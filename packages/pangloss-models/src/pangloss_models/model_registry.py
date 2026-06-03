@@ -5,7 +5,12 @@ from typing import TYPE_CHECKING, ClassVar, get_args, get_origin
 
 from pydantic import BaseModel
 
-from pangloss_models.exceptions import PanglossInitialisationError, PanglossModelError
+from pangloss_models.default_db_integration import default_database_module
+from pangloss_models.exceptions import (
+    PanglossImportError,
+    PanglossInitialisationError,
+    PanglossModelError,
+)
 
 if TYPE_CHECKING:
     from pangloss_models.model_bases.base_models import _DeclaredClass
@@ -197,7 +202,7 @@ class ModelRegistry:
     # ----------------------------
 
     @classmethod
-    def _initialise_models(cls):
+    def _initialise_models(cls, db_module: str | None = None):
         """
         Override or monkey-patch this.
         """
@@ -275,7 +280,7 @@ class ModelRegistry:
         for model in chain(cyclic, order):
             if can_have_create_model(model):
                 initialise_create_model(model)
-                add_fields_to_create_model(model.Create, [])
+                add_fields_to_create_model(model.Create, frozenset())
 
             initialise_create_db_model(model)
 
@@ -284,7 +289,7 @@ class ModelRegistry:
         for model in chain(cyclic, order):
             if can_have_update_model(model):
                 initialise_update_model(model=model)
-                add_fields_to_update_model(model.Update, [])
+                add_fields_to_update_model(model.Update, frozenset())
 
             initialise_update_db_model(model)
 
@@ -299,13 +304,19 @@ class ModelRegistry:
             if can_have_head_view_model(model):
                 initialise_head_view_model(model)
 
-        database = "pangloss_memgraph.databases.memgraph"
+        database = db_module or default_database_module
 
-        database_exposed_functions_module = importlib.import_module(
-            f"{database}.exposed_functions"
-        )
+        try:
+            database_exposed_functions_module = importlib.import_module(
+                f"{database}.exposed_functions"
+            )
+        except ImportError:
+            raise PanglossImportError(
+                f"Failed to find database functions in given module '{database}'"
+            )
 
         def save_func_for_create(self):
+            print(f"Using database {database}")
             db_instance = self._to_db_model()
             database_exposed_functions_module.save(db_instance)
 

@@ -20,3 +20,7 @@ class PanglossInternalError(Exception):
 
 class PanglossRuntimeError(Exception):
     pass
+
+
+class PanglossImportError(ImportError):
+    pass
