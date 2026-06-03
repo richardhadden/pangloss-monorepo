@@ -1,0 +1,28 @@
+[project]
+name = "pangloss-models"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Richard Hadden", email = "richard.hadden@oeaw.ac.at" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "frozendict>=2.4.7",
+    "pydantic>=2.13.3",
+    "pydantic-meta-kit",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv.sources]
+pydantic-meta-kit = { git = "https://github.com/richardhadden/pydantic-meta-kit.git" }
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.3",
+    "pytest-xdist>=3.8.0",
+    "python-lsp-server>=1.14.0",
+]
