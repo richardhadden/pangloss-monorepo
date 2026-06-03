@@ -55,7 +55,7 @@ class EntityMeta(BaseMeta, DeclaredClassMeta):
 
 
 class _EntityCreateBase(_CreateBase):
-    pass
+    def save(self: Self) -> None: ...
 
 
 class _EntityCreateDBBase(_CreateDBBase):

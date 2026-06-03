@@ -1,4 +1,4 @@
-from typing import Annotated, Any, ClassVar
+from typing import Annotated, Any, ClassVar, Self
 from uuid import UUID, uuid7
 
 from pydantic import ConfigDict, Field, model_validator
@@ -11,7 +11,6 @@ from pangloss_models.field_definitions import (
 )
 from pangloss_models.model_bases.base_models import (
     DeclaredClassMeta,
-    _APIHeadMeta,
     _BaseObject,
     _CreateBase,
     _CreateDBBase,
@@ -39,7 +38,7 @@ class DocumentMeta(BaseMeta, DeclaredClassMeta):
     )
     use_in_semantic_space_label: bool = True
     field_definitions: ModelFields = Field(default_factory=ModelFields)
-    _owner_class: type[Document] | InheritValue = InheritValue.AS_DEFAULT
+    _owner_class: type[Document] | InheritValue = InheritValue.AS_DEFAULT  # noqa: F821
 
     @property
     def fields(self) -> ModelFieldDict[str, FieldDefinition]:
@@ -47,7 +46,7 @@ class DocumentMeta(BaseMeta, DeclaredClassMeta):
 
 
 class _DocumentCreateBase(_CreateBase):
-    pass
+    def save(self: Self) -> None: ...
 
 
 class _DocumentCreateDBBase(_CreateDBBase):

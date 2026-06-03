@@ -2,3 +2,6 @@
 members = [
     "packages/*",
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["packages"]
