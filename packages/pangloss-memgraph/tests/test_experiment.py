@@ -1,14 +1,7 @@
-from pangloss_models import initialise
-from pangloss_models.model_bases.document import Document
+def test_database_writing_for_sanity(db_driver):
 
+    db_driver.execute_query("CREATE (node:Node {name: 'Tony'})", database="memgraph")
 
-def test_doc():
-    class Statement(Document):
-        pass
+    records, summary, keys = db_driver.execute_query("MATCH (node:Node) RETURN node")
 
-    initialise()
-
-    st = Statement.Create(label="A Statement")
-    st.save()
-
-    assert False
+    assert records[0].data() == {"node": {"name": "Tony"}}
