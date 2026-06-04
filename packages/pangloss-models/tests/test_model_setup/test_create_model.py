@@ -6,8 +6,6 @@ from uuid import UUID, uuid7
 
 import pytest
 from annotated_types import Gt, MinLen
-from pydantic import AnyHttpUrl, ValidationError
-
 from pangloss_models import initialise
 from pangloss_models.exceptions import PanglossMetaError
 from pangloss_models.field_definitions import (
@@ -37,6 +35,7 @@ from pangloss_models.model_bases.semantic_space import (
     _SemanticSpaceCreateBase,
 )
 from pangloss_models.model_bases.trait import Trait
+from pydantic import AnyHttpUrl, ValidationError
 
 
 @no_type_check

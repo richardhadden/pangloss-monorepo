@@ -3,5 +3,10 @@ members = [
     "packages/*",
 ]
 
+
 [tool.pytest.ini_options]
 testpaths = ["packages"]
+
+[tool.uv.sources]
+pangloss-models = { workspace = true }
+pangloss-sdk = { workspace = true }

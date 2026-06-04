@@ -1,17 +1,9 @@
 import typing
 
 from pangloss_core.settings import BaseSettings, DatabaseSettings
-from pangloss_models.model_registry import ModelRegistry
 from pangloss_sdk.databases.api.settings import ApiAsDatabaseSettings
 from pydantic import AnyHttpUrl
 from pytest import fixture
-
-
-@fixture(scope="function", autouse=True)
-def reset_model_registry():
-
-    ModelRegistry._reset()
-    yield
 
 
 @fixture(scope="session", autouse=True)

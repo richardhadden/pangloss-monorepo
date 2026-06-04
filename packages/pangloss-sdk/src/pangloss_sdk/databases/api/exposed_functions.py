@@ -35,7 +35,7 @@ def save(
 
 
 def get_document(cls: type[Document], id: UUID | AnyHttpUrl) -> _DocumentHeadViewBase:
-    return _DocumentHeadViewBase(
+    return cls.HeadView(
         id=uuid7(),
         label="A document",
         meta=_APIHeadMeta(

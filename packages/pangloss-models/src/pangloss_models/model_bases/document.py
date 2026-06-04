@@ -1,7 +1,7 @@
 from typing import Annotated, Any, ClassVar, Self
 from uuid import UUID, uuid7
 
-from pydantic import ConfigDict, Field, model_validator
+from pydantic import AnyHttpUrl, ConfigDict, Field, model_validator
 from pydantic_meta_kit import BaseMeta, InheritValue, MetaRules, WithMeta
 
 from pangloss_models.field_definitions import (
@@ -119,6 +119,10 @@ class Document(_DeclaredClass, WithMeta[DocumentMeta]):
 
     ReferenceView: ClassVar[type[_DocumentReferenceViewBase]]
     ReferenceSetBase: ClassVar[type[_DocumentReferenceSetBase]]
+
+    @classmethod
+    def get(cls, id: UUID | AnyHttpUrl) -> _DocumentHeadViewBase:
+        raise NotImplementedError()
 
     def __new__(cls, *args, **kwargs) -> _DocumentCreateBase:
         return cls.Create(*args, **kwargs)

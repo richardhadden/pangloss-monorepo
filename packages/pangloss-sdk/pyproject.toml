@@ -1,5 +1,5 @@
 [project]
-name = "pangloss-memgraph"
+name = "pangloss-sdk"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
@@ -7,22 +7,8 @@ authors = [
     { name = "Richard Hadden", email = "rwjhadden@gmail.com" }
 ]
 requires-python = ">=3.14"
-dependencies = [
-    "neo4j>=6.2.0",
-    "pangloss-models",
-    "pangloss-sdk",
-]
+dependencies = []
 
 [build-system]
 requires = ["uv_build>=0.11.8,<0.12.0"]
 build-backend = "uv_build"
-
-[tool.uv.sources]
-pangloss-models = { workspace = true }
-pangloss-sdk = { workspace = true }
-
-[dependency-groups]
-dev = [
-    "docker>=7.1.0",
-    "tenacity>=9.1.4",
-]

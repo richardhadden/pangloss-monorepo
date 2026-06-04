@@ -1,11 +1,12 @@
 import heapq
 import importlib
+from inspect import iscoroutinefunction
 from itertools import chain
 from typing import TYPE_CHECKING, ClassVar, get_args, get_origin
+from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import AnyHttpUrl, BaseModel
 
-from pangloss_models.default_db_integration import default_database_module
 from pangloss_models.exceptions import (
     PanglossImportError,
     PanglossInitialisationError,
@@ -244,8 +245,7 @@ class ModelRegistry:
             can_have_view_model,
             initialise_view_model,
         )
-        from pangloss_models.model_bases.document import _DocumentCreateBase
-        from pangloss_models.model_bases.entity import _EntityCreateBase
+        from pangloss_models.model_bases.document import Document
 
         graph = cls._build_graph()
         order, cyclic = cls._toposort(graph)
@@ -304,7 +304,9 @@ class ModelRegistry:
             if can_have_head_view_model(model):
                 initialise_head_view_model(model)
 
-        database = db_module or default_database_module
+        from pangloss_core.settings import SETTINGS
+
+        database = SETTINGS.DATABASE_MODULE
 
         try:
             database_exposed_functions_module = importlib.import_module(
@@ -315,10 +317,26 @@ class ModelRegistry:
                 f"Failed to find database functions in given module '{database}'"
             )
 
+        is_async = iscoroutinefunction(database_exposed_functions_module.get_document)
+        if is_async:
+
+            async def get_document_function_async(cls: Document, id: UUID | AnyHttpUrl):
+                return await database_exposed_functions_module.get_document(cls, id)
+
+            Document.get = classmethod(get_document_function_async)  # type: ignore
+        else:
+
+            def get_document_function_sync(cls: Document, id: UUID | AnyHttpUrl):
+                return database_exposed_functions_module.get_document(cls, id)
+
+            Document.get = classmethod(get_document_function_sync)  # type: ignore
+
         def save_func_for_create(self):
             print(f"Using database {database}")
             db_instance = self._to_db_model()
             database_exposed_functions_module.save(db_instance)
 
+        """
         _DocumentCreateBase.save = save_func_for_create  # ty:ignore[invalid-assignment]
         _EntityCreateBase.save = save_func_for_create  # ty:ignore[invalid-assignment]
+        """
