@@ -10,3 +10,8 @@ members = [
 
 [tool.pytest.ini_options]
 testpaths = ["packages"]
+
+[dependency-groups]
+dev = [
+    "pytest-asyncio>=1.4.0",
+]

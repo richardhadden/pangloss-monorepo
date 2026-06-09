@@ -1,20 +1,24 @@
 import functools
 import typing
-from typing import Awaitable, Callable, Concatenate
+from typing import Awaitable, Callable, Concatenate, cast
 
 import neo4j
 from pangloss_core.settings import BaseSettings
 
+from pangloss_memgraph.databases.memgraph.settings import MemgraphDatabaseSettings
+
+Transaction = neo4j.Transaction
+
+
 class Database:
-    settings: BaseSettings
+    settings: BaseSettings[MemgraphDatabaseSettings]
     driver: neo4j.AsyncDriver
 
     _instances: dict[int, "Database"] = {}
     _initialised: bool = False
+    default: "Database"
 
-    def __init__(
-        self, settings: "BaseSettings", instance_identifier: int | None = None
-    ):
+    def __init__(self, settings: BaseSettings, instance_identifier: int | None = None):
         if settings is None:
             return
 
@@ -27,10 +31,17 @@ class Database:
         # to look up the instance
         self.__class__._instances[instance_identifier or id(self)] = self
 
+        global database
+        self.__class__.default = self
+
     def _initialise_driver(self):
+        assert isinstance(self.settings.DATABASE, MemgraphDatabaseSettings)
         self.driver = neo4j.AsyncGraphDatabase.driver(
-            self.settings.DB_URL,
-            auth=(self.settings.DB_USER, self.settings.DB_PASSWORD),
+            self.settings.DATABASE.DB_URL,
+            auth=(
+                self.settings.DATABASE.DB_USERNAME,
+                self.settings.DATABASE.DB_PASSWORD,
+            ),
             keep_alive=True,
         )
 
@@ -38,9 +49,7 @@ class Database:
         if self.driver._closed:
             self._initialise_driver()
 
-    def read_transaction[ReturnType, **Params](
-        self,
-        func)
+    def read_transaction[ReturnType, **Params](self, func):
         """Decorator to run a database read transaction
 
         Wraps an asynchronous function taking a pangloss.neo4j.database.Transaction
@@ -54,11 +63,13 @@ class Database:
         """
 
         async def wrapper(*args: Params.args, **kwargs: Params.kwargs) -> ReturnType:
-            this: "Database" = self.__class__._instances[id(self)]
+
+            this: Database = self.__class__._instances[id(self)]
             this._check_driver()
+
             # async with neo4j.AsyncGraphDatabase.driver(uri, auth=auth) as driver:
             async with this.driver.session(
-                database=this.settings.DB_DATABASE_NAME
+                database=this.settings.DATABASE.DATABASE_NAME
             ) as session:
                 records = await session.execute_read(func, *args, **kwargs)
                 return records
@@ -96,7 +107,7 @@ class Database:
             this._check_driver()
 
             async with this.driver.session(
-                database=this.settings.DB_DATABASE_NAME
+                database=this.settings.DATABASE.DATABASE_NAME
             ) as session:
                 records = None
                 try:
@@ -130,4 +141,5 @@ class Database:
     async def close(self):
         await DatabaseUtils.close_database_connection()
 
-database: Database
+
+database: "Database" = Database(settings=None)  # type: ignore

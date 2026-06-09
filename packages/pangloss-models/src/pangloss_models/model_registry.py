@@ -307,7 +307,7 @@ class ModelRegistry:
         from pangloss_core.settings import SETTINGS
 
         database = SETTINGS.DATABASE_MODULE
-
+        print(database)
         try:
             database_exposed_functions_module = importlib.import_module(
                 f"{database}.exposed_functions"
@@ -319,6 +319,7 @@ class ModelRegistry:
 
         is_async = iscoroutinefunction(database_exposed_functions_module.get_document)
         if is_async:
+            print("here")
 
             async def get_document_function_async(cls: Document, id: UUID | AnyHttpUrl):
                 return await database_exposed_functions_module.get_document(cls, id)
@@ -331,12 +332,13 @@ class ModelRegistry:
 
             Document.get = classmethod(get_document_function_sync)  # type: ignore
 
+        """
         def save_func_for_create(self):
             print(f"Using database {database}")
             db_instance = self._to_db_model()
             database_exposed_functions_module.save(db_instance)
 
-        """
+
         _DocumentCreateBase.save = save_func_for_create  # ty:ignore[invalid-assignment]
         _EntityCreateBase.save = save_func_for_create  # ty:ignore[invalid-assignment]
         """

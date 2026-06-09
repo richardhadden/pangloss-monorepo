@@ -1,8 +1,8 @@
 from pangloss_core.settings import DatabaseSettings
 
 
-class MemgraphSettings(DatabaseSettings):
-    URL: str
-    USERNAME: str
-    PASSWORD: str
+class MemgraphDatabaseSettings(DatabaseSettings):
+    DB_URL: str
+    DB_USERNAME: str
+    DB_PASSWORD: str
     DATABASE_NAME: str

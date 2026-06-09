@@ -23,6 +23,8 @@ from pangloss_models.model_bases.entity import (
 )
 from pydantic import AnyHttpUrl
 
+from pangloss_memgraph.databases.memgraph.database import Database, Transaction
+
 
 def save(
     tx,
@@ -34,10 +36,14 @@ def save(
     print("wahoo!", self)
 
 
-def get_document(cls: type[Document], id: UUID | AnyHttpUrl) -> _DocumentHeadViewBase:
+@Database.default.read_transaction
+async def get_document(
+    tx: Transaction, cls: type[Document], id: UUID | AnyHttpUrl
+) -> _DocumentHeadViewBase:
+
     return _DocumentHeadViewBase(
         id=uuid7(),
-        label="A document",
+        label="A document",  # type: ignore
         meta=_APIHeadMeta(
             created_by="asf",
             created_when=datetime.datetime.now(),
@@ -45,3 +51,10 @@ def get_document(cls: type[Document], id: UUID | AnyHttpUrl) -> _DocumentHeadVie
             updated_when=datetime.datetime.now(),
         ),
     )
+
+
+@Database.default.write_transaction
+async def create_document(
+    tx: Transaction, instance: _DocumentCreateBase, return_data: bool | None
+):
+    pass

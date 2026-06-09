@@ -14,7 +14,7 @@ def reset_model_registry():
     yield
 
 
-@fixture(scope="session", autouse=True)
+@fixture(scope="module", autouse=True)
 def initialise_database():
     """Creates a Settings instance for testing. Use the SDK api option
     as it doesn't require any actual database connection"""

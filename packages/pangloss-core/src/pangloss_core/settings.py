@@ -9,12 +9,12 @@ class DatabaseSettings(PydanticBaseSettings):
     pass
 
 
-class BaseSettings(PydanticBaseSettings):
+class BaseSettings[TDatabaseSettings: DatabaseSettings](PydanticBaseSettings):
     PROJECT_NAME: str
     BACKEND_CORS_ORIGINS: list[typing.Any]
     INSTALLED_APPS: list[str]
     DATABASE_MODULE: str
-    DATABASE: DatabaseSettings
+    DATABASE: TDatabaseSettings
 
     INTERFACE_LANGUAGES: list[str] = []
     DEFAULT_INTERFACE_LANGUAGE: str = "en"
