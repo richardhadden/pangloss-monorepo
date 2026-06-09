@@ -1,13 +1,13 @@
 import functools
 import typing
-from typing import Awaitable, Callable, Concatenate, cast
+from typing import Any, Awaitable, Callable, Concatenate, Coroutine, cast
 
 import neo4j
 from pangloss_core.settings import BaseSettings
 
 from pangloss_memgraph.databases.memgraph.settings import MemgraphDatabaseSettings
 
-Transaction = neo4j.Transaction
+Transaction = neo4j.AsyncManagedTransaction
 
 
 class Database:
@@ -49,7 +49,10 @@ class Database:
         if self.driver._closed:
             self._initialise_driver()
 
-    def read_transaction[ReturnType, **Params](self, func):
+    def read_transaction[T, **P](
+        self,
+        func: Callable[Concatenate[neo4j.AsyncManagedTransaction, P], Awaitable[T]],
+    ) -> Callable[P, Awaitable[T]]:
         """Decorator to run a database read transaction
 
         Wraps an asynchronous function taking a pangloss.neo4j.database.Transaction
@@ -62,12 +65,11 @@ class Database:
         ```
         """
 
-        async def wrapper(*args: Params.args, **kwargs: Params.kwargs) -> ReturnType:
+        async def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
 
             this: Database = self.__class__._instances[id(self)]
             this._check_driver()
 
-            # async with neo4j.AsyncGraphDatabase.driver(uri, auth=auth) as driver:
             async with this.driver.session(
                 database=this.settings.DATABASE.DATABASE_NAME
             ) as session:
@@ -76,17 +78,10 @@ class Database:
 
         return wrapper
 
-    def write_transaction[ReturnType, **Params](
+    def write_transaction[T, **P](
         self,
-        func: Callable[
-            Concatenate[neo4j.AsyncManagedTransaction, Params],
-            Awaitable[ReturnType | None],
-        ]
-        | Callable[
-            Concatenate[neo4j.AsyncManagedTransaction, Params],
-            Awaitable[ReturnType | None],
-        ],
-    ) -> Callable[Params, Awaitable[ReturnType | None]]:
+        func: Callable[Concatenate[neo4j.AsyncManagedTransaction, P], Awaitable[T]],
+    ) -> Callable[P, Awaitable[T | None]]:
         """Decorator to run a database read transaction
 
         Wraps an asynchronous function taking a pangloss.neo4j.database.Transaction
@@ -100,9 +95,9 @@ class Database:
         """
 
         async def wrapper(
-            *args: Params.args,
-            **kwargs: Params.kwargs,
-        ) -> ReturnType | None:
+            *args: P.args,
+            **kwargs: P.kwargs,
+        ) -> T | None:
             this: "Database" = self.__class__._instances[id(self)]
             this._check_driver()
 
@@ -111,7 +106,7 @@ class Database:
             ) as session:
                 records = None
                 try:
-                    records = await session.execute_write(func, **kwargs)
+                    records = await session.execute_write(func, *args, **kwargs)
                 except neo4j.exceptions.TransactionError:
                     pass
 
@@ -121,7 +116,7 @@ class Database:
 
     def with_database[ReturnType, **Params](
         self, func: Callable[["Database"], Awaitable[ReturnType]]
-    ) -> Callable[Concatenate[Params], Awaitable[ReturnType]]:
+    ) -> Callable[Params, Awaitable[ReturnType]]:
         """Decorator to allow access to the database instance inside a function,
         taking a `database` argument as its first argument"""
 
@@ -139,7 +134,7 @@ class Database:
         return database
 
     async def close(self):
-        await DatabaseUtils.close_database_connection()
+        await self.driver.close()
 
 
 database: "Database" = Database(settings=None)  # type: ignore

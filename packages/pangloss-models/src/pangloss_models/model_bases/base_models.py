@@ -429,6 +429,8 @@ class _CreateDBBase(_ActionClass):
     _labels = property(get_labels_for_db_classes)
     _fulfils_classes = property(lambda self: get_fulfilled_classes(self, "Create"))
 
+    type: str
+
     @model_validator(mode="before")
     @classmethod
     def ensure_id(cls, data: Any) -> Any:

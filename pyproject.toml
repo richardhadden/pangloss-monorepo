@@ -10,6 +10,8 @@ members = [
 
 [tool.pytest.ini_options]
 testpaths = ["packages"]
+asyncio_mode = "auto"
+
 
 [dependency-groups]
 dev = [

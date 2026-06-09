@@ -245,7 +245,7 @@ class ModelRegistry:
             can_have_view_model,
             initialise_view_model,
         )
-        from pangloss_models.model_bases.document import Document
+        from pangloss_models.model_bases.document import Document, _DocumentCreateBase
 
         graph = cls._build_graph()
         order, cyclic = cls._toposort(graph)
@@ -319,7 +319,6 @@ class ModelRegistry:
 
         is_async = iscoroutinefunction(database_exposed_functions_module.get_document)
         if is_async:
-            print("here")
 
             async def get_document_function_async(cls: Document, id: UUID | AnyHttpUrl):
                 return await database_exposed_functions_module.get_document(cls, id)
@@ -332,6 +331,21 @@ class ModelRegistry:
 
             Document.get = classmethod(get_document_function_sync)  # type: ignore
 
+        is_async = iscoroutinefunction(
+            database_exposed_functions_module.create_document
+        )
+        if is_async:
+
+            async def create_document_function_async(self: _DocumentCreateBase):
+                return await database_exposed_functions_module.create_document(self)
+
+            _DocumentCreateBase.save = create_document_function_async  # type: ignore
+        else:
+
+            def create_document_function_sync(self: _DocumentCreateBase):
+                return database_exposed_functions_module.create_document(self)
+
+            _DocumentCreateBase.save = create_document_function_sync  # type: ignore
         """
         def save_func_for_create(self):
             print(f"Using database {database}")

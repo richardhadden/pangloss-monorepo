@@ -16,3 +16,5 @@ wheels/
 # Editor variables
 .zed
 .ropeproject
+
+.query_dumps/

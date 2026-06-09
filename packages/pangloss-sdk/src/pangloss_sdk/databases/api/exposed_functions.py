@@ -45,3 +45,7 @@ def get_document(cls: type[Document], id: UUID | AnyHttpUrl) -> _DocumentHeadVie
             updated_when=datetime.datetime.now(),
         ),
     )
+
+
+def create_document(self: _DocumentCreateBase):
+    pass

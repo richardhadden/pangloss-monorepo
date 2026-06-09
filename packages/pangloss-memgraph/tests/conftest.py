@@ -3,6 +3,7 @@ from typing import Generator
 
 import docker
 import neo4j
+import pytest_asyncio
 from pangloss_core.settings import BaseSettings, DatabaseSettings
 from pangloss_memgraph.databases.memgraph.database import Database
 from pangloss_memgraph.databases.memgraph.settings import MemgraphDatabaseSettings
@@ -101,8 +102,8 @@ def pytest_itemcollected(item):
     item.add_marker(mark.xdist_group("db"))
 
 
-@fixture(scope="module", autouse=True)
-def initialise_settings():
+@pytest_asyncio.fixture(autouse=True)
+async def initialise_settings():
     """Creates a Settings instance for testing. Use memgraph database (i.e. this module)"""
 
     class Settings(BaseSettings[MemgraphDatabaseSettings]):
@@ -123,6 +124,8 @@ def initialise_settings():
         ENTITY_BASE_URL: AnyHttpUrl = AnyHttpUrl("http://test.com/")
 
     settings = Settings()
-    Database(settings=settings)
+    db = Database(settings=settings)
 
     yield
+
+    await db.close()

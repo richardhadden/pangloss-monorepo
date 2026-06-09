@@ -23,6 +23,9 @@ from pangloss_models.model_bases.entity import (
 )
 from pydantic import AnyHttpUrl
 
+from pangloss_memgraph.databases.memgraph.build_create_query import (
+    build_head_create_query,
+)
 from pangloss_memgraph.databases.memgraph.database import Database, Transaction
 
 
@@ -55,6 +58,10 @@ async def get_document(
 
 @Database.default.write_transaction
 async def create_document(
-    tx: Transaction, instance: _DocumentCreateBase, return_data: bool | None
-):
-    pass
+    tx: Transaction, instance: _DocumentCreateBase
+) -> _DocumentHeadViewBase | None:
+    db_instance = instance._to_db_model()
+    query_object = build_head_create_query(db_instance)
+
+    with open(".query_dumps/create.cypher", "w") as f:
+        f.write(query_object.to_query_string())
