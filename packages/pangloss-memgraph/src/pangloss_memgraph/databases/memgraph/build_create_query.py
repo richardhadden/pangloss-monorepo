@@ -1,3 +1,4 @@
+import datetime
 import typing
 import uuid
 
@@ -53,7 +54,7 @@ class QueryObject:
             {"\n".join(self.create_query_strings)}
             {"\n".join(self.set_query_strings)}
             {"\n".join(self.merge_query_strings)}
-            RETURN {self.return_identifier}{{.*, uris: []}}
+            RETURN {self.return_identifier}
         """,
         )
 
@@ -73,9 +74,24 @@ def convert_type_for_writing(value):
 
 
 def get_literal_fields_as_writable_dict(
-    instance: _CreateDBBase,
+    instance: _DocumentCreateDBBase | _EntityCreateDBBase,
 ) -> dict[str, typing.Any]:
-    return {}
+    node_data = {
+        "id": str(instance.id),
+        "type": instance.type,
+        "meta": {
+            "created_by": "testuser",
+            "created_when": str(datetime.datetime.now()),
+            "updated_by": "testuser",
+            "updated_when": str(datetime.datetime.now()),
+        },
+    }
+    if label := getattr(instance, "label"):
+        node_data["label"] = label
+    for field_name in instance._meta.fields.literal_fields:
+        if value := getattr(instance, field_name):
+            node_data[field_name] = value
+    return node_data
 
 
 def get_label_query_string(
@@ -87,8 +103,11 @@ def get_label_query_string(
     return f"{':'.join(all_labels)}"
 
 
-def build_head_create_query(instance: _CreateDBBase) -> QueryObject:
+def build_head_create_query(
+    instance: _DocumentCreateDBBase | _EntityCreateDBBase,
+) -> QueryObject:
     # Initialise a query object with head values
+
     query_object = QueryObject(head_id=instance.id, head_type=instance.type)
 
     # Create an Identifier for the node
@@ -100,13 +119,15 @@ def build_head_create_query(instance: _CreateDBBase) -> QueryObject:
 
     # Transform literal fields into a writeable dict
     node_data_dict = get_literal_fields_as_writable_dict(instance)
-
+    print(instance)
+    print(node_data_dict)
     # Add the dict to the query params and get back an Identifier
     node_data_identifier = query_object.params.add(node_data_dict)
 
     query_object.create_query_strings.append(f"""
         CREATE ({node_identifier}:{instance_labels})
         SET {node_identifier} = ${node_data_identifier}
+
     """)
 
     return query_object

@@ -65,3 +65,7 @@ async def create_document(
 
     with open(".query_dumps/create.cypher", "w") as f:
         f.write(query_object.to_query_string())
+
+    result = await tx.run(query_object.to_query_string(), **query_object.params)
+    result_value = await result.value()
+    return instance._owner.HeadView(**result_value[0])

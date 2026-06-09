@@ -31,4 +31,7 @@ async def test_document_write():
 
     st = Statement.Create(label="A Statement")
 
-    await st.save()
+    result = await st.save()
+    assert result.id
+    assert result.label == "A Statement"
+    assert result.type == "Statement"
