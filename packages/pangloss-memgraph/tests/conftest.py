@@ -3,6 +3,7 @@ from typing import Generator
 
 import docker
 import neo4j
+import pytest
 import pytest_asyncio
 from pangloss_core.settings import BaseSettings, DatabaseSettings
 from pangloss_memgraph.databases.memgraph.database import Database
@@ -11,6 +12,8 @@ from pangloss_models.model_registry import ModelRegistry
 from pydantic import AnyHttpUrl, AnyUrl
 from pytest import fixture, mark
 from tenacity import retry, stop_after_delay, wait_fixed
+
+pytestmark = pytest.mark.asyncio(loop_scope="session")
 
 
 @fixture(scope="function", autouse=True)
@@ -102,8 +105,8 @@ def pytest_itemcollected(item):
     item.add_marker(mark.xdist_group("db"))
 
 
-@pytest_asyncio.fixture(scope="function", loop_scope="function", autouse=True)
-async def initialise_settings():
+@pytest_asyncio.fixture(scope="session", loop_scope="session", autouse=True)
+async def initialise_settings(event_loop_policy):
     """Creates a Settings instance for testing. Use memgraph database (i.e. this module)"""
 
     class Settings(BaseSettings[MemgraphDatabaseSettings]):
@@ -128,5 +131,6 @@ async def initialise_settings():
     await db._initialise_driver()
 
     yield
+    # Cancel all pending tasks on the current loop before closing the driver
 
     await db.close()

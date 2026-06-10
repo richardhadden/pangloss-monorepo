@@ -1,6 +1,6 @@
 import functools
 import typing
-from typing import Any, Awaitable, Callable, Concatenate, Coroutine, cast
+from typing import Any, Awaitable, Callable, ClassVar, Concatenate, Coroutine, cast
 
 import neo4j
 from pangloss_core.settings import BaseSettings
@@ -16,21 +16,13 @@ class Database:
 
     _instances: dict[int, "Database"] = {}
     _initialised: bool = False
-    default: "Database"
+    default: ClassVar["Database"]
 
     def __init__(self, settings: BaseSettings, instance_identifier: int | None = None):
         if settings is None:
             return
 
         self.settings = settings
-
-        # Because @read_transaction and @write_transaction are decorators,
-        # "self" is bound with non-functioning instance before initialisation of the db;
-        # So we store each instance of this class, and use this
-        # to look up the instance
-        self.__class__._instances[instance_identifier or id(self)] = self
-
-        global database
         self.__class__.default = self
 
     async def _initialise_driver(self):
@@ -66,11 +58,10 @@ class Database:
 
         async def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
 
-            this: Database = self.__class__._instances[id(self)]
-            await this._check_driver()
+            await self._check_driver()
 
-            async with this.driver.session(
-                database=this.settings.DATABASE.DATABASE_NAME
+            async with self.driver.session(
+                database=self.settings.DATABASE.DATABASE_NAME
             ) as session:
                 records = await session.execute_read(func, *args, **kwargs)
                 return records
@@ -97,11 +88,11 @@ class Database:
             *args: P.args,
             **kwargs: P.kwargs,
         ) -> T | None:
-            this: "Database" = self.__class__._instances[id(self)]
-            await this._check_driver()
 
-            async with this.driver.session(
-                database=this.settings.DATABASE.DATABASE_NAME
+            await self._check_driver()
+
+            async with self.driver.session(
+                database=self.settings.DATABASE.DATABASE_NAME
             ) as session:
                 records = None
                 try:
@@ -128,14 +119,9 @@ class Database:
 
     @staticmethod
     def initialise_default_database(settings: "BaseSettings") -> "Database":
-        global database
-        database = Database(settings=settings, instance_identifier=id(database))
+
+        database = Database(settings=settings)
         return database
 
     async def close(self):
         await self.driver.close()
-        this: Database = self.__class__._instances[id(self)]
-        await this.driver.close()
-
-
-database: "Database" = Database(settings=None)  # type: ignore
