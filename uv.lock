@@ -9,6 +9,7 @@ members = [
     "pangloss-memgraph",
     "pangloss-models",
     "pangloss-sdk",
+    "pangloss-users",
 ]
 
 [[package]]
@@ -268,6 +269,7 @@ dependencies = [
     { name = "neo4j" },
     { name = "pangloss-models" },
     { name = "pangloss-sdk" },
+    { name = "pangloss-users" },
     { name = "pytest-asyncio" },
 ]
 
@@ -283,6 +285,7 @@ requires-dist = [
     { name = "neo4j", specifier = ">=6.2.0" },
     { name = "pangloss-models", editable = "packages/pangloss-models" },
     { name = "pangloss-sdk", editable = "packages/pangloss-sdk" },
+    { name = "pangloss-users", editable = "packages/pangloss-users" },
     { name = "pytest-asyncio", specifier = ">=1.4.0" },
 ]
 
@@ -330,6 +333,11 @@ dev = [
 name = "pangloss-sdk"
 version = "0.1.0"
 source = { editable = "packages/pangloss-sdk" }
+
+[[package]]
+name = "pangloss-users"
+version = "0.1.0"
+source = { editable = "packages/pangloss-users" }
 
 [[package]]
 name = "parso"

@@ -23,7 +23,6 @@ class Database:
             return
 
         self.settings = settings
-        self._initialise_driver()
 
         # Because @read_transaction and @write_transaction are decorators,
         # "self" is bound with non-functioning instance before initialisation of the db;
@@ -34,7 +33,7 @@ class Database:
         global database
         self.__class__.default = self
 
-    def _initialise_driver(self):
+    async def _initialise_driver(self):
         assert isinstance(self.settings.DATABASE, MemgraphDatabaseSettings)
         self.driver = neo4j.AsyncGraphDatabase.driver(
             self.settings.DATABASE.DB_URL,
@@ -45,9 +44,9 @@ class Database:
             keep_alive=True,
         )
 
-    def _check_driver(self):
+    async def _check_driver(self):
         if self.driver._closed:
-            self._initialise_driver()
+            await self._initialise_driver()
 
     def read_transaction[T, **P](
         self,
@@ -68,7 +67,7 @@ class Database:
         async def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
 
             this: Database = self.__class__._instances[id(self)]
-            this._check_driver()
+            await this._check_driver()
 
             async with this.driver.session(
                 database=this.settings.DATABASE.DATABASE_NAME
@@ -99,7 +98,7 @@ class Database:
             **kwargs: P.kwargs,
         ) -> T | None:
             this: "Database" = self.__class__._instances[id(self)]
-            this._check_driver()
+            await this._check_driver()
 
             async with this.driver.session(
                 database=this.settings.DATABASE.DATABASE_NAME
@@ -135,6 +134,8 @@ class Database:
 
     async def close(self):
         await self.driver.close()
+        this: Database = self.__class__._instances[id(self)]
+        await this.driver.close()
 
 
 database: "Database" = Database(settings=None)  # type: ignore

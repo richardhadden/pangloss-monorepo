@@ -87,7 +87,7 @@ def wait_for_memgraph():
     driver.close()
 
 
-@fixture(scope="module")
+@fixture
 def db_driver() -> Generator[neo4j.Driver, None, None]:
     driver = neo4j.GraphDatabase.driver(
         "bolt://localhost:7687",
@@ -102,7 +102,7 @@ def pytest_itemcollected(item):
     item.add_marker(mark.xdist_group("db"))
 
 
-@pytest_asyncio.fixture(autouse=True)
+@pytest_asyncio.fixture(scope="function", loop_scope="function", autouse=True)
 async def initialise_settings():
     """Creates a Settings instance for testing. Use memgraph database (i.e. this module)"""
 
@@ -125,6 +125,7 @@ async def initialise_settings():
 
     settings = Settings()
     db = Database(settings=settings)
+    await db._initialise_driver()
 
     yield
 

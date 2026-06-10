@@ -5,6 +5,7 @@ import uuid
 from pangloss_models.model_bases.base_models import _CreateDBBase
 from pangloss_models.model_bases.document import _DocumentCreateDBBase
 from pangloss_models.model_bases.entity import _EntityCreateDBBase
+from pangloss_users import current_request_username
 from pydantic import AnyUrl
 
 
@@ -73,19 +74,33 @@ def convert_type_for_writing(value):
             return value
 
 
-def get_literal_fields_as_writable_dict(
+def get_node_fields_as_writable_dict(
     instance: _DocumentCreateDBBase | _EntityCreateDBBase,
+    is_new: bool = False,
+    is_head_node: bool = False,
+    head_node_type: str | None = None,
+    head_node_id: uuid.UUID | None = None,
 ) -> dict[str, typing.Any]:
-    node_data = {
+
+    node_data: dict[str, typing.Any] = {
         "id": str(instance.id),
         "type": instance.type,
-        "meta": {
-            "created_by": "testuser",
-            "created_when": str(datetime.datetime.now()),
-            "updated_by": "testuser",
-            "updated_when": str(datetime.datetime.now()),
-        },
     }
+
+    # If it's new, we can create the whole meta object; otherwise, must be
+    # updated granularly to preserve the created_by/created_when
+    if is_new:
+        node_data["meta"] = {
+            "created_by": current_request_username.get(),
+            "created_when": str(datetime.datetime.now()),
+            "updated_by": current_request_username.get(),
+            "updated_when": str(datetime.datetime.now()),
+        }
+
+    if not is_head_node:
+        node_data["head_node_type"] = head_node_type
+        node_data["head_node_id"] = head_node_id
+
     if label := getattr(instance, "label"):
         node_data["label"] = label
     for field_name in instance._meta.fields.literal_fields:
@@ -118,7 +133,9 @@ def build_head_create_query(
     instance_labels = get_label_query_string(instance, ["HeadNode", "PGIndexableNode"])
 
     # Transform literal fields into a writeable dict
-    node_data_dict = get_literal_fields_as_writable_dict(instance)
+    node_data_dict = get_node_fields_as_writable_dict(
+        instance, is_new=True, is_head_node=True
+    )
     print(instance)
     print(node_data_dict)
     # Add the dict to the query params and get back an Identifier

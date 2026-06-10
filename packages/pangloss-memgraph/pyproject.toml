@@ -11,6 +11,7 @@ dependencies = [
     "neo4j>=6.2.0",
     "pangloss-models",
     "pangloss-sdk",
+    "pangloss-users",
     "pytest-asyncio>=1.4.0",
 ]
 
@@ -21,6 +22,7 @@ build-backend = "uv_build"
 [tool.uv.sources]
 pangloss-models = { workspace = true }
 pangloss-sdk = { workspace = true }
+pangloss-users = { workspace = true }
 
 [dependency-groups]
 dev = [
