@@ -430,6 +430,7 @@ class _CreateDBBase(_ActionClass):
     _fulfils_classes = property(lambda self: get_fulfilled_classes(self, "Create"))
 
     type: str
+    id: UUID
 
     @model_validator(mode="before")
     @classmethod

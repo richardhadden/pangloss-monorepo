@@ -1,12 +1,30 @@
 import datetime
 import typing
 import uuid
+from collections.abc import Iterable
 
+from more_itertools import always_iterable
+from pangloss_models.field_definitions import RelationFieldDefinition
 from pangloss_models.model_bases.base_models import _CreateDBBase
+from pangloss_models.model_bases.conjunction import _ConjunctionCreateDBBase
 from pangloss_models.model_bases.document import _DocumentCreateDBBase
 from pangloss_models.model_bases.entity import _EntityCreateDBBase
+from pangloss_models.model_bases.reified_relation import (
+    _ReifiedRelationCreateDBBase,
+    _ReifiedRelationDocumentCreateDBBase,
+)
+from pangloss_models.model_bases.semantic_space import _SemanticSpaceCreateDBBase
 from pangloss_users import current_request_username
 from pydantic import AnyUrl
+
+type _AllCreateDBModels = (
+    _DocumentCreateDBBase
+    | _EntityCreateDBBase
+    | _ReifiedRelationCreateDBBase
+    | _ReifiedRelationDocumentCreateDBBase
+    | _ConjunctionCreateDBBase
+    | _SemanticSpaceCreateDBBase
+)
 
 
 class Identifier(str):
@@ -75,7 +93,7 @@ def convert_type_for_writing(value):
 
 
 def get_node_fields_as_writable_dict(
-    instance: _DocumentCreateDBBase | _EntityCreateDBBase,
+    instance: _AllCreateDBModels,
     is_new: bool = False,
     is_head_node: bool = False,
     head_node_type: str | None = None,
@@ -105,7 +123,7 @@ def get_node_fields_as_writable_dict(
         node_data["label"] = label
     for field_name in instance._meta.fields.literal_fields:
         if value := getattr(instance, field_name):
-            node_data[field_name] = value
+            node_data[field_name] = convert_type_for_writing(value)
     return node_data
 
 
@@ -116,6 +134,59 @@ def get_label_query_string(
         [*instance._labels, *extra_labels] if extra_labels else instance._labels
     )
     return f"{':'.join(all_labels)}"
+
+
+def build_node_query(
+    query_object: QueryObject,
+    instance: _AllCreateDBModels,
+    source_identifier: Identifier,
+    head_node_type: str,
+    head_node_id: uuid.UUID,
+    field_definition: RelationFieldDefinition,
+):
+    node_identifier = Identifier()
+    instance_labels = get_label_query_string(instance, ["PGIndexableNode"])
+
+    # Transform literal fields into a writeable dict
+    node_data_dict = get_node_fields_as_writable_dict(
+        instance,
+        is_new=True,
+        is_head_node=False,
+        head_node_id=head_node_id,
+        head_node_type=head_node_type,
+    )
+
+    # Add the dict to the query params and get back an Identifier
+    node_data_identifier = query_object.params.add(node_data_dict)
+
+    query_object.create_query_strings.append(f"""
+        CREATE ({node_identifier}:{instance_labels})
+        SET {node_identifier} = ${node_data_identifier}
+    """)
+
+
+def build_attached_nodes(
+    query_object: QueryObject,
+    instance: _AllCreateDBModels,
+    instance_identifier: Identifier,
+    head_node_type: str,
+    head_node_id: uuid.UUID,
+):
+    for (
+        related_field_name,
+        related_field_def,
+    ) in instance._meta.fields.relation_fields.items():
+        if field_value := getattr(instance, related_field_name, None):
+            items = always_iterable(field_value)
+            for item in items:
+                build_node_query(
+                    query_object=query_object,
+                    instance=item,
+                    source_identifier=instance_identifier,
+                    field_definition=related_field_def,
+                    head_node_type=head_node_type,
+                    head_node_id=head_node_id,
+                )
 
 
 def build_head_create_query(
@@ -136,15 +207,20 @@ def build_head_create_query(
     node_data_dict = get_node_fields_as_writable_dict(
         instance, is_new=True, is_head_node=True
     )
-    print(instance)
-    print(node_data_dict)
+
     # Add the dict to the query params and get back an Identifier
     node_data_identifier = query_object.params.add(node_data_dict)
 
+    # Add Create and Set strings to query_object
     query_object.create_query_strings.append(f"""
         CREATE ({node_identifier}:{instance_labels})
         SET {node_identifier} = ${node_data_identifier}
 
     """)
+
+    # Attach all related nodes to the object
+    build_attached_nodes(
+        query_object, instance, node_identifier, instance.type, instance.id
+    )
 
     return query_object

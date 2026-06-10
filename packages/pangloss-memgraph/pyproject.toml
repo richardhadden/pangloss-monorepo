@@ -8,6 +8,7 @@ authors = [
 ]
 requires-python = ">=3.14"
 dependencies = [
+    "more-itertools>=11.1.0",
     "neo4j>=6.2.0",
     "pangloss-models",
     "pangloss-sdk",

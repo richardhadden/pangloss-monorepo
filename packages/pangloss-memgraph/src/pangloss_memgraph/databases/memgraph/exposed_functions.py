@@ -57,8 +57,10 @@ async def get_document(
 
 
 @Database.default.write_transaction
-async def create_document(
-    tx: Transaction, instance: _DocumentCreateBase
+async def create_head_node(
+    tx: Transaction,
+    instance: _DocumentCreateBase,
+    return_created: bool = False,
 ) -> _DocumentHeadViewBase | None:
     db_instance = instance._to_db_model()
     query_object = build_head_create_query(db_instance)

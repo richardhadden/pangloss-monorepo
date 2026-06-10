@@ -47,5 +47,5 @@ def get_document(cls: type[Document], id: UUID | AnyHttpUrl) -> _DocumentHeadVie
     )
 
 
-def create_document(self: _DocumentCreateBase):
+def create_head_node(self: _DocumentCreateBase, return_created: bool = False):
     pass

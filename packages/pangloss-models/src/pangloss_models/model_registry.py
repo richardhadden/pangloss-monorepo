@@ -246,6 +246,7 @@ class ModelRegistry:
             initialise_view_model,
         )
         from pangloss_models.model_bases.document import Document, _DocumentCreateBase
+        from pangloss_models.model_bases.entity import _EntityCreateBase
 
         graph = cls._build_graph()
         order, cyclic = cls._toposort(graph)
@@ -332,20 +333,30 @@ class ModelRegistry:
             Document.get = classmethod(get_document_function_sync)  # type: ignore
 
         is_async = iscoroutinefunction(
-            database_exposed_functions_module.create_document
+            database_exposed_functions_module.create_head_node
         )
         if is_async:
 
-            async def create_document_function_async(self: _DocumentCreateBase):
-                return await database_exposed_functions_module.create_document(self)
+            async def create_head_node_function_async(
+                self: _DocumentCreateBase, return_created: bool = False
+            ):
+                return await database_exposed_functions_module.create_head_node(
+                    self, return_created
+                )
 
-            _DocumentCreateBase.save = create_document_function_async  # type: ignore
+            _DocumentCreateBase.save = create_head_node_function_async  # type: ignore
+            _EntityCreateBase.save = create_head_node_function_async  # type: ignore
         else:
 
-            def create_document_function_sync(self: _DocumentCreateBase):
-                return database_exposed_functions_module.create_document(self)
+            def create_head_node_function_sync(
+                self: _DocumentCreateBase, return_created: bool = False
+            ):
+                return database_exposed_functions_module.create_head_node(
+                    self, return_created
+                )
 
-            _DocumentCreateBase.save = create_document_function_sync  # type: ignore
+            _DocumentCreateBase.save = create_head_node_function_sync  # type: ignore
+            _EntityCreateBase.save = create_head_node_function_sync  # type: ignore
         """
         def save_func_for_create(self):
             print(f"Using database {database}")
