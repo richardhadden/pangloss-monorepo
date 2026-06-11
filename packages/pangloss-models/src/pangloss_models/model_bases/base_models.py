@@ -14,6 +14,7 @@ from typing import (
 )
 from uuid import UUID, uuid7
 
+import neo4j
 from pydantic import (
     BaseModel,
     ConfigDict,
@@ -462,6 +463,22 @@ class _CreateDBBase(_ActionClass):
 class _ViewBase(_ActionClass):
     id: UUID
 
+    @model_validator(mode="before")
+    @classmethod
+    def convert_neo4j_types(cls, data: Any) -> Any:
+        return convert_neo4j_datetimes(data)
+
+
+def convert_neo4j_datetimes(data: Any) -> Any:
+    """Recursively convert neo4j DateTime objects in a dict."""
+    if isinstance(data, dict):
+        return {k: convert_neo4j_datetimes(v) for k, v in data.items()}
+    if isinstance(data, list):
+        return [convert_neo4j_datetimes(v) for v in data]
+    if isinstance(data, neo4j.time.DateTime):
+        return data.to_native()
+    return data
+
 
 class _APIHeadMeta(_BaseObject):
     created_by: str
@@ -469,10 +486,20 @@ class _APIHeadMeta(_BaseObject):
     updated_by: str
     updated_when: datetime.datetime
 
+    @model_validator(mode="before")
+    @classmethod
+    def convert_neo4j_types(cls, data: Any) -> Any:
+        return convert_neo4j_datetimes(data)
+
 
 class _HeadViewBase(_ActionClass):
     id: UUID
     meta: _APIHeadMeta
+
+    @model_validator(mode="before")
+    @classmethod
+    def convert_neo4j_types(cls, data: Any) -> Any:
+        return convert_neo4j_datetimes(data)
 
 
 class _UpdateBase(_ActionClass):

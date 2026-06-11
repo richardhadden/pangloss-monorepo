@@ -91,3 +91,49 @@ async def test_write_entity():
     result = await p.save()
 
     assert result.label == "John Smith"
+
+
+@no_type_check
+async def test_write_existing_related_entity():
+    class Person(Entity):
+        pass
+
+    class Statement(Document):
+        concerns_person: Person
+
+    initialise()
+
+    p_to_create = Person.Create(label="John Smith")
+    p_created = await p_to_create.save()
+    assert p_created.id
+
+    st = Statement.Create(
+        label="A Statement", concerns_person={"type": "Person", "id": p_created.id}
+    )
+
+    await st.save()
+
+    # TODO: actually test this!
+
+
+@no_type_check
+async def test_write_with_relation_to_new_entity():
+    class Person(Entity):
+        _meta = Entity.Meta(create_inline=True, create_with_id=True)
+
+    class Statement(Document):
+        concerns_person: Person
+
+    initialise()
+
+    st = Statement.Create(
+        label="A Statement",
+        concerns_person={
+            "id": uuid7(),
+            "type": "Person",
+            "label": "John Smith",
+            "create_new": True,
+        },
+    )
+
+    await st.save()

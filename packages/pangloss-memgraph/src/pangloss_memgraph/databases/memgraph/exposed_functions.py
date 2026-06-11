@@ -1,4 +1,6 @@
 import datetime
+import functools
+import time
 from typing import TYPE_CHECKING, overload
 from uuid import UUID, uuid7
 
@@ -29,6 +31,18 @@ from pangloss_memgraph.databases.memgraph.build_create_query import (
 from pangloss_memgraph.databases.memgraph.database import Database, Transaction
 
 
+def timer(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        start = time.perf_counter()
+        result = func(*args, **kwargs)
+        end = time.perf_counter()
+        print(f"{func.__name__} took {end - start:.12f}s")
+        return result
+
+    return wrapper
+
+
 def save(
     tx,
     self: _EntityCreateDBBase
@@ -57,6 +71,7 @@ async def get_document(
 
 
 @Database.default.write_transaction
+@timer
 async def create_head_node(
     tx: Transaction,
     instance: _DocumentCreateBase,
@@ -70,4 +85,8 @@ async def create_head_node(
 
     result = await tx.run(query_object.to_query_string(), **query_object.params)
     result_value = await result.value()
-    return instance._owner.HeadView(**result_value[0])
+
+    try:
+        return instance._owner.HeadView(**result_value[0])
+    except:
+        return None

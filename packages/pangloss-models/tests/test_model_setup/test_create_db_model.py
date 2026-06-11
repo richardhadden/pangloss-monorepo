@@ -1,5 +1,4 @@
 import datetime
-from ast import Sub
 from types import UnionType
 from typing import Annotated, Literal, get_args, get_origin, no_type_check
 from uuid import UUID, uuid7
@@ -9,7 +8,6 @@ from annotated_types import Gt, MinLen
 from pangloss_models import initialise
 from pangloss_models.exceptions import PanglossMetaError
 from pangloss_models.field_definitions import (
-    FieldBinding,
     FieldSubclassing,
     ListFieldDefinition,
     LiteralFieldDefinition,

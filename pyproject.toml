@@ -10,8 +10,10 @@ members = [
 
 [tool.pytest.ini_options]
 testpaths = ["packages"]
-
 asyncio_default_fixture_loop_scope = "session"
+
+[tool.ruff]
+target-version = "py314"
 
 [dependency-groups]
 dev = [

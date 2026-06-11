@@ -195,6 +195,29 @@ def test_build_base_create_model_for_reified_relation():
 
 
 @no_type_check
+def test_create_with_a_created_subobject():
+    class Person(Entity):
+        _meta = Entity.Meta(create_inline=True, create_with_id=True)
+
+    class Statement(Document):
+        concerns_person: Person
+
+    initialise()
+
+    st = Statement.Create(
+        label="A Statement",
+        concerns_person={
+            "id": uuid7(),
+            "type": "Person",
+            "label": "John Smith",
+            "create_new": True,
+        },
+    )
+
+    assert isinstance(st.concerns_person, Person.Create)
+
+
+@no_type_check
 def test_add_fields_to_document_create_model():
     class Statement(Document):
         name: str

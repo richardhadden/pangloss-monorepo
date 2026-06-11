@@ -4,10 +4,15 @@ import uuid
 from collections.abc import Iterable
 
 from more_itertools import always_iterable
-from pangloss_models.field_definitions import RelationFieldDefinition
-from pangloss_models.model_bases.base_models import _CreateDBBase
+from pangloss_models.field_definitions import (
+    FieldDefinition,
+    FieldSubclassing,
+    RelationFieldDefinition,
+)
+from pangloss_models.model_bases.base_models import _CreateDBBase, _ReferenceSetBase
 from pangloss_models.model_bases.conjunction import _ConjunctionCreateDBBase
 from pangloss_models.model_bases.document import _DocumentCreateDBBase
+from pangloss_models.model_bases.embedded import _EmbeddedCreateDBBase
 from pangloss_models.model_bases.entity import _EntityCreateDBBase
 from pangloss_models.model_bases.reified_relation import (
     _ReifiedRelationCreateDBBase,
@@ -24,6 +29,7 @@ type _AllCreateDBModels = (
     | _ReifiedRelationDocumentCreateDBBase
     | _ConjunctionCreateDBBase
     | _SemanticSpaceCreateDBBase
+    | _EmbeddedCreateDBBase
 )
 
 
@@ -110,9 +116,9 @@ def get_node_fields_as_writable_dict(
     if is_new:
         node_data["meta"] = {
             "created_by": current_request_username.get(),
-            "created_when": str(datetime.datetime.now()),
+            "created_when": datetime.datetime.now(),
             "updated_by": current_request_username.get(),
-            "updated_when": str(datetime.datetime.now()),
+            "updated_when": datetime.datetime.now(),
         }
 
     if not is_head_node:
@@ -136,7 +142,7 @@ def get_label_query_string(
     return f"{':'.join(all_labels)}"
 
 
-def build_node_query(
+def build_related_node_query(
     query_object: QueryObject,
     instance: _AllCreateDBModels,
     source_identifier: Identifier,
@@ -161,8 +167,34 @@ def build_node_query(
 
     query_object.create_query_strings.append(f"""
         CREATE ({node_identifier}:{instance_labels})
+        CREATE ({source_identifier})-[:{field_definition.field_name}]->({node_identifier})
+        CREATE ({source_identifier})<-[:{field_definition.reverse_name}]-({node_identifier})
         SET {node_identifier} = ${node_data_identifier}
     """)
+
+
+def build_relation_query(
+    query_object: QueryObject,
+    instance: _ReferenceSetBase,
+    source_identifier: Identifier,
+    field_definition: RelationFieldDefinition,
+):
+
+    instance_identifier = Identifier()
+    id_identifier = query_object.params.add(str(instance.id))
+    query_object.match_query_strings.append(
+        f"""MATCH ({instance_identifier}:PGIndexableNode {{id: ${id_identifier}}})"""
+    )
+    query_object.create_query_strings.append(f"""
+        CREATE ({source_identifier})-[:{field_definition.field_name}]->({instance_identifier})
+        CREATE ({source_identifier})<-[:{field_definition.reverse_name}]-({instance_identifier})
+    """)
+
+    """ TODO: add subclassed fields
+    for subclasses_field in field_definition.subclasses_parent_fields:
+        assert isinstance(subclasses_field, FieldSubclassing)
+        subclasses_field.field_name
+    """
 
 
 def build_attached_nodes(
@@ -177,16 +209,31 @@ def build_attached_nodes(
         related_field_def,
     ) in instance._meta.fields.relation_fields.items():
         if field_value := getattr(instance, related_field_name, None):
-            items = always_iterable(field_value)
+            # Todo: check this actually works properly;
+            #
+            if isinstance(field_value, list):
+                items = field_value
+            else:
+                items = [field_value]
+
             for item in items:
-                build_node_query(
-                    query_object=query_object,
-                    instance=item,
-                    source_identifier=instance_identifier,
-                    field_definition=related_field_def,
-                    head_node_type=head_node_type,
-                    head_node_id=head_node_id,
-                )
+                match item:
+                    case _CreateDBBase():
+                        build_related_node_query(
+                            query_object=query_object,
+                            instance=typing.cast(_AllCreateDBModels, item),
+                            source_identifier=instance_identifier,
+                            field_definition=related_field_def,
+                            head_node_type=head_node_type,
+                            head_node_id=head_node_id,
+                        )
+                    case _ReferenceSetBase():
+                        build_relation_query(
+                            query_object=query_object,
+                            instance=item,
+                            source_identifier=instance_identifier,
+                            field_definition=related_field_def,
+                        )
 
 
 def build_head_create_query(

@@ -486,7 +486,7 @@ def add_fields_to_create_db_model(
             model.CreateDB.model_fields[field_name] = FieldInfo(
                 annotation=(annotation | None) if optional else annotation,  # type: ignore
                 validation_alias=to_camel(field_name),
-                discriminator="type" if not field_definition.wrapper else None,
+                # discriminator="type" if not field_definition.wrapper else None,
                 **map_validators_to_kwargs(field_definition.validators),
             )
 
