@@ -350,15 +350,11 @@ async def test_massive_write():
 
     initialise()
 
-    ids = []
-    for i in range(300):
-        p = Person.Create(label=f"John Smith {i}")
-        p_in_db = await p.save()
-        ids.append(p_in_db.id)
-
     action = Action.Create(
         label="An Action",
-        action_carried_out_by=[{"type": "Person", "id": i} for i in ids],
+        action_carried_out_by=[
+            {"type": "Person", "id": uuid7(), "create_new": True} for _ in range(1000)
+        ],
     )
 
     await action.save()

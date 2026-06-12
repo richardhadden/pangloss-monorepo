@@ -60,6 +60,7 @@ class QueryObject:
     return_identifier: Identifier
     head_id: uuid.UUID
     head_type: str | None
+    with_statement_stack: list[Identifier]
 
     def __init__(self, head_id: uuid.UUID, head_type: str):
         self.match_query_strings = []
@@ -69,6 +70,7 @@ class QueryObject:
         self.params = QueryParams()
         self.head_type = head_type
         self.head_id = head_id
+        self.with_statement_stack = []
 
     def to_query_string(self) -> typing.LiteralString:
         if not self.return_identifier:
@@ -200,6 +202,7 @@ def build_related_node_query(
 ):
 
     node_identifier = Identifier()
+
     instance_labels = get_label_query_string(instance, ["PGIndexableNode"])
 
     # Transform literal fields into a writeable dict
@@ -221,6 +224,7 @@ def build_related_node_query(
     reverse_query_identifier = Identifier()
 
     query_object.create_query_strings.append(f"""
+        WITH {", ".join(query_object.with_statement_stack)}
         MERGE ({node_identifier}:{instance_labels} {{id: ${node_id_identifier}}})
         ON CREATE SET {node_identifier} = ${node_data_identifier}
         CREATE ({source_identifier})-[{forward_query_identifier}:{field_definition.field_name}]->({node_identifier})
@@ -255,6 +259,7 @@ def build_related_node_query(
                 SET {reverse_query_identifier} = ${edge_properties_identifier}
             """)
 
+    query_object.with_statement_stack.append(node_identifier)
     # Attach all related nodes to the object
     build_attached_nodes(
         query_object=query_object,
@@ -263,6 +268,7 @@ def build_related_node_query(
         head_node_type=head_node_type,
         head_node_id=head_node_id,
     )
+    query_object.with_statement_stack.pop()
 
 
 def build_relation_to_existing_query(
@@ -280,14 +286,17 @@ def build_relation_to_existing_query(
     instance_identifier = Identifier()
     id_identifier = query_object.params.add(str(instance.id))
     allowed_types_identifier = query_object.params.add(allowed_types)
-    query_object.match_query_strings.append(
-        f"""MATCH ({instance_identifier}:PGIndexableNode {{id: ${id_identifier}}})
-            WHERE ANY(label IN labels({instance_identifier}) WHERE label IN ${allowed_types_identifier})
-        """
-    )
+    # query_object.match_query_strings.append(
+    #    f"""MATCH ({instance_identifier}:PGIndexableNode {{id: ${id_identifier}}})
+    #        WHERE ANY(label IN labels({instance_identifier}) WHERE label IN ${allowed_types_identifier})
+    #    """
+    # )
     forward_query_identifier = Identifier()
     reverse_query_identifier = Identifier()
     query_object.create_query_strings.append(f"""
+        WITH {", ".join(query_object.with_statement_stack)}
+        MATCH ({instance_identifier}:PGIndexableNode {{id: ${id_identifier}}})
+            WHERE ANY(label IN labels({instance_identifier}) WHERE label IN ${allowed_types_identifier})
         CREATE ({source_identifier})-[{forward_query_identifier}:{field_definition.field_name}]->({instance_identifier})
         CREATE ({source_identifier})<-[{reverse_query_identifier}:{field_definition.reverse_name}]-({instance_identifier})
     """)
@@ -332,6 +341,8 @@ def build_head_create_query(
 
     # Create an Identifier for the node
     node_identifier = Identifier()
+    query_object.with_statement_stack.append(node_identifier)
+
     query_object.return_identifier = node_identifier
 
     # Map labels to a Cypher string
@@ -356,5 +367,7 @@ def build_head_create_query(
     build_attached_nodes(
         query_object, instance, node_identifier, instance.type, instance.id
     )
+
+    query_object.with_statement_stack.pop()
 
     return query_object
