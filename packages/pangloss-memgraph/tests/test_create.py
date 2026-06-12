@@ -126,7 +126,7 @@ async def test_write_existing_related_entity(db_driver, clear_database):
 
 
 @no_type_check
-async def test_write_with_relation_to_new_entity(db_driver):
+async def test_write_with_relation_to_new_entity(db_driver, clear_database):
     class Person(Entity):
         _meta = Entity.Meta(create_inline=True, create_with_id=True)
 
@@ -151,7 +151,6 @@ async def test_write_with_relation_to_new_entity(db_driver):
 
     assert isinstance(st_db.concerns_person, Person.CreateDB)
 
-    """
     await st.save()
 
     records, summary, keys = db_driver.execute_query(
@@ -164,4 +163,41 @@ async def test_write_with_relation_to_new_entity(db_driver):
     assert data["p"]["label"] == "John Smith"
     assert data["st"]["label"] == "A Statement"
     assert data["r"][1] == "concerns_person"
-    """
+    assert data["p"]["head_node_id"] == data["st"]["id"]
+
+
+@no_type_check
+async def test_we_can_match_id_with_wrong_type_as_long_as_its_allowed(db_driver):
+    class Person(Entity):
+        pass
+
+    class Dude(Entity):
+        pass
+
+    class Statement(Document):
+        concerns_person: Person | Dude
+
+    initialise()
+
+    p_to_create = Person.Create(label="John Smith")
+    p_created = await p_to_create.save()
+    assert p_created.id
+
+    st = Statement.Create(
+        # type of concerned person is deliberately wrong!
+        label="A Statement",
+        concerns_person={"type": "Dude", "id": p_created.id},
+    )
+
+    await st.save()
+
+    records, summary, keys = db_driver.execute_query(
+        "MATCH (st:Statement)-[r:concerns_person]->(p:Person) RETURN st, r, p"
+    )
+
+    data = records[0].data()
+    assert data
+
+    assert data["p"]["label"] == "John Smith"
+    assert data["st"]["label"] == "A Statement"
+    assert data["r"][1] == "concerns_person"

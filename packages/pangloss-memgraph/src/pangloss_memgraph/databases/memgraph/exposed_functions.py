@@ -1,5 +1,6 @@
 import datetime
 import functools
+import json
 import time
 from typing import TYPE_CHECKING, overload
 from uuid import UUID, uuid7
@@ -81,7 +82,10 @@ async def create_head_node(
     query_object = build_head_create_query(db_instance)
 
     with open(".query_dumps/create.cypher", "w") as f:
-        f.write(query_object.to_query_string())
+        f.write(f"""{query_object.to_query_string()}
+
+            // {str(query_object.params)}
+            """)
 
     result = await tx.run(query_object.to_query_string(), **query_object.params)
     result_value = await result.value()

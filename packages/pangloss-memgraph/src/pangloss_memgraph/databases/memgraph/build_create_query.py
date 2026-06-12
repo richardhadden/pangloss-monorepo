@@ -9,6 +9,8 @@ from pangloss_models.field_definitions import (
     FieldDefinition,
     FieldSubclassing,
     RelationFieldDefinition,
+    RelationToDocument,
+    RelationToEntity,
 )
 from pangloss_models.model_bases.base_models import _CreateDBBase, _ReferenceSetBase
 from pangloss_models.model_bases.conjunction import _ConjunctionCreateDBBase
@@ -47,7 +49,7 @@ class QuerySubstring(str):
 class QueryParams(dict[Identifier, dict[str, typing.Any] | typing.Any]):
     def add(self, item: dict[str, typing.Any] | typing.Any) -> Identifier:
         identifier = Identifier()
-        self.__setitem__(identifier, item)
+        self.__setitem__(identifier, convert_type_for_writing(item))
         return identifier
 
 
@@ -114,7 +116,7 @@ def get_node_fields_as_writable_dict(
 
     # If it's new, we can create the whole meta object; otherwise, must be
     # updated granularly to preserve the created_by/created_when
-    if is_new:
+    if is_new and is_head_node:
         node_data["meta"] = {
             "created_by": current_request_username.get(),
             "created_when": datetime.datetime.now(),
@@ -124,7 +126,7 @@ def get_node_fields_as_writable_dict(
 
     if not is_head_node:
         node_data["head_node_type"] = head_node_type
-        node_data["head_node_id"] = head_node_id
+        node_data["head_node_id"] = str(head_node_id)
 
     if label := getattr(instance, "label"):
         node_data["label"] = label
@@ -151,7 +153,7 @@ def build_related_node_query(
     head_node_id: uuid.UUID,
     field_definition: RelationFieldDefinition,
 ):
-    print("HERE")
+
     node_identifier = Identifier()
     instance_labels = get_label_query_string(instance, ["PGIndexableNode"])
 
@@ -165,7 +167,7 @@ def build_related_node_query(
     )
 
     # Add the node id identifier to params and get back an Identifier
-    node_id_identifier = query_object.params.add(instance.id)
+    node_id_identifier = query_object.params.add(str(instance.id))
 
     # Add the dict to the query params and get back an Identifier
     node_data_identifier = query_object.params.add(node_data_dict)
@@ -179,17 +181,25 @@ def build_related_node_query(
     """)
 
 
-def build_relation_query(
+def build_relation_to_existing_query(
     query_object: QueryObject,
     instance: _ReferenceSetBase,
     source_identifier: Identifier,
     field_definition: RelationFieldDefinition,
 ):
-    print("build_relation_query called")
+    allowed_types = [
+        type_option.annotated_type.__name__
+        for type_option in field_definition.type_options
+        if isinstance(type_option, (RelationToEntity, RelationToDocument))
+    ]
+
     instance_identifier = Identifier()
     id_identifier = query_object.params.add(str(instance.id))
+    allowed_types_identifier = query_object.params.add(allowed_types)
     query_object.match_query_strings.append(
-        f"""MATCH ({instance_identifier}:PGIndexableNode {{id: ${id_identifier}}})"""
+        f"""MATCH ({instance_identifier}:PGIndexableNode {{id: ${id_identifier}}})
+            WHERE ANY(label IN labels({instance_identifier}) WHERE label IN ${allowed_types_identifier})
+        """
     )
     query_object.create_query_strings.append(f"""
         CREATE ({source_identifier})-[:{field_definition.field_name}]->({instance_identifier})
@@ -235,7 +245,7 @@ def build_attached_nodes(
                             head_node_id=head_node_id,
                         )
                     case _ReferenceSetBase():
-                        build_relation_query(
+                        build_relation_to_existing_query(
                             query_object=query_object,
                             instance=item,
                             source_identifier=instance_identifier,
