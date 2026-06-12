@@ -5,7 +5,6 @@ from typing import Annotated, Optional, TypeVar, get_args, get_origin
 
 import pytest
 from annotated_types import MaxLen
-
 from pangloss_models import initialise
 from pangloss_models.exceptions import PanglossModelError
 from pangloss_models.field_definitions import (
@@ -469,13 +468,16 @@ def test_build_relation_field_definition_with_annotation_list():
 
 
 def test_build_relation_field_with_relation_to_document():
+    class Action(Document):
+        person: Person
+
     class Statement(Document):
         action_carried_out: Annotated[
             Action,
             RelationConfig(reverse_name="was carried out in"),
         ]
 
-    class Action(Document):
+    class Person(Entity):
         pass
 
     initialise()
@@ -2041,3 +2043,22 @@ def test_incoming_relation_via_embedded():
             via_reified=True,
         )
     ]
+
+
+def test_relation_to_document_in_non_functioning_order():
+    """Later testing revealed an initialisation order that may not work"""
+
+    class Action(Document):
+        action_carried_out_by: Person
+
+    class Person(Entity):
+        pass
+
+    class Order(Document):
+        ordered_by: Person
+        order_received_by: Person
+        thing_ordered: Action
+
+    initialise()
+
+    assert Order._meta.fields["thing_ordered"]

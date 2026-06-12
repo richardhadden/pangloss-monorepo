@@ -38,7 +38,7 @@ def timer(func):
         start = time.perf_counter()
         result = await func(*args, **kwargs)
         end = time.perf_counter()
-        print(f"{func.__name__} took {end - start:.12f}s")
+        print(f"{func.__name__} took {end - start:.12f}s : {kwargs}")
         return result
 
     return wrapper

@@ -1,10 +1,16 @@
+from argparse import Action
 from inspect import iscoroutinefunction
+from typing import Annotated
 from uuid import uuid7
 
 import pytest
 from pangloss_models import initialise
+from pangloss_models.field_definitions import FieldSubclassing
+from pangloss_models.model_bases.configs import RelationConfig
 from pangloss_models.model_bases.document import Document
+from pangloss_models.model_bases.edge_model import EdgeModel
 from pangloss_models.model_bases.entity import Entity
+from pangloss_models.model_bases.helpers import ViaEdge
 from pangloss_users import current_request_username
 from typing_extensions import no_type_check
 
@@ -167,7 +173,9 @@ async def test_write_with_relation_to_new_entity(db_driver, clear_database):
 
 
 @no_type_check
-async def test_we_can_match_id_with_wrong_type_as_long_as_its_allowed(db_driver):
+async def test_we_can_match_id_with_wrong_type_as_long_as_its_allowed(
+    db_driver, clear_database
+):
     class Person(Entity):
         pass
 
@@ -201,3 +209,132 @@ async def test_we_can_match_id_with_wrong_type_as_long_as_its_allowed(db_driver)
     assert data["p"]["label"] == "John Smith"
     assert data["st"]["label"] == "A Statement"
     assert data["r"][1] == "concerns_person"
+
+
+@no_type_check
+async def test_write_subclassed_edges(db_driver, clear_database):
+    class Person(Entity):
+        pass
+
+    class Statement(Document):
+        concerns_person: Person
+
+    class Action(Statement):
+        carried_out_by: Annotated[
+            Person,
+            RelationConfig(
+                subclasses_parent_fields=[
+                    FieldSubclassing(
+                        field_name="concerns_person", field_on_model=Statement
+                    )
+                ]
+            ),
+        ]
+
+    initialise()
+
+    p_to_create = Person.Create(label="John Smith")
+    p_created = await p_to_create.save()
+    assert p_created.id
+
+    ac = Action.Create(
+        # type of concerned person is deliberately wrong!
+        label="An Action",
+        carried_out_by={"type": "Person", "id": p_created.id},
+    )
+
+    await ac.save()
+
+    records, summary, keys = db_driver.execute_query(f"""
+        MATCH (st:Action)-[r:carried_out_by]->(p:Person {{id: "{str(p_created.id)}"}})
+        MATCH (st)-[:concerns_person]->(p)
+        MATCH (st)<-[:carried_out_by_reverse]-(p)
+        MATCH (st)<-[:concerns_person_reverse]-(p)
+        RETURN st, r, p
+
+        """)
+    data = records[0].data()
+    assert data["p"]
+    assert data["st"]
+
+
+@no_type_check
+async def test_write_edge_properties(db_driver, clear_database):
+    class SomeEdge(EdgeModel):
+        number: int
+
+    class Person(Entity):
+        pass
+
+    class Statement(Document):
+        concerns_person: ViaEdge[Person, SomeEdge]
+
+    initialise()
+
+    p_to_create = Person.Create(label="John Smith")
+    p_created = await p_to_create.save()
+    assert p_created.id
+
+    st = Statement.Create(
+        label="A Statement",
+        concerns_person={
+            "type": "Person",
+            "id": p_created.id,
+            "edge_properties": {"number": 1},
+        },
+    )
+
+    await st.save()
+
+
+@no_type_check
+async def test_write_nested_statements(db_driver):
+    class Action(Document):
+        action_carried_out_by: Person
+
+    class Order(Document):
+        order_given_by: Person
+        order_received_by: Person
+        thing_ordered: Action
+
+    class Person(Entity):
+        pass
+
+    initialise()
+
+    js = Person.Create(label="John Smith")
+    john_smith = await js.save()
+    assert john_smith.id
+
+    km = Person.Create(label="Kaiser Maximilian")
+    kaiser_maximilian = await km.save()
+    assert kaiser_maximilian.id
+
+    order = Order.Create(
+        label="An Order",
+        order_given_by={"type": "Person", "id": kaiser_maximilian.id},
+        order_received_by={"type": "Person", "id": john_smith.id},
+        thing_ordered={
+            "type": "Action",
+            "label": "An Action",
+            "action_carried_out_by": {"type": "Person", "id": john_smith.id},
+        },
+    )
+
+    await order.save()
+
+    records, summary, keys = db_driver.execute_query("""
+        MATCH (order:Order)-[:order_given_by]->(km:Person)
+        MATCH (order)-[:order_received_by]->(js:Person)
+        MATCH (order)-[:thing_ordered]->(action:Action)-[:action_carried_out_by]->(js)
+
+        RETURN order, action, km, js
+
+        """)
+
+    data = records[0].data()
+
+    assert data["order"]
+    assert data["action"]
+    assert data["km"]
+    assert data["js"]

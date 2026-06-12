@@ -1,12 +1,9 @@
 import datetime
 import typing
 import uuid
-from collections.abc import Iterable
+from typing import Any
 
-from more_itertools import always_iterable
-from neo4j._work import query
 from pangloss_models.field_definitions import (
-    FieldDefinition,
     FieldSubclassing,
     RelationFieldDefinition,
     RelationToDocument,
@@ -15,6 +12,7 @@ from pangloss_models.field_definitions import (
 from pangloss_models.model_bases.base_models import _CreateDBBase, _ReferenceSetBase
 from pangloss_models.model_bases.conjunction import _ConjunctionCreateDBBase
 from pangloss_models.model_bases.document import _DocumentCreateDBBase
+from pangloss_models.model_bases.edge_model import EdgeModel
 from pangloss_models.model_bases.embedded import _EmbeddedCreateDBBase
 from pangloss_models.model_bases.entity import _EntityCreateDBBase
 from pangloss_models.model_bases.reified_relation import (
@@ -101,6 +99,13 @@ def convert_type_for_writing(value):
             return value
 
 
+def convert_edge_properties_for_writing(edge_properties: EdgeModel) -> dict[str, Any]:
+    edge_properties_dict = edge_properties.model_dump()
+    for k, v in edge_properties_dict.items():
+        edge_properties_dict[k] = convert_type_for_writing(v)
+    return edge_properties_dict
+
+
 def get_node_fields_as_writable_dict(
     instance: _AllCreateDBModels,
     is_new: bool = False,
@@ -116,7 +121,7 @@ def get_node_fields_as_writable_dict(
 
     # If it's new, we can create the whole meta object; otherwise, must be
     # updated granularly to preserve the created_by/created_when
-    if is_new and is_head_node:
+    if is_new:
         node_data["meta"] = {
             "created_by": current_request_username.get(),
             "created_when": datetime.datetime.now(),
@@ -145,74 +150,6 @@ def get_label_query_string(
     return f"{':'.join(all_labels)}"
 
 
-def build_related_node_query(
-    query_object: QueryObject,
-    instance: _AllCreateDBModels,
-    source_identifier: Identifier,
-    head_node_type: str,
-    head_node_id: uuid.UUID,
-    field_definition: RelationFieldDefinition,
-):
-
-    node_identifier = Identifier()
-    instance_labels = get_label_query_string(instance, ["PGIndexableNode"])
-
-    # Transform literal fields into a writeable dict
-    node_data_dict = get_node_fields_as_writable_dict(
-        instance,
-        is_new=True,
-        is_head_node=False,
-        head_node_id=head_node_id,
-        head_node_type=head_node_type,
-    )
-
-    # Add the node id identifier to params and get back an Identifier
-    node_id_identifier = query_object.params.add(str(instance.id))
-
-    # Add the dict to the query params and get back an Identifier
-    node_data_identifier = query_object.params.add(node_data_dict)
-
-    query_object.create_query_strings.append(f"""
-        MERGE ({node_identifier}:{instance_labels} {{id: ${node_id_identifier}}})
-        ON CREATE SET {node_identifier} = ${node_data_identifier}
-        CREATE ({source_identifier})-[:{field_definition.field_name}]->({node_identifier})
-        CREATE ({source_identifier})<-[:{field_definition.reverse_name}]-({node_identifier})
-
-    """)
-
-
-def build_relation_to_existing_query(
-    query_object: QueryObject,
-    instance: _ReferenceSetBase,
-    source_identifier: Identifier,
-    field_definition: RelationFieldDefinition,
-):
-    allowed_types = [
-        type_option.annotated_type.__name__
-        for type_option in field_definition.type_options
-        if isinstance(type_option, (RelationToEntity, RelationToDocument))
-    ]
-
-    instance_identifier = Identifier()
-    id_identifier = query_object.params.add(str(instance.id))
-    allowed_types_identifier = query_object.params.add(allowed_types)
-    query_object.match_query_strings.append(
-        f"""MATCH ({instance_identifier}:PGIndexableNode {{id: ${id_identifier}}})
-            WHERE ANY(label IN labels({instance_identifier}) WHERE label IN ${allowed_types_identifier})
-        """
-    )
-    query_object.create_query_strings.append(f"""
-        CREATE ({source_identifier})-[:{field_definition.field_name}]->({instance_identifier})
-        CREATE ({source_identifier})<-[:{field_definition.reverse_name}]-({instance_identifier})
-    """)
-
-    """ TODO: add subclassed fields
-    for subclasses_field in field_definition.subclasses_parent_fields:
-        assert isinstance(subclasses_field, FieldSubclassing)
-        subclasses_field.field_name
-    """
-
-
 def build_attached_nodes(
     query_object: QueryObject,
     instance: _AllCreateDBModels,
@@ -220,6 +157,7 @@ def build_attached_nodes(
     head_node_type: str,
     head_node_id: uuid.UUID,
 ):
+    print("calling build attached nodes with ", instance)
     for (
         related_field_name,
         related_field_def,
@@ -253,9 +191,145 @@ def build_attached_nodes(
                         )
 
 
+def build_related_node_query(
+    query_object: QueryObject,
+    instance: _AllCreateDBModels,
+    source_identifier: Identifier,
+    head_node_type: str,
+    head_node_id: uuid.UUID,
+    field_definition: RelationFieldDefinition,
+):
+    print(">> calling build related node query with", instance)
+
+    node_identifier = Identifier()
+    instance_labels = get_label_query_string(instance, ["PGIndexableNode"])
+
+    # Transform literal fields into a writeable dict
+    node_data_dict = get_node_fields_as_writable_dict(
+        instance,
+        is_new=True,
+        is_head_node=False,
+        head_node_id=head_node_id,
+        head_node_type=head_node_type,
+    )
+
+    # Add the node id identifier to params and get back an Identifier
+    node_id_identifier = query_object.params.add(str(instance.id))
+
+    # Add the dict to the query params and get back an Identifier
+    node_data_identifier = query_object.params.add(node_data_dict)
+
+    forward_query_identifier = Identifier()
+    reverse_query_identifier = Identifier()
+
+    query_object.create_query_strings.append(f"""
+        MERGE ({node_identifier}:{instance_labels} {{id: ${node_id_identifier}}})
+        ON CREATE SET {node_identifier} = ${node_data_identifier}
+        CREATE ({source_identifier})-[{forward_query_identifier}:{field_definition.field_name}]->({node_identifier})
+        CREATE ({source_identifier})<-[{reverse_query_identifier}:{field_definition.reverse_name}]-({node_identifier})
+
+    """)
+    edge_properties_identifier: Identifier | None = None
+
+    if edge_properties := getattr(instance, "edge_properties", None):
+        edge_properties_identifier = query_object.params.add(
+            convert_edge_properties_for_writing(edge_properties)
+        )
+        query_object.create_query_strings.append(f"""
+            SET {forward_query_identifier} = ${edge_properties_identifier}
+            SET {reverse_query_identifier} = ${edge_properties_identifier}
+        """)
+
+    for subclasses_field in field_definition.subclasses_parent_fields:
+        assert isinstance(subclasses_field, FieldSubclassing)
+        reverse_name = subclasses_field.field_on_model._meta.fields.relation_fields[
+            subclasses_field.field_name
+        ].reverse_name
+        forward_query_identifier = Identifier()
+        reverse_query_identifier = Identifier()
+        query_object.create_query_strings.append(f"""
+            CREATE ({source_identifier})-[{forward_query_identifier}:{subclasses_field.field_name}]->({node_identifier})
+            CREATE ({source_identifier})<-[{reverse_query_identifier}:{reverse_name}]-({node_identifier})
+        """)
+        if edge_properties_identifier:
+            query_object.create_query_strings.append(f"""
+                SET {forward_query_identifier} = ${edge_properties_identifier}
+                SET {reverse_query_identifier} = ${edge_properties_identifier}
+            """)
+
+    # Attach all related nodes to the object
+    build_attached_nodes(
+        query_object=query_object,
+        instance=instance,
+        instance_identifier=node_identifier,
+        head_node_type=head_node_type,
+        head_node_id=head_node_id,
+    )
+
+
+def build_relation_to_existing_query(
+    query_object: QueryObject,
+    instance: _ReferenceSetBase,
+    source_identifier: Identifier,
+    field_definition: RelationFieldDefinition,
+):
+    allowed_types = [
+        type_option.annotated_type.__name__
+        for type_option in field_definition.type_options
+        if isinstance(type_option, (RelationToEntity, RelationToDocument))
+    ]
+
+    instance_identifier = Identifier()
+    id_identifier = query_object.params.add(str(instance.id))
+    allowed_types_identifier = query_object.params.add(allowed_types)
+    query_object.match_query_strings.append(
+        f"""MATCH ({instance_identifier}:PGIndexableNode {{id: ${id_identifier}}})
+            WHERE ANY(label IN labels({instance_identifier}) WHERE label IN ${allowed_types_identifier})
+        """
+    )
+    forward_query_identifier = Identifier()
+    reverse_query_identifier = Identifier()
+    query_object.create_query_strings.append(f"""
+        CREATE ({source_identifier})-[{forward_query_identifier}:{field_definition.field_name}]->({instance_identifier})
+        CREATE ({source_identifier})<-[{reverse_query_identifier}:{field_definition.reverse_name}]-({instance_identifier})
+    """)
+
+    edge_properties_identifier: Identifier | None = None
+
+    if edge_properties := getattr(instance, "edge_properties", None):
+        edge_properties_identifier = query_object.params.add(
+            convert_edge_properties_for_writing(edge_properties)
+        )
+        query_object.create_query_strings.append(f"""
+            SET {forward_query_identifier} = ${edge_properties_identifier}
+            SET {reverse_query_identifier} = ${edge_properties_identifier}
+        """)
+
+    for subclasses_field in field_definition.subclasses_parent_fields:
+        assert isinstance(subclasses_field, FieldSubclassing)
+        reverse_name = subclasses_field.field_on_model._meta.fields.relation_fields[
+            subclasses_field.field_name
+        ].reverse_name
+        forward_query_identifier = Identifier()
+        reverse_query_identifier = Identifier()
+        query_object.create_query_strings.append(f"""
+            CREATE ({source_identifier})-[{forward_query_identifier}:{subclasses_field.field_name}]->({instance_identifier})
+            CREATE ({source_identifier})<-[{reverse_query_identifier}:{reverse_name}]-({instance_identifier})
+        """)
+        if edge_properties_identifier:
+            query_object.create_query_strings.append(f"""
+                SET {forward_query_identifier} = ${edge_properties_identifier}
+                SET {reverse_query_identifier} = ${edge_properties_identifier}
+            """)
+
+
 def build_head_create_query(
     instance: _DocumentCreateDBBase | _EntityCreateDBBase,
 ) -> QueryObject:
+    print("======")
+    print(instance)
+    print("-----")
+
     # Initialise a query object with head values
 
     query_object = QueryObject(head_id=instance.id, head_type=instance.type)
