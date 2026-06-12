@@ -157,7 +157,7 @@ def build_attached_nodes(
     head_node_type: str,
     head_node_id: uuid.UUID,
 ):
-    print("calling build attached nodes with ", instance)
+
     for (
         related_field_name,
         related_field_def,
@@ -171,7 +171,6 @@ def build_attached_nodes(
                 items = [field_value]
 
             for item in items:
-                print(item.__class__)
                 match item:
                     case _CreateDBBase():
                         build_related_node_query(
@@ -199,7 +198,6 @@ def build_related_node_query(
     head_node_id: uuid.UUID,
     field_definition: RelationFieldDefinition,
 ):
-    print(">> calling build related node query with", instance)
 
     node_identifier = Identifier()
     instance_labels = get_label_query_string(instance, ["PGIndexableNode"])
@@ -327,8 +325,6 @@ def build_head_create_query(
     instance: _DocumentCreateDBBase | _EntityCreateDBBase,
 ) -> QueryObject:
     print("======")
-    print(instance)
-    print("-----")
 
     # Initialise a query object with head values
 

@@ -288,7 +288,7 @@ async def test_write_edge_properties(db_driver, clear_database):
 
 
 @no_type_check
-async def test_write_nested_statements(db_driver):
+async def test_write_nested_statements(db_driver, clear_database):
     class Action(Document):
         action_carried_out_by: Person
 
@@ -338,3 +338,29 @@ async def test_write_nested_statements(db_driver):
     assert data["action"]
     assert data["km"]
     assert data["js"]
+
+
+@no_type_check
+async def test_massive_write():
+    class Action(Document):
+        action_carried_out_by: list[Person]
+
+    class Person(Entity):
+        pass
+
+    initialise()
+
+    ids = []
+    for i in range(300):
+        p = Person.Create(label=f"John Smith {i}")
+        p_in_db = await p.save()
+        ids.append(p_in_db.id)
+
+    action = Action.Create(
+        label="An Action",
+        action_carried_out_by=[{"type": "Person", "id": i} for i in ids],
+    )
+
+    await action.save()
+
+    assert False
