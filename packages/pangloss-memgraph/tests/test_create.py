@@ -11,7 +11,7 @@ from typing_extensions import no_type_check
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
 
-async def test_document_get():
+async def test_document_get(clear_database):
     class Statement(Document):
         pass
 
@@ -25,7 +25,7 @@ async def test_document_get():
 
 
 @no_type_check
-async def test_document_write():
+async def test_document_write(clear_database):
     class Statement(Document):
         pass
 
@@ -57,7 +57,7 @@ async def test_document_write_with_user_contextvar():
 
 
 @no_type_check
-async def test_document_write_with_different_types():
+async def test_document_write_with_different_types(clear_database):
     class Statement(Document):
         name: str
         age: int
@@ -80,7 +80,7 @@ async def test_document_write_with_different_types():
 
 
 @no_type_check
-async def test_write_entity():
+async def test_write_entity(clear_database):
     class Person(Entity):
         pass
 
@@ -94,7 +94,7 @@ async def test_write_entity():
 
 
 @no_type_check
-async def test_write_existing_related_entity():
+async def test_write_existing_related_entity(db_driver, clear_database):
     class Person(Entity):
         pass
 
@@ -113,11 +113,20 @@ async def test_write_existing_related_entity():
 
     await st.save()
 
-    # TODO: actually test this!
+    records, summary, keys = db_driver.execute_query(
+        "MATCH (st:Statement)-[r:concerns_person]->(p:Person) RETURN st, r, p"
+    )
+
+    data = records[0].data()
+    assert data
+
+    assert data["p"]["label"] == "John Smith"
+    assert data["st"]["label"] == "A Statement"
+    assert data["r"][1] == "concerns_person"
 
 
 @no_type_check
-async def test_write_with_relation_to_new_entity():
+async def test_write_with_relation_to_new_entity(db_driver):
     class Person(Entity):
         _meta = Entity.Meta(create_inline=True, create_with_id=True)
 
@@ -136,4 +145,23 @@ async def test_write_with_relation_to_new_entity():
         },
     )
 
+    assert isinstance(st.concerns_person, Person.Create)
+
+    st_db = st._to_db_model()
+
+    assert isinstance(st_db.concerns_person, Person.CreateDB)
+
+    """
     await st.save()
+
+    records, summary, keys = db_driver.execute_query(
+        "MATCH (st:Statement)-[r:concerns_person]->(p:Person) RETURN st, r, p"
+    )
+
+    data = records[0].data()
+    assert data
+
+    assert data["p"]["label"] == "John Smith"
+    assert data["st"]["label"] == "A Statement"
+    assert data["r"][1] == "concerns_person"
+    """

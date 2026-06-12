@@ -33,9 +33,9 @@ from pangloss_memgraph.databases.memgraph.database import Database, Transaction
 
 def timer(func):
     @functools.wraps(func)
-    def wrapper(*args, **kwargs):
+    async def wrapper(*args, **kwargs):
         start = time.perf_counter()
-        result = func(*args, **kwargs)
+        result = await func(*args, **kwargs)
         end = time.perf_counter()
         print(f"{func.__name__} took {end - start:.12f}s")
         return result

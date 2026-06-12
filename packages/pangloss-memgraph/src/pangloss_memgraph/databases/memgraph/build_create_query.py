@@ -4,6 +4,7 @@ import uuid
 from collections.abc import Iterable
 
 from more_itertools import always_iterable
+from neo4j._work import query
 from pangloss_models.field_definitions import (
     FieldDefinition,
     FieldSubclassing,
@@ -150,6 +151,7 @@ def build_related_node_query(
     head_node_id: uuid.UUID,
     field_definition: RelationFieldDefinition,
 ):
+    print("HERE")
     node_identifier = Identifier()
     instance_labels = get_label_query_string(instance, ["PGIndexableNode"])
 
@@ -162,14 +164,18 @@ def build_related_node_query(
         head_node_type=head_node_type,
     )
 
+    # Add the node id identifier to params and get back an Identifier
+    node_id_identifier = query_object.params.add(instance.id)
+
     # Add the dict to the query params and get back an Identifier
     node_data_identifier = query_object.params.add(node_data_dict)
 
     query_object.create_query_strings.append(f"""
-        CREATE ({node_identifier}:{instance_labels})
+        MERGE ({node_identifier}:{instance_labels} {{id: ${node_id_identifier}}})
+        ON CREATE SET {node_identifier} = ${node_data_identifier}
         CREATE ({source_identifier})-[:{field_definition.field_name}]->({node_identifier})
         CREATE ({source_identifier})<-[:{field_definition.reverse_name}]-({node_identifier})
-        SET {node_identifier} = ${node_data_identifier}
+
     """)
 
 
@@ -179,7 +185,7 @@ def build_relation_query(
     source_identifier: Identifier,
     field_definition: RelationFieldDefinition,
 ):
-
+    print("build_relation_query called")
     instance_identifier = Identifier()
     id_identifier = query_object.params.add(str(instance.id))
     query_object.match_query_strings.append(
@@ -217,6 +223,7 @@ def build_attached_nodes(
                 items = [field_value]
 
             for item in items:
+                print(item.__class__)
                 match item:
                     case _CreateDBBase():
                         build_related_node_query(

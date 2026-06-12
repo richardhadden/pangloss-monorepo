@@ -107,6 +107,35 @@ def test_create_model_for_document_with_id_allowed():
 
 
 @no_type_check
+def test_inline_create_is_converted_to_db_model():
+    class Person(Entity):
+        _meta = Entity.Meta(create_inline=True, create_with_id=True)
+
+    class Statement(Document):
+        concerns_person: Person
+
+    initialise()
+
+    st = Statement.Create(
+        label="A Statement",
+        concerns_person={
+            "id": uuid7(),
+            "type": "Person",
+            "label": "John Smith",
+            "create_new": True,
+        },
+    )
+
+    assert isinstance(st.concerns_person, Person.Create)
+
+    print(st.model_dump())
+
+    st_db = st._to_db_model()
+
+    assert isinstance(st_db.concerns_person, Person.CreateDB)
+
+
+@no_type_check
 def test_create_model_for_document_with_id_and_url_allowed_and_no_label():
     class Statement(Document):
         _meta = Document.Meta(

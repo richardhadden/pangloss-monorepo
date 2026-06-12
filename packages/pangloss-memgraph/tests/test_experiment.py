@@ -1,4 +1,4 @@
-def test_database_writing_for_sanity(db_driver):
+def test_database_writing_for_sanity(db_driver, clear_database):
 
     db_driver.execute_query("CREATE (node:Node {name: 'Tony'})", database="memgraph")
 
