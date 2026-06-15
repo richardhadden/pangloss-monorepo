@@ -1,6 +1,6 @@
 import datetime
-from types import UnionType
-from typing import Annotated, Literal, get_args, get_origin, no_type_check
+from types import NoneType, UnionType
+from typing import Annotated, Literal, Union, get_args, get_origin, no_type_check
 from uuid import UUID, uuid7
 
 import pytest
@@ -1374,3 +1374,100 @@ def test_fulfils_on_subclass():
 
     assert isinstance(a2_db, SubActivity.CreateDB)
     assert not isinstance(a2_db, PersonInPlace.CreateDB)
+
+
+def test_createdb_model_with_complex_nested():
+    """This test is added to address a bug, which turned out to be a problem
+    in initialisation order affecting this particular order. Solved by forcing
+    rebuilds of Create/CreateDB models"""
+
+    class Factoid(Document):
+        statements: list[Statement]
+
+    class Statement(Document):
+        _meta = Document.Meta(abstract=True)
+
+    class Order(Statement):
+        order_given_by: Person
+        order_received_by: Person
+        thing_ordered: list[Action]
+
+    class Action(Statement):
+        action_carried_out_by: Person
+
+    class Person(Entity):
+        pass
+
+    initialise()
+
+    assert Order._meta.fields["thing_ordered"]
+    assert Order.CreateDB.model_fields["thing_ordered"]
+
+    assert Order.Create.model_fields["thing_ordered"]
+
+    order_create_from_factoid = (
+        get_args(
+            get_args(get_args(Factoid.Create.model_fields["statements"].annotation)[0])[
+                0
+            ]
+        )[0]
+        if get_args(
+            get_args(get_args(Factoid.Create.model_fields["statements"].annotation)[0])[
+                0
+            ]
+        )[0].__name__
+        == "OrderCreate"
+        else get_args(
+            get_args(get_args(Factoid.Create.model_fields["statements"].annotation)[0])[
+                0
+            ]
+        )[1]
+    )
+    order_create_from_mod = Order.Create
+    print(order_create_from_factoid, order_create_from_mod)
+    assert order_create_from_factoid is order_create_from_mod
+
+    assert order_create_from_mod.model_fields["thing_ordered"]
+    assert order_create_from_factoid.model_fields["thing_ordered"]
+
+    o = order_create_from_factoid(
+        **{
+            "type": "Order",
+            "label": "KM orders JS to take an action",
+            "order_given_by": {"type": "Person", "id": uuid7()},
+            "order_received_by": {"type": "Person", "id": uuid7()},
+            "thing_ordered": [
+                {
+                    "type": "Action",
+                    "label": "JS carries out an action",
+                    "action_carried_out_by": {"type": "Person", "id": uuid7()},
+                }
+            ],
+        }
+    )
+
+    assert o.thing_ordered
+
+    factoid = Factoid.Create(
+        **{
+            "label": "A Factoid",
+            "statements": [
+                {
+                    "type": "Order",
+                    "label": "KM orders JS to take an action",
+                    "order_given_by": {"type": "Person", "id": uuid7()},
+                    "order_received_by": {"type": "Person", "id": uuid7()},
+                    "thing_ordered": [
+                        {
+                            "type": "Action",
+                            "label": "JS carries out an action",
+                            "action_carried_out_by": {"type": "Person", "id": uuid7()},
+                        }
+                    ],
+                }
+            ],
+        }
+    )
+
+    assert factoid.statements[0].type == "Order"
+    assert factoid.statements[0].thing_ordered[0].type == "Action"

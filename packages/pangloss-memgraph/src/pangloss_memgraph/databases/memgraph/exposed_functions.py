@@ -89,7 +89,7 @@ async def create_head_node(
 
     result = await tx.run(query_object.to_query_string(), **query_object.params)
     result_value = await result.value()
-
+    print(result_value)
     try:
         return instance._owner.HeadView(**result_value[0])
     except:

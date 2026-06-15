@@ -292,7 +292,7 @@ def build_fulfiled_model[T: _CreateDBBase | _UpdateDBBase](
 
 class _CreateBase(_ActionClass):
     def _to_db_model(self):
-
+        print(self)
         db_model_instance: _CreateDBBase = self._owner.CreateDB(**self.model_dump())  # type: ignore
         recursively_propagate_semantic_space_types(db_model_instance, [], [], None)
 
@@ -442,6 +442,7 @@ class _CreateDBBase(_ActionClass):
         return data
 
     def __init__(self, **kwargs):
+        print(self.__class__._owner, kwargs)
 
         # Calling model_construct emits a warning that the data might not be valid,
         # so catch these and supress. This is fine as we later pass the data back to

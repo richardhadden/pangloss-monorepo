@@ -305,6 +305,19 @@ class ModelRegistry:
             if can_have_head_view_model(model):
                 initialise_head_view_model(model)
 
+        # Rebuild all the models' action classes as referenced models
+        # might not be up to date in referencing classes internal
+        # pydantic validator models
+        for model in chain(cyclic, order):
+            if can_have_create_model(model):
+                model.Create.model_rebuild(force=True)
+                model.CreateDB.model_rebuild(force=True)
+                model.Update.model_rebuild(force=True)
+                model.UpdateDB.model_rebuild(force=True)
+
+            if can_have_head_view_model(model):
+                model.HeadView.model_rebuild(force=True)
+
         from pangloss_core.settings import SETTINGS
 
         database = SETTINGS.DATABASE_MODULE

@@ -438,4 +438,51 @@ async def test_write_semantic_spaces():
         pass
 
     class Factoid(Document):
+        statements: list[Statement]
+
+    class Statement(Document):
+        _meta = Document.Meta(abstract=True)
+
+    class Order(Statement):
+        order_given_by: Person
+        order_received_by: Person
+        thing_ordered: list[Action]
+
+    class Action(Statement):
+        action_carried_out_by: Person
+
+    class Person(Entity):
         pass
+
+    initialise()
+
+    js = Person.Create(label="John Smith")
+    js = await js.save()
+    assert js.id
+
+    km = Person.Create(label="Kaiser Maximilian")
+    km = await km.save()
+    assert km.id
+
+    factoid = Factoid(
+        **{
+            "label": "A Factoid",
+            "statements": [
+                {
+                    "type": "Order",
+                    "label": "KM orders JS to take an action",
+                    "order_given_by": {"type": "Person", "id": km.id},
+                    "order_received_by": {"type": "Person", "id": js.id},
+                    "thing_ordered": [
+                        {
+                            "type": "Action",
+                            "label": "JS carries out an action",
+                            "action_carried_out_by": {"type": "Person", "id": js.id},
+                        }
+                    ],
+                }
+            ],
+        }
+    )
+
+    await factoid.save()
