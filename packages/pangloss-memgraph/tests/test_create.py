@@ -341,22 +341,91 @@ async def test_write_nested_statements(db_driver, clear_database):
 
 
 @no_type_check
-async def test_massive_write():
+async def test_massive_write(clear_database):
     class Action(Document):
         action_carried_out_by: list[Person]
 
     class Person(Entity):
-        pass
+        _meta = Entity.Meta(create_inline=True, create_with_id=True)
 
     initialise()
 
+    uids = [uuid7() for _ in range(200)]
+
+    for i, uid in enumerate(uids):
+        p = Person.Create(
+            **{
+                "type": "Person",
+                "id": uid,
+                "label": f"A Person{i}",
+                "create_new": True,
+            }
+        )
+        await p.save()
+
     action = Action.Create(
         label="An Action",
-        action_carried_out_by=[
-            {"type": "Person", "id": uuid7(), "create_new": True} for _ in range(1000)
-        ],
+        action_carried_out_by=[{"type": "Person", "id": uid} for uid in uids],
     )
 
     await action.save()
 
-    assert False
+
+@no_type_check
+async def test_massive_nested_write(clear_database):
+    class Action(Document):
+        action_carried_out_by: list[Person]
+
+    class Order(Document):
+        order_given_by: Person
+        order_received_by: Person
+        thing_ordered: list[Action]
+
+    class Person(Entity):
+        _meta = Entity.Meta(create_inline=True, create_with_id=True)
+        pass
+
+    initialise()
+
+    order = Order.Create(
+        label="An Order",
+        order_given_by={
+            "type": "Person",
+            "id": uuid7(),
+            "label": "DudeX",
+            "create_new": True,
+        },
+        order_received_by={
+            "type": "Person",
+            "id": uuid7(),
+            "label": "DudeY",
+            "create_new": True,
+        },
+        thing_ordered=[
+            {
+                "type": "Action",
+                "label": f"An Action {j}",
+                "action_carried_out_by": [
+                    {
+                        "type": "Person",
+                        "id": uuid7(),
+                        "label": f"Dude{i}",
+                        "create_new": True,
+                    }
+                    for i in range(100)
+                ],
+            }
+            for j in range(50)
+        ],
+    )
+
+    assert isinstance(order.thing_ordered[0], Action.Create)
+    assert isinstance(order.thing_ordered[0].action_carried_out_by[0], Person.Create)
+
+    order_db = order._to_db_model()
+    assert isinstance(order_db.thing_ordered[0], Action.CreateDB)
+    assert isinstance(
+        order_db.thing_ordered[0].action_carried_out_by[0], Person.CreateDB
+    )
+
+    await order.save()

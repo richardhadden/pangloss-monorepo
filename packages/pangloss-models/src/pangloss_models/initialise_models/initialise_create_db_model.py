@@ -354,7 +354,7 @@ def build_generic_create_db_model_from_type_option(
 
         if field_definition.wrapper:
             annotation = field_definition.wrapper[  # type: ignore
-                Annotated[Union[*annotations], Field(discriminator="type")]  # ty:ignore[invalid-type-form]
+                Annotated[Union[*annotations], Field()]  # ty:ignore[invalid-type-form]
             ]
         else:
             annotation = Union[*annotations]  # ty:ignore[invalid-type-form]
@@ -363,7 +363,7 @@ def build_generic_create_db_model_from_type_option(
             annotation=annotation,  # type: ignore
             validation_alias=to_camel(field_name),
             metadata=field_definition.validators,  # type: ignore
-            discriminator="type" if not field_definition.wrapper else None,
+            # discriminator="type" if not field_definition.wrapper else None,
             description=field_definition.description,
         )
 
@@ -426,7 +426,7 @@ def get_relation_annotation_types(
 
     if field_definition.wrapper:
         return field_definition.wrapper[  # type: ignore
-            Annotated[Union[*types], Field(discriminator="type")]
+            Annotated[Union[*types], Field()]
         ]
     return Union[*types]  # ty:ignore[invalid-type-form]
 
@@ -475,7 +475,7 @@ def add_fields_to_create_db_model(
             model.CreateDB.model_fields[field_name] = FieldInfo(
                 annotation=annotation,  # type: ignore
                 validation_alias=to_camel(field_name),
-                discriminator="type",
+                # discriminator="type",
             )
 
             if optional:
