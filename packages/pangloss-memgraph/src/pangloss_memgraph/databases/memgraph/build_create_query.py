@@ -80,7 +80,12 @@ class QueryObject:
             {"\n".join(self.create_query_strings)}
             {"\n".join(self.set_query_strings)}
             {"\n".join(self.merge_query_strings)}
-            RETURN {self.return_identifier}
+            WITH {self.return_identifier}
+            MATCH matched_paths = ({self.return_identifier})-[*BFS]->(p)
+            WHERE "Entity" in labels(p) or "Embedded" in labels(p)
+            WITH collect(matched_paths) as paths
+            CALL convert_c.to_tree(paths) YIELD value
+            RETURN value
         """,
         )
 

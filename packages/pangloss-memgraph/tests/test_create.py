@@ -11,6 +11,7 @@ from pangloss_models.model_bases.document import Document
 from pangloss_models.model_bases.edge_model import EdgeModel
 from pangloss_models.model_bases.entity import Entity
 from pangloss_models.model_bases.helpers import ViaEdge
+from pangloss_models.model_bases.semantic_space import SemanticSpace
 from pangloss_users import current_request_username
 from typing_extensions import no_type_check
 
@@ -429,3 +430,12 @@ async def test_massive_nested_write(clear_database):
     )
 
     await order.save()
+
+
+@no_type_check
+async def test_write_semantic_spaces():
+    class Negative[T](SemanticSpace[T]):
+        pass
+
+    class Factoid(Document):
+        pass
