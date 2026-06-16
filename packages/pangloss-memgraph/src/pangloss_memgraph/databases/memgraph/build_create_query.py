@@ -324,7 +324,6 @@ def build_relation_to_existing_query(
 def build_head_create_query(
     instance: _DocumentCreateDBBase | _EntityCreateDBBase,
 ) -> QueryObject:
-    print("======")
 
     # Initialise a query object with head values
 

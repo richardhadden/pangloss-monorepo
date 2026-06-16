@@ -169,6 +169,7 @@ def build_relation_options(
         type_args = annotation.__pydantic_generic_metadata__["args"]
         parameters = origin.__pydantic_generic_metadata__["parameters"]
         params_type_args = zip(parameters, type_args)
+
         for t in type_args:
             if (
                 isclass(t)
@@ -188,6 +189,7 @@ def build_relation_options(
             )
             for type_var, type_arg in params_type_args
         }
+        print(type_options)
 
         if issubclass(origin, ReifiedRelation):
             model._depends_on_classes.add(origin)
@@ -234,6 +236,8 @@ def build_relation_options(
 
     if isclass(annotation) and issubclass(annotation, Document):
         for concrete_type in get_concrete_types(annotation):
+            if concrete_type._meta.abstract:
+                continue
             relation_options.append(
                 RelationToDocument(
                     annotated_type=concrete_type,
@@ -734,10 +738,8 @@ def initialise_field_definitions(model: type[_DeclaredClass]):
                 raise PanglossModelError(
                     f"AnnotatedValue {model.__name__} does not support relations ({model.__name__}.{field_name})"
                 )
-    print("=====", model.__name__)
+
     for field_name, field_info, field_fulfilment in get_fields_on_model(model):
-        print("-----", field_name)
-        print(field_info)
         is_db_field = any(
             isclass(md) and issubclass(md, DBField) or isinstance(md, DBField)
             for md in field_info.metadata
@@ -824,7 +826,6 @@ def initialise_field_definitions(model: type[_DeclaredClass]):
         elif is_relatable(field_info.annotation) or is_list_relatable(
             field_info.annotation
         ):
-            print("is relatable")
             field_definition = build_relatable_field_definition(
                 field_name, field_info, model, is_db_field=is_db_field
             )
@@ -832,8 +833,6 @@ def initialise_field_definitions(model: type[_DeclaredClass]):
                 field_definition.field_required_to_fulfil.update(field_fulfilment)
 
             check_subclass_type(field_definition)
-
-            print(field_definition)
 
             model._meta.field_definitions.add_field(
                 name=field_name,
@@ -866,5 +865,4 @@ def initialise_field_definitions(model: type[_DeclaredClass]):
                 field_definition=field_definition,
             )
         else:
-            print("NO MATCH")
-            print(field_info.annotation)
+            pass

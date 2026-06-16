@@ -14,7 +14,11 @@ from pangloss_models.exceptions import (
 )
 
 if TYPE_CHECKING:
-    from pangloss_models.model_bases.base_models import _DeclaredClass
+    from pangloss_models.model_bases.base_models import (
+        _ActionClass,
+        _CreateBase,
+        _DeclaredClass,
+    )
 
 
 class ModelRegistry:
@@ -44,10 +48,13 @@ class ModelRegistry:
         cls._models = []
         cls._model_set = set()
         cls._model_dict = {}
+        cls._action_classes = []
 
     _models: ClassVar[list[type[_DeclaredClass]]] = []
     _model_set: ClassVar[set[type[_DeclaredClass]]] = set()
     _model_dict: ClassVar[dict[str, type[_DeclaredClass]]] = dict()
+
+    _action_classes: ClassVar[list[type[_ActionClass]]] = []
 
     # ----------------------------
     # Registration
@@ -308,20 +315,16 @@ class ModelRegistry:
         # Rebuild all the models' action classes as referenced models
         # might not be up to date in referencing classes internal
         # pydantic validator models
-        for model in chain(cyclic, order):
-            if can_have_create_model(model):
-                model.Create.model_rebuild(force=True)
-                model.CreateDB.model_rebuild(force=True)
-                model.Update.model_rebuild(force=True)
-                model.UpdateDB.model_rebuild(force=True)
 
-            if can_have_head_view_model(model):
-                model.HeadView.model_rebuild(force=True)
+        # It seems to be fine to do this in a single pass if we reverse
+        # the order
+        for action_class in reversed(cls._action_classes):
+            action_class.model_rebuild(force=True)
 
         from pangloss_core.settings import SETTINGS
 
         database = SETTINGS.DATABASE_MODULE
-        print(database)
+
         try:
             database_exposed_functions_module = importlib.import_module(
                 f"{database}.exposed_functions"

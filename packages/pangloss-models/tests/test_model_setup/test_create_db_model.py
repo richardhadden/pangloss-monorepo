@@ -128,8 +128,6 @@ def test_inline_create_is_converted_to_db_model():
 
     assert isinstance(st.concerns_person, Person.Create)
 
-    print(st.model_dump())
-
     st_db = st._to_db_model()
 
     assert isinstance(st_db.concerns_person, Person.CreateDB)
@@ -664,7 +662,7 @@ def test_relation_with_conjunction():
     # Check that Causes has a Create model
     assert hasattr(Causes, "Create")
     assert issubclass(Causes.CreateDB, _ConjunctionCreateDBBase)
-    print(union_items)
+
     # Check that the specialized Causes[Statement, Statement] has a Create model
 
     causes_statement_create = [
@@ -1376,6 +1374,7 @@ def test_fulfils_on_subclass():
     assert not isinstance(a2_db, PersonInPlace.CreateDB)
 
 
+@no_type_check
 def test_createdb_model_with_complex_nested():
     """This test is added to address a bug, which turned out to be a problem
     in initialisation order affecting this particular order. Solved by forcing
@@ -1424,7 +1423,7 @@ def test_createdb_model_with_complex_nested():
         )[1]
     )
     order_create_from_mod = Order.Create
-    print(order_create_from_factoid, order_create_from_mod)
+
     assert order_create_from_factoid is order_create_from_mod
 
     assert order_create_from_mod.model_fields["thing_ordered"]
@@ -1471,3 +1470,65 @@ def test_createdb_model_with_complex_nested():
 
     assert factoid.statements[0].type == "Order"
     assert factoid.statements[0].thing_ordered[0].type == "Action"
+
+
+@no_type_check
+def test_create_db_with_multiple_type_bug():
+
+    class Negative[T](SemanticSpace[T]):
+        pass
+
+    class Factoid(Document):
+        statements: list[Statement | Negative[Statement]]
+
+    class Statement(Document):
+        _meta = Document.Meta(abstract=True)
+
+    class Order(Statement):
+        order_given_by: Person
+        order_received_by: Person
+        thing_ordered: list[Action]
+
+    class Action(Statement):
+        action_carried_out_by: Person
+
+    class Person(Entity):
+        pass
+
+    initialise()
+
+    factoid = Factoid.Create(
+        **{
+            "label": "A Factoid",
+            "statements": [
+                {
+                    "type": "Negative",
+                    "contents": [
+                        {
+                            "type": "Order",
+                            "label": "KM orders JS to take an action",
+                            "order_given_by": {"type": "Person", "id": uuid7()},
+                            "order_received_by": {"type": "Person", "id": uuid7()},
+                            "thing_ordered": [
+                                {
+                                    "type": "Action",
+                                    "label": "JS carries out an action",
+                                    "action_carried_out_by": {
+                                        "type": "Person",
+                                        "id": uuid7(),
+                                    },
+                                }
+                            ],
+                        }
+                    ],
+                }
+            ],
+        }
+    )
+
+    factoid_db = factoid._to_db_model()
+
+    assert (
+        factoid_db.statements[0].contents[0].thing_ordered[0].action_carried_out_by.type
+        == "Person"
+    )

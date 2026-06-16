@@ -137,6 +137,7 @@ class _ActionClass(_BaseObject):
     @classmethod
     def __pydantic_init_subclass__(cls, **kwargs: Any) -> None:
         cls._via = GetItemViaAttrDict()
+        ModelRegistry._action_classes.append(cls)
         return super().__pydantic_init_subclass__(**kwargs)
 
     @classmethod
@@ -292,7 +293,7 @@ def build_fulfiled_model[T: _CreateDBBase | _UpdateDBBase](
 
 class _CreateBase(_ActionClass):
     def _to_db_model(self):
-        print(self)
+        print(self.model_dump())
         db_model_instance: _CreateDBBase = self._owner.CreateDB(**self.model_dump())  # type: ignore
         recursively_propagate_semantic_space_types(db_model_instance, [], [], None)
 
@@ -442,7 +443,6 @@ class _CreateDBBase(_ActionClass):
         return data
 
     def __init__(self, **kwargs):
-        print(self.__class__._owner, kwargs)
 
         # Calling model_construct emits a warning that the data might not be valid,
         # so catch these and supress. This is fine as we later pass the data back to
@@ -507,7 +507,7 @@ class _UpdateBase(_ActionClass):
     id: UUID
 
     def _to_db_model(self):
-        print("called for", self.__class__._owner.__name__)
+
         db_model_instance = self._owner.UpdateDB(**self.model_dump())  # type: ignore
         recursively_propagate_semantic_space_types(db_model_instance, [], [], None)
         return db_model_instance

@@ -364,6 +364,7 @@ def build_generic_create_model_from_type_option(
         else:
             annotation = Union[*annotations]  # ty:ignore[invalid-type-form]
 
+        print(bound_create_model, field_name, annotation)
         bound_create_model.model_fields[field_name] = FieldInfo(
             annotation=annotation,  # type: ignore
             validation_alias=to_camel(field_name),
@@ -418,7 +419,7 @@ def build_bound_field_create_model[
     bound_fields_create_model: TModel = cast(
         TModel,
         pydantic_create_model(
-            f"{create_model.__name__}[bound=({','.join(str(fb) for fb in field_bindings)})]",
+            f"{create_model.__name__}[bound=({','.join(str(fb) for fb in field_bindings)})]Create",
             __base__=create_model,
             __validators__=get_model_validators(model),
             __module__=model.__module__,
