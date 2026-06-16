@@ -17,5 +17,6 @@ target-version = "py314"
 
 [dependency-groups]
 dev = [
+    "pytest>=9.0.3",
     "pytest-asyncio>=1.4.0",
 ]

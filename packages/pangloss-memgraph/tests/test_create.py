@@ -1,6 +1,5 @@
-from argparse import Action
 from inspect import iscoroutinefunction
-from typing import Annotated
+from typing import Annotated, get_args
 from uuid import uuid7
 
 import pytest
@@ -373,7 +372,7 @@ async def test_massive_write(clear_database):
 
 
 @no_type_check
-async def test_massive_nested_write(clear_database):
+async def test_massive_nested_write():
     class Action(Document):
         action_carried_out_by: list[Person]
 
@@ -434,11 +433,12 @@ async def test_massive_nested_write(clear_database):
 
 @no_type_check
 async def test_write_semantic_spaces():
+
     class Negative[T](SemanticSpace[T]):
         pass
 
     class Factoid(Document):
-        statements: list[Statement]
+        statements: list[Statement | Negative[Statement]]
 
     class Statement(Document):
         _meta = Document.Meta(abstract=True)
@@ -464,20 +464,28 @@ async def test_write_semantic_spaces():
     km = await km.save()
     assert km.id
 
-    factoid = Factoid(
+    factoid = Factoid.Create(
         **{
             "label": "A Factoid",
             "statements": [
                 {
-                    "type": "Order",
-                    "label": "KM orders JS to take an action",
-                    "order_given_by": {"type": "Person", "id": km.id},
-                    "order_received_by": {"type": "Person", "id": js.id},
-                    "thing_ordered": [
+                    "type": "Negative",
+                    "contents": [
                         {
-                            "type": "Action",
-                            "label": "JS carries out an action",
-                            "action_carried_out_by": {"type": "Person", "id": js.id},
+                            "type": "Order",
+                            "label": "KM orders JS to take an action",
+                            "order_given_by": {"type": "Person", "id": km.id},
+                            "order_received_by": {"type": "Person", "id": js.id},
+                            "thing_ordered": [
+                                {
+                                    "type": "Action",
+                                    "label": "JS carries out an action",
+                                    "action_carried_out_by": {
+                                        "type": "Person",
+                                        "id": js.id,
+                                    },
+                                }
+                            ],
                         }
                     ],
                 }
@@ -485,4 +493,4 @@ async def test_write_semantic_spaces():
         }
     )
 
-    await factoid.save()
+    # assert False

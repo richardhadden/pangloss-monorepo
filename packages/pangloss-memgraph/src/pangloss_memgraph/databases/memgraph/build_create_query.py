@@ -358,3 +358,22 @@ def build_head_create_query(
     )
 
     return query_object
+
+
+"""
+TODO: HOW! to query (courtesy of claude, see convs)
+
+MATCH p1 = (root:Order {id: "019ecb68-26b6-731f-a5d7-80114ce63529"})
+           -[* BFS (e, n | NOT n:Entity)]->(intermediate)
+           -[]->(person:Entity)
+WITH root, collect(p1) AS indirect_paths
+
+// Case 2: Person directly on the root
+OPTIONAL MATCH p2 = (root)-[]->(person:Entity)
+WITH indirect_paths, collect(p2) AS direct_paths
+
+WITH indirect_paths + direct_paths AS paths
+CALL convert_c.to_tree(paths) YIELD value
+RETURN value
+
+"""
