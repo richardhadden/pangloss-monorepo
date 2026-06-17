@@ -115,7 +115,7 @@ def get_labels_for_db_classes(self):
             model_is_trait(c)
             and issubclass(c, NonHeritableTrait)
             and self._owner not in c.__subclasses__()
-        ):
+        ) or self.__pydantic_generic_metadata__["parameters"]:
             pass
         else:
             parent_labels.append(c.__name__)
