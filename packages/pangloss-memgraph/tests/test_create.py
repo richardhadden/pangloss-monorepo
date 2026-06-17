@@ -493,4 +493,6 @@ async def test_write_semantic_spaces():
         }
     )
 
-    # assert False
+    print(factoid.model_dump_json())
+
+    assert False
