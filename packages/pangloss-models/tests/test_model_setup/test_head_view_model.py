@@ -3,8 +3,6 @@ from inspect import isclass
 from typing import Annotated, get_args, get_origin, no_type_check
 from uuid import UUID, uuid7
 
-from pydantic.fields import FieldInfo
-
 from pangloss_models import initialise
 from pangloss_models.model_bases.base_models import _APIHeadMeta
 from pangloss_models.model_bases.document import Document
@@ -14,6 +12,7 @@ from pangloss_models.model_bases.reified_relation import (
     ReifiedRelation,
     ReifiedRelationDocument,
 )
+from pydantic.fields import FieldInfo
 
 
 @no_type_check
@@ -273,3 +272,37 @@ def test_incoming_via_reified_in_embedded():
     annotated = get_args(identification_view.model_fields["target"].annotation)[0]
 
     assert get_args(annotated)[0] is Person.ReferenceView
+
+
+@no_type_check
+def test_head_view_converts_non_list_fields():
+    class Factoid(Document):
+        statements: list[Action]
+
+    class Action(Document):
+        person_carrying_out_action: Person
+        persons_affected_by_action: list[Person]
+
+    class Person(Entity):
+        pass
+
+    initialise()
+
+    factoid = Factoid.HeadView(
+        **{
+            "label": "A Factoid",
+            "id": uuid7(),
+            "statements": [
+                {
+                    "type": "Action",
+                    "id": uuid7(),
+                    "person_carrying_out_action": [
+                        {"type": "Person", "id": uuid7()},
+                    ],
+                    "person_affected_by_action": [
+                        {"type": "Person", "id": uuid7()},
+                    ],
+                }
+            ],
+        }
+    )

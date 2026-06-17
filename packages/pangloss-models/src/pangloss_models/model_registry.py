@@ -314,11 +314,11 @@ class ModelRegistry:
 
         # Rebuild all the models' action classes as referenced models
         # might not be up to date in referencing classes internal
-        # pydantic validator models
-
-        # It seems to be fine to do this in a single pass if we reverse
-        # the order
+        # pydantic validator models —— two passes seem to be required!
         for action_class in reversed(cls._action_classes):
+            action_class.model_rebuild(force=True)
+
+        for action_class in cls._action_classes:
             action_class.model_rebuild(force=True)
 
         from pangloss_core.settings import SETTINGS

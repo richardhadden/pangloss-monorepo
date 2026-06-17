@@ -80,7 +80,6 @@ class QueryObject:
             {"\n".join(self.create_query_strings)}
             {"\n".join(self.set_query_strings)}
             {"\n".join(self.merge_query_strings)}
-            RETURN {self.return_identifier}
         """,
         )
 
@@ -133,7 +132,7 @@ def get_node_fields_as_writable_dict(
         node_data["head_node_type"] = head_node_type
         node_data["head_node_id"] = str(head_node_id)
 
-    if label := getattr(instance, "label"):
+    if label := getattr(instance, "label", None):
         node_data["label"] = label
     for field_name in instance._meta.fields.literal_fields:
         if value := getattr(instance, field_name):

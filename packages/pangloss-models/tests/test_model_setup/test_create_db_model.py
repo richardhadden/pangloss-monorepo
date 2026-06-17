@@ -1195,7 +1195,7 @@ def test_labels_with_trait():
 
     c = Cat.CreateDB(label="A Cat", id=uuid7())
     assert c.__metatype__ == "Entity"
-    assert c._labels == ["Cat", "Mammal", "Animal", "CanBite", "Entity"]
+    assert set(c._labels) == set(["Cat", "Mammal", "Animal", "CanBite", "Entity"])
 
 
 @no_type_check

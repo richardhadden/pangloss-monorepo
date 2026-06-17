@@ -493,6 +493,12 @@ async def test_write_semantic_spaces():
         }
     )
 
-    print(factoid.model_dump_json())
+    factoid_ref = await factoid.save()
+    print(factoid_ref)
+    assert factoid_ref.id
+    print("---")
+    factoid_from_db = await Factoid.get(id=factoid_ref.id)
+
+    print(factoid_from_db)
 
     assert False

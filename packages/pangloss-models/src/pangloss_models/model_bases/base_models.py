@@ -104,7 +104,7 @@ def get_labels_for_db_classes(self):
 
     # print(self._meta.fields)
 
-    from pangloss_models.model_bases.trait import NonHeritableTrait
+    from pangloss_models.model_bases.trait import NonHeritableTrait, Trait
     from pangloss_models.utils import get_all_parent_classes, model_is_trait
 
     labels = [self._owner.__name__]
@@ -115,7 +115,9 @@ def get_labels_for_db_classes(self):
             model_is_trait(c)
             and issubclass(c, NonHeritableTrait)
             and self._owner not in c.__subclasses__()
-        ) or self.__pydantic_generic_metadata__["parameters"]:
+        ) or (
+            c.__pydantic_generic_metadata__["parameters"] and not issubclass(c, Trait)
+        ):
             pass
         else:
             parent_labels.append(c.__name__)

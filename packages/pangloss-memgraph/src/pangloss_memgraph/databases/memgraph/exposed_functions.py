@@ -29,6 +29,9 @@ from pydantic import AnyHttpUrl
 from pangloss_memgraph.databases.memgraph.build_create_query import (
     build_head_create_query,
 )
+from pangloss_memgraph.databases.memgraph.build_read_query import (
+    build_fetch_document_query,
+)
 from pangloss_memgraph.databases.memgraph.database import Database, Transaction
 
 
@@ -55,20 +58,23 @@ def save(
 
 
 @Database.default.read_transaction
+@timer
 async def get_document(
     tx: Transaction, cls: type[Document], id: UUID | AnyHttpUrl
 ) -> _DocumentHeadViewBase:
 
-    return _DocumentHeadViewBase(
-        id=uuid7(),
-        label="A document",  # type: ignore
-        meta=_APIHeadMeta(
-            created_by="asf",
-            created_when=datetime.datetime.now(),
-            updated_by="asdf",
-            updated_when=datetime.datetime.now(),
-        ),
-    )
+    query_string, query_params = build_fetch_document_query(cls, id)
+    with open(".query_dumps/read.cypher", "w") as f:
+        f.write(f"""{query_string}
+
+            // {str(query_params)}
+            """)
+
+    result = await tx.run(query_string, **query_params)
+    result_value = await result.value()
+    if result_value:
+        return cls.HeadView(**result_value[0])
+    return None
 
 
 @Database.default.write_transaction
@@ -78,7 +84,7 @@ async def create_head_node(
     instance: _DocumentCreateBase,
     return_created: bool = False,
 ) -> _DocumentHeadViewBase | None:
-    db_instance = instance._to_db_model()
+    db_instance: _DocumentCreateDBBase = instance._to_db_model()
     query_object = build_head_create_query(db_instance)
 
     with open(".query_dumps/create.cypher", "w") as f:
@@ -90,7 +96,4 @@ async def create_head_node(
     result = await tx.run(query_object.to_query_string(), **query_object.params)
     result_value = await result.value()
     print(result_value)
-    try:
-        return instance._owner.HeadView(**result_value[0])
-    except:
-        return None
+    return instance._owner.ReferenceView(**db_instance.model_dump())
