@@ -291,18 +291,33 @@ def test_head_view_converts_non_list_fields():
     factoid = Factoid.HeadView(
         **{
             "label": "A Factoid",
+            "meta": {
+                "created_by": "user",
+                "created_when": datetime.now(),
+                "updated_by": "user",
+                "updated_when": datetime.now(),
+            },
             "id": uuid7(),
             "statements": [
                 {
                     "type": "Action",
+                    "label": "An Action",
                     "id": uuid7(),
                     "person_carrying_out_action": [
-                        {"type": "Person", "id": uuid7()},
+                        {"type": "Person", "id": uuid7(), "label": "Dude 1"},
                     ],
-                    "person_affected_by_action": [
-                        {"type": "Person", "id": uuid7()},
+                    "persons_affected_by_action": [
+                        {"type": "Person", "id": uuid7(), "label": "Dude 2"},
                     ],
                 }
             ],
         }
+    )
+    assert isinstance(factoid.statements, list)
+    assert isinstance(
+        factoid.statements[0].person_carrying_out_action, Person.ReferenceView
+    )
+    assert isinstance(factoid.statements[0].persons_affected_by_action, list)
+    assert isinstance(
+        factoid.statements[0].persons_affected_by_action[0], Person.ReferenceView
     )

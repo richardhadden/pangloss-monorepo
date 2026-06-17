@@ -471,6 +471,28 @@ class _ViewBase(_ActionClass):
     def convert_neo4j_types(cls, data: Any) -> Any:
         return convert_neo4j_datetimes(data)
 
+    @model_validator(mode="before")
+    @classmethod
+    def convert_lists(cls, data: Any) -> Any:
+        print(cls._meta.fields.embedded_fields)
+        for k, v in data.items():
+            if k in cls._meta.fields.relation_fields:
+                if cls._meta.fields.relation_fields[k].wrapper is None and isinstance(
+                    v, list
+                ):
+                    if len(v) > 1:
+                        raise ValidationError(
+                            f"{cls.__name__}.{k}: More than one value returned for field"
+                        )
+                    data[k] = v[0]
+            if k in cls._meta.fields.embedded_fields:
+                if len(v) > 1:
+                    raise ValidationError(
+                        f"{cls.__name__}.{k}: More than one value returned for field"
+                    )
+                data[k] = v[0]
+        return data
+
 
 def convert_neo4j_datetimes(data: Any) -> Any:
     """Recursively convert neo4j DateTime objects in a dict."""
@@ -503,6 +525,27 @@ class _HeadViewBase(_ActionClass):
     @classmethod
     def convert_neo4j_types(cls, data: Any) -> Any:
         return convert_neo4j_datetimes(data)
+
+    @model_validator(mode="before")
+    @classmethod
+    def convert_lists(cls, data: Any) -> Any:
+        for k, v in data.items():
+            if k in cls._meta.fields.relation_fields:
+                if cls._meta.fields.relation_fields[k].wrapper is None and isinstance(
+                    v, list
+                ):
+                    if len(v) > 1:
+                        raise ValidationError(
+                            f"{cls.__name__}.{k}: More than one value returned for field"
+                        )
+                    data[k] = v[0]
+            if k in cls._meta.fields.embedded_fields:
+                if len(v) > 1:
+                    raise ValidationError(
+                        f"{cls.__name__}.{k}: More than one value returned for field"
+                    )
+                data[k] = v[0]
+        return data
 
 
 class _UpdateBase(_ActionClass):

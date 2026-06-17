@@ -5,8 +5,6 @@ from uuid import uuid7
 
 import pytest
 from annotated_types import Gt, MinLen
-from pydantic import ValidationError
-
 from pangloss_models import initialise
 from pangloss_models.field_definitions import (
     FieldBinding,
@@ -34,6 +32,7 @@ from pangloss_models.model_bases.semantic_space import (
     _SemanticSpaceViewBase,
 )
 from pangloss_models.model_bases.trait import Trait
+from pydantic import ValidationError
 
 
 @no_type_check
@@ -677,7 +676,7 @@ def test_relation_to_embedded():
     st = Statement.View(
         id=uuid7(),
         label="A Statement",
-        date={"type": "Date", "when": "2019-01-01", "id": uuid7()},
+        date=[{"type": "Date", "when": "2019-01-01", "id": uuid7()}],
     )
 
     assert st.label == "A Statement"

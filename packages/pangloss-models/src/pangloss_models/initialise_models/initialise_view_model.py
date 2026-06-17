@@ -539,6 +539,7 @@ def add_fields_to_view_model(
             fields_to_bind, field_name, field_definition.field_on_model
         ):
             field_optional = True
+
             annotation = Union[annotation, None]  # type: ignore
 
         if annotation:
