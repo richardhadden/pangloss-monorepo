@@ -189,7 +189,6 @@ def build_relation_options(
             )
             for type_var, type_arg in params_type_args
         }
-        print(type_options)
 
         if issubclass(origin, ReifiedRelation):
             model._depends_on_classes.add(origin)

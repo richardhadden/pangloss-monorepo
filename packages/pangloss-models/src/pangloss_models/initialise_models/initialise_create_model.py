@@ -364,7 +364,6 @@ def build_generic_create_model_from_type_option(
         else:
             annotation = Union[*annotations]  # ty:ignore[invalid-type-form]
 
-        print(bound_create_model, field_name, annotation)
         bound_create_model.model_fields[field_name] = FieldInfo(
             annotation=annotation,  # type: ignore
             validation_alias=to_camel(field_name),

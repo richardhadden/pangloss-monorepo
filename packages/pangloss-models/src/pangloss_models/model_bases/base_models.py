@@ -295,7 +295,7 @@ def build_fulfiled_model[T: _CreateDBBase | _UpdateDBBase](
 
 class _CreateBase(_ActionClass):
     def _to_db_model(self):
-        print(self.model_dump())
+
         db_model_instance: _CreateDBBase = self._owner.CreateDB(**self.model_dump())  # type: ignore
         recursively_propagate_semantic_space_types(db_model_instance, [], [], None)
 
@@ -520,6 +520,12 @@ class _APIHeadMeta(_BaseObject):
 class _HeadViewBase(_ActionClass):
     id: UUID
     meta: _APIHeadMeta
+
+    def __repr__(self):
+        return f"<{self._owner.__name__} {super().__repr__()}>"
+
+    def __str__(self):
+        return f"<{self._owner.__name__}.HeadView {super().__str__()}>"
 
     @model_validator(mode="before")
     @classmethod

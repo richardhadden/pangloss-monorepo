@@ -2,7 +2,7 @@ import datetime
 import functools
 import json
 import time
-from typing import TYPE_CHECKING, overload
+from typing import TYPE_CHECKING, Literal, overload
 from uuid import UUID, uuid7
 
 from pangloss_models.model_bases.base_models import (
@@ -82,7 +82,7 @@ async def get_document(
 async def create_head_node(
     tx: Transaction,
     instance: _DocumentCreateBase,
-    return_created: bool = False,
+    return_type: Literal["Reference"] = "Reference",
 ) -> _DocumentHeadViewBase | None:
     db_instance: _DocumentCreateDBBase = instance._to_db_model()
     query_object = build_head_create_query(db_instance)
@@ -94,6 +94,5 @@ async def create_head_node(
             """)
 
     result = await tx.run(query_object.to_query_string(), **query_object.params)
-    result_value = await result.value()
-    print(result_value)
+
     return instance._owner.ReferenceView(**db_instance.model_dump())

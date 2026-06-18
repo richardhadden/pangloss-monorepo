@@ -2,7 +2,7 @@ import heapq
 import importlib
 from inspect import iscoroutinefunction
 from itertools import chain
-from typing import TYPE_CHECKING, ClassVar, get_args, get_origin
+from typing import TYPE_CHECKING, ClassVar, Literal, get_args, get_origin
 from uuid import UUID
 
 from pydantic import AnyHttpUrl, BaseModel
@@ -354,10 +354,13 @@ class ModelRegistry:
         if is_async:
 
             async def create_head_node_function_async(
-                self: _DocumentCreateBase, return_created: bool = False
+                self: _DocumentCreateBase,
+                return_type: Literal["Reference"]
+                | Literal["Full"]
+                | Literal["Detail"] = "Reference",
             ):
                 return await database_exposed_functions_module.create_head_node(
-                    self, return_created
+                    self, return_type
                 )
 
             _DocumentCreateBase.save = create_head_node_function_async  # type: ignore
