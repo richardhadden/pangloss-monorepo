@@ -474,7 +474,7 @@ class _ViewBase(_ActionClass):
     @model_validator(mode="before")
     @classmethod
     def convert_lists(cls, data: Any) -> Any:
-        print(cls._meta.fields.embedded_fields)
+
         for k, v in data.items():
             if k in cls._meta.fields.relation_fields:
                 if cls._meta.fields.relation_fields[k].wrapper is None and isinstance(

@@ -1,3 +1,4 @@
+import datetime
 from collections.abc import Awaitable
 from typing import Annotated, Any, Callable, ClassVar, Self
 from uuid import UUID, uuid7
@@ -89,6 +90,14 @@ class _DocumentReferenceViewAPIMeta(_BaseObject):
     head_node_type: str | None = None
     semantic_spaces: list[str] = Field(default_factory=list)
     semantic_space_labels: list[str] = Field(default_factory=list)
+    created_by: str | None = None
+    created_when: datetime.datetime = Field(
+        default_factory=lambda: datetime.datetime.now(datetime.timezone.utc)
+    )
+    updated_by: str | None = None
+    updated_when: datetime.datetime = Field(
+        default_factory=lambda: datetime.datetime.now(datetime.timezone.utc)
+    )
 
 
 class _DocumentReferenceViewBase(_ReferenceViewBase):

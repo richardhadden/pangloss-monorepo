@@ -75,7 +75,10 @@ async def test_document_write_with_different_types(clear_database):
         label="A Statement", name="Statement", age=100, stuff=["one", "two", "three"]
     )
 
-    result = await st.save()
+    saved = await st.save()
+
+    result = await Statement.get(id=saved.id)
+
     assert result.id
     assert result.label == "A Statement"
     assert result.type == "Statement"
@@ -494,11 +497,9 @@ async def test_write_semantic_spaces():
     )
 
     factoid_ref = await factoid.save(return_type="Full")
-    print("ref", factoid_ref)
-    assert factoid_ref.id
-    print("---")
-    # factoid_from_db = await Factoid.get(id=factoid_ref.id)
 
-    # print(factoid_from_db)
+    assert factoid_ref.id
+
+    factoid_from_db = await Factoid.get(id=factoid_ref.id)
 
     assert False

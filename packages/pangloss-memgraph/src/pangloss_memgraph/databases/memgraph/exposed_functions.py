@@ -24,6 +24,7 @@ from pangloss_models.model_bases.entity import (
     _EntityUpdateBase,
     _EntityUpdateDBBase,
 )
+from pangloss_users import current_request_username
 from pydantic import AnyHttpUrl
 
 from pangloss_memgraph.databases.memgraph.build_create_query import (
@@ -41,7 +42,7 @@ def timer(func):
         start = time.perf_counter()
         result = await func(*args, **kwargs)
         end = time.perf_counter()
-        print(f"{func.__name__} took {end - start:.12f}s : {kwargs}")
+        print(f"{func.__name__} took {end - start:.12f}s : {args}")
         return result
 
     return wrapper
@@ -95,4 +96,6 @@ async def create_head_node(
 
     result = await tx.run(query_object.to_query_string(), **query_object.params)
 
-    return instance._owner.ReferenceView(**db_instance.model_dump())
+    return instance._owner.ReferenceView(
+        **db_instance.model_dump(), meta={"created_by": current_request_username.get()}
+    )
