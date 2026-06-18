@@ -508,8 +508,8 @@ def convert_neo4j_datetimes(data: Any) -> Any:
 class _APIHeadMeta(_BaseObject):
     created_by: str
     created_when: datetime.datetime
-    updated_by: str
-    updated_when: datetime.datetime
+    updated_by: str | None
+    updated_when: datetime.datetime | None
 
     @model_validator(mode="before")
     @classmethod

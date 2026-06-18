@@ -120,7 +120,7 @@ def get_node_fields_as_writable_dict(
 
     # If it's new, we can create the whole meta object; otherwise, must be
     # updated granularly to preserve the created_by/created_when
-    if is_new:
+    if is_new and not is_head_node:
         node_data["meta"] = {
             "created_by": current_request_username.get(),
             "created_when": datetime.datetime.now(),
@@ -343,11 +343,28 @@ def build_head_create_query(
     # Add the dict to the query params and get back an Identifier
     node_data_identifier = query_object.params.add(node_data_dict)
 
+    creation_data_identifier = query_object.params.add(
+        {
+            "id": str(uuid.uuid7()),
+            "created_when": datetime.datetime.now(datetime.timezone.utc),
+        }
+    )
+
+    username_identifier = query_object.params.add(current_request_username.get())
+    user_node_identifier = Identifier()
+
+    query_object.match_query_strings.append(
+        f"""MATCH (user:PGUser {{username: ${username_identifier}}})"""
+    )
+
     # Add Create and Set strings to query_object
     query_object.create_query_strings.append(f"""
         CREATE ({node_identifier}:{instance_labels})
         SET {node_identifier} = ${node_data_identifier}
-
+        CREATE (creation:PGCreation)
+        SET creation = ${creation_data_identifier}
+        CREATE (creation)-[:is_creation_of]->({node_identifier})
+        CREATE (creation)-[:created_by]->(user)
     """)
 
     # Attach all related nodes to the object

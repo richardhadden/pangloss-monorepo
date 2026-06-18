@@ -501,5 +501,5 @@ async def test_write_semantic_spaces():
     assert factoid_ref.id
 
     factoid_from_db = await Factoid.get(id=factoid_ref.id)
-
+    print(factoid_from_db)
     assert False

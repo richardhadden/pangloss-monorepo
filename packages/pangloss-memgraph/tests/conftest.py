@@ -9,6 +9,7 @@ from pangloss_core.settings import BaseSettings, DatabaseSettings
 from pangloss_memgraph.databases.memgraph.database import Database
 from pangloss_memgraph.databases.memgraph.settings import MemgraphDatabaseSettings
 from pangloss_models.model_registry import ModelRegistry
+from pangloss_users import current_request_username
 from pydantic import AnyHttpUrl, AnyUrl
 from pytest import fixture, mark
 from tenacity import retry, stop_after_delay, wait_fixed
@@ -26,6 +27,16 @@ def reset_model_registry():
 def clear_database(db_driver):
     yield
     db_driver.execute_query("MATCH (n) DETACH DELETE n", database="memgraph")
+
+
+@fixture(scope="session", autouse=True)
+def ensure_user(db_driver):
+
+    db_driver.execute_query(
+        f"""MERGE (user:PGUser {{username: "{current_request_username.get()}"}})""",
+        database="memgraph",
+    )
+    yield
 
 
 @fixture(scope="session", autouse=True)
@@ -90,7 +101,7 @@ def wait_for_memgraph():
     driver.close()
 
 
-@fixture
+@fixture(scope="session")
 def db_driver() -> Generator[neo4j.Driver, None, None]:
     driver = neo4j.GraphDatabase.driver(
         "bolt://localhost:7687",
