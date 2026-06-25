@@ -34,6 +34,7 @@ class Database:
                 self.settings.DATABASE.DB_PASSWORD,
             ),
             keep_alive=True,
+            max_transaction_retry_time=10.0,
         )
 
     async def _check_driver(self):
@@ -63,7 +64,9 @@ class Database:
             async with self.driver.session(
                 database=self.settings.DATABASE.DATABASE_NAME
             ) as session:
+                print("starting read")
                 records = await session.execute_read(func, *args, **kwargs)
+                print("end read")
                 return records
 
         return wrapper
@@ -88,18 +91,15 @@ class Database:
             *args: P.args,
             **kwargs: P.kwargs,
         ) -> T | None:
-
             await self._check_driver()
-
             async with self.driver.session(
                 database=self.settings.DATABASE.DATABASE_NAME
             ) as session:
                 records = None
                 try:
                     records = await session.execute_write(func, *args, **kwargs)
-                except neo4j.exceptions.TransactionError:
-                    pass
-
+                except neo4j.exceptions.TransactionError as e:
+                    print(f"Transaction failed in: {e}")
                 return records
 
         return wrapper

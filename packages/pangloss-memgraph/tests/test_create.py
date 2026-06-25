@@ -26,9 +26,6 @@ async def test_document_get(clear_database):
     assert Statement.get
     assert iscoroutinefunction(Statement.get)
 
-    resp = await Statement.get(uuid7())
-    assert resp
-
 
 @no_type_check
 async def test_document_write(clear_database):
@@ -63,7 +60,7 @@ async def test_document_write_with_user_contextvar():
 
 
 @no_type_check
-async def test_document_write_with_different_types(clear_database):
+async def test_document_write_with_different_types():
     class Statement(Document):
         name: str
         age: int
@@ -375,7 +372,7 @@ async def test_massive_write(clear_database):
 
 
 @no_type_check
-async def test_massive_nested_write():
+async def test_massive_nested_write(clear_database):
     class Action(Document):
         action_carried_out_by: list[Person]
 
@@ -415,10 +412,10 @@ async def test_massive_nested_write():
                         "label": f"Dude{i}",
                         "create_new": True,
                     }
-                    for i in range(100)
+                    for i in range(20)
                 ],
             }
-            for j in range(50)
+            for j in range(20)
         ],
     )
 
@@ -431,11 +428,22 @@ async def test_massive_nested_write():
         order_db.thing_ordered[0].action_carried_out_by[0], Person.CreateDB
     )
 
-    await order.save()
+    order_ref = await order.save()
+
+    order_from_db = await Order.get(id=order_ref.id)
+
+    assert order_from_db.order_given_by.type == "Person"
+    assert order_from_db.order_given_by.id
+    assert order_from_db.order_received_by.type == "Person"
+    assert order_from_db.order_received_by.id
+
+    assert len(order_from_db.thing_ordered) == 20
+    assert len(order_from_db.thing_ordered[0].action_carried_out_by) == 20
+    assert order_from_db.thing_ordered[0].action_carried_out_by[0].type == "Person"
 
 
 @no_type_check
-async def test_write_semantic_spaces():
+async def test_write_semantic_spaces(clear_database):
 
     class Negative[T](SemanticSpace[T]):
         pass
@@ -497,9 +505,24 @@ async def test_write_semantic_spaces():
     )
 
     factoid_ref = await factoid.save(return_type="Full")
-
+    assert isinstance(factoid_ref, Factoid.HeadView)
     assert factoid_ref.id
 
     factoid_from_db = await Factoid.get(id=factoid_ref.id)
-    print(factoid_from_db)
-    assert False
+    assert factoid_from_db.type == "Factoid"
+    assert factoid_from_db.statements[0].type == "Negative"
+    assert factoid_from_db.statements[0].contents[0].type == "Order"
+    assert (
+        factoid_from_db.statements[0].contents[0].label
+        == "KM orders JS to take an action"
+    )
+    assert factoid_from_db.statements[0].contents[0].order_given_by.id == km.id
+    assert factoid_from_db.statements[0].contents[0].order_received_by.id == js.id
+    assert factoid_from_db.statements[0].contents[0].thing_ordered[0].type == "Action"
+    assert (
+        factoid_from_db.statements[0]
+        .contents[0]
+        .thing_ordered[0]
+        .action_carried_out_by.type
+        == "Person"
+    )

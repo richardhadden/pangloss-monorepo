@@ -29,11 +29,13 @@ def clear_database(db_driver):
     db_driver.execute_query("MATCH (n) DETACH DELETE n", database="memgraph")
 
 
-@fixture(scope="session", autouse=True)
+@fixture(scope="function", autouse=True)
 def ensure_user(db_driver):
 
     db_driver.execute_query(
-        f"""MERGE (user:PGUser {{username: "{current_request_username.get()}"}})""",
+        f"""
+        MERGE (user:PGUser {{username: "{current_request_username.get()}"}});
+        """,
         database="memgraph",
     )
     yield

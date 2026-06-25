@@ -1,4 +1,6 @@
+import base64
 import datetime
+import lzma
 import typing
 import uuid
 from typing import Any
@@ -21,7 +23,18 @@ from pangloss_models.model_bases.reified_relation import (
 )
 from pangloss_models.model_bases.semantic_space import _SemanticSpaceCreateDBBase
 from pangloss_users import current_request_username
-from pydantic import AnyUrl
+from pydantic import AnyUrl, BaseModel
+
+
+def compress(instance: BaseModel):
+
+    stored_string = base64.b64encode(
+        lzma.compress(
+            instance.model_dump_json().encode("utf-8"), preset=9 | lzma.PRESET_EXTREME
+        )
+    ).decode("utf-8")
+    return stored_string
+
 
 type _AllCreateDBModels = (
     _DocumentCreateDBBase
@@ -223,7 +236,7 @@ def build_related_node_query(
         MERGE ({node_identifier}:{instance_labels} {{id: ${node_id_identifier}}})
         ON CREATE SET {node_identifier} = ${node_data_identifier}
         CREATE ({source_identifier})-[{forward_query_identifier}:{field_definition.field_name}]->({node_identifier})
-        CREATE ({source_identifier})<-[{reverse_query_identifier}:{field_definition.reverse_name}]-({node_identifier})
+        CREATE ({source_identifier})<-[{reverse_query_identifier}:{field_definition.reverse_name} {{reverse: true}}]-({node_identifier})
 
     """)
     edge_properties_identifier: Identifier | None = None
@@ -246,7 +259,7 @@ def build_related_node_query(
         reverse_query_identifier = Identifier()
         query_object.create_query_strings.append(f"""
             CREATE ({source_identifier})-[{forward_query_identifier}:{subclasses_field.field_name}]->({node_identifier})
-            CREATE ({source_identifier})<-[{reverse_query_identifier}:{reverse_name}]-({node_identifier})
+            CREATE ({source_identifier})<-[{reverse_query_identifier}:{reverse_name} {{reverse: true}}]-({node_identifier})
         """)
         if edge_properties_identifier:
             query_object.create_query_strings.append(f"""
@@ -288,7 +301,7 @@ def build_relation_to_existing_query(
     reverse_query_identifier = Identifier()
     query_object.create_query_strings.append(f"""
         CREATE ({source_identifier})-[{forward_query_identifier}:{field_definition.field_name}]->({instance_identifier})
-        CREATE ({source_identifier})<-[{reverse_query_identifier}:{field_definition.reverse_name}]-({instance_identifier})
+        CREATE ({source_identifier})<-[{reverse_query_identifier}:{field_definition.reverse_name} {{reverse: true}}]-({instance_identifier})
     """)
 
     edge_properties_identifier: Identifier | None = None
@@ -311,7 +324,7 @@ def build_relation_to_existing_query(
         reverse_query_identifier = Identifier()
         query_object.create_query_strings.append(f"""
             CREATE ({source_identifier})-[{forward_query_identifier}:{subclasses_field.field_name}]->({instance_identifier})
-            CREATE ({source_identifier})<-[{reverse_query_identifier}:{reverse_name}]-({instance_identifier})
+            CREATE ({source_identifier})<-[{reverse_query_identifier}:{reverse_name} {{reverse: true}}]-({instance_identifier})
         """)
         if edge_properties_identifier:
             query_object.create_query_strings.append(f"""
@@ -343,16 +356,19 @@ def build_head_create_query(
     # Add the dict to the query params and get back an Identifier
     node_data_identifier = query_object.params.add(node_data_dict)
 
+    # Build a Creation object connected to the created node and
+    # current user
+    compressed_data = compress(instance)
     creation_data_identifier = query_object.params.add(
         {
             "id": str(uuid.uuid7()),
             "created_when": datetime.datetime.now(datetime.timezone.utc),
+            # "data": compressed_data,
         }
     )
 
+    # Match the current user username
     username_identifier = query_object.params.add(current_request_username.get())
-    user_node_identifier = Identifier()
-
     query_object.match_query_strings.append(
         f"""MATCH (user:PGUser {{username: ${username_identifier}}})"""
     )
@@ -390,5 +406,50 @@ WITH indirect_paths, collect(p2) AS direct_paths
 WITH indirect_paths + direct_paths AS paths
 CALL convert_c.to_tree(paths) YIELD value
 RETURN value
+
+"""
+
+
+"""
+
+MATCH (root:PGIndexableNode {id: "019ef8b5-026f-700b-bda3-a7958b207d78"})
+WHERE "Order" IN labels(root)
+OPTIONAL MATCH (hn:HeadNode {id: root.id})
+WITH root, coalesce(hn, root) AS headnode
+MATCH (headnode)<-[:is_creation_of]-(creation:PGCreation)
+MATCH (creation)-[:created_by]->(user:PGUser)
+OPTIONAL MATCH p1 = (root)-[*BFS (e, n | NOT n:Entity)]->(intermediate)-[]->(:Entity)
+OPTIONAL MATCH p2 = (root)-[*BFS]->(intermediate)-[]->(:Document)
+WITH DISTINCT root, creation, user, p1, p2
+WITH root, creation, user, collect(p1) AS indirect_paths, collect(p2) AS paths_to_docs
+OPTIONAL MATCH p3 = (root)-[]->(:Entity)
+WITH creation, user, indirect_paths, paths_to_docs, collect(p3) AS direct_paths
+WITH creation, user, indirect_paths + direct_paths + paths_to_docs AS paths
+ CALL convert_c.to_tree(paths) YIELD value
+    RETURN map.merge(value, {meta: {created_by: user.username, created_when: creation.created_when, updated_by: null, updated_when: null}})
+"""
+
+
+"""
+// FASTEST READ SO FAR!
+MATCH (root:PGIndexableNode {id: "019ef8b5-026f-700b-bda3-a7958b207d78"})
+WHERE "Order" IN labels(root)
+
+OPTIONAL MATCH (hn:HeadNode {id: root.id})
+WITH root, coalesce(hn, root) AS headnode
+MATCH (headnode)<-[:is_creation_of]-(creation:PGCreation)
+MATCH (creation)-[:created_by]->(user:PGUser)
+
+CALL graph_util.descendants(root) YIELD descendants
+WITH root, creation, user,
+     [n IN descendants WHERE n:Entity] AS entity_nodes,
+     [n IN descendants WHERE n:Document] AS doc_nodes
+
+UNWIND entity_nodes + doc_nodes AS target
+OPTIONAL MATCH p = (root)-[*BFS]->(target)
+WITH creation, user, collect(p) AS paths
+
+CALL convert_c.to_tree(paths) YIELD value
+RETURN map.merge(value, {meta: {created_by: user.username, created_when: creation.created_when, updated_by: null, updated_when: null}})
 
 """

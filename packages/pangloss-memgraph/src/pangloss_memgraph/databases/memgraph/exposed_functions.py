@@ -2,9 +2,10 @@ import datetime
 import functools
 import json
 import time
-from typing import TYPE_CHECKING, Literal, overload
+from typing import TYPE_CHECKING, Literal, cast, overload
 from uuid import UUID, uuid7
 
+from neo4j import AsyncResult
 from pangloss_models.model_bases.base_models import (
     _APIHeadMeta,
     _CreateDBBase,
@@ -15,6 +16,7 @@ from pangloss_models.model_bases.document import (
     _DocumentCreateBase,
     _DocumentCreateDBBase,
     _DocumentHeadViewBase,
+    _DocumentReferenceViewAPIMeta,
     _DocumentUpdateDBBase,
 )
 from pangloss_models.model_bases.entity import (
@@ -42,7 +44,7 @@ def timer(func):
         start = time.perf_counter()
         result = await func(*args, **kwargs)
         end = time.perf_counter()
-        print(f"{func.__name__} took {end - start:.12f}s : {args}")
+        print(f"{func.__name__} took {end - start:.12f}s")
         return result
 
     return wrapper
@@ -80,12 +82,11 @@ async def get_document(
 
 @Database.default.write_transaction
 @timer
-async def create_head_node(
+async def write_head_node(
     tx: Transaction,
-    instance: _DocumentCreateBase,
-    return_type: Literal["Reference"] = "Reference",
-) -> _DocumentHeadViewBase | None:
-    db_instance: _DocumentCreateDBBase = instance._to_db_model()
+    db_instance: _DocumentCreateDBBase,
+) -> AsyncResult:
+
     query_object = build_head_create_query(db_instance)
 
     with open(".query_dumps/create.cypher", "w") as f:
@@ -94,8 +95,27 @@ async def create_head_node(
             // {str(query_object.params)}
             """)
 
-    result = await tx.run(query_object.to_query_string(), **query_object.params)
+    response = await tx.run(query_object.to_query_string(), **query_object.params)
+    result = await response.value()
+    print(result)
+    return result
 
-    return instance._owner.ReferenceView(
-        **db_instance.model_dump(), meta={"created_by": current_request_username.get()}
+
+async def create_head_node(
+    instance: _DocumentCreateBase,
+    return_type: Literal["Reference"] | Literal["Full"] = "Reference",
+):
+    db_instance: _DocumentCreateDBBase = cast(
+        _DocumentCreateDBBase, instance._to_db_model()
     )
+    await write_head_node(db_instance)
+
+    if return_type == "Reference":
+        return cast(type[Document], instance._owner).ReferenceView(
+            **db_instance.model_dump(),
+            meta=_DocumentReferenceViewAPIMeta(
+                created_by=current_request_username.get()
+            ),
+        )
+    if return_type == "Full":
+        return await get_document(cast(type[Document], instance._owner), db_instance.id)
