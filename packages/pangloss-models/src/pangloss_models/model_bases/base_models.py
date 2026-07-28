@@ -22,6 +22,7 @@ from pydantic import (
     PrivateAttr,
     ValidationError,
     create_model,
+    field_validator,
     model_validator,
 )
 from pydantic.alias_generators import to_camel
@@ -190,13 +191,9 @@ def allow_bind_on_this_item(
     item: _CreateBase | _UpdateBase, binding: FieldBinding
 ) -> bool:
     return bool(
-        (
-            binding.allowed_type_names
-            and getattr(item, "type") in binding.allowed_type_names
-        )
+        (binding.allowed_type_names and item.type in binding.allowed_type_names)
         or (
-            binding.excluded_type_names
-            and getattr(item, "type") not in binding.excluded_type_names
+            binding.excluded_type_names and item.type not in binding.excluded_type_names
         )
         or (not binding.allowed_type_names and not binding.excluded_type_names)
     )
@@ -343,18 +340,16 @@ def recursively_propagate_semantic_space_types(
         item.semantic_space_labels = [*semantic_space_labels]
 
     if isinstance(item, (_SemanticSpaceCreateDBBase, _SemanticSpaceUpdateDBBase)):
-        semantic_spaces.append(getattr(item, "type"))
+        semantic_spaces.append(item.type)
 
         if (
             parent
             and isinstance(parent, _DocumentCreateDBBase)
             and parent._meta.use_in_semantic_space_label  # type: ignore
         ):
-            semantic_space_labels.append(
-                f"{getattr(parent, 'type')} -> {getattr(item, 'type')}"
-            )
+            semantic_space_labels.append(f"{parent.type} -> {item.type}")
         else:
-            semantic_space_labels.append(getattr(item, "type"))
+            semantic_space_labels.append(item.type)
 
     for field_name, field_definition in item._meta.fields.relation_fields.items():
         if related_item := getattr(item, field_name, None):
@@ -398,7 +393,7 @@ def get_fulfillable_models(self):
     return model_fulfilments
 
 
-def get_fulfilled_classes(self, metafunction: Literal["Update"] | Literal["Create"]):
+def get_fulfilled_classes(self, metafunction: Literal["Update", "Create"]):
     model_fulfilments = get_fulfillable_models(self)
 
     models_fulfiled = []
@@ -510,6 +505,20 @@ class _APIHeadMeta(_BaseObject):
     created_when: datetime.datetime
     updated_by: str | None
     updated_when: datetime.datetime | None
+    semantic_spaces: list[str] = Field(default_factory=list)
+    semantic_space_labels: list[str] = Field(default_factory=list)
+    head_node_type: str | None = None
+    head_node_id: UUID | None = None
+
+    @field_validator("semantic_spaces", mode="before")
+    @classmethod
+    def semantic_spaces_to_empty_list(cls, v):
+        return [] if v is None else v
+
+    @field_validator("semantic_space_labels", mode="before")
+    @classmethod
+    def semantic_space_labels_to_empty_list(cls, v):
+        return [] if v is None else v
 
     @model_validator(mode="before")
     @classmethod

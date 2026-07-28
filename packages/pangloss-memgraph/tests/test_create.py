@@ -1,5 +1,5 @@
 from inspect import iscoroutinefunction
-from typing import Annotated, get_args
+from typing import Annotated, no_type_check
 from uuid import uuid7
 
 import pytest
@@ -12,7 +12,6 @@ from pangloss_models.model_bases.entity import Entity
 from pangloss_models.model_bases.helpers import ViaEdge
 from pangloss_models.model_bases.semantic_space import SemanticSpace
 from pangloss_users import current_request_username
-from typing_extensions import no_type_check
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -246,7 +245,7 @@ async def test_write_subclassed_edges(db_driver, clear_database):
     await ac.save()
 
     records, summary, keys = db_driver.execute_query(f"""
-        MATCH (st:Action)-[r:carried_out_by]->(p:Person {{id: "{str(p_created.id)}"}})
+        MATCH (st:Action)-[r:carried_out_by]->(p:Person {{id: "{p_created.id!s}"}})
         MATCH (st)-[:concerns_person]->(p)
         MATCH (st)<-[:carried_out_by_reverse]-(p)
         MATCH (st)<-[:concerns_person_reverse]-(p)
@@ -353,14 +352,7 @@ async def test_massive_write(clear_database):
     uids = [uuid7() for _ in range(200)]
 
     for i, uid in enumerate(uids):
-        p = Person.Create(
-            **{
-                "type": "Person",
-                "id": uid,
-                "label": f"A Person{i}",
-                "create_new": True,
-            }
-        )
+        p = Person.Create(type="Person", id=uid, label=f"A Person{i}", create_new=True)
         await p.save()
 
     action = Action.Create(
@@ -383,7 +375,6 @@ async def test_massive_nested_write(clear_database):
 
     class Person(Entity):
         _meta = Entity.Meta(create_inline=True, create_with_id=True)
-        pass
 
     initialise()
 
@@ -476,32 +467,30 @@ async def test_write_semantic_spaces(clear_database):
     assert km.id
 
     factoid = Factoid.Create(
-        **{
-            "label": "A Factoid",
-            "statements": [
-                {
-                    "type": "Negative",
-                    "contents": [
-                        {
-                            "type": "Order",
-                            "label": "KM orders JS to take an action",
-                            "order_given_by": {"type": "Person", "id": km.id},
-                            "order_received_by": {"type": "Person", "id": js.id},
-                            "thing_ordered": [
-                                {
-                                    "type": "Action",
-                                    "label": "JS carries out an action",
-                                    "action_carried_out_by": {
-                                        "type": "Person",
-                                        "id": js.id,
-                                    },
-                                }
-                            ],
-                        }
-                    ],
-                }
-            ],
-        }
+        label="A Factoid",
+        statements=[
+            {
+                "type": "Negative",
+                "contents": [
+                    {
+                        "type": "Order",
+                        "label": "KM orders JS to take an action",
+                        "order_given_by": {"type": "Person", "id": km.id},
+                        "order_received_by": {"type": "Person", "id": js.id},
+                        "thing_ordered": [
+                            {
+                                "type": "Action",
+                                "label": "JS carries out an action",
+                                "action_carried_out_by": {
+                                    "type": "Person",
+                                    "id": js.id,
+                                },
+                            }
+                        ],
+                    }
+                ],
+            }
+        ],
     )
 
     factoid_ref = await factoid.save(return_type="Full")

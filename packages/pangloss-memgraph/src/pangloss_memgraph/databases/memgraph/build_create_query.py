@@ -139,6 +139,8 @@ def get_node_fields_as_writable_dict(
             "created_when": datetime.datetime.now(),
             "updated_by": current_request_username.get(),
             "updated_when": datetime.datetime.now(),
+            "semantic_spaces": instance.semantic_spaces,
+            "semantic_space_labels": instance.semantic_space_labels,
         }
 
     if not is_head_node:
@@ -362,7 +364,7 @@ def build_head_create_query(
     creation_data_identifier = query_object.params.add(
         {
             "id": str(uuid.uuid7()),
-            "created_when": datetime.datetime.now(datetime.timezone.utc),
+            "created_when": datetime.datetime.now(datetime.UTC),
             # "data": compressed_data,
         }
     )
