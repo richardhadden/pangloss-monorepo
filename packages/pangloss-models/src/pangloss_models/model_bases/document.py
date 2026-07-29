@@ -1,9 +1,9 @@
 import datetime
-from collections.abc import Awaitable
-from typing import Annotated, Any, Callable, ClassVar, Self
+from collections.abc import Awaitable, Callable
+from typing import Annotated, Any, ClassVar, Self
 from uuid import UUID, uuid7
 
-from pydantic import AnyHttpUrl, ConfigDict, Field, model_validator
+from pydantic import AnyHttpUrl, ConfigDict, Field, field_validator, model_validator
 from pydantic_meta_kit import BaseMeta, InheritValue, MetaRules, WithMeta
 
 from pangloss_models.field_definitions import (
@@ -18,6 +18,7 @@ from pangloss_models.model_bases.base_models import (
     _CreateDBBase,
     _DeclaredClass,
     _HeadViewBase,
+    _ListItems,
     _ReferenceSetBase,
     _ReferenceViewBase,
     _UpdateBase,
@@ -40,7 +41,7 @@ class DocumentMeta(BaseMeta, DeclaredClassMeta):
     )
     use_in_semantic_space_label: bool = True
     field_definitions: ModelFields = Field(default_factory=ModelFields)
-    _owner_class: type[Document] | InheritValue = InheritValue.AS_DEFAULT  # noqa: F821
+    _owner_class: type[Document] | InheritValue = InheritValue.AS_DEFAULT
 
     @property
     def fields(self) -> ModelFieldDict[str, FieldDefinition]:
@@ -88,16 +89,40 @@ class _DocumentReferenceViewAPIMeta(_BaseObject):
     is_head_node: bool = False
     head_node_id: UUID | None = None
     head_node_type: str | None = None
-    semantic_spaces: list[str] = Field(default_factory=list)
-    semantic_space_labels: list[str] = Field(default_factory=list)
+    semantic_spaces: list[str] | None = Field(default_factory=list)
+    semantic_space_labels: list[str] | None = Field(default_factory=list)
     created_by: str | None = None
     created_when: datetime.datetime = Field(
-        default_factory=lambda: datetime.datetime.now(datetime.timezone.utc)
+        default_factory=lambda: datetime.datetime.now(datetime.UTC)
     )
     updated_by: str | None = None
-    updated_when: datetime.datetime = Field(
-        default_factory=lambda: datetime.datetime.now(datetime.timezone.utc)
+    updated_when: datetime.datetime | None = Field(
+        default_factory=lambda: datetime.datetime.now(datetime.UTC)
     )
+
+    @field_validator("semantic_spaces", mode="before")
+    @classmethod
+    def semantic_spaces_to_empty_list(cls, v):
+        return [] if v is None else v
+
+    @field_validator("semantic_space_labels", mode="before")
+    @classmethod
+    def semantic_space_labels_to_empty_list(cls, v):
+        return [] if v is None else v
+
+    @field_validator("created_when", mode="before")
+    @classmethod
+    def convert_neo4j_created_when_date(cls, v) -> Any:
+        if v:
+            return v.to_native()
+        return v
+
+    @field_validator("updated_when", mode="before")
+    @classmethod
+    def convert_neo4j_updated_when_date(cls, v) -> Any:
+        if v:
+            return v.to_native()
+        return v
 
 
 class _DocumentReferenceViewBase(_ReferenceViewBase):
@@ -138,6 +163,14 @@ class Document(_DeclaredClass, WithMeta[DocumentMeta]):
         Callable[
             [AnyHttpUrl | UUID],
             _DocumentHeadViewBase | Awaitable[_DocumentHeadViewBase],
+        ]
+    ]
+
+    list: ClassVar[
+        Callable[
+            [str],
+            _ListItems[_DocumentReferenceViewBase]
+            | Awaitable[_ListItems[_DocumentReferenceViewBase]],
         ]
     ]
 

@@ -526,6 +526,15 @@ class _APIHeadMeta(_BaseObject):
         return convert_neo4j_datetimes(data)
 
 
+class _ListItems[T: _ReferenceViewBase](_BaseObject):
+    results: list[T]
+    count: int
+    page: int
+    page_size: int
+    next_page: int | None
+    previous_page: int | None
+
+
 class _HeadViewBase(_ActionClass):
     id: UUID
     meta: _APIHeadMeta

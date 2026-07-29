@@ -16,7 +16,6 @@ from pangloss_models.exceptions import (
 if TYPE_CHECKING:
     from pangloss_models.model_bases.base_models import (
         _ActionClass,
-        _CreateBase,
         _DeclaredClass,
     )
 
@@ -253,7 +252,7 @@ class ModelRegistry:
             initialise_view_model,
         )
         from pangloss_models.model_bases.document import Document, _DocumentCreateBase
-        from pangloss_models.model_bases.entity import _EntityCreateBase
+        from pangloss_models.model_bases.entity import Entity, _EntityCreateBase
 
         graph = cls._build_graph()
         order, cyclic = cls._toposort(graph)
@@ -355,9 +354,7 @@ class ModelRegistry:
 
             async def create_head_node_function_async(
                 self: _DocumentCreateBase,
-                return_type: Literal["Reference"]
-                | Literal["Full"]
-                | Literal["Detail"] = "Reference",
+                return_type: Literal["Reference", "Full", "Detail"] = "Reference",
             ):
                 return await database_exposed_functions_module.create_head_node(
                     self, return_type
@@ -376,6 +373,27 @@ class ModelRegistry:
 
             _DocumentCreateBase.save = create_head_node_function_sync  # type: ignore
             _EntityCreateBase.save = create_head_node_function_sync  # type: ignore
+
+        is_async = iscoroutinefunction(database_exposed_functions_module.list_items)
+
+        if is_async:
+
+            async def list_items_function_async(cls, search_term: str | None = None):
+                return await database_exposed_functions_module.list_items(
+                    cls, search_term
+                )
+
+            Document.list = classmethod(list_items_function_async)  # type: ignore
+            Entity.list = classmethod(list_items_function_async)  # type: ignore
+
+        else:
+
+            def list_items_function_sync(cls, search_term: str | None = None):
+                return database_exposed_functions_module.list_items(cls, search_term)
+
+            Document.list = classmethod(list_items_function_sync)  # type: ignore
+            Entity.list = classmethod(list_items_function_sync)  # type: ignore
+
         """
         def save_func_for_create(self):
             print(f"Using database {database}")

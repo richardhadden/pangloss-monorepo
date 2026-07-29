@@ -10,7 +10,7 @@ pytestmark = pytest.mark.asyncio(loop_scope="session")
 
 
 @no_type_check
-async def test_read_nested_object():
+async def test_read_nested_object(clear_database):
     class Negative[T](SemanticSpace[T]):
         pass
 
@@ -88,3 +88,13 @@ async def test_read_nested_object():
     assert order_from_db.order_given_by.label == "Kaiser Maximilian"
     assert order_from_db.order_received_by.id == js.id
     assert order_from_db.order_received_by.label == "John Smith"
+
+    thing_ordered = order_from_db.thing_ordered[0]
+    assert thing_ordered
+
+    assert thing_ordered.type == "Action"
+
+    assert thing_ordered.meta.semantic_spaces == ["Negative"]
+    assert thing_ordered.meta.semantic_space_labels == ["Factoid -> Negative"]
+
+    assert thing_ordered.action_carried_out_by.id == js.id

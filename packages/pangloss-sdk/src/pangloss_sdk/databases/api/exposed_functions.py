@@ -1,24 +1,22 @@
 import datetime
-from typing import TYPE_CHECKING, overload
 from uuid import UUID, uuid7
 
 from pangloss_models.model_bases.base_models import (
     _APIHeadMeta,
-    _CreateDBBase,
-    _UpdateDBBase,
+    _ListItems,
 )
 from pangloss_models.model_bases.document import (
     Document,
     _DocumentCreateBase,
     _DocumentCreateDBBase,
     _DocumentHeadViewBase,
+    _DocumentReferenceViewBase,
     _DocumentUpdateDBBase,
 )
 from pangloss_models.model_bases.entity import (
     Entity,
-    _EntityCreateBase,
     _EntityCreateDBBase,
-    _EntityUpdateBase,
+    _EntityReferenceViewBase,
     _EntityUpdateDBBase,
 )
 from pydantic import AnyHttpUrl
@@ -48,4 +46,10 @@ def get_document(cls: type[Document], id: UUID | AnyHttpUrl) -> _DocumentHeadVie
 
 
 def create_head_node(self: _DocumentCreateBase, return_created: bool = False):
+    pass
+
+
+def list_items(
+    cls: type[Document | Entity], search_terms: str
+) -> _ListItems[_DocumentReferenceViewBase | _EntityReferenceViewBase]:
     pass

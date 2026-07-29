@@ -1,3 +1,4 @@
+from collections.abc import Awaitable, Callable
 from typing import Annotated, Any, ClassVar, Self
 from uuid import UUID, uuid7
 
@@ -16,6 +17,7 @@ from pangloss_models.model_bases.base_models import (
     _CreateDBBase,
     _DeclaredClass,
     _HeadViewBase,
+    _ListItems,
     _ReferenceSetBase,
     _ReferenceViewBase,
     _UpdateBase,
@@ -84,7 +86,7 @@ class _EntityReferenceSetBase(_ReferenceSetBase):
     pass
 
 
-class _EntityReferenceView(_ReferenceViewBase):
+class _EntityReferenceViewBase(_ReferenceViewBase):
     label: str
 
 
@@ -112,7 +114,7 @@ class Entity(_DeclaredClass, WithMeta[EntityMeta]):
     Create: ClassVar[type[_EntityCreateBase]]
     CreateDB: ClassVar[type[_EntityCreateDBBase]]
     ReferenceSet: ClassVar[type[_EntityReferenceSetBase]]
-    ReferenceView: ClassVar[type[_EntityReferenceView]]
+    ReferenceView: ClassVar[type[_EntityReferenceViewBase]]
     Update: ClassVar[type[_EntityUpdateBase]]
     UpdateDB: ClassVar[type[_EntityUpdateDBBase]]
 
@@ -129,3 +131,11 @@ class Entity(_DeclaredClass, WithMeta[EntityMeta]):
         cls._meta._owner_class = cls
 
         cls._register()
+
+    list: ClassVar[
+        Callable[
+            [str],
+            _ListItems[_EntityReferenceViewBase]
+            | Awaitable[_ListItems[_EntityReferenceViewBase]],
+        ]
+    ]
