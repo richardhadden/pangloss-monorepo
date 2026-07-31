@@ -378,9 +378,19 @@ class ModelRegistry:
 
         if is_async:
 
-            async def list_items_function_async(cls, search_term: str | None = None):
+            async def list_items_function_async(
+                cls,
+                search_terms: str | None = None,
+                page_number: int | None = None,
+                page_size: int | None = None,
+                deep_search: bool = False,
+            ):
                 return await database_exposed_functions_module.list_items(
-                    cls, search_term
+                    cls,
+                    search_terms=search_terms,
+                    page_number=page_number,
+                    page_size=page_size,
+                    deep_search=deep_search,
                 )
 
             Document.list = classmethod(list_items_function_async)  # type: ignore
@@ -388,8 +398,20 @@ class ModelRegistry:
 
         else:
 
-            def list_items_function_sync(cls, search_term: str | None = None):
-                return database_exposed_functions_module.list_items(cls, search_term)
+            def list_items_function_sync(
+                cls,
+                search_terms: str | None = None,
+                page_number: int | None = None,
+                page_size: int | None = None,
+                deep_search: bool = False,
+            ):
+                return database_exposed_functions_module.list_items(
+                    cls,
+                    search_terms=search_terms,
+                    page_number=page_number,
+                    page_size=page_size,
+                    deep_search=deep_search,
+                )
 
             Document.list = classmethod(list_items_function_sync)  # type: ignore
             Entity.list = classmethod(list_items_function_sync)  # type: ignore

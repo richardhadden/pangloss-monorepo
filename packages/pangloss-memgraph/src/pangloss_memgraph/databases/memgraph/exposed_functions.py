@@ -61,25 +61,40 @@ def save(
 @Database.default.read_transaction
 @timer
 async def list_items(
-    tx: Transaction, cls: type[Document | Entity], search_terms: str | None
+    tx: Transaction,
+    cls: type[Document | Entity],
+    search_terms: str | None = None,
+    page_number: int | None = None,
+    page_size: int | None = None,
+    deep_search: bool = False,
 ) -> _ListItems[_DocumentReferenceViewBase | _EntityReferenceViewBase]:
-    query, params = build_generic_list_query(cls, search_terms)
+    query, params = build_generic_list_query(
+        cls,
+        search_terms=search_terms,
+        page_number=page_number,
+        page_size=page_size,
+        deep_search=deep_search,
+    )
+
+    with open(".query_dumps/list.cypher", "w") as f:
+        f.write(f"""{query}
+
+            // {params!s}
+            """)
 
     concrete_types = get_concrete_types(cls)
     concrete_ref_types = [t.ReferenceView for t in concrete_types]
 
-    print(concrete_ref_types)
-    type_adapter = TypeAdapter(list[Union[*concrete_ref_types]])
+    type_adapter = TypeAdapter(list[Union[*concrete_ref_types]])  # type: ignore
 
     result = await tx.run(query, **params)
     result_values = await result.value()
+
     results: dict = result_values[0]
     results["results"] = type_adapter.validate_python(results["results"])
     result = _ListItems(**results)
-    print(result)
+
     return result
-    # items = [cls.ReferenceView(item) for item in result_values]
-    # print(items)
 
 
 @Database.default.read_transaction
