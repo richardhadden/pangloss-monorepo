@@ -72,8 +72,15 @@ async def test_list_basic_and_search(clear_database):
     assert any(isinstance(r, SubFactoid.ReferenceView) for r in result.results)
     assert any(isinstance(r, Factoid.ReferenceView) for r in result.results)
 
-    result: _ListItems = await Factoid.list("John Yak")
+    # Now try with a search
+    result: _ListItems = await Factoid.list("John ebr")
     assert result.count == 2
+
+    result: _ListItems = await SubFactoid.list("John ebr")
+    assert result.count == 1
+
+    result: _ListItems = await SubFactoid.list("wank off")
+    assert result.count == 0
 
 
 @no_type_check
@@ -115,7 +122,7 @@ async def test_list_deep_search(clear_database):
 
     await f.save()
 
-    res = await Person.list(search_terms="factoid john", deep_search=True)
+    res = await Person.list(search_terms="act john", deep_search=True)
 
     assert res.count == 1
     assert res.results[0].id == john_smith.id

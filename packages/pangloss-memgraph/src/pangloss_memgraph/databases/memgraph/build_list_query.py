@@ -15,7 +15,7 @@ def build_generic_list_query(
     print("BuildListQuery", object_class.__metatype__, search_terms, deep_search)
 
     if search_terms and deep_search:
-        search_term_list = [f"data.label:{t}" for t in search_terms.split(" ")]
+        search_term_list = [f".*{t}.*" for t in search_terms.split(" ")]
         params = {
             "targetType": object_class.__name__,
             "page": page_number or 1,
@@ -31,7 +31,7 @@ def build_generic_list_query(
                 // $page_size: results per page
 
                 UNWIND $tokens AS token
-                CALL text_search.search("label_index", token) YIELD node AS matchedNode
+                CALL text_search.regex_search("label_index", token) YIELD node AS matchedNode
                 CALL {
                   WITH matchedNode
                   WITH matchedNode
@@ -124,7 +124,7 @@ def build_generic_list_query(
             // $page_size: results per page
 
             UNWIND $tokens AS token
-            CALL text_search.search("label_index", token) YIELD node AS matchedNode
+            CALL text_search.regex_search("label_index", token) YIELD node AS matchedNode
             CALL {
               WITH matchedNode
               WITH matchedNode
@@ -208,48 +208,54 @@ def build_generic_list_query(
                 params,
             )
     if search_terms:
-        search_string = " AND ".join("data.label:" + t for t in search_terms.split(" "))
+        search_string = [f".*{t}.*" for t in search_terms.split(" ")]
         params = {
             "node_type": object_class.__name__,
             "page_number": page_number or 1,
             "page_size": page_size or 50,
-            "search_string": search_string,
+            "patterns": search_string,
         }
         return (
             """
-            CALL text_search.search("label_index", $search_string, {limit: 1000000}) YIELD node
-            WHERE $node_type IN labels(node)
-            WITH count(node) as total
-
-            CALL text_search.search("label_index", $search_string, {limit: $page_size}) YIELD node, score
-            WHERE $node_type IN labels(node)
-            WITH node as n, total
-              ORDER BY score
-
-              OPTIONAL MATCH (hn:HeadNode {id: n.head_node_id})
-              WITH n, total, coalesce(hn, n) AS headnode
-              MATCH (headnode)<-[:is_creation_of]-(creation:PGCreation)
-              MATCH (creation)-[:created_by]->(user:PGUser)
-
-              WITH collect(n{.*, meta: {
-                  created_by: user.username,
-                  created_when: creation.created_when,
-                  updated_by: null,
-                  updated_when: null,
-                  semantic_spaces: n.semantic_spaces,
-                  semantic_space_labels: n.semantic_space_labels
-              }}) AS items, total, toInteger(ceil(toFloat(total) / $page_size)) AS totalPages
-
-              RETURN {
+            UNWIND $patterns AS pattern
+            CALL text_search.regex_search("label_index", pattern) YIELD node, score
+            WITH node AS n, pattern, max(score) AS patternScore
+            WITH n, count(*) AS matchedPatterns, sum(patternScore) AS totalScore
+            WHERE matchedPatterns = size($patterns)
+              AND $node_type IN labels(n)
+            WITH n, totalScore
+            ORDER BY totalScore DESC, id(n)
+            WITH collect(n) AS allNodes
+            WITH allNodes,
+                 size(allNodes) AS total,
+                 toInteger(ceil(toFloat(size(allNodes)) / $page_size)) AS totalPages
+            WITH allNodes[($page_number - 1) * $page_size .. $page_number * $page_size] AS pageNodes,
+                 total, totalPages
+            CALL {
+                WITH pageNodes
+                UNWIND pageNodes AS n
+                OPTIONAL MATCH (hn:HeadNode {id: n.head_node_id})
+                WITH n, coalesce(hn, n) AS headnode
+                OPTIONAL MATCH (headnode)<-[:is_creation_of]-(creation:PGCreation)
+                OPTIONAL MATCH (creation)-[:created_by]->(user:PGUser)
+                RETURN collect(n{.*, meta: {
+                    created_by: user.username,
+                    created_when: creation.created_when,
+                    updated_by: null,
+                    updated_when: null,
+                    semantic_spaces: n.semantic_spaces,
+                    semantic_space_labels: n.semantic_space_labels
+                }}) AS items
+            }
+            RETURN {
                 results: items,
                 count: total,
                 page: $page_number,
                 page_size: $page_size,
-                page_count: toInteger(ceil(toFloat(total) / $page_size)),
+                page_count: totalPages,
                 previous_page: CASE WHEN $page_number > 1 THEN $page_number - 1 ELSE null END,
                 next_page: CASE WHEN $page_number < totalPages THEN $page_number + 1 ELSE null END
-              } AS result
-
+            } AS result;
         """,
             params,
         )
