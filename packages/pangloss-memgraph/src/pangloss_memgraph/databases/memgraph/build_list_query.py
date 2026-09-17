@@ -268,40 +268,52 @@ def build_generic_list_query(
         }
         return (
             """
-            MATCH (n)
-            WHERE $node_type in labels(n)
-            WITH count(n) AS total
+            MATCH (n:$node_type)
 
-            MATCH (n)
-            WHERE $node_type in labels(n)
-            WITH n, total
-            ORDER BY n.id
-            SKIP ($page_number - 1) * $page_size
-            LIMIT $page_size
+                        WITH count(n) AS total
 
-            OPTIONAL MATCH (hn:HeadNode {id: n.head_node_id})
-            WITH n, total, coalesce(hn, n) AS headnode
-            MATCH (headnode)<-[:is_creation_of]-(creation:PGCreation)
-            MATCH (creation)-[:created_by]->(user:PGUser)
+                        MATCH (n:$node_type)
 
-            WITH collect(n{.*, meta: {
-                created_by: user.username,
-                created_when: creation.created_when,
-                updated_by: null,
-                updated_when: null,
-                semantic_spaces: n.semantic_spaces,
-                semantic_space_labels: n.semantic_space_labels
-            }}) AS items, total, toInteger(ceil(toFloat(total) / $page_size)) AS totalPages
+                        WITH n, total
+                        ORDER BY n.id
+                        SKIP ($page_number - 1) * $page_size
+                        LIMIT $page_size
 
-            RETURN {
-              results: items,
-              count: total,
-              page: $page_number,
-              page_size: $page_size,
-              page_count: toInteger(ceil(toFloat(total) / $page_size)),
-              previous_page: CASE WHEN $page_number > 1 THEN $page_number - 1 ELSE null END,
-              next_page: CASE WHEN $page_number < totalPages THEN $page_number + 1 ELSE null END
-            } AS result
+                        OPTIONAL MATCH (hn:HeadNode:PGIndexableNode {id: n.head_node_id})
+                        WITH n, total, coalesce(hn, n) AS headnode
+                        MATCH (headnode)<-[:is_creation_of]-(creation:PGCreation)
+                        MATCH (creation)-[:created_by]->(user:PGUser)
+
+                        CALL {
+                          WITH n
+                          WITH collect(n) as ns
+                          UNWIND ns as m
+                          OPTIONAL MATCH (m)-->(entities:Entity)
+                          WITH entities
+                          WHERE entities IS NOT NULL
+                          WITH entities.type AS type, collect(entities{.id, .type, .label}) AS nodes
+                          RETURN collect(type, nodes) AS facets
+                        }
+
+                        WITH collect(n{.*, meta: {
+                            created_by: user.username,
+                            created_when: creation.created_when,
+                            updated_by: null,
+                            updated_when: null,
+                            semantic_spaces: n.semantic_spaces,
+                            semantic_space_labels: n.semantic_space_labels
+                        }}) AS items, total, toInteger(ceil(toFloat(total) / $page_size)) AS totalPages, facets
+
+                        RETURN {
+                          results: items,
+                          count: total,
+                          page: $page_number,
+                          page_size: $page_size,
+                          page_count: toInteger(ceil(toFloat(total) / $page_size)),
+                          previous_page: CASE WHEN $page_number > 1 THEN $page_number - 1 ELSE null END,
+                          next_page: CASE WHEN $page_number < totalPages THEN $page_number + 1 ELSE null END,
+                          facets: facets
+                        } AS result
         """,
             params,
         )
