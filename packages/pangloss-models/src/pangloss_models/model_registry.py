@@ -2,7 +2,7 @@ import heapq
 import importlib
 from inspect import iscoroutinefunction
 from itertools import chain
-from typing import TYPE_CHECKING, ClassVar, Literal, get_args, get_origin
+from typing import ClassVar, Literal, get_args, get_origin
 from uuid import UUID
 
 from pydantic import AnyHttpUrl, BaseModel
@@ -12,12 +12,49 @@ from pangloss_models.exceptions import (
     PanglossInitialisationError,
     PanglossModelError,
 )
-
-if TYPE_CHECKING:
-    from pangloss_models.model_bases.base_models import (
-        _ActionClass,
-        _DeclaredClass,
-    )
+lazy from pangloss_models.initialise_models.initalise_incoming_relation_definitions import (
+    initialise_incoming_relation_definitions,
+)
+lazy from pangloss_models.initialise_models.initialise_create_db_model import (
+    add_fields_to_create_db_model,
+    initialise_create_db_model,
+)
+lazy from pangloss_models.initialise_models.initialise_create_model import (
+    add_fields_to_create_model,
+    can_have_create_model,
+    initialise_create_model,
+)
+lazy from pangloss_models.initialise_models.initialise_field_definitions import (
+    initialise_field_definitions,
+)
+lazy from pangloss_models.initialise_models.initialise_head_view_model import (
+    can_have_head_view_model,
+    initialise_head_view_model,
+)
+lazy from pangloss_models.initialise_models.initialise_reference_models import (
+    initialise_reference_set_model,
+    initialise_reference_view_model,
+)
+lazy from pangloss_models.initialise_models.initialise_update_db_model import (
+    add_fields_to_update_db_model,
+    initialise_update_db_model,
+)
+lazy from pangloss_models.initialise_models.initialise_update_model import (
+    add_fields_to_update_model,
+    can_have_update_model,
+    initialise_update_model,
+)
+lazy from pangloss_models.initialise_models.initialise_view_model import (
+    add_fields_to_view_model,
+    can_have_view_model,
+    initialise_view_model,
+)
+lazy from pangloss_models.model_bases.base_models import (
+    _ActionClass,
+    _DeclaredClass,
+)
+lazy from pangloss_models.model_bases.document import Document, _DocumentCreateBase
+lazy from pangloss_models.model_bases.entity import Entity, _EntityCreateBase
 
 
 class ModelRegistry:
@@ -83,13 +120,18 @@ class ModelRegistry:
     def _generic_deps(cls, model: type[_DeclaredClass]) -> set[type[_DeclaredClass]]:
         from pangloss_models.utils import get_parent_class
 
-        deps = set()
+        deps: set[type[_DeclaredClass]] = set()
 
-        deps.add(get_parent_class(model))
+        if parent_class := get_parent_class(model):
+            deps.add(parent_class)
         meta = getattr(model, "__pydantic_generic_metadata__", None)
         if meta:
             for arg in meta.get("args", ()):
-                if isinstance(arg, type) and issubclass(arg, BaseModel):
+                if (
+                    isinstance(arg, type)
+                    and issubclass(arg, _DeclaredClass)
+                    and issubclass(arg, BaseModel)
+                ):
                     deps.add(arg)
 
         return deps
@@ -214,46 +256,6 @@ class ModelRegistry:
         Override or monkey-patch this.
         """
 
-        from pangloss_models.initialise_models.initalise_incoming_relation_definitions import (
-            initialise_incoming_relation_definitions,
-        )
-        from pangloss_models.initialise_models.initialise_create_db_model import (
-            add_fields_to_create_db_model,
-            initialise_create_db_model,
-        )
-        from pangloss_models.initialise_models.initialise_create_model import (
-            add_fields_to_create_model,
-            can_have_create_model,
-            initialise_create_model,
-        )
-        from pangloss_models.initialise_models.initialise_field_definitions import (
-            initialise_field_definitions,
-        )
-        from pangloss_models.initialise_models.initialise_head_view_model import (
-            can_have_head_view_model,
-            initialise_head_view_model,
-        )
-        from pangloss_models.initialise_models.initialise_reference_models import (
-            initialise_reference_set_model,
-            initialise_reference_view_model,
-        )
-        from pangloss_models.initialise_models.initialise_update_db_model import (
-            add_fields_to_update_db_model,
-            initialise_update_db_model,
-        )
-        from pangloss_models.initialise_models.initialise_update_model import (
-            add_fields_to_update_model,
-            can_have_update_model,
-            initialise_update_model,
-        )
-        from pangloss_models.initialise_models.initialise_view_model import (
-            add_fields_to_view_model,
-            can_have_view_model,
-            initialise_view_model,
-        )
-        from pangloss_models.model_bases.document import Document, _DocumentCreateBase
-        from pangloss_models.model_bases.entity import Entity, _EntityCreateBase
-
         graph = cls._build_graph()
         order, cyclic = cls._toposort(graph)
 
@@ -371,7 +373,7 @@ class ModelRegistry:
                     self, return_created
                 )
 
-            _DocumentCreateBase.save = create_head_node_function_sync  # type: ignore
+            _DocumentCreateBase.save = create_head_node_function_sync
             _EntityCreateBase.save = create_head_node_function_sync  # type: ignore
 
         is_async = iscoroutinefunction(database_exposed_functions_module.list_items)
