@@ -29,7 +29,7 @@ def build_fetch_document_query(
         created_when: creation.created_when,
         updated_by: null, updated_when: null,
         semantic_spaces: root.meta.semantic_spaces,
-        semantic_space_labels: root.meta.semantic_space_labels,
+        context_labels: root.meta.context_labels,
         head_node_type: headnode.type,
         head_node_id: headnode.id
     }}}})

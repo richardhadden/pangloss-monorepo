@@ -140,7 +140,7 @@ def get_node_fields_as_writable_dict(
             "updated_by": current_request_username.get(),
             "updated_when": datetime.datetime.now(),
             "semantic_spaces": instance.semantic_spaces,
-            "semantic_space_labels": instance.semantic_space_labels,
+            "context_labels": instance.context_labels,
         }
 
     if not is_head_node:

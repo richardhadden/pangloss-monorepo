@@ -7,7 +7,6 @@ import pytest
 from annotated_types import Gt, MinLen
 from pangloss_models import initialise
 from pangloss_models.field_definitions import (
-    FieldBinding,
     FieldSubclassing,
     ListFieldDefinition,
     LiteralFieldDefinition,
@@ -822,9 +821,14 @@ def test_meta_on_view_model():
         label="A Statement",
         meta={
             "semantic_spaces": ["Negative"],
-            "semantic_space_labels": ["Order -> Negative"],
+            "context_labels": {
+                "type": "Order",
+                "id": uuid7(),
+                "contents": {"type": "Negative", "id": uuid7()},
+            },
         },
     )
 
     assert st.meta.semantic_spaces == ["Negative"]
-    assert st.meta.semantic_space_labels == ["Order -> Negative"]
+    assert st.meta.context_labels["type"] == "Order"
+    assert st.meta.context_labels["contents"]["type"] == "Negative"

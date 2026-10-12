@@ -1,6 +1,6 @@
 import datetime
-from types import NoneType, UnionType
-from typing import Annotated, Literal, Union, get_args, get_origin, no_type_check
+from types import UnionType
+from typing import Annotated, Literal, get_args, get_origin, no_type_check
 from uuid import UUID, uuid7
 
 import pytest
@@ -1106,24 +1106,22 @@ def test_document_create_db_in_semantic_spaces_propagated():
     assert Factoid.Create
 
     factoid = Factoid.Create(
-        **{
-            "label": "A Factoid",
-            "statements": [
-                {
-                    "type": "Negative",
-                    "contents": [
-                        {
-                            "type": "Order",
-                            "label": "An Order",
-                            "thing_ordered": {
-                                "type": "Subjunctive",
-                                "contents": [{"type": "Action", "label": "An Action"}],
-                            },
-                        }
-                    ],
-                }
-            ],
-        }
+        label="A Factoid",
+        statements=[
+            {
+                "type": "Negative",
+                "contents": [
+                    {
+                        "type": "Order",
+                        "label": "An Order",
+                        "thing_ordered": {
+                            "type": "Subjunctive",
+                            "contents": [{"type": "Action", "label": "An Action"}],
+                        },
+                    }
+                ],
+            }
+        ],
     )
 
     factoid_db = factoid._to_db_model()
@@ -1142,21 +1140,19 @@ def test_document_create_db_in_semantic_spaces_propagated():
     ].semantic_spaces == ["Negative", "Subjunctive"]
 
     factoid_db = factoid._to_db_model()
-    assert factoid_db.semantic_space_labels == []
+    assert factoid_db.context_labels == []
     assert factoid_db.statements[0].type == "Negative"
-    assert factoid_db.statements[0].semantic_space_labels == []
+    assert factoid_db.statements[0].context_labels == []
     assert factoid_db.statements[0].contents[0].type == "Order"
-    assert factoid_db.statements[0].contents[0].semantic_space_labels == ["Negative"]
+    assert factoid_db.statements[0].contents[0].context_labels == ["Negative"]
     assert factoid_db.statements[0].contents[0].thing_ordered.type == "Subjunctive"
-    assert (
-        factoid_db.statements[0].contents[0].thing_ordered.semantic_space_labels == []
-    )
+    assert factoid_db.statements[0].contents[0].thing_ordered.context_labels == []
     assert (
         factoid_db.statements[0].contents[0].thing_ordered.contents[0].type == "Action"
     )
     assert factoid_db.statements[0].contents[0].thing_ordered.contents[
         0
-    ].semantic_space_labels == ["Negative", "Order -> Subjunctive"]
+    ].context_labels == ["Negative", "Order -> Subjunctive"]
 
 
 @no_type_check
@@ -1430,42 +1426,38 @@ def test_createdb_model_with_complex_nested():
     assert order_create_from_factoid.model_fields["thing_ordered"]
 
     o = order_create_from_factoid(
-        **{
-            "type": "Order",
-            "label": "KM orders JS to take an action",
-            "order_given_by": {"type": "Person", "id": uuid7()},
-            "order_received_by": {"type": "Person", "id": uuid7()},
-            "thing_ordered": [
-                {
-                    "type": "Action",
-                    "label": "JS carries out an action",
-                    "action_carried_out_by": {"type": "Person", "id": uuid7()},
-                }
-            ],
-        }
+        type="Order",
+        label="KM orders JS to take an action",
+        order_given_by={"type": "Person", "id": uuid7()},
+        order_received_by={"type": "Person", "id": uuid7()},
+        thing_ordered=[
+            {
+                "type": "Action",
+                "label": "JS carries out an action",
+                "action_carried_out_by": {"type": "Person", "id": uuid7()},
+            }
+        ],
     )
 
     assert o.thing_ordered
 
     factoid = Factoid.Create(
-        **{
-            "label": "A Factoid",
-            "statements": [
-                {
-                    "type": "Order",
-                    "label": "KM orders JS to take an action",
-                    "order_given_by": {"type": "Person", "id": uuid7()},
-                    "order_received_by": {"type": "Person", "id": uuid7()},
-                    "thing_ordered": [
-                        {
-                            "type": "Action",
-                            "label": "JS carries out an action",
-                            "action_carried_out_by": {"type": "Person", "id": uuid7()},
-                        }
-                    ],
-                }
-            ],
-        }
+        label="A Factoid",
+        statements=[
+            {
+                "type": "Order",
+                "label": "KM orders JS to take an action",
+                "order_given_by": {"type": "Person", "id": uuid7()},
+                "order_received_by": {"type": "Person", "id": uuid7()},
+                "thing_ordered": [
+                    {
+                        "type": "Action",
+                        "label": "JS carries out an action",
+                        "action_carried_out_by": {"type": "Person", "id": uuid7()},
+                    }
+                ],
+            }
+        ],
     )
 
     assert factoid.statements[0].type == "Order"
@@ -1498,32 +1490,30 @@ def test_create_db_with_multiple_type_bug():
     initialise()
 
     factoid = Factoid.Create(
-        **{
-            "label": "A Factoid",
-            "statements": [
-                {
-                    "type": "Negative",
-                    "contents": [
-                        {
-                            "type": "Order",
-                            "label": "KM orders JS to take an action",
-                            "order_given_by": {"type": "Person", "id": uuid7()},
-                            "order_received_by": {"type": "Person", "id": uuid7()},
-                            "thing_ordered": [
-                                {
-                                    "type": "Action",
-                                    "label": "JS carries out an action",
-                                    "action_carried_out_by": {
-                                        "type": "Person",
-                                        "id": uuid7(),
-                                    },
-                                }
-                            ],
-                        }
-                    ],
-                }
-            ],
-        }
+        label="A Factoid",
+        statements=[
+            {
+                "type": "Negative",
+                "contents": [
+                    {
+                        "type": "Order",
+                        "label": "KM orders JS to take an action",
+                        "order_given_by": {"type": "Person", "id": uuid7()},
+                        "order_received_by": {"type": "Person", "id": uuid7()},
+                        "thing_ordered": [
+                            {
+                                "type": "Action",
+                                "label": "JS carries out an action",
+                                "action_carried_out_by": {
+                                    "type": "Person",
+                                    "id": uuid7(),
+                                },
+                            }
+                        ],
+                    }
+                ],
+            }
+        ],
     )
 
     factoid_db = factoid._to_db_model()

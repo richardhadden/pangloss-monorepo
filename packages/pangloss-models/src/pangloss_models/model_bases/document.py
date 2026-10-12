@@ -12,6 +12,7 @@ from pangloss_models.field_definitions import (
     ModelFields,
 )
 from pangloss_models.model_bases.base_models import (
+    ContextLabel,
     DeclaredClassMeta,
     _BaseObject,
     _CreateBase,
@@ -66,7 +67,7 @@ class _DocumentCreateDBBase(_CreateDBBase):
 
 class _DocumentViewAPIMeta(_BaseObject):
     semantic_spaces: list[str] = Field(default_factory=list)
-    semantic_space_labels: list[str] = Field(default_factory=list)
+    context_labels: ContextLabel | None = None
 
 
 class _DocumentViewBase(_ViewBase):
@@ -90,7 +91,7 @@ class _DocumentReferenceViewAPIMeta(_BaseObject):
     head_node_id: UUID | None = None
     head_node_type: str | None = None
     semantic_spaces: list[str] | None = Field(default_factory=list)
-    semantic_space_labels: list[str] | None = Field(default_factory=list)
+    context_labels: ContextLabel | None = None
     created_by: str | None = None
     created_when: datetime.datetime = Field(
         default_factory=lambda: datetime.datetime.now(datetime.UTC)
@@ -105,9 +106,9 @@ class _DocumentReferenceViewAPIMeta(_BaseObject):
     def semantic_spaces_to_empty_list(cls, v):
         return [] if v is None else v
 
-    @field_validator("semantic_space_labels", mode="before")
+    @field_validator("context_labels", mode="before")
     @classmethod
-    def semantic_space_labels_to_empty_list(cls, v):
+    def context_labels_to_empty_list(cls, v):
         return [] if v is None else v
 
     @field_validator("created_when", mode="before")

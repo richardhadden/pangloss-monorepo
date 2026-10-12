@@ -97,7 +97,7 @@ def build_generic_list_query(
                       updated_by: null,
                       updated_when: null,
                       semantic_spaces: n.semantic_spaces,
-                      semantic_space_labels: n.semantic_space_labels
+                      context_labels: n.context_labels
                   }}) AS pagedResults
                   RETURN pagedResults
                 }
@@ -190,7 +190,7 @@ def build_generic_list_query(
                   updated_by: null,
                   updated_when: null,
                   semantic_spaces: n.semantic_spaces,
-                  semantic_space_labels: n.semantic_space_labels
+                  context_labels: n.context_labels
               }}) AS pagedResults
               RETURN pagedResults
             }
@@ -244,7 +244,7 @@ def build_generic_list_query(
                     updated_by: null,
                     updated_when: null,
                     semantic_spaces: n.semantic_spaces,
-                    semantic_space_labels: n.semantic_space_labels
+                    context_labels: n.context_labels
                 }}) AS items
             }
             RETURN {
@@ -301,7 +301,7 @@ def build_generic_list_query(
                             updated_by: null,
                             updated_when: null,
                             semantic_spaces: n.semantic_spaces,
-                            semantic_space_labels: n.semantic_space_labels
+                            context_labels: n.context_labels
                         }}) AS items, total, toInteger(ceil(toFloat(total) / $page_size)) AS totalPages, facets
 
                         RETURN {
