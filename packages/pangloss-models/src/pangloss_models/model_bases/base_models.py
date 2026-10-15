@@ -527,7 +527,7 @@ class _APIHeadMeta(_BaseObject):
     updated_by: str | None
     updated_when: datetime.datetime | None
     semantic_spaces: list[str] = Field(default_factory=list)
-    context_labels: list[str] = Field(default_factory=list)
+    context_labels: list[ContextLabel] | None = None
     head_node_type: str | None = None
     head_node_id: UUID | None = None
 

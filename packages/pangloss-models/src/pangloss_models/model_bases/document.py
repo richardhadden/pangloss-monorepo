@@ -67,7 +67,7 @@ class _DocumentCreateDBBase(_CreateDBBase):
 
 class _DocumentViewAPIMeta(_BaseObject):
     semantic_spaces: list[str] = Field(default_factory=list)
-    context_labels: ContextLabel | None = None
+    context_labels: list[ContextLabel] | None = None
 
 
 class _DocumentViewBase(_ViewBase):
