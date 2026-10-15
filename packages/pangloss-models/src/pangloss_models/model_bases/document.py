@@ -91,7 +91,7 @@ class _DocumentReferenceViewAPIMeta(_BaseObject):
     head_node_id: UUID | None = None
     head_node_type: str | None = None
     semantic_spaces: list[str] | None = Field(default_factory=list)
-    context_labels: ContextLabel | None = None
+    context_labels: list[ContextLabel] | None = None
     created_by: str | None = None
     created_when: datetime.datetime = Field(
         default_factory=lambda: datetime.datetime.now(datetime.UTC)

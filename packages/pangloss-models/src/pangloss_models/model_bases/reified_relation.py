@@ -127,7 +127,7 @@ class _ReifiedRelationDocumentReferenceViewBase(_ReferenceViewBase):
 
 class _ReifiedRelationDocumentViewAPIMeta(_BaseObject):
     semantic_spaces: list[str] = Field(default_factory=list)
-    context_labels: ContextLabel | None = None
+    context_labels: list[ContextLabel] | None = None
 
 
 class _ReifiedRelationDocumentViewBase(_ViewBase):

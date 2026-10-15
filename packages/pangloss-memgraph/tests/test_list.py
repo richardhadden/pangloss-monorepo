@@ -58,7 +58,7 @@ async def test_list_basic_and_search(clear_database):
         await subfactoid.save()
 
     result: _ListItems = await Factoid.list()
-    assert False
+
     assert result.count == 52
     assert result.page == 1
     assert result.next_page == 2

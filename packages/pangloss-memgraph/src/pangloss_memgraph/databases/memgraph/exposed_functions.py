@@ -91,6 +91,7 @@ async def list_items(
     result_values = await result.value()
 
     results: dict = result_values[0]
+
     results["results"] = type_adapter.validate_python(results["results"])
     result = _ListItems(**results)
 
