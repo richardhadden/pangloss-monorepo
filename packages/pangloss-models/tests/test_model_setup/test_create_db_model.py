@@ -1082,6 +1082,8 @@ def test_list_validators():
 
 @no_type_check
 def test_document_create_db_in_semantic_spaces_propagated():
+    class Alternative[T](Conjunction):
+        options: list[T]
 
     class Negative[T](SemanticSpace[T]):
         pass
@@ -1093,11 +1095,11 @@ def test_document_create_db_in_semantic_spaces_propagated():
     class Action(Document):
         pass
 
-    class Order(Document):
-        thing_ordered: Subjunctive[Action]
-
     class Subjunctive[T](SemanticSpace[T]):
         pass
+
+    class Order(Document):
+        thing_ordered: Subjunctive[Action | Alternative[Action]] | Order
 
     initialise()
 
@@ -1126,33 +1128,219 @@ def test_document_create_db_in_semantic_spaces_propagated():
 
     factoid_db = factoid._to_db_model()
     assert factoid_db.semantic_spaces == []
-    assert factoid_db.statements[0].type == "Negative"
-    assert factoid_db.statements[0].semantic_spaces == []
-    assert factoid_db.statements[0].contents[0].type == "Order"
-    assert factoid_db.statements[0].contents[0].semantic_spaces == ["Negative"]
-    assert factoid_db.statements[0].contents[0].thing_ordered.type == "Subjunctive"
-    assert factoid_db.statements[0].contents[0].thing_ordered.semantic_spaces == []
-    assert (
-        factoid_db.statements[0].contents[0].thing_ordered.contents[0].type == "Action"
+    negative = factoid_db.statements[0]
+    assert negative.type == "Negative"
+
+    # No point in semantic spaces wasting memory by storing this
+    assert negative.semantic_spaces == []
+    assert negative.context_labels is None
+
+    order = negative.contents[0]
+    assert order.type == "Order"
+
+    # Order should have a semantic-space and context label
+    assert order.semantic_spaces == ["Negative"]
+    assert order.context_labels == [
+        {
+            "type": "Negative",
+            "contents": [{"id": order.id, "type": "Order"}],
+        }
+    ]
+
+    subjunctive = order.thing_ordered
+    assert subjunctive.type == "Subjunctive"
+
+    # Semantic Spaces not holding this as not required
+    assert subjunctive.semantic_spaces == []
+    assert subjunctive.context_labels is None
+
+    action = subjunctive.contents[0]
+    assert action.type == "Action"
+    assert action.semantic_spaces == ["Negative", "Subjunctive"]
+    assert action.context_labels == [
+        {
+            "type": "Negative",
+            "contents": [
+                {"id": order.id, "type": "Order"},
+            ],
+        },
+        {
+            "type": "Subjunctive",
+            "contents": [
+                {"id": action.id, "type": "Action"},
+            ],
+        },
+    ]
+
+    factoid = Factoid.Create(
+        label="A Factoid",
+        statements=[
+            {
+                "type": "Order",
+                "label": "An Order",
+                "thing_ordered": {
+                    "type": "Subjunctive",
+                    "contents": [{"type": "Action", "label": "An Action"}],
+                },
+            }
+        ],
     )
-    assert factoid_db.statements[0].contents[0].thing_ordered.contents[
-        0
-    ].semantic_spaces == ["Negative", "Subjunctive"]
 
     factoid_db = factoid._to_db_model()
-    assert factoid_db.context_labels == []
-    assert factoid_db.statements[0].type == "Negative"
-    assert factoid_db.statements[0].context_labels == []
-    assert factoid_db.statements[0].contents[0].type == "Order"
-    assert factoid_db.statements[0].contents[0].context_labels == ["Negative"]
-    assert factoid_db.statements[0].contents[0].thing_ordered.type == "Subjunctive"
-    assert factoid_db.statements[0].contents[0].thing_ordered.context_labels == []
-    assert (
-        factoid_db.statements[0].contents[0].thing_ordered.contents[0].type == "Action"
+    assert factoid_db.semantic_spaces == []
+    order = factoid_db.statements[0]
+
+    assert order.type == "Order"
+    assert order.context_labels == []
+    assert order.semantic_spaces == []
+
+    subjunctive = order.thing_ordered
+    assert subjunctive.type == "Subjunctive"
+    assert subjunctive.context_labels is None
+
+    action = subjunctive.contents[0]
+    assert action.type == "Action"
+    assert action.context_labels == [
+        {
+            "type": "#rootcontext",
+            "contents": [
+                {"id": order.id, "type": "Order"},
+            ],
+        },
+        {
+            "type": "Subjunctive",
+            "contents": [
+                {"id": action.id, "type": "Action"},
+            ],
+        },
+    ]
+    assert action.semantic_spaces == ["Subjunctive"]
+
+    factoid = Factoid.Create(
+        label="A Factoid",
+        statements=[
+            {
+                "type": "Order",
+                "label": "Outer Order",
+                "thing_ordered": {
+                    "type": "Order",
+                    "label": "Inner Order",
+                    "thing_ordered": {
+                        "type": "Subjunctive",
+                        "contents": [{"type": "Action", "label": "An Action"}],
+                    },
+                },
+            }
+        ],
     )
-    assert factoid_db.statements[0].contents[0].thing_ordered.contents[
-        0
-    ].context_labels == ["Negative", "Order -> Subjunctive"]
+
+    factoid_db = factoid._to_db_model()
+
+    outer_order = factoid_db.statements[0]
+    assert outer_order.type == "Order"
+    assert outer_order.label == "Outer Order"
+    assert outer_order.context_labels == []
+
+    inner_order = outer_order.thing_ordered
+    assert inner_order.type == "Order"
+    assert inner_order.label == "Inner Order"
+    assert inner_order.context_labels == [
+        {
+            "type": "#rootcontext",
+            "contents": [
+                {"id": outer_order.id, "type": "Order"},
+                {"id": inner_order.id, "type": "Order"},
+            ],
+        }
+    ]
+
+    subjunctive = inner_order.thing_ordered
+    assert subjunctive.type == "Subjunctive"
+    assert subjunctive.context_labels == None
+
+    action = subjunctive.contents[0]
+    assert action.type == "Action"
+    assert action.context_labels == [
+        {
+            "type": "#rootcontext",
+            "contents": [
+                {"id": outer_order.id, "type": "Order"},
+                {"id": inner_order.id, "type": "Order"},
+            ],
+        },
+        {
+            "type": "Subjunctive",
+            "contents": [
+                {"id": action.id, "type": "Action"},
+            ],
+        },
+    ]
+
+    factoid = Factoid.Create(
+        label="A Factoid",
+        statements=[
+            {
+                "type": "Negative",
+                "contents": [
+                    {
+                        "type": "Order",
+                        "label": "An Order",
+                        "thing_ordered": {
+                            "type": "Subjunctive",
+                            "contents": [
+                                {
+                                    "type": "Alternative",
+                                    "options": [
+                                        {
+                                            "type": "Action",
+                                            "label": "Possible Action A",
+                                        },
+                                        {
+                                            "type": "Action",
+                                            "label": "Possible Action B",
+                                        },
+                                    ],
+                                }
+                            ],
+                        },
+                    }
+                ],
+            }
+        ],
+    )
+
+    factoid_db = factoid._to_db_model()
+
+    negative = factoid_db.statements[0]
+    assert negative.type == "Negative"
+
+    order = negative.contents[0]
+    assert order.type == "Order"
+    assert order.context_labels == [
+        {"type": "Negative", "contents": [{"type": "Order", "id": order.id}]}
+    ]
+
+    subjunctive = order.thing_ordered
+    assert subjunctive.type == "Subjunctive"
+
+    alternative = subjunctive.contents[0]
+    assert alternative.type == "Alternative"
+
+    action_a = alternative.options[0]
+    action_b = alternative.options[1]
+
+    assert action_a.type == "Action"
+    assert action_b.type == "Action"
+
+    assert action_a.context_labels == [
+        {"type": "Negative", "contents": [{"type": "Order", "id": order.id}]},
+        {"type": "Subjunctive", "contents": [{"type": "Action", "id": action_a.id}]},
+    ]
+
+    assert action_b.context_labels == [
+        {"type": "Negative", "contents": [{"type": "Order", "id": order.id}]},
+        {"type": "Subjunctive", "contents": [{"type": "Action", "id": action_b.id}]},
+    ]
 
 
 @no_type_check
@@ -1522,3 +1710,29 @@ def test_create_db_with_multiple_type_bug():
         factoid_db.statements[0].contents[0].thing_ordered[0].action_carried_out_by.type
         == "Person"
     )
+
+
+@no_type_check
+def test_recursive_type():
+    """This test is for debugging a problem; for Subjunctive[Action | Order] to work, Subjunctive must be declared before Order.
+    Could be fixable at some point to allow truly arbitrary ordering, but for now a note that SemanticSpace classes
+    should be declared before self-referencing models should suffice.
+    """
+
+    class Negative[T](SemanticSpace[T]):
+        pass
+
+    class Factoid(Document):
+        _meta = Document.Meta(use_in_semantic_space_label=False)
+        statements: list[Order | Negative[Order]]
+
+    class Action(Document):
+        pass
+
+    class Subjunctive[T](SemanticSpace[T]):
+        pass
+
+    class Order(Document):
+        thing_ordered: SemanticSpace[Action | Order]
+
+    initialise()

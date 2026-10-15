@@ -6,6 +6,7 @@ from typing import ClassVar, Literal, get_args, get_origin
 from uuid import UUID
 
 from pydantic import AnyHttpUrl, BaseModel
+lazy from pangloss_core.settings import SETTINGS
 
 from pangloss_models.exceptions import (
     PanglossImportError,
@@ -321,8 +322,6 @@ class ModelRegistry:
 
         for action_class in cls._action_classes:
             action_class.model_rebuild(force=True)
-
-        from pangloss_core.settings import SETTINGS
 
         database = SETTINGS.DATABASE_MODULE
 

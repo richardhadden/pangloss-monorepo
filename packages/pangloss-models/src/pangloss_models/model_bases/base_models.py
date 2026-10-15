@@ -2,6 +2,7 @@ import datetime
 import warnings
 from abc import ABC, abstractmethod
 from collections import defaultdict
+from copy import copy, deepcopy
 from functools import cache
 from typing import (
     TYPE_CHECKING,
@@ -30,6 +31,11 @@ from pydantic import (
 from pydantic.alias_generators import to_camel
 
 from pangloss_models.model_registry import ModelRegistry
+lazy from pangloss_models.model_bases.document import _DocumentCreateDBBase
+lazy from pangloss_models.model_bases.semantic_space import (
+    _SemanticSpaceCreateDBBase,
+    _SemanticSpaceUpdateDBBase,
+)
 
 if TYPE_CHECKING:
     from pangloss_models.field_definitions import (
@@ -324,9 +330,9 @@ class _CreateBase(_ActionClass):
 
 
 class ContextLabel(TypedDict):
-    type: str
+    type: str | None
     id: NotRequired[UUID]
-    contents: NotRequired[ContextLabel]
+    contents: NotRequired[list[ContextLabel]]
 
 
 def recursively_propagate_context_types(
@@ -337,11 +343,6 @@ def recursively_propagate_context_types(
 ):
     """Takes a _CreateDBBase instance and recursively adds type of semantic
     spaces to each contained type below that semantic space node"""
-    from pangloss_models.model_bases.document import _DocumentCreateDBBase
-    from pangloss_models.model_bases.semantic_space import (
-        _SemanticSpaceCreateDBBase,
-        _SemanticSpaceUpdateDBBase,
-    )
 
     if not isinstance(item, (_SemanticSpaceCreateDBBase, _SemanticSpaceUpdateDBBase)):
         item.semantic_spaces = [*semantic_spaces]
@@ -349,23 +350,35 @@ def recursively_propagate_context_types(
 
     if isinstance(item, (_SemanticSpaceCreateDBBase, _SemanticSpaceUpdateDBBase)):
         semantic_spaces.append(item.type)
+        context_labels.append({"type": item.type})
 
-        if (
-            parent
-            and isinstance(parent, _DocumentCreateDBBase)
-            and parent._meta.use_in_semantic_space_label  # type: ignore
-        ):
-            context_labels.append(f"{parent.type} -> {item.type}")
+    elif (
+        parent
+        and isinstance(item, _DocumentCreateDBBase)
+        and item._meta.use_in_semantic_space_label  # type: ignore
+    ):
+        if context_labels:
+            if not context_labels[-1].get("contents", None):
+                context_labels[-1]["contents"] = []
+            context_labels[-1]["contents"].append({"type": item.type, "id": item.id})
         else:
-            context_labels.append(item.type)
+            context_labels.append(
+                {
+                    "type": "#rootcontext",
+                    "contents": [{"type": item.type, "id": item.id}],
+                }
+            )
 
     for field_name, field_definition in item._meta.fields.relation_fields.items():
         if related_item := getattr(item, field_name, None):
             if isinstance(related_item, list):
                 for ri in related_item:
                     if isinstance(ri, (_CreateDBBase, _UpdateDBBase)):
+                        # If it's a list, we need to deepcopy context_labels so that the multiple
+                        # items in the list do not share the same object and interfere with each
+                        # other
                         recursively_propagate_context_types(
-                            ri, semantic_spaces, context_labels, item
+                            ri, copy(semantic_spaces), deepcopy(context_labels), item
                         )
 
             else:
