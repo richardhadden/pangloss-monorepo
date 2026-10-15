@@ -1143,7 +1143,7 @@ def test_document_create_db_in_semantic_spaces_propagated():
     assert order.context_labels == [
         {
             "type": "Negative",
-            "contents": [{"id": order.id, "type": "Order"}],
+            "contents": [{"id": str(order.id), "type": "Order"}],
         }
     ]
 
@@ -1161,13 +1161,13 @@ def test_document_create_db_in_semantic_spaces_propagated():
         {
             "type": "Negative",
             "contents": [
-                {"id": order.id, "type": "Order"},
+                {"id": str(order.id), "type": "Order"},
             ],
         },
         {
             "type": "Subjunctive",
             "contents": [
-                {"id": action.id, "type": "Action"},
+                {"id": str(action.id), "type": "Action"},
             ],
         },
     ]
@@ -1204,13 +1204,13 @@ def test_document_create_db_in_semantic_spaces_propagated():
         {
             "type": "#rootcontext",
             "contents": [
-                {"id": order.id, "type": "Order"},
+                {"id": str(order.id), "type": "Order"},
             ],
         },
         {
             "type": "Subjunctive",
             "contents": [
-                {"id": action.id, "type": "Action"},
+                {"id": str(action.id), "type": "Action"},
             ],
         },
     ]
@@ -1248,8 +1248,8 @@ def test_document_create_db_in_semantic_spaces_propagated():
         {
             "type": "#rootcontext",
             "contents": [
-                {"id": outer_order.id, "type": "Order"},
-                {"id": inner_order.id, "type": "Order"},
+                {"id": str(outer_order.id), "type": "Order"},
+                {"id": str(inner_order.id), "type": "Order"},
             ],
         }
     ]
@@ -1264,14 +1264,14 @@ def test_document_create_db_in_semantic_spaces_propagated():
         {
             "type": "#rootcontext",
             "contents": [
-                {"id": outer_order.id, "type": "Order"},
-                {"id": inner_order.id, "type": "Order"},
+                {"id": str(outer_order.id), "type": "Order"},
+                {"id": str(inner_order.id), "type": "Order"},
             ],
         },
         {
             "type": "Subjunctive",
             "contents": [
-                {"id": action.id, "type": "Action"},
+                {"id": str(action.id), "type": "Action"},
             ],
         },
     ]
@@ -1317,7 +1317,7 @@ def test_document_create_db_in_semantic_spaces_propagated():
     order = negative.contents[0]
     assert order.type == "Order"
     assert order.context_labels == [
-        {"type": "Negative", "contents": [{"type": "Order", "id": order.id}]}
+        {"type": "Negative", "contents": [{"type": "Order", "id": str(order.id)}]}
     ]
 
     subjunctive = order.thing_ordered
@@ -1333,13 +1333,19 @@ def test_document_create_db_in_semantic_spaces_propagated():
     assert action_b.type == "Action"
 
     assert action_a.context_labels == [
-        {"type": "Negative", "contents": [{"type": "Order", "id": order.id}]},
-        {"type": "Subjunctive", "contents": [{"type": "Action", "id": action_a.id}]},
+        {"type": "Negative", "contents": [{"type": "Order", "id": str(order.id)}]},
+        {
+            "type": "Subjunctive",
+            "contents": [{"type": "Action", "id": str(action_a.id)}],
+        },
     ]
 
     assert action_b.context_labels == [
-        {"type": "Negative", "contents": [{"type": "Order", "id": order.id}]},
-        {"type": "Subjunctive", "contents": [{"type": "Action", "id": action_b.id}]},
+        {"type": "Negative", "contents": [{"type": "Order", "id": str(order.id)}]},
+        {
+            "type": "Subjunctive",
+            "contents": [{"type": "Action", "id": str(action_b.id)}],
+        },
     ]
 
 

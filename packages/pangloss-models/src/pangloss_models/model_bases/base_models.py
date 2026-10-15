@@ -331,7 +331,7 @@ class _CreateBase(_ActionClass):
 
 class ContextLabel(TypedDict):
     type: str | None
-    id: NotRequired[UUID]
+    id: NotRequired[str]
     contents: NotRequired[list[ContextLabel]]
 
 
@@ -360,12 +360,14 @@ def recursively_propagate_context_types(
         if context_labels:
             if not context_labels[-1].get("contents", None):
                 context_labels[-1]["contents"] = []
-            context_labels[-1]["contents"].append({"type": item.type, "id": item.id})
+            context_labels[-1]["contents"].append(
+                {"type": item.type, "id": str(item.id)}
+            )
         else:
             context_labels.append(
                 {
                     "type": "#rootcontext",
-                    "contents": [{"type": item.type, "id": item.id}],
+                    "contents": [{"type": item.type, "id": str(item.id)}],
                 }
             )
 

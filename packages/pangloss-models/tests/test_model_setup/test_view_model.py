@@ -5,7 +5,7 @@ from uuid import uuid7
 
 import pytest
 from annotated_types import Gt, MinLen
-from dirty_equals import IsUUID
+from dirty_equals import IsStr
 from pangloss_models import initialise
 from pangloss_models.field_definitions import (
     FieldSubclassing,
@@ -825,7 +825,7 @@ def test_meta_on_view_model():
             "context_labels": [
                 {
                     "type": "Negative",
-                    "contents": [{"type": "Order", "id": uuid7()}],
+                    "contents": [{"type": "Order", "id": str(uuid7())}],
                 }
             ],
         },
@@ -833,5 +833,5 @@ def test_meta_on_view_model():
 
     assert st.meta.semantic_spaces == ["Negative"]
     assert st.meta.context_labels == [
-        {"type": "Negative", "contents": [{"id": IsUUID, "type": "Order"}]}
+        {"type": "Negative", "contents": [{"id": IsStr, "type": "Order"}]}
     ]
