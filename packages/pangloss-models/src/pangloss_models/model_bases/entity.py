@@ -132,6 +132,13 @@ class Entity(_DeclaredClass, WithMeta[EntityMeta]):
 
         cls._register()
 
+    get: ClassVar[
+        Callable[
+            [AnyHttpUrl | UUID],
+            _EntityHeadViewBase | None | Awaitable[_EntityHeadViewBase | None],
+        ]
+    ]
+
     list: ClassVar[
         Callable[
             [str],

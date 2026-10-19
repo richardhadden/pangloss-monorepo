@@ -10,6 +10,7 @@ A snapshot of what works and what does not, as of this writing.
 - Memgraph, writing: documents and entities with nested documents, relations to existing entities (by id or URL), edge properties, subclassed edges, semantic spaces, conjunctions, reified relations, reified relation documents, embedded objects and annotated values.
 - Memgraph, updating Documents and Entities by replacing the whole tree (`Update(...).save()`), keeping entities, creation info and ids, with a `PGUpdate` record and `meta.updated_by` / `updated_when` on read; all checks are made before anything is deleted, so a failed update changes nothing.
 - Writes that cannot succeed raise typed errors (`PanglossWriteError` subclasses) instead of silently writing nothing.
+- Memgraph, reading an entity (`Entity.get`), with the documents that refer to it directly, through embedded objects and through chains of reified relations, subclassed relations shown under their narrower name.
 - Memgraph, reading: a document read back as a `HeadView` (nested documents at any depth, with or without entities, semantic spaces, conjunctions, embedded objects, reified relations and reified relation documents, annotated values, dates, unset optionals and empty lists), and listing with pagination, search and deep search.
 - Recording the creating user and time on head nodes.
 - Context labels and semantic-space annotation on create.
@@ -22,7 +23,6 @@ A snapshot of what works and what does not, as of this writing.
 | Head node type and id through `CreateDB` / `UpdateDB` | Open item in `todo.md` |
 | `ReifiedRelationDocument` has no label | Never given one on creation, so `View` / `HeadView` do not require it; but its `ReferenceView` still requires `label` (existing tests assert this) |
 | `Enum` storage | Stored by value for now; native Memgraph enums need a database setup command that does not exist yet |
-| `HeadView` for Entities | Model exists; there is no `Entity.get` |
 | Updating a document concurrently | Last write wins; there is no check that the payload was based on the latest version |
 | Return type `"Detail"` for `save()` | Named in the registry wrapper, not handled by the Memgraph backend |
 | `pangloss-sdk` (API as database) | Only settings; the functions are stubs returning dummy data |

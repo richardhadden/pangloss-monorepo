@@ -21,13 +21,14 @@ from pangloss_models.model_bases.document import (
 from pangloss_models.model_bases.entity import (
     Entity,
     _EntityCreateDBBase,
+    _EntityHeadViewBase,
     _EntityReferenceViewBase,
     _EntityUpdateBase,
     _EntityUpdateDBBase,
 )
 from pangloss_models.utils import get_concrete_types
 from pangloss_users import current_request_username
-from pydantic import AnyHttpUrl, TypeAdapter
+from pydantic import AnyHttpUrl, AnyUrl, TypeAdapter
 
 from pangloss_memgraph.databases.memgraph.build_create_query import (
     build_head_create_query,
@@ -43,6 +44,9 @@ from pangloss_memgraph.databases.memgraph.build_update_query import (
     build_replace_head_query,
 )
 from pangloss_memgraph.databases.memgraph.database import Database, Transaction
+from pangloss_memgraph.databases.memgraph.read_incoming import (
+    fetch_incoming_relations,
+)
 from pangloss_memgraph.databases.memgraph.validate_write import (
     ExistingHead,
     check_ids_available,
@@ -125,6 +129,37 @@ def dump_query(name: str, query: str, params: dict) -> None:
 
             // {params!s}
             """)
+
+
+@Database.default.read_transaction
+@timer
+async def get_entity(
+    tx: Transaction, cls: type[Entity], id: UUID | AnyHttpUrl
+) -> _EntityHeadViewBase | None:
+    """An entity, with its own values and relations, and the documents (and
+    entities) that refer to it, in the fields named after the reverse relations"""
+
+    if isinstance(id, AnyUrl):
+        result = await tx.run(
+            "MATCH (entity:PGIndexableNode) WHERE $url IN entity.urls RETURN entity.id AS id",
+            url=str(id),
+        )
+        found = await result.value()
+        if not found:
+            return None
+        id = UUID(found[0])
+
+    query_string, query_params = build_fetch_document_query(cls, id)
+    dump_query("read_entity", query_string, query_params)
+
+    result = await tx.run(query_string, **query_params)
+    result_value = await result.value()
+    if not result_value:
+        return None
+
+    data = result_value[0]
+    data.update(await fetch_incoming_relations(tx, cls, id))
+    return cls.HeadView(**data)
 
 
 @Database.default.write_transaction

@@ -9,7 +9,7 @@ For each declared class, `initialise()` creates a set of Pydantic models and att
 | `Update` | same | Validates user input for updating (requires `id`). Nested items are either an `Update` (an existing item, with its `id`) or a `Create` (a new one). It is a full replacement, not a patch | ✅ for Documents and Entities |
 | `UpdateDB` | same | Database-side counterpart of `Update` | ✅ for Documents and Entities |
 | `View` | same | Nested representation returned from reads | ✅ |
-| `HeadView` | Document, Entity, ReifiedRelationDocument | Top-level read model: `id`, `meta` (`created_by`, `created_when`, `updated_*`, `semantic_spaces`, `context_labels`, `head_node_*`), fields and incoming relations | ✅ (Documents); Entities ⏳ (no `get`) |
+| `HeadView` | Document, Entity, ReifiedRelationDocument | Top-level read model: `id`, `meta` (`created_by`, `created_when`, `updated_*`, `semantic_spaces`, `context_labels`, `head_node_*`), fields and incoming relations | ✅ |
 | `ReferenceSet` | Entity | `{type, id}` pointer used in `Create`/`Update` to refer to an existing entity (label is dropped if supplied) | ✅ |
 | `ReferenceView` | Document, Entity, ReifiedRelationDocument | `{type, id, label, ...}` summary; used in lists and nested reads | ✅ |
 
@@ -43,6 +43,7 @@ Optional literal fields (`X | None`) default to `None` in all of these models, s
    | Bound to | From `exposed_functions` |
    |----------|--------------------------|
    | `Document.get` | `get_document(cls, id)` |
+   | `Entity.get` | `get_entity(cls, id)` |
    | `_DocumentCreateBase.save`, `_EntityCreateBase.save` | `create_head_node(instance, return_type)` |
    | `_DocumentUpdateBase.save`, `_EntityUpdateBase.save` | `update_head_node(instance, return_type)` |
    | `Document.list`, `Entity.list` | `list_items(cls, search_terms, page_number, page_size, deep_search)` |

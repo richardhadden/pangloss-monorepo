@@ -68,7 +68,26 @@ class Person(Entity):
 | `accept_url_as_id` | `True` | Accept a URL as `id`. `CreateDB` then generates a UUID and stores the URL in `urls` |
 | `create_inline` | `False` | Allow creating the entity inside another object's payload. Requires `create_with_id=True` (checked; otherwise `PanglossMetaError`) |
 
-`Entity.list(...)` ✅ and `.save()` ✅ are bound. There is **no** `Entity.get` yet (⏳).
+Database-bound methods: `Entity.Create(...).save()` ✅, `Entity.Update(id=..., ...).save()` ✅, `await Person.get(id)` ✅ (by id or URL; `None` if not found) and `await Person.list(...)` ✅.
+
+### Reading an entity
+
+`Person.get(id)` returns a `Person.HeadView` with:
+
+- the values stored on the entity, and its own relations (as for a Document);
+- `meta` (`created_by`, `created_when`, `updated_by`, `updated_when`, and so on); and
+- a field for each **reverse relation**, named after it (`concerns_person_reverse`, or the name given by `RelationConfig(reverse_name=...)`), listing everything that refers to the entity that way. It is an empty list if nothing does.
+
+What each list contains depends on how the document refers to the entity:
+
+| The document refers to the entity... | The list holds |
+|---|---|
+| directly (`concerns_person: Person`), including from a nested document, a semantic space or a conjunction | a `ReferenceView` of the document that has the field (the nested document, not the document it is nested in; its `meta` says which that is, and whether it is a head node) |
+| through embedded objects (`Statement.date: Date`, `Date.about: Person`) | a `ReferenceView` of the document that the chain of embedded objects starts from |
+| through reified relations (`involves_person: Identification[Person]`) | that document, with only `id`, `type`, `meta` and the field holding the chain of reified relations: each with its own values, and, as its `target`, the next in the chain. The last one's `target` is all its targets (so the entity and any others). The document's other fields are not included |
+| through a chain that mixes embedded objects and reified relations | as for reified relations, with the field named as in the embedded object that holds it |
+
+A relation that a subclass narrows is shown only under the narrower name. If `Action` is a `Statement`, and its `carried_out_by` subclasses `Statement.concerns_person`, then an `Action` appears under `carried_out_by_reverse` and not under `concerns_person_reverse`, although both are stored in the graph. (This follows the incoming relations that the models define for the entity, so a document type that is not a possible source of a relation is left out of that field.)
 
 ## Embedded
 

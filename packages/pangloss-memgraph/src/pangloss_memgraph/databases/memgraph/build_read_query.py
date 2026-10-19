@@ -1,13 +1,17 @@
 import uuid
 
 from pangloss_models.model_bases.document import Document
+from pangloss_models.model_bases.entity import Entity
 
 from pangloss_memgraph.databases.memgraph.build_create_query import QueryParams
 
 
 def build_fetch_document_query(
-    document_class: type[Document], document_id: uuid.UUID
+    document_class: type[Document | Entity], document_id: uuid.UUID
 ) -> tuple[str, QueryParams]:
+    """Build the query for a Document or Entity and what it contains: its own
+    values, `meta`, and everything below it. (For an Entity, its relations to
+    documents come from `build_fetch_incoming_query`)"""
     query_params = QueryParams()
     document_id_identifier = query_params.add(document_id)
     document_type_identifier = query_params.add(document_class.__name__)
@@ -50,3 +54,63 @@ def build_fetch_document_query(
     }}}})
     """
     return (query, query_params)
+
+
+def build_fetch_incoming_query(
+    entity_class: type[Entity], entity_id: uuid.UUID
+) -> tuple[str, dict]:
+    """Build the query for the relations *to* an entity.
+
+    Every relation is stored as a forward edge and a reverse edge marked
+    `reverse: true`, so the relations to an entity are the reverse edges leading
+    out of it. An entity can be related to through a chain of reified relations
+    and embedded objects (`Statement -> Date -> Identification -> Person`); for
+    each reverse edge, this follows the chain up to the node that holds the
+    relation (the document, or entity, that the chain starts from).
+
+    Each row has the reverse edge's name, the nodes of the chain from the one next
+    to the entity up to that node (and the names of the edges between them), the
+    targets of the first of them, and what is needed for the `meta` of that node.
+    """
+    params = {"id": str(entity_id), "type": entity_class.__name__}
+    query = """
+    MATCH (entity:PGIndexableNode {id: $id})
+    WHERE $type IN labels(entity)
+    MATCH (entity)-[first]->(next)
+    WHERE coalesce(first.reverse, false)
+    OPTIONAL MATCH ascent = (next)-[*BFS ..10 (edge, node | coalesce(edge.reverse, false))]->(top)
+    WHERE (next:ReifiedRelation OR next:ReifiedRelationDocument OR next:Embedded)
+      AND ALL(chain_node IN nodes(ascent)[0..-1]
+              WHERE chain_node:ReifiedRelation OR chain_node:ReifiedRelationDocument OR chain_node:Embedded)
+      AND NOT (top:ReifiedRelation OR top:ReifiedRelationDocument OR top:Embedded)
+    WITH first, next, ascent, coalesce(top, next) AS holder
+    OPTIONAL MATCH (hn:HeadNode {id: holder.head_node_id})
+    WITH first, next, ascent, holder, coalesce(hn, holder) AS headnode
+    OPTIONAL MATCH (headnode)<-[:is_creation_of]-(creation:PGCreation)-[:created_by]->(creator:PGUser)
+    CALL {
+        WITH headnode
+        OPTIONAL MATCH (headnode)<-[:is_update_of]-(update:PGUpdate)-[:updated_by]->(update_user:PGUser)
+        RETURN update.updated_when AS updated_when, update_user.username AS updated_by
+        ORDER BY update.updated_when DESC
+        LIMIT 1
+    }
+    RETURN
+        type(first) AS first_edge_type,
+        CASE WHEN ascent IS NULL
+            THEN [next{.*, _labels: labels(next)}]
+            ELSE [chain_node IN nodes(ascent) | chain_node{.*, _labels: labels(chain_node)}]
+        END AS chain,
+        // All the targets of the reified relation next to the entity (the entity
+        // itself, and any others). The others in the chain only lead to it.
+        [(next)-[:target]->(target) | target{.*}] AS next_targets,
+        CASE WHEN ascent IS NULL THEN [] ELSE [edge IN relationships(ascent) | type(edge)] END AS chain_edge_types,
+        {
+            created_by: creator.username,
+            created_when: creation.created_when,
+            updated_by: updated_by,
+            updated_when: updated_when,
+            head_node_type: headnode.type,
+            head_node_id: headnode.id
+        } AS creation_meta
+    """
+    return query, params

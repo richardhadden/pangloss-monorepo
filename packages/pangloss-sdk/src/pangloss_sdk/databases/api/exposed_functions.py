@@ -17,6 +17,7 @@ from pangloss_models.model_bases.document import (
 from pangloss_models.model_bases.entity import (
     Entity,
     _EntityCreateDBBase,
+    _EntityHeadViewBase,
     _EntityReferenceViewBase,
     _EntityUpdateBase,
     _EntityUpdateDBBase,
@@ -45,6 +46,10 @@ def get_document(cls: type[Document], id: UUID | AnyHttpUrl) -> _DocumentHeadVie
             updated_when=datetime.datetime.now(),
         ),
     )
+
+
+def get_entity(cls: type[Entity], id: UUID | AnyHttpUrl) -> _EntityHeadViewBase | None:
+    pass
 
 
 def create_head_node(self: _DocumentCreateBase, return_created: bool = False):
