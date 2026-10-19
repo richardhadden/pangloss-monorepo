@@ -14,7 +14,12 @@ from pangloss_models.exceptions import (
 )
 from pangloss_users import current_request_username
 
-from pangloss_memgraph.databases.memgraph.build_create_query import QueryObject
+from pangloss_memgraph.databases.memgraph.build_create_query import (
+    ExistingEntity,
+    InlineEntity,
+    InlineEntityKey,
+    QueryObject,
+)
 from pangloss_memgraph.databases.memgraph.build_update_query import (
     build_head_query,
     build_tree_meta_query,
@@ -45,37 +50,45 @@ async def check_references_exist(tx: Transaction, query_object: QueryObject) -> 
     by_url = [r for r in query_object.references if r.is_url]
 
     found: dict[str, list[set[str]]] = {}
+    deleted_values: set[str] = set()
 
     if by_id:
         result = await tx.run(
             """
             UNWIND $values AS value
             OPTIONAL MATCH (node:PGIndexableNode {id: value})
-            RETURN value, labels(node) AS labels
+            RETURN value, labels(node) AS labels, node.deleted AS deleted
             """,
             values=sorted({r.value for r in by_id}),
         )
-        for value, labels in await result.values():
+        for value, labels, deleted in await result.values():
             found.setdefault(value, []).append(set(labels or []))
+            if deleted:
+                deleted_values.add(value)
 
     if by_url:
         result = await tx.run(
             """
             UNWIND $values AS value
-            OPTIONAL MATCH (node:PGIndexableNode)
-            WHERE value IN node.urls
-            RETURN value, labels(node) AS labels
+            OPTIONAL MATCH (:PGUrl {url: value})<-[:has_url]-(node:PGIndexableNode)
+            RETURN value, labels(node) AS labels, node.deleted AS deleted
             """,
             values=sorted({r.value for r in by_url}),
         )
-        for value, labels in await result.values():
+        for value, labels, deleted in await result.values():
             found.setdefault(value, []).append(set(labels or []))
+            if deleted:
+                deleted_values.add(value)
 
     problems = []
     for reference in query_object.references:
         matches = [labels for labels in found.get(reference.value, []) if labels]
         if not matches:
             problems.append(f"{reference.field_name}: '{reference.value}' not found")
+        elif reference.value in deleted_values:
+            problems.append(
+                f"{reference.field_name}: '{reference.value}' has been deleted"
+            )
         elif not any(set(reference.allowed_types) & labels for labels in matches):
             problems.append(
                 f"{reference.field_name}: '{reference.value}' is not of an allowed type "
@@ -85,6 +98,87 @@ async def check_references_exist(tx: Transaction, query_object: QueryObject) -> 
         raise PanglossReferenceError(
             "Invalid references to existing objects: " + "; ".join(problems)
         )
+
+
+async def find_existing_entities(
+    tx: Transaction, inline_entities: list[InlineEntity]
+) -> dict[InlineEntityKey, ExistingEntity]:
+    """Which of the entities written in a document (by their id or URL) exist"""
+    ids = sorted({e.key[1] for e in inline_entities if e.key[0] == "id"})
+    urls = sorted({e.key[1] for e in inline_entities if e.key[0] == "url"})
+    existing: dict[InlineEntityKey, ExistingEntity] = {}
+
+    for kind, values, query in (
+        (
+            "id",
+            ids,
+            """
+            UNWIND $values AS value
+            MATCH (node:PGIndexableNode {id: value})
+            RETURN value, node.id AS id, labels(node) AS labels, node.deleted AS deleted
+            ORDER BY id
+            """,
+        ),
+        (
+            "url",
+            urls,
+            """
+            UNWIND $values AS value
+            MATCH (:PGUrl {url: value})<-[:has_url]-(node:PGIndexableNode)
+            RETURN value, node.id AS id, labels(node) AS labels, node.deleted AS deleted
+            ORDER BY id
+            """,
+        ),
+    ):
+        if not values:
+            continue
+        result = await tx.run(query, values=values)  # type: ignore
+        for value, id, labels, deleted in await result.values():
+            existing.setdefault(
+                (kind, value),
+                ExistingEntity(id=id, labels=frozenset(labels), deleted=bool(deleted)),
+            )
+    return existing
+
+
+def check_inline_entities(
+    inline_entities: list[InlineEntity],
+    existing: dict[InlineEntityKey, ExistingEntity],
+) -> None:
+    """Check that an entity written in a document, if it exists, can be the one the
+    document means: it is an entity, of an allowed type, that has not been deleted"""
+    problems = []
+    for entity in inline_entities:
+        found = existing.get(entity.key)
+        if found is None:
+            continue
+        name = f"{entity.field_name}: '{entity.key[1]}'"
+        if "Entity" not in found.labels:
+            problems.append(f"{name} is used by something that is not an entity")
+        elif found.deleted:
+            problems.append(f"{name} has been deleted")
+        elif not set(entity.allowed_types) & found.labels:
+            problems.append(
+                f"{name} is an entity of another type (not "
+                f"{', '.join(entity.allowed_types)})"
+            )
+    if problems:
+        raise PanglossConflictError(
+            "Entities in the document are not the existing ones: " + "; ".join(problems)
+        )
+
+
+async def check_urls_available(tx: Transaction, query_object: QueryObject) -> None:
+    """Check that no URL of a new entity is already the URL of an entity"""
+    if not query_object.urls_to_write:
+        return
+    result = await tx.run(
+        "UNWIND $urls AS url MATCH (node:PGUrl {url: url}) RETURN node.url AS url",
+        urls=sorted(set(query_object.urls_to_write)),
+    )
+    in_use = [url for (url,) in await result.values()]
+    if in_use:
+        raise PanglossConflictError(f"URLs {in_use} are already in use")
 
 
 async def check_ids_available(
@@ -127,9 +221,9 @@ async def get_existing_head(
     query, params = build_head_query(head_id)
     result = await tx.run(query, **params)
     records = await result.values()
-    if not records or head_type not in records[0][0]:
+    if not records or head_type not in records[0][0] or records[0][3]:
         raise PanglossNotFoundError(f"There is no {head_type} with id {head_id}")
-    _, created_when, created_by = records[0]
+    _, created_when, created_by, _ = records[0]
     return ExistingHead(created_by=created_by, created_when=created_when)
 
 

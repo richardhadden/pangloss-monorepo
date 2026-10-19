@@ -136,7 +136,7 @@ async def test_list_deep_search(clear_database):
 // $page_size: results per page
 
 UNWIND $tokens AS token
-CALL text_search.search_all("label_index", token) YIELD node AS matchedNode
+CALL text_search.search_all("label_text", token) YIELD node AS matchedNode
 CALL {
   WITH matchedNode
   WITH matchedNode
@@ -227,7 +227,7 @@ RETURN {
 // $page_size: results per page
 
 UNWIND $tokens AS token
-CALL text_search.search_all("label_index", token) YIELD node AS matchedNode
+CALL text_search.search_all("label_text", token) YIELD node AS matchedNode
 CALL {
   WITH matchedNode
   WITH matchedNode

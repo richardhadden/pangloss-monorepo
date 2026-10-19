@@ -22,7 +22,13 @@ from pangloss_models.model_bases.semantic_space import SemanticSpace
 from pangloss_users import current_request_username
 from pydantic import AnyHttpUrl
 
-from .helpers import count_nodes, labels_of, native, run
+from pangloss_memgraph.databases.memgraph.initialise_database import (
+    initialise_database,
+)
+
+from .helpers import count_nodes, labels_of, mg_enum, native, run
+
+from .test_create import Colour, Dimensions, Size  # noqa: E402
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -770,8 +776,9 @@ async def test_update_can_create_inline_entities(db_driver, clear_database):
     person = run(db_driver, "MATCH (p:Person) RETURN p")[0]["p"]
     assert person["id"] == str(new_id)
     assert person["label"] == "New Person"
-    assert person["head_node_id"] == str(saved.id)
-    assert "HeadNode" not in labels_of(db_driver, new_id)
+    # (an entity of its own, not part of the statement that created it)
+    assert "head_node_id" not in person
+    assert "HeadNode" in labels_of(db_driver, new_id)
     assert (
         run(db_driver, "MATCH (:Statement)-[r:concerns_people]->(:Person) RETURN count(r) AS c")[0]["c"]
         == 1
@@ -856,7 +863,7 @@ async def test_update_entity_replaces_properties_and_own_relations_only(
 
 
 @no_type_check
-async def test_update_entity_keeps_urls(db_driver, clear_database):
+async def test_update_entity_keeps_its_urls(db_driver, clear_database):
     class Person(Entity):
         _meta = Entity.Meta(create_with_id=True)
 
@@ -869,7 +876,8 @@ async def test_update_entity_keeps_urls(db_driver, clear_database):
 
     node = run(db_driver, "MATCH (p:Person) RETURN p")[0]["p"]
     assert node["label"] == "John Smith"
-    assert node["urls"] == [url]
+    rows = run(db_driver, "MATCH (:Person)-[:has_url]->(u:PGUrl) RETURN u.url AS url")
+    assert rows == [{"url": url}]
 
 
 # ---------------------------------------------------------------------------
@@ -1083,3 +1091,72 @@ async def test_update_replaces_an_annotated_value(db_driver, clear_database):
 
     read = await Naming.get(id=saved.id)
     assert (read.name.value, read.name.certainty) == ("Giovanni", 2)
+
+
+@no_type_check
+async def test_update_replaces_enum_values(db_driver, clear_database):
+    class Statement(Document):
+        colour: Colour
+        colours: list[Colour]
+        sizes: Dimensions | None = None
+
+    initialise()
+    await initialise_database()
+
+    saved = await Statement.Create(
+        label="A Statement", colour=Colour.RED, colours=[Colour.RED], sizes=None
+    ).save()
+
+    await Statement.Update(
+        id=saved.id,
+        label="A Statement",
+        colour="blue",
+        colours=[Colour.BLUE, Colour.RED],
+    ).save()
+
+    node = run(db_driver, "MATCH (n:Statement) RETURN n")[0]["n"]
+    assert node["colour"] == mg_enum("Colour::BLUE")
+    assert node["colours"] == [mg_enum("Colour::BLUE"), mg_enum("Colour::RED")]
+
+    read = await Statement.get(id=saved.id)
+    assert read.colour is Colour.BLUE
+    assert read.colours == [Colour.BLUE, Colour.RED]
+
+
+@no_type_check
+async def test_update_with_enums_on_nested_documents_and_edges(db_driver, clear_database):
+    class Certainty(EdgeModel):
+        colour: Colour
+
+    class Person(Entity):
+        pass
+
+    class Action(Document):
+        size: Size
+
+    class Statement(Document):
+        action: Action
+        concerns: ViaEdge[Person, Certainty]
+
+    initialise()
+    await initialise_database()
+
+    person = await Person.Create(label="John Smith").save()
+    reference = {"type": "Person", "id": person.id}
+    saved = await Statement.Create(
+        label="A Statement",
+        action={"type": "Action", "label": "An Action", "size": 1},
+        concerns={**reference, "edge_properties": {"colour": "red"}},
+    ).save()
+    await Statement.Update(
+        id=saved.id,
+        label="A Statement",
+        action={"type": "Action", "label": "An Action", "size": 2},
+        concerns={**reference, "edge_properties": {"colour": "blue"}},
+    ).save()
+
+    action = run(db_driver, "MATCH (a:Action) RETURN a")[0]["a"]
+    assert action["size"] == mg_enum("Size::LARGE")
+    for edge in ("concerns", "concerns_reverse"):
+        props = run(db_driver, f"MATCH ()-[r:{edge}]->() RETURN properties(r) AS p")[0]["p"]
+        assert props["colour"] == mg_enum("Colour::BLUE"), edge

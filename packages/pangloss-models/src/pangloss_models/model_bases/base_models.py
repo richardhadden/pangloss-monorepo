@@ -31,6 +31,10 @@ from pydantic import (
 from pydantic.alias_generators import to_camel
 
 from pangloss_models.model_registry import ModelRegistry
+lazy from pangloss_models.model_bases.entity import (
+    _EntityCreateDBBase,
+    _EntityUpdateDBBase,
+)
 lazy from pangloss_models.model_bases.document import (
     _DocumentCreateDBBase,
     _DocumentUpdateDBBase,
@@ -347,6 +351,13 @@ def recursively_propagate_context_types(
     """Takes a _CreateDBBase instance and recursively adds type of semantic
     spaces to each contained type below that semantic space node"""
 
+    # An entity is not part of the document that creates it: it is a context of its
+    # own, whatever semantic space the document puts it in
+    if parent is not None and isinstance(
+        item, (_EntityCreateDBBase, _EntityUpdateDBBase)
+    ):
+        semantic_spaces, context_labels = [], []
+
     if not isinstance(item, (_SemanticSpaceCreateDBBase, _SemanticSpaceUpdateDBBase)):
         item.semantic_spaces = [*semantic_spaces]
         item.context_labels = [*context_labels]
@@ -535,6 +546,9 @@ class _APIHeadMeta(_BaseObject):
     context_labels: list[ContextLabel] | None = None
     head_node_type: str | None = None
     head_node_id: UUID | None = None
+    # An entity that something refers to cannot be deleted: when someone tried to,
+    # it was marked instead
+    marked_for_deletion: bool = False
 
     @field_validator("semantic_spaces", mode="before")
     @classmethod
@@ -545,6 +559,11 @@ class _APIHeadMeta(_BaseObject):
     @classmethod
     def context_labels_labels_to_empty_list(cls, v):
         return [] if v is None else v
+
+    @field_validator("marked_for_deletion", mode="before")
+    @classmethod
+    def marked_for_deletion_to_false(cls, v):
+        return False if v is None else v
 
     @model_validator(mode="before")
     @classmethod

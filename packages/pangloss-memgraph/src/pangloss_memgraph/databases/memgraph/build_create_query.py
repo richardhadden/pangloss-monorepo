@@ -72,6 +72,8 @@ class QuerySubstring(str):
 
 class QueryParams(dict[Identifier, dict[str, typing.Any] | typing.Any]):
     def add(self, item: dict[str, typing.Any] | typing.Any) -> Identifier:
+        # (Enums cannot be parameters: see `PropertyAssignments`)
+        assert not contains_enum(item), "enums cannot be query parameters"
         identifier = Identifier()
         self.__setitem__(identifier, convert_type_for_writing(item))
         return identifier
@@ -95,6 +97,48 @@ class NodeToWrite:
     is_entity: bool
 
 
+# How an entity that a document creates is looked up: by the URL it is given,
+# or else by its id
+type InlineEntityKey = tuple[str, str]
+
+
+@dataclasses.dataclass(frozen=True)
+class InlineEntity:
+    """An entity written in a document, with an id or URL of its own (a `create_new`
+    entity). It is an entity like any other, found if it exists, and created as
+    one if it does not"""
+
+    key: InlineEntityKey
+    type: str
+    field_name: str
+    allowed_types: tuple[str, ...]
+
+
+@dataclasses.dataclass(frozen=True)
+class ExistingEntity:
+    """What the database has for an `InlineEntity` that exists"""
+
+    id: str
+    labels: frozenset[str]
+    deleted: bool
+
+
+def inline_entity_key(instance: "_EntityCreateDBBase") -> InlineEntityKey:
+    if instance.urls:
+        return ("url", str(sorted(instance.urls, key=str)[0]))
+    return ("id", str(instance.id))
+
+
+def allowed_type_names(type_options: typing.Iterable[RelationOption]) -> list[str]:
+    return sorted(
+        {
+            type_option.annotated_type.__name__
+            for type_option in type_options
+            if isinstance(type_option, (RelationToEntity, RelationToDocument))
+        }
+    )
+
+
 class QueryObject:
     match_query_strings: list[str]
     create_query_strings: list[str]
@@ -106,6 +150,7 @@ class QueryObject:
     head_type: str | None
     # What the query refers to and writes, so that it can be checked before it
     # is run
+    urls_to_write: list[str]
     references: list[ReferenceToExisting]
     nodes_to_write: list[NodeToWrite]
     # `meta` of nodes of the tree being replaced in an update, by node id, so that
@@ -114,8 +159,19 @@ class QueryObject:
     # Identifiers of the existing nodes already matched by the query, so that an
     # entity referred to many times is matched once
     matched_references: dict[tuple, Identifier]
+    # The entities written in the document: asked about before the query is built (the
+    # query differs for those that exist), and then given back as `existing_entities`
+    inline_entities: list[InlineEntity]
+    existing_entities: dict[InlineEntityKey, ExistingEntity]
+    # Identifiers of those in the query, so that one that is written twice is one
+    inline_entity_identifiers: dict[InlineEntityKey, Identifier]
 
-    def __init__(self, head_id: uuid.UUID, head_type: str):
+    def __init__(
+        self,
+        head_id: uuid.UUID,
+        head_type: str,
+        existing_entities: dict[InlineEntityKey, ExistingEntity] | None = None,
+    ):
         self.match_query_strings = []
         self.create_query_strings = []
         self.merge_query_strings = []
@@ -124,9 +180,13 @@ class QueryObject:
         self.head_type = head_type
         self.head_id = head_id
         self.references = []
+        self.urls_to_write = []
         self.nodes_to_write = []
         self.previous_meta = {}
         self.matched_references = {}
+        self.inline_entities = []
+        self.existing_entities = existing_entities or {}
+        self.inline_entity_identifiers = {}
 
     def to_query_string(self) -> typing.LiteralString:
         if not self.return_identifier:
@@ -148,8 +208,8 @@ def convert_type_for_writing(value):
 
     - `Decimal` is stored as a string, to keep its exact value (Memgraph has no
       decimal type).
-    - `Enum` members are stored as their value. (To be replaced by Memgraph's
-      native enum type, which needs to be created ahead of time.)
+    - `Enum` members are left as they are: they are stored as Memgraph's native
+      enums, which cannot be query parameters (see `PropertyAssignments`).
     - Containers (including TypedDicts) are converted recursively."""
     match value:
         case uuid.UUID():
@@ -157,7 +217,7 @@ def convert_type_for_writing(value):
         case AnyUrl():
             return str(value)
         case Enum():
-            return convert_type_for_writing(value.value)
+            return value
         case Decimal():
             return str(value)
         case set() | tuple() | list():
@@ -173,6 +233,78 @@ def convert_edge_properties_for_writing(edge_properties: EdgeModel) -> dict[str,
     for k, v in edge_properties_dict.items():
         edge_properties_dict[k] = convert_type_for_writing(v)
     return edge_properties_dict
+
+
+def contains_enum(value: typing.Any) -> bool:
+    """Whether a value is, or has in it (in a list or dict), an `Enum` member"""
+    match value:
+        case Enum():
+            return True
+        case set() | tuple() | list():
+            return any(contains_enum(v) for v in value)
+        case dict():
+            return any(contains_enum(v) for v in value.values())
+        case _:
+            return False
+
+
+def enum_name(member: Enum) -> str:
+    """Name of an enum member in Memgraph, e.g. `Colour::RED`. (The enum is made,
+    with the names of its members, by `initialise_database`)"""
+    return f"{type(member).__name__}::{member.name}"
+
+
+def cypher_expression(params: QueryParams, value: typing.Any) -> str:
+    """Cypher for a value that has an enum in it: lists and maps are written out,
+    and each enum is made from its name with `ToEnum`. Everything else is a parameter"""
+    match value:
+        case Enum():
+            return f"ToEnum(${params.add(enum_name(value))})"
+        case set() | tuple() | list():
+            return "[" + ", ".join(cypher_expression(params, v) for v in value) + "]"
+        case dict():
+            return (
+                "{"
+                + ", ".join(
+                    f"{quote_key(key)}: {cypher_expression(params, v)}"
+                    for key, v in value.items()
+                )
+                + "}"
+            )
+        case _:
+            return f"${params.add(value)}"
+
+
+def quote_key(key: str) -> str:
+    return "`" + str(key).replace("`", "``") + "`"
+
+
+class PropertyAssignments:
+    """The properties to set on a node or edge.
+
+    Enums cannot be passed as parameters, so those properties (and any list or map
+    with an enum in it) are put into the query as `ToEnum(...)` expressions, and the
+    rest are set from a single parameter."""
+
+    def __init__(self, params: QueryParams, properties: dict[str, typing.Any]):
+        plain = {k: v for k, v in properties.items() if not contains_enum(v)}
+        with_enums = {k: v for k, v in properties.items() if contains_enum(v)}
+        self.plain_identifier = params.add(plain)
+        self.enum_expressions = {
+            key: cypher_expression(params, value) for key, value in with_enums.items()
+        }
+
+    def set_items(self, variable: str, replace: bool = False) -> str:
+        """What to put after `SET` to give `variable` the properties: replacing
+        its properties (`=`), or adding to them (`+=`)"""
+        items = [f"{variable} {'=' if replace else '+='} ${self.plain_identifier}"]
+        if self.enum_expressions:
+            expressions = ", ".join(
+                f"{quote_key(key)}: {expression}"
+                for key, expression in self.enum_expressions.items()
+            )
+            items.append(f"{variable} += {{{expressions}}}")
+        return ", ".join(items)
 
 
 def native_datetime(value: typing.Any) -> typing.Any:
@@ -228,10 +360,6 @@ def get_node_fields_as_writable_dict(
     if not is_head_node:
         node_data["head_node_type"] = head_node_type
         node_data["head_node_id"] = str(head_node_id)
-
-    # Entities given a URL as id keep the URL(s) so they can be found by them
-    if urls := getattr(instance, "urls", None):
-        node_data["urls"] = sorted(str(url) for url in urls)
 
     # Compare with None rather than truthiness: 0, 0.0, "" and [] are real values
     if (label := getattr(instance, "label", None)) is not None:
@@ -319,6 +447,19 @@ def build_attached_nodes(
         )
         for item in iter_values(getattr(instance, related_field_name, None)):
             match item:
+                case _CreateDBBase() | _UpdateDBBase() if (
+                    item.__metatype__ == "Entity"
+                ):
+                    # (an entity of its own, not part of this document)
+                    build_inline_entity_query(
+                        query_object=query_object,
+                        instance=typing.cast("_EntityCreateDBBase", item),
+                        source_identifier=instance_identifier,
+                        field_name=related_field_name,
+                        reverse_name=related_field_def.reverse_name,
+                        subclasses_parent_fields=related_field_def.subclasses_parent_fields,
+                        type_options=type_options,
+                    )
                 case _CreateDBBase() | _UpdateDBBase():
                     build_related_node_query(
                         query_object=query_object,
@@ -359,6 +500,22 @@ def build_attached_nodes(
                 )
 
 
+def build_url_nodes(
+    query_object: QueryObject, instance: "_EntityCreateDBBase", node_identifier: Identifier
+) -> None:
+    """The URLs of a new entity, as nodes (`PGUrl`) that it has, rather than as a
+    property: a URL is unique, so that two entities cannot have it, even if they are
+    made at the same time (a uniqueness constraint)."""
+    for url in sorted(getattr(instance, "urls", None) or [], key=str):
+        url_identifier = Identifier()
+        url_parameter = query_object.params.add(str(url))
+        query_object.urls_to_write.append(str(url))
+        query_object.create_query_strings.append(f"""
+            CREATE ({url_identifier}:PGUrl {{url: ${url_parameter}}})
+            CREATE ({node_identifier})-[:has_url]->({url_identifier})
+        """)
+
+
 def build_edges(
     query_object: QueryObject,
     source_identifier: Identifier,
@@ -372,10 +529,10 @@ def build_edges(
     pair for each parent field that the field subclasses — with any edge
     properties on all of them"""
 
-    edge_properties_identifier: Identifier | None = None
+    edge_property_assignments: PropertyAssignments | None = None
     if edge_properties:
-        edge_properties_identifier = query_object.params.add(
-            convert_edge_properties_for_writing(edge_properties)
+        edge_property_assignments = PropertyAssignments(
+            query_object.params, convert_edge_properties_for_writing(edge_properties)
         )
 
     edge_names = [(field_name, reverse_name)]
@@ -397,12 +554,12 @@ def build_edges(
             CREATE ({source_identifier})-[{forward_query_identifier}:{forward_name}]->({target_identifier})
             CREATE ({source_identifier})<-[{reverse_query_identifier}:{backward_name} {{reverse: true}}]-({target_identifier})
         """)
-        if edge_properties_identifier:
+        if edge_property_assignments:
             # `+=` adds to the edge's properties; `=` would replace them and
             # remove the {reverse: true} marker
             query_object.create_query_strings.append(f"""
-                SET {forward_query_identifier} += ${edge_properties_identifier}
-                SET {reverse_query_identifier} += ${edge_properties_identifier}
+                SET {edge_property_assignments.set_items(forward_query_identifier)}
+                SET {edge_property_assignments.set_items(reverse_query_identifier)}
             """)
 
 
@@ -437,12 +594,12 @@ def build_related_node_query(
     # Add the node id identifier to params and get back an Identifier
     node_id_identifier = query_object.params.add(str(instance.id))
 
-    # Add the dict to the query params and get back an Identifier
-    node_data_identifier = query_object.params.add(node_data_dict)
+    # Add the properties to the query params (and, for enums, the query)
+    node_data = PropertyAssignments(query_object.params, node_data_dict)
 
     query_object.create_query_strings.append(f"""
         MERGE ({node_identifier}:{instance_labels} {{id: ${node_id_identifier}}})
-        ON CREATE SET {node_identifier} = ${node_data_identifier}
+        ON CREATE SET {node_data.set_items(node_identifier, replace=True)}
     """)
 
     build_edges(
@@ -468,6 +625,83 @@ def build_related_node_query(
     )
 
 
+def build_inline_entity_query(
+    query_object: QueryObject,
+    instance: "_EntityCreateDBBase",
+    source_identifier: Identifier,
+    field_name: str,
+    reverse_name: str,
+    subclasses_parent_fields: typing.Iterable[str | FieldSubclassing],
+    type_options: TypeOptions,
+):
+    """An entity given in a document, with an id or URL of its own.
+
+    It is not part of the document. If it exists, it is just related to, like any
+    entity that is referred to. If not, it is created as `Entity.Create(...).save()`
+    would create it: a head node, with its own record of creation, and nothing to
+    do with the document (nor with the semantic spaces it is in)."""
+    key = inline_entity_key(instance)
+    query_object.inline_entities.append(
+        InlineEntity(
+            key=key,
+            type=instance.type,
+            field_name=field_name,
+            allowed_types=tuple(allowed_type_names(type_options)),
+        )
+    )
+
+    if key in query_object.inline_entity_identifiers:
+        entity_identifier = query_object.inline_entity_identifiers[key]
+    elif key in query_object.existing_entities:
+        entity_identifier = Identifier()
+        existing_id = query_object.params.add(query_object.existing_entities[key].id)
+        query_object.match_query_strings.append(
+            f"MATCH ({entity_identifier}:PGIndexableNode {{id: ${existing_id}}})"
+        )
+        query_object.inline_entity_identifiers[key] = entity_identifier
+    else:
+        entity_identifier = Identifier()
+        query_object.inline_entity_identifiers[key] = entity_identifier
+        entity_data = PropertyAssignments(
+            query_object.params,
+            get_node_fields_as_writable_dict(instance, is_new=True, is_head_node=True),
+        )
+        creation = Identifier()
+        creation_data = query_object.params.add(
+            {
+                "id": str(uuid.uuid7()),
+                "created_when": datetime.datetime.now(datetime.UTC),
+            }
+        )
+        query_object.create_query_strings.append(f"""
+            CREATE ({entity_identifier}:{get_label_query_string(instance, ["HeadNode", "PGIndexableNode"])})
+            SET {entity_data.set_items(entity_identifier, replace=True)}
+            CREATE ({creation}:PGCreation)
+            SET {creation} = ${creation_data}
+            CREATE ({creation})-[:is_creation_of]->({entity_identifier})
+            CREATE ({creation})-[:created_by]->(user)
+        """)
+        build_url_nodes(query_object, instance, entity_identifier)
+        # Its own relations belong to it (it is the head node of them)
+        build_attached_nodes(
+            query_object=query_object,
+            instance=typing.cast(_AllCreateDBModels, instance),
+            instance_identifier=entity_identifier,
+            head_node_type=instance.type,
+            head_node_id=instance.id,
+        )
+
+    build_edges(
+        query_object,
+        source_identifier,
+        entity_identifier,
+        field_name,
+        reverse_name,
+        subclasses_parent_fields,
+        getattr(instance, "edge_properties", None),
+    )
+
+
 def build_relation_to_existing_query(
     query_object: QueryObject,
     instance: _ReferenceSetBase,
@@ -477,13 +711,7 @@ def build_relation_to_existing_query(
     subclasses_parent_fields: typing.Iterable[str | FieldSubclassing],
     type_options: TypeOptions,
 ):
-    allowed_types = sorted(
-        {
-            type_option.annotated_type.__name__
-            for type_option in type_options
-            if isinstance(type_option, (RelationToEntity, RelationToDocument))
-        }
-    )
+    allowed_types = allowed_type_names(type_options)
 
     query_object.references.append(
         ReferenceToExisting(
@@ -505,8 +733,11 @@ def build_relation_to_existing_query(
 
         # An entity can be referred to by a URL, as well as by its id
         if isinstance(instance.id, AnyUrl):
-            id_condition = f"${id_identifier} IN {instance_identifier}.urls"
-            match_node = f"({instance_identifier}:PGIndexableNode)"
+            id_condition = "true"
+            match_node = (
+                f"(:PGUrl {{url: ${id_identifier}}})"
+                f"<-[:has_url]-({instance_identifier}:PGIndexableNode)"
+            )
         else:
             id_condition = "true"
             match_node = (
@@ -533,11 +764,16 @@ def build_relation_to_existing_query(
 
 def build_head_create_query(
     instance: _DocumentCreateDBBase | _EntityCreateDBBase,
+    existing_entities: dict[InlineEntityKey, ExistingEntity] | None = None,
 ) -> QueryObject:
 
     # Initialise a query object with head values
 
-    query_object = QueryObject(head_id=instance.id, head_type=instance.type)
+    query_object = QueryObject(
+        head_id=instance.id,
+        head_type=instance.type,
+        existing_entities=existing_entities,
+    )
 
     # Create an Identifier for the node
     node_identifier = Identifier()
@@ -551,8 +787,8 @@ def build_head_create_query(
         instance, is_new=True, is_head_node=True
     )
 
-    # Add the dict to the query params and get back an Identifier
-    node_data_identifier = query_object.params.add(node_data_dict)
+    # Add the properties to the query params (and, for enums, the query)
+    node_data = PropertyAssignments(query_object.params, node_data_dict)
 
     # Build a Creation object connected to the created node and
     # current user
@@ -573,12 +809,15 @@ def build_head_create_query(
     # Add Create and Set strings to query_object
     query_object.create_query_strings.append(f"""
         CREATE ({node_identifier}:{instance_labels})
-        SET {node_identifier} = ${node_data_identifier}
+        SET {node_data.set_items(node_identifier, replace=True)}
         CREATE (creation:PGCreation)
         SET creation = ${creation_data_identifier}
         CREATE (creation)-[:is_creation_of]->({node_identifier})
         CREATE (creation)-[:created_by]->(user)
     """)
+
+    if isinstance(instance, _EntityCreateDBBase):
+        build_url_nodes(query_object, instance, node_identifier)
 
     # Attach all related nodes to the object
     build_attached_nodes(

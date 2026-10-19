@@ -27,7 +27,8 @@ class PanglossImportError(ImportError):
 
 
 class PanglossWriteError(Exception):
-    """A write to the database was rejected, and nothing was written"""
+    """A write to the database was rejected, and (unless the error says otherwise)
+    nothing was written"""
 
 
 class PanglossNotFoundError(PanglossWriteError):
@@ -46,3 +47,18 @@ class PanglossConflictError(PanglossWriteError):
 
 class PanglossUserNotFoundError(PanglossWriteError):
     """The user doing the write has no user node in the database"""
+
+
+class PanglossNotDeletableError(PanglossWriteError):
+    """Only head documents can be deleted: this is part of another document"""
+
+
+class PanglossEntityInUseError(PanglossWriteError):
+    """An entity that documents (or other entities) refer to cannot be deleted. It
+    has been marked for deletion instead (`meta.marked_for_deletion`)."""
+
+    def __init__(self, message: str, entity_id=None, referenced_by=None):
+        super().__init__(message)
+        self.entity_id = entity_id
+        # What refers to it: dicts with `id`, `type` and `label`
+        self.referenced_by: list[dict] = referenced_by or []

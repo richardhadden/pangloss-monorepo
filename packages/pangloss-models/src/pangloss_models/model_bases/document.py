@@ -167,6 +167,13 @@ class Document(_DeclaredClass, WithMeta[DocumentMeta]):
         ]
     ]
 
+    delete: ClassVar[
+        Callable[
+            [AnyHttpUrl | UUID],
+            None | Awaitable[None],
+        ]
+    ]
+
     list: ClassVar[
         Callable[
             [str],

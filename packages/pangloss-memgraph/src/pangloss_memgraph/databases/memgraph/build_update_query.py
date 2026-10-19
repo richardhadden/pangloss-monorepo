@@ -24,15 +24,20 @@ from pangloss_models.model_bases.entity import _EntityUpdateDBBase
 from pangloss_users import current_request_username
 
 from pangloss_memgraph.databases.memgraph.build_create_query import (
+    ExistingEntity,
     Identifier,
+    InlineEntityKey,
+    PropertyAssignments,
     QueryObject,
+    QueryParams,
     build_attached_nodes,
     get_node_fields_as_writable_dict,
 )
 
 # Walks forward edges from the head node, without entering entities
+# (The URLs of an entity are not part of what it owns)
 TREE_TRAVERSAL = (
-    "[*BFS (edge, node | NOT node:Entity AND NOT coalesce(edge.reverse, false))]"
+    "[*BFS (edge, node | NOT node:Entity AND NOT node:PGUrl AND NOT coalesce(edge.reverse, false))]"
 )
 
 
@@ -45,7 +50,8 @@ def build_head_query(head_id: uuid.UUID) -> tuple[str, dict[str, typing.Any]]:
                        -[:created_by]->(user:PGUser)
         RETURN labels(head) AS labels,
                creation.created_when AS created_when,
-               user.username AS created_by
+               user.username AS created_by,
+               coalesce(head.deleted, false) AS deleted
         """,
         {"head_id": str(head_id)},
     )
@@ -67,36 +73,43 @@ def build_replace_head_query(
     instance: _DocumentUpdateDBBase | _EntityUpdateDBBase,
 ) -> tuple[str, dict[str, typing.Any]]:
     """Delete everything the head node owns, and replace its properties"""
+    params = QueryParams()
+    head_id_identifier = params.add(str(instance.id))
     data = get_node_fields_as_writable_dict(instance, is_new=True, is_head_node=True)
+    assignments = PropertyAssignments(params, data)
     return (
         f"""
-        MATCH (head:HeadNode {{id: $head_id}})
+        MATCH (head:HeadNode {{id: ${head_id_identifier}}})
         OPTIONAL MATCH (head)-{TREE_TRAVERSAL}->(node)
-        WITH head, head.urls AS old_urls, collect(DISTINCT node) AS tree
+        WITH head, collect(DISTINCT node) AS tree
         OPTIONAL MATCH (head)-[owned_out]->()
-        WHERE NOT coalesce(owned_out.reverse, false)
-        WITH head, old_urls, tree, collect(owned_out) AS owned_out_edges
+        WHERE NOT coalesce(owned_out.reverse, false) AND type(owned_out) <> 'has_url'
+        WITH head, tree, collect(owned_out) AS owned_out_edges
         OPTIONAL MATCH ()-[owned_in]->(head)
         WHERE coalesce(owned_in.reverse, false)
-        WITH head, old_urls, tree, owned_out_edges,
+        WITH head, tree, owned_out_edges,
              collect(owned_in) AS owned_in_edges
         FOREACH (edge IN owned_out_edges + owned_in_edges | DELETE edge)
         FOREACH (node IN tree | DETACH DELETE node)
-        SET head = $data
-        SET head.urls = coalesce($data.urls, old_urls)
+        SET {assignments.set_items("head", replace=True)}
         RETURN head.id AS id
         """,
-        {"head_id": str(instance.id), "data": data},
+        dict(params),
     )
 
 
 def build_head_update_query(
     instance: _DocumentUpdateDBBase | _EntityUpdateDBBase,
     previous_meta: dict[str, dict[str, typing.Any]],
+    existing_entities: dict[InlineEntityKey, ExistingEntity] | None = None,
 ) -> QueryObject:
     """Write the new tree below an existing head node, and record the update"""
 
-    query_object = QueryObject(head_id=instance.id, head_type=instance.type)
+    query_object = QueryObject(
+        head_id=instance.id,
+        head_type=instance.type,
+        existing_entities=existing_entities,
+    )
     query_object.previous_meta = previous_meta
 
     node_identifier = Identifier()

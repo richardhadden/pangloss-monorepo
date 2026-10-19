@@ -51,10 +51,11 @@ Database-bound methods, available after `initialise()`:
 - `Statement.Update(id=..., ...).save(return_type="Reference" | "Full")` ✅ replaces the document and everything nested in it; see [Updating](memgraph.md#update_head_nodeinstance-return_typereference-)
 - `await Statement.get(id)` ✅ returns a `HeadView`, or `None` if not found
 - `await Statement.list(search_terms=None, page_number=None, page_size=None, deep_search=False)` ✅ returns paginated reference views
+- `await Statement.delete(id)` ✅ deletes a head document; see [Deleting](#deleting)
 
 ## Entity
 
-A real-world thing that documents refer to: a person, place, group, or organisation. Entities are referenced from documents rather than created inline: the relation field accepts an `EntityName.ReferenceSet` (`{"type": "Person", "id": ...}`).
+A real-world thing that documents refer to: a person, place, group, or organisation. Documents refer to entities rather than containing them: the relation field accepts an `EntityName.ReferenceSet` (`{"type": "Person", "id": ...}`).
 
 ```python
 class Person(Entity):
@@ -65,10 +66,19 @@ class Person(Entity):
 
 | Option | Default | Meaning |
 |--------|---------|---------|
-| `accept_url_as_id` | `True` | Accept a URL as `id`. `CreateDB` then generates a UUID and stores the URL in `urls` |
-| `create_inline` | `False` | Allow creating the entity inside another object's payload. Requires `create_with_id=True` (checked; otherwise `PanglossMetaError`) |
+| `accept_url_as_id` | `True` | Accept a URL as `id`. `CreateDB` then generates a UUID, and the URL is stored as a node belonging to the entity (unique: no two entities have the same URL) |
+| `create_inline` | `False` | Allow the entity to be written in the payload of a document that needs it (with `create_new`), so that a document and the entities it needs can be created in one go. Requires `create_with_id=True` (checked; otherwise `PanglossMetaError`). See below |
 
-Database-bound methods: `Entity.Create(...).save()` ✅, `Entity.Update(id=..., ...).save()` ✅, `await Person.get(id)` ✅ (by id or URL; `None` if not found) and `await Person.list(...)` ✅.
+Database-bound methods: `Entity.Create(...).save()` ✅, `Entity.Update(id=..., ...).save()` ✅, `await Person.get(id)` ✅ (by id or URL; `None` if not found), `await Person.list(...)` ✅ and `await Person.delete(id)` ✅ (see [Deleting](#deleting)).
+
+### Entities written in a document
+
+With `create_inline`, a document's payload can contain the entity itself instead of a reference to it: `{"type": "Person", "id": <UUID or URL>, "label": "...", "create_new": True}`. This is only a convenience. The entity is **not part of the document**:
+
+- It is looked up by its UUID, or its URL. If it exists it is used as it is (the rest of the payload is ignored, and nothing is changed). If it does not, it is created exactly as `Person.Create(...).save()` would create it: a head node with its own record of creation, and no connection to the document other than the relation. A URL given in several documents is one entity.
+- It has nothing of the document's context: not its head node, nor the semantic space the document is in.
+- Afterwards it is updated, deleted and read like any other entity.
+- If the id or URL is that of something that is not an entity, of a deleted entity, or of an entity of a type the field does not allow, the write raises `PanglossConflictError`.
 
 ### Reading an entity
 
@@ -88,6 +98,15 @@ What each list contains depends on how the document refers to the entity:
 | through a chain that mixes embedded objects and reified relations | as for reified relations, with the field named as in the embedded object that holds it |
 
 A relation that a subclass narrows is shown only under the narrower name. If `Action` is a `Statement`, and its `carried_out_by` subclasses `Statement.concerns_person`, then an `Action` appears under `carried_out_by_reverse` and not under `concerns_person_reverse`, although both are stored in the graph. (This follows the incoming relations that the models define for the entity, so a document type that is not a possible source of a relation is left out of that field.)
+
+## Deleting
+
+`Statement.delete(id)` and `Person.delete(id)` delete nothing for good: the node is flagged `deleted`, with a record of who deleted it and when, and everything that reads the database leaves it out (`get` returns `None`, `list` and searches do not find it, it can no longer be updated or referred to, and it no longer counts as referring to an entity). Its `id` stays in use.
+
+- **Only head documents** can be deleted. Deleting one that is nested in another document raises `PanglossNotDeletableError`. A nested document goes when its head document does.
+- **An entity can only be deleted if nothing refers to it**: no document, and no other entity, that has not itself been deleted. This includes references through nested documents, embedded objects and reified relations.
+- **An entity that is referred to is not deleted, but marked.** `delete` raises `PanglossEntityInUseError` (it has `entity_id` and `referenced_by`, with the `id`, `type` and `label` of up to 10 of the head documents or entities that refer to it), and the entity is flagged `marked_for_deletion`, which its `HeadView` shows as `meta.marked_for_deletion`. The mark is kept although the call raised. Delete it again once nothing refers to it, and it is deleted, and the mark cleared. Nothing deletes it automatically.
+- A deleted document or entity that does not exist, or is of another type, raises `PanglossNotFoundError`.
 
 ## Embedded
 

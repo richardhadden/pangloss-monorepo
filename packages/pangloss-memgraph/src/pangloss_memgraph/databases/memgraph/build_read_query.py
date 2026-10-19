@@ -10,7 +10,8 @@ def build_fetch_document_query(
     document_class: type[Document | Entity], document_id: uuid.UUID
 ) -> tuple[str, QueryParams]:
     """Build the query for a Document or Entity and what it contains: its own
-    values, `meta`, and everything below it. (For an Entity, its relations to
+    values, `meta`, and everything below it. It returns the root node, the edges of
+    the tree below it, and the `meta` (`build_tree` makes the tree). (For an Entity, its relations to
     documents come from `build_fetch_incoming_query`)"""
     query_params = QueryParams()
     document_id_identifier = query_params.add(document_id)
@@ -20,6 +21,8 @@ def build_fetch_document_query(
     WHERE ${document_type_identifier} in labels(root)
     OPTIONAL MATCH (hn:HeadNode {{id: root.head_node_id}})
     WITH root, rp, coalesce(hn, root) AS headnode
+    // (a deleted document, or one nested in it, or a deleted entity, is not found)
+    WHERE NOT coalesce(CASE WHEN root:Entity THEN root.deleted ELSE headnode.deleted END, false)
     MATCH (headnode)<-[:is_creation_of]-(creation:PGCreation)
     MATCH (creation)-[:created_by]->(user:PGUser)
     CALL {{
@@ -32,26 +35,40 @@ def build_fetch_document_query(
     // The tree below the root: every node reachable by forward edges, without
     // entering entities. (Each relation is stored as a forward edge and a
     // reverse edge marked `reverse: true`, which is not followed.)
-    OPTIONAL MATCH tree_path = (root)-[*BFS (e, n | NOT n:Entity AND NOT coalesce(e.reverse, false))]->(descendant)
+    OPTIONAL MATCH tree_path = (root)-[*BFS (e, n | NOT n:Entity AND NOT n:PGUrl AND NOT coalesce(e.reverse, false))]->(descendant)
     WITH headnode, root, creation, user, updated_by, updated_when, rp, collect(tree_path) AS tree_paths
     // The entities that the nodes of the tree refer to
-    OPTIONAL MATCH entity_path = (root)-[*BFS (e, n | NOT n:Entity AND NOT coalesce(e.reverse, false))]->(holder)-[holder_edge]->(:Entity)
+    OPTIONAL MATCH entity_path = (root)-[*BFS (e, n | NOT n:Entity AND NOT n:PGUrl AND NOT coalesce(e.reverse, false))]->(holder)-[holder_edge]->(:Entity)
     WHERE NOT coalesce(holder_edge.reverse, false)
     WITH headnode, root, creation, user, updated_by, updated_when, rp, tree_paths, collect(entity_path) AS entity_paths
     OPTIONAL MATCH root_entity_path = (root)-[root_edge]->(:Entity)
     WHERE NOT coalesce(root_edge.reverse, false)
     WITH headnode, root, creation, user, updated_by, updated_when,
          collect(rp) + tree_paths + entity_paths + collect(root_entity_path) AS paths
-    CALL convert_c.to_tree(paths) YIELD value
-    RETURN map.merge(value, {{meta: {{
-        created_by: user.username,
-        created_when: creation.created_when,
-        updated_by: updated_by, updated_when: updated_when,
-        semantic_spaces: root.meta.semantic_spaces,
-        context_labels: root.meta.context_labels,
-        head_node_type: headnode.type,
-        head_node_id: headnode.id
-    }}}})
+    UNWIND paths AS path
+    UNWIND (CASE WHEN size(relationships(path)) = 0 THEN [null] ELSE relationships(path) END) AS edge
+    WITH headnode, root, creation, user, updated_by, updated_when, collect(DISTINCT edge) AS edges
+    RETURN
+        properties(root) AS root,
+        labels(root) AS root_labels,
+        [edge IN edges WHERE edge IS NOT NULL | {{
+            source: startNode(edge).id,
+            type: type(edge),
+            properties: properties(edge),
+            target: properties(endNode(edge)),
+            target_labels: labels(endNode(edge))
+        }}] AS edges,
+        {{
+            created_by: user.username,
+            created_when: creation.created_when,
+            updated_by: updated_by,
+            updated_when: updated_when,
+            semantic_spaces: root.meta.semantic_spaces,
+            context_labels: root.meta.context_labels,
+            head_node_type: headnode.type,
+            head_node_id: headnode.id,
+            marked_for_deletion: coalesce(root.marked_for_deletion, false)
+        }} AS meta
     """
     return (query, query_params)
 
@@ -86,6 +103,8 @@ def build_fetch_incoming_query(
     WITH first, next, ascent, coalesce(top, next) AS holder
     OPTIONAL MATCH (hn:HeadNode {id: holder.head_node_id})
     WITH first, next, ascent, holder, coalesce(hn, holder) AS headnode
+    // (what has been deleted no longer refers to the entity)
+    WHERE NOT coalesce(CASE WHEN holder:Entity THEN holder.deleted ELSE headnode.deleted END, false)
     OPTIONAL MATCH (headnode)<-[:is_creation_of]-(creation:PGCreation)-[:created_by]->(creator:PGUser)
     CALL {
         WITH headnode

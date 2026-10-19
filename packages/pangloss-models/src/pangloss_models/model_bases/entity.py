@@ -139,6 +139,13 @@ class Entity(_DeclaredClass, WithMeta[EntityMeta]):
         ]
     ]
 
+    delete: ClassVar[
+        Callable[
+            [AnyHttpUrl | UUID],
+            None | Awaitable[None],
+        ]
+    ]
+
     list: ClassVar[
         Callable[
             [str],

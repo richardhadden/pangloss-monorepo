@@ -1,17 +1,25 @@
 import datetime
-from typing import no_type_check
+from typing import TypedDict, no_type_check
 
 import pytest
 from pangloss_models import initialise
 from pangloss_models.model_bases.annotated_value import AnnotatedValue
 from pangloss_models.model_bases.document import Document
+from pangloss_models.model_bases.edge_model import EdgeModel
 from pangloss_models.model_bases.embedded import Embedded
 from pangloss_models.model_bases.entity import Entity
+from pangloss_models.model_bases.helpers import ViaEdge
 from pangloss_models.model_bases.reified_relation import (
     ReifiedRelation,
     ReifiedRelationDocument,
 )
 from pangloss_models.model_bases.semantic_space import SemanticSpace
+
+from pangloss_memgraph.databases.memgraph.initialise_database import (
+    initialise_database,
+)
+
+from .test_create import Colour, Size  # noqa: E402
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -588,3 +596,151 @@ async def test_read_annotated_value_with_a_list_of_literals(clear_database):
     read = await Naming.get(id=saved.id)
     assert read.aliases.value == ["a", "b", "c"]
     assert read.aliases.certainty == 2
+
+
+# ---------------------------------------------------------------------------
+# Edge properties, enums
+# ---------------------------------------------------------------------------
+
+
+@no_type_check
+async def test_read_edge_properties(clear_database):
+    class Certainty(EdgeModel):
+        number: int
+
+    class Person(Entity):
+        pass
+
+    class Action(Document):
+        pass
+
+    class Statement(Document):
+        concerns: ViaEdge[Person, Certainty]
+        action: ViaEdge[Action, Certainty]
+        actions: list[ViaEdge[Action, Certainty]]
+
+    initialise()
+
+    person = await Person.Create(label="John Smith").save()
+    saved = await Statement.Create(
+        label="A Statement",
+        concerns={"type": "Person", "id": person.id, "edge_properties": {"number": 1}},
+        action={
+            "type": "Action",
+            "label": "One",
+            "edge_properties": {"number": 2},
+        },
+        actions=[
+            {
+                "type": "Action",
+                "label": f"Many {i}",
+                "edge_properties": {"number": 10 + i},
+            }
+            for i in range(2)
+        ],
+    ).save()
+
+    read = await Statement.get(id=saved.id)
+    assert read.concerns.id == person.id
+    assert read.concerns.edge_properties.number == 1
+    assert read.action.edge_properties.number == 2
+    assert sorted(a.edge_properties.number for a in read.actions) == [10, 11]
+
+
+@no_type_check
+async def test_read_enums_everywhere(clear_database):
+    class Dimensions(TypedDict):
+        size: Size
+        colours: list[Colour]
+
+    class WithColour[T](AnnotatedValue[T]):
+        colour: Colour
+
+    class Person(Entity):
+        favourite: Colour
+
+    class Action(Document):
+        size: Size
+        sizes: list[Size]
+
+    class Statement(Document):
+        colour: Colour
+        optional_colour: Colour | None
+        dimensions: Dimensions
+        name: WithColour[str]
+        action: Action
+        actions: list[Action]
+        concerns: Person
+
+    initialise()
+    await initialise_database()
+
+    person = await Person.Create(label="John Smith", favourite="blue").save()
+    saved = await Statement.Create(
+        label="A Statement",
+        colour="red",
+        optional_colour=Colour.BLUE,
+        dimensions={"size": Size.LARGE, "colours": [Colour.RED, Colour.BLUE]},
+        name={"value": "John", "colour": Colour.BLUE},
+        action={"type": "Action", "label": "A", "size": Size.SMALL, "sizes": [Size.LARGE]},
+        actions=[
+            {"type": "Action", "label": "B", "size": Size.LARGE, "sizes": []},
+        ],
+        concerns={"type": "Person", "id": person.id},
+    ).save()
+
+    read = await Statement.get(id=saved.id)
+    assert read.colour is Colour.RED
+    assert read.optional_colour is Colour.BLUE
+    assert read.dimensions == {"size": Size.LARGE, "colours": [Colour.RED, Colour.BLUE]}
+    assert read.name.colour is Colour.BLUE
+    assert read.action.size is Size.SMALL
+    assert read.action.sizes == [Size.LARGE]
+    assert read.actions[0].size is Size.LARGE
+    assert read.concerns.id == person.id
+
+    read_person = await Person.get(id=person.id)
+    assert read_person.favourite is Colour.BLUE
+
+
+@no_type_check
+async def test_list_documents_with_an_enum_in_the_reference_view(clear_database):
+    class Statement(Document):
+        _meta = Document.Meta(reference_view_extra_fields=["colour"])
+        colour: Colour
+
+    initialise()
+    await initialise_database()
+
+    await Statement.Create(label="Red", colour=Colour.RED).save()
+    await Statement.Create(label="Blue", colour="blue").save()
+
+    listed = await Statement.list()
+    assert {item.label: item.colour for item in listed.results} == {
+        "Red": Colour.RED,
+        "Blue": Colour.BLUE,
+    }
+
+
+@no_type_check
+async def test_read_entity_incoming_with_an_enum_in_the_reference_view(clear_database):
+    class Person(Entity):
+        pass
+
+    class Statement(Document):
+        _meta = Document.Meta(reference_view_extra_fields=["colour"])
+        colour: Colour
+        concerns: Person
+
+    initialise()
+    await initialise_database()
+
+    person = await Person.Create(label="John Smith").save()
+    await Statement.Create(
+        label="A Statement",
+        colour=Colour.BLUE,
+        concerns={"type": "Person", "id": person.id},
+    ).save()
+
+    read = await Person.get(id=person.id)
+    assert read.concerns_reverse[0].colour is Colour.BLUE

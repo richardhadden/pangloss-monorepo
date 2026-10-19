@@ -351,6 +351,8 @@ class ModelRegistry:
 
         Document.get = classmethod(exposed_functions.get_document)  # type: ignore
         Entity.get = classmethod(exposed_functions.get_entity)  # type: ignore
+        Document.delete = classmethod(exposed_functions.delete_document)  # type: ignore
+        Entity.delete = classmethod(exposed_functions.delete_entity)  # type: ignore
         Document.list = classmethod(exposed_functions.list_items)  # type: ignore
         Entity.list = classmethod(exposed_functions.list_items)  # type: ignore
 

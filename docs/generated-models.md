@@ -23,7 +23,7 @@ Optional literal fields (`X | None`) default to `None` in all of these models, s
   - Document and Entity `Create` models get a `.save()` method, bound at initialisation to the database module.
 - **`_UpdateBase`** is the base of every `Update` model. Like `_CreateBase`, it builds the `UpdateDB` instance with `_to_db_model()`, applies field bindings, and for Documents and Entities has a `.save()` bound to the database module. In `UpdateDB` unions, an entity that can be created inline comes before its `ReferenceSet`, so that a new entity in an update is not mistaken for a reference to an existing one.
 - **`_CreateDBBase`** has `type`, `id` (a `uuid7` is generated if missing), `semantic_spaces`, `context_labels` and a `_labels` property that lists the class name, all parent classes (minus non-heritable traits and generic bases) and the kind (`"Document"`, `"Entity"`, ...). These become the node labels. If the declared class defines `to_db`, `to_db_create` or `to_db_update`, it is called to transform the data (a hook for computed database fields).
-  - `_EntityCreateDBBase` also converts a URL `id` into a fresh UUID plus an entry in `urls`.
+  - `_EntityCreateDBBase` also converts a URL `id` into a fresh UUID plus an entry in `urls`. (The database stores each URL as a node: see [the Memgraph backend](memgraph.md#graph-schema).)
 - **`_ViewBase` / `_HeadViewBase`** convert `neo4j.time.DateTime` values to native datetimes and collapse single-valued relations (which the graph returns as one-item lists) into a single value.
 - **`_ListItems[T]`** is the paginated list result: `results`, `count`, `page`, `page_size`, `next_page`, `previous_page`.
 
@@ -44,6 +44,8 @@ Optional literal fields (`X | None`) default to `None` in all of these models, s
    |----------|--------------------------|
    | `Document.get` | `get_document(cls, id)` |
    | `Entity.get` | `get_entity(cls, id)` |
+   | `Document.delete` | `delete_document(cls, id)` |
+   | `Entity.delete` | `delete_entity(cls, id)` |
    | `_DocumentCreateBase.save`, `_EntityCreateBase.save` | `create_head_node(instance, return_type)` |
    | `_DocumentUpdateBase.save`, `_EntityUpdateBase.save` | `update_head_node(instance, return_type)` |
    | `Document.list`, `Entity.list` | `list_items(cls, search_terms, page_number, page_size, deep_search)` |
@@ -66,3 +68,5 @@ Optional literal fields (`X | None`) default to `None` in all of these models, s
 | `PanglossReferenceError` | An existing entity that is referred to does not exist, or is not of a type allowed in that field |
 | `PanglossConflictError` | An id given for a new object is already in use, or (in an update) belongs to a different document |
 | `PanglossUserNotFoundError` | The user doing the write (`current_request_username`) has no `PGUser` node |
+| `PanglossNotDeletableError` | A document nested in another document cannot be deleted: only head documents can |
+| `PanglossEntityInUseError` | An entity that is referred to cannot be deleted. It **has been marked** for deletion (the one write error that leaves a change), and has `entity_id` and `referenced_by` |

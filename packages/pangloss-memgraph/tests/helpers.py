@@ -22,3 +22,8 @@ def count_nodes(db_driver, label: str) -> int:
 def native(value):
     """Convert neo4j temporal types to Python natives"""
     return value.to_native() if hasattr(value, "to_native") else value
+
+
+def mg_enum(value: str) -> dict:
+    """How the driver gives a Memgraph enum value, e.g. `mg_enum("Colour::RED")`"""
+    return {"__type": "mg_enum", "__value": value}

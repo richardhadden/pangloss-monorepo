@@ -7,6 +7,9 @@ import pytest
 import pytest_asyncio
 from pangloss_core.settings import BaseSettings
 from pangloss_memgraph.databases.memgraph.database import Database
+from pangloss_memgraph.databases.memgraph.initialise_database import (
+    initialise_database,
+)
 from pangloss_memgraph.databases.memgraph.settings import MemgraphDatabaseSettings
 from pangloss_models.model_registry import ModelRegistry
 from pangloss_users import current_request_username
@@ -19,7 +22,6 @@ pytestmark = pytest.mark.asyncio(loop_scope="session")
 MEMGRAPH_URI = "bolt://localhost:7687"
 MEMGRAPH_AUTH = ("test", "test")
 MEMGRAPH_DATABASE = "memgraph"
-TEXT_INDEX_NAME = "label_index"
 
 
 @fixture(scope="function", autouse=True)
@@ -102,27 +104,6 @@ def db_driver(
         driver.close()
 
 
-@fixture(scope="session", autouse=True)
-def create_memgraph_indexes(db_driver):
-    """Create required indexes if they do not already exist."""
-
-    with db_driver.session(database=MEMGRAPH_DATABASE) as session:
-        # SHOW INDEX INFO includes Memgraph's text-index information.
-        existing_indexes = session.run("SHOW INDEX INFO").data()
-
-        index_exists = any(TEXT_INDEX_NAME in repr(index) for index in existing_indexes)
-
-        if not index_exists:
-            # session.run() executes an implicit (auto-commit) transaction.
-            # Do not use session.begin_transaction() for index creation.
-            session.run(
-                """
-                CREATE TEXT INDEX label_index
-                ON :PGIndexableNode(label);
-                """
-            ).consume()
-
-
 @fixture(scope="function")
 def clear_database(db_driver):
     yield
@@ -157,9 +138,10 @@ def pytest_itemcollected(item):
 )
 async def initialise_settings(
     event_loop_policy,
-    create_memgraph_indexes,
+    db_driver,
 ):
-    """Initialise application settings and the Memgraph database."""
+    """Initialise application settings and the Memgraph database (with its indexes,
+    constraints and so on)."""
 
     class Settings(BaseSettings[MemgraphDatabaseSettings]):
         PROJECT_NAME: str = "Test"
@@ -180,6 +162,7 @@ async def initialise_settings(
     settings = Settings()
     db = Database(settings=settings)
     await db._initialise_driver()
+    await initialise_database(db)
 
     try:
         yield

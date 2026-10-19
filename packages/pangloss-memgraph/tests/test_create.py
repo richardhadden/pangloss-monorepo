@@ -3,12 +3,14 @@ from decimal import Decimal
 from enum import Enum, IntEnum
 from inspect import iscoroutinefunction
 from typing import Annotated, NotRequired, TypedDict, no_type_check
-from uuid import uuid7
+from uuid import uuid4, uuid7
 
 import pytest
 from pangloss_models import initialise
+from pangloss_models.model_registry import ModelRegistry
 from pangloss_models.exceptions import (
     PanglossConflictError,
+    PanglossWriteError,
     PanglossReferenceError,
     PanglossUserNotFoundError,
 )
@@ -30,7 +32,11 @@ from pangloss_models.model_bases.trait import Trait
 from pangloss_users import current_request_username
 from pydantic import AnyHttpUrl
 
-from .helpers import count_nodes, labels_of, native, run
+from pangloss_memgraph.databases.memgraph.initialise_database import (
+    initialise_database,
+)
+
+from .helpers import count_nodes, labels_of, mg_enum, native, run
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -189,7 +195,8 @@ async def test_write_with_relation_to_new_entity(db_driver, clear_database):
     assert data["p"]["label"] == "John Smith"
     assert data["st"]["label"] == "A Statement"
     assert data["r"][1] == "concerns_person"
-    assert data["p"]["head_node_id"] == data["st"]["id"]
+    # (the entity is not part of the statement that created it)
+    assert "head_node_id" not in data["p"]
 
 
 @no_type_check
@@ -913,13 +920,14 @@ async def test_decimal_is_written_exactly_and_read_back(db_driver, clear_databas
 
 
 @no_type_check
-async def test_enum_is_written_by_value_and_read_back(db_driver, clear_database):
+async def test_enum_is_written_as_a_native_enum_and_read_back(db_driver, clear_database):
     class Statement(Document):
         colour: Colour
         size: Size
         colours: list[Colour]
 
     initialise()
+    await initialise_database()
 
     saved = await Statement.Create(
         label="Enumerated",
@@ -929,9 +937,10 @@ async def test_enum_is_written_by_value_and_read_back(db_driver, clear_database)
     ).save()
 
     node = run(db_driver, "MATCH (n:Statement) RETURN n")[0]["n"]
-    assert node["colour"] == "red"
-    assert node["size"] == 2
-    assert node["colours"] == ["red", "blue"]
+    # Native enums, made from the names of the members
+    assert node["colour"] == mg_enum("Colour::RED")
+    assert node["size"] == mg_enum("Size::LARGE")
+    assert node["colours"] == [mg_enum("Colour::RED"), mg_enum("Colour::BLUE")]
 
     read = await Statement.get(id=saved.id)
     assert read.colour is Colour.RED
@@ -985,6 +994,7 @@ async def test_optional_literal_with_value_reads_back(db_driver, clear_database)
         price: Decimal | None
 
     initialise()
+    await initialise_database()
 
     saved = await Statement.Create(
         label="Set", number=0, colour="red", price="1.5"
@@ -1029,6 +1039,7 @@ async def test_typeddict_is_written_as_a_map_and_read_back(db_driver, clear_data
         all_dimensions: list[Dimensions]
 
     initialise()
+    await initialise_database()
 
     saved = await Statement.Create(
         label="Dictionary",
@@ -1044,7 +1055,7 @@ async def test_typeddict_is_written_as_a_map_and_read_back(db_driver, clear_data
     assert node["dimensions"] == {"width": 1, "height": 2, "note": "small"}
     assert node["nested"] == {
         "name": "outer",
-        "inner": {"values": [1, 2], "price": "1.50", "colour": "blue"},
+        "inner": {"values": [1, 2], "price": "1.50", "colour": mg_enum("Colour::BLUE")},
     }
     assert node["all_dimensions"] == [
         {"width": 3, "height": 4},
@@ -1092,13 +1103,14 @@ async def test_decimal_enum_and_typeddict_on_nested_documents_and_entities(
         action: Action
 
     initialise()
+    await initialise_database()
 
     person = await Person.Create(
         label="John Smith", favourite="blue", height="1.85"
     ).save()
     assert labels_of(db_driver, person.id)
     node = run(db_driver, "MATCH (n:Person) RETURN n")[0]["n"]
-    assert node["favourite"] == "blue"
+    assert node["favourite"] == mg_enum("Colour::BLUE")
     assert node["height"] == "1.85"
 
     await Statement.Create(
@@ -1112,7 +1124,7 @@ async def test_decimal_enum_and_typeddict_on_nested_documents_and_entities(
     ).save()
 
     action = run(db_driver, "MATCH (a:Action) RETURN a")[0]["a"]
-    assert action["size"] == 1
+    assert action["size"] == mg_enum("Size::SMALL")
     assert action["dimensions"] == {"width": 1, "height": 2}
 
 
@@ -1130,6 +1142,7 @@ async def test_decimal_enum_and_typeddict_as_edge_properties(db_driver, clear_da
         concerns_person: ViaEdge[Person, Certainty]
 
     initialise()
+    await initialise_database()
 
     person = await Person.Create(label="John Smith").save()
     await Statement.Create(
@@ -1150,7 +1163,7 @@ async def test_decimal_enum_and_typeddict_as_edge_properties(db_driver, clear_da
             "p"
         ]
         assert props["weight"] == "0.75", edge
-        assert props["colour"] == "red", edge
+        assert props["colour"] == mg_enum("Colour::RED"), edge
         assert props["dimensions"] == {"width": 1, "height": 2}, edge
 
 
@@ -1165,6 +1178,7 @@ async def test_decimal_and_enum_in_annotated_value(db_driver, clear_database):
         name: WithWeight[str]
 
     initialise()
+    await initialise_database()
 
     await Naming.Create(
         label="A Naming",
@@ -1174,7 +1188,7 @@ async def test_decimal_and_enum_in_annotated_value(db_driver, clear_database):
     node = run(db_driver, "MATCH (n:Naming) RETURN n")[0]["n"]
     assert node["name"]["value"] == "John"
     assert node["name"]["weight"] == "0.5"
-    assert node["name"]["colour"] == "red"
+    assert node["name"]["colour"] == mg_enum("Colour::RED")
     assert native(node["name"]["when"]) == datetime.date(2020, 1, 2)
 
 
@@ -1278,7 +1292,7 @@ async def test_entity_with_url_as_id_is_given_a_uuid(db_driver, clear_database):
 
 
 @no_type_check
-async def test_entity_url_id_is_stored_in_urls(db_driver, clear_database):
+async def test_entity_url_id_is_stored_as_a_url_node(db_driver, clear_database):
     class Person(Entity):
         _meta = Entity.Meta(create_with_id=True)
 
@@ -1287,8 +1301,11 @@ async def test_entity_url_id_is_stored_in_urls(db_driver, clear_database):
     url = "http://example.com/people/john-smith"
     await Person.Create(id=AnyHttpUrl(url), create_new=True, label="JS").save()
 
+    # The URL is a node that the entity has, not a property of it
     node = run(db_driver, "MATCH (n:Person) RETURN n")[0]["n"]
-    assert url in [str(u) for u in node["urls"]]
+    assert "urls" not in node
+    rows = run(db_driver, "MATCH (:Person)-[:has_url]->(u:PGUrl) RETURN u.url AS url")
+    assert rows == [{"url": url}]
 
 
 # ---------------------------------------------------------------------------
@@ -2111,8 +2128,10 @@ async def test_nested_document_with_inline_created_entity(db_driver, clear_datab
 
     person = run(db_driver, "MATCH (p:Person) RETURN p")[0]["p"]
     assert person["id"] == str(person_id)
-    assert person["head_node_id"] == str(statement.id)
-    assert "HeadNode" not in labels_of(db_driver, person_id)
+    # It is an entity of its own, not part of the statement that created it
+    assert "head_node_id" not in person
+    assert "HeadNode" in labels_of(db_driver, person_id)
+    assert statement.id
 
 
 @no_type_check
@@ -2858,3 +2877,63 @@ async def test_annotated_value_is_written_on_nested_documents_and_entities(
     assert person["name"] == {"value": "John", "certainty": 1}
     naming = run(db_driver, "MATCH (n:Naming) RETURN n")[0]["n"]
     assert naming["name"] == {"value": "Johann", "certainty": 2}
+
+
+@no_type_check
+async def test_enum_missing_from_the_database_raises_a_helpful_error(
+    db_driver, clear_database
+):
+    """Enums are made by `initialise_database`; writing one that is not there is an
+    error that says so, and nothing is written"""
+
+    Mood = Enum(f"Mood_{uuid4().hex[:8]}", ["HAPPY", "SAD"])
+
+    class Statement(Document):
+        mood: Mood
+
+    initialise()
+
+    with pytest.raises(PanglossWriteError, match="initialise_database"):
+        await Statement.Create(label="A Statement", mood=Mood.HAPPY).save()
+    assert count_nodes(db_driver, "Statement") == 0
+
+    await initialise_database()
+    await Statement.Create(label="A Statement", mood=Mood.HAPPY).save()
+    assert count_nodes(db_driver, "Statement") == 1
+
+
+@no_type_check
+async def test_enum_member_missing_from_the_database_raises_a_helpful_error(
+    db_driver, clear_database
+):
+    """The model's enum has gained a member since `initialise_database` was run"""
+
+    name = f"Mood_{uuid4().hex[:8]}"
+    Mood = Enum(name, ["HAPPY"])
+
+    class Statement(Document):
+        mood: Mood
+
+    initialise()
+    await initialise_database()
+
+    # (the code is edited: the enum has a new member, and the models are initialised
+    # again, but the database is not set up again)
+    ModelRegistry._reset()
+    Wider = Enum(name, ["HAPPY", "SAD"])
+
+    class StatementAgain(Document):
+        mood: Wider
+
+    initialise()
+
+    with pytest.raises(PanglossWriteError, match="initialise_database"):
+        await StatementAgain.Create(label="A", mood=Wider.SAD).save()
+    assert count_nodes(db_driver, "StatementAgain") == 0
+
+    await StatementAgain.Create(label="A", mood=Wider.HAPPY).save()
+    assert count_nodes(db_driver, "StatementAgain") == 1
+
+    await initialise_database()
+    await StatementAgain.Create(label="B", mood=Wider.SAD).save()
+    assert count_nodes(db_driver, "StatementAgain") == 2

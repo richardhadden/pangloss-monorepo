@@ -26,7 +26,7 @@ Literal fields are stored as properties of the node (or edge) they belong to, ra
 | `str`, `int`, `float`, `bool` | The same type | |
 | `date`, `datetime` | Memgraph date / datetime | |
 | `Decimal` | A string, e.g. `"1.10"` | Memgraph has no decimal type, and a float would lose precision. Strings are read back as `Decimal`, but cannot be compared numerically in Cypher |
-| `Enum` (including `IntEnum`) | The member's **value** | ⏳ To be replaced with Memgraph's native enum type, which needs creating ahead of time by a (not yet written) database setup command |
+| `Enum` (including `IntEnum`) | A native Memgraph enum, e.g. `Colour::RED` (the enum's name and the member's *name*) | Created by `initialise_database`, which must be run after changing the models. When creating a model, give the member or its value (`Colour.RED` or `"red"`); it is read back as the member |
 | `TypedDict` | A map | Every value must itself be a literal type or a list of one; may be nested, and may contain `NotRequired` keys |
 | `list[...]` of any of the above | A list | |
 

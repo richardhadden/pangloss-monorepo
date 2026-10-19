@@ -64,4 +64,4 @@ An update replaces the whole document, rather than working out what changed. In 
 
 ## Data flow for a read
 
-`Statement.get(id)` runs a Cypher query that walks outward from the node, collects paths to entities and nested documents, converts them to a tree with Memgraph MAGE's `convert_c.to_tree`, adds `meta`, and validates the result as `Statement.HeadView`.
+`Statement.get(id)` runs a Cypher query that walks outward from the node, collects paths to entities and nested documents, makes them into a tree, adds `meta`, and validates the result as `Statement.HeadView`.

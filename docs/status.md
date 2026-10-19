@@ -12,6 +12,10 @@ A snapshot of what works and what does not, as of this writing.
 - Writes that cannot succeed raise typed errors (`PanglossWriteError` subclasses) instead of silently writing nothing.
 - Memgraph, reading an entity (`Entity.get`), with the documents that refer to it directly, through embedded objects and through chains of reified relations, subclassed relations shown under their narrower name.
 - Memgraph, reading: a document read back as a `HeadView` (nested documents at any depth, with or without entities, semantic spaces, conjunctions, embedded objects, reified relations and reified relation documents, annotated values, dates, unset optionals and empty lists), and listing with pagination, search and deep search.
+- Enums stored as Memgraph's native enums (made by `initialise_database`), in fields, lists, `TypedDict`s, edge properties and annotated values, and read back as the models' enums.
+- Reading `ViaEdge` fields, with their `edge_properties`.
+- Setting up a database (`initialise_database`): indexes, uniqueness constraints on ids, the `label_text` text index and enums; safe to repeat.
+- Deleting head documents and unreferenced entities, as a flag (`deleted`) with a `PGDeletion` record, hidden from reads, lists and searches; an entity that is referred to is marked for deletion (`meta.marked_for_deletion`) instead.
 - Recording the creating user and time on head nodes.
 - Context labels and semantic-space annotation on create.
 
@@ -22,7 +26,6 @@ A snapshot of what works and what does not, as of this writing.
 | Semantic spaces through `UpdateDB` | Works and is tested for updates; the item in `packages/pangloss-models/todo.md` is still unticked |
 | Head node type and id through `CreateDB` / `UpdateDB` | Open item in `todo.md` |
 | `ReifiedRelationDocument` has no label | Never given one on creation, so `View` / `HeadView` do not require it; but its `ReferenceView` still requires `label` (existing tests assert this) |
-| `Enum` storage | Stored by value for now; native Memgraph enums need a database setup command that does not exist yet |
 | Updating a document concurrently | Last write wins; there is no check that the payload was based on the latest version |
 | Return type `"Detail"` for `save()` | Named in the registry wrapper, not handled by the Memgraph backend |
 | `pangloss-sdk` (API as database) | Only settings; the functions are stubs returning dummy data |
@@ -32,9 +35,9 @@ A snapshot of what works and what does not, as of this writing.
 
 - ⏳ **REST API / web layer.** The project description mentions one; `BACKEND_CORS_ORIGINS`, `AUTHJWT_SECRET_KEY` and `ENTITY_BASE_URL` exist in settings but nothing uses them.
 - ⏳ **Authentication, user management, permissions.**
-- ⏳ **Deleting** stored objects.
+- ⏳ **Undeleting**, and removing deleted nodes for good. An entity marked for deletion is not deleted automatically when the last reference to it goes.
 - ⏳ **Installed apps / plugin discovery** (`INSTALLED_APPS`), **interface languages** (`INTERFACE_LANGUAGES`).
-- ⏳ **Database setup command**: installing indexes (currently only done by the test fixtures; `indexes.py` and `pangloss_memgraph/tooling/` are empty) and creating native Memgraph enum types for `Enum` fields.
+- ⏳ **A command-line interface** for `initialise_database` (indexes, constraints, the text index and enums), which has to be called from code for now. `indexes.py` and `pangloss_memgraph/tooling/` are empty.
 - ⏳ **Optional relations** (`Person | None`), **optional embedded objects**, **lists of embedded objects or annotated values** and **plain `dict` fields** (use a `TypedDict`) are not supported by the model layer; each raises an error at `initialise()`.
 - ⏳ **The `"subtract"` type wrapper** (opposite of `Fulfil`), from `todo.md`.
 - ⏳ **`Relation[Subject, Object]`**: placeholder class only.

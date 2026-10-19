@@ -31,7 +31,7 @@ def build_generic_list_query(
                 // $page_size: results per page
 
                 UNWIND $tokens AS token
-                CALL text_search.regex_search("label_index", token) YIELD node AS matchedNode
+                CALL text_search.regex_search("label_text", token) YIELD node AS matchedNode
                 CALL {
                   WITH matchedNode
                   WITH matchedNode
@@ -70,6 +70,11 @@ def build_generic_list_query(
                   RETURN n
                 }
                 WITH DISTINCT n, nodeScores
+                // (what has been deleted is not listed: a deleted entity, or a node of a deleted document)
+                OPTIONAL MATCH (n_head:HeadNode {id: n.head_node_id})
+                WITH n, nodeScores, n_head
+                WHERE NOT coalesce(CASE WHEN n:Entity THEN n.deleted ELSE coalesce(n_head, n).deleted END, false)
+                WITH n, nodeScores
 
                 WITH n, [x IN nodeScores WHERE x.node = n | x.score] AS scoreList
                 WITH n, CASE WHEN size(scoreList) > 0 THEN scoreList[0] ELSE 0 END AS matchScore
@@ -124,7 +129,7 @@ def build_generic_list_query(
             // $page_size: results per page
 
             UNWIND $tokens AS token
-            CALL text_search.regex_search("label_index", token) YIELD node AS matchedNode
+            CALL text_search.regex_search("label_text", token) YIELD node AS matchedNode
             CALL {
               WITH matchedNode
               WITH matchedNode
@@ -161,9 +166,19 @@ def build_generic_list_query(
               RETURN t
             }
             WITH DISTINCT t, nodeScores
+            // (what has been deleted is not listed: a deleted entity, or a node of a deleted document)
+            OPTIONAL MATCH (t_head:HeadNode {id: t.head_node_id})
+            WITH t, nodeScores, t_head
+            WHERE NOT coalesce(CASE WHEN t:Entity THEN t.deleted ELSE coalesce(t_head, t).deleted END, false)
+            WITH t, nodeScores
             MATCH (t)--(n:Entity)
             WHERE $targetType IN labels(n)
             WITH DISTINCT n, nodeScores
+            // (what has been deleted is not listed: a deleted entity, or a node of a deleted document)
+            OPTIONAL MATCH (n_head:HeadNode {id: n.head_node_id})
+            WITH n, nodeScores, n_head
+            WHERE NOT coalesce(CASE WHEN n:Entity THEN n.deleted ELSE coalesce(n_head, n).deleted END, false)
+            WITH n, nodeScores
 
             WITH n, [x IN nodeScores WHERE x.node = n | x.score] AS scoreList
             WITH n, CASE WHEN size(scoreList) > 0 THEN scoreList[0] ELSE 0 END AS matchScore
@@ -218,11 +233,16 @@ def build_generic_list_query(
         return (
             """
             UNWIND $patterns AS pattern
-            CALL text_search.regex_search("label_index", pattern) YIELD node, score
+            CALL text_search.regex_search("label_text", pattern) YIELD node, score
             WITH node AS n, pattern, max(score) AS patternScore
             WITH n, count(*) AS matchedPatterns, sum(patternScore) AS totalScore
             WHERE matchedPatterns = size($patterns)
               AND $node_type IN labels(n)
+            WITH n, totalScore
+            // (what has been deleted is not listed: a deleted entity, or a node of a deleted document)
+            OPTIONAL MATCH (n_head:HeadNode {id: n.head_node_id})
+            WITH n, totalScore, n_head
+            WHERE NOT coalesce(CASE WHEN n:Entity THEN n.deleted ELSE coalesce(n_head, n).deleted END, false)
             WITH n, totalScore
             ORDER BY totalScore DESC, id(n)
             WITH collect(n) AS allNodes
@@ -269,10 +289,17 @@ def build_generic_list_query(
         return (
             """
             MATCH (n:$node_type)
+            // (what has been deleted is not listed: a deleted entity, or a node of a deleted document)
+            OPTIONAL MATCH (counted_head:HeadNode {id: n.head_node_id})
+            WITH n, counted_head
+            WHERE NOT coalesce(CASE WHEN n:Entity THEN n.deleted ELSE coalesce(counted_head, n).deleted END, false)
 
                         WITH count(n) AS total
 
                         MATCH (n:$node_type)
+            OPTIONAL MATCH (listed_head:HeadNode {id: n.head_node_id})
+            WITH n, total, listed_head
+            WHERE NOT coalesce(CASE WHEN n:Entity THEN n.deleted ELSE coalesce(listed_head, n).deleted END, false)
 
                         WITH n, total
                         ORDER BY n.id
