@@ -11,7 +11,7 @@ Per-class options are given through a `_meta` attribute, e.g. `_meta = Document.
 | [`Embedded`](#embedded) | `embedded` | ✅ | ✓ | |
 | [`Trait` / `NonHeritableTrait`](#traits) | `trait` | ✅ | | |
 | [`EdgeModel`](#edgemodel) | `edge_model` | ✅ | | |
-| [`AnnotatedValue[T]`](#annotatedvalue) | `annotated_value` | 🚧 | | |
+| [`AnnotatedValue[T]`](#annotatedvalue) | `annotated_value` | ✅ | | |
 | [`ReifiedRelation[T]`](#reifiedrelation) | `reified_relation` | ✅ | ✓ | |
 | [`ReifiedRelationDocument[T]`](#reifiedrelationdocument) | `reified_relation` | 🚧 | ✓ | ✓ |
 | [`SemanticSpace[T]`](#semanticspace) | `semantic_space` | ✅ | ✓ | |
@@ -72,7 +72,7 @@ class Person(Entity):
 
 ## Embedded
 
-Structured data without its own identity or head node, for example a date range belonging to the object that contains it. It is stored as a separate node, linked from its container, and written together with it. Reading one back has not been tested. `Embedded` classes are used as field types and get their own `Create`/`Update`/`View`/`CreateDB`/`UpdateDB` models. They never require a label.
+Structured data without its own identity or head node, for example a date range belonging to the object that contains it. It is stored as a separate node, linked from its container, and written together with it, and read back with it (tested). `Embedded` classes are used as field types, singly or as a union (`Date | DateRange`), and get their own `Create`/`Update`/`View`/`CreateDB`/`UpdateDB` models. They never require a label. A list of embedded objects (`list[Date]`) and an optional embedded object (`Date | None`) are **not supported**, and raise an error at `initialise()`.
 
 ```python
 class Date(Embedded):
@@ -121,7 +121,7 @@ class Naming(Document):
     name: WithCertainty[str]
 ```
 
-🚧 Declaring and writing are implemented and tested: the value is written as a node (labelled with the class name and `AnnotatedValue`) holding `value` and the extra fields, joined to its container by the field's edge pair. Reading one back has not been tested.
+✅ A field holds exactly one annotated value, stored as a **map property on the node it belongs to** (`{value: "John", certainty: 2}`), not as a node of its own, and read back from it. Both the value and the extra fields are literals (so `Decimal`, `Enum` and dates are converted as for any literal). A list of annotated values (`list[WithCertainty[str]]`) is **not supported** and raises an error at `initialise()`; to annotate a whole list, make the value a list: `WithCertainty[list[str]]`.
 
 ## ReifiedRelation
 
@@ -139,7 +139,7 @@ class Statement(Document):
 
 ## ReifiedRelationDocument
 
-Like a `ReifiedRelation`, but with the lifecycle of a document: it has a label, a `ReferenceView`, a `View` and a `HeadView`, and can be a head node. 🚧 Models are generated and tested, and writing one (with a nested document as its target) is tested against Memgraph. It has no `label`: `ReifiedRelationDocument` does not require one and the generated models do not contain one.
+Like a `ReifiedRelation`, but with the lifecycle of a document: it has a label, a `ReferenceView`, a `View` and a `HeadView`, and can be a head node. 🚧 Models are generated and tested, and writing one (with a nested document as its target) is tested against Memgraph. Reading one back is tested. It is never given a `label` when created, so `View` / `HeadView` do not require one; its `ReferenceView`, however, still declares a required `label` (existing tests assert this), so it cannot be built for one that was read back from the database. ⏳ Decide whether it should have a label (for example a computed one).
 
 ## SemanticSpace
 

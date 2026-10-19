@@ -131,7 +131,8 @@ class _ReifiedRelationDocumentViewAPIMeta(_BaseObject):
 
 
 class _ReifiedRelationDocumentViewBase(_ViewBase):
-    label: str
+    # A ReifiedRelationDocument does not have a label
+    label: str | None = None
     meta: _ReifiedRelationDocumentViewAPIMeta = Field(
         default_factory=_ReifiedRelationDocumentViewAPIMeta
     )

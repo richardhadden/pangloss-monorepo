@@ -521,7 +521,7 @@ def convert_neo4j_datetimes(data: Any) -> Any:
         return {k: convert_neo4j_datetimes(v) for k, v in data.items()}
     if isinstance(data, list):
         return [convert_neo4j_datetimes(v) for v in data]
-    if isinstance(data, neo4j.time.DateTime):
+    if isinstance(data, (neo4j.time.DateTime, neo4j.time.Date, neo4j.time.Time)):
         return data.to_native()
     return data
 

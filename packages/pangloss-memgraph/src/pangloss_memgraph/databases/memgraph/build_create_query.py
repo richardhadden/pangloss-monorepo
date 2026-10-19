@@ -15,7 +15,6 @@ from pangloss_models.field_definitions import (
     RelationToEntity,
     RelationToTypeVar,
 )
-from pangloss_models.model_bases.annotated_value import AnnotatedValue
 from pangloss_models.model_bases.base_models import (
     _CreateDBBase,
     _ReferenceSetBase,
@@ -112,6 +111,9 @@ class QueryObject:
     # `meta` of nodes of the tree being replaced in an update, by node id, so that
     # `created_by` and `created_when` are kept
     previous_meta: dict[str, dict[str, typing.Any]]
+    # Identifiers of the existing nodes already matched by the query, so that an
+    # entity referred to many times is matched once
+    matched_references: dict[tuple, Identifier]
 
     def __init__(self, head_id: uuid.UUID, head_type: str):
         self.match_query_strings = []
@@ -124,6 +126,7 @@ class QueryObject:
         self.references = []
         self.nodes_to_write = []
         self.previous_meta = {}
+        self.matched_references = {}
 
     def to_query_string(self) -> typing.LiteralString:
         if not self.return_identifier:
@@ -236,6 +239,14 @@ def get_node_fields_as_writable_dict(
     for field_name in instance._meta.fields.literal_fields:
         if (value := getattr(instance, field_name)) is not None:
             node_data[field_name] = convert_type_for_writing(value)
+
+    # An annotated value (a value with extra literal fields) is stored on the node
+    # as a map, e.g. {value: "John", certainty: 2}
+    for field_name in instance._meta.fields.annotated_value_fields:
+        if (annotated_value := getattr(instance, field_name, None)) is not None:
+            node_data[field_name] = convert_type_for_writing(
+                annotated_value.model_dump()
+            )
     return node_data
 
 
@@ -298,7 +309,7 @@ def build_attached_nodes(
     type_var_options: TypeVarOptions | None = None,
 ):
     """Add queries for everything that is not a literal field of `instance`:
-    relations, embedded objects and annotated values"""
+    relations and embedded objects"""
 
     fields = instance._meta.fields
 
@@ -346,17 +357,6 @@ def build_attached_nodes(
                     head_node_type=head_node_type,
                     head_node_id=head_node_id,
                 )
-
-    for annotated_field_name in fields.annotated_value_fields:
-        for item in iter_values(getattr(instance, annotated_field_name, None)):
-            build_annotated_value_query(
-                query_object=query_object,
-                instance=item,
-                source_identifier=instance_identifier,
-                field_name=annotated_field_name,
-                head_node_type=head_node_type,
-                head_node_id=head_node_id,
-            )
 
 
 def build_edges(
@@ -468,49 +468,6 @@ def build_related_node_query(
     )
 
 
-def build_annotated_value_query(
-    query_object: QueryObject,
-    instance: AnnotatedValue,
-    source_identifier: Identifier,
-    field_name: str,
-    head_node_type: str,
-    head_node_id: uuid.UUID,
-):
-    """An annotated value (a value with extra literal fields) is written as a
-    node holding `value` and the extra fields"""
-
-    # `WithCertainty[str]` is labelled `WithCertainty`
-    instance_class = type(instance)
-    base_class = instance_class.__pydantic_generic_metadata__["origin"] or instance_class
-    type_name = base_class.__name__
-
-    node_data: dict[str, typing.Any] = {
-        "id": str(uuid.uuid7()),
-        "type": type_name,
-        "head_node_type": head_node_type,
-        "head_node_id": str(head_node_id),
-    }
-    for key, value in instance.model_dump().items():
-        if value is not None:
-            node_data[key] = convert_type_for_writing(value)
-
-    node_identifier = Identifier()
-    node_data_identifier = query_object.params.add(node_data)
-    query_object.create_query_strings.append(f"""
-        CREATE ({node_identifier}:{type_name}:AnnotatedValue)
-        SET {node_identifier} = ${node_data_identifier}
-    """)
-
-    build_edges(
-        query_object,
-        source_identifier,
-        node_identifier,
-        field_name,
-        default_reverse_name(field_name),
-        (),
-    )
-
-
 def build_relation_to_existing_query(
     query_object: QueryObject,
     instance: _ReferenceSetBase,
@@ -537,24 +494,31 @@ def build_relation_to_existing_query(
         )
     )
 
-    instance_identifier = Identifier()
-    id_identifier = query_object.params.add(str(instance.id))
-    allowed_types_identifier = query_object.params.add(allowed_types)
-
-    # An entity can be referred to by a URL, as well as by its id
-    if isinstance(instance.id, AnyUrl):
-        id_condition = f"${id_identifier} IN {instance_identifier}.urls"
-        match_node = f"({instance_identifier}:PGIndexableNode)"
+    reference_key = (str(instance.id), tuple(allowed_types))
+    if reference_key in query_object.matched_references:
+        instance_identifier = query_object.matched_references[reference_key]
     else:
-        id_condition = "true"
-        match_node = f"({instance_identifier}:PGIndexableNode {{id: ${id_identifier}}})"
+        instance_identifier = Identifier()
+        query_object.matched_references[reference_key] = instance_identifier
+        id_identifier = query_object.params.add(str(instance.id))
+        allowed_types_identifier = query_object.params.add(allowed_types)
 
-    query_object.match_query_strings.append(
-        f"""MATCH {match_node}
-            WHERE {id_condition}
-            AND ANY(label IN labels({instance_identifier}) WHERE label IN ${allowed_types_identifier})
-        """
-    )
+        # An entity can be referred to by a URL, as well as by its id
+        if isinstance(instance.id, AnyUrl):
+            id_condition = f"${id_identifier} IN {instance_identifier}.urls"
+            match_node = f"({instance_identifier}:PGIndexableNode)"
+        else:
+            id_condition = "true"
+            match_node = (
+                f"({instance_identifier}:PGIndexableNode {{id: ${id_identifier}}})"
+            )
+
+        query_object.match_query_strings.append(
+            f"""MATCH {match_node}
+                WHERE {id_condition}
+                AND ANY(label IN labels({instance_identifier}) WHERE label IN ${allowed_types_identifier})
+            """
+        )
 
     build_edges(
         query_object,

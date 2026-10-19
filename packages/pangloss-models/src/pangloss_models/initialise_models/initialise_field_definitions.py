@@ -61,6 +61,7 @@ from pangloss_models.utils import (
     get_model_and_edge_type,
     get_relation_config,
     is_embedded,
+    is_list_of_embedded_or_annotated_value,
     is_list_of_literal,
     is_list_relatable,
     is_literal,
@@ -815,6 +816,12 @@ def initialise_field_definitions(model: type[_DeclaredClass]):
                     name=field_name,
                     field_definition=field_definition,
                 )
+
+        if is_list_of_embedded_or_annotated_value(field_info.annotation):
+            raise PanglossModelError(
+                f"{model.__name__}.{field_name}: lists of Embedded objects or of "
+                "AnnotatedValues are not supported (a field can have only one)"
+            )
 
         if is_embedded(field_info.annotation) or is_union_of_embedded(
             field_info.annotation

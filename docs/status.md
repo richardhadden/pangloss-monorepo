@@ -10,7 +10,7 @@ A snapshot of what works and what does not, as of this writing.
 - Memgraph, writing: documents and entities with nested documents, relations to existing entities (by id or URL), edge properties, subclassed edges, semantic spaces, conjunctions, reified relations, reified relation documents, embedded objects and annotated values.
 - Memgraph, updating Documents and Entities by replacing the whole tree (`Update(...).save()`), keeping entities, creation info and ids, with a `PGUpdate` record and `meta.updated_by` / `updated_when` on read; all checks are made before anything is deleted, so a failed update changes nothing.
 - Writes that cannot succeed raise typed errors (`PanglossWriteError` subclasses) instead of silently writing nothing.
-- Memgraph, reading: a document read back as a `HeadView`, and listing with pagination, search and deep search.
+- Memgraph, reading: a document read back as a `HeadView` (nested documents at any depth, with or without entities, semantic spaces, conjunctions, embedded objects, reified relations and reified relation documents, annotated values, dates, unset optionals and empty lists), and listing with pagination, search and deep search.
 - Recording the creating user and time on head nodes.
 - Context labels and semantic-space annotation on create.
 
@@ -20,10 +20,7 @@ A snapshot of what works and what does not, as of this writing.
 |------|-------|
 | Semantic spaces through `UpdateDB` | Works and is tested for updates; the item in `packages/pangloss-models/todo.md` is still unticked |
 | Head node type and id through `CreateDB` / `UpdateDB` | Open item in `todo.md` |
-| Reading a nested document with no entity or document below it | `get` fails validation (expected-failure test) |
-| Reading back `Conjunction` | Written, but `get` does not return the field (expected-failure test) |
-| Reading back `date` fields | `get` fails validation (expected-failure test); `datetime` is fine |
-| Reading back `Embedded`, `AnnotatedValue`, `ReifiedRelation(Document)` | Written and tested; reading them back is untested |
+| `ReifiedRelationDocument` has no label | Never given one on creation, so `View` / `HeadView` do not require it; but its `ReferenceView` still requires `label` (existing tests assert this) |
 | `Enum` storage | Stored by value for now; native Memgraph enums need a database setup command that does not exist yet |
 | `HeadView` for Entities | Model exists; there is no `Entity.get` |
 | Updating a document concurrently | Last write wins; there is no check that the payload was based on the latest version |
@@ -38,7 +35,7 @@ A snapshot of what works and what does not, as of this writing.
 - ⏳ **Deleting** stored objects.
 - ⏳ **Installed apps / plugin discovery** (`INSTALLED_APPS`), **interface languages** (`INTERFACE_LANGUAGES`).
 - ⏳ **Database setup command**: installing indexes (currently only done by the test fixtures; `indexes.py` and `pangloss_memgraph/tooling/` are empty) and creating native Memgraph enum types for `Enum` fields.
-- ⏳ **Optional relations** (`Person | None`) are not supported by the model layer and raise an error at `initialise()`; neither is a plain `dict` field (use a `TypedDict`).
+- ⏳ **Optional relations** (`Person | None`), **optional embedded objects**, **lists of embedded objects or annotated values** and **plain `dict` fields** (use a `TypedDict`) are not supported by the model layer; each raises an error at `initialise()`.
 - ⏳ **The `"subtract"` type wrapper** (opposite of `Fulfil`), from `todo.md`.
 - ⏳ **`Relation[Subject, Object]`**: placeholder class only.
 - ⏳ **Other database backends.** The backend interface is simply the `exposed_functions` module (`get_document`, `create_head_node`, `list_items`), so another backend implements those and is selected by `DATABASE_MODULE`.

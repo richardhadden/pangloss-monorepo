@@ -30,6 +30,7 @@ from pydantic_meta_kit import WithMeta
 
 from pangloss_models.exceptions import PanglossModelError
 from pangloss_models.field_definitions import FieldBinding
+from pangloss_models.model_bases.annotated_value import AnnotatedValue
 from pangloss_models.model_bases.base_models import _BaseObject, _DeclaredClass
 from pangloss_models.model_bases.configs import RelationConfig
 from pangloss_models.model_bases.conjunction import Conjunction
@@ -307,6 +308,31 @@ def is_list_of_literal(
         if is_literal(inner_type_args[0]):
             return True
     return False
+
+
+def get_list_item_type(annotation: Any) -> Any:
+    """For `list[X]` or `list[Annotated[X, ...]]`, return X, otherwise None"""
+    if get_origin(annotation) is not list:
+        return None
+    args = get_args(annotation)
+    if not args:
+        return None
+    inner_type = args[0]
+    if get_origin(inner_type) is Annotated:
+        inner_type = get_args(inner_type)[0]
+    return inner_type
+
+
+def is_list_of_embedded_or_annotated_value(annotation: Any) -> bool:
+    """A field has a single embedded object or annotated value: lists of them are
+    not supported"""
+    inner_type = get_list_item_type(annotation)
+    if inner_type is None:
+        return False
+    if is_union_of_embedded(inner_type):
+        return True
+    # (a parametrised `AnnotatedValue[str]` is a class too)
+    return isclass(inner_type) and issubclass(inner_type, (Embedded, AnnotatedValue))
 
 
 def is_embedded(annotation: type[Any] | UnionType | None) -> TypeIs[type[Embedded]]:

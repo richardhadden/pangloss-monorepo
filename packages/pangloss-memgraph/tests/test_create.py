@@ -834,11 +834,6 @@ async def test_literal_types_read_back(db_driver, clear_database):
 
 
 @no_type_check
-@pytest.mark.xfail(
-    strict=True,
-    reason="convert_neo4j_datetimes only converts neo4j DateTime, not Date, so "
-    "reading a document with a date field fails validation",
-)
 async def test_date_literal_read_back(db_driver, clear_database):
     class Statement(Document):
         on_date: datetime.date
@@ -1164,6 +1159,7 @@ async def test_decimal_and_enum_in_annotated_value(db_driver, clear_database):
     class WithWeight[T](AnnotatedValue[T]):
         weight: Decimal
         colour: Colour
+        when: datetime.date
 
     class Naming(Document):
         name: WithWeight[str]
@@ -1171,13 +1167,15 @@ async def test_decimal_and_enum_in_annotated_value(db_driver, clear_database):
     initialise()
 
     await Naming.Create(
-        label="A Naming", name={"value": "John", "weight": "0.5", "colour": "red"}
+        label="A Naming",
+        name={"value": "John", "weight": "0.5", "colour": "red", "when": "2020-01-02"},
     ).save()
 
-    node = run(db_driver, "MATCH (:Naming)-[:name]->(n) RETURN n")[0]["n"]
-    assert node["value"] == "John"
-    assert node["weight"] == "0.5"
-    assert node["colour"] == "red"
+    node = run(db_driver, "MATCH (n:Naming) RETURN n")[0]["n"]
+    assert node["name"]["value"] == "John"
+    assert node["name"]["weight"] == "0.5"
+    assert node["name"]["colour"] == "red"
+    assert native(node["name"]["when"]) == datetime.date(2020, 1, 2)
 
 
 @no_type_check
@@ -2529,11 +2527,6 @@ async def test_conjunction(db_driver, clear_database):
 
 
 @no_type_check
-@pytest.mark.xfail(
-    strict=True,
-    reason="Factoid.get does not return the conjunction field (`has_statements` "
-    "missing from the HeadView input)",
-)
 async def test_conjunction_read_back(db_driver, clear_database):
     class Causes[TCause, TResult](Conjunction):
         cause: TCause
@@ -2705,13 +2698,16 @@ async def test_annotated_value(db_driver, clear_database):
 
     initialise()
 
-    await Naming.Create(label="A Naming", name={"value": "John", "certainty": 2}).save()
+    await Naming.Create(
+        label="A Naming", name={"value": "John", "certainty": 2}
+    ).save()
 
-    rows = run(
-        db_driver,
-        "MATCH (:Naming)-[:name]->(n) RETURN n.value AS value, n.certainty AS certainty",
-    )
-    assert rows == [{"value": "John", "certainty": 2}]
+    # An annotated value is a map on the node it belongs to, not a node of its own
+    node = run(db_driver, "MATCH (n:Naming) RETURN n")[0]["n"]
+    assert node["name"] == {"value": "John", "certainty": 2}
+    assert count_nodes(db_driver, "WithCertainty") == 0
+    assert count_nodes(db_driver, "AnnotatedValue") == 0
+    assert run(db_driver, "MATCH (:Naming)-[r]->() RETURN count(r) AS c") == [{"c": 0}]
 
 
 # ---------------------------------------------------------------------------
@@ -2777,3 +2773,88 @@ async def test_explicit_child_value_wins_over_bound_value(db_driver, clear_datab
 
     node = run(db_driver, "MATCH (a:Action) RETURN a")[0]["a"]
     assert native(node["action_when"]) == datetime.date(1999, 1, 1)
+
+
+@no_type_check
+async def test_dates_inside_typeddicts_and_embedded_fields_read_back(
+    db_driver, clear_database
+):
+    class Period(TypedDict):
+        start: datetime.date
+        end: datetime.date
+
+    class Statement(Document):
+        period: Period
+        on_date: datetime.date | None
+        dates: list[datetime.date]
+
+    initialise()
+
+    saved = await Statement.Create(
+        label="Dates",
+        period={"start": "2020-01-01", "end": "2020-12-31"},
+        on_date="2021-02-03",
+        dates=["2000-01-01", "2000-01-02"],
+    ).save()
+
+    read = await Statement.get(id=saved.id)
+    assert read.period == {
+        "start": datetime.date(2020, 1, 1),
+        "end": datetime.date(2020, 12, 31),
+    }
+    assert read.on_date == datetime.date(2021, 2, 3)
+    assert read.dates == [datetime.date(2000, 1, 1), datetime.date(2000, 1, 2)]
+
+
+@no_type_check
+async def test_annotated_value_of_a_list_of_literals(db_driver, clear_database):
+    """To annotate a list, annotate the whole list"""
+
+    class WithCertainty[T](AnnotatedValue[T]):
+        certainty: int
+
+    class Naming(Document):
+        aliases: WithCertainty[list[str]]
+
+    initialise()
+
+    await Naming.Create(
+        label="A Naming", aliases={"value": ["a", "b"], "certainty": 2}
+    ).save()
+
+    node = run(db_driver, "MATCH (n:Naming) RETURN n")[0]["n"]
+    assert node["aliases"] == {"value": ["a", "b"], "certainty": 2}
+
+
+@no_type_check
+async def test_annotated_value_is_written_on_nested_documents_and_entities(
+    db_driver, clear_database
+):
+    class WithCertainty[T](AnnotatedValue[T]):
+        certainty: int
+
+    class Person(Entity):
+        name: WithCertainty[str]
+
+    class Naming(Document):
+        name: WithCertainty[str]
+
+    class Statement(Document):
+        naming: Naming
+
+    initialise()
+
+    await Person.Create(label="P", name={"value": "John", "certainty": 1}).save()
+    await Statement.Create(
+        label="S",
+        naming={
+            "type": "Naming",
+            "label": "N",
+            "name": {"value": "Johann", "certainty": 2},
+        },
+    ).save()
+
+    person = run(db_driver, "MATCH (n:Person) RETURN n")[0]["n"]
+    assert person["name"] == {"value": "John", "certainty": 1}
+    naming = run(db_driver, "MATCH (n:Naming) RETURN n")[0]["n"]
+    assert naming["name"] == {"value": "Johann", "certainty": 2}

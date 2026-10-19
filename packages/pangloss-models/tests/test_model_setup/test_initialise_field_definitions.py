@@ -325,6 +325,49 @@ def test_decimal_enum_and_typeddict_on_edge_model():
     assert isinstance(Certainty._meta.fields["colour"], LiteralFieldDefinition)
 
 
+def test_list_of_embedded_objects_raises():
+    """Lists of embedded objects are not supported (and not silently dropped)"""
+
+    class Date(Embedded):
+        when: date
+
+    class Statement(Document):
+        dates: list[Date]
+
+    with pytest.raises(PanglossModelError, match=r"Statement\.dates"):
+        initialise()
+
+
+def test_list_of_annotated_values_raises():
+    """A field has one annotated value; to annotate a list, annotate the whole list"""
+
+    class WithCertainty[T](AnnotatedValue[T]):
+        certainty: int
+
+    class Naming(Document):
+        names: list[WithCertainty[str]]
+
+    with pytest.raises(PanglossModelError, match=r"Naming\.names"):
+        initialise()
+
+
+def test_annotated_value_with_a_list_of_literals_as_its_value():
+    class WithCertainty[T](AnnotatedValue[T]):
+        certainty: int
+
+    class Naming(Document):
+        aliases: WithCertainty[list[str]]
+
+    initialise()
+
+    naming = Naming.Create(
+        label="A Naming", aliases={"value": ["a", "b"], "certainty": 1}
+    )
+    assert naming.aliases.value == ["a", "b"]
+    with pytest.raises(ValidationError):
+        Naming.Create(label="A Naming", aliases={"value": "a", "certainty": 1})
+
+
 def test_unsupported_field_type_raises():
     """Field types that cannot be stored are an error, not silently dropped"""
 

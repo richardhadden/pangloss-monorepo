@@ -20,12 +20,12 @@ Requirements: a Memgraph server with the **MAGE** library (the read query uses `
 
 ## Graph schema
 
-**Everything that is not a literal value is stored as a node**: documents, entities, embedded objects, reified relations, semantic spaces and conjunctions alike. Only literal fields (see [Literal fields](relations.md#literal-fields)) are stored as node properties; every other field becomes a relation to such a node. Embedded objects and annotated values are nodes too, joined by an edge pair named like a relation's (`<field>` and `<field>_reverse`).
+**Everything that is not a literal value is stored as a node**: documents, entities, embedded objects, reified relations, semantic spaces and conjunctions alike. Only literal fields (see [Literal fields](relations.md#literal-fields)) are stored as node properties; every other field becomes a relation to such a node. Embedded objects are nodes too, joined by an edge pair named like a relation's (`<field>` and `<field>_reverse`). An annotated value is the exception: it is a map property on the node it belongs to (`name: {value: "John", certainty: 2}`), because it holds only literals.
 
 | Element | Meaning |
 |---------|---------|
 | Node labels | Class name, each parent class name, the kind (`Document`, `Entity`, ...), plus `PGIndexableNode` on everything and `HeadNode` on the top-level node |
-| Node properties | `id`, `type`, `label`, the literal fields that are not `None`, `urls` (for entities created with URL ids), `meta` (`created_by`, `created_when`, `updated_*`, `semantic_spaces`, `context_labels`; times are UTC), and on non-head nodes `head_node_id` / `head_node_type`. Annotated-value nodes have `id`, `type`, `head_node_*` and their fields, but no `meta` |
+| Node properties | `id`, `type`, `label`, the literal fields that are not `None`, `urls` (for entities created with URL ids), `meta` (`created_by`, `created_when`, `updated_*`, `semantic_spaces`, `context_labels`; times are UTC), and on non-head nodes `head_node_id` / `head_node_type`. Annotated values are stored as map properties, named after their field |
 | Relation edges | `(a)-[:field_name]->(b)` and `(a)<-[:reverse_name {reverse: true}]-(b)`; edge properties from a `ViaEdge` are added to both, and the `reverse: true` marker is kept |
 | `(:PGCreation)` | One per head node, with `id` and `created_when`; linked `(creation)-[:is_creation_of]->(head)` and `(creation)-[:created_by]->(:PGUser)` |
 | `(:PGUpdate)` | One for each update of a head node, with `id` and `updated_when`; linked `(update)-[:is_update_of]->(head)` and `(update)-[:updated_by]->(:PGUser)`. `get_document` reports the latest as `meta.updated_by` / `meta.updated_when` |
@@ -67,7 +67,7 @@ Called by `.save()` on a `Document.Update` or `Entity.Update`. **An update is a 
 4. **Write the new tree**, with the same code as a creation, and add a `PGUpdate` node.
 
 What is deleted, and what is not:
-- Nodes are found by walking forward edges from the head node, without entering entities. These are the nested documents, embedded objects, annotated values, semantic spaces, conjunctions and reified relations.
+- Nodes are found by walking forward edges from the head node, without entering entities. These are the nested documents, embedded objects, semantic spaces, conjunctions and reified relations. (Annotated values are properties of those nodes, so go with them.)
 - **Entities are never deleted**, including entities created inline by this document, as other documents may refer to them. An update only removes and re-creates the *edges* to them. A new inline entity in an update (`create_new`) is created; one that exists is left as it is.
 - A node owns its outgoing edges that are **not** marked `reverse: true`, and the incoming edges that are. So when an entity is updated, the edges from documents *to* it are kept, and only its own relations are replaced.
 - Nodes given with an existing `id` keep that id (and so can be referred to), nodes given without one get a new id, and nodes left out are gone.
@@ -83,7 +83,14 @@ What is deleted, and what is not:
 
 ### `get_document(cls, id)` ✅
 
-Matches `PGIndexableNode` by `id` and type label, then collects paths to entities and nested documents with `BFS` expansions, converts them to a tree with `convert_c.to_tree`, and adds `meta`. Returns `cls.HeadView`, or `None` if not found. Only documents are supported; ⏳ `Entity.get`. Known read-side gaps (covered by expected-failure tests): a conjunction field is not returned; a `date` field fails validation (`convert_neo4j_datetimes` converts `DateTime` but not `Date`); and a nested document with no entity or further document below it is not returned.
+Matches `PGIndexableNode` by `id` and type label, then builds the document as a tree and adds `meta`. Returns `cls.HeadView`, or `None` if not found. Only documents are supported; ⏳ `Entity.get`.
+
+The tree is made from three sets of paths, converted by `convert_c.to_tree`:
+- every path from the root through **forward** edges (reverse edges marked `reverse: true` are not followed), without entering entities, which reaches all nested documents, embedded objects, semantic spaces, conjunctions and reified relations at any depth;
+- the edges from each of those nodes to **entities**; and
+- the edges from the root to entities.
+
+An entity appears as a reference (its `id`, `label` and so on): its own relations are not part of the document. A relation with no items has no edges, so reads back as an empty list; an optional literal that was `None` was never stored, so reads back as `None`. `neo4j` date, time and datetime values are converted to Python values.
 
 ### `list_items(cls, search_terms=None, page_number=None, page_size=None, deep_search=False)` ✅
 

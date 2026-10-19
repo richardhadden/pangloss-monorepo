@@ -871,3 +871,49 @@ def test_optional_literal_fields_default_to_none_in_view_models():
     # Required fields are still required
     with pytest.raises(ValidationError):
         Statement.View(id=uuid7(), label="A statement")
+
+
+@no_type_check
+def test_list_relations_default_to_empty_in_view_models():
+    """A relation with no items has no edges in the database, so there is nothing
+    to read back"""
+
+    class Person(Entity):
+        pass
+
+    class Action(Document):
+        pass
+
+    class Statement(Document):
+        people: list[Person]
+        actions: list[Action]
+        single_person: Person
+
+    initialise()
+
+    view = Statement.View(id=uuid7(), label="A statement", singlePerson={"type": "Person", "id": uuid7(), "label": "P"})
+    assert view.people == []
+    assert view.actions == []
+
+    # A single (non-list) relation is still required
+    with pytest.raises(ValidationError):
+        Statement.View(id=uuid7(), label="A statement")
+
+
+@no_type_check
+def test_reified_relation_document_view_does_not_require_a_label():
+    from pangloss_models.model_bases.reified_relation import ReifiedRelationDocument
+
+    class Person(Entity):
+        pass
+
+    class Role[T](ReifiedRelationDocument[T]):
+        since: datetime.date
+
+    class Statement(Document):
+        role: Role[Person]
+
+    initialise()
+
+    role = Role.View(id=uuid7(), since=datetime.date(2000, 1, 1), target=[])
+    assert role.label is None

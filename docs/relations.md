@@ -13,7 +13,7 @@
 | `AnnotatedValue[...]` | `AnnotatedValueFieldDefinition` | `.annotated_value_fields` |
 | `Annotated[T, DBField]` | marked `db_field=True` | |
 
-Any other annotation is an error: `initialise()` raises `PanglossModelError` naming the model, field and type, rather than ignoring the field. In particular, a plain `dict`, `complex`, `bytes` and `UUID` are not supported, and nor are optional relations (`Person | None`); use a `list[Person]` for a relation that may be empty.
+Any other annotation is an error: `initialise()` raises `PanglossModelError` naming the model, field and type, rather than ignoring the field. In particular, a plain `dict`, `complex`, `bytes` and `UUID` are not supported, and nor are optional relations (`Person | None`); use a `list[Person]` for a relation that may be empty. Lists of embedded objects (`list[Date]`) and of annotated values are not supported either: a field has one of each.
 
 `Annotated[..., DBField]` marks a field as a database-side field: it appears in the `CreateDB` model but not in the user-facing `Create` model. The `annotated_types` validators (`Gt`, `MinLen`, ...) are carried through to the generated models.
 
@@ -37,6 +37,8 @@ Any of these can be written `X | None`.
 An optional literal (`number: int | None`) does not have to be given: it defaults to `None` in `Create`, `CreateDB`, `Update`, `UpdateDB`, `View`, `HeadView` and `ReferenceView` (for `reference_view_extra_fields`). A `None` value is **not written** to the database, so the property is absent from the node, and reads back as `None`.
 
 Falsy values (`0`, `0.0`, `""`, `False`, `[]`) are values, and are written.
+
+Similarly, a relation that is a list (`list[Person]`) defaults to an empty list in `View` and `HeadView` when it has no items, since an empty relation has no edges to read back. A single relation (`Person`) is required.
 
 ## Relation fields
 

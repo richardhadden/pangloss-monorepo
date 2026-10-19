@@ -529,16 +529,19 @@ async def test_update_replaces_wrapper_nodes_rather_than_adding_to_them(
     saved = await Statement.Create(**payload("old", 1, "2020-01-01T00:00:00")).save()
     await Statement.Update(id=saved.id, **payload("new", 2, "2021-02-03T04:05:06")).save()
 
-    for label in ("Date", "WithCertainty", "Located", "Place", "Causes"):
+    for label in ("Date", "Located", "Place", "Causes"):
         assert count_nodes(db_driver, label) == 1, label
     assert count_nodes(db_driver, "Action") == 2
 
     assert native(run(db_driver, "MATCH (d:Date) RETURN d.when AS w")[0]["w"]) == (
         datetime.datetime(2021, 2, 3, 4, 5, 6)
     )
-    assert run(db_driver, "MATCH (n:WithCertainty) RETURN n.value AS v")[0]["v"] == (
-        "name new"
-    )
+    # (an annotated value is a property of the node, so is replaced with it)
+    assert run(db_driver, "MATCH (n:Statement) RETURN n.name AS name")[0]["name"] == {
+        "value": "name new",
+        "certainty": 2,
+    }
+    assert count_nodes(db_driver, "WithCertainty") == 0
     assert run(db_driver, "MATCH (n:Located) RETURN n.certainty AS c")[0]["c"] == 2
     assert run(db_driver, "MATCH (n:Place) RETURN n.label AS l")[0]["l"] == "place new"
     assert sorted(r["l"] for r in run(db_driver, "MATCH (n:Action) RETURN n.label AS l")) == [
@@ -1056,3 +1059,27 @@ async def test_update_entity_of_missing_id_raises(db_driver, clear_database):
         await Person.Update(id=uuid7(), label="Nobody").save()
 
     assert count_nodes(db_driver, "Person") == 0
+
+
+@no_type_check
+async def test_update_replaces_an_annotated_value(db_driver, clear_database):
+    class WithCertainty[T](AnnotatedValue[T]):
+        certainty: int
+
+    class Naming(Document):
+        name: WithCertainty[str]
+
+    initialise()
+
+    saved = await Naming.Create(
+        label="A Naming", name={"value": "Johann", "certainty": 1}
+    ).save()
+    await Naming.Update(
+        id=saved.id, label="A Naming", name={"value": "Giovanni", "certainty": 2}
+    ).save()
+
+    node = run(db_driver, "MATCH (n:Naming) RETURN n")[0]["n"]
+    assert node["name"] == {"value": "Giovanni", "certainty": 2}
+
+    read = await Naming.get(id=saved.id)
+    assert (read.name.value, read.name.certainty) == ("Giovanni", 2)

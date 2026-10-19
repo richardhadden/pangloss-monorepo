@@ -25,11 +25,19 @@ def build_fetch_document_query(
         ORDER BY update.updated_when DESC
         LIMIT 1
     }}
-    OPTIONAL MATCH p1 = (root)-[*BFS (e, n | NOT n:Entity)]->(intermediate)-[]->(:Entity)
-    OPTIONAL MATCH p2 =  (root)-[*BFS]->(intermediate)-[]->(:Document)
-    OPTIONAL MATCH p3 = (root)-[]->(:Entity)
-    WITH headnode, root, creation, user, updated_by, updated_when, collect(p1) AS indirect_paths, collect(p2) AS paths_to_docs, collect(p3) AS direct_paths, collect(rp) as root_path
-    WITH headnode, creation, user, updated_by, updated_when, indirect_paths + direct_paths + paths_to_docs + root_path AS paths, root
+    // The tree below the root: every node reachable by forward edges, without
+    // entering entities. (Each relation is stored as a forward edge and a
+    // reverse edge marked `reverse: true`, which is not followed.)
+    OPTIONAL MATCH tree_path = (root)-[*BFS (e, n | NOT n:Entity AND NOT coalesce(e.reverse, false))]->(descendant)
+    WITH headnode, root, creation, user, updated_by, updated_when, rp, collect(tree_path) AS tree_paths
+    // The entities that the nodes of the tree refer to
+    OPTIONAL MATCH entity_path = (root)-[*BFS (e, n | NOT n:Entity AND NOT coalesce(e.reverse, false))]->(holder)-[holder_edge]->(:Entity)
+    WHERE NOT coalesce(holder_edge.reverse, false)
+    WITH headnode, root, creation, user, updated_by, updated_when, rp, tree_paths, collect(entity_path) AS entity_paths
+    OPTIONAL MATCH root_entity_path = (root)-[root_edge]->(:Entity)
+    WHERE NOT coalesce(root_edge.reverse, false)
+    WITH headnode, root, creation, user, updated_by, updated_when,
+         collect(rp) + tree_paths + entity_paths + collect(root_entity_path) AS paths
     CALL convert_c.to_tree(paths) YIELD value
     RETURN map.merge(value, {{meta: {{
         created_by: user.username,

@@ -556,6 +556,11 @@ def add_fields_to_view_model(
 
             if field_optional:
                 model.model_fields[field_name].default = None
+            elif field_definition.wrapper:
+                # A relation with no items has no edges, so nothing to read back
+                model.model_fields[field_name].default_factory = (
+                    field_definition.wrapper
+                )
 
     # Annotated values
     for (
