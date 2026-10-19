@@ -42,7 +42,7 @@ Tests: `pangloss-memgraph/tests/test_create.py::test_write_semantic_spaces`; mod
 ## Status
 
 - ✅ Declaring spaces, generating `Create`/`CreateDB`/`View` models, propagating labels on create, writing to Memgraph.
-- ⏳ "Propagate Semantic Spaces through UpdateDB" (from `pangloss-models/todo.md`).
+- ✅ Semantic spaces are propagated through updates too: updating a document rewrites `semantic_spaces` and `context_labels` on its nodes (tested). The matching item in `pangloss-models/todo.md` is still unticked.
 - ⏳ Querying by semantic space is not implemented.
 
 ## Conjunctions

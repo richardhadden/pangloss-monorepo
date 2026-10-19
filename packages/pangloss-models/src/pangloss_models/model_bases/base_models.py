@@ -31,7 +31,10 @@ from pydantic import (
 from pydantic.alias_generators import to_camel
 
 from pangloss_models.model_registry import ModelRegistry
-lazy from pangloss_models.model_bases.document import _DocumentCreateDBBase
+lazy from pangloss_models.model_bases.document import (
+    _DocumentCreateDBBase,
+    _DocumentUpdateDBBase,
+)
 lazy from pangloss_models.model_bases.semantic_space import (
     _SemanticSpaceCreateDBBase,
     _SemanticSpaceUpdateDBBase,
@@ -354,7 +357,7 @@ def recursively_propagate_context_types(
 
     elif (
         parent
-        and isinstance(item, _DocumentCreateDBBase)
+        and isinstance(item, (_DocumentCreateDBBase, _DocumentUpdateDBBase))
         and item._meta.use_in_semantic_space_label  # type: ignore
     ):
         if context_labels:

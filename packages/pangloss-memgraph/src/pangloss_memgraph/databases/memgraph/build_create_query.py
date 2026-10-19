@@ -1,4 +1,5 @@
 import base64
+import dataclasses
 import datetime
 import lzma
 import typing
@@ -15,12 +16,19 @@ from pangloss_models.field_definitions import (
     RelationToTypeVar,
 )
 from pangloss_models.model_bases.annotated_value import AnnotatedValue
-from pangloss_models.model_bases.base_models import _CreateDBBase, _ReferenceSetBase
+from pangloss_models.model_bases.base_models import (
+    _CreateDBBase,
+    _ReferenceSetBase,
+    _UpdateDBBase,
+)
 from pangloss_models.model_bases.conjunction import _ConjunctionCreateDBBase
-from pangloss_models.model_bases.document import _DocumentCreateDBBase
+from pangloss_models.model_bases.document import (
+    _DocumentCreateDBBase,
+    _DocumentUpdateDBBase,
+)
 from pangloss_models.model_bases.edge_model import EdgeModel
 from pangloss_models.model_bases.embedded import _EmbeddedCreateDBBase
-from pangloss_models.model_bases.entity import _EntityCreateDBBase
+from pangloss_models.model_bases.entity import _EntityCreateDBBase, _EntityUpdateDBBase
 from pangloss_models.model_bases.reified_relation import (
     _ReifiedRelationCreateDBBase,
     _ReifiedRelationDocumentCreateDBBase,
@@ -41,7 +49,9 @@ def compress(instance: BaseModel):
 
 
 type _AllCreateDBModels = (
-    _DocumentCreateDBBase
+    _DocumentUpdateDBBase
+    | _EntityUpdateDBBase
+    | _DocumentCreateDBBase
     | _EntityCreateDBBase
     | _ReifiedRelationCreateDBBase
     | _ReifiedRelationDocumentCreateDBBase
@@ -68,6 +78,24 @@ class QueryParams(dict[Identifier, dict[str, typing.Any] | typing.Any]):
         return identifier
 
 
+@dataclasses.dataclass(frozen=True)
+class ReferenceToExisting:
+    """A reference to an existing entity, to be checked before writing"""
+
+    value: str
+    is_url: bool
+    allowed_types: tuple[str, ...]
+    field_name: str
+
+
+@dataclasses.dataclass(frozen=True)
+class NodeToWrite:
+    """A node that will be written below the head node"""
+
+    id: str
+    is_entity: bool
+
+
 class QueryObject:
     match_query_strings: list[str]
     create_query_strings: list[str]
@@ -77,6 +105,13 @@ class QueryObject:
     return_identifier: Identifier
     head_id: uuid.UUID
     head_type: str | None
+    # What the query refers to and writes, so that it can be checked before it
+    # is run
+    references: list[ReferenceToExisting]
+    nodes_to_write: list[NodeToWrite]
+    # `meta` of nodes of the tree being replaced in an update, by node id, so that
+    # `created_by` and `created_when` are kept
+    previous_meta: dict[str, dict[str, typing.Any]]
 
     def __init__(self, head_id: uuid.UUID, head_type: str):
         self.match_query_strings = []
@@ -86,6 +121,9 @@ class QueryObject:
         self.params = QueryParams()
         self.head_type = head_type
         self.head_id = head_id
+        self.references = []
+        self.nodes_to_write = []
+        self.previous_meta = {}
 
     def to_query_string(self) -> typing.LiteralString:
         if not self.return_identifier:
@@ -97,6 +135,7 @@ class QueryObject:
             {"\n".join(self.create_query_strings)}
             {"\n".join(self.set_query_strings)}
             {"\n".join(self.merge_query_strings)}
+            RETURN {self.return_identifier}.id AS id
         """,
         )
 
@@ -133,6 +172,11 @@ def convert_edge_properties_for_writing(edge_properties: EdgeModel) -> dict[str,
     return edge_properties_dict
 
 
+def native_datetime(value: typing.Any) -> typing.Any:
+    """Convert a neo4j DateTime to a Python datetime"""
+    return value.to_native() if hasattr(value, "to_native") else value
+
+
 def default_reverse_name(field_name: str) -> str:
     """Reverse edge name for fields that do not define one (embedded objects,
     annotated values)"""
@@ -154,6 +198,7 @@ def get_node_fields_as_writable_dict(
     is_head_node: bool = False,
     head_node_type: str | None = None,
     head_node_id: uuid.UUID | None = None,
+    previous_meta: dict[str, typing.Any] | None = None,
 ) -> dict[str, typing.Any]:
 
     node_data: dict[str, typing.Any] = {
@@ -165,9 +210,12 @@ def get_node_fields_as_writable_dict(
     # updated granularly to preserve the created_by/created_when
     if is_new and not is_head_node:
         now = datetime.datetime.now(datetime.UTC)
+        # If this node is being rewritten by an update, it keeps its creation info
+        previous_meta = previous_meta or {}
         node_data["meta"] = {
-            "created_by": current_request_username.get(),
-            "created_when": now,
+            "created_by": previous_meta.get("created_by")
+            or current_request_username.get(),
+            "created_when": native_datetime(previous_meta.get("created_when")) or now,
             "updated_by": current_request_username.get(),
             "updated_when": now,
             "semantic_spaces": instance.semantic_spaces,
@@ -260,7 +308,7 @@ def build_attached_nodes(
         )
         for item in iter_values(getattr(instance, related_field_name, None)):
             match item:
-                case _CreateDBBase():
+                case _CreateDBBase() | _UpdateDBBase():
                     build_related_node_query(
                         query_object=query_object,
                         instance=typing.cast(_AllCreateDBModels, item),
@@ -286,7 +334,7 @@ def build_attached_nodes(
     # Embedded objects are nodes in their own right, attached like a nested document
     for embedded_field_name in fields.embedded_fields:
         for item in iter_values(getattr(instance, embedded_field_name, None)):
-            if isinstance(item, _CreateDBBase):
+            if isinstance(item, (_CreateDBBase, _UpdateDBBase)):
                 build_related_node_query(
                     query_object=query_object,
                     instance=typing.cast(_AllCreateDBModels, item),
@@ -380,6 +428,10 @@ def build_related_node_query(
         is_head_node=False,
         head_node_id=head_node_id,
         head_node_type=head_node_type,
+        previous_meta=query_object.previous_meta.get(str(instance.id)),
+    )
+    query_object.nodes_to_write.append(
+        NodeToWrite(id=str(instance.id), is_entity=instance.__metatype__ == "Entity")
     )
 
     # Add the node id identifier to params and get back an Identifier
@@ -474,6 +526,15 @@ def build_relation_to_existing_query(
             for type_option in type_options
             if isinstance(type_option, (RelationToEntity, RelationToDocument))
         }
+    )
+
+    query_object.references.append(
+        ReferenceToExisting(
+            value=str(instance.id),
+            is_url=isinstance(instance.id, AnyUrl),
+            allowed_types=tuple(allowed_types),
+            field_name=field_name,
+        )
     )
 
     instance_identifier = Identifier()

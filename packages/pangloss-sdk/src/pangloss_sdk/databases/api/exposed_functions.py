@@ -11,12 +11,14 @@ from pangloss_models.model_bases.document import (
     _DocumentCreateDBBase,
     _DocumentHeadViewBase,
     _DocumentReferenceViewBase,
+    _DocumentUpdateBase,
     _DocumentUpdateDBBase,
 )
 from pangloss_models.model_bases.entity import (
     Entity,
     _EntityCreateDBBase,
     _EntityReferenceViewBase,
+    _EntityUpdateBase,
     _EntityUpdateDBBase,
 )
 from pydantic import AnyHttpUrl
@@ -46,6 +48,12 @@ def get_document(cls: type[Document], id: UUID | AnyHttpUrl) -> _DocumentHeadVie
 
 
 def create_head_node(self: _DocumentCreateBase, return_created: bool = False):
+    pass
+
+
+def update_head_node(
+    self: _DocumentUpdateBase | _EntityUpdateBase, return_type="Reference"
+):
     pass
 
 

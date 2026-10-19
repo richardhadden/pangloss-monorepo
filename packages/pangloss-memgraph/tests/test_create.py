@@ -7,6 +7,11 @@ from uuid import uuid7
 
 import pytest
 from pangloss_models import initialise
+from pangloss_models.exceptions import (
+    PanglossConflictError,
+    PanglossReferenceError,
+    PanglossUserNotFoundError,
+)
 from pangloss_models.field_definitions import FieldSubclassing
 from pangloss_models.model_bases.annotated_value import AnnotatedValue
 from pangloss_models.model_bases.configs import RelationConfig
@@ -25,28 +30,9 @@ from pangloss_models.model_bases.trait import Trait
 from pangloss_users import current_request_username
 from pydantic import AnyHttpUrl
 
+from .helpers import count_nodes, labels_of, native, run
+
 pytestmark = pytest.mark.asyncio(loop_scope="session")
-
-
-def run(db_driver, cypher: str, **params) -> list[dict]:
-    """Run a query against the test database and return each record as a dict"""
-    records, _, _ = db_driver.execute_query(cypher, parameters_=params)
-    return [r.data() for r in records]
-
-
-def labels_of(db_driver, node_id) -> set[str]:
-    rows = run(db_driver, "MATCH (n {id: $id}) RETURN labels(n) AS l", id=str(node_id))
-    assert len(rows) == 1, f"expected exactly one node with id {node_id}"
-    return set(rows[0]["l"])
-
-
-def count_nodes(db_driver, label: str) -> int:
-    return run(db_driver, f"MATCH (n:{label}) RETURN count(n) AS c")[0]["c"]
-
-
-def native(value):
-    """Convert neo4j temporal types to Python natives"""
-    return value.to_native() if hasattr(value, "to_native") else value
 
 
 async def test_document_get(clear_database):
@@ -76,11 +62,13 @@ async def test_document_write(clear_database):
 
 
 @no_type_check
-async def test_document_write_with_user_contextvar():
+async def test_document_write_with_user_contextvar(db_driver, clear_database):
     class Statement(Document):
         pass
 
     initialise()
+
+    run(db_driver, "MERGE (:PGUser {username: 'john_smith'})")
 
     with current_request_username.set("john_smith"):
         st = Statement.Create(label="A Statement")
@@ -641,6 +629,25 @@ async def test_document_create_with_given_id(db_driver, clear_database):
 
 
 @no_type_check
+async def test_creating_with_an_id_already_in_use_raises(db_driver, clear_database):
+    class Statement(Document):
+        _meta = Document.Meta(create_with_id=True)
+
+    initialise()
+
+    given_id = uuid7()
+    await Statement.Create(id=given_id, create_new=True, label="First").save()
+
+    with pytest.raises(PanglossConflictError, match=str(given_id)):
+        await Statement.Create(id=given_id, create_new=True, label="Second").save()
+
+    assert count_nodes(db_driver, "Statement") == 1
+    assert run(db_driver, "MATCH (n:Statement) RETURN n.label AS l") == [
+        {"l": "First"}
+    ]
+
+
+@no_type_check
 async def test_creation_record_is_linked_to_head_node_and_user(
     db_driver, clear_database
 ):
@@ -689,9 +696,9 @@ async def test_creation_record_uses_current_user(db_driver, clear_database):
 
 
 @no_type_check
-async def test_writing_as_unknown_user_writes_nothing(db_driver, clear_database):
-    """The writer MATCHes the user, so if there is no such user the whole
-    statement matches nothing and no data is written"""
+async def test_writing_as_unknown_user_raises_and_writes_nothing(
+    db_driver, clear_database
+):
 
     class Statement(Document):
         pass
@@ -700,7 +707,8 @@ async def test_writing_as_unknown_user_writes_nothing(db_driver, clear_database)
 
     token = current_request_username.set("nobody_by_this_name")
     try:
-        await Statement.Create(label="A Statement").save()
+        with pytest.raises(PanglossUserNotFoundError, match="nobody_by_this_name"):
+            await Statement.Create(label="A Statement").save()
     finally:
         current_request_username.reset(token)
 
@@ -1507,7 +1515,7 @@ async def test_trait_labels_are_added_to_nodes(db_driver, clear_database):
 
 
 @no_type_check
-async def test_relation_to_entity_of_disallowed_type_writes_nothing(
+async def test_relation_to_entity_of_disallowed_type_raises_and_writes_nothing(
     db_driver, clear_database
 ):
     class Person(Entity):
@@ -1523,15 +1531,18 @@ async def test_relation_to_entity_of_disallowed_type_writes_nothing(
 
     place = await Place.Create(label="A Place").save()
 
-    await Statement.Create(
-        label="A Statement", concerns_person={"type": "Person", "id": place.id}
-    ).save()
+    with pytest.raises(PanglossReferenceError, match="concerns_person"):
+        await Statement.Create(
+            label="A Statement", concerns_person={"type": "Person", "id": place.id}
+        ).save()
 
     assert count_nodes(db_driver, "Statement") == 0
 
 
 @no_type_check
-async def test_relation_to_missing_entity_writes_nothing(db_driver, clear_database):
+async def test_relation_to_missing_entity_raises_and_writes_nothing(
+    db_driver, clear_database
+):
     class Person(Entity):
         pass
 
@@ -1540,16 +1551,20 @@ async def test_relation_to_missing_entity_writes_nothing(db_driver, clear_databa
 
     initialise()
 
-    await Statement.Create(
-        label="A Statement", concerns_person={"type": "Person", "id": uuid7()}
-    ).save()
+    missing_id = uuid7()
+    with pytest.raises(PanglossReferenceError, match=str(missing_id)):
+        await Statement.Create(
+            label="A Statement", concerns_person={"type": "Person", "id": missing_id}
+        ).save()
 
     assert count_nodes(db_driver, "Statement") == 0
     assert count_nodes(db_driver, "PGCreation") == 0
 
 
 @no_type_check
-async def test_one_missing_entity_among_many_writes_nothing(db_driver, clear_database):
+async def test_one_missing_entity_among_many_raises_and_writes_nothing(
+    db_driver, clear_database
+):
     """A write is all-or-nothing: no partial documents"""
 
     class Person(Entity):
@@ -1562,13 +1577,14 @@ async def test_one_missing_entity_among_many_writes_nothing(db_driver, clear_dat
 
     person = await Person.Create(label="Exists").save()
 
-    await Statement.Create(
-        label="A Statement",
-        concerns_people=[
-            {"type": "Person", "id": person.id},
-            {"type": "Person", "id": uuid7()},
-        ],
-    ).save()
+    with pytest.raises(PanglossReferenceError):
+        await Statement.Create(
+            label="A Statement",
+            concerns_people=[
+                {"type": "Person", "id": person.id},
+                {"type": "Person", "id": uuid7()},
+            ],
+        ).save()
 
     assert count_nodes(db_driver, "Statement") == 0
     assert (
@@ -2013,7 +2029,7 @@ async def test_nested_document_with_relation_to_existing_entity(
 
 
 @no_type_check
-async def test_missing_entity_in_nested_document_writes_nothing(
+async def test_missing_entity_in_nested_document_raises_and_writes_nothing(
     db_driver, clear_database
 ):
     class Person(Entity):
@@ -2027,14 +2043,15 @@ async def test_missing_entity_in_nested_document_writes_nothing(
 
     initialise()
 
-    await Statement.Create(
-        label="A Statement",
-        action={
-            "type": "Action",
-            "label": "An Action",
-            "carried_out_by": {"type": "Person", "id": uuid7()},
-        },
-    ).save()
+    with pytest.raises(PanglossReferenceError):
+        await Statement.Create(
+            label="A Statement",
+            action={
+                "type": "Action",
+                "label": "An Action",
+                "carried_out_by": {"type": "Person", "id": uuid7()},
+            },
+        ).save()
 
     assert count_nodes(db_driver, "Statement") == 0
     assert count_nodes(db_driver, "Action") == 0

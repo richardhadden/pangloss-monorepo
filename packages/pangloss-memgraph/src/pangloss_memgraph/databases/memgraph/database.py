@@ -74,15 +74,16 @@ class Database:
     def write_transaction[T, **P](
         self,
         func: Callable[Concatenate[neo4j.AsyncManagedTransaction, P], Awaitable[T]],
-    ) -> Callable[P, Awaitable[T | None]]:
-        """Decorator to run a database read transaction
+    ) -> Callable[P, Awaitable[T]]:
+        """Decorator to run a database write transaction
 
         Wraps an asynchronous function taking a pangloss.neo4j.database.Transaction
-        object as its first argument.
+        object as its first argument. If the function raises, the transaction is
+        rolled back and the exception propagates.
 
         ```
-        @read_transaction
-        def get_a_thing(tx: Transaction):
+        @write_transaction
+        def save_a_thing(tx: Transaction):
             await tx.run(<QUERY>, <PARAMS>)
         ```
         """
@@ -90,17 +91,12 @@ class Database:
         async def wrapper(
             *args: P.args,
             **kwargs: P.kwargs,
-        ) -> T | None:
+        ) -> T:
             await self._check_driver()
             async with self.driver.session(
                 database=self.settings.DATABASE.DATABASE_NAME
             ) as session:
-                records = None
-                try:
-                    records = await session.execute_write(func, *args, **kwargs)
-                except neo4j.exceptions.TransactionError as e:
-                    print(f"Transaction failed in: {e}")
-                return records
+                return await session.execute_write(func, *args, **kwargs)
 
         return wrapper
 

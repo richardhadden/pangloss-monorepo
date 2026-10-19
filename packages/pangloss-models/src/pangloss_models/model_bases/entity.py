@@ -91,7 +91,7 @@ class _EntityReferenceViewBase(_ReferenceViewBase):
 
 
 class _EntityUpdateBase(_UpdateBase):
-    pass
+    def save(self: Self) -> None: ...
 
 
 class _EntityUpdateDBBase(_UpdateDBBase):

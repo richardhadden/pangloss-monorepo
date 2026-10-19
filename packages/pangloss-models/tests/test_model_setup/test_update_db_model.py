@@ -1178,3 +1178,56 @@ def test_document_update_db_in_semantic_spaces_propagated():
     assert factoid_db.statements[0].contents[0].thing_ordered.contents[
         0
     ].semantic_spaces == ["Negative", "Subjunctive"]
+
+
+@no_type_check
+def test_inline_entity_in_update_is_a_new_entity_not_a_reference():
+    """A new entity (with `create_new`) given in an update must become a CreateDB
+    model, not be mistaken for a reference to an existing entity"""
+
+    class Person(Entity):
+        _meta = Entity.Meta(create_inline=True, create_with_id=True)
+
+    class Statement(Document):
+        one: Person
+        many: list[Person]
+
+    initialise()
+
+    person_id = uuid7()
+    existing_id = uuid7()
+    st = Statement.Update(
+        id=uuid7(),
+        label="A Statement",
+        one={"type": "Person", "id": person_id, "label": "New", "create_new": True},
+        many=[
+            {"type": "Person", "id": existing_id},
+            {"type": "Person", "id": uuid7(), "label": "Also new", "create_new": True},
+        ],
+    )
+
+    db_st = st._to_db_model()
+
+    assert isinstance(db_st.one, Person.CreateDB)
+    assert db_st.one.id == person_id
+    assert isinstance(db_st.many[0], Person.ReferenceSet)
+    assert db_st.many[0].id == existing_id
+    assert isinstance(db_st.many[1], Person.CreateDB)
+
+
+@no_type_check
+def test_save_is_bound_on_update_models():
+    class Person(Entity):
+        pass
+
+    class Statement(Document):
+        pass
+
+    initialise()
+
+    # Bound to the database module's function (here, the SDK's stand-in)
+    from pangloss_sdk.databases.api import exposed_functions
+
+    assert Statement.Update.save is exposed_functions.update_head_node
+    assert Person.Update.save is exposed_functions.update_head_node
+    assert Statement.Create.save is exposed_functions.create_head_node

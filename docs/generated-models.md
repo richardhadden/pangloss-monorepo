@@ -6,8 +6,8 @@ For each declared class, `initialise()` creates a set of Pydantic models and att
 |-----------|--------------|---------|--------|
 | `Create` | Document, Entity, Embedded, ReifiedRelation(Document), SemanticSpace, Conjunction | Validates user input for creating | ✅ |
 | `CreateDB` | same | `Create` after ids, labels, semantic spaces and context labels are filled in; what the database layer consumes | ✅ |
-| `Update` | same | Validates user input for updating (requires `id`) | 🚧 models only |
-| `UpdateDB` | same | Database-side counterpart of `Update` | 🚧 models only |
+| `Update` | same | Validates user input for updating (requires `id`). Nested items are either an `Update` (an existing item, with its `id`) or a `Create` (a new one). It is a full replacement, not a patch | ✅ for Documents and Entities |
+| `UpdateDB` | same | Database-side counterpart of `Update` | ✅ for Documents and Entities |
 | `View` | same | Nested representation returned from reads | ✅ |
 | `HeadView` | Document, Entity, ReifiedRelationDocument | Top-level read model: `id`, `meta` (`created_by`, `created_when`, `updated_*`, `semantic_spaces`, `context_labels`, `head_node_*`), fields and incoming relations | ✅ (Documents); Entities ⏳ (no `get`) |
 | `ReferenceSet` | Entity | `{type, id}` pointer used in `Create`/`Update` to refer to an existing entity (label is dropped if supplied) | ✅ |
@@ -21,6 +21,7 @@ Optional literal fields (`X | None`) default to `None` in all of these models, s
   - `_to_db_model()` builds the `CreateDB` instance, propagates semantic-space/context info through it, and resolves `Fulfils` combinations.
   - A model validator applies [field bindings](relations.md#field-binding).
   - Document and Entity `Create` models get a `.save()` method, bound at initialisation to the database module.
+- **`_UpdateBase`** is the base of every `Update` model. Like `_CreateBase`, it builds the `UpdateDB` instance with `_to_db_model()`, applies field bindings, and for Documents and Entities has a `.save()` bound to the database module. In `UpdateDB` unions, an entity that can be created inline comes before its `ReferenceSet`, so that a new entity in an update is not mistaken for a reference to an existing one.
 - **`_CreateDBBase`** has `type`, `id` (a `uuid7` is generated if missing), `semantic_spaces`, `context_labels` and a `_labels` property that lists the class name, all parent classes (minus non-heritable traits and generic bases) and the kind (`"Document"`, `"Entity"`, ...). These become the node labels. If the declared class defines `to_db`, `to_db_create` or `to_db_update`, it is called to transform the data (a hook for computed database fields).
   - `_EntityCreateDBBase` also converts a URL `id` into a fresh UUID plus an entry in `urls`.
 - **`_ViewBase` / `_HeadViewBase`** convert `neo4j.time.DateTime` values to native datetimes and collapse single-valued relations (which the graph returns as one-item lists) into a single value.
@@ -43,6 +44,7 @@ Optional literal fields (`X | None`) default to `None` in all of these models, s
    |----------|--------------------------|
    | `Document.get` | `get_document(cls, id)` |
    | `_DocumentCreateBase.save`, `_EntityCreateBase.save` | `create_head_node(instance, return_type)` |
+   | `_DocumentUpdateBase.save`, `_EntityUpdateBase.save` | `update_head_node(instance, return_type)` |
    | `Document.list`, `Entity.list` | `list_items(cls, search_terms, page_number, page_size, deep_search)` |
 
    A missing module raises `PanglossImportError`.
@@ -58,3 +60,8 @@ Optional literal fields (`X | None`) default to `None` in all of these models, s
 | `PanglossMetaError` | Invalid `_meta` combination (e.g. `create_inline` without `create_with_id`) |
 | `PanglossImportError` | The database module cannot be found |
 | `PanglossAwaitingInitialisation`, `PanglossInternalError`, `PanglossRuntimeError` | Defined; used for internal states |
+| `PanglossWriteError` | Base class of the errors below. A write was rejected and **nothing was written** |
+| `PanglossNotFoundError` | The Document or Entity being updated does not exist, or is not of the given type |
+| `PanglossReferenceError` | An existing entity that is referred to does not exist, or is not of a type allowed in that field |
+| `PanglossConflictError` | An id given for a new object is already in use, or (in an update) belongs to a different document |
+| `PanglossUserNotFoundError` | The user doing the write (`current_request_username`) has no `PGUser` node |

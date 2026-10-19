@@ -111,3 +111,31 @@ async def test_read_nested_object(clear_database):
     ]
 
     assert thing_ordered.action_carried_out_by.id == js.id
+
+
+@no_type_check
+@pytest.mark.xfail(
+    strict=True,
+    reason="The read query only finds nested documents through paths that end at an "
+    "Entity or at a further nested Document, so a nested document with no entity "
+    "or document below it is not returned and `get` fails validation",
+)
+async def test_read_nested_document_without_entities(clear_database):
+    class Action(Document):
+        detail: str
+
+    class Statement(Document):
+        action: Action
+        actions: list[Action]
+
+    initialise()
+
+    saved = await Statement.Create(
+        label="A Statement",
+        action={"type": "Action", "label": "One", "detail": "one"},
+        actions=[{"type": "Action", "label": "Two", "detail": "two"}],
+    ).save()
+
+    read = await Statement.get(id=saved.id)
+    assert read.action.detail == "one"
+    assert [a.detail for a in read.actions] == ["two"]

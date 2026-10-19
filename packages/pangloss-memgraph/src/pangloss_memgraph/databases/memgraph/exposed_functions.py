@@ -1,9 +1,12 @@
+import datetime
 import functools
+import os
 import time
 from typing import Literal, Union, cast
 from uuid import UUID
 
 from neo4j import AsyncResult
+from pangloss_models.exceptions import PanglossWriteError
 from pangloss_models.model_bases.base_models import _ListItems
 from pangloss_models.model_bases.document import (
     Document,
@@ -12,12 +15,14 @@ from pangloss_models.model_bases.document import (
     _DocumentHeadViewBase,
     _DocumentReferenceViewAPIMeta,
     _DocumentReferenceViewBase,
+    _DocumentUpdateBase,
     _DocumentUpdateDBBase,
 )
 from pangloss_models.model_bases.entity import (
     Entity,
     _EntityCreateDBBase,
     _EntityReferenceViewBase,
+    _EntityUpdateBase,
     _EntityUpdateDBBase,
 )
 from pangloss_models.utils import get_concrete_types
@@ -33,7 +38,19 @@ from pangloss_memgraph.databases.memgraph.build_list_query import (
 from pangloss_memgraph.databases.memgraph.build_read_query import (
     build_fetch_document_query,
 )
+from pangloss_memgraph.databases.memgraph.build_update_query import (
+    build_head_update_query,
+    build_replace_head_query,
+)
 from pangloss_memgraph.databases.memgraph.database import Database, Transaction
+from pangloss_memgraph.databases.memgraph.validate_write import (
+    ExistingHead,
+    check_ids_available,
+    check_references_exist,
+    check_user_exists,
+    get_existing_head,
+    get_tree_meta,
+)
 
 
 def timer(func):
@@ -46,16 +63,6 @@ def timer(func):
         return result
 
     return wrapper
-
-
-def save(
-    tx,
-    self: _EntityCreateDBBase
-    | _DocumentCreateDBBase
-    | _EntityUpdateDBBase
-    | _DocumentUpdateDBBase,
-):
-    print("wahoo!", self)
 
 
 @Database.default.read_transaction
@@ -76,11 +83,7 @@ async def list_items(
         deep_search=deep_search,
     )
 
-    with open(".query_dumps/list.cypher", "w") as f:
-        f.write(f"""{query}
-
-            // {params!s}
-            """)
+    dump_query("list", query, params)
 
     concrete_types = get_concrete_types(cls)
     concrete_ref_types = [t.ReferenceView for t in concrete_types]
@@ -105,11 +108,7 @@ async def get_document(
 ) -> _DocumentHeadViewBase:
 
     query_string, query_params = build_fetch_document_query(cls, id)
-    with open(".query_dumps/read.cypher", "w") as f:
-        f.write(f"""{query_string}
-
-            // {query_params!s}
-            """)
+    dump_query("read", query_string, query_params)
 
     result = await tx.run(query_string, **query_params)
     result_value = await result.value()
@@ -118,24 +117,35 @@ async def get_document(
     return None
 
 
+def dump_query(name: str, query: str, params: dict) -> None:
+    """Write the last query of each kind to `.query_dumps`, for debugging"""
+    os.makedirs(".query_dumps", exist_ok=True)
+    with open(f".query_dumps/{name}.cypher", "w") as f:
+        f.write(f"""{query}
+
+            // {params!s}
+            """)
+
+
 @Database.default.write_transaction
 @timer
 async def write_head_node(
     tx: Transaction,
     db_instance: _DocumentCreateDBBase,
-) -> AsyncResult:
+) -> list:
 
     query_object = build_head_create_query(db_instance)
 
-    with open(".query_dumps/create.cypher", "w") as f:
-        f.write(f"""{query_object.to_query_string()}
+    await check_user_exists(tx)
+    await check_references_exist(tx, query_object)
+    await check_ids_available(tx, query_object, is_update=False)
 
-            // {query_object.params!s}
-            """)
+    dump_query("create", query_object.to_query_string(), query_object.params)
 
     response = await tx.run(query_object.to_query_string(), **query_object.params)
     result = await response.value()
-    print(result)
+    if not result:
+        raise PanglossWriteError("Nothing was written")
     return result
 
 
@@ -157,3 +167,63 @@ async def create_head_node(
         )
     if return_type == "Full":
         return await get_document(cast(type[Document], instance._owner), db_instance.id)
+
+
+@Database.default.write_transaction
+@timer
+async def replace_head_node(
+    tx: Transaction,
+    db_instance: _DocumentUpdateDBBase | _EntityUpdateDBBase,
+) -> ExistingHead:
+    """Replace everything below a head node, and its properties, with the new
+    version. All checks are made before anything is deleted, and if anything
+    fails the transaction is rolled back."""
+
+    await check_user_exists(tx)
+    existing_head = await get_existing_head(tx, db_instance.id, db_instance.type)
+    previous_meta = await get_tree_meta(tx, db_instance.id)
+
+    query_object = build_head_update_query(db_instance, previous_meta)
+
+    await check_references_exist(tx, query_object)
+    await check_ids_available(tx, query_object, is_update=True)
+
+    replace_query, replace_params = build_replace_head_query(db_instance)
+    dump_query("update_replace", replace_query, replace_params)
+    dump_query("update", query_object.to_query_string(), query_object.params)
+
+    response = await tx.run(replace_query, **replace_params)
+    if not await response.value():
+        raise PanglossWriteError("Nothing was updated")
+
+    response = await tx.run(query_object.to_query_string(), **query_object.params)
+    if not await response.value():
+        raise PanglossWriteError("Nothing was written")
+
+    return existing_head
+
+
+async def update_head_node(
+    instance: _DocumentUpdateBase | _EntityUpdateBase,
+    return_type: Literal["Reference", "Full"] = "Reference",
+):
+    """Replace a Document or Entity (and, for a Document, everything nested in it)
+    with the given version"""
+    db_instance = cast(
+        _DocumentUpdateDBBase | _EntityUpdateDBBase, instance._to_db_model()
+    )
+    existing_head = await replace_head_node(db_instance)
+
+    owner = cast(type[Document], instance._owner)
+    if return_type == "Reference":
+        return owner.ReferenceView(
+            **db_instance.model_dump(),
+            meta=_DocumentReferenceViewAPIMeta(
+                created_by=existing_head.created_by,
+                created_when=existing_head.created_when,
+                updated_by=current_request_username.get(),
+                updated_when=datetime.datetime.now(datetime.UTC),
+            ),
+        )
+    if return_type == "Full":
+        return await get_document(owner, db_instance.id)

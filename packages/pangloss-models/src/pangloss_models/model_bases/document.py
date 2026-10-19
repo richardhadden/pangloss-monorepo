@@ -79,7 +79,7 @@ class _DocumentHeadViewBase(_HeadViewBase):
 
 
 class _DocumentUpdateBase(_UpdateBase):
-    pass
+    def save(self: Self) -> None: ...
 
 
 class _DocumentUpdateDBBase(_UpdateDBBase):
@@ -114,14 +114,14 @@ class _DocumentReferenceViewAPIMeta(_BaseObject):
     @field_validator("created_when", mode="before")
     @classmethod
     def convert_neo4j_created_when_date(cls, v) -> Any:
-        if v:
+        if hasattr(v, "to_native"):
             return v.to_native()
         return v
 
     @field_validator("updated_when", mode="before")
     @classmethod
     def convert_neo4j_updated_when_date(cls, v) -> Any:
-        if v:
+        if hasattr(v, "to_native"):
             return v.to_native()
         return v
 

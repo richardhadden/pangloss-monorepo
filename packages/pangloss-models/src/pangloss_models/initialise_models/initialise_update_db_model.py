@@ -255,26 +255,27 @@ def build_generic_update_db_model_from_type_option(
                     if isinstance(to, RelationToEntity):
                         # ... if there is an edge model, add the applied_edge_model
                         # version of annotated_type.ReferenceSet to annotation
+                        # (an entity that can be created inline is added first, so
+                        # that it is not mistaken for a reference to an existing one)
                         if to.edge_model:
-                            annotations.append(
-                                to.annotated_type.ReferenceSet.apply_edge_model(
-                                    to.edge_model
-                                )
-                            )
                             if to.annotated_type._meta.create_inline:
                                 annotations.append(
                                     to.annotated_type.CreateDB.apply_edge_model(
                                         to.edge_model
                                     )
                                 )
+                            annotations.append(
+                                to.annotated_type.ReferenceSet.apply_edge_model(
+                                    to.edge_model
+                                )
+                            )
 
                         else:
                             # ... otherwise, just add the annotated_type.ReferenceSet
-                            annotations.append(to.annotated_type.ReferenceSet)
-
                             if to.annotated_type._meta.create_inline:
                                 initialise_update_db_model(to.annotated_type)
                                 annotations.append(to.annotated_type.CreateDB)
+                            annotations.append(to.annotated_type.ReferenceSet)
 
                     # If relation to Document...
                     elif isinstance(to, RelationToDocument):
@@ -323,24 +324,25 @@ def build_generic_update_db_model_from_type_option(
                 # version of annotated_type.ReferenceSet to annotation
                 initialise_update_db_model(generic_type_option.annotated_type)
                 if generic_type_option.edge_model:
-                    annotations.append(
-                        generic_type_option.annotated_type.ReferenceSet.apply_edge_model(
-                            generic_type_option.edge_model
-                        )
-                    )
                     if generic_type_option.annotated_type._meta.create_inline:
                         annotations.append(
                             generic_type_option.annotated_type.CreateDB.apply_edge_model(
                                 generic_type_option.edge_model
                             )
                         )
+                    annotations.append(
+                        generic_type_option.annotated_type.ReferenceSet.apply_edge_model(
+                            generic_type_option.edge_model
+                        )
+                    )
 
                 else:
                     initialise_update_db_model(generic_type_option.annotated_type)
                     # ... otherwise, just add the annotated_type.ReferenceSet
-                    annotations.append(generic_type_option.annotated_type.ReferenceSet)
+                    # (after the CreateDB, if it can be created inline)
                     if generic_type_option.annotated_type._meta.create_inline:
                         annotations.append(generic_type_option.annotated_type.CreateDB)
+                    annotations.append(generic_type_option.annotated_type.ReferenceSet)
 
             # If relation to Document...
             elif isinstance(generic_type_option, RelationToDocument):
@@ -389,16 +391,25 @@ def get_relation_annotation_types(
     types = []
     for type_option in field_definition.type_options:
         if isinstance(type_option, RelationToEntity):
+            # An entity that can be created inline goes first, as a new entity is
+            # also valid as a reference to an existing one (it has an id), and the
+            # first type that matches is used
             if type_option.edge_model:
+                if type_option.annotated_type._meta.create_inline:
+                    types.append(
+                        type_option.annotated_type.CreateDB.apply_edge_model(
+                            type_option.edge_model
+                        )
+                    )
                 types.append(
                     type_option.annotated_type.ReferenceSet.apply_edge_model(
                         type_option.edge_model
                     )
                 )
             else:
-                types.append(type_option.annotated_type.ReferenceSet)
                 if type_option.annotated_type._meta.create_inline:
                     types.append(type_option.annotated_type.CreateDB)
+                types.append(type_option.annotated_type.ReferenceSet)
 
         elif isinstance(type_option, RelationToDocument):
             initialise_update_db_model(type_option.annotated_type)

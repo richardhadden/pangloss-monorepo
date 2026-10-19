@@ -52,8 +52,16 @@ lazy from pangloss_models.model_bases.base_models import (
     _ActionClass,
     _DeclaredClass,
 )
-lazy from pangloss_models.model_bases.document import Document, _DocumentCreateBase
-lazy from pangloss_models.model_bases.entity import Entity, _EntityCreateBase
+lazy from pangloss_models.model_bases.document import (
+    Document,
+    _DocumentCreateBase,
+    _DocumentUpdateBase,
+)
+lazy from pangloss_models.model_bases.entity import (
+    Entity,
+    _EntityCreateBase,
+    _EntityUpdateBase,
+)
 
 
 class ModelRegistry:
@@ -347,3 +355,5 @@ class ModelRegistry:
 
         _DocumentCreateBase.save = exposed_functions.create_head_node
         _EntityCreateBase.save = exposed_functions.create_head_node
+        _DocumentUpdateBase.save = exposed_functions.update_head_node
+        _EntityUpdateBase.save = exposed_functions.update_head_node

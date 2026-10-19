@@ -58,6 +58,10 @@ user dict / kwargs
                        ReferenceView (default) or HeadView ◄─ return_type
 ```
 
+## Data flow for an update
+
+An update replaces the whole document, rather than working out what changed. In one transaction: check the document exists, that everything it refers to exists, and that the ids it uses are free; then delete everything below the head node (never entities), and write the new version in the same way as a creation. See [Memgraph backend](memgraph.md#update_head_nodeinstance-return_typereference-).
+
 ## Data flow for a read
 
 `Statement.get(id)` runs a Cypher query that walks outward from the node, collects paths to entities and nested documents, converts them to a tree with Memgraph MAGE's `convert_c.to_tree`, adds `meta`, and validates the result as `Statement.HeadView`.

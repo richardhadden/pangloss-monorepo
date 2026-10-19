@@ -18,6 +18,7 @@ uv sync            # installs all workspace packages into .venv
 
 - `pangloss-models/tests`: model-initialisation tests. They need no database: the fixtures use `pangloss_sdk.databases.api` as `DATABASE_MODULE`.
 - `pangloss-memgraph/tests`: integration tests. They need Docker or a Memgraph instance on `bolt://localhost:7687` (user/password `test`/`test`). If none is found, the fixture starts a `memgraph/memgraph-mage` container, creates the `label_index` text index and a `PGUser` for the default username, and clears the data after tests that request `clear_database`. Tests run in the `db` xdist group so that they run serially.
+  - `test_create.py`: writing; `test_update.py`: updating; `test_read.py` and `test_list.py`: reading and listing. Shared helpers are in `helpers.py`.
 - `pangloss-sdk/tests`: checks that the synchronous database-module binding works, using the hard-coded `get_document` stub.
 
 Tests for known bugs and missing features are written as the behaviour we want and marked `@pytest.mark.xfail(strict=True, reason=...)`, so they pass the suite while the bug exists and fail (XPASS) once it is fixed, at which point the marker should be removed. `grep -rn "xfail" packages` lists them.
@@ -43,6 +44,6 @@ The root `pyproject.toml` sets `testpaths = ["packages"]` and the session-scoped
 
 ## Tips
 
-- `.query_dumps/create.cypher`, `read.cypher` and `list.cypher` contain the most recent query and its parameters, which is the quickest way to debug a query.
+- `.query_dumps/create.cypher`, `update.cypher`, `update_replace.cypher`, `read.cypher` and `list.cypher` contain the most recent query and its parameters, which is the quickest way to debug a query.
 - Tests call `ModelRegistry._reset()` before each test, so classes defined inside a test function do not leak into others. Do the same in scratch scripts if you re-define classes.
 - To set the acting user for a write, use the context variable: `current_request_username.set("john_smith")`. The `PGUser` node must exist in the database.
