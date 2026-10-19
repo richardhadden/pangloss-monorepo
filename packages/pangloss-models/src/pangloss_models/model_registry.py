@@ -1,11 +1,9 @@
 import heapq
 import importlib
-from inspect import iscoroutinefunction
 from itertools import chain
-from typing import ClassVar, Literal, get_args, get_origin
-from uuid import UUID
+from typing import ClassVar, get_args, get_origin
 
-from pydantic import AnyHttpUrl, BaseModel
+from pydantic import BaseModel
 lazy from pangloss_core.settings import SETTINGS
 
 from pangloss_models.exceptions import (
@@ -246,16 +244,15 @@ class ModelRegistry:
             model.model_rebuild(force=True, _types_namespace=namespace)
 
         cls._initialise_models()
+        cls._bind_database_functions()
 
     # ----------------------------
-    # Hook for your system
+    # Model initialisation
     # ----------------------------
 
     @classmethod
-    def _initialise_models(cls, db_module: str | None = None):
-        """
-        Override or monkey-patch this.
-        """
+    def _initialise_models(cls):
+        """Generate all action classes (Create, View, etc.) for the registered models."""
 
         graph = cls._build_graph()
         order, cyclic = cls._toposort(graph)
@@ -323,107 +320,30 @@ class ModelRegistry:
         for action_class in cls._action_classes:
             action_class.model_rebuild(force=True)
 
+    # ----------------------------
+    # Database bindings
+    # ----------------------------
+
+    @classmethod
+    def _bind_database_functions(cls):
+        """Attach the database module's `exposed_functions` to the model base classes.
+
+        The functions are assigned directly: sync and async functions both work as
+        methods, so no wrapping is needed. They must take the class (or instance,
+        for `save`) as their first argument."""
+
         database = SETTINGS.DATABASE_MODULE
 
         try:
-            database_exposed_functions_module = importlib.import_module(
-                f"{database}.exposed_functions"
-            )
+            exposed_functions = importlib.import_module(f"{database}.exposed_functions")
         except ImportError:
             raise PanglossImportError(
                 f"Failed to find database functions in given module '{database}'"
             )
 
-        is_async = iscoroutinefunction(database_exposed_functions_module.get_document)
-        if is_async:
+        Document.get = classmethod(exposed_functions.get_document)  # type: ignore
+        Document.list = classmethod(exposed_functions.list_items)  # type: ignore
+        Entity.list = classmethod(exposed_functions.list_items)  # type: ignore
 
-            async def get_document_function_async(cls: Document, id: UUID | AnyHttpUrl):
-                return await database_exposed_functions_module.get_document(cls, id)
-
-            Document.get = classmethod(get_document_function_async)  # type: ignore
-        else:
-
-            def get_document_function_sync(cls: Document, id: UUID | AnyHttpUrl):
-                return database_exposed_functions_module.get_document(cls, id)
-
-            Document.get = classmethod(get_document_function_sync)  # type: ignore
-
-        is_async = iscoroutinefunction(
-            database_exposed_functions_module.create_head_node
-        )
-        if is_async:
-
-            async def create_head_node_function_async(
-                self: _DocumentCreateBase,
-                return_type: Literal["Reference", "Full", "Detail"] = "Reference",
-            ):
-                return await database_exposed_functions_module.create_head_node(
-                    self, return_type
-                )
-
-            _DocumentCreateBase.save = create_head_node_function_async  # type: ignore
-            _EntityCreateBase.save = create_head_node_function_async  # type: ignore
-        else:
-
-            def create_head_node_function_sync(
-                self: _DocumentCreateBase, return_created: bool = False
-            ):
-                return database_exposed_functions_module.create_head_node(
-                    self, return_created
-                )
-
-            _DocumentCreateBase.save = create_head_node_function_sync
-            _EntityCreateBase.save = create_head_node_function_sync  # type: ignore
-
-        is_async = iscoroutinefunction(database_exposed_functions_module.list_items)
-
-        if is_async:
-
-            async def list_items_function_async(
-                cls,
-                search_terms: str | None = None,
-                page_number: int | None = None,
-                page_size: int | None = None,
-                deep_search: bool = False,
-            ):
-                return await database_exposed_functions_module.list_items(
-                    cls,
-                    search_terms=search_terms,
-                    page_number=page_number,
-                    page_size=page_size,
-                    deep_search=deep_search,
-                )
-
-            Document.list = classmethod(list_items_function_async)  # type: ignore
-            Entity.list = classmethod(list_items_function_async)  # type: ignore
-
-        else:
-
-            def list_items_function_sync(
-                cls,
-                search_terms: str | None = None,
-                page_number: int | None = None,
-                page_size: int | None = None,
-                deep_search: bool = False,
-            ):
-                return database_exposed_functions_module.list_items(
-                    cls,
-                    search_terms=search_terms,
-                    page_number=page_number,
-                    page_size=page_size,
-                    deep_search=deep_search,
-                )
-
-            Document.list = classmethod(list_items_function_sync)  # type: ignore
-            Entity.list = classmethod(list_items_function_sync)  # type: ignore
-
-        """
-        def save_func_for_create(self):
-            print(f"Using database {database}")
-            db_instance = self._to_db_model()
-            database_exposed_functions_module.save(db_instance)
-
-
-        _DocumentCreateBase.save = save_func_for_create  # ty:ignore[invalid-assignment]
-        _EntityCreateBase.save = save_func_for_create  # ty:ignore[invalid-assignment]
-        """
+        _DocumentCreateBase.save = exposed_functions.create_head_node  # type: ignore
+        _EntityCreateBase.save = exposed_functions.create_head_node  # type: ignore

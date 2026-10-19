@@ -35,7 +35,7 @@ For each declared class, `initialise()` creates a set of Pydantic models and att
 5. **`ReferenceSet` / `ReferenceView`** models are created.
 6. **`Create` + `CreateDB`**, then **`Update` + `UpdateDB`**, then **`View`**, then **`HeadView`**. Each is first created empty and its fields are added afterwards, so models can refer to each other.
 7. **Rebuild the action classes** twice so that models see the final versions of the models they reference.
-8. **Bind the database.** `SETTINGS.DATABASE_MODULE` names a Python package. `ModelRegistry` imports `<DATABASE_MODULE>.exposed_functions` and binds, in sync or async form depending on whether the function is a coroutine function:
+8. **Bind the database.** `SETTINGS.DATABASE_MODULE` names a Python package. `ModelRegistry._bind_database_functions` (run after the models are built) imports `<DATABASE_MODULE>.exposed_functions` and assigns the functions directly; sync and async both work:
 
    | Bound to | From `exposed_functions` |
    |----------|--------------------------|

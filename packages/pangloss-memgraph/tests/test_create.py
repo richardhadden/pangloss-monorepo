@@ -1,3 +1,4 @@
+import datetime
 from inspect import iscoroutinefunction
 from typing import Annotated, no_type_check
 from uuid import uuid7
@@ -5,15 +6,45 @@ from uuid import uuid7
 import pytest
 from pangloss_models import initialise
 from pangloss_models.field_definitions import FieldSubclassing
+from pangloss_models.model_bases.annotated_value import AnnotatedValue
 from pangloss_models.model_bases.configs import RelationConfig
+from pangloss_models.model_bases.conjunction import Conjunction
 from pangloss_models.model_bases.document import Document
 from pangloss_models.model_bases.edge_model import EdgeModel
+from pangloss_models.model_bases.embedded import Embedded
 from pangloss_models.model_bases.entity import Entity
 from pangloss_models.model_bases.helpers import ViaEdge
+from pangloss_models.model_bases.reified_relation import (
+    ReifiedRelation,
+    ReifiedRelationDocument,
+)
 from pangloss_models.model_bases.semantic_space import SemanticSpace
+from pangloss_models.model_bases.trait import Trait
 from pangloss_users import current_request_username
+from pydantic import AnyHttpUrl
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
+
+
+def run(db_driver, cypher: str, **params) -> list[dict]:
+    """Run a query against the test database and return each record as a dict"""
+    records, _, _ = db_driver.execute_query(cypher, parameters_=params)
+    return [r.data() for r in records]
+
+
+def labels_of(db_driver, node_id) -> set[str]:
+    rows = run(db_driver, "MATCH (n {id: $id}) RETURN labels(n) AS l", id=str(node_id))
+    assert len(rows) == 1, f"expected exactly one node with id {node_id}"
+    return set(rows[0]["l"])
+
+
+def count_nodes(db_driver, label: str) -> int:
+    return run(db_driver, f"MATCH (n:{label}) RETURN count(n) AS c")[0]["c"]
+
+
+def native(value):
+    """Convert neo4j temporal types to Python natives"""
+    return value.to_native() if hasattr(value, "to_native") else value
 
 
 async def test_document_get(clear_database):
@@ -515,3 +546,1923 @@ async def test_write_semantic_spaces(clear_database):
         .action_carried_out_by.type
         == "Person"
     )
+
+
+# ---------------------------------------------------------------------------
+# Head nodes: labels, properties, creation record
+# ---------------------------------------------------------------------------
+
+
+@no_type_check
+async def test_head_node_labels_include_parents_and_kind(db_driver, clear_database):
+    class Statement(Document):
+        pass
+
+    class Action(Statement):
+        pass
+
+    class Person(Entity):
+        pass
+
+    class Employee(Person):
+        pass
+
+    initialise()
+
+    action = await Action.Create(label="An Action").save()
+    employee = await Employee.Create(label="An Employee").save()
+
+    assert labels_of(db_driver, action.id) == {
+        "Action",
+        "Statement",
+        "Document",
+        "HeadNode",
+        "PGIndexableNode",
+    }
+    assert labels_of(db_driver, employee.id) == {
+        "Employee",
+        "Person",
+        "Entity",
+        "HeadNode",
+        "PGIndexableNode",
+    }
+
+
+@no_type_check
+async def test_head_node_properties(db_driver, clear_database):
+    class Statement(Document):
+        text: str
+
+    initialise()
+
+    saved = await Statement.Create(label="A Statement", text="Some text").save()
+
+    node = run(db_driver, "MATCH (n:Statement) RETURN n")[0]["n"]
+    assert node["id"] == str(saved.id)
+    assert node["type"] == "Statement"
+    assert node["label"] == "A Statement"
+    assert node["text"] == "Some text"
+    # A head node is its own head: no pointer to a head node, and its
+    # creation metadata lives on the PGCreation node instead
+    assert "head_node_id" not in node
+    assert "head_node_type" not in node
+    assert "meta" not in node
+
+
+@no_type_check
+async def test_each_save_creates_a_new_node_with_a_new_id(db_driver, clear_database):
+    class Statement(Document):
+        pass
+
+    initialise()
+
+    first = await Statement.Create(label="Same label").save()
+    second = await Statement.Create(label="Same label").save()
+
+    assert first.id != second.id
+    assert count_nodes(db_driver, "Statement") == 2
+
+
+@no_type_check
+async def test_document_create_with_given_id(db_driver, clear_database):
+    class Statement(Document):
+        _meta = Document.Meta(create_with_id=True)
+
+    initialise()
+
+    given_id = uuid7()
+    saved = await Statement.Create(id=given_id, create_new=True, label="Given").save()
+
+    assert saved.id == given_id
+    rows = run(db_driver, "MATCH (n:Statement {id: $id}) RETURN n", id=str(given_id))
+    assert len(rows) == 1
+
+
+@no_type_check
+async def test_creation_record_is_linked_to_head_node_and_user(
+    db_driver, clear_database
+):
+    class Statement(Document):
+        pass
+
+    initialise()
+
+    saved = await Statement.Create(label="A Statement").save()
+
+    rows = run(
+        db_driver,
+        """
+        MATCH (user:PGUser)<-[:created_by]-(c:PGCreation)-[:is_creation_of]->(n:Statement)
+        RETURN user.username AS username, c.created_when AS created_when, n.id AS id
+        """,
+    )
+    assert len(rows) == 1
+    assert rows[0]["id"] == str(saved.id)
+    assert rows[0]["username"] == "pangloss_default_user"
+    assert rows[0]["created_when"] is not None
+
+
+@no_type_check
+async def test_creation_record_uses_current_user(db_driver, clear_database):
+    class Statement(Document):
+        pass
+
+    initialise()
+
+    run(db_driver, "MERGE (:PGUser {username: 'john_smith'})")
+
+    token = current_request_username.set("john_smith")
+    try:
+        saved = await Statement.Create(label="A Statement").save()
+    finally:
+        current_request_username.reset(token)
+
+    assert saved.meta.created_by == "john_smith"
+    rows = run(
+        db_driver,
+        "MATCH (:Statement)<-[:is_creation_of]-(:PGCreation)-[:created_by]->(u:PGUser) "
+        "RETURN u.username AS username",
+    )
+    assert [r["username"] for r in rows] == ["john_smith"]
+
+
+@no_type_check
+async def test_writing_as_unknown_user_writes_nothing(db_driver, clear_database):
+    """The writer MATCHes the user, so if there is no such user the whole
+    statement matches nothing and no data is written"""
+
+    class Statement(Document):
+        pass
+
+    initialise()
+
+    token = current_request_username.set("nobody_by_this_name")
+    try:
+        await Statement.Create(label="A Statement").save()
+    finally:
+        current_request_username.reset(token)
+
+    assert count_nodes(db_driver, "Statement") == 0
+    assert count_nodes(db_driver, "PGCreation") == 0
+
+
+@no_type_check
+async def test_a_single_creation_record_for_a_nested_write(db_driver, clear_database):
+    class Leaf(Document):
+        pass
+
+    class Branch(Document):
+        leaf: Leaf
+
+    class Root(Document):
+        branch: Branch
+
+    initialise()
+
+    await Root.Create(
+        label="Root",
+        branch={
+            "type": "Branch",
+            "label": "Branch",
+            "leaf": {"type": "Leaf", "label": "Leaf"},
+        },
+    ).save()
+
+    assert count_nodes(db_driver, "PGCreation") == 1
+
+
+@no_type_check
+async def test_save_return_types(db_driver, clear_database):
+    class Statement(Document):
+        text: str
+
+    initialise()
+
+    reference = await Statement.Create(label="A Statement", text="hello").save()
+    assert isinstance(reference, Statement.ReferenceView)
+    assert reference.label == "A Statement"
+    assert reference.type == "Statement"
+    assert reference.meta.created_by == "pangloss_default_user"
+
+    full = await Statement.Create(label="Another", text="world").save(
+        return_type="Full"
+    )
+    assert isinstance(full, Statement.HeadView)
+    assert full.text == "world"
+    assert full.meta.created_by == "pangloss_default_user"
+    assert full.meta.head_node_type == "Statement"
+
+
+# ---------------------------------------------------------------------------
+# Literal fields
+# ---------------------------------------------------------------------------
+
+
+@no_type_check
+async def test_literal_types_are_written(db_driver, clear_database):
+    class Statement(Document):
+        text: str
+        number: int
+        ratio: float
+        on_date: datetime.date
+        at_time: datetime.datetime
+        tags: list[str]
+        numbers: list[int]
+
+    initialise()
+
+    await Statement.Create(
+        label="Literals",
+        text="hello",
+        number=42,
+        ratio=1.5,
+        on_date=datetime.date(2020, 3, 4),
+        at_time=datetime.datetime(2020, 3, 4, 5, 6, 7),
+        tags=["a", "b"],
+        numbers=[1, 2, 3],
+    ).save()
+
+    node = run(db_driver, "MATCH (n:Statement) RETURN n")[0]["n"]
+    assert node["text"] == "hello"
+    assert node["number"] == 42
+    assert node["ratio"] == 1.5
+    assert native(node["on_date"]) == datetime.date(2020, 3, 4)
+    assert native(node["at_time"]) == datetime.datetime(2020, 3, 4, 5, 6, 7)
+    assert node["tags"] == ["a", "b"]
+    assert node["numbers"] == [1, 2, 3]
+
+
+@no_type_check
+async def test_literal_types_read_back(db_driver, clear_database):
+    class Statement(Document):
+        text: str
+        number: int
+        ratio: float
+        at_time: datetime.datetime
+        tags: list[str]
+        numbers: list[int]
+
+    initialise()
+
+    saved = await Statement.Create(
+        label="Literals",
+        text="hello",
+        number=42,
+        ratio=1.5,
+        at_time=datetime.datetime(2020, 3, 4, 5, 6, 7),
+        tags=["a", "b"],
+        numbers=[1, 2, 3],
+    ).save()
+
+    read = await Statement.get(id=saved.id)
+    assert read.text == "hello"
+    assert read.number == 42
+    assert read.ratio == 1.5
+    assert read.at_time == datetime.datetime(2020, 3, 4, 5, 6, 7)
+    assert read.tags == ["a", "b"]
+    assert read.numbers == [1, 2, 3]
+
+
+@no_type_check
+@pytest.mark.xfail(
+    strict=True,
+    reason="convert_neo4j_datetimes only converts neo4j DateTime, not Date, so "
+    "reading a document with a date field fails validation",
+)
+async def test_date_literal_read_back(db_driver, clear_database):
+    class Statement(Document):
+        on_date: datetime.date
+
+    initialise()
+
+    saved = await Statement.Create(
+        label="A date", on_date=datetime.date(2020, 3, 4)
+    ).save()
+
+    read = await Statement.get(id=saved.id)
+    assert read.on_date == datetime.date(2020, 3, 4)
+
+
+@no_type_check
+async def test_none_literals_are_not_written(db_driver, clear_database):
+    class Statement(Document):
+        text: str | None
+        number: int | None
+
+    initialise()
+
+    await Statement.Create(label="Sparse", text=None, number=None).save()
+
+    node = run(db_driver, "MATCH (n:Statement) RETURN n")[0]["n"]
+    assert "text" not in node
+    assert "number" not in node
+
+
+@no_type_check
+async def test_literals_with_special_characters_are_stored_verbatim(
+    db_driver, clear_database
+):
+    class Statement(Document):
+        text: str
+
+    initialise()
+
+    run(db_driver, "CREATE (:Canary {id: 'canary'})")
+
+    nasty = "x'}) DETACH DELETE n //\" \\ ünïcödé 日本語\nnewline"
+    await Statement.Create(label=nasty, text=nasty).save()
+
+    node = run(db_driver, "MATCH (n:Statement) RETURN n")[0]["n"]
+    assert node["label"] == nasty
+    assert node["text"] == nasty
+    assert count_nodes(db_driver, "Canary") == 1
+
+
+@no_type_check
+@pytest.mark.xfail(
+    strict=True,
+    reason="get_node_fields_as_writable_dict skips falsy values, so 0, 0.0, "
+    "'' and [] are never written",
+)
+async def test_falsy_literals_are_written(db_driver, clear_database):
+    class Statement(Document):
+        number: int
+        ratio: float
+        text: str
+        tags: list[str]
+
+    initialise()
+
+    await Statement.Create(label="Falsy", number=0, ratio=0.0, text="", tags=[]).save()
+
+    node = run(db_driver, "MATCH (n:Statement) RETURN n")[0]["n"]
+    assert node["number"] == 0
+    assert node["ratio"] == 0.0
+    assert node["text"] == ""
+    assert node["tags"] == []
+
+
+# ---------------------------------------------------------------------------
+# Entities
+# ---------------------------------------------------------------------------
+
+
+@no_type_check
+async def test_entity_head_node(db_driver, clear_database):
+    class Person(Entity):
+        born: datetime.date | None = None
+
+    initialise()
+
+    saved = await Person.Create(
+        label="John Smith", born=datetime.date(1900, 1, 1)
+    ).save()
+
+    assert isinstance(saved, Person.ReferenceView)
+    node = run(db_driver, "MATCH (n:Person) RETURN n")[0]["n"]
+    assert node["id"] == str(saved.id)
+    assert node["label"] == "John Smith"
+    assert native(node["born"]) == datetime.date(1900, 1, 1)
+    assert labels_of(db_driver, saved.id) == {
+        "Person",
+        "Entity",
+        "HeadNode",
+        "PGIndexableNode",
+    }
+
+
+@no_type_check
+async def test_entity_with_url_as_id_is_given_a_uuid(db_driver, clear_database):
+    class Person(Entity):
+        _meta = Entity.Meta(create_with_id=True)
+
+    initialise()
+
+    url = "http://example.com/people/john-smith"
+    saved = await Person.Create(id=AnyHttpUrl(url), create_new=True, label="JS").save()
+
+    rows = run(db_driver, "MATCH (n:Person) RETURN n.id AS id")
+    assert len(rows) == 1
+    assert rows[0]["id"] == str(saved.id)
+    assert rows[0]["id"] != url
+
+
+@no_type_check
+@pytest.mark.xfail(
+    strict=True,
+    reason="CreateDB.urls is not a literal field, so URLs given as ids are not persisted",
+)
+async def test_entity_url_id_is_stored_in_urls(db_driver, clear_database):
+    class Person(Entity):
+        _meta = Entity.Meta(create_with_id=True)
+
+    initialise()
+
+    url = "http://example.com/people/john-smith"
+    await Person.Create(id=AnyHttpUrl(url), create_new=True, label="JS").save()
+
+    node = run(db_driver, "MATCH (n:Person) RETURN n")[0]["n"]
+    assert url in [str(u) for u in node["urls"]]
+
+
+# ---------------------------------------------------------------------------
+# Relations to existing nodes
+# ---------------------------------------------------------------------------
+
+
+@no_type_check
+async def test_relation_to_existing_entity_writes_forward_and_reverse_edges(
+    db_driver, clear_database
+):
+    class Person(Entity):
+        pass
+
+    class Statement(Document):
+        concerns_person: Person
+
+    initialise()
+
+    person = await Person.Create(label="John Smith").save()
+    statement = await Statement.Create(
+        label="A Statement", concerns_person={"type": "Person", "id": person.id}
+    ).save()
+
+    rows = run(
+        db_driver,
+        """
+        MATCH (s:Statement)-[f:concerns_person]->(p:Person)
+        MATCH (s)<-[r:concerns_person_reverse]-(p)
+        RETURN s.id AS s, p.id AS p, properties(f) AS fp, properties(r) AS rp
+        """,
+    )
+    assert len(rows) == 1
+    assert rows[0]["s"] == str(statement.id)
+    assert rows[0]["p"] == str(person.id)
+    assert rows[0]["rp"] == {"reverse": True}
+    assert "reverse" not in rows[0]["fp"]
+    # The existing entity is not duplicated or altered
+    assert count_nodes(db_driver, "Person") == 1
+
+
+@no_type_check
+async def test_relation_with_custom_reverse_name(db_driver, clear_database):
+    class Person(Entity):
+        pass
+
+    class Statement(Document):
+        concerns_person: Annotated[
+            Person, RelationConfig(reverse_name="Is Concerned In")
+        ]
+
+    initialise()
+
+    person = await Person.Create(label="John Smith").save()
+    await Statement.Create(
+        label="A Statement", concerns_person={"type": "Person", "id": person.id}
+    ).save()
+
+    rows = run(
+        db_driver,
+        "MATCH (:Statement)<-[r:is_concerned_in]-(:Person) RETURN count(r) AS c",
+    )
+    assert rows[0]["c"] == 1
+    assert (
+        run(db_driver, "MATCH ()-[r:concerns_person_reverse]->() RETURN count(r) AS c")[
+            0
+        ]["c"]
+        == 0
+    )
+
+
+@no_type_check
+async def test_list_relation_to_existing_entities(db_driver, clear_database):
+    class Person(Entity):
+        pass
+
+    class Statement(Document):
+        concerns_people: list[Person]
+
+    initialise()
+
+    people = [await Person.Create(label=f"Person {i}").save() for i in range(5)]
+    await Statement.Create(
+        label="A Statement",
+        concerns_people=[{"type": "Person", "id": p.id} for p in people],
+    ).save()
+
+    rows = run(
+        db_driver,
+        "MATCH (:Statement)-[:concerns_people]->(p:Person) RETURN p.id AS id",
+    )
+    assert {r["id"] for r in rows} == {str(p.id) for p in people}
+    assert (
+        run(db_driver, "MATCH ()-[r:concerns_people_reverse]->() RETURN count(r) AS c")[
+            0
+        ]["c"]
+        == 5
+    )
+
+
+@no_type_check
+async def test_empty_and_missing_relations_write_no_edges(db_driver, clear_database):
+    class Person(Entity):
+        pass
+
+    class Statement(Document):
+        everyone: list[Person]
+        optional_person: Person | None = None
+
+    initialise()
+
+    await Statement.Create(label="A Statement", everyone=[]).save()
+
+    assert count_nodes(db_driver, "Statement") == 1
+    assert (
+        run(
+            db_driver,
+            "MATCH ()-[r]->() WHERE type(r) IN ['everyone', 'optional_person'] RETURN r",
+        )
+        == []
+    )
+
+
+@no_type_check
+async def test_relation_to_union_of_entity_types(db_driver, clear_database):
+    class Person(Entity):
+        pass
+
+    class Place(Entity):
+        pass
+
+    class Statement(Document):
+        concerns: list[Person | Place]
+
+    initialise()
+
+    person = await Person.Create(label="A Person").save()
+    place = await Place.Create(label="A Place").save()
+
+    await Statement.Create(
+        label="A Statement",
+        concerns=[
+            {"type": "Person", "id": person.id},
+            {"type": "Place", "id": place.id},
+        ],
+    ).save()
+
+    rows = run(db_driver, "MATCH (:Statement)-[:concerns]->(n) RETURN n.type AS t")
+    assert sorted(r["t"] for r in rows) == ["Person", "Place"]
+
+
+@no_type_check
+async def test_relation_to_subclass_of_allowed_entity_type(db_driver, clear_database):
+    class Person(Entity):
+        pass
+
+    class Employee(Person):
+        pass
+
+    class Statement(Document):
+        concerns_person: Person
+
+    initialise()
+
+    employee = await Employee.Create(label="An Employee").save()
+    await Statement.Create(
+        label="A Statement", concerns_person={"type": "Employee", "id": employee.id}
+    ).save()
+
+    rows = run(
+        db_driver,
+        "MATCH (:Statement)-[:concerns_person]->(e:Employee) RETURN e.id AS id",
+    )
+    assert [r["id"] for r in rows] == [str(employee.id)]
+
+
+@no_type_check
+async def test_relation_to_trait_accepts_every_implementer(db_driver, clear_database):
+    class Agent(Trait):
+        pass
+
+    class Person(Entity, Agent):
+        pass
+
+    class Group(Entity, Agent):
+        pass
+
+    class Statement(Document):
+        carried_out_by: list[Agent]
+
+    initialise()
+
+    person = await Person.Create(label="A Person").save()
+    group = await Group.Create(label="A Group").save()
+
+    await Statement.Create(
+        label="A Statement",
+        carried_out_by=[
+            {"type": "Person", "id": person.id},
+            {"type": "Group", "id": group.id},
+        ],
+    ).save()
+
+    rows = run(
+        db_driver, "MATCH (:Statement)-[:carried_out_by]->(n) RETURN n.type AS t"
+    )
+    assert sorted(r["t"] for r in rows) == ["Group", "Person"]
+
+
+@no_type_check
+async def test_trait_labels_are_added_to_nodes(db_driver, clear_database):
+    class Agent(Trait):
+        pass
+
+    class Person(Entity, Agent):
+        pass
+
+    initialise()
+
+    person = await Person.Create(label="A Person").save()
+
+    assert "Agent" in labels_of(db_driver, person.id)
+
+
+@no_type_check
+async def test_relation_to_entity_of_disallowed_type_writes_nothing(
+    db_driver, clear_database
+):
+    class Person(Entity):
+        pass
+
+    class Place(Entity):
+        pass
+
+    class Statement(Document):
+        concerns_person: Person
+
+    initialise()
+
+    place = await Place.Create(label="A Place").save()
+
+    await Statement.Create(
+        label="A Statement", concerns_person={"type": "Person", "id": place.id}
+    ).save()
+
+    assert count_nodes(db_driver, "Statement") == 0
+
+
+@no_type_check
+async def test_relation_to_missing_entity_writes_nothing(db_driver, clear_database):
+    class Person(Entity):
+        pass
+
+    class Statement(Document):
+        concerns_person: Person
+
+    initialise()
+
+    await Statement.Create(
+        label="A Statement", concerns_person={"type": "Person", "id": uuid7()}
+    ).save()
+
+    assert count_nodes(db_driver, "Statement") == 0
+    assert count_nodes(db_driver, "PGCreation") == 0
+
+
+@no_type_check
+async def test_one_missing_entity_among_many_writes_nothing(db_driver, clear_database):
+    """A write is all-or-nothing: no partial documents"""
+
+    class Person(Entity):
+        pass
+
+    class Statement(Document):
+        concerns_people: list[Person]
+
+    initialise()
+
+    person = await Person.Create(label="Exists").save()
+
+    await Statement.Create(
+        label="A Statement",
+        concerns_people=[
+            {"type": "Person", "id": person.id},
+            {"type": "Person", "id": uuid7()},
+        ],
+    ).save()
+
+    assert count_nodes(db_driver, "Statement") == 0
+    assert (
+        run(db_driver, "MATCH ()-[r:concerns_people]->() RETURN count(r) AS c")[0]["c"]
+        == 0
+    )
+
+
+@no_type_check
+async def test_same_entity_in_two_fields(db_driver, clear_database):
+    class Person(Entity):
+        pass
+
+    class Order(Document):
+        order_given_by: Person
+        order_received_by: Person
+
+    initialise()
+
+    person = await Person.Create(label="Self-orderer").save()
+    reference = {"type": "Person", "id": person.id}
+    await Order.Create(
+        label="An Order", order_given_by=reference, order_received_by=reference
+    ).save()
+
+    for edge in ("order_given_by", "order_received_by"):
+        rows = run(
+            db_driver, f"MATCH (:Order)-[r:{edge}]->(:Person) RETURN count(r) AS c"
+        )
+        assert rows[0]["c"] == 1
+
+
+@no_type_check
+@pytest.mark.xfail(
+    strict=True,
+    reason="Entities are matched on `id` only, so a URL used to refer to an "
+    "existing entity can never be resolved",
+)
+async def test_relation_to_existing_entity_by_url(db_driver, clear_database):
+    class Person(Entity):
+        _meta = Entity.Meta(create_with_id=True)
+
+    class Statement(Document):
+        concerns_person: Person
+
+    initialise()
+
+    url = AnyHttpUrl("http://example.com/people/john-smith")
+    await Person.Create(id=url, create_new=True, label="JS").save()
+
+    await Statement.Create(
+        label="A Statement", concerns_person={"type": "Person", "id": url}
+    ).save()
+
+    assert count_nodes(db_driver, "Statement") == 1
+
+
+# ---------------------------------------------------------------------------
+# Edge properties
+# ---------------------------------------------------------------------------
+
+
+@no_type_check
+async def test_edge_properties_are_written_to_both_edges(db_driver, clear_database):
+    class Certainty(EdgeModel):
+        number: int
+        note: str
+        weight: float
+        tags: list[str]
+        when: datetime.date
+
+    class Person(Entity):
+        pass
+
+    class Statement(Document):
+        concerns_person: ViaEdge[Person, Certainty]
+
+    initialise()
+
+    person = await Person.Create(label="John Smith").save()
+    await Statement.Create(
+        label="A Statement",
+        concerns_person={
+            "type": "Person",
+            "id": person.id,
+            "edge_properties": {
+                "number": 3,
+                "note": "fairly sure",
+                "weight": 0.5,
+                "tags": ["a", "b"],
+                "when": "2020-01-02",
+            },
+        },
+    ).save()
+
+    rows = run(
+        db_driver,
+        """
+        MATCH (:Statement)-[f:concerns_person]->(:Person)
+        MATCH (:Statement)<-[r:concerns_person_reverse]-(:Person)
+        RETURN properties(f) AS f, properties(r) AS r
+        """,
+    )
+    assert len(rows) == 1
+    forward, reverse = rows[0]["f"], rows[0]["r"]
+    for props in (forward, reverse):
+        assert props["number"] == 3
+        assert props["note"] == "fairly sure"
+        assert props["weight"] == 0.5
+        assert props["tags"] == ["a", "b"]
+        assert native(props["when"]) == datetime.date(2020, 1, 2)
+    assert "reverse" not in forward
+
+
+@no_type_check
+@pytest.mark.xfail(
+    strict=True,
+    reason="`SET edge = $edge_properties` replaces all properties, which wipes "
+    "{reverse: true} from the reverse edge whenever edge properties are present",
+)
+async def test_reverse_edge_keeps_reverse_flag_when_it_has_edge_properties(
+    db_driver, clear_database
+):
+    class Certainty(EdgeModel):
+        number: int
+
+    class Person(Entity):
+        pass
+
+    class Statement(Document):
+        concerns_person: ViaEdge[Person, Certainty]
+
+    initialise()
+
+    person = await Person.Create(label="John Smith").save()
+    await Statement.Create(
+        label="A Statement",
+        concerns_person={
+            "type": "Person",
+            "id": person.id,
+            "edge_properties": {"number": 1},
+        },
+    ).save()
+
+    rows = run(
+        db_driver,
+        "MATCH (:Statement)<-[r:concerns_person_reverse]-(:Person) RETURN properties(r) AS r",
+    )
+    assert rows[0]["r"]["reverse"] is True
+    assert rows[0]["r"]["number"] == 1
+
+
+@no_type_check
+async def test_edge_properties_on_each_item_of_a_list_are_separate(
+    db_driver, clear_database
+):
+    class Certainty(EdgeModel):
+        number: int
+
+    class Person(Entity):
+        pass
+
+    class Statement(Document):
+        concerns: list[ViaEdge[Person, Certainty]]
+
+    initialise()
+
+    first = await Person.Create(label="First").save()
+    second = await Person.Create(label="Second").save()
+
+    await Statement.Create(
+        label="A Statement",
+        concerns=[
+            {"type": "Person", "id": first.id, "edge_properties": {"number": 1}},
+            {"type": "Person", "id": second.id, "edge_properties": {"number": 2}},
+        ],
+    ).save()
+
+    rows = run(
+        db_driver,
+        "MATCH (:Statement)-[r:concerns]->(p:Person) RETURN p.id AS id, r.number AS n",
+    )
+    assert {r["id"]: r["n"] for r in rows} == {str(first.id): 1, str(second.id): 2}
+
+
+@no_type_check
+async def test_edge_properties_on_edge_to_nested_document(db_driver, clear_database):
+    class Certainty(EdgeModel):
+        number: int
+
+    class Action(Document):
+        pass
+
+    class Statement(Document):
+        action: ViaEdge[Action, Certainty]
+
+    initialise()
+
+    await Statement.Create(
+        label="A Statement",
+        action={
+            "type": "Action",
+            "label": "An Action",
+            "edge_properties": {"number": 7},
+        },
+    ).save()
+
+    rows = run(
+        db_driver,
+        """
+        MATCH (:Statement)-[f:action]->(a:Action)
+        MATCH (:Statement)<-[r:action_reverse]-(a)
+        RETURN f.number AS f, r.number AS r
+        """,
+    )
+    assert rows == [{"f": 7, "r": 7}]
+
+
+@no_type_check
+async def test_edge_properties_on_nested_document_inside_a_list(
+    db_driver, clear_database
+):
+    class Certainty(EdgeModel):
+        number: int
+
+    class Person(Entity):
+        pass
+
+    class Action(Document):
+        carried_out_by: ViaEdge[Person, Certainty]
+
+    class Statement(Document):
+        actions: list[Action]
+
+    initialise()
+
+    person = await Person.Create(label="John Smith").save()
+    await Statement.Create(
+        label="A Statement",
+        actions=[
+            {
+                "type": "Action",
+                "label": f"Action {i}",
+                "carried_out_by": {
+                    "type": "Person",
+                    "id": person.id,
+                    "edge_properties": {"number": i},
+                },
+            }
+            for i in range(3)
+        ],
+    ).save()
+
+    rows = run(
+        db_driver,
+        "MATCH (a:Action)-[r:carried_out_by]->(:Person) RETURN a.label AS l, r.number AS n",
+    )
+    assert {r["l"]: r["n"] for r in rows} == {
+        "Action 0": 0,
+        "Action 1": 1,
+        "Action 2": 2,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Nested documents
+# ---------------------------------------------------------------------------
+
+
+@no_type_check
+async def test_nested_document_node(db_driver, clear_database):
+    class Action(Document):
+        detail: str
+
+    class Statement(Document):
+        action: Action
+
+    initialise()
+
+    statement = await Statement.Create(
+        label="A Statement",
+        action={"type": "Action", "label": "An Action", "detail": "details"},
+    ).save()
+
+    node = run(db_driver, "MATCH (:Statement)-[:action]->(a:Action) RETURN a")[0]["a"]
+    assert node["label"] == "An Action"
+    assert node["detail"] == "details"
+    assert node["head_node_id"] == str(statement.id)
+    assert node["head_node_type"] == "Statement"
+    assert node["meta"]["created_by"] == "pangloss_default_user"
+    assert node["meta"]["updated_by"] == "pangloss_default_user"
+    assert node["meta"]["semantic_spaces"] == []
+    assert node["meta"]["created_when"] is not None
+
+    assert labels_of(db_driver, node["id"]) == {
+        "Action",
+        "Document",
+        "PGIndexableNode",
+    }
+    assert (
+        run(
+            db_driver,
+            "MATCH (:Statement)<-[r:action_reverse {reverse: true}]-(:Action) RETURN count(r) AS c",
+        )[0]["c"]
+        == 1
+    )
+
+
+@no_type_check
+async def test_deeply_nested_documents_all_point_at_the_head_node(
+    db_driver, clear_database
+):
+    class Leaf(Document):
+        pass
+
+    class Branch(Document):
+        leaf: Leaf
+
+    class Trunk(Document):
+        branch: Branch
+
+    class Root(Document):
+        trunk: Trunk
+
+    initialise()
+
+    root = await Root.Create(
+        label="Root",
+        trunk={
+            "type": "Trunk",
+            "label": "Trunk",
+            "branch": {
+                "type": "Branch",
+                "label": "Branch",
+                "leaf": {"type": "Leaf", "label": "Leaf"},
+            },
+        },
+    ).save()
+
+    rows = run(
+        db_driver,
+        """
+        MATCH (:Root)-[:trunk]->(:Trunk)-[:branch]->(:Branch)-[:leaf]->(l:Leaf)
+        RETURN l.head_node_id AS head_id, l.head_node_type AS head_type
+        """,
+    )
+    assert rows == [{"head_id": str(root.id), "head_type": "Root"}]
+
+    head_nodes = run(db_driver, "MATCH (n:HeadNode) RETURN n.id AS id")
+    assert [r["id"] for r in head_nodes] == [str(root.id)]
+
+    others = run(
+        db_driver,
+        "MATCH (n:PGIndexableNode) WHERE n.id <> $id RETURN DISTINCT n.head_node_id AS h",
+        id=str(root.id),
+    )
+    assert others == [{"h": str(root.id)}]
+
+
+@no_type_check
+async def test_list_of_nested_documents(db_driver, clear_database):
+    class Action(Document):
+        pass
+
+    class Statement(Document):
+        actions: list[Action]
+
+    initialise()
+
+    await Statement.Create(
+        label="A Statement",
+        actions=[{"type": "Action", "label": f"Action {i}"} for i in range(4)],
+    ).save()
+
+    rows = run(
+        db_driver, "MATCH (:Statement)-[:actions]->(a:Action) RETURN a.label AS l"
+    )
+    assert sorted(r["l"] for r in rows) == [f"Action {i}" for i in range(4)]
+    ids = run(db_driver, "MATCH (a:Action) RETURN DISTINCT a.id AS id")
+    assert len(ids) == 4
+
+
+@no_type_check
+async def test_nested_document_of_a_subclass_has_parent_labels(
+    db_driver, clear_database
+):
+    class Statement(Document):
+        _meta = Document.Meta(abstract=True)
+
+    class Action(Statement):
+        pass
+
+    class Order(Statement):
+        pass
+
+    class Factoid(Document):
+        statements: list[Statement]
+
+    initialise()
+
+    await Factoid.Create(
+        label="A Factoid",
+        statements=[
+            {"type": "Action", "label": "An Action"},
+            {"type": "Order", "label": "An Order"},
+        ],
+    ).save()
+
+    rows = run(
+        db_driver,
+        "MATCH (:Factoid)-[:statements]->(s:Statement) RETURN s.type AS t, labels(s) AS l",
+    )
+    assert {r["t"] for r in rows} == {"Action", "Order"}
+    for row in rows:
+        assert {row["t"], "Statement", "Document", "PGIndexableNode"} <= set(row["l"])
+
+
+@no_type_check
+async def test_nested_document_with_relation_to_existing_entity(
+    db_driver, clear_database
+):
+    class Person(Entity):
+        pass
+
+    class Action(Document):
+        carried_out_by: Person
+
+    class Statement(Document):
+        action: Action
+
+    initialise()
+
+    person = await Person.Create(label="John Smith").save()
+    await Statement.Create(
+        label="A Statement",
+        action={
+            "type": "Action",
+            "label": "An Action",
+            "carried_out_by": {"type": "Person", "id": person.id},
+        },
+    ).save()
+
+    rows = run(
+        db_driver,
+        """
+        MATCH (:Statement)-[:action]->(a:Action)-[:carried_out_by]->(p:Person)
+        MATCH (a)<-[:carried_out_by_reverse]-(p)
+        RETURN p.id AS id
+        """,
+    )
+    assert [r["id"] for r in rows] == [str(person.id)]
+
+
+@no_type_check
+async def test_missing_entity_in_nested_document_writes_nothing(
+    db_driver, clear_database
+):
+    class Person(Entity):
+        pass
+
+    class Action(Document):
+        carried_out_by: Person
+
+    class Statement(Document):
+        action: Action
+
+    initialise()
+
+    await Statement.Create(
+        label="A Statement",
+        action={
+            "type": "Action",
+            "label": "An Action",
+            "carried_out_by": {"type": "Person", "id": uuid7()},
+        },
+    ).save()
+
+    assert count_nodes(db_driver, "Statement") == 0
+    assert count_nodes(db_driver, "Action") == 0
+
+
+@no_type_check
+async def test_relation_to_union_of_documents_and_entities(db_driver, clear_database):
+    class Person(Entity):
+        pass
+
+    class Action(Document):
+        pass
+
+    class Statement(Document):
+        subjects: list[Person | Action]
+
+    initialise()
+
+    person = await Person.Create(label="John Smith").save()
+    await Statement.Create(
+        label="A Statement",
+        subjects=[
+            {"type": "Person", "id": person.id},
+            {"type": "Action", "label": "An Action"},
+        ],
+    ).save()
+
+    rows = run(db_driver, "MATCH (:Statement)-[:subjects]->(n) RETURN n.type AS t")
+    assert sorted(r["t"] for r in rows) == ["Action", "Person"]
+
+
+@no_type_check
+async def test_nested_document_with_inline_created_entity(db_driver, clear_database):
+    class Person(Entity):
+        _meta = Entity.Meta(create_inline=True, create_with_id=True)
+
+    class Action(Document):
+        carried_out_by: Person
+
+    class Statement(Document):
+        action: Action
+
+    initialise()
+
+    person_id = uuid7()
+    statement = await Statement.Create(
+        label="A Statement",
+        action={
+            "type": "Action",
+            "label": "An Action",
+            "carried_out_by": {
+                "type": "Person",
+                "id": person_id,
+                "label": "John Smith",
+                "create_new": True,
+            },
+        },
+    ).save()
+
+    person = run(db_driver, "MATCH (p:Person) RETURN p")[0]["p"]
+    assert person["id"] == str(person_id)
+    assert person["head_node_id"] == str(statement.id)
+    assert "HeadNode" not in labels_of(db_driver, person_id)
+
+
+@no_type_check
+async def test_inline_entity_with_existing_id_is_not_duplicated(
+    db_driver, clear_database
+):
+    class Person(Entity):
+        _meta = Entity.Meta(create_inline=True, create_with_id=True)
+
+    class Statement(Document):
+        concerns_person: Person
+
+    initialise()
+
+    person_id = uuid7()
+    await Person.Create(id=person_id, create_new=True, label="Original").save()
+
+    await Statement.Create(
+        label="A Statement",
+        concerns_person={
+            "type": "Person",
+            "id": person_id,
+            "label": "Changed",
+            "create_new": True,
+        },
+    ).save()
+
+    people = run(db_driver, "MATCH (p:Person) RETURN p.label AS label")
+    assert people == [{"label": "Original"}]
+    assert (
+        run(
+            db_driver,
+            "MATCH (:Statement)-[r:concerns_person]->(:Person) RETURN count(r) AS c",
+        )[0]["c"]
+        == 1
+    )
+
+
+@no_type_check
+async def test_nested_documents_with_subclassed_edges(db_driver, clear_database):
+    class Note(Document):
+        pass
+
+    class Base(Document):
+        has_note: Note
+
+    class Derived(Base):
+        own_note: Annotated[
+            Note,
+            RelationConfig(
+                subclasses_parent_fields=[
+                    FieldSubclassing(field_name="has_note", field_on_model=Base)
+                ]
+            ),
+        ]
+
+    initialise()
+
+    await Derived.Create(
+        label="Derived", own_note={"type": "Note", "label": "A Note"}
+    ).save()
+
+    rows = run(
+        db_driver,
+        """
+        MATCH (d:Derived)-[:own_note]->(n:Note)
+        MATCH (d)-[:has_note]->(n)
+        MATCH (d)<-[:own_note_reverse]-(n)
+        MATCH (d)<-[:has_note_reverse]-(n)
+        RETURN count(n) AS c
+        """,
+    )
+    assert rows == [{"c": 1}]
+    assert count_nodes(db_driver, "Note") == 1
+
+
+@no_type_check
+async def test_subclassed_edges_to_existing_entity_carry_edge_properties(
+    db_driver, clear_database
+):
+    class Certainty(EdgeModel):
+        number: int
+
+    class Person(Entity):
+        pass
+
+    class Statement(Document):
+        concerns_person: ViaEdge[Person, Certainty]
+
+    class Action(Statement):
+        carried_out_by: Annotated[
+            ViaEdge[Person, Certainty],
+            RelationConfig(
+                subclasses_parent_fields=[
+                    FieldSubclassing(
+                        field_name="concerns_person", field_on_model=Statement
+                    )
+                ]
+            ),
+        ]
+
+    initialise()
+
+    person = await Person.Create(label="John Smith").save()
+    await Action.Create(
+        label="An Action",
+        carried_out_by={
+            "type": "Person",
+            "id": person.id,
+            "edge_properties": {"number": 9},
+        },
+    ).save()
+
+    for edge in ("carried_out_by", "concerns_person"):
+        rows = run(
+            db_driver, f"MATCH (:Action)-[r:{edge}]->(:Person) RETURN r.number AS n"
+        )
+        assert rows == [{"n": 9}], edge
+
+
+# ---------------------------------------------------------------------------
+# Semantic spaces
+# ---------------------------------------------------------------------------
+
+
+@no_type_check
+async def test_semantic_space_node_and_contents(db_driver, clear_database):
+    class Negative[T](SemanticSpace[T]):
+        pass
+
+    class Statement(Document):
+        pass
+
+    class Factoid(Document):
+        statements: list[Statement | Negative[Statement]]
+
+    initialise()
+
+    factoid = await Factoid.Create(
+        label="A Factoid",
+        statements=[
+            {"type": "Statement", "label": "Plain"},
+            {
+                "type": "Negative",
+                "contents": [{"type": "Statement", "label": "Negated"}],
+            },
+        ],
+    ).save()
+
+    space = run(db_driver, "MATCH (n:Negative) RETURN n")[0]["n"]
+    assert labels_of(db_driver, space["id"]) == {
+        "Negative",
+        "SemanticSpace",
+        "PGIndexableNode",
+    }
+    assert space["head_node_id"] == str(factoid.id)
+
+    rows = run(
+        db_driver,
+        """
+        MATCH (f:Factoid)-[:statements]->(n:Negative)-[:contents]->(s:Statement)
+        MATCH (n)<-[:contents_reverse]-(s)
+        RETURN s.label AS label
+        """,
+    )
+    assert rows == [{"label": "Negated"}]
+
+
+@no_type_check
+async def test_semantic_space_is_recorded_on_contents_only(db_driver, clear_database):
+    class Negative[T](SemanticSpace[T]):
+        pass
+
+    class Statement(Document):
+        pass
+
+    class Factoid(Document):
+        statements: list[Statement | Negative[Statement]]
+
+    initialise()
+
+    await Factoid.Create(
+        label="A Factoid",
+        statements=[
+            {"type": "Statement", "label": "Plain"},
+            {
+                "type": "Negative",
+                "contents": [{"type": "Statement", "label": "Negated"}],
+            },
+        ],
+    ).save()
+
+    metas = {
+        r["label"]: r["meta"]
+        for r in run(
+            db_driver, "MATCH (s:Statement) RETURN s.label AS label, s.meta AS meta"
+        )
+    }
+    negated_id = run(
+        db_driver, "MATCH (s:Statement {label: 'Negated'}) RETURN s.id AS id"
+    )[0]["id"]
+
+    assert metas["Plain"]["semantic_spaces"] == []
+    assert metas["Negated"]["semantic_spaces"] == ["Negative"]
+    assert metas["Negated"]["context_labels"] == [
+        {"type": "Negative", "contents": [{"type": "Statement", "id": negated_id}]}
+    ]
+
+
+@no_type_check
+async def test_semantic_space_applies_to_everything_beneath_it(
+    db_driver, clear_database
+):
+    class Negative[T](SemanticSpace[T]):
+        pass
+
+    class Action(Document):
+        pass
+
+    class Order(Document):
+        thing_ordered: list[Action]
+
+    class Factoid(Document):
+        statements: list[Order | Negative[Order]]
+
+    initialise()
+
+    await Factoid.Create(
+        label="A Factoid",
+        statements=[
+            {
+                "type": "Negative",
+                "contents": [
+                    {
+                        "type": "Order",
+                        "label": "An Order",
+                        "thing_ordered": [{"type": "Action", "label": "An Action"}],
+                    }
+                ],
+            }
+        ],
+    ).save()
+
+    for label in ("Order", "Action"):
+        meta = run(db_driver, f"MATCH (n:{label}) RETURN n.meta AS meta")[0]["meta"]
+        assert meta["semantic_spaces"] == ["Negative"], label
+
+
+@no_type_check
+async def test_sibling_semantic_spaces_do_not_share_state(db_driver, clear_database):
+    class Negative[T](SemanticSpace[T]):
+        pass
+
+    class Hypothetical[T](SemanticSpace[T]):
+        pass
+
+    class Statement(Document):
+        pass
+
+    class Factoid(Document):
+        statements: list[Statement | Negative[Statement] | Hypothetical[Statement]]
+
+    initialise()
+
+    await Factoid.Create(
+        label="A Factoid",
+        statements=[
+            {"type": "Negative", "contents": [{"type": "Statement", "label": "N"}]},
+            {"type": "Hypothetical", "contents": [{"type": "Statement", "label": "H"}]},
+            {"type": "Statement", "label": "P"},
+        ],
+    ).save()
+
+    spaces = {
+        r["label"]: r["meta"]["semantic_spaces"]
+        for r in run(
+            db_driver, "MATCH (s:Statement) RETURN s.label AS label, s.meta AS meta"
+        )
+    }
+    assert spaces == {"N": ["Negative"], "H": ["Hypothetical"], "P": []}
+
+
+@no_type_check
+async def test_nested_semantic_spaces(db_driver, clear_database):
+    class Negative[T](SemanticSpace[T]):
+        pass
+
+    class Hypothetical[T](SemanticSpace[T]):
+        pass
+
+    class Statement(Document):
+        pass
+
+    class Factoid(Document):
+        statements: list[Hypothetical[Negative[Statement]]]
+
+    initialise()
+
+    await Factoid.Create(
+        label="A Factoid",
+        statements=[
+            {
+                "type": "Hypothetical",
+                "contents": [
+                    {
+                        "type": "Negative",
+                        "contents": [{"type": "Statement", "label": "Inner"}],
+                    }
+                ],
+            }
+        ],
+    ).save()
+
+    meta = run(db_driver, "MATCH (s:Statement) RETURN s.meta AS meta")[0]["meta"]
+    assert meta["semantic_spaces"] == ["Hypothetical", "Negative"]
+    assert [c["type"] for c in meta["context_labels"]] == ["Hypothetical", "Negative"]
+
+
+@no_type_check
+async def test_semantic_space_with_entity_contents_and_edges(db_driver, clear_database):
+    class Negative[T](SemanticSpace[T]):
+        pass
+
+    class Person(Entity):
+        pass
+
+    class Action(Document):
+        carried_out_by: Person
+
+    class Factoid(Document):
+        statements: list[Negative[Action]]
+
+    initialise()
+
+    person = await Person.Create(label="John Smith").save()
+    await Factoid.Create(
+        label="A Factoid",
+        statements=[
+            {
+                "type": "Negative",
+                "contents": [
+                    {
+                        "type": "Action",
+                        "label": "An Action",
+                        "carried_out_by": {"type": "Person", "id": person.id},
+                    }
+                ],
+            }
+        ],
+    ).save()
+
+    rows = run(
+        db_driver,
+        "MATCH (:Factoid)-[:statements]->(:Negative)-[:contents]->(:Action)-[:carried_out_by]->(p:Person) RETURN p.id AS id",
+    )
+    assert rows == [{"id": str(person.id)}]
+    # An entity that is merely referenced is not given context
+    assert "meta" not in run(db_driver, "MATCH (p:Person) RETURN p")[0]["p"]
+
+
+# ---------------------------------------------------------------------------
+# Conjunctions, reified relations, embedded objects, annotated values
+# ---------------------------------------------------------------------------
+
+
+@no_type_check
+async def test_conjunction(db_driver, clear_database):
+    class Causes[TCause, TResult](Conjunction):
+        cause: TCause
+        result: TResult
+
+    class Action(Document):
+        pass
+
+    class Factoid(Document):
+        has_statements: Action | Causes[Action, Action]
+
+    initialise()
+
+    factoid = await Factoid.Create(
+        label="A Factoid",
+        has_statements={
+            "type": "Causes",
+            "cause": {"type": "Action", "label": "The cause"},
+            "result": {"type": "Action", "label": "The result"},
+        },
+    ).save()
+
+    assert labels_of(
+        db_driver,
+        run(db_driver, "MATCH (c:Causes) RETURN c.id AS id")[0]["id"],
+    ) == {"Causes", "Conjunction", "PGIndexableNode"}
+
+    rows = run(
+        db_driver,
+        """
+        MATCH (:Factoid)-[:has_statements]->(c:Causes)
+        MATCH (c)-[:cause]->(cause:Action)
+        MATCH (c)-[:result]->(result:Action)
+        RETURN cause.label AS cause, result.label AS result,
+               c.head_node_id AS head, cause.head_node_id AS cause_head
+        """,
+    )
+    assert rows == [
+        {
+            "cause": "The cause",
+            "result": "The result",
+            "head": str(factoid.id),
+            "cause_head": str(factoid.id),
+        }
+    ]
+
+
+@no_type_check
+@pytest.mark.xfail(
+    strict=True,
+    reason="Factoid.get does not return the conjunction field (`has_statements` "
+    "missing from the HeadView input)",
+)
+async def test_conjunction_read_back(db_driver, clear_database):
+    class Causes[TCause, TResult](Conjunction):
+        cause: TCause
+        result: TResult
+
+    class Action(Document):
+        pass
+
+    class Factoid(Document):
+        has_statements: Action | Causes[Action, Action]
+
+    initialise()
+
+    saved = await Factoid.Create(
+        label="A Factoid",
+        has_statements={
+            "type": "Causes",
+            "cause": {"type": "Action", "label": "The cause"},
+            "result": {"type": "Action", "label": "The result"},
+        },
+    ).save()
+
+    read = await Factoid.get(id=saved.id)
+    assert read.has_statements.type == "Causes"
+    assert read.has_statements.cause.label == "The cause"
+    assert read.has_statements.result.label == "The result"
+
+
+@no_type_check
+@pytest.mark.xfail(
+    strict=True,
+    reason="The allowed types for a reified relation's `target` come out empty, "
+    "so the MATCH of the target entity can never succeed and nothing is written",
+)
+async def test_reified_relation(db_driver, clear_database):
+    class Person(Entity):
+        pass
+
+    class Proxy[T](ReifiedRelation[T]):
+        certainty: int
+
+    class Statement(Document):
+        identified: Proxy[Person]
+
+    initialise()
+
+    person = await Person.Create(label="John Smith").save()
+    statement = await Statement.Create(
+        label="A Statement",
+        identified={
+            "type": "Proxy",
+            "certainty": 2,
+            "target": [{"type": "Person", "id": person.id}],
+        },
+    ).save()
+
+    rows = run(
+        db_driver,
+        """
+        MATCH (s:Statement)-[:identified]->(r:Proxy)-[:target]->(p:Person)
+        RETURN r.certainty AS certainty, r.head_node_id AS head, p.id AS person
+        """,
+    )
+    assert rows == [
+        {"certainty": 2, "head": str(statement.id), "person": str(person.id)}
+    ]
+
+
+@no_type_check
+async def test_reified_relation_node_labels_and_properties(db_driver, clear_database):
+    """Reified relations with a *nested document* target do get written"""
+
+    class Place(Document):
+        pass
+
+    class Located[T](ReifiedRelation[T]):
+        certainty: int
+
+    class Statement(Document):
+        located: Located[Place]
+
+    initialise()
+
+    await Statement.Create(
+        label="A Statement",
+        located={
+            "type": "Located",
+            "certainty": 2,
+            "target": [{"type": "Place", "label": "A Place"}],
+        },
+    ).save()
+
+    rows = run(
+        db_driver,
+        """
+        MATCH (:Statement)-[:located]->(r:Located)-[:target]->(p:Place)
+        RETURN r.certainty AS certainty, labels(r) AS labels, p.label AS place
+        """,
+    )
+    assert len(rows) == 1
+    assert rows[0]["certainty"] == 2
+    assert {"Located", "ReifiedRelation", "PGIndexableNode"} <= set(rows[0]["labels"])
+    assert rows[0]["place"] == "A Place"
+
+
+@no_type_check
+async def test_reified_relation_document(db_driver, clear_database):
+    class Place(Document):
+        pass
+
+    class Residence[T](ReifiedRelationDocument[T]):
+        since: datetime.date
+
+    class Statement(Document):
+        residence: Residence[Place]
+
+    initialise()
+
+    await Statement.Create(
+        label="A Statement",
+        residence={
+            "type": "Residence",
+            "since": "2000-01-01",
+            "target": [{"type": "Place", "label": "A Place"}],
+        },
+    ).save()
+
+    rows = run(
+        db_driver,
+        """
+        MATCH (:Statement)-[:residence]->(r:Residence)-[:target]->(:Place)
+        RETURN r.since AS since, labels(r) AS labels
+        """,
+    )
+    assert len(rows) == 1
+    assert native(rows[0]["since"]) == datetime.date(2000, 1, 1)
+    assert "ReifiedRelationDocument" in rows[0]["labels"]
+
+
+@no_type_check
+@pytest.mark.xfail(
+    strict=True,
+    reason="Embedded fields are not handled by build_attached_nodes, so embedded "
+    "objects are dropped on write",
+)
+async def test_embedded_object(db_driver, clear_database):
+    class Date(Embedded):
+        when: datetime.date
+
+    class Statement(Document):
+        date: Date
+
+    initialise()
+
+    statement = await Statement.Create(
+        label="A Statement", date={"type": "Date", "when": "2020-01-02"}
+    ).save()
+
+    rows = run(
+        db_driver,
+        """
+        MATCH (s:Statement)-[:date]->(d:Date)
+        RETURN d.when AS when, d.head_node_id AS head, labels(d) AS labels
+        """,
+    )
+    assert len(rows) == 1
+    assert native(rows[0]["when"]) == datetime.date(2020, 1, 2)
+    assert rows[0]["head"] == str(statement.id)
+    assert "Embedded" in rows[0]["labels"]
+
+
+@no_type_check
+@pytest.mark.xfail(
+    strict=True,
+    reason="Annotated value fields are not handled by build_attached_nodes, so "
+    "they are dropped on write",
+)
+async def test_annotated_value(db_driver, clear_database):
+    class WithCertainty[T](AnnotatedValue[T]):
+        certainty: int
+
+    class Naming(Document):
+        name: WithCertainty[str]
+
+    initialise()
+
+    await Naming.Create(label="A Naming", name={"value": "John", "certainty": 2}).save()
+
+    rows = run(
+        db_driver,
+        "MATCH (:Naming)-[:name]->(n) RETURN n.value AS value, n.certainty AS certainty",
+    )
+    assert rows == [{"value": "John", "certainty": 2}]
+
+
+# ---------------------------------------------------------------------------
+# Binding and fulfilment
+# ---------------------------------------------------------------------------
+
+
+@no_type_check
+async def test_bound_field_values_are_written_on_children(db_driver, clear_database):
+    from pangloss_models.field_definitions import FieldBinding
+
+    class Action(Document):
+        action_when: datetime.date
+
+    class Statement(Document):
+        when: datetime.date
+        action: Annotated[
+            Action,
+            RelationConfig(
+                bind_to_child_field=[
+                    FieldBinding(bound_field="when", child_fields=["action_when"])
+                ]
+            ),
+        ]
+
+    initialise()
+
+    await Statement.Create(
+        label="A Statement",
+        when="2020-05-06",
+        action={"type": "Action", "label": "An Action"},
+    ).save()
+
+    node = run(db_driver, "MATCH (a:Action) RETURN a")[0]["a"]
+    assert native(node["action_when"]) == datetime.date(2020, 5, 6)
+
+
+@no_type_check
+async def test_explicit_child_value_wins_over_bound_value(db_driver, clear_database):
+    from pangloss_models.field_definitions import FieldBinding
+
+    class Action(Document):
+        action_when: datetime.date
+
+    class Statement(Document):
+        when: datetime.date
+        action: Annotated[
+            Action,
+            RelationConfig(
+                bind_to_child_field=[
+                    FieldBinding(bound_field="when", child_fields=["action_when"])
+                ]
+            ),
+        ]
+
+    initialise()
+
+    await Statement.Create(
+        label="A Statement",
+        when="2020-05-06",
+        action={"type": "Action", "label": "An Action", "action_when": "1999-01-01"},
+    ).save()
+
+    node = run(db_driver, "MATCH (a:Action) RETURN a")[0]["a"]
+    assert native(node["action_when"]) == datetime.date(1999, 1, 1)
