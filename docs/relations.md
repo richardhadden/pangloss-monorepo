@@ -6,14 +6,37 @@
 
 | Field annotation | Definition class | Accessor |
 |------------------|------------------|----------|
-| `str`, `int`, `float`, `date`, `datetime` (and `X \| None`) | `LiteralFieldDefinition` | `.literal_fields` |
-| `list[str]`, `list[int]`, ... | `ListFieldDefinition` | `.literal_fields` |
+| A [literal type](#literal-fields) (and `X \| None`) | `LiteralFieldDefinition` | `.literal_fields` |
+| `list[...]` of a literal type | `ListFieldDefinition` | `.literal_fields` |
 | Another declared class, a union, `list[...]`, a trait, a generic | `RelationFieldDefinition` | `.relation_fields` |
 | An `Embedded` class | `EmbeddedFieldDefinition` | `.embedded_fields` |
 | `AnnotatedValue[...]` | `AnnotatedValueFieldDefinition` | `.annotated_value_fields` |
 | `Annotated[T, DBField]` | marked `db_field=True` | |
 
+Any other annotation is an error: `initialise()` raises `PanglossModelError` naming the model, field and type, rather than ignoring the field. In particular, a plain `dict`, `complex`, `bytes` and `UUID` are not supported, and nor are optional relations (`Person | None`); use a `list[Person]` for a relation that may be empty.
+
 `Annotated[..., DBField]` marks a field as a database-side field: it appears in the `CreateDB` model but not in the user-facing `Create` model. The `annotated_types` validators (`Gt`, `MinLen`, ...) are carried through to the generated models.
+
+## Literal fields
+
+Literal fields are stored as properties of the node (or edge) they belong to, rather than as nodes of their own.
+
+| Type | Stored in Memgraph as | Notes |
+|------|-----------------------|-------|
+| `str`, `int`, `float`, `bool` | The same type | |
+| `date`, `datetime` | Memgraph date / datetime | |
+| `Decimal` | A string, e.g. `"1.10"` | Memgraph has no decimal type, and a float would lose precision. Strings are read back as `Decimal`, but cannot be compared numerically in Cypher |
+| `Enum` (including `IntEnum`) | The member's **value** | ⏳ To be replaced with Memgraph's native enum type, which needs creating ahead of time by a (not yet written) database setup command |
+| `TypedDict` | A map | Every value must itself be a literal type or a list of one; may be nested, and may contain `NotRequired` keys |
+| `list[...]` of any of the above | A list | |
+
+Any of these can be written `X | None`.
+
+### Optional literals
+
+An optional literal (`number: int | None`) does not have to be given: it defaults to `None` in `Create`, `CreateDB`, `Update`, `UpdateDB`, `View`, `HeadView` and `ReferenceView` (for `reference_view_extra_fields`). A `None` value is **not written** to the database, so the property is absent from the node, and reads back as `None`.
+
+Falsy values (`0`, `0.0`, `""`, `False`, `[]`) are values, and are written.
 
 ## Relation fields
 

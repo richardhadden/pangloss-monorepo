@@ -50,7 +50,7 @@ from pangloss_models.model_bases.semantic_space import (
     SemanticSpace,
     _SemanticSpaceUpdateDBBase,
 )
-from pangloss_models.utils import map_validators_to_kwargs
+from pangloss_models.utils import annotation_is_optional, map_validators_to_kwargs
 
 
 def build_id_field_on_update_db_model(model) -> None:
@@ -484,6 +484,8 @@ def add_fields_to_update_db_model(
             validation_alias=to_camel(field_name),
             **map_validators_to_kwargs(field_definition.validators),
         )
+        if annotation_is_optional(field_definition.annotated_type):
+            model.UpdateDB.model_fields[field_name].default = None
 
     # Embedded fields
     for field_name, field_definition in model._meta.fields.embedded_fields.items():

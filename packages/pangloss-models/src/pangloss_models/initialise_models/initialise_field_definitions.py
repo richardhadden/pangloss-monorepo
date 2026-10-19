@@ -744,7 +744,24 @@ def initialise_field_definitions(model: type[_DeclaredClass]):
             for md in field_info.metadata
         )
 
+        # Fields of the generic wrapper base classes (`target: list[T]`) and of their
+        # parametrisations (`Negative[Statement]`) are defined elsewhere (or on the
+        # unparametrised subclass), so are never "unsupported". Set also when one of
+        # the generic-wrapper cases below defines this field.
+        handled_as_type_variable = (
+            model.__pydantic_generic_metadata__["origin"] is not None
+            or model
+            in (
+                AnnotatedValue,
+                Conjunction,
+                ReifiedRelation,
+                ReifiedRelationDocument,
+                SemanticSpace,
+            )
+        )
+
         if issubclass(model, AnnotatedValue) and field_name == "value":
+            handled_as_type_variable = True
             model._meta.field_definitions.add_field(
                 name=field_name,
                 field_definition=LiteralTypeVarFieldDefinition(
@@ -762,6 +779,7 @@ def initialise_field_definitions(model: type[_DeclaredClass]):
             and model is not SemanticSpace
             and model.__pydantic_generic_metadata__["origin"] is None
         ):
+            handled_as_type_variable = True
             field_definition = build_relatable_field_definition(
                 field_name, field_info, model, is_db_field=is_db_field
             )
@@ -776,6 +794,7 @@ def initialise_field_definitions(model: type[_DeclaredClass]):
             and model is not Conjunction
             and model.__pydantic_generic_metadata__["origin"] is None
         ):
+            handled_as_type_variable = True
             field_definition = build_relatable_field_definition(
                 field_name, field_info, model, is_db_field=is_db_field
             )
@@ -788,6 +807,7 @@ def initialise_field_definitions(model: type[_DeclaredClass]):
             if get_origin(field_info.annotation) and isinstance(
                 get_args(field_info.annotation)[0], TypeVar
             ):
+                handled_as_type_variable = True
                 field_definition = build_relatable_field_definition(
                     field_name, field_info, model, is_db_field=is_db_field
                 )
@@ -863,5 +883,10 @@ def initialise_field_definitions(model: type[_DeclaredClass]):
                 name=field_name,
                 field_definition=field_definition,
             )
-        else:
-            pass
+        elif not handled_as_type_variable:
+            raise PanglossModelError(
+                f"Unsupported type for field {model.__name__}.{field_name}: "
+                f"{field_info.annotation!r}. Supported field types are str, int, "
+                "float, bool, Decimal, date, datetime, Enum subclasses, TypedDicts "
+                "of these, lists of these, and other Pangloss models"
+            )

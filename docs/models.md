@@ -71,7 +71,7 @@ class Person(Entity):
 
 ## Embedded
 
-Structured data without its own identity or head node, for example a date range belonging to the object that contains it. It is still stored as a separate node, linked from its container. `Embedded` classes are used as field types and get their own `Create`/`Update`/`View`/`CreateDB`/`UpdateDB` models. They never require a label.
+Structured data without its own identity or head node, for example a date range belonging to the object that contains it. It is stored as a separate node, linked from its container, and written together with it. Reading one back has not been tested. `Embedded` classes are used as field types and get their own `Create`/`Update`/`View`/`CreateDB`/`UpdateDB` models. They never require a label.
 
 ```python
 class Date(Embedded):
@@ -120,7 +120,7 @@ class Naming(Document):
     name: WithCertainty[str]
 ```
 
-🚧 Field definitions exist (`AnnotatedValueFieldDefinition`) and a creation test covers declaring one; persistence of annotated values in the Memgraph backend is not implemented.
+🚧 Declaring and writing are implemented and tested: the value is written as a node (labelled with the class name and `AnnotatedValue`) holding `value` and the extra fields, joined to its container by the field's edge pair. Reading one back has not been tested.
 
 ## ReifiedRelation
 
@@ -138,7 +138,7 @@ class Statement(Document):
 
 ## ReifiedRelationDocument
 
-Like a `ReifiedRelation`, but with the lifecycle of a document: it has a label, a `ReferenceView`, a `View` and a `HeadView`, and can be a head node. 🚧 Models are generated and tested; query support in the backend is untested.
+Like a `ReifiedRelation`, but with the lifecycle of a document: it has a label, a `ReferenceView`, a `View` and a `HeadView`, and can be a head node. 🚧 Models are generated and tested, and writing one (with a nested document as its target) is tested against Memgraph. It has no `label`: `ReifiedRelationDocument` does not require one and the generated models do not contain one.
 
 ## SemanticSpace
 

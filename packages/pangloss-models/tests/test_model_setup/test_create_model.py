@@ -1222,3 +1222,28 @@ def test_list_validators():
         Factoid.Create(label="A Factoid", numbers=[1])
 
     Factoid.Create(label="A Factoid", numbers=[2, 2, 2])
+
+
+@no_type_check
+def test_optional_literal_fields_do_not_have_to_be_given():
+    class Statement(Document):
+        number: int | None
+        when: datetime.date | None
+        required_number: int
+
+    initialise()
+
+    st = Statement.Create(label="A statement", required_number=1)
+    assert st.number is None
+    assert st.when is None
+
+    with pytest.raises(ValidationError):
+        Statement.Create(label="A statement")
+
+    # Can still be given
+    assert Statement.Create(label="A", required_number=1, number=0).number == 0
+
+    # The same goes for the database model
+    db_st = st._to_db_model()
+    assert db_st.number is None
+    assert Statement.CreateDB(label="A", required_number=1).number is None

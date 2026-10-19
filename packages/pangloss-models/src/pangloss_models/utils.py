@@ -1,5 +1,7 @@
 import typing
 from datetime import date, datetime
+from decimal import Decimal
+from enum import Enum
 from functools import cache
 from inspect import isclass
 from types import NoneType, UnionType
@@ -8,11 +10,14 @@ from typing import (
     Any,
     Generic,
     Iterable,
+    TypedDict,
     TypeIs,
     Union,
     cast,
     get_args,
     get_origin,
+    get_type_hints,
+    is_typeddict,
     overload,
 )
 
@@ -45,6 +50,8 @@ from pangloss_models.model_bases.trait import (
 )
 
 type ConcreteUnionType[T] = type[type[T] | type[T]]
+
+LITERAL_TYPES = {str, int, float, bool, Decimal, date, datetime}
 
 
 @overload
@@ -246,18 +253,39 @@ def get_direct_instantiations_of_trait(
 
 def is_literal(
     annotation: type[Any] | None | UnionType,
-) -> TypeIs[type[str | int | float | date | datetime]]:
-    """Checks whether an annotation is of a literal type"""
-    LITERAL_TYPES = {str, int, float, date, datetime}
+) -> TypeIs[
+    type[str | int | float | bool | Decimal | Enum | date | datetime | TypedDict]
+]:
+    """Checks whether an annotation is of a literal type: one stored as a property
+    of its node, rather than as a node of its own.
+
+    Literal types are `str`, `int`, `float`, `bool`, `Decimal`, `date`, `datetime`,
+    `Enum` subclasses and `TypedDict`s (whose values must themselves be literals,
+    or lists of literals)."""
     if annotation_is_optional(annotation):
         annotation = [t for t in get_args(annotation) if t is not NoneType][0]
 
-    return annotation in LITERAL_TYPES
+    if annotation in LITERAL_TYPES:
+        return True
+
+    if not isclass(annotation):
+        return False
+
+    if issubclass(annotation, Enum):
+        return True
+
+    if is_typeddict(annotation):
+        return all(
+            is_literal(value_type) or is_list_of_literal(value_type)
+            for value_type in get_type_hints(annotation).values()
+        )
+
+    return False
 
 
 def is_list_of_literal(
     annotation: type[Any] | None,
-) -> TypeIs[type[list[str | int | float | date | datetime]]]:
+) -> TypeIs[type[list[str | int | float | bool | Decimal | Enum | date | datetime | TypedDict]]]:
 
     # list[X]
     if get_origin(annotation) is not list:

@@ -13,6 +13,8 @@ For each declared class, `initialise()` creates a set of Pydantic models and att
 | `ReferenceSet` | Entity | `{type, id}` pointer used in `Create`/`Update` to refer to an existing entity (label is dropped if supplied) | ✅ |
 | `ReferenceView` | Document, Entity, ReifiedRelationDocument | `{type, id, label, ...}` summary; used in lists and nested reads | ✅ |
 
+Optional literal fields (`X | None`) default to `None` in all of these models, so they can be left out when creating and are `None` when absent from the database.
+
 ## What the base classes add
 
 - **`_CreateBase`** is the base of every `Create` model.
@@ -52,7 +54,7 @@ For each declared class, `initialise()` creates a set of Pydantic models and att
 | Exception | Raised when |
 |-----------|-------------|
 | `PanglossInitialisationError` | Registry or field-definition misuse, e.g. instantiating `ModelRegistry` |
-| `PanglossModelError` | The user's model declaration is invalid |
+| `PanglossModelError` | The user's model declaration is invalid, including a field of an [unsupported type](relations.md#field-kinds) |
 | `PanglossMetaError` | Invalid `_meta` combination (e.g. `create_inline` without `create_with_id`) |
 | `PanglossImportError` | The database module cannot be found |
 | `PanglossAwaitingInitialisation`, `PanglossInternalError`, `PanglossRuntimeError` | Defined; used for internal states |

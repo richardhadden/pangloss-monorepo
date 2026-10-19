@@ -39,6 +39,7 @@ from pangloss_models.model_bases.semantic_space import (
     _SemanticSpaceUpdateBase,
 )
 from pangloss_models.utils import (
+    annotation_is_optional,
     field_has_inherited_field_bindings,
     map_validators_to_kwargs,
 )
@@ -530,7 +531,12 @@ def add_fields_to_update_model(
             description=field_definition.description,
             **map_validators_to_kwargs(field_definition.validators),
         )
-        if has_inherited_bindings or optional:
+        # An optional literal does not have to be given
+        if (
+            has_inherited_bindings
+            or optional
+            or annotation_is_optional(field_definition.annotated_type)
+        ):
             model.model_fields[field_name].default = None
 
     # Embedded fields

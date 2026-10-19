@@ -1,6 +1,16 @@
 from datetime import date, datetime
+from decimal import Decimal
+from enum import Enum, IntEnum
 from types import NoneType, UnionType
-from typing import Annotated, Optional, TypeVar, get_args, get_origin
+from typing import (
+    Annotated,
+    NotRequired,
+    Optional,
+    TypedDict,
+    TypeVar,
+    get_args,
+    get_origin,
+)
 
 import pytest
 from annotated_types import MaxLen
@@ -45,6 +55,7 @@ from pangloss_models.model_bases.reified_relation import (
 from pangloss_models.model_bases.semantic_space import SemanticSpace
 from pangloss_models.model_bases.trait import NonHeritableTrait, Trait
 from pangloss_models.model_registry import ModelRegistry
+from pydantic import ValidationError
 from pangloss_models.utils import get_all_parent_classes
 
 
@@ -123,6 +134,205 @@ def test_field_definition_for_literal_field():
     assert string_field_def.model_field is Statement.model_fields["string"]
     assert string_field_def.validators == [MaxLen(1)]
     assert string_field_def.field_on_model is Statement
+
+
+def test_field_definition_for_bool_field():
+    """bool is a literal type (and not treated as an int)"""
+
+    class Statement(Document):
+        flag: bool
+        optional_flag: bool | None
+        flags: list[bool]
+
+    initialise()
+
+    flag_field_def = Statement._meta.fields["flag"]
+    assert isinstance(flag_field_def, LiteralFieldDefinition)
+    assert flag_field_def.annotated_type is bool
+
+    optional_flag_field_def = Statement._meta.fields["optional_flag"]
+    assert isinstance(optional_flag_field_def, LiteralFieldDefinition)
+    assert optional_flag_field_def.annotated_type == bool | NoneType
+
+    flags_field_def = Statement._meta.fields["flags"]
+    assert isinstance(flags_field_def, ListFieldDefinition)
+    assert flags_field_def.inner_type is bool
+
+    assert set(Statement._meta.fields.literal_fields) >= {
+        "flag",
+        "optional_flag",
+        "flags",
+    }
+
+
+def test_bool_field_is_in_create_and_view_models():
+    class Statement(Document):
+        flag: bool
+
+    initialise()
+
+    assert Statement.Create.model_fields["flag"].annotation is bool
+    assert Statement.CreateDB.model_fields["flag"].annotation is bool
+    assert Statement.View.model_fields["flag"].annotation is bool
+
+    assert Statement.Create(label="A", flag=False).flag is False
+
+
+def test_field_definitions_for_decimal_enum_and_typeddict():
+    class Colour(Enum):
+        RED = "red"
+        BLUE = "blue"
+
+    class Size(IntEnum):
+        SMALL = 1
+        LARGE = 2
+
+    class Dimensions(TypedDict):
+        width: int
+        height: int
+        note: NotRequired[str]
+
+    class Statement(Document):
+        price: Decimal
+        colour: Colour
+        size: Size
+        dimensions: Dimensions
+        optional_colour: Colour | None
+        prices: list[Decimal]
+        colours: list[Colour]
+        all_dimensions: list[Dimensions]
+
+    initialise()
+
+    fields = Statement._meta.fields
+    for name, annotated_type in {
+        "price": Decimal,
+        "colour": Colour,
+        "size": Size,
+        "dimensions": Dimensions,
+    }.items():
+        field_def = fields[name]
+        assert isinstance(field_def, LiteralFieldDefinition), name
+        assert field_def.annotated_type is annotated_type, name
+
+    assert fields["optional_colour"].annotated_type == Colour | None
+
+    for name, inner_type in {
+        "prices": Decimal,
+        "colours": Colour,
+        "all_dimensions": Dimensions,
+    }.items():
+        field_def = fields[name]
+        assert isinstance(field_def, ListFieldDefinition), name
+        assert field_def.inner_type is inner_type, name
+
+    assert set(fields.literal_fields) >= {
+        "price",
+        "colour",
+        "size",
+        "dimensions",
+        "optional_colour",
+        "prices",
+        "colours",
+        "all_dimensions",
+    }
+
+
+def test_typeddict_with_nested_typeddict_and_lists():
+    class Inner(TypedDict):
+        values: list[int]
+
+    class Outer(TypedDict):
+        inner: Inner
+        when: date
+        maybe: str | None
+
+    class Statement(Document):
+        data: Outer
+
+    initialise()
+
+    assert isinstance(Statement._meta.fields["data"], LiteralFieldDefinition)
+
+
+def test_typeddict_with_unsupported_value_type_raises():
+    class Bad(TypedDict):
+        value: complex
+
+    class Statement(Document):
+        data: Bad
+
+    with pytest.raises(PanglossModelError, match=r"Statement\.data"):
+        initialise()
+
+
+def test_decimal_enum_and_typeddict_in_create_and_view_models():
+    class Colour(Enum):
+        RED = "red"
+        BLUE = "blue"
+
+    class Dimensions(TypedDict):
+        width: int
+        height: int
+
+    class Statement(Document):
+        price: Decimal
+        colour: Colour
+        dimensions: Dimensions
+
+    initialise()
+
+    for model in (Statement.Create, Statement.CreateDB, Statement.View):
+        assert model.model_fields["price"].annotation is Decimal, model
+        assert model.model_fields["colour"].annotation is Colour, model
+        assert model.model_fields["dimensions"].annotation is Dimensions, model
+
+    st = Statement.Create(
+        label="A",
+        price="1.10",
+        colour="red",
+        dimensions={"width": 1, "height": 2},
+    )
+    assert st.price == Decimal("1.10")
+    assert st.colour is Colour.RED
+    assert st.dimensions == {"width": 1, "height": 2}
+
+    with pytest.raises(ValidationError):
+        Statement.Create(
+            label="A", price="1", colour="green", dimensions={"width": 1, "height": 2}
+        )
+    with pytest.raises(ValidationError):
+        Statement.Create(label="A", price="1", colour="red", dimensions={"width": 1})
+
+
+def test_decimal_enum_and_typeddict_on_edge_model():
+    class Colour(Enum):
+        RED = "red"
+
+    class Certainty(EdgeModel):
+        weight: Decimal
+        colour: Colour
+
+    class Person(Entity):
+        pass
+
+    class Statement(Document):
+        concerns: ViaEdge[Person, Certainty]
+
+    initialise()
+
+    assert isinstance(Certainty._meta.fields["weight"], LiteralFieldDefinition)
+    assert isinstance(Certainty._meta.fields["colour"], LiteralFieldDefinition)
+
+
+def test_unsupported_field_type_raises():
+    """Field types that cannot be stored are an error, not silently dropped"""
+
+    class Statement(Document):
+        mapping: complex
+
+    with pytest.raises(PanglossModelError, match=r"Statement\.mapping"):
+        initialise()
 
 
 def test_field_definition_for_optional_literal_field():

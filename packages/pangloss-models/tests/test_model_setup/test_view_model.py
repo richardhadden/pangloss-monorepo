@@ -835,3 +835,39 @@ def test_meta_on_view_model():
     assert st.meta.context_labels == [
         {"type": "Negative", "contents": [{"id": IsStr, "type": "Order"}]}
     ]
+
+
+@no_type_check
+def test_optional_literal_fields_default_to_none_in_view_models():
+    """An unset optional literal is not stored, so it cannot be required when reading"""
+
+    class Statement(Document):
+        _meta = Document.Meta(reference_view_extra_fields=["note"])
+        number: int | None
+        note: str | None
+        required_number: int
+
+    initialise()
+
+    view = Statement.View(id=uuid7(), label="A statement", requiredNumber=1)
+    assert view.number is None
+
+    head_view = Statement.HeadView(
+        id=uuid7(),
+        label="A statement",
+        requiredNumber=1,
+        meta={
+            "created_by": "a",
+            "created_when": datetime.datetime.now(),
+            "updated_by": None,
+            "updated_when": None,
+        },
+    )
+    assert head_view.number is None
+
+    reference_view = Statement.ReferenceView(id=uuid7(), label="A statement")
+    assert reference_view.note is None
+
+    # Required fields are still required
+    with pytest.raises(ValidationError):
+        Statement.View(id=uuid7(), label="A statement")

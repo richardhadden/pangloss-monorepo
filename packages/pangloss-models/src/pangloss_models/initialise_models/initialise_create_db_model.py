@@ -35,7 +35,7 @@ from pangloss_models.model_bases.semantic_space import (
     SemanticSpace,
     _SemanticSpaceCreateDBBase,
 )
-from pangloss_models.utils import map_validators_to_kwargs
+from pangloss_models.utils import annotation_is_optional, map_validators_to_kwargs
 
 
 def check_create_and_id_present(self):
@@ -463,7 +463,7 @@ def add_fields_to_create_db_model(
             **map_validators_to_kwargs(field_definition.validators),
         )
 
-        if optional:
+        if optional or annotation_is_optional(field_definition.annotated_type):
             model.CreateDB.model_fields[field_name].default = None
 
     # Embedded fields

@@ -20,6 +20,8 @@ uv sync            # installs all workspace packages into .venv
 - `pangloss-memgraph/tests`: integration tests. They need Docker or a Memgraph instance on `bolt://localhost:7687` (user/password `test`/`test`). If none is found, the fixture starts a `memgraph/memgraph-mage` container, creates the `label_index` text index and a `PGUser` for the default username, and clears the data after tests that request `clear_database`. Tests run in the `db` xdist group so that they run serially.
 - `pangloss-sdk/tests`: checks that the synchronous database-module binding works, using the hard-coded `get_document` stub.
 
+Tests for known bugs and missing features are written as the behaviour we want and marked `@pytest.mark.xfail(strict=True, reason=...)`, so they pass the suite while the bug exists and fail (XPASS) once it is fixed, at which point the marker should be removed. `grep -rn "xfail" packages` lists them.
+
 The root `pyproject.toml` sets `testpaths = ["packages"]` and the session-scoped asyncio loop.
 
 ## Repository layout

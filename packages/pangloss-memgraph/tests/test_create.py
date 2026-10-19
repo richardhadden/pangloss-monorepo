@@ -1,6 +1,8 @@
 import datetime
+from decimal import Decimal
+from enum import Enum, IntEnum
 from inspect import iscoroutinefunction
-from typing import Annotated, no_type_check
+from typing import Annotated, NotRequired, TypedDict, no_type_check
 from uuid import uuid7
 
 import pytest
@@ -844,6 +846,333 @@ async def test_date_literal_read_back(db_driver, clear_database):
 
 
 @no_type_check
+async def test_bool_literals_are_written_and_read_back(db_driver, clear_database):
+    class Statement(Document):
+        true_flag: bool
+        false_flag: bool
+        flags: list[bool]
+
+    initialise()
+
+    saved = await Statement.Create(
+        label="Bools", true_flag=True, false_flag=False, flags=[True, False]
+    ).save()
+
+    node = run(db_driver, "MATCH (n:Statement) RETURN n")[0]["n"]
+    assert node["true_flag"] is True
+    assert node["false_flag"] is False
+    assert node["flags"] == [True, False]
+
+    read = await Statement.get(id=saved.id)
+    assert read.true_flag is True
+    assert read.false_flag is False
+    assert read.flags == [True, False]
+
+
+class Colour(Enum):
+    RED = "red"
+    BLUE = "blue"
+
+
+class Size(IntEnum):
+    SMALL = 1
+    LARGE = 2
+
+
+class Dimensions(TypedDict):
+    width: int
+    height: int
+    note: NotRequired[str]
+
+
+@no_type_check
+async def test_decimal_is_written_exactly_and_read_back(db_driver, clear_database):
+    class Statement(Document):
+        price: Decimal
+        prices: list[Decimal]
+
+    initialise()
+
+    saved = await Statement.Create(
+        label="Priced",
+        price="1234567890.123456789012345678",
+        prices=["0.10", "2.50", "0"],
+    ).save()
+
+    # Stored as strings, so that no precision is lost
+    node = run(db_driver, "MATCH (n:Statement) RETURN n")[0]["n"]
+    assert node["price"] == "1234567890.123456789012345678"
+    assert node["prices"] == ["0.10", "2.50", "0"]
+
+    read = await Statement.get(id=saved.id)
+    assert read.price == Decimal("1234567890.123456789012345678")
+    assert read.prices == [Decimal("0.10"), Decimal("2.50"), Decimal("0")]
+
+
+@no_type_check
+async def test_enum_is_written_by_value_and_read_back(db_driver, clear_database):
+    class Statement(Document):
+        colour: Colour
+        size: Size
+        colours: list[Colour]
+
+    initialise()
+
+    saved = await Statement.Create(
+        label="Enumerated",
+        colour=Colour.RED,
+        size=Size.LARGE,
+        colours=["red", Colour.BLUE],
+    ).save()
+
+    node = run(db_driver, "MATCH (n:Statement) RETURN n")[0]["n"]
+    assert node["colour"] == "red"
+    assert node["size"] == 2
+    assert node["colours"] == ["red", "blue"]
+
+    read = await Statement.get(id=saved.id)
+    assert read.colour is Colour.RED
+    assert read.size is Size.LARGE
+    assert read.colours == [Colour.RED, Colour.BLUE]
+
+
+@no_type_check
+@pytest.mark.parametrize("annotation", [int, Colour, Decimal, Dimensions])
+async def test_optional_literal_set_to_none_reads_back_as_none(
+    db_driver, clear_database, annotation
+):
+    class Statement(Document):
+        optional: annotation | None
+
+    initialise()
+
+    saved = await Statement.Create(label="Sparse", optional=None).save()
+
+    node = run(db_driver, "MATCH (n:Statement) RETURN n")[0]["n"]
+    assert "optional" not in node
+
+    read = await Statement.get(id=saved.id)
+    assert read.optional is None
+
+
+@no_type_check
+async def test_optional_literal_can_be_left_out(db_driver, clear_database):
+    class Statement(Document):
+        number: int | None
+        colour: Colour | None
+
+    initialise()
+
+    saved = await Statement.Create(label="Left out").save()
+
+    node = run(db_driver, "MATCH (n:Statement) RETURN n")[0]["n"]
+    assert "number" not in node
+    assert "colour" not in node
+
+    read = await Statement.get(id=saved.id)
+    assert read.number is None
+    assert read.colour is None
+
+
+@no_type_check
+async def test_optional_literal_with_value_reads_back(db_driver, clear_database):
+    class Statement(Document):
+        number: int | None
+        colour: Colour | None
+        price: Decimal | None
+
+    initialise()
+
+    saved = await Statement.Create(
+        label="Set", number=0, colour="red", price="1.5"
+    ).save()
+
+    read = await Statement.get(id=saved.id)
+    assert read.number == 0
+    assert read.colour is Colour.RED
+    assert read.price == Decimal("1.5")
+
+
+@no_type_check
+async def test_optional_reference_view_extra_field_is_listed(db_driver, clear_database):
+    class Statement(Document):
+        _meta = Document.Meta(reference_view_extra_fields=["note"])
+        note: str | None
+
+    initialise()
+
+    await Statement.Create(label="With", note="a note").save()
+    await Statement.Create(label="Without", note=None).save()
+
+    listed = await Statement.list()
+    notes = {item.label: item.note for item in listed.results}
+    assert notes == {"With": "a note", "Without": None}
+
+
+@no_type_check
+async def test_typeddict_is_written_as_a_map_and_read_back(db_driver, clear_database):
+    class Inner(TypedDict):
+        values: list[int]
+        price: Decimal
+        colour: Colour
+
+    class Outer(TypedDict):
+        name: str
+        inner: Inner
+
+    class Statement(Document):
+        dimensions: Dimensions
+        nested: Outer
+        all_dimensions: list[Dimensions]
+
+    initialise()
+
+    saved = await Statement.Create(
+        label="Dictionary",
+        dimensions={"width": 1, "height": 2, "note": "small"},
+        nested={
+            "name": "outer",
+            "inner": {"values": [1, 2], "price": "1.50", "colour": "blue"},
+        },
+        all_dimensions=[{"width": 3, "height": 4}, {"width": 5, "height": 6}],
+    ).save()
+
+    node = run(db_driver, "MATCH (n:Statement) RETURN n")[0]["n"]
+    assert node["dimensions"] == {"width": 1, "height": 2, "note": "small"}
+    assert node["nested"] == {
+        "name": "outer",
+        "inner": {"values": [1, 2], "price": "1.50", "colour": "blue"},
+    }
+    assert node["all_dimensions"] == [
+        {"width": 3, "height": 4},
+        {"width": 5, "height": 6},
+    ]
+
+    read = await Statement.get(id=saved.id)
+    assert read.dimensions == {"width": 1, "height": 2, "note": "small"}
+    assert read.nested["inner"]["price"] == Decimal("1.50")
+    assert read.nested["inner"]["colour"] is Colour.BLUE
+    assert read.all_dimensions == [
+        {"width": 3, "height": 4},
+        {"width": 5, "height": 6},
+    ]
+
+
+@no_type_check
+async def test_typeddict_with_optional_key_missing(db_driver, clear_database):
+    class Statement(Document):
+        dimensions: Dimensions
+
+    initialise()
+
+    saved = await Statement.Create(
+        label="No note", dimensions={"width": 1, "height": 2}
+    ).save()
+
+    read = await Statement.get(id=saved.id)
+    assert read.dimensions == {"width": 1, "height": 2}
+
+
+@no_type_check
+async def test_decimal_enum_and_typeddict_on_nested_documents_and_entities(
+    db_driver, clear_database
+):
+    class Person(Entity):
+        favourite: Colour
+        height: Decimal
+
+    class Action(Document):
+        size: Size
+        dimensions: Dimensions
+
+    class Statement(Document):
+        action: Action
+
+    initialise()
+
+    person = await Person.Create(
+        label="John Smith", favourite="blue", height="1.85"
+    ).save()
+    assert labels_of(db_driver, person.id)
+    node = run(db_driver, "MATCH (n:Person) RETURN n")[0]["n"]
+    assert node["favourite"] == "blue"
+    assert node["height"] == "1.85"
+
+    await Statement.Create(
+        label="A Statement",
+        action={
+            "type": "Action",
+            "label": "An Action",
+            "size": 1,
+            "dimensions": {"width": 1, "height": 2},
+        },
+    ).save()
+
+    action = run(db_driver, "MATCH (a:Action) RETURN a")[0]["a"]
+    assert action["size"] == 1
+    assert action["dimensions"] == {"width": 1, "height": 2}
+
+
+@no_type_check
+async def test_decimal_enum_and_typeddict_as_edge_properties(db_driver, clear_database):
+    class Certainty(EdgeModel):
+        weight: Decimal
+        colour: Colour
+        dimensions: Dimensions
+
+    class Person(Entity):
+        pass
+
+    class Statement(Document):
+        concerns_person: ViaEdge[Person, Certainty]
+
+    initialise()
+
+    person = await Person.Create(label="John Smith").save()
+    await Statement.Create(
+        label="A Statement",
+        concerns_person={
+            "type": "Person",
+            "id": person.id,
+            "edge_properties": {
+                "weight": "0.75",
+                "colour": "red",
+                "dimensions": {"width": 1, "height": 2},
+            },
+        },
+    ).save()
+
+    for edge in ("concerns_person", "concerns_person_reverse"):
+        props = run(db_driver, f"MATCH ()-[r:{edge}]->() RETURN properties(r) AS p")[0][
+            "p"
+        ]
+        assert props["weight"] == "0.75", edge
+        assert props["colour"] == "red", edge
+        assert props["dimensions"] == {"width": 1, "height": 2}, edge
+
+
+@no_type_check
+async def test_decimal_and_enum_in_annotated_value(db_driver, clear_database):
+    class WithWeight[T](AnnotatedValue[T]):
+        weight: Decimal
+        colour: Colour
+
+    class Naming(Document):
+        name: WithWeight[str]
+
+    initialise()
+
+    await Naming.Create(
+        label="A Naming", name={"value": "John", "weight": "0.5", "colour": "red"}
+    ).save()
+
+    node = run(db_driver, "MATCH (:Naming)-[:name]->(n) RETURN n")[0]["n"]
+    assert node["value"] == "John"
+    assert node["weight"] == "0.5"
+    assert node["colour"] == "red"
+
+
+@no_type_check
 async def test_none_literals_are_not_written(db_driver, clear_database):
     class Statement(Document):
         text: str | None
@@ -879,11 +1208,6 @@ async def test_literals_with_special_characters_are_stored_verbatim(
 
 
 @no_type_check
-@pytest.mark.xfail(
-    strict=True,
-    reason="get_node_fields_as_writable_dict skips falsy values, so 0, 0.0, "
-    "'' and [] are never written",
-)
 async def test_falsy_literals_are_written(db_driver, clear_database):
     class Statement(Document):
         number: int
@@ -948,10 +1272,6 @@ async def test_entity_with_url_as_id_is_given_a_uuid(db_driver, clear_database):
 
 
 @no_type_check
-@pytest.mark.xfail(
-    strict=True,
-    reason="CreateDB.urls is not a literal field, so URLs given as ids are not persisted",
-)
 async def test_entity_url_id_is_stored_in_urls(db_driver, clear_database):
     class Person(Entity):
         _meta = Entity.Meta(create_with_id=True)
@@ -1064,13 +1384,12 @@ async def test_list_relation_to_existing_entities(db_driver, clear_database):
 
 
 @no_type_check
-async def test_empty_and_missing_relations_write_no_edges(db_driver, clear_database):
+async def test_empty_list_relation_writes_no_edges(db_driver, clear_database):
     class Person(Entity):
         pass
 
     class Statement(Document):
         everyone: list[Person]
-        optional_person: Person | None = None
 
     initialise()
 
@@ -1080,7 +1399,7 @@ async def test_empty_and_missing_relations_write_no_edges(db_driver, clear_datab
     assert (
         run(
             db_driver,
-            "MATCH ()-[r]->() WHERE type(r) IN ['everyone', 'optional_person'] RETURN r",
+            "MATCH ()-[r]->() WHERE type(r) = 'everyone' RETURN r",
         )
         == []
     )
@@ -1283,11 +1602,6 @@ async def test_same_entity_in_two_fields(db_driver, clear_database):
 
 
 @no_type_check
-@pytest.mark.xfail(
-    strict=True,
-    reason="Entities are matched on `id` only, so a URL used to refer to an "
-    "existing entity can never be resolved",
-)
 async def test_relation_to_existing_entity_by_url(db_driver, clear_database):
     class Person(Entity):
         _meta = Entity.Meta(create_with_id=True)
@@ -1365,11 +1679,6 @@ async def test_edge_properties_are_written_to_both_edges(db_driver, clear_databa
 
 
 @no_type_check
-@pytest.mark.xfail(
-    strict=True,
-    reason="`SET edge = $edge_properties` replaces all properties, which wipes "
-    "{reverse: true} from the reverse edge whenever edge properties are present",
-)
 async def test_reverse_edge_keeps_reverse_flag_when_it_has_edge_properties(
     db_driver, clear_database
 ):
@@ -2237,11 +2546,6 @@ async def test_conjunction_read_back(db_driver, clear_database):
 
 
 @no_type_check
-@pytest.mark.xfail(
-    strict=True,
-    reason="The allowed types for a reified relation's `target` come out empty, "
-    "so the MATCH of the target entity can never succeed and nothing is written",
-)
 async def test_reified_relation(db_driver, clear_database):
     class Person(Entity):
         pass
@@ -2348,11 +2652,6 @@ async def test_reified_relation_document(db_driver, clear_database):
 
 
 @no_type_check
-@pytest.mark.xfail(
-    strict=True,
-    reason="Embedded fields are not handled by build_attached_nodes, so embedded "
-    "objects are dropped on write",
-)
 async def test_embedded_object(db_driver, clear_database):
     class Date(Embedded):
         when: datetime.date
@@ -2380,11 +2679,6 @@ async def test_embedded_object(db_driver, clear_database):
 
 
 @no_type_check
-@pytest.mark.xfail(
-    strict=True,
-    reason="Annotated value fields are not handled by build_attached_nodes, so "
-    "they are dropped on write",
-)
 async def test_annotated_value(db_driver, clear_database):
     class WithCertainty[T](AnnotatedValue[T]):
         certainty: int

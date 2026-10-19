@@ -6,6 +6,7 @@ from pydantic import AnyHttpUrl, ConfigDict
 from pydantic import create_model as pydantic_create_model
 from pydantic.alias_generators import to_camel
 from pydantic.fields import FieldInfo
+from pydantic_core import PydanticUndefined
 
 from pangloss_models.exceptions import PanglossModelError
 from pangloss_models.model_bases.base_models import _DeclaredClass
@@ -15,6 +16,7 @@ from pangloss_models.model_bases.reified_relation import (
     ReifiedRelation,
     ReifiedRelationDocument,
 )
+from pangloss_models.utils import annotation_is_optional
 
 
 def initialise_reference_set_model(model: type[_DeclaredClass]):
@@ -112,6 +114,11 @@ def initialise_reference_view_model(model: type[_DeclaredClass]):
             validation_alias=to_camel(field_name),
             metadata=field_definition.validators,  # type: ignore
             description=field_definition.description,
+            # An optional literal that is unset is not stored, so cannot be
+            # required when reading it back
+            default=None
+            if annotation_is_optional(field_definition.annotated_type)
+            else PydanticUndefined,
         )
 
     model.ReferenceView.model_rebuild(force=True)

@@ -345,5 +345,5 @@ class ModelRegistry:
         Document.list = classmethod(exposed_functions.list_items)  # type: ignore
         Entity.list = classmethod(exposed_functions.list_items)  # type: ignore
 
-        _DocumentCreateBase.save = exposed_functions.create_head_node  # type: ignore
-        _EntityCreateBase.save = exposed_functions.create_head_node  # type: ignore
+        _DocumentCreateBase.save = exposed_functions.create_head_node
+        _EntityCreateBase.save = exposed_functions.create_head_node

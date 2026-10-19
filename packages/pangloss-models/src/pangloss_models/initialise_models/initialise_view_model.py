@@ -48,6 +48,7 @@ from pangloss_models.model_bases.semantic_space import (
     _SemanticSpaceViewBase,
 )
 from pangloss_models.utils import (
+    annotation_is_optional,
     field_has_inherited_field_bindings,
     map_validators_to_kwargs,
 )
@@ -489,7 +490,9 @@ def add_fields_to_view_model(
             description=field_definition.description,
             **map_validators_to_kwargs(field_definition.validators),
         )
-        if has_inherited_bindings or optional:
+        # An optional literal that is unset is not stored, so cannot be required
+        # when reading it back
+        if has_inherited_bindings or optional or annotation_is_optional(annotation):
             model.model_fields[field_name].default = None
 
     # Embedded fields

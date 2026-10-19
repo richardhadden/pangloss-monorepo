@@ -1615,3 +1615,23 @@ def test_list_validators():
         Factoid.Update(id=uuid7(), label="A Factoid", numbers=[1])
 
     Factoid.Update(id=uuid7(), label="A Factoid", numbers=[2, 2, 2])
+
+
+@no_type_check
+def test_optional_literal_fields_do_not_have_to_be_given():
+    from uuid import uuid7
+
+    from pangloss_models import initialise
+    from pangloss_models.model_bases.document import Document
+
+    class Statement(Document):
+        number: int | None
+        required_number: int
+
+    initialise()
+
+    st = Statement.Update(id=uuid7(), label="A statement", required_number=1)
+    assert st.number is None
+
+    db_st = Statement.UpdateDB(id=uuid7(), label="A", required_number=1)
+    assert db_st.number is None
