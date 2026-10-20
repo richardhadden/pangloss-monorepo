@@ -278,8 +278,8 @@ def test_update_needs_the_same_id_in_the_path_and_the_body(settings, monkeypatch
     headers = login(client)
     saved = []
 
-    async def save(self, detail=False):
-        saved.append((self.id, detail))
+    async def save(self, detail=False, expected_version=None):
+        saved.append((self.id, detail, expected_version))
         return Person.ReferenceView(id=self.id, label=self.label)
 
     monkeypatch.setattr(_EntityUpdateBase, "save", save)
@@ -293,12 +293,16 @@ def test_update_needs_the_same_id_in_the_path_and_the_body(settings, monkeypatch
     }
 
     response = client.put(
-        f"/api/Person/{person_id}", json=body, headers=headers, params={"detail": "true"}
+        f"/api/Person/{person_id}",
+        json=body,
+        headers={**headers, "If-Match": '"2"'},
     )
     assert response.status_code == 200, response.text
-    assert saved == [(person_id, True)]
+    assert saved == [(person_id, False, 2)]
 
-    response = client.put(f"/api/Person/{uuid7()}", json=body, headers=headers)
+    response = client.put(
+        f"/api/Person/{uuid7()}", json=body, headers={**headers, "If-Match": '"2"'}
+    )
     assert response.status_code == 400
     assert len(saved) == 1
 
@@ -526,3 +530,171 @@ def test_a_model_cannot_have_the_name_of_other_routes(settings, name):
     type(name, (Entity,), {"__module__": __name__})
     with pytest.raises(PanglossInitialisationError, match="cannot be called"):
         create_app()
+
+
+# ---------------------------------------------------------------------------
+# Versions
+# ---------------------------------------------------------------------------
+
+
+def person_body(person_id):
+    return {
+        "type": "Person",
+        "id": str(person_id),
+        "label": "John",
+        "bornIn": {"type": "Place", "id": str(uuid7())},
+    }
+
+
+def test_an_update_must_say_which_version_it_is_based_on(settings, monkeypatch):
+    from fastapi.testclient import TestClient
+    from pangloss_models.model_bases.entity import _EntityUpdateBase
+
+    _, Person, _ = make_models()
+    client = TestClient(create_app())
+    headers = login(client)
+    saved = []
+
+    async def save(self, detail=False, expected_version=None):
+        saved.append(expected_version)
+        return Person.ReferenceView(id=self.id, label=self.label)
+
+    monkeypatch.setattr(_EntityUpdateBase, "save", save)
+    person_id = uuid7()
+    url = f"/api/Person/{person_id}"
+
+    # Without it: refused, and nothing is called
+    response = client.put(url, json=person_body(person_id), headers=headers)
+    assert response.status_code == 428
+    assert "If-Match" in response.json()["detail"]
+    assert saved == []
+
+    # The ETag of the edit view, in quotes or not
+    for header, expected in (('"1"', 1), ('"12"', 12), ("3", 3), (' "4" ', 4)):
+        response = client.put(
+            url, json=person_body(person_id), headers={**headers, "If-Match": header}
+        )
+        assert response.status_code == 200, (header, response.text)
+        assert saved[-1] == expected
+
+    # `*` updates whatever the version is
+    response = client.put(
+        url, json=person_body(person_id), headers={**headers, "If-Match": "*"}
+    )
+    assert response.status_code == 200
+    assert saved[-1] is None
+
+    # Not a version
+    before = len(saved)
+    for header in ('"x"', '"0"', '"-1"', '"1', 'W/"1"', '"1", "2"', ""):
+        response = client.put(
+            url, json=person_body(person_id), headers={**headers, "If-Match": header}
+        )
+        assert response.status_code == 400, header
+    assert len(saved) == before
+
+
+def test_etags_are_the_versions(settings, monkeypatch):
+    from fastapi.testclient import TestClient
+    from pangloss_models.model_bases.entity import _EntityCreateBase, _EntityUpdateBase
+
+    Place, Person, Statement = make_models()
+    client = TestClient(create_app())
+    headers = login(client)
+    person_id = uuid7()
+
+    async def get_for_edit(cls, id):
+        return Person.EditView(
+            id=person_id,
+            label="John",
+            meta={**META, "version": 7},
+            born_in=[{"type": "Place", "id": uuid7(), "label": "Paris"}],
+        )
+
+    async def get_statement(cls, id):
+        return Statement.HeadView(
+            id=id,
+            label="S",
+            text="x",
+            about=[{"type": "Person", "id": person_id, "label": "John"}],
+            meta={**META, "version": 3},
+        )
+
+    async def save_new(self, detail=False):
+        return Person.ReferenceView(id=person_id, label=self.label)
+
+    async def save_update(self, detail=False, expected_version=None):
+        if detail:
+            return Person.HeadView(
+                id=person_id,
+                label=self.label,
+                meta={**META, "version": 99},
+                born_in=[{"type": "Place", "id": uuid7(), "label": "Paris"}],
+            )
+        return Person.ReferenceView(id=person_id, label=self.label)
+
+    stub(monkeypatch, Person, "get_for_edit", get_for_edit)
+    stub(monkeypatch, Statement, "get", get_statement)
+    monkeypatch.setattr(_EntityCreateBase, "save", save_new)
+    monkeypatch.setattr(_EntityUpdateBase, "save", save_update)
+
+    # The edit view says the version it has (of an entity, or of a document)
+    response = client.get(f"/api/Person/{person_id}/edit", headers=headers)
+    assert response.headers["etag"] == '"7"'
+    assert response.json()["meta"]["version"] == 7
+    response = client.get(f"/api/Statement/{uuid7()}/edit", headers=headers)
+    assert response.headers["etag"] == '"3"'
+
+    # A new one is at version 1
+    response = client.post(
+        "/api/Person",
+        json={"type": "Person", "label": "J", "bornIn": {"type": "Place", "id": str(uuid7())}},
+        headers=headers,
+    )
+    assert response.status_code == 201
+    assert response.headers["etag"] == '"1"'
+
+    # An update gives the version it made, to go on from
+    url = f"/api/Person/{person_id}"
+    response = client.put(
+        url, json=person_body(person_id), headers={**headers, "If-Match": '"7"'}
+    )
+    assert response.headers["etag"] == '"8"'
+    # ... from the whole thing, if that is returned
+    response = client.put(
+        url,
+        json=person_body(person_id),
+        params={"detail": "true"},
+        headers={**headers, "If-Match": '"7"'},
+    )
+    assert response.headers["etag"] == '"99"'
+    # ... and not known after an update of whatever version it was
+    response = client.put(
+        url, json=person_body(person_id), headers={**headers, "If-Match": "*"}
+    )
+    assert response.status_code == 200
+    assert "etag" not in response.headers
+
+
+def test_an_update_of_an_old_version_is_refused_with_the_new_one(settings, monkeypatch):
+    from fastapi.testclient import TestClient
+    from pangloss_models.exceptions import PanglossVersionConflictError
+    from pangloss_models.model_bases.entity import _EntityUpdateBase
+
+    _, Person, _ = make_models()
+    client = TestClient(create_app())
+    headers = login(client)
+
+    async def save(self, detail=False, expected_version=None):
+        raise PanglossVersionConflictError("it has been updated", current_version=5)
+
+    monkeypatch.setattr(_EntityUpdateBase, "save", save)
+    person_id = uuid7()
+    response = client.put(
+        f"/api/Person/{person_id}",
+        json=person_body(person_id),
+        headers={**headers, "If-Match": '"4"'},
+    )
+    assert response.status_code == 412
+    assert response.json() == {"detail": "it has been updated", "currentVersion": 5}
+    assert response.headers["etag"] == '"5"'

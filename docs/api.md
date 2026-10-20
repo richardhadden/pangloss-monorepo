@@ -10,6 +10,22 @@ app = create_app()   # or: uvicorn "pangloss_api.app:create_app" --factory
 
 `create_app()` uses the settings already imported, or else the module named by the environment variable `PANGLOSS_SETTINGS`. Building the app imports the `models` module of each installed app and runs `initialise()` (the routes are made from the models); starting the server (the app's lifespan) connects to the database through the `setup` module of `DATABASE_MODULE` (see [Command line](cli.md#what-a-database-backend-supplies)). A short `AUTHJWT_SECRET_KEY` (under 32 characters) gives a warning.
 
+## CORS: using the API from a frontend
+
+A browser only lets a page use the API if the API says that the page's origin may. Put the origins of the frontends in `BACKEND_CORS_ORIGINS`:
+
+```python
+BACKEND_CORS_ORIGINS: list = ["http://localhost:5173", "https://app.example.com"]
+```
+
+An origin is a scheme, host and port, with no path (a trailing `/` is dropped, and the case does not matter); a string of origins separated by commas is accepted, so it can be set in the environment or `.env` as `BACKEND_CORS_ORIGINS=http://localhost:5173,https://app.example.com` (if the class does not declare the field again; a JSON list works anyway). A project made with `pangloss new-project` allows `http://localhost:5173`, where the dev server of Vite and SvelteKit runs. With the list empty there is no CORS: only a page of the API's own origin can use it.
+
+For those origins, the API answers preflight requests and allows the methods `GET POST PUT PATCH DELETE`, and the headers `Authorization`, `Content-Type`, `Accept` and `If-Match`; the frontend can read the response header `ETag`. Errors carry the headers too, so that the frontend can read them. (A `500` from a bug does not: that is how Starlette is built, and the browser then reports a CORS error instead of the status.)
+
+- **Tokens:** send `Authorization: Bearer <access token>`; nothing more is needed.
+- **Cookie sessions:** the frontend has to ask for the cookies to be used, with `fetch(url, { credentials: "include" })`, and the API allows that for the origins in the list. Cookies are sent between pages and an API of the same *site*, which is the host name without the port (`localhost:5173` and `localhost:8000`, yes; `127.0.0.1:5173` and `localhost:8000`, no, so use one name for both). Between different sites, the cookies need `AUTH_COOKIE_SAMESITE = "none"` and HTTPS (`Secure` is then set), or tokens should be used instead.
+- **`*`** allows any site to use the API, but without credentials, so only tokens work (a cookie of a visitor must not be usable by any site). It gives a warning.
+
 ## Authentication
 
 Logging in gives either **tokens** or a **session**.
@@ -76,9 +92,18 @@ For every Document and Entity of the project that is not abstract, `NAME` being 
 | `GET /api/NAME/{id}` | no | The `HeadView`; 404 if there is none, or it has been deleted. For an entity, `{id}` can be one of its URLs (see below) |
 | `POST /api/NAME` | yes | Create, with the body of `NAME.Create`. Returns 201 and a summary (`ReferenceView`), or with `?detail=true` the whole `HeadView` |
 | `GET /api/NAME/{id}/edit` | yes | What to edit: for an entity its `EditView` (no incoming relations), for a document its `HeadView` |
-| `PUT /api/NAME/{id}` | yes | Update, with the body of `NAME.Update`: a full replacement, which what `/edit` returns can be sent back as. The `id` in the body must be the one in the path (400). Returns a summary, or with `?detail=true` the `HeadView` |
+| `PUT /api/NAME/{id}` | yes | Update, with the body of `NAME.Update`: a full replacement, which what `/edit` returns can be sent back as. The `id` in the body must be the one in the path (400), and the header `If-Match` says which version it is based on (see below). Returns a summary, or with `?detail=true` the `HeadView` |
 | `DELETE /api/NAME/{id}` | yes | Delete. 204 |
 | `POST /api/NAME/{id}/undelete` | yes | Undelete. 204 |
+
+**Versions: editing without overwriting.** Each Document and Entity has a `meta.version`: 1 when it is made, and 1 more for each update. An update replaces the whole thing, so if two people load it, and both save, the second would silently undo the first. To prevent that, an update says which version it is based on:
+
+1. `GET /api/NAME/{id}/edit` returns the version in the header `ETag` (`"3"`), as well as in `meta.version`. (The create and update responses have it too: `"1"`, and the version made.)
+2. `PUT /api/NAME/{id}` has to have the header `If-Match: "3"`. If that is still the latest version, the update is made, and the response has the new `ETag` (`"4"`; after `?detail=true`, from the `HeadView`).
+3. If someone has updated it since, nothing is written and the response is **412 Precondition Failed**, with `currentVersion` and the current `ETag`. The frontend loads the edit view again, to show what has changed, and the user saves from there. Nothing is merged for them.
+4. Without the header the response is **428 Precondition Required**: an update cannot be blind. `If-Match: *` updates whatever the version is (a deliberate overwrite; the response then has no `ETag`, so load it again to go on). A header that is not a version, or is a weak ETag (`W/"3"`), is 400.
+
+The version belongs to the thing itself: a change in what refers to an entity does not change the entity's version, and deleting or undeleting does not change it.
 
 Everything can be looked at by anyone; creating, loading for edit, updating, deleting and undeleting need a logged-in user, whose name is recorded as the creator or updater. (Finer permissions are not written yet ⏳.) A disabled user is refused with 401.
 
@@ -86,6 +111,8 @@ The JSON is `camelCase` throughout (`bornIn`, `meta.createdBy`, `aboutPersonReve
 
 | Status | When |
 |--------|------|
+| 412 | An update based on a version that is no longer the latest (see below) |
+| 428 | An update without `If-Match` |
 | 400 | The `id` in an update body is not the one in the path; loading to edit, updating, deleting or undeleting an entity at a URL; deleting a document that is part of another (`PanglossNotDeletableError`); other rejected writes |
 | 401 | Not logged in |
 | 404 | No such item (also: update, delete or undelete of one that does not exist) |

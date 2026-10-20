@@ -149,11 +149,16 @@ async def test_crud_flow(db_driver, clear_database):
         # Updating (a full replacement, which the edit view can be sent back as)
         changes = edit.json()
         changes["label"] = "John Q. Smith"
+        # (an update says which version of the edit view it is based on)
+        assert edit.headers["etag"] == '"1"'
+        assert edit.json()["meta"]["version"] == 1
+        based_on = {**john, "If-Match": edit.headers["etag"]}
         response = await client.put(
-            f"{person_url}/{person_id}", json=changes, headers=john
+            f"{person_url}/{person_id}", json=changes, headers=based_on
         )
         assert response.status_code == 200, response.text
         assert response.json()["label"] == "John Q. Smith"
+        assert response.headers["etag"] == '"2"'  # (to go on from)
         after = (await client.get(f"{person_url}/{person_id}")).json()
         assert after["label"] == "John Q. Smith"
         assert after["bornIn"]["id"] == place_id
@@ -163,17 +168,22 @@ async def test_crud_flow(db_driver, clear_database):
             f"{person_url}/{person_id}",
             params={"detail": "true"},
             json=changes,
-            headers=john,
+            headers={**john, "If-Match": '"2"'},
         )
         assert "aboutReverse" in response.json()
+        assert response.json()["meta"]["version"] == 3
+        assert response.headers["etag"] == '"3"'
 
         # ... the id in the body must be the one in the path, and exist
+        any_version = {**john, "If-Match": "*"}
         response = await client.put(
-            f"{person_url}/{some_id}", json=changes, headers=john
+            f"{person_url}/{some_id}", json=changes, headers=any_version
         )
         assert response.status_code == 400
         response = await client.put(
-            f"{person_url}/{some_id}", json={**changes, "id": str(some_id)}, headers=john
+            f"{person_url}/{some_id}",
+            json={**changes, "id": str(some_id)},
+            headers=any_version,
         )
         assert response.status_code == 404
 
@@ -573,7 +583,9 @@ async def test_an_entity_is_found_by_its_url(db_driver, clear_database):
             assert response.status_code == 400
         assert (await client.get(url_path)).status_code == 200  # (not deleted)
         put = await client.put(
-            f"/api/Person/{person_id}", json=edit.json(), headers=headers
+            f"/api/Person/{person_id}",
+            json=edit.json(),
+            headers={**headers, "If-Match": edit.headers["etag"]},
         )
         assert put.status_code == 200, put.text
 
@@ -596,3 +608,96 @@ async def test_an_entity_is_found_by_its_url(db_driver, clear_database):
             await client.post(f"{id_path}/undelete", headers=headers)
         ).status_code == 204
         assert (await client.get(url_path)).json()["id"] == person_id
+
+
+@no_type_check
+async def test_an_update_of_a_version_that_is_no_longer_the_latest_is_refused(
+    db_driver, clear_database
+):
+    class Place(Entity):
+        pass
+
+    class Statement(Document):
+        text: str
+        at: Place
+
+    app = create_app()
+    async with client_for(app) as client:
+        headers = await logged_in(client)
+        place = (
+            await client.post(
+                "/api/Place", json={"type": "Place", "label": "P"}, headers=headers
+            )
+        ).json()
+        created = await client.post(
+            "/api/Statement",
+            json={
+                "type": "Statement",
+                "label": "S",
+                "text": "one",
+                "at": {"type": "Place", "id": place["id"]},
+            },
+            headers=headers,
+        )
+        assert created.headers["etag"] == '"1"'
+        url = f"/api/Statement/{created.json()['id']}"
+
+        # Two people load the same version to edit
+        alice = await client.get(f"{url}/edit", headers=headers)
+        bob = await client.get(f"{url}/edit", headers=headers)
+        assert alice.headers["etag"] == bob.headers["etag"] == '"1"'
+
+        # Alice saves first
+        response = await client.put(
+            url,
+            json={**alice.json(), "text": "alice"},
+            headers={**headers, "If-Match": alice.headers["etag"]},
+        )
+        assert response.status_code == 200, response.text
+        assert response.headers["etag"] == '"2"'
+
+        # Bob's is refused, says what the version is now, and changes nothing
+        response = await client.put(
+            url,
+            json={**bob.json(), "text": "bob"},
+            headers={**headers, "If-Match": bob.headers["etag"]},
+        )
+        assert response.status_code == 412
+        assert response.json()["currentVersion"] == 2
+        assert response.headers["etag"] == '"2"'
+        assert (await client.get(url)).json()["text"] == "alice"
+
+        # He loads again, to see what has changed, and saves from there
+        again = await client.get(f"{url}/edit", headers=headers)
+        assert again.json()["text"] == "alice"
+        response = await client.put(
+            url,
+            json={**again.json(), "text": "alice and bob"},
+            headers={**headers, "If-Match": again.headers["etag"]},
+        )
+        assert response.status_code == 200
+        assert (await client.get(url)).json()["meta"]["version"] == 3
+
+        # Not saying which version is refused; `*` is not
+        blind = await client.put(url, json={**again.json(), "text": "x"}, headers=headers)
+        assert blind.status_code == 428
+        assert (await client.get(url)).json()["text"] == "alice and bob"
+        forced = await client.put(
+            url,
+            json={**again.json(), "text": "forced"},
+            headers={**headers, "If-Match": "*"},
+        )
+        assert forced.status_code == 200
+        assert "etag" not in forced.headers
+        assert (await client.get(url)).json()["meta"]["version"] == 4
+
+        # (the same for an entity: the version goes up with an update of it)
+        place_edit = await client.get(f"/api/Place/{place['id']}/edit", headers=headers)
+        assert place_edit.headers["etag"] == '"1"'
+        stale = await client.put(
+            f"/api/Place/{place['id']}",
+            json=place_edit.json(),
+            headers={**headers, "If-Match": '"7"'},
+        )
+        assert stale.status_code == 412
+        assert stale.json()["currentVersion"] == 1

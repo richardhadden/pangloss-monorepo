@@ -77,7 +77,9 @@ def create_head_node(self: _DocumentCreateBase, detail: bool = False):
 
 
 def update_head_node(
-    self: _DocumentUpdateBase | _EntityUpdateBase, detail: bool = False
+    self: _DocumentUpdateBase | _EntityUpdateBase,
+    detail: bool = False,
+    expected_version: int | None = None,
 ):
     pass
 

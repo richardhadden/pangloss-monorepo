@@ -41,17 +41,22 @@ TREE_TRAVERSAL = (
 )
 
 
+# The version of a head node: 1, and 1 more for each update of it
+VERSION_OF_HEAD = "size([(head)<-[:is_update_of]-(update:PGUpdate) | update]) + 1"
+
+
 def build_head_query(head_id: uuid.UUID) -> tuple[str, dict[str, typing.Any]]:
     """Find a head node, and get what is needed to check an update to it"""
     return (
-        """
-        MATCH (head:PGIndexableNode:HeadNode {id: $head_id})
+        f"""
+        MATCH (head:PGIndexableNode:HeadNode {{id: $head_id}})
         OPTIONAL MATCH (head)<-[:is_creation_of]-(creation:PGCreation)
                        -[:created_by]->(user:PGUser)
         RETURN labels(head) AS labels,
                creation.created_when AS created_when,
                user.username AS created_by,
-               coalesce(head.deleted, false) AS deleted
+               coalesce(head.deleted, false) AS deleted,
+               {VERSION_OF_HEAD} AS version
         """,
         {"head_id": str(head_id)},
     )

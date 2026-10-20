@@ -27,7 +27,7 @@ Values can also come from environment variables or a `.env` file (`pydantic-sett
 | Setting | Type | Used by |
 |---------|------|---------|
 | `PROJECT_NAME` | `str` | Informational |
-| `BACKEND_CORS_ORIGINS` | `list` | Accepts a comma-separated string. Reserved for CORS in the web API ⏳ (not read yet) |
+| `BACKEND_CORS_ORIGINS` | `list` | The origins of the frontends that may use the API from a browser, such as `http://localhost:5173`. Accepts a comma-separated string. See [REST API](api.md#cors-using-the-api-from-a-frontend) |
 | `INSTALLED_APPS` | `list[str]` | Packages whose `cli.py` adds commands to `pangloss`, and whose `models` are imported by `pangloss setup-database`. See [Command line](cli.md) |
 | `DATABASE_MODULE` | `str` | Dotted path of the backend package; `initialise()` imports `<it>.exposed_functions` |
 | `DATABASE` | `DatabaseSettings` subclass | Backend connection details |

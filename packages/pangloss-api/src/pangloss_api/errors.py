@@ -11,6 +11,7 @@ from pangloss_models.exceptions import (
     PanglossReferenceError,
     PanglossUserDisabledError,
     PanglossUserNotFoundError,
+    PanglossVersionConflictError,
     PanglossWriteError,
 )
 from pangloss_users.exceptions import (
@@ -27,6 +28,7 @@ STATUS_FOR_ERROR: list[tuple[type[Exception], int]] = [
     (PanglossInvalidUserError, 422),
     (PanglossUserError, 400),
     (PanglossNotFoundError, 404),
+    (PanglossVersionConflictError, 412),
     (PanglossEntityInUseError, 409),
     (PanglossConflictError, 409),
     (PanglossNotDeletedError, 409),
@@ -52,7 +54,12 @@ async def error_handler(request: Request, error: Exception) -> JSONResponse:
             {key: str(value) for key, value in item.items()}
             for item in error.referenced_by
         ]
-    return JSONResponse(status_code=status_for(error), content=content)
+    headers = {}
+    if isinstance(error, PanglossVersionConflictError) and error.current_version:
+        # (what the version is now: to load again, and see what has been changed)
+        content["currentVersion"] = error.current_version
+        headers["ETag"] = f'"{error.current_version}"'
+    return JSONResponse(status_code=status_for(error), content=content, headers=headers)
 
 
 def register_error_handlers(app: FastAPI) -> None:

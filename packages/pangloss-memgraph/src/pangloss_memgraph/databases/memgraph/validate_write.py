@@ -32,6 +32,7 @@ from pangloss_memgraph.databases.memgraph.database import Transaction
 class ExistingHead:
     created_by: str | None
     created_when: typing.Any
+    version: int = 1
 
 
 async def check_user_exists(tx: Transaction) -> None:
@@ -230,8 +231,10 @@ async def get_existing_head(
     records = await result.values()
     if not records or head_type not in records[0][0] or records[0][3]:
         raise PanglossNotFoundError(f"There is no {head_type} with id {head_id}")
-    _, created_when, created_by, _ = records[0]
-    return ExistingHead(created_by=created_by, created_when=created_when)
+    _, created_when, created_by, _, version = records[0]
+    return ExistingHead(
+        created_by=created_by, created_when=created_when, version=version
+    )
 
 
 async def get_tree_meta(

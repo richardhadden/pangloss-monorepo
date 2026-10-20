@@ -67,7 +67,8 @@ def build_fetch_document_query(
             context_labels: root.meta.context_labels,
             head_node_type: headnode.type,
             head_node_id: headnode.id,
-            marked_for_deletion: coalesce(root.marked_for_deletion, false)
+            marked_for_deletion: coalesce(root.marked_for_deletion, false),
+            version: size([(headnode)<-[:is_update_of]-(version_update:PGUpdate) | version_update]) + 1
         }} AS meta
     """
     return (query, query_params)

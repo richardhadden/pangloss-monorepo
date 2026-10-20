@@ -12,7 +12,9 @@ from pydantic import AnyHttpUrl
 
 class Settings(BaseSettings[MemgraphDatabaseSettings]):
     PROJECT_NAME: str = "${project_name}"
-    BACKEND_CORS_ORIGINS: list = []
+    # The sites that may use the API from a browser: the frontend, here as the dev
+    # server of Vite or SvelteKit runs (add the real address when it is deployed)
+    BACKEND_CORS_ORIGINS: list = ["http://localhost:5173"]
 
     # The packages whose commands and models are used, and your own apps (made with
     # `pangloss new-app <name>`, which adds them here)

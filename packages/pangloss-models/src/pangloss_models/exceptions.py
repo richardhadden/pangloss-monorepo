@@ -45,6 +45,15 @@ class PanglossConflictError(PanglossWriteError):
     updated includes an id belonging to a different head object"""
 
 
+class PanglossVersionConflictError(PanglossWriteError):
+    """An update was made to a version of an object that is no longer the latest:
+    someone else has updated it since it was read. Nothing was written."""
+
+    def __init__(self, message: str, current_version: int | None = None):
+        super().__init__(message)
+        self.current_version = current_version
+
+
 class PanglossUserNotFoundError(PanglossWriteError):
     """The user doing the write has no user node in the database"""
 

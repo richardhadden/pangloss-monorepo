@@ -86,6 +86,7 @@ def test_a_new_project_can_be_loaded(workdir: Path):
     settings = importlib.import_module("my_site.settings")
     assert settings.Settings().INSTALLED_APPS == ["pangloss_memgraph"]
     assert settings.Settings().PROJECT_NAME == "my_site"
+    assert settings.Settings().BACKEND_CORS_ORIGINS == ["http://localhost:5173"]
 
 
 def test_settings_are_read_from_the_project_directory(workdir: Path):

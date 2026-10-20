@@ -8,7 +8,7 @@ For each one that is not abstract, `NAME` being its class name:
 | `GET`    | `/api/NAME/{id}`         | the `HeadView` |
 | `POST`   | `/api/NAME`              | create (`Create`); login required |
 | `GET`    | `/api/NAME/{id}/edit`    | to edit: an entity's `EditView`, a document's `HeadView`; login required |
-| `PUT`    | `/api/NAME/{id}`         | update (`Update`); login required |
+| `PUT`    | `/api/NAME/{id}`         | update (`Update`); login required, and `If-Match` |
 | `DELETE` | `/api/NAME/{id}`         | delete; login required |
 | `POST`   | `/api/NAME/{id}/undelete`| undelete; login required |
 
@@ -16,7 +16,9 @@ For an entity, `{id}` can also be one of its URLs, as it is, to get it:
 `/api/Person/https://example.com/people/john`. Everything else (`/edit`, and
 the changes: update, delete, undelete) is only ever at the id.
 
-Reading is open to everyone. The functions they call are those bound to the models
+An update says which version it is based on, with the header `If-Match` (the `ETag` of
+the edit view): if the object has been updated since, it is refused. Reading is open to
+everyone. The functions they call are those bound to the models
 by the database backend (`Model.get`, `Model.list`, `Model.Create(...).save()` ...).
 """
 
@@ -29,6 +31,7 @@ from fastapi import (
     APIRouter,
     Body,
     Depends,
+    Header,
     HTTPException,
     Path,
     Query,
@@ -141,6 +144,43 @@ async def entity_id(
     return reference
 
 
+def etag(version: int) -> str:
+    return f'"{version}"'
+
+
+def expected_version(if_match: str | None) -> int | None:
+    """The version that an update is based on, from the header `If-Match`: the `ETag`
+    that the edit view had (`"3"`); or `*`, to update whatever the version is (None).
+
+    The header is required: without it, whoever updates last would silently undo the
+    changes of whoever updated before."""
+    if if_match is None:
+        raise HTTPException(
+            status.HTTP_428_PRECONDITION_REQUIRED,
+            detail="An update must say which version it is based on, with the header "
+            'If-Match: the ETag of the edit view ("3"), or * to update whatever the '
+            "version is",
+        )
+    value = if_match.strip()
+    if value == "*":
+        return None
+    if value.startswith("W/"):
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            detail="If-Match must be a strong ETag, such as \"3\"",
+        )
+    try:
+        version = int(value.strip('"'))
+    except ValueError:
+        version = 0
+    if version < 1 or (value.count('"') not in (0, 2)):
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            detail='If-Match must be the version in quotes ("3"), or *',
+        )
+    return version
+
+
 def list_response_model(model: type[Document] | type[Entity]) -> Any:
     reference_views = [t.ReferenceView for t in get_concrete_types(model)]  # type: ignore[attr-defined]
     return _ListItems[Union[*reference_views]]  # type: ignore[valid-type]
@@ -193,11 +233,14 @@ def build_router(model: type[Document] | type[Entity]) -> APIRouter:
     )
     async def create_item(
         body: Annotated[create_model, Body()],  # type: ignore[valid-type]
+        response: Response,
         detail: Annotated[
             bool, Query(description="Return the whole HeadView, not a summary")
         ] = False,
     ):
-        return await called(body.save(detail=detail))  # type: ignore[attr-defined]
+        created = await called(body.save(detail=detail))  # type: ignore[attr-defined]
+        response.headers["ETag"] = etag(1)
+        return created
 
     @router.get(
         f"{item}/edit",
@@ -205,11 +248,14 @@ def build_router(model: type[Document] | type[Entity]) -> APIRouter:
         dependencies=logged_in,
         operation_id=f"edit_{name}",
     )
-    async def edit_item(id: ChangeId):  # type: ignore[valid-type]
+    async def edit_item(id: ChangeId, response: Response):  # type: ignore[valid-type]
+        """What to edit. Its `ETag` is the version, which an update says it is based
+        on (`If-Match`)."""
         read = model.get_for_edit if is_entity else model.get  # type: ignore[attr-defined]
         found = await called(read(id))
         if found is None:
             raise not_found(model, id)
+        response.headers["ETag"] = etag(found.meta.version)
         return found
 
     @router.post(
@@ -238,6 +284,16 @@ def build_router(model: type[Document] | type[Entity]) -> APIRouter:
     async def update_item(
         id: ChangeId,  # type: ignore[valid-type]
         body: Annotated[update_model, Body()],  # type: ignore[valid-type]
+        response: Response,
+        if_match: Annotated[
+            str | None,
+            Header(
+                alias="If-Match",
+                description='The version this update is based on: the ETag of the '
+                'edit view ("3"). `*` updates whatever the version is. 412 if it is '
+                "not the latest.",
+            ),
+        ] = None,
         detail: Annotated[
             bool, Query(description="Return the whole HeadView, not a summary")
         ] = False,
@@ -247,7 +303,17 @@ def build_router(model: type[Document] | type[Entity]) -> APIRouter:
                 status.HTTP_400_BAD_REQUEST,
                 detail="The id in the body is not the id in the path",
             )
-        return await called(body.save(detail=detail))  # type: ignore[attr-defined]
+        based_on = expected_version(if_match)
+        updated = await called(
+            body.save(detail=detail, expected_version=based_on)  # type: ignore[attr-defined]
+        )
+        # The new version, to go on editing from (not known after a forced update,
+        # unless the whole thing is returned)
+        if detail:
+            response.headers["ETag"] = etag(updated.meta.version)
+        elif based_on is not None:
+            response.headers["ETag"] = etag(based_on + 1)
+        return updated
 
     @router.delete(
         item,

@@ -51,7 +51,7 @@ Optional literal fields (`X | None`) default to `None` in all of these models, s
    | `Document.undelete` | `undelete_document(cls, id)` |
    | `Entity.undelete` | `undelete_entity(cls, id)` |
    | `_DocumentCreateBase.save`, `_EntityCreateBase.save` | `create_head_node(instance, detail)` |
-   | `_DocumentUpdateBase.save`, `_EntityUpdateBase.save` | `update_head_node(instance, detail)` |
+   | `_DocumentUpdateBase.save`, `_EntityUpdateBase.save` | `update_head_node(instance, detail, expected_version)` |
    | `Document.list`, `Entity.list` | `list_items(cls, search_terms, page_number, page_size, deep_search)` |
 
    A missing module raises `PanglossImportError`.
@@ -71,6 +71,7 @@ Optional literal fields (`X | None`) default to `None` in all of these models, s
 | `PanglossNotFoundError` | The Document or Entity being updated does not exist, or is not of the given type |
 | `PanglossReferenceError` | An existing entity that is referred to does not exist, or is not of a type allowed in that field |
 | `PanglossConflictError` | An id given for a new object is already in use, or (in an update) belongs to a different document |
+| `PanglossVersionConflictError` | An update said which version it was based on (`expected_version`), and that is not the latest: it has been updated since. Has `current_version` |
 | `PanglossUserNotFoundError` | The user doing the write (`current_request_username`) has no `PGUser` node |
 | `PanglossNotDeletableError` | A document nested in another document cannot be deleted: only head documents can |
 | `PanglossEntityInUseError` | An entity that is referred to cannot be deleted. It **has been marked** for deletion (the one write error that leaves a change), and has `entity_id` and `referenced_by` |

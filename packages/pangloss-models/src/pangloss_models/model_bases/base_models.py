@@ -550,6 +550,9 @@ class _APIHeadMeta(_BaseObject):
     # An entity that something refers to cannot be deleted: when someone tried to,
     # it was marked instead
     marked_for_deletion: bool = False
+    # 1 when made, and 1 more for each update: an update can say which version it
+    # was based on, and is refused if that is no longer the latest
+    version: int = 1
 
     @field_validator("semantic_spaces", mode="before")
     @classmethod

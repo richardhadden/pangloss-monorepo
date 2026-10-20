@@ -15,6 +15,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from pangloss_core import settings as core_settings
 
 from pangloss_api.errors import register_error_handlers
@@ -74,6 +75,35 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 MIN_SECRET_LENGTH = 32
 
+CORS_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
+
+
+def add_cors(app: FastAPI, origins: list[str]) -> None:
+    """Let a browser use the API from a page on one of the origins.
+
+    Cookies (the session) are sent with a request from those origins, which is what
+    `credentials: "include"` is for in the frontend. Not with `*`: any site could
+    then use the cookies of whoever visits it; so with `*`, only the `Authorization`
+    header can be used to log in."""
+    if not origins:
+        return
+    anyone = "*" in origins
+    if anyone:
+        warnings.warn(
+            "BACKEND_CORS_ORIGINS has '*': any site can use the API from a browser "
+            "(though not with the session cookies)",
+            stacklevel=3,
+        )
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"] if anyone else origins,
+        allow_credentials=not anyone,
+        allow_methods=CORS_METHODS,
+        allow_headers=["Authorization", "Content-Type", "Accept", "If-Match"],
+        expose_headers=["ETag"],
+        max_age=600,
+    )
+
 
 def create_app() -> FastAPI:
     settings = ensure_settings()
@@ -91,6 +121,7 @@ def create_app() -> FastAPI:
 
     app = FastAPI(title=settings.PROJECT_NAME, lifespan=lifespan)
 
+    add_cors(app, settings.BACKEND_CORS_ORIGINS)
     register_error_handlers(app)
     app.include_router(users.router)
     for model in routable_models():

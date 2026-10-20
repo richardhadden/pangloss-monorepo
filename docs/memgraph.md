@@ -85,11 +85,11 @@ Called by `.save()`. Converts the `Create` instance to `CreateDB`, builds one qu
 - By default `.save()` returns the `ReferenceView` straight from the in-memory object, with `meta.created_by` set from `current_request_username`.
 - `detail=True` re-reads the node and returns the full `HeadView` (`get_document` or `get_entity`).
 
-### `update_head_node(instance, detail=False)` ✅
+### `update_head_node(instance, detail=False, expected_version=None)` ✅
 
 Called by `.save()` on a `Document.Update` or `Entity.Update`. **An update is a full replacement of the document, not a patch**: anything left out of the payload is removed. It does not work out what has changed; it deletes the tree and writes the new one, in one transaction:
 
-1. **Check**, before anything is deleted: the user exists; the head node exists and has the given type (`PanglossNotFoundError`); everything referred to exists (`PanglossReferenceError`); no id in the payload belongs to a node outside this document (`PanglossConflictError`). If any check fails, nothing has changed.
+1. **Check**, before anything is deleted: the user exists; the head node exists and has the given type (`PanglossNotFoundError`); if `expected_version` is given, it is the version of the head node now (`PanglossVersionConflictError`, with `current_version`; see below); everything referred to exists (`PanglossReferenceError`); no id in the payload belongs to a node outside this document (`PanglossConflictError`). If any check fails, nothing has changed.
 2. **Collect `meta`** of every node already below the head node, so that nodes given again keep `created_by` and `created_when`. Their `updated_by` and `updated_when` are set.
 3. **Replace the head node**: delete every node below it, except entities, and delete the edges it owns; then replace its properties. (Its URLs are kept: they are `PGUrl` nodes, which it does not own.) The head node itself is kept, with its `PGCreation`.
 4. **Write the new tree**, with the same code as a creation, and add a `PGUpdate` node.
@@ -101,6 +101,8 @@ What is deleted, and what is not:
 - Nodes given with an existing `id` keep that id (and so can be referred to), nodes given without one get a new id, and nodes left out are gone.
 
 `detail` is as for creation; by default `.save()` returns the `ReferenceView` with `meta.created_by`, `created_when`, `updated_by` and `updated_when`.
+
+**Versions.** The version of a head node is 1 and one more for each update of it, worked out from its `PGUpdate` records (`1 + count`), so nothing more is stored and nodes made before it have a version. It is `meta.version` of the `HeadView` and `EditView`. `Update(...).save(expected_version=3)` writes only if the version now is 3, and raises `PanglossVersionConflictError` otherwise, with nothing written. The check is made in the transaction of the update: two updates at once both read the version, but both write to the head node, so the database makes the second run again, and it then finds the new version and is refused. Without `expected_version` the update is made whatever the version. A delete or undelete is not an update, so does not change it. Nor does a change of what refers to an entity.
 
 ### `delete_document(cls, id)` and `delete_entity(cls, id)` ✅
 
@@ -156,7 +158,7 @@ Returns `_ListItems` of `ReferenceView`s of all concrete subtypes of `cls`. Defa
 
 ### Transactions
 
-`Database.read_transaction` / `write_transaction` open a session per call. If a write function raises, its transaction is rolled back and the exception propagates (the checks above rely on this to leave data untouched). Transient conflicts, such as two updates of the same document at once, are retried by the driver for up to `max_transaction_retry_time` (10 seconds); the last write wins.
+`Database.read_transaction` / `write_transaction` open a session per call. If a write function raises, its transaction is rolled back and the exception propagates (the checks above rely on this to leave data untouched). Transient conflicts, such as two updates of the same document at once, are retried by the driver for up to `max_transaction_retry_time` (10 seconds); an update that says which version it is based on (`expected_version`) is then refused if it is no longer the latest, and one that does not says nothing: the last write wins.
 
 ## Known rough edges
 

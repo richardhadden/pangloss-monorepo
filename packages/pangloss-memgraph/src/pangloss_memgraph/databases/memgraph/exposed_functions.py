@@ -7,6 +7,7 @@ from neo4j.exceptions import ClientError
 from pangloss_models.exceptions import (
     PanglossConflictError,
     PanglossEntityInUseError,
+    PanglossVersionConflictError,
     PanglossWriteError,
 )
 from pangloss_models.model_bases.base_models import _ListItems
@@ -353,13 +354,26 @@ async def create_head_node(
 async def replace_head_node(
     tx: Transaction,
     db_instance: _DocumentUpdateDBBase | _EntityUpdateDBBase,
+    expected_version: int | None = None,
 ) -> ExistingHead:
     """Replace everything below a head node, and its properties, with the new
     version. All checks are made before anything is deleted, and if anything
-    fails the transaction is rolled back."""
+    fails the transaction is rolled back.
+
+    If `expected_version` is given, the update is only made if that is the version
+    of the head node now. (Two updates at once are safe: both read the version, but
+    both write to the head node, so the second is made to run again by the
+    database, and then finds the new version.)"""
 
     await check_user_exists(tx)
     existing_head = await get_existing_head(tx, db_instance.id, db_instance.type)
+    if expected_version is not None and existing_head.version != expected_version:
+        raise PanglossVersionConflictError(
+            f"{db_instance.type} {db_instance.id} is at version "
+            f"{existing_head.version}, not {expected_version}: it has been updated "
+            "since it was read",
+            current_version=existing_head.version,
+        )
     previous_meta = await get_tree_meta(tx, db_instance.id)
 
     query_object = build_head_update_query(db_instance, previous_meta)
@@ -388,13 +402,20 @@ async def replace_head_node(
 async def update_head_node(
     instance: _DocumentUpdateBase | _EntityUpdateBase,
     detail: bool = False,
+    expected_version: int | None = None,
 ):
     """Replace a Document or Entity (and, for a Document, everything nested in it)
-    with the given version"""
+    with the given version.
+
+    `expected_version` is the `meta.version` that the new version was made from:
+    if someone has updated it since, `PanglossVersionConflictError` is raised and
+    nothing is written. Without it, the update is made whatever the version."""
     db_instance = cast(
         _DocumentUpdateDBBase | _EntityUpdateDBBase, instance._to_db_model()
     )
-    existing_head = await write_with_retries(replace_head_node, db_instance)
+    existing_head = await write_with_retries(
+        replace_head_node, db_instance, expected_version
+    )
 
     owner = cast(type[Document | Entity], instance._owner)
     if detail:
