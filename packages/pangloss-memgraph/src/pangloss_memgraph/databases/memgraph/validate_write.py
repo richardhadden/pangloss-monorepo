@@ -10,6 +10,7 @@ from pangloss_models.exceptions import (
     PanglossConflictError,
     PanglossNotFoundError,
     PanglossReferenceError,
+    PanglossUserDisabledError,
     PanglossUserNotFoundError,
 )
 from pangloss_users import current_request_username
@@ -36,11 +37,17 @@ class ExistingHead:
 async def check_user_exists(tx: Transaction) -> None:
     username = current_request_username.get()
     result = await tx.run(
-        "MATCH (user:PGUser {username: $username}) RETURN user.username AS username",
+        """
+        MATCH (user:PGUser {username: $username})
+        RETURN coalesce(user.disabled, false) AS disabled
+        """,
         username=username,
     )
-    if not await result.value():
+    found = await result.value()
+    if not found:
         raise PanglossUserNotFoundError(f"There is no user '{username}'")
+    if found[0]:
+        raise PanglossUserDisabledError(f"The user '{username}' is disabled")
 
 
 async def check_references_exist(tx: Transaction, query_object: QueryObject) -> None:

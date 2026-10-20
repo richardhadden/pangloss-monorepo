@@ -22,6 +22,8 @@ Each feature in these docs is marked with its status:
 | [Semantic spaces and context labels](semantic-spaces.md) | How nesting inside `SemanticSpace` wrappers is tracked |
 | [Memgraph backend](memgraph.md) | Graph schema, query builders, and the database API |
 | [Settings](settings.md) | `BaseSettings` and database settings |
+| [Users](users.md) | User models, passwords and the `service` functions |
+| [Command line](cli.md) | The `pangloss` command, and adding commands from apps |
 | [Development](development.md) | Setting up, running tests, repository layout |
 | [Status and roadmap](status.md) | What is and is not implemented |
 

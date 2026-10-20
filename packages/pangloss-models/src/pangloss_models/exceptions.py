@@ -49,6 +49,10 @@ class PanglossUserNotFoundError(PanglossWriteError):
     """The user doing the write has no user node in the database"""
 
 
+class PanglossUserDisabledError(PanglossWriteError):
+    """The user doing the write has been disabled"""
+
+
 class PanglossNotDeletableError(PanglossWriteError):
     """Only head documents can be deleted: this is part of another document"""
 

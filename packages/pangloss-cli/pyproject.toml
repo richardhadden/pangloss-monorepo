@@ -1,0 +1,27 @@
+[project]
+name = "pangloss-cli"
+version = "0.1.0"
+description = "The pangloss command line"
+readme = "README.md"
+authors = [
+    { name = "Richard Hadden", email = "rwjhadden@gmail.com" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "pangloss-core",
+    "pangloss-models",
+    "pangloss-users",
+    "typer>=0.12",
+]
+
+[project.scripts]
+pangloss = "pangloss_cli.main:main"
+
+[build-system]
+requires = ["uv_build>=0.11.8,<0.12.0"]
+build-backend = "uv_build"
+
+[tool.uv.sources]
+pangloss-core = { workspace = true }
+pangloss-models = { workspace = true }
+pangloss-users = { workspace = true }

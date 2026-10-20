@@ -14,6 +14,7 @@ dependencies = [
     "pangloss-sdk",
     "pangloss-users",
     "pytest-asyncio>=1.4.0",
+    "typer>=0.27.3",
 ]
 
 [build-system]

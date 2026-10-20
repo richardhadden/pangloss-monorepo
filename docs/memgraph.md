@@ -37,7 +37,7 @@ Requirements: a Memgraph server with text search (the `text_search` module), sup
 | `(:PGUrl {url})` | A URL of an entity (from a URL given as its `id`), linked `(entity)-[:has_url]->(url)`. It is a node, not a property, so that it can have a **uniqueness constraint**: a URL cannot belong to two entities, even if they are written at the same moment. It is not part of what an entity owns or contains: reading and updating an entity leave it alone, and a deleted entity keeps it (so the URL stays taken) |
 | `(:PGDeletion)` | One for each deletion of a head document or an entity, with `id` and `deleted_when`; linked `(deletion)-[:is_deletion_of]->(node)` and `(deletion)-[:deleted_by]->(:PGUser)`. The node itself has `deleted: true` |
 | `(:PGUndeletion)` | One for each undeletion, with `id` and `undeleted_when`; linked `(undeletion)-[:is_undeletion_of]->(node)` and `(undeletion)-[:undeleted_by]->(:PGUser)`. The node's `deleted` flag is removed; its `PGDeletion` records are kept |
-| `(:PGUser {username})` | Must already exist: a write as a user with no node raises `PanglossUserNotFoundError`. (The tests `MERGE` it) |
+| `(:PGUser {username})` | Must already exist: a write as a user with no node raises `PanglossUserNotFoundError`, and as a disabled user `PanglossUserDisabledError`. Users made with `create_user` also have `email`, `full_name`, `admin`, `disabled`, `created_when` and `hashed_password`; `username` and `email` are unique. See [Users](users.md). (The tests `MERGE` a bare one) |
 
 ### Property values
 
@@ -156,6 +156,6 @@ Returns `_ListItems` of `ReferenceView`s of all concrete subtypes of `cls`. Defa
 
 ## Known rough edges
 
-- `initialise_database` is not connected to a command yet (⏳ a CLI), so it has to be called from code.
+- `initialise_database` is run by `pangloss setup-database` (see [Command line](cli.md)), or can be called from code.
 - Nothing yet removes deleted nodes for good.
 - `Database.default` is set by the last `Database(...)` constructed, and `exposed_functions` decorates with `Database.default` at import time, so the settings/`Database` must be created before the module is first imported (which `initialise()` does when binding).

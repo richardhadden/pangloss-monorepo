@@ -82,3 +82,23 @@ def list_items(
     cls: type[Document | Entity], search_terms: str
 ) -> _ListItems[_DocumentReferenceViewBase | _EntityReferenceViewBase]:
     pass
+
+
+def create_user_in_db(user) -> None:
+    pass
+
+
+def get_user_in_db(username: str):
+    pass
+
+
+def get_user_in_db_by_email(email: str):
+    pass
+
+
+def list_users_in_db() -> list:
+    pass
+
+
+def update_user_in_db(username: str, changes: dict):
+    pass

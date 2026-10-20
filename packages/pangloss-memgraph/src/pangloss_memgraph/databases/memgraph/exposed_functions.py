@@ -1,5 +1,5 @@
 import datetime
-from typing import Union, cast
+from typing import Any, Union, cast
 from uuid import UUID
 
 from neo4j import AsyncResult
@@ -30,6 +30,7 @@ from pangloss_models.model_bases.entity import (
 )
 from pangloss_models.utils import get_concrete_types
 from pangloss_users import current_request_username
+from pangloss_users.models import UserInDB
 from pydantic import AnyHttpUrl, TypeAdapter
 
 from pangloss_memgraph.databases.memgraph.build_create_query import (
@@ -47,6 +48,7 @@ from pangloss_memgraph.databases.memgraph.build_update_query import (
     build_replace_head_query,
 )
 from pangloss_memgraph.databases.memgraph.database import Database, Transaction
+from pangloss_memgraph.databases.memgraph import users
 from pangloss_memgraph.databases.memgraph.delete_node import (
     DeletionResult,
     soft_delete,
@@ -353,3 +355,35 @@ async def update_head_node(
             updated_when=datetime.datetime.now(datetime.UTC),
         ),
     )
+
+
+# ---------------------------------------------------------------------------
+# Users (see `pangloss_users.service`)
+# ---------------------------------------------------------------------------
+
+
+@Database.default.write_transaction
+async def create_user_in_db(tx: Transaction, user: UserInDB) -> None:
+    await users.create_user(tx, user)
+
+
+@Database.default.read_transaction
+async def get_user_in_db(tx: Transaction, username: str) -> UserInDB | None:
+    return await users.get_user(tx, username)
+
+
+@Database.default.read_transaction
+async def get_user_in_db_by_email(tx: Transaction, email: str) -> UserInDB | None:
+    return await users.get_user_by_email(tx, email)
+
+
+@Database.default.read_transaction
+async def list_users_in_db(tx: Transaction) -> list[UserInDB]:
+    return await users.list_users(tx)
+
+
+@Database.default.write_transaction
+async def update_user_in_db(
+    tx: Transaction, username: str, changes: dict[str, Any]
+) -> UserInDB:
+    return await users.update_user(tx, username, changes)

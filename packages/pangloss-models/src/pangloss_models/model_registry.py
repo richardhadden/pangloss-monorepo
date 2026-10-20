@@ -4,7 +4,7 @@ from itertools import chain
 from typing import ClassVar, get_args, get_origin
 
 from pydantic import BaseModel
-lazy from pangloss_core.settings import SETTINGS
+lazy from pangloss_core import settings as core_settings
 
 from pangloss_models.exceptions import (
     PanglossImportError,
@@ -330,7 +330,8 @@ class ModelRegistry:
         methods, so no wrapping is needed. They must take the class (or instance,
         for `save`) as their first argument."""
 
-        database = SETTINGS.DATABASE_MODULE
+        # (read when used: the settings are set when a project makes them)
+        database = core_settings.SETTINGS.DATABASE_MODULE
 
         try:
             exposed_functions = importlib.import_module(f"{database}.exposed_functions")

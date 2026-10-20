@@ -18,6 +18,8 @@ A snapshot of what works and what does not, as of this writing.
 - Deleting head documents and unreferenced entities, as a flag (`deleted`) with a `PGDeletion` record, hidden from reads, lists and searches; an entity that is referred to is marked for deletion (`meta.marked_for_deletion`) instead.
 - Undeleting head documents and entities (`Document.undelete`, `Entity.undelete`): the flag is removed and a `PGUndeletion` record added, keeping the `PGDeletion` history; `PanglossNotDeletedError` if the node was not deleted.
 - Recording the creating user and time on head nodes.
+- The `pangloss` command line (`pangloss-cli`): `setup-database`, `users ...`, and commands added by installed apps' `cli.py` (`pangloss memgraph info`). See [Command line](cli.md).
+- Users (`pangloss-users`, stored by the Memgraph backend as `PGUser` nodes): create, find, list, update, change password (Argon2id), make admin, disable; `authenticate` checks a password. A disabled user cannot write. See [Users](users.md).
 - Context labels and semantic-space annotation on create.
 
 ## Partial
@@ -28,15 +30,13 @@ A snapshot of what works and what does not, as of this writing.
 | Head node type and id through `CreateDB` / `UpdateDB` | Open item in `todo.md` |
 | Updating a document concurrently | Last write wins; there is no check that the payload was based on the latest version |
 | `pangloss-sdk` (API as database) | Only settings; the functions are stubs returning dummy data |
-| `pangloss-users` | Only the `current_request_username` context variable |
 
 ## Not implemented
 
 - ⏳ **REST API / web layer.** The project description mentions one; `BACKEND_CORS_ORIGINS`, `AUTHJWT_SECRET_KEY` and `ENTITY_BASE_URL` exist in settings but nothing uses them.
-- ⏳ **Authentication, user management, permissions.**
+- ⏳ **Tokens and sessions (JWT/cookies), API routes for users, and permissions.** Users and passwords exist; nothing issues or checks tokens yet.
 - ⏳ **Removing deleted nodes for good**. An entity marked for deletion is not deleted automatically when the last reference to it goes.
-- ⏳ **Installed apps / plugin discovery** (`INSTALLED_APPS`), **interface languages** (`INTERFACE_LANGUAGES`).
-- ⏳ **A command-line interface** for `initialise_database` (indexes, constraints, the text index and enums), which has to be called from code for now. `indexes.py` and `pangloss_memgraph/tooling/` are empty.
+- ⏳ **Interface languages** (`INTERFACE_LANGUAGES`). (`INSTALLED_APPS` is used by the command line, to add commands and import models; nothing else reads it yet.)
 - ⏳ **Optional relations** (`Person | None`), **optional embedded objects**, **lists of embedded objects or annotated values** and **plain `dict` fields** (use a `TypedDict`) are not supported by the model layer; each raises an error at `initialise()`.
 - ⏳ **The `"subtract"` type wrapper** (opposite of `Fulfil`), from `todo.md`.
 - ⏳ **`Relation[Subject, Object]`**: placeholder class only.

@@ -5,7 +5,9 @@ This is a [uv workspace](https://docs.astral.sh/uv/concepts/projects/workspaces/
 ```
 pangloss-memgraph ──► pangloss-models ──► pangloss-core ──► pangloss-sdk
         │──────────────────────────────────────────────────────►│
-        └──► pangloss-users
+        └──► pangloss-users ──► pangloss-core
+
+pangloss-cli ──► pangloss-core, pangloss-models, pangloss-users
 ```
 
 Arrows show declared dependencies. The SDK's code also imports `pangloss_core` and `pangloss_models`, which `pangloss-sdk/pyproject.toml` does not declare (a cycle with `pangloss-core`'s declared dependency on the SDK).
@@ -37,7 +39,11 @@ It depends on [`pydantic-meta-kit`](https://github.com/richardhadden/pydantic-me
 
 A database backend for [Memgraph](https://memgraph.com/) (using the `neo4j` async driver). It supplies the `exposed_functions` module that `ModelRegistry` binds to `Document.get`, `Document.list`, `Entity.list` and `.save()`. See [Memgraph backend](memgraph.md).
 
-`indexes.py` and `tooling/__init__.py` are empty placeholders.
+`cli.py` adds `pangloss memgraph <command>`; `databases/memgraph/setup.py` is what the core `pangloss setup-database` calls. `indexes.py` and `tooling/__init__.py` are empty placeholders.
+
+## pangloss-cli ✅
+
+The `pangloss` command (`pangloss_cli.main`), built with [Typer](https://typer.tiangolo.com/). It finds the project's settings, adds the commands of installed apps, and has the core commands `setup-database` and `users ...`. It knows nothing about a particular database: it uses the `setup` module of `DATABASE_MODULE`. See [Command line](cli.md).
 
 ## pangloss-sdk 🚧
 
@@ -49,4 +55,11 @@ Intended to let Pangloss models be used locally and read/write a remote Pangloss
 
 ## pangloss-users 🚧
 
-Only provides the `current_request_username` `ContextVar` (default `"pangloss_default_user"`). The Memgraph backend uses it to record who created a node. There is no user model, authentication or permissions code yet; `BaseSettings` requires `AUTHJWT_SECRET_KEY`, but nothing consumes it.
+Users and their passwords. See [Users](users.md).
+
+- `current_request_username`: a `ContextVar` (default `"pangloss_default_user"`) naming the acting user. The Memgraph backend uses it to record who created, updated or deleted a node, and refuses writes by a user who does not exist or is disabled.
+- `models.py`: `User` (what can be shown: no password or hash), `UserCreate`, `UserUpdate` and `UserInDB` (with `hashed_password`).
+- `passwords.py`: Argon2id hashing and checking.
+- `service.py`: `create_user`, `get_user`, `get_user_by_email`, `list_users`, `authenticate`, `update_user`, `set_password`, `change_password`, `set_admin` and `set_disabled`. They call the database backend's `exposed_functions`.
+
+Tokens, sessions, permissions and the API routes are not here yet ⏳ (`AUTHJWT_SECRET_KEY` is not consumed by anything).

@@ -40,6 +40,8 @@ UNIQUE_CONSTRAINTS = [
     ("PGDeletion", "id"),
     ("PGUndeletion", "id"),
     ("PGUrl", "url"),
+    ("PGUser", "username"),
+    ("PGUser", "email"),
 ]
 
 # (label, properties). Each unique property is indexed, for finding a node; and an id
