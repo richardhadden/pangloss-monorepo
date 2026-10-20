@@ -304,3 +304,36 @@ RETURN {
   next_page: CASE WHEN $page < toInteger(ceil(toFloat(total) / $page_size)) THEN $page + 1 ELSE null END
 } AS response
 """
+
+
+@no_type_check
+async def test_list_with_nothing_in_it_or_a_page_past_the_end(clear_database):
+    class Person(Entity):
+        pass
+
+    initialise()
+
+    empty = await Person.list()
+    assert empty.results == []
+    assert empty.count == 0
+    assert empty.page == 1
+    assert empty.next_page is None
+    assert empty.previous_page is None
+
+    for label in ("One", "Two", "Three"):
+        await Person.Create(label=label).save()
+
+    past_the_end = await Person.list(page_number=5, page_size=2)
+    assert past_the_end.results == []
+    assert past_the_end.count == 3
+    assert past_the_end.page == 5
+    assert past_the_end.previous_page == 4
+    assert past_the_end.next_page is None
+
+    # (a deleted one is not counted)
+    first = (await Person.list(page_size=1)).results[0]
+    await Person.delete(first.id)
+    assert (await Person.list(page_number=9)).count == 2
+
+    # With search terms, nothing found is nothing
+    assert (await Person.list("nothing like this")).count == 0

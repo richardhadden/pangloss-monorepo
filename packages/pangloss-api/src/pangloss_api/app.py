@@ -2,9 +2,10 @@
 
 `create_app()` builds it from the project's settings: the settings module is the one
 already imported, or the one named by the environment variable `PANGLOSS_SETTINGS`
-(which is how `pangloss run` and `pangloss dev` pass it to the server). Starting the
-server (the lifespan) imports the models of the installed apps, initialises them, and
-connects to the database through the `setup` module of `DATABASE_MODULE`.
+(which is how `pangloss run` and `pangloss dev` pass it to the server). Building the
+app imports the models of the installed apps and initialises them, as its routes are
+made from them; starting the server (the lifespan) connects to the database through the
+`setup` module of `DATABASE_MODULE`.
 """
 
 import importlib
@@ -13,26 +14,14 @@ import warnings
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI
 from pangloss_core import settings as core_settings
-from pangloss_users.exceptions import (
-    PanglossInvalidUserError,
-    PanglossUserDoesNotExistError,
-    PanglossUserError,
-    PanglossUserExistsError,
-)
 
+from pangloss_api.errors import register_error_handlers
 from pangloss_api.routes import users
+from pangloss_api.routes.models import build_router, routable_models
 
 SETTINGS_ENVIRONMENT_VARIABLE = "PANGLOSS_SETTINGS"
-
-# How errors about users are reported
-USER_ERROR_STATUS = {
-    PanglossUserExistsError: 409,
-    PanglossUserDoesNotExistError: 404,
-    PanglossInvalidUserError: 422,
-}
 
 
 def ensure_settings() -> core_settings.BaseSettings:
@@ -53,23 +42,11 @@ def ensure_settings() -> core_settings.BaseSettings:
     return settings
 
 
-async def user_error_handler(request: Request, error: Exception) -> JSONResponse:
-    assert isinstance(error, PanglossUserError)
-    status_code = next(
-        (code for kind, code in USER_ERROR_STATUS.items() if isinstance(error, kind)),
-        400,
-    )
-    return JSONResponse(status_code=status_code, content={"detail": str(error)})
-
-
-@asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    settings = ensure_settings()
-
+def prepare_models(settings: core_settings.BaseSettings) -> None:
+    """Make the database object, import the models of the installed apps and
+    initialise them (which binds the database's functions to them)"""
     backend = importlib.import_module(f"{settings.DATABASE_MODULE}.setup")
     backend.create_database(settings)
-
-    from pangloss_models import initialise
 
     for installed_app in settings.INSTALLED_APPS:
         try:
@@ -77,8 +54,17 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         except ModuleNotFoundError as error:
             if error.name != f"{installed_app}.models":
                 raise
+
+    from pangloss_models import initialise
+
     initialise()
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    backend = importlib.import_module(
+        f"{ensure_settings().DATABASE_MODULE}.setup"
+    )
     await backend.connect()
     try:
         yield
@@ -99,8 +85,14 @@ def create_app() -> FastAPI:
             stacklevel=2,
         )
 
+    # (the models are needed now, as the routes are made from them; the connection
+    # to the database is made when the server starts)
+    prepare_models(settings)
+
     app = FastAPI(title=settings.PROJECT_NAME, lifespan=lifespan)
 
-    app.add_exception_handler(PanglossUserError, user_error_handler)
+    register_error_handlers(app)
     app.include_router(users.router)
+    for model in routable_models():
+        app.include_router(build_router(model))
     return app

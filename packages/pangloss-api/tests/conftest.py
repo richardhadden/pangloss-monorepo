@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 from pangloss_api.app import create_app
 from pangloss_core import settings as core_settings
 from pangloss_core.settings import BaseSettings, DatabaseSettings
+from pangloss_models.model_registry import ModelRegistry
 from pydantic import AnyHttpUrl
 
 PASSWORD = "correct horse"
@@ -18,6 +19,12 @@ class Settings(BaseSettings[DatabaseSettings]):
     INTERFACE_LANGUAGES: list[str] = []
     AUTHJWT_SECRET_KEY: str = "a secret for the tests, of a decent length"
     ENTITY_BASE_URL: AnyHttpUrl = AnyHttpUrl("http://test.com/")
+
+
+@pytest.fixture(autouse=True)
+def reset_model_registry():
+    ModelRegistry._reset()
+    yield
 
 
 @pytest.fixture

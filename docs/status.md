@@ -18,8 +18,8 @@ A snapshot of what works and what does not, as of this writing.
 - Deleting head documents and unreferenced entities, as a flag (`deleted`) with a `PGDeletion` record, hidden from reads, lists and searches; an entity that is referred to is marked for deletion (`meta.marked_for_deletion`) instead.
 - Undeleting head documents and entities (`Document.undelete`, `Entity.undelete`): the flag is removed and a `PGUndeletion` record added, keeping the `PGDeletion` history; `PanglossNotDeletedError` if the node was not deleted.
 - Recording the creating user and time on head nodes.
-- The `pangloss` command line (`pangloss-cli`): `new-project` and `new-app` (made from templates; `new-app` adds the app to `INSTALLED_APPS`), `setup-database`, `users ...`, and commands added by installed apps' `cli.py` (`pangloss memgraph info`). See [Command line](cli.md).
-- The REST API (`pangloss-api`): login by token or cookie session, and endpoints to read, update and manage users. See [REST API](api.md).
+- The `pangloss` command line (`pangloss-cli`): `new-project` and `new-app` (made from templates; `new-app` adds the app to `INSTALLED_APPS`), `run` and `dev` (the API server; `dev` restarts on changes), `setup-database`, `users ...`, and commands added by installed apps' `cli.py` (`pangloss memgraph info`). See [Command line](cli.md).
+- The REST API (`pangloss-api`): login by token or cookie session, endpoints to manage users, and CRUD routes for every Document and Entity (list, get, create, edit, update, delete, undelete; reading is open, changing needs a login). See [REST API](api.md).
 - Users (`pangloss-users`, stored by the Memgraph backend as `PGUser` nodes): create, find, list, update, change password (Argon2id), make admin, disable; `authenticate` checks a password. A disabled user cannot write. See [Users](users.md).
 - Context labels and semantic-space annotation on create.
 
@@ -34,7 +34,7 @@ A snapshot of what works and what does not, as of this writing.
 
 ## Not implemented
 
-- ⏳ **REST API routes for documents and entities** (and for installed apps to add their own), CORS (`BACKEND_CORS_ORIGINS` is not used yet), `pangloss run` / `dev` to start the server, and `ENTITY_BASE_URL`.
+- ⏳ **REST API routes from installed apps**, CORS (`BACKEND_CORS_ORIGINS` is not used yet) and `ENTITY_BASE_URL`.
 - ⏳ **Permissions** beyond admin / not admin, revoking tokens, and limiting login attempts.
 - ⏳ **Removing deleted nodes for good**. An entity marked for deletion is not deleted automatically when the last reference to it goes.
 - ⏳ **Interface languages** (`INTERFACE_LANGUAGES`). (`INSTALLED_APPS` is used by the command line, to add commands and import models; nothing else reads it yet.)

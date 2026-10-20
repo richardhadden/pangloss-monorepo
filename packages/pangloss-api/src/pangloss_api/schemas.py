@@ -2,10 +2,12 @@
 
 from typing import Literal
 
-from pangloss_users.models import UserCreate
+from pangloss_users.models import CamelCaseModel, UserCreate
 from pydantic import BaseModel
 
 
+# The token endpoints use the names of OAuth2 (RFC 6749), which clients and the
+# interactive docs look for: the one place the API is not camelCase.
 class TokenResponse(BaseModel):
     access_token: str
     refresh_token: str
@@ -28,7 +30,7 @@ class NewUser(UserCreate):
     admin: bool = False
 
 
-class ChangePassword(BaseModel):
+class ChangePassword(CamelCaseModel):
     old_password: str
     new_password: str
 

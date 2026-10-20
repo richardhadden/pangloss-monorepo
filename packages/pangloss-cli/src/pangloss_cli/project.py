@@ -145,12 +145,18 @@ def load_settings(location: SettingsLocation) -> BaseSettings:
     if root not in sys.path:
         sys.path.insert(0, root)
 
+    # (from the project's directory, wherever the command is run from: the settings
+    # read `.env` from the current directory)
+    previous_directory = os.getcwd()
+    os.chdir(location.root)
     try:
         importlib.import_module(location.module)
     except ModuleNotFoundError as error:
         if error.name and location.module.startswith(error.name):
             raise ImportError(f"There is no settings module '{location.module}'")
         raise
+    finally:
+        os.chdir(previous_directory)
 
     settings = getattr(core_settings, "SETTINGS", None)
     if settings is None:

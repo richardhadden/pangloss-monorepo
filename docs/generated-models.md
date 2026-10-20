@@ -1,6 +1,6 @@
 # Generated models
 
-For each declared class, `initialise()` creates a set of Pydantic models and attaches them as class attributes. All of them are subclasses of `_ActionClass`, have `_owner` (the declared class) and share its `_meta`. Field names are accepted in `snake_case` or `camelCase` (`alias_generator=to_camel`, `populate_by_name=True`). Every model has a `type` literal field holding the class name, which is the discriminator in unions.
+For each declared class, `initialise()` creates a set of Pydantic models and attaches them as class attributes. All of them are subclasses of `_ActionClass`, have `_owner` (the declared class) and share its `_meta`. Field names are accepted in `snake_case` or `camelCase` (`alias_generator=to_camel`, `populate_by_name=True`), and serialised by alias (`camelCase`) in the API. The fields added to the generated models after they are created do not get the alias from the generator, so `initialise()` ends by giving every field of every action class its camelCase alias (`apply_camel_case_aliases`). Every model has a `type` literal field holding the class name, which is the discriminator in unions.
 
 | Attribute | Available on | Purpose | Status |
 |-----------|--------------|---------|--------|

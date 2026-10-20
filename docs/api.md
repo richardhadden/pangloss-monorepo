@@ -1,14 +1,14 @@
 # REST API
 
-The API is the `pangloss-api` package, built with [FastAPI](https://fastapi.tiangolo.com/). So far it has the user endpoints; the routes for documents and entities, and `pangloss run` / `pangloss dev` to start the server, are not written yet ⏳.
+The API is the `pangloss-api` package, built with [FastAPI](https://fastapi.tiangolo.com/). It has the user endpoints, and routes made from the models of the project. Start it with `pangloss run` or, to restart on changes, `pangloss dev` (see [Command line](cli.md#running-the-server)).
 
 ```python
 from pangloss_api.app import create_app
 
-app = create_app()   # e.g. served with: uvicorn "pangloss_api.app:create_app" --factory
+app = create_app()   # or: uvicorn "pangloss_api.app:create_app" --factory
 ```
 
-`create_app()` uses the settings already imported, or else the module named by the environment variable `PANGLOSS_SETTINGS`. Starting the server (the app's lifespan) imports the `models` module of each installed app, runs `initialise()`, and connects to the database through the `setup` module of `DATABASE_MODULE` (see [Command line](cli.md#what-a-database-backend-supplies)). A short `AUTHJWT_SECRET_KEY` (under 32 characters) gives a warning.
+`create_app()` uses the settings already imported, or else the module named by the environment variable `PANGLOSS_SETTINGS`. Building the app imports the `models` module of each installed app and runs `initialise()` (the routes are made from the models); starting the server (the app's lifespan) connects to the database through the `setup` module of `DATABASE_MODULE` (see [Command line](cli.md#what-a-database-backend-supplies)). A short `AUTHJWT_SECRET_KEY` (under 32 characters) gives a warning.
 
 ## Authentication
 
@@ -54,6 +54,8 @@ All under `/api/users`. A `User` never includes a password or its hash.
 | `PUT /{username}/admin` | admin | `{"admin": bool}` |
 | `PUT /{username}/disabled` | admin | `{"disabled": bool}` |
 
+The JSON of the user endpoints is `camelCase` too (`fullName`, `createdWhen`, `oldPassword`). The exception is the two token endpoints (`/token` and `/token/refresh`), which use the names OAuth2 defines (`access_token`, `refresh_token`, `token_type`, `expires_in`), as clients and the interactive docs expect them.
+
 A wrong username, password, an unknown user or a disabled user all give the same 401 at login. An admin cannot change their own `admin` or `disabled` status (400), so that the last admin cannot lock everyone out.
 
 | Status | When |
@@ -64,8 +66,37 @@ A wrong username, password, an unknown user or a disabled user all give the same
 | 409 | Username or email already in use |
 | 422 | A bad username, email or password (including a wrong old password) |
 
+## Routes for the models
+
+For every Document and Entity of the project that is not abstract, `NAME` being the class name (so `Person`, not `person`), and `KIND` being `documents` or `entities`:
+
+| Endpoint | Login | |
+|----------|-------|--|
+| `GET /api/KIND/NAME` | no | A page of a list. Parameters: `q` (searches the labels), `deep` (search more), `page`, `page_size` (up to 500). Includes the subtypes of `NAME`. Returns `results` (summaries), `count`, `page`, `page_size`, `next_page`, `previous_page` |
+| `GET /api/KIND/NAME/{id}` | no | The `HeadView`; 404 if there is none, or it has been deleted |
+| `POST /api/KIND/NAME` | yes | Create, with the body of `NAME.Create`. Returns 201 and a summary (`ReferenceView`), or with `?detail=true` the whole `HeadView` |
+| `GET /api/KIND/NAME/{id}/edit` | yes | What to edit: for an entity its `EditView` (no incoming relations), for a document its `HeadView` |
+| `PUT /api/KIND/NAME/{id}` | yes | Update, with the body of `NAME.Update`: a full replacement, which what `/edit` returns can be sent back as. The `id` in the body must be the one in the path (400). Returns a summary, or with `?detail=true` the `HeadView` |
+| `DELETE /api/KIND/NAME/{id}` | yes | Delete. 204 |
+| `POST /api/KIND/NAME/{id}/undelete` | yes | Undelete. 204 |
+
+Everything can be looked at by anyone; creating, loading for edit, updating, deleting and undeleting need a logged-in user, whose name is recorded as the creator or updater. (Finer permissions are not written yet ⏳.) A disabled user is refused with 401.
+
+The JSON is `camelCase` throughout (`bornIn`, `meta.createdBy`, `aboutPersonReverse`), though the models declare their fields in `snake_case`. Requests accept either. (The models do this with an `alias_generator`, and a pass at the end of `initialise()` that gives the same aliases to the fields added to the generated models afterwards.)
+
+| Status | When |
+|--------|------|
+| 400 | The `id` in an update body is not the one in the path; deleting a document that is part of another (`PanglossNotDeletableError`); other rejected writes |
+| 401 | Not logged in |
+| 404 | No such item (also: update, delete or undelete of one that does not exist) |
+| 409 | An id already in use; undeleting what is not deleted; deleting an entity that is referred to. For the last, the response also has `referencedBy`, a list of `{id, type, label}`, and the entity is marked for deletion |
+| 422 | A body that is not valid for the model; a reference to an entity that does not exist or is of the wrong type; a bad page |
+
+The OpenAPI document (`/openapi.json`, with the interactive `/docs`) describes every route, with the schemas of the models.
+
 ## Not done yet ⏳
 
 - Revoking tokens: changing a password does not end sessions already open (their tokens last until they expire).
 - Limiting login attempts.
-- Routes for documents and entities, and for `INSTALLED_APPS` to add their own.
+- Routes from `INSTALLED_APPS` (an app's own), reading an entity by one of its URLs, and a route to list the types.
+- Per-type or per-object permissions.

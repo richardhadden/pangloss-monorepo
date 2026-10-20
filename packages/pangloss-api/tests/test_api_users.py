@@ -68,7 +68,7 @@ def test_current_user_with_a_bearer_token(client):
     response = client.get("/api/users/me", headers=bearer(client))
     assert response.status_code == 200
     assert response.json()["username"] == "john"
-    assert response.json()["full_name"] == "John Smith"
+    assert response.json()["fullName"] == "John Smith"
     # never the password, or its hash
     assert "password" not in str(response.json()).lower()
 
@@ -220,11 +220,11 @@ def test_update_me(client):
     make_user()
     response = client.patch(
         "/api/users/me",
-        json={"full_name": "John Smith", "email": "js@example.com"},
+        json={"fullName": "John Smith", "email": "js@example.com"},
         headers=bearer(client),
     )
     assert response.status_code == 200
-    assert response.json()["full_name"] == "John Smith"
+    assert response.json()["fullName"] == "John Smith"
     assert response.json()["email"] == "js@example.com"
 
     # (can't make oneself an admin this way)
@@ -249,21 +249,21 @@ def test_change_my_password(client):
 
     response = client.put(
         "/api/users/me/password",
-        json={"old_password": "wrong password", "new_password": "a new password"},
+        json={"oldPassword": "wrong password", "newPassword": "a new password"},
         headers=headers,
     )
     assert response.status_code == 422
 
     response = client.put(
         "/api/users/me/password",
-        json={"old_password": PASSWORD, "new_password": "short"},
+        json={"oldPassword": PASSWORD, "newPassword": "short"},
         headers=headers,
     )
     assert response.status_code == 422
 
     response = client.put(
         "/api/users/me/password",
-        json={"old_password": PASSWORD, "new_password": "a new password"},
+        json={"oldPassword": PASSWORD, "newPassword": "a new password"},
         headers=headers,
     )
     assert response.status_code == 200
@@ -291,7 +291,7 @@ def test_only_admins_manage_users(client):
         == 403
     )
     for path, body in (
-        ("/api/users/root", {"full_name": "Root"}),
+        ("/api/users/root", {"fullName": "Root"}),
     ):
         assert client.patch(path, json=body, headers=headers).status_code == 403
     assert client.put(
@@ -336,7 +336,7 @@ def test_create_user(client):
             "username": "jane",
             "email": "jane@example.com",
             "password": PASSWORD,
-            "full_name": "Jane Doe",
+            "fullName": "Jane Doe",
         },
         headers=admin,
     )
@@ -379,11 +379,11 @@ def test_admin_changes_another_user(client):
     admin = bearer(client, "root")
 
     response = client.patch(
-        "/api/users/john", json={"full_name": "John Smith"}, headers=admin
+        "/api/users/john", json={"fullName": "John Smith"}, headers=admin
     )
-    assert response.json()["full_name"] == "John Smith"
+    assert response.json()["fullName"] == "John Smith"
     assert (
-        client.patch("/api/users/nobody", json={"full_name": "N"}, headers=admin).status_code
+        client.patch("/api/users/nobody", json={"fullName": "N"}, headers=admin).status_code
         == 404
     )
 
@@ -414,3 +414,51 @@ def test_admins_cannot_change_their_own_status(client):
         "/api/users/root/disabled", json={"disabled": True}, headers=admin
     ).status_code == 400
     assert client.get("/api/users/me", headers=admin).json()["admin"] is True
+
+
+def test_the_users_json_is_camel_case(client):
+    make_user(full_name="John Smith")
+    body = client.get("/api/users/me", headers=bearer(client)).json()
+    assert set(body) == {
+        "username",
+        "email",
+        "fullName",
+        "admin",
+        "disabled",
+        "createdWhen",
+    }
+    assert not any("_" in key for key in body)
+
+
+def test_the_names_are_accepted_as_well_as_the_camel_case(client):
+    make_user()
+    make_user("root", admin=True)
+    admin = bearer(client, "root")
+    response = client.post(
+        "/api/users",
+        json={
+            "username": "jane",
+            "email": "jane@example.com",
+            "password": PASSWORD,
+            "full_name": "Jane Doe",
+        },
+        headers=admin,
+    )
+    assert response.status_code == 201
+    assert response.json()["fullName"] == "Jane Doe"
+    response = client.put(
+        "/api/users/me/password",
+        json={"old_password": PASSWORD, "new_password": "a new password"},
+        headers=bearer(client),
+    )
+    assert response.status_code == 200
+
+
+def test_the_token_endpoints_use_the_names_of_oauth2(client):
+    make_user()
+    body = login(client).json()
+    assert set(body) == {"access_token", "refresh_token", "token_type", "expires_in"}
+    refreshed = client.post(
+        "/api/users/token/refresh", json={"refresh_token": body["refresh_token"]}
+    ).json()
+    assert set(refreshed) == {"access_token", "token_type", "expires_in"}

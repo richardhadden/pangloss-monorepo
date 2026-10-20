@@ -26,6 +26,7 @@ from pangloss_cli.scaffold import (
     plan_project,
     settings_file,
 )
+from pangloss_cli.server import serve
 from pangloss_cli.users import run_with_database, users_cli
 
 
@@ -117,6 +118,24 @@ def new_app(
     typer.echo(f"\nNow declare your models in {name}/models.py")
 
 
+def run(
+    ctx: typer.Context,
+    host: str = typer.Option("127.0.0.1", "--host", help="The address to listen on"),
+    port: int = typer.Option(8000, "--port", help="The port to listen on"),
+) -> None:
+    """Start the API server"""
+    serve(ctx.obj, host, port, reload=False)
+
+
+def dev(
+    ctx: typer.Context,
+    host: str = typer.Option("127.0.0.1", "--host", help="The address to listen on"),
+    port: int = typer.Option(8000, "--port", help="The port to listen on"),
+) -> None:
+    """Start the API server, restarting it when the code or settings change"""
+    serve(ctx.obj, host, port, reload=True)
+
+
 def add_app_commands(app: typer.Typer, project: Project) -> None:
     if project.settings is None:
         return
@@ -177,6 +196,8 @@ def build_app(
     app.command("setup-database")(setup_database)
     app.command("new-project")(new_project)
     app.command("new-app")(new_app)
+    app.command("run")(run)
+    app.command("dev")(dev)
     app.add_typer(users_cli, name="users")
     add_app_commands(app, project)
     return app

@@ -1,6 +1,6 @@
 """The user endpoints of the API, with the users kept in Memgraph"""
 
-import httpx
+import httpx2 as httpx
 import pytest
 import pytest_asyncio
 from pangloss_api.app import create_app
@@ -44,7 +44,7 @@ async def test_users_through_the_api(client, db_driver, clear_database):
             "username": "john",
             "email": "john@example.com",
             "password": PASSWORD,
-            "full_name": "John Smith",
+            "fullName": "John Smith",
         },
         headers=admin,
     )
@@ -55,7 +55,7 @@ async def test_users_through_the_api(client, db_driver, clear_database):
     john = await bearer(client, "john")
     me = (await client.get("/api/users/me", headers=john)).json()
     assert me["username"] == "john"
-    assert me["full_name"] == "John Smith"
+    assert me["fullName"] == "John Smith"
     assert me["admin"] is False
     assert "hashed_password" not in me
 
@@ -75,12 +75,12 @@ async def test_users_through_the_api(client, db_driver, clear_database):
 
     # Changing their own details and password
     response = await client.patch(
-        "/api/users/me", json={"full_name": "J. Smith"}, headers=john
+        "/api/users/me", json={"fullName": "J. Smith"}, headers=john
     )
-    assert response.json()["full_name"] == "J. Smith"
+    assert response.json()["fullName"] == "J. Smith"
     response = await client.put(
         "/api/users/me/password",
-        json={"old_password": PASSWORD, "new_password": "a new password"},
+        json={"oldPassword": PASSWORD, "newPassword": "a new password"},
         headers=john,
     )
     assert response.status_code == 200

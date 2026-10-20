@@ -44,11 +44,11 @@ A database backend for [Memgraph](https://memgraph.com/) (using the `neo4j` asyn
 
 ## pangloss-cli ✅
 
-The `pangloss` command (`pangloss_cli.main`), built with [Typer](https://typer.tiangolo.com/). It finds the project's settings, adds the commands of installed apps, and has the core commands `new-project`, `new-app`, `setup-database` and `users ...`. The templates for new projects and apps are in `pangloss_cli/templates`. It knows nothing about a particular database: it uses the `setup` module of `DATABASE_MODULE`. See [Command line](cli.md).
+The `pangloss` command (`pangloss_cli.main`), built with [Typer](https://typer.tiangolo.com/). It finds the project's settings, adds the commands of installed apps, and has the core commands `new-project`, `new-app`, `run`, `dev`, `setup-database` and `users ...`. The templates for new projects and apps are in `pangloss_cli/templates`. It knows nothing about a particular database: it uses the `setup` module of `DATABASE_MODULE`. See [Command line](cli.md).
 
 ## pangloss-api 🚧
 
-The FastAPI application (`pangloss_api.app.create_app`). Done: token and session login (JWT with PyJWT), and the user endpoints. Not done: routes for documents and entities, and routes from installed apps. See [REST API](api.md).
+The FastAPI application (`pangloss_api.app.create_app`). Done: token and session login (JWT with PyJWT), the user endpoints, and CRUD routes for every Document and Entity. Not done: routes from installed apps, and finer permissions. See [REST API](api.md).
 
 ## pangloss-sdk 🚧
 

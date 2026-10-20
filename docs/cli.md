@@ -51,6 +51,8 @@ The module is imported, and so constructs the project's `BaseSettings` subclass 
 | Command | |
 |---------|--|
 | `pangloss new-project <name>`, `pangloss new-app <name>` | See above |
+| `pangloss run [--host H] [--port P]` | Starts the API server (`127.0.0.1:8000` by default) |
+| `pangloss dev [--host H] [--port P]` | The same, restarting when files change |
 | `pangloss setup-database` | Imports the `models` module of each installed app, runs `initialise()`, then asks the database backend to set up what it needs (for Memgraph: indexes, uniqueness constraints, the text index and enums). Safe to repeat |
 | `pangloss users create` | Asks for (or takes `--username`, `--email`, `--password`, `--full-name`, `--admin/--no-admin`) the details of a new user |
 | `pangloss users list` | |
@@ -82,6 +84,16 @@ def hello():
 ```
 
 An app's `models.py` (if it has one) is imported by `setup-database`, so that its models are registered.
+
+## Running the server
+
+`pangloss run` and `pangloss dev` start the API (see [REST API](api.md)) with uvicorn, as the factory `pangloss_api.app:create_app`. They need `pangloss-api` installed.
+
+The server is run from the project's directory (where `pyproject.toml` is), wherever the command is typed, so `.env` and the project's imports are found. The settings module is passed to the server in the environment variable `PANGLOSS_SETTINGS`. The server imports the `models` of the installed apps and initialises them when it is built, and connects to the database when it starts; a mistake in them is shown, and the server does not start.
+
+`pangloss dev` restarts the server when a `.py` file or `.env` changes in the project, or in an installed app that is not installed as a package (for example a Pangloss package being worked on). Environment directories (`.venv`, `venv`) are ignored. After an error such as a syntax error in a model, the server stays down, showing the traceback, and starts again when the file is fixed.
+
+Settings are always loaded with the project's directory as the current directory, so the `.env` of the project is read whichever directory a command is run from.
 
 ## What a database backend supplies
 

@@ -8,6 +8,16 @@ from pangloss_users.exceptions import (
 USERS: dict = {}
 
 
+# (what `initialise()` binds to the models; tests replace the ones they use)
+def _unused(*args, **kwargs):
+    raise NotImplementedError
+
+
+get_document = get_entity = get_entity_for_edit = _unused
+delete_document = delete_entity = undelete_document = undelete_entity = _unused
+list_items = create_head_node = update_head_node = _unused
+
+
 async def create_user_in_db(user):
     if user.username in USERS or any(u.email == user.email for u in USERS.values()):
         raise PanglossUserExistsError("That username or email is already in use")

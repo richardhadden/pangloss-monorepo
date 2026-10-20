@@ -73,6 +73,38 @@ from pangloss_memgraph.databases.memgraph.validate_write import (
 )
 
 
+COUNT_LISTED_QUERY = """
+    MATCH (n:$node_type)
+    OPTIONAL MATCH (head:HeadNode {id: n.head_node_id})
+    WITH n, head
+    WHERE NOT coalesce(CASE WHEN n:Entity THEN n.deleted ELSE coalesce(head, n).deleted END, false)
+    RETURN count(n) AS total
+"""
+
+
+async def empty_page(tx: Transaction, cls: type[Document | Entity], params: dict) -> dict:
+    """The result of a list that has no items on the page asked for. (When there
+    are search terms, the count of what matched is not worked out: it is 0.)"""
+    page = params.get("page_number", params.get("page", 1))
+    page_size = params["page_size"]
+
+    total = 0
+    if "tokens" not in params and "patterns" not in params:
+        counted = await tx.run(COUNT_LISTED_QUERY, node_type=cls.__name__)
+        total = (await counted.single())["total"]  # type: ignore[index]
+
+    page_count = -(-total // page_size)
+    return {
+        "results": [],
+        "count": total,
+        "page": page,
+        "page_size": page_size,
+        "page_count": page_count,
+        "previous_page": page - 1 if page > 1 else None,
+        "next_page": page + 1 if page < page_count else None,
+    }
+
+
 @Database.default.read_transaction
 async def list_items(
     tx: Transaction,
@@ -99,7 +131,10 @@ async def list_items(
     result = await tx.run(query, **params)
     result_values = await result.value()
 
-    results: dict = result_values[0]
+    # (a list with nothing in it, or a page past the end, gives no row at all)
+    results: dict = result_values[0] if result_values else await empty_page(
+        tx, cls, params
+    )
 
     results["results"] = type_adapter.validate_python(
         convert_enums(results["results"])

@@ -1,7 +1,8 @@
 import datetime
 import re
 
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+from pydantic.alias_generators import to_camel
 
 USERNAME_PATTERN = re.compile(r"^[A-Za-z0-9_.-]{1,64}$")
 
@@ -15,7 +16,13 @@ def check_username(username: str) -> str:
     return username
 
 
-class User(BaseModel):
+class CamelCaseModel(BaseModel):
+    """The JSON of the API is camelCase (`fullName`); the names are accepted too"""
+
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+
+class User(CamelCaseModel):
     """A user, as it can be shown: it never has the password, or its hash"""
 
     username: str
@@ -29,7 +36,7 @@ class User(BaseModel):
     _check_username = field_validator("username")(check_username)
 
 
-class UserCreate(BaseModel):
+class UserCreate(CamelCaseModel):
     username: str
     email: EmailStr
     password: str
@@ -38,7 +45,7 @@ class UserCreate(BaseModel):
     _check_username = field_validator("username")(check_username)
 
 
-class UserUpdate(BaseModel):
+class UserUpdate(CamelCaseModel):
     """What can be changed about a user; whatever is left out is kept"""
 
     email: EmailStr | None = None

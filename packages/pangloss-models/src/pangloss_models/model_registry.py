@@ -4,6 +4,7 @@ from itertools import chain
 from typing import ClassVar, get_args, get_origin
 
 from pydantic import BaseModel
+from pydantic.alias_generators import to_camel
 lazy from pangloss_core import settings as core_settings
 
 from pangloss_models.exceptions import (
@@ -66,6 +67,27 @@ lazy from pangloss_models.model_bases.entity import (
     _EntityCreateBase,
     _EntityUpdateBase,
 )
+
+
+def apply_camel_case_aliases(model: type[BaseModel]) -> None:
+    """Give each field of the model its camelCase alias, for input and output (in
+    the JSON of the API: `born_in` is `bornIn`). The name itself is still accepted.
+
+    Fields that were given a (validation) alias already are completed with the
+    others; fields with an alias of their own that is not the camelCase one are left
+    as they are."""
+    for name, field in model.model_fields.items():
+        alias = to_camel(name)
+        if alias == name:
+            continue
+        # (`alias_priority` 2 is "set explicitly": the generator will not replace it)
+        if field.alias is None:
+            field.alias = alias
+        if field.validation_alias is None:
+            field.validation_alias = alias
+        if field.serialization_alias is None:
+            field.serialization_alias = alias
+        field.alias_priority = 2
 
 
 class ModelRegistry:
@@ -314,6 +336,12 @@ class ModelRegistry:
                 initialise_head_view_model(model)
             if can_have_edit_view_model(model):
                 initialise_edit_view_model(model)
+
+        # The fields added to the models above have to be given their camelCase
+        # aliases (the `alias_generator` of the models only sees the fields they are
+        # created with)
+        for action_class in cls._action_classes:
+            apply_camel_case_aliases(action_class)
 
         # Rebuild all the models' action classes as referenced models
         # might not be up to date in referencing classes internal

@@ -88,6 +88,22 @@ def test_a_new_project_can_be_loaded(workdir: Path):
     assert settings.Settings().PROJECT_NAME == "my_site"
 
 
+def test_settings_are_read_from_the_project_directory(workdir: Path):
+    """`.env` is next to pyproject.toml, wherever the command is run from"""
+    assert invoke("new-project", "my_site").exit_code == 0
+    sub = workdir / "some" / "where"
+    sub.mkdir(parents=True)
+    os.chdir(sub)
+
+    app = build_app(argv=[], environment={})
+    result = Result(runner.invoke(app, ["--help"]))
+    assert "Cannot load" not in result.output
+    assert Path.cwd() == sub  # (and the directory is as it was)
+    from pangloss_core import settings as core_settings
+
+    assert len(core_settings.SETTINGS.AUTHJWT_SECRET_KEY) >= 32
+
+
 def test_new_project_adds_to_an_existing_pyproject_and_env(workdir: Path):
     (workdir / "pyproject.toml").write_text(
         '[project]\nname = "mine"\nversion = "1.0"\n'

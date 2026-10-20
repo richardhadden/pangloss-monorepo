@@ -2,8 +2,8 @@
 
 A backend package (`DATABASE_MODULE`) supplies a `setup` module with these functions:
 
-- `create_database(settings)`: make the default database object. Not async, and it
-  does not connect: `exposed_functions` needs it to exist when it is imported.
+- `create_database(settings)`: make the default database object, if there is not one.
+  Not async, and it does not connect: `exposed_functions` needs it to exist when it is imported.
 - `async connect()` / `async disconnect()`: open and close the connection. The
   command line does this inside the event loop that runs a command.
 - `async setup_database()`: make what the backend needs in the database (for Memgraph,
@@ -20,7 +20,10 @@ from pangloss_memgraph.databases.memgraph.initialise_database import (
 
 
 def create_database(settings: BaseSettings) -> None:
-    Database(settings=settings)
+    """Make the default database object, if there is not one already (there is one
+    default per process, and it holds the connection)"""
+    if "default" not in Database.__dict__:
+        Database(settings=settings)
 
 
 async def connect() -> None:

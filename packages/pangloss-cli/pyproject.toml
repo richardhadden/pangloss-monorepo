@@ -25,3 +25,9 @@ build-backend = "uv_build"
 pangloss-core = { workspace = true }
 pangloss-models = { workspace = true }
 pangloss-users = { workspace = true }
+pangloss-api = { workspace = true }
+
+[dependency-groups]
+dev = [
+    "pangloss-api",
+]
