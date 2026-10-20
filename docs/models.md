@@ -177,7 +177,7 @@ class Statement(Document):
 
 ## ReifiedRelationDocument
 
-Like a `ReifiedRelation`, but with the lifecycle of a document: it has a label, a `ReferenceView`, a `View` and a `HeadView`, and can be a head node. 🚧 Models are generated and tested, and writing one (with a nested document as its target) is tested against Memgraph. Reading one back is tested. It is never given a `label` when created, so `View` / `HeadView` do not require one; its `ReferenceView`, however, still declares a required `label` (existing tests assert this), so it cannot be built for one that was read back from the database. ⏳ Decide whether it should have a label (for example a computed one).
+Like a `ReifiedRelation`, but with the lifecycle of a document: it has a label, a `ReferenceView`, a `View` and a `HeadView`, and can be a head node. 🚧 Models are generated and tested, and writing one (with a nested document as its target) is tested against Memgraph. Reading one back is tested. Like a `Document`, it requires a `label` on creation, update and in its views (`Meta.require_label` is `True` by default).
 
 ## SemanticSpace
 

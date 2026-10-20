@@ -90,7 +90,7 @@ class ReifiedRelation[TTarget](_DeclaredClass):
 class ReifiedRelationDocumentMeta(BaseModel, DeclaredClassMeta):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     _owner_class: type[ReifiedRelationDocument] | InheritValue = InheritValue.AS_DEFAULT
-    require_label: Literal[False] = False
+    require_label: bool | InheritValue = True
     view_extra_fields: Annotated[list[str], MetaRules.ACCUMULATE] = Field(
         default_factory=list
     )
@@ -131,8 +131,6 @@ class _ReifiedRelationDocumentViewAPIMeta(_BaseObject):
 
 
 class _ReifiedRelationDocumentViewBase(_ViewBase):
-    # A ReifiedRelationDocument does not have a label
-    label: str | None = None
     meta: _ReifiedRelationDocumentViewAPIMeta = Field(
         default_factory=_ReifiedRelationDocumentViewAPIMeta
     )

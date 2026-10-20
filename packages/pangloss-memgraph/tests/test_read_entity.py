@@ -673,6 +673,7 @@ async def test_incoming_relation_through_a_reified_relation_document(clear_datab
         label="A Statement",
         role={
             "type": "Role",
+            "label": "A Role",
             "since": "2000-01-01",
             "target": [{"type": "Person", "id": person.id}],
         },

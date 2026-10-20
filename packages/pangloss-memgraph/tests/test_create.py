@@ -2663,6 +2663,7 @@ async def test_reified_relation_document(db_driver, clear_database):
         label="A Statement",
         residence={
             "type": "Residence",
+            "label": "A Residence",
             "since": "2000-01-01",
             "target": [{"type": "Place", "label": "A Place"}],
         },

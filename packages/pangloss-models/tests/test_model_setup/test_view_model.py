@@ -901,7 +901,7 @@ def test_list_relations_default_to_empty_in_view_models():
 
 
 @no_type_check
-def test_reified_relation_document_view_does_not_require_a_label():
+def test_reified_relation_document_view_requires_a_label():
     from pangloss_models.model_bases.reified_relation import ReifiedRelationDocument
 
     class Person(Entity):
@@ -915,5 +915,10 @@ def test_reified_relation_document_view_does_not_require_a_label():
 
     initialise()
 
-    role = Role.View(id=uuid7(), since=datetime.date(2000, 1, 1), target=[])
-    assert role.label is None
+    with pytest.raises(ValidationError):
+        Role.View(id=uuid7(), since=datetime.date(2000, 1, 1), target=[])
+
+    role = Role.View(
+        id=uuid7(), label="A role", since=datetime.date(2000, 1, 1), target=[]
+    )
+    assert role.label == "A role"
