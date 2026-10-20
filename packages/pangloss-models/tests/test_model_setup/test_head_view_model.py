@@ -321,3 +321,70 @@ def test_head_view_converts_non_list_fields():
     assert isinstance(
         factoid.statements[0].persons_affected_by_action[0], Person.ReferenceView
     )
+
+
+@no_type_check
+def test_union_of_embedded_in_head_view():
+    class Date(Embedded):
+        when: datetime
+
+    class DateRange(Embedded):
+        start: datetime
+        end: datetime
+
+    class Statement(Document):
+        date: Date | DateRange
+
+    initialise()
+
+    st = Statement.HeadView(
+        id=uuid7(),
+        label="A Statement",
+        meta=TEST_META,
+        date={
+            "type": "DateRange",
+            "start": "2019-01-01",
+            "end": "2019-12-31",
+            "id": uuid7(),
+        },
+    )
+    assert isinstance(st.date, DateRange.View)
+
+    st = Statement.HeadView(
+        id=uuid7(),
+        label="A Statement",
+        meta=TEST_META,
+        date={"type": "Date", "when": "2019-01-01", "id": uuid7()},
+    )
+    assert isinstance(st.date, Date.View)
+
+
+@no_type_check
+def test_incoming_relations_through_a_union_of_embedded():
+    class Person(Entity):
+        pass
+
+    class Place(Entity):
+        pass
+
+    class DateSpecific(Embedded):
+        involved_place: Place
+
+    class Date(Embedded):
+        involved_person: Person
+
+    class DateRange(Embedded):
+        date_specific: DateSpecific
+
+    class Statement(Document):
+        date: Date | DateRange
+
+    initialise()
+
+    for entity, field in (
+        (Person, "involved_person_reverse"),
+        (Place, "involved_place_reverse"),
+    ):
+        annotation = entity.HeadView.model_fields[field].annotation
+        assert get_origin(annotation) is list
+        assert get_args(annotation)[0] is Statement.ReferenceView

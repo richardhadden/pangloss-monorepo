@@ -12,8 +12,6 @@ def build_generic_list_query(
     deep_search: bool = False,
 ) -> tuple[LiteralString, dict]:
 
-    print("BuildListQuery", object_class.__metatype__, search_terms, deep_search)
-
     if search_terms and deep_search:
         search_term_list = [f".*{t}.*" for t in search_terms.split(" ")]
         params = {

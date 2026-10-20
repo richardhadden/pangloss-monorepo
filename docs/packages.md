@@ -44,7 +44,7 @@ A database backend for [Memgraph](https://memgraph.com/) (using the `neo4j` asyn
 Intended to let Pangloss models be used locally and read/write a remote Pangloss instance through its standard API ("API as database"). Currently:
 
 - `ApiAsDatabaseSettings` (URL, username, password) exists.
-- `databases/api/exposed_functions.py` is a **stub**: `get_document` returns a fabricated placeholder object, `create_head_node` and `list_items` do nothing, and `save` prints a message.
+- `databases/api/exposed_functions.py` is a **stub**: `get_document` returns a fabricated placeholder object, `create_head_node` and `list_items` do nothing.
 - The model tests use it as a database module because it needs no live connection.
 
 ## pangloss-users 🚧

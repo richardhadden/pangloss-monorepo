@@ -118,7 +118,6 @@ class GetItemViaAttrDict[T](dict):
 
 def get_labels_for_db_classes(self):
 
-    # print(self._meta.fields)
 
     from pangloss_models.model_bases.trait import NonHeritableTrait, Trait
     from pangloss_models.utils import get_all_parent_classes, model_is_trait
@@ -506,24 +505,26 @@ class _ViewBase(_ActionClass):
     @model_validator(mode="before")
     @classmethod
     def convert_lists(cls, data: Any) -> Any:
+        return unwrap_single_item_lists(cls, data)
 
-        for k, v in data.items():
-            if k in cls._meta.fields.relation_fields:
-                if cls._meta.fields.relation_fields[k].wrapper is None and isinstance(
-                    v, list
-                ):
-                    if len(v) > 1:
-                        raise ValidationError(
-                            f"{cls.__name__}.{k}: More than one value returned for field"
-                        )
-                    data[k] = v[0]
-            if k in cls._meta.fields.embedded_fields:
-                if len(v) > 1:
-                    raise ValidationError(
-                        f"{cls.__name__}.{k}: More than one value returned for field"
-                    )
-                data[k] = v[0]
-        return data
+
+def unwrap_single_item_lists(cls: Any, data: Any) -> Any:
+    """Single relations and embedded objects come back from the database as lists of
+    one: take the item out"""
+    for k, v in data.items():
+        if not isinstance(v, list):
+            continue
+        if k in cls._meta.fields.relation_fields:
+            if cls._meta.fields.relation_fields[k].wrapper is not None:
+                continue
+        elif k not in cls._meta.fields.embedded_fields:
+            continue
+        if len(v) > 1:
+            raise ValueError(
+                f"{cls.__name__}.{k}: More than one value returned for field"
+            )
+        data[k] = v[0]
+    return data
 
 
 def convert_neo4j_datetimes(data: Any) -> Any:
@@ -598,23 +599,7 @@ class _HeadViewBase(_ActionClass):
     @model_validator(mode="before")
     @classmethod
     def convert_lists(cls, data: Any) -> Any:
-        for k, v in data.items():
-            if k in cls._meta.fields.relation_fields:
-                if cls._meta.fields.relation_fields[k].wrapper is None and isinstance(
-                    v, list
-                ):
-                    if len(v) > 1:
-                        raise ValidationError(
-                            f"{cls.__name__}.{k}: More than one value returned for field"
-                        )
-                    data[k] = v[0]
-            if k in cls._meta.fields.embedded_fields:
-                if len(v) > 1:
-                    raise ValidationError(
-                        f"{cls.__name__}.{k}: More than one value returned for field"
-                    )
-                data[k] = v[0]
-        return data
+        return unwrap_single_item_lists(cls, data)
 
 
 class _UpdateBase(_ActionClass):

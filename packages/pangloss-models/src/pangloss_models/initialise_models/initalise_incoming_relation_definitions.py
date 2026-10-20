@@ -133,9 +133,10 @@ def recurse_embedded_for_incoming(
                                 )
                             )
 
-    for (
-        nested_embedded
-    ) in embedded_field_definition.annotated_type._meta.fields.embedded_fields.values():
-        recurse_embedded_for_incoming(nested_embedded, accumulated_targets)
+    for embedded_type_option in embedded_field_definition.type_options:
+        for (
+            nested_embedded
+        ) in embedded_type_option.annotated_type._meta.fields.embedded_fields.values():
+            recurse_embedded_for_incoming(nested_embedded, accumulated_targets)
 
     return accumulated_targets

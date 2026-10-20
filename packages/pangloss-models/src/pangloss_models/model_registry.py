@@ -268,12 +268,7 @@ class ModelRegistry:
         # To initialise field definitions, we need to initialise in
         # declaration order
         for model in cls._model_dict.values():
-            try:
-                initialise_field_definitions(model)
-            except PanglossModelError as e:
-                raise PanglossModelError(e)
-            except Exception as e:
-                print(f"Exception on init fields of model {model.__name__}", e)
+            initialise_field_definitions(model)
 
         for model in cls._model_dict.values():
             if hasattr(model, "__metatype__") and model.__metatype__ in [
@@ -281,12 +276,7 @@ class ModelRegistry:
                 "Entity",
                 "ReifiedRelationDocument",
             ]:
-                try:
-                    initialise_incoming_relation_definitions(model)
-                except PanglossModelError as e:
-                    raise e
-                except Exception as e:
-                    print(f"Exception on init fields of model {model.__name__}", e)
+                initialise_incoming_relation_definitions(model)
 
         for model in chain(order, cyclic):
             initialise_reference_set_model(model)

@@ -1247,3 +1247,34 @@ def test_optional_literal_fields_do_not_have_to_be_given():
     db_st = st._to_db_model()
     assert db_st.number is None
     assert Statement.CreateDB(label="A", required_number=1).number is None
+
+
+@no_type_check
+def test_union_of_embedded():
+    class Date(Embedded):
+        when: datetime.datetime
+
+    class DateRange(Embedded):
+        start: datetime.datetime
+        end: datetime.datetime
+
+    class Statement(Document):
+        date: Date | DateRange
+
+    initialise()
+
+    st = Statement(label="A Statement", date={"type": "Date", "when": "2019-01-01"})
+    assert isinstance(st.date, Date.Create)
+
+    st = Statement(
+        label="A Statement",
+        date={"type": "DateRange", "start": "2019-01-01", "end": "2019-12-31"},
+    )
+    assert isinstance(st.date, DateRange.Create)
+    assert st.date.end == datetime.datetime(2019, 12, 31)
+
+    with pytest.raises(ValidationError):
+        Statement(label="A Statement", date={"type": "Date", "start": "2019-01-01"})
+
+    with pytest.raises(ValidationError):
+        Statement(label="A Statement", date={"type": "Other", "when": "2019-01-01"})

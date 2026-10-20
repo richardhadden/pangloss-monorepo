@@ -353,6 +353,76 @@ async def test_read_union_of_embedded_objects(clear_database):
 
 
 @no_type_check
+async def test_write_and_read_every_member_of_a_union_of_embedded_objects(
+    clear_database,
+):
+    class Place(Entity):
+        pass
+
+    class Date(Embedded):
+        when: datetime.date
+
+    class DateRange(Embedded):
+        start: datetime.date
+        end: datetime.date
+        place: Place
+
+    class Statement(Document):
+        date: Date | DateRange
+
+    initialise()
+
+    place = await Place.Create(label="Paris").save()
+    with_date = await Statement.Create(
+        label="One", date={"type": "Date", "when": "2020-01-01"}
+    ).save()
+    with_range = await Statement.Create(
+        label="Two",
+        date={
+            "type": "DateRange",
+            "start": "2020-01-01",
+            "end": "2020-12-31",
+            "place": {"type": "Place", "id": place.id},
+        },
+    ).save()
+
+    read = await Statement.get(id=with_date.id)
+    assert read.date.type == "Date"
+    assert read.date.when == datetime.date(2020, 1, 1)
+
+    read = await Statement.get(id=with_range.id)
+    assert read.date.type == "DateRange"
+    assert read.date.end == datetime.date(2020, 12, 31)
+    assert read.date.place.id == place.id
+
+
+@no_type_check
+async def test_read_embedded_object_nested_in_a_member_of_a_union(clear_database):
+    class Detail(Embedded):
+        note: str
+
+    class Date(Embedded):
+        when: datetime.date
+
+    class DateRange(Embedded):
+        detail: Detail
+
+    class Statement(Document):
+        date: Date | DateRange
+
+    initialise()
+
+    saved = await Statement.Create(
+        label="A Statement",
+        date={"type": "DateRange", "detail": {"type": "Detail", "note": "a note"}},
+    ).save()
+
+    read = await Statement.get(id=saved.id)
+    assert read.date.type == "DateRange"
+    assert read.date.detail.note == "a note"
+
+
+@no_type_check
 async def test_read_embedded_object_in_nested_document(clear_database):
     class Date(Embedded):
         when: datetime.date

@@ -457,6 +457,54 @@ async def test_incoming_relation_through_embedded_object_in_a_nested_document(
     assert read.about_reverse[0].meta.head_node_id == statement.id
 
 
+@no_type_check
+async def test_incoming_relation_through_a_union_of_embedded_objects(clear_database):
+    class Person(Entity):
+        pass
+
+    class Place(Entity):
+        pass
+
+    class DateSpecific(Embedded):
+        about: Place
+
+    class Date(Embedded):
+        by: Person
+
+    class DateRange(Embedded):
+        specific: DateSpecific
+
+    class Statement(Document):
+        date: Date | DateRange
+
+    initialise()
+
+    person = await Person.Create(label="John Smith").save()
+    place = await Place.Create(label="Paris").save()
+    with_date = await Statement.Create(
+        label="One",
+        date={"type": "Date", "by": {"type": "Person", "id": person.id}},
+    ).save()
+    with_range = await Statement.Create(
+        label="Two",
+        date={
+            "type": "DateRange",
+            "specific": {
+                "type": "DateSpecific",
+                "about": {"type": "Place", "id": place.id},
+            },
+        },
+    ).save()
+
+    # A member of the union, with a relation of its own
+    read_person = await Person.get(id=person.id)
+    assert [i.id for i in read_person.by_reverse] == [with_date.id]
+
+    # A member of the union that holds another embedded object with a relation
+    read_place = await Place.get(id=place.id)
+    assert [i.id for i in read_place.about_reverse] == [with_range.id]
+
+
 # ---------------------------------------------------------------------------
 # Reified relations
 # ---------------------------------------------------------------------------

@@ -922,3 +922,45 @@ def test_reified_relation_document_view_requires_a_label():
         id=uuid7(), label="A role", since=datetime.date(2000, 1, 1), target=[]
     )
     assert role.label == "A role"
+
+
+@no_type_check
+def test_union_of_embedded():
+    class Date(Embedded):
+        when: datetime.datetime
+
+    class DateRange(Embedded):
+        start: datetime.datetime
+        end: datetime.datetime
+
+    class Statement(Document):
+        date: Date | DateRange
+
+    initialise()
+
+    st = Statement.View(
+        id=uuid7(),
+        label="A Statement",
+        date={"type": "Date", "when": "2019-01-01", "id": uuid7()},
+    )
+    assert isinstance(st.date, Date.View)
+
+    st = Statement.View(
+        id=uuid7(),
+        label="A Statement",
+        date={
+            "type": "DateRange",
+            "start": "2019-01-01",
+            "end": "2019-12-31",
+            "id": uuid7(),
+        },
+    )
+    assert isinstance(st.date, DateRange.View)
+    assert st.date.end == datetime.datetime(2019, 12, 31)
+
+    with pytest.raises(ValidationError):
+        Statement.View(
+            id=uuid7(),
+            label="A Statement",
+            date={"type": "Date", "start": "2019-01-01", "id": uuid7()},
+        )

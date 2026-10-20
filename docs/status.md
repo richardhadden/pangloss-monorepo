@@ -41,7 +41,6 @@ A snapshot of what works and what does not, as of this writing.
 - ⏳ **The `"subtract"` type wrapper** (opposite of `Fulfil`), from `todo.md`.
 - ⏳ **`Relation[Subject, Object]`**: placeholder class only.
 - ⏳ **Other database backends.** The backend interface is simply the `exposed_functions` module (`get_document`, `create_head_node`, `list_items`), so another backend implements those and is selected by `DATABASE_MODULE`.
-- ⏳ **Removal of debugging output** (`print` calls, query dumps to disk) in the Memgraph backend.
 
 ## Open design questions
 

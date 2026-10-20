@@ -1,7 +1,4 @@
 import datetime
-import functools
-import os
-import time
 from typing import Union, cast
 from uuid import UUID
 
@@ -73,20 +70,7 @@ from pangloss_memgraph.databases.memgraph.validate_write import (
 )
 
 
-def timer(func):
-    @functools.wraps(func)
-    async def wrapper(*args, **kwargs):
-        start = time.perf_counter()
-        result = await func(*args, **kwargs)
-        end = time.perf_counter()
-        print(f"{func.__name__} took {end - start:.12f}s")
-        return result
-
-    return wrapper
-
-
 @Database.default.read_transaction
-@timer
 async def list_items(
     tx: Transaction,
     cls: type[Document | Entity],
@@ -103,7 +87,6 @@ async def list_items(
         deep_search=deep_search,
     )
 
-    dump_query("list", query, params)
 
     concrete_types = get_concrete_types(cls)
     concrete_ref_types = [t.ReferenceView for t in concrete_types]
@@ -124,13 +107,11 @@ async def list_items(
 
 
 @Database.default.read_transaction
-@timer
 async def get_document(
     tx: Transaction, cls: type[Document], id: UUID | AnyHttpUrl
 ) -> _DocumentHeadViewBase:
 
     query_string, query_params = build_fetch_document_query(cls, id)
-    dump_query("read", query_string, query_params)
 
     result = await tx.run(query_string, **query_params)
     records = await result.data()
@@ -146,18 +127,7 @@ def tree_of(record: dict) -> dict:
     return tree
 
 
-def dump_query(name: str, query: str, params: dict) -> None:
-    """Write the last query of each kind to `.query_dumps`, for debugging"""
-    os.makedirs(".query_dumps", exist_ok=True)
-    with open(f".query_dumps/{name}.cypher", "w") as f:
-        f.write(f"""{query}
-
-            // {params!s}
-            """)
-
-
 @Database.default.read_transaction
-@timer
 async def get_entity(
     tx: Transaction, cls: type[Entity], id: UUID | AnyHttpUrl
 ) -> _EntityHeadViewBase | None:
@@ -170,7 +140,6 @@ async def get_entity(
     id = resolved_id
 
     query_string, query_params = build_fetch_document_query(cls, id)
-    dump_query("read_entity", query_string, query_params)
 
     result = await tx.run(query_string, **query_params)
     records = await result.data()
@@ -200,7 +169,6 @@ async def run_write_query(tx: Transaction, query: str, params: dict) -> list:
 
 
 @Database.default.write_transaction
-@timer
 async def soft_delete_node(
     tx: Transaction, cls: type[Document | Entity], id: UUID | AnyHttpUrl
 ) -> DeletionResult:
@@ -230,7 +198,6 @@ async def delete_entity(cls: type[Entity], id: UUID | AnyHttpUrl) -> None:
 
 
 @Database.default.write_transaction
-@timer
 async def undelete_node(
     tx: Transaction, cls: type[Document | Entity], id: UUID | AnyHttpUrl
 ) -> None:
@@ -250,7 +217,6 @@ async def undelete_entity(cls: type[Entity], id: UUID | AnyHttpUrl) -> None:
 
 
 @Database.default.write_transaction
-@timer
 async def write_head_node(
     tx: Transaction,
     db_instance: _DocumentCreateDBBase,
@@ -269,7 +235,6 @@ async def write_head_node(
     await check_ids_available(tx, query_object, is_update=False)
     await check_urls_available(tx, query_object)
 
-    dump_query("create", query_object.to_query_string(), query_object.params)
 
     result = await run_write_query(
         tx, query_object.to_query_string(), query_object.params
@@ -330,7 +295,6 @@ async def create_head_node(
 
 
 @Database.default.write_transaction
-@timer
 async def replace_head_node(
     tx: Transaction,
     db_instance: _DocumentUpdateDBBase | _EntityUpdateDBBase,
@@ -354,8 +318,6 @@ async def replace_head_node(
     await check_urls_available(tx, query_object)
 
     replace_query, replace_params = build_replace_head_query(db_instance)
-    dump_query("update_replace", replace_query, replace_params)
-    dump_query("update", query_object.to_query_string(), query_object.params)
 
     if not await run_write_query(tx, replace_query, replace_params):
         raise PanglossWriteError("Nothing was updated")

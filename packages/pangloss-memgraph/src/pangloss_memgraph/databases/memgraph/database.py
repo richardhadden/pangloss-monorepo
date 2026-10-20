@@ -64,10 +64,7 @@ class Database:
             async with self.driver.session(
                 database=self.settings.DATABASE.DATABASE_NAME
             ) as session:
-                print("starting read")
-                records = await session.execute_read(func, *args, **kwargs)
-                print("end read")
-                return records
+                return await session.execute_read(func, *args, **kwargs)
 
         return wrapper
 

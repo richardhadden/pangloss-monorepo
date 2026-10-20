@@ -156,7 +156,6 @@ Returns `_ListItems` of `ReferenceView`s of all concrete subtypes of `cls`. Defa
 
 ## Known rough edges
 
-- `exposed_functions.py` writes each generated query to `.query_dumps/*.cypher` (git-ignored; the directory is created if missing) and prints timings and debug output.
 - `initialise_database` is not connected to a command yet (⏳ a CLI), so it has to be called from code.
-- Nothing yet reverses a deletion, or removes deleted nodes for good.
+- Nothing yet removes deleted nodes for good.
 - `Database.default` is set by the last `Database(...)` constructed, and `exposed_functions` decorates with `Database.default` at import time, so the settings/`Database` must be created before the module is first imported (which `initialise()` does when binding).

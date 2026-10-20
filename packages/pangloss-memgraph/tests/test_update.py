@@ -1160,3 +1160,35 @@ async def test_update_with_enums_on_nested_documents_and_edges(db_driver, clear_
     for edge in ("concerns", "concerns_reverse"):
         props = run(db_driver, f"MATCH ()-[r:{edge}]->() RETURN properties(r) AS p")[0]["p"]
         assert props["colour"] == mg_enum("Colour::BLUE"), edge
+
+
+@no_type_check
+async def test_update_switches_the_member_of_a_union_of_embedded_objects(
+    db_driver, clear_database
+):
+    class Date(Embedded):
+        when: datetime.date
+
+    class DateRange(Embedded):
+        start: datetime.date
+        end: datetime.date
+
+    class Statement(Document):
+        date: Date | DateRange
+
+    initialise()
+
+    saved = await Statement.Create(
+        label="A Statement", date={"type": "Date", "when": "2020-01-01"}
+    ).save()
+    await Statement.Update(
+        id=saved.id,
+        label="A Statement",
+        date={"type": "DateRange", "start": "2020-01-01", "end": "2020-12-31"},
+    ).save()
+
+    assert count_nodes(db_driver, "Date") == 0
+    assert count_nodes(db_driver, "DateRange") == 1
+    read = await Statement.get(id=saved.id)
+    assert read.date.type == "DateRange"
+    assert read.date.end == datetime.date(2020, 12, 31)

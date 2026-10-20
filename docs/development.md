@@ -37,13 +37,11 @@ The root `pyproject.toml` sets `testpaths = ["packages"]` and the session-scoped
 │   ├── pangloss-memgraph/  Memgraph backend
 │   ├── pangloss-sdk/       API-as-database client (stub)
 │   └── pangloss-users/     request-user context variable
-├── .query_dumps/           last generated Cypher (git-ignored; written by the Memgraph backend)
 ├── pyproject.toml          uv workspace + pytest config
 └── run_tests.sh
 ```
 
 ## Tips
 
-- `.query_dumps/create.cypher`, `update.cypher`, `update_replace.cypher`, `read.cypher` and `list.cypher` contain the most recent query and its parameters, which is the quickest way to debug a query.
 - Tests call `ModelRegistry._reset()` before each test, so classes defined inside a test function do not leak into others. Do the same in scratch scripts if you re-define classes.
 - To set the acting user for a write, use the context variable: `current_request_username.set("john_smith")`. The `PGUser` node must exist in the database.

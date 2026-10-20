@@ -32,7 +32,7 @@ def save(
     | _EntityUpdateDBBase
     | _DocumentUpdateDBBase,
 ):
-    print("wahoo!", self)
+    pass
 
 
 def get_document(cls: type[Document], id: UUID | AnyHttpUrl) -> _DocumentHeadViewBase:
