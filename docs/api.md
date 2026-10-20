@@ -68,17 +68,17 @@ A wrong username, password, an unknown user or a disabled user all give the same
 
 ## Routes for the models
 
-For every Document and Entity of the project that is not abstract, `NAME` being the class name (so `Person`, not `person`), and `KIND` being `documents` or `entities`:
+For every Document and Entity of the project that is not abstract, `NAME` being the class name (so `Person`, not `person`). Class names are unique, so the kind is not in the path: the server knows which a name is. (A model cannot be called `users`, `docs`, `redoc` or `openapi.json`, whatever the case: those are used by the API, and `initialise` refuses it.)
 
 | Endpoint | Login | |
 |----------|-------|--|
-| `GET /api/KIND/NAME` | no | A page of a list. Parameters: `q` (searches the labels), `deep` (search more), `page`, `page_size` (up to 500). Includes the subtypes of `NAME`. Returns `results` (summaries), `count`, `page`, `page_size`, `next_page`, `previous_page` |
-| `GET /api/KIND/NAME/{id}` | no | The `HeadView`; 404 if there is none, or it has been deleted |
-| `POST /api/KIND/NAME` | yes | Create, with the body of `NAME.Create`. Returns 201 and a summary (`ReferenceView`), or with `?detail=true` the whole `HeadView` |
-| `GET /api/KIND/NAME/{id}/edit` | yes | What to edit: for an entity its `EditView` (no incoming relations), for a document its `HeadView` |
-| `PUT /api/KIND/NAME/{id}` | yes | Update, with the body of `NAME.Update`: a full replacement, which what `/edit` returns can be sent back as. The `id` in the body must be the one in the path (400). Returns a summary, or with `?detail=true` the `HeadView` |
-| `DELETE /api/KIND/NAME/{id}` | yes | Delete. 204 |
-| `POST /api/KIND/NAME/{id}/undelete` | yes | Undelete. 204 |
+| `GET /api/NAME` | no | A page of a list. Parameters: `q` (searches the labels), `deep` (search more), `page`, `page_size` (up to 500). Includes the subtypes of `NAME`. Returns `results` (summaries), `count`, `page`, `page_size`, `next_page`, `previous_page` |
+| `GET /api/NAME/{id}` | no | The `HeadView`; 404 if there is none, or it has been deleted. For an entity, `{id}` can be one of its URLs (see below) |
+| `POST /api/NAME` | yes | Create, with the body of `NAME.Create`. Returns 201 and a summary (`ReferenceView`), or with `?detail=true` the whole `HeadView` |
+| `GET /api/NAME/{id}/edit` | yes | What to edit: for an entity its `EditView` (no incoming relations), for a document its `HeadView` |
+| `PUT /api/NAME/{id}` | yes | Update, with the body of `NAME.Update`: a full replacement, which what `/edit` returns can be sent back as. The `id` in the body must be the one in the path (400). Returns a summary, or with `?detail=true` the `HeadView` |
+| `DELETE /api/NAME/{id}` | yes | Delete. 204 |
+| `POST /api/NAME/{id}/undelete` | yes | Undelete. 204 |
 
 Everything can be looked at by anyone; creating, loading for edit, updating, deleting and undeleting need a logged-in user, whose name is recorded as the creator or updater. (Finer permissions are not written yet ⏳.) A disabled user is refused with 401.
 
@@ -86,11 +86,26 @@ The JSON is `camelCase` throughout (`bornIn`, `meta.createdBy`, `aboutPersonReve
 
 | Status | When |
 |--------|------|
-| 400 | The `id` in an update body is not the one in the path; deleting a document that is part of another (`PanglossNotDeletableError`); other rejected writes |
+| 400 | The `id` in an update body is not the one in the path; loading to edit, updating, deleting or undeleting an entity at a URL; deleting a document that is part of another (`PanglossNotDeletableError`); other rejected writes |
 | 401 | Not logged in |
 | 404 | No such item (also: update, delete or undelete of one that does not exist) |
 | 409 | An id already in use; undeleting what is not deleted; deleting an entity that is referred to. For the last, the response also has `referencedBy`, a list of `{id, type, label}`, and the entity is marked for deletion |
 | 422 | A body that is not valid for the model; a reference to an entity that does not exist or is of the wrong type; a bad page |
+
+**URLs.** An entity can be given URLs, such as its address in another database, by creating it with a URL as its `id` (if its class has `create_with_id`; the entity still gets an id of its own). To get an entity, one of its URLs can be put in the path instead of its `{id}`, as it is:
+
+```
+GET /api/Person/https://example.com/people/john-smith
+```
+
+The response has the entity's `id`. **Everything else is only ever at an id**: loading it to edit (`/edit`), and update, delete and undelete, are refused at a URL with 400 ("this is done at the id of an entity"), so get the entity at its URL first to find the id. Documents are found by id only. A URL can also refer to an entity in the body of a request (`{"type": "Person", "id": "http://..."}`). Details:
+
+- The rest of the path is the URL, so one that ends in `/edit` or `/undelete` is taken for the route of that name.
+- `http:/` is read as `http://`, as servers and proxies often merge slashes.
+- The query string of the request is the URL's (`.../Place/http://example.com/p?id=5` is the URL with `?id=5`).
+- Percent-encoded characters are decoded in the path, and the URL is then normalised as when it was stored. A URL that has an encoded `/`, `?` or `#` in it cannot be told apart this way.
+
+The URLs themselves are not part of what is returned for an entity yet ⏳.
 
 The OpenAPI document (`/openapi.json`, with the interactive `/docs`) describes every route, with the schemas of the models.
 
@@ -98,5 +113,5 @@ The OpenAPI document (`/openapi.json`, with the interactive `/docs`) describes e
 
 - Revoking tokens: changing a password does not end sessions already open (their tokens last until they expire).
 - Limiting login attempts.
-- Routes from `INSTALLED_APPS` (an app's own), reading an entity by one of its URLs, and a route to list the types.
+- Routes from `INSTALLED_APPS` (an app's own), showing the URLs of an entity, and a route to list the types.
 - Per-type or per-object permissions.

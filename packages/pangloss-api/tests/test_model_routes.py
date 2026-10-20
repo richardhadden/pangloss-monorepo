@@ -78,12 +78,18 @@ def test_routes_are_made_for_concrete_documents_and_entities(settings):
     client = TestClient(create_app())
     paths = set(client.get("/openapi.json").json()["paths"])
 
-    for kind, name in (("entities", "Person"), ("entities", "Poet"), ("documents", "Statement")):
-        assert f"/api/{kind}/{name}" in paths
-        assert f"/api/{kind}/{name}/{{id}}" in paths
-        assert f"/api/{kind}/{name}/{{id}}/edit" in paths
-        assert f"/api/{kind}/{name}/{{id}}/undelete" in paths
+    # (no matter whether they are entities or documents; an entity is found by its
+    # id or a URL)
+    for name, item in (("Person", "ref"), ("Poet", "ref"), ("Statement", "id")):
+        assert f"/api/{name}" in paths
+        assert f"/api/{name}/{{{item}}}" in paths
+        assert f"/api/{name}/{{{item}}}/edit" in paths
+        assert f"/api/{name}/{{{item}}}/undelete" in paths
     assert not any("Base" in path for path in paths)
+
+    # The kind of the model is not in the path
+    assert client.get("/api/entities/Person").status_code in (404, 422)
+    assert client.get("/api/documents/Statement").status_code in (404, 422)
     # (the users' routes are still there)
     assert "/api/users/me" in paths
 
@@ -117,20 +123,20 @@ def test_reading_is_open_and_changing_needs_a_login(settings, monkeypatch):
     stub(monkeypatch, Statement, "get", get)
 
     # Reading does not ask who you are (the 404 is from the stub)
-    assert client.get(f"/api/entities/Person/{some_id}").status_code == 404
-    assert client.get(f"/api/documents/Statement/{some_id}").status_code == 404
+    assert client.get(f"/api/Person/{some_id}").status_code == 404
+    assert client.get(f"/api/Statement/{some_id}").status_code == 404
 
     # Changing does, and nothing has been called without it
     for method, url, body in (
-        ("POST", "/api/entities/Person", {"type": "Person", "label": "x"}),
-        ("POST", "/api/documents/Statement", {"type": "Statement", "label": "x"}),
-        ("GET", f"/api/entities/Person/{some_id}/edit", None),
-        ("GET", f"/api/documents/Statement/{some_id}/edit", None),
-        ("PUT", f"/api/entities/Person/{some_id}", {"type": "Person", "id": some_id}),
-        ("DELETE", f"/api/entities/Person/{some_id}", None),
-        ("POST", f"/api/entities/Person/{some_id}/undelete", None),
-        ("DELETE", f"/api/documents/Statement/{some_id}", None),
-        ("POST", f"/api/documents/Statement/{some_id}/undelete", None),
+        ("POST", "/api/Person", {"type": "Person", "label": "x"}),
+        ("POST", "/api/Statement", {"type": "Statement", "label": "x"}),
+        ("GET", f"/api/Person/{some_id}/edit", None),
+        ("GET", f"/api/Statement/{some_id}/edit", None),
+        ("PUT", f"/api/Person/{some_id}", {"type": "Person", "id": some_id}),
+        ("DELETE", f"/api/Person/{some_id}", None),
+        ("POST", f"/api/Person/{some_id}/undelete", None),
+        ("DELETE", f"/api/Statement/{some_id}", None),
+        ("POST", f"/api/Statement/{some_id}/undelete", None),
     ):
         response = client.request(method, url, json=body)
         assert response.status_code == 401, (method, url)
@@ -162,7 +168,7 @@ def test_list_parameters(settings, monkeypatch):
 
     stub(monkeypatch, Person, "list", list_)
 
-    assert client.get("/api/entities/Person").status_code == 200
+    assert client.get("/api/Person").status_code == 200
     assert seen[-1] == {
         "search_terms": None,
         "page_number": None,
@@ -171,7 +177,7 @@ def test_list_parameters(settings, monkeypatch):
     }
 
     response = client.get(
-        "/api/entities/Person",
+        "/api/Person",
         params={"q": "smith", "deep": "true", "page": 2, "page_size": 10},
     )
     assert response.status_code == 200
@@ -184,7 +190,7 @@ def test_list_parameters(settings, monkeypatch):
     assert response.json()["page"] == 2
 
     for bad in ({"page": 0}, {"page_size": 0}, {"page_size": 100000}, {"page": "x"}):
-        assert client.get("/api/entities/Person", params=bad).status_code == 422
+        assert client.get("/api/Person", params=bad).status_code == 422
 
 
 def test_get_returns_the_head_view_in_camel_case(settings, monkeypatch):
@@ -204,7 +210,7 @@ def test_get_returns_the_head_view_in_camel_case(settings, monkeypatch):
         )
 
     stub(monkeypatch, Person, "get", get)
-    response = client.get(f"/api/entities/Person/{person_id}")
+    response = client.get(f"/api/Person/{person_id}")
     assert response.status_code == 200
     body = response.json()
     assert body["bornIn"]["label"] == "Paris"
@@ -242,7 +248,7 @@ def test_create_passes_detail_and_accepts_either_naming(settings, monkeypatch):
 
     for key in ("born_in", "bornIn"):
         response = client.post(
-            "/api/entities/Person",
+            "/api/Person",
             json={"type": "Person", "label": "John", key: {"type": "Place", "id": place_id}},
             headers=headers,
         )
@@ -258,7 +264,7 @@ def test_create_passes_detail_and_accepts_either_naming(settings, monkeypatch):
         {"type": "Person", "label": "x", "born_in": {"type": "Person", "id": place_id}},
         {"type": "Statement", "label": "x"},
     ):
-        response = client.post("/api/entities/Person", json=body, headers=headers)
+        response = client.post("/api/Person", json=body, headers=headers)
         assert response.status_code == 422
     assert len(saved) == 2
 
@@ -287,12 +293,12 @@ def test_update_needs_the_same_id_in_the_path_and_the_body(settings, monkeypatch
     }
 
     response = client.put(
-        f"/api/entities/Person/{person_id}", json=body, headers=headers, params={"detail": "true"}
+        f"/api/Person/{person_id}", json=body, headers=headers, params={"detail": "true"}
     )
     assert response.status_code == 200, response.text
     assert saved == [(person_id, True)]
 
-    response = client.put(f"/api/entities/Person/{uuid7()}", json=body, headers=headers)
+    response = client.put(f"/api/Person/{uuid7()}", json=body, headers=headers)
     assert response.status_code == 400
     assert len(saved) == 1
 
@@ -324,7 +330,7 @@ def test_errors_from_the_database_become_statuses(settings, monkeypatch, error, 
         raise error
 
     stub(monkeypatch, Person, "delete", delete)
-    response = client.delete(f"/api/entities/Person/{uuid7()}", headers=headers)
+    response = client.delete(f"/api/Person/{uuid7()}", headers=headers)
     assert response.status_code == status_code
     assert response.json() == {"detail": str(error)}
 
@@ -345,7 +351,7 @@ def test_an_entity_in_use_says_what_refers_to_it(settings, monkeypatch):
         )
 
     stub(monkeypatch, Person, "delete", delete)
-    response = client.delete(f"/api/entities/Person/{uuid7()}", headers=headers)
+    response = client.delete(f"/api/Person/{uuid7()}", headers=headers)
     assert response.status_code == 409
     assert response.json() == {
         "detail": "in use",
@@ -371,10 +377,10 @@ def test_delete_and_undelete_give_no_content(settings, monkeypatch):
     stub(monkeypatch, Statement, "undelete", undelete)
 
     document_id = uuid7()
-    response = client.delete(f"/api/documents/Statement/{document_id}", headers=headers)
+    response = client.delete(f"/api/Statement/{document_id}", headers=headers)
     assert response.status_code == 204
     assert response.content == b""
-    response = client.post(f"/api/documents/Statement/{document_id}/undelete", headers=headers)
+    response = client.post(f"/api/Statement/{document_id}/undelete", headers=headers)
     assert response.status_code == 204
     assert calls == [("delete", document_id), ("undelete", document_id)]
 
@@ -393,6 +399,130 @@ def test_a_synchronous_backend_works_too(settings, monkeypatch):
 
     stub(monkeypatch, Person, "delete", delete)
     person_id = uuid7()
-    response = client.delete(f"/api/entities/Person/{person_id}", headers=headers)
+    response = client.delete(f"/api/Person/{person_id}", headers=headers)
     assert response.status_code == 204
     assert deleted == [person_id]
+
+
+def test_entities_are_found_by_url_as_well_as_by_id(settings, monkeypatch):
+    from fastapi.testclient import TestClient
+
+    Place, Person, Statement = make_models()
+    client = TestClient(create_app())
+    headers = login(client)
+    person_id, place_id = uuid7(), uuid7()
+    url = "http://example.com/people/john"
+    asked = []
+
+    def head_view():
+        return Person.HeadView(
+            id=person_id,
+            label="John",
+            meta=META,
+            born_in=[{"type": "Place", "id": place_id, "label": "Paris"}],
+        )
+
+    async def get(cls, id):
+        asked.append(("get", id))
+        return head_view() if str(id) in (url, str(person_id)) else None
+
+    async def get_for_edit(cls, id):
+        asked.append(("edit", id))
+        return Person.EditView(
+            id=person_id,
+            label="John",
+            meta=META,
+            born_in=[{"type": "Place", "id": place_id, "label": "Paris"}],
+        )
+
+    async def delete(cls, id):
+        asked.append(("delete", id))
+
+    async def undelete(cls, id):
+        asked.append(("undelete", id))
+
+    stub(monkeypatch, Person, "get", get)
+    stub(monkeypatch, Person, "get_for_edit", get_for_edit)
+    stub(monkeypatch, Person, "delete", delete)
+    stub(monkeypatch, Person, "undelete", undelete)
+
+    # By the URL, as it is: no login, as for reading by id
+    response = client.get(f"/api/Person/{url}")
+    assert response.status_code == 200, response.text
+    assert response.json()["id"] == str(person_id)
+    assert response.json()["bornIn"]["label"] == "Paris"
+    # (what is passed on is a URL, which is what tells the database not to use an id)
+    kind, passed = asked[-1]
+    assert str(passed) == url
+    assert not isinstance(passed, str | type(person_id))
+
+    # By the id, as before
+    assert client.get(f"/api/Person/{person_id}").status_code == 200
+    assert asked[-1] == ("get", person_id)
+
+    # A server may have merged the slashes of "http://"
+    assert client.get("/api/Person/http:/example.com/people/john").status_code == 200
+    assert str(asked[-1][1]) == url
+    assert client.get("/api/Person/HTTP://example.com/people/john").status_code == 200
+
+    # A URL with a query string: it is the URL's
+    client.get(f"/api/Person/{url}?id=5&x=y")
+    assert str(asked[-1][1]) == f"{url}?id=5&x=y"
+
+    # Not found
+    missing = client.get("/api/Person/http://example.com/people/jane")
+    assert missing.status_code == 404
+    assert "URL http://example.com/people/jane" in missing.json()["detail"]
+    assert "with id" in client.get(f"/api/Person/{uuid7()}").json()["detail"]
+
+    # Neither an id nor a URL
+    for bad in ("john", "ftp://example.com/john", "http://"):
+        assert client.get(f"/api/Person/{bad}").status_code == 422, bad
+
+    # Loading to edit, and changes, are only ever at an id: at a URL they are refused
+    # (and nothing is called), at the id they are done
+    body = {
+        "type": "Person",
+        "id": str(person_id),
+        "label": "John",
+        "bornIn": {"type": "Place", "id": str(place_id)},
+    }
+    before = len(asked)
+    for method, suffix, json in (
+        ("GET", "/edit", None),
+        ("PUT", "", body),
+        ("DELETE", "", None),
+        ("POST", "/undelete", None),
+    ):
+        path = f"/api/Person/{url}{suffix}"
+        assert client.request(method, path, json=json).status_code == 401
+        response = client.request(method, path, json=json, headers=headers)
+        assert response.status_code == 400, (method, suffix)
+        assert "at the id of an entity" in response.json()["detail"]
+    assert len(asked) == before
+
+    for method, suffix, expected in (
+        ("GET", "/edit", "edit"),
+        ("DELETE", "", "delete"),
+        ("POST", "/undelete", "undelete"),
+    ):
+        path = f"/api/Person/{person_id}{suffix}"
+        response = client.request(method, path, headers=headers)
+        assert response.status_code in (200, 204), (method, suffix)
+        assert asked[-1] == (expected, person_id)
+
+    # (what is neither is not valid)
+    assert client.delete("/api/Person/john", headers=headers).status_code == 422
+
+    # A document is found by its id only
+    assert client.get(f"/api/Statement/{url}").status_code == 404
+    assert client.get("/api/Statement/not-an-id").status_code == 422
+
+
+@pytest.mark.parametrize("name", ["users", "Users", "docs", "Docs", "redoc"])
+def test_a_model_cannot_have_the_name_of_other_routes(settings, name):
+    from pangloss_models.exceptions import PanglossInitialisationError
+
+    type(name, (Entity,), {"__module__": __name__})
+    with pytest.raises(PanglossInitialisationError, match="cannot be called"):
+        create_app()
