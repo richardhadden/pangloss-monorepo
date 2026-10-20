@@ -1,0 +1,38 @@
+{
+  "name": "@pangloss/interface-core",
+  "version": "0.1.0",
+  "description": "The components of the Pangloss interface, which an application can use and override",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "solid": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./types": "./src/types/index.ts",
+    "./schema": "./src/schema/index.ts",
+    "./api": "./src/api/index.ts",
+    "./context": "./src/context/index.ts",
+    "./primitives": "./src/primitives/index.ts",
+    "./components": "./src/components/index.ts"
+  },
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "peerDependencies": {
+    "@solidjs/web": "^2.0.0-rc.15",
+    "solid-js": "^2.0.0-rc.15"
+  },
+  "devDependencies": {
+    "@solidjs/vite-plugin": "^3.0.0-next.50",
+    "@solidjs/web": "^2.0.0-rc.15",
+    "solid-js": "^2.0.0-rc.15",
+    "typescript": "^5.9.2",
+    "vitest": "^5.0.5"
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "name": "pangloss-interface-js",
+  "private": true,
+  "description": "The JavaScript side of pangloss-interface: a library of components and the application that uses it",
+  "type": "module",
+  "workspaces": [
+    "interface-core",
+    "interface-app"
+  ],
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "check:layers": "depcruise --config .dependency-cruiser.cjs interface-core/src interface-app/src",
+    "test": "npm run test --workspaces --if-present",
+    "build": "npm run build --workspace interface-app",
+    "dev": "npm run dev --workspace interface-app",
+    "start": "npm run start --workspace interface-app"
+  },
+  "devDependencies": {
+    "dependency-cruiser": "^18.7.0",
+    "typescript": "^5.9.2"
+  }
+}
