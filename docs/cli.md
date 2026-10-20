@@ -54,6 +54,7 @@ The module is imported, and so constructs the project's `BaseSettings` subclass 
 | `pangloss run [--host H] [--port P]` | Starts the API server (`127.0.0.1:8000` by default) |
 | `pangloss dev [--host H] [--port P]` | The same, restarting when files change |
 | `pangloss setup-database` | Imports the `models` module of each installed app, runs `initialise()`, then asks the database backend to set up what it needs (for Memgraph: indexes, uniqueness constraints, the text index and enums). Safe to repeat |
+| `pangloss make-stubs [--force]` | Writes a type stub (`.pyi`) beside each module of the project that declares models, so that an editor can complete the classes made for each model (`Person.Create(...)`, `Person.HeadView`, `Person.EditView`, and so on) with their fields. Needs no database. Run it again when the models change. It does not overwrite a `.pyi` it did not write, unless `--force` is given. See [Type stubs](#type-stubs) |
 | `pangloss users create` | Asks for (or takes `--username`, `--email`, `--password`, `--full-name`, `--admin/--no-admin`) the details of a new user |
 | `pangloss users list` | |
 | `pangloss users set-password <username>` | |
@@ -106,3 +107,12 @@ The core commands do not know about any database. The backend named by `DATABASE
 | `async setup_database() -> list[str]` | Does the work of `pangloss setup-database`, and returns lines to show |
 
 For Memgraph this is `pangloss_memgraph.databases.memgraph.setup`; the SDK has a stub.
+
+## Type stubs
+
+`Person.Create`, `Person.Update`, `Person.HeadView` and the other classes of a model are made when the models are initialised, so an editor or type checker cannot see them. `pangloss make-stubs` imports the models of the installed apps, initialises them, and writes a `.pyi` file beside each module in the project that declares models (`myapp/models.pyi` next to `myapp/models.py`). In it each model has those classes as nested classes, with their fields typed (a relation is the `ReferenceSet` or `ReferenceView` of its target, an enum is the enum).
+
+- A stub **replaces its module for a type checker**, so it has everything the module declares (classes, functions and signatures, enums, type variables), without function bodies. If the module changes, make the stubs again.
+- Models in other modules of the project (imported by a `models.py`) get stubs of their own. Modules in `site-packages` or a virtual environment do not.
+- The first line says the file was generated. Commit the stubs of your apps, so that everyone who clones the project (and any CI type check) has them: do not add `*.pyi` to `.gitignore`. Make them again, and commit the change, when the models change.
+- The nested classes are marked `# type: ignore` where they replace the class variable of the same name in `Entity` or `Document`.

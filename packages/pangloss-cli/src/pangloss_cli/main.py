@@ -52,6 +52,51 @@ def setup_database(ctx: typer.Context) -> None:
     typer.secho("Database is set up", fg="green")
 
 
+def make_stubs(
+    ctx: typer.Context,
+    force: bool = typer.Option(
+        False, "--force", help="Write over a .pyi file that was not made by this command"
+    ),
+) -> None:
+    """Write type stubs (.pyi) for the modules that declare models, so that an editor
+    can complete `Person.Create(...)`, `Person.HeadView` and the like
+
+    The models of the installed apps (and the modules they import models from, if they
+    are in the project) are initialised, and a stub is written beside each module that
+    declares models. Run it again when the models change."""
+    project: Project = ctx.obj
+    settings = project.require_settings()
+    assert project.location is not None
+
+    from pangloss_models import initialise
+    from pangloss_models.exceptions import (
+        PanglossImportError,
+        PanglossInitialisationError,
+    )
+    from pangloss_models.typestubs import write_stubs
+
+    try:
+        project.import_models()
+        initialise()
+    except (PanglossInitialisationError, PanglossImportError) as error:
+        fail(f"Cannot initialise the models: {error}")
+
+    root = project.location.root
+    written, skipped = write_stubs(root, force=force)
+    for path in written:
+        typer.echo(f"  wrote {path.relative_to(root)}")
+    for path in skipped:
+        typer.secho(
+            f"  skipped {path.relative_to(root)}: it was not made by this command "
+            "(use --force to write over it)",
+            fg="yellow",
+        )
+    if not written and not skipped:
+        typer.echo(f"No models found in {', '.join(settings.INSTALLED_APPS) or 'the project'}")
+    else:
+        typer.secho(f"Wrote {len(written)} stub file(s)", fg="green")
+
+
 def new_project(
     name: str = typer.Argument(..., help="The name of the project (a Python name)"),
 ) -> None:
@@ -194,6 +239,7 @@ def build_app(
         ctx.obj = project
 
     app.command("setup-database")(setup_database)
+    app.command("make-stubs")(make_stubs)
     app.command("new-project")(new_project)
     app.command("new-app")(new_app)
     app.command("run")(run)
