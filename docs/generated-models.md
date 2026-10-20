@@ -48,8 +48,8 @@ Optional literal fields (`X | None`) default to `None` in all of these models, s
    | `Entity.delete` | `delete_entity(cls, id)` |
    | `Document.undelete` | `undelete_document(cls, id)` |
    | `Entity.undelete` | `undelete_entity(cls, id)` |
-   | `_DocumentCreateBase.save`, `_EntityCreateBase.save` | `create_head_node(instance, return_type)` |
-   | `_DocumentUpdateBase.save`, `_EntityUpdateBase.save` | `update_head_node(instance, return_type)` |
+   | `_DocumentCreateBase.save`, `_EntityCreateBase.save` | `create_head_node(instance, detail)` |
+   | `_DocumentUpdateBase.save`, `_EntityUpdateBase.save` | `update_head_node(instance, detail)` |
    | `Document.list`, `Entity.list` | `list_items(cls, search_terms, page_number, page_size, deep_search)` |
 
    A missing module raises `PanglossImportError`.

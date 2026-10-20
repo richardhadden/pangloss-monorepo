@@ -55,12 +55,12 @@ user dict / kwargs
                                            ▼
                                        Memgraph
                                            │
-                       ReferenceView (default) or HeadView ◄─ return_type
+                       ReferenceView (default) or HeadView ◄─ detail
 ```
 
 ## Data flow for an update
 
-An update replaces the whole document, rather than working out what changed. In one transaction: check the document exists, that everything it refers to exists, and that the ids it uses are free; then delete everything below the head node (never entities), and write the new version in the same way as a creation. See [Memgraph backend](memgraph.md#update_head_nodeinstance-return_typereference-).
+An update replaces the whole document, rather than working out what changed. In one transaction: check the document exists, that everything it refers to exists, and that the ids it uses are free; then delete everything below the head node (never entities), and write the new version in the same way as a creation. See [Memgraph backend](memgraph.md#update_head_nodeinstance-detailfalse-).
 
 ## Data flow for a read
 

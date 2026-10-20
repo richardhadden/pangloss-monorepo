@@ -27,7 +27,6 @@ A snapshot of what works and what does not, as of this writing.
 | Semantic spaces through `UpdateDB` | Works and is tested for updates; the item in `packages/pangloss-models/todo.md` is still unticked |
 | Head node type and id through `CreateDB` / `UpdateDB` | Open item in `todo.md` |
 | Updating a document concurrently | Last write wins; there is no check that the payload was based on the latest version |
-| Return type `"Detail"` for `save()` | Named in the registry wrapper, not handled by the Memgraph backend |
 | `pangloss-sdk` (API as database) | Only settings; the functions are stubs returning dummy data |
 | `pangloss-users` | Only the `current_request_username` context variable |
 

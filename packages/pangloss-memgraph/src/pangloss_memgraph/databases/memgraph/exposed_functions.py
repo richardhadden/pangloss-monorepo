@@ -2,7 +2,7 @@ import datetime
 import functools
 import os
 import time
-from typing import Literal, Union, cast
+from typing import Union, cast
 from uuid import UUID
 
 from neo4j import AsyncResult
@@ -303,24 +303,30 @@ async def write_with_retries(write, *args):
                 ) from error
 
 
+async def _get_head_view(cls: type[Document | Entity], id: UUID):
+    if cls.__metatype__ == "Entity":
+        return await get_entity(cast(type[Entity], cls), id)
+    return await get_document(cast(type[Document], cls), id)
+
+
 async def create_head_node(
     instance: _DocumentCreateBase,
-    return_type: Literal["Reference", "Full"] = "Reference",
+    detail: bool = False,
 ):
+    """Create a Document or Entity. Returns its `ReferenceView`, or, if `detail`, its
+    `HeadView`"""
     db_instance: _DocumentCreateDBBase = cast(
         _DocumentCreateDBBase, instance._to_db_model()
     )
     await write_with_retries(write_head_node, db_instance)
 
-    if return_type == "Reference":
-        return cast(type[Document], instance._owner).ReferenceView(
-            **db_instance.model_dump(),
-            meta=_DocumentReferenceViewAPIMeta(
-                created_by=current_request_username.get()
-            ),
-        )
-    if return_type == "Full":
-        return await get_document(cast(type[Document], instance._owner), db_instance.id)
+    owner = cast(type[Document | Entity], instance._owner)
+    if detail:
+        return await _get_head_view(owner, db_instance.id)
+    return owner.ReferenceView(
+        **db_instance.model_dump(),
+        meta=_DocumentReferenceViewAPIMeta(created_by=current_request_username.get()),
+    )
 
 
 @Database.default.write_transaction
@@ -364,7 +370,7 @@ async def replace_head_node(
 
 async def update_head_node(
     instance: _DocumentUpdateBase | _EntityUpdateBase,
-    return_type: Literal["Reference", "Full"] = "Reference",
+    detail: bool = False,
 ):
     """Replace a Document or Entity (and, for a Document, everything nested in it)
     with the given version"""
@@ -373,16 +379,15 @@ async def update_head_node(
     )
     existing_head = await write_with_retries(replace_head_node, db_instance)
 
-    owner = cast(type[Document], instance._owner)
-    if return_type == "Reference":
-        return owner.ReferenceView(
-            **db_instance.model_dump(),
-            meta=_DocumentReferenceViewAPIMeta(
-                created_by=existing_head.created_by,
-                created_when=existing_head.created_when,
-                updated_by=current_request_username.get(),
-                updated_when=datetime.datetime.now(datetime.UTC),
-            ),
-        )
-    if return_type == "Full":
-        return await get_document(owner, db_instance.id)
+    owner = cast(type[Document | Entity], instance._owner)
+    if detail:
+        return await _get_head_view(owner, db_instance.id)
+    return owner.ReferenceView(
+        **db_instance.model_dump(),
+        meta=_DocumentReferenceViewAPIMeta(
+            created_by=existing_head.created_by,
+            created_when=existing_head.created_when,
+            updated_by=current_request_username.get(),
+            updated_when=datetime.datetime.now(datetime.UTC),
+        ),
+    )

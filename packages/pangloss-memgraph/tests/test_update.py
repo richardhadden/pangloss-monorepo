@@ -180,7 +180,7 @@ async def test_update_return_types_and_meta(db_driver, clear_database):
         ).save()
         full = await Statement.Update(
             id=saved.id, label="Third", text="three"
-        ).save(return_type="Full")
+        ).save(detail=True)
 
     assert isinstance(reference, Statement.ReferenceView)
     assert reference.id == saved.id

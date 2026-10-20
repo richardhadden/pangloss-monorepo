@@ -83,7 +83,7 @@ async def test_read_nested_object(clear_database):
         ],
     )
 
-    factoid_ref = await factoid.save(return_type="Full")
+    factoid_ref = await factoid.save(detail=True)
     assert isinstance(factoid_ref, Factoid.HeadView)
     assert factoid_ref.id
 

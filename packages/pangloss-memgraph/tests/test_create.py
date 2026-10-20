@@ -521,7 +521,7 @@ async def test_write_semantic_spaces(clear_database):
         ],
     )
 
-    factoid_ref = await factoid.save(return_type="Full")
+    factoid_ref = await factoid.save(detail=True)
     assert isinstance(factoid_ref, Factoid.HeadView)
     assert factoid_ref.id
 
@@ -761,9 +761,7 @@ async def test_save_return_types(db_driver, clear_database):
     assert reference.type == "Statement"
     assert reference.meta.created_by == "pangloss_default_user"
 
-    full = await Statement.Create(label="Another", text="world").save(
-        return_type="Full"
-    )
+    full = await Statement.Create(label="Another", text="world").save(detail=True)
     assert isinstance(full, Statement.HeadView)
     assert full.text == "world"
     assert full.meta.created_by == "pangloss_default_user"
@@ -2938,3 +2936,22 @@ async def test_enum_member_missing_from_the_database_raises_a_helpful_error(
     await initialise_database()
     await StatementAgain.Create(label="B", mood=Wider.SAD).save()
     assert count_nodes(db_driver, "StatementAgain") == 2
+
+
+@no_type_check
+async def test_save_detail_for_an_entity(db_driver, clear_database):
+    class Person(Entity):
+        pass
+
+    initialise()
+
+    reference = await Person.Create(label="John Smith").save()
+    assert isinstance(reference, Person.ReferenceView)
+
+    full = await Person.Create(label="Jane Smith").save(detail=True)
+    assert isinstance(full, Person.HeadView)
+    assert full.label == "Jane Smith"
+
+    updated = await Person.Update(id=full.id, label="Jane Jones").save(detail=True)
+    assert isinstance(updated, Person.HeadView)
+    assert updated.label == "Jane Jones"

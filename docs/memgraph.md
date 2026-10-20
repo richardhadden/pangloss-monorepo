@@ -74,7 +74,7 @@ Indexes, constraints and enums cannot be changed inside a transaction, so each s
 
 All are `async`.
 
-### `create_head_node(instance, return_type="Reference")` ✅
+### `create_head_node(instance, detail=False)` ✅
 
 Called by `.save()`. Converts the `Create` instance to `CreateDB`, builds one query (`CREATE` for the head and its creation record; `MERGE` for nested documents keyed on `id`; `MATCH` + `CREATE` for edges to existing entities, restricted to the field's allowed types), checks it (see [Checks before writing](#checks-before-writing)), and runs it in a write transaction.
 
@@ -82,11 +82,10 @@ Called by `.save()`. Converts the `Create` instance to `CreateDB`, builds one qu
 - **Generic wrappers** (reified relations, semantic spaces, conjunctions): the allowed types of their contents (such as `target: list[T]`) come from the field that uses the wrapper, e.g. `Proxy[Person]`.
 - **Entities written in the document** (with `create_new`) are entities of their own. Before the query is built, those that exist are looked up (by `id`, or by `PGUrl`, if given a URL) in the same transaction, and the query is built again: an existing one is `MATCH`ed like a reference, and a new one is `CREATE`d as `Entity.Create` creates it (head node, `PGCreation` record, its own relations). One that appears twice in a document is one entity. A conflict with what exists raises `PanglossConflictError`. A URL, like an id, has a uniqueness constraint. If another write creates the entity at the same moment, after this one checked that it was not there, this one fails when it commits and is run again (up to 3 times): it then finds the entity and uses it. For something that cannot be shared, such as a document id, the second attempt reports a `PanglossConflictError`.
 
-- `return_type="Reference"` returns the `ReferenceView` straight from the in-memory object, with `meta.created_by` set from `current_request_username`.
-- `return_type="Full"` re-reads the node and returns the `HeadView`.
-- The `"Detail"` literal is accepted by the registry's wrapper signature but not handled here.
+- By default `.save()` returns the `ReferenceView` straight from the in-memory object, with `meta.created_by` set from `current_request_username`.
+- `detail=True` re-reads the node and returns the full `HeadView` (`get_document` or `get_entity`).
 
-### `update_head_node(instance, return_type="Reference")` ✅
+### `update_head_node(instance, detail=False)` ✅
 
 Called by `.save()` on a `Document.Update` or `Entity.Update`. **An update is a full replacement of the document, not a patch**: anything left out of the payload is removed. It does not work out what has changed; it deletes the tree and writes the new one, in one transaction:
 
@@ -101,7 +100,7 @@ What is deleted, and what is not:
 - A node owns its outgoing edges that are **not** marked `reverse: true`, and the incoming edges that are. So when an entity is updated, the edges from documents *to* it are kept, and only its own relations are replaced.
 - Nodes given with an existing `id` keep that id (and so can be referred to), nodes given without one get a new id, and nodes left out are gone.
 
-`return_type` is as for creation; `"Reference"` returns the `ReferenceView` with `meta.created_by`, `created_when`, `updated_by` and `updated_when`.
+`detail` is as for creation; by default `.save()` returns the `ReferenceView` with `meta.created_by`, `created_when`, `updated_by` and `updated_when`.
 
 ### `delete_document(cls, id)` and `delete_entity(cls, id)` ✅
 

@@ -68,12 +68,12 @@ def undelete_entity(cls: type[Entity], id: UUID | AnyHttpUrl) -> None:
     pass
 
 
-def create_head_node(self: _DocumentCreateBase, return_created: bool = False):
+def create_head_node(self: _DocumentCreateBase, detail: bool = False):
     pass
 
 
 def update_head_node(
-    self: _DocumentUpdateBase | _EntityUpdateBase, return_type="Reference"
+    self: _DocumentUpdateBase | _EntityUpdateBase, detail: bool = False
 ):
     pass
 
