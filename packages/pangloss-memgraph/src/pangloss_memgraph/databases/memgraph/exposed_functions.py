@@ -50,7 +50,11 @@ from pangloss_memgraph.databases.memgraph.build_update_query import (
     build_replace_head_query,
 )
 from pangloss_memgraph.databases.memgraph.database import Database, Transaction
-from pangloss_memgraph.databases.memgraph.delete_node import DeletionResult, soft_delete
+from pangloss_memgraph.databases.memgraph.delete_node import (
+    DeletionResult,
+    soft_delete,
+    undelete,
+)
 from pangloss_memgraph.databases.memgraph.lookup import resolve_id
 from pangloss_memgraph.databases.memgraph.read_enums import convert_enums
 from pangloss_memgraph.databases.memgraph.read_incoming import (
@@ -223,6 +227,26 @@ async def delete_entity(cls: type[Entity], id: UUID | AnyHttpUrl) -> None:
             entity_id=id,
             referenced_by=result.referenced_by,
         )
+
+
+@Database.default.write_transaction
+@timer
+async def undelete_node(
+    tx: Transaction, cls: type[Document | Entity], id: UUID | AnyHttpUrl
+) -> None:
+    await undelete(tx, cls, id)
+
+
+async def undelete_document(cls: type[Document], id: UUID) -> None:
+    """Restore a deleted head document. `PanglossNotDeletedError` is raised if it has
+    not been deleted."""
+    await undelete_node(cls, id)
+
+
+async def undelete_entity(cls: type[Entity], id: UUID | AnyHttpUrl) -> None:
+    """Restore a deleted entity (by id or URL). `PanglossNotDeletedError` is raised if
+    it has not been deleted."""
+    await undelete_node(cls, id)
 
 
 @Database.default.write_transaction

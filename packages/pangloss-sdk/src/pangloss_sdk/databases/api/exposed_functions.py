@@ -60,6 +60,14 @@ def delete_entity(cls: type[Entity], id: UUID | AnyHttpUrl) -> None:
     pass
 
 
+def undelete_document(cls: type[Document], id: UUID | AnyHttpUrl) -> None:
+    pass
+
+
+def undelete_entity(cls: type[Entity], id: UUID | AnyHttpUrl) -> None:
+    pass
+
+
 def create_head_node(self: _DocumentCreateBase, return_created: bool = False):
     pass
 

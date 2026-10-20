@@ -36,6 +36,7 @@ Requirements: a Memgraph server with text search (the `text_search` module), sup
 | `(:PGUpdate)` | One for each update of a head node, with `id` and `updated_when`; linked `(update)-[:is_update_of]->(head)` and `(update)-[:updated_by]->(:PGUser)`. `get_document` reports the latest as `meta.updated_by` / `meta.updated_when` |
 | `(:PGUrl {url})` | A URL of an entity (from a URL given as its `id`), linked `(entity)-[:has_url]->(url)`. It is a node, not a property, so that it can have a **uniqueness constraint**: a URL cannot belong to two entities, even if they are written at the same moment. It is not part of what an entity owns or contains: reading and updating an entity leave it alone, and a deleted entity keeps it (so the URL stays taken) |
 | `(:PGDeletion)` | One for each deletion of a head document or an entity, with `id` and `deleted_when`; linked `(deletion)-[:is_deletion_of]->(node)` and `(deletion)-[:deleted_by]->(:PGUser)`. The node itself has `deleted: true` |
+| `(:PGUndeletion)` | One for each undeletion, with `id` and `undeleted_when`; linked `(undeletion)-[:is_undeletion_of]->(node)` and `(undeletion)-[:undeleted_by]->(:PGUser)`. The node's `deleted` flag is removed; its `PGDeletion` records are kept |
 | `(:PGUser {username})` | Must already exist: a write as a user with no node raises `PanglossUserNotFoundError`. (The tests `MERGE` it) |
 
 ### Property values
@@ -110,6 +111,10 @@ Both are in one write transaction (`soft_delete` in `delete_node.py`), after che
 - **Entities** (by id or URL). The query follows the reverse edges out of the entity to whatever holds each relation, then takes the head document of that (or the entity itself, if it is one). Those that are not deleted are the references. If there are none the entity is deleted, and any mark cleared. If there are, the entity gets `marked_for_deletion` (with `marked_for_deletion_by` and `marked_for_deletion_when`), the transaction **commits**, and `delete_entity` then raises `PanglossEntityInUseError`. (Raising inside the transaction would roll the mark back.)
 
 **What deletion hides.** `get_document` and `get_entity` do not find a deleted node, or a node of a deleted document; all four `list` queries (also the count and the pages) leave them out, as do the searches, and the incoming relations of an entity; `update` raises `PanglossNotFoundError`; and a write that refers to a deleted entity raises `PanglossReferenceError` ("has been deleted"). A deleted node keeps its `id`, so it cannot be used again. For an entity the `deleted` flag is its own; for any other node it is that of its head document.
+
+### `undelete_document(cls, id)` and `undelete_entity(cls, id)`
+
+Restore a deleted head document or entity (`undelete` in `delete_node.py`), in one write transaction: the `deleted` flag is removed and a `PGUndeletion` record added. `PanglossNotFoundError` if there is no such node, `PanglossNotDeletableError` if the document is nested in another, and `PanglossNotDeletedError` if it has not been deleted. (A document nested in a deleted document comes back with its head document.)
 
 ### Checks before writing
 

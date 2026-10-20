@@ -1,4 +1,4 @@
-"""Deleting a head document or an entity.
+"""Deleting (and undeleting) a head document or an entity.
 
 Nothing is removed from the database. A deleted node has `deleted: true`, and a
 `PGDeletion` record of who deleted it and when (as `PGCreation` and `PGUpdate` record
@@ -11,6 +11,8 @@ its own.
   entity, that has not been deleted itself. If something does, it is not deleted, but
   is marked (`marked_for_deletion`, in its `meta`), so that it is known that someone
   wanted it gone.
+- A deleted node can be undeleted: the flag is removed, and a `PGUndeletion` record is
+  added (the `PGDeletion` record is kept, as history).
 """
 
 import dataclasses
@@ -21,6 +23,7 @@ from uuid import UUID
 
 from pangloss_models.exceptions import (
     PanglossNotDeletableError,
+    PanglossNotDeletedError,
     PanglossNotFoundError,
 )
 from pangloss_models.model_bases.document import Document
@@ -144,3 +147,55 @@ async def soft_delete(
     )
     await result.consume()
     return DeletionResult(deleted=True)
+
+
+UNDELETE_QUERY = """
+    MATCH (user:PGUser {username: $username})
+    MATCH (node:PGIndexableNode {id: $id})
+    CREATE (undeletion:PGUndeletion)
+    SET undeletion = $undeletion
+    CREATE (undeletion)-[:is_undeletion_of]->(node)
+    CREATE (undeletion)-[:undeleted_by]->(user)
+    REMOVE node.deleted
+    RETURN node.id AS id
+"""
+
+
+async def undelete(
+    tx: Transaction, cls: type[Document | Entity], id: UUID | AnyHttpUrl
+) -> None:
+    """Restore a deleted head document or entity"""
+
+    is_entity = cls.__metatype__ == "Entity"
+
+    await check_user_exists(tx)
+
+    resolved_id = await resolve_id(tx, id) if is_entity else id
+    if resolved_id is None:
+        raise PanglossNotFoundError(f"There is no {cls.__name__} with id {id}")
+    node_id = str(resolved_id)
+
+    result = await tx.run(FIND_QUERY, id=node_id, type=cls.__name__)
+    found = await result.data()
+    if not found:
+        raise PanglossNotFoundError(f"There is no {cls.__name__} with id {id}")
+
+    if not is_entity and not found[0]["is_head_node"]:
+        raise PanglossNotDeletableError(
+            f"{cls.__name__} {id} is part of another document, and cannot be "
+            "deleted or undeleted on its own"
+        )
+
+    if not found[0]["deleted"]:
+        raise PanglossNotDeletedError(f"{cls.__name__} {id} has not been deleted")
+
+    result = await tx.run(
+        UNDELETE_QUERY,
+        id=node_id,
+        username=current_request_username.get(),
+        undeletion={
+            "id": str(uuid.uuid7()),
+            "undeleted_when": datetime.datetime.now(datetime.UTC),
+        },
+    )
+    await result.consume()

@@ -46,6 +46,8 @@ Optional literal fields (`X | None`) default to `None` in all of these models, s
    | `Entity.get` | `get_entity(cls, id)` |
    | `Document.delete` | `delete_document(cls, id)` |
    | `Entity.delete` | `delete_entity(cls, id)` |
+   | `Document.undelete` | `undelete_document(cls, id)` |
+   | `Entity.undelete` | `undelete_entity(cls, id)` |
    | `_DocumentCreateBase.save`, `_EntityCreateBase.save` | `create_head_node(instance, return_type)` |
    | `_DocumentUpdateBase.save`, `_EntityUpdateBase.save` | `update_head_node(instance, return_type)` |
    | `Document.list`, `Entity.list` | `list_items(cls, search_terms, page_number, page_size, deep_search)` |

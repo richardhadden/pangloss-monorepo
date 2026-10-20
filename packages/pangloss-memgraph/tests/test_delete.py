@@ -11,6 +11,7 @@ from pangloss_models.exceptions import (
     PanglossConflictError,
     PanglossEntityInUseError,
     PanglossNotDeletableError,
+    PanglossNotDeletedError,
     PanglossNotFoundError,
     PanglossReferenceError,
     PanglossUserNotFoundError,
@@ -666,3 +667,77 @@ async def test_entity_deep_search_does_not_find_entities_through_a_deleted_docum
     assert (await Person.list(search_terms="Quirinal", deep_search=True)).count == 0
     # (the entity itself is not deleted)
     assert (await Person.get(id=person.id)) is not None
+
+
+@no_type_check
+async def test_undelete_document(db_driver, clear_database):
+    class Statement(Document):
+        pass
+
+    initialise()
+
+    saved = await Statement.Create(label="A Statement").save()
+
+    with pytest.raises(PanglossNotDeletedError):
+        await Statement.undelete(saved.id)
+
+    await Statement.delete(saved.id)
+    assert await Statement.get(id=saved.id) is None
+
+    assert await Statement.undelete(saved.id) is None
+    assert await Statement.get(id=saved.id) is not None
+    assert "deleted" not in node(db_driver, saved.id)
+    # The history is kept
+    assert len(deletions(db_driver)) == 1
+    assert count_nodes(db_driver, "PGUndeletion") == 1
+
+    # It can be deleted again
+    await Statement.delete(saved.id)
+    assert await Statement.get(id=saved.id) is None
+
+
+@no_type_check
+async def test_undelete_entity_by_id_and_url(db_driver, clear_database):
+    class Person(Entity):
+        _meta = Entity.Meta(create_with_id=True)
+
+    initialise()
+
+    url = AnyHttpUrl("https://example.com/john")
+    person = await Person.Create(id=url, create_new=True, label="John Smith").save()
+    await Person.delete(url)
+    assert await Person.get(id=url) is None
+
+    await Person.undelete(url)
+    assert await Person.get(id=url) is not None
+
+    await Person.delete(person.id)
+    await Person.undelete(person.id)
+    assert await Person.get(id=person.id) is not None
+
+
+@no_type_check
+async def test_undelete_missing_or_nested(db_driver, clear_database):
+    class Action(Document):
+        pass
+
+    class Statement(Document):
+        action: Action
+
+    initialise()
+
+    with pytest.raises(PanglossNotFoundError):
+        await Statement.undelete(uuid7())
+
+    saved = await Statement.Create(
+        label="A Statement", action={"type": "Action", "label": "An Action"}
+    ).save()
+    nested_id = run(db_driver, "MATCH (a:Action) RETURN a.id AS id")[0]["id"]
+    with pytest.raises(PanglossNotDeletableError):
+        await Action.undelete(nested_id)
+
+    # A nested document comes back with its head document
+    await Statement.delete(saved.id)
+    assert await Action.get(id=nested_id) is None
+    await Statement.undelete(saved.id)
+    assert await Action.get(id=nested_id) is not None

@@ -16,6 +16,7 @@ A snapshot of what works and what does not, as of this writing.
 - Reading `ViaEdge` fields, with their `edge_properties`.
 - Setting up a database (`initialise_database`): indexes, uniqueness constraints on ids, the `label_text` text index and enums; safe to repeat.
 - Deleting head documents and unreferenced entities, as a flag (`deleted`) with a `PGDeletion` record, hidden from reads, lists and searches; an entity that is referred to is marked for deletion (`meta.marked_for_deletion`) instead.
+- Undeleting head documents and entities (`Document.undelete`, `Entity.undelete`): the flag is removed and a `PGUndeletion` record added, keeping the `PGDeletion` history; `PanglossNotDeletedError` if the node was not deleted.
 - Recording the creating user and time on head nodes.
 - Context labels and semantic-space annotation on create.
 
@@ -35,7 +36,7 @@ A snapshot of what works and what does not, as of this writing.
 
 - ⏳ **REST API / web layer.** The project description mentions one; `BACKEND_CORS_ORIGINS`, `AUTHJWT_SECRET_KEY` and `ENTITY_BASE_URL` exist in settings but nothing uses them.
 - ⏳ **Authentication, user management, permissions.**
-- ⏳ **Undeleting**, and removing deleted nodes for good. An entity marked for deletion is not deleted automatically when the last reference to it goes.
+- ⏳ **Removing deleted nodes for good**. An entity marked for deletion is not deleted automatically when the last reference to it goes.
 - ⏳ **Installed apps / plugin discovery** (`INSTALLED_APPS`), **interface languages** (`INTERFACE_LANGUAGES`).
 - ⏳ **A command-line interface** for `initialise_database` (indexes, constraints, the text index and enums), which has to be called from code for now. `indexes.py` and `pangloss_memgraph/tooling/` are empty.
 - ⏳ **Optional relations** (`Person | None`), **optional embedded objects**, **lists of embedded objects or annotated values** and **plain `dict` fields** (use a `TypedDict`) are not supported by the model layer; each raises an error at `initialise()`.

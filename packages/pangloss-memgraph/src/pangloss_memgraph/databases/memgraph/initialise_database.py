@@ -38,6 +38,7 @@ UNIQUE_CONSTRAINTS = [
     ("PGCreation", "id"),
     ("PGUpdate", "id"),
     ("PGDeletion", "id"),
+    ("PGUndeletion", "id"),
     ("PGUrl", "url"),
 ]
 

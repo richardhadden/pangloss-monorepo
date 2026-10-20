@@ -95,7 +95,7 @@ class ModelRegistry:
 
     _models: ClassVar[list[type[_DeclaredClass]]] = []
     _model_set: ClassVar[set[type[_DeclaredClass]]] = set()
-    _model_dict: ClassVar[dict[str, type[_DeclaredClass]]] = dict()
+    _model_dict: ClassVar[dict[str, type[_DeclaredClass]]] = {}
 
     _action_classes: ClassVar[list[type[_ActionClass]]] = []
 
@@ -353,6 +353,8 @@ class ModelRegistry:
         Entity.get = classmethod(exposed_functions.get_entity)  # type: ignore
         Document.delete = classmethod(exposed_functions.delete_document)  # type: ignore
         Entity.delete = classmethod(exposed_functions.delete_entity)  # type: ignore
+        Document.undelete = classmethod(exposed_functions.undelete_document)  # type: ignore
+        Entity.undelete = classmethod(exposed_functions.undelete_entity)  # type: ignore
         Document.list = classmethod(exposed_functions.list_items)  # type: ignore
         Entity.list = classmethod(exposed_functions.list_items)  # type: ignore
 

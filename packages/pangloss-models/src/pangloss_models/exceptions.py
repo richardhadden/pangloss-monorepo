@@ -53,6 +53,10 @@ class PanglossNotDeletableError(PanglossWriteError):
     """Only head documents can be deleted: this is part of another document"""
 
 
+class PanglossNotDeletedError(PanglossWriteError):
+    """An attempt to undelete something that has not been deleted"""
+
+
 class PanglossEntityInUseError(PanglossWriteError):
     """An entity that documents (or other entities) refer to cannot be deleted. It
     has been marked for deletion instead (`meta.marked_for_deletion`)."""
