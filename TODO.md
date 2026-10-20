@@ -4,13 +4,12 @@ What is outstanding, as of the version check on updates (after CORS). What works
 
 ## Before a frontend (next)
 
-- [ ] **Export the models for the frontend build.** A command (`pangloss export-models <file>`) that loads the settings, imports the apps' models, runs `initialise()` and writes a JSON serialisation of the `ModelFields` (fields, relations and their target types, embedded objects, annotated values, `parameter_type_options` of the generic wrappers, incoming fields, validators). Needs no database or server. Could also dump `create_app().openapi()` for typed API clients. // Should be part of the frontend package, not needed before
+- [ ] Typed API client for the frontend: dump `create_app().openapi()` (the models themselves are exported by `pangloss interface export-models`; see [docs/interface.md](docs/interface.md)).
 
 ## API and security
 
 - [ ] Permissions beyond logged in / admin (per type, per object).
 - [ ] Delete and undelete do not check the version (an `If-Match` could be accepted, as for an update, so a stale page cannot delete what has just been changed).
-- [ ] Routes contributed by installed apps (an `<app>.api` router, as apps add CLI commands).
 - [ ] Revoke open sessions when a password is changed (disabling a user already stops their tokens at once).
 - [ ] Limit login attempts.
 - [ ] CSRF protection for cookie sessions (only `SameSite` protects them now).
@@ -35,6 +34,10 @@ What is outstanding, as of the version check on updates (after CORS). What works
 - [ ] `pangloss-core` depends on `pangloss-sdk`, which imports `pangloss-core` back.
 - [ ] A project made by `pangloss new-project` has `dependencies = []`, as the Pangloss packages are not published.
 - [ ] Running in production: workers, deployment notes (`pangloss run` is one process).
+
+## The interface
+
+See [docs/interface.md](docs/interface.md), "Decisions to make next".
 
 ## Open design questions
 

@@ -50,6 +50,10 @@ The `pangloss` command (`pangloss_cli.main`), built with [Typer](https://typer.t
 
 The FastAPI application (`pangloss_api.app.create_app`). Done: token and session login (JWT with PyJWT), the user endpoints, and CRUD routes for every Document and Entity. Not done: routes from installed apps, and finer permissions. See [REST API](api.md).
 
+## pangloss-interface 🚧 (scaffolding)
+
+A Python package that holds the JavaScript of the web interface: `interface-core` (a Solid 2.0 component library) and `interface-app` (a server-rendered Solid 2.0 application), with `pangloss interface` commands that wrap Node or Bun and endpoints under `/api/interface`. See [The interface](interface.md).
+
 ## pangloss-sdk 🚧
 
 Intended to let Pangloss models be used locally and read/write a remote Pangloss instance through its standard API ("API as database"). Currently:

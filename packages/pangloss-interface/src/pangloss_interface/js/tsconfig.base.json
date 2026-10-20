@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    // Solid 2.0: JSX is compiled by @solidjs/vite-plugin; TypeScript only checks it
+    "jsx": "preserve",
+    "jsxImportSource": "@solidjs/web",
+    "target": "ESNext",
+
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "noEmit": true,
+
+    "strict": true,
+    "skipLibCheck": true
+  }
+}

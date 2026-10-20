@@ -14,7 +14,7 @@ import warnings
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pangloss_core import settings as core_settings
 
@@ -78,6 +78,28 @@ MIN_SECRET_LENGTH = 32
 CORS_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
 
 
+def app_routers(apps: list[str]) -> list[APIRouter]:
+    """The `router` of the `api` module of each installed app that has one (as an app
+    adds commands with `cli.py`). An error inside a module that exists is not hidden."""
+    routers = []
+    for app in apps:
+        try:
+            module = importlib.import_module(f"{app}.api")
+        except ModuleNotFoundError as error:
+            if error.name in (app, f"{app}.api") or (
+                error.name and app.startswith(f"{error.name}.")
+            ):
+                continue
+            raise
+        router = getattr(module, "router", None)
+        if router is None:
+            continue
+        if not isinstance(router, APIRouter):
+            raise TypeError(f"{app}.api has a 'router' that is not a FastAPI APIRouter")
+        routers.append(router)
+    return routers
+
+
 def add_cors(app: FastAPI, origins: list[str]) -> None:
     """Let a browser use the API from a page on one of the origins.
 
@@ -126,6 +148,8 @@ def create_app() -> FastAPI:
     add_cors(app, settings.BACKEND_CORS_ORIGINS)
     register_error_handlers(app)
     app.include_router(users.router)
+    for router in app_routers(settings.INSTALLED_APPS):
+        app.include_router(router)
     for model in routable_models():
         app.include_router(build_router(model))
     return app

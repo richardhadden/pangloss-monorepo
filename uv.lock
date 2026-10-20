@@ -8,6 +8,7 @@ members = [
     "pangloss-api",
     "pangloss-cli",
     "pangloss-core",
+    "pangloss-interface",
     "pangloss-memgraph",
     "pangloss-models",
     "pangloss-sdk",
@@ -598,6 +599,39 @@ dependencies = [
 requires-dist = [
     { name = "pangloss-sdk", editable = "packages/pangloss-sdk" },
     { name = "pydantic-settings", specifier = ">=2.14.1" },
+]
+
+[[package]]
+name = "pangloss-interface"
+version = "0.1.0"
+source = { editable = "packages/pangloss-interface" }
+dependencies = [
+    { name = "fastapi" },
+    { name = "pangloss-core" },
+    { name = "pangloss-models" },
+    { name = "typer" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "httpx2" },
+    { name = "pangloss-api" },
+    { name = "pangloss-cli" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "fastapi", specifier = ">=0.115" },
+    { name = "pangloss-core", editable = "packages/pangloss-core" },
+    { name = "pangloss-models", editable = "packages/pangloss-models" },
+    { name = "typer", specifier = ">=0.12" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "httpx2", specifier = ">=2.15" },
+    { name = "pangloss-api", editable = "packages/pangloss-api" },
+    { name = "pangloss-cli", editable = "packages/pangloss-cli" },
 ]
 
 [[package]]

@@ -136,9 +136,13 @@ The URLs of an entity are returned as a list, `urls`, in its `HeadView` and `Edi
 
 The OpenAPI document (`/openapi.json`, with the interactive `/docs`) describes every route, with the schemas of the models.
 
+## Routes from installed apps
+
+An app in `INSTALLED_APPS` that has an `api.py` with a `router` (a FastAPI `APIRouter`) has it included in the API, as an app with a `cli.py` adds commands. The router gives its own prefix (`pangloss_interface` uses `/api/interface`). An error in the module is not hidden, and a `router` that is not an `APIRouter` is a `TypeError`.
+
 ## Not done yet ⏳
 
 - Revoking tokens: changing a password does not end sessions already open (their tokens last until they expire).
 - Limiting login attempts.
-- Routes from `INSTALLED_APPS` (an app's own), and a route to list the types.
+- A route to list the types.
 - Per-type or per-object permissions.

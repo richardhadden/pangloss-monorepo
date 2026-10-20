@@ -1,0 +1,27 @@
+{
+  "name": "@pangloss/interface-app",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The Pangloss interface: a Solid 2.0 application with server-side rendering",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "start": "node --env-file-if-exists=.env dist/server/node.js",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@pangloss/interface-core": "*",
+    "@solidjs/meta": "^1.0.0-next.2",
+    "@solidjs/router": "^2.0.0-next.40",
+    "@solidjs/web": "^2.0.0-rc.15",
+    "solid-js": "^2.0.0-rc.15"
+  },
+  "devDependencies": {
+    "@solidjs/vite-plugin": "^3.0.0-next.50",
+    "@types/node": "^26.2.0",
+    "filesystem-routing": "0.4.0",
+    "typescript": "^5.9.2",
+    "vite": "^8.3.4"
+  }
+}
