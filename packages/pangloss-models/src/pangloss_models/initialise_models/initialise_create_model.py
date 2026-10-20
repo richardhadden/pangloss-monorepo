@@ -454,6 +454,8 @@ def get_relation_annotation_types(
             else:
                 types.append(type_option.annotated_type.ReferenceSet)
                 if type_option.annotated_type._meta.create_inline:
+                    # (the entity may come after the model with the relation to it)
+                    initialise_create_model(type_option.annotated_type)
                     types.append(type_option.annotated_type.Create)
 
         elif isinstance(type_option, RelationToDocument):

@@ -154,3 +154,33 @@ def test_a_missing_runtime_is_explained(project, monkeypatch):
     result = invoke(project, "install")
     assert result.exit_code == 1
     assert "Node.js" in result.output
+
+
+def test_dev_link_runs_the_package_source_with_the_projects_models(commands, project, monkeypatch):
+    from pangloss_interface.paths import APP_PATH, JS_ROOT
+
+    monkeypatch.setattr(interface_cli, "is_source_checkout", lambda: True)
+    monkeypatch.setattr(interface_cli, "installed", lambda directory: True)
+    result = invoke(project, "dev", "--link", "--api-url", "http://api:9000")
+    assert result.exit_code == 0, result.output
+
+    models = working_directory(project.location.root) / "linked" / "models.ts"
+    assert 'export type ModelName = "Person";' in models.read_text()
+    assert commands == [
+        (
+            ["/bin/npm", "run", "dev", "--", "--port", "3000"],
+            APP_PATH,
+            {"PANGLOSS_API_URL": "http://api:9000", "PANGLOSS_MODELS_MODULE": str(models)},
+        )
+    ]
+    # nothing is copied: the source of the package is what runs
+    assert not (working_directory(project.location.root) / "interface-core").exists()
+    assert JS_ROOT.is_dir()
+
+
+def test_dev_link_needs_the_source(commands, project, monkeypatch):
+    monkeypatch.setattr(interface_cli, "is_source_checkout", lambda: False)
+    result = invoke(project, "dev", "--link")
+    assert result.exit_code == 1
+    assert "editable install" in result.output
+    assert commands == []

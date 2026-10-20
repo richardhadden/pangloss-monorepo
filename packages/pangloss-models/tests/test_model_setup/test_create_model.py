@@ -218,6 +218,39 @@ def test_create_with_a_created_subobject():
 
 
 @no_type_check
+def test_an_inline_entity_declared_after_what_refers_to_it():
+    class AtPage[T](ReifiedRelation[T]):
+        page: str
+
+    class Factoid(Document):
+        source: AtPage[Source]
+        agents: list[Agent]
+
+    class Agent(Trait):
+        pass
+
+    class Source(Entity):
+        _meta = Entity.Meta(create_inline=True, create_with_id=True)
+
+    class Person(Entity, Agent):
+        _meta = Entity.Meta(create_inline=True, create_with_id=True)
+
+    initialise()
+
+    factoid = Factoid.Create(
+        label="F",
+        source={
+            "page": "3",
+            "target": [
+                {"id": uuid7(), "type": "Source", "label": "S", "create_new": True}
+            ],
+        },
+        agents=[{"id": uuid7(), "type": "Person", "label": "P", "create_new": True}],
+    )
+    assert isinstance(factoid.agents[0], Person.Create)
+
+
+@no_type_check
 def test_add_fields_to_document_create_model():
     class Statement(Document):
         name: str
@@ -871,6 +904,37 @@ def test_create_model_with_field_binding():
         action_model.model_fields["action_when_optional"].annotation
         == datetime.date | None
     )
+
+
+@no_type_check
+def test_field_binding_into_a_list_of_documents():
+    class Action(Document):
+        action_when: datetime.date
+
+    class Statement(Document):
+        when: datetime.date
+        actions: Annotated[
+            list[Action],
+            RelationConfig(
+                bind_to_child_field=[
+                    FieldBinding(bound_field="when", child_fields=["action_when"])
+                ]
+            ),
+        ]
+
+    initialise()
+
+    statement = Statement.Create(
+        label="S",
+        when=datetime.date(800, 12, 25),
+        actions=[
+            {"type": "Action", "label": "A"},
+            {"type": "Action", "label": "B", "action_when": datetime.date(801, 1, 1)},
+        ],
+    )
+    # (given to the one without a value of its own)
+    assert statement.actions[0].action_when == datetime.date(800, 12, 25)
+    assert statement.actions[1].action_when == datetime.date(801, 1, 1)
 
 
 @no_type_check

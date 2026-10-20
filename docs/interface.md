@@ -138,12 +138,24 @@ Restart `pangloss interface dev` after changing the models: they are exported wh
 | `info` | the working directory, whether it is installed and built, and the runtime found |
 | `export-models [--format ts\|json] [-o FILE]` | prints (or writes) the exported models, without building |
 | `install` | prepares the working directory, and installs its packages |
-| `dev [--api-url] [--port]` | prepares it, then the Vite dev server with HMR and SSR; passes `/api` on to the API (`pangloss dev`) |
+| `dev [--api-url] [--port] [--link]` | prepares it, then the Vite dev server with HMR and SSR; passes `/api` on to the API (`pangloss dev`). `--link`: see below |
 | `build` | prepares it, then `vite build` → `.pangloss/interface/interface-app/dist/{client,server}` |
 | `serve [--host] [--port]` | runs the built `dist/server/node.js` |
 | `check` | prepares it, type-checks both packages (with the project's models), and checks the layers of the library |
 
 For development: `pangloss dev` (API, port 8000) and `pangloss interface dev` (interface, port 3000).
+
+### Working on the interface: `dev --link`
+
+The copy in `.pangloss/interface` is overwritten by every command, so edits to `interface-core` and
+`interface-app` would not show in it. For working on the interface itself, `pangloss interface dev --link`
+runs Vite **from the package's own source** (`packages/pangloss-interface/src/pangloss_interface/js`), with
+HMR, while the models come from the project: they are exported to `.pangloss/interface/linked/models.ts` and
+the app's `@generated/models` alias is pointed at it (`PANGLOSS_MODELS_MODULE`, in `vite.config.ts`). Edit
+the package, and the page in the project changes at once; the package's own empty `generated/models.ts` is
+not touched. It needs a checkout of the source (an editable install), and installs the packages in the
+package's `js/` the first time. (Symlinking the copy was not used: Vite follows a link to its real path, so
+`solid-js` and the rest would be looked for next to the package, not the project.)
 
 ## Architecture
 

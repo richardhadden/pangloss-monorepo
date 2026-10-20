@@ -22,9 +22,12 @@ from pangloss_interface.runtime import (
     run,
 )
 from pangloss_interface.typescript import models_module
+from pangloss_interface.paths import APP_PATH, JS_ROOT
 from pangloss_interface.workspace import (
     export_project_models,
+    is_source_checkout,
     prepare,
+    prepare_linked,
     working_directory,
 )
 
@@ -156,17 +159,34 @@ def dev(
     runtime: str | None = RuntimeOption,
     api_url: str = ApiUrlOption,
     port: int = typer.Option(3000, "--port", help="The port to listen on"),
+    link: bool = typer.Option(
+        False,
+        "--link",
+        help="Run from the source of the package itself, not a copy in the project, so "
+        "that changes to interface-core and interface-app show at once. For working on "
+        "the interface (needs a checkout of the source)",
+    ),
 ) -> None:
     """Start the interface's development server (it passes /api on to the API)
 
     The models are exported when it starts: restart it after changing them."""
     found = runtime_or_exit(runtime)
-    directory = prepare_workspace(ctx)
-    ensure_installed(found, directory)
+    if link:
+        if not is_source_checkout():
+            fail("--link needs the source of pangloss-interface (an editable install)")
+        project = project_of(ctx)
+        models = prepare_linked(project.location.root, export_or_exit(project))
+        typer.echo(f"Running from {JS_ROOT}\nModels: {models}")
+        ensure_installed(found, JS_ROOT)
+        directory, environment = APP_PATH, {"PANGLOSS_MODELS_MODULE": str(models)}
+    else:
+        directory = prepare_workspace(ctx)
+        ensure_installed(found, directory)
+        directory, environment = directory / "interface-app", {}
     run_or_exit(
         found.script("dev", "--port", str(port)),
-        directory / "interface-app",
-        {"PANGLOSS_API_URL": api_url},
+        directory,
+        {"PANGLOSS_API_URL": api_url, **environment},
     )
 
 

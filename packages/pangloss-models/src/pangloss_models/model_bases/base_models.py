@@ -219,6 +219,12 @@ def recursively_add_bound_field_values(
     """Given an item, a FieldBinding instance and a value, try to
     bind values where rules are followed, and call itself to try on
     all nested items"""
+    # (the value of a relation to a list of things is a list)
+    if isinstance(item, list | tuple):
+        for list_item in item:
+            recursively_add_bound_field_values(list_item, binding, value)
+        return
+
     child_bound_fields = binding.child_fields
     if isinstance(item, _CreateBase | _UpdateBase) and allow_bind_on_this_item(
         item, binding

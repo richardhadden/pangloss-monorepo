@@ -385,6 +385,8 @@ def get_relation_annotation_types(
                     )
                 )
                 if type_option.annotated_type._meta.create_inline:
+                    # (the entity may come after the model with the relation to it)
+                    initialise_create_db_model(type_option.annotated_type)
                     types.append(
                         type_option.annotated_type.CreateDB.apply_edge_model(
                             type_option.edge_model
@@ -392,6 +394,7 @@ def get_relation_annotation_types(
                     )
             else:
                 if type_option.annotated_type._meta.create_inline:
+                    initialise_create_db_model(type_option.annotated_type)
                     types.append(type_option.annotated_type.CreateDB)
                 types.append(type_option.annotated_type.ReferenceSet)
 

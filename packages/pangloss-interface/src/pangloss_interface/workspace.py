@@ -112,5 +112,27 @@ def prepare(project_root: Path, exported: dict[str, Any]) -> Prepared:
     return Prepared(directory, written, removed)
 
 
+def linked_models_path(project_root: Path) -> Path:
+    """Where the models are for `dev --link`: not in the interface's source, which is
+    the package's own"""
+    return working_directory(project_root) / "linked" / "models.ts"
+
+
+def is_source_checkout() -> bool:
+    """Whether the package's JavaScript can be run where it is: a checkout of the
+    source (editable install), not a copy in `site-packages`"""
+    return "site-packages" not in JS_ROOT.parts and "dist-packages" not in JS_ROOT.parts
+
+
+def prepare_linked(project_root: Path, exported: dict[str, Any]) -> Path:
+    """Write only the project's models, for the interface to be run from the package's
+    own source. Returns the path of the module."""
+    path = linked_models_path(project_root)
+    write_if_changed(path, models_module(exported).encode())
+    gitignore = working_directory(project_root) / ".gitignore"
+    write_if_changed(gitignore, GITIGNORE.encode())
+    return path
+
+
 def remove_working_directory(project_root: Path) -> None:
     shutil.rmtree(working_directory(project_root), ignore_errors=True)

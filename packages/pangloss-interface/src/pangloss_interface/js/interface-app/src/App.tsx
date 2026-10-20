@@ -7,7 +7,7 @@ import {
 import { Title } from "@solidjs/meta";
 import { Loading } from "solid-js";
 import { components } from "./components";
-import { definitions } from "./generated/models";
+import { definitions } from "@generated/models";
 import { paths, Router } from "./router";
 
 // (the browser asks the same origin, which passes `/api` on to the API: in development
