@@ -379,3 +379,27 @@ async def test_list_with_nothing_in_it_or_a_page_past_the_end(clear_database):
     assert past.count == 2
     assert past.previous_page == 6
     assert past.next_page is None
+
+
+@no_type_check
+async def test_a_page_of_documents_that_refer_to_entities_is_one_page(db_driver, clear_database):
+    """(the facets were worked out for each document, and a page of them came back as many)"""
+
+    class Person(Entity):
+        pass
+
+    class Statement(Document):
+        about: Person
+
+    initialise()
+
+    people = [await Person.Create(label=f"P{i}").save() for i in range(3)]
+    for i in range(5):
+        await Statement.Create(
+            label=f"S{i}", about={"type": "Person", "id": people[i % 3].id}
+        ).save()
+
+    page = await Statement.list(page_number=1, page_size=100)
+    assert page.count == 5
+    assert sorted(r.label for r in page.results) == [f"S{i}" for i in range(5)]
+    assert page.next_page is None

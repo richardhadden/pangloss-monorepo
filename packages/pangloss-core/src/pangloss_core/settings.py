@@ -60,6 +60,11 @@ class BaseSettings[TDatabaseSettings: DatabaseSettings](PydanticBaseSettings):
 
     ENTITY_BASE_URL: AnyHttpUrl
 
+    # What the server does at start-up if the project has migrations and the database is not
+    # what they say, or the models are not what they come to: "error" does not start, "warn"
+    # starts and says so, "off" does not look
+    MIGRATION_CHECK: typing.Literal["error", "warn", "off"] = "error"
+
     @field_validator("BACKEND_CORS_ORIGINS", mode="before")
     @classmethod
     def assemble_cors_origins(cls, v: typing.Any) -> list[str]:

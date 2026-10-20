@@ -285,6 +285,7 @@ class Exporter:
             "createWithId": bool(getattr(meta, "create_with_id", False)),
             "acceptUrlAsId": bool(getattr(meta, "accept_url_as_id", False)),
             "requireLabel": bool(getattr(meta, "require_label", True)),
+            "useInSemanticSpaceLabel": bool(getattr(meta, "use_in_semantic_space_label", True)),
             "fields": [self.export_field(n, d) for n, d in meta.field_definitions.fields.items()],
             "incoming": self.incoming(meta.field_definitions.incoming_fields),
         }

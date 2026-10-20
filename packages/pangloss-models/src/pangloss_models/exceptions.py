@@ -79,3 +79,17 @@ class PanglossEntityInUseError(PanglossWriteError):
         self.entity_id = entity_id
         # What refers to it: dicts with `id`, `type` and `label`
         self.referenced_by: list[dict] = referenced_by or []
+
+
+class PanglossMigrationError(Exception):
+    """A migration cannot be applied"""
+
+
+class PanglossMigrationAnswerNeeded(PanglossMigrationError):
+    """A change needs something that only a person can say (a value for existing nodes, what
+    to do with what does not convert): it is `None` in the change as `diff` found it"""
+
+
+class PanglossMigrationNotSupported(PanglossMigrationError):
+    """A change that has to be written by hand (`RunCypher`): it is found, but there is no
+    general way to apply it"""

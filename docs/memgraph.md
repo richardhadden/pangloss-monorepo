@@ -21,6 +21,7 @@ Requirements: a Memgraph server with text search (the `text_search` module), sup
 | `build_read_query.py` | `build_fetch_document_query` |
 | `build_list_query.py` | `build_generic_list_query`: pagination, text search, and deep search |
 | `settings.py` | `MemgraphDatabaseSettings` |
+| `migrations/` | Applying the changes that `pangloss_models.migrations` finds, to the data and to the enums: see [Database migrations](migrations.md#12-progress) |
 | `indexes.py` | Empty. ⏳ Index creation is currently done in the test fixtures |
 
 ## Graph schema
@@ -69,6 +70,10 @@ It creates:
 **Enums.** Every `Enum` used as the type of a field (also in a list, a `TypedDict`, an edge model, or an annotated value) is created as a Memgraph enum of the same name, with the names of its members. If one exists, members it lacks are added (Memgraph cannot remove them). Two different enums with the same name, or names that are not identifiers, are an error. Fields of an enum type are stored as these enums (see above), so run it after changing the models.
 
 Indexes, constraints and enums cannot be changed inside a transaction, so each statement is run on its own.
+
+## Performance: the plan of a query
+
+Memgraph keeps the plan of a query by its **text**. A query with a different text is planned again, which for the read query took ~118 ms, against 1 to 2 ms to run it. So the text of a query that is run often must not change between calls: parameters have fixed names (`$document_id`), and anything that varies is a parameter. The read of a document (`build_fetch_document_query`) is that way, and a test checks it. The queries that write are built with a name made for each parameter (`QueryParams`), so each is planned each time (a create is ~10 ms); they would need fixed names to be as fast.
 
 ## Operations
 

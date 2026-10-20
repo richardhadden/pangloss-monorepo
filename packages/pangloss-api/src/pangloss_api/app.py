@@ -61,13 +61,36 @@ def prepare_models(settings: core_settings.BaseSettings) -> None:
     initialise()
 
 
+async def check_migrations(settings: core_settings.BaseSettings) -> None:
+    """If the project has migrations, the database must be what they say and the models what
+    they come to: `MIGRATION_CHECK` says what to do if not (see `docs/migrations.md`)"""
+    from pangloss_models.exceptions import PanglossMigrationError
+    from pangloss_models.migrations.startup import (
+        migration_backend_of,
+        migration_problems,
+    )
+
+    if settings.MIGRATION_CHECK == "off":
+        return
+    migrations = migration_backend_of(settings.DATABASE_MODULE)
+    if migrations is None:
+        return
+    found = await migration_problems(settings.INSTALLED_APPS, migrations)
+    if not found:
+        return
+    message = "The database and the models do not agree with the migrations:\n  " + "\n  ".join(found)
+    if settings.MIGRATION_CHECK == "error":
+        raise PanglossMigrationError(message)
+    warnings.warn(message, stacklevel=2)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    backend = importlib.import_module(
-        f"{ensure_settings().DATABASE_MODULE}.setup"
-    )
+    settings = ensure_settings()
+    backend = importlib.import_module(f"{settings.DATABASE_MODULE}.setup")
     await backend.connect()
     try:
+        await check_migrations(settings)
         yield
     finally:
         await backend.disconnect()

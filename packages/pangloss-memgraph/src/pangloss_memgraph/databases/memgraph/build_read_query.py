@@ -3,7 +3,10 @@ import uuid
 from pangloss_models.model_bases.document import Document
 from pangloss_models.model_bases.entity import Entity
 
-from pangloss_memgraph.databases.memgraph.build_create_query import QueryParams
+from pangloss_memgraph.databases.memgraph.build_create_query import (
+    QueryParams,
+    convert_type_for_writing,
+)
 
 
 def build_fetch_document_query(
@@ -13,9 +16,14 @@ def build_fetch_document_query(
     values, `meta`, and everything below it. It returns the root node, the edges of
     the tree below it, and the `meta` (`build_tree` makes the tree). (For an Entity, its relations to
     documents come from `build_fetch_incoming_query`)"""
+    # (the names of the parameters are fixed, so that the text of the query is the same each
+    # time and Memgraph finds its plan again: with a name made for each call it planned it
+    # afresh each time, which took most of the time a read took)
+    document_id_identifier = "document_id"
+    document_type_identifier = "document_type"
     query_params = QueryParams()
-    document_id_identifier = query_params.add(document_id)
-    document_type_identifier = query_params.add(document_class.__name__)
+    query_params[document_id_identifier] = convert_type_for_writing(document_id)
+    query_params[document_type_identifier] = document_class.__name__
     query = f"""
     MATCH rp = (root:PGIndexableNode {{id: ${document_id_identifier}}})
     WHERE ${document_type_identifier} in labels(root)
@@ -47,6 +55,20 @@ def build_fetch_document_query(
          collect(rp) + tree_paths + entity_paths + collect(root_entity_path) AS paths
     UNWIND paths AS path
     UNWIND (CASE WHEN size(relationships(path)) = 0 THEN [null] ELSE relationships(path) END) AS edge
+    WITH headnode, root, creation, user, updated_by, updated_when,
+         [found IN collect(DISTINCT edge) WHERE found IS NOT NULL] AS found_edges
+    // A search reaches each node once, along one edge. A field that narrows another is stored
+    // as an edge for each (to the same node), so the others between the same two nodes are
+    // added: which one the search met first is not to decide what is read.
+    UNWIND (CASE WHEN size(found_edges) = 0 THEN [null] ELSE found_edges END) AS found_edge
+    WITH headnode, root, creation, user, updated_by, updated_when, found_edges, found_edge,
+         CASE WHEN found_edge IS NULL THEN null ELSE startNode(found_edge) END AS from_node,
+         CASE WHEN found_edge IS NULL THEN null ELSE endNode(found_edge) END AS to_node
+    OPTIONAL MATCH (from_node)-[parallel]->(to_node)
+    WHERE parallel <> found_edge AND NOT coalesce(parallel.reverse, false)
+    WITH headnode, root, creation, user, updated_by, updated_when,
+         found_edges + [p IN collect(DISTINCT parallel) WHERE p IS NOT NULL] AS all_edges
+    UNWIND (CASE WHEN size(all_edges) = 0 THEN [null] ELSE all_edges END) AS edge
     WITH headnode, root, creation, user, updated_by, updated_when, collect(DISTINCT edge) AS edges
     RETURN
         properties(root) AS root,

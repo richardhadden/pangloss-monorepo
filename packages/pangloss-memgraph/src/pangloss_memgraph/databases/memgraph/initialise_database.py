@@ -157,7 +157,9 @@ async def run_statement(
         return rows
 
 
-async def initialise_database(database: Database | None = None) -> DatabaseSetup:
+async def initialise_database(
+    database: Database | None = None, enums: bool = True
+) -> DatabaseSetup:
     """Set up the database: indexes, constraints, the text index and enums.
 
     Creates, if they do not exist already:
@@ -171,7 +173,8 @@ async def initialise_database(database: Database | None = None) -> DatabaseSetup
       (Memgraph cannot remove them).
 
     Uses the default `Database`, unless given one. Models must be initialised
-    first, for their enums to be known.
+    first, for their enums to be known. With `enums=False` the enums are left to the
+    migrations (which make them as the models have changed).
     """
     database = database or Database.default
     if not hasattr(database, "driver"):
@@ -223,6 +226,9 @@ async def initialise_database(database: Database | None = None) -> DatabaseSetup
                 f"CREATE CONSTRAINT ON (n:{label}) ASSERT n.{property_name} IS UNIQUE"
             )
         record(f"unique constraint on :{label}({property_name})", existed)
+
+    if not enums:
+        return setup
 
     # Enums
     existing_enums = {

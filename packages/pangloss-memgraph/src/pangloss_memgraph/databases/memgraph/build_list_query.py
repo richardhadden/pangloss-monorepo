@@ -309,17 +309,9 @@ def build_generic_list_query(
                         MATCH (headnode)<-[:is_creation_of]-(creation:PGCreation)
                         MATCH (creation)-[:created_by]->(user:PGUser)
 
-                        CALL {
-                          WITH n
-                          WITH collect(n) as ns
-                          UNWIND ns as m
-                          OPTIONAL MATCH (m)-->(entities:Entity)
-                          WITH entities
-                          WHERE entities IS NOT NULL
-                          WITH entities.type AS type, collect(entities{.id, .type, .label}) AS nodes
-                          RETURN collect(type, nodes) AS facets
-                        }
-
+                        // The page, as one row: the facets are of the entities the whole page refers
+                        // to (computed for each node they were one row each, and a page of
+                        // documents that refer to entities came back as many rows)
                         WITH collect(n{.*, meta: {
                             created_by: user.username,
                             created_when: creation.created_when,
@@ -327,7 +319,18 @@ def build_generic_list_query(
                             updated_when: null,
                             semantic_spaces: n.semantic_spaces,
                             context_labels: n.context_labels
-                        }}) AS items, total, toInteger(ceil(toFloat(total) / $page_size)) AS totalPages, facets
+                        }}) AS items, collect(n) AS page_nodes, total,
+                        toInteger(ceil(toFloat(total) / $page_size)) AS totalPages
+
+                        CALL {
+                          WITH page_nodes
+                          UNWIND page_nodes AS m
+                          OPTIONAL MATCH (m)-->(entities:Entity)
+                          WITH entities
+                          WHERE entities IS NOT NULL
+                          WITH entities.type AS type, collect(DISTINCT entities{.id, .type, .label}) AS nodes
+                          RETURN collect(type, nodes) AS facets
+                        }
 
                         RETURN {
                           results: items,

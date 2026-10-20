@@ -116,20 +116,21 @@ class GetItemViaAttrDict[T](dict):
         return super().__getattribute__(name)
 
 
-def get_labels_for_db_classes(self):
-
+def labels_for_model(owner: type[_DeclaredClass], metatype: str) -> list[str]:
+    """The labels of the nodes of a model in the database: its name, those of its
+    parents and traits, and its kind"""
 
     from pangloss_models.model_bases.trait import NonHeritableTrait, Trait
     from pangloss_models.utils import get_all_parent_classes, model_is_trait
 
-    labels = [self._owner.__name__]
+    labels = [owner.__name__]
 
     parent_labels = []
-    for c in get_all_parent_classes(self._owner):
+    for c in get_all_parent_classes(owner):
         if (
             model_is_trait(c)
             and issubclass(c, NonHeritableTrait)
-            and self._owner not in c.__subclasses__()
+            and owner not in c.__subclasses__()
         ) or (
             c.__pydantic_generic_metadata__["parameters"] and not issubclass(c, Trait)
         ):
@@ -137,9 +138,13 @@ def get_labels_for_db_classes(self):
         else:
             parent_labels.append(c.__name__)
     labels.extend(parent_labels)
-    labels.append(self.__metatype__)
+    labels.append(metatype)
 
     return labels
+
+
+def get_labels_for_db_classes(self):
+    return labels_for_model(self._owner, self.__metatype__)
 
 
 class _ActionClass(_BaseObject):

@@ -19,6 +19,12 @@ from pangloss_cli.project import (
     group_name,
     load_project,
 )
+from pangloss_cli.migrations import (
+    check_data_command,
+    makemigrations,
+    migrate,
+    showmigrations,
+)
 from pangloss_cli.scaffold import (
     ScaffoldError,
     add_to_installed_apps,
@@ -240,6 +246,10 @@ def build_app(
 
     app.command("setup-database")(setup_database)
     app.command("make-stubs")(make_stubs)
+    app.command("makemigrations")(makemigrations)
+    app.command("migrate")(migrate)
+    app.command("showmigrations")(showmigrations)
+    app.command("check-data")(check_data_command)
     app.command("new-project")(new_project)
     app.command("new-app")(new_app)
     app.command("run")(run)

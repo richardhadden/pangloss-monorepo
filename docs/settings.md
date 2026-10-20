@@ -36,6 +36,7 @@ Values can also come from environment variables or a `.env` file (`pydantic-sett
 | `AUTHJWT_SECRET_KEY` | `str` | Signs the API's tokens (use 32 characters or more) |
 | `AUTH_ACCESS_TOKEN_EXPIRE_MINUTES`, `AUTH_REFRESH_TOKEN_EXPIRE_DAYS` | `int` (`30`, `14`) | How long tokens last |
 | `AUTH_COOKIE_SAMESITE`, `AUTH_COOKIE_SECURE` | `"lax"`, `False` | How the session cookies are set. See [REST API](api.md#authentication) |
+| `MIGRATION_CHECK` | `"error"`, `"warn"` or `"off"` (`"error"`) | What the API server does as it starts, if the project has migrations and the database has not had them all, a migration was changed after it was applied, or the models are not what the migrations come to: not start, start and warn, or not look. A project with no migrations is not checked. See [Database migrations](migrations.md) |
 | `ENTITY_BASE_URL` | `AnyHttpUrl` | Reserved for entity URL generation ⏳ |
 
 ## Database settings

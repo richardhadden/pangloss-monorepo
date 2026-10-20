@@ -815,3 +815,20 @@ async def test_read_entity_incoming_with_an_enum_in_the_reference_view(clear_dat
 
     read = await Person.get(id=person.id)
     assert read.concerns_reverse[0].colour is Colour.BLUE
+
+
+def test_the_read_query_is_the_same_text_for_every_document():
+    """Memgraph keeps the plan of a query by its text: with the names of the parameters made for
+    each call it planned the query afresh each time, which was most of what a read took"""
+    import uuid
+
+    from pangloss_memgraph.databases.memgraph.build_read_query import build_fetch_document_query
+    from pangloss_models.model_bases.entity import Entity
+
+    class Thing(Entity):
+        pass
+
+    first, first_params = build_fetch_document_query(Thing, uuid.uuid4())
+    second, second_params = build_fetch_document_query(Thing, uuid.uuid4())
+    assert first == second
+    assert first_params["document_id"] != second_params["document_id"]

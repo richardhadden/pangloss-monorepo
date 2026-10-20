@@ -19,6 +19,7 @@ export const definitions: ModelDefinitions = {
       "createWithId": false,
       "acceptUrlAsId": false,
       "requireLabel": true,
+      "useInSemanticSpaceLabel": true,
       "fields": [
         {
           "name": "text",
@@ -173,6 +174,7 @@ export const definitions: ModelDefinitions = {
       "createWithId": false,
       "acceptUrlAsId": false,
       "requireLabel": false,
+      "useInSemanticSpaceLabel": true,
       "fields": [
         {
           "name": "target",
@@ -225,6 +227,7 @@ export const definitions: ModelDefinitions = {
       "createWithId": false,
       "acceptUrlAsId": false,
       "requireLabel": false,
+      "useInSemanticSpaceLabel": true,
       "fields": [
         {
           "name": "cause",
@@ -278,6 +281,7 @@ export const definitions: ModelDefinitions = {
       "createWithId": false,
       "acceptUrlAsId": false,
       "requireLabel": true,
+      "useInSemanticSpaceLabel": true,
       "fields": [
         {
           "name": "level",
@@ -313,6 +317,7 @@ export const definitions: ModelDefinitions = {
       "createWithId": false,
       "acceptUrlAsId": false,
       "requireLabel": false,
+      "useInSemanticSpaceLabel": true,
       "fields": [
         {
           "name": "when",
@@ -357,6 +362,7 @@ export const definitions: ModelDefinitions = {
       "createWithId": false,
       "acceptUrlAsId": false,
       "requireLabel": true,
+      "useInSemanticSpaceLabel": true,
       "fields": [
         {
           "name": "year",
@@ -523,6 +529,7 @@ export const definitions: ModelDefinitions = {
       "createWithId": false,
       "acceptUrlAsId": true,
       "requireLabel": true,
+      "useInSemanticSpaceLabel": true,
       "fields": [
         {
           "name": "name",
@@ -620,6 +627,7 @@ export const definitions: ModelDefinitions = {
       "createWithId": false,
       "acceptUrlAsId": false,
       "requireLabel": false,
+      "useInSemanticSpaceLabel": true,
       "fields": [
         {
           "name": "contents",
@@ -656,6 +664,7 @@ export const definitions: ModelDefinitions = {
       "createWithId": false,
       "acceptUrlAsId": false,
       "requireLabel": false,
+      "useInSemanticSpaceLabel": true,
       "fields": [
         {
           "name": "target",
@@ -708,6 +717,7 @@ export const definitions: ModelDefinitions = {
       "createWithId": false,
       "acceptUrlAsId": false,
       "requireLabel": false,
+      "useInSemanticSpaceLabel": true,
       "fields": [
         {
           "name": "contents",
@@ -744,6 +754,7 @@ export const definitions: ModelDefinitions = {
       "createWithId": true,
       "acceptUrlAsId": true,
       "requireLabel": true,
+      "useInSemanticSpaceLabel": true,
       "fields": [
         {
           "name": "known_as",
@@ -857,6 +868,7 @@ export const definitions: ModelDefinitions = {
       "createWithId": false,
       "acceptUrlAsId": true,
       "requireLabel": true,
+      "useInSemanticSpaceLabel": true,
       "fields": [
         {
           "name": "coordinates",
@@ -917,6 +929,7 @@ export const definitions: ModelDefinitions = {
       "createWithId": true,
       "acceptUrlAsId": true,
       "requireLabel": true,
+      "useInSemanticSpaceLabel": true,
       "fields": [
         {
           "name": "author",
@@ -986,6 +999,7 @@ export const definitions: ModelDefinitions = {
       "createWithId": false,
       "acceptUrlAsId": false,
       "requireLabel": true,
+      "useInSemanticSpaceLabel": true,
       "fields": [
         {
           "name": "text",
@@ -1090,6 +1104,7 @@ export const definitions: ModelDefinitions = {
       "createWithId": false,
       "acceptUrlAsId": false,
       "requireLabel": true,
+      "useInSemanticSpaceLabel": true,
       "fields": [
         {
           "name": "text",
@@ -1244,6 +1259,7 @@ export const definitions: ModelDefinitions = {
       "createWithId": false,
       "acceptUrlAsId": false,
       "requireLabel": true,
+      "useInSemanticSpaceLabel": true,
       "fields": [
         {
           "name": "value",

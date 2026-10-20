@@ -35,6 +35,40 @@ What is outstanding, as of the version check on updates (after CORS). What works
 - [ ] A project made by `pangloss new-project` has `dependencies = []`, as the Pangloss packages are not published.
 - [ ] Running in production: workers, deployment notes (`pangloss run` is one process).
 
+## Database migrations
+
+What works is in [docs/migrations.md](docs/migrations.md) (section 12). Still to do:
+
+**Commands and safety**
+- [ ] `migrate --backup`: take a Memgraph snapshot before applying (and require it, or `--no-backup`, for changes that lose data). Not checked: whether a snapshot can be taken from a client with the Memgraph in use.
+- [ ] Going backwards: `migrate <app> <earlier>`, with `database_backwards` for each change that can be reversed, `reversible` / `lossy` on each, a confirmation before a lossy one (and, as in the spec, `keep=True` to save what would be lost).
+- [ ] Squashing: `squashmigrations app 0001 0007`.
+- [ ] `RunCypher` and `RunPython` operations (section 7.1): the way to write by hand what cannot be generated. Without them, a change that is `[NEEDS CODE]` has nowhere to be written.
+- [ ] `makemigrations --empty` (a file to put hand-written operations in) and `makemigrations <app>` (only one app).
+- [ ] A read-only mode while a migration runs (the lock only stops another `migrate`); today the API is stopped, or `MIGRATION_CHECK` stops it starting.
+- [ ] `pangloss setup-database` and `migrate` both set up a database (`setup-database` makes the enums of the models directly, which can get ahead of the migrations). Decide how they relate: probably `setup-database` only for a project without migrations, and a warning from it otherwise.
+
+**Changes that cannot be applied yet** (they are found, and refused with `PanglossMigrationNotSupported`)
+- [ ] A change of the kind of a model (`AlterModelKind`: Entity to Document and so on) and of the kind of a field (`ChangeFieldKind`), and adding an embedded object that is not made of literals that were there.
+- [ ] Wrapping in a conjunction (several slots to fill, so not an automatic change), and unwrapping one.
+- [ ] `Fulfils`: the labels a node gets for the classes it fulfils are decided when it is written and are not in the snapshot.
+- [ ] Removing a member of, or renaming, an enum whose values are inside a `TypedDict`, an annotated value or an edge model.
+- [ ] Indexes, constraints and the text index as changes of their own (`AddIndex`, `RemoveIndex`, `AddConstraint`...): `migrate` only makes the ones `setup-database` makes (`ensure_ready`), and never removes one.
+- [ ] Models of two apps that need each other (the planner refuses to share the changes); a model moved from one app to another; migrations that depend on those of a library app (`pangloss_users` and the like).
+
+**Batches and speed**
+- [ ] Batches (`--batch-size`) for the changes that are made at once now: removing or renaming a relation, wrapping in a semantic space, `RemoveEnumMember`, unwrapping, `LiteralsToEmbedded`.
+- [ ] `check-data` reads one node at a time (~1.5 ms a node, more for large documents); reading several at once.
+- [ ] `migrate --dry-run` on a large database runs everything in one transaction.
+- [ ] **Writes are planned afresh each time**: the queries that write build parameter names for each call, so Memgraph plans each (a create is ~10 ms, a read now 1 to 2). Fixed parameter names (or a query shape per model) would make creates and updates faster. See "Performance" in [docs/memgraph.md](docs/memgraph.md).
+
+**Code to tidy**
+- [ ] `propagate_context` (`migrations/operations.py`) copies `recursively_propagate_context_types` (`base_models.py`), including its sharing of lists. Make it one function used by both, or a test that they agree, so that a change to how the models give context cannot leave migrated data different from written data.
+- [ ] The order of the entries of a context label follows the order the edges were made in.
+- [ ] `atomic = False` is read from a migration file and means "in batches"; the per-migration choice of batch size is not.
+- [ ] The tests leave enums in the test database (Memgraph cannot drop one): `MigrationHue...` and one with a new name for each run of the enum-member test, and `ScratchColour`, `ScratchColour2` in the demo's database from the experiments. A fresh test database is the only way to clear them.
+- [ ] `migrate` for a project whose database was made before migrations needs `--fake` for the first; a hint when it finds a non-empty database and no record.
+
 ## The interface
 
 See [docs/interface.md](docs/interface.md), "Decisions to make next".

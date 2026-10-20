@@ -23,6 +23,10 @@ A snapshot of what works and what does not, as of this writing.
 - The REST API (`pangloss-api`): login by token or cookie session, CORS for frontends, a version check on updates (`If-Match` / `ETag`), endpoints to manage users, and CRUD routes for every Document and Entity (list, get, create, edit, update, delete, undelete; reading is open, changing needs a login). See [REST API](api.md).
 - Users (`pangloss-users`, stored by the Memgraph backend as `PGUser` nodes): create, find, list, update, change password (Argon2id), make admin, disable; `authenticate` checks a password. A disabled user cannot write. See [Users](users.md).
 - Context labels and semantic-space annotation on create.
+- Entity URLs: returned as `urls` in an entity's `HeadView` and `EditView`, and replaced by an update that gives `urls` (checked for conflicts, stored as `PGUrl` nodes).
+- Exporting the definitions of the models as plain data (`pangloss_models.export.export_models()`), which the interface turns into a TypeScript module (`pangloss interface export-models`, and on every build). See [The interface](interface.md).
+- Routes from installed apps: an app's `api.py` `router` is included by the API (used by `pangloss-interface`).
+- The demo project, `pangloss-demo/` (a factoid model with a script that populates it), and its setup: [The demo project](demo-setup.md). Making it fixed two faults in the model layer: an inline entity declared after what refers to it, and field binding into a `list[...]` relation.
 
 ## Partial
 
@@ -32,7 +36,8 @@ A snapshot of what works and what does not, as of this writing.
 
 ## Not implemented
 
-- ⏳ **REST API routes from installed apps** and `ENTITY_BASE_URL`.
+- ⏳ **`ENTITY_BASE_URL`** is not used by anything.
+- 🚧 **Database migrations**: `pangloss makemigrations`, `migrate` and `showmigrations` work (renames are asked, not guessed; the answers a change needs are asked and kept in the migration file), for literals, enums, relations, edge properties, wrapping a relation in a reified relation or a semantic space, one wrapper for another, literals becoming an embedded object, and models, applied to Memgraph with a record of what has been applied and a lock. The API does not start with migrations pending or the models changed since (`MIGRATION_CHECK`). `migrate --dry-run` says what each change would do, `check-data` reads everything with the models (`migrate` reads the models the migrations could have affected after applying), and `migrate --batch-size` makes the large changes in batches that a run that stops goes on from. Not yet: backups, going backwards, squashing. See [Database migrations](migrations.md#12-progress).
 - ⏳ **Permissions** beyond admin / not admin, revoking tokens, and limiting login attempts.
 - ⏳ **Removing deleted nodes for good**. An entity marked for deletion is not deleted automatically when the last reference to it goes.
 - ⏳ **Interface languages** (`INTERFACE_LANGUAGES`). (`INSTALLED_APPS` is used by the command line, to add commands and import models; nothing else reads it yet.)
