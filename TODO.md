@@ -5,7 +5,7 @@ What is outstanding, as of the version check on updates (after CORS). What works
 ## Before a frontend (next)
 
 - [ ] **Entity URLs in the views.** An entity can be found by URL, but its `HeadView` / `EditView` do not say which URLs it has.
-- [ ] **Export the models for the frontend build.** A command (`pangloss export-models <file>`) that loads the settings, imports the apps' models, runs `initialise()` and writes a JSON serialisation of the `ModelFields` (fields, relations and their target types, embedded objects, annotated values, `parameter_type_options` of the generic wrappers, incoming fields, validators). Needs no database or server. Could also dump `create_app().openapi()` for typed API clients.
+- [ ] **Export the models for the frontend build.** A command (`pangloss export-models <file>`) that loads the settings, imports the apps' models, runs `initialise()` and writes a JSON serialisation of the `ModelFields` (fields, relations and their target types, embedded objects, annotated values, `parameter_type_options` of the generic wrappers, incoming fields, validators). Needs no database or server. Could also dump `create_app().openapi()` for typed API clients. // Should be part of the frontend package, not needed before
 
 ## API and security
 
@@ -16,7 +16,6 @@ What is outstanding, as of the version check on updates (after CORS). What works
 - [ ] Limit login attempts.
 - [ ] CSRF protection for cookie sessions (only `SameSite` protects them now).
 - [ ] `ENTITY_BASE_URL` is not used by anything (it was for generating entity URLs).
-- [ ] A `500` from a bug has no CORS headers, so a browser reports a CORS error instead (Starlette; documented).
 
 ## Data and the Memgraph backend
 

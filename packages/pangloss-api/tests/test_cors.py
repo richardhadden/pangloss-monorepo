@@ -206,8 +206,7 @@ def test_the_setting_can_be_given_as_a_comma_separated_environment_variable(
     assert FromEnvironment().BACKEND_CORS_ORIGINS == ["http://localhost:5173"]
 
 
-def test_a_server_error_has_no_cors_headers(settings):
-    """(documented: Starlette's outermost middleware makes the 500, outside CORS)"""
+def test_a_server_error_carries_the_headers_too(settings, caplog):
     Settings(BACKEND_CORS_ORIGINS=[FRONTEND])
     app = create_app()
 
@@ -218,7 +217,9 @@ def test_a_server_error_has_no_cors_headers(settings):
     client = TestClient(app, raise_server_exceptions=False)
     response = client.get("/test/broken", headers={"Origin": FRONTEND})
     assert response.status_code == 500
-    assert "access-control-allow-origin" not in response.headers
+    assert response.json() == {"detail": "Internal server error"}
+    assert response.headers["access-control-allow-origin"] == FRONTEND
+    assert "a bug" in caplog.text  # (logged here, as it does not reach the server)
 
 
 def test_the_etag_can_be_read_by_the_frontend(settings):

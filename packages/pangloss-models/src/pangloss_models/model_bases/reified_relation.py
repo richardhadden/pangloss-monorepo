@@ -59,7 +59,7 @@ class ReifiedRelation[TTarget](_DeclaredClass):
     __metatype__ = "ReifiedRelation"
     Meta: ClassVar[type[ReifiedRelationMeta]] = ReifiedRelationMeta
     model_config = ConfigDict(validate_assignment=True)
-    _meta: ClassVar[ReifiedRelationMeta] = ReifiedRelationMeta()  # pyright: ignore[reportIncompatibleVariableOverride]
+    _meta: ClassVar[ReifiedRelationMeta] = ReifiedRelationMeta()  # type: ignore
 
     Create: ClassVar[type[_ReifiedRelationCreateBase]]
     CreateDB: ClassVar[type[_ReifiedRelationCreateDBBase]]

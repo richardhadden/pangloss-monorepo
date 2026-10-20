@@ -18,7 +18,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pangloss_core import settings as core_settings
 
-from pangloss_api.errors import register_error_handlers
+from pangloss_api.errors import ServerErrorResponder, register_error_handlers
 from pangloss_api.routes import users
 from pangloss_api.routes.models import build_router, routable_models
 
@@ -121,6 +121,8 @@ def create_app() -> FastAPI:
 
     app = FastAPI(title=settings.PROJECT_NAME, lifespan=lifespan)
 
+    # (added first, so inside the CORS middleware: a 500 then has the CORS headers)
+    app.add_middleware(ServerErrorResponder)
     add_cors(app, settings.BACKEND_CORS_ORIGINS)
     register_error_handlers(app)
     app.include_router(users.router)

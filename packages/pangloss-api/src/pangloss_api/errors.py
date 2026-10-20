@@ -1,5 +1,7 @@
 """How errors from the database and models are reported to a client"""
 
+import logging
+
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from pangloss_models.exceptions import (
@@ -20,6 +22,9 @@ from pangloss_users.exceptions import (
     PanglossUserError,
     PanglossUserExistsError,
 )
+from starlette.types import ASGIApp, Message, Receive, Scope, Send
+
+logger = logging.getLogger(__name__)
 
 # (an error is given the status of the first of these it is an instance of)
 STATUS_FOR_ERROR: list[tuple[type[Exception], int]] = [
@@ -65,3 +70,39 @@ async def error_handler(request: Request, error: Exception) -> JSONResponse:
 def register_error_handlers(app: FastAPI) -> None:
     app.add_exception_handler(PanglossUserError, error_handler)
     app.add_exception_handler(PanglossWriteError, error_handler)
+
+
+class ServerErrorResponder:
+    """Answer a bug (an unhandled exception) with a `500` from inside the middleware.
+
+    Starlette answers it from outside all middleware, so the response would not pass
+    through `CORSMiddleware` and has no CORS headers: a browser then reports a CORS
+    error instead of the status. This has to be added before `CORSMiddleware`, so
+    that it is inside it."""
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        started = False
+
+        async def send_tracking_start(message: Message) -> None:
+            nonlocal started
+            if message["type"] == "http.response.start":
+                started = True
+            await send(message)
+
+        try:
+            await self.app(scope, receive, send_tracking_start)
+        except Exception:
+            if started:
+                raise  # (too late to change the response)
+            logger.exception("Unhandled error in %s %s", scope["method"], scope["path"])
+            response = JSONResponse(
+                status_code=500, content={"detail": "Internal server error"}
+            )
+            await response(scope, receive, send)
