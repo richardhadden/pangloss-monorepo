@@ -1,6 +1,4 @@
-import functools
-import typing
-from typing import Any, Awaitable, Callable, ClassVar, Concatenate, Coroutine, cast
+from typing import Awaitable, Callable, ClassVar, Concatenate
 
 import neo4j
 from pangloss_core.settings import BaseSettings

@@ -1,4 +1,3 @@
-from pangloss_users import service
 from typer.testing import CliRunner
 
 from pangloss_cli.main import build_app

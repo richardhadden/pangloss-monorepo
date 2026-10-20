@@ -1,6 +1,5 @@
 """Helpers shared by the tests"""
 
-import datetime
 
 
 def run(db_driver, cypher: str, **params) -> list[dict]:

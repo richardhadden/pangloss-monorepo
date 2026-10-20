@@ -27,8 +27,6 @@ A snapshot of what works and what does not, as of this writing.
 
 | Area | State |
 |------|-------|
-| Semantic spaces through `UpdateDB` | Works and is tested for updates; the item in `packages/pangloss-models/todo.md` is still unticked |
-| Head node type and id through `CreateDB` / `UpdateDB` | Open item in `todo.md` |
 | `pangloss-sdk` (API as database) | Only settings; the functions are stubs returning dummy data |
 
 ## Not implemented

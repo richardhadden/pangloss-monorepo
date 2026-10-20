@@ -8,7 +8,6 @@ from pydantic.fields import FieldInfo
 from pangloss_models.field_definitions import IncomingRelationDefinition
 from pangloss_models.initialise_models.initialise_view_model import (
     get_relation_annotation_types,
-    get_view_base_model_type,
 )
 from pangloss_models.model_bases.base_models import _DeclaredClass
 from pangloss_models.model_bases.document import Document, _DocumentHeadViewBase

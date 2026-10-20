@@ -21,17 +21,15 @@ What is outstanding, as of the version check on updates (after CORS). What works
 ## Data and the Memgraph backend
 
 - [ ] Remove deleted nodes for good; delete an entity that was marked for deletion when the last reference to it goes.
-- [ ] A search with a page past the end reports a count of 0 (the plain list gives the real count).
 - [ ] An entity's `ReferenceView` has no `meta`, a document's does.
 - [ ] `service.set_admin` / `set_disabled` do not stop the last admin being demoted or disabled (the API stops admins changing their own status).
 
 ## Model layer
-
+- [ ] Check whether subclassed relations also have their parent type written to the database, with an appropriate flag ("Derived" stored as a bool); investigate the viability of having "derived" nodes written later as a background job (would involve another thread, locks etc. See DeferredQueryRunner in https://github.com/richardhadden/pangloss/blob/main/pangloss/api.py, which is probably bad and has lots of unwarranted assumptions and race conditions)
 - [ ] Optional relations (`Person | None`), optional embedded objects, lists of embedded objects or annotated values, and plain `dict` fields: each raises an error at `initialise()`.
 - [ ] The `"subtract"` type wrapper (opposite of `Fulfil`).
 - [ ] `Relation[Subject, Object]` (a placeholder class).
 - [ ] Interface languages (`INTERFACE_LANGUAGES`).
-- [ ] Check whether "semantic spaces through `UpdateDB`" and "head node type and id through `CreateDB` / `UpdateDB`" are done (they are no longer in `packages/pangloss-models/todo.md`), and if so remove the two "Partial" rows in `docs/status.md`.
 
 ## Structure and packaging
 

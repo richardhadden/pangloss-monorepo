@@ -10,7 +10,6 @@ lazy from pangloss_core import settings as core_settings
 from pangloss_models.exceptions import (
     PanglossImportError,
     PanglossInitialisationError,
-    PanglossModelError,
 )
 lazy from pangloss_models.initialise_models.initalise_incoming_relation_definitions import (
     initialise_incoming_relation_definitions,

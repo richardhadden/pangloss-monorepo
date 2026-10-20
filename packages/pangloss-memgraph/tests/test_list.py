@@ -128,6 +128,39 @@ async def test_list_deep_search(clear_database):
     assert res.results[0].id == john_smith.id
 
 
+@no_type_check
+async def test_a_deep_search_past_the_end_still_counts_what_was_found(clear_database):
+    class Action(Document):
+        carried_out_by: Person
+
+    class Person(Entity):
+        pass
+
+    initialise()
+
+    john = await Person.Create(label="John Smith").save()
+    await Action.Create(
+        label="An Action", carried_out_by=Person.ReferenceSet(id=john.id)
+    ).save()
+
+    first = await Person.list(search_terms="act john", deep_search=True)
+    assert first.count == 1
+    assert [r.id for r in first.results] == [john.id]
+
+    past = await Person.list(
+        search_terms="act john", deep_search=True, page_number=4, page_size=1
+    )
+    assert past.results == []
+    assert past.count == 1
+    assert past.page == 4
+    assert past.previous_page == 3
+
+    # (and Documents are listed the same way)
+    past = await Action.list(search_terms="act", deep_search=True, page_number=4)
+    assert past.results == []
+    assert past.count == 1
+
+
 """
 // DOCUMENT QUERY
 // $tokens: list of tokenised search words
@@ -335,5 +368,14 @@ async def test_list_with_nothing_in_it_or_a_page_past_the_end(clear_database):
     await Person.delete(first.id)
     assert (await Person.list(page_number=9)).count == 2
 
-    # With search terms, nothing found is nothing
+    # With search terms, nothing found is nothing ...
     assert (await Person.list("nothing like this")).count == 0
+
+    # ... and a page past the end of what was found still says how much there was
+    found = await Person.list("T", page_size=1)  # (Two, Three: One was deleted)
+    assert found.count == 2
+    past = await Person.list("T", page_number=7, page_size=1)
+    assert past.results == []
+    assert past.count == 2
+    assert past.previous_page == 6
+    assert past.next_page is None

@@ -2,7 +2,6 @@ import datetime
 from typing import Any, Union, cast
 from uuid import UUID
 
-from neo4j import AsyncResult
 from neo4j.exceptions import ClientError
 from pangloss_models.exceptions import (
     PanglossConflictError,
@@ -23,7 +22,6 @@ from pangloss_models.model_bases.document import (
 )
 from pangloss_models.model_bases.entity import (
     Entity,
-    _EntityCreateDBBase,
     _EntityEditViewBase,
     _EntityHeadViewBase,
     _EntityReferenceViewBase,
@@ -74,25 +72,21 @@ from pangloss_memgraph.databases.memgraph.validate_write import (
 )
 
 
-COUNT_LISTED_QUERY = """
-    MATCH (n:$node_type)
-    OPTIONAL MATCH (head:HeadNode {id: n.head_node_id})
-    WITH n, head
-    WHERE NOT coalesce(CASE WHEN n:Entity THEN n.deleted ELSE coalesce(head, n).deleted END, false)
-    RETURN count(n) AS total
-"""
-
-
-async def empty_page(tx: Transaction, cls: type[Document | Entity], params: dict) -> dict:
-    """The result of a list that has no items on the page asked for. (When there
-    are search terms, the count of what matched is not worked out: it is 0.)"""
-    page = params.get("page_number", params.get("page", 1))
-    page_size = params["page_size"]
+async def empty_page(
+    tx: Transaction, query: str, params: dict
+) -> dict[str, Any]:
+    """The result of a list that has no items on the page asked for: nothing is
+    listed, but there may be a count of what there is on the other pages. (The query
+    gives no row at all then, so the count comes from the first page.)"""
+    page_key = "page" if "page" in params else "page_number"
+    page, page_size = params[page_key], params["page_size"]
 
     total = 0
-    if "tokens" not in params and "patterns" not in params:
-        counted = await tx.run(COUNT_LISTED_QUERY, node_type=cls.__name__)
-        total = (await counted.single())["total"]  # type: ignore[index]
+    if page > 1:
+        result = await tx.run(query, **{**params, page_key: 1})
+        first_page = await result.value()
+        if first_page:
+            total = first_page[0]["count"]
 
     page_count = -(-total // page_size)
     return {
@@ -133,8 +127,8 @@ async def list_items(
     result_values = await result.value()
 
     # (a list with nothing in it, or a page past the end, gives no row at all)
-    results: dict = result_values[0] if result_values else await empty_page(
-        tx, cls, params
+    results: dict = (
+        result_values[0] if result_values else await empty_page(tx, query, params)
     )
 
     results["results"] = type_adapter.validate_python(

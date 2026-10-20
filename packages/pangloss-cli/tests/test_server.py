@@ -243,6 +243,7 @@ def test_run_starts_the_api(project: Path, server_process):
     with pytest.raises(urllib.error.HTTPError) as error:
         urllib.request.urlopen(request, timeout=5)
     assert error.value.code == 401
+    error.value.close()
 
 
 def test_dev_restarts_when_the_settings_change(project: Path, server_process):

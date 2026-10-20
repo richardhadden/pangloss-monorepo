@@ -12,7 +12,6 @@ from pangloss_models.model_bases.reified_relation import (
     ReifiedRelation,
     ReifiedRelationDocument,
 )
-from pydantic.fields import FieldInfo
 
 
 @no_type_check

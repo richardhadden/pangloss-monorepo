@@ -162,7 +162,7 @@ Returns `_ListItems` of `ReferenceView`s of all concrete subtypes of `cls`. Defa
 
 ## Known rough edges
 
-- A list with nothing in it, or a page past the end, has no rows in the query: `list_items` then gives an empty page (with the real count, unless searching).
+- A list with nothing in it, or a page past the end, has no rows in the query: `list_items` then gives an empty page, with the real count (worked out by running the query for the first page).
 - `initialise_database` is run by `pangloss setup-database` (see [Command line](cli.md)), or can be called from code.
 - Nothing yet removes deleted nodes for good.
 - `Database.default` is set by the last `Database(...)` constructed, and `exposed_functions` decorates with `Database.default` at import time, so the settings/`Database` must be created before the module is first imported (which `initialise()` does when binding).

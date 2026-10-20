@@ -9,7 +9,6 @@ from annotated_types import Gt, MinLen
 from pydantic import AnyHttpUrl, ValidationError
 
 from pangloss_models import initialise
-from pangloss_models.exceptions import PanglossMetaError
 from pangloss_models.field_definitions import (
     FieldSubclassing,
     ListFieldDefinition,
@@ -20,7 +19,6 @@ from pangloss_models.model_bases.annotated_value import AnnotatedValue
 from pangloss_models.model_bases.configs import RelationConfig
 from pangloss_models.model_bases.conjunction import (
     Conjunction,
-    _ConjunctionCreateDBBase,
     _ConjunctionUpdateDBBase,
 )
 from pangloss_models.model_bases.document import (
@@ -32,12 +30,10 @@ from pangloss_models.model_bases.entity import Entity
 from pangloss_models.model_bases.helpers import DBField, Fulfils, ViaEdge
 from pangloss_models.model_bases.reified_relation import (
     ReifiedRelation,
-    _ReifiedRelationCreateDBBase,
     _ReifiedRelationUpdateDBBase,
 )
 from pangloss_models.model_bases.semantic_space import (
     SemanticSpace,
-    _SemanticSpaceCreateDBBase,
     _SemanticSpaceUpdateDBBase,
 )
 from pangloss_models.model_bases.trait import Trait
