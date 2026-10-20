@@ -92,11 +92,15 @@ class _EntityReferenceViewBase(_ReferenceViewBase):
 
 
 class _EntityUpdateBase(_UpdateBase):
+    # The URLs the entity should have, which replace its present ones; `None` (not
+    # given) leaves them as they are, and `[]` removes them all
+    urls: list[AnyHttpUrl] | None = None
+
     def save(self: Self) -> None: ...
 
 
 class _EntityUpdateDBBase(_UpdateDBBase):
-    pass
+    urls: list[AnyHttpUrl] | None = None
 
 
 class _EntityViewBase(_ViewBase):
@@ -104,11 +108,11 @@ class _EntityViewBase(_ViewBase):
 
 
 class _EntityHeadViewBase(_HeadViewBase):
-    pass
+    urls: list[AnyHttpUrl] = Field(default_factory=list)
 
 
 class _EntityEditViewBase(_EditViewBase):
-    pass
+    urls: list[AnyHttpUrl] = Field(default_factory=list)
 
 
 class Entity(_DeclaredClass, WithMeta[EntityMeta]):

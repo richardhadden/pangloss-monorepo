@@ -132,7 +132,7 @@ The response has the entity's `id`. **Everything else is only ever at an id**: l
 - The query string of the request is the URL's (`.../Place/http://example.com/p?id=5` is the URL with `?id=5`).
 - Percent-encoded characters are decoded in the path, and the URL is then normalised as when it was stored. A URL that has an encoded `/`, `?` or `#` in it cannot be told apart this way.
 
-The URLs themselves are not part of what is returned for an entity yet ⏳.
+The URLs of an entity are returned as a list, `urls`, in its `HeadView` and `EditView`. To change them, send `urls` in the update body (the `EditView` can be sent back changed): the list replaces the entity's URLs, so a URL left out is removed, and `[]` removes them all; if `urls` is not in the body they are left as they are. A URL that belongs to another entity (even a deleted one) is refused with 409.
 
 The OpenAPI document (`/openapi.json`, with the interactive `/docs`) describes every route, with the schemas of the models.
 
@@ -140,5 +140,5 @@ The OpenAPI document (`/openapi.json`, with the interactive `/docs`) describes e
 
 - Revoking tokens: changing a password does not end sessions already open (their tokens last until they expire).
 - Limiting login attempts.
-- Routes from `INSTALLED_APPS` (an app's own), showing the URLs of an entity, and a route to list the types.
+- Routes from `INSTALLED_APPS` (an app's own), and a route to list the types.
 - Per-type or per-object permissions.

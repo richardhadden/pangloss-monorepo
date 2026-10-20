@@ -530,6 +530,35 @@ async def test_an_entity_is_found_by_its_url(db_driver, clear_database):
         assert found.json()["id"] == person_id
         assert found.json() == by_id.json()
         assert found.json()["bornIn"]["id"] == place.json()["id"]
+        assert found.json()["urls"] == [person_url]
+
+        # The URLs are edited with the rest: the edit view is sent back changed
+        anyversion = {**headers, "If-Match": "*"}
+        other_url = "http://example.org/p/john"
+        edit = await client.get(f"/api/Person/{person_id}/edit", headers=headers)
+        assert edit.json()["urls"] == [person_url]
+        changes = {**edit.json(), "urls": [other_url]}
+        updated = await client.put(
+            f"/api/Person/{person_id}", json=changes, headers=anyversion
+        )
+        assert updated.status_code == 200, updated.text
+        assert (await client.get(f"/api/Person/{person_id}")).json()["urls"] == [
+            other_url
+        ]
+        assert (await client.get(f"/api/Person/{person_url}")).status_code == 404
+        taken = await client.put(
+            f"/api/Place/{place.json()['id']}",
+            json={"type": "Place", "id": place.json()["id"], "label": "Paris",
+                  "urls": [other_url]},
+            headers=anyversion,
+        )
+        assert taken.status_code == 409, taken.text
+        # (put back, for the rest)
+        await client.put(
+            f"/api/Person/{person_id}",
+            json={**changes, "urls": [person_url]},
+            headers=anyversion,
+        )
 
         # ... also with the slashes merged, as a proxy may
         merged = await client.get("/api/Person/http:/example.com/people/john-smith")

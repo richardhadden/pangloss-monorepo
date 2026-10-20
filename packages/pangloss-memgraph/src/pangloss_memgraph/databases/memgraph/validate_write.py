@@ -243,3 +243,44 @@ async def get_tree_meta(
     query, params = build_tree_meta_query(head_id)
     result = await tx.run(query, **params)
     return {id: meta for id, meta in await result.values()}
+
+
+async def replace_urls(tx: Transaction, entity_id: uuid.UUID, urls: list[str]) -> None:
+    """Make `urls` the URLs of an entity: URLs it has that are not in the list are
+    removed, and the others are added. A URL that belongs to another entity (even a
+    deleted one) is a conflict."""
+    urls = sorted(set(urls))
+    id = str(entity_id)
+    result = await tx.run(
+        """
+        UNWIND $urls AS url
+        MATCH (node:PGUrl {url: url})
+        WHERE NOT (:Entity {id: $id})-[:has_url]->(node)
+        RETURN node.url AS url
+        """,
+        urls=urls,
+        id=id,
+    )
+    in_use = [url for (url,) in await result.values()]
+    if in_use:
+        raise PanglossConflictError(f"URLs {in_use} are already in use")
+
+    await tx.run(
+        """
+        MATCH (:Entity {id: $id})-[:has_url]->(node:PGUrl)
+        WHERE NOT node.url IN $urls
+        DETACH DELETE node
+        """,
+        urls=urls,
+        id=id,
+    )
+    await tx.run(
+        """
+        MATCH (entity:Entity {id: $id})
+        UNWIND $urls AS url
+        MERGE (node:PGUrl {url: url})
+        MERGE (entity)-[:has_url]->(node)
+        """,
+        urls=urls,
+        id=id,
+    )

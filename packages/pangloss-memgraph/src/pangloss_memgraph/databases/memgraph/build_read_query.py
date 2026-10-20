@@ -51,6 +51,7 @@ def build_fetch_document_query(
     RETURN
         properties(root) AS root,
         labels(root) AS root_labels,
+        [(root)-[:has_url]->(url:PGUrl) | url.url] AS urls,
         [edge IN edges WHERE edge IS NOT NULL | {{
             source: startNode(edge).id,
             type: type(edge),

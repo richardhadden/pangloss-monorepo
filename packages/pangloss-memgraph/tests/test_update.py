@@ -880,6 +880,60 @@ async def test_update_entity_keeps_its_urls(db_driver, clear_database):
     assert rows == [{"url": url}]
 
 
+@no_type_check
+async def test_update_replaces_the_urls_of_an_entity(db_driver, clear_database):
+    class Person(Entity):
+        _meta = Entity.Meta(create_with_id=True)
+
+    initialise()
+
+    a, b, c = (f"http://example.com/people/{n}" for n in "abc")
+    saved = await Person.Create(id=AnyHttpUrl(a), create_new=True, label="JS").save()
+
+    # (read for edit, as the frontend does, then send the list back changed)
+    edit = await Person.get_for_edit(id=saved.id)
+    assert [str(u) for u in edit.urls] == [a]
+
+    await Person.Update(id=saved.id, label="JS", urls=[AnyHttpUrl(b), AnyHttpUrl(c)]).save()
+    read = await Person.get(id=saved.id)
+    assert [str(u) for u in read.urls] == [b, c]
+    assert await Person.get(id=AnyHttpUrl(a)) is None  # (a is no longer taken)
+    assert (await Person.get(id=AnyHttpUrl(c))).id == saved.id
+    rows = run(db_driver, "MATCH (u:PGUrl) RETURN u.url AS url ORDER BY url")
+    assert rows == [{"url": b}, {"url": c}]
+
+    # (the same list again changes nothing)
+    await Person.Update(id=saved.id, label="JS", urls=[AnyHttpUrl(b), AnyHttpUrl(c)]).save()
+    assert [str(u) for u in (await Person.get(id=saved.id)).urls] == [b, c]
+
+    # (not given: left as they are; empty: all removed)
+    await Person.Update(id=saved.id, label="JS 2").save()
+    assert [str(u) for u in (await Person.get(id=saved.id)).urls] == [b, c]
+    await Person.Update(id=saved.id, label="JS 3", urls=[]).save()
+    assert (await Person.get(id=saved.id)).urls == []
+    assert count_nodes(db_driver, "PGUrl") == 0
+
+
+@no_type_check
+async def test_update_cannot_take_the_url_of_another_entity(db_driver, clear_database):
+    class Person(Entity):
+        _meta = Entity.Meta(create_with_id=True)
+
+    initialise()
+
+    a, b = "http://example.com/people/a", "http://example.com/people/b"
+    first = await Person.Create(id=AnyHttpUrl(a), create_new=True, label="A").save()
+    second = await Person.Create(id=AnyHttpUrl(b), create_new=True, label="B").save()
+
+    with pytest.raises(PanglossConflictError, match="already in use"):
+        await Person.Update(id=second.id, label="B2", urls=[AnyHttpUrl(a)]).save()
+
+    # (nothing was changed)
+    assert [str(u) for u in (await Person.get(id=second.id)).urls] == [b]
+    assert [str(u) for u in (await Person.get(id=first.id)).urls] == [a]
+    assert (await Person.get(id=second.id)).label == "B"
+
+
 # ---------------------------------------------------------------------------
 # Errors: nothing is changed
 # ---------------------------------------------------------------------------

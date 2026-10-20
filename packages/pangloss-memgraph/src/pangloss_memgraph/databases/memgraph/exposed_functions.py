@@ -69,6 +69,7 @@ from pangloss_memgraph.databases.memgraph.validate_write import (
     find_existing_entities,
     get_existing_head,
     get_tree_meta,
+    replace_urls,
 )
 
 
@@ -176,6 +177,7 @@ async def read_entity(
         return None
 
     data = tree_of(records[0])
+    data["urls"] = sorted(records[0]["urls"])
     if incoming:
         data.update(await fetch_incoming_relations(tx, cls, resolved_id))
     return convert_enums(data)
@@ -384,6 +386,11 @@ async def replace_head_node(
 
     if not await run_write_query(tx, replace_query, replace_params):
         raise PanglossWriteError("Nothing was updated")
+
+    # (the URLs of an entity are nodes it does not own, so they are replaced apart)
+    urls = getattr(db_instance, "urls", None)
+    if urls is not None:
+        await replace_urls(tx, db_instance.id, [str(url) for url in urls])
 
     if not await run_write_query(
         tx, query_object.to_query_string(), query_object.params
