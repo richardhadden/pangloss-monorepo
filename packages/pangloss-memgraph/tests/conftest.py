@@ -156,7 +156,7 @@ async def initialise_settings(
         )
         INTERFACE_LANGUAGES: list[str] = []
         DEFAULT_INTERFACE_LANGUAGES: str = "en"
-        AUTHJWT_SECRET_KEY: str = "asdf"
+        AUTHJWT_SECRET_KEY: str = "a secret for the tests, of a decent length"
         ENTITY_BASE_URL: AnyHttpUrl = AnyHttpUrl("http://test.com/")
 
     settings = Settings()

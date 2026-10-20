@@ -1,6 +1,6 @@
 # Users
 
-`pangloss_users` holds the user models, password hashing and a `service` module; the users themselves are stored by the database backend (as `(:PGUser)` nodes in Memgraph). Tokens, sessions, permissions and the API routes are not written yet ⏳.
+`pangloss_users` holds the user models, password hashing and a `service` module; the users themselves are stored by the database backend (as `(:PGUser)` nodes in Memgraph). The tokens, sessions and routes for users are in the [REST API](api.md); permissions are not written yet ⏳.
 
 ```python
 from pangloss_users import service
@@ -40,7 +40,7 @@ All are `async`.
 | `set_password(username, password)`, `change_password(username, old, new)` | `change_password` checks the old one |
 | `set_admin(username, admin)`, `set_disabled(username, disabled)` | A disabled user cannot log in or write; what they wrote stays |
 
-Nothing stops the last admin being disabled or demoted ⏳.
+`service` does not stop the last admin being disabled or demoted (the API does not let admins change their own status).
 
 ## What a backend supplies
 

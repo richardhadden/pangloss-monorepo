@@ -602,6 +602,14 @@ class _HeadViewBase(_ActionClass):
         return unwrap_single_item_lists(cls, data)
 
 
+class _EditViewBase(_HeadViewBase):
+    """A head node as it is edited: its own values and outgoing relations, but none of
+    the incoming relations (those belong to the documents they are written in)"""
+
+    def __str__(self):
+        return f"<{self._owner.__name__}.EditView {_ActionClass.__str__(self)}>"
+
+
 class _UpdateBase(_ActionClass):
     id: UUID
 

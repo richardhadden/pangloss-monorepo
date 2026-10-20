@@ -23,6 +23,7 @@ from pangloss_models.model_bases.document import (
 from pangloss_models.model_bases.entity import (
     Entity,
     _EntityCreateDBBase,
+    _EntityEditViewBase,
     _EntityHeadViewBase,
     _EntityReferenceViewBase,
     _EntityUpdateBase,
@@ -129,19 +130,15 @@ def tree_of(record: dict) -> dict:
     return tree
 
 
-@Database.default.read_transaction
-async def get_entity(
-    tx: Transaction, cls: type[Entity], id: UUID | AnyHttpUrl
-) -> _EntityHeadViewBase | None:
-    """An entity, with its own values and relations, and the documents (and
-    entities) that refer to it, in the fields named after the reverse relations"""
-
+async def read_entity(
+    tx: Transaction, cls: type[Entity], id: UUID | AnyHttpUrl, incoming: bool
+) -> dict | None:
+    """The data of an entity (with the incoming relations, if `incoming`)"""
     resolved_id = await resolve_id(tx, id)
     if resolved_id is None:
         return None
-    id = resolved_id
 
-    query_string, query_params = build_fetch_document_query(cls, id)
+    query_string, query_params = build_fetch_document_query(cls, resolved_id)
 
     result = await tx.run(query_string, **query_params)
     records = await result.data()
@@ -149,8 +146,29 @@ async def get_entity(
         return None
 
     data = tree_of(records[0])
-    data.update(await fetch_incoming_relations(tx, cls, id))
-    return cls.HeadView(**convert_enums(data))
+    if incoming:
+        data.update(await fetch_incoming_relations(tx, cls, resolved_id))
+    return convert_enums(data)
+
+
+@Database.default.read_transaction
+async def get_entity(
+    tx: Transaction, cls: type[Entity], id: UUID | AnyHttpUrl
+) -> _EntityHeadViewBase | None:
+    """An entity, with its own values and relations, and the documents (and
+    entities) that refer to it, in the fields named after the reverse relations"""
+    data = await read_entity(tx, cls, id, incoming=True)
+    return cls.HeadView(**data) if data is not None else None
+
+
+@Database.default.read_transaction
+async def get_entity_for_edit(
+    tx: Transaction, cls: type[Entity], id: UUID | AnyHttpUrl
+) -> _EntityEditViewBase | None:
+    """An entity as it is edited: its own values and outgoing relations, without
+    the incoming relations (which are not looked for)"""
+    data = await read_entity(tx, cls, id, incoming=False)
+    return cls.EditView(**data) if data is not None else None
 
 
 async def run_write_query(tx: Transaction, query: str, params: dict) -> list:

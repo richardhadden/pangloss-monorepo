@@ -23,6 +23,7 @@ Each feature in these docs is marked with its status:
 | [Memgraph backend](memgraph.md) | Graph schema, query builders, and the database API |
 | [Settings](settings.md) | `BaseSettings` and database settings |
 | [Users](users.md) | User models, passwords and the `service` functions |
+| [REST API](api.md) | Authentication and the user endpoints |
 | [Command line](cli.md) | The `pangloss` command, and adding commands from apps |
 | [Development](development.md) | Setting up, running tests, repository layout |
 | [Status and roadmap](status.md) | What is and is not implemented |

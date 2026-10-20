@@ -10,6 +10,7 @@ For each declared class, `initialise()` creates a set of Pydantic models and att
 | `UpdateDB` | same | Database-side counterpart of `Update` | ✅ for Documents and Entities |
 | `View` | same | Nested representation returned from reads | ✅ |
 | `HeadView` | Document, Entity, ReifiedRelationDocument | Top-level read model: `id`, `meta` (`created_by`, `created_when`, `updated_*`, `semantic_spaces`, `context_labels`, `head_node_*`), fields and incoming relations | ✅ |
+| `EditView` | Entity | A `HeadView` without the incoming relations: `id`, `meta`, the node's own values and its outgoing relations. For editing: incoming relations are written in the documents that hold them. Read with `Entity.get_for_edit`, and can be changed and sent back as an `Update` | ✅ |
 | `ReferenceSet` | Entity | `{type, id}` pointer used in `Create`/`Update` to refer to an existing entity (label is dropped if supplied) | ✅ |
 | `ReferenceView` | Document, Entity, ReifiedRelationDocument | `{type, id, label, ...}` summary; used in lists and nested reads | ✅ |
 
@@ -36,7 +37,7 @@ Optional literal fields (`X | None`) default to `None` in all of these models, s
 3. **Field definitions** are built for every model in declaration order (`initialise_field_definitions`). Mistakes such as invalid relation targets raise `PanglossModelError`.
 4. **Incoming relations** are worked out for Documents, Entities and ReifiedRelationDocuments.
 5. **`ReferenceSet` / `ReferenceView`** models are created.
-6. **`Create` + `CreateDB`**, then **`Update` + `UpdateDB`**, then **`View`**, then **`HeadView`**. Each is first created empty and its fields are added afterwards, so models can refer to each other.
+6. **`Create` + `CreateDB`**, then **`Update` + `UpdateDB`**, then **`View`**, then **`HeadView`** (and, for Entities, **`EditView`**). Each is first created empty and its fields are added afterwards, so models can refer to each other.
 7. **Rebuild the action classes** twice so that models see the final versions of the models they reference.
 8. **Bind the database.** `SETTINGS.DATABASE_MODULE` names a Python package. `ModelRegistry._bind_database_functions` (run after the models are built) imports `<DATABASE_MODULE>.exposed_functions` and assigns the functions directly; sync and async both work:
 
@@ -45,6 +46,7 @@ Optional literal fields (`X | None`) default to `None` in all of these models, s
    | `Document.get` | `get_document(cls, id)` |
    | `Entity.get` | `get_entity(cls, id)` |
    | `Document.delete` | `delete_document(cls, id)` |
+   | `Entity.get_for_edit` | `get_entity_for_edit(cls, id)` |
    | `Entity.delete` | `delete_entity(cls, id)` |
    | `Document.undelete` | `undelete_document(cls, id)` |
    | `Entity.undelete` | `undelete_entity(cls, id)` |

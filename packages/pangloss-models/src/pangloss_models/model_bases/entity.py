@@ -16,6 +16,7 @@ from pangloss_models.model_bases.base_models import (
     _CreateBase,
     _CreateDBBase,
     _DeclaredClass,
+    _EditViewBase,
     _HeadViewBase,
     _ListItems,
     _ReferenceSetBase,
@@ -106,6 +107,10 @@ class _EntityHeadViewBase(_HeadViewBase):
     pass
 
 
+class _EntityEditViewBase(_EditViewBase):
+    pass
+
+
 class Entity(_DeclaredClass, WithMeta[EntityMeta]):
     __metatype__ = "Entity"
     Meta: ClassVar[type[EntityMeta]] = EntityMeta
@@ -120,6 +125,7 @@ class Entity(_DeclaredClass, WithMeta[EntityMeta]):
 
     View: ClassVar[type[_EntityViewBase]]
     HeadView: ClassVar[type[_HeadViewBase]]
+    EditView: ClassVar[type[_EntityEditViewBase]]
 
     @classmethod
     def __pydantic_init_subclass__(cls, **_):
@@ -136,6 +142,13 @@ class Entity(_DeclaredClass, WithMeta[EntityMeta]):
         Callable[
             [AnyHttpUrl | UUID],
             _EntityHeadViewBase | None | Awaitable[_EntityHeadViewBase | None],
+        ]
+    ]
+
+    get_for_edit: ClassVar[
+        Callable[
+            [AnyHttpUrl | UUID],
+            _EntityEditViewBase | None | Awaitable[_EntityEditViewBase | None],
         ]
     ]
 

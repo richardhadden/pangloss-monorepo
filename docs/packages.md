@@ -8,6 +8,7 @@ pangloss-memgraph ──► pangloss-models ──► pangloss-core ──► pa
         └──► pangloss-users ──► pangloss-core
 
 pangloss-cli ──► pangloss-core, pangloss-models, pangloss-users
+pangloss-api ──► pangloss-core, pangloss-models, pangloss-users
 ```
 
 Arrows show declared dependencies. The SDK's code also imports `pangloss_core` and `pangloss_models`, which `pangloss-sdk/pyproject.toml` does not declare (a cycle with `pangloss-core`'s declared dependency on the SDK).
@@ -43,7 +44,11 @@ A database backend for [Memgraph](https://memgraph.com/) (using the `neo4j` asyn
 
 ## pangloss-cli ✅
 
-The `pangloss` command (`pangloss_cli.main`), built with [Typer](https://typer.tiangolo.com/). It finds the project's settings, adds the commands of installed apps, and has the core commands `setup-database` and `users ...`. It knows nothing about a particular database: it uses the `setup` module of `DATABASE_MODULE`. See [Command line](cli.md).
+The `pangloss` command (`pangloss_cli.main`), built with [Typer](https://typer.tiangolo.com/). It finds the project's settings, adds the commands of installed apps, and has the core commands `new-project`, `new-app`, `setup-database` and `users ...`. The templates for new projects and apps are in `pangloss_cli/templates`. It knows nothing about a particular database: it uses the `setup` module of `DATABASE_MODULE`. See [Command line](cli.md).
+
+## pangloss-api 🚧
+
+The FastAPI application (`pangloss_api.app.create_app`). Done: token and session login (JWT with PyJWT), and the user endpoints. Not done: routes for documents and entities, and routes from installed apps. See [REST API](api.md).
 
 ## pangloss-sdk 🚧
 
@@ -62,4 +67,4 @@ Users and their passwords. See [Users](users.md).
 - `passwords.py`: Argon2id hashing and checking.
 - `service.py`: `create_user`, `get_user`, `get_user_by_email`, `list_users`, `authenticate`, `update_user`, `set_password`, `change_password`, `set_admin` and `set_disabled`. They call the database backend's `exposed_functions`.
 
-Tokens, sessions, permissions and the API routes are not here yet ⏳ (`AUTHJWT_SECRET_KEY` is not consumed by anything).
+Tokens, sessions and the user routes are in [`pangloss-api`](#pangloss-api-🚧), not here; permissions are not written yet ⏳.

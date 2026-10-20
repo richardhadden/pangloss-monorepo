@@ -52,6 +52,10 @@ def get_entity(cls: type[Entity], id: UUID | AnyHttpUrl) -> _EntityHeadViewBase 
     pass
 
 
+def get_entity_for_edit(cls: type[Entity], id: UUID | AnyHttpUrl):
+    pass
+
+
 def delete_document(cls: type[Document], id: UUID | AnyHttpUrl) -> None:
     pass
 

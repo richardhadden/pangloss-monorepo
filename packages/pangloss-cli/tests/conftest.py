@@ -68,10 +68,34 @@ def project(tmp_path, monkeypatch):
     # (the settings are global, and other packages' tests set and use them: put back
     # whatever was there)
     saved_settings = core_settings.__dict__.get("SETTINGS")
+    # (start with none, as a command line starts)
+    core_settings.__dict__.pop("SETTINGS", None)
     yield tmp_path
     sys.path[:] = saved_path
     for name in list(sys.modules):
         if name.split(".")[0] in PACKAGES:
+            del sys.modules[name]
+    if saved_settings is None:
+        core_settings.__dict__.pop("SETTINGS", None)
+    else:
+        core_settings.SETTINGS = saved_settings
+
+
+@pytest.fixture
+def workdir(tmp_path, monkeypatch):
+    """An empty directory to work in, as a command line would be run from. Whatever
+    is imported from it, and the settings that are made, are forgotten afterwards."""
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("PANGLOSS_SETTINGS", raising=False)
+    saved_path = list(sys.path)
+    saved_settings = core_settings.__dict__.get("SETTINGS")
+    core_settings.__dict__.pop("SETTINGS", None)
+    yield tmp_path
+    sys.path[:] = saved_path
+    root = str(tmp_path.resolve())
+    for name, module in list(sys.modules.items()):
+        file = getattr(module, "__file__", None)
+        if file and str(file).startswith(root):
             del sys.modules[name]
     if saved_settings is None:
         core_settings.__dict__.pop("SETTINGS", None)

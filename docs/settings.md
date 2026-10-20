@@ -27,13 +27,15 @@ Values can also come from environment variables or a `.env` file (`pydantic-sett
 | Setting | Type | Used by |
 |---------|------|---------|
 | `PROJECT_NAME` | `str` | Informational |
-| `BACKEND_CORS_ORIGINS` | `list` | Accepts a comma-separated string. Reserved for a web API ⏳ |
+| `BACKEND_CORS_ORIGINS` | `list` | Accepts a comma-separated string. Reserved for CORS in the web API ⏳ (not read yet) |
 | `INSTALLED_APPS` | `list[str]` | Packages whose `cli.py` adds commands to `pangloss`, and whose `models` are imported by `pangloss setup-database`. See [Command line](cli.md) |
 | `DATABASE_MODULE` | `str` | Dotted path of the backend package; `initialise()` imports `<it>.exposed_functions` |
 | `DATABASE` | `DatabaseSettings` subclass | Backend connection details |
 | `INTERFACE_LANGUAGES` | `list[str]` | Reserved for i18n ⏳ |
 | `DEFAULT_INTERFACE_LANGUAGE` | `str` (`"en"`) | Reserved for i18n ⏳ |
-| `AUTHJWT_SECRET_KEY` | `str` | Reserved for token signing ⏳ (not read anywhere yet) |
+| `AUTHJWT_SECRET_KEY` | `str` | Signs the API's tokens (use 32 characters or more) |
+| `AUTH_ACCESS_TOKEN_EXPIRE_MINUTES`, `AUTH_REFRESH_TOKEN_EXPIRE_DAYS` | `int` (`30`, `14`) | How long tokens last |
+| `AUTH_COOKIE_SAMESITE`, `AUTH_COOKIE_SECURE` | `"lax"`, `False` | How the session cookies are set. See [REST API](api.md#authentication) |
 | `ENTITY_BASE_URL` | `AnyHttpUrl` | Reserved for entity URL generation ⏳ |
 
 ## Database settings

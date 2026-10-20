@@ -812,3 +812,107 @@ async def test_incoming_relations_of_different_kinds_together(clear_database):
     assert [s.id for s in read.about_reverse] == [statement.id]
     assert [s.id for s in read.involves_person_reverse] == [statement.id]
     assert read.involves_person_reverse[0].involves_person.certainty == 1
+
+
+# ---------------------------------------------------------------------------
+# Reading an entity to edit it
+# ---------------------------------------------------------------------------
+
+
+@no_type_check
+async def test_get_entity_for_edit_has_no_incoming_relations(clear_database):
+    class Place(Entity):
+        pass
+
+    class Person(Entity):
+        born: int
+        born_in: Place
+
+    class Statement(Document):
+        about: Person
+
+    initialise()
+
+    place = await Place.Create(label="Paris").save()
+    person = await Person.Create(
+        label="John Smith",
+        born=1900,
+        born_in={"type": "Place", "id": place.id},
+    ).save()
+    await Statement.Create(
+        label="A Statement", about={"type": "Person", "id": person.id}
+    ).save()
+
+    # The head view has what refers to the person...
+    head = await Person.get(id=person.id)
+    assert isinstance(head, Person.HeadView)
+    assert len(head.about_reverse) == 1
+
+    # ... the edit view only the person, with its outgoing relations
+    edit = await Person.get_for_edit(id=person.id)
+    assert isinstance(edit, Person.EditView)
+    assert edit.id == person.id
+    assert edit.born == 1900
+    assert edit.born_in.id == place.id
+    assert edit.born_in.label == "Paris"
+    assert edit.meta.created_by == "pangloss_default_user"
+    assert not hasattr(edit, "about_reverse")
+
+    assert await Person.get_for_edit(id=uuid7()) is None
+
+
+@no_type_check
+async def test_get_entity_for_edit_by_url_and_not_when_deleted(clear_database):
+    class Person(Entity):
+        _meta = Entity.Meta(create_with_id=True)
+
+    initialise()
+
+    url = AnyHttpUrl("http://example.com/people/john-smith")
+    saved = await Person.Create(id=url, create_new=True, label="JS").save()
+
+    assert (await Person.get_for_edit(id=url)).id == saved.id
+
+    await Person.delete(saved.id)
+    assert await Person.get_for_edit(id=saved.id) is None
+    assert await Person.get_for_edit(id=url) is None
+
+
+@no_type_check
+async def test_an_edited_entity_can_be_saved_as_an_update(clear_database):
+    class Place(Entity):
+        pass
+
+    class Person(Entity):
+        born: int
+        born_in: Place
+
+    class Statement(Document):
+        about: Person
+
+    initialise()
+
+    paris = await Place.Create(label="Paris").save()
+    rome = await Place.Create(label="Rome").save()
+    person = await Person.Create(
+        label="John Smith", born=1900, born_in={"type": "Place", "id": paris.id}
+    ).save()
+    statement = await Statement.Create(
+        label="A Statement", about={"type": "Person", "id": person.id}
+    ).save()
+
+    edit = await Person.get_for_edit(id=person.id)
+    changes = edit.model_dump()
+    changes["born"] = 1901
+    changes["born_in"] = {"type": "Place", "id": rome.id}
+    changes["label"] = "John Q. Smith"
+    await Person.Update(**changes).save()
+
+    after = await Person.get_for_edit(id=person.id)
+    assert after.label == "John Q. Smith"
+    assert after.born == 1901
+    assert after.born_in.id == rome.id
+
+    # What refers to the person was not touched by editing it
+    head = await Person.get(id=person.id)
+    assert [item.id for item in head.about_reverse] == [statement.id]

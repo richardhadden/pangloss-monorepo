@@ -107,6 +107,8 @@ def group_name(app: str, group: typer.Typer) -> str:
 @dataclass
 class Project:
     settings: BaseSettings | None = None
+    # Where the settings are, if a project was found (even if it cannot be loaded)
+    location: SettingsLocation | None = None
     # Why there are no settings, or the database is not available
     settings_error: str | None = None
     database_error: str | None = None
@@ -185,6 +187,7 @@ def load_project(
         project.settings_error = NO_SETTINGS_MESSAGE
         return project
 
+    project.location = location
     try:
         project.settings = load_settings(location)
     except Exception as error:

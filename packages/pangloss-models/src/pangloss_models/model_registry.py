@@ -26,6 +26,10 @@ lazy from pangloss_models.initialise_models.initialise_create_model import (
 lazy from pangloss_models.initialise_models.initialise_field_definitions import (
     initialise_field_definitions,
 )
+lazy from pangloss_models.initialise_models.initialise_edit_view_model import (
+    can_have_edit_view_model,
+    initialise_edit_view_model,
+)
 lazy from pangloss_models.initialise_models.initialise_head_view_model import (
     can_have_head_view_model,
     initialise_head_view_model,
@@ -308,6 +312,8 @@ class ModelRegistry:
         for model in chain(cyclic, order):
             if can_have_head_view_model(model):
                 initialise_head_view_model(model)
+            if can_have_edit_view_model(model):
+                initialise_edit_view_model(model)
 
         # Rebuild all the models' action classes as referenced models
         # might not be up to date in referencing classes internal
@@ -342,6 +348,7 @@ class ModelRegistry:
 
         Document.get = classmethod(exposed_functions.get_document)  # type: ignore
         Entity.get = classmethod(exposed_functions.get_entity)  # type: ignore
+        Entity.get_for_edit = classmethod(exposed_functions.get_entity_for_edit)  # type: ignore
         Document.delete = classmethod(exposed_functions.delete_document)  # type: ignore
         Entity.delete = classmethod(exposed_functions.delete_entity)  # type: ignore
         Document.undelete = classmethod(exposed_functions.undelete_document)  # type: ignore

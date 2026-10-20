@@ -1,0 +1,38 @@
+"""Settings for ${project_name}.
+
+Values can also be set in the environment, or in the `.env` file next to
+`pyproject.toml` (which is not for version control). `AUTHJWT_SECRET_KEY`, which signs
+login tokens, is set there.
+"""
+
+from pangloss_core.settings import BaseSettings
+from pangloss_memgraph.databases.memgraph.settings import MemgraphDatabaseSettings
+from pydantic import AnyHttpUrl
+
+
+class Settings(BaseSettings[MemgraphDatabaseSettings]):
+    PROJECT_NAME: str = "${project_name}"
+    BACKEND_CORS_ORIGINS: list = []
+
+    # The packages whose commands and models are used, and your own apps (made with
+    # `pangloss new-app <name>`, which adds them here)
+    INSTALLED_APPS: list[str] = [
+        "pangloss_memgraph",
+    ]
+
+    DATABASE_MODULE: str = "pangloss_memgraph.databases.memgraph"
+    DATABASE: MemgraphDatabaseSettings = MemgraphDatabaseSettings(
+        DB_URL="bolt://localhost:7687",
+        DB_USERNAME="memgraph",
+        DB_PASSWORD="memgraph",
+        DATABASE_NAME="memgraph",
+    )
+
+    INTERFACE_LANGUAGES: list[str] = ["en"]
+    ENTITY_BASE_URL: AnyHttpUrl = AnyHttpUrl("http://localhost:8000/entity/")
+
+    # (no default: it is read from the environment or `.env`)
+    AUTHJWT_SECRET_KEY: str
+
+
+Settings()

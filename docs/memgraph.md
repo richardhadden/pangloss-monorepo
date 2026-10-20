@@ -131,6 +131,10 @@ Each relation is stored as a forward edge and a reverse edge marked `reverse: tr
 
 It takes 100–130 ms to read an entity with 400 incoming relations, and the time hardly grows with the number. The incoming relations are not paginated.
 
+### `get_entity_for_edit(cls, id)` ✅
+
+Reads an entity as `get_entity` does, but without the second query for the relations *to* it, and returns `cls.EditView`: the entity's own values, `meta` and outgoing relations. It is for editing: what refers to an entity is changed in the documents that hold it. The result can be changed and sent back as an update (`Person.Update(**edit.model_dump())`).
+
 ### `get_document(cls, id)` ✅
 
 Matches `PGIndexableNode` by `id` and type label, then builds the document as a tree and adds `meta`. Returns `cls.HeadView`, or `None` if not found. (See `get_entity` for entities.)

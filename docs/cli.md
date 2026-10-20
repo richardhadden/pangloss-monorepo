@@ -9,6 +9,28 @@ pangloss users create
 pangloss memgraph info
 ```
 
+## Making a project and its apps
+
+```
+mkdir my-site && cd my-site
+pangloss new-project my_site
+pangloss new-app blog
+```
+
+`pangloss new-project <name>`, run in a directory, makes the project there. The name must be a valid Python name that is not already a module (`my_site`, not `my-site`).
+
+| Made | |
+|------|--|
+| `<name>/settings.py` | The project's `Settings` (for Memgraph), with `INSTALLED_APPS = ["pangloss_memgraph"]` |
+| `<name>/__init__.py` | |
+| `pyproject.toml` | With `[tool.pangloss] settings = "<name>.settings"` (see below). If there is one already, the section is added to it; if it already has that section, the command refuses |
+| `.env` | `AUTHJWT_SECRET_KEY` with a new random value (added to an existing `.env` that lacks it). It is not in `settings.py`, which is read for it |
+| `.gitignore` | Keeps `.env` out of version control (created, or `.env` added to it) |
+
+Nothing is overwritten: if anything cannot be made, nothing is written. Add the Pangloss packages you use to the dependencies in `pyproject.toml`.
+
+`pangloss new-app <name>`, run anywhere in the project, makes an app for your own models next to the settings' project: `<name>/__init__.py` and `<name>/models.py`, and adds `"<name>"` to `INSTALLED_APPS` in the settings. The settings file is edited only if `INSTALLED_APPS` is a plain list of strings; otherwise the app is still made, and the command says to add it yourself. Declare the models in `<name>/models.py`: it is imported by `pangloss setup-database` and when the API starts.
+
 ## Finding the project
 
 The settings are found, in this order, from:
@@ -28,6 +50,7 @@ The module is imported, and so constructs the project's `BaseSettings` subclass 
 
 | Command | |
 |---------|--|
+| `pangloss new-project <name>`, `pangloss new-app <name>` | See above |
 | `pangloss setup-database` | Imports the `models` module of each installed app, runs `initialise()`, then asks the database backend to set up what it needs (for Memgraph: indexes, uniqueness constraints, the text index and enums). Safe to repeat |
 | `pangloss users create` | Asks for (or takes `--username`, `--email`, `--password`, `--full-name`, `--admin/--no-admin`) the details of a new user |
 | `pangloss users list` | |

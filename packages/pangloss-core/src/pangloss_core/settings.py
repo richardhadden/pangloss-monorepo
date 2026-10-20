@@ -21,6 +21,12 @@ class BaseSettings[TDatabaseSettings: DatabaseSettings](PydanticBaseSettings):
 
     AUTHJWT_SECRET_KEY: str
 
+    # Authentication: how long tokens last, and how the session cookies are set
+    AUTH_ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    AUTH_REFRESH_TOKEN_EXPIRE_DAYS: int = 14
+    AUTH_COOKIE_SAMESITE: typing.Literal["lax", "strict", "none"] = "lax"
+    AUTH_COOKIE_SECURE: bool = False
+
     INTERFACE_LANGUAGES: list[str]
 
     ENTITY_BASE_URL: AnyHttpUrl
