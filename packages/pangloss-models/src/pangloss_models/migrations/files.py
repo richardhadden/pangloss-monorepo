@@ -33,9 +33,10 @@ MIGRATION_NAME = re.compile(r"^(\d{4})_\w+$")
 EMPTY_SNAPSHOT: dict[str, Any] = {"version": 1, "models": {}, "enums": {}}
 
 
-def changes_from_data(data: Iterable[dict[str, Any]]) -> list[c.Change]:
-    """The changes of a migration file, from the data they are written as"""
-    return [c.change_from_dict(entry) for entry in data]
+def changes_from_data(data: Iterable[dict[str, Any] | c.Change]) -> list[c.Change]:
+    """The changes of a migration file, from the data they are written as (or changes, for one
+    written by hand: `RunCypher(...)`)"""
+    return [entry if isinstance(entry, c.Change) else c.change_from_dict(entry) for entry in data]
 
 
 def checksum_of(changes: Iterable[c.Change]) -> str:
@@ -107,9 +108,23 @@ def render(migration: Migration, summary: str | None = None) -> str:
         lines.append("atomic = False")
     lines.append("")
     data = [change.to_dict() for change in migration.changes]
+    if not data:
+        lines += EMPTY_HINT
     lines.append(f"changes = changes_from_data({_pformat(data)})")
     lines.append("")
     return "\n".join(lines)
+
+
+EMPTY_HINT = [
+    "# Changes written by hand go here (import them from pangloss_models.migrations.changes):",
+    "# queries, or functions of this app, and, when a change of",
+    "# the models was refused (`[NEEDS CODE]`), its data moved first and the models after it:",
+    "#",
+    "#     RunCypher(query='MATCH (n:Person) SET n.born = $year', parameters={'year': 1900}),",
+    "#     RunPython(function='myapp.migrations.helpers:move_names'),   # def f(tx, state)",
+    "#     StateOnly(changes=(AlterModelKind(model='Person', old='entity', new='document'),)),",
+    "",
+]
 
 
 def _pformat(value: Any) -> str:

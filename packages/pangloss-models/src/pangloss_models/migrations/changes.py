@@ -599,6 +599,95 @@ class EmbeddedToLiterals(Change):
         )
 
 
+# --- by hand -----------------------------------------------------------------------------
+
+
+@dataclass(frozen=True, kw_only=True)
+class RunCypher(Change):
+    """A query written by hand, run in the transaction of the migration. It does not change what
+    the models are (that is the other changes, or `StateOnly`), only the data.
+
+    DDL (enums, indexes) cannot be run: Memgraph refuses it in a transaction."""
+
+    query: str
+    parameters: dict[str, Any] = field(default_factory=dict)
+    # Whether it loses data (asked about before it is applied)
+    lossy: bool = False
+    # The models it changes, to read them afterwards (None: all of them)
+    affects: list[str] | None = None
+    note: str = ""
+
+    @property
+    def safety(self) -> Safety:  # type: ignore[override]
+        return "lossy" if self.lossy else "transforming"
+
+    def describe(self) -> str:
+        return f"Run a query: {self.note or ' '.join(self.query.split())[:70]}"
+
+
+@dataclass(frozen=True, kw_only=True)
+class RunPython(Change):
+    """A function written by hand, called as `function(tx, state)` in the transaction of the
+    migration (`tx.run(...)` makes a query; `state` is the snapshot of the models before it). It may
+    be `async`. Given as `"package.module:name"`, or as the function itself, which is kept as that.
+
+    The checksum of the migration is of the name: a change to the function is not noticed."""
+
+    function: str
+    lossy: bool = False
+    affects: list[str] | None = None
+    note: str = ""
+
+    def __post_init__(self) -> None:
+        if callable(self.function):
+            function = self.function
+            object.__setattr__(self, "function", f"{function.__module__}:{function.__qualname__}")  # type: ignore[attr-defined]
+
+    @property
+    def safety(self) -> Safety:  # type: ignore[override]
+        return "lossy" if self.lossy else "transforming"
+
+    def resolve(self) -> Any:
+        """The function itself"""
+        import importlib
+
+        module, _, path = self.function.partition(":")
+        if not path:
+            raise ValueError(f"'{self.function}' is not 'module:function'")
+        found: Any = importlib.import_module(module)
+        for part in path.split("."):
+            found = getattr(found, part)
+        return found
+
+    def describe(self) -> str:
+        return f"Run {self.function}" + (f": {self.note}" if self.note else "")
+
+
+@dataclass(frozen=True, kw_only=True)
+class StateOnly(Change):
+    """Changes to what the models are, without anything done to the data: for a change that was
+    refused as `[NEEDS CODE]`, whose data was moved by a `RunCypher` or `RunPython` before it."""
+
+    changes: tuple[Change, ...] = ()
+
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "changes",
+            tuple(change_from_dict(i) if isinstance(i, dict) else i for i in self.changes),
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "change": self.kind,
+            "safety": self.safety,
+            "changes": [change.to_dict() for change in self.changes],
+        }
+
+    def describe(self) -> str:
+        return "The models (only): " + "; ".join(change.describe() for change in self.changes)
+
+
 def _type_name(descriptor: dict[str, Any]) -> str:
     if descriptor.get("type") == "enum":
         return f"enum {descriptor['enum']}"

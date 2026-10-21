@@ -15,6 +15,7 @@ Enums are changed outside of a transaction (`run_ddl`), as Memgraph requires; se
 
 import copy
 import dataclasses
+import inspect
 import re
 import uuid
 from contextvars import ContextVar
@@ -96,9 +97,14 @@ COUNTED = [
 ]
 
 
-async def run(tx: Transaction, query: str, **params: Any) -> list[dict[str, Any]]:
+async def run(tx: Transaction, query: str, /, **params: Any) -> list[dict[str, Any]]:
+    return await run_with(tx, query, params)
+
+
+async def run_with(tx: Transaction, query: str, params: dict[str, Any]) -> list[dict[str, Any]]:
+    """`run`, with the parameters as a dict (a name may be `query`, which the driver's `run` takes)"""
     try:
-        result = await tx.run(query, **params)  # type: ignore[arg-type]
+        result = await tx.run(query, params)  # type: ignore[arg-type]
         rows = await result.data()
         counters = COUNTERS.get()
         if counters is not None:
@@ -1422,6 +1428,20 @@ async def nothing(tx: Any, change: c.Change, state: dict) -> None:
     """Changes that are of the models, and not of the data"""
 
 
+async def run_cypher(tx: Transaction, change: c.RunCypher, state: dict) -> None:
+    await run_with(tx, change.query, change.parameters)
+
+
+async def run_python(tx: Transaction, change: c.RunPython, state: dict) -> None:
+    try:
+        function = change.resolve()
+    except (ImportError, AttributeError, ValueError) as error:
+        raise PanglossMigrationError(f"Cannot find {change.function}: {error}") from error
+    result = function(tx, copy.deepcopy(state))
+    if inspect.isawaitable(result):
+        await result
+
+
 def manual(why: str) -> Callable[[Transaction, Any, dict], Awaitable[None]]:
     async def refuse(tx: Transaction, change: c.Change, state: dict) -> None:
         raise PanglossMigrationNotSupported(f"{change.describe()}: {why}")
@@ -1459,6 +1479,9 @@ DATA_HANDLERS: dict[type, Callable[[Transaction, Any, dict], Awaitable[None]]] =
     c.EmbeddedToLiterals: embedded_to_literals,
     c.RemoveEnumMember: remove_enum_member,
     c.RemoveEnum: nothing,
+    c.RunCypher: run_cypher,
+    c.RunPython: run_python,
+    c.StateOnly: nothing,
 }
 
 DDL_HANDLERS: dict[type, Callable[[Database, Any, dict], Awaitable[None]]] = {

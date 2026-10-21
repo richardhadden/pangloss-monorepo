@@ -126,7 +126,17 @@ def affected_models(changes: Iterable[c.Change], snapshot: dict[str, Any]) -> se
     entity_roots: set[str] = set()  # (entities read through a relation that changed)
     changed_enums: set[str] = set()
 
+    expanded: list[c.Change] = []
     for change in changes:
+        if isinstance(change, c.StateOnly):
+            expanded.extend(change.changes)  # (the data was moved by hand, but is worth reading)
+        elif isinstance(change, (c.RunCypher, c.RunPython)):
+            # (by hand: it may have changed anything, unless it says what)
+            touched |= set(models) if change.affects is None else set(change.affects)
+        else:
+            expanded.append(change)
+
+    for change in expanded:
         if isinstance(change, c.RenameEnum):
             changed_enums.add(change.new)
             continue

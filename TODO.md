@@ -43,8 +43,7 @@ What works is in [docs/migrations.md](docs/migrations.md) (section 12). Still to
 - [ ] `migrate --backup`: take a Memgraph snapshot before applying (and require it, or `--no-backup`, for changes that lose data). Not checked: whether a snapshot can be taken from a client with the Memgraph in use.
 - [ ] Going backwards: `migrate <app> <earlier>`, with `database_backwards` for each change that can be reversed, `reversible` / `lossy` on each, a confirmation before a lossy one (and, as in the spec, `keep=True` to save what would be lost).
 - [ ] Squashing: `squashmigrations app 0001 0007`.
-- [ ] `RunCypher` and `RunPython` operations (section 7.1): the way to write by hand what cannot be generated. Without them, a change that is `[NEEDS CODE]` has nowhere to be written.
-- [ ] `makemigrations --empty` (a file to put hand-written operations in) and `makemigrations <app>` (only one app).
+- [ ] `makemigrations <app>` (only one app).
 - [ ] A read-only mode while a migration runs (the lock only stops another `migrate`); today the API is stopped, or `MIGRATION_CHECK` stops it starting.
 - [ ] `pangloss setup-database` and `migrate` both set up a database (`setup-database` makes the enums of the models directly, which can get ahead of the migrations). Decide how they relate: probably `setup-database` only for a project without migrations, and a warning from it otherwise.
 

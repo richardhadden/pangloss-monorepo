@@ -24,6 +24,7 @@ from pangloss_models.migrations.files import (
     MigrationGraph,
     graph_of,
     migrations_directory,
+    next_name,
     write,
 )
 from pangloss_models.migrations.history import pending, problems
@@ -134,8 +135,37 @@ def ask_answers(changes: list[c.Change], state: dict, noinput: bool) -> list[c.C
     return changes
 
 
+def make_empty(project: Project, app: str | None, name: str | None, dry_run: bool) -> None:
+    """A migration with no changes, to write by hand"""
+    apps = installed_apps(project)
+    if app is None:
+        fail("`--empty` needs the app the migration is for: `pangloss makemigrations --empty <app>`")
+    if app not in apps:
+        fail(f"{app} is not one of the INSTALLED_APPS")
+    graph = load_graph(apps)
+    leaf = graph.leaf(app)
+    if leaf is None:
+        fail(f"{app} has no migrations yet: run `pangloss makemigrations` first")
+    migration = Migration(
+        app=app,
+        name=next_name((m for m in graph.migrations.values() if m.app == app), name or "empty"),
+        changes=(),
+        schema_hash=leaf.schema_hash,
+    )
+    typer.secho(f"{migration}", bold=True)
+    if dry_run:
+        typer.echo("(nothing was written)")
+        return
+    path = write(migration, migrations_directory(app))
+    typer.secho(f"Wrote {path}", fg="green")
+
+
 def makemigrations(
     ctx: typer.Context,
+    app: str | None = typer.Argument(None, help="With --empty, the app the migration is for"),
+    empty: bool = typer.Option(
+        False, "--empty", help="Write a migration with no changes, to put RunCypher / RunPython in"
+    ),
     name: str | None = typer.Option(None, "--name", "-n", help="A name for the migration"),
     dry_run: bool = typer.Option(False, "--dry-run", help="Show what would be written"),
     check: bool = typer.Option(
@@ -145,6 +175,11 @@ def makemigrations(
 ) -> None:
     """Write the migrations for what has changed in the models since the last"""
     project: Project = ctx.obj
+    if empty:
+        make_empty(project, app, name, dry_run)
+        return
+    if app is not None:
+        fail("An app can be given only with `--empty` (migrations are made for all the apps)")
     snapshot = load_models(project)
     apps = installed_apps(project)
     graph = load_graph(apps)

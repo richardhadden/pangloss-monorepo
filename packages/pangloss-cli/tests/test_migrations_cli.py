@@ -174,6 +174,35 @@ def test_a_required_field_asks_for_a_value(models_project: Path):
     assert "'default': 1900" in text
 
 
+def test_an_empty_migration_is_made_to_write_by_hand(models_project: Path):
+    assert invoke("makemigrations")[0] == 0
+    exit_code, output = invoke("makemigrations", "--empty")
+    assert exit_code == 1 and "needs the app" in output
+    exit_code, output = invoke("makemigrations", "--empty", "nonsense")
+    assert exit_code == 1 and "INSTALLED_APPS" in output
+    assert invoke("makemigrations", "fakeapp")[0] == 1  # (an app only with --empty)
+
+    exit_code, output = invoke("makemigrations", "--empty", "fakeapp", "--name", "by_hand")
+    assert exit_code == 0, output
+    assert migration_files(models_project) == ["0001_initial.py", "0002_by_hand.py"]
+    path = models_project / "fakeapp/migrations/0002_by_hand.py"
+    assert "RunCypher" in path.read_text()  # (the hint)
+
+    # the models have not changed, so there is nothing else to make, and it can be applied
+    assert "No changes" in invoke("makemigrations")[1]
+
+    path.write_text(
+        path.read_text().replace(
+            "changes = changes_from_data([])",
+            "from pangloss_models.migrations.changes import RunCypher\n\n"
+            "changes = changes_from_data([RunCypher(query='MATCH (n) SET n.x = 1', lossy=True)])",
+        )
+    )
+    exit_code, output = invoke("migrate", "--plan")
+    assert exit_code == 0, output
+    assert "Run a query" in output and "[LOSES DATA]" in output
+
+
 def test_a_rename_is_asked_and_the_answer_is_used(models_project: Path):
     set_models(models_project, V1.replace("name: str", "name: str\n        born: int"))
     assert invoke("makemigrations")[0] == 0

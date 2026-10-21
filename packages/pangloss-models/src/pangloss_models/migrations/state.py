@@ -256,6 +256,18 @@ def _alter_parent_fields(snapshot, change: c.AlterParentFields):
     )
 
 
+def _nothing(snapshot, change):
+    """Changes by hand: what they do is to the data, and the other changes say what the models are"""
+
+
+def _state_only(snapshot, change: c.StateOnly):
+    after = snapshot
+    for inner in change.changes:
+        after = apply_change(after, inner)
+    snapshot.clear()
+    snapshot.update(after)
+
+
 HANDLERS: dict[type, Callable[[dict, Any], None]] = {
     c.RenameModel: _rename_model,
     c.RenameEnum: _rename_enum,
@@ -290,4 +302,7 @@ HANDLERS: dict[type, Callable[[dict, Any], None]] = {
     c.AlterCardinality: _alter_cardinality,
     c.AlterReverseName: _alter_reverse_name,
     c.AlterParentFields: _alter_parent_fields,
+    c.RunCypher: _nothing,
+    c.RunPython: _nothing,
+    c.StateOnly: _state_only,
 }
