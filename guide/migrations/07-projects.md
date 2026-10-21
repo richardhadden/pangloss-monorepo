@@ -47,7 +47,7 @@ Move the class to another app's `models.py` (and fix imports). Because *which ap
 
 ### Apps that come with Pangloss
 
-`pangloss_memgraph` ships migrations of its own: the indexes and constraints Pangloss needs (ids unique, the label text index, user names and so on). They appear in `showmigrations` and are applied by `migrate` like yours. You never write or change them. When you upgrade Pangloss and it needs something new, the upgrade brings a new migration, and `pangloss migrate` applies it.
+`pangloss_memgraph` ships migrations of its own (see [chapter 9](09-memgraph.md)). They appear in `showmigrations` and are applied by `migrate` like yours. You never write or change them. When you upgrade Pangloss and it needs something new, the upgrade brings a new migration, and `pangloss migrate` applies it.
 
 ## A database that already exists
 

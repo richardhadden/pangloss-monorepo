@@ -10,6 +10,8 @@ Each feature in these docs is marked with its status:
 | 🚧 Partial | Some of it works; the gaps are described |
 | ⏳ Planned | Not implemented yet (stub, `TODO`, or only mentioned in a description) |
 
+**New here?** Start with the [Getting started guide](../guide/getting-started/README.md). These pages are the reference.
+
 ## Contents
 
 | Document | What it covers |
@@ -26,7 +28,7 @@ Each feature in these docs is marked with its status:
 | [REST API](api.md) | Authentication and the user endpoints |
 | [Command line](cli.md) | The `pangloss` command, and adding commands from apps |
 | [Meta slots](meta-slots.md) ⏳ | A design for letting optional packages (the interface) keep their own `_<name>_meta` on a model class |
-| [Database migrations](migrations.md) 🚧 | The design and progress of migrations: how changes to the models are applied to existing data. To use them, see the [user guide](../guide/README.md) |
+| [Database migrations](migrations.md) 🚧 | The design and progress of migrations: how changes to the models are applied to existing data. To use them, see the [user guide](../guide/migrations/README.md) |
 | [Development](development.md) | Setting up, running tests, repository layout |
 | [Status and roadmap](status.md) | What is and is not implemented |
 

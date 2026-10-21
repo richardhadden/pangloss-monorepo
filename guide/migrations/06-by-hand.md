@@ -54,15 +54,7 @@ RunCypher(
 )
 ```
 
-How the data is stored, since you are writing Cypher against it (the full account is in `docs/migrations.md`):
-
-- A node of a model has the model's **name as a label** (`:Person`), as well as its parents', its kind (`:Entity`, `:Document`...) and `:PGIndexableNode`. Match on the model's label and you also get its subclasses.
-- Literal fields are **properties** of the node. Dates are dates; decimals are strings; an enum is the **value** of its member (a string or a number).
-- A relation `home: Place` is two edges: `(person)-[:home]->(place)` and `(place)-[:home_reverse {reverse: true}]->(person)`. Always write both (the reverse edge is called `<field>_reverse` unless the field sets another `reverse_name`).
-- Every node has an `id` (a UUID string) and a `label`. Nodes inside a document have a `head_node_id` pointing to the document at the top.
-- Use **parameters** (`$year`), not string building.
-
-Limits: **no DDL.** Memgraph will not create or change an index or constraint inside a transaction. Those are made by Pangloss's own migrations.
+How the data is stored, and what a migration cannot do in Cypher (no indexes or constraints), is in [chapter 9](09-memgraph.md#writing-cypher-against-pangloss-data). Use **parameters** (`$year`), not string building.
 
 ## `RunPython`
 

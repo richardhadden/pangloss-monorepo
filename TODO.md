@@ -37,7 +37,7 @@ What is outstanding, as of the version check on updates (after CORS). What works
 
 ## Database migrations
 
-Built, and documented in [docs/migrations.md](docs/migrations.md) (section 12) and the [user guide](guide/README.md). What is left:
+Built, and documented in [docs/migrations.md](docs/migrations.md) (section 12) and the [user guide](guide/migrations/README.md). What is left:
 
 - [ ] **A smoke test of the real CLI against the real database**, on a scratch project: `makemigrations`, `migrate`, an added field, going back, `squashmigrations`, `cleanmigrations`, `backups`, `restore`. The CLI tests use a fake backend and the Memgraph tests call the functions directly, so nothing has run the real commands together since the enum, `Fulfils`, read-only and batching changes. Do this first.
 - [ ] **A test that the shipped library migration is current**: `pangloss_memgraph/migrations/0001_initial.py` is generated from `INDEXES` / `UNIQUE_CONSTRAINTS` / `TEXT_INDEX` in `initialise_database.py`, and nothing fails if one is edited without regenerating the other. A test that the migrations come to `structure()` would catch it.

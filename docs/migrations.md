@@ -1,6 +1,6 @@
 # Database migrations 🚧
 
-**Status: specified and largely implemented.** It describes how changes to the models are applied to data that is already in the database, and what that needs. What is built, and what is left: see [Progress](#12-progress). **For how to use it, read the [user guide](../guide/README.md).**
+**Status: specified and largely implemented.** It describes how changes to the models are applied to data that is already in the database, and what that needs. What is built, and what is left: see [Progress](#12-progress). **For how to use it, read the [user guide](../guide/migrations/README.md).**
 
 ## 1. The problem
 

@@ -131,7 +131,7 @@ A class declared `Fulfils[X]` supplies what `X` requires, and a node of it that 
 
 ## Indexes and constraints
 
-Pangloss itself needs some indexes and uniqueness constraints (on ids, on user names, the text index used for searching labels). They are migrations like any other, shipped by the `pangloss_memgraph` package in its own `migrations/` folder, so a project does not write them. If a newer Pangloss needs another, you get it as a normal pending migration: `pangloss migrate` makes it.
+Pangloss itself needs some indexes and uniqueness constraints. They are migrations like any other, shipped with the database package, so a project does not write them; if a newer Pangloss needs another, you get it as a normal pending migration. See [chapter 9](09-memgraph.md).
 
 ## What is not handled automatically
 

@@ -56,7 +56,7 @@ Some changes would fail: nothing was changed
 Things to know:
 
 - After the first failure the remaining changes say `not tried` (a failed transaction cannot go on).
-- Changes to the database's indexes and constraints are **not tried** (`changes the database itself (an index or constraint: not tried)`), because Memgraph does not allow them inside a transaction. Everything else, enum changes included, is.
+- Changes to the database's indexes and constraints are **not tried** (`changes the database itself (an index or constraint: not tried)`), because the database does not allow them inside a transaction ([chapter 9](09-memgraph.md)). Everything else, enum changes included, is.
 - It does not take the lock, and changes nothing.
 - It makes a transaction as large as the whole migration, so on a very large database it is slow or heavy. Try it on a copy.
 
@@ -65,38 +65,17 @@ Things to know:
 ## Backups
 
 ```bash
-pangloss migrate --backup        # take a snapshot first
+pangloss migrate --backup        # take a backup first
 pangloss migrate --no-backup     # you have taken your own
+pangloss backups                 # the backups the database has
+pangloss restore PATH            # put the database back to one (replaces everything)
 ```
 
-`--backup` asks Memgraph for a **snapshot** of the whole database just before applying (after taking the lock, so nothing else is migrating). Pangloss prints where it is:
+`--backup` takes a backup of the whole database just before applying (after taking the lock, so nothing else is migrating). If taking it fails, nothing is applied. A migration with a `[LOSES DATA]` change *requires* you to choose one of the two flags: there is no default, so that "I didn't think about it" is not an option. `--no-backup` is for when you have your own arrangements (a database copy, a cloud snapshot) and want to be explicit about it.
 
-```
-Backup: /var/lib/memgraph/snapshots/20261021040143118268_timestamp_405218
-```
+**`restore` replaces everything in the database with what the backup has.** Data written since is lost, and so is the record of migrations since (so the database is where the backup was: run `pangloss showmigrations`, and `pangloss migrate` with the code that goes with it). It asks first.
 
-Know what this is:
-
-- The snapshot is **Memgraph's own**, written on the **server** (not on the machine you ran `pangloss` from).
-- Memgraph keeps only the newest few snapshots (3 by default, `--storage-snapshot-retention-count`), and may make its own on a timer (every 300 s by default in the container), each of which pushes the oldest out. So a backup can be gone **within minutes**. Pangloss says how long yours lasts, from the server's own settings:
-
-  ```
-  Memgraph makes a snapshot every 300 s and keeps 3: this one is removed in about 15 minutes. Raise `--storage-snapshot-retention-count`, or copy it from the server
-  ```
-
-  Raise the retention (or switch the timer off) on the Memgraph server if a migration will run longer than that, and copy the file off the server if it must be kept for good: it can only be copied from the server itself.
-- If taking the snapshot fails, nothing is applied.
-
-### Looking at backups, and going back to one
-
-```bash
-pangloss backups                       # the snapshots the server has, newest first
-pangloss restore /var/lib/memgraph/snapshots/2026…   # put the database back to one
-```
-
-**`restore` replaces everything in the database with what the snapshot has.** Data written since is lost, and so is the record of migrations since (so the database is where the snapshot was: run `pangloss showmigrations`, and `pangloss migrate` with the code that goes with it). It asks first (`--yes` does not). Only a snapshot the server lists can be restored. Afterwards Pangloss makes the database's text indexes again: a recovered snapshot has them but not their files, and without that nothing could be written.
-
-A migration with a `[LOSES DATA]` change *requires* you to choose one of the two flags. There is no default, so that "I didn't think about it" is not an option. `--no-backup` is for when you have your own arrangements (a database copy, a cloud snapshot) and want to be explicit about it.
+What a backup *is*, where it is kept and how long it lasts depend on the database. For Memgraph (the one Pangloss uses), read [chapter 9](09-memgraph.md): **a backup can be gone within minutes.**
 
 ## When a migration fails
 
@@ -111,7 +90,7 @@ $ pangloss migrate
 
 Fix the cause (see [chapter 8](08-troubleshooting.md)) and run `migrate` again: a failed migration is tried again from the start.
 
-The exception is a Memgraph limit: **indexes and constraints cannot be changed inside a transaction**, so those steps happen on their own, one at a time. They are written so that doing them twice is harmless, and a stop part way leaves the next run to finish them.
+The exception is a database limit (see [chapter 9](09-memgraph.md)): **indexes and constraints cannot be changed inside a transaction**, so those steps happen on their own, one at a time. They are written so that doing them twice is harmless, and a stop part way leaves the next run to finish them.
 
 If you needed to stop a migration and the lock remains (see below), the record shows `[~] running`.
 
@@ -189,7 +168,7 @@ pangloss check-data --parallel 4 # several at a time (not faster against a local
 1. The migration was generated and reviewed in development, and committed.
 2. You ran `migrate --dry-run` and then `migrate` on a copy of the production data, and `check-data` is clean.
 3. You read the `[LOSES DATA]` lines and are happy to lose them.
-4. A backup exists that you can restore (`--backup`; mind how long it lasts, and copy it off the server if it must outlive Memgraph's retention).
+4. A backup exists that you can restore (`--backup`; mind how long it lasts: [chapter 9](09-memgraph.md)).
 5. The API is stopped.
 6. `pangloss migrate` (with `--batch-size` if the data is large).
 7. `pangloss check-data` if you used `--no-check`, then start the API.
