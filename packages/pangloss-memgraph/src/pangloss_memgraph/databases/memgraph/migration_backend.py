@@ -6,6 +6,8 @@ A backend package (`DATABASE_MODULE`) supplies a `migration_backend` module with
   the models, for the snapshot: the migrations make it (`AddIndex`, `AddConstraint`...);
 - `async ensure_ready()`: what the backend needs to keep the record of migrations;
 - `async applied() -> {(app, name): record}`: the migrations that have been applied (or began);
+- `async backups() -> [dict]`, `async backup_notice() -> str | None`, `async restore(path)` (optional): the
+  snapshots there are, how long a new one lasts, and putting the database back to one;
 - `async has_data() -> bool` (optional): whether the database holds anything but the record;
 - `async lock(who)` / `async unlock()`: so that only one `migrate` runs; `lock` raises
   `PanglossMigrationError` if another has the lock;
@@ -24,6 +26,7 @@ See `docs/migrations.md`.
 """
 
 import datetime
+import re
 import time
 from collections.abc import Callable
 from typing import Any
@@ -114,6 +117,73 @@ async def backup(database: Database | None = None) -> str:
         except neo4j.exceptions.Neo4jError as error:
             raise PanglossMigrationError(f"Cannot take a snapshot: {error.message}") from error
     return str(rows[0]["path"]) if rows else "(the snapshot directory of the server)"
+
+
+async def backups(database: Database | None = None) -> list[dict[str, Any]]:
+    """The snapshots the server has (`SHOW SNAPSHOTS`): `path`, `creation_time` and `size`, newest first"""
+    database = database or Database.default
+    if not hasattr(database, "driver"):
+        await database._initialise_driver()
+    async with _session(database) as session:
+        result = await session.run("SHOW SNAPSHOTS")
+        rows = await result.data()
+    return sorted(rows, key=lambda row: row["creation_time"], reverse=True)
+
+
+async def backup_notice(database: Database | None = None) -> str | None:
+    """How long a snapshot lasts, if the server makes its own and keeps only a few: each new one
+    pushes the oldest out, so a backup is gone after that many have been made after it"""
+    database = database or Database.default
+    if not hasattr(database, "driver"):
+        await database._initialise_driver()
+    async with _session(database) as session:
+        result = await session.run("SHOW CONFIG")
+        config = {row["name"]: row["current_value"] for row in await result.data()}
+    try:
+        keep = int(config["storage_snapshot_retention_count"])
+        every = int(config.get("storage_snapshot_interval_sec") or 0)
+    except (KeyError, ValueError):
+        return None
+    if not every:
+        return f"Memgraph keeps the newest {keep} snapshots: this one is removed after {keep} more are made"
+    minutes = max(1, keep * every // 60)
+    return (
+        f"Memgraph makes a snapshot every {every} s and keeps {keep}: this one is removed in about "
+        f"{minutes} minutes. Raise `--storage-snapshot-retention-count`, or copy it from the server"
+    )
+
+
+async def restore(path: str, database: Database | None = None) -> None:
+    """Put the database back to a snapshot (`RECOVER SNAPSHOT ... FORCE`): everything in it is
+    replaced by what the snapshot has, the record of migrations with it. Only a snapshot the server
+    lists can be used."""
+    database = database or Database.default
+    known = {row["path"] for row in await backups(database)}
+    if path not in known:
+        raise PanglossMigrationError(
+            f"{path} is not a snapshot the server has (`pangloss backups` lists them)"
+        )
+    async with _session(database) as session:
+        try:
+            result = await session.run(f'RECOVER SNAPSHOT "{path}" FORCE')
+            await result.consume()
+        except neo4j.exceptions.Neo4jError as error:
+            raise PanglossMigrationError(f"Cannot restore {path}: {error.message}") from error
+    await rebuild_text_indexes(database)
+
+
+async def rebuild_text_indexes(database: Database) -> None:
+    """Make the text indexes again. A recovered snapshot has them, but their files (which are kept
+    beside the snapshot, not in it) are not there, so every write of a node they cover would fail."""
+    name = database.settings.DATABASE.DATABASE_NAME
+    rows = await run_statement(database.driver, name, "SHOW INDEX INFO")
+    for row in rows:
+        match = re.match(r"label_text \(name: (\w+)\)", row["index type"])
+        if not match:
+            continue
+        index, label, prop = match.group(1), row["label"], row["property"][0]
+        await run_statement(database.driver, name, f"DROP TEXT INDEX {index}")
+        await run_statement(database.driver, name, f"CREATE TEXT INDEX {index} ON :{label}({prop})")
 
 
 async def lock(who: str | None = None, database: Database | None = None) -> None:
@@ -290,12 +360,17 @@ async def unapply(
     fake: bool = False,
     progress: Callable[[Migration, str], None] | None = None,
     database: Database | None = None,
+    batch_size: int | None = None,
 ) -> dict[str, Any]:
     """Undo migrations, last first: `migration.changes` are the changes that undo each (see
     `pangloss_models.migrations.reverse`), `state` the snapshot after them all. The record of a
     migration is removed when it has been undone, so it is to be applied again; one that fails
-    stops the rest, and is still recorded as applied (nothing of it was changed, as it is made in
-    one transaction, except the indexes and constraints that cannot be)."""
+    stops the rest, and is still recorded as it was (nothing of it was changed, as it is made in
+    one transaction, except the indexes and constraints that cannot be).
+
+    In batches (`batch_size`, or the migration's `batch_size` or `atomic = False`) it is not one
+    transaction: one that stops part way has undone part, and is run again from the start, which is
+    harmless as what is undone is not there to undo again."""
     database = database or Database.default
     if not hasattr(database, "driver"):
         await database._initialise_driver()
@@ -306,7 +381,11 @@ async def unapply(
             for change in migration.changes:
                 state = apply_to_snapshot(state, change)
         else:
-            state = await apply_changes(database, state, list(migration.changes))
+            size = batch_size or migration.batch_size or (None if migration.atomic else DEFAULT_BATCH_SIZE)
+            if size:
+                state = await apply_changes_in_batches(database, state, list(migration.changes), size)
+            else:
+                state = await apply_changes(database, state, list(migration.changes))
         async with _session(database) as session:
             result = await session.run(
                 "UNWIND $keys AS key MATCH (m:PGMigration {app: key[0], name: key[1]}) DELETE m",

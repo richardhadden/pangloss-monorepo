@@ -44,6 +44,10 @@ pangloss migrate                         # apply what is pending
 pangloss migrate myapp 0002              # go to a migration (backwards if it is already applied)
 pangloss migrate myapp zero              # undo all of an app's migrations
 pangloss squashmigrations myapp 0001 0007
+pangloss cleanmigrations myapp           # delete the originals of a squashed migration
+
+pangloss backups                         # the snapshots the server has
+pangloss restore PATH                    # put the database back to one (replaces everything)
 
 pangloss check-data                      # read all the data with the current models
 ```

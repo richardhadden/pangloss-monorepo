@@ -34,7 +34,7 @@ from pangloss_models.migrations.snapshot import data_view
 from pangloss_models.migrations.state import apply_change
 
 MIGRATION_NAME = re.compile(r"^(\d{4})_\w+$")
-SQUASHED_NAME = re.compile(r"^\d{4}_squashed_(\d{4})_\w+$")
+SQUASHED_NAME = re.compile(r"^(\d{4})_squashed_(\d{4})_\w+$")
 EMPTY_SNAPSHOT: dict[str, Any] = {"version": 1, "models": {}, "enums": {}, "indexes": [], "constraints": []}
 
 
@@ -77,9 +77,15 @@ class Migration:
         """Where it comes in its app: for a squashed migration, that of the last it replaces"""
         squashed = SQUASHED_NAME.match(self.name)
         if squashed:
-            return int(squashed.group(1))
+            return int(squashed.group(2))
         match = MIGRATION_NAME.match(self.name)
         return int(match.group(1)) if match else 0
+
+    @property
+    def first_number(self) -> int:
+        """Where it begins in its app: for a squashed migration, that of the first it replaces"""
+        squashed = SQUASHED_NAME.match(self.name)
+        return int(squashed.group(1)) if squashed else self.number
 
     @property
     def checksum(self) -> str:
@@ -145,7 +151,7 @@ EMPTY_HINT = [
     "#",
     "#     RunCypher(query='MATCH (n:Person) SET n.born = $year', parameters={'year': 1900}),",
     "#     RunPython(function='myapp.migrations.helpers:move_names'),   # def f(tx, state)",
-    "#     StateOnly(changes=(AlterModelKind(model='Person', old='entity', new='document'),)),",
+    "#     StateOnly(changes=(AlterLiteralType(model='Event', name='when', old={'type': 'datetime'}, new={'type': 'str'}),)),",
     "",
 ]
 
@@ -223,6 +229,8 @@ class MigrationGraph:
     migrations: dict[tuple[str, str], Migration] = field(default_factory=dict)
     # The squashed migrations that are used, and the originals they stand in for
     stands_for: dict[tuple[str, str], tuple[tuple[str, str], ...]] = field(default_factory=dict)
+    # Every squashed migration there is, used or not, and what each replaces
+    squashed: dict[tuple[str, str], tuple[tuple[str, str], ...]] = field(default_factory=dict)
 
     @classmethod
     def of(
@@ -233,8 +241,11 @@ class MigrationGraph:
         """The graph of the migrations. Where a squashed migration and the migrations it replaces
         are both there, one set is used: the squashed migration, unless the database (`applied`)
         has begun on the originals and not finished them"""
-        chosen, stands_for = choose(list(migrations), applied)
-        graph = cls({m.key: m for m in chosen}, stands_for)
+        migrations = list(migrations)
+        chosen, stands_for = choose(migrations, applied)
+        graph = cls(
+            {m.key: m for m in chosen}, stands_for, {m.key: m.replaces for m in migrations if m.replaces}
+        )
         graph.check()
         return graph
 
@@ -242,13 +253,18 @@ class MigrationGraph:
         self, applied: dict[tuple[str, str], dict[str, Any]]
     ) -> dict[tuple[str, str], dict[str, Any]]:
         """The record of the database as the graph reads it: a squashed migration whose originals
-        were all applied is applied, and the originals are not there to be compared"""
+        were all applied (or that was itself applied) is applied, and the originals are not there to
+        be compared"""
+        full = expanded(applied, self.squashed)
         view = dict(applied)
         for key, originals in self.stands_for.items():
-            if originals and all(applied.get(o, {}).get("status") == "applied" for o in originals):
+            if originals and all(full.get(o, {}).get("status") == "applied" for o in originals):
                 for original in originals:
                     view.pop(original, None)
-                view[key] = {"status": "applied", "checksum": None, "replaces_applied": list(originals)}
+                # (keep its own record, if it has one)
+                view.setdefault(
+                    key, {"status": "applied", "checksum": None, "replaces_applied": list(originals)}
+                )
         return view
 
     def parents(self, migration: Migration) -> list[tuple[str, str]]:
@@ -332,16 +348,45 @@ class MigrationGraph:
         return wanted
 
 
+def expanded(
+    applied: dict[tuple[str, str], dict[str, Any]],
+    squashed: dict[tuple[str, str], tuple[tuple[str, str], ...]],
+) -> dict[tuple[str, str], dict[str, Any]]:
+    """The record of a database with what a squashed migration means filled in: if it was applied,
+    so were the migrations it replaces; and if they all were, so was it. (A database that applied a
+    squashed migration, or the migrations that were squashed into it, has the same.)"""
+    view = dict(applied)
+    changed = True
+    while changed:
+        changed = False
+        for key, originals in squashed.items():
+            if view.get(key, {}).get("status") == "applied":
+                for original in originals:
+                    if original not in view:
+                        view[original] = {"status": "applied", "checksum": None, "implied": True}
+                        changed = True
+            elif key not in view and all(view.get(o, {}).get("status") == "applied" for o in originals):
+                view[key] = {"status": "applied", "checksum": None, "implied": True}
+                changed = True
+    return view
+
+
 def choose(
     migrations: list[Migration], applied: dict[tuple[str, str], dict[str, Any]] | None
 ) -> tuple[list[Migration], dict[tuple[str, str], tuple[tuple[str, str], ...]]]:
     """Of each squashed migration and the migrations it replaces, those to use; and what the
-    migrations that were left out are replaced by, for the dependencies on them"""
+    migrations that were left out are replaced by, for the dependencies on them. A squashed
+    migration can be among those another replaces (it was squashed again): the outer one is used
+    or not as the inner one was, and replaces everything."""
     by_key = {m.key: m for m in migrations}
+    squashed_index = {m.key: m.replaces for m in migrations if m.replaces}
+    if applied is not None:
+        applied = expanded(applied, squashed_index)
     dropped: set[tuple[str, str]] = set()
     redirect: dict[tuple[str, str], tuple[str, str]] = {}
     stands_for: dict[tuple[str, str], tuple[tuple[str, str], ...]] = {}
-    for squashed in sorted((m for m in migrations if m.replaces), key=lambda m: m.key):
+    # (the ones that replace least first: what a squashed migration replaces is decided before it)
+    for squashed in sorted((m for m in migrations if m.replaces), key=lambda m: (len(m.replaces), m.key)):
         originals = squashed.replaces
         records = [applied.get(o) for o in originals] if applied is not None else []
         began = any(record is not None for record in records)
@@ -362,6 +407,7 @@ def choose(
             dropped |= {o for o in originals if o in by_key}
             redirect.update({o: squashed.key for o in originals})
             stands_for[squashed.key] = originals
+    stands_for = {key: originals for key, originals in stands_for.items() if key not in dropped}
     kept = []
     for migration in migrations:
         if migration.key in dropped:
@@ -404,11 +450,6 @@ def squash(
     if start is None or end is None or start.number > end.number:
         raise PanglossMigrationError(f"{first} to {last} is not a run of migrations of {app}")
     run = [m for m in graph.order() if m.app == app and start.number <= m.number <= end.number]
-    if any(m.replaces for m in run):
-        raise PanglossMigrationError(
-            f"{', '.join(m.name for m in run if m.replaces)} is itself a squashed migration: "
-            "delete the migrations it replaces and squash from the ones after it"
-        )
     if len(run) < 2:
         raise PanglossMigrationError("There is nothing to squash in one migration")
     inside = {m.key for m in run}
@@ -421,7 +462,7 @@ def squash(
         after = apply_change(after, change)
 
     by_hand = any(isinstance(ch, (c.RunCypher, c.RunPython, c.StateOnly)) for ch in changes)
-    first_of_app = not any(m.app == app and m.number < start.number for m in graph.migrations.values())
+    first_of_app = not any(m.app == app and m.number < start.first_number for m in graph.migrations.values())
     if optimize and first_of_app and not by_hand:
         found = diff(before, after)
         found = diff(before, after, declined=found.questions)  # (a rename is a removal and an addition)
@@ -432,14 +473,19 @@ def squash(
             isinstance(ch, (c.AlterModelKind, c.ChangeFieldKind)) for ch in found.changes
         ):
             changes = found.changes
-    rest = end.name.split("_", 1)[1]
+    squashed_end = SQUASHED_NAME.match(end.name)
+    rest = end.name.split("_", 3)[3] if squashed_end else end.name.split("_", 1)[1]
+    # (what it replaces: a squashed migration in the run, and the migrations that went into that)
+    replaces = tuple(
+        dict.fromkeys(key for m in run for key in (*m.replaces, m.key))
+    )
     return Migration(
         app=app,
-        name=name or f"{start.number:04d}_squashed_{end.number:04d}_{rest}",
+        name=name or f"{start.first_number:04d}_squashed_{end.number:04d}_{rest}",
         changes=tuple(changes),
         dependencies=tuple(dict.fromkeys(p for p in outside if p[0] != app)),
         schema_hash=end.schema_hash,
         atomic=all(m.atomic for m in run),
         batch_size=min((m.batch_size for m in run if m.batch_size), default=None),
-        replaces=tuple(m.key for m in run),
+        replaces=replaces,
     )

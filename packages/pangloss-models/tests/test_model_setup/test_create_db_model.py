@@ -1742,3 +1742,42 @@ def test_recursive_type():
         thing_ordered: SemanticSpace[Action | Order]
 
     initialise()
+
+
+@no_type_check
+def test_each_class_fulfils_what_it_says_and_the_fulfils_class_is_not_a_label():
+    from pangloss_models.initialise_models.initialise_field_definitions import get_fulfiled_types
+    from pangloss_models.model_bases.base_models import labels_for_model
+
+    class Person(Entity):
+        pass
+
+    class PersonInPlace(Document):
+        located_person: Person
+
+    class Other(Document):
+        thing: Person
+
+    class Activity(Document, Fulfils[PersonInPlace]):
+        person_responsible: Person
+
+    class Meeting(Document, Fulfils[Other]):
+        who: Person
+
+    class SpecialMeeting(Meeting):
+        pass
+
+    initialise()
+
+    # (`Fulfils` used to be one class, holding what the last use of it gave)
+    assert get_fulfiled_types(Activity) == {PersonInPlace}
+    assert get_fulfiled_types(Meeting) == {Other}
+    assert get_fulfiled_types(SpecialMeeting) == {Other}  # (a subclass fulfils what its parent does)
+    assert get_fulfiled_types(Person) == set()
+
+    # ... and it is not a model, so it is not a label
+    assert labels_for_model(Activity, "Document") == ["Activity", "Document"]
+    assert Activity.CreateDB(label="A", person_responsible={"type": "Person", "id": uuid7()})._labels == [
+        "Activity",
+        "Document",
+    ]

@@ -144,6 +144,14 @@ def _alter_enum_member_value(snapshot, change: c.AlterEnumMemberValue):
             member["value"] = change.new
 
 
+def _recompute_fulfils(snapshot, change: c.RecomputeFulfils):
+    entry = model_entry(snapshot, change.model)
+    if change.fulfils:
+        entry["fulfils"] = copy.deepcopy(change.fulfils)
+    else:
+        entry.pop("fulfils", None)
+
+
 def _create_enum(snapshot, change: c.CreateEnum):
     snapshot["enums"][change.enum] = copy.deepcopy(change.definition)
 
@@ -307,6 +315,7 @@ HANDLERS: dict[type, Callable[[dict, Any], None]] = {
     c.AddEnumMember: _add_enum_member,
     c.RemoveEnumMember: _remove_enum_member,
     c.AlterEnumMemberValue: _alter_enum_member_value,
+    c.RecomputeFulfils: _recompute_fulfils,
     c.RemoveEnum: _remove_enum,
     c.CreateModel: _create_model,
     c.DeleteModel: _delete_model,

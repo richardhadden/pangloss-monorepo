@@ -1,6 +1,7 @@
 from typing import Awaitable, Callable, ClassVar, Concatenate
 
 import neo4j
+from pangloss_models.exceptions import PanglossReadOnlyError
 from pangloss_core.settings import BaseSettings
 
 from pangloss_memgraph.databases.memgraph.settings import MemgraphDatabaseSettings
@@ -74,7 +75,9 @@ class Database:
 
         Wraps an asynchronous function taking a pangloss.neo4j.database.Transaction
         object as its first argument. If the function raises, the transaction is
-        rolled back and the exception propagates.
+        rolled back and the exception propagates. While `pangloss migrate` is running
+        (it holds a lock in the database) nothing is written: this raises
+        `PanglossReadOnlyError`, from inside the transaction, before the function.
 
         ```
         @write_transaction
@@ -88,10 +91,15 @@ class Database:
             **kwargs: P.kwargs,
         ) -> T:
             await self._check_driver()
+
+            async def not_while_migrating(tx, *a, **k):
+                await refuse_while_migrating(tx)
+                return await func(tx, *a, **k)
+
             async with self.driver.session(
                 database=self.settings.DATABASE.DATABASE_NAME
             ) as session:
-                return await session.execute_write(func, *args, **kwargs)
+                return await session.execute_write(not_while_migrating, *args, **kwargs)
 
         return wrapper
 
@@ -116,3 +124,16 @@ class Database:
 
     async def close(self):
         await self.driver.close()
+
+
+async def refuse_while_migrating(tx: neo4j.AsyncManagedTransaction) -> None:
+    """Raise `PanglossReadOnlyError` if a migration is running (it holds a `PGMigrationLock`). Called
+    in the transaction of a write, so a write that began after the lock was taken is refused;
+    one that was already running when it was taken is not waited for."""
+    result = await tx.run("MATCH (l:PGMigrationLock) RETURN count(l) AS locked")
+    row = await result.single()
+    if row and row["locked"]:
+        raise PanglossReadOnlyError(
+            "The database is being migrated: it can be read, and not written to, until that is done "
+            "(if no migration is running, `pangloss migrate --unlock`)"
+        )

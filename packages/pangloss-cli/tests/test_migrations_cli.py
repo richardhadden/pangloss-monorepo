@@ -23,6 +23,20 @@ FAKE_MIGRATION_BACKEND = """
         return dict(APPLIED)
 
     BACKUP_FAILS = False
+    RESTORED = []
+
+    async def backup_notice():
+        return "Memgraph keeps 3 snapshots"
+
+    async def backups():
+        return [{"path": "/snapshots/1", "creation_time": "2026-10-21T10:00", "size": "62KiB"}]
+
+    async def restore(path):
+        from pangloss_models.exceptions import PanglossMigrationError
+
+        if path != "/snapshots/1":
+            raise PanglossMigrationError(f"{path} is not a snapshot the server has")
+        RESTORED.append(path)
 
     async def backup():
         from pangloss_models.exceptions import PanglossMigrationError
@@ -60,11 +74,12 @@ FAKE_MIGRATION_BACKEND = """
             reports.append(MigrationReport(migration.app, migration.name, changes))
         return reports
 
-    async def unapply(migrations, state, fake=False, progress=None):
+    async def unapply(migrations, state, fake=False, progress=None, batch_size=None):
         for migration in migrations:
             if progress:
                 progress(migration, "undoing")
             CALLS.append(("unapply", migration.name, fake, [ch.kind for ch in migration.changes]))
+            BATCHES.append(batch_size)
             del APPLIED[migration.key]
         return state
 
@@ -730,3 +745,142 @@ def test_migrations_can_be_made_for_one_app(models_project: Path):
     exit_code, output = invoke("makemigrations", "fakeapp", input="1900\n")
     assert exit_code == 0, output
     assert len(migration_files(models_project)) == 2
+
+
+def test_a_model_that_changes_kind_is_refused_by_makemigrations(models_project: Path):
+    assert invoke("makemigrations")[0] == 0
+    set_models(
+        models_project,
+        V1.replace("from pangloss_models.model_bases.entity import Entity", "from pangloss_models.model_bases.document import Document")
+        .replace("(Entity)", "(Document)"),
+    )
+    exit_code, output = invoke("makemigrations")
+    assert exit_code == 1
+    assert "kind of a model cannot be changed" in output and "Keep its kind" in output
+    assert migration_files(models_project) == ["0001_initial.py"]
+    assert invoke("makemigrations", "--check")[0] == 1
+
+
+
+
+@pytest.fixture
+def born_then_removed(models_project: Path):
+    assert invoke("makemigrations")[0] == 0
+    set_models(models_project, V2)
+    assert invoke("makemigrations", input="1900\n")[0] == 0
+    set_models(models_project, V1)
+    assert invoke("makemigrations")[0] == 0
+    assert invoke("migrate", "--no-backup", "--yes")[0] == 0
+    assert len(backend().APPLIED) == 3
+    return models_project
+
+
+def test_a_plan_back_says_what_going_back_will_ask_for(born_then_removed: Path):
+    exit_code, output = invoke("migrate", "fakeapp", "0002", "--plan")
+    assert exit_code == 0, output
+    assert "To undo" in output and "Going back will ask for" in output
+    assert "born" in output
+    assert len(backend().APPLIED) == 3
+
+    # not asked in a plan; asked when it is done (and by a dry run, which tries it)
+    exit_code, output = invoke("migrate", "fakeapp", "0002", "--dry-run", input="1950\n")
+    assert exit_code == 0, output
+    assert len(backend().APPLIED) == 3
+    exit_code, output = invoke("migrate", "fakeapp", "0002", "--no-backup", "--yes", input="1950\n")
+    assert exit_code == 0, output
+    assert len(backend().APPLIED) == 2
+    undone = [call for call in backend().CALLS if call[0] == "unapply"]
+    assert undone[-1][3] == ["AddField"]
+
+
+def test_going_back_can_be_in_batches(born_then_removed: Path):
+    exit_code, output = invoke(
+        "migrate", "fakeapp", "0002", "--no-backup", "--yes", "--batch-size", "7", input="1950\n"
+    )
+    assert exit_code == 0, output
+    assert backend().BATCHES[-1] == 7
+
+
+def test_a_migration_that_failed_or_was_left_running_is_undone_too(born_then_removed: Path):
+    last = sorted(backend().APPLIED)[-1]
+    backend().APPLIED[last]["status"] = "failed"
+    exit_code, output = invoke("migrate", "fakeapp", "0002", "--no-backup", "--yes", input="1950\n")
+    assert exit_code == 0, output
+    assert last not in backend().APPLIED
+    assert len(backend().APPLIED) == 2
+
+
+def test_a_squashed_migration_is_squashed_again_with_the_ones_after_it(three_migrations: Path):
+    assert invoke("squashmigrations", "fakeapp", "0001", "0002")[0] == 0
+    files = migration_files(three_migrations)
+    assert len(files) == 4 and any("squashed_0002" in f for f in files)
+
+    exit_code, output = invoke("squashmigrations", "fakeapp", "0001", "0003")
+    assert exit_code == 0, output
+    assert "0001_squashed_0003" in output and "replaces" in output
+    files = migration_files(three_migrations)
+    assert len(files) == 5 and any("0001_squashed_0003" in f for f in files)
+
+    # a new database has only the last; one that had everything has nothing to do
+    exit_code, output = invoke("migrate")
+    assert exit_code == 0, output
+    assert [name for _, name in backend().APPLIED] == [
+        next(f[:-3] for f in files if "0001_squashed_0003" in f)
+    ]
+    assert "No changes" in invoke("makemigrations")[1]
+
+
+def test_the_originals_of_a_squashed_migration_can_be_deleted(three_migrations: Path):
+    assert invoke("squashmigrations", "fakeapp", "0001", "0003")[0] == 0
+    assert len(migration_files(three_migrations)) == 4
+
+    exit_code, output = invoke("cleanmigrations", "fakeapp", input="n\n")
+    assert exit_code != 0 and "0001_initial.py" in output and "No other database is looked at" in output
+    assert len(migration_files(three_migrations)) == 4
+
+    exit_code, output = invoke("cleanmigrations", "fakeapp", "--yes")
+    assert exit_code == 0, output
+    assert len(migration_files(three_migrations)) == 1
+    assert "squashed_0003" in migration_files(three_migrations)[0]
+    assert "Nothing to delete" in invoke("cleanmigrations")[1]
+
+    # the project goes on as before
+    assert invoke("migrate")[0] == 0
+    assert "No changes" in invoke("makemigrations")[1]
+
+
+def test_nothing_is_deleted_for_a_database_that_is_part_way_through(three_migrations: Path):
+    assert invoke("migrate", "fakeapp", "0001")[0] == 0  # (only the first applied)
+    assert invoke("squashmigrations", "fakeapp", "0001", "0003")[0] == 0
+
+    exit_code, output = invoke("cleanmigrations", "--yes")
+    assert exit_code == 0, output
+    assert "part way" in output and "Nothing to delete" in output
+    assert len(migration_files(three_migrations)) == 4
+
+
+def test_a_squash_of_a_squash_deletes_both_sets(three_migrations: Path):
+    assert invoke("squashmigrations", "fakeapp", "0001", "0002")[0] == 0
+    assert invoke("squashmigrations", "fakeapp", "0001", "0003")[0] == 0
+    assert len(migration_files(three_migrations)) == 5
+    assert invoke("cleanmigrations", "--yes")[0] == 0
+    left = migration_files(three_migrations)
+    assert len(left) == 1 and "squashed_0003" in left[0]
+
+
+def test_a_backup_says_how_long_it_lasts_and_backups_can_be_listed_and_restored(models_project: Path):
+    assert invoke("makemigrations")[0] == 0
+    exit_code, output = invoke("migrate", "--backup")
+    assert exit_code == 0, output
+    assert "Backup: /snapshots/1" in output and "Memgraph keeps 3 snapshots" in output
+
+    exit_code, output = invoke("backups")
+    assert exit_code == 0 and "/snapshots/1" in output and "62KiB" in output
+
+    exit_code, output = invoke("restore", "/snapshots/1", input="n\n")
+    assert exit_code != 0 and backend().RESTORED == []
+    exit_code, output = invoke("restore", "/snapshots/1", "--yes")
+    assert exit_code == 0, output
+    assert backend().RESTORED == ["/snapshots/1"]
+    exit_code, output = invoke("restore", "/nowhere", "--yes")
+    assert exit_code != 0 and "not a snapshot" in output

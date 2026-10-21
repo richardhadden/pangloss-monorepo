@@ -1,6 +1,8 @@
-"""The migrations' own copy of how the models give nodes their semantic spaces and context labels
-(`propagate_context`) must agree with the models (`recursively_propagate_context_types`): for a
-document the models wrote, working them out again must change nothing"""
+"""A migration works out the semantic spaces and context labels of stored nodes with the same algorithm
+the models use for an instance they write (`pangloss_models.context.propagate_context`), each looking
+at its nodes in its own way. So for a document the models wrote, working them out again from the stored
+nodes must change nothing: this checks the two views (what a relation holds, what an entity is, what
+counts as context) agree."""
 
 from types import SimpleNamespace as ns
 from typing import no_type_check

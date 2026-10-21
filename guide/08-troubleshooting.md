@@ -37,7 +37,11 @@ You can silence the server's check with `MIGRATION_CHECK = "warn"` or `"off"` wh
 
 **It asks a rename question I don't understand.** It is asking whether a field/model/enum that has disappeared is the same thing as one that has appeared. Answer `y` only if the *values should move across*. If unsure, answer `n`, read the migration it writes (`--dry-run` first), and re-run: the removal will be marked `[LOSES DATA]`, which tells you what `n` costs.
 
-**It wrote a change marked `[NEEDS CODE]`.** Pangloss found a change it cannot apply automatically. See [chapter 6](06-by-hand.md).
+**"Changing the kind of a model or a field is not supported".** You changed an `Entity` to a `Document`, or a plain field to a relation, or the reverse. Pangloss will not migrate that. Put the model back as it was, or make a new model or field and move the data by hand ([chapter 6](06-by-hand.md)).
+
+**`migrate --plan` or `--dry-run` shows a change that `WOULD FAIL`, or `migrate` stops saying it cannot.** Pangloss found a change it cannot apply itself (a conjunction, a type conversion it does not know). See [chapter 6](06-by-hand.md).
+
+**Writes fail with `503` and "The database is being migrated".** A `migrate` is running, or was killed and left its lock. Reads still work. If none is running, `pangloss migrate --unlock`.
 
 **It says "No changes" but I changed the model.** You may have changed something that is not stored (a docstring, a validator, a default in Python, the order of fields). That is correct; nothing to migrate.
 

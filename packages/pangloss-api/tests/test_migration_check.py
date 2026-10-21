@@ -106,3 +106,19 @@ def test_the_check_can_warn_or_be_turned_off(project):
     with pytest.warns(UserWarning, match="have not been applied"):
         start("warn")
     start("off")
+
+
+def test_a_write_during_a_migration_is_answered_with_unavailable_and_when_to_try_again():
+    import asyncio
+
+    from pangloss_api.errors import error_handler, status_for
+    from pangloss_models.exceptions import PanglossReadOnlyError, PanglossWriteError
+
+    error = PanglossReadOnlyError("The database is being migrated")
+    assert status_for(error) == 503
+    assert status_for(PanglossWriteError("x")) == 400  # (an ordinary write error is as it was)
+
+    response = asyncio.run(error_handler(None, error))  # type: ignore[arg-type]
+    assert response.status_code == 503
+    assert response.headers["Retry-After"] == "30"
+    assert b"being migrated" in response.body

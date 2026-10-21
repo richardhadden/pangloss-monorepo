@@ -2,7 +2,7 @@
 
 Most migrations are written for you. You need to write one yourself when:
 
-- `makemigrations` marked a change **`[NEEDS CODE]`** and `migrate` refuses it (a model changing kind, a plain field becoming a relation, wrapping in a conjunction, and the others listed at the end of [chapter 3](03-changes.md));
+- `migrate` refuses a change, because Pangloss cannot do it (wrapping in a conjunction, a type conversion it does not know, and the others listed at the end of [chapter 3](03-changes.md)); `--plan` shows it and `--dry-run` says `WOULD FAIL`;
 - you want to **change the data itself**: fill in a value computed from other values, split a field in two, clean up records, load some reference data.
 
 You get three building blocks, all in `pangloss_models.migrations.changes`:
@@ -107,41 +107,33 @@ RunPython(function="library.migrations.helpers:split_names",
 
 ## Refused changes: `RunCypher` plus `StateOnly`
 
-When `makemigrations` marks a change `[NEEDS CODE]` it still writes it into the migration, so that the *models* are accounted for, and `migrate` stops when it reaches it. To finish the job you do two things:
+When `makemigrations` finds a change that `migrate` will not apply, it still writes it into the migration, so that the *models* are accounted for. `migrate` stops when it reaches it. To finish the job you do two things:
 
 1. **Move the data** yourself, with `RunCypher` / `RunPython`, placed *before* the refused change;
 2. **Tell Pangloss the models changed**, by wrapping the refused change in `StateOnly`, so that it updates the record of the models without trying to touch the data.
 
-Here `Person.home` was a text field and is now a relation to `Place`. `makemigrations` wrote a `ChangeFieldKind` entry. The edited migration:
+(Changing the *kind* of a model or a field is different: it is not allowed at all, and `makemigrations` refuses it before anything is written. Make a new model or field, and move the data to it with a migration like the one below.)
+
+Here `Event.when` was a `datetime` and is now a `str`. Pangloss does not convert a datetime to text, so `makemigrations` wrote an `AlterLiteralType` entry that `migrate` refuses. The edited migration:
 
 ```python
 changes = changes_from_data([
-    # 1. make a link to the Place whose label matches the text, then drop the text
+    # 1. turn the datetime into text
     {'change': 'RunCypher',
-     'note': 'turn the text Person.home into a link to the Place of that name',
-     'query': """
-        MATCH (p:Person), (place:Place)
-        WHERE p.home = place.label
-        CREATE (p)-[:home]->(place)
-        CREATE (place)-[:home_reverse {reverse: true}]->(p)
-     """,
-     'lossy': True,
+     'note': 'store Event.when as ISO text',
+     'query': "MATCH (e:Event) WHERE e.when IS NOT NULL SET e.when = toString(e.when)",
     },
-    {'change': 'RunCypher',
-     'query': "MATCH (p:Person) REMOVE p.home",
-     'lossy': True},
 
     # 2. the entry makemigrations wrote, now wrapped so that it changes the models only
     {'change': 'StateOnly',
      'changes': [
-         {'change': 'ChangeFieldKind', 'model': 'Person', 'name': 'home',
-          'old': 'literal', 'new': 'relation',
-          'definition': { ... exactly as makemigrations wrote it ... }},
+         {'change': 'AlterLiteralType', 'model': 'Event', 'name': 'when',
+          'old': {'type': 'datetime'}, 'new': {'type': 'str'}},
      ]},
 ])
 ```
 
-(This example is illustrative. Check how your own nodes are stored, and try it on a copy.) The pattern is always the same: **data first, then `StateOnly` of the refused change**. If you forget the second part, `makemigrations` will notice that the migrations no longer come to the models and offer the change again.
+(This example is illustrative. Check how your own values are stored, and try it on a copy.) The pattern is always the same: **data first, then `StateOnly` of the refused change**. If you forget the second part, `makemigrations` will notice that the migrations no longer come to the models and offer the change again.
 
 ## Testing hand-written changes
 

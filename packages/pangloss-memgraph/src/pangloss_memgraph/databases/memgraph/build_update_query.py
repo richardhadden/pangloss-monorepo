@@ -19,6 +19,7 @@ import datetime
 import typing
 import uuid
 
+from pangloss_models.model_bases.base_models import fulfillable_labels
 from pangloss_models.model_bases.document import _DocumentUpdateDBBase
 from pangloss_models.model_bases.entity import _EntityUpdateDBBase
 from pangloss_users import current_request_username
@@ -82,6 +83,16 @@ def build_replace_head_query(
     head_id_identifier = params.add(str(instance.id))
     data = get_node_fields_as_writable_dict(instance, is_new=True, is_head_node=True)
     assignments = PropertyAssignments(params, data)
+    # the classes it fulfils now, by what it holds: their labels are put on, and those of the
+    # classes it could fulfil and does not are taken off
+    labels = instance._labels
+    gone = sorted(fulfillable_labels(instance) - set(labels))
+    relabel = "".join(
+        [
+            f"SET head{''.join(':' + label for label in labels)}\n        " if labels else "",
+            f"REMOVE head{''.join(':' + label for label in gone)}\n        " if gone else "",
+        ]
+    )
     return (
         f"""
         MATCH (head:HeadNode {{id: ${head_id_identifier}}})
@@ -97,7 +108,7 @@ def build_replace_head_query(
         FOREACH (edge IN owned_out_edges + owned_in_edges | DELETE edge)
         FOREACH (node IN tree | DETACH DELETE node)
         SET {assignments.set_items("head", replace=True)}
-        RETURN head.id AS id
+        {relabel}RETURN head.id AS id
         """,
         dict(params),
     )
@@ -117,7 +128,7 @@ def build_head_update_query(
     )
     query_object.previous_meta = previous_meta
 
-    node_identifier = Identifier()
+    node_identifier = query_object.params.new_identifier()
     query_object.return_identifier = node_identifier
 
     head_id_identifier = query_object.params.add(str(instance.id))

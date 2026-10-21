@@ -160,7 +160,7 @@ library
 
 A few habits that pay off:
 
-- **Read the list of changes** `makemigrations` prints, especially anything marked `[LOSES DATA]` or `[NEEDS CODE]`. It is a summary of what you are about to do to real data.
+- **Read the list of changes** `makemigrations` prints, especially anything marked `[LOSES DATA]`. It is a summary of what you are about to do to real data.
 - **Make one logical change at a time.** Small migrations are easier to check, to undo, and to review.
 - **Never edit a migration that has been applied** anywhere other than your own machine. Pangloss will refuse (the checksum no longer matches). If you made a mistake, write a new migration that fixes it. A migration that has *not* been applied anywhere yet can be deleted and regenerated freely.
 - **Run `pangloss makemigrations --check` in CI.** It exits with an error if someone changed a model and forgot the migration.

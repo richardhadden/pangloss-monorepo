@@ -10,6 +10,7 @@ from pangloss_models.exceptions import (
     PanglossNotDeletableError,
     PanglossNotDeletedError,
     PanglossNotFoundError,
+    PanglossReadOnlyError,
     PanglossReferenceError,
     PanglossUserDisabledError,
     PanglossUserNotFoundError,
@@ -41,6 +42,7 @@ STATUS_FOR_ERROR: list[tuple[type[Exception], int]] = [
     (PanglossReferenceError, 422),
     (PanglossUserDisabledError, 403),
     (PanglossUserNotFoundError, 403),
+    (PanglossReadOnlyError, 503),
     (PanglossWriteError, 400),
 ]
 
@@ -64,6 +66,8 @@ async def error_handler(request: Request, error: Exception) -> JSONResponse:
         # (what the version is now: to load again, and see what has been changed)
         content["currentVersion"] = error.current_version
         headers["ETag"] = f'"{error.current_version}"'
+    if isinstance(error, PanglossReadOnlyError):
+        headers["Retry-After"] = "30"  # (a migration takes a while: look again soon)
     return JSONResponse(status_code=status_for(error), content=content, headers=headers)
 
 

@@ -30,6 +30,7 @@ from pydantic import (
 )
 from pydantic.alias_generators import to_camel
 
+from pangloss_models.context import propagate_context
 from pangloss_models.model_registry import ModelRegistry
 lazy from pangloss_models.model_bases.entity import (
     _EntityCreateDBBase,
@@ -127,6 +128,8 @@ def labels_for_model(owner: type[_DeclaredClass], metatype: str) -> list[str]:
 
     parent_labels = []
     for c in get_all_parent_classes(owner):
+        if not hasattr(c, "__pydantic_generic_metadata__"):
+            continue  # (`Fulfils[...]`, and the like: not a model, so not a label)
         if (
             model_is_trait(c)
             and issubclass(c, NonHeritableTrait)
@@ -144,7 +147,29 @@ def labels_for_model(owner: type[_DeclaredClass], metatype: str) -> list[str]:
 
 
 def get_labels_for_db_classes(self):
-    return labels_for_model(self._owner, self.__metatype__)
+    """The labels of the node an instance is written as: those of its model and, for each class it
+    fulfils (`Fulfils`, decided by what it holds: see `get_fulfilled_classes`), the labels of that
+    class, before the kind"""
+    labels = labels_for_model(self._owner, self.__metatype__)
+    fulfilled = getattr(self, "_fulfils_classes", None)
+    if not fulfilled:
+        return labels
+    kind = labels.pop()
+    for fulfilled_class in fulfilled:
+        for label in labels_for_model(fulfilled_class, fulfilled_class.__metatype__)[:-1]:
+            if label not in labels:
+                labels.append(label)
+    labels.append(kind)
+    return labels
+
+
+def fulfillable_labels(self) -> set[str]:
+    """Every label that a class this instance could fulfil can give it (so that the labels of a
+    node that no longer fulfils one can be taken off)"""
+    found: set[str] = set()
+    for fulfillable in get_fulfillable_models(self):
+        found.update(labels_for_model(fulfillable, fulfillable.__metatype__))
+    return found
 
 
 class _ActionClass(_BaseObject):
@@ -352,6 +377,41 @@ class ContextLabel(TypedDict):
     contents: NotRequired[list[ContextLabel]]
 
 
+class _InstanceContext:
+    """How the models look at an instance they are about to write, for `propagate_context`"""
+
+    def is_entity(self, node):
+        return isinstance(node, (_EntityCreateDBBase, _EntityUpdateDBBase))
+
+    def is_space(self, node):
+        return isinstance(node, (_SemanticSpaceCreateDBBase, _SemanticSpaceUpdateDBBase))
+
+    def in_context(self, node):
+        return isinstance(
+            node, (_DocumentCreateDBBase, _DocumentUpdateDBBase)
+        ) and node._meta.use_in_semantic_space_label  # type: ignore
+
+    def type_of(self, node):
+        return node.type
+
+    def id_of(self, node):
+        return str(node.id)
+
+    def children(self, node):
+        for field_name in node._meta.fields.relation_fields:
+            if related_item := getattr(node, field_name, None):
+                if isinstance(related_item, list):
+                    for ri in related_item:
+                        if isinstance(ri, (_CreateDBBase, _UpdateDBBase)):
+                            yield ri, True
+                elif isinstance(related_item, (_CreateDBBase, _UpdateDBBase)):
+                    yield related_item, False
+
+    def assign(self, node, semantic_spaces, context_labels):
+        node.semantic_spaces = semantic_spaces
+        node.context_labels = context_labels
+
+
 def recursively_propagate_context_types(
     item: _CreateDBBase | _UpdateDBBase,
     semantic_spaces: list[str],
@@ -359,60 +419,9 @@ def recursively_propagate_context_types(
     parent: _CreateDBBase | _UpdateDBBase | None,
 ):
     """Takes a _CreateDBBase instance and recursively adds type of semantic
-    spaces to each contained type below that semantic space node"""
-
-    # An entity is not part of the document that creates it: it is a context of its
-    # own, whatever semantic space the document puts it in
-    if parent is not None and isinstance(
-        item, (_EntityCreateDBBase, _EntityUpdateDBBase)
-    ):
-        semantic_spaces, context_labels = [], []
-
-    if not isinstance(item, (_SemanticSpaceCreateDBBase, _SemanticSpaceUpdateDBBase)):
-        item.semantic_spaces = [*semantic_spaces]
-        item.context_labels = [*context_labels]
-
-    if isinstance(item, (_SemanticSpaceCreateDBBase, _SemanticSpaceUpdateDBBase)):
-        semantic_spaces.append(item.type)
-        context_labels.append({"type": item.type})
-
-    elif (
-        parent
-        and isinstance(item, (_DocumentCreateDBBase, _DocumentUpdateDBBase))
-        and item._meta.use_in_semantic_space_label  # type: ignore
-    ):
-        if context_labels:
-            if not context_labels[-1].get("contents", None):
-                context_labels[-1]["contents"] = []
-            context_labels[-1]["contents"].append(
-                {"type": item.type, "id": str(item.id)}
-            )
-        else:
-            context_labels.append(
-                {
-                    "type": "#rootcontext",
-                    "contents": [{"type": item.type, "id": str(item.id)}],
-                }
-            )
-
-    for field_name, field_definition in item._meta.fields.relation_fields.items():
-        if related_item := getattr(item, field_name, None):
-            if isinstance(related_item, list):
-                for ri in related_item:
-                    if isinstance(ri, (_CreateDBBase, _UpdateDBBase)):
-                        # If it's a list, we need to deepcopy context_labels so that the multiple
-                        # items in the list do not share the same object and interfere with each
-                        # other
-                        recursively_propagate_context_types(
-                            ri, copy(semantic_spaces), deepcopy(context_labels), item
-                        )
-
-            else:
-                if isinstance(related_item, (_CreateDBBase, _UpdateDBBase)):
-                    recursively_propagate_context_types(
-                        related_item, semantic_spaces, context_labels, item
-                    )
-
+    spaces to each contained type below that semantic space node (see
+    `pangloss_models.context`, which migrations use too)"""
+    propagate_context(item, semantic_spaces, context_labels, parent, _InstanceContext())  # type: ignore[arg-type]
     return item
 
 

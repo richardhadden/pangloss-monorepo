@@ -14,7 +14,7 @@ Everything here is applied in a **single transaction per migration** (with the e
 | Remove a model | All its nodes are deleted, with everything they own (nested documents, embedded objects) and their creation/update records | **lossy** |
 | Rename a model | **Asked** if it is a rename. Nodes are relabelled and their `type` updated (as is the `head_node_type` of what a renamed document holds) | transforming |
 | Add or remove a parent class or trait | The matching label is added to, or taken off, the model's nodes | transforming |
-| Change the kind (an `Entity` becomes a `Document`, or the reverse) | **Refused**: a Document and an Entity are stored differently. Write it by hand ([chapter 6](06-by-hand.md)) | needs code |
+| Change the kind (an `Entity` becomes a `Document`, or the reverse) | **Not allowed**: `makemigrations` refuses. They are stored differently. Keep the kind, or make a new model and move the data | not allowed |
 
 Subclasses carry their parents' labels, so a change made to a model applies wherever it is used, including to subclasses and to documents nested inside other documents.
 
@@ -115,7 +115,7 @@ You can wrap what a relation points to, for example `person: Person` becomes `pe
 | Unwrap it | The nodes are removed and the edges join up again. The wrapper's own fields are lost | **lossy** |
 | Wrap in a **semantic space** | A node for the space is inserted, and the semantic spaces and context labels of everything inside are recomputed | transforming |
 | One reified relation or space for another | Nodes are relabelled; new fields get **asked** values; fields the new one lacks are dropped | transforming |
-| Wrap in a **conjunction** | **Refused, always.** A conjunction has several slots, and nothing says which one an existing relation should fill. Write it by hand ([chapter 6](06-by-hand.md)) | needs code |
+| Wrap in a **conjunction** | **Refused when applied, always.** A conjunction has several slots, and nothing says which one an existing relation should fill. Write it by hand ([chapter 6](06-by-hand.md)) | needs code |
 
 ### Embedded objects
 
@@ -123,7 +123,11 @@ You can wrap what a relation points to, for example `person: Person` becomes `pe
 |------------|--------------|--------|
 | Some literal fields become an embedded object | A node is made for each owner, the values moved into it. **Asked** for the embedded object's other required fields | transforming |
 | An embedded object becomes plain fields | The values are copied out and the node deleted; its other fields are lost | **lossy** |
-| Add an embedded object that is not made of fields that were there | **Refused**: there is nothing to make it from | needs code |
+| Add an embedded object (not made of fields that were there) | A node of it is made for each owner that exists. **Asked** for the values of its required fields. Refused when it could be any of several kinds (which one is not known) | additive |
+
+## `Fulfils`
+
+A class declared `Fulfils[X]` supplies what `X` requires, and a node of it that holds everything `X` needs also carries `X`'s labels. If you add or remove `Fulfils[X]`, or change what `X` requires (or its labels), the labels of the existing nodes are worked out again: a node gets the labels of the classes it fulfils now, and loses those of the classes it no longer does. Nothing is asked, nothing is lost, and the migration can be undone. A node counts as fulfilling `X` if it has a value for each field `X` requires (a property that is set, an edge that is there); a Python validator on one of `X`'s fields is not checked.
 
 ## Indexes and constraints
 
@@ -131,14 +135,15 @@ Pangloss itself needs some indexes and uniqueness constraints (on ids, on user n
 
 ## What is not handled automatically
 
-These are found, shown as `[NEEDS CODE]`, and refused when applied, so nothing is half-done:
+**Not allowed** (`makemigrations` refuses, and says what):
 
-- changing the **kind** of a model or a field (Entity ↔ Document, a plain field ↔ a relation);
+- changing the **kind** of a model (an `Entity` that is a `Document`, or the reverse) or of a field (a plain value that is a relation, and so on). They are stored differently. Keep the kind, or make a new model or field, move the data to it by hand, and remove the old one.
+
+**Found, but refused when applied** (`migrate` stops before changing anything, `--plan` shows them and `--dry-run` says `WOULD FAIL`), so you write them by hand ([chapter 6](06-by-hand.md)):
+
 - wrapping in a **conjunction**;
-- changes involving **`Fulfils`** (the extra labels a node gets for classes it fulfils are decided when it is written and are not recorded);
-- adding an **embedded object** from nothing.
-
-[Chapter 6](06-by-hand.md) shows how to do each by hand.
+- adding an **embedded object** that could be of several kinds (which one to make is not known);
+- a **type conversion** Pangloss does not know (see the table above).
 
 ## Editing the answers in the file
 

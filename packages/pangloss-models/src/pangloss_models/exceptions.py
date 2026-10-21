@@ -62,6 +62,10 @@ class PanglossUserDisabledError(PanglossWriteError):
     """The user doing the write has been disabled"""
 
 
+class PanglossReadOnlyError(PanglossWriteError):
+    """The database is being migrated: it can be read, and not written to, until that is done"""
+
+
 class PanglossNotDeletableError(PanglossWriteError):
     """Only head documents can be deleted: this is part of another document"""
 

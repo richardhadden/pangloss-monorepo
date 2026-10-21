@@ -20,9 +20,12 @@ from pangloss_cli.project import (
     load_project,
 )
 from pangloss_cli.migrations import (
+    backups,
     check_data_command,
+    cleanmigrations,
     makemigrations,
     migrate,
+    restore,
     showmigrations,
     squashmigrations,
 )
@@ -262,6 +265,9 @@ def build_app(
     app.command("migrate")(migrate)
     app.command("showmigrations")(showmigrations)
     app.command("squashmigrations")(squashmigrations)
+    app.command("cleanmigrations")(cleanmigrations)
+    app.command("backups")(backups)
+    app.command("restore")(restore)
     app.command("check-data")(check_data_command)
     app.command("new-project")(new_project)
     app.command("new-app")(new_app)

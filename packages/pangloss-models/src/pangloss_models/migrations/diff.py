@@ -17,6 +17,7 @@ nothing is left to ask.
 """
 
 import json
+import copy
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 from typing import Any
@@ -51,6 +52,7 @@ from pangloss_models.migrations.changes import (
     DeleteModel,
     LiteralToAnnotatedValue,
     PossibleRename,
+    RecomputeFulfils,
     RemoveConstraint,
     RemoveEnum,
     RemoveIndex,
@@ -147,12 +149,33 @@ def diff(
     diff_enums(old, new, result)
     diff_structure(old, new, result)
     diff_models(old, new, result)
+    diff_fulfils(old, new, result)
 
     result.questions = [
         q for q in possible_renames(old, new) if q not in declined
     ]
     result.changes.sort(key=lambda change: change.phase)  # (stable: keeps the order found)
     return result
+
+
+# --- which classes a model fulfils ------------------------------------------------------------
+
+
+def diff_fulfils(old: dict, new: dict, result: DiffResult) -> None:
+    """A model whose fulfilment changed (what it fulfils, which of its fields stand in, what the
+    classes require, their labels) has its nodes' labels worked out again"""
+    from pangloss_models.migrations.fulfils import fulfilment
+
+    for name, model in new["models"].items():
+        if name not in old["models"]:
+            continue  # (no nodes yet)
+        before, after = fulfilment(old, name), fulfilment(new, name)
+        if before != after or old["models"][name].get("fulfils", []) != model.get("fulfils", []):
+            result.changes.append(
+                RecomputeFulfils(
+                    model=name, fulfils=copy.deepcopy(model.get("fulfils", [])), before=before, after=after
+                )
+            )
 
 
 # --- the database's structure ------------------------------------------------------------------

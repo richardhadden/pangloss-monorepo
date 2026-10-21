@@ -37,31 +37,14 @@ What is outstanding, as of the version check on updates (after CORS). What works
 
 ## Database migrations
 
-What works is in [docs/migrations.md](docs/migrations.md) (section 12); how to use it is in [guide/](guide/README.md). Still to do:
+Built, and documented in [docs/migrations.md](docs/migrations.md) (section 12) and the [user guide](guide/README.md). What is left:
 
-> **Paused (2026-10-21), to resume.** Done so far: files, planner, apply, dry run, check-data, batches (literals, wrapping, relation rename/remove), backups, going back, squashing, hand-written changes, indexes and constraints as changes, models across apps, `makemigrations <app>`. Enums are now stored as the member's value (native Memgraph enums were dropped on 2026-10-21; the enum limitations are gone). Next: the remaining batch cases, `Fulfils`, kind changes, a read-only mode.
+- [ ] **Decide: `keep=True`** (the spec's way to save what a lossy change would remove, so that going back can restore it). Not built: `--backup` is how to keep what a migration would lose. Build it (a `PGKept` node per removed value, restored by the reverse `AddField`) only if backups prove too coarse.
+- [ ] **`check-data` reads a node at a time** (~1.5 ms a node, several read transactions each). A batched read (many nodes in one query) is a change to the read layer (`get`), not to migrations; reading in parallel was measured and is not faster against a local Memgraph.
+- [ ] `Fulfils`: a migration decides that a node fulfils a class by whether it has what the class requires (a property, an edge); a write validates against the class's `CreateDB`, so a Python validator on a field of the class is not run by the migration.
+- [ ] A cycle between apps that cannot be split (neither a field nor a parent class can be added later) is an error that says so: put the models in one app.
 
-**Commands and safety**
-- [ ] Backups: restoring (`RECOVER SNAPSHOT`, not tried), keeping a snapshot past Memgraph's retention count (3 by default; a later snapshot removes the oldest), and one that is copied off the server.
-- [ ] Going backwards, what is left: `AlterModelKind` and `ChangeFieldKind` cannot be undone (they were done by hand); undoing is always one transaction a migration (no batches, no going on from a stop); values that a change lost are not brought back (`keep=True` to save what would be lost, as the spec has it, is not done); a `--backwards` for a migration that failed or is `running`.
-- [ ] Going backwards needs the answers (a value for a field that comes back) asked when it runs; they are not kept anywhere, and `--plan` / `--dry-run` do not ask.
-- [ ] Squashing, what is left: a squashed migration cannot itself be squashed (delete its originals, squash from the ones after); only a run that begins the app is made smaller than its changes put together (a run in the middle keeps them all, since data is there); `makemigrations` and the planner do not know of `replaces` beyond the numbering; no command deletes the originals once every database has applied them.
-- [ ] A read-only mode while a migration runs (the lock only stops another `migrate`); today the API is stopped, or `MIGRATION_CHECK` stops it starting.
-
-**Changes that cannot be applied yet** (they are found, and refused with `PanglossMigrationNotSupported`). Wrapping in a conjunction is not on this list: a conjunction has several slots and nothing says which one an existing node fills, so it is always written by hand (`RunCypher` / `RunPython`, then `StateOnly`).
-- [ ] A change of the kind of a model (`AlterModelKind`: Entity to Document and so on) and of the kind of a field (`ChangeFieldKind`), and adding an embedded object that is not made of literals that were there.
-- [ ] `Fulfils`: the labels a node gets for the classes it fulfils are decided when it is written and are not in the snapshot.
-- [ ] Apps: a library app's models that a project's refer to are not tried (the dependency on its migrations is made as for any app); the order of the layers of an app is by name, not by what is cheapest; a cycle that runs through a model's parents or labels (not its fields) is still refused.
-
-**Batches and speed**
-- [ ] Batches (`--batch-size`) for the changes that are made at once now: wrapping in a semantic space, unwrapping, `LiteralsToEmbedded`, and changes to the values of an enum (`AlterEnumMemberValue`, `RemoveEnumMember`).
-- [ ] `check-data` reads one node at a time (~1.5 ms a node, more for large documents). Reading several at once (`--parallel`) was **slower** against a local Memgraph (300 nodes: 0.48 s, 0.89 s with 8): the time is in building the models, not in waiting. Left as an option (default 1); worth measuring with a remote database, and `pydantic` model building is the thing to look at.
-- [ ] `migrate --dry-run` on a large database runs everything in one transaction.
-- [ ] **Writes are planned afresh each time**: the queries that write build parameter names for each call, so Memgraph plans each (a create is ~10 ms, a read now 1 to 2). Fixed parameter names (or a query shape per model) would make creates and updates faster. See "Performance" in [docs/memgraph.md](docs/memgraph.md).
-
-**Code to tidy**
-- [ ] `propagate_context` (`migrations/operations.py`) is still a copy of `recursively_propagate_context_types` (`base_models.py`). `test_migrations_context.py` checks that they agree (working contexts out again for a document the models wrote changes nothing, over spaces inside spaces, nested documents in lists and singly); a single function used by both would be better.
-- [ ] The order of the entries of a context label follows the order the edges were made in.
+The limits that are by design (a squash in the middle of an app keeps all its changes, `--dry-run` is one transaction, a backup is on the server) are in [docs/migrations.md](docs/migrations.md), "Limits that are not going to change".
 
 ## The interface
 

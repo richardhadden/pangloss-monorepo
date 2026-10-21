@@ -2913,3 +2913,37 @@ async def test_a_stored_value_that_is_not_a_member_cannot_be_read(db_driver, cle
 
     with pytest.raises(ValidationError, match="colour"):
         await Statement.get(id=saved.id)
+
+
+@no_type_check
+async def test_a_write_of_the_same_shape_is_the_same_query_text(db_driver, clear_database):
+    """Memgraph keeps the plan of a query by its text. Names for the variables and parameters made at
+    random planned every write afresh; they are counted, so the text depends only on the shape"""
+    import uuid
+
+    from pangloss_memgraph.databases.memgraph.build_create_query import build_head_create_query
+
+    class Person(Entity):
+        pass
+
+    class Action(Document):
+        text: str
+
+    class Statement(Document):
+        who: Person
+        action: Action
+
+    initialise()
+
+    def build(label: str):
+        instance = Statement.Create(
+            label=label,
+            who={"type": "Person", "id": uuid.uuid4()},
+            action={"type": "Action", "label": f"A {label}", "text": label},
+        )._to_db_model()
+        return build_head_create_query(instance)
+
+    first, second = build("one"), build("two")
+    assert first.to_query_string() == second.to_query_string()
+    assert dict(first.params) != dict(second.params)  # (what differs is in the parameters)
+    assert all(name.startswith("x") and name[1:].isdigit() for name in first.params)

@@ -10,14 +10,19 @@ Ts = TypeVarTuple("Ts")
 
 
 class Fulfils(Generic[*Ts]):
-    _fulfiling_types: tuple
+    """`Fulfils[A, B]` as a base class: the class supplies what `A` and `B` require.
+
+    Each `Fulfils[...]` is a class of its own, holding the classes it was given in its own
+    `_fulfiling_types` (not on `Fulfils`, which every class that fulfils anything would share)."""
+
+    _fulfiling_types: tuple = ()
 
     @classmethod
     def __class_getitem__(cls, typs):
         if not isinstance(typs, tuple):
             typs = (typs,)
-        cls._fulfiling_types = typs
-        return cls
+        names = ", ".join(getattr(t, "__name__", str(t)) for t in typs)
+        return type(f"Fulfils[{names}]", (cls,), {"_fulfiling_types": typs})
 
 
 class ViaEdge[Target, Model: EdgeModel](BaseModel):

@@ -424,7 +424,7 @@ A migration is a list of operations; `RunCypher` and `RunPython` (which gets the
 
 A failed non-atomic migration is `failed`, and the next `migrate` **resumes** it. An atomic one has changed nothing.
 
-While it runs, the API is not to be used: `pangloss run` refuses to start with pending migrations (3.3), and a running migration holds the lock; there is a setting to put the API in read-only. Anything that writes during a structural change would write nodes in the old shape.
+While it runs the database is **read-only**: the lock a running `migrate` holds is checked in the transaction of every write (`Database.write_transaction`), and a write is refused with `PanglossReadOnlyError` (a `PanglossWriteError`; the API answers `503` with `Retry-After`). Reads are as usual. `pangloss run` also refuses to start with pending migrations (3.3). A write already running when the lock is taken is not waited for.
 
 ### 7.4 Safety
 
@@ -465,7 +465,7 @@ Each phase is usable by itself.
 - ~~**Rename detection**~~ Decided: always asked on the command line, never inferred (4.2).
 - **Field identity beyond the name**: a stable id in the declaration (`Field(id="...")`) would make renames exact, at the cost of noise in the models.
 - **How lossy is allowed by default**: `--yes` per operation, or one flag per run?
-- **Read-only mode** while migrating: needed, or is stopping the API enough?
+- ~~**Read-only mode** while migrating~~ Decided and built: every write is refused while the lock is held (7.3).
 - **Multiple databases / environments** whose migrations diverge (a branch that migrates the demo database differently): Django's merge migrations, or a linear history only?
 - **Memgraph limits** — now tested (11): edge types are replaced (not altered), DDL is outside transactions. A snapshot (`--backup`) can be taken from a client. Still to check: the size of a transaction on large graphs.
 - **History**: `PGUpdate` records say who and when but not what. If a content history is ever kept, migrations would have to rewrite it too.
@@ -536,7 +536,8 @@ The property that makes it complete is tested on every case in the diff tests: *
 | `AlterModelLabels`, `RenameModel`, `DeleteModel` | labels added or removed; relabelled (and `type`, `head_node_type`, and the context labels of what a renamed document holds); the nodes, what they own, and their creation and update records |
 | `CreateModel`, `AlterModelOption`, `AlterAnnotatedValue`, `AlterEmbedded` | nothing to do to the data |
 | `RunCypher`, `RunPython`, `StateOnly` | **By hand.** `RunCypher(query, parameters, lossy, affects, note)` runs a query in the migration's transaction (not DDL: Memgraph refuses it there). `RunPython(function, ...)` calls `function(tx, state)` (it may be `async`; given as `"package.module:name"` or as the function, which is kept as its name, so the checksum does not notice an edit to its body) with `state` the snapshot before it. Neither changes what the models are. `StateOnly(changes=(...))` does the opposite: the changes are made to the snapshot only. So a `[NEEDS CODE]` change is written as a `RunCypher` / `RunPython` that moves the data, then a `StateOnly` of the refused change. `lossy=True` makes the confirmation before applying apply to it; `affects` names the models to read afterwards (all, if not given). Work in `--dry-run` (counted) and in batches (each as one transaction) |
-| `AlterModelKind`, `ChangeFieldKind`, `AddField` of an embedded object that is not made of literals that were there, wrapping in a conjunction (it has several slots to fill: by hand, always) | refused with `PanglossMigrationNotSupported`: to be written by hand |
+| `AddField` of an embedded object that is not made of literals that were there, wrapping in a conjunction (it has several slots to fill: by hand, always) | refused with `PanglossMigrationNotSupported` when applied: to be written by hand |
+| `AlterModelKind`, `ChangeFieldKind` | **not allowed**: the planner refuses them (`refuse_kind_changes`) before anything is written; `diff` still finds them, so that it can say what changed |
 
 Tested in `pangloss-memgraph/tests/test_migrations_literals.py` and `test_migrations_relations.py`: data written with the old models, migrated, and read with the new ones. Memgraph found three things the specification had not:
 
@@ -563,8 +564,7 @@ Tried for real against Memgraph (a project of its own): `makemigrations` writes 
 
 **Not done**
 
-- Batches (below) do not cover wrapping in a semantic space, unwrapping, `LiteralsToEmbedded` or a change to the values of an enum; those are made at once, in a transaction of their own.
-- `Fulfils` (the labels a node gets for the classes it fulfils are decided when it is written, and are not in the snapshot); the `contents` order of a context label, which depends on the order the edges were made in.
+- the `contents` order of a context label, which depends on the order the edges were made in.
 
 **Also done: the start-up check** (`migrations/startup.py`, called from the lifespan of `pangloss-api`). If a project has migrations, the server does not start (`MIGRATION_CHECK = "error"`; `"warn"` starts and warns, `"off"` does not look) when migrations have not been applied, one was changed or lost after it was applied, or the models are not what the migrations come to. Tried on the demo: it starts; with its migration marked not applied it refuses and says `pangloss migrate`.
 
@@ -579,7 +579,7 @@ Tried for real against Memgraph (a project of its own): `makemigrations` writes 
 
 **Also done: resumable batches.** `pangloss migrate --batch-size N`, or `atomic = False` in a migration file (batches of 5000), makes a migration in batches, each its own transaction (`apply_changes_in_batches`):
 
-- a change to a literal field (add, remove, rename, make not null, change the type or the items' type, wrap in or take out of an annotated value) and a change of labels are made **`N` nodes at a time, in the order of their ids**, and a wrapped relation (a reified relation) **`N` relations at a time** (those done are no longer there to be wrapped, so the next batch finds the next); everything else is made at once, in a transaction of its own, and enum changes on their own as before;
+- a change to a literal field (add, remove, rename, make not null, change the type or the items' type, wrap in or take out of an annotated value) and a change of labels are made **`N` nodes at a time, in the order of their ids**, and a wrapped relation (a reified relation) **`N` relations at a time** (those done are no longer there to be wrapped, so the next batch finds the next); the other changes that touch data are made `N` of what is left at a time (see "batches for every change that touches data" below); an index or constraint is made on its own, outside a transaction;
 - **how far it has got is saved in the same transaction as each batch** (`cursor` on the `PGMigration` record: the changes before `change` are done, and `change` is done for ids up to `after`); a run that stops or fails leaves the record `running` or `failed` with it, and the next `migrate` goes on from there (`going on from change 3`), after `--unlock` if the lock was left;
 - what must hold before anything is changed is checked **once, before the first batch**: that every value converts (or `on_failure` says what to do), that the answers a change needs are given;
 - the result is the same as for the whole migration (the tests run the same changes both ways, and a wrapped relation is what the new models write, and wrapped once, even when stopped half way through).
@@ -594,7 +594,7 @@ A batch that is retried by the driver after a transient error runs again, so a c
 - **Every reversal is checked**: applied to the snapshot after the migration it must give the snapshot before, or the migration is refused as irreversible. The diff tests check it for every case that finds changes.
 - **`lossy`**: a reversal is lossy if the migration's changes were (a removed field's values do not come back), if undoing removes what the migration added (the values written since), or if a conversion may not return the same value. It needs `--backup` or `--no-backup`, and `--yes` or a confirmation, as going forwards does.
 - **Answers**: what an inverse needs that only a person can give (a value for a required field that comes back, the fields of a wrapper that comes back) is asked when it runs. One that cannot be asked fails.
-- **Cannot be undone**: `AlterModelKind` and `ChangeFieldKind` (done by hand); a `RunCypher` / `RunPython` unless it has `reverse_query` / `reverse_function`. Each says which change and why.
+- **Cannot be undone**: a `RunCypher` / `RunPython` unless it has `reverse_query` / `reverse_function`. Each says which change and why.
 - A migration is undone in **one transaction** (index and constraint changes aside, which are not in one): one that fails has changed nothing and stays recorded as applied. Its record is removed when it is undone, so it is pending again. Tested against Memgraph: a renamed relation, a wrapped relation (the graph is what it was), a converted type, with what was written since.
 
 **Also done: squashing** (`files.squash`, `files.choose`, `pangloss squashmigrations`).
@@ -625,8 +625,46 @@ A batch that is retried by the driver after a transient error runs again, so a c
 
 **Also done: enums stored as values** (2026-10-21). An `Enum` field is the member's value, a plain property (see 5.6 for why). The write path converts a member to its value (`convert_type_for_writing`) and reads need no conversion (the models validate the value as they do one from the API); `read_enums.py`, `ToEnum`, `CREATE ENUM` and `initialise_database`'s enums are gone. The values of an enum must be strings or numbers (checked at `initialise()`). In migrations the enum changes became data changes: a member renamed with the same value is a rename of the name only (not asked, nothing to do); a changed value is `AlterEnumMemberValue`; `RemoveEnumMember` moves the values; `RenameEnum` is the name only, and so is reversible; the three enum conversions are `str` to and from an enum and one enum to another. Enum changes can be tried in `--dry-run`, and the only changes made outside a transaction are indexes and constraints. No old data is converted: the demo's database is repopulated.
 
+**Also done: batches for every change that touches data.** What was left to make at once (wrapping in a semantic space, unwrapping, a wrapper changed for another, literals to and from an embedded object, a model renamed or deleted, a reverse name changed, a list made a single value, a relation narrowed, the parent fields a field narrows, properties on edges, the values of an enum) is now made in batches too, as `"edges"` batches (`batch_kind`, `apply_edges`): a call does `N` of what is left and returns how many, and **what is done is no longer there to be found** (the old label, the old property, the edge to the wrapper), so the next call finds the next, a stop is gone on from by calling again, and a change that is repeated is harmless. A few take several steps (a model rename: relabel, then `type`, then `head_node_type`, then the contexts): a call does the first step that has anything left and says there is more (returns `N`) until nothing is. **Tested by equivalence** (`test_migration_batch_equivalence.py`): each case is run whole, in batches of 2 (and checked to be several), and in batches with the second batch failing and the migration run again from the start; the three graphs (every node's labels, properties and context, every edge) are the same. What is still made in one transaction: hand-written changes (`RunCypher`, `RunPython`), and the recomputing of the contexts of every document that a rename or a semantic-space change touched (it is the last step, over all of them).
+
+**Also done: `Fulfils`** (`fulfils.py`, `RecomputeFulfils`). Finding that it needed writes first: `Fulfils[X]` was one shared class (so with two fulfilling classes the last one won for all), `labels_for_model` raised on it (so a class that fulfils could not be written to Memgraph), and the labels of a fulfilled class were never written, by create or by update. Now:
+
+- `Fulfils[X]` is a class of its own for each use, and `_labels` of an instance includes the labels of the classes it fulfils (`get_labels_for_db_classes`), so a create, a nested document and an update all give them; an update puts the labels of what the head now fulfils on it and takes off those of the classes it could fulfil and no longer does (`build_replace_head_query`).
+- The snapshot has `fulfils` for a model that fulfils anything: `[{"class": "X", "fields": {"x_field": "own_field"}}]` (which of `X`'s fields the model's own stand in for); a model that fulfils nothing has no such key, so existing states are unchanged. A model's subclasses have it too (they fulfil what it does).
+- `RecomputeFulfils(model, fulfils, before, after)` is found for a model whose fulfilment changed: what it fulfils, which fields stand in, what a fulfilled class requires, or its labels. `before` and `after` are resolved from the snapshots, for each class its `labels` and what a node `needs` (a `property` or an `edge`, or `never`), so the change needs nothing but itself. It is the last change of a migration, and it is its own inverse (`before` and `after` swapped).
+- Applied, to the nodes whose `type` is exactly the model (a subclass has its own change): each label the classes give is looked at by itself, and a node has it if it is one of the model's own or it fulfils a class that gives it (so a label two classes give is not taken off by one and put back by the other). Done `N` at a time, and what is done is not found again, so it is in batches (tested whole, in batches, and after a stop, as the others).
+- Tested against native writes: after migrating, a node has the labels a new write gives it, for adding `Fulfils`, removing it, a fulfilled class that requires more, and a subclass. What a node needs is a presence check (a property that is not null, an edge): a Python validator on a field of the fulfilled class is not run.
+
+**Also done: the kind of a model or a field cannot be changed** (decided). An `Entity` that becomes a `Document`, or a plain field that becomes a relation, is stored differently, and nothing can be made of one from the other. `makemigrations` (and `--check`) fail with `PanglossMigrationNotSupported` listing them and saying to keep the kind or to make a new model or field and move the data by hand. The change classes remain (`diff` reports them), and one in a hand-written file is refused when applied.
+
+**Also done: read-only while migrating.** `Database.write_transaction` checks for the `PGMigrationLock` in the transaction of the write, before the write: held means `PanglossReadOnlyError`. Everything that writes goes through it, so the API, scripts and a shell are all refused, and reads are not. The API maps it to `503` with `Retry-After: 30`. A lock left by a killed run keeps writes refused until `migrate --unlock`; `--plan`, `--dry-run` and `--check` take no lock. Cost: one small query a write. A `RunPython` has to write through `tx`.
+
+**Also done: the context recompute after a model rename is in batches.** The documents to work out again are those with a node that still has the old name in its semantic spaces or context labels; once done they do not (and a check that they do not stops it from never ending), so each call takes the next `N`. Wrapping and unwrapping in a semantic space already did their own documents each batch. Nothing that touches data is made in one go now except what is written by hand.
+
+**Also done: the migration TODO list.** Written after the work above; what each was, and what came of it.
+
+- **One algorithm for the context.** `pangloss_models.context.propagate_context` is the one function the models (for an instance they write) and a migration (for stored nodes) use, each through a small view of its nodes (`ContextView`). `test_migrations_context.py` checks that the two views agree.
+- **Writes are planned once.** The names in a write query are counted (`x1`, `x2`...) so that the text of a query depends on its shape only; Memgraph keeps plans by text. An update went from ~23 to ~15 ms; a create is unchanged at ~11 ms.
+- **A new embedded object** (`AddField` of an embedded object, with the values it requires asked as `default.<field>`): a node of it for each owner, as for literals that become one, with no literals to move (`add_embedded`). Refused only when the field can be any of several kinds. In batches.
+- **Going back**: in batches (`--batch-size`, or the migration's `batch_size` / `atomic = False`; one that stops is run again from the start, which is harmless); a migration that `failed` or was left `running` is undone like an applied one (`begun`); `--plan` lists what will be asked and does not ask, and `--dry-run` asks.
+- **Squashing a squash.** A run may include a squashed migration. The new one's `replaces` is everything: the old one and what went into it. A database's record is read both ways (`expanded`): that a squashed migration was applied means its originals were, and that all its originals were means it was. So a database that had the old squash, the originals, or neither uses the right one. The name begins at the first original (`0001_squashed_0010_...`).
+- **`pangloss cleanmigrations`** deletes the files a squashed migration replaces. It looks at the database it is pointed at only (it keeps the originals if that one is part way through them), and asks.
+- **Backups**: `pangloss backups` lists the server's snapshots and `pangloss restore PATH` puts the database back to one (`RECOVER SNAPSHOT ... FORCE`, only for a snapshot the server lists). **Found when trying it:** a recovered snapshot has the text indexes but not their files, so every write to a node they cover failed; `restore` makes them again. And `--backup` says how long the snapshot will last from the server's settings (`SHOW CONFIG`): Memgraph's own timer (300 s) and retention (3) can remove a backup in about 15 minutes.
+- **Apps**: the model of a cycle through inheritance is split too (a model is made without the parent from another new app, and given its `parent` and label in the second step, with `AlterModelOption` and `AlterModelLabels`), and a cycle that cannot be split is an error, not an endless loop (the loop was found to be one, writing it). A model that fulfils a class of another app depends on that app (tested with two apps).
+
+**Limits that are not going to change** (they were on the list):
+
+- A squashed run in the middle of an app keeps all its changes: data may exist at that point, and what was done to it must still be done.
+- `--dry-run` is one transaction as large as the migration. It is a rollback of everything, and that is what it is.
+- The layers of an app made for a cycle are numbered in the order they are made, not by what is cheapest: they are two, and cheapness does not come into it.
+- The order of the entries of a context label follows the order the edges were made in, which for a written document is the order of its list; the migration reads them in that order, so they agree.
+- A backup cannot be copied off the server by Pangloss: the file is on the server.
+- `check-data` reads a node at a time because the models' `get` does (several transactions each). A batched read is a change to the read layer, not to migrations; `--parallel` was measured and is not faster against a local database.
+- A migration decides that a node fulfils a class by what it has, not by running the class's Python validators.
+- `keep=True` (saving what a lossy change would remove, so that going back can restore it) is not built: `--backup` is how to keep what a migration would lose.
+
 **Next**
 
 Everything that is left is listed in [`TODO.md`](../TODO.md), under "Database migrations" (commands and safety, changes that cannot be applied yet, batches and speed, code to tidy). In order of use:
 
-1. See `TODO.md`: the changes that cannot be applied yet (`Fulfils`, kind changes...), batches for the changes made at once, and tidying.
+1. See `TODO.md`: what cannot be applied yet, speed, and tidying.

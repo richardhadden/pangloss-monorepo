@@ -45,6 +45,23 @@ def required_literals(model: dict[str, Any]) -> list[dict[str, Any]]:
 
 def answers_needed(change: c.Change, state: dict[str, Any]) -> list[Question]:
     """The questions for a change, given the snapshot before it"""
+    if (
+        isinstance(change, c.AddField)
+        and change.definition.get("kind") == "embedded"
+        and not change.from_narrowing
+    ):
+        types = change.definition.get("types") or [change.definition.get("model")]
+        embedded = state["models"].get(types[0], {}) if len(types) == 1 else {}
+        have = change.default if isinstance(change.default, dict) else {}
+        return [
+            Question(
+                f"default.{f['name']}",
+                f"{types[0]}.{f['name']} for the {change.model} that exist (each is given a {types[0]})",
+                field_descriptor(f),
+            )
+            for f in required_literals(embedded)
+            if f["name"] not in have
+        ]
     if isinstance(change, c.AddField) and change.needs_value and not change.from_narrowing:
         if change.default is None and change.definition["kind"] != "list":
             return [

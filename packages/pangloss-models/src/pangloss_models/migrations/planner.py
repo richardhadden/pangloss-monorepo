@@ -15,7 +15,7 @@ import json
 from dataclasses import dataclass, field
 from typing import Any, Iterable
 
-from pangloss_models.exceptions import PanglossMigrationError
+from pangloss_models.exceptions import PanglossMigrationError, PanglossMigrationNotSupported
 from pangloss_models.migrations import changes as c
 from pangloss_models.migrations.diff import diff, needs_value
 from pangloss_models.migrations.files import (
@@ -128,6 +128,18 @@ def mentioned(change: c.Change, names: Iterable[str]) -> set[str]:
     return {name for name in names if f'"{name}"' in text}
 
 
+def refuse_kind_changes(changes: list[c.Change]) -> None:
+    """A model or a field that is another kind (an Entity that is a Document, a plain field that is a
+    relation) is stored differently, and nothing can be made of it: it is not allowed."""
+    refused = [ch for ch in changes if isinstance(ch, (c.AlterModelKind, c.ChangeFieldKind))]
+    if refused:
+        raise PanglossMigrationNotSupported(
+            "Changing the kind of a model or a field is not supported:\n  "
+            + "\n  ".join(ch.describe() for ch in refused)
+            + "\nKeep its kind, or make a new model or field and move the data to it."
+        )
+
+
 def plan(
     graph: MigrationGraph,
     new: dict[str, Any],
@@ -146,6 +158,7 @@ def plan(
     if not result.changes or not result.is_final:
         return plan_
 
+    refuse_kind_changes(result.changes)
     changes = answer(result.changes, old) if answer else result.changes
     plan_.changes = changes
     plan_.migrations = split(graph, old, new, changes, apps, name)
@@ -274,8 +287,17 @@ def layers_of(
         cyclic = sorted(cyclic_apps(first, created, names))
         if not cyclic:
             break
-        app = cyclic[0]
-        first[app], second[app] = split_app(first[app], app, created)
+        for app in cyclic:
+            moved_first, moved_second = split_app(first[app], app, created)
+            if moved_second:
+                break
+        else:
+            raise PanglossMigrationError(
+                "The new models of these apps need each other, and not by a field or a parent class that "
+                f"can be added later: {', '.join(cyclic)}. Put them in one app, or write the migrations by hand"
+            )
+        first[app] = moved_first
+        second[app] = second.get(app, []) + moved_second
     layers: dict[tuple[str, int], list[c.Change]] = {(app, 0): group for app, group in first.items()}
     layers.update({(app, 1): group for app, group in second.items() if group})
     return layers
@@ -292,11 +314,26 @@ def split_app(group: list[c.Change], app: str, created: dict[str, str]) -> tuple
             kept, moved = [], []
             for entry in change.definition.get("fields", []):
                 (moved if mentioned_in(entry, others) else kept).append(entry)
+            # (a parent class that is another app's new model is a label, and the `parent`: given once
+            # it is there)
+            own_labels = [l for l in change.definition.get("labels", []) if l not in others]
+            parent_labels = [l for l in change.definition.get("labels", []) if l in others]
+            parent = change.definition.get("parent")
+            late_parent = parent if parent in others else None
+            definition = {**change.definition, "fields": kept, "labels": own_labels}
+            if late_parent:
+                definition["parent"] = None
             first.append(
-                dataclasses.replace(change, definition={**change.definition, "fields": kept})
-                if moved
+                dataclasses.replace(change, definition=definition)
+                if moved or parent_labels or late_parent
                 else change
             )
+            if parent_labels:
+                second.append(c.AlterModelLabels(model=change.model, added=parent_labels))
+            if late_parent:
+                second.append(
+                    c.AlterModelOption(model=change.model, option="parent", old=None, new=late_parent)
+                )
             second += [
                 c.AddField(
                     model=change.model,

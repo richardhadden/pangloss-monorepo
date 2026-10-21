@@ -68,7 +68,9 @@ Every change has a safety level, which `makemigrations` and `migrate` show you:
 | safe / additive | nothing existing is touched, or only new things are made | a new model; a new optional field |
 | transforming | existing data is rewritten, but nothing is lost | a rename; `int` becomes `str`; wrapping a relation |
 | **lossy** | information is removed and cannot be brought back | removing a field; removing a model; unwrapping a relation |
-| **needs code** | too ambiguous to guess; you write it ([chapter 6](06-by-hand.md)) | an Entity becoming a Document |
+| **by hand** | Pangloss cannot do it: `migrate` stops (and `--dry-run` says so) and you write it ([chapter 6](06-by-hand.md)) | wrapping in a conjunction; a type conversion it does not know |
+
+One thing is **not allowed at all**: changing the **kind** of a model (an `Entity` that becomes a `Document`, or the reverse) or of a field (a plain value that becomes a relation). They are stored differently and nothing can be made of one from the other. `makemigrations` refuses, and says so: keep the kind, or make a new model or field and move the data to it.
 
 Lossy changes are marked **`[LOSES DATA]`** everywhere you see them, and `migrate` will not apply one until you have said how you are protecting yourself (a backup, or `--no-backup`) and confirmed.
 

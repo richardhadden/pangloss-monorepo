@@ -78,9 +78,23 @@ Backup: /var/lib/memgraph/snapshots/20261021040143118268_timestamp_405218
 Know what this is:
 
 - The snapshot is **Memgraph's own**, written on the **server** (not on the machine you ran `pangloss` from).
-- Memgraph keeps only the newest few snapshots (3 by default, `--storage-snapshot-retention-count`). A later snapshot, including its own automatic ones, can remove yours. **If it must be kept, copy it away.**
-- Pangloss does **not** restore. To go back to a snapshot, use Memgraph's own tools (see Memgraph's documentation on snapshots and recovery).
+- Memgraph keeps only the newest few snapshots (3 by default, `--storage-snapshot-retention-count`), and may make its own on a timer (every 300 s by default in the container), each of which pushes the oldest out. So a backup can be gone **within minutes**. Pangloss says how long yours lasts, from the server's own settings:
+
+  ```
+  Memgraph makes a snapshot every 300 s and keeps 3: this one is removed in about 15 minutes. Raise `--storage-snapshot-retention-count`, or copy it from the server
+  ```
+
+  Raise the retention (or switch the timer off) on the Memgraph server if a migration will run longer than that, and copy the file off the server if it must be kept for good: it can only be copied from the server itself.
 - If taking the snapshot fails, nothing is applied.
+
+### Looking at backups, and going back to one
+
+```bash
+pangloss backups                       # the snapshots the server has, newest first
+pangloss restore /var/lib/memgraph/snapshots/2026…   # put the database back to one
+```
+
+**`restore` replaces everything in the database with what the snapshot has.** Data written since is lost, and so is the record of migrations since (so the database is where the snapshot was: run `pangloss showmigrations`, and `pangloss migrate` with the code that goes with it). It asks first (`--yes` does not). Only a snapshot the server lists can be restored. Afterwards Pangloss makes the database's text indexes again: a recovered snapshot has them but not their files, and without that nothing could be written.
 
 A migration with a `[LOSES DATA]` change *requires* you to choose one of the two flags. There is no default, so that "I didn't think about it" is not an option. `--no-backup` is for when you have your own arrangements (a database copy, a cloud snapshot) and want to be explicit about it.
 
@@ -115,15 +129,15 @@ Make sure no migration really is running, then:
 pangloss migrate --unlock
 ```
 
-### Keep writers out
+### Read-only while it runs
 
-The lock only stops another `migrate`. **Nothing stops your application writing while a migration runs**, and a write during a structural change would store data in the old shape. For a migration that matters:
+While `migrate` runs it holds a lock in the database, and **while the lock is held nothing can be written**: every write (through the API, a script, or the models in a shell) is refused, and everything can still be read. The check is made inside the transaction of each write, so it holds for anything that writes through Pangloss.
 
-- stop the API (`MIGRATION_CHECK = "error"` already stops it *starting* with migrations pending), or put it behind a maintenance page;
-- run the migration;
-- start the API again.
-
-A read-only mode while migrating is not available yet.
+- Through the API a refused write is answered with **`503 Service Unavailable`**, `Retry-After: 30`, and `The database is being migrated: it can be read, and not written to, until that is done`. Reads go on as usual.
+- A write that was already running when the lock was taken is not waited for. For a migration that matters, stop the writers (or wait for quiet) before you start.
+- The same goes for the changes in your own migrations: a `RunPython` must write through `tx`, not through the models (those are refused while the lock is held).
+- If a run was killed and left the lock, writes stay refused until `pangloss migrate --unlock`. The message says so.
+- `--plan`, `--dry-run` and `--check` take no lock, so they do not stop anyone writing.
 
 ## Large databases: batches
 
@@ -145,11 +159,11 @@ batch_size = 1000     # or: batches of this many (this implies atomic = False)
 In batches:
 
 - changes to plain fields (add, remove, rename, make required, change type, wrap or unwrap an annotated value) and changes of labels are made **N nodes at a time, in the order of their ids**, each batch its own transaction;
-- wrapping a relation in a reified relation is made N relations at a time (the ones done are no longer there to wrap, so the next batch finds the next);
-- **renaming** a relation is made N edges at a time, and **removing** one N relations at a time (the nodes it owns go with them, in batches too, then its edges);
-- everything else (wrapping in a semantic space, unwrapping, turning fields into an embedded object, changes to the values of an enum) is still made at once, in a transaction of its own;
+- everything else that touches data is made **N of whatever is left at a time**: relations wrapped or unwrapped (in a reified relation or a semantic space), one wrapper changed for another, fields turned into an embedded object and back, relations renamed or removed (and the nodes they own), a reverse name or the properties on edges changed, a list made a single value, a relation made to point to less, parent fields, the values of an enum, models renamed or deleted. What is done is no longer there to find, so each batch finds the next, and a run that stops is simply run again;
 - what must hold **before anything is changed** (that every value converts, that every answer is given) is checked **once, before the first batch**, so a bad value does not leave you with half a migration;
 - how far it has got is saved **in the same transaction as each batch**.
+
+Still made in one go: anything you wrote by hand (`RunCypher`, `RunPython`). (The recomputing of the context of documents after a model rename is in batches too: the documents that still have the old name in them, `N` at a time.)
 
 If a batched run stops (the network, a killed process), run `migrate` again — after `--unlock` if it left the lock:
 
@@ -175,7 +189,7 @@ pangloss check-data --parallel 4 # several at a time (not faster against a local
 1. The migration was generated and reviewed in development, and committed.
 2. You ran `migrate --dry-run` and then `migrate` on a copy of the production data, and `check-data` is clean.
 3. You read the `[LOSES DATA]` lines and are happy to lose them.
-4. A backup exists that you can restore (`--backup`, and copied off the server if it must outlive Memgraph's retention).
+4. A backup exists that you can restore (`--backup`; mind how long it lasts, and copy it off the server if it must outlive Memgraph's retention).
 5. The API is stopped.
 6. `pangloss migrate` (with `--batch-size` if the data is large).
 7. `pangloss check-data` if you used `--no-check`, then start the API.

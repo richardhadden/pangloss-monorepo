@@ -61,8 +61,7 @@ type _AllCreateDBModels = (
 
 
 class Identifier(str):
-    def __new__(cls):
-        return super().__new__(cls, "x" + uuid.uuid4().hex[:10].lower())
+    """A name in a query, for a variable or a parameter. Made by `QueryParams.new_identifier`."""
 
 
 class QuerySubstring(str):
@@ -71,8 +70,22 @@ class QuerySubstring(str):
 
 
 class QueryParams(dict[Identifier, dict[str, typing.Any] | typing.Any]):
+    """The parameters of a query, by name, and the names of a query.
+
+    The names are `x1`, `x2`... in the order they are made in, so a query of the same shape has the
+    same text each time and Memgraph, which keeps the plan of a query by its text, plans it once
+    (names that were made at random were planned afresh every time)."""
+
+    def __init__(self, *args: typing.Any, **kwargs: typing.Any) -> None:
+        super().__init__(*args, **kwargs)
+        self._made = 0
+
+    def new_identifier(self) -> Identifier:
+        self._made += 1
+        return Identifier(f"x{self._made}")
+
     def add(self, item: dict[str, typing.Any] | typing.Any) -> Identifier:
-        identifier = Identifier()
+        identifier = self.new_identifier()
         self.__setitem__(identifier, convert_type_for_writing(item))
         return identifier
 
@@ -445,7 +458,7 @@ def build_url_nodes(
     property: a URL is unique, so that two entities cannot have it, even if they are
     made at the same time (a uniqueness constraint)."""
     for url in sorted(getattr(instance, "urls", None) or [], key=str):
-        url_identifier = Identifier()
+        url_identifier = query_object.params.new_identifier()
         url_parameter = query_object.params.add(str(url))
         query_object.urls_to_write.append(str(url))
         query_object.create_query_strings.append(f"""
@@ -486,8 +499,8 @@ def build_edges(
         )
 
     for forward_name, backward_name in edge_names:
-        forward_query_identifier = Identifier()
-        reverse_query_identifier = Identifier()
+        forward_query_identifier = query_object.params.new_identifier()
+        reverse_query_identifier = query_object.params.new_identifier()
         query_object.create_query_strings.append(f"""
             CREATE ({source_identifier})-[{forward_query_identifier}:{forward_name}]->({target_identifier})
             CREATE ({source_identifier})<-[{reverse_query_identifier}:{backward_name} {{reverse: true}}]-({target_identifier})
@@ -513,7 +526,7 @@ def build_related_node_query(
     type_options: TypeOptions,
 ):
 
-    node_identifier = Identifier()
+    node_identifier = query_object.params.new_identifier()
     instance_labels = get_label_query_string(instance, ["PGIndexableNode"])
 
     # Transform literal fields into a writeable dict
@@ -591,20 +604,20 @@ def build_inline_entity_query(
     if key in query_object.inline_entity_identifiers:
         entity_identifier = query_object.inline_entity_identifiers[key]
     elif key in query_object.existing_entities:
-        entity_identifier = Identifier()
+        entity_identifier = query_object.params.new_identifier()
         existing_id = query_object.params.add(query_object.existing_entities[key].id)
         query_object.match_query_strings.append(
             f"MATCH ({entity_identifier}:PGIndexableNode {{id: ${existing_id}}})"
         )
         query_object.inline_entity_identifiers[key] = entity_identifier
     else:
-        entity_identifier = Identifier()
+        entity_identifier = query_object.params.new_identifier()
         query_object.inline_entity_identifiers[key] = entity_identifier
         entity_data = PropertyAssignments(
             query_object.params,
             get_node_fields_as_writable_dict(instance, is_new=True, is_head_node=True),
         )
-        creation = Identifier()
+        creation = query_object.params.new_identifier()
         creation_data = query_object.params.add(
             {
                 "id": str(uuid.uuid7()),
@@ -664,7 +677,7 @@ def build_relation_to_existing_query(
     if reference_key in query_object.matched_references:
         instance_identifier = query_object.matched_references[reference_key]
     else:
-        instance_identifier = Identifier()
+        instance_identifier = query_object.params.new_identifier()
         query_object.matched_references[reference_key] = instance_identifier
         id_identifier = query_object.params.add(str(instance.id))
         allowed_types_identifier = query_object.params.add(allowed_types)
@@ -714,7 +727,7 @@ def build_head_create_query(
     )
 
     # Create an Identifier for the node
-    node_identifier = Identifier()
+    node_identifier = query_object.params.new_identifier()
     query_object.return_identifier = node_identifier
 
     # Map labels to a Cypher string

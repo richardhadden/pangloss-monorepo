@@ -29,6 +29,7 @@ NO_EFFECT = (
     c.RenameEnumMember,  # (the values are the same)
     c.RenameEnum,  # (nothing is stored of the name)
     c.RemoveEnum,
+    c.RecomputeFulfils,  # (labels only: the data is read by the model of its `type`)
     c.AlterModelOption,
     c.AlterAnnotatedValue,
     c.AddIndex,

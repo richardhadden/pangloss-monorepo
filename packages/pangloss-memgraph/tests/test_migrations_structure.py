@@ -313,3 +313,75 @@ async def test_literals_become_an_embedded_object_and_back(db_driver, clear_data
     again = await old_models.Statement.get(id=head.id)
     assert (again.when, again.precision, again.text) == ("800", 2, "T")
     assert run(db_driver, "MATCH (d:Date) WHERE d.head_node_id = $id RETURN count(d) AS n", id=str(head.id)) == [{"n": 0}]
+
+
+# ---------------------------------------------------------------------------
+# An embedded object that is new
+# ---------------------------------------------------------------------------
+
+
+def new_embedded_models(embedded: bool, two: bool = False):
+    def declare_models():
+        class Date(Embedded):
+            when: str
+            precision: int
+
+        class Instant(Embedded):
+            at: str
+
+        if embedded and two:
+
+            class Statement(Document):
+                date: Date | Instant
+                text: str
+
+        elif embedded:
+
+            class Statement(Document):
+                date: Date
+                text: str
+
+        else:
+
+            class Statement(Document):
+                text: str
+
+        return ns(Statement=Statement, Date=Date)
+
+    return declare_models
+
+
+@no_type_check
+async def test_a_new_embedded_object_is_made_for_each_node_that_exists(db_driver, clear_database):
+    old_models, old = declare(new_embedded_models(embedded=False))
+    head = await old_models.Statement.Create(label="S", text="T").save()
+    new_models, new = declare(new_embedded_models(embedded=True))
+
+    # (what the embedded object requires is asked)
+    with pytest.raises(PanglossMigrationAnswerNeeded, match="when, precision|precision, when"):
+        await migrate(old, new)
+
+    answers = {"when": "unknown", "precision": 0}
+    await migrate(old, new, answer=with_answers(AddField={"default": answers}))
+
+    read = await new_models.Statement.get(id=head.id)
+    assert (read.date.when, read.date.precision, read.text) == ("unknown", 0, "T")
+
+    native = await new_models.Statement.Create(label="S", date=answers, text="T").save()
+    assert signature(db_driver, head.id) == signature(db_driver, native.id)
+    assert contexts(db_driver, head.id) == contexts(db_driver, native.id)
+
+    # (repeating it makes no more: each already has one)
+    await migrate(old, new, answer=with_answers(AddField={"default": answers}))
+    assert run(db_driver, "MATCH (d:Date) WHERE d.head_node_id = $id RETURN count(d) AS n", id=str(head.id)) == [{"n": 1}]
+
+
+@no_type_check
+async def test_a_new_embedded_object_that_could_be_of_several_kinds_is_not_guessed(db_driver, clear_database):
+    from pangloss_models.exceptions import PanglossMigrationNotSupported
+
+    old_models, old = declare(new_embedded_models(embedded=False))
+    await old_models.Statement.Create(label="S", text="T").save()
+    _, new = declare(new_embedded_models(embedded=True, two=True))
+    with pytest.raises(PanglossMigrationNotSupported, match="which one"):
+        await migrate(old, new, answer=with_answers(AddField={"default": {"when": "x", "precision": 0, "at": "y"}}))

@@ -18,6 +18,7 @@ PHASE_ALTER = 2
 PHASE_ADD_FIELD = 3
 PHASE_REMOVE_FIELD = 4
 PHASE_REMOVE = 5
+PHASE_FULFILS = 6  # (last: it is worked out from the models as they are then)
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -207,7 +208,7 @@ class AlterModelKind(Change):
     new: str
 
     def describe(self) -> str:
-        return f"{self.model} changed from a {self.old} to a {self.new}: needs hand-written code"
+        return f"{self.model} changed from a {self.old} to a {self.new}: the kind of a model cannot be changed"
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -358,7 +359,7 @@ class ChangeFieldKind(Change):
     definition: dict[str, Any] = field(default_factory=dict)
 
     def describe(self) -> str:
-        return f"{self.model}.{self.name} changed from a {self.old} to a {self.new} field: needs hand-written code"
+        return f"{self.model}.{self.name} changed from a {self.old} to a {self.new} field: the kind of a field cannot be changed"
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -661,6 +662,29 @@ class RemoveConstraint(Change):
 
     def describe(self) -> str:
         return f"Stop requiring {structure_name(self.constraint)} to be unique"
+
+
+# --- which classes a node fulfils ---------------------------------------------------------
+
+
+@dataclass(frozen=True, kw_only=True)
+class RecomputeFulfils(Change):
+    """What a model fulfils (`Fulfils`) has changed: the nodes of exactly that model are given the
+    labels of the classes they fulfil now, and lose those of the classes they no longer do.
+
+    `fulfils` is what the model declares now (as the snapshot has it); `before` and `after` say for
+    each class its labels and what a node needs to have to fulfil it (see `fulfils.fulfilment`)."""
+
+    phase: ClassVar[int] = PHASE_FULFILS
+    safety: ClassVar[Safety] = "transforming"
+    model: str
+    fulfils: list[dict[str, Any]] = field(default_factory=list)
+    before: list[dict[str, Any]] = field(default_factory=list)
+    after: list[dict[str, Any]] = field(default_factory=list)
+
+    def describe(self) -> str:
+        classes = sorted({e["class"] for e in [*self.before, *self.after]})
+        return f"{self.model}: which of {', '.join(classes) or 'none'} its nodes fulfil is worked out again (their labels)"
 
 
 # --- by hand -----------------------------------------------------------------------------

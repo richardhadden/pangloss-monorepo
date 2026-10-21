@@ -29,6 +29,7 @@ from pangloss_models.exceptions import (
     PanglossMigrationError,
     PanglossMigrationNotSupported,
 )
+from pangloss_models.context import propagate_context
 from pangloss_models.migrations import changes as c
 from pangloss_models.migrations.state import rename_field
 from pangloss_models.migrations.state import rename_model as state_after_rename
@@ -209,43 +210,99 @@ def field_descriptor(field: dict) -> dict:
 # ---------------------------------------------------------------------------
 
 
-async def rename_model(tx: Transaction, change: c.RenameModel, state: dict) -> None:
+async def rename_model(
+    tx: Transaction, change: c.RenameModel, state: dict, limit: int | None = None
+) -> int:
+    """Relabel the nodes, change the `type` they and what they hold have, and work out again the
+    context of the documents whose nodes have the name in it (the semantic spaces they are in, and
+    the documents that are a part of their context). With a `limit` this is done `limit` at a time:
+    a call does the first of these steps that has anything left to do, and says that there may be
+    more (it returns `limit`) until all of it is done."""
     old, new = ident(change.old), ident(change.new)
-    await run(tx, f"MATCH (n:{old}) REMOVE n:{old} SET n:{new}")
-    await run(tx, f"MATCH (n:{new}) WHERE n.type = $old SET n.type = $new", old=change.old, new=change.new)
-    await run(
-        tx,
-        "MATCH (n) WHERE n.head_node_type = $old SET n.head_node_type = $new",
-        old=change.old,
-        new=change.new,
-    )
-    # the context of what a renamed document holds has its name in it
-    heads = await run(
-        tx,
-        f"MATCH (n:{new}) WHERE n:Document OR n:SemanticSpace "
-        "RETURN DISTINCT coalesce(n.head_node_id, n.id) AS head",
-    )
+    window = f"WITH n LIMIT {int(limit)} " if limit else ""
+    steps = [
+        f"MATCH (n:{old}) {window}REMOVE n:{old} SET n:{new} RETURN count(n) AS done",
+        f"MATCH (n:{new}) WHERE n.type = $old {window}SET n.type = $new RETURN count(n) AS done",
+        f"MATCH (n) WHERE n.head_node_type = $old {window}SET n.head_node_type = $new RETURN count(n) AS done",
+    ]
+    for step in steps:
+        rows = await run(tx, step, old=change.old, new=change.new)
+        done = rows[0]["done"] if rows else 0
+        if limit and done:
+            return limit  # (there may be more of this, or the steps after it)
+    # the context of what a renamed document holds has its name in it: the documents with a node
+    # that has it are worked out again, and then none has it (so a next call finds the next)
+    head_window = f"WITH DISTINCT coalesce(n.head_node_id, n.id) AS head LIMIT {int(limit)} " if limit else "WITH DISTINCT coalesce(n.head_node_id, n.id) AS head "
+    mentions = """
+        MATCH (n) WHERE n.meta IS NOT NULL AND (
+            $old IN coalesce(n.meta.semantic_spaces, [])
+            OR any(label IN coalesce(n.meta.context_labels, []) WHERE label.type = $old
+                   OR any(entry IN coalesce(label.contents, []) WHERE entry.type = $old)))
+    """
+    heads = await run(tx, f"{mentions}{head_window}RETURN head", old=change.old)
     if heads:
         await recompute_contexts(
             tx, [row["head"] for row in heads], state_after_rename(state, change.old, change.new)
         )
+        again = await run(
+            tx,
+            f"{mentions} WITH DISTINCT coalesce(n.head_node_id, n.id) AS head "
+            "WHERE head IN $heads RETURN count(head) AS left",
+            old=change.old,
+            heads=[row["head"] for row in heads],
+        )
+        if again and again[0]["left"]:
+            # (what is done is meant to be gone: if it is not, going on would never end)
+            raise PanglossMigrationError(
+                f"The context of {again[0]['left']} documents still has {change.old} in it after it was "
+                "worked out again"
+            )
+        return limit or 0
+    return 0
 
 
-async def delete_model(tx: Transaction, change: c.DeleteModel, state: dict) -> None:
+async def delete_model(
+    tx: Transaction, change: c.DeleteModel, state: dict, limit: int | None = None
+) -> int:
+    """Delete the nodes of a model, with their records and what they hold. With a `limit`, `limit`
+    head nodes at a time and then the rest of its nodes (a nested document) `limit` at a time; a
+    call returns `limit` while there may be more."""
     model = ident(change.model)
-    # what records it: creation, updates, deletions; the URLs of an entity
-    await run(
-        tx,
-        f"""
-        MATCH (h:{model})<-[e]-(record)
-        WHERE type(e) IN ['is_creation_of', 'is_update_of', 'is_deletion_of', 'is_undeletion_of']
-        DETACH DELETE record
-        """,
+    if limit is None:
+        # what records it: creation, updates, deletions; the URLs of an entity
+        await run(
+            tx,
+            f"""
+            MATCH (h:{model})<-[e]-(record)
+            WHERE type(e) IN ['is_creation_of', 'is_update_of', 'is_deletion_of', 'is_undeletion_of']
+            DETACH DELETE record
+            """,
+        )
+        await run(tx, f"MATCH (h:{model})-[:has_url]->(u:PGUrl) DETACH DELETE u")
+        # what it owns (the nodes of its document), then it
+        await run(tx, f"MATCH (h:{model}:HeadNode) MATCH (x) WHERE x.head_node_id = h.id DETACH DELETE x")
+        await run(tx, f"MATCH (n:{model}) DETACH DELETE n")
+        return 0
+    rows = await run(
+        tx, f"MATCH (h:{model}:HeadNode) WITH h LIMIT {int(limit)} RETURN collect(h.id) AS ids"
     )
-    await run(tx, f"MATCH (h:{model})-[:has_url]->(u:PGUrl) DETACH DELETE u")
-    # what it owns (the nodes of its document), then it
-    await run(tx, f"MATCH (h:{model}:HeadNode) MATCH (x) WHERE x.head_node_id = h.id DETACH DELETE x")
-    await run(tx, f"MATCH (n:{model}) DETACH DELETE n")
+    ids = rows[0]["ids"] if rows else []
+    if ids:
+        await run(
+            tx,
+            f"""
+            MATCH (h:{model})<-[e]-(record)
+            WHERE h.id IN $ids AND type(e) IN ['is_creation_of', 'is_update_of', 'is_deletion_of', 'is_undeletion_of']
+            DETACH DELETE record
+            """,
+            ids=ids,
+        )
+        await run(tx, f"MATCH (h:{model})-[:has_url]->(u:PGUrl) WHERE h.id IN $ids DETACH DELETE u", ids=ids)
+        await run(tx, "MATCH (x) WHERE x.head_node_id IN $ids DETACH DELETE x", ids=ids)
+        await run(tx, f"MATCH (n:{model}) WHERE n.id IN $ids DETACH DELETE n", ids=ids)
+        return limit  # (more heads, or the nodes that are not heads, may be left)
+    rows = await run(tx, f"MATCH (n:{model}) WITH n LIMIT {int(limit)} DETACH DELETE n RETURN count(n) AS done")
+    return rows[0]["done"] if rows else 0
 
 
 async def alter_model_labels(
@@ -272,9 +329,8 @@ async def add_field(
     if change.from_narrowing:
         return None  # (written already, by the field that narrowed it)
     if field["kind"] == "embedded":
-        raise PanglossMigrationNotSupported(
-            f"{change.describe()}: a node would be needed for each that exists; write it by hand"
-        )
+        await add_embedded(tx, change, state)
+        return None if window is None else []
     if field["kind"] not in SCALAR_PROPERTY_KINDS or not change.needs_value:
         return None if window is None else []  # (an absent property is none; a relation is empty)
     if field["kind"] == "list" and change.default is None:
@@ -295,6 +351,31 @@ async def add_field(
         select_nodes(ident(change.model), f"{prop} IS NULL", window) + f" SET {prop} = {expression}",
         **params,
     )
+
+
+async def add_embedded(
+    tx: Transaction, change: c.AddField, state: dict, limit: int | None = None
+) -> int:
+    """A field that is an embedded object, new: each node that exists is given one, with the values
+    that were answered (`default`: a value for each field the embedded object requires). Done as
+    for literals that become an embedded object, with no literals to move."""
+    field = change.definition
+    types = field.get("types") or ([field["model"]] if field.get("model") else [])
+    if len(types) != 1:
+        raise PanglossMigrationNotSupported(
+            f"{change.describe()}: it can be any of {', '.join(types) or 'several'}, and which one the "
+            "nodes that exist are given is not known: write it by hand"
+        )
+    synthetic = c.LiteralsToEmbedded(
+        model=change.model,
+        name=change.name,
+        embedded_model=field["model"],
+        fields=[],
+        definition=field,
+        defaults=change.default if isinstance(change.default, dict) else None,
+        embedded_type=types[0],
+    )
+    return await literals_to_embedded(tx, synthetic, state, limit)
 
 
 async def delete_relation(
@@ -376,12 +457,47 @@ async def delete_relation_batch(tx: Transaction, model: str, field: dict, limit:
 
 
 async def apply_edges(tx: Transaction, change: c.Change, state: dict, limit: int) -> int:
-    """One batch of a change made `"edges"` at a time (see `batch_kind`): how many it did, which
-    is `limit` if there may be more"""
-    if isinstance(change, c.RenameField):
-        return await rename_relation_edges(tx, change, state, limit)
-    assert isinstance(change, c.RemoveField)
-    return await delete_relation_batch(tx, change.model, field_of(state, change.model, change.name), limit)
+    """One batch of a change made `limit` at a time (`batch_kind` calls them `"edges"`): how many it
+    did, which is `limit` if there may be more. What is done is no longer there to do, so a call
+    again finds the next."""
+    match change:
+        case c.RenameField():
+            return await rename_relation_edges(tx, change, state, limit)
+        case c.AddField():
+            return await add_embedded(tx, change, state, limit)
+        case c.RemoveField():
+            return await delete_relation_batch(tx, change.model, field_of(state, change.model, change.name), limit)
+        case c.AlterReverseName():
+            return await alter_reverse_name(tx, change, state, limit)
+        case c.UnwrapRelation():
+            return await unwrap_relation(tx, change, state, limit)
+        case c.WrapRelation():
+            return await wrap_relation(tx, change, state, limit)
+        case c.ChangeWrapper():
+            return await change_wrapper(tx, change, state, limit)
+        case c.LiteralsToEmbedded():
+            return await literals_to_embedded(tx, change, state, limit)
+        case c.EmbeddedToLiterals():
+            return await embedded_to_literals(tx, change, state, limit)
+        case c.RenameModel():
+            return await rename_model(tx, change, state, limit)
+        case c.DeleteModel():
+            return await delete_model(tx, change, state, limit)
+        case c.AlterEnumMemberValue():
+            return await alter_enum_member_value(tx, change, state, limit)
+        case c.RemoveEnumMember():
+            return await remove_enum_member(tx, change, state, limit)
+        case c.RecomputeFulfils():
+            return await recompute_fulfils(tx, change, state, limit)
+        case c.AlterCardinality():
+            return await alter_cardinality(tx, change, state, limit)
+        case c.AlterRelationTarget():
+            return await alter_relation_target(tx, change, state, limit)
+        case c.AlterParentFields():
+            return await alter_parent_fields(tx, change, state, limit)
+        case c.AlterEdgeModel():
+            return await alter_edge_model(tx, change, state, limit)
+    raise PanglossMigrationError(f"{type(change).__name__} cannot be made in batches")
 
 
 async def remove_field(
@@ -591,9 +707,13 @@ async def annotated_to_literal(
 # ---------------------------------------------------------------------------
 
 
-async def alter_cardinality(tx: Transaction, change: c.AlterCardinality, state: dict) -> None:
+async def alter_cardinality(
+    tx: Transaction, change: c.AlterCardinality, state: dict, limit: int | None = None
+) -> int:
+    """A list that is now a single value: where a node has several, the first is kept (`keep`).
+    With a `limit`, that many nodes at a time (a node that has been dealt with has one)."""
     if change.many:
-        return
+        return 0
     field = field_of(state, change.model, change.name)
     if owns_nodes(field):
         raise PanglossMigrationNotSupported(
@@ -602,51 +722,58 @@ async def alter_cardinality(tx: Transaction, change: c.AlterCardinality, state: 
     pairs = edge_pairs(field)
     (forward, reverse), others = pairs[0], pairs[1:]
     label = ident(change.model)
-    several = (
-        await run(
-            tx,
-            f"""
-            MATCH (n:{label})-[e]->() WHERE type(e) = $forward AND NOT coalesce(e.reverse, false)
-            WITH n, count(e) AS edges WHERE edges > 1 RETURN count(n) AS several
-            """,
-            forward=forward,
-        )
-    )[0]["several"]
-    if not several:
-        return
     if change.keep != "first":
-        raise PanglossMigrationAnswerNeeded(
-            f"{several} nodes have several {change.model}.{change.name}: say which to keep "
-            f"(`keep`: 'first')"
-        )
+        several = (
+            await run(
+                tx,
+                f"""
+                MATCH (n:{label})-[e]->() WHERE type(e) = $forward AND NOT coalesce(e.reverse, false)
+                WITH n, count(e) AS edges WHERE edges > 1 RETURN count(n) AS several
+                """,
+                forward=forward,
+            )
+        )[0]["several"]
+        if several:
+            raise PanglossMigrationAnswerNeeded(
+                f"{several} nodes have several {change.model}.{change.name}: say which to keep "
+                f"(`keep`: 'first')"
+            )
+        return 0
     # keep the first edge (the oldest), and remove the others with their reverse edges
-    await run(
+    window = f"WITH n, edges LIMIT {int(limit)} " if limit else ""
+    rows = await run(
         tx,
         f"""
         MATCH (n:{label})-[e]->(t) WHERE type(e) = $forward AND NOT coalesce(e.reverse, false)
         WITH n, e, t ORDER BY id(e)
         WITH n, collect({{e: e, t: t}}) AS edges WHERE size(edges) > 1
-        UNWIND edges[1..] AS extra
+        {window}UNWIND edges[1..] AS extra
         WITH n, extra.e AS e, extra.t AS t
         OPTIONAL MATCH (t)-[r]->(n) WHERE type(r) = $reverse AND coalesce(r.reverse, false)
         DELETE e, r
+        RETURN count(DISTINCT n) AS done
         """,
         forward=forward,
         reverse=reverse,
     )
+    done = rows[0]["done"] if rows else 0
     for other_forward, other_reverse in others:
         # (the pairs of the parent fields go to the same target)
-        await run(
+        other_window = f"WITH n, e, t LIMIT {int(limit)} " if limit else ""
+        rows = await run(
             tx,
             f"""
             MATCH (n:{label})-[e]->(t)
             WHERE type(e) = $other AND NOT coalesce(e.reverse, false) AND NOT (n)-[:{ident(forward)}]->(t)
-            OPTIONAL MATCH (t)-[r]->(n) WHERE type(r) = $other_reverse AND coalesce(r.reverse, false)
+            {other_window}OPTIONAL MATCH (t)-[r]->(n) WHERE type(r) = $other_reverse AND coalesce(r.reverse, false)
             DELETE e, r
+            RETURN count(DISTINCT e) AS done
             """,
             other=other_forward,
             other_reverse=other_reverse,
         )
+        done = max(done, rows[0]["done"] if rows else 0)
+    return done
 
 
 def allowed_labels(options: list[dict]) -> list[str]:
@@ -655,80 +782,122 @@ def allowed_labels(options: list[dict]) -> list[str]:
         "reifiedRelation", "reifiedRelationDocument", "semanticSpace", "conjunction"}})
 
 
-async def alter_relation_target(tx: Transaction, change: c.AlterRelationTarget, state: dict) -> None:
+async def alter_relation_target(
+    tx: Transaction, change: c.AlterRelationTarget, state: dict, limit: int | None = None
+) -> int:
+    """Edges to what a relation can no longer be to: it fails if there are any (and says how many),
+    or they are removed (`on_narrowing`); with a `limit`, that many at a time"""
     if not change.removed:
-        return
+        return 0
     field = field_of(state, change.model, change.name)
     allowed = allowed_labels(change.options)
     forward, reverse = edge_pairs(field)[0]
     label = ident(change.model)
-    violations = (
-        await run(
+    if change.on_narrowing != "remove":
+        violations = (
+            await run(
+                tx,
+                f"""
+                MATCH (n:{label})-[e]->(t) WHERE type(e) = $forward AND NOT coalesce(e.reverse, false)
+                  AND NOT any(l IN labels(t) WHERE l IN $allowed)
+                RETURN count(e) AS violations
+                """,
+                forward=forward,
+                allowed=allowed,
+            )
+        )[0]["violations"]
+        if violations:
+            raise PanglossMigrationAnswerNeeded(
+                f"{violations} relations {change.model}.{change.name} are to what it can no longer be "
+                f"to: say what to do (`on_narrowing`: 'remove')"
+            )
+        return 0
+    if owns_nodes(field):
+        if await run(
             tx,
             f"""
             MATCH (n:{label})-[e]->(t) WHERE type(e) = $forward AND NOT coalesce(e.reverse, false)
               AND NOT any(l IN labels(t) WHERE l IN $allowed)
-            RETURN count(e) AS violations
+            RETURN e LIMIT 1
             """,
             forward=forward,
             allowed=allowed,
-        )
-    )[0]["violations"]
-    if not violations:
-        return
-    if change.on_narrowing != "remove":
-        raise PanglossMigrationAnswerNeeded(
-            f"{violations} relations {change.model}.{change.name} are to what it can no longer be "
-            f"to: say what to do (`on_narrowing`: 'remove')"
-        )
-    if owns_nodes(field):
-        raise PanglossMigrationNotSupported(
-            f"{change.describe()}: nodes that belong to the document would be left; write it by hand"
-        )
+        ):
+            raise PanglossMigrationNotSupported(
+                f"{change.describe()}: nodes that belong to the document would be left; write it by hand"
+            )
+        return 0
+    window = f"WITH n, e, t LIMIT {int(limit)} " if limit else ""
+    done = 0
     for pair_forward, pair_reverse in edge_pairs(field):
-        await run(
+        rows = await run(
             tx,
             f"""
             MATCH (n:{label})-[e]->(t) WHERE type(e) = $forward AND NOT coalesce(e.reverse, false)
               AND NOT any(l IN labels(t) WHERE l IN $allowed)
-            OPTIONAL MATCH (t)-[r]->(n) WHERE type(r) = $reverse AND coalesce(r.reverse, false)
+            {window}OPTIONAL MATCH (t)-[r]->(n) WHERE type(r) = $reverse AND coalesce(r.reverse, false)
             DELETE e, r
+            RETURN count(DISTINCT e) AS done
             """,
             forward=pair_forward,
             reverse=pair_reverse,
             allowed=allowed,
         )
+        done = max(done, rows[0]["done"] if rows else 0)
+    return done
 
 
-async def alter_reverse_name(tx: Transaction, change: c.AlterReverseName, state: dict) -> None:
+async def alter_reverse_name(
+    tx: Transaction, change: c.AlterReverseName, state: dict, limit: int | None = None
+) -> int:
     field = field_of(state, change.model, change.name)
     old = edge_pairs(field)[0][1]
-    if old != change.new:
-        await rename_edge_type(tx, change.model, old, change.new, reverse=True)
+    if old == change.new:
+        return 0
+    return await rename_edge_type(tx, change.model, old, change.new, reverse=True, limit=limit)
 
 
-async def alter_parent_fields(tx: Transaction, change: c.AlterParentFields, state: dict) -> None:
+async def alter_parent_fields(
+    tx: Transaction, change: c.AlterParentFields, state: dict, limit: int | None = None
+) -> int:
+    """The edge pair of each parent field a field now narrows is written, and those of the parent
+    fields it no longer narrows are deleted: `limit` edges at a time at most (those done are no
+    longer there to do)"""
     field = field_of(state, change.model, change.name)
     forward, reverse = edge_pairs(field)[0]
     label = ident(change.model)
     new_reverse = {name: rev or f"{name}_reverse" for name, rev in change.edges}
+    window = f"WITH n, e, t LIMIT {int(limit)} " if limit else ""
+    done = 0
     for parent in change.added:
         parent_reverse = new_reverse[parent]
-        await run(
+        rows = await run(
             tx,
             f"""
             MATCH (n:{label})-[e:{ident(forward)}]->(t)
             WHERE NOT coalesce(e.reverse, false) AND NOT (n)-[:{ident(parent)}]->(t)
-            CREATE (n)-[f:{ident(parent)}]->(t) SET f = properties(e)
-            WITH n, t
-            MATCH (t)-[r:{ident(reverse)}]->(n) WHERE coalesce(r.reverse, false)
-            CREATE (t)-[g:{ident(parent_reverse)}]->(n) SET g = properties(r)
+            {window}CREATE (n)-[f:{ident(parent)}]->(t) SET f = properties(e)
+            WITH n, t, f
+            OPTIONAL MATCH (t)-[r:{ident(reverse)}]->(n) WHERE coalesce(r.reverse, false)
+            FOREACH (x IN CASE WHEN r IS NULL THEN [] ELSE [1] END |
+                CREATE (t)-[g:{ident(parent_reverse)}]->(n) SET g = properties(r))
+            RETURN count(DISTINCT f) AS done
             """,
         )
+        done = max(done, rows[0]["done"] if rows else 0)
     old_reverse = {name: rev for name, rev in edge_pairs(field)}
     removed_pairs = [(name, old_reverse[name]) for name in change.removed if name in old_reverse]
-    if removed_pairs:
+    if removed_pairs and limit is None:
         await delete_relation(tx, change.model, field, only_pairs=removed_pairs)
+    elif removed_pairs:
+        for removed_forward, removed_reverse in removed_pairs:
+            for query, name in (
+                (f"MATCH (n:{label})-[e:{ident(removed_forward)}]->() WITH e LIMIT {int(limit)} DELETE e RETURN count(e) AS done", removed_forward),
+                (f"MATCH ()-[e:{ident(removed_reverse)}]->(n:{label}) WITH e LIMIT {int(limit)} DELETE e RETURN count(e) AS done", removed_reverse),
+            ):
+                rows = await run(tx, query)
+                done = max(done, rows[0]["done"] if rows else 0)
+    return done
 
 
 def edge_model_properties(state: dict, options: list[dict]) -> dict[str, dict]:
@@ -741,23 +910,33 @@ def edge_model_properties(state: dict, options: list[dict]) -> dict[str, dict]:
     return properties
 
 
-async def alter_edge_model(tx: Transaction, change: c.AlterEdgeModel, state: dict) -> None:
+async def alter_edge_model(
+    tx: Transaction, change: c.AlterEdgeModel, state: dict, limit: int | None = None
+) -> int:
+    """Properties taken off, or given a value on, the edges of a relation (both edges of each pair):
+    on all, or `limit` at a time (those done no longer have the property, or now do)"""
     field = field_of(state, change.model, change.name)
     old = edge_model_properties(state, field["options"])
     new = edge_model_properties(state, change.options)
     pairs = edge_pairs(field)
     label = ident(change.model)
+    done = 0
 
+    async def on_edges(forward_query: str, reverse_query: str, **params: Any) -> None:
+        nonlocal done
+        for query in (forward_query, reverse_query):
+            rows = await run(tx, query, **params)
+            done = max(done, rows[0]["done"] if rows else 0)
+
+    window = f"WITH e LIMIT {int(limit)} " if limit else ""
     gone = [name for name in old if name not in new]
     for name in gone:
         for forward, reverse in pairs:
-            await run(
-                tx,
-                f"MATCH (n:{label})-[e:{ident(forward)}]->() REMOVE e.{ident(name)}",
-            )
-            await run(
-                tx,
-                f"MATCH ()-[e:{ident(reverse)}]->(n:{label}) REMOVE e.{ident(name)}",
+            await on_edges(
+                f"MATCH (n:{label})-[e:{ident(forward)}]->() WHERE e.{ident(name)} IS NOT NULL "
+                f"{window}REMOVE e.{ident(name)} RETURN count(e) AS done",
+                f"MATCH ()-[e:{ident(reverse)}]->(n:{label}) WHERE e.{ident(name)} IS NOT NULL "
+                f"{window}REMOVE e.{ident(name)} RETURN count(e) AS done",
             )
 
     added = {name: entry for name, entry in new.items() if name not in old}
@@ -775,18 +954,16 @@ async def alter_edge_model(tx: Transaction, change: c.AlterEdgeModel, state: dic
             value, field_descriptor(added[name]), params, "edge_value", state["enums"]
         )
         for forward, reverse in pairs:
-            await run(
-                tx,
-                f"MATCH (n:{label})-[e:{ident(forward)}]->() WHERE NOT coalesce(e.reverse, false) "
-                f"SET e.{ident(name)} = {expression}",
+            await on_edges(
+                f"MATCH (n:{label})-[e:{ident(forward)}]->() "
+                f"WHERE NOT coalesce(e.reverse, false) AND e.{ident(name)} IS NULL "
+                f"{window}SET e.{ident(name)} = {expression} RETURN count(e) AS done",
+                f"MATCH ()-[e:{ident(reverse)}]->(n:{label}) "
+                f"WHERE coalesce(e.reverse, false) AND e.{ident(name)} IS NULL "
+                f"{window}SET e.{ident(name)} = {expression} RETURN count(e) AS done",
                 **params,
             )
-            await run(
-                tx,
-                f"MATCH ()-[e:{ident(reverse)}]->(n:{label}) WHERE coalesce(e.reverse, false) "
-                f"SET e.{ident(name)} = {expression}",
-                **params,
-            )
+    return done
 
 
 # ---------------------------------------------------------------------------
@@ -863,15 +1040,17 @@ def wrapper_properties(change: c.WrapRelation, state: dict) -> tuple[str, dict[s
     return ", ".join(assignments), params
 
 
-async def wrap_relation(tx: Transaction, change: c.WrapRelation, state: dict) -> None:
+async def wrap_relation(
+    tx: Transaction, change: c.WrapRelation, state: dict, limit: int | None = None
+) -> int:
     if change.wrapper_kind == "semanticSpace":
-        return await wrap_in_semantic_space(tx, change, state)
+        return await wrap_in_semantic_space(tx, change, state, limit)
     if change.wrapper_kind != "reifiedRelation":
         raise PanglossMigrationNotSupported(
             f"{change.describe()}: a relation cannot be wrapped in a {change.wrapper_kind} "
             f"(it has several slots to fill): write it by hand"
         )
-    await wrap_reified(tx, change, state, limit=None)
+    return await wrap_reified(tx, change, state, limit=limit)
 
 
 async def wrap_reified(tx: Transaction, change: c.WrapRelation, state: dict, limit: int | None) -> int:
@@ -958,9 +1137,13 @@ async def wrap_reified(tx: Transaction, change: c.WrapRelation, state: dict, lim
     return count
 
 
-async def unwrap_relation(tx: Transaction, change: c.UnwrapRelation, state: dict) -> None:
+async def unwrap_relation(
+    tx: Transaction, change: c.UnwrapRelation, state: dict, limit: int | None = None
+) -> int:
+    """Unwrap relations: all of them, or `limit` (those unwrapped are no longer there to unwrap, so
+    this is called again until it unwraps none). Returns how many."""
     if change.wrapper_kind == "semanticSpace":
-        return await unwrap_semantic_space(tx, change, state)
+        return await unwrap_semantic_space(tx, change, state, limit)
     if change.wrapper_kind != "reifiedRelation":
         raise PanglossMigrationNotSupported(
             f"{change.describe()}: unwrapping a {change.wrapper_kind} is not supported: "
@@ -972,6 +1155,9 @@ async def unwrap_relation(tx: Transaction, change: c.UnwrapRelation, state: dict
     model, wrapper_label = ident(change.model), ident(change.wrapper)
 
     not_narrowed = "".join(f" AND NOT (s)-[:{ident(n)}]->(r)" for n in narrowers_of(state, primary))
+    ids = await wrapper_ids(tx, model, wrapper_label, primary, not_narrowed, limit)
+    if not ids:
+        return 0
     creates = []
     for forward, reverse in pairs:
         creates.append(f"MERGE (s)-[:{ident(forward)}]->(p)")
@@ -980,21 +1166,41 @@ async def unwrap_relation(tx: Transaction, change: c.UnwrapRelation, state: dict
         tx,
         f"""
         MATCH (s:{model})-[e]->(r:{wrapper_label})-[:target]->(p)
-        WHERE type(e) = $primary AND NOT coalesce(e.reverse, false){not_narrowed}
+        WHERE type(e) = $primary AND NOT coalesce(e.reverse, false){not_narrowed} AND r.id IN $ids
         {' '.join(creates)}
         """,
         primary=primary,
+        ids=ids,
     )
     # the node between, with the edges to it and from it (that the relations just unwrapped had)
     await run(
         tx,
         f"""
         MATCH (s:{model})-[e]->(r:{wrapper_label})
-        WHERE type(e) = $primary AND NOT coalesce(e.reverse, false){not_narrowed}
+        WHERE type(e) = $primary AND NOT coalesce(e.reverse, false){not_narrowed} AND r.id IN $ids
         DETACH DELETE r
         """,
         primary=primary,
+        ids=ids,
     )
+    return len(ids)
+
+
+async def wrapper_ids(
+    tx: Transaction, model: str, wrapper_label: str, primary: str, not_narrowed: str, limit: int | None
+) -> list[str]:
+    """The ids of the wrapper nodes on the edges of a relation: all of them, or `limit`"""
+    window = f"WITH DISTINCT r LIMIT {int(limit)} " if limit else ""
+    rows = await run(
+        tx,
+        f"""
+        MATCH (s:{model})-[e]->(r:{wrapper_label})
+        WHERE type(e) = $primary AND NOT coalesce(e.reverse, false){not_narrowed}
+        {window}RETURN collect(DISTINCT r.id) AS ids
+        """,
+        primary=primary,
+    )
+    return rows[0]["ids"] if rows else []
 
 
 # ---------------------------------------------------------------------------
@@ -1002,53 +1208,50 @@ async def unwrap_relation(tx: Transaction, change: c.UnwrapRelation, state: dict
 # ---------------------------------------------------------------------------
 
 
-def propagate_context(
-    node_id: str,
-    nodes: dict[str, dict],
-    children: dict[str, dict[str, list[str]]],
-    state: dict,
-    in_context: dict[str, bool],
-    spaces: list[str],
-    labels: list[dict],
-    parent: str | None,
-    out: dict[str, tuple[list[str], list[dict]]],
-) -> None:
-    """The semantic spaces and context labels of a node and what is below it, as the models give
-    them when they write a document (`recursively_propagate_context_types`, which this follows
-    closely, including that what a single relation holds shares the lists of the node and a
-    list's items are given copies): a node is in the spaces above it; a space adds itself to the
-    context; and a document nested in another is a part of the context of what it holds (in the
-    innermost space, or in a root context). Only relations are followed, not embedded objects."""
-    node = nodes[node_id]
-    node_labels = node["labels"]
-    is_space = "SemanticSpace" in node_labels
-    if not is_space:
-        out[node_id] = ([*spaces], [*labels])
-    if is_space:
-        spaces.append(node["type"])
-        labels.append({"type": node["type"]})
-    elif parent is not None and "Document" in node_labels and in_context.get(node["type"], True):
-        entry = {"type": node["type"], "id": node_id}
-        if labels:
-            labels[-1].setdefault("contents", []).append(entry)
-        else:
-            labels.append({"type": "#rootcontext", "contents": [entry]})
+class StoredContext:
+    """How a migration looks at the nodes of a document that is stored, for
+    `pangloss_models.context.propagate_context` (the one algorithm the models use too): by the id of a
+    node, with what was read of the nodes and of the edges between them. Only relations are
+    followed, not embedded objects; and an entity is not one of the nodes."""
 
-    model = state["models"].get(node["type"], {})
-    for entry in model.get("fields", []):
-        if entry["kind"] != "relation":
-            continue
-        forward = edge_pairs(entry)[0][0]
-        for child in children.get(node_id, {}).get(forward, []):
-            if entry["many"]:
-                propagate_context(
-                    child, nodes, children, state, in_context,
-                    [*spaces], copy.deepcopy(labels), node_id, out,
-                )
-            else:
-                propagate_context(
-                    child, nodes, children, state, in_context, spaces, labels, node_id, out
-                )
+    def __init__(
+        self,
+        nodes: dict[str, dict],
+        children: dict[str, dict[str, list[str]]],
+        state: dict,
+        in_context: dict[str, bool],
+        out: dict[str, tuple[list[str], list[dict]]],
+    ) -> None:
+        self.nodes, self.child_ids, self.state = nodes, children, state
+        self.counts_as_context, self.out = in_context, out
+
+    def is_entity(self, node: str) -> bool:
+        return False
+
+    def is_space(self, node: str) -> bool:
+        return "SemanticSpace" in self.nodes[node]["labels"]
+
+    def in_context(self, node: str) -> bool:
+        data = self.nodes[node]
+        return "Document" in data["labels"] and self.counts_as_context.get(data["type"], True)
+
+    def type_of(self, node: str) -> str:
+        return self.nodes[node]["type"]
+
+    def id_of(self, node: str) -> str:
+        return node
+
+    def children(self, node: str):
+        model = self.state["models"].get(self.nodes[node]["type"], {})
+        for entry in model.get("fields", []):
+            if entry["kind"] != "relation":
+                continue
+            forward = edge_pairs(entry)[0][0]
+            for child in self.child_ids.get(node, {}).get(forward, []):
+                yield child, entry["many"]
+
+    def assign(self, node: str, semantic_spaces: list[str], context_labels: list[dict]) -> None:
+        self.out[node] = (semantic_spaces, context_labels)
 
 
 async def recompute_contexts(tx: Transaction, head_ids: list[str], state: dict) -> None:
@@ -1084,7 +1287,9 @@ async def recompute_contexts(tx: Transaction, head_ids: list[str], state: dict) 
         if head_id not in nodes:
             continue
         computed: dict[str, tuple[list[str], list[dict]]] = {}
-        propagate_context(head_id, nodes, children, state, in_context, [], [], None, computed)
+        propagate_context(
+            head_id, [], [], None, StoredContext(nodes, children, state, in_context, computed)
+        )
 
         updates = []
         for node_id, (spaces, labels) in computed.items():
@@ -1102,9 +1307,12 @@ async def recompute_contexts(tx: Transaction, head_ids: list[str], state: dict) 
             )
 
 
-async def wrap_in_semantic_space(tx: Transaction, change: c.WrapRelation, state: dict) -> None:
+async def wrap_in_semantic_space(
+    tx: Transaction, change: c.WrapRelation, state: dict, limit: int | None = None
+) -> int:
     """A node for the space on each edge, between the node and what it holds (which is then in the
-    space, as is everything below it)"""
+    space, as is everything below it): on all of them, or on `limit` (what is wrapped is no longer
+    there to be wrapped). Returns how many."""
     field = field_of(state, change.model, change.name)
     space_model = model_of(state, change.wrapper)
     pairs = edge_pairs(field)
@@ -1114,13 +1322,15 @@ async def wrap_in_semantic_space(tx: Transaction, change: c.WrapRelation, state:
     labels = "".join(":" + ident(label) for label in [*space_model["labels"], "PGIndexableNode"])
     not_narrowed = "".join(f" AND NOT (s)-[:{ident(n)}]->(p)" for n in narrowers_of(state, primary))
 
+    window = f"WITH s, p LIMIT {int(limit)}" if limit else ""
     match = f"""
         MATCH (s:{model})-[e]->(p)
         WHERE type(e) = $primary AND NOT coalesce(e.reverse, false) AND NOT p:{space_label}{not_narrowed}
+        {window}
     """
     count = (await run(tx, match + " RETURN count(*) AS count", primary=primary))[0]["count"]
     if not count:
-        return
+        return 0
     ids = [str(uuid.uuid7()) for _ in range(count)]
     new_edges = []
     for forward, reverse in pairs:
@@ -1173,15 +1383,21 @@ async def wrap_in_semantic_space(tx: Transaction, change: c.WrapRelation, state:
             names = [r for _, r in pairs]
         await run(tx, query, names=names)
     await recompute_contexts(tx, [row["head"] for row in heads], state)
+    return count
 
 
-async def unwrap_semantic_space(tx: Transaction, change: c.UnwrapRelation, state: dict) -> None:
+async def unwrap_semantic_space(
+    tx: Transaction, change: c.UnwrapRelation, state: dict, limit: int | None = None
+) -> int:
     field = field_of(state, change.model, change.name)
     pairs = edge_pairs(field)
     primary = pairs[0][0]
     contents_forward = edge_pairs(field_of(state, change.wrapper, "contents"))[0][0]
     model, space_label = ident(change.model), ident(change.wrapper)
     not_narrowed = "".join(f" AND NOT (s)-[:{ident(n)}]->(r)" for n in narrowers_of(state, primary))
+    ids = await wrapper_ids(tx, model, space_label, primary, not_narrowed, limit)
+    if not ids:
+        return 0
     creates = []
     for forward, reverse in pairs:
         creates.append(f"MERGE (s)-[:{ident(forward)}]->(p)")
@@ -1190,22 +1406,25 @@ async def unwrap_semantic_space(tx: Transaction, change: c.UnwrapRelation, state
         tx,
         f"""
         MATCH (s:{model})-[e]->(r:{space_label})-[:{ident(contents_forward)}]->(p)
-        WHERE type(e) = $primary AND NOT coalesce(e.reverse, false){not_narrowed}
+        WHERE type(e) = $primary AND NOT coalesce(e.reverse, false){not_narrowed} AND r.id IN $ids
         {' '.join(creates)}
         RETURN DISTINCT coalesce(s.head_node_id, s.id) AS head
         """,
         primary=primary,
+        ids=ids,
     )
     await run(
         tx,
         f"""
         MATCH (s:{model})-[e]->(r:{space_label})
-        WHERE type(e) = $primary AND NOT coalesce(e.reverse, false){not_narrowed}
+        WHERE type(e) = $primary AND NOT coalesce(e.reverse, false){not_narrowed} AND r.id IN $ids
         DETACH DELETE r
         """,
         primary=primary,
+        ids=ids,
     )
     await recompute_contexts(tx, [row["head"] for row in heads], state)
+    return len(ids)
 
 
 # ---------------------------------------------------------------------------
@@ -1213,7 +1432,9 @@ async def unwrap_semantic_space(tx: Transaction, change: c.UnwrapRelation, state
 # ---------------------------------------------------------------------------
 
 
-async def change_wrapper(tx: Transaction, change: c.ChangeWrapper, state: dict) -> None:
+async def change_wrapper(
+    tx: Transaction, change: c.ChangeWrapper, state: dict, limit: int | None = None
+) -> int:
     if change.wrapper_kind != "reifiedRelation":
         raise PanglossMigrationNotSupported(
             f"{change.describe()}: only reified relations are supported: write it by hand"
@@ -1251,17 +1472,22 @@ async def change_wrapper(tx: Transaction, change: c.ChangeWrapper, state: dict) 
     clauses.append("SET r.type = $new_type" + "".join(", " + assignment for assignment in sets))
     if removes:
         clauses.append("REMOVE " + ", ".join(removes))
-    await run(
+    # (what is changed no longer has the old label, so a next call finds the next)
+    window = f"WITH DISTINCT r LIMIT {int(limit)}" if limit else "WITH DISTINCT r"
+    rows = await run(
         tx,
         f"""
         MATCH (s:{model})-[e]->(r:{old_label})
         WHERE type(e) = $primary AND NOT coalesce(e.reverse, false)
+        {window}
         {' '.join(clauses)}
+        RETURN count(r) AS done
         """,
         primary=primary,
         new_type=change.new_wrapper,
         **params,
     )
+    return rows[0]["done"] if rows else 0
 
 
 def embedded_node_clauses(state: dict, embedded_model: str) -> tuple[str, dict[str, Any]]:
@@ -1269,9 +1495,11 @@ def embedded_node_clauses(state: dict, embedded_model: str) -> tuple[str, dict[s
     return "".join(":" + ident(label) for label in [*model["labels"], "PGIndexableNode"]), {}
 
 
-async def literals_to_embedded(tx: Transaction, change: c.LiteralsToEmbedded, state: dict) -> None:
+async def literals_to_embedded(
+    tx: Transaction, change: c.LiteralsToEmbedded, state: dict, limit: int | None = None
+) -> int:
     """A node of the embedded object on each node that has the fields, with the values moved
-    into it"""
+    into it: on all of them, or on `limit` (those done no longer have the values). Returns how many."""
     embedded_name = change.embedded_type or change.embedded_model
     embedded = model_of(state, embedded_name)
     own = {f["name"]: f for f in embedded["fields"]}
@@ -1285,8 +1513,7 @@ async def literals_to_embedded(tx: Transaction, change: c.LiteralsToEmbedded, st
     forward, reverse = edge_pairs(change.definition)[0]
     labels = "".join(":" + ident(label) for label in [*embedded["labels"], "PGIndexableNode"])
     model = ident(change.model)
-    holds = " OR ".join(f"s.{ident(f)} IS NOT NULL" for f in change.fields)
-    move = ", ".join(f"{ident(f)}: s.{ident(f)}" for f in change.fields)
+    holds = " OR ".join(f"s.{ident(f)} IS NOT NULL" for f in change.fields) or "true"
     params: dict[str, Any] = {}
     extra = []
     for name, value in defaults.items():
@@ -1296,13 +1523,18 @@ async def literals_to_embedded(tx: Transaction, change: c.LiteralsToEmbedded, st
                 + literal_expression(value, field_descriptor(own[name]), params, f"default_{name}", state["enums"])
             )
 
+    properties = [f"{ident(f)}: s.{ident(f)}" for f in change.fields] + extra
+    tail = ", " + ", ".join(properties) if properties else ""
+    removes = f"REMOVE {', '.join(f's.{ident(f)}' for f in change.fields)}" if change.fields else ""
+    window = f"WITH s LIMIT {int(limit)}" if limit else ""
     match = f"""
         MATCH (s:{model})
         WHERE ({holds}) AND NOT (s)-[:{ident(forward)}]->(:Embedded)
+        {window}
     """
     count = (await run(tx, match + " RETURN count(*) AS count"))[0]["count"]
     if not count:
-        return
+        return 0
     ids = [str(uuid.uuid7()) for _ in range(count)]
     heads = await run(
         tx,
@@ -1319,12 +1551,11 @@ async def literals_to_embedded(tx: Transaction, change: c.LiteralsToEmbedded, st
             head_node_type: coalesce(s.head_node_type, s.type),
             meta: {{created_by: new_meta.created_by, created_when: new_meta.created_when,
                     updated_by: new_meta.updated_by, updated_when: new_meta.updated_when,
-                    semantic_spaces: [], context_labels: null}},
-            {move}{', ' + ', '.join(extra) if extra else ''}
+                    semantic_spaces: [], context_labels: null}}{tail}
         }})
         CREATE (s)-[:{ident(forward)}]->(e)
         CREATE (e)-[:{ident(reverse)} {{reverse: true}}]->(s)
-        REMOVE {', '.join(f"s.{ident(f)}" for f in change.fields)}
+        {removes}
         RETURN DISTINCT coalesce(s.head_node_id, s.id) AS head
         """,
         ids=ids,
@@ -1332,21 +1563,100 @@ async def literals_to_embedded(tx: Transaction, change: c.LiteralsToEmbedded, st
         labels_in_context=labels_in_context(state),
         **params,
     )
+    return count
 
 
-async def embedded_to_literals(tx: Transaction, change: c.EmbeddedToLiterals, state: dict) -> None:
+async def embedded_to_literals(
+    tx: Transaction, change: c.EmbeddedToLiterals, state: dict, limit: int | None = None
+) -> int:
+    """The values of the embedded objects copied onto the nodes that have them, and the objects
+    deleted: all of them, or `limit` (those done are no longer there). Returns how many."""
     field = field_of(state, change.model, change.name)
     forward, reverse = edge_pairs(field)[0]
     model = ident(change.model)
     moves = ", ".join(f"s.{ident(f)} = e.{ident(f)}" for f in change.fields)
-    await run(
+    if limit is None:
+        await run(
+            tx,
+            f"""
+            MATCH (s:{model})-[x:{ident(forward)}]->(e) WHERE NOT coalesce(x.reverse, false)
+            SET {moves}
+            """,
+        )
+        await delete_relation(tx, change.model, field)
+        return 0
+    rows = await run(
         tx,
         f"""
         MATCH (s:{model})-[x:{ident(forward)}]->(e) WHERE NOT coalesce(x.reverse, false)
+        WITH s, e LIMIT {int(limit)}
         SET {moves}
+        RETURN collect(e.id) AS ids
         """,
     )
+    ids = rows[0]["ids"] if rows else []
+    if ids:
+        await run(
+            tx,
+            """
+            MATCH (e) WHERE e.id IN $ids
+            OPTIONAL MATCH (e)-[*BFS (e2, n2 | NOT n2:Entity AND NOT coalesce(e2.reverse, false))]->(d)
+            WITH collect(DISTINCT e) + collect(DISTINCT d) AS owned
+            UNWIND [x IN owned WHERE x IS NOT NULL] AS o
+            DETACH DELETE o
+            """,
+            ids=ids,
+        )
+    if ids:
+        return len(ids)
+    # (the objects are all gone: what is left of the relation, the edges, goes with the last call)
     await delete_relation(tx, change.model, field)
+    return 0
+
+
+# ---------------------------------------------------------------------------
+# The classes a node fulfils (`Fulfils`)
+# ---------------------------------------------------------------------------
+
+
+def fulfils_condition(entry: dict) -> str:
+    """A Cypher condition that is true of a node `n` that has everything a fulfilled class needs"""
+    parts = []
+    for need in entry["needs"]:
+        if need.get("never"):
+            return "false"
+        if "property" in need:
+            parts.append(f"n.{ident(need['property'])} IS NOT NULL")
+        else:
+            parts.append(f"EXISTS {{ MATCH (n)-[:{ident(need['edge'])}]->() }}")
+    return " AND ".join(parts) or "true"
+
+
+async def recompute_fulfils(
+    tx: Transaction, change: c.RecomputeFulfils, state: dict, limit: int | None = None
+) -> int:
+    """Give the nodes of the model (of exactly the model, not of its subclasses, which have their
+    own change) the labels of the classes they fulfil, and take off those of the classes they do not.
+
+    Each label is looked at by itself: a node should have it if it is one of the model's own, or if
+    it fulfils a class that gives it. So a label two classes give is not taken off by one and put
+    back by the other. What is done is no longer there to do, so with a `limit` a call again finds
+    the next. Returns the most that any label had changed."""
+    own = set(model_of(state, change.model)["labels"])
+    labels = sorted({label for entry in [*change.before, *change.after] for label in entry["labels"]} - own)
+    window = f"WITH n LIMIT {int(limit)} " if limit else ""
+    done = 0
+    for label in labels:
+        providers = [entry for entry in change.after if label in entry["labels"]]
+        wanted = " OR ".join(f"({fulfils_condition(entry)})" for entry in providers) or "false"
+        base = f"MATCH (n:{ident(change.model)}) WHERE n.type = $model"
+        for query in (
+            f"{base} AND NOT n:{ident(label)} AND ({wanted}) {window}SET n:{ident(label)} RETURN count(n) AS done",
+            f"{base} AND n:{ident(label)} AND NOT ({wanted}) {window}REMOVE n:{ident(label)} RETURN count(n) AS done",
+        ):
+            rows = await run(tx, query, model=change.model)
+            done = max(done, rows[0]["done"] if rows else 0)
+    return done
 
 
 # ---------------------------------------------------------------------------
@@ -1552,10 +1862,14 @@ async def rewrite_enum_values(
     enum: str,
     mapping: dict[str, Any],
     refuse: Callable[[str, int], None] | None = None,
-) -> None:
+    limit: int | None = None,
+) -> int:
     """Change the stored values of `enum` that are keys of `mapping` (their text) to what it
     gives, everywhere they are. `refuse(where, count)` is called, before anything is changed, for
-    each place that has any: it may raise."""
+    each place that has any: it may raise. With a `limit`, that many at most of each place (what is
+    changed no longer has the old value, so a next call finds the next). Returns the most that any
+    place had changed."""
+    window = f"WITH {{v}} LIMIT {int(limit)} " if limit else ""
     keys = list(mapping)
     holders = enum_holders(state, enum)
     queries: list[tuple[str, str, str]] = []  # (where, count query, change query)
@@ -1569,7 +1883,7 @@ async def rewrite_enum_values(
                 (
                     where,
                     f"MATCH (n:{label}) WHERE {test} RETURN count(n) AS count",
-                    f"MATCH (n:{label}) WHERE {test} SET {ref} = {new}",
+                    f"MATCH (n:{label}) WHERE {test} {window.format(v='n')}SET {ref} = {new} RETURN count(n) AS done",
                 )
             )
         else:
@@ -1582,14 +1896,14 @@ async def rewrite_enum_values(
                 (
                     where,
                     f"MATCH (n:{label})-[e]->() WHERE type(e) IN {forward!r} AND {test} RETURN count(e) AS count",
-                    f"MATCH (n:{label})-[e]->() WHERE type(e) IN {forward!r} AND {test} SET {ref} = {new}",
+                    f"MATCH (n:{label})-[e]->() WHERE type(e) IN {forward!r} AND {test} {window.format(v='e')}SET {ref} = {new} RETURN count(e) AS done",
                 )
             )
             queries.append(
                 (
                     where,
                     f"MATCH ()-[e]->(n:{label}) WHERE type(e) IN {reverse!r} AND {test} RETURN count(e) AS count",
-                    f"MATCH ()-[e]->(n:{label}) WHERE type(e) IN {reverse!r} AND {test} SET {ref} = {new}",
+                    f"MATCH ()-[e]->(n:{label}) WHERE type(e) IN {reverse!r} AND {test} {window.format(v='e')}SET {ref} = {new} RETURN count(e) AS done",
                 )
             )
     if refuse is not None:
@@ -1597,8 +1911,11 @@ async def rewrite_enum_values(
             count = (await run(tx, count_query, keys=keys, values=mapping))[0]["count"]
             if count:
                 refuse(where, count)
+    done = 0
     for _, _, change_query in queries:
-        await run(tx, change_query, keys=keys, values=mapping)
+        rows = await run(tx, change_query, keys=keys, values=mapping)
+        done = max(done, rows[0]["done"] if rows else 0)
+    return done
 
 
 def member_of(state: dict, enum: str, name: str) -> dict:
@@ -1608,15 +1925,20 @@ def member_of(state: dict, enum: str, name: str) -> dict:
     raise PanglossMigrationError(f"There is no member {enum}.{name} at this point")
 
 
-async def alter_enum_member_value(tx: Transaction, change: c.AlterEnumMemberValue, state: dict) -> None:
-    """The data that has the old value of a member is given the new"""
+async def alter_enum_member_value(
+    tx: Transaction, change: c.AlterEnumMemberValue, state: dict, limit: int | None = None
+) -> int:
+    """The data that has the old value of a member is given the new (`limit` at a time at most)"""
     if change.old == change.new:
-        return
-    await rewrite_enum_values(tx, state, change.enum, {str(change.old): change.new})
+        return 0
+    return await rewrite_enum_values(tx, state, change.enum, {str(change.old): change.new}, limit=limit)
 
 
-async def remove_enum_member(tx: Transaction, change: c.RemoveEnumMember, state: dict) -> None:
-    """Move the values off a member, to those of the member that `replacement` names"""
+async def remove_enum_member(
+    tx: Transaction, change: c.RemoveEnumMember, state: dict, limit: int | None = None
+) -> int:
+    """Move the values off a member, to those of the member that `replacement` names (`limit` at
+    a time at most)"""
     removed = member_of(state, change.enum, change.member)["value"]
     if change.replacement is None:
 
@@ -1626,10 +1948,11 @@ async def remove_enum_member(tx: Transaction, change: c.RemoveEnumMember, state:
                 f"(`replacement`)"
             )
 
+        # (nothing is changed if there are none: so a call again finds none)
         await rewrite_enum_values(tx, state, change.enum, {str(removed): removed}, refuse)
-        return
+        return 0
     replacement = member_of(state, change.enum, change.replacement)["value"]
-    await rewrite_enum_values(tx, state, change.enum, {str(removed): replacement})
+    return await rewrite_enum_values(tx, state, change.enum, {str(removed): replacement}, limit=limit)
 
 
 # ---------------------------------------------------------------------------
@@ -1668,11 +1991,11 @@ DATA_HANDLERS: dict[type, Callable[[Transaction, Any, dict], Awaitable[None]]] =
     c.RenameModel: rename_model,
     c.AlterModelLabels: alter_model_labels,
     c.AlterModelOption: nothing,
-    c.AlterModelKind: manual("a Document and an Entity are stored differently; write it by hand"),
+    c.AlterModelKind: manual("the kind of a model cannot be changed"),
     c.AddField: add_field,
     c.RemoveField: remove_field,
     c.RenameField: rename_field_data,
-    c.ChangeFieldKind: manual("write it by hand"),
+    c.ChangeFieldKind: manual("the kind of a field cannot be changed"),
     c.AlterLiteralType: alter_literal_type,
     c.AlterListItemType: alter_list_item_type,
     c.AlterNullability: alter_nullability,
@@ -1692,6 +2015,7 @@ DATA_HANDLERS: dict[type, Callable[[Transaction, Any, dict], Awaitable[None]]] =
     c.EmbeddedToLiterals: embedded_to_literals,
     c.RemoveEnumMember: remove_enum_member,
     c.AlterEnumMemberValue: alter_enum_member_value,
+    c.RecomputeFulfils: recompute_fulfils,
     c.CreateEnum: nothing,
     c.AddEnumMember: nothing,
     c.RenameEnumMember: nothing,
@@ -1726,11 +2050,36 @@ WINDOWED_HANDLERS: dict[type, Callable[..., Awaitable[list[str] | None]]] = {
 def batch_kind(change: c.Change, state: dict) -> str | None:
     """How a change can be made in batches, so that a large one is not a single transaction that
     cannot be resumed: `"window"` (the nodes in the order of their ids, a number at a time),
-    `"wrap"` (the relations not yet wrapped, a number at a time), `"edges"` (the edges, or the nodes
-    they own, not yet renamed or deleted, a number at a time), or None (it is made at once).
+    `"wrap"` (the relations not yet wrapped, a number at a time), `"edges"` (whatever is left to do,
+    found by what is no longer there once it is done, a number at a time: edges to rename or delete,
+    wrappers to take off, values to change, nodes to relabel or delete), or None (it is made at once).
     `state` is the snapshot before it."""
     if isinstance(change, c.WrapRelation):
-        return "wrap" if change.wrapper_kind == "reifiedRelation" else None
+        if change.wrapper_kind == "reifiedRelation":
+            return "wrap"
+        return "edges" if change.wrapper_kind == "semanticSpace" else None
+    if isinstance(change, c.UnwrapRelation):
+        return "edges" if change.wrapper_kind in ("reifiedRelation", "semanticSpace") else None
+    if isinstance(change, c.ChangeWrapper):
+        return "edges" if change.wrapper_kind == "reifiedRelation" else None
+    if isinstance(
+        change,
+        (
+            c.LiteralsToEmbedded,
+            c.EmbeddedToLiterals,
+            c.RenameModel,
+            c.DeleteModel,
+            c.AlterReverseName,
+            c.AlterEnumMemberValue,
+            c.RemoveEnumMember,
+            c.RecomputeFulfils,
+            c.AlterCardinality,
+            c.AlterRelationTarget,
+            c.AlterParentFields,
+            c.AlterEdgeModel,
+        ),
+    ):
+        return "edges"
     if isinstance(change, c.RenameField):
         field = field_of(state, change.model, change.old)
         return "window" if field["kind"] in SCALAR_PROPERTY_KINDS else "edges"
@@ -1743,6 +2092,8 @@ def batch_kind(change: c.Change, state: dict) -> str | None:
         return "window" if field["kind"] in SCALAR_PROPERTY_KINDS else "edges"
     if isinstance(change, c.AddField):
         field = change.definition
+        if field["kind"] == "embedded" and not change.from_narrowing:
+            return "edges"
         scalar = field["kind"] in SCALAR_PROPERTY_KINDS
         return "window" if scalar and change.needs_value and not change.from_narrowing else None
     if isinstance(change, c.AlterNullability):

@@ -155,3 +155,60 @@ async def test_a_value_that_cannot_go_back_fails_and_changes_nothing(db_driver, 
     with pytest.raises(Exception, match="seven|convert"):
         await go_back(old, new, forward)
     assert run(db_driver, "MATCH (n:Item) RETURN n.count AS c") == [{"c": "seven"}]
+
+
+@no_type_check
+async def test_undoing_in_batches_and_again_after_a_stop(db_driver, clear_database, monkeypatch):
+    from dataclasses import replace
+
+    from pangloss_memgraph.databases.memgraph import migration_backend as backend
+    from pangloss_memgraph.databases.memgraph.migrations import runner
+    from pangloss_models.migrations.files import EMPTY_SNAPSHOT, Migration
+
+    def v1():
+        class Item(Entity):
+            name: str
+
+        return ns(Item=Item)
+
+    def v2():
+        class Item(Entity):
+            name: str
+            count: int
+
+        return ns(Item=Item)
+
+    old_models, old = declare(v1)
+    for n in range(5):
+        await old_models.Item.Create(label=f"I{n}", name=f"n{n}").save()
+    new_models, new = declare(v2)
+    forward = await migrate(old, new, answer=with_answers(AddField={"default": 3}))
+    assert run(db_driver, "MATCH (i:Item) WHERE i.count = 3 RETURN count(i) AS n") == [{"n": 5}]
+
+    await backend.ensure_ready()
+    reversal = reverse_changes(forward, data_view(old))
+    migration = Migration(app="back", name="0001_x", changes=tuple(reversal.changes))
+    run(db_driver, "CREATE (:PGMigration {app: 'back', name: '0001_x', status: 'applied'})")
+
+    # the second batch fails
+    calls = []
+    original = runner.apply_window
+
+    async def failing(*args, **kwargs):
+        calls.append(1)
+        if len(calls) == 2:
+            raise RuntimeError("stopped part way")
+        return await original(*args, **kwargs)
+
+    monkeypatch.setattr(runner, "apply_window", failing)
+    with pytest.raises(RuntimeError, match="stopped part way"):
+        await backend.unapply([migration], data_view(new), batch_size=2)
+    assert [r["key"] for r in run(db_driver, "MATCH (m:PGMigration) RETURN m.name AS key")] == ["0001_x"]  # (still recorded)
+    assert run(db_driver, "MATCH (i:Item) WHERE i.count IS NOT NULL RETURN count(i) AS n") == [{"n": 3}]  # (2 done)
+
+    # ... and run again from the start: the rest is done, and what was done is not found again
+    monkeypatch.setattr(runner, "apply_window", original)
+    state = await backend.unapply([migration], data_view(new), batch_size=2)
+    assert run(db_driver, "MATCH (i:Item) WHERE i.count IS NOT NULL RETURN count(i) AS n") == [{"n": 0}]
+    assert run(db_driver, "MATCH (m:PGMigration {app: 'back'}) RETURN count(m) AS n") == [{"n": 0}]
+    assert state == data_view(old)

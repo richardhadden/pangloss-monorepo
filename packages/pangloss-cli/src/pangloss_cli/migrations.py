@@ -8,6 +8,7 @@ the database has not had, and records them.
 
 import copy
 import importlib
+from pathlib import Path
 from collections.abc import Callable
 from types import ModuleType
 
@@ -26,6 +27,7 @@ from pangloss_models.migrations.files import (
     EMPTY_SNAPSHOT,
     Migration,
     MigrationGraph,
+    discover,
     graph_of,
     migrations_directory,
     next_name,
@@ -311,10 +313,11 @@ def squashmigrations(
     except PanglossMigrationError as error:
         fail(str(error))
         raise
-    before = sum(len(graph.migrations[key].changes) for key in squashed.replaces)
+    in_graph = [graph.migrations[key] for key in squashed.replaces if key in graph.migrations]
+    before = sum(len(m.changes) for m in in_graph)
     typer.secho(f"{squashed}", bold=True)
     typer.echo(f"  replaces {', '.join(n for _, n in squashed.replaces)}")
-    typer.echo(f"  {before} changes in {len(squashed.replaces)} migrations -> {len(squashed.changes)} changes")
+    typer.echo(f"  {before} changes in {len(in_graph)} migrations -> {len(squashed.changes)} changes")
     for line in describe(squashed):
         typer.echo(line)
     if dry_run:
@@ -326,6 +329,103 @@ def squashmigrations(
         "The migrations it replaces are kept, for databases that are part way through them. "
         "Delete them (the files) when every database has applied them all."
     )
+
+
+def backups(ctx: typer.Context) -> None:
+    """List the snapshots the server has (what `migrate --backup` takes), newest first"""
+    project: Project = ctx.obj
+    backend = migration_backend(project)
+    if not hasattr(backend, "backups"):
+        fail("This database does not list backups")
+    for row in run_with_database(project, backend.backups):
+        typer.echo(f"{row['creation_time']}  {row['size']:>10}  {row['path']}")
+
+
+def restore(
+    ctx: typer.Context,
+    path: str = typer.Argument(..., help="A snapshot, as `pangloss backups` shows it"),
+    yes: bool = typer.Option(False, "--yes", "-y", help="Do not ask first"),
+) -> None:
+    """Put the database back to a snapshot. EVERYTHING in it now is replaced by what the snapshot
+    has: data written since is lost, and so is the record of migrations since (so run `pangloss
+    migrate` after, with the code that goes with it)."""
+    project: Project = ctx.obj
+    backend = migration_backend(project)
+    if not hasattr(backend, "restore"):
+        fail("This database cannot restore a backup")
+    if not yes:
+        typer.confirm(f"Replace everything in the database with {path}?", abort=True)
+    try:
+        run_with_database(project, lambda: backend.restore(path))
+    except PanglossMigrationError as error:
+        fail(str(error))
+    typer.secho("Restored. Run `pangloss showmigrations` to see where the database is.", fg="green")
+
+
+def cleanmigrations(
+    ctx: typer.Context,
+    app: str | None = typer.Argument(None, help="Only this app's"),
+    yes: bool = typer.Option(False, "--yes", "-y", help="Do not ask before deleting"),
+) -> None:
+    """Delete the files of the migrations that a squashed migration replaces.
+
+    Only this database is looked at: it must have had all of them or none (not be part way through).
+    Another database (a colleague's, staging, production) that is part way through them cannot go
+    on without them, so delete them only when every database has applied them all."""
+    project: Project = ctx.obj
+    apps = installed_apps(project)
+    if app is not None and app not in apps:
+        fail(f"{app} is not one of the INSTALLED_APPS")
+    backend = migration_backend(project)
+
+    async def read():
+        await backend.ensure_ready()
+        return await backend.applied()
+
+    applied = run_with_database(project, read)
+    try:
+        everything = [m for name in apps for m in discover(name)]
+        graph = MigrationGraph.of(everything, applied)
+    except PanglossMigrationError as error:
+        fail(str(error))
+        raise
+
+    files: list[tuple[Migration, Path]] = []
+    part_way: list[Migration] = []
+    seen: set[Path] = set()
+    # (what the squashed migrations that are used replace, among them squashed migrations that were
+    # squashed again)
+    covered = {key for originals in graph.stands_for.values() for key in originals}
+    for squashed in (m for m in everything if m.replaces and (app is None or m.app == app)):
+        if squashed.key not in graph.migrations:
+            if squashed.key not in covered:
+                part_way.append(squashed)  # (not used: the database is part way through what it replaces)
+            continue
+        for original in squashed.replaces:
+            path = migrations_directory(original[0]) / f"{original[1]}.py"
+            if path.exists() and path not in seen:
+                seen.add(path)
+                files.append((squashed, path))
+    for squashed in part_way:
+        typer.secho(
+            f"{squashed}: this database is part way through what it replaces, so they are kept",
+            fg="yellow",
+        )
+    if not files:
+        typer.echo("Nothing to delete")
+        return
+    typer.echo("These are replaced by a squashed migration:")
+    for squashed, path in files:
+        typer.echo(f"  {path.name}  (by {squashed.name})")
+    typer.secho(
+        "No other database is looked at. One that is part way through them cannot go on without them.",
+        fg="yellow",
+    )
+    if not yes:
+        typer.confirm("Delete them?", abort=True)
+    for _, path in files:
+        path.unlink()
+    typer.secho(f"Deleted {len(files)} files", fg="green")
 
 
 # ---------------------------------------------------------------------------
@@ -367,6 +467,7 @@ def go_backwards(
     backup: bool | None,
     no_check: bool,
     check: bool,
+    batch_size: int | None = None,
 ) -> None:
     """Undo the migrations of `app` after `wanted` (and what follows them): their changes are
     undone by the changes that `reverse_changes` makes, the last applied first"""
@@ -378,20 +479,32 @@ def go_backwards(
         typer.echo(f"{len(chosen)} migrations to undo")
         raise typer.Exit(1)
 
-    keys = {key for key, record in applied.items() if record.get("status") == "applied"}
+    # (one that failed or was left running is undone as if it was applied: the changes can be made over
+    # what was done)
+    keys = {key for key, record in applied.items() if record.get("status") in ("applied", "failed", "running")}
     before, after, now = states_around(graph, keys)
     undoing: list[Migration] = []
     lossy = False
+    to_be_asked: list[str] = []
     for migration in chosen:
         try:
             reversal = reverse_changes(migration.changes, before[migration.key])
         except PanglossMigrationIrreversible as error:
             fail(f"{migration} cannot be undone: {error}")
             raise
-        changes = ask_answers(reversal.changes, after[migration.key], noinput=plan_only or dry_run)
-        for _, question in collect_questions(changes, after[migration.key]):
-            if not question.optional:
-                fail(f"{migration} cannot be undone without: {question.prompt}")
+        if plan_only:
+            # (a plan says what will be asked, and does not ask)
+            changes = list(reversal.changes)
+            to_be_asked += [
+                f"{migration}: {question.prompt}"
+                for _, question in collect_questions(changes, after[migration.key])
+                if not question.optional
+            ]
+        else:
+            changes = ask_answers(reversal.changes, after[migration.key], noinput=False)
+            for _, question in collect_questions(changes, after[migration.key]):
+                if not question.optional:
+                    fail(f"{migration} cannot be undone without: {question.prompt}")
         lossy = lossy or reversal.lossy
         undoing.append(
             Migration(
@@ -399,6 +512,8 @@ def go_backwards(
                 name=migration.name,
                 changes=tuple(changes),
                 replaces=migration.replaces,  # (their records go too)
+                atomic=migration.atomic,
+                batch_size=migration.batch_size,
             )
         )
 
@@ -410,6 +525,10 @@ def go_backwards(
     if lossy:
         typer.secho("  [LOSES DATA: what the migrations wrote or changed is not brought back]", fg="yellow")
     if plan_only:
+        if to_be_asked:
+            typer.echo("Going back will ask for:")
+            for line in to_be_asked:
+                typer.echo(f"  - {line}")
         return
     if dry_run:
         report_dry_run(run_with_database(project, lambda: backend.dry_run(undoing, now)))
@@ -433,7 +552,12 @@ def go_backwards(
                 if not hasattr(backend, "backup"):
                     raise PanglossMigrationError("This database cannot take a backup")
                 typer.echo(f"Backup: {await backend.backup()}")
-            return await backend.unapply(undoing, now, fake=fake, progress=progress)
+                notice = await backend.backup_notice() if hasattr(backend, "backup_notice") else None
+                if notice:
+                    typer.secho(notice, fg="yellow")
+            return await backend.unapply(
+                undoing, now, fake=fake, progress=progress, batch_size=batch_size
+            )
         finally:
             await backend.unlock()
 
@@ -554,6 +678,7 @@ def migrate(
                 backup=backup,
                 no_check=no_check,
                 check=check,
+                batch_size=batch_size,
             )
             return
     elif target is not None:
@@ -615,6 +740,9 @@ def migrate(
                 if not hasattr(backend, "backup"):
                     raise PanglossMigrationError("This database cannot take a backup")
                 typer.echo(f"Backup: {await backend.backup()}")
+                notice = await backend.backup_notice() if hasattr(backend, "backup_notice") else None
+                if notice:
+                    typer.secho(notice, fg="yellow")
             return await backend.apply(
                 todo, state, fake=fake, progress=progress, batch_size=batch_size
             )

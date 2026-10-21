@@ -91,6 +91,18 @@ def _alter_member_value(change: c.AlterEnumMemberValue, before):
     return swapped(change, old=change.new, new=change.old)
 
 
+def _recompute_fulfils(change: c.RecomputeFulfils, before):
+    entry = model_entry(before, change.model)
+    return [
+        c.RecomputeFulfils(
+            model=change.model,
+            fulfils=copy.deepcopy(entry.get("fulfils", [])),
+            before=change.after,
+            after=change.before,
+        )
+    ]
+
+
 def _create_enum(change: c.CreateEnum, before):
     return [c.RemoveEnum(enum=change.enum)]
 
@@ -379,6 +391,7 @@ INVERSES: dict[type, Inverse] = {
     c.RenameEnumMember: _rename,
     c.RenameEnum: _rename,
     c.AlterEnumMemberValue: _alter_member_value,
+    c.RecomputeFulfils: _recompute_fulfils,
     c.CreateEnum: _create_enum,
     c.RemoveEnum: _remove_enum,
     c.AddEnumMember: _add_enum_member,

@@ -314,3 +314,37 @@ async def test_data_is_told_from_the_record_of_migrations(db_driver, clear_datab
 
     run(db_driver, "CREATE (:Person {id: 'a'})")
     assert await backend.has_data() is True
+
+
+async def test_a_backup_can_be_listed_and_the_database_put_back_to_it(db_driver, clear_database):
+    run(db_driver, "MATCH (n:BackedUp) DETACH DELETE n")
+    run(db_driver, "CREATE (:BackedUp {v: 'before'})")
+    path = await backend.backup()
+    assert path in [row["path"] for row in await backend.backups()]
+    # (newest first)
+    listed = await backend.backups()
+    assert listed == sorted(listed, key=lambda row: row["creation_time"], reverse=True)
+
+    run(db_driver, "CREATE (:BackedUp {v: 'after'})")
+    assert run(db_driver, "MATCH (n:BackedUp) RETURN count(n) AS c") == [{"c": 2}]
+
+    await backend.restore(path)
+    assert run(db_driver, "MATCH (n:BackedUp) RETURN n.v AS v") == [{"v": "before"}]
+    run(db_driver, "MATCH (n:BackedUp) DETACH DELETE n")
+
+    # ... and it can be written to: a recovered snapshot has the text indexes, and not their files
+    # (so the indexes are made again)
+    run(db_driver, "CREATE (:PGIndexableNode {id: 'after-restore', label: 'written after'})")
+    run(db_driver, "MATCH (n {id: 'after-restore'}) DELETE n")
+
+
+async def test_only_a_snapshot_the_server_has_can_be_restored(db_driver, clear_database):
+    with pytest.raises(PanglossMigrationError, match="not a snapshot the server has"):
+        await backend.restore('/etc/passwd" FORCE; MATCH (n) DETACH DELETE n; //')
+    with pytest.raises(PanglossMigrationError, match="not a snapshot"):
+        await backend.restore("/var/lib/memgraph/snapshots/nothing")
+
+
+async def test_a_backup_is_said_to_last_only_so_long(db_driver, clear_database):
+    notice = await backend.backup_notice()
+    assert notice and "keeps 3" in notice and "removed" in notice

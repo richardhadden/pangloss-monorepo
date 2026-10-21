@@ -64,6 +64,11 @@ def resolve_target(graph: MigrationGraph, app: str, text: str) -> Migration | No
     return matches[0]
 
 
+def begun(applied: dict[tuple[str, str], dict[str, Any]], key: tuple[str, str]) -> bool:
+    """Whether a migration has been applied, or begun and not finished (failed, or running)"""
+    return applied.get(key, {}).get("status") in ("applied", "failed", "running")
+
+
 def to_unapply(
     graph: MigrationGraph,
     applied: dict[tuple[str, str], dict[str, Any]],
@@ -71,12 +76,14 @@ def to_unapply(
     target: Migration | None,
 ) -> list[Migration]:
     """The migrations to undo to leave `app` at `target` (None: before its first), last first: those
-    of the app after it, and whatever applied migrations follow those (of any app)"""
+    of the app after it, and whatever applied migrations follow those (of any app). One that failed
+    or was left running is undone too: it was begun, and what it did is undone (every change can be
+    made over what is already done)."""
     number = target.number if target else 0
     chosen = {
         m.key
         for m in graph.migrations.values()
-        if m.app == app and m.number > number and applied.get(m.key, {}).get("status") == "applied"
+        if m.app == app and m.number > number and begun(applied, m.key)
     }
     grew = True
     while grew:
@@ -84,7 +91,7 @@ def to_unapply(
         for m in graph.migrations.values():
             if (
                 m.key not in chosen
-                and applied.get(m.key, {}).get("status") == "applied"
+                and begun(applied, m.key)
                 and any(parent in chosen for parent in graph.parents(m))
             ):
                 chosen.add(m.key)

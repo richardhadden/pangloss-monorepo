@@ -462,3 +462,159 @@ def test_the_migrations_of_one_app_come_with_those_of_others_that_they_need(apps
     owners = MigrationGraph().owners()
     where = {ch.model: app_of_change(ch, new, owners, apps) for ch in result.changes if isinstance(ch, c.CreateModel)}
     assert where == {"Place": "appone", "Thing": "appone", "Person": "apptwo"}
+
+
+@no_type_check
+def test_changing_the_kind_of_a_model_or_a_field_is_refused(apps):
+    from pangloss_models.exceptions import PanglossMigrationNotSupported
+
+    def entity():
+        class Thing(Entity):
+            name: str
+
+    def document():
+        class Thing(Document):
+            name: str
+
+    first = in_app(snapshot_of(entity), Thing="appone.models")
+    graph = write_all(plan(MigrationGraph(), first, apps).migrations, apps)
+
+    with pytest.raises(PanglossMigrationNotSupported, match="kind of a model cannot be changed"):
+        plan(graph, in_app(snapshot_of(document), Thing="appone.models"), apps)
+
+
+def test_changing_the_kind_of_a_field_is_refused_too():
+    from pangloss_models.exceptions import PanglossMigrationNotSupported
+    from pangloss_models.migrations.planner import refuse_kind_changes
+
+    with pytest.raises(PanglossMigrationNotSupported, match="kind of a field cannot be changed"):
+        refuse_kind_changes([c.ChangeFieldKind(model="Thing", name="home", old="literal", new="relation")])
+    refuse_kind_changes([c.AddField(model="Thing", name="x", field_kind="literal", needs_value=False)])
+
+
+@no_type_check
+def test_a_new_embedded_object_asks_for_the_values_it_requires():
+    from pangloss_models.migrations import diff
+    from pangloss_models.migrations.files import EMPTY_SNAPSHOT
+    from pangloss_models.model_bases.embedded import Embedded
+
+    def before():
+        class Statement(Document):
+            text: str
+
+    def after():
+        class Date(Embedded):
+            when: str
+            precision: int | None
+
+        class Statement(Document):
+            text: str
+            date: Date
+
+    old, new = snapshot_of(before), snapshot_of(after)
+    found = diff(old, new).changes
+    added = next(ch for ch in found if isinstance(ch, c.AddField) and ch.name == "date")
+    asked = [q for _, q in collect_questions(found, data_view(old)) if q.field.startswith("default")]
+    assert [q.field for q in asked] == ["default.when"]  # (`precision` may be left out)
+
+    answered = with_answer(added, "default.when", "unknown")
+    assert answered.default == {"when": "unknown"}
+
+
+@no_type_check
+def test_a_model_that_fulfils_a_class_of_another_app_depends_on_that_app(apps):
+    from pangloss_models.field_definitions import FieldSubclassing
+    from pangloss_models.model_bases.configs import RelationConfig
+    from pangloss_models.model_bases.helpers import Fulfils
+
+    def plain():
+        class Person(Entity):
+            pass
+
+        class Place(Entity):
+            pass
+
+        class Dated(Document):
+            who: Person
+            place: Place
+
+        class Meeting(Document):
+            attendee: Person
+            place: Place
+
+    def fulfilling():
+        class Person(Entity):
+            pass
+
+        class Place(Entity):
+            pass
+
+        class Dated(Document):
+            who: Person
+            place: Place
+
+        class Meeting(Document, Fulfils[Dated]):
+            attendee: Annotated[
+                Person,
+                RelationConfig(subclasses_parent_fields=[FieldSubclassing("who", field_on_model=Dated)]),
+            ]
+
+    modules = dict(Person="appone.models", Place="appone.models", Dated="appone.models", Meeting="apptwo.models")
+    graph = write_all(plan(MigrationGraph(), in_app(snapshot_of(plain), **modules), apps).migrations, apps)
+
+    new = in_app(snapshot_of(fulfilling), **modules)
+    result = plan(graph, new, apps)
+    recompute = [(m.app, m.dependencies) for m in result.migrations if any(isinstance(ch, c.RecomputeFulfils) for ch in m.changes)]
+    # (it is Meeting's, so apptwo's; and it needs what Dated is, which is appone's)
+    assert [app for app, _ in recompute] == ["apptwo"]
+    assert ("appone", graph.leaf("appone").name) in recompute[0][1]
+
+    graph = write_all(result.migrations, apps)
+    assert graph.state() == data_view(new)
+    assert plan(graph, new, apps).is_empty
+
+
+@no_type_check
+def test_apps_whose_models_inherit_from_each_other_round_a_circle_are_made_in_two_steps(apps):
+    def declare():
+        class Base(Document):
+            pass
+
+        class Child2(Document):
+            pass
+
+        class Child(Base):
+            pass
+
+        class Holder(Child2):
+            pass
+
+    new = in_app(
+        snapshot_of(declare),
+        Base="apptwo.models", Holder="apptwo.models", Child="appone.models", Child2="appone.models",
+    )
+    result = plan(MigrationGraph(), new, apps)
+    # appone's Child needs apptwo's Base (to inherit from) and apptwo's Holder needs appone's Child2
+    kinds = {(m.app, m.name[:4]): [type(ch).__name__ for ch in m.changes] for m in result.migrations}
+    assert any("AlterModelLabels" in changes for changes in kinds.values())
+
+    graph = write_all(result.migrations, apps)
+    assert graph.state() == data_view(new)
+    assert plan(graph, new, apps).is_empty
+    labels = graph.state()["models"]["Child"]["labels"]
+    assert "Base" in labels and "Child" in labels
+
+
+def test_a_circle_that_cannot_be_split_is_an_error_and_not_an_endless_loop(monkeypatch):
+    from pangloss_models.migrations import planner
+
+    def create(name):
+        return c.CreateModel(model=name, model_kind="Document", definition={"fields": [], "labels": [name]})
+
+    groups = {"one": [create("A")], "two": [create("B")]}
+    created = {"A": "one", "B": "two"}
+    # (each is said to need the other's, and nothing can be moved)
+    monkeypatch.setattr(planner, "cyclic_apps", lambda *args: {"one", "two"})
+    monkeypatch.setattr(planner, "split_app", lambda group, app, created: (group, []))
+    with pytest.raises(PanglossMigrationError, match="need each other"):
+        planner.layers_of(groups, created, set())

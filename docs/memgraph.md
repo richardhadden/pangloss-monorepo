@@ -71,7 +71,7 @@ Indexes and constraints cannot be changed inside a transaction, so each statemen
 
 ## Performance: the plan of a query
 
-Memgraph keeps the plan of a query by its **text**. A query with a different text is planned again, which for the read query took ~118 ms, against 1 to 2 ms to run it. So the text of a query that is run often must not change between calls: parameters have fixed names (`$document_id`), and anything that varies is a parameter. The read of a document (`build_fetch_document_query`) is that way, and a test checks it. The queries that write are built with a name made for each parameter (`QueryParams`), so each is planned each time (a create is ~10 ms); they would need fixed names to be as fast.
+Memgraph keeps the plan of a query by its **text**. A query with a different text is planned again, which for the read query took ~118 ms, against 1 to 2 ms to run it. So the text of a query that is run often must not change between calls: parameters have fixed names (`$document_id`), and anything that varies is a parameter. The read of a document (`build_fetch_document_query`) is that way, and a test checks it. The queries that write used to be built with a name made at random for each variable and parameter, so each was planned each time. The names are counted now (`x1`, `x2`... in `QueryParams.new_identifier`), so a write of the same shape has the same text, and a test checks it. Measured on a local Memgraph: an update went from ~23 ms to ~15 ms (it runs several queries); a create is ~11 to 12 ms either way, so what is left of a create is not the plan.
 
 ## Operations
 

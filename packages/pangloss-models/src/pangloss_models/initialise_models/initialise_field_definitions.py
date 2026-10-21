@@ -587,10 +587,10 @@ def field_is_from_indirect_non_heritable_model(model: type[_DeclaredClass], fiel
 def get_fulfiled_types(model: type[_DeclaredClass]) -> set[type[_DeclaredClass]]:
     """Return all types fulfilled by `model` via `Fulfils` parent classes."""
     fulfilled_types = set()
-    fulfilments = [f for f in get_all_parent_classes(model) if issubclass(f, Fulfils)]
-
-    for f in fulfilments:
-        fulfilled_types.update(f._fulfiling_types)
+    for parent in model.mro():
+        # (each `Fulfils[...]` holds its own classes: not those of `Fulfils`, or of another)
+        if isinstance(parent, type) and issubclass(parent, Fulfils):
+            fulfilled_types.update(parent.__dict__.get("_fulfiling_types", ()))
 
     return fulfilled_types
 

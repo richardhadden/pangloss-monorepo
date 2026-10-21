@@ -126,11 +126,6 @@ def test_what_cannot_be_squashed_is_said():
     with pytest.raises(PanglossMigrationError, match="not one migration"):
         squash(graph, "sq", "0001", "0009")
 
-    squashed = squash(graph, "sq", "0001", "0003")
-    again = MigrationGraph.of([*run_of_migrations(), squashed])
-    with pytest.raises(PanglossMigrationError, match="squashed"):
-        squash(again, "sq", "0001_squashed_0003_step", "0004")
-
 
 def test_the_squashed_migration_stands_in_for_the_originals_with_no_record():
     migrations = run_of_migrations()
@@ -248,3 +243,69 @@ def test_a_squashed_migration_is_written_and_read_back(app):
     graph = MigrationGraph.of(found)
     assert [m.name for m in graph.order()] == ["0001_squashed_0003_step", "0004_step"]
     assert graph.state() == data_view(versions()[3])
+
+
+def test_a_squashed_migration_can_be_squashed_again_with_what_follows_it():
+    migrations = run_of_migrations()
+    first = squash(MigrationGraph.of(migrations), "sq", "0001", "0003")
+    graph = MigrationGraph.of([*migrations, first])  # (the originals are not in it: the squashed one is)
+    assert [m.name for m in graph.order()] == ["0001_squashed_0003_step", "0004_step"]
+
+    again = squash(graph, "sq", "0001", "0004")
+    assert again.name == "0001_squashed_0004_step"
+    # it replaces them all: the squashed migration, and the migrations that went into it
+    assert set(again.replaces) == {m.key for m in migrations} | {first.key}
+    assert again.schema_hash == "hash4"
+    assert MigrationGraph.of([again]).state() == MigrationGraph.of(migrations).state()
+
+
+def test_each_database_uses_the_squashed_migration_or_the_ones_it_has_part_way():
+    migrations = run_of_migrations()
+    first = squash(MigrationGraph.of(migrations), "sq", "0001", "0003")
+    again = squash(MigrationGraph.of([*migrations, first]), "sq", "0001", "0004")
+    everything = [*migrations, first, again]
+
+    def names(graph):
+        return [m.name for m in graph.order()]
+
+    by_name = {m.name: m for m in everything}
+
+    def had(*which):
+        return {
+            by_name[name].key: {"status": "applied", "checksum": by_name[name].checksum} for name in which
+        }
+
+    # a new database: only the last
+    assert names(MigrationGraph.of(everything, {})) == [again.name]
+
+    # one that had the originals, all of them: the last, and nothing is left to do
+    record = had(*(m.name for m in migrations))
+    graph = MigrationGraph.of(everything, record)
+    assert names(graph) == [again.name]
+    view = graph.reconcile(record)
+    assert set(view) == {again.key} and pending(graph, view) == [] and problems(graph, view) == []
+
+    # one that had the first squashed migration and the one after it
+    record = had(first.name, "0004_step")
+    graph = MigrationGraph.of(everything, record)
+    view = graph.reconcile(record)
+    assert names(graph) == [again.name] and set(view) == {again.key}
+    assert pending(graph, view) == [] and problems(graph, view) == []
+
+    # one that had only the first squashed migration (or the originals of it): the rest is left to do
+    for record in (had(first.name), had("0001_initial", "0002_step", "0003_step")):
+        graph = MigrationGraph.of(everything, record)
+        view = graph.reconcile(record)
+        assert names(graph) == [first.name, "0004_step"]
+        assert [m.name for m in pending(graph, view)] == ["0004_step"]
+        assert problems(graph, view) == []
+
+    # one part way through the first: the originals, to go on with
+    record = had("0001_initial")
+    assert names(MigrationGraph.of(everything, record)) == [m.name for m in migrations]
+
+    # one that had the last squashed migration only
+    record = had(again.name)
+    graph = MigrationGraph.of(everything, record)
+    view = graph.reconcile(record)
+    assert names(graph) == [again.name] and pending(graph, view) == [] and problems(graph, view) == []

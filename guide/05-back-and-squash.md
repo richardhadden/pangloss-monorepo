@@ -49,7 +49,6 @@ Every reversal is checked before it is tried: applied to the models as they were
 
 ### What cannot be undone
 
-- A change of **model kind** or **field kind**: those were done by hand.
 - A **hand-written** `RunCypher` or `RunPython` that was given no way back (see [chapter 6](06-by-hand.md)).
 
 Pangloss says which migration and which change, before touching anything:
@@ -60,9 +59,10 @@ library.0004_… cannot be undone: Run a query: it has no `reverse_query`
 
 ### Rules of the road
 
-- **Undoing runs in one transaction per migration.** If one fails, it changes nothing and stays recorded as applied; the ones already undone stay undone.
+- **Undoing runs in one transaction per migration** (unless you give `--batch-size`, or the migration says `atomic = False` or `batch_size`: then in batches, like going forwards). If one fails in a transaction, it changes nothing and stays recorded; the ones already undone stay undone. One that fails in batches has undone part: run it again, which is safe, because what is undone is not there to undo again.
+- **A migration that failed or was left `[~] running` is undone too**: going back to an earlier migration undoes whatever was begun after it, finished or not.
 - **Going back makes a migration pending again.** Its record is removed, so the next plain `pangloss migrate` applies it again, and until you do, the server will refuse to start with the newer models (as it should). The usual use is a rollback of a deployment: go back, then run the older code.
-- **Answers are asked when you run it.** If undoing needs a value (a required field coming back), `migrate` asks. `--plan` and `--dry-run` cannot ask, and will say that an answer is needed.
+- **Answers are asked when you run it.** If undoing needs a value (a required field coming back), `migrate` asks (`--dry-run` asks too, since it tries it). `--plan` does not ask: it lists what will be asked (`Going back will ask for: ...`).
 - **`--fake`** with a target removes the records without touching the data (the mirror of `migrate --fake`).
 - Undoing a migration also undoes anything **in any app** that depends on it and has been applied. It lists them first.
 
@@ -105,9 +105,20 @@ So squashing is safe to commit while colleagues and servers are at different poi
 
 Once **every database** that matters (your own, your colleagues', staging, production) has applied all the originals, delete the original files. A database whose record names migrations that no longer exist is still fine: it counts the squashed migration as applied. But one that is only **part way** through the originals, and whose files you deleted, is told so and cannot go on; keep the originals until you are sure.
 
+```console
+$ pangloss cleanmigrations library
+These are replaced by a squashed migration:
+  0001_initial.py  (by 0001_squashed_0007_addfield_person_born)
+  ...
+No other database is looked at. One that is part way through them cannot go on without them.
+Delete them? [y/N]:
+```
+
+`cleanmigrations` deletes the files of what a squashed migration replaces (`--yes` skips the question). It looks only at **the database your settings point to**: it keeps the originals if that one is part way through them. It cannot know about the others, which is why it asks.
+
 ### Rules
 
 - You can squash any run of one app's consecutive migrations (`0003` to `0007`), not only from the start.
-- A squashed migration cannot be squashed again while its originals are still there: delete them first, then squash it with the migrations after it.
+- A squashed migration can be squashed again with the migrations after it (`squashmigrations library 0001 0010`). The new one replaces the old one and everything the old one replaced, and each database uses it, or the first squashed migration, or the originals, according to how far it has got.
 - Later migrations, and migrations of other apps that depended on an original, continue to work: they follow the squashed one.
 - Going back past a squashed migration removes the originals' records too.

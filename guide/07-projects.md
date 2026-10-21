@@ -39,7 +39,7 @@ people.0001_initial    creates Person (depends on library.0001)
 library.0002_…         adds Place.visitors, now that Person exists  (depends on people.0001)
 ```
 
-You will see the extra migration appear; nothing is asked of you. This works for any number of apps going round in a circle, and only splits as many as it needs. (It handles *fields* that refer to each other. A circle that runs through model *inheritance* is refused: put those models in one app.)
+You will see the extra migration appear; nothing is asked of you. This works for any number of apps going round in a circle, and only splits as many as it needs. (It handles *fields* that refer to each other, and a model that inherits from another app's new model: it is made without the parent, and given it in the second step.)
 
 ### Moving a model to another app
 
