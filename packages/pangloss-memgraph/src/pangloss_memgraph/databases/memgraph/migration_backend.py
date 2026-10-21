@@ -16,7 +16,7 @@ A backend package (`DATABASE_MODULE`) supplies a `migration_backend` module with
   after them; the record of each (and of those it `replaces`) is removed. Always in one transaction a migration (so one that
   fails has changed nothing);
 - `async dry_run(migrations, state) -> [MigrationReport]`: what each change would do, tried in a
-  transaction that is rolled back (changes to the database's enums are not tried);
+  transaction that is rolled back (changes to the database's indexes and constraints are not tried);
 - `async apply(migrations, state, fake=False, progress=None) -> state`: apply migrations in
   order, recording each, starting from the snapshot `state`; returns the snapshot after them.
 
@@ -295,7 +295,7 @@ async def unapply(
     `pangloss_models.migrations.reverse`), `state` the snapshot after them all. The record of a
     migration is removed when it has been undone, so it is to be applied again; one that fails
     stops the rest, and is still recorded as applied (nothing of it was changed, as it is made in
-    one transaction, except the enums that cannot be: the database enum keeps its members)."""
+    one transaction, except the indexes and constraints that cannot be)."""
     database = database or Database.default
     if not hasattr(database, "driver"):
         await database._initialise_driver()

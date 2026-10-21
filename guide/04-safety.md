@@ -56,7 +56,7 @@ Some changes would fail: nothing was changed
 Things to know:
 
 - After the first failure the remaining changes say `not tried` (a failed transaction cannot go on).
-- Changes to the database's enums and indexes are **not tried** (`changes the database itself (enums, indexes: not tried)`), because Memgraph does not allow them inside a transaction. A change that needs an enum that the same migration would create fails here for want of it; that is expected.
+- Changes to the database's indexes and constraints are **not tried** (`changes the database itself (an index or constraint: not tried)`), because Memgraph does not allow them inside a transaction. Everything else, enum changes included, is.
 - It does not take the lock, and changes nothing.
 - It makes a transaction as large as the whole migration, so on a very large database it is slow or heavy. Try it on a copy.
 
@@ -97,7 +97,7 @@ $ pangloss migrate
 
 Fix the cause (see [chapter 8](08-troubleshooting.md)) and run `migrate` again: a failed migration is tried again from the start.
 
-The exceptions are Memgraph's own limits: **enums, indexes and constraints cannot be changed inside a transaction**, so those steps happen on their own, one at a time. They are written so that doing them twice is harmless, and a stop part way leaves the next run to finish them.
+The exception is a Memgraph limit: **indexes and constraints cannot be changed inside a transaction**, so those steps happen on their own, one at a time. They are written so that doing them twice is harmless, and a stop part way leaves the next run to finish them.
 
 If you needed to stop a migration and the lock remains (see below), the record shows `[~] running`.
 
@@ -147,7 +147,7 @@ In batches:
 - changes to plain fields (add, remove, rename, make required, change type, wrap or unwrap an annotated value) and changes of labels are made **N nodes at a time, in the order of their ids**, each batch its own transaction;
 - wrapping a relation in a reified relation is made N relations at a time (the ones done are no longer there to wrap, so the next batch finds the next);
 - **renaming** a relation is made N edges at a time, and **removing** one N relations at a time (the nodes it owns go with them, in batches too, then its edges);
-- everything else (wrapping in a semantic space, unwrapping, turning fields into an embedded object, enum changes) is still made at once, in a transaction of its own;
+- everything else (wrapping in a semantic space, unwrapping, turning fields into an embedded object, changes to the values of an enum) is still made at once, in a transaction of its own;
 - what must hold **before anything is changed** (that every value converts, that every answer is given) is checked **once, before the first batch**, so a bad value does not leave you with half a migration;
 - how far it has got is saved **in the same transaction as each batch**.
 

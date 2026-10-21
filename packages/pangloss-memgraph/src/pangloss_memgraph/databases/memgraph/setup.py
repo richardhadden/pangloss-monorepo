@@ -7,7 +7,7 @@ A backend package (`DATABASE_MODULE`) supplies a `setup` module with these funct
 - `async connect()` / `async disconnect()`: open and close the connection. The
   command line does this inside the event loop that runs a command.
 - `async setup_database()`: make what the backend needs in the database (for Memgraph,
-  indexes, constraints, the text index and enums), as far as it is not there already,
+  indexes, constraints and the text index), as far as it is not there already,
   and return a description of what was done, as a list of lines to show.
 """
 

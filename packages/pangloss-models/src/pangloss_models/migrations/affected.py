@@ -26,7 +26,8 @@ NO_EFFECT = (
     c.CreateModel,
     c.CreateEnum,
     c.AddEnumMember,
-    c.RenameEnumMember,  # (in place: the values follow)
+    c.RenameEnumMember,  # (the values are the same)
+    c.RenameEnum,  # (nothing is stored of the name)
     c.RemoveEnum,
     c.AlterModelOption,
     c.AlterAnnotatedValue,
@@ -141,10 +142,7 @@ def affected_models(changes: Iterable[c.Change], snapshot: dict[str, Any]) -> se
             expanded.append(change)
 
     for change in expanded:
-        if isinstance(change, c.RenameEnum):
-            changed_enums.add(change.new)
-            continue
-        if isinstance(change, c.RemoveEnumMember):
+        if isinstance(change, (c.RemoveEnumMember, c.AlterEnumMemberValue)):
             changed_enums.add(change.enum)
             continue
         if isinstance(change, NO_EFFECT) or adds_nothing_unreadable(change):

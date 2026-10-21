@@ -72,8 +72,6 @@ class QuerySubstring(str):
 
 class QueryParams(dict[Identifier, dict[str, typing.Any] | typing.Any]):
     def add(self, item: dict[str, typing.Any] | typing.Any) -> Identifier:
-        # (Enums cannot be parameters: see `PropertyAssignments`)
-        assert not contains_enum(item), "enums cannot be query parameters"
         identifier = Identifier()
         self.__setitem__(identifier, convert_type_for_writing(item))
         return identifier
@@ -208,8 +206,8 @@ def convert_type_for_writing(value):
 
     - `Decimal` is stored as a string, to keep its exact value (Memgraph has no
       decimal type).
-    - `Enum` members are left as they are: they are stored as Memgraph's native
-      enums, which cannot be query parameters (see `PropertyAssignments`).
+    - `Enum` members are stored as their values (a string or a number), so the
+      database holds nothing of the enum but what it means.
     - Containers (including TypedDicts) are converted recursively."""
     match value:
         case uuid.UUID():
@@ -217,7 +215,7 @@ def convert_type_for_writing(value):
         case AnyUrl():
             return str(value)
         case Enum():
-            return value
+            return convert_type_for_writing(value.value)
         case Decimal():
             return str(value)
         case set() | tuple() | list():
@@ -235,76 +233,16 @@ def convert_edge_properties_for_writing(edge_properties: EdgeModel) -> dict[str,
     return edge_properties_dict
 
 
-def contains_enum(value: typing.Any) -> bool:
-    """Whether a value is, or has in it (in a list or dict), an `Enum` member"""
-    match value:
-        case Enum():
-            return True
-        case set() | tuple() | list():
-            return any(contains_enum(v) for v in value)
-        case dict():
-            return any(contains_enum(v) for v in value.values())
-        case _:
-            return False
-
-
-def enum_name(member: Enum) -> str:
-    """Name of an enum member in Memgraph, e.g. `Colour::RED`. (The enum is made,
-    with the names of its members, by `initialise_database`)"""
-    return f"{type(member).__name__}::{member.name}"
-
-
-def cypher_expression(params: QueryParams, value: typing.Any) -> str:
-    """Cypher for a value that has an enum in it: lists and maps are written out,
-    and each enum is made from its name with `ToEnum`. Everything else is a parameter"""
-    match value:
-        case Enum():
-            return f"ToEnum(${params.add(enum_name(value))})"
-        case set() | tuple() | list():
-            return "[" + ", ".join(cypher_expression(params, v) for v in value) + "]"
-        case dict():
-            return (
-                "{"
-                + ", ".join(
-                    f"{quote_key(key)}: {cypher_expression(params, v)}"
-                    for key, v in value.items()
-                )
-                + "}"
-            )
-        case _:
-            return f"${params.add(value)}"
-
-
-def quote_key(key: str) -> str:
-    return "`" + str(key).replace("`", "``") + "`"
-
-
 class PropertyAssignments:
-    """The properties to set on a node or edge.
-
-    Enums cannot be passed as parameters, so those properties (and any list or map
-    with an enum in it) are put into the query as `ToEnum(...)` expressions, and the
-    rest are set from a single parameter."""
+    """The properties to set on a node or edge, from a single parameter"""
 
     def __init__(self, params: QueryParams, properties: dict[str, typing.Any]):
-        plain = {k: v for k, v in properties.items() if not contains_enum(v)}
-        with_enums = {k: v for k, v in properties.items() if contains_enum(v)}
-        self.plain_identifier = params.add(plain)
-        self.enum_expressions = {
-            key: cypher_expression(params, value) for key, value in with_enums.items()
-        }
+        self.identifier = params.add(properties)
 
     def set_items(self, variable: str, replace: bool = False) -> str:
         """What to put after `SET` to give `variable` the properties: replacing
         its properties (`=`), or adding to them (`+=`)"""
-        items = [f"{variable} {'=' if replace else '+='} ${self.plain_identifier}"]
-        if self.enum_expressions:
-            expressions = ", ".join(
-                f"{quote_key(key)}: {expression}"
-                for key, expression in self.enum_expressions.items()
-            )
-            items.append(f"{variable} += {{{expressions}}}")
-        return ", ".join(items)
+        return f"{variable} {'=' if replace else '+='} ${self.identifier}"
 
 
 def native_datetime(value: typing.Any) -> typing.Any:
@@ -594,7 +532,7 @@ def build_related_node_query(
     # Add the node id identifier to params and get back an Identifier
     node_id_identifier = query_object.params.add(str(instance.id))
 
-    # Add the properties to the query params (and, for enums, the query)
+    # Add the properties to the query params
     node_data = PropertyAssignments(query_object.params, node_data_dict)
 
     query_object.create_query_strings.append(f"""
@@ -787,7 +725,7 @@ def build_head_create_query(
         instance, is_new=True, is_head_node=True
     )
 
-    # Add the properties to the query params (and, for enums, the query)
+    # Add the properties to the query params
     node_data = PropertyAssignments(query_object.params, node_data_dict)
 
     # Build a Creation object connected to the created node and

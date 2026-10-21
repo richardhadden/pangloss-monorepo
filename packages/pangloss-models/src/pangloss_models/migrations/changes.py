@@ -97,33 +97,47 @@ class AddEnumMember(Change):
 
 @dataclass(frozen=True, kw_only=True)
 class RenameEnumMember(Change):
+    """The name of a member changed and its value did not: an enum is stored as the values of its
+    members, so nothing is stored of the name and there is nothing to do to the data"""
+
     phase: ClassVar[int] = PHASE_RENAME
     enum: str
     old: str
     new: str
 
     def describe(self) -> str:
-        return f"Rename {self.enum}.{self.old} to {self.new} (in place)"
+        return f"Rename {self.enum}.{self.old} to {self.new} (the value is the same)"
+
+
+@dataclass(frozen=True, kw_only=True)
+class AlterEnumMemberValue(Change):
+    """The value of a member changed: the data that has the old value is given the new"""
+
+    safety: ClassVar[Safety] = "transforming"
+    enum: str
+    member: str
+    old: Any
+    new: Any
+
+    def describe(self) -> str:
+        return f"The value of {self.enum}.{self.member} changes from {self.old!r} to {self.new!r} (stored values follow)"
 
 
 @dataclass(frozen=True, kw_only=True)
 class RenameEnum(Change):
+    """An enum has another name: nothing is stored of it, so there is nothing to do to the data"""
+
     phase: ClassVar[int] = PHASE_RENAME
-    safety: ClassVar[Safety] = "transforming"
     old: str
     new: str
 
     def describe(self) -> str:
-        return (
-            f"Rename the enum {self.old} to {self.new}: a new enum, and the values "
-            f"converted (the old enum stays in the database)"
-        )
+        return f"Rename the enum {self.old} to {self.new}"
 
 
 @dataclass(frozen=True, kw_only=True)
 class RemoveEnumMember(Change):
-    """A member that the models no longer have. The database enum keeps it, so the data
-    that has it has to be moved."""
+    """A member that the models no longer have: the data that has its value has to be moved"""
 
     phase: ClassVar[int] = PHASE_REMOVE
     safety: ClassVar[Safety] = "transforming"
@@ -134,8 +148,7 @@ class RemoveEnumMember(Change):
 
     def describe(self) -> str:
         return (
-            f"Stop using {self.enum}.{self.member}: values that have it are moved "
-            f"(it stays in the database enum)"
+            f"Stop using {self.enum}.{self.member}: values that have it are moved"
         )
 
 
@@ -146,7 +159,7 @@ class RemoveEnum(Change):
     enum: str
 
     def describe(self) -> str:
-        return f"Stop using the enum {self.enum} (it stays in the database)"
+        return f"Stop using the enum {self.enum}"
 
 
 # --- models ------------------------------------------------------------------------------

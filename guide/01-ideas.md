@@ -54,7 +54,7 @@ Not every change to a class changes the data. Pangloss only migrates what is **s
 - adding, removing, renaming or retyping a **field**;
 - the **kind** of a field (a plain value, a list, a relation, an embedded object...);
 - what a **relation** may point to, whether it is a list or one value, its reverse name, properties on its edges, and whether it is wrapped in a reified relation or a semantic space;
-- the **members of an enum**;
+- the **members and values of an enum** (the values are what is stored);
 - the database's own **indexes and constraints**.
 
 Things that are *not* stored are ignored, so changing them never makes a migration: docstrings, validators, whether a field has a default in Python, and the order you declare things in. (Validators are checked when data is written and by `check-data`, not stored.)

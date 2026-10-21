@@ -36,7 +36,7 @@ from pangloss_memgraph.databases.memgraph.initialise_database import (
     initialise_database,
 )
 
-from .helpers import count_nodes, labels_of, mg_enum, native, run
+from .helpers import count_nodes, labels_of, native, run
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -918,7 +918,7 @@ async def test_decimal_is_written_exactly_and_read_back(db_driver, clear_databas
 
 
 @no_type_check
-async def test_enum_is_written_as_a_native_enum_and_read_back(db_driver, clear_database):
+async def test_enum_is_written_as_its_value_and_read_back(db_driver, clear_database):
     class Statement(Document):
         colour: Colour
         size: Size
@@ -935,10 +935,10 @@ async def test_enum_is_written_as_a_native_enum_and_read_back(db_driver, clear_d
     ).save()
 
     node = run(db_driver, "MATCH (n:Statement) RETURN n")[0]["n"]
-    # Native enums, made from the names of the members
-    assert node["colour"] == mg_enum("Colour::RED")
-    assert node["size"] == mg_enum("Size::LARGE")
-    assert node["colours"] == [mg_enum("Colour::RED"), mg_enum("Colour::BLUE")]
+    # The values of the members, as plain strings
+    assert node["colour"] == Colour.RED.value
+    assert node["size"] == Size.LARGE.value
+    assert node["colours"] == [Colour.RED.value, Colour.BLUE.value]
 
     read = await Statement.get(id=saved.id)
     assert read.colour is Colour.RED
@@ -1053,7 +1053,7 @@ async def test_typeddict_is_written_as_a_map_and_read_back(db_driver, clear_data
     assert node["dimensions"] == {"width": 1, "height": 2, "note": "small"}
     assert node["nested"] == {
         "name": "outer",
-        "inner": {"values": [1, 2], "price": "1.50", "colour": mg_enum("Colour::BLUE")},
+        "inner": {"values": [1, 2], "price": "1.50", "colour": Colour.BLUE.value},
     }
     assert node["all_dimensions"] == [
         {"width": 3, "height": 4},
@@ -1108,7 +1108,7 @@ async def test_decimal_enum_and_typeddict_on_nested_documents_and_entities(
     ).save()
     assert labels_of(db_driver, person.id)
     node = run(db_driver, "MATCH (n:Person) RETURN n")[0]["n"]
-    assert node["favourite"] == mg_enum("Colour::BLUE")
+    assert node["favourite"] == Colour.BLUE.value
     assert node["height"] == "1.85"
 
     await Statement.Create(
@@ -1122,7 +1122,7 @@ async def test_decimal_enum_and_typeddict_on_nested_documents_and_entities(
     ).save()
 
     action = run(db_driver, "MATCH (a:Action) RETURN a")[0]["a"]
-    assert action["size"] == mg_enum("Size::SMALL")
+    assert action["size"] == Size.SMALL.value
     assert action["dimensions"] == {"width": 1, "height": 2}
 
 
@@ -1161,7 +1161,7 @@ async def test_decimal_enum_and_typeddict_as_edge_properties(db_driver, clear_da
             "p"
         ]
         assert props["weight"] == "0.75", edge
-        assert props["colour"] == mg_enum("Colour::RED"), edge
+        assert props["colour"] == Colour.RED.value, edge
         assert props["dimensions"] == {"width": 1, "height": 2}, edge
 
 
@@ -1186,7 +1186,7 @@ async def test_decimal_and_enum_in_annotated_value(db_driver, clear_database):
     node = run(db_driver, "MATCH (n:Naming) RETURN n")[0]["n"]
     assert node["name"]["value"] == "John"
     assert node["name"]["weight"] == "0.5"
-    assert node["name"]["colour"] == mg_enum("Colour::RED")
+    assert node["name"]["colour"] == Colour.RED.value
     assert native(node["name"]["when"]) == datetime.date(2020, 1, 2)
 
 
@@ -2878,65 +2878,6 @@ async def test_annotated_value_is_written_on_nested_documents_and_entities(
     assert naming["name"] == {"value": "Johann", "certainty": 2}
 
 
-@no_type_check
-async def test_enum_missing_from_the_database_raises_a_helpful_error(
-    db_driver, clear_database
-):
-    """Enums are made by `initialise_database`; writing one that is not there is an
-    error that says so, and nothing is written"""
-
-    Mood = Enum(f"Mood_{uuid4().hex[:8]}", ["HAPPY", "SAD"])
-
-    class Statement(Document):
-        mood: Mood
-
-    initialise()
-
-    with pytest.raises(PanglossWriteError, match="initialise_database"):
-        await Statement.Create(label="A Statement", mood=Mood.HAPPY).save()
-    assert count_nodes(db_driver, "Statement") == 0
-
-    await initialise_database()
-    await Statement.Create(label="A Statement", mood=Mood.HAPPY).save()
-    assert count_nodes(db_driver, "Statement") == 1
-
-
-@no_type_check
-async def test_enum_member_missing_from_the_database_raises_a_helpful_error(
-    db_driver, clear_database
-):
-    """The model's enum has gained a member since `initialise_database` was run"""
-
-    name = f"Mood_{uuid4().hex[:8]}"
-    Mood = Enum(name, ["HAPPY"])
-
-    class Statement(Document):
-        mood: Mood
-
-    initialise()
-    await initialise_database()
-
-    # (the code is edited: the enum has a new member, and the models are initialised
-    # again, but the database is not set up again)
-    ModelRegistry._reset()
-    Wider = Enum(name, ["HAPPY", "SAD"])
-
-    class StatementAgain(Document):
-        mood: Wider
-
-    initialise()
-
-    with pytest.raises(PanglossWriteError, match="initialise_database"):
-        await StatementAgain.Create(label="A", mood=Wider.SAD).save()
-    assert count_nodes(db_driver, "StatementAgain") == 0
-
-    await StatementAgain.Create(label="A", mood=Wider.HAPPY).save()
-    assert count_nodes(db_driver, "StatementAgain") == 1
-
-    await initialise_database()
-    await StatementAgain.Create(label="B", mood=Wider.SAD).save()
-    assert count_nodes(db_driver, "StatementAgain") == 2
-
 
 @no_type_check
 async def test_save_detail_for_an_entity(db_driver, clear_database):
@@ -2955,3 +2896,20 @@ async def test_save_detail_for_an_entity(db_driver, clear_database):
     updated = await Person.Update(id=full.id, label="Jane Jones").save(detail=True)
     assert isinstance(updated, Person.HeadView)
     assert updated.label == "Jane Jones"
+
+
+@no_type_check
+async def test_a_stored_value_that_is_not_a_member_cannot_be_read(db_driver, clear_database):
+    """The database does not check the value (the models do): a bad one is found on reading"""
+
+    class Statement(Document):
+        colour: Colour
+
+    initialise()
+    saved = await Statement.Create(label="S", colour=Colour.RED).save()
+    run(db_driver, "MATCH (n:Statement) SET n.colour = 'purple'")
+
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError, match="colour"):
+        await Statement.get(id=saved.id)

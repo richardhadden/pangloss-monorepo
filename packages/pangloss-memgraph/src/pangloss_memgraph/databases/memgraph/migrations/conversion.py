@@ -2,7 +2,7 @@
 
 Each gives an expression of the value (`ref`) that is `null` when it cannot be converted, so
 that what does not convert can be found; except `date`, which Memgraph reports as an error.
-Decimals are stored as strings; enums as native enum values (see `docs/memgraph.md`).
+Decimals are stored as strings; enums as the values of their members.
 """
 
 from pangloss_models.exceptions import PanglossMigrationNotSupported
@@ -21,17 +21,16 @@ def convert_expression(
     old_type, new_type = old["type"], new["type"]
     params: dict = {}
 
-    if old_type == new_type and old_type != "enum":
+    if old_type == new_type and (old_type != "enum" or old["enum"] == new["enum"]):
         return ref, params
 
     if new_type == "enum":
         return _to_enum(old, new, ref, enums, mapping, params)
 
     if old_type == "enum":
-        # (a member is stored as `Colour::RED`)
-        text = f"split(toString({ref}), '::')[1]"
+        # (a member is stored as its value)
         if new_type == "str":
-            return text, params
+            return f"toString({ref})", params
         raise PanglossMigrationNotSupported(
             f"Converting an enum to {new_type} is not supported: write it by hand"
         )
@@ -67,23 +66,34 @@ def convert_expression(
 
 
 def _to_enum(old, new, ref, enums, mapping, params) -> tuple[str, dict]:
-    """An enum member from a value: by the mapping given, or the value of a member"""
-    enum_name = new["enum"]
-    members = enums.get(enum_name, {}).get("members", [])
-    by_value = {m["value"]: m["name"] for m in members}
-    pairs = dict(mapping) if mapping else {}
+    """The value of a member of the new enum from a stored value. From a string: the string if it is
+    the value of a member (or, for a number, its text). From another enum: the member of the same
+    name, unless `mapping` (old member name to new member name) says otherwise."""
+    members = enums.get(new["enum"], {}).get("members", [])
+    by_name = {m["name"]: m["value"] for m in members}
+    pairs: dict[str, object] = {}
     if old["type"] == "enum":
-        # an enum to another: by the name of the member, unless it is mapped
-        source = f"split(toString({ref}), '::')[1]"
-        pairs = {**{m["name"]: m["name"] for m in members}, **pairs}
+        before = enums.get(old["enum"], {}).get("members", [])
+        for member in before:
+            if member["name"] in by_name:
+                pairs[str(member["value"])] = by_name[member["name"]]
+        for old_name, new_name in (mapping or {}).items():
+            source = next((m["value"] for m in before if m["name"] == old_name), None)
+            if source is None or new_name not in by_name:
+                raise PanglossMigrationNotSupported(
+                    f"The mapping {old_name!r} -> {new_name!r} is not between members of "
+                    f"{old['enum']} and {new['enum']}"
+                )
+            pairs[str(source)] = by_name[new_name]
     else:
-        source = ref
-        pairs = {**by_value, **pairs}
+        pairs = {str(value): value for value in by_name.values()}
+        for old_value, new_name in (mapping or {}).items():
+            if new_name not in by_name:
+                raise PanglossMigrationNotSupported(f"{new_name!r} is not a member of {new['enum']}")
+            pairs[str(old_value)] = by_name[new_name]
 
-    params["enum_name"] = enum_name
-    params["enum_map"] = {str(key): value for key, value in pairs.items()}
+    params["enum_map"] = pairs
     expression = (
-        f"CASE WHEN {source} IN keys($enum_map) "
-        f"THEN ToEnum($enum_name, $enum_map[{source}]) ELSE null END"
+        f"CASE WHEN toString({ref}) IN keys($enum_map) THEN $enum_map[toString({ref})] ELSE null END"
     )
     return expression, params

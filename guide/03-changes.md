@@ -4,7 +4,7 @@ This is the reference for "I changed my model like *this*: what will Pangloss do
 
 Each table gives the change, what happens to existing data, and its safety (see [chapter 1](01-ideas.md#how-safe-is-a-change)). **Asked** means `makemigrations` prompts you; **in the file** means there is an option you can set by editing the migration (see the end of this chapter).
 
-Everything here is applied in a **single transaction per migration** (with the exceptions noted: enums and indexes), so a migration that fails part way leaves the data as it was.
+Everything here is applied in a **single transaction per migration** (with the exception of indexes and constraints), so a migration that fails part way leaves the data as it was.
 
 ## Models
 
@@ -37,13 +37,13 @@ These conversions are understood:
 
 | From | To |
 |------|----|
-| `str` | `int`, `float`, `bool` (`true` / `false`), `Decimal`, `date` (ISO text), an enum (by the member's value) |
+| `str` | `int`, `float`, `bool` (`true` / `false`), `Decimal`, `date` (ISO text), an enum (the text must be the value of a member) |
 | `int` | `float`, `str`, `Decimal`, `bool` (non-zero is true) |
 | `float` | `int`, `str`, `Decimal` |
 | `bool` | `str`, `int` |
 | `Decimal` | `str`, `float`, `int` |
 | `date` | `str` |
-| an enum | `str` (the member's name), another enum (by member name, or by `mapping`) |
+| an enum | `str` (the member's value as text), another enum (by member name, or by `mapping` of member names) |
 
 Any other pair (for example `datetime`, or an enum to `int`) is refused: write it by hand ([chapter 6](06-by-hand.md)). A conversion can be lossy in practice (`float` to `int` drops the fraction), so the migration is marked as one that may not be undone exactly.
 
@@ -63,19 +63,19 @@ For an enum that changes to another enum, say which new member each old value be
 
 ### Enums
 
-Memgraph enums can only grow. This shapes what Pangloss can do:
+An enum field is stored as the **value** of the member (`Colour.RED = "red"` is stored as `"red"`; a number if the value is one), as an ordinary property. Nothing is made in the database for the enum, and its *name* and its members' *names* are not stored at all. So:
 
 | You change | What happens |
 |------------|--------------|
-| Add an enum, or a member | The database enum gets it |
-| Rename a member | **Asked** if it is a rename. Renamed in place; all values that had it follow |
-| Remove a member | **Asked** which member the values that had it become (or nothing: then it fails if any do). The old member **stays in the database's enum**, unused |
-| Rename an enum | **Asked** if it is a rename. A new enum is made, values converted. The old enum stays, unused |
-| Remove an enum | Nothing to the data; the database enum stays |
+| Add an enum, or a member | Nothing to the data |
+| Rename a member (same value) | Nothing to the data, and **not asked**: a removed member and an added one with the same value are taken for a rename |
+| Change a member's **value** (`GREEN = "green"` becomes `"verde"`) | Every stored `"green"` of that enum becomes `"verde"`, wherever it is kept: a field, a list, inside a `TypedDict`, an annotated value, or on an edge. The text `"green"` in a plain `str` field is not touched |
+| Rename a member *and* change its value | **Asked** if it is a rename; if so, both of the above |
+| Remove a member | **Asked** which member the values that had it become (or nothing: then it fails, saying where, if any do) |
+| Rename an enum | **Asked** if it is a rename. Nothing to the data |
+| Remove an enum | Nothing to the data |
 
-Unused enum members and enums are harmless leftovers. Enum changes happen *outside* the migration's transaction, one at a time, and are safe to repeat if a run stops half-way.
-
-An enum used inside a `TypedDict`, an annotated value or an edge model cannot have a member removed or be renamed automatically; those are refused (write them by hand).
+The values of an enum must be strings or numbers (Pangloss checks this when the models start). Because an enum is only its values, all enum changes are ordinary updates: they run in the migration's transaction, can be tried by `--dry-run`, and can be undone.
 
 ### Annotated values
 
@@ -136,7 +136,6 @@ These are found, shown as `[NEEDS CODE]`, and refused when applied, so nothing i
 - changing the **kind** of a model or a field (Entity ↔ Document, a plain field ↔ a relation);
 - wrapping in a **conjunction**;
 - changes involving **`Fulfils`** (the extra labels a node gets for classes it fulfils are decided when it is written and are not recorded);
-- removing or renaming an **enum used inside a `TypedDict`**, annotated value or edge model;
 - adding an **embedded object** from nothing.
 
 [Chapter 6](06-by-hand.md) shows how to do each by hand.

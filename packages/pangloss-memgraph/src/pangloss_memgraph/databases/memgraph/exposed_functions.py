@@ -55,7 +55,6 @@ from pangloss_memgraph.databases.memgraph.delete_node import (
     undelete,
 )
 from pangloss_memgraph.databases.memgraph.lookup import resolve_id
-from pangloss_memgraph.databases.memgraph.read_enums import convert_enums
 from pangloss_memgraph.databases.memgraph.read_incoming import (
     fetch_incoming_relations,
 )
@@ -133,7 +132,7 @@ async def list_items(
     )
 
     results["results"] = type_adapter.validate_python(
-        convert_enums(results["results"])
+        results["results"]
     )
     result = _ListItems(**results)
 
@@ -150,7 +149,7 @@ async def get_document(
     result = await tx.run(query_string, **query_params)
     records = await result.data()
     if records:
-        return cls.HeadView(**convert_enums(tree_of(records[0])))
+        return cls.HeadView(**tree_of(records[0]))
     return None
 
 
@@ -180,7 +179,7 @@ async def read_entity(
     data["urls"] = sorted(records[0]["urls"])
     if incoming:
         data.update(await fetch_incoming_relations(tx, cls, resolved_id))
-    return convert_enums(data)
+    return data
 
 
 @Database.default.read_transaction
@@ -204,20 +203,9 @@ async def get_entity_for_edit(
 
 
 async def run_write_query(tx: Transaction, query: str, params: dict) -> list:
-    """Run a query that writes, and get its result. An enum that is not in the
-    database (because `initialise_database` has not been run since the models
-    changed) is reported as such."""
-    try:
-        response = await tx.run(query, **params)  # type: ignore
-        return await response.value()
-    except ClientError as error:
-        if "Invalid enum" in str(error):
-            raise PanglossWriteError(
-                f"{error.message}: the database does not have this enum or member. "
-                "Run initialise_database() (after initialising the models) to make "
-                "the enums used by the models"
-            ) from error
-        raise
+    """Run a query that writes, and get its result"""
+    response = await tx.run(query, **params)  # type: ignore
+    return await response.value()
 
 
 @Database.default.write_transaction

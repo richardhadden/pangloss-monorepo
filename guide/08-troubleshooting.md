@@ -114,11 +114,9 @@ The migration itself succeeded, but the data does not fit the new models. Typica
 
 ## Development databases
 
-**I want a clean database.** Drop it and `pangloss migrate`. Memgraph enums cannot be dropped, so enum definitions can linger in a database you reuse; for a truly fresh start, make a new Memgraph database or container.
+**I want a clean database.** Drop it and `pangloss migrate`.
 
 **I applied a migration I want to change.** Only on your own database: `pangloss migrate library 0003` goes back to before it, then edit the file, then `pangloss migrate`. Once it has run anywhere else, write a new migration instead.
-
-**The tests leave odd enums behind.** That is the same Memgraph limit.
 
 ## Still stuck?
 

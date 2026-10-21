@@ -9,8 +9,9 @@ Changes are written for a model and a field, and select by label (`MATCH (n:Stat
 that one change is made wherever the model is used: subclasses carry the label of their
 parents, and a nested model is found without knowing what it is nested in.
 
-Enums are changed outside of a transaction (`run_ddl`), as Memgraph requires; see
-`docs/migrations.md` 5.6.
+Indexes and constraints are changed outside of a transaction (`run_ddl`), as Memgraph requires;
+enums are stored as the values of their members, so changing one is a change to data like any other.
+See `docs/migrations.md` 5.6.
 """
 
 import copy
@@ -168,18 +169,15 @@ def literal_expression(
     """The expression for a value of a type, with what it needs in `params`"""
     kind = descriptor["type"]
     if kind == "enum":
-        enum = enums.get(descriptor["enum"], {})
-        members = enum.get("members", [])
-        member = next(
-            (m["name"] for m in members if m["name"] == value or m["value"] == value), None
-        )
+        # (an enum is stored as the value of its member)
+        members = enums.get(descriptor["enum"], {}).get("members", [])
+        member = next((m for m in members if m["name"] == value or m["value"] == value), None)
         if member is None:
             raise PanglossMigrationError(
                 f"{value!r} is not a member of the enum {descriptor['enum']}"
             )
-        params[f"{name}_enum"] = descriptor["enum"]
-        params[f"{name}_member"] = member
-        return f"ToEnum(${name}_enum, ${name}_member)"
+        params[name] = member["value"]
+        return f"${name}"
     if kind == "list":
         items = [
             literal_expression(item, descriptor["item"], params, f"{name}_{i}", enums)
@@ -1352,34 +1350,12 @@ async def embedded_to_literals(tx: Transaction, change: c.EmbeddedToLiterals, st
 
 
 # ---------------------------------------------------------------------------
-# Enums (outside of a transaction)
+# Indexes and constraints (outside of a transaction)
 # ---------------------------------------------------------------------------
-
-
-async def existing_enums(database: Database) -> dict[str, list[str]]:
-    rows = await run_statement(
-        database.driver, database.settings.DATABASE.DATABASE_NAME, "SHOW ENUMS"
-    )
-    return {row["Enum Name"]: row["Enum Values"] for row in rows}
 
 
 async def ddl(database: Database, statement: str) -> None:
     await run_statement(database.driver, database.settings.DATABASE.DATABASE_NAME, statement)
-
-
-async def create_enum(database: Database, change: c.CreateEnum, state: dict) -> None:
-    present = await existing_enums(database)
-    names = change.members
-    if change.enum not in present:
-        await ddl(
-            database,
-            f"CREATE ENUM {ident(change.enum)} VALUES {{ {', '.join(ident(n) for n in names)} }}",
-        )
-        return
-    # (it may be there already: made by an earlier run, or by `initialise_database`)
-    for name in names:
-        if name not in present[change.enum]:
-            await ddl(database, f"ALTER ENUM {ident(change.enum)} ADD VALUE {ident(name)}")
 
 
 async def add_index(database: Database, change: c.AddIndex, state: dict) -> None:
@@ -1457,112 +1433,203 @@ async def remove_constraint(database: Database, change: c.RemoveConstraint, stat
         await ddl(database, unique_statement("DROP", change.constraint))
 
 
-async def add_enum_member(database: Database, change: c.AddEnumMember, state: dict) -> None:
-    present = await existing_enums(database)
-    if change.member not in present.get(change.enum, []):
-        await ddl(database, f"ALTER ENUM {ident(change.enum)} ADD VALUE {ident(change.member)}")
+# --- the values of an enum -----------------------------------------------------------------------
+#
+# An enum is stored as the values of its members, wherever it is: a field, a list, in a `TypedDict`
+# or an annotated value (a map), or a property of an edge. Changing a value, or moving the values
+# off a member, is a change to all of those.
 
 
-async def rename_enum_member(database: Database, change: c.RenameEnumMember, state: dict) -> None:
-    present = await existing_enums(database)
-    members = present.get(change.enum, [])
-    if change.old in members and change.new not in members:
-        await ddl(
-            database,
-            f"ALTER ENUM {ident(change.enum)} UPDATE VALUE {ident(change.old)} TO {ident(change.new)}",
-        )
-    elif change.old in members and change.new in members:
-        raise PanglossMigrationError(
-            f"Both {change.enum}.{change.old} and {change.enum}.{change.new} are in the database"
-        )
+def holds_enum(ref: str, descriptor: dict, enum: str, keys: str, depth: int = 0) -> str | None:
+    """A Cypher condition that is true when the value `ref` (of the type `descriptor`) has in it a
+    value of `enum` that is one of the `$keys` (their text); None if the type has no such enum"""
+    kind = descriptor.get("type")
+    if kind == "enum":
+        return f"toString({ref}) IN ${keys}" if descriptor["enum"] == enum else None
+    if kind == "list":
+        inner = holds_enum(f"x{depth}", descriptor["item"], enum, keys, depth + 1)
+        return f"any(x{depth} IN {ref} WHERE {inner})" if inner else None
+    if kind == "typedDict":
+        parts = [
+            holds_enum(f"{ref}.{ident(name)}", field, enum, keys, depth + 1)
+            for name, field in descriptor["fields"].items()
+        ]
+        parts = [p for p in parts if p]
+        return "(" + " OR ".join(parts) + ")" if parts else None
+    return None
 
 
-async def rename_enum(database: Database, change: c.RenameEnum, state: dict) -> None:
-    """A new enum (Memgraph cannot rename one) with the members of the old, and the values
-    that use the old converted. The old stays in the database."""
-    old = state["enums"].get(change.old)
-    if old is None:
-        raise PanglossMigrationError(f"There is no enum {change.old} at this point")
-    await create_enum(
-        database,
-        c.CreateEnum(enum=change.new, definition={**old, "name": change.new}),
-        state,
-    )
-    old_type, new_type = {"type": "enum", "enum": change.old}, {"type": "enum", "enum": change.new}
+def rewrite_enum(ref: str, descriptor: dict, enum: str, values: str, depth: int = 0) -> str | None:
+    """A Cypher expression for the value `ref` with the values of `enum` that are keys of the map
+    `$values` (by their text) changed to what it says; None if the type has no such enum"""
+    kind = descriptor.get("type")
+    if kind == "enum":
+        if descriptor["enum"] != enum:
+            return None
+        return f"coalesce(${values}[toString({ref})], {ref})"
+    if kind == "list":
+        inner = rewrite_enum(f"x{depth}", descriptor["item"], enum, values, depth + 1)
+        return f"[x{depth} IN {ref} | {inner}]" if inner else None
+    if kind == "typedDict":
+        changed = {
+            name: rewrite_enum(f"{ref}.{ident(name)}", field, enum, values, depth + 1)
+            for name, field in descriptor["fields"].items()
+        }
+        changed = {name: expression for name, expression in changed.items() if expression}
+        if not changed:
+            return None
+        # (a key that is not there is left not there)
+        built = ref
+        for name, expression in changed.items():
+            built = (
+                f"CASE WHEN {ref}.{ident(name)} IS NULL THEN {built} "
+                f"ELSE map.set_key({built}, '{name}', {expression}) END"
+            )
+        return f"CASE WHEN {ref} IS NULL THEN null ELSE {built} END"
+    return None
 
-    async def convert(tx: Transaction) -> None:
-        for model_name, model in state["models"].items():
-            for entry in model["fields"]:
-                if entry["kind"] == "literal" and entry["type"] == old_type:
-                    synthetic = c.AlterLiteralType(
-                        model=model_name, name=entry["name"], old=old_type, new=new_type
+
+def enum_holders(state: dict, enum: str) -> list[dict]:
+    """Where the values of an enum are stored: the properties of nodes (of a model's label), and the
+    properties of the edges of a relation. Each is `{"label", "property", "type"}` (a node) or also
+    `"edges": [forward, reverse]` (an edge). A model that has a field of a parent shares it."""
+    holders: list[dict] = []
+    models = state["models"]
+
+    def descriptors(model: dict) -> list[tuple[str, dict]]:
+        found = []
+        for entry in model["fields"]:
+            if entry["kind"] == "literal":
+                found.append((entry["name"], entry["type"]))
+            elif entry["kind"] == "list":
+                found.append((entry["name"], {"type": "list", "item": entry["item"]}))
+            elif entry["kind"] == "annotatedValue":
+                extra = {
+                    f["name"]: field_descriptor(f)
+                    for f in models.get(entry.get("model"), {}).get("fields", [])
+                    if f["kind"] in ("literal", "list") and f["name"] != "value"
+                }
+                found.append(
+                    (entry["name"], {"type": "typedDict", "fields": {"value": entry["valueType"], **extra}})
+                )
+        return found
+
+    for name, model in models.items():
+        if model["kind"] in ("EdgeModel", "AnnotatedValue"):
+            continue
+        parents = set(model.get("labels", [])) - {name}
+        for prop, descriptor in descriptors(model):
+            if holds_enum("v", descriptor, enum, "k") is None:
+                continue
+            inherited = any(
+                parent in models and (prop, descriptor) in descriptors(models[parent]) for parent in parents
+            )
+            if not inherited:
+                holders.append({"label": name, "property": prop, "type": descriptor})
+        for entry in model["fields"]:
+            if entry["kind"] not in ("relation", "embedded"):
+                continue
+            edge_models = {o.get("edgeModel") for o in entry.get("options", []) if o.get("edgeModel")}
+            for edge_model in edge_models:
+                for prop, descriptor in descriptors(models.get(edge_model, {"fields": []})):
+                    if holds_enum("v", descriptor, enum, "k") is None:
+                        continue
+                    pairs = edge_pairs(entry)
+                    holders.append(
+                        {
+                            "label": name,
+                            "property": prop,
+                            "type": descriptor,
+                            "edges": [[forward, reverse] for forward, reverse in pairs],
+                        }
                     )
-                    await convert_property(tx, synthetic, state, old_type, new_type, is_list=False)
-                elif entry["kind"] == "list" and entry["item"] == old_type:
-                    synthetic_list = c.AlterListItemType(
-                        model=model_name, name=entry["name"], old=old_type, new=new_type
-                    )
-                    await convert_property(tx, synthetic_list, state, old_type, new_type, is_list=True)
+    return holders
 
-    async with database.driver.session(database=database.settings.DATABASE.DATABASE_NAME) as session:
-        await session.execute_write(convert)
+
+async def rewrite_enum_values(
+    tx: Transaction,
+    state: dict,
+    enum: str,
+    mapping: dict[str, Any],
+    refuse: Callable[[str, int], None] | None = None,
+) -> None:
+    """Change the stored values of `enum` that are keys of `mapping` (their text) to what it
+    gives, everywhere they are. `refuse(where, count)` is called, before anything is changed, for
+    each place that has any: it may raise."""
+    keys = list(mapping)
+    holders = enum_holders(state, enum)
+    queries: list[tuple[str, str, str]] = []  # (where, count query, change query)
+    for holder in holders:
+        label, prop, descriptor = ident(holder["label"]), ident(holder["property"]), holder["type"]
+        if "edges" not in holder:
+            ref = f"n.{prop}"
+            test, new = holds_enum(ref, descriptor, enum, "keys"), rewrite_enum(ref, descriptor, enum, "values")
+            where = f"{holder['label']}.{holder['property']}"
+            queries.append(
+                (
+                    where,
+                    f"MATCH (n:{label}) WHERE {test} RETURN count(n) AS count",
+                    f"MATCH (n:{label}) WHERE {test} SET {ref} = {new}",
+                )
+            )
+        else:
+            ref = f"e.{prop}"
+            test, new = holds_enum(ref, descriptor, enum, "keys"), rewrite_enum(ref, descriptor, enum, "values")
+            forward = [pair[0] for pair in holder["edges"]]
+            reverse = [pair[1] for pair in holder["edges"]]
+            where = f"the edges of {holder['label']}.{holder['edges'][0][0]} ({prop})"
+            queries.append(
+                (
+                    where,
+                    f"MATCH (n:{label})-[e]->() WHERE type(e) IN {forward!r} AND {test} RETURN count(e) AS count",
+                    f"MATCH (n:{label})-[e]->() WHERE type(e) IN {forward!r} AND {test} SET {ref} = {new}",
+                )
+            )
+            queries.append(
+                (
+                    where,
+                    f"MATCH ()-[e]->(n:{label}) WHERE type(e) IN {reverse!r} AND {test} RETURN count(e) AS count",
+                    f"MATCH ()-[e]->(n:{label}) WHERE type(e) IN {reverse!r} AND {test} SET {ref} = {new}",
+                )
+            )
+    if refuse is not None:
+        for where, count_query, _ in queries:
+            count = (await run(tx, count_query, keys=keys, values=mapping))[0]["count"]
+            if count:
+                refuse(where, count)
+    for _, _, change_query in queries:
+        await run(tx, change_query, keys=keys, values=mapping)
+
+
+def member_of(state: dict, enum: str, name: str) -> dict:
+    for member in state["enums"].get(enum, {}).get("members", []):
+        if member["name"] == name:
+            return member
+    raise PanglossMigrationError(f"There is no member {enum}.{name} at this point")
+
+
+async def alter_enum_member_value(tx: Transaction, change: c.AlterEnumMemberValue, state: dict) -> None:
+    """The data that has the old value of a member is given the new"""
+    if change.old == change.new:
+        return
+    await rewrite_enum_values(tx, state, change.enum, {str(change.old): change.new})
 
 
 async def remove_enum_member(tx: Transaction, change: c.RemoveEnumMember, state: dict) -> None:
-    """Move the values off a member (it stays in the database enum)"""
-    enum_type = {"type": "enum", "enum": change.enum}
-    for model_name, model in state["models"].items():
-        for entry in model["fields"]:
-            uses = (entry["kind"] == "literal" and entry["type"] == enum_type) or (
-                entry["kind"] == "list" and entry["item"] == enum_type
+    """Move the values off a member, to those of the member that `replacement` names"""
+    removed = member_of(state, change.enum, change.member)["value"]
+    if change.replacement is None:
+
+        def refuse(where: str, count: int) -> None:
+            raise PanglossMigrationAnswerNeeded(
+                f"{count} {where} have {change.enum}.{change.member}: say which member to give them "
+                f"(`replacement`)"
             )
-            if not uses:
-                continue
-            if model["kind"] in ("EdgeModel", "AnnotatedValue"):
-                raise PanglossMigrationNotSupported(
-                    f"{change.describe()}: {model_name}.{entry['name']} is stored on an "
-                    f"{model['kind']}; write it by hand"
-                )
-            prop = f"n.{ident(entry['name'])}"
-            label = ident(model_name)
-            member = "ToEnum($enum, $member)"
-            if entry["kind"] == "literal":
-                holds, replace = f"{prop} = {member}", None
-            else:
-                holds, replace = f"{member} IN {prop}", None
-            count = (
-                await run(
-                    tx,
-                    f"MATCH (n:{label}) WHERE {holds} RETURN count(n) AS count",
-                    enum=change.enum,
-                    member=change.member,
-                )
-            )[0]["count"]
-            if not count:
-                continue
-            if change.replacement is None:
-                raise PanglossMigrationAnswerNeeded(
-                    f"{count} {model_name}.{entry['name']} have {change.enum}.{change.member}: say "
-                    f"which member to give them (`replacement`)"
-                )
-            replacement = "ToEnum($enum, $replacement)"
-            if entry["kind"] == "literal":
-                await run(
-                    tx,
-                    f"MATCH (n:{label}) WHERE {holds} SET {prop} = {replacement}",
-                    enum=change.enum,
-                    member=change.member,
-                    replacement=change.replacement,
-                )
-            else:
-                await run(
-                    tx,
-                    f"MATCH (n:{label}) WHERE {holds} "
-                    f"SET {prop} = [x IN {prop} | CASE WHEN x = {member} THEN {replacement} ELSE x END]",
-                    enum=change.enum,
-                    member=change.member,
-                    replacement=change.replacement,
-                )
+
+        await rewrite_enum_values(tx, state, change.enum, {str(removed): removed}, refuse)
+        return
+    replacement = member_of(state, change.enum, change.replacement)["value"]
+    await rewrite_enum_values(tx, state, change.enum, {str(removed): replacement})
 
 
 # ---------------------------------------------------------------------------
@@ -1624,6 +1691,11 @@ DATA_HANDLERS: dict[type, Callable[[Transaction, Any, dict], Awaitable[None]]] =
     c.LiteralsToEmbedded: literals_to_embedded,
     c.EmbeddedToLiterals: embedded_to_literals,
     c.RemoveEnumMember: remove_enum_member,
+    c.AlterEnumMemberValue: alter_enum_member_value,
+    c.CreateEnum: nothing,
+    c.AddEnumMember: nothing,
+    c.RenameEnumMember: nothing,
+    c.RenameEnum: nothing,
     c.RemoveEnum: nothing,
     c.RunCypher: run_cypher,
     c.RunPython: run_python,
@@ -1631,10 +1703,6 @@ DATA_HANDLERS: dict[type, Callable[[Transaction, Any, dict], Awaitable[None]]] =
 }
 
 DDL_HANDLERS: dict[type, Callable[[Database, Any, dict], Awaitable[None]]] = {
-    c.CreateEnum: create_enum,
-    c.AddEnumMember: add_enum_member,
-    c.RenameEnumMember: rename_enum_member,
-    c.RenameEnum: rename_enum,
     c.AddIndex: add_index,
     c.RemoveIndex: remove_index,
     c.AddConstraint: add_constraint,
@@ -1688,7 +1756,7 @@ async def apply_window(tx: Transaction, change: c.Change, state: dict, window: W
 
 
 def is_ddl(change: c.Change) -> bool:
-    """Whether a change is to the database itself (enums), made outside a transaction"""
+    """Whether a change is to the database itself (an index, a constraint), made outside a transaction"""
     return type(change) in DDL_HANDLERS
 
 

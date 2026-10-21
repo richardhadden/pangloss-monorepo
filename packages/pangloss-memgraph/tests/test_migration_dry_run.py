@@ -5,6 +5,8 @@ from types import SimpleNamespace as ns
 from typing import Annotated, no_type_check
 
 import pytest
+from pangloss_memgraph.databases.memgraph.database import Database
+from pangloss_memgraph.databases.memgraph.migrations import dry_run
 from pangloss_memgraph.databases.memgraph import migration_backend as backend
 from pangloss_models.migrations.check import check_data
 from pangloss_models.migrations.files import EMPTY_SNAPSHOT, MigrationGraph
@@ -21,7 +23,6 @@ pytestmark = pytest.mark.asyncio(loop_scope="session")
 
 APPS = ["migapp"]
 
-DryRunColour = Enum("MigrationDryRunColour", {"RED": "red"})
 
 
 def in_app(snapshot: dict) -> dict:
@@ -157,33 +158,43 @@ async def test_a_dry_run_finds_what_would_fail(db_driver, clear_database):
 
 
 @no_type_check
-async def test_changes_to_enums_are_listed_and_not_tried(db_driver, clear_database):
-    def v1():
-        class Person(Entity):
-            name: str
+async def test_changes_to_indexes_are_listed_and_not_tried_but_those_to_enums_are(db_driver, clear_database):
+    from pangloss_models.migrations import changes as c
 
-        return ns(Person=Person)
+    index = {"kind": "label+property", "label": "DryRunScratch", "properties": ["a"]}
+    shade = {"type": "enum", "enum": "DryRunShade"}
+    state = {
+        "version": 1,
+        "indexes": [],
+        "constraints": [],
+        "enums": {
+            "DryRunShade": {
+                "name": "DryRunShade",
+                "members": [{"name": "A", "value": "a"}, {"name": "B", "value": "b"}],
+            }
+        },
+        "models": {
+            "DryRunThing": {
+                "kind": "Entity",
+                "labels": ["DryRunThing", "Entity"],
+                "fields": [{"name": "shade", "kind": "literal", "type": shade, "nullable": False}],
+            }
+        },
+    }
+    run(db_driver, "CREATE (:DryRunThing {id: 'x', shade: 'a'})")
+    changes = [
+        c.AddIndex(index=index),
+        c.AlterEnumMemberValue(enum="DryRunShade", member="A", old="a", new="alpha"),
+    ]
 
-    def v2():
-        class Person(Entity):
-            name: str
-            colour: DryRunColour | None
-
-        return ns(Person=Person)
-
-    _, first = declare(v1)
-    initial = migrations_between(MigrationGraph(), first)
-    graph = MigrationGraph.of(initial)
-    await backend.ensure_ready()
-    state = await backend.apply(initial, EMPTY_SNAPSHOT)
-    _, second = declare(v2)
-    later = migrations_between(graph, second)
-
-    (report,) = await backend.dry_run(later, state)
-    assert [r.status for r in report.changes][0] == "enum"
-    assert "not tried" in report.changes[0].summary()
-    rows = run(db_driver, "SHOW ENUMS")
-    assert "MigrationDryRunColour" not in {row["Enum Name"] for row in rows}
+    reports, _ = await dry_run(Database.default, state, changes)
+    assert [r.status for r in reports] == ["ddl", "counted"]
+    assert "not tried" in reports[0].summary()
+    assert reports[1].counts.get("properties_set") == 1
+    # (nothing was done: not the index, and the rolled-back value is as it was)
+    assert run(db_driver, "MATCH (n:DryRunThing) RETURN n.shade AS s") == [{"s": "a"}]
+    with db_driver.session() as session:
+        assert not [r for r in session.run("SHOW INDEX INFO").data() if r["label"] == "DryRunScratch"]
 
 
 @no_type_check

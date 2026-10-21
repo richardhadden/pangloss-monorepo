@@ -252,6 +252,16 @@ def get_direct_instantiations_of_trait(
     )
 
 
+def check_enum_values(enumeration: type[Enum]) -> None:
+    """An enum is stored as the values of its members, so they must be strings or numbers"""
+    bad = [m.name for m in enumeration if not isinstance(m.value, (str, int, float))]
+    if bad:
+        raise PanglossModelError(
+            f"The members {', '.join(bad)} of the enum {enumeration.__name__} have values that are "
+            "not a string or a number: an enum is stored as the values of its members"
+        )
+
+
 def is_literal(
     annotation: type[Any] | None | UnionType,
 ) -> TypeIs[
@@ -273,6 +283,7 @@ def is_literal(
         return False
 
     if issubclass(annotation, Enum):
+        check_enum_values(annotation)
         return True
 
     if is_typeddict(annotation):

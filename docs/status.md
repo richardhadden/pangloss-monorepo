@@ -12,7 +12,7 @@ A snapshot of what works and what does not, as of this writing.
 - Writes that cannot succeed raise typed errors (`PanglossWriteError` subclasses) instead of silently writing nothing.
 - Memgraph, reading an entity (`Entity.get`), with the documents that refer to it directly, through embedded objects and through chains of reified relations, subclassed relations shown under their narrower name.
 - Memgraph, reading: a document read back as a `HeadView` (nested documents at any depth, with or without entities, semantic spaces, conjunctions, embedded objects, reified relations and reified relation documents, annotated values, dates, unset optionals and empty lists), and listing with pagination, search and deep search.
-- Enums stored as Memgraph's native enums (made by `initialise_database`), in fields, lists, `TypedDict`s, edge properties and annotated values, and read back as the models' enums.
+- Enums stored as the values of their members (plain properties), in fields, lists, `TypedDict`s, edge properties and annotated values, and read back as the models' enums.
 - Reading `ViaEdge` fields, with their `edge_properties`.
 - Setting up a database (`initialise_database`): indexes, uniqueness constraints on ids, the `label_text` text index and enums; safe to repeat.
 - Deleting head documents and unreferenced entities, as a flag (`deleted`) with a `PGDeletion` record, hidden from reads, lists and searches; an entity that is referred to is marked for deletion (`meta.marked_for_deletion`) instead.

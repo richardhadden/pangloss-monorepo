@@ -26,7 +26,7 @@ from pangloss_memgraph.databases.memgraph.initialise_database import (
     initialise_database,
 )
 
-from .helpers import count_nodes, labels_of, mg_enum, native, run
+from .helpers import count_nodes, labels_of, native, run
 
 from .test_create import Colour, Dimensions, Size  # noqa: E402
 
@@ -1169,8 +1169,8 @@ async def test_update_replaces_enum_values(db_driver, clear_database):
     ).save()
 
     node = run(db_driver, "MATCH (n:Statement) RETURN n")[0]["n"]
-    assert node["colour"] == mg_enum("Colour::BLUE")
-    assert node["colours"] == [mg_enum("Colour::BLUE"), mg_enum("Colour::RED")]
+    assert node["colour"] == Colour.BLUE.value
+    assert node["colours"] == [Colour.BLUE.value, Colour.RED.value]
 
     read = await Statement.get(id=saved.id)
     assert read.colour is Colour.BLUE
@@ -1210,10 +1210,10 @@ async def test_update_with_enums_on_nested_documents_and_edges(db_driver, clear_
     ).save()
 
     action = run(db_driver, "MATCH (a:Action) RETURN a")[0]["a"]
-    assert action["size"] == mg_enum("Size::LARGE")
+    assert action["size"] == Size.LARGE.value
     for edge in ("concerns", "concerns_reverse"):
         props = run(db_driver, f"MATCH ()-[r:{edge}]->() RETURN properties(r) AS p")[0]["p"]
-        assert props["colour"] == mg_enum("Colour::BLUE"), edge
+        assert props["colour"] == Colour.BLUE.value, edge
 
 
 @no_type_check

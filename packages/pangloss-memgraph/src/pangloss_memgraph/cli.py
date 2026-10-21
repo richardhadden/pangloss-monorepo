@@ -40,13 +40,12 @@ async def show(statement: str) -> list[dict[str, Any]]:
 
 @cli.command()
 def info() -> None:
-    """Show the indexes, constraints and enums in the database"""
+    """Show the indexes and constraints in the database"""
 
     async def collect():
         return {
             "indexes": await show("SHOW INDEX INFO"),
             "constraints": await show("SHOW CONSTRAINT INFO"),
-            "enums": await show("SHOW ENUMS"),
         }
 
     try:
@@ -63,6 +62,3 @@ def info() -> None:
         typer.echo(
             f"  {row['constraint type']}: :{row['label']}({', '.join(row['properties'])})"
         )
-    typer.secho("Enums", bold=True)
-    for row in found["enums"]:
-        typer.echo(f"  {row['Enum Name']}: {', '.join(row['Enum Values'])}")

@@ -39,7 +39,7 @@ The migrations come off **last first**. Each is undone by the opposite of each o
 | Change a type | Convert back (what no longer converts makes it fail) |
 | Wrap a relation | Unwrap it (the wrapper's own fields are lost) |
 | Unwrap a relation | Wrap it again (**asked** for the wrapper's fields) |
-| Add or remove an index, a constraint, an enum member | The opposite |
+| Add or remove an index, a constraint, an enum member; rename an enum or a member; change a member's value | The opposite |
 | Make a field required | Make it optional |
 | Make a field optional | Make it required (**asked** for a value for the empty ones) |
 
@@ -49,7 +49,6 @@ Every reversal is checked before it is tried: applied to the models as they were
 
 ### What cannot be undone
 
-- A rename of an **enum**: a new enum was made and has been written to since.
 - A change of **model kind** or **field kind**: those were done by hand.
 - A **hand-written** `RunCypher` or `RunPython` that was given no way back (see [chapter 6](06-by-hand.md)).
 
@@ -63,7 +62,6 @@ library.0004_… cannot be undone: Run a query: it has no `reverse_query`
 
 - **Undoing runs in one transaction per migration.** If one fails, it changes nothing and stays recorded as applied; the ones already undone stay undone.
 - **Going back makes a migration pending again.** Its record is removed, so the next plain `pangloss migrate` applies it again, and until you do, the server will refuse to start with the newer models (as it should). The usual use is a rollback of a deployment: go back, then run the older code.
-- **Enums are append-only**, so an enum or member the migration added stays in the database, unused.
 - **Answers are asked when you run it.** If undoing needs a value (a required field coming back), `migrate` asks. `--plan` and `--dry-run` cannot ask, and will say that an answer is needed.
 - **`--fake`** with a target removes the records without touching the data (the mirror of `migrate --fake`).
 - Undoing a migration also undoes anything **in any app** that depends on it and has been applied. It lists them first.

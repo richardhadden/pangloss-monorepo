@@ -87,6 +87,10 @@ def _rename_field(change, before):
     return swapped(change, old=change.new, new=change.old)
 
 
+def _alter_member_value(change: c.AlterEnumMemberValue, before):
+    return swapped(change, old=change.new, new=change.old)
+
+
 def _create_enum(change: c.CreateEnum, before):
     return [c.RemoveEnum(enum=change.enum)]
 
@@ -373,6 +377,8 @@ INVERSES: dict[type, Inverse] = {
     c.RenameModel: _rename,
     c.RenameField: _rename_field,
     c.RenameEnumMember: _rename,
+    c.RenameEnum: _rename,
+    c.AlterEnumMemberValue: _alter_member_value,
     c.CreateEnum: _create_enum,
     c.RemoveEnum: _remove_enum,
     c.AddEnumMember: _add_enum_member,
@@ -405,8 +411,7 @@ INVERSES: dict[type, Inverse] = {
     c.StateOnly: _state_only,
 }
 
-# Not undone: RenameEnum (a new enum was made, and the old stays: there is no telling what has
-# been written to either since), AlterModelKind and ChangeFieldKind (they were done by hand).
+# Not undone: AlterModelKind and ChangeFieldKind (they were done by hand).
 
 
 def loses_information(change: c.Change) -> bool:

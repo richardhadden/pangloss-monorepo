@@ -2314,3 +2314,36 @@ def test_relation_to_document_in_non_functioning_order():
     initialise()
 
     assert Order._meta.fields["thing_ordered"]
+
+
+def test_the_values_of_an_enum_must_be_strings_or_numbers():
+    import datetime
+    from enum import Enum
+
+    from pangloss_models import initialise
+    from pangloss_models.exceptions import PanglossModelError
+    from pangloss_models.model_bases.document import Document
+
+    class Fine(Enum):
+        A = "a"
+        B = 2
+        C = 3.5
+
+    class Statement(Document):
+        fine: Fine
+
+    initialise()  # (an enum is stored as the values of its members: these can be)
+
+    from pangloss_models.model_registry import ModelRegistry
+
+    ModelRegistry._reset()
+
+    class Odd(Enum):
+        WHEN = datetime.date(2020, 1, 1)
+        ALSO = (1, 2)
+
+    class Other(Document):
+        odd: Odd
+
+    with pytest.raises(PanglossModelError, match="WHEN, ALSO.*not a string or a number"):
+        initialise()

@@ -65,7 +65,7 @@ From then on, everything works normally. Only use `--fake` when the database **r
 
 You can fake just part of the history (`pangloss migrate library 0003 --fake` records up to 0003), for a database that is somewhere in the middle.
 
-`pangloss setup-database` and `pangloss migrate` both set a database up. Use `setup-database` only for a project **without** migrations; it warns you if you run it on one that has them, because it makes enums as the models are now, which can get ahead of the migrations.
+`pangloss setup-database` and `pangloss migrate` both set a database up. Use `setup-database` only for a project **without** migrations; it warns you if you run it on one that has them, because it makes the indexes as they are now, which can get ahead of the migrations.
 
 ## A new developer, a new database
 

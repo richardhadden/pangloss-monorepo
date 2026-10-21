@@ -1,28 +1,17 @@
 """Setting up a Memgraph database for Pangloss.
 
 `initialise_database` creates what the queries rely on: indexes, uniqueness
-constraints for ids, the text index used for searching labels, and an enum type
-for each `Enum` used by the models. It can be run again at any time: whatever
-already exists is left alone (and enums gain any new members).
+constraints for ids, and the text index used for searching labels. It can be run
+again at any time: whatever already exists is left alone.
 
-Call `pangloss_models.initialise()` first, so that the models, and so the enums
-they use, are known.
+(Enums are not made: a field of an `Enum` type is stored as the value of the member, a
+string or a number, like any other property.)
 """
 
 import dataclasses
-import re
-from enum import Enum
-from types import UnionType
-from typing import Any, Union, get_args, get_origin, get_type_hints, is_typeddict
+from typing import Any
 
 import neo4j
-from pangloss_models.exceptions import PanglossInitialisationError
-from pangloss_models.field_definitions import (
-    AnnotatedValueFieldDefinition,
-    ListFieldDefinition,
-    LiteralFieldDefinition,
-)
-from pangloss_models.model_registry import ModelRegistry
 
 from pangloss_memgraph.databases.memgraph.database import Database
 
@@ -54,9 +43,6 @@ INDEXES = [
 ]
 
 TEXT_INDEX = (TEXT_INDEX_NAME, "PGIndexableNode", "label")
-
-# Memgraph's names for types and their values
-IDENTIFIER = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
 
 # The app whose migrations make this structure: this package (`pangloss_memgraph.migrations`), which
@@ -92,79 +78,6 @@ class DatabaseSetup:
 
 
 # ---------------------------------------------------------------------------
-# Enums used by the models
-# ---------------------------------------------------------------------------
-
-
-def enums_in_annotation(annotation: Any) -> set[type[Enum]]:
-    """The enums used in a type: itself, in a list or optional, or in a TypedDict"""
-    if isinstance(annotation, type) and issubclass(annotation, Enum):
-        return {annotation}
-
-    if isinstance(annotation, type) and is_typeddict(annotation):
-        enums: set[type[Enum]] = set()
-        for value_type in get_type_hints(annotation).values():
-            enums |= enums_in_annotation(value_type)
-        return enums
-
-    if get_origin(annotation) in (list, Union, UnionType):
-        enums = set()
-        for argument in get_args(annotation):
-            enums |= enums_in_annotation(argument)
-        return enums
-
-    return set()
-
-
-def enums_used_by_models() -> list[type[Enum]]:
-    """Every enum that is the type of a field of a registered model (including edge
-    models and annotated values, and enums in lists and TypedDicts)"""
-    enums: set[type[Enum]] = set()
-
-    for model in ModelRegistry.all_models().values():
-        fields = model._meta.fields  # type: ignore
-        for field_definition in fields.values():
-            match field_definition:
-                case LiteralFieldDefinition() | ListFieldDefinition():
-                    enums |= enums_in_annotation(field_definition.annotated_type)
-                case AnnotatedValueFieldDefinition():
-                    annotated_value = field_definition.annotated_type
-                    # What the value is (`WithCertainty[Colour]`), and its extra fields
-                    for argument in annotated_value.__pydantic_generic_metadata__[
-                        "args"
-                    ]:
-                        enums |= enums_in_annotation(argument)
-                    for extra in annotated_value._meta.fields.values():
-                        if isinstance(
-                            extra, LiteralFieldDefinition | ListFieldDefinition
-                        ):
-                            enums |= enums_in_annotation(extra.annotated_type)
-
-    return sorted(enums, key=lambda enum: enum.__qualname__)
-
-
-def enum_members(enums: list[type[Enum]]) -> dict[str, list[str]]:
-    """The names (and the member names) of the enums, as Memgraph would have them"""
-    members: dict[str, list[str]] = {}
-    for enum in enums:
-        names = [member.name for member in enum]
-        if not IDENTIFIER.match(enum.__name__) or not all(
-            IDENTIFIER.match(name) for name in names
-        ):
-            raise PanglossInitialisationError(
-                f"Enum {enum.__qualname__} cannot be made in Memgraph: its name and "
-                "the names of its members must be identifiers"
-            )
-        if enum.__name__ in members and members[enum.__name__] != names:
-            raise PanglossInitialisationError(
-                f"There are different enums called {enum.__name__}, which Memgraph "
-                "cannot tell apart"
-            )
-        members[enum.__name__] = names
-    return members
-
-
-# ---------------------------------------------------------------------------
 # Setting up
 # ---------------------------------------------------------------------------
 
@@ -181,10 +94,8 @@ async def run_statement(
         return rows
 
 
-async def initialise_database(
-    database: Database | None = None, enums: bool = True
-) -> DatabaseSetup:
-    """Set up the database: indexes, constraints, the text index and enums.
+async def initialise_database(database: Database | None = None) -> DatabaseSetup:
+    """Set up the database: indexes, constraints and the text index.
 
     Creates, if they do not exist already:
 
@@ -192,13 +103,9 @@ async def initialise_database(
       the URLs of entities, an index and a uniqueness constraint;
     - an index of `id` and `head_node_id` together, and one of `id` for head nodes;
     - the text index `label_text` on the `label` of every `PGIndexableNode`, used
-      for searching; and
-    - an enum for each `Enum` used by a model. Members are added to one that exists
-      (Memgraph cannot remove them).
+      for searching.
 
-    Uses the default `Database`, unless given one. Models must be initialised
-    first, for their enums to be known. With `enums=False` the enums are left to the
-    migrations (which make them as the models have changed).
+    Uses the default `Database`, unless given one.
     """
     database = database or Database.default
     if not hasattr(database, "driver"):
@@ -250,25 +157,5 @@ async def initialise_database(
                 f"CREATE CONSTRAINT ON (n:{label}) ASSERT n.{property_name} IS UNIQUE"
             )
         record(f"unique constraint on :{label}({property_name})", existed)
-
-    if not enums:
-        return setup
-
-    # Enums
-    existing_enums = {
-        row["Enum Name"]: row["Enum Values"] for row in await run("SHOW ENUMS")
-    }
-    for enum_name, names in enum_members(enums_used_by_models()).items():
-        if enum_name not in existing_enums:
-            await run(f"CREATE ENUM {enum_name} VALUES {{ {', '.join(names)} }}")
-            record(f"enum {enum_name}", False)
-            continue
-        missing = [name for name in names if name not in existing_enums[enum_name]]
-        for name in missing:
-            await run(f"ALTER ENUM {enum_name} ADD VALUE {name}")
-        if missing:
-            setup.created.append(f"enum {enum_name}: added {', '.join(missing)}")
-        else:
-            record(f"enum {enum_name}", True)
 
     return setup

@@ -25,6 +25,7 @@ from pangloss_models.migrations.changes import (
     AddConstraint,
     AddEnumMember,
     AddIndex,
+    AlterEnumMemberValue,
     AddField,
     AlterAnnotatedValue,
     AlterCardinality,
@@ -142,6 +143,7 @@ def diff(
                 RenameEnumMember(enum=rename.scope, old=rename.old, new=rename.new)
             )
 
+    old = rename_members_with_the_same_value(old, new, result)
     diff_enums(old, new, result)
     diff_structure(old, new, result)
     diff_models(old, new, result)
@@ -177,6 +179,27 @@ def member_value(enum: dict, name: str) -> Any:
     return next((m["value"] for m in enum["members"] if m["name"] == name), None)
 
 
+def rename_members_with_the_same_value(old: dict, new: dict, result: DiffResult) -> dict:
+    """A member that has gone and one that has come with the same value are the same member under
+    another name: an enum is stored as the values, so that is not a question, and it needs nothing
+    done to the data"""
+    for name, enum in new["enums"].items():
+        if name not in old["enums"]:
+            continue
+        had, has = members_of(old["enums"][name]), members_of(enum)
+        gone = [m for m in had if m not in has]
+        came = [m for m in has if m not in had]
+        for old_member in gone:
+            value = member_value(old["enums"][name], old_member)
+            matches = [m for m in came if member_value(enum, m) == value]
+            same_value_before = [g for g in gone if member_value(old["enums"][name], g) == value]
+            if len(matches) == 1 and len(same_value_before) == 1:
+                old = rename_enum_member(old, name, old_member, matches[0])
+                result.changes.append(RenameEnumMember(enum=name, old=old_member, new=matches[0]))
+                came.remove(matches[0])
+    return old
+
+
 def diff_enums(old: dict, new: dict, result: DiffResult) -> None:
     for name, enum in new["enums"].items():
         if name not in old["enums"]:
@@ -187,6 +210,15 @@ def diff_enums(old: dict, new: dict, result: DiffResult) -> None:
             if member not in had:
                 result.changes.append(
                     AddEnumMember(enum=name, member=member, value=member_value(enum, member))
+                )
+            elif member_value(old["enums"][name], member) != member_value(enum, member):
+                result.changes.append(
+                    AlterEnumMemberValue(
+                        enum=name,
+                        member=member,
+                        old=member_value(old["enums"][name], member),
+                        new=member_value(enum, member),
+                    )
                 )
         for member in had:
             if member not in members_of(enum):

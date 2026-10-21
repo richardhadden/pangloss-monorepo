@@ -36,6 +36,8 @@ from pangloss_models.migrations.changes import (
     DeleteModel,
     LiteralToAnnotatedValue,
     RemoveEnumMember,
+    AlterEnumMemberValue,
+    RenameEnum,
     RemoveField,
     RenameEnumMember,
     RenameField,
@@ -340,7 +342,7 @@ def test_enums_and_their_members():
 
 
 @no_type_check
-def test_a_renamed_enum_member_is_a_rename_in_place():
+def test_a_member_renamed_with_the_same_value_is_not_a_question():
     def before():
         class Colour(Enum):
             RED = "red"
@@ -357,12 +359,89 @@ def test_a_renamed_enum_member_is_a_rename_in_place():
         class Thing(Entity):
             colour: Colour
 
-    question = changes(before, after).questions[0]
-    result = changes(before, after, confirmed=[question])
+    # (an enum is stored as the values: the same value is the same member, whatever it is called)
+    result = changes(before, after)
+    assert result.is_final
     assert kinds(result) == ["RenameEnumMember"]
     renamed = one(result, RenameEnumMember)
     assert (renamed.enum, renamed.old, renamed.new) == ("Colour", "GREEN", "LIME")
+    assert renamed.safety == "safe"
+
+
+@no_type_check
+def test_a_member_whose_value_changes_changes_the_data():
+    def before():
+        class Colour(Enum):
+            RED = "red"
+            GREEN = "green"
+
+        class Thing(Entity):
+            colour: Colour
+
+    def after():
+        class Colour(Enum):
+            RED = "red"
+            GREEN = "verde"
+
+        class Thing(Entity):
+            colour: Colour
+
+    result = changes(before, after)
+    assert kinds(result) == ["AlterEnumMemberValue"]
+    altered = one(result, AlterEnumMemberValue)
+    assert (altered.member, altered.old, altered.new) == ("GREEN", "green", "verde")
+    assert altered.safety == "transforming"
+
+
+@no_type_check
+def test_a_member_renamed_and_given_another_value_is_asked_about_and_then_both():
+    def before():
+        class Colour(Enum):
+            RED = "red"
+            GREEN = "green"
+
+        class Thing(Entity):
+            colour: Colour
+
+    def after():
+        class Colour(Enum):
+            RED = "red"
+            LIME = "lime"
+
+        class Thing(Entity):
+            colour: Colour
+
+    question = changes(before, after).questions[0]
+    assert (question.what, question.old, question.new) == ("enum_member", "GREEN", "LIME")
+    result = changes(before, after, confirmed=[question])
+    assert kinds(result) == ["RenameEnumMember", "AlterEnumMemberValue"]
     assert result.is_final
+
+    # (declined: GREEN goes, and LIME comes)
+    declined = changes(before, after, declined=[question])
+    assert sorted(kinds(declined)) == ["AddEnumMember", "RemoveEnumMember"]
+
+
+@no_type_check
+def test_a_renamed_enum_is_only_the_name():
+    def before():
+        class Colour(Enum):
+            RED = "red"
+
+        class Thing(Entity):
+            colour: Colour
+
+    def after():
+        class Hue(Enum):
+            RED = "red"
+
+        class Thing(Entity):
+            colour: Hue
+
+    question = changes(before, after).questions[0]
+    result = changes(before, after, confirmed=[question])
+    assert kinds(result) == ["RenameEnum"]
+    assert one(result, RenameEnum).safety == "safe"
 
 
 # ---------------------------------------------------------------------------

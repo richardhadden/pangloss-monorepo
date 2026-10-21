@@ -138,6 +138,12 @@ def _rename_enum_member(snapshot, change: c.RenameEnumMember):
     snapshot.update(rename_enum_member(snapshot, change.enum, change.old, change.new))
 
 
+def _alter_enum_member_value(snapshot, change: c.AlterEnumMemberValue):
+    for member in snapshot["enums"][change.enum]["members"]:
+        if member["name"] == change.member:
+            member["value"] = change.new
+
+
 def _create_enum(snapshot, change: c.CreateEnum):
     snapshot["enums"][change.enum] = copy.deepcopy(change.definition)
 
@@ -300,6 +306,7 @@ HANDLERS: dict[type, Callable[[dict, Any], None]] = {
     c.CreateEnum: _create_enum,
     c.AddEnumMember: _add_enum_member,
     c.RemoveEnumMember: _remove_enum_member,
+    c.AlterEnumMemberValue: _alter_enum_member_value,
     c.RemoveEnum: _remove_enum,
     c.CreateModel: _create_model,
     c.DeleteModel: _delete_model,

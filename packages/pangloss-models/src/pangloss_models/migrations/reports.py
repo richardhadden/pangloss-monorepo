@@ -19,16 +19,16 @@ COUNT_NAMES = {
 @dataclass
 class ChangeReport:
     change: c.Change
-    #: "counted": run and rolled back, with the counts; "enum": not run (a change to the database
+    #: "counted": run and rolled back, with the counts; "ddl": not run (a change to the database
     #: itself cannot be tried); "error": it could not be applied, and why; "not tried": an earlier
     #: change failed
-    status: Literal["counted", "enum", "error", "not tried"]
+    status: Literal["counted", "ddl", "error", "not tried"]
     counts: dict[str, int] = field(default_factory=dict)
     message: str | None = None
 
     def summary(self) -> str:
-        if self.status == "enum":
-            return "changes the database itself (enums, indexes: not tried)"
+        if self.status == "ddl":
+            return "changes the database itself (an index or constraint: not tried)"
         if self.status == "not tried":
             return "not tried (an earlier change failed)"
         if self.status == "error":

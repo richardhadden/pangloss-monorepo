@@ -7,7 +7,7 @@
 The models are Python classes; the data is a graph that was written *by an earlier version of them*. When a model changes, three things can stop agreeing:
 
 1. **The data and the new models.** A field was renamed, a type narrowed, a relation wrapped in a new object. The old data can no longer be read (`HeadView(**data)` fails), or can be read but is wrong.
-2. **The database's own structure**: indexes, uniqueness constraints, the text index and the Memgraph enums that `initialise_database()` makes (`memgraph.md`). It only *adds* (it cannot remove an enum member, or drop what is no longer used).
+2. **The database's own structure**: indexes, uniqueness constraints and the text index (`memgraph.md`). (Enums are not part of it: they are stored as the values of their members. They were Memgraph's native enums until 2026-10-21; sections 5.6 and 11 say why that was given up.)
 3. **Derived data** that is stored, not computed: `head_node_id`/`head_node_type`, `meta.semantic_spaces`/`context_labels`, the `PGUrl` nodes, the reverse edges. A structural change has to keep these true.
 
 A migration is a recorded, ordered, repeatable change that takes the database from one version of the models to the next.
@@ -31,7 +31,7 @@ A change to a model is a change to one of these. (From `memgraph.md`, confirmed 
 | A class | Labels on its nodes: its name, every parent class and trait name, its kind (`Document`, `Entity`, `Embedded`, `ReifiedRelation`, ...), `PGIndexableNode`; `HeadNode` on top-level nodes. Property `type` is the class name |
 | A `str`/`int`/`float`/`bool`/`date`/`datetime`/list literal | A node property of the field's name (absent when `None`) |
 | `Decimal` | A string property |
-| An `Enum` | A native Memgraph enum value (`ActivityType::MEETING`), and a database-level enum that must exist |
+| An `Enum` | The **value** of the member (a string or a number), as a plain property; nothing is made in the database for the enum |
 | A `TypedDict` | A map property |
 | An `AnnotatedValue[T]` | A map property `{value: ..., <extra fields>}` on the node |
 | A relation to an Entity | A forward edge `(a)-[:field]->(b)` and a reverse edge `(b)-[:field_reverse {reverse: true}]->(a)`; the reverse name is `RelationConfig.reverse_name` or derived |
@@ -128,7 +128,7 @@ Nodes of the comparison are models and fields, matched by their identity (5.3). 
 
 1. **Models** only in the new: `CreateModel`. Only in the old: `DeleteModel`. In both: compare kind, parents, traits, abstract.
 2. **Fields** of a model, matched by name: only in the new, `AddField`; only in the old, `RemoveField`; in both, compare storage, type and options, and emit the operation for what differs.
-3. **Database structure** (indexes, constraints, enums, text index) is derived from the snapshot, and diffed the same way, so `initialise_database()` and a migration cannot disagree.
+3. **Database structure** (indexes, constraints, the text index) is derived from the snapshot, and diffed the same way, so `initialise_database()` and a migration cannot disagree.
 
 Then the operations are **ordered** (create models and enums before fields that use them; add before wrapping; remove last) and **merged** where one change is several differences (a rename seen as a removal and an addition, 4.2; a parent field and the field that narrows it, 5.4).
 
@@ -195,14 +195,14 @@ For each: how it is **detected** (from the diff), what it does to **data**, and 
 | **Type**, widening (`int` to `float`, `str` to `list[str]`) | convert in place: `SET n.f = toFloat(n.f)`; `[n.f]` | T |
 | **Type**, narrowing or incompatible (`str` to `int`, `float` to `int`, to a `date`) | per node conversion with `toInteger`, `date(...)`; a value that does not convert fails the migration, or is set to null/default (a choice, written in the migration) | T / L |
 | **To or from `Decimal`** | stored as a string: convert to `toString(...)` / `toFloat(...)` | T |
-| **To an `Enum`** | create the Memgraph enum (a database-level step, 5.6), then `SET n.f = ToEnum('Name', 'MEMBER')` using a mapping of old values to members. Tested (see 11) | T |
-| **From an `Enum`** | the reverse: `split(toString(n.f), '::')[1]` is the member name, mapped to the new value | T |
+| **To an `Enum`** | `SET n.f = $map[toString(n.f)]` from the text of the old value to the value of the member: a string that is the value of a member stays; anything else is `null`, which fails, or is set to `on_failure` / `default`. From another enum, by the name of the member or a `mapping` of names |
+| **From an `Enum`** | to a string: `toString(n.f)`. Any other type is refused (by hand) |
 | **List item type** | as above, applied with `[x IN n.f | convert(x)]` | T |
 | **`TypedDict` shape** | rewrite the map: add keys (default), remove keys, rename keys | T / L |
-| **Add a member to an `Enum`** | `ALTER ENUM Name ADD VALUE MEMBER`. Tested | S |
-| **Rename a member** | `ALTER ENUM Name UPDATE VALUE OLD TO NEW`: **in place, and the stored values follow** (a node that had `OLD` now has `NEW`; tested). No data rewrite | S |
-| **Remove a member** | **Not possible** (`Not yet implemented: Alter enum remove value`, Memgraph 3.13.1). Move the data off it (a mapping to another member, asked), and **leave the member in the database enum**, which is then a superset of the model's. See 5.6 | T / L |
-| **Rename an enum class**, or replace one | There is no `RENAME ENUM` or `DROP ENUM` (not implemented). Create the new enum, convert every property that used the old (`ToEnum` per value, also inside lists, maps and annotated values), and leave the old enum **orphaned** in the database | T |
+| **Add a member to an `Enum`** | nothing to the data (state only) |
+| **Rename a member** | the name only: nothing is stored of it, so nothing to the data (state only). If the *value* changes, `AlterEnumMemberValue`: every stored value of the old is set to the new, wherever the enum is kept (a field, a list, a `TypedDict`, an annotated value, an edge). A removed and an added member with the same value are taken for a rename without asking |
+| **Remove a member** | the values that have it are moved to the member that `replacement` names (asked), or it fails if any have it. Nothing is left in the database |
+| **Rename an enum class** | nothing to the data: the enum's name is not stored (state only) |
 | **Plain literal to annotated value** (`name: str` to `name: WithCertainty[str]`) | `SET n.name = {value: n.name, certainty: $default}` | T |
 | **Annotated value to plain** | `SET n.name = n.name.value` | L (the extra fields) |
 | **Add or remove a field of an annotated value** | rewrite the map property on every node that has it | A / L |
@@ -250,19 +250,11 @@ The identity of a *relation* is the pair `(model, field)` and so also names its 
 
 ### 5.6 Database structure
 
-Indexes, constraints, the text index and enums are derived from the snapshot and diffed like fields; the operations are `AddIndex`, `RemoveIndex`, `AddConstraint`, `RemoveConstraint`, `AddEnum` and `AlterEnum`. After this is done, `setup-database` is only for a database that has no migrations yet.
+Indexes, constraints and the text index are derived from the snapshot and diffed like fields; the operations are `AddIndex`, `RemoveIndex`, `AddConstraint` and `RemoveConstraint`. After this is done, `setup-database` is only for a database that has no migrations yet.
 
-**DDL is not transactional.** Memgraph refuses index, constraint and enum changes inside an explicit transaction (`Creating or modifying enums is not allowed in multicommand transactions`), so each runs on its own, in an auto-commit session, and is idempotent (`IF NOT EXISTS`, "already there" is ignored). Do not use `execute_query` or a transaction function for them: the driver treats Memgraph's *Not yet implemented* as a transient error and **retries it with backoff for minutes** (this hung an experiment); DDL has to be run without retries.
+**DDL is not transactional.** Memgraph refuses index and constraint changes inside an explicit transaction, so each runs on its own, in an auto-commit session, and is idempotent (checked against `SHOW INDEX INFO` / `SHOW CONSTRAINT INFO` first). Do not use `execute_query` or a transaction function for them: the driver treats Memgraph's *Not yet implemented* as a transient error and retries it with backoff for minutes.
 
-**Enums are append-only** (Memgraph 3.13.1, tested; see 11):
-
-| | |
-|---|---|
-| `CREATE ENUM`, `ALTER ENUM ... ADD VALUE`, `ALTER ENUM ... UPDATE VALUE a TO b` | work. `UPDATE VALUE` renames a member and the stored values follow |
-| `ALTER ENUM ... REMOVE VALUE`, `DROP ENUM` | *Not yet implemented* |
-| rename an enum | no such statement |
-
-So the database's enums are always a **superset** of the models': a removed member stays; a replaced enum stays as an orphan. Consequences for the design: the drift check compares "every enum and member of the models exists in the database", not equality; `initialise_database()` already only adds; the migration of a removed member is a *data* migration (nothing has that member any more); and an orphan is harmless but never goes away (a wiped and recreated database does not have it). A `pangloss migrate --plan` lists enums that would be orphaned.
+**Why enums are not Memgraph enums.** They were, until 2026-10-21, and they cost: `CREATE ENUM` and `ALTER ENUM ADD VALUE` work, but removing a member and dropping or renaming an enum are *not implemented*, DDL cannot be in a transaction, the driver retried the error for minutes, a replaced enum stayed in the database for ever, and an enum value cannot be a query parameter or be handled by MAGE's `to_tree`. Storing the value of the member as a plain property removes all of it, and costs only the database no longer checking the value (the models do, and `check-data` finds a bad one).
 
 
 ### 5.7 Derived data a structural change must keep true
@@ -400,7 +392,7 @@ class Operation:
 |-----------|--|
 | `CreateModel`, `DeleteModel`, `RenameModel`, `AlterModelLabels` (parents/traits) | 5.1 |
 | `AddField`, `RemoveField`, `RenameField`, `AlterField` (type, nullability, default) | 5.2, with `convert=` for a changed type |
-| `AddEnum`, `AlterEnum`, `RemoveEnum`, `AddIndex`, `RemoveIndex`, `AddConstraint`, `RemoveConstraint` | 5.6 |
+| `CreateEnum`, `AddEnumMember`, `RenameEnumMember`, `RenameEnum`, `RemoveEnum` (the models only), `AlterEnumMemberValue`, `RemoveEnumMember` (the data), `AddIndex`, `RemoveIndex`, `AddConstraint`, `RemoveConstraint` | 5.6 |
 | `AddRelation`, `RemoveRelation`, `RenameRelation`, `AlterRelationTarget`, `AlterCardinality`, `AlterEdgeModel` | 5.4 |
 | `WrapInReified`, `UnwrapReified`, `WrapInSemanticSpace`, `UnwrapSemanticSpace` | 5.4, 6 |
 | `LiteralsToEmbedded`, `EmbeddedToLiterals` | 5.5 |
@@ -475,12 +467,12 @@ Each phase is usable by itself.
 - **How lossy is allowed by default**: `--yes` per operation, or one flag per run?
 - **Read-only mode** while migrating: needed, or is stopping the API enough?
 - **Multiple databases / environments** whose migrations diverge (a branch that migrates the demo database differently): Django's merge migrations, or a linear history only?
-- **Memgraph limits** — now tested (11): enums are append-only, edge types are replaced (not altered), DDL is outside transactions. A snapshot **can** be taken from a client (`CREATE SNAPSHOT`, in an auto-commit session; it returns the path on the server). Still to check: the size of a transaction on large graphs.
+- **Memgraph limits** — now tested (11): edge types are replaced (not altered), DDL is outside transactions. A snapshot (`--backup`) can be taken from a client. Still to check: the size of a transaction on large graphs.
 - **History**: `PGUpdate` records say who and when but not what. If a content history is ever kept, migrations would have to rewrite it too.
 
 ## 11. What was tested
 
-Run against the demo database (Memgraph **3.13.1**, `memgraph/memgraph-mage`) on scratch labels and enums, to see what is possible before specifying it.
+Run against the demo database (Memgraph **3.13.1**, `memgraph/memgraph-mage`) on scratch labels and enums, to see what is possible before specifying it. (The enum rows are history: enums are no longer Memgraph enums, which is what these found.)
 
 | Tried | Result |
 |-------|--------|
@@ -498,7 +490,6 @@ Run against the demo database (Memgraph **3.13.1**, `memgraph/memgraph-mage`) on
 | `refactor.extract_node`, `collapse_node` | work, but not suited (5.8) |
 | 50,000 edges renamed | 0.11 s by `rename_type`, 0.11 s by `CREATE`+`DELETE`; a batch of 10,000 by `LIMIT` works |
 
-> The experiment left two **scratch enums, `ScratchColour` and `ScratchColour2`, in the demo database**. Because enums cannot be dropped, they stay until the demo database is recreated. They are not used by anything.
 
 ## 12. Progress
 
@@ -507,7 +498,7 @@ Where the work stands, so that it can be picked up.
 **Done: the specification and the Memgraph facts it rests on**
 
 - This specification (sections 1 to 10), and the Memgraph behaviour it depends on, tested (section 11).
-- Decisions: a rename is **always asked on the command line**, never inferred (4.2); enums are append-only (5.6); edge types are renamed with plain Cypher (5.8).
+- Decisions: a rename is **always asked on the command line**, never inferred (4.2); enums are stored as the values of their members (5.6); edge types are renamed with plain Cypher (5.8).
 
 **Done: finding what changed** (`pangloss_models.migrations`; no database, no files)
 
@@ -522,17 +513,18 @@ The property that makes it complete is tested on every case in the diff tests: *
 
 **Done: applying changes to Memgraph** (`pangloss_memgraph.databases.memgraph.migrations`)
 
-`apply_change(tx, change, state)` for a change to the data, in a transaction; `run_ddl(database, change, state)` for enums, outside one and safe to repeat; `apply_changes(database, state, changes)` runs a list in order (the data changes that come together in one transaction, enum changes on their own between them, the snapshot followed through so each change is given the state before it). `state` is the snapshot: nothing needs the classes of the models.
+`apply_change(tx, change, state)` for a change to the data, in a transaction; `run_ddl(database, change, state)` for indexes and constraints, outside one and safe to repeat; `apply_changes(database, state, changes)` runs a list in order (the data changes that come together in one transaction, index and constraint changes on their own between them, the snapshot followed through so each change is given the state before it). `state` is the snapshot: nothing needs the classes of the models.
 
 | Change | Data |
 |--------|------|
-| `CreateEnum`, `AddEnumMember`, `RenameEnumMember` (`UPDATE VALUE`, in place), `RenameEnum` (a new enum, the values converted) | DDL; the old enum or member stays |
-| `RemoveEnumMember` | the values are moved to `replacement` (an answer; fails if some have it and there is none); the member stays in the database enum |
+| `CreateEnum`, `AddEnumMember`, `RenameEnumMember`, `RenameEnum`, `RemoveEnum` | nothing to do to the data: an enum is stored as the values of its members, and the name of an enum or of a member is not stored |
+| `AlterEnumMemberValue` | every stored value of the old is set to the new, in every place the enum is kept: a field, a list, inside a `TypedDict` or an annotated value (with MAGE's `map.set_key`), and the properties of an edge. A value that is not the enum's (the text `"green"` in a `str` field) is not touched |
+| `RemoveEnumMember` | the values that have the member are moved to `replacement` (an answer; fails, saying where, if some have it and there is none) |
 | `AddField` | a required literal gets `default` on the nodes that exist; optional fields and relations need nothing |
 | `RemoveField` | the property, or the edges of the relation and the nodes it owned (the subtree below, not entering entities) |
 | `RenameField` | the property moved, or the edge types (forward and reverse) replaced |
 | `AlterNullability` | to non-null: `default` where there is none |
-| `AlterLiteralType`, `AlterListItemType` | converted in place (`str`, `int`, `float`, `bool`, `decimal`, `date`, enums by value or `mapping`); what does not convert fails unless `on_failure` is `null` or `default` |
+| `AlterLiteralType`, `AlterListItemType` | converted in place (`str`, `int`, `float`, `bool`, `decimal`, `date`; an enum from a string, or from another enum by the name of the member or a `mapping` of names); what does not convert fails unless `on_failure` is `null` or `default` |
 | `LiteralToAnnotatedValue`, `AnnotatedValueToLiteral` | the value wrapped in (with `defaults` for the extra fields) or taken out of the map |
 | `AlterCardinality` | list to one: `keep: "first"` or it fails when a node has several |
 | `AlterRelationTarget` | narrowing: the edges to what is no longer allowed fail, or are removed (`on_narrowing: "remove"`) |
@@ -542,7 +534,7 @@ The property that makes it complete is tested on every case in the diff tests: *
 | `ChangeWrapper` | a relation to one reified relation that is now to another: the nodes relabelled and given the new `type`; the fields the new has not are given `defaults`, those the old had and the new has not are removed |
 | `LiteralsToEmbedded`, `EmbeddedToLiterals` | the literal fields of a model become the fields of an embedded object (a node for each node that has them, the values moved into it, `defaults` for what else it needs) and back (the values copied out, the node deleted; its other fields are lost) |
 | `AlterModelLabels`, `RenameModel`, `DeleteModel` | labels added or removed; relabelled (and `type`, `head_node_type`, and the context labels of what a renamed document holds); the nodes, what they own, and their creation and update records |
-| `CreateModel`, `AlterModelOption`, `AlterAnnotatedValue`, `AlterEmbedded`, `RemoveEnum` | nothing to do to the data |
+| `CreateModel`, `AlterModelOption`, `AlterAnnotatedValue`, `AlterEmbedded` | nothing to do to the data |
 | `RunCypher`, `RunPython`, `StateOnly` | **By hand.** `RunCypher(query, parameters, lossy, affects, note)` runs a query in the migration's transaction (not DDL: Memgraph refuses it there). `RunPython(function, ...)` calls `function(tx, state)` (it may be `async`; given as `"package.module:name"` or as the function, which is kept as its name, so the checksum does not notice an edit to its body) with `state` the snapshot before it. Neither changes what the models are. `StateOnly(changes=(...))` does the opposite: the changes are made to the snapshot only. So a `[NEEDS CODE]` change is written as a `RunCypher` / `RunPython` that moves the data, then a `StateOnly` of the refused change. `lossy=True` makes the confirmation before applying apply to it; `affects` names the models to read afterwards (all, if not given). Work in `--dry-run` (counted) and in batches (each as one transaction) |
 | `AlterModelKind`, `ChangeFieldKind`, `AddField` of an embedded object that is not made of literals that were there, wrapping in a conjunction (it has several slots to fill: by hand, always) | refused with `PanglossMigrationNotSupported`: to be written by hand |
 
@@ -571,9 +563,8 @@ Tried for real against Memgraph (a project of its own): `makemigrations` writes 
 
 **Not done**
 
-- Batches (below) do not cover wrapping in a semantic space, unwrapping, `LiteralsToEmbedded` or a change of enum; those are made at once, in a transaction of their own.
-- `Fulfils` (the labels a node gets for the classes it fulfils are decided when it is written, and are not in the snapshot); a node whose enum values are inside a `TypedDict`, an annotated value or an edge model when an enum member is removed or an enum renamed; the `contents` order of a context label, which depends on the order the edges were made in.
-- The tests make enums that stay in the test database (Memgraph cannot drop one): `MigrationHue` and one with a new name for each run of the member test.
+- Batches (below) do not cover wrapping in a semantic space, unwrapping, `LiteralsToEmbedded` or a change to the values of an enum; those are made at once, in a transaction of their own.
+- `Fulfils` (the labels a node gets for the classes it fulfils are decided when it is written, and are not in the snapshot); the `contents` order of a context label, which depends on the order the edges were made in.
 
 **Also done: the start-up check** (`migrations/startup.py`, called from the lifespan of `pangloss-api`). If a project has migrations, the server does not start (`MIGRATION_CHECK = "error"`; `"warn"` starts and warns, `"off"` does not look) when migrations have not been applied, one was changed or lost after it was applied, or the models are not what the migrations come to. Tried on the demo: it starts; with its migration marked not applied it refuses and says `pangloss migrate`.
 
@@ -603,8 +594,8 @@ A batch that is retried by the driver after a transient error runs again, so a c
 - **Every reversal is checked**: applied to the snapshot after the migration it must give the snapshot before, or the migration is refused as irreversible. The diff tests check it for every case that finds changes.
 - **`lossy`**: a reversal is lossy if the migration's changes were (a removed field's values do not come back), if undoing removes what the migration added (the values written since), or if a conversion may not return the same value. It needs `--backup` or `--no-backup`, and `--yes` or a confirmation, as going forwards does.
 - **Answers**: what an inverse needs that only a person can give (a value for a required field that comes back, the fields of a wrapper that comes back) is asked when it runs. One that cannot be asked fails.
-- **Cannot be undone**: `RenameEnum` (a new enum, written to since), `AlterModelKind` and `ChangeFieldKind` (done by hand); a `RunCypher` / `RunPython` unless it has `reverse_query` / `reverse_function`. Each says which change and why.
-- A migration is undone in **one transaction** (enum changes aside, which are not in one): one that fails has changed nothing and stays recorded as applied. Its record is removed when it is undone, so it is pending again. Tested against Memgraph: a renamed relation, a wrapped relation (the graph is what it was), a converted type, with what was written since.
+- **Cannot be undone**: `AlterModelKind` and `ChangeFieldKind` (done by hand); a `RunCypher` / `RunPython` unless it has `reverse_query` / `reverse_function`. Each says which change and why.
+- A migration is undone in **one transaction** (index and constraint changes aside, which are not in one): one that fails has changed nothing and stays recorded as applied. Its record is removed when it is undone, so it is pending again. Tested against Memgraph: a renamed relation, a wrapped relation (the graph is what it was), a converted type, with what was written since.
 
 **Also done: squashing** (`files.squash`, `files.choose`, `pangloss squashmigrations`).
 
@@ -618,7 +609,7 @@ A batch that is retried by the driver after a transient error runs again, so a c
 
 - The snapshot has `indexes` and `constraints` when the database package says what it needs: `migration_backend.structure()` (for Memgraph, the lists `initialise_database` makes: ids unique, the text index `label_text`, and so on). `build_snapshot(structure)`, the commands and the server's check all pass it; without one, the snapshot has none. Which app makes an entry is its `app` (not stored: it is not in the hash); for Memgraph that is `pangloss_memgraph`, which ships `pangloss_memgraph/migrations/0001_initial.py` for them. A project that does not install it has them made by the migrations of its first app. One that is dropped is dropped by the app that made it.
 - `makemigrations` finds a change to the list (a newer Pangloss that wants another index) as it finds a change to a model; `migrate` makes it. DDL: outside a transaction, only if it is not there already (`SHOW INDEX INFO` / `SHOW CONSTRAINT INFO`), so a database made by `setup-database` has them already and is not disturbed; a unique constraint the data already breaks fails and says so. Undone by the opposite. Not tried in `--dry-run` (like enums).
-- `ensure_ready` no longer makes the indexes: the migrations do. `setup-database` warns when the project has migrations (it makes the enums of the models as they are now, which can get ahead of them): it is for a project without.
+- `ensure_ready` no longer makes the indexes: the migrations do. `setup-database` warns when the project has migrations (it makes the indexes as they are now): it is for a project without.
 - The demo's database was made before this: `pangloss migrate` (or `--fake` for the library's first migration) is needed before its server will start.
 
 **Also done: models of different apps that need each other.** Where the new models of two apps refer to each other's, the planner makes one of them in two steps (`split_app`): the first migration makes its models without the fields that refer to the other app's new models, the second (numbered after, depending on the other's first) adds those fields as `AddField`s. Apps are split one at a time until the circle is broken, so only as many as are needed are. A model that moves to another app is not a change (the app is not stored), and a later change to it is its new app's migration, depending on the old. A cycle through a model's parents or labels (not a field) is still refused.
@@ -632,8 +623,10 @@ A batch that is retried by the driver after a transient error runs again, so a c
 - `check_data(concurrency=N)` / `check-data --parallel N`: reads `N` at once. **Not faster** against a local Memgraph (it was 1.8 times slower with 8), so the default is 1.
 - `test_migrations_context.py`: working the semantic spaces and context labels out again for a document the models wrote changes nothing, so `propagate_context` and the models' own agree.
 
+**Also done: enums stored as values** (2026-10-21). An `Enum` field is the member's value, a plain property (see 5.6 for why). The write path converts a member to its value (`convert_type_for_writing`) and reads need no conversion (the models validate the value as they do one from the API); `read_enums.py`, `ToEnum`, `CREATE ENUM` and `initialise_database`'s enums are gone. The values of an enum must be strings or numbers (checked at `initialise()`). In migrations the enum changes became data changes: a member renamed with the same value is a rename of the name only (not asked, nothing to do); a changed value is `AlterEnumMemberValue`; `RemoveEnumMember` moves the values; `RenameEnum` is the name only, and so is reversible; the three enum conversions are `str` to and from an enum and one enum to another. Enum changes can be tried in `--dry-run`, and the only changes made outside a transaction are indexes and constraints. No old data is converted: the demo's database is repopulated.
+
 **Next**
 
 Everything that is left is listed in [`TODO.md`](../TODO.md), under "Database migrations" (commands and safety, changes that cannot be applied yet, batches and speed, code to tidy). In order of use:
 
-1. See `TODO.md`: the changes that cannot be applied yet (`Fulfils`, enums inside a `TypedDict`...), batches for the changes made at once, and tidying.
+1. See `TODO.md`: the changes that cannot be applied yet (`Fulfils`, kind changes...), batches for the changes made at once, and tidying.

@@ -1,7 +1,7 @@
 """Applying a list of changes to a database, in order.
 
 The changes to the data that come one after another are made in one transaction (so that
-they happen together or not at all); a change to the database itself (an enum) is made on
+they happen together or not at all); a change to the database itself (an index or constraint) is made on
 its own, between them, as Memgraph requires. The snapshot is followed through, so that
 each change is given the state of the models just before it.
 """
@@ -71,10 +71,9 @@ async def dry_run(
 ) -> tuple[list[ChangeReport], dict[str, Any]]:
     """Try the changes, in one transaction that is rolled back, and say what each did.
 
-    Nothing is changed. A change to the database itself (an enum) cannot be tried, and is not;
-    one that needs an enum that the migration would make fails here for want of it (and says so),
-    as does any that would fail for real: a value that is needed and was not given, data that does
-    not convert. After a failure the rest are not tried (the transaction cannot go on).
+    Nothing is changed. A change to the database itself (an index or constraint) cannot be tried, and
+    is not. A change that would fail for real says so: a value that is needed and was not given, data
+    that does not convert. After a failure the rest are not tried (the transaction cannot go on).
     Returns the reports, and the snapshot after the changes."""
     if not hasattr(database, "driver"):
         await database._initialise_driver()
@@ -87,7 +86,7 @@ async def dry_run(
                 before = state
                 state = apply_to_snapshot(state, change)
                 if is_ddl(change):
-                    reports.append(ChangeReport(change, "enum"))
+                    reports.append(ChangeReport(change, "ddl"))
                 elif failed:
                     reports.append(ChangeReport(change, "not tried"))
                 else:

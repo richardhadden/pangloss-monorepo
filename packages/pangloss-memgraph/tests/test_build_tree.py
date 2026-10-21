@@ -1,15 +1,7 @@
-"""The functions that turn what the database returns into the input of a view"""
-
-from enum import Enum
+"""The functions that turn what the database returns into the input of a view (`build_tree`)"""
 
 import pytest
 from pangloss_memgraph.databases.memgraph.build_tree import build_tree
-from pangloss_memgraph.databases.memgraph.read_enums import convert_enums
-from pangloss_models import initialise
-from pangloss_models.exceptions import PanglossRuntimeError
-from pangloss_models.model_bases.document import Document
-
-from .helpers import mg_enum
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -92,46 +84,3 @@ async def test_build_tree_edge_properties():
     assert tree["with"][0]["edge_properties"] == {"number": 1, "note": "n"}
     assert "edge_properties" not in tree["without"][0]
     assert "edge_properties" not in tree["reverse_only"][0]
-
-
-class ReadColour(Enum):
-    RED = "red"
-    BLUE = "blue"
-
-
-async def test_convert_enums():
-    class Statement(Document):
-        colour: ReadColour
-
-    initialise()
-
-    converted = convert_enums(
-        {
-            "a": mg_enum("ReadColour::RED"),
-            "list": [mg_enum("ReadColour::BLUE"), 1, "x"],
-            "nested": {"deeper": [{"c": mg_enum("ReadColour::RED")}]},
-            "plain": {"__type": "something_else", "__value": "x"},
-            "number": 3,
-        }
-    )
-
-    assert converted["a"] is ReadColour.RED
-    assert converted["list"] == [ReadColour.BLUE, 1, "x"]
-    assert converted["nested"]["deeper"][0]["c"] is ReadColour.RED
-    assert converted["plain"] == {"__type": "something_else", "__value": "x"}
-    assert converted["number"] == 3
-
-
-async def test_convert_enums_leaves_data_with_no_enums_alone():
-    data = {"a": [1, {"b": "c"}], "d": None}
-    assert convert_enums(data) == data
-
-
-async def test_convert_enums_of_an_unknown_enum_raises():
-    class Statement(Document):
-        text: str
-
-    initialise()
-
-    with pytest.raises(PanglossRuntimeError, match="NoSuchEnum::X"):
-        convert_enums(mg_enum("NoSuchEnum::X"))

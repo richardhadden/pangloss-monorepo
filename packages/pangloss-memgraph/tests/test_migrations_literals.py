@@ -1,14 +1,12 @@
-"""Applying changes to literal fields and enums: data written with the old models, migrated,
+"""Applying changes to literal fields: data written with the old models, migrated,
 and read with the new"""
 
-import uuid
 from enum import Enum
 from types import SimpleNamespace as ns
 from typing import Annotated, no_type_check
 
 import pytest
 from pangloss_memgraph.databases.memgraph.database import Database
-from pangloss_memgraph.databases.memgraph.initialise_database import initialise_database
 from pangloss_models.exceptions import PanglossMigrationAnswerNeeded
 from pangloss_models.migrations import PossibleRename
 from pangloss_models.model_bases.annotated_value import AnnotatedValue
@@ -18,12 +16,6 @@ from .helpers import run
 from .migration_support import declare, migrate, with_answers
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
-
-
-def unique_enum(name: str, members: dict[str, str]) -> type[Enum]:
-    """An enum that no earlier run made. (Memgraph cannot drop or rename an enum, nor remove a
-    member of one, so a test that changes one makes a new one each time.)"""
-    return Enum(f"{name}{uuid.uuid4().hex[:8]}", members)
 
 
 # ---------------------------------------------------------------------------
@@ -254,95 +246,6 @@ async def test_a_field_becomes_an_annotated_value_and_back(db_driver, clear_data
     assert (await old_models.Person.get(id=saved.id)).name == "Ann"  # (the extra field is lost)
     props = run(db_driver, "MATCH (p:Person) RETURN p.name AS name")
     assert props == [{"name": "Ann"}]
-
-
-# ---------------------------------------------------------------------------
-# Enums
-# ---------------------------------------------------------------------------
-
-
-@no_type_check
-async def test_a_new_enum_and_a_field_that_uses_it(db_driver, clear_database):
-    hue = unique_enum("MigrationHue", {"RED": "red", "GREEN": "green"})
-
-    def v1():
-        class Person(Entity):
-            name: str
-
-        return ns(Person=Person)
-
-    def v2():
-        class Person(Entity):
-            name: str
-            favourite: hue
-
-        return ns(Person=Person)
-
-    old_models, old = declare(v1)
-    saved = await old_models.Person.Create(label="Ann", name="Ann").save()
-    new_models, new = declare(v2)
-
-    await migrate(old, new, answer=with_answers(AddField={"default": "green"}))
-    read = await new_models.Person.get(id=saved.id)
-    assert read.favourite is hue.GREEN
-    # (and again: the enum is there already, and nothing goes wrong)
-    await migrate(old, new, answer=with_answers(AddField={"default": "green"}))
-
-
-@no_type_check
-async def test_a_member_is_added_renamed_in_place_and_removed(db_driver, clear_database):
-    name = f"MigrationShade{uuid.uuid4().hex[:8]}"
-    shade_v1 = Enum(name, {"RED": "red", "GREEN": "green", "BLUE": "blue"})
-    # GREEN is called LIME, BLUE goes (its values become RED), and PINK is new
-    shade_v2 = Enum(name, {"RED": "red", "LIME": "green", "PINK": "pink"})
-
-    def v1():
-        class Person(Entity):
-            favourite: shade_v1
-            others: list[shade_v1]
-
-        return ns(Person=Person)
-
-    def v2():
-        class Person(Entity):
-            favourite: shade_v2
-            others: list[shade_v2]
-
-        return ns(Person=Person)
-
-    old_models, old = declare(v1)
-    await initialise_database()
-    green = await old_models.Person.Create(
-        label="Ann", favourite=shade_v1.GREEN, others=[shade_v1.BLUE, shade_v1.GREEN]
-    ).save()
-    blue = await old_models.Person.Create(label="Bob", favourite=shade_v1.BLUE, others=[]).save()
-    new_models, new = declare(v2)
-
-    renamed = PossibleRename(what="enum_member", scope=name, old="GREEN", new="LIME")
-    # BLUE has values: it cannot go until they are given another member
-    with pytest.raises(PanglossMigrationAnswerNeeded, match="which member to give them"):
-        await migrate(old, new, confirmed=[renamed], declined=[
-            PossibleRename(what="enum_member", scope=name, old="BLUE", new="PINK"),
-        ])
-
-    await migrate(
-        old,
-        new,
-        confirmed=[renamed],
-        declined=[PossibleRename(what="enum_member", scope=name, old="BLUE", new="PINK")],
-        answer=with_answers(RemoveEnumMember={"replacement": "RED"}),
-    )
-
-    read_green = await new_models.Person.get(id=green.id)
-    # GREEN is LIME now, in place; BLUE became RED
-    assert read_green.favourite is shade_v2.LIME
-    assert sorted(m.name for m in read_green.others) == ["LIME", "RED"]
-    assert (await new_models.Person.get(id=blue.id)).favourite is shade_v2.RED
-
-    # the member is still in the database enum (it cannot be removed), and the new one is there
-    rows = run(db_driver, "SHOW ENUMS")
-    members = {row["Enum Name"]: row["Enum Values"] for row in rows}[name]
-    assert {"RED", "LIME", "PINK", "BLUE"} <= set(members)
 
 
 @no_type_check

@@ -2,7 +2,7 @@
 
 Package: `pangloss-memgraph` (module `pangloss_memgraph.databases.memgraph`). Select it with `DATABASE_MODULE = "pangloss_memgraph.databases.memgraph"` and a `MemgraphDatabaseSettings`.
 
-Requirements: a Memgraph server with text search (the `text_search` module), supporting native enums, started with `--storage-properties-on-edges=true`. (Reading does not use MAGE's `convert_c.to_tree`, which cannot handle enum values.)
+Requirements: a Memgraph server with text search (the `text_search` module), started with `--storage-properties-on-edges=true`. (MAGE's `map` functions are used by migrations to change a value inside a stored map.)
 
 ## Modules
 
@@ -16,7 +16,6 @@ Requirements: a Memgraph server with text search (the `text_search` module), sup
 | `delete_node.py` | Deleting (flagging) a head document or an entity, or marking an entity that is referred to |
 | `lookup.py` | `resolve_id`: the id of a node, given its id or a URL |
 | `build_tree.py` | Makes the nodes and edges returned by the read query into a nested dict |
-| `read_enums.py` | Turns the enums returned by the database (dicts such as `{"__type": "mg_enum", "__value": "Colour::RED"}`) into members of the models' enums |
 | `validate_write.py` | Checks made inside a write transaction before anything is written (user, references, ids, the document being updated) |
 | `build_read_query.py` | `build_fetch_document_query` |
 | `build_list_query.py` | `build_generic_list_query`: pagination, text search, and deep search |
@@ -44,7 +43,7 @@ Requirements: a Memgraph server with text search (the `text_search` module), sup
 
 Values are converted by `convert_type_for_writing`: UUIDs and URLs become strings, `Decimal` becomes a string, and sets, tuples, lists and dicts (including `TypedDict`s) are converted recursively. `None` is never written. Edge properties are converted in the same way.
 
-**Enums** are stored as Memgraph's native enums (`Colour::RED`, from the enum's name and the *name* of the member), which cannot be passed as query parameters. So the properties of a node or edge are set from one parameter holding everything but the enums, followed by `SET n += {colour: ToEnum($p), colours: [ToEnum($q), ToEnum($r)]}` for the properties that are, or have in them (in a list, a `TypedDict` or an annotated value), an enum (`PropertyAssignments` in `build_create_query.py`). The enum has to exist in the database: see `initialise_database`. A write that uses one that does not (or a member added since) raises a `PanglossWriteError` that says so.
+**Enums** are stored as the *value* of the member (`Colour.RED = "red"` is stored as `"red"`; a number if the value is one), as an ordinary property, in a list, in a `TypedDict`, in an annotated value or on an edge. There is no Memgraph enum to make, and nothing is read back but a string or a number, which the models' `Enum` field validates as it does a value from the API. The values of an enum must be strings or numbers (checked when the models are initialised). Renaming a member in Python, with the same value, changes nothing stored; changing a value is a data migration.
 
 ### Setting up the database
 
@@ -65,11 +64,10 @@ It creates:
 | An index on `PGIndexableNode(id, head_node_id)` | Finding a node of a particular document |
 | An index on `HeadNode(id)` | Reads and updates look up the head node by id |
 | The text index `label_text` on `PGIndexableNode(label)` | Listing and searching (`text_search.regex_search("label_text", ...)`) |
-| An enum for each `Enum` used by a model | See below |
 
-**Enums.** Every `Enum` used as the type of a field (also in a list, a `TypedDict`, an edge model, or an annotated value) is created as a Memgraph enum of the same name, with the names of its members. If one exists, members it lacks are added (Memgraph cannot remove them). Two different enums with the same name, or names that are not identifiers, are an error. Fields of an enum type are stored as these enums (see above), so run it after changing the models.
+**Enums** are not made: they are stored as values (see above).
 
-Indexes, constraints and enums cannot be changed inside a transaction, so each statement is run on its own.
+Indexes and constraints cannot be changed inside a transaction, so each statement is run on its own.
 
 ## Performance: the plan of a query
 
