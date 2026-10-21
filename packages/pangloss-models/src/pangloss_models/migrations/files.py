@@ -395,10 +395,11 @@ def choose(
             # (the database is part way through them: they are used, as they are on disk)
             missing = [o for o in originals if o not in by_key]
             if missing:
+                names = ", ".join(".".join(o) for o in missing)
                 raise PanglossMigrationError(
-                    f"{squashed} replaces migrations that the database has only begun, and "
-                    f"{', '.join('.'.join(o) for o in missing)} is not there: finish them with the "
-                    "migrations that had them, or restore the files"
+                    f"{squashed} replaces migrations that the database has only begun, and their "
+                    f"{'file is' if len(missing) == 1 else 'files are'} missing ({names}): "
+                    "restore the files and finish them, then the squashed one can be used"
                 )
             dropped.add(squashed.key)
             last = max((by_key[o] for o in originals), key=lambda m: m.number)

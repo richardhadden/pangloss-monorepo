@@ -655,6 +655,20 @@ def test_a_database_part_way_goes_on_with_the_originals(three_migrations: Path):
     assert sorted(name[:4] for _, name in backend().APPLIED) == ["0001", "0002", "0003"]
 
 
+def test_a_part_way_database_without_the_originals_can_still_be_listed(three_migrations: Path):
+    assert invoke("migrate", "fakeapp", "0001")[0] == 0
+    assert invoke("squashmigrations", "fakeapp", "0001", "0003")[0] == 0
+    for name in migration_files(three_migrations):
+        if "squashed" not in name:
+            (three_migrations / "fakeapp/migrations" / name).unlink()
+
+    exit_code, output = invoke("showmigrations")
+    assert exit_code == 1
+    assert "[X] 0001_initial (no file)" in output
+    assert "[ ] 0001_squashed_0003" in output
+    assert "files are missing" in output and "restore the files" in output
+
+
 def test_nothing_is_squashed_that_cannot_be(three_migrations: Path):
     exit_code, output = invoke("squashmigrations", "fakeapp", "0001", "0009")
     assert exit_code != 0 and "not one migration" in output

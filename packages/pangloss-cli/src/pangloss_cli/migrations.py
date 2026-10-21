@@ -789,7 +789,14 @@ def showmigrations(ctx: typer.Context) -> None:
         return await backend.applied()
 
     applied = run_with_database(project, read)
-    graph = load_graph(apps, applied)
+    try:
+        graph = graph_of(apps, applied)
+    except PanglossMigrationError as error:
+        # (the migrations do not make a graph with this database, but what is on disk and what
+        # the database has had can still be listed, to see what is wrong)
+        show_without_graph(apps, applied)
+        fail(str(error))
+        raise
     applied = graph.reconcile(applied)
     for app in apps:
         own = [m for m in graph.order() if m.app == app]
@@ -804,6 +811,21 @@ def showmigrations(ctx: typer.Context) -> None:
             typer.echo(f" {mark} {migration.name}{note}")
     for line in problems(graph, applied):
         typer.secho(line, fg="red", err=True)
+
+
+def show_without_graph(apps: list[str], applied: dict) -> None:
+    """The migrations on disk and the records of the database, side by side, by name"""
+    for app in apps:
+        names = {m.name for m in discover(app)}
+        recorded = {name: record for (a, name), record in applied.items() if a == app}
+        if not names and not recorded:
+            continue
+        typer.secho(app, bold=True)
+        for name in sorted(names | recorded.keys()):
+            status = recorded.get(name, {}).get("status")
+            mark = {"applied": "[X]", "failed": "[!]", "running": "[~]"}.get(status, "[ ]")
+            note = "" if name in names else " (no file)"
+            typer.echo(f" {mark} {name}{note}")
 
 
 def report_data_check(
