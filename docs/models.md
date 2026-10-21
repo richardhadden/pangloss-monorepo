@@ -55,6 +55,14 @@ Database-bound methods, available after `initialise()`:
 
 ## Entity
 
+> **There are no "inline entities".** An entity is never part of a document, however it came to exist.
+> `create_inline` only lets a document's *payload* name an entity that may not exist yet, by a UUID or URL
+> that the sender supplies (with `create_new`), so that data from other sources can be **uploaded in batches**
+> without first creating every entity it mentions. If the entity exists it is used as it is; if not, it is created
+> exactly as `Entity.Create(...).save()` would create it: a separate head node, with its own history, joined to
+> the document only by the relation. Do not describe it as embedded, nested or "inline" in the document
+> (see [Creating an entity from a document's payload](#creating-an-entity-from-a-documents-payload-create_inline)).
+
 A real-world thing that documents refer to: a person, place, group, or organisation. Documents refer to entities rather than containing them: the relation field accepts an `EntityName.ReferenceSet` (`{"type": "Person", "id": ...}`).
 
 ```python
@@ -71,9 +79,9 @@ class Person(Entity):
 
 Database-bound methods: `Entity.Create(...).save()` ✅, `Entity.Update(id=..., ...).save()` ✅, `await Person.get(id)` ✅ (by id or URL; `None` if not found), `await Person.list(...)` ✅ and `await Person.delete(id)` ✅ (see [Deleting](#deleting)).
 
-### Entities written in a document
+### Creating an entity from a document's payload (`create_inline`)
 
-With `create_inline`, a document's payload can contain the entity itself instead of a reference to it: `{"type": "Person", "id": <UUID or URL>, "label": "...", "create_new": True}`. This is only a convenience. The entity is **not part of the document**:
+With `create_inline`, a document's payload can name the entity, with the identifier it should have, instead of only referring to one that exists: `{"type": "Person", "id": <UUID or URL>, "label": "...", "create_new": True}`. This is only a convenience. The entity is **not part of the document**:
 
 - It is looked up by its UUID, or its URL. If it exists it is used as it is (the rest of the payload is ignored, and nothing is changed). If it does not, it is created exactly as `Person.Create(...).save()` would create it: a head node with its own record of creation, and no connection to the document other than the relation. A URL given in several documents is one entity.
 - It has nothing of the document's context: not its head node, nor the semantic space the document is in.

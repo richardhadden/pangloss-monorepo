@@ -2,6 +2,21 @@
 
 What is outstanding, as of the version check on updates (after CORS). What works is in `docs/status.md`.
 
+## Decisions and planning (open)
+
+Choices that block, or shape, other work. Not tasks to start yet; each says what it blocks. Written 2026-10-21 from the review sessions.
+
+- [ ] **Fix `pydantic-meta-kit` (in progress, separate repository).** Bugs found by reading and by probes: a grandchild loses its parent's meta values (`parents_metas[-1]` is the farthest ancestor), `ACCUMULATE` of a `dict` raises on a repeated key, `_meta_class` is global to `WithMeta` (so a second meta type breaks a subclass with its own `_meta`), aliased fields never count as set, its own docstring example does not run. Add tests with three-level hierarchies and two meta types. **Decide:** release it with a version and pin Pangloss to it, and whether it stays a separate repository (it is closely tied to pydantic internals). *Blocks:* meta slots, and any use of its merge rules by an optional package.
+- [ ] **Meta slots** ([docs/meta-slots.md](docs/meta-slots.md)): decide the open questions (does a subclass's value replace its parent's or merge; warn on an unregistered `_x_meta`; refuse a name taken by another package; accumulating slots; generics; instances). **Decide first** whether the interface's per-model components need a slot at all, or a module-level mapping read by the exporter is enough (it needs no change to `pangloss_models`). *Blocks:* per-model components in the interface.
+- [ ] **What the generated models promise.** Before merging the five builders (see `packages/pangloss-models/todo.md`, "Merge the five builders into one"), decide which differences between `Create`, `Update`, `View` and the DB models are contract and which are accidents. Field names, the `type` discriminator and the members of a union become hard to change once projects and clients depend on them. *Blocks:* the builder merge; adding any new model kind.
+- [ ] **Access control: decide the model now, build later.** Reads need no login (`GET /api/<Model>` is open) and a write needs only to be logged in, as any user. Decide whether that is intended; if not, what the unit of permission is (per type, per object, per user, roles). See "API and security" below. *Blocks:* the shape of the API, and the interface (what it may show).
+- [ ] **Supported Python versions.** `pyproject.toml` says `>=3.14`; the development environment is Python 3.15, where `coverage` does not load (`coverage.tracer uses unknown slot ID`). Decide which versions are supported and tested, and add them to CI. (Whether there is CI, and what it runs, is not known to these notes: check.)
+- [ ] **How Pangloss is installed.** Not published, so the getting-started guide says "use a checkout of the repository" and `new-project` writes `dependencies = []`. Decide: publish (names, versions, release process) or document the checkout as the way. *Blocks:* the getting-started guide's first chapter; anyone outside the repository.
+- [ ] **Other databases.** `pangloss-sdk` is stubs and the migrations guide now keeps Memgraph-specific parts in their own chapter. Decide whether a second backend is planned. If yes, the `migration_backend` interface (and the stub SDK) need a design pass; if not, say so in the docs so nothing is over-abstracted.
+- [ ] **Interface decisions** (full list in [docs/interface.md](docs/interface.md), "Decisions to make next"): project overrides, sessions, the production proxy for `/api`, styling, forms from the models. Added by these sessions: per-model components (a mapping model to component, with a fallback up the model's parents, carried by the `ComponentsProvider` so library components use it too; start with a TypeScript file keyed by model name, and generate it from Python config later if wanted).
+
+**Suggested order:** (1) `pydantic-meta-kit`; (2) the snapshot harness for the generated models, then the accidental differences and bugs; (3) the builder merge; (4) meta slots (if still wanted) and per-model components; (5) in parallel, the migration items below (structure test, large-database trial); (6) decide access control early, even if it is built last.
+
 ## Before a frontend (next)
 
 - [ ] Typed API client for the frontend: dump `create_app().openapi()` (the models themselves are exported by `pangloss interface export-models`; see [docs/interface.md](docs/interface.md)).
@@ -17,16 +32,21 @@ What is outstanding, as of the version check on updates (after CORS). What works
 
 ## Data and the Memgraph backend
 
+- [ ] **History: record every version of a document or entity, and restore one** ([docs/history.md](docs/history.md)). Best effort (recorded after the Memgraph commit, in SQLite, by a background worker; gaps are tolerated). Decided: snapshots (post-images), not diffs; SQLite behind a `HistoryStore` interface; hand-written migrations are not restorable across, but a version that cannot be restored cleanly is given to the interface as a **draft with a list of problems** to reconcile by hand; erasure is deferred but not designed out. Phase 1 (record and read, including the schema position, which cannot be added later) needs no further decisions. To check first: whether the write payload carries the ids of nested nodes, and whether they survive an update. Related: the "Remove deleted nodes for good" item above would break restoring.
 - [ ] Remove deleted nodes for good; delete an entity that was marked for deletion when the last reference to it goes.
 - [ ] An entity's `ReferenceView` has no `meta`, a document's does.
 - [ ] `service.set_admin` / `set_disabled` do not stop the last admin being demoted or disabled (the API stops admins changing their own status).
 
 ## Model layer
+- [ ] **Rename `create_inline`** (and the words around it). "Inline" suggests the entity is embedded in the document, which it never is; it has been misunderstood more than once. What the option does: a document's payload may name an entity by a UUID or URL (with `create_new`) so that batches from other sources can be uploaded without creating each entity first, and the write creates it if it does not exist (see the note at the top of "Entity" in [docs/models.md](docs/models.md)). A name that says that (for example `create_on_reference`) would remove the problem. Touches the meta option, `PanglossMetaError`, the generated models (`ReferenceSet` + `Create` members), `docs/` (models, generated-models, migrations, demo-setup), the demo, and migration `meta differs` handling; wording in the docs can be fixed first, without renaming.
 - [ ] Check whether subclassed relations also have their parent type written to the database, with an appropriate flag ("Derived" stored as a bool); investigate the viability of having "derived" nodes written later as a background job (would involve another thread, locks etc. See DeferredQueryRunner in https://github.com/richardhadden/pangloss/blob/main/pangloss/api.py, which is probably bad and has lots of unwarranted assumptions and race conditions)
 - [ ] Optional relations (`Person | None`), optional embedded objects, lists of embedded objects or annotated values, and plain `dict` fields: each raises an error at `initialise()`.
 - [ ] The `"subtract"` type wrapper (opposite of `Fulfil`).
 - [ ] `Relation[Subject, Object]` (a placeholder class).
 - [ ] Interface languages (`INTERFACE_LANGUAGES`).
+
+- [ ] **Review of `initialise_models/`** (bugs, a merge of the five builders, untested paths): see `packages/pangloss-models/todo.md`, "`initialise_models/`: review".
+- [ ] **`Field(description=...)` is ignored**, and fields named `label`, `id`, `type` or `urls` are accepted silently (two of the confirmed bugs in that review; listed here because both affect what clients see).
 
 ## Structure and packaging
 
@@ -50,6 +70,11 @@ Built, and documented in [docs/migrations.md](docs/migrations.md) (section 12) a
 - [ ] **`check-data` reads a node at a time** (~1.5 ms a node, several read transactions each). A batched read (many nodes in one query) is a change to the read layer (`get`), not to migrations; reading in parallel was measured and is not faster against a local Memgraph.
 - [ ] `Fulfils`: a migration decides that a node fulfils a class by whether it has what the class requires (a property, an edge); a write validates against the class's `CreateDB`, so a Python validator on a field of the class is not run by the migration.
 - [ ] A cycle between apps that cannot be split (neither a field nor a parent class can be added later) is an error that says so: put the models in one app.
+
+- [ ] **On a new database the library migration (`pangloss_memgraph.0001_initial`) is applied after the app's own** (seen in the smoke test: `letters.0001` first). Harmless today; decide whether the library's indexes should come first (a dependency from the app's first migration on the library's), in case a later migration relies on one.
+- [ ] **A duplicate text index in `memgraph info`** (`label_index` and `label_text`, both on `:PGIndexableNode(label)`), seen in a test database. Find out whether `setup-database` still makes `label_index`, or it is left over from older tests; the structure test (above) should settle it.
+- [ ] **`pangloss users create` asks `Make admin? [y/N]`** when neither `--admin` nor `--no-admin` is given, although the help shows a default; without a terminal it waits on stdin instead of failing. Apply the default silently (or drop the shown default), and fail when not interactive.
+- [ ] Smoke test follow-ups (done, 2026-10-21, on a scratch project against the test Memgraph): `makemigrations`, `migrate`, `--plan`, `--dry-run`, `--backup`, backwards, `--batch-size`, `squashmigrations`, `cleanmigrations`, `backups`, `restore` all worked. Not covered: squash and clean with every migration applied, several apps, hand-written migrations. `showmigrations` now lists a part-way squash whose originals are gone (it used to fail).
 
 The limits that are by design (a squash in the middle of an app keeps all its changes, `--dry-run` is one transaction, a backup is on the server) are in [docs/migrations.md](docs/migrations.md), "Limits that are not going to change".
 

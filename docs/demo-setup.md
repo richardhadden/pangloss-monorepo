@@ -138,7 +138,7 @@ own `.gitignore` leaves out `node_modules` and `dist`).
 
 | | |
 |---|---|
-| Entities | `Person` and `Group` (both an `Agent`), `Place`, `Source`: with URLs as ids, and written inline in the factoid that needs them |
+| Entities | `Person` and `Group` (both an `Agent`), `Place`, `Source`: with URLs as ids, and created from the payload of the factoid that mentions them (by their URL, if they do not exist yet; they are still separate entities) |
 | Documents | `Factoid` contains `Statement`s (abstract), which are `Activity` or `Transfer` |
 | Relations | `AtPage[Source]` and `InRole[Agent]` (reified: a relation with fields), `ViaEdge[Agent, Certainty]` (fields on the edge), a field narrowed by a subclass (`carried_out_by` narrows `involves`) |
 | Wrappers | `Negative` and `Hypothetical` (semantic spaces), `Causes` (a conjunction) |
@@ -153,5 +153,5 @@ Making the demo showed two faults in `pangloss-models`, now fixed (with tests):
   `Create` or `CreateDB` when initialising the models);
 - a field binding (`bind_to_child_field`) failed on a relation to a `list[...]` of documents.
 
-Not supported, and avoided in the demo: an entity cannot be written inline where the relation has
-properties of its own (`ViaEdge`), so `carried_out_by` refers to entities that already exist.
+Not supported, and avoided in the demo: an entity cannot be created from a document's payload (by its URL or
+UUID) where the relation has properties of its own (`ViaEdge`), so `carried_out_by` refers to entities that already exist.
