@@ -66,7 +66,7 @@ The database was set up without migrations, so the first migration is recorded a
 
 ```bash
 pangloss makemigrations                # writes demo_app/migrations/0001_initial.py
-pangloss migrate --fake                # the database is as it says: record it, do not run it
+pangloss migrate --fake                # the database is as it says: record it (the library's migrations too), do not run it
 pangloss showmigrations                # [X] 0001_initial (faked)
 ```
 

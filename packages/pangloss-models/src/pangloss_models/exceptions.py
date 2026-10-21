@@ -90,6 +90,11 @@ class PanglossMigrationAnswerNeeded(PanglossMigrationError):
     to do with what does not convert): it is `None` in the change as `diff` found it"""
 
 
+class PanglossMigrationIrreversible(PanglossMigrationError):
+    """A migration cannot be undone: a change in it has no inverse (or the inverse would not
+    bring back the models as they were)"""
+
+
 class PanglossMigrationNotSupported(PanglossMigrationError):
     """A change that has to be written by hand (`RunCypher`): it is found, but there is no
     general way to apply it"""

@@ -28,7 +28,7 @@ class ChangeReport:
 
     def summary(self) -> str:
         if self.status == "enum":
-            return "changes the database's enums (not tried)"
+            return "changes the database itself (enums, indexes: not tried)"
         if self.status == "not tried":
             return "not tried (an earlier change failed)"
         if self.status == "error":

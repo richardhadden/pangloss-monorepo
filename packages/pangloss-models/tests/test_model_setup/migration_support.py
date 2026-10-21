@@ -20,4 +20,18 @@ def changes(before, after, **answers):
     # makes the changes complete (nothing is found that is not in the models, and nothing in
     # the models is missed)
     assert replay(old, result.changes) == data_view(new)
+    check_reversal(old, result.changes)
     return result
+
+
+def check_reversal(old, found):
+    """Whatever can be undone is undone to the models as they were (reversing is checked in
+    every case that finds changes; what cannot be is said so, not wrong)"""
+    from pangloss_models.exceptions import PanglossMigrationIrreversible
+    from pangloss_models.migrations.reverse import reverse_changes
+
+    try:
+        reversal = reverse_changes(found, data_view(old))
+    except PanglossMigrationIrreversible:
+        return
+    assert replay(replay(old, found), reversal.changes) == data_view(old)

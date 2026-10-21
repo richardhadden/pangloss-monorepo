@@ -599,6 +599,57 @@ class EmbeddedToLiterals(Change):
         )
 
 
+# --- the database's own structure ---------------------------------------------------------
+
+
+def structure_name(entry: dict[str, Any]) -> str:
+    """How an index or a constraint is called: `:Label(property, ...)`"""
+    text = f":{entry['label']}({', '.join(entry['properties'])})"
+    return f"{entry['name']} on {text}" if entry.get("name") else text
+
+
+@dataclass(frozen=True, kw_only=True)
+class AddIndex(Change):
+    """An index on a label and properties (`kind` `"label+property"`), or a text index (`"text"`,
+    with a `name`). Made outside a transaction, and if it is not there already."""
+
+    phase: ClassVar[int] = PHASE_CREATE
+    index: dict[str, Any]
+
+    def describe(self) -> str:
+        return f"Create the {'text ' if self.index.get('kind') == 'text' else ''}index {structure_name(self.index)}"
+
+
+@dataclass(frozen=True, kw_only=True)
+class RemoveIndex(Change):
+    phase: ClassVar[int] = PHASE_REMOVE
+    index: dict[str, Any]
+
+    def describe(self) -> str:
+        return f"Drop the {'text ' if self.index.get('kind') == 'text' else ''}index {structure_name(self.index)}"
+
+
+@dataclass(frozen=True, kw_only=True)
+class AddConstraint(Change):
+    """A uniqueness constraint (`kind` `"unique"`): it fails if the data already breaks it"""
+
+    phase: ClassVar[int] = PHASE_CREATE
+    safety: ClassVar[Safety] = "additive"
+    constraint: dict[str, Any]
+
+    def describe(self) -> str:
+        return f"Require {structure_name(self.constraint)} to be unique"
+
+
+@dataclass(frozen=True, kw_only=True)
+class RemoveConstraint(Change):
+    phase: ClassVar[int] = PHASE_REMOVE
+    constraint: dict[str, Any]
+
+    def describe(self) -> str:
+        return f"Stop requiring {structure_name(self.constraint)} to be unique"
+
+
 # --- by hand -----------------------------------------------------------------------------
 
 
@@ -616,6 +667,9 @@ class RunCypher(Change):
     # The models it changes, to read them afterwards (None: all of them)
     affects: list[str] | None = None
     note: str = ""
+    # What undoes it (going backwards): without a query, the migration cannot be undone
+    reverse_query: str | None = None
+    reverse_parameters: dict[str, Any] | None = None
 
     @property
     def safety(self) -> Safety:  # type: ignore[override]
@@ -637,23 +691,27 @@ class RunPython(Change):
     lossy: bool = False
     affects: list[str] | None = None
     note: str = ""
+    # What undoes it (going backwards), given in the same way as `function`
+    reverse_function: str | None = None
 
     def __post_init__(self) -> None:
-        if callable(self.function):
-            function = self.function
-            object.__setattr__(self, "function", f"{function.__module__}:{function.__qualname__}")  # type: ignore[attr-defined]
+        for name in ("function", "reverse_function"):
+            function = getattr(self, name)
+            if callable(function):
+                object.__setattr__(self, name, f"{function.__module__}:{function.__qualname__}")
 
     @property
     def safety(self) -> Safety:  # type: ignore[override]
         return "lossy" if self.lossy else "transforming"
 
-    def resolve(self) -> Any:
-        """The function itself"""
+    def resolve(self, function: str | None = None) -> Any:
+        """The function itself (or, given its name, that one)"""
         import importlib
 
-        module, _, path = self.function.partition(":")
+        function = function or self.function
+        module, _, path = function.partition(":")
         if not path:
-            raise ValueError(f"'{self.function}' is not 'module:function'")
+            raise ValueError(f"'{function}' is not 'module:function'")
         found: Any = importlib.import_module(module)
         for part in path.split("."):
             found = getattr(found, part)

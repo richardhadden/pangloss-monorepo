@@ -256,6 +256,30 @@ def _alter_parent_fields(snapshot, change: c.AlterParentFields):
     )
 
 
+def _add_structure(key: str, attribute: str):
+    def add(snapshot, change):
+        entries = snapshot.setdefault(key, [])
+        entry = copy.deepcopy(getattr(change, attribute))
+        if not any(same_structure(e, entry) for e in entries):
+            entries.append(entry)
+
+    return add
+
+
+def _remove_structure(key: str, attribute: str):
+    def remove(snapshot, change):
+        entry = getattr(change, attribute)
+        snapshot[key] = [e for e in snapshot.get(key, []) if not same_structure(e, entry)]
+
+    return remove
+
+
+def same_structure(a: dict, b: dict) -> bool:
+    """Whether two indexes (or constraints) are the same: what they are of, not the app"""
+    keys = ("kind", "label", "properties", "name")
+    return all(a.get(k) == b.get(k) for k in keys)
+
+
 def _nothing(snapshot, change):
     """Changes by hand: what they do is to the data, and the other changes say what the models are"""
 
@@ -302,6 +326,10 @@ HANDLERS: dict[type, Callable[[dict, Any], None]] = {
     c.AlterCardinality: _alter_cardinality,
     c.AlterReverseName: _alter_reverse_name,
     c.AlterParentFields: _alter_parent_fields,
+    c.AddIndex: _add_structure("indexes", "index"),
+    c.RemoveIndex: _remove_structure("indexes", "index"),
+    c.AddConstraint: _add_structure("constraints", "constraint"),
+    c.RemoveConstraint: _remove_structure("constraints", "constraint"),
     c.RunCypher: _nothing,
     c.RunPython: _nothing,
     c.StateOnly: _state_only,

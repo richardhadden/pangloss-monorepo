@@ -6,11 +6,13 @@ and what changed is written as new migrations, after asking what cannot be known
 the database has not had, and records them.
 """
 
+import copy
 import importlib
 from types import ModuleType
 
 import typer
 from pangloss_models.exceptions import (
+    PanglossMigrationIrreversible,
     PanglossImportError,
     PanglossInitialisationError,
     PanglossMigrationError,
@@ -20,15 +22,25 @@ from pangloss_models.migrations import changes as c
 from pangloss_models.migrations.affected import affected_models
 from pangloss_models.migrations.check import check_data
 from pangloss_models.migrations.files import (
+    EMPTY_SNAPSHOT,
     Migration,
     MigrationGraph,
     graph_of,
     migrations_directory,
     next_name,
+    squash,
     write,
 )
-from pangloss_models.migrations.history import pending, problems
+from pangloss_models.migrations.history import (
+    pending,
+    problems,
+    resolve_target,
+    states_around,
+    to_unapply,
+)
+from pangloss_models.migrations.reverse import reverse_changes
 from pangloss_models.migrations.planner import plan
+from pangloss_models.migrations.startup import migration_backend_of, structure_of
 from pangloss_models.migrations.questions import (
     collect_questions,
     parse_value,
@@ -47,6 +59,10 @@ SAFETY_MARKS = {
 }
 
 
+def optional_migration_backend(project: Project) -> ModuleType | None:
+    return migration_backend_of(project.require_settings().DATABASE_MODULE)
+
+
 def load_models(project: Project) -> dict:
     """Import and initialise the models of the project, and describe them"""
     from pangloss_models import initialise
@@ -57,16 +73,16 @@ def load_models(project: Project) -> dict:
         initialise()
     except (PanglossInitialisationError, PanglossImportError) as error:
         fail(f"Cannot initialise the models: {error}")
-    return build_snapshot()
+    return build_snapshot(structure_of(optional_migration_backend(project)))
 
 
 def installed_apps(project: Project) -> list[str]:
     return list(project.require_settings().INSTALLED_APPS)
 
 
-def load_graph(apps: list[str]) -> MigrationGraph:
+def load_graph(apps: list[str], applied: dict | None = None) -> MigrationGraph:
     try:
-        return graph_of(apps)
+        return graph_of(apps, applied)
     except PanglossMigrationError as error:
         fail(str(error))
         raise
@@ -233,13 +249,183 @@ def makemigrations(
         typer.secho(f"Wrote {path}", fg="green")
 
 
+def squashmigrations(
+    ctx: typer.Context,
+    app: str = typer.Argument(..., help="The app"),
+    first: str = typer.Argument(..., help="The first migration of the run (name or number)"),
+    last: str = typer.Argument(..., help="The last migration of the run (name or number)"),
+    name: str | None = typer.Option(None, "--name", "-n", help="A name for the squashed migration"),
+    no_optimize: bool = typer.Option(
+        False, "--no-optimize", help="Keep all the changes, one after another, as they were"
+    ),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Show what would be written"),
+) -> None:
+    """Replace a run of migrations of an app by one that does the same.
+
+    A database that has had all of them, or none, uses the squashed one; one that is part way
+    through goes on with the originals. Delete the originals once every database has had them all."""
+    project: Project = ctx.obj
+    apps = installed_apps(project)
+    if app not in apps:
+        fail(f"{app} is not one of the INSTALLED_APPS")
+    graph = load_graph(apps)
+    try:
+        squashed = squash(graph, app, first, last, name=name, optimize=not no_optimize)
+    except PanglossMigrationError as error:
+        fail(str(error))
+        raise
+    before = sum(len(graph.migrations[key].changes) for key in squashed.replaces)
+    typer.secho(f"{squashed}", bold=True)
+    typer.echo(f"  replaces {', '.join(n for _, n in squashed.replaces)}")
+    typer.echo(f"  {before} changes in {len(squashed.replaces)} migrations -> {len(squashed.changes)} changes")
+    for line in describe(squashed):
+        typer.echo(line)
+    if dry_run:
+        typer.echo("(nothing was written)")
+        return
+    path = write(squashed, migrations_directory(app))
+    typer.secho(f"Wrote {path}", fg="green")
+    typer.echo(
+        "The migrations it replaces are kept, for databases that are part way through them. "
+        "Delete them (the files) when every database has applied them all."
+    )
+
+
 # ---------------------------------------------------------------------------
 # migrate, showmigrations
 # ---------------------------------------------------------------------------
 
 
+def report_dry_run(reports: list) -> None:
+    """Say what a dry run found, and fail if some change would"""
+    failed = False
+    typer.echo("\nTried, and rolled back:")
+    for report in reports:
+        typer.secho(f"  {report.app}.{report.name}", bold=True)
+        for change_report in report.changes:
+            typer.echo(f"    - {change_report.change.describe()}")
+            typer.secho(
+                f"        {change_report.summary()}",
+                fg="red" if change_report.status == "error" else None,
+            )
+        failed = failed or report.failed
+    if failed:
+        fail("Some changes would fail: nothing was changed")
+    typer.echo("Nothing was changed")
+
+
+def go_backwards(
+    project: Project,
+    backend: ModuleType,
+    graph: MigrationGraph,
+    applied: dict,
+    app: str,
+    wanted: Migration | None,
+    snapshot: dict,
+    *,
+    plan_only: bool,
+    dry_run: bool,
+    fake: bool,
+    yes: bool,
+    backup: bool | None,
+    no_check: bool,
+    check: bool,
+) -> None:
+    """Undo the migrations of `app` after `wanted` (and what follows them): their changes are
+    undone by the changes that `reverse_changes` makes, the last applied first"""
+    chosen = to_unapply(graph, applied, app, wanted)
+    if not chosen:
+        typer.echo("Nothing to undo")
+        return
+    if check:
+        typer.echo(f"{len(chosen)} migrations to undo")
+        raise typer.Exit(1)
+
+    keys = {key for key, record in applied.items() if record.get("status") == "applied"}
+    before, after, now = states_around(graph, keys)
+    undoing: list[Migration] = []
+    lossy = False
+    for migration in chosen:
+        try:
+            reversal = reverse_changes(migration.changes, before[migration.key])
+        except PanglossMigrationIrreversible as error:
+            fail(f"{migration} cannot be undone: {error}")
+            raise
+        changes = ask_answers(reversal.changes, after[migration.key], noinput=plan_only or dry_run)
+        for _, question in collect_questions(changes, after[migration.key]):
+            if not question.optional:
+                fail(f"{migration} cannot be undone without: {question.prompt}")
+        lossy = lossy or reversal.lossy
+        undoing.append(
+            Migration(
+                app=migration.app,
+                name=migration.name,
+                changes=tuple(changes),
+                replaces=migration.replaces,  # (their records go too)
+            )
+        )
+
+    typer.echo("To undo:")
+    for migration in undoing:
+        typer.secho(f"  {migration}", bold=True)
+        for line in describe(migration):
+            typer.echo(line)
+    if lossy:
+        typer.secho("  [LOSES DATA: what the migrations wrote or changed is not brought back]", fg="yellow")
+    if plan_only:
+        return
+    if dry_run:
+        report_dry_run(run_with_database(project, lambda: backend.dry_run(undoing, now)))
+        return
+
+    if lossy and not fake and backup is None:
+        fail(
+            "Some of this loses data: give --backup (take a snapshot first) or --no-backup (you "
+            "have your own)"
+        )
+    if lossy and not fake and not yes:
+        typer.confirm("Some of this loses data. Go on?", abort=True)
+
+    def progress(migration: Migration, what: str) -> None:
+        typer.echo(f"  {migration}: {what}")
+
+    async def run_all():
+        await backend.lock()
+        try:
+            if backup and not fake:
+                if not hasattr(backend, "backup"):
+                    raise PanglossMigrationError("This database cannot take a backup")
+                typer.echo(f"Backup: {await backend.backup()}")
+            return await backend.unapply(undoing, now, fake=fake, progress=progress)
+        finally:
+            await backend.unlock()
+
+    try:
+        run_with_database(project, run_all)
+    except PanglossMigrationError as error:
+        fail(str(error))
+    typer.secho("Done", fg="green")
+    if not fake and not no_check:
+        remaining = before[chosen[-1].key]
+        changes = [change for migration in undoing for change in migration.changes]
+        affected = sorted(affected_models(changes, remaining))
+        if affected:
+            typer.echo(f"Models the undoing could have made unreadable: {', '.join(affected)}")
+            report_data_check(project, types=affected)
+        else:
+            typer.echo("Nothing that exists is affected: no data to read")
+
+
 def migrate(
     ctx: typer.Context,
+    app: str | None = typer.Argument(
+        None, help="Only this app's migrations (and what they need), or go back to <target>"
+    ),
+    target: str | None = typer.Argument(
+        None,
+        help="Go to this migration of the app (its name or number): forwards if it is not applied, "
+        "backwards if it is (`zero`: undo them all). Backwards undoes what follows it, in every app",
+    ),
     plan_only: bool = typer.Option(False, "--plan", help="Show what would be applied, and apply nothing"),
     dry_run: bool = typer.Option(
         False,
@@ -270,6 +456,12 @@ def migrate(
         help="Record the migrations as applied without running them (for a database that already is as they say)",
     ),
     yes: bool = typer.Option(False, "--yes", "-y", help="Do not ask before changes that lose data"),
+    backup: bool | None = typer.Option(
+        None,
+        "--backup/--no-backup",
+        help="Take a snapshot of the database before applying (after the lock). Migrations with "
+        "changes that lose data need one of the two",
+    ),
     unlock: bool = typer.Option(False, "--unlock", help="Remove the lock of a migrate that was stopped"),
     check: bool = typer.Option(
         False, "--check", help="Apply nothing; exit with an error if migrations are to be applied"
@@ -279,7 +471,6 @@ def migrate(
     project: Project = ctx.obj
     snapshot = load_models(project)
     apps = installed_apps(project)
-    graph = load_graph(apps)
     backend = migration_backend(project)
 
     if unlock:
@@ -292,6 +483,8 @@ def migrate(
         return await backend.applied()
 
     applied = run_with_database(project, state_of_database)
+    graph = load_graph(apps, applied)
+    applied = graph.reconcile(applied)  # (a squashed migration whose originals were applied is)
 
     found = problems(graph, applied)
     if found:
@@ -299,7 +492,40 @@ def migrate(
             typer.secho(line, fg="red", err=True)
         fail("The migrations and the record of them in the database do not agree")
 
+    wanted: Migration | None = None
+    if app is not None:
+        if app not in apps:
+            fail(f"{app} is not one of the INSTALLED_APPS")
+        try:
+            wanted = resolve_target(graph, app, target) if target else graph.leaf(app)
+        except PanglossMigrationError as error:
+            fail(str(error))
+        is_applied = wanted is not None and applied.get(wanted.key, {}).get("status") == "applied"
+        if target is not None and (wanted is None or is_applied):
+            go_backwards(
+                project,
+                backend,
+                graph,
+                applied,
+                app,
+                wanted,
+                snapshot,
+                plan_only=plan_only,
+                dry_run=dry_run,
+                fake=fake,
+                yes=yes,
+                backup=backup,
+                no_check=no_check,
+                check=check,
+            )
+            return
+    elif target is not None:
+        fail("A target needs the app it is for: `pangloss migrate <app> <target>`")
+
     todo = pending(graph, applied)
+    if wanted is not None:
+        needed = graph.closure([wanted.key])
+        todo = [m for m in todo if m.key in needed]
     if not todo:
         typer.echo("Nothing to apply")
         warn_if_models_have_changed(graph, snapshot)
@@ -317,27 +543,18 @@ def migrate(
         return
 
     applied_keys = [key for key, record in applied.items() if record.get("status") == "applied"]
-    state = graph.state(applied_keys) if applied_keys else {"version": 1, "models": {}, "enums": {}}
+    state = graph.state(applied_keys) if applied_keys else copy.deepcopy(EMPTY_SNAPSHOT)
 
     if dry_run:
-        reports = run_with_database(project, lambda: backend.dry_run(todo, state))
-        failed = False
-        typer.echo("\nTried, and rolled back:")
-        for report in reports:
-            typer.secho(f"  {report.app}.{report.name}", bold=True)
-            for change_report in report.changes:
-                typer.echo(f"    - {change_report.change.describe()}")
-                typer.secho(
-                    f"        {change_report.summary()}",
-                    fg="red" if change_report.status == "error" else None,
-                )
-            failed = failed or report.failed
-        if failed:
-            fail("Some changes would fail: nothing was changed")
-        typer.echo("Nothing was changed")
+        report_dry_run(run_with_database(project, lambda: backend.dry_run(todo, state)))
         return
 
     lossy = [m for m in todo for ch in m.changes if ch.safety == "lossy"]
+    if lossy and not fake and backup is None:
+        fail(
+            "Some of these lose data: give --backup (take a snapshot first) or --no-backup (you "
+            "have your own)"
+        )
     if lossy and not fake and not yes:
         typer.confirm("Some of these lose data. Go on?", abort=True)
 
@@ -347,6 +564,10 @@ def migrate(
     async def run_all():
         await backend.lock()
         try:
+            if backup and not fake:
+                if not hasattr(backend, "backup"):
+                    raise PanglossMigrationError("This database cannot take a backup")
+                typer.echo(f"Backup: {await backend.backup()}")
             return await backend.apply(
                 todo, state, fake=fake, progress=progress, batch_size=batch_size
             )
@@ -386,7 +607,6 @@ def showmigrations(ctx: typer.Context) -> None:
     """List the migrations, and which the database has had"""
     project: Project = ctx.obj
     apps = installed_apps(project)
-    graph = load_graph(apps)
     backend = migration_backend(project)
 
     async def read():
@@ -394,6 +614,8 @@ def showmigrations(ctx: typer.Context) -> None:
         return await backend.applied()
 
     applied = run_with_database(project, read)
+    graph = load_graph(apps, applied)
+    applied = graph.reconcile(applied)
     for app in apps:
         own = [m for m in graph.order() if m.app == app]
         if not own:

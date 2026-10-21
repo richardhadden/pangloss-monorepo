@@ -25,7 +25,7 @@ Each feature in these docs is marked with its status:
 | [Users](users.md) | User models, passwords and the `service` functions |
 | [REST API](api.md) | Authentication and the user endpoints |
 | [Command line](cli.md) | The `pangloss` command, and adding commands from apps |
-| [Database migrations](migrations.md) ⏳ | A specification: how changes to the models could be applied to existing data |
+| [Database migrations](migrations.md) 🚧 | The design and progress of migrations: how changes to the models are applied to existing data. To use them, see the [user guide](../guide/README.md) |
 | [Development](development.md) | Setting up, running tests, repository layout |
 | [Status and roadmap](status.md) | What is and is not implemented |
 

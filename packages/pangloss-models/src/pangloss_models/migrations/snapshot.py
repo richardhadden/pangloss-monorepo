@@ -39,6 +39,7 @@ NOT_DATA_KEYS = {
     "required",  # whether it has a default
     "concreteTypes",  # follows from the models that exist
     "incoming",  # follows from the fields of the other models
+    "app",  # the app an index or constraint is for (which migration makes it)
 }
 
 
@@ -70,8 +71,12 @@ def field_storage(definition: FieldDefinition) -> dict[str, Any]:
     return {"kind": "property"}
 
 
-def build_snapshot() -> dict[str, Any]:
-    """The snapshot of the models that are registered (initialise them first)"""
+def build_snapshot(structure: dict[str, Any] | None = None) -> dict[str, Any]:
+    """The snapshot of the models that are registered (initialise them first).
+
+    `structure` is what the database needs besides the models, as the database package says it
+    (`indexes` and `constraints`: lists of `{"kind", "label", "properties", ...}`, each perhaps with
+    the `app` whose migration is to make it); without it the snapshot has none."""
     exported = export_models()
     models = ModelRegistry.all_models()
 
@@ -83,7 +88,11 @@ def build_snapshot() -> dict[str, Any]:
         for field in entry["fields"]:
             field["storage"] = field_storage(definitions[field["name"]])
 
-    return {"version": SNAPSHOT_VERSION, **exported}
+    snapshot = {"version": SNAPSHOT_VERSION, **exported}
+    if structure:
+        snapshot["indexes"] = copy.deepcopy(structure.get("indexes", []))
+        snapshot["constraints"] = copy.deepcopy(structure.get("constraints", []))
+    return snapshot
 
 
 def data_view(snapshot: Any) -> Any:
@@ -100,6 +109,11 @@ def data_view(snapshot: Any) -> Any:
             view["fields"] = sorted(view["fields"], key=lambda f: f["name"])
         if isinstance(view.get("labels"), list):
             view["labels"] = sorted(view["labels"])
+        if "models" in view:  # (the snapshot as a whole)
+            for key in ("indexes", "constraints"):
+                view[key] = sorted(
+                    view.get(key, []), key=lambda e: json.dumps(e, sort_keys=True)
+                )
         if isinstance(view.get("members"), list) and all(
             isinstance(m, dict) and "name" in m for m in view["members"]
         ):

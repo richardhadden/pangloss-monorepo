@@ -26,16 +26,22 @@ def migration_backend_of(database_module: str) -> ModuleType | None:
         raise
 
 
+def structure_of(backend: ModuleType) -> dict[str, Any] | None:
+    """The indexes and constraints the database needs (for the snapshot), if it says"""
+    return backend.structure() if hasattr(backend, "structure") else None
+
+
 async def migration_problems(
     apps: list[str], backend: ModuleType, snapshot: dict[str, Any] | None = None
 ) -> list[str]:
     """What is wrong, as sentences (none: all is well, or the project has no migrations).
     `snapshot` is of the initialised models; it is made if it is not given."""
-    graph = graph_of(apps)
-    if not graph.migrations:
+    if not graph_of(apps).migrations:
         return []
 
     applied = await backend.applied()
+    graph = graph_of(apps, applied)
+    applied = graph.reconcile(applied)
     found = problems(graph, applied)
 
     todo = pending(graph, applied)
@@ -43,7 +49,9 @@ async def migration_problems(
         names = ", ".join(str(m) for m in todo[:5]) + (", ..." if len(todo) > 5 else "")
         found.append(f"{len(todo)} migrations have not been applied ({names}): run `pangloss migrate`")
 
-    if not todo and graph.state() != data_view(snapshot if snapshot is not None else build_snapshot()):
+    if snapshot is None:
+        snapshot = build_snapshot(structure_of(backend))
+    if not todo and graph.state() != data_view(snapshot):
         found.append(
             "The models are not what the migrations come to: run `pangloss makemigrations`"
         )

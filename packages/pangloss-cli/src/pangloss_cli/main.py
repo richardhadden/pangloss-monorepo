@@ -24,6 +24,7 @@ from pangloss_cli.migrations import (
     makemigrations,
     migrate,
     showmigrations,
+    squashmigrations,
 )
 from pangloss_cli.scaffold import (
     ScaffoldError,
@@ -49,6 +50,17 @@ def setup_database(ctx: typer.Context) -> None:
         initialise()
     except PanglossInitialisationError as error:
         fail(f"Cannot initialise the models: {error}")
+
+    from pangloss_models.migrations.files import graph_of
+
+    if graph_of(list(project.require_settings().INSTALLED_APPS)).migrations:
+        typer.secho(
+            "This project has migrations: `pangloss migrate` makes and changes the database "
+            "(this makes the enums of the models as they are now, which can get ahead of the "
+            "migrations). Use it for a project without migrations.",
+            fg="yellow",
+            err=True,
+        )
 
     async def run() -> list[str]:
         return await backend.setup_database()
@@ -249,6 +261,7 @@ def build_app(
     app.command("makemigrations")(makemigrations)
     app.command("migrate")(migrate)
     app.command("showmigrations")(showmigrations)
+    app.command("squashmigrations")(squashmigrations)
     app.command("check-data")(check_data_command)
     app.command("new-project")(new_project)
     app.command("new-app")(new_app)

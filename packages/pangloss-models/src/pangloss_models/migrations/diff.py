@@ -22,7 +22,9 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from pangloss_models.migrations.changes import (
+    AddConstraint,
     AddEnumMember,
+    AddIndex,
     AddField,
     AlterAnnotatedValue,
     AlterCardinality,
@@ -48,7 +50,9 @@ from pangloss_models.migrations.changes import (
     DeleteModel,
     LiteralToAnnotatedValue,
     PossibleRename,
+    RemoveConstraint,
     RemoveEnum,
+    RemoveIndex,
     RemoveEnumMember,
     RemoveField,
     RenameEnum,
@@ -60,6 +64,7 @@ from pangloss_models.migrations.changes import (
 )
 from pangloss_models.migrations.snapshot import data_view
 from pangloss_models.migrations.state import (
+    same_structure,
     rename_enum,
     rename_enum_member,
     rename_field,
@@ -138,6 +143,7 @@ def diff(
             )
 
     diff_enums(old, new, result)
+    diff_structure(old, new, result)
     diff_models(old, new, result)
 
     result.questions = [
@@ -145,6 +151,19 @@ def diff(
     ]
     result.changes.sort(key=lambda change: change.phase)  # (stable: keeps the order found)
     return result
+
+
+# --- the database's structure ------------------------------------------------------------------
+
+
+def diff_structure(old: dict, new: dict, result: DiffResult) -> None:
+    for key, add, remove, attribute in (
+        ("indexes", AddIndex, RemoveIndex, "index"),
+        ("constraints", AddConstraint, RemoveConstraint, "constraint"),
+    ):
+        had, have = old.get(key, []), new.get(key, [])
+        result.changes += [add(**{attribute: e}) for e in have if not any(same_structure(e, o) for o in had)]
+        result.changes += [remove(**{attribute: e}) for e in had if not any(same_structure(e, n) for n in have)]
 
 
 # --- enums --------------------------------------------------------------------------------------

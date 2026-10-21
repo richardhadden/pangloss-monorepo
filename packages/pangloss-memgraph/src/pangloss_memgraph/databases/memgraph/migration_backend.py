@@ -2,11 +2,18 @@
 
 A backend package (`DATABASE_MODULE`) supplies a `migration_backend` module with these:
 
-- `async ensure_ready()`: what the backend needs to keep the record of migrations, and its
-  structure as far as migrations do not make it (indexes and constraints; not enums);
+- `structure() -> {"indexes": [...], "constraints": [...]}`: the structure the database needs besides
+  the models, for the snapshot: the migrations make it (`AddIndex`, `AddConstraint`...);
+- `async ensure_ready()`: what the backend needs to keep the record of migrations;
 - `async applied() -> {(app, name): record}`: the migrations that have been applied (or began);
 - `async lock(who)` / `async unlock()`: so that only one `migrate` runs; `lock` raises
   `PanglossMigrationError` if another has the lock;
+- `async backup() -> str`: a snapshot of the whole database, kept by the database (Memgraph's own
+  snapshot, on the server); returns where it is;
+- `async unapply(migrations, state, fake=False, progress=None) -> state`: undo migrations whose
+  `changes` are the changes that undo them (the last applied first), starting from the snapshot
+  after them; the record of each (and of those it `replaces`) is removed. Always in one transaction a migration (so one that
+  fails has changed nothing);
 - `async dry_run(migrations, state) -> [MigrationReport]`: what each change would do, tried in a
   transaction that is rolled back (changes to the database's enums are not tried);
 - `async apply(migrations, state, fake=False, progress=None) -> state`: apply migrations in
@@ -28,10 +35,8 @@ from pangloss_models.migrations.state import apply_change as apply_to_snapshot
 from pangloss_users import current_request_username
 
 from pangloss_memgraph.databases.memgraph.database import Database
-from pangloss_memgraph.databases.memgraph.initialise_database import (
-    initialise_database,
-    run_statement,
-)
+from pangloss_memgraph.databases.memgraph.initialise_database import run_statement
+from pangloss_memgraph.databases.memgraph.initialise_database import structure as initialise_structure
 from pangloss_memgraph.databases.memgraph.migrations import (
     Progress,
     apply_changes,
@@ -46,11 +51,16 @@ CONSTRAINTS = [
 ]
 
 
+def structure() -> dict[str, Any]:
+    """The indexes and constraints the database needs, for the snapshot (see
+    `initialise_database.structure`): migrations make them"""
+    return initialise_structure()
+
+
 async def ensure_ready(database: Database | None = None) -> None:
     database = database or Database.default
     if not hasattr(database, "driver"):
         await database._initialise_driver()
-    await initialise_database(database, enums=False)
     name = database.settings.DATABASE.DATABASE_NAME
     existing = await run_statement(database.driver, name, "SHOW CONSTRAINT INFO")
     have = {(row["label"], tuple(row["properties"])) for row in existing if row["constraint type"] == "unique"}
@@ -72,6 +82,24 @@ async def applied(database: Database | None = None) -> dict[tuple[str, str], dic
         result = await session.run("MATCH (m:PGMigration) RETURN properties(m) AS record")
         records = [row["record"] async for row in result]
     return {(r["app"], r["name"]): r for r in records}
+
+
+async def backup(database: Database | None = None) -> str:
+    """Take a snapshot of the database (`CREATE SNAPSHOT`), and say where it is kept.
+
+    The snapshot is of the whole of Memgraph and is written on the server, not here. Memgraph
+    keeps only the newest few (`--storage-snapshot-retention-count`, 3 by default), so a later
+    snapshot can remove it; copy it away if it has to be kept."""
+    database = database or Database.default
+    if not hasattr(database, "driver"):
+        await database._initialise_driver()
+    async with _session(database) as session:  # (an auto-commit session: not in a transaction)
+        try:
+            result = await session.run("CREATE SNAPSHOT")
+            rows = await result.data()
+        except neo4j.exceptions.Neo4jError as error:
+            raise PanglossMigrationError(f"Cannot take a snapshot: {error.message}") from error
+    return str(rows[0]["path"]) if rows else "(the snapshot directory of the server)"
 
 
 async def lock(who: str | None = None, database: Database | None = None) -> None:
@@ -239,6 +267,40 @@ async def apply(
             )
             await result.consume()
         say(migration, "applied")
+    return state
+
+
+async def unapply(
+    migrations: list[Migration],
+    state: dict[str, Any],
+    fake: bool = False,
+    progress: Callable[[Migration, str], None] | None = None,
+    database: Database | None = None,
+) -> dict[str, Any]:
+    """Undo migrations, last first: `migration.changes` are the changes that undo each (see
+    `pangloss_models.migrations.reverse`), `state` the snapshot after them all. The record of a
+    migration is removed when it has been undone, so it is to be applied again; one that fails
+    stops the rest, and is still recorded as applied (nothing of it was changed, as it is made in
+    one transaction, except the enums that cannot be: the database enum keeps its members)."""
+    database = database or Database.default
+    if not hasattr(database, "driver"):
+        await database._initialise_driver()
+    for migration in migrations:
+        if progress:
+            progress(migration, "faked" if fake else "undoing")
+        if fake:
+            for change in migration.changes:
+                state = apply_to_snapshot(state, change)
+        else:
+            state = await apply_changes(database, state, list(migration.changes))
+        async with _session(database) as session:
+            result = await session.run(
+                "UNWIND $keys AS key MATCH (m:PGMigration {app: key[0], name: key[1]}) DELETE m",
+                keys=[list(migration.key), *(list(r) for r in migration.replaces)],
+            )
+            await result.consume()
+        if progress:
+            progress(migration, "undone")
     return state
 
 

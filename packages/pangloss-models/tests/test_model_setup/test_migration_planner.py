@@ -192,8 +192,12 @@ def test_changes_are_shared_among_the_apps_and_the_migrations_depend_on_each_oth
     assert [(m.app, m.name[:4]) for m in result.migrations] == [("apptwo", "0002")]
 
 
+def names_of(result):
+    return [(m.app, m.name[:4], sorted(m.dependencies)) for m in result.migrations]
+
+
 @no_type_check
-def test_models_that_need_each_other_in_two_apps_cannot_be_shared(apps):
+def test_models_that_need_each_other_in_two_apps_are_made_in_two_steps(apps):
     def declare():
         class Place(Entity):
             lived_here: list[Person]
@@ -202,8 +206,116 @@ def test_models_that_need_each_other_in_two_apps_cannot_be_shared(apps):
             home: Place
 
     new = in_app(snapshot_of(declare), Place="appone.models", Person="apptwo.models")
-    with pytest.raises(PanglossMigrationError, match="circle|depend on each other"):
-        plan(MigrationGraph(), new, apps)
+    result = plan(MigrationGraph(), new, apps)
+    # one app makes its models and the other's follow (they need the first); then the first adds
+    # the fields that refer to the second's, which exist by then
+    assert len(result.migrations) == 3
+    steps = [(m.app, m.name[:4], [ch.kind for ch in m.changes]) for m in result.migrations]
+    assert sorted(a for a, _, _ in steps) == ["appone", "appone", "apptwo"]
+    late = [m for m in result.migrations if m.name.startswith("0002")][0]
+    assert all(ch.kind == "AddField" for ch in late.changes)
+    assert late.dependencies  # (on the other's first)
+
+    # the models come out as declared, written and read back, and nothing is left to make
+    graph = write_all(result.migrations, apps)
+    assert graph.state() == data_view(new)
+    assert plan(graph, new, apps).is_empty
+
+
+@no_type_check
+def test_three_apps_that_need_each_other_round_a_circle(apps, tmp_path, monkeypatch):
+    (tmp_path / "appthree").mkdir()
+    (tmp_path / "appthree" / "__init__.py").write_text("")
+    importlib.invalidate_caches()
+    three = [*apps, "appthree"]
+
+    def declare():
+        class A(Entity):
+            b: B
+
+        class B(Entity):
+            c: C
+
+        class C(Entity):
+            a: A
+
+    new = in_app(snapshot_of(declare), A="appone.models", B="apptwo.models", C="appthree.models")
+    result = plan(MigrationGraph(), new, three)
+    graph = write_all(result.migrations, three)
+    assert graph.state() == data_view(new)
+    assert plan(graph, new, three).is_empty
+    for name in [n for n in sys.modules if n.startswith("appthree")]:
+        del sys.modules[name]
+
+
+@no_type_check
+def test_models_that_only_one_needs_are_made_in_one_step_each(apps):
+    def declare():
+        class Place(Entity):
+            pass
+
+        class Person(Entity):
+            home: Place
+
+    new = in_app(snapshot_of(declare), Place="appone.models", Person="apptwo.models")
+    result = plan(MigrationGraph(), new, apps)
+    assert names_of(result) == [
+        ("appone", "0001", []),
+        ("apptwo", "0001", [("appone", result.migrations[0].name)]),
+    ]
+
+
+@no_type_check
+def test_a_field_added_between_models_that_exist_depends_on_the_other_app(apps):
+    def before():
+        class Place(Entity):
+            pass
+
+        class Person(Entity):
+            name: str
+
+    def after():
+        class Place(Entity):
+            visitors: list[Person]
+
+        class Person(Entity):
+            name: str
+            home: Place
+
+    modules = dict(Place="appone.models", Person="apptwo.models")
+    graph = write_all(plan(MigrationGraph(), in_app(snapshot_of(before), **modules), apps).migrations, apps)
+    new = in_app(snapshot_of(after), **modules)
+    result = plan(graph, new, apps)
+    graph = write_all(result.migrations, apps)
+    assert graph.state() == data_view(new)
+    assert plan(graph, new, apps).is_empty
+
+
+@no_type_check
+def test_a_model_moved_to_another_app_needs_no_migration_and_its_later_changes_follow_it(apps):
+    def v1():
+        class Person(Entity):
+            name: str
+
+    def v2():
+        class Person(Entity):
+            name: str
+            born: int | None
+
+    graph = write_all(
+        plan(MigrationGraph(), in_app(snapshot_of(v1), Person="appone.models"), apps).migrations, apps
+    )
+    # the class is in another app now: that is not stored, so nothing has changed
+    moved = in_app(snapshot_of(v1), Person="apptwo.models")
+    assert plan(graph, moved, apps).is_empty
+
+    # ... and a change to it afterwards is the new app's, which follows the first
+    result = plan(graph, in_app(snapshot_of(v2), Person="apptwo.models"), apps)
+    assert [(m.app, m.dependencies) for m in result.migrations] == [
+        ("apptwo", (("appone", graph.leaf("appone").name),))
+    ]
+    graph = write_all(result.migrations, apps)
+    assert graph.state() == data_view(snapshot_of(v2))
 
 
 # ---------------------------------------------------------------------------

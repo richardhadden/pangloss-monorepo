@@ -40,20 +40,18 @@ What is outstanding, as of the version check on updates (after CORS). What works
 What works is in [docs/migrations.md](docs/migrations.md) (section 12). Still to do:
 
 **Commands and safety**
-- [ ] `migrate --backup`: take a Memgraph snapshot before applying (and require it, or `--no-backup`, for changes that lose data). Not checked: whether a snapshot can be taken from a client with the Memgraph in use.
-- [ ] Going backwards: `migrate <app> <earlier>`, with `database_backwards` for each change that can be reversed, `reversible` / `lossy` on each, a confirmation before a lossy one (and, as in the spec, `keep=True` to save what would be lost).
-- [ ] Squashing: `squashmigrations app 0001 0007`.
+- [ ] Backups: restoring (`RECOVER SNAPSHOT`, not tried), keeping a snapshot past Memgraph's retention count (3 by default; a later snapshot removes the oldest), and one that is copied off the server.
+- [ ] Going backwards, what is left: `RenameEnum`, `AlterModelKind` and `ChangeFieldKind` cannot be undone (the first creates a new enum that has been written to since; the others were done by hand); undoing is always one transaction a migration (no batches, no going on from a stop); values that a change lost are not brought back (`keep=True` to save what would be lost, as the spec has it, is not done); a `--backwards` for a migration that failed or is `running`.
+- [ ] Going backwards needs the answers (a value for a field that comes back) asked when it runs; they are not kept anywhere, and `--plan` / `--dry-run` do not ask.
+- [ ] Squashing, what is left: a squashed migration cannot itself be squashed (delete its originals, squash from the ones after); only a run that begins the app is made smaller than its changes put together (a run in the middle keeps them all, since data is there); `makemigrations` and the planner do not know of `replaces` beyond the numbering; no command deletes the originals once every database has applied them.
 - [ ] `makemigrations <app>` (only one app).
 - [ ] A read-only mode while a migration runs (the lock only stops another `migrate`); today the API is stopped, or `MIGRATION_CHECK` stops it starting.
-- [ ] `pangloss setup-database` and `migrate` both set up a database (`setup-database` makes the enums of the models directly, which can get ahead of the migrations). Decide how they relate: probably `setup-database` only for a project without migrations, and a warning from it otherwise.
 
-**Changes that cannot be applied yet** (they are found, and refused with `PanglossMigrationNotSupported`)
+**Changes that cannot be applied yet** (they are found, and refused with `PanglossMigrationNotSupported`). Wrapping in a conjunction is not on this list: a conjunction has several slots and nothing says which one an existing node fills, so it is always written by hand (`RunCypher` / `RunPython`, then `StateOnly`).
 - [ ] A change of the kind of a model (`AlterModelKind`: Entity to Document and so on) and of the kind of a field (`ChangeFieldKind`), and adding an embedded object that is not made of literals that were there.
-- [ ] Wrapping in a conjunction (several slots to fill, so not an automatic change), and unwrapping one.
 - [ ] `Fulfils`: the labels a node gets for the classes it fulfils are decided when it is written and are not in the snapshot.
 - [ ] Removing a member of, or renaming, an enum whose values are inside a `TypedDict`, an annotated value or an edge model.
-- [ ] Indexes, constraints and the text index as changes of their own (`AddIndex`, `RemoveIndex`, `AddConstraint`...): `migrate` only makes the ones `setup-database` makes (`ensure_ready`), and never removes one.
-- [ ] Models of two apps that need each other (the planner refuses to share the changes); a model moved from one app to another; migrations that depend on those of a library app (`pangloss_users` and the like).
+- [ ] Apps: a library app's models that a project's refer to are not tried (the dependency on its migrations is made as for any app); the order of the layers of an app is by name, not by what is cheapest; a cycle that runs through a model's parents or labels (not its fields) is still refused.
 
 **Batches and speed**
 - [ ] Batches (`--batch-size`) for the changes that are made at once now: removing or renaming a relation, wrapping in a semantic space, `RemoveEnumMember`, unwrapping, `LiteralsToEmbedded`.

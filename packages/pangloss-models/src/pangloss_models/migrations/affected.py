@@ -30,6 +30,10 @@ NO_EFFECT = (
     c.RemoveEnum,
     c.AlterModelOption,
     c.AlterAnnotatedValue,
+    c.AddIndex,
+    c.RemoveIndex,
+    c.AddConstraint,
+    c.RemoveConstraint,
     c.DeleteModel,  # (what refers to it has changed in its own right)
 )
 OWNED_KINDS = {"reifiedRelation", "reifiedRelationDocument", "semanticSpace", "conjunction", "document"}

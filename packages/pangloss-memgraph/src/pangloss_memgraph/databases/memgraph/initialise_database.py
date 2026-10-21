@@ -59,6 +59,30 @@ TEXT_INDEX = (TEXT_INDEX_NAME, "PGIndexableNode", "label")
 IDENTIFIER = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
 
+# The app whose migrations make this structure: this package (`pangloss_memgraph.migrations`), which
+# keeps the users and the records of creation as well. A project that does not install it has the
+# structure made by the migrations of its first app.
+STRUCTURE_APP = "pangloss_memgraph"
+
+
+def structure() -> dict[str, list[dict[str, Any]]]:
+    """The indexes and constraints a database needs, as the snapshot of the models has them (so
+    that migrations make them, and a change to this list is a migration)"""
+    indexes: list[dict[str, Any]] = [
+        {"kind": "label+property", "label": label, "properties": list(properties)}
+        for label, properties in INDEXES
+    ]
+    name, label, property_name = TEXT_INDEX
+    indexes.append({"kind": "text", "label": label, "properties": [property_name], "name": name})
+    constraints = [
+        {"kind": "unique", "label": label, "properties": [property_name]}
+        for label, property_name in UNIQUE_CONSTRAINTS
+    ]
+    for entry in [*indexes, *constraints]:
+        entry["app"] = STRUCTURE_APP
+    return {"indexes": indexes, "constraints": constraints}
+
+
 @dataclasses.dataclass
 class DatabaseSetup:
     """What `initialise_database` did"""

@@ -1311,6 +1311,81 @@ async def create_enum(database: Database, change: c.CreateEnum, state: dict) -> 
             await ddl(database, f"ALTER ENUM {ident(change.enum)} ADD VALUE {ident(name)}")
 
 
+async def add_index(database: Database, change: c.AddIndex, state: dict) -> None:
+    entry = change.index
+    label, properties = ident(entry["label"]), ", ".join(ident(p) for p in entry["properties"])
+    rows = await run_statement(
+        database.driver, database.settings.DATABASE.DATABASE_NAME, "SHOW INDEX INFO"
+    )
+    if entry.get("kind") == "text":
+        name = ident(entry["name"]).strip("`")
+        if not any(row["index type"] == f"label_text (name: {name})" for row in rows):
+            await ddl(database, f"CREATE TEXT INDEX {ident(entry['name'])} ON :{label}({properties})")
+        return
+    if not any(
+        row["index type"] == "label+property"
+        and row["label"] == entry["label"]
+        and row["property"] == entry["properties"]
+        for row in rows
+    ):
+        await ddl(database, f"CREATE INDEX ON :{label}({properties})")
+
+
+async def remove_index(database: Database, change: c.RemoveIndex, state: dict) -> None:
+    entry = change.index
+    label, properties = ident(entry["label"]), ", ".join(ident(p) for p in entry["properties"])
+    rows = await run_statement(
+        database.driver, database.settings.DATABASE.DATABASE_NAME, "SHOW INDEX INFO"
+    )
+    if entry.get("kind") == "text":
+        if any(row["index type"] == f"label_text (name: {entry['name']})" for row in rows):
+            await ddl(database, f"DROP TEXT INDEX {ident(entry['name'])}")
+        return
+    if any(
+        row["index type"] == "label+property"
+        and row["label"] == entry["label"]
+        and row["property"] == entry["properties"]
+        for row in rows
+    ):
+        await ddl(database, f"DROP INDEX ON :{label}({properties})")
+
+
+def constraint_exists(rows: list[dict], entry: dict) -> bool:
+    return any(
+        row["constraint type"] == "unique"
+        and row["label"] == entry["label"]
+        and row["properties"] == entry["properties"]
+        for row in rows
+    )
+
+
+def unique_statement(verb: str, entry: dict) -> str:
+    label = ident(entry["label"])
+    properties = ", ".join(f"n.{ident(p)}" for p in entry["properties"])
+    return f"{verb} CONSTRAINT ON (n:{label}) ASSERT {properties} IS UNIQUE"
+
+
+async def add_constraint(database: Database, change: c.AddConstraint, state: dict) -> None:
+    rows = await run_statement(
+        database.driver, database.settings.DATABASE.DATABASE_NAME, "SHOW CONSTRAINT INFO"
+    )
+    if not constraint_exists(rows, change.constraint):
+        try:
+            await ddl(database, unique_statement("CREATE", change.constraint))
+        except neo4j.exceptions.Neo4jError as error:
+            raise PanglossMigrationError(
+                f"Cannot make {change.describe()}: {error.message} (the data may break it already)"
+            ) from error
+
+
+async def remove_constraint(database: Database, change: c.RemoveConstraint, state: dict) -> None:
+    rows = await run_statement(
+        database.driver, database.settings.DATABASE.DATABASE_NAME, "SHOW CONSTRAINT INFO"
+    )
+    if constraint_exists(rows, change.constraint):
+        await ddl(database, unique_statement("DROP", change.constraint))
+
+
 async def add_enum_member(database: Database, change: c.AddEnumMember, state: dict) -> None:
     present = await existing_enums(database)
     if change.member not in present.get(change.enum, []):
@@ -1489,6 +1564,10 @@ DDL_HANDLERS: dict[type, Callable[[Database, Any, dict], Awaitable[None]]] = {
     c.AddEnumMember: add_enum_member,
     c.RenameEnumMember: rename_enum_member,
     c.RenameEnum: rename_enum,
+    c.AddIndex: add_index,
+    c.RemoveIndex: remove_index,
+    c.AddConstraint: add_constraint,
+    c.RemoveConstraint: remove_constraint,
 }
 
 

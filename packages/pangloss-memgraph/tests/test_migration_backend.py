@@ -171,3 +171,134 @@ async def test_only_one_migrate_at_a_time(db_driver, clear_database):
     await backend.lock("bob")
     await backend.unlock()
     assert run(db_driver, "MATCH (l:PGMigrationLock) RETURN count(l) AS n") == [{"n": 0}]
+
+
+async def test_a_backup_is_a_snapshot_the_server_has(db_driver, clear_database):
+    path = await backend.backup()
+    assert path
+    with db_driver.session() as session:  # (not in a transaction)
+        listed = session.run("SHOW SNAPSHOTS").data()
+    assert path in [row["path"] for row in listed]
+
+
+@no_type_check
+async def test_a_migration_is_undone_and_its_record_removed(db_driver, clear_database):
+    from dataclasses import replace
+
+    from pangloss_models.migrations.reverse import reverse_changes
+
+    def v1():
+        class Person(Entity):
+            name: str
+
+        return ns(Person=Person)
+
+    def v2():
+        class Person(Entity):
+            name: str
+            born: int
+
+        return ns(Person=Person)
+
+    old_models, first_snapshot = declare(v1)
+    initial = migrations_between(MigrationGraph(), first_snapshot)
+    graph = MigrationGraph.of(initial)
+    await backend.ensure_ready()
+    state = await backend.apply(initial, EMPTY_SNAPSHOT)
+    saved = await old_models.Person.Create(label="Ann", name="Ann").save()
+
+    new_models, second_snapshot = declare(v2)
+
+    def answer(changes, old):
+        return [with_answer(ch, "default", 1900) if ch.kind == "AddField" else ch for ch in changes]
+
+    later = migrations_between(graph, second_snapshot, answer=answer)
+    after = await backend.apply(later, state)
+    assert (await new_models.Person.get(id=saved.id)).born == 1900
+
+    reversal = reverse_changes(later[0].changes, state)
+    undoing = replace(later[0], changes=tuple(reversal.changes))
+    assert await backend.unapply([undoing], after) == state
+
+    assert [key[1] for key in await backend.applied()] == ["0001_initial"]
+    old_models, _ = declare(v1)
+    assert (await old_models.Person.get(id=saved.id)).name == "Ann"
+    assert run(db_driver, "MATCH (n:Person) RETURN n.born AS born") == [{"born": None}]
+
+    # (and it can be applied again)
+    await backend.apply(later, state)
+    assert (await new_models.Person.get(id=saved.id)).born == 1900
+
+
+@no_type_check
+async def test_an_undoing_that_fails_leaves_the_record(db_driver, clear_database):
+    from dataclasses import replace
+
+    from pangloss_models.migrations import changes as c
+
+    def v1():
+        class Person(Entity):
+            name: str
+
+        return ns(Person=Person)
+
+    _, snapshot = declare(v1)
+    initial = migrations_between(MigrationGraph(), snapshot)
+    await backend.ensure_ready()
+    state = await backend.apply(initial, EMPTY_SNAPSHOT)
+
+    broken = replace(initial[0], changes=(c.RunCypher(query="NOT CYPHER"),))
+    with pytest.raises(PanglossMigrationError):
+        await backend.unapply([broken], state)
+    assert [key[1] for key in await backend.applied()] == ["0001_initial"]
+
+
+@no_type_check
+async def test_a_squashed_migration_makes_what_the_originals_made(db_driver, clear_database):
+    from dataclasses import replace
+
+    from pangloss_models.migrations.files import squash
+    from pangloss_models.migrations.reverse import reverse_changes
+
+    def v1():
+        class Person(Entity):
+            name: str
+
+        return ns(Person=Person)
+
+    def v2():
+        class Person(Entity):
+            name: str
+            nickname: str | None
+
+        class Place(Entity):
+            name: str
+
+        return ns(Person=Person, Place=Place)
+
+    _, first = declare(v1)
+    initial = migrations_between(MigrationGraph(), first)
+    graph = MigrationGraph.of(initial)
+    models, second = declare(v2)
+    later = migrations_between(graph, second)
+    originals = [*initial, *later]
+    graph = MigrationGraph.of(originals)
+    squashed = squash(graph, "migapp", "0001", originals[-1].name[:4])
+    assert len(squashed.replaces) == len(originals)
+
+    # a new database: only the squashed migration, and the models work
+    await backend.ensure_ready()
+    state = await backend.apply([squashed], EMPTY_SNAPSHOT)
+    assert state == data_view(second)
+    place = await models.Place.Create(label="Paris", name="Paris").save()
+    person = await models.Person.Create(label="Ann", name="Ann", nickname="A").save()
+    assert (await models.Place.get(id=place.id)).name == "Paris"
+    assert [key[1] for key in await backend.applied()] == [squashed.name]
+
+    # ... that can be undone, and takes the records of the originals with it
+    run(db_driver, "MERGE (:PGMigration {app: 'migapp', name: $name, status: 'applied'})", name=originals[0].name)
+    reversal = reverse_changes(squashed.changes, EMPTY_SNAPSHOT)
+    undoing = replace(squashed, changes=tuple(reversal.changes))
+    assert await backend.unapply([undoing], state) == data_view(EMPTY_SNAPSHOT)
+    assert await backend.applied() == {}
+    assert person.id

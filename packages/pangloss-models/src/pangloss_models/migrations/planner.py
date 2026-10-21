@@ -10,21 +10,23 @@ it mentions.
     result.migrations     # the migrations to write, if nothing is left to ask
 """
 
+import dataclasses
 import json
 from dataclasses import dataclass, field
 from typing import Any, Iterable
 
 from pangloss_models.exceptions import PanglossMigrationError
 from pangloss_models.migrations import changes as c
-from pangloss_models.migrations.diff import diff
+from pangloss_models.migrations.diff import diff, needs_value
 from pangloss_models.migrations.files import (
     Migration,
     MigrationGraph,
     next_name,
     slug_of,
+    structure_id,
 )
 from pangloss_models.migrations.snapshot import data_view, snapshot_hash
-from pangloss_models.migrations.state import replay
+from pangloss_models.migrations.state import replay, same_structure
 
 
 @dataclass
@@ -83,6 +85,19 @@ def owner_of(
     raise PanglossMigrationError(f"{name} is not in any installed app")
 
 
+def structure_owner(
+    change: c.Change, new: dict[str, Any], owners: dict[str, str], apps: list[str]
+) -> str:
+    """The app that makes (or drops) an index or constraint: the one the database package says,
+    for one that is new; the one that made it, for one that is dropped; otherwise the first"""
+    entry = getattr(change, "index", None) or getattr(change, "constraint")
+    key = "indexes" if hasattr(change, "index") else "constraints"
+    for candidate in new.get(key, []):
+        if same_structure(candidate, entry) and candidate.get("app") in apps:
+            return candidate["app"]
+    return owners.get(structure_id(change)) or apps[0]
+
+
 def mentioned(change: c.Change, names: Iterable[str]) -> set[str]:
     """Which of the names of models and enums a change mentions"""
     text = json.dumps(change.to_dict(), default=str)
@@ -127,41 +142,45 @@ def split(
     groups: dict[str, list[c.Change]] = {}
     for change in changes:
         subject = subject_of(change)
-        app = owner_of(subject, new, owners, apps) if subject else apps[0]
+        if isinstance(change, (c.AddIndex, c.RemoveIndex, c.AddConstraint, c.RemoveConstraint)):
+            app = structure_owner(change, new, owners, apps)
+        else:
+            app = owner_of(subject, new, owners, apps) if subject else apps[0]
         groups.setdefault(app, []).append(change)
 
     # what each app makes, so that another's migration can depend on it
-    created: dict[str, str] = {}
-    for app, group in groups.items():
-        for change in group:
-            if isinstance(change, (c.CreateModel, c.CreateEnum)):
-                created[getattr(change, "model", None) or change.enum] = app  # type: ignore[attr-defined]
+    created = created_by(groups)
 
     existing = list(graph.migrations.values())
-    migrations: dict[str, Migration] = {}
-    names_of: dict[str, str] = {}
-    for app, group in groups.items():
-        initial = graph.leaf(app) is None
-        migration_name = name if name and len(groups) == 1 else next_name(
-            [m for m in existing if m.app == app], slug_of(group, initial=initial)
+    layers = layers_of(groups, created, names)
+    migrations: dict[tuple[str, int], Migration] = {}
+    names_of: dict[tuple[str, int], str] = {}
+    for (app, layer), group in layers.items():
+        taken = [m for m in existing if m.app == app] + [
+            m for (a, _), m in migrations.items() if a == app
+        ]
+        migration_name = name if name and len(layers) == 1 else next_name(
+            taken, slug_of(group, initial=graph.leaf(app) is None and layer == 0)
         )
-        names_of[app] = migration_name
+        names_of[(app, layer)] = migration_name
+        # (a placeholder, so that the next layer of the app is numbered after it)
+        migrations[(app, layer)] = Migration(app=app, name=migration_name, changes=tuple(group))
 
-    for app, group in groups.items():
+    for (app, layer), group in layers.items():
         dependencies: set[tuple[str, str]] = set()
         for change in group:
             for mention in mentioned(change, names):
                 other = created.get(mention) or owners.get(mention)
                 if other and other != app:
-                    if other in names_of and mention in created:
-                        dependencies.add((other, names_of[other]))
+                    if mention in created and (other, 0) in names_of:
+                        dependencies.add((other, names_of[(other, 0)]))  # (made in the first layer)
                     else:
                         leaf = graph.leaf(other)
                         if leaf:
                             dependencies.add((other, leaf.name))
-        migrations[app] = Migration(
+        migrations[(app, layer)] = Migration(
             app=app,
-            name=names_of[app],
+            name=names_of[(app, layer)],
             changes=tuple(group),
             dependencies=tuple(sorted(dependencies)),
         )
@@ -190,23 +209,120 @@ def split(
     ]
 
 
-def order_migrations(migrations: dict[str, Migration]) -> list[Migration]:
-    """Each after those of the other apps that it depends on"""
+def created_by(groups: dict[str, list[c.Change]]) -> dict[str, str]:
+    """The app that makes each model and enum that is new"""
+    created: dict[str, str] = {}
+    for app, group in groups.items():
+        for change in group:
+            if isinstance(change, (c.CreateModel, c.CreateEnum)):
+                created[getattr(change, "model", None) or change.enum] = app  # type: ignore[attr-defined]
+    return created
+
+
+def needs_other_apps(group: list[c.Change], app: str, created: dict[str, str], names: set[str]) -> set[str]:
+    """The other apps whose new models or enums the changes mention"""
+    others = {n for n, a in created.items() if a != app}
+    found: set[str] = set()
+    for change in group:
+        found |= {created[n] for n in mentioned(change, others)}
+    return found
+
+
+def cyclic_apps(groups: dict[str, list[c.Change]], created: dict[str, str], names: set[str]) -> set[str]:
+    """The apps whose new models need those of an app that needs theirs, however far round"""
+    needs = {app: needs_other_apps(group, app, created, names) for app, group in groups.items()}
+
+    def reaches(start: str, goal: str, seen: set[str]) -> bool:
+        return any(
+            nxt == goal or (nxt not in seen and reaches(nxt, goal, seen | {nxt}))
+            for nxt in needs.get(start, ())
+        )
+
+    return {app for app in groups if reaches(app, app, {app})}
+
+
+def layers_of(
+    groups: dict[str, list[c.Change]], created: dict[str, str], names: set[str]
+) -> dict[tuple[str, int], list[c.Change]]:
+    """The changes of each app as one migration (layer 0), except where new models need each other
+    round a circle. Then an app is split in two, one at a time until the circle is broken: the first
+    makes its models without the fields that refer to another app's new models, the second adds
+    those fields, once the others' models are there. (The second follows the first of every app it
+    needs, so there is no circle.)"""
+    first = dict(groups)
+    second: dict[str, list[c.Change]] = {}
+    while True:
+        cyclic = sorted(cyclic_apps(first, created, names))
+        if not cyclic:
+            break
+        app = cyclic[0]
+        first[app], second[app] = split_app(first[app], app, created)
+    layers: dict[tuple[str, int], list[c.Change]] = {(app, 0): group for app, group in first.items()}
+    layers.update({(app, 1): group for app, group in second.items() if group})
+    return layers
+
+
+def split_app(group: list[c.Change], app: str, created: dict[str, str]) -> tuple[list[c.Change], list[c.Change]]:
+    """The changes of an app that do not need the new models of other apps, and those that do (a
+    model's fields that refer to them are added after it is made)"""
+    others = {n for n, a in created.items() if a != app}
+    first: list[c.Change] = []
+    second: list[c.Change] = []
+    for change in group:
+        if isinstance(change, c.CreateModel):
+            kept, moved = [], []
+            for entry in change.definition.get("fields", []):
+                (moved if mentioned_in(entry, others) else kept).append(entry)
+            first.append(
+                dataclasses.replace(change, definition={**change.definition, "fields": kept})
+                if moved
+                else change
+            )
+            second += [
+                c.AddField(
+                    model=change.model,
+                    name=entry["name"],
+                    field_kind=entry["kind"],
+                    needs_value=needs_value(entry),
+                    definition=entry,
+                )
+                for entry in moved
+            ]
+        elif not isinstance(change, c.CreateEnum) and mentioned(change, others):
+            second.append(change)
+        else:
+            first.append(change)
+    return first, second
+
+
+def mentioned_in(value: Any, names: Iterable[str]) -> set[str]:
+    text = json.dumps(value, default=str)
+    return {name for name in names if f'"{name}"' in text}
+
+
+def order_migrations(migrations: dict[tuple[str, int], Migration]) -> list[Migration]:
+    """Each after those of the other apps that it depends on (and an app's layers in order)"""
     remaining = dict(migrations)
     done: list[Migration] = []
-    placed: set[str] = set()
+    placed: set[str] = set()  # (the names of the migrations, as app.name)
     while remaining:
         ready = [
-            app
-            for app, m in remaining.items()
-            if all(dep_app in placed or dep_app not in migrations for dep_app, _ in m.dependencies)
+            key
+            for key, m in remaining.items()
+            if all(
+                f"{dep_app}.{dep_name}" in placed
+                or (dep_app, dep_name) not in {(a, mm.name) for (a, _), mm in migrations.items()}
+                for dep_app, dep_name in m.dependencies
+            )
+            and not any(a == key[0] and layer < key[1] for (a, layer) in remaining)
         ]
         if not ready:
             raise PanglossMigrationError(
                 "The migrations to write depend on each other in a circle: "
-                + ", ".join(sorted(remaining))
+                + ", ".join(sorted(f"{a}.{m.name}" for (a, _), m in remaining.items()))
             )
-        app = sorted(ready)[0]
-        done.append(remaining.pop(app))
-        placed.add(app)
+        key = sorted(ready)[0]
+        migration = remaining.pop(key)
+        placed.add(f"{migration.app}.{migration.name}")
+        done.append(migration)
     return done
