@@ -571,7 +571,7 @@ Tried for real against Memgraph (a project of its own): `makemigrations` writes 
 
 **Not done**
 
-- Batches (below) do not cover relations that are removed or renamed, wrapping in a semantic space, or a change of enum; those are made at once, in a transaction of their own.
+- Batches (below) do not cover wrapping in a semantic space, unwrapping, `LiteralsToEmbedded` or a change of enum; those are made at once, in a transaction of their own.
 - `Fulfils` (the labels a node gets for the classes it fulfils are decided when it is written, and are not in the snapshot); a node whose enum values are inside a `TypedDict`, an annotated value or an edge model when an enum member is removed or an enum renamed; the `contents` order of a context label, which depends on the order the edges were made in.
 - The tests make enums that stay in the test database (Memgraph cannot drop one): `MigrationHue` and one with a new name for each run of the member test.
 
@@ -622,6 +622,15 @@ A batch that is retried by the driver after a transient error runs again, so a c
 - The demo's database was made before this: `pangloss migrate` (or `--fake` for the library's first migration) is needed before its server will start.
 
 **Also done: models of different apps that need each other.** Where the new models of two apps refer to each other's, the planner makes one of them in two steps (`split_app`): the first migration makes its models without the fields that refer to the other app's new models, the second (numbered after, depending on the other's first) adds those fields as `AddField`s. Apps are split one at a time until the circle is broken, so only as many as are needed are. A model that moves to another app is not a change (the app is not stored), and a later change to it is its new app's migration, depending on the old. A cycle through a model's parents or labels (not a field) is still refused.
+
+**Also done: smaller things.**
+
+- `makemigrations <app>` writes the migrations of one app and those of other apps that they need (a migration cannot be written without what it depends on); only questions about what those hold are asked. The others are named, and left for a plain `makemigrations`.
+- `migrate` says when the database has data and no record of any migration (`backend.has_data()`): a database made before migrations needs `--fake`.
+- A migration file may say `batch_size = N` (batches of that many nodes; implies not atomic). `migrate --batch-size` wins over it.
+- Batches (`"edges"`) also for **renaming** a relation (edges `N` at a time, forward and reverse) and **removing** one (the nodes it owns, `N` relations' worth, with what they own; then its edges). Both go on from where they stopped; tested with a stop part way.
+- `check_data(concurrency=N)` / `check-data --parallel N`: reads `N` at once. **Not faster** against a local Memgraph (it was 1.8 times slower with 8), so the default is 1.
+- `test_migrations_context.py`: working the semantic spaces and context labels out again for a document the models wrote changes nothing, so `propagate_context` and the models' own agree.
 
 **Next**
 

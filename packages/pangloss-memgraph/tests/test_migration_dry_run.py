@@ -240,3 +240,33 @@ async def test_check_data_reads_everything_the_models_can_and_reports_the_rest(d
     # what is deleted is not read
     await old_models.Person.delete(id=ann.id)
     assert (await check_data()).checked == 2
+
+
+@no_type_check
+async def test_reading_several_at_once_finds_the_same_in_the_same_order(db_driver, clear_database):
+    def v1():
+        class Person(Entity):
+            name: str
+
+        return ns(Person=Person)
+
+    def v2():
+        class Person(Entity):
+            name: str
+            born: int
+
+        return ns(Person=Person)
+
+    old_models, _ = declare(v1)
+    for number in range(30):
+        await old_models.Person.Create(label=f"P{number:02d}", name="x").save()
+    declare(v2)
+
+    one = await check_data(concurrency=1)
+    many = await check_data(concurrency=8)
+    assert one.checked == many.checked == 30
+    assert [p.id for p in many.problems] == [p.id for p in one.problems]
+    assert len(many.problems) == 30
+
+    limited = await check_data(limit=7, concurrency=4)
+    assert limited.checked == 7 and len(limited.problems) == 7

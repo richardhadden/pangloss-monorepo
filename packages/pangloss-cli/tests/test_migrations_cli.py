@@ -32,6 +32,11 @@ FAKE_MIGRATION_BACKEND = """
             raise PanglossMigrationError("Cannot take a snapshot: no")
         return "/snapshots/1"
 
+    HAS_DATA = False
+
+    async def has_data():
+        return HAS_DATA
+
     async def lock(who=None):
         CALLS.append("lock")
 
@@ -103,7 +108,7 @@ def data_is_readable(monkeypatch):
     """(the fake database has no data to read: `migrate` reads it with the models after applying)"""
     import pangloss_cli.migrations as module
 
-    async def nothing_to_read(types=None, limit=None):
+    async def nothing_to_read(types=None, limit=None, **_):
         from pangloss_models.migrations.check import DataCheck
 
         return DataCheck()
@@ -198,7 +203,6 @@ def test_an_empty_migration_is_made_to_write_by_hand(models_project: Path):
     assert exit_code == 1 and "needs the app" in output
     exit_code, output = invoke("makemigrations", "--empty", "nonsense")
     assert exit_code == 1 and "INSTALLED_APPS" in output
-    assert invoke("makemigrations", "fakeapp")[0] == 1  # (an app only with --empty)
 
     exit_code, output = invoke("makemigrations", "--empty", "fakeapp", "--name", "by_hand")
     assert exit_code == 0, output
@@ -397,8 +401,9 @@ class Checked:
             checked=5, problems=[DataProblem("Person", "1", "Ann", ["born: Field required"]) for _ in problems]
         )
 
-    async def __call__(self, types=None, limit=None):
+    async def __call__(self, types=None, limit=None, concurrency=8):
         self.asked = (types, limit)
+        self.concurrency = concurrency
         return self.result
 
 
@@ -461,9 +466,9 @@ def test_check_data_reads_the_data(models_project: Path, monkeypatch):
 
     checked = Checked()
     monkeypatch.setattr(module, "check_data", checked)
-    exit_code, output = invoke("check-data", "--type", "Person", "--limit", "10")
+    exit_code, output = invoke("check-data", "--type", "Person", "--limit", "10", "--parallel", "3")
     assert exit_code == 0, output
-    assert checked.asked == (["Person"], 10)
+    assert checked.asked == (["Person"], 10) and checked.concurrency == 3
     monkeypatch.setattr(module, "check_data", Checked(problems=[1]))
     assert invoke("check-data")[0] == 1
 
@@ -687,3 +692,41 @@ def test_setting_up_a_database_that_has_migrations_is_warned_about(models_projec
     exit_code, output = invoke("setup-database")
     assert exit_code == 0, output
     assert "This project has migrations" in output and "Database is set up" in output
+
+
+def test_a_database_with_data_and_no_record_is_pointed_to_fake(models_project: Path):
+    assert invoke("makemigrations")[0] == 0
+    invoke("migrate", "--plan")  # (loads the backend)
+    backend().HAS_DATA = True
+    exit_code, output = invoke("migrate", "--plan")
+    assert exit_code == 0 and "no record of any migration" in output and "--fake" in output
+
+    # not once there is a record, nor when faking
+    backend().APPLIED.clear()
+    exit_code, output = invoke("migrate", "--fake")
+    assert "no record of any migration" not in output
+    assert invoke("migrate", "--plan")[0] == 0
+    backend().HAS_DATA = False
+
+
+def test_migrations_can_be_made_for_one_app(models_project: Path):
+    exit_code, output = invoke("makemigrations", "elsewhere")
+    assert exit_code != 0 and "INSTALLED_APPS" in output
+    assert migration_files(models_project) == []
+
+    exit_code, output = invoke("makemigrations", "fakeapp")
+    assert exit_code == 0, output
+    assert migration_files(models_project) == ["0001_initial.py"]
+
+    exit_code, output = invoke("makemigrations", "fakeapp")
+    assert "No changes" in output
+
+    # (a change to the app's models, asked about as for all)
+    set_models(models_project, V2)
+    exit_code, output = invoke("makemigrations", "fakeapp", "--noinput")
+    assert exit_code == 1 and "born" in output
+    exit_code, output = invoke("makemigrations", "fakeapp", "--check")
+    assert exit_code == 1 and "changes since the last migration" in output
+    exit_code, output = invoke("makemigrations", "fakeapp", input="1900\n")
+    assert exit_code == 0, output
+    assert len(migration_files(models_project)) == 2

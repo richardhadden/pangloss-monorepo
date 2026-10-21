@@ -6,6 +6,7 @@ A backend package (`DATABASE_MODULE`) supplies a `migration_backend` module with
   the models, for the snapshot: the migrations make it (`AddIndex`, `AddConstraint`...);
 - `async ensure_ready()`: what the backend needs to keep the record of migrations;
 - `async applied() -> {(app, name): record}`: the migrations that have been applied (or began);
+- `async has_data() -> bool` (optional): whether the database holds anything but the record;
 - `async lock(who)` / `async unlock()`: so that only one `migrate` runs; `lock` raises
   `PanglossMigrationError` if another has the lock;
 - `async backup() -> str`: a snapshot of the whole database, kept by the database (Memgraph's own
@@ -72,6 +73,19 @@ async def ensure_ready(database: Database | None = None) -> None:
 
 def _session(database: Database) -> neo4j.AsyncSession:
     return database.driver.session(database=database.settings.DATABASE.DATABASE_NAME)
+
+
+async def has_data(database: Database | None = None) -> bool:
+    """Whether the database holds anything besides the record of migrations (so that `migrate` can
+    say that a database made before migrations needs `--fake`)"""
+    database = database or Database.default
+    if not hasattr(database, "driver"):
+        await database._initialise_driver()
+    async with _session(database) as session:
+        result = await session.run(
+            "MATCH (n) WHERE NOT n:PGMigration AND NOT n:PGMigrationLock RETURN n LIMIT 1"
+        )
+        return await result.single() is not None
 
 
 async def applied(database: Database | None = None) -> dict[tuple[str, str], dict[str, Any]]:
@@ -164,7 +178,7 @@ async def record(
 
 
 # How many nodes a batch is, for a migration that is made in batches (`atomic = False`) when
-# `migrate --batch-size` does not say
+# `migrate --batch-size` and the migration's `batch_size` do not say
 DEFAULT_BATCH_SIZE = 5000
 
 
@@ -229,7 +243,7 @@ async def apply(
             say(migration, "faked")
             continue
 
-        size = batch_size or (None if migration.atomic else DEFAULT_BATCH_SIZE)
+        size = batch_size or migration.batch_size or (None if migration.atomic else DEFAULT_BATCH_SIZE)
         start = await stored_progress(database, migration) if size else Progress()
         if start.change or start.after:
             say(migration, f"going on from change {start.change + 1}")

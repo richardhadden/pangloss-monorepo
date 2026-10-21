@@ -32,6 +32,7 @@ If you only read one chapter, read [2](02-workflow.md); if you only read two, ad
 pangloss makemigrations                  # write migrations for what changed in the models
 pangloss makemigrations --dry-run        # show them without writing
 pangloss makemigrations --check          # exit 1 if the models have changed (for CI)
+pangloss makemigrations myapp            # only that app's migrations (and what they need)
 pangloss makemigrations --empty myapp    # an empty migration, to write by hand
 
 pangloss showmigrations                  # what is applied ([X]) and what is not ([ ])

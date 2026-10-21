@@ -19,6 +19,8 @@ people/
 
 `makemigrations` writes each change into the app **whose `models.py` the class is in**. You do not choose; if `Person` lives in `people`, changes to `Person` are `people` migrations, even if the field that changed refers to a model in `library`.
 
+To write only one app's migrations, name it: `pangloss makemigrations people`. You get that app's, and those of other apps they depend on (a migration cannot be written without what it follows), and are asked only about the changes in those. The others are listed as "not written", for a later `makemigrations`.
+
 The migrations of all apps together are one history. Each app's are numbered in order, and a migration can **depend on** another app's:
 
 ```python
@@ -51,7 +53,7 @@ Move the class to another app's `models.py` (and fix imports). Because *which ap
 
 If your database was made **before** the project had migrations (with `pangloss setup-database`, say), it already has the structure and the data. The first migration would try to create what is there.
 
-Tell Pangloss the database is already as the migrations say:
+Tell Pangloss the database is already as the migrations say. (If you forget, `migrate` notices a database with data and no record of any migration, and says so.)
 
 ```bash
 pangloss makemigrations        # writes 0001_initial from the current models

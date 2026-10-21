@@ -21,6 +21,7 @@ from pangloss_memgraph.databases.memgraph.migrations.operations import (
     Window,
     apply_change,
     apply_window,
+    apply_edges,
     batch_kind,
     is_ddl,
     run_ddl,
@@ -189,6 +190,17 @@ async def apply_changes_in_batches(
                     return wrapped
 
                 if await in_transaction(wrap_work) < size:
+                    break
+        elif kind == "edges":
+            while True:
+
+                async def edges_work(tx: Transaction) -> int:
+                    renamed = await apply_edges(tx, change, before, size)  # type: ignore[arg-type]
+                    if save:
+                        await save(tx, Progress(index))
+                    return renamed
+
+                if await in_transaction(edges_work) < size:
                     break
         else:
 

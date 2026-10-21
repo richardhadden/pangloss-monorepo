@@ -250,3 +250,158 @@ async def test_a_migration_that_is_not_atomic_is_made_in_batches(db_driver, clea
     stopper.calls = 0
     await backend.apply(world.later, world.state)
     assert stopper.calls == 0
+
+
+@no_type_check
+async def test_a_migration_can_say_how_big_its_batches_are(db_driver, clear_database, monkeypatch):
+    world = await start_with_people(5)
+    stopper = Stopper(monkeypatch, runner, "apply_window")
+    sized = [dataclasses.replace(m, batch_size=2) for m in world.later]  # (atomic, but sized)
+
+    await backend.apply(sized, world.state)
+    assert stopper.calls == 3  # (2 + 2 + 1)
+    assert run(db_driver, "MATCH (p:Person) WHERE p.born = 1900 RETURN count(p) AS n") == [{"n": 5}]
+
+    # the command line's size wins over the migration's
+    world = await start_with_people(5)
+    stopper.calls = 0
+    await backend.apply(sized, world.state, batch_size=10)
+    assert stopper.calls == 1
+
+
+@no_type_check
+async def test_a_renamed_relation_is_renamed_in_batches_even_when_stopped(
+    db_driver, clear_database, monkeypatch
+):
+    from pangloss_models.migrations import PossibleRename
+    from pangloss_models.model_bases.document import Document
+
+    def v1():
+        class Place(Entity):
+            pass
+
+        class Statement(Document):
+            home: Place
+
+        return ns(Place=Place, Statement=Statement)
+
+    def v2():
+        class Place(Entity):
+            pass
+
+        class Statement(Document):
+            residence: Place
+
+        return ns(Place=Place, Statement=Statement)
+
+    old_models, first = declare(v1)
+    graph = MigrationGraph.of(migrations_between(MigrationGraph(), first))
+    initial = list(graph.migrations.values())
+    await backend.ensure_ready()
+    state = await backend.apply(initial, EMPTY_SNAPSHOT)
+    place = await old_models.Place.Create(label="Paris").save()
+    statements = [
+        await old_models.Statement.Create(
+            label=f"S{n}", home={"type": "Place", "id": place.id}
+        ).save()
+        for n in range(5)
+    ]
+
+    new_models, second = declare(v2)
+    result = plan(
+        graph,
+        in_app(second),
+        APPS,
+        confirmed=[PossibleRename(what="field", scope="Statement", old="home", new="residence")],
+    )
+    later = result.migrations
+
+    calls = Stopper(monkeypatch, runner, "apply_edges", fail_on=2)
+    with pytest.raises(RuntimeError, match="stopped part way"):
+        await backend.apply(later, state, batch_size=2)
+    # (one batch of 2 forward edges and 2 reverse edges was done)
+    assert run(db_driver, "MATCH ()-[e:residence]->() RETURN count(e) AS n") == [{"n": 2}]
+    assert run(db_driver, "MATCH ()-[e:home]->() RETURN count(e) AS n") == [{"n": 3}]
+
+    calls.fail_on = None
+    calls.calls = 0
+    await backend.apply(later, state, batch_size=2)
+    assert calls.calls == 2  # (2, then the last 1)
+    assert run(db_driver, "MATCH ()-[e:residence]->() RETURN count(e) AS n") == [{"n": 5}]
+    assert run(db_driver, "MATCH ()-[e:home]->() RETURN count(e) AS n") == [{"n": 0}]
+    assert run(db_driver, "MATCH ()-[e:residence_reverse {reverse: true}]->() RETURN count(e) AS n") == [{"n": 5}]
+    read = await new_models.Statement.get(id=statements[0].id)
+    assert read.residence.id == place.id
+    assert len((await new_models.Place.get(id=place.id)).residence_reverse) == 5
+
+
+@no_type_check
+async def test_a_removed_relation_is_removed_in_batches_with_what_it_owned(
+    db_driver, clear_database, monkeypatch
+):
+    from pangloss_models.model_bases.document import Document
+
+    def v1():
+        class Place(Entity):
+            pass
+
+        class Statement(Document):
+            text: str
+            where: Place
+
+        class Factoid(Document):
+            statements: list[Statement]
+            home: Place
+
+        return ns(Place=Place, Statement=Statement, Factoid=Factoid)
+
+    def v2():
+        class Place(Entity):
+            pass
+
+        class Statement(Document):
+            text: str
+            where: Place
+
+        class Factoid(Document):
+            home: Place
+
+        return ns(Place=Place, Statement=Statement, Factoid=Factoid)
+
+    old_models, first = declare(v1)
+    graph = MigrationGraph.of(migrations_between(MigrationGraph(), first))
+    await backend.ensure_ready()
+    state = await backend.apply(list(graph.migrations.values()), EMPTY_SNAPSHOT)
+    place = await old_models.Place.Create(label="Paris").save()
+    reference = {"type": "Place", "id": place.id}
+    factoids = [
+        await old_models.Factoid.Create(
+            label=f"F{n}",
+            home=reference,
+            statements=[
+                {"type": "Statement", "label": f"S{n}{m}", "text": "t", "where": reference}
+                for m in range(2)
+            ],
+        ).save()
+        for n in range(3)
+    ]
+    assert run(db_driver, "MATCH (s:Statement) RETURN count(s) AS n") == [{"n": 6}]
+
+    new_models, second = declare(v2)
+    later = migrations_between(graph, second)
+    assert [ch.kind for m in later for ch in m.changes] == ["RemoveField"]
+
+    calls = Stopper(monkeypatch, runner, "apply_edges", fail_on=2)
+    with pytest.raises(RuntimeError, match="stopped part way"):
+        await backend.apply(later, state, batch_size=2)
+    assert run(db_driver, "MATCH (s:Statement) RETURN count(s) AS n") == [{"n": 4}]  # (a batch of 2)
+
+    calls.fail_on = None
+    await backend.apply(later, state, batch_size=2)
+    assert run(db_driver, "MATCH (s:Statement) RETURN count(s) AS n") == [{"n": 0}]
+    assert run(db_driver, "MATCH ()-[e:statements]->() RETURN count(e) AS n") == [{"n": 0}]
+    assert run(db_driver, "MATCH ()-[e:statements_reverse]->() RETURN count(e) AS n") == [{"n": 0}]
+    # the entity is still there, and so are the other relations to it
+    assert (await new_models.Place.get(id=place.id)).label == "Paris"
+    assert (await new_models.Factoid.get(id=factoids[0].id)).home.id == place.id
+    assert run(db_driver, "MATCH ()-[e:home]->() RETURN count(e) AS n") == [{"n": 3}]

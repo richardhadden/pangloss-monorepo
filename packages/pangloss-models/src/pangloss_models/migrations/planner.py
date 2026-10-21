@@ -98,6 +98,30 @@ def structure_owner(
     return owners.get(structure_id(change)) or apps[0]
 
 
+def app_of_change(
+    change: c.Change, new: dict[str, Any], owners: dict[str, str], apps: list[str]
+) -> str:
+    """The app whose migration a change is written in"""
+    if isinstance(change, (c.AddIndex, c.RemoveIndex, c.AddConstraint, c.RemoveConstraint)):
+        return structure_owner(change, new, owners, apps)
+    subject = subject_of(change)
+    return owner_of(subject, new, owners, apps) if subject else apps[0]
+
+
+def with_what_they_need(migrations: Iterable[Migration], app: str) -> list[Migration]:
+    """The migrations of one app, and those of other apps in the same lot that they depend on
+    (a migration cannot be written without the ones it follows)"""
+    by_key = {m.key: m for m in migrations}
+    wanted = {key for key, m in by_key.items() if m.app == app}
+    pending = list(wanted)
+    while pending:
+        for dependency in by_key[pending.pop()].dependencies:
+            if dependency in by_key and dependency not in wanted:
+                wanted.add(dependency)
+                pending.append(dependency)
+    return [m for m in migrations if m.key in wanted]
+
+
 def mentioned(change: c.Change, names: Iterable[str]) -> set[str]:
     """Which of the names of models and enums a change mentions"""
     text = json.dumps(change.to_dict(), default=str)
@@ -141,12 +165,7 @@ def split(
 
     groups: dict[str, list[c.Change]] = {}
     for change in changes:
-        subject = subject_of(change)
-        if isinstance(change, (c.AddIndex, c.RemoveIndex, c.AddConstraint, c.RemoveConstraint)):
-            app = structure_owner(change, new, owners, apps)
-        else:
-            app = owner_of(subject, new, owners, apps) if subject else apps[0]
-        groups.setdefault(app, []).append(change)
+        groups.setdefault(app_of_change(change, new, owners, apps), []).append(change)
 
     # what each app makes, so that another's migration can depend on it
     created = created_by(groups)

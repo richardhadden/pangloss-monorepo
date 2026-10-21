@@ -6,6 +6,7 @@ with these names:
     dependencies = [("demo_app", "0001_initial")]   # migrations that come first, of any app
     schema_hash = "..."                              # the snapshot of the models after it
     atomic = True                                    # (optional)
+    batch_size = 1000                                # (optional: in batches of this many nodes)
     replaces = [("app", "0001_initial"), ...]        # (optional: a squashed migration)
     changes = changes_from_data([{...}, ...])        # what it does, in order
 
@@ -62,6 +63,8 @@ class Migration:
     dependencies: tuple[tuple[str, str], ...] = ()
     schema_hash: str = ""
     atomic: bool = True
+    # In batches of this many nodes (None: `atomic` says whether in batches at all, and how big)
+    batch_size: int | None = None
     # The migrations it stands in for, if it is a squashed one (see `squash`)
     replaces: tuple[tuple[str, str], ...] = ()
 
@@ -122,6 +125,8 @@ def render(migration: Migration, summary: str | None = None) -> str:
     lines.append(f"schema_hash = {migration.schema_hash!r}")
     if not migration.atomic:
         lines.append("atomic = False")
+    if migration.batch_size:
+        lines.append(f"batch_size = {migration.batch_size}")
     if migration.replaces:
         lines.append(f"replaces = {_pformat([list(r) for r in migration.replaces])}")
     lines.append("")
@@ -180,6 +185,7 @@ def load(app: str, name: str) -> Migration:
         dependencies=tuple(tuple(d) for d in getattr(module, "dependencies", [])),  # type: ignore[misc]
         schema_hash=getattr(module, "schema_hash", ""),
         atomic=getattr(module, "atomic", True),
+        batch_size=getattr(module, "batch_size", None),
         replaces=tuple(tuple(r) for r in getattr(module, "replaces", [])),  # type: ignore[misc]
     )
 
@@ -434,5 +440,6 @@ def squash(
         dependencies=tuple(dict.fromkeys(p for p in outside if p[0] != app)),
         schema_hash=end.schema_hash,
         atomic=all(m.atomic for m in run),
+        batch_size=min((m.batch_size for m in run if m.batch_size), default=None),
         replaces=tuple(m.key for m in run),
     )

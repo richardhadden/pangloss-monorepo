@@ -8,6 +8,7 @@ the database has not had, and records them.
 
 import copy
 import importlib
+from collections.abc import Callable
 from types import ModuleType
 
 import typer
@@ -39,7 +40,7 @@ from pangloss_models.migrations.history import (
     to_unapply,
 )
 from pangloss_models.migrations.reverse import reverse_changes
-from pangloss_models.migrations.planner import plan
+from pangloss_models.migrations.planner import app_of_change, plan, with_what_they_need
 from pangloss_models.migrations.startup import migration_backend_of, structure_of
 from pangloss_models.migrations.questions import (
     collect_questions,
@@ -113,9 +114,18 @@ def ask_renames(result_questions: list[PossibleRename]) -> tuple[list[PossibleRe
     return confirmed, declined
 
 
-def ask_answers(changes: list[c.Change], state: dict, noinput: bool) -> list[c.Change]:
-    """Ask for what the changes need, and put it in them"""
-    needed = collect_questions(changes, state)
+def ask_answers(
+    changes: list[c.Change],
+    state: dict,
+    noinput: bool,
+    wanted: Callable[[c.Change], bool] | None = None,
+) -> list[c.Change]:
+    """Ask for what the changes need, and put it in them (only for those that `wanted` says yes to)"""
+    needed = [
+        (index, question)
+        for index, question in collect_questions(changes, state)
+        if wanted is None or wanted(changes[index])
+    ]
     changes = list(changes)
     unanswerable: list[str] = []
     refused: list[str] = []
@@ -178,7 +188,9 @@ def make_empty(project: Project, app: str | None, name: str | None, dry_run: boo
 
 def makemigrations(
     ctx: typer.Context,
-    app: str | None = typer.Argument(None, help="With --empty, the app the migration is for"),
+    app: str | None = typer.Argument(
+        None, help="Only this app's migrations (and the other apps' they need); with --empty, the app it is for"
+    ),
     empty: bool = typer.Option(
         False, "--empty", help="Write a migration with no changes, to put RunCypher / RunPython in"
     ),
@@ -194,10 +206,10 @@ def makemigrations(
     if empty:
         make_empty(project, app, name, dry_run)
         return
-    if app is not None:
-        fail("An app can be given only with `--empty` (migrations are made for all the apps)")
     snapshot = load_models(project)
     apps = installed_apps(project)
+    if app is not None and app not in apps:
+        fail(f"{app} is not one of the INSTALLED_APPS")
     graph = load_graph(apps)
 
     confirmed: list[PossibleRename] = []
@@ -217,13 +229,27 @@ def makemigrations(
         if result.is_empty:
             typer.echo("No changes")
             return
+        if app is not None and not with_what_they_need(result.migrations, app):
+            typer.echo(f"No changes for {app}")
+            return
         if check:
-            typer.echo(f"{len(result.changes)} changes since the last migration:")
-            for change in result.changes:
+            shown = (
+                [ch for m in with_what_they_need(result.migrations, app) for ch in m.changes]
+                if app is not None
+                else result.changes
+            )
+            typer.echo(f"{len(shown)} changes since the last migration:")
+            for change in shown:
                 typer.echo(f"  - {change.describe()}")
             raise typer.Exit(1)
 
-        answered = ask_answers(result.changes, result.old, noinput)
+        owners = graph.owners()
+        mine: Callable[[c.Change], bool] | None = None
+        if app is not None:
+            # (only what the app's migrations, and those they need, will hold is asked about)
+            held = {m.app for m in with_what_they_need(result.migrations, app)}
+            mine = lambda change: app_of_change(change, snapshot, owners, apps) in held  # noqa: E731
+        answered = ask_answers(result.changes, result.old, noinput, mine)
         result = plan(
             graph,
             snapshot,
@@ -236,6 +262,17 @@ def makemigrations(
     except PanglossMigrationError as error:
         fail(str(error))
         raise
+
+    if app is not None:
+        kept = with_what_they_need(result.migrations, app)
+        left = [m for m in result.migrations if m not in kept]
+        result.migrations = kept
+        if left:
+            typer.secho(
+                f"Not written (not {app}'s, nor needed by it): {', '.join(str(m) for m in left)}. "
+                "`pangloss makemigrations` writes them.",
+                fg="yellow",
+            )
 
     for migration in result.migrations:
         typer.secho(f"{migration}", bold=True)
@@ -534,6 +571,16 @@ def migrate(
         typer.echo(f"{len(todo)} migrations to apply")
         raise typer.Exit(1)
 
+    if not applied and not fake and hasattr(backend, "has_data"):
+        if run_with_database(project, backend.has_data):
+            typer.secho(
+                "The database has data, and no record of any migration. If it was made before these "
+                "migrations (by `pangloss setup-database`, say), run `pangloss migrate --fake` to "
+                "record them without running them. Otherwise go on.",
+                fg="yellow",
+                err=True,
+            )
+
     typer.echo("To apply:")
     for migration in todo:
         typer.secho(f"  {migration}", bold=True)
@@ -631,10 +678,14 @@ def showmigrations(ctx: typer.Context) -> None:
         typer.secho(line, fg="red", err=True)
 
 
-def report_data_check(project: Project, types: list[str] | None = None, limit: int | None = None) -> None:
+def report_data_check(
+    project: Project, types: list[str] | None = None, limit: int | None = None, parallel: int = 1
+) -> None:
     """Read the data with the models, and say what cannot be read (exit 1 if anything)"""
     typer.echo("Reading the data with the models ...")
-    check = run_with_database(project, lambda: check_data(types=types, limit=limit))
+    check = run_with_database(
+        project, lambda: check_data(types=types, limit=limit, concurrency=parallel)
+    )
     if check.ok:
         typer.secho(f"All {check.checked} can be read", fg="green")
         return
@@ -650,6 +701,12 @@ def check_data_command(
     ctx: typer.Context,
     type: list[str] = typer.Option([], "--type", "-t", help="Only this model (more than once for more)"),
     limit: int | None = typer.Option(None, "--limit", help="At most this many of each model"),
+    parallel: int = typer.Option(
+        1,
+        "--parallel",
+        min=1,
+        help="How many to read at once (it was not faster against a local database; try it with a remote one)",
+    ),
 ) -> None:
     """Read all the data with the models as they are, and report what cannot be read
 
@@ -657,4 +714,4 @@ def check_data_command(
     agree about."""
     project: Project = ctx.obj
     load_models(project)
-    report_data_check(project, types=type or None, limit=limit)
+    report_data_check(project, types=type or None, limit=limit, parallel=parallel)

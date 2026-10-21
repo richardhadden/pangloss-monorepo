@@ -137,13 +137,17 @@ or mark one migration in its file:
 
 ```python
 atomic = False        # batches of 5000
+batch_size = 1000     # or: batches of this many (this implies atomic = False)
 ```
+
+(The command line's `--batch-size` wins over the file's.)
 
 In batches:
 
 - changes to plain fields (add, remove, rename, make required, change type, wrap or unwrap an annotated value) and changes of labels are made **N nodes at a time, in the order of their ids**, each batch its own transaction;
 - wrapping a relation in a reified relation is made N relations at a time (the ones done are no longer there to wrap, so the next batch finds the next);
-- everything else (removing or renaming a relation, wrapping in a semantic space, enum changes) is still made at once, in a transaction of its own;
+- **renaming** a relation is made N edges at a time, and **removing** one N relations at a time (the nodes it owns go with them, in batches too, then its edges);
+- everything else (wrapping in a semantic space, unwrapping, turning fields into an embedded object, enum changes) is still made at once, in a transaction of its own;
 - what must hold **before anything is changed** (that every value converts, that every answer is given) is checked **once, before the first batch**, so a bad value does not leave you with half a migration;
 - how far it has got is saved **in the same transaction as each batch**.
 
@@ -163,6 +167,7 @@ The data check at the end is your safety net. It reads back the models the migra
 pangloss migrate --check-all     # read everything afterwards
 pangloss migrate --no-check      # read nothing
 pangloss check-data              # read everything, at any time
+pangloss check-data --parallel 4 # several at a time (not faster against a local database; may help with a remote one)
 ```
 
 ## A checklist for production

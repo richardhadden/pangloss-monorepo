@@ -152,3 +152,11 @@ def test_the_state_is_what_the_migrations_come_to_and_who_made_what():
     assert graph.state() == data_view(s2)
     assert graph.state([("a", "0001_initial")]) == data_view(s1)
     assert graph.owners() == {"Person": "a", "Place": "b"}
+
+
+def test_a_migration_may_say_its_batch_size(app):
+    migration = Migration(app="fileapp", name="0001_initial", changes=(), batch_size=250)
+    path = write(migration, migrations_directory(app))
+    assert "batch_size = 250" in path.read_text()
+    assert load(app, "0001_initial").batch_size == 250
+    assert Migration(app="a", name="0001_x", changes=()).batch_size is None

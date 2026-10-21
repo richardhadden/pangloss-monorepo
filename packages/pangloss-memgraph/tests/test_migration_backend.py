@@ -302,3 +302,15 @@ async def test_a_squashed_migration_makes_what_the_originals_made(db_driver, cle
     assert await backend.unapply([undoing], state) == data_view(EMPTY_SNAPSHOT)
     assert await backend.applied() == {}
     assert person.id
+
+
+async def test_data_is_told_from_the_record_of_migrations(db_driver, clear_database):
+    run(db_driver, "MATCH (n) DETACH DELETE n")  # (the tests' user is data too)
+    await backend.ensure_ready()
+    assert await backend.has_data() is False
+
+    run(db_driver, "CREATE (:PGMigration {app: 'x', name: '0001_initial', status: 'applied'})")
+    assert await backend.has_data() is False  # (the record is not data)
+
+    run(db_driver, "CREATE (:Person {id: 'a'})")
+    assert await backend.has_data() is True

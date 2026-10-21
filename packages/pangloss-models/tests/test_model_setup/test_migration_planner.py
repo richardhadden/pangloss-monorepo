@@ -436,3 +436,29 @@ def test_what_the_new_wrapper_or_the_embedded_object_has_more_is_asked():
     # the field the old wrapper has not; and what the embedded object has besides the literals
     assert ("ChangeWrapper", "defaults.reason") in asked
     assert ("LiteralsToEmbedded", "defaults.precision") in asked
+
+
+@no_type_check
+def test_the_migrations_of_one_app_come_with_those_of_others_that_they_need(apps):
+    from pangloss_models.migrations.planner import app_of_change, with_what_they_need
+
+    def declare():
+        class Place(Entity):
+            pass
+
+        class Person(Entity):
+            home: Place
+
+        class Thing(Entity):
+            pass
+
+    new = in_app(snapshot_of(declare), Place="appone.models", Person="apptwo.models", Thing="appone.models")
+    result = plan(MigrationGraph(), new, apps)
+    # (apptwo's migration needs appone's, so it cannot be written without it)
+    assert [m.app for m in with_what_they_need(result.migrations, "apptwo")] == ["appone", "apptwo"]
+    # (and appone's needs nothing)
+    assert [m.app for m in with_what_they_need(result.migrations, "appone")] == ["appone"]
+
+    owners = MigrationGraph().owners()
+    where = {ch.model: app_of_change(ch, new, owners, apps) for ch in result.changes if isinstance(ch, c.CreateModel)}
+    assert where == {"Place": "appone", "Thing": "appone", "Person": "apptwo"}

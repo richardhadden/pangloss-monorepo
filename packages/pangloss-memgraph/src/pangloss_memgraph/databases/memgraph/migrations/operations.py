@@ -333,6 +333,59 @@ async def delete_relation(
     )
 
 
+async def delete_relation_batch(tx: Transaction, model: str, field: dict, limit: int) -> int:
+    """`delete_relation`, `limit` at a time: the nodes that `limit` of the relations own (with what
+    they own), then `limit` of the forward edges, then `limit` of the reverse. What is done is no
+    longer there for the next call to find. Returns the most that any of the three did."""
+    pairs = edge_pairs(field)
+    forward = [f for f, _ in pairs]
+    reverse = [r for _, r in pairs]
+    label = ident(model)
+    done = 0
+    if owns_nodes(field):
+        rows = await run(
+            tx,
+            f"""
+            MATCH (n:{label})-[e]->(t)
+            WHERE type(e) IN $forward AND NOT t:Entity AND NOT coalesce(e.reverse, false)
+            WITH t LIMIT {int(limit)}
+            OPTIONAL MATCH (t)-[*BFS (e2, n2 | NOT n2:Entity AND NOT coalesce(e2.reverse, false))]->(d)
+            WITH collect(DISTINCT t) AS tops, collect(DISTINCT d) AS below
+            WITH size(tops) AS handled, tops + [x IN below WHERE x IS NOT NULL] AS owned
+            UNWIND owned AS o
+            DETACH DELETE o
+            RETURN max(handled) AS handled
+            """,
+            forward=forward,
+        )
+        done = max(done, rows[0]["handled"] or 0 if rows else 0)
+        if done >= limit:
+            return done  # (more may be owned: the edges are for a later call)
+    rows = await run(
+        tx,
+        f"MATCH (n:{label})-[e]->() WHERE type(e) IN $forward AND NOT coalesce(e.reverse, false) "
+        f"WITH e LIMIT {int(limit)} DELETE e RETURN count(e) AS n",
+        forward=forward,
+    )
+    done = max(done, rows[0]["n"] if rows else 0)
+    rows = await run(
+        tx,
+        f"MATCH ()-[e]->(n:{label}) WHERE type(e) IN $reverse AND coalesce(e.reverse, false) "
+        f"WITH e LIMIT {int(limit)} DELETE e RETURN count(e) AS n",
+        reverse=reverse,
+    )
+    return max(done, rows[0]["n"] if rows else 0)
+
+
+async def apply_edges(tx: Transaction, change: c.Change, state: dict, limit: int) -> int:
+    """One batch of a change made `"edges"` at a time (see `batch_kind`): how many it did, which
+    is `limit` if there may be more"""
+    if isinstance(change, c.RenameField):
+        return await rename_relation_edges(tx, change, state, limit)
+    assert isinstance(change, c.RemoveField)
+    return await delete_relation_batch(tx, change.model, field_of(state, change.model, change.name), limit)
+
+
 async def remove_field(
     tx: Transaction, change: c.RemoveField, state: dict, window: Window | None = None
 ) -> list[str] | None:
@@ -348,8 +401,12 @@ async def remove_field(
     return None
 
 
-async def rename_edge_type(tx: Transaction, model: str, old: str, new: str, reverse: bool) -> None:
-    """Edge types are replaced, not changed: a new edge with the properties of the old"""
+async def rename_edge_type(
+    tx: Transaction, model: str, old: str, new: str, reverse: bool, limit: int | None = None
+) -> int:
+    """Edge types are replaced, not changed: a new edge with the properties of the old. With a
+    `limit`, that many at most (those done no longer have the old type, so a next call finds the
+    next). Returns how many were renamed."""
     label = ident(model)
     if not reverse:
         pattern = f"(a:{label})-[e:{ident(old)}]->(b)"
@@ -357,10 +414,29 @@ async def rename_edge_type(tx: Transaction, model: str, old: str, new: str, reve
     else:
         pattern = f"(a)-[e:{ident(old)}]->(b:{label})"
         guard = "WHERE coalesce(e.reverse, false)"
-    await run(
+    window = f"WITH a, e, b LIMIT {int(limit)} " if limit else ""
+    rows = await run(
         tx,
-        f"MATCH {pattern} {guard} CREATE (a)-[n:{ident(new)}]->(b) SET n = properties(e) DELETE e",
+        f"MATCH {pattern} {guard} {window}"
+        f"CREATE (a)-[n:{ident(new)}]->(b) SET n = properties(e) DELETE e RETURN count(n) AS renamed",
     )
+    return rows[0]["renamed"] if rows else 0
+
+
+async def rename_relation_edges(
+    tx: Transaction, change: c.RenameField, state: dict, limit: int | None = None
+) -> int:
+    """The edges of a renamed relation (forward and reverse); with a `limit`, that many of each at
+    most. Returns the most of either that were renamed (the same as `limit` if there may be more)."""
+    field = field_of(state, change.model, change.old)
+    renamed = field_of(rename_field(state, change.model, change.old, change.new), change.model, change.new)
+    (old_forward, old_reverse), (new_forward, new_reverse) = edge_pairs(field)[0], edge_pairs(renamed)[0]
+    done = 0
+    if old_forward != new_forward:
+        done = max(done, await rename_edge_type(tx, change.model, old_forward, new_forward, False, limit))
+    if old_reverse != new_reverse:
+        done = max(done, await rename_edge_type(tx, change.model, old_reverse, new_reverse, True, limit))
+    return done
 
 
 async def rename_field_data(
@@ -375,12 +451,7 @@ async def rename_field_data(
             select_nodes(ident(change.model), f"{old} IS NOT NULL", window)
             + f" SET {new} = {old} REMOVE {old}",
         )
-    renamed = field_of(rename_field(state, change.model, change.old, change.new), change.model, change.new)
-    (old_forward, old_reverse), (new_forward, new_reverse) = edge_pairs(field)[0], edge_pairs(renamed)[0]
-    if old_forward != new_forward:
-        await rename_edge_type(tx, change.model, old_forward, new_forward, reverse=False)
-    if old_reverse != new_reverse:
-        await rename_edge_type(tx, change.model, old_reverse, new_reverse, reverse=True)
+    await rename_relation_edges(tx, change, state)
     return None
 
 
@@ -1587,18 +1658,21 @@ WINDOWED_HANDLERS: dict[type, Callable[..., Awaitable[list[str] | None]]] = {
 def batch_kind(change: c.Change, state: dict) -> str | None:
     """How a change can be made in batches, so that a large one is not a single transaction that
     cannot be resumed: `"window"` (the nodes in the order of their ids, a number at a time),
-    `"wrap"` (the relations not yet wrapped, a number at a time), or None (it is made at once).
+    `"wrap"` (the relations not yet wrapped, a number at a time), `"edges"` (the edges, or the nodes
+    they own, not yet renamed or deleted, a number at a time), or None (it is made at once).
     `state` is the snapshot before it."""
     if isinstance(change, c.WrapRelation):
         return "wrap" if change.wrapper_kind == "reifiedRelation" else None
+    if isinstance(change, c.RenameField):
+        field = field_of(state, change.model, change.old)
+        return "window" if field["kind"] in SCALAR_PROPERTY_KINDS else "edges"
     if type(change) not in WINDOWED_HANDLERS:
         return None
     if isinstance(change, c.RemoveField):
+        if change.absorbed:
+            return None
         field = field_of(state, change.model, change.name)
-        return "window" if field["kind"] in SCALAR_PROPERTY_KINDS and not change.absorbed else None
-    if isinstance(change, c.RenameField):
-        field = field_of(state, change.model, change.old)
-        return "window" if field["kind"] in SCALAR_PROPERTY_KINDS else None
+        return "window" if field["kind"] in SCALAR_PROPERTY_KINDS else "edges"
     if isinstance(change, c.AddField):
         field = change.definition
         scalar = field["kind"] in SCALAR_PROPERTY_KINDS
