@@ -133,11 +133,10 @@ before it), each now fixed with a test of its own:
 
 `packages/pangloss-memgraph/tests/test_edit_cycle.py` does the read, edit, send-back and write/read cycle through the real database for the kitchen-sink models.
 
-**An open question the first fix exposes.** `ViaEdge[InRole[Person], Weight]` passes the edge model down to what the
-wrapper is made for, so the wrapper's *targets* need `edgeProperties` as well as the wrapper itself (this was never
-visible, as the targets were dropped). If the intended meaning is the edge from the document to the wrapper only, the
-targets should not have them; that is a change to `build_relation_options`. It is kept as it was, and a test shows
-what it does today.
+**Decided (2026-10-22): the edge model of `ViaEdge[InRole[Person], Weight]` is the relation to the wrapper only.** It used to be
+passed down to the wrapper's targets, so they needed `edgeProperties` too (never visible before the first fix). A wrapper that
+wants properties on its own relations declares them itself (`ViaEdge[...]` on its field). `build_relation_options` no longer
+passes it down.
 
 ## Decisions made (2026-10-22): the `Update` quirks
 

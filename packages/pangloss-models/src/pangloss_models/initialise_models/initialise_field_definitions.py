@@ -198,7 +198,9 @@ def build_relation_options(
                 type_var=type_var,
                 type_var_name=type_var.__name__,
                 type_options=frozenset(
-                    build_relation_options(model, type_arg, edge_model=edge_model)
+                    # (the edge model is the relation to the wrapper's; what the wrapper relates to
+                    # has its own, if the wrapper declares it)
+                    build_relation_options(model, type_arg)
                 ),
             )
             for type_var, type_arg in params_type_args

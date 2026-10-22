@@ -107,8 +107,8 @@ def test_an_edge_variant_of_a_generic_takes_the_edge_properties():
 
     initialise()
 
-    # (the edge model is passed down to what the wrapper is made for, so the targets have the
-    # properties as well: see "Decisions needed" in docs/initialise-models-cleanup.md)
+    # (the edge model is the relation to the wrapper's: its targets have none, unless the wrapper
+    # declares one of its own)
     properties = {"weight": 0.5}
     statement = Statement.Create(
         label="S",
@@ -117,11 +117,12 @@ def test_an_edge_variant_of_a_generic_takes_the_edge_properties():
                 "type": "InRole",
                 "role": "witness",
                 "edgeProperties": properties,
-                "target": [{"type": "Person", "id": uuid7(), "edgeProperties": properties}],
+                "target": [{"type": "Person", "id": uuid7()}],
             }
         ],
     )
     assert statement.witnesses[0].edge_properties.weight == 0.5
+    assert not hasattr(statement.witnesses[0].target[0], "edge_properties")
 
     with pytest.raises(ValidationError):  # (the properties are required)
         Statement.Create(
@@ -130,7 +131,7 @@ def test_an_edge_variant_of_a_generic_takes_the_edge_properties():
                 {
                     "type": "InRole",
                     "role": "witness",
-                    "target": [{"type": "Person", "id": uuid7(), "edgeProperties": properties}],
+                    "target": [{"type": "Person", "id": uuid7()}],
                 }
             ],
         )
