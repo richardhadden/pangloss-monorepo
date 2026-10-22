@@ -88,9 +88,25 @@ How the five models are made is described in [Generated models](generated-models
   often it runs (it accepts both forms), but it should return a value instead. Pinned by the snapshot; not yet changed.
 - **The head view, edit view and reference models** still write `model_fields` directly and share `FieldInfo`
   objects between models (`HeadView` copies `View`'s). Small, and they are not duplicated code.
-- **The models made for a generic are not shared.** Each use of `InRole[Person]` in a relation makes new classes (the
-  snapshot has `...Create#2`, `...Update#2`: two classes with the same name). Only `Update` caches them. Caching all
-  of them would make fewer classes and fewer duplicate names in the OpenAPI, and is a change in what is generated.
+- **The models made for a generic are not shared** (measured 2026-10-22; five runs each, fresh process, laptop). Each
+  use of `InRole[Person]` in a relation makes new classes (the snapshot has `...Create#2`: two classes with one name),
+  and only `Update` caches them. Turning the cache on for every kind (the `cache_generic` field of `ModelKind`) gives:
+
+  | | demo (28 models) | kitchen sink (40 models) |
+  |---|---|---|
+  | generated classes | 200 → 186 | 363 → 313 |
+  | of which share a name with another | 25 → 11 | 68 → 18 |
+  | `initialise()` | 0.238 s → 0.220 s (−7%) | 0.397 s → 0.340 s (−14%) |
+  | memory growth (RSS) | 48.7 → 45.9 MB (−6%) | 81 → 72 MB (−11%) |
+  | OpenAPI schema | 128 KB, 102 schemas, **unchanged** | not measured |
+
+  So the gain is small, and the OpenAPI schema does not change (pydantic already merges the duplicates), which
+  removes the main reason I gave for doing it. It does change what is generated (the snapshot), so it is not worth
+  doing for speed. The duplicates that remain are the same wrapper used with different bindings.
+  Where the time goes: `initialise()` is 75% pydantic's `model_rebuild` (977 calls for 200 generated classes), and more
+  than half of those (520 calls, about 45% of the time) are the two loops at the end of `ModelRegistry._initialise_models`
+  that rebuild every action class again. Whether one of those loops can go has not been tried; it is the only
+  lever of any size. (An earlier figure of 0.9 s was measured under `tracemalloc`, which slows this code about 4×.)
 - **`initialise()` needs settings loaded** (`_bind_database_functions` reads `SETTINGS`) even to make pure models.
 - Type-checker ignore comments (`# type: ignore`, `# pyright: ignore[...]`, `# ty:ignore[...]`) on the same lines:
   the builder has `# type: ignore[...]` with the error named; the rest of the module has the old three.
@@ -126,4 +142,3 @@ These change what clients see. They are kept as named fields of `ModelKind` (mar
 - Whether the database models should carry field descriptions (a wrapper's relation fields do).
 - Whether an `Update` embedded field that is optional because a class `Fulfils` it should default to `None` (now it is
   nullable but required).
-- Whether the models made for generics should be cached for every kind (see "Not done").
