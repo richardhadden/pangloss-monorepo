@@ -138,7 +138,7 @@ def build_list_field_definition(
 
 
 def build_relation_options(
-    model: type[_DeclaredClass],
+    depends_on: set[type[_DeclaredClass]],
     annotation: TRelationFieldDefinitionAnnotation,
     edge_model: type[EdgeModel] | None = None,
 ) -> set[RelationOption]:
@@ -151,7 +151,7 @@ def build_relation_options(
     - Conjunction[T]
     - Document and Entity relations
 
-    Adds dependency records to `model.depends_on_classes`, and returns the
+    Adds the classes the relation depends on to `depends_on` (the model's `_depends_on_classes`), and returns the
     set of Matching `RelationOption` objects for the annotation.
     """
     relation_options = []
@@ -167,7 +167,7 @@ def build_relation_options(
     if isclass(origin) and issubclass(origin, UnionType):
         for union_arg in get_args(annotation):
             relation_options.extend(
-                build_relation_options(model, union_arg, edge_model=edge_model)
+                build_relation_options(depends_on, union_arg, edge_model=edge_model)
             )
 
     if (
@@ -190,7 +190,7 @@ def build_relation_options(
                 and issubclass(t, (_DeclaredClass))
                 and not is_parameterized_generic(t)
             ):
-                model._depends_on_classes.add(t)
+                depends_on.add(t)
 
         type_options = {
             type_var.__name__: ParameterTypeOptions[type[origin]](
@@ -200,14 +200,14 @@ def build_relation_options(
                 type_options=frozenset(
                     # (the edge model is the relation to the wrapper's; what the wrapper relates to
                     # has its own, if the wrapper declares it)
-                    build_relation_options(model, type_arg)
+                    build_relation_options(depends_on, type_arg)
                 ),
             )
             for type_var, type_arg in params_type_args
         }
 
         if issubclass(origin, ReifiedRelation):
-            model._depends_on_classes.add(origin)
+            depends_on.add(origin)
             relation_options.append(
                 RelationToReifiedRelation(
                     annotated_type=annotation,
@@ -217,7 +217,7 @@ def build_relation_options(
                 )
             )
         if issubclass(origin, ReifiedRelationDocument):
-            model._depends_on_classes.add(origin)
+            depends_on.add(origin)
             relation_options.append(
                 RelationToReifiedRelationDocument(
                     annotated_type=annotation,
@@ -227,7 +227,7 @@ def build_relation_options(
                 )
             )
         if issubclass(origin, SemanticSpace):
-            model._depends_on_classes.add(origin)
+            depends_on.add(origin)
             for concrete_semantic_space in get_concrete_types(origin):
                 relation_options.append(
                     RelationToSemanticSpace(
@@ -238,7 +238,7 @@ def build_relation_options(
                     )
                 )
         if issubclass(origin, Conjunction):
-            model._depends_on_classes.add(origin)
+            depends_on.add(origin)
             for concrete_conjunction in get_concrete_types(origin):
                 relation_options.append(
                     RelationToConjunction(
@@ -338,7 +338,7 @@ def build_relatable_field_definition(
         elif isclass(inner):
             model._depends_on_classes.add(inner)
 
-        type_options = build_relation_options(model, inner)
+        type_options = build_relation_options(model._depends_on_classes, inner)
 
     else:
         wrapper = None
@@ -349,7 +349,7 @@ def build_relatable_field_definition(
         else:
             model._depends_on_classes.add(annotation)
 
-        type_options = build_relation_options(model, annotation)
+        type_options = build_relation_options(model._depends_on_classes, annotation)
 
     return RelationFieldDefinition(
         field_name=field_name,
@@ -424,7 +424,7 @@ def get_field_origin_model_and_definition(
         if field_name in getattr(parent_class, "model_fields", {}):
             parents_with_field.append((parent_class, parent_class._meta.fields[field_name]))
 
-    for fulfilled_class in sorted(get_fulfiled_types(model), key=lambda c: c.__qualname__):
+    for fulfilled_class in sorted(get_fulfilled_types(model), key=lambda c: c.__qualname__):
         if field_name in fulfilled_class.model_fields:
             parents_with_field.append((fulfilled_class, fulfilled_class._meta.fields[field_name]))
 
@@ -485,7 +485,9 @@ def normalise_and_get_subclassed_fields(
                         not in field_subclassing.field_on_model.model_fields
                     ):
                         raise PanglossModelError(
-                            f"{model.__name__}.{field_name} is trying to subclass a field ('{field_subclassing}') that does not exist on a parent class"
+                            f"{model.__name__}.{field_name} is trying to subclass a field "
+                            f"('{field_subclassing.field_on_model.__name__}.{field_subclassing.field_name}') "
+                            "that does not exist on a parent class"
                         )
 
                     recursively_add_field_subclassings(
@@ -560,12 +562,12 @@ def fulfilled_types_in_order(model: type[_DeclaredClass]) -> list[type[_Declared
     for parent in model.mro():
         # (each `Fulfils[...]` holds its own classes: not those of `Fulfils`, or of another)
         if isinstance(parent, type) and issubclass(parent, Fulfils):
-            for fulfilled in parent.__dict__.get("_fulfiling_types", ()):
+            for fulfilled in parent.__dict__.get("_fulfilling_types", ()):
                 found.setdefault(fulfilled)
     return list(found)
 
 
-def get_fulfiled_types(model: type[_DeclaredClass]) -> set[type[_DeclaredClass]]:
+def get_fulfilled_types(model: type[_DeclaredClass]) -> set[type[_DeclaredClass]]:
     """Return all types fulfilled by `model` via `Fulfils` parent classes."""
     return set(fulfilled_types_in_order(model))
 
@@ -591,7 +593,7 @@ def get_fields_on_model(model: type[_DeclaredClass]):
     )
 
     for field_name in fulfilled_field_names:
-        if field_name in ("type", "fulfiling_types"):
+        if field_name == "type":
             continue
 
         if field_name in subclassed_fields:

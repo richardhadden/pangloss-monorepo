@@ -14,7 +14,7 @@ import json
 from typing import Any
 
 # Fields every node has, or that are not the model's to give
-SYSTEM_FIELDS = {"type", "label", "fulfiling_types"}
+SYSTEM_FIELDS = {"type", "label"}
 
 
 def required(field: dict[str, Any]) -> bool:

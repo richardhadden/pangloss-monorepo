@@ -309,8 +309,8 @@ def recursively_add_bound_field_values(
             recursively_add_bound_field_values(child_item, binding, value)
 
 
-def build_fulfiled_model[T: _CreateDBBase | _UpdateDBBase](
-    instance: T, fulfiled_classes: list[type[_DeclaredClass]]
+def build_fulfilled_model[T: _CreateDBBase | _UpdateDBBase](
+    instance: T, fulfilled_classes: list[type[_DeclaredClass]]
 ) -> T:
     if isinstance(instance, _CreateDBBase):
         metafunction = "Create"
@@ -318,7 +318,7 @@ def build_fulfiled_model[T: _CreateDBBase | _UpdateDBBase](
         metafunction = "Update"
 
     base_models: list[type[_DeclaredClass]] = [instance._owner]
-    base_models.extend(fulfiled_classes)
+    base_models.extend(fulfilled_classes)
 
     names = [c.__name__ for c in base_models]
 
@@ -327,7 +327,7 @@ def build_fulfiled_model[T: _CreateDBBase | _UpdateDBBase](
     else:
         base_db_models = [m.UpdateDB for m in base_models]  # type: ignore
 
-    new_fulfiled_model = create_model(
+    new_fulfilled_model = create_model(
         f"({','.join(names)}){metafunction}DB",
         __base__=tuple(base_db_models),
         __module__=instance.__class__.__module__,
@@ -338,7 +338,7 @@ def build_fulfiled_model[T: _CreateDBBase | _UpdateDBBase](
 
     fulfillable_models = get_fulfillable_models(instance)
     for fm, fulfilments in fulfillable_models.items():
-        if fm in fulfiled_classes:
+        if fm in fulfilled_classes:
             for f in fulfilments:
                 fulfilled_fields[f.field_on_class_to_fulfil] = getattr(
                     fm, f"{metafunction}DB"
@@ -354,17 +354,17 @@ def build_fulfiled_model[T: _CreateDBBase | _UpdateDBBase](
         **instance_fields,
     }
     for field_name, field_info in all_new_fields.items():
-        new_fulfiled_model.model_fields[field_name] = field_info
+        new_fulfilled_model.model_fields[field_name] = field_info
 
     ## can't just duplicate fields because because...
     # relations might be pointing some kind of new Create object...
     # unless that's ... already assigned an ID?
 
-    new_fulfiled_model.model_rebuild(force=True)
+    new_fulfilled_model.model_rebuild(force=True)
 
     # TODO: find a way to copy _meta fields...
 
-    new_instance = new_fulfiled_model(**fulfilled_data)
+    new_instance = new_fulfilled_model(**fulfilled_data)
 
     return new_instance
 
@@ -376,7 +376,7 @@ class _CreateBase(_ActionClass):
         recursively_propagate_context_types(db_model_instance, [], [], None)
 
         if db_model_instance._fulfils_classes:
-            return build_fulfiled_model(
+            return build_fulfilled_model(
                 db_model_instance, db_model_instance._fulfils_classes
             )
 
@@ -481,7 +481,7 @@ def get_fulfillable_models(self):
 def get_fulfilled_classes(self, metafunction: Literal["Update", "Create"]):
     model_fulfilments = get_fulfillable_models(self)
 
-    models_fulfiled = []
+    models_fulfilled = []
     for model_to_fulfil_base, fulfilments in model_fulfilments.items():
         if metafunction == "Update":
             model_to_fulfil: type[_UpdateDBBase | _CreateDBBase] = (
@@ -499,11 +499,11 @@ def get_fulfilled_classes(self, metafunction: Literal["Update", "Create"]):
             )
         try:
             model_to_fulfil(**data, type=model_to_fulfil_base.__name__)
-            models_fulfiled.append(model_to_fulfil_base)
+            models_fulfilled.append(model_to_fulfil_base)
         except ValidationError:
             pass
 
-    return models_fulfiled
+    return models_fulfilled
 
 
 class _CreateDBBase(_ActionClass):

@@ -2011,7 +2011,7 @@ def test_field_required_to_fulfil_subclassed_field():
 
     assert "wpp_person" not in Action._meta.fields
     assert "type" not in Action._meta.fields
-    assert "_fulfiling_types" not in Action._meta.fields
+    assert "_fulfilling_types" not in Action._meta.fields
 
 
 def test_field_required_to_fulfil_subclassed_field_through_parent_fulfilment():
@@ -2071,7 +2071,7 @@ def test_field_required_to_fulfil_subclassed_field_through_parent_fulfilment():
 
     assert "wpp_person" not in Action._meta.fields
     assert "type" not in Action._meta.fields
-    assert "_fulfiling_types" not in Action._meta.fields
+    assert "_fulfilling_types" not in Action._meta.fields
 
 
 def test_relation_to_trait():

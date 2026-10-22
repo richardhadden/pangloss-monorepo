@@ -59,11 +59,9 @@ Items below marked `[x]` are fixed (with a test); `[x] not a bug` were suspected
   literal field gives an `AssertionError` (and nothing under `python -O`), not a `PanglossModelError`. The same
   `assert`-as-validation is in `build_list_field_definition`, which then catches `AssertionError` to turn it into a
   generic message (this would hide a real assertion error from elsewhere in the `try`). **Fixed.**
-- [ ] **(suspected) A relation field that ends with no usable types** (`get_relation_annotation_types` returns
-  `None`) and is optional makes `Union[None, None]`, i.e. a field of type `None`, and it is created silently.
-- [ ] **(suspected) `CreateDB` literals that are optional get `default=None` but a non-optional annotation**
-  (`Create` and `View` use `X | None`). Harmless at runtime (defaults are not validated), but the schema and type
-  hints disagree.
+- [x] **(checked 2026-10-22) A relation field that ends with no usable types** is left out of the model (`builder.py`, `if annotation is None: continue`), not made a field of type `None`. Whether it should be an error is open.
+- [ ] **(confirmed, a decision) `CreateDB` literals that are optional get `default=None` but a non-optional annotation**
+  (`Create` and `View` use `X | None`). Harmless at runtime, but the schema and type hints disagree. Listed under "Decisions needed" in `docs/initialise-models-cleanup.md`.
 - [x] **(confirmed 2026-10-22) An entity reached only through a `SemanticSpace` or `Conjunction` has no reverse relation.**
   Tested on the real database, with `Plain.direct: Person`, `ViaReified.reified: InRole[Person]`,
   `ViaSpace.spaced: Negative[Person]` and `ViaSpaceReified.both: Negative[InRole[Person]]`: all four documents are
@@ -86,11 +84,7 @@ Items below marked `[x]` are fixed (with a test); `[x] not a bug` were suspected
   it is not cleared by `ModelRegistry._reset()` (check), so models from an earlier registry can be reused. Key by
   the tuple `(model, bindings)` and clear it in `_reset`. Same for the `@cache` on
   `build_generic_update_model_from_type_option`. **Fixed.**
-- [ ] **Writes to `Model.model_fields[...]` directly, then `model_rebuild(force=True)`**, everywhere (65
-  places). It works with the pydantic in use but is not a public API. The comment "for some reason, we need to
-  manually add all the fields from the Generic unbound type" is a sign it is being fought. At minimum put it in
-  one helper (`set_field(model, name, FieldInfo)`) so a pydantic change has one place to fix; better, build the
-  fields as `create_model(**field_definitions)` once.
+- [x] **Writes to `Model.model_fields[...]` directly** now go through `set_field` (`builder.py`): one place to change if pydantic does.
 - [ ] **`FieldInfo` objects are shared between models** (`HeadView`/`EditView` copy `View`'s `FieldInfo`s), and
   the code later sets `.default` / `.default_factory` on `FieldInfo`s it has just put in. A later mutation would
   leak between models. Copy (`copy.copy`) when sharing.
@@ -165,17 +159,8 @@ Items below marked `[x]` are fixed (with a test); `[x] not a bug` were suspected
   field category, returning the definition), and put the "wrapper with a TypeVar" cases in their own function. **Done.**
 - [x] `build_relatable_field_definition` makes the same `RelationFieldDefinition(...)` in four branches that
   differ in three arguments. One construction, with the branches computing `type_options` and `wrapper`. **Done.**
-- [ ] Functions called `build_*` / `get_*` that **mutate the model** (`model._depends_on_classes.add(...)` inside
-  `build_relation_options` and `build_relatable_field_definition`; docstrings say `model.depends_on_classes`, the
-  attribute is `_depends_on_classes`). Return the dependencies and let the caller record them.
-- [ ] Small: `initalise_incoming_relation_definitions.py` (typo in the file name); "fulfiled"/"fulfilling" spelled
-  both ways (`get_fulfiled_types`, `_fulfiling_types`, a magic `"fulfiling_types"` skipped by name in
-  `get_fields_on_model`); the loop variable `type_option` is shadowed inside `recurse_embedded_for_incoming` and
-  the match capture `parameter_type_options` rebinds the loop variable in `recursive_get_target_of_reified`;
-  `getattr(model._meta, "create_with_id", False)` / `getattr(..., "require_label", True)` hide a typo in an
-  option name (the meta classes declare them); error messages print class objects (`{spf.field_on_model}`) instead
-  of names; three type checkers' ignore comments (`# type: ignore`, `# pyright: ignore[...]`, `# ty:ignore[...]`)
-  on the same lines; `label` is added last to `Create`/`View`, so appears last in the schema.
+- [x] `build_relation_options` no longer takes the model: it adds to the set it is given (`depends_on`), and says so. (`build_relatable_field_definition` still records into `model._depends_on_classes`.)
+- [x] Small, done 2026-10-22: "fulfiled"/"fulfiling" spelled one way (`fulfilled`, `fulfilling`), and the dead `"fulfiling_types"` field name no longer skipped by name; the `initalise_` file name and the shadowed loop variables had been fixed already; the error for a subclassed field that does not exist names `Class.field`. Left: the `getattr(model._meta, "create_with_id" / "require_label", ...)` calls are needed, as not every meta class declares them; three type checkers' ignore comments on the same lines; `label` is added last to `Create`/`View`, so appears last in the schema.
 
 ### Tests that are missing (from the line trace)
 
