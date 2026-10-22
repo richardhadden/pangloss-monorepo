@@ -107,15 +107,17 @@ def test_an_edge_variant_of_a_generic_takes_the_edge_properties():
 
     initialise()
 
-    person = Person.Create(label="P").model_dump()  # (only to have a type to refer to)
+    # (the edge model is passed down to what the wrapper is made for, so the targets have the
+    # properties as well: see "Decisions needed" in docs/initialise-models-cleanup.md)
+    properties = {"weight": 0.5}
     statement = Statement.Create(
         label="S",
         witnesses=[
             {
                 "type": "InRole",
                 "role": "witness",
-                "edgeProperties": {"weight": 0.5},
-                "target": [{"type": "Person", "id": uuid7()}],
+                "edgeProperties": properties,
+                "target": [{"type": "Person", "id": uuid7(), "edgeProperties": properties}],
             }
         ],
     )
@@ -128,7 +130,7 @@ def test_an_edge_variant_of_a_generic_takes_the_edge_properties():
                 {
                     "type": "InRole",
                     "role": "witness",
-                    "target": [{"type": "Person", "id": uuid7()}],
+                    "target": [{"type": "Person", "id": uuid7(), "edgeProperties": properties}],
                 }
             ],
         )
@@ -167,6 +169,266 @@ def test_a_generic_inside_a_generic_with_an_edge_model_has_only_the_edge_variant
         roles = {n for n in inner if n.startswith("InRole[")}
         assert roles, inner
         assert all("ViaWeight" in n for n in roles), roles
+
+
+# --- Models with no label --------------------------------------------------------------------------
+
+
+@no_type_check
+def test_a_document_that_requires_no_label_has_no_label_to_refer_to_it_by():
+    """The model that refers to a document when it has been written or is listed (`ReferenceView`) cannot
+    require a label of one that has none (saving one failed: `NoteReferenceView label: Field required`).
+    (Only documents have the option: an entity always has a label.)"""
+
+    class Thing(Document):
+        _meta = Document.Meta(require_label=False)
+        text: str
+
+    class Labelled(Document):
+        text: str
+
+    initialise()
+
+    thing = Thing.ReferenceView(id=uuid7(), type="Thing")
+    assert thing.label is None
+    assert not Thing.ReferenceView.model_fields["label"].is_required()
+    assert Labelled.ReferenceView.model_fields["label"].is_required()  # (the others, as ever)
+
+
+# --- Conversion for writing ------------------------------------------------------------------------
+
+
+@no_type_check
+def test_a_fulfilling_class_with_a_relation_to_an_entity_that_can_be_named_can_be_written():
+    """`ensure_id` of the database model of an entity was given a model, not a dict, when a union tried
+    the entity itself (`create_inline`) on a reference to it: `AttributeError: ... has no attribute
+    'get'`, which pydantic does not take as that member not fitting"""
+
+    class Person(Entity):
+        _meta = Entity.Meta(create_with_id=True, create_inline=True)
+
+    class Office(Entity):
+        pass
+
+    class Appointment(Document):
+        holder: Person
+        office: Office
+
+    class Grant(Document, Fulfils[Appointment]):
+        granted_by: Annotated[
+            Person,
+            RelationConfig(
+                subclasses_parent_fields=[FieldSubclassing("holder", field_on_model=Appointment)]
+            ),
+        ]
+
+    initialise()
+
+    person, office = uuid7(), uuid7()
+    grant = Grant.Create(
+        label="G",
+        granted_by={"type": "Person", "id": person},
+        office={"type": "Office", "id": office},
+    )
+    written = grant._to_db_model()
+    assert written.granted_by.id == person
+    assert written.office.id == office
+
+
+# --- A class that can be given an id may be created without one ----------------------------------
+
+
+@pytest.mark.parametrize("kind", [Entity, Document])
+@no_type_check
+def test_a_class_that_can_be_given_an_id_can_be_created_without_one(kind):
+    """`create_with_id` allows an id to be given (with `create_new`); it does not require one. A new one
+    that was made without an id could not be written: its database model made an id and then
+    refused it, as an id without `create_new`"""
+
+    class Thing(kind):
+        _meta = kind.Meta(create_with_id=True)
+
+    initialise()
+
+    created = Thing.Create(label="T")
+    assert created.id is None
+
+    written = created._to_db_model()
+    assert isinstance(written, Thing.CreateDB)
+    assert written.id is not None
+
+    # (with an id, as before: the two go together)
+    named = Thing.Create(label="T", id=uuid7(), create_new=True)._to_db_model()
+    assert named.create_new is True
+    with pytest.raises(ValidationError):
+        Thing.Create(label="T", id=uuid7())
+
+
+@no_type_check
+def test_the_database_model_of_a_new_thing_has_create_new_when_it_makes_the_id():
+    class Thing(Entity):
+        _meta = Entity.Meta(create_with_id=True)
+
+    initialise()
+
+    assert Thing.CreateDB(label="T").create_new is True
+    assert Thing.CreateDB(label="T", createNew=True).create_new is True
+    with pytest.raises(ValidationError, match="create_new=True flag must also be set"):
+        Thing.CreateDB(label="T", id=uuid7())
+
+
+# --- Edge models on relations to documents and wrappers -----------------------------------------
+
+
+@pytest.mark.parametrize("model", ACTION_MODELS)
+@no_type_check
+def test_an_edge_variant_has_all_the_fields_of_what_it_is_a_variant_of(model):
+    """`ViaEdge[Note, Weight]` and `ViaEdge[InRole[Person], Weight]` offer the document or wrapper with
+    the edge's properties added: nothing of the document or wrapper is lost. (The variant had only
+    `type` and `edge_properties`, so a note's label and text, and a wrapper's role and targets, were
+    silently left out of what was written.)"""
+
+    class Weight(EdgeModel):
+        weight: float
+
+    class Person(Entity):
+        pass
+
+    class InRole[T](ReifiedRelation[T]):
+        role: str
+
+    class Note(Document):
+        text: str
+
+    class Activity(Document):
+        witnesses: list[ViaEdge[InRole[Person], Weight]]
+        notes: list[ViaEdge[Note, Weight]]
+
+    initialise()
+
+    fields = getattr(Activity, model).model_fields
+    for field, expected in (("witnesses", {"role", "target"}), ("notes", {"label", "text"})):
+        variants = [
+            c for c in classes_in(fields[field].annotation) if c.__name__.endswith("ViaWeight")
+        ]
+        assert variants, field
+        for variant in variants:
+            assert "edge_properties" in variant.model_fields
+            missing = (expected & set(getattr(variant, "__base__").model_fields)) - set(
+                variant.model_fields
+            )
+            assert not missing, (variant.__name__, missing)
+            # (at least, what the document or wrapper itself has)
+            assert expected - {"label"} <= set(variant.model_fields), (variant.__name__, field)
+
+
+@no_type_check
+def test_what_is_given_for_a_relation_with_an_edge_model_is_kept():
+    class Weight(EdgeModel):
+        weight: float
+
+    class Person(Entity):
+        pass
+
+    class InRole[T](ReifiedRelation[T]):
+        role: str
+
+    class Note(Document):
+        text: str
+
+    class Activity(Document):
+        witnesses: list[ViaEdge[InRole[Person], Weight]]
+        notes: list[ViaEdge[Note, Weight]]
+
+    initialise()
+
+    person_id = uuid7()
+    activity = Activity.Create(
+        label="A",
+        witnesses=[
+            {
+                "type": "InRole",
+                "role": "witness",
+                "target": [
+                    {"type": "Person", "id": person_id, "edgeProperties": {"weight": 0.5}}
+                ],
+                "edgeProperties": {"weight": 0.5},
+            }
+        ],
+        notes=[{"type": "Note", "label": "N", "text": "the text", "edgeProperties": {"weight": 0.9}}],
+    )
+
+    witness, note = activity.witnesses[0], activity.notes[0]
+    assert witness.role == "witness"
+    assert [t.id for t in witness.target] == [person_id]
+    assert witness.edge_properties.weight == 0.5
+    assert (note.label, note.text, note.edge_properties.weight) == ("N", "the text", 0.9)
+
+    # ... and in what is written
+    written = activity._to_db_model()
+    assert written.witnesses[0].role == "witness"
+    assert [t.id for t in written.witnesses[0].target] == [person_id]
+    assert written.notes[0].text == "the text"
+
+    # (a required part is still required)
+    with pytest.raises(ValidationError):
+        Activity.Create(
+            label="A",
+            witnesses=[],
+            notes=[{"type": "Note", "label": "N", "edgeProperties": {"weight": 0.9}}],
+        )
+
+
+@no_type_check
+def test_a_binding_goes_through_a_relation_with_an_edge_model():
+    """(this raised `AttributeError: ... has no attribute 'target'`: the variant had no `target`)"""
+
+    class Weight(EdgeModel):
+        weight: float
+
+    class Person(Entity):
+        pass
+
+    class InRole[T](ReifiedRelation[T]):
+        role: str
+
+    class Activity(Document):
+        year: int
+        witnesses: list[ViaEdge[InRole[Person], Weight]]
+
+    class Factoid(Document):
+        year: int
+        activities: Annotated[
+            list[Activity],
+            RelationConfig(
+                bind_to_child_field=[FieldBinding(bound_field="year", child_fields=["year"])]
+            ),
+        ]
+
+    initialise()
+
+    factoid = Factoid.Create(
+        label="F",
+        year=1500,
+        activities=[
+            {
+                "type": "Activity",
+                "label": "A",
+                "witnesses": [
+                    {
+                        "type": "InRole",
+                        "role": "witness",
+                        "target": [
+                            {"type": "Person", "id": uuid7(), "edgeProperties": {"weight": 0.5}}
+                        ],
+                        "edgeProperties": {"weight": 0.5},
+                    }
+                ],
+            }
+        ],
+    )
+    assert factoid.activities[0].year == 1500
+    assert factoid.activities[0].witnesses[0].role == "witness"
 
 
 # --- Incoming relations ----------------------------------------------------------------------------

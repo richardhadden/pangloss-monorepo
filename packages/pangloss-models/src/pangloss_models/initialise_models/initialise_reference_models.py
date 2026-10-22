@@ -98,7 +98,8 @@ def initialise_reference_view_model(model: type[_DeclaredClass]):
         type=(Literal[type_name], type_name),  # type: ignore
         __doc__=model._meta.description if model._meta.description else "",
         id=id_type,
-        label=str,
+        # (a thing that requires no label may have none)
+        label=str if getattr(model._meta, "require_label", True) else (str | None, None),
     )  # pyright: ignore[reportAttributeAccessIssue]
 
     for field_name in model._meta.reference_view_extra_fields:

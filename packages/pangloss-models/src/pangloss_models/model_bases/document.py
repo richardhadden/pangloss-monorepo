@@ -1,7 +1,7 @@
 import datetime
 from collections.abc import Awaitable, Callable
 from typing import Annotated, Any, ClassVar, Self
-from uuid import UUID, uuid7
+from uuid import UUID
 
 from pydantic import AnyHttpUrl, ConfigDict, Field, field_validator, model_validator
 from pydantic_meta_kit import BaseMeta, InheritValue, MetaRules, WithMeta
@@ -12,6 +12,7 @@ from pangloss_models.field_definitions import (
     ModelFields,
 )
 from pangloss_models.model_bases.base_models import (
+    make_id,
     ContextLabel,
     DeclaredClassMeta,
     _BaseObject,
@@ -60,8 +61,8 @@ class _DocumentCreateDBBase(_CreateDBBase):
     @model_validator(mode="before")
     @classmethod
     def ensure_id(cls, data: Any) -> Any:
-        if not data.get("id", None):
-            data["id"] = uuid7()
+        if isinstance(data, dict) and not data.get("id", None):
+            make_id(cls, data)
         return data
 
 

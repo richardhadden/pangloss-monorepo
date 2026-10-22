@@ -12,6 +12,7 @@ from pangloss_models.field_definitions import (
     ModelFields,
 )
 from pangloss_models.model_bases.base_models import (
+    make_id,
     DeclaredClassMeta,
     _CreateBase,
     _CreateDBBase,
@@ -69,7 +70,9 @@ class _EntityCreateDBBase(_CreateDBBase):
     @classmethod
     def ensure_id(cls, data: Any) -> Any:
         """If provided with a URL as id, pass the url to the urls field and replace with UUID;
-        otherwise, generate a UUID"""
+        otherwise, generate a UUID. (Anything but a dict is for another member of a union to take.)"""
+        if not isinstance(data, dict):
+            return data
 
         if (id_value := data.get("id", None)) and isinstance(id_value, AnyHttpUrl):
             data["id"] = uuid7()
@@ -79,7 +82,7 @@ class _EntityCreateDBBase(_CreateDBBase):
                 data["urls"].add(id_value)
 
         if not data.get("id", None):
-            data["id"] = uuid7()
+            make_id(cls, data)
         return data
 
 

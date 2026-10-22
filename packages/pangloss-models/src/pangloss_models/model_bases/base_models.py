@@ -2,7 +2,7 @@ import datetime
 import warnings
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from copy import copy, deepcopy
+from copy import copy
 from functools import cache
 from typing import (
     TYPE_CHECKING,
@@ -172,6 +172,34 @@ def fulfillable_labels(self) -> set[str]:
     return found
 
 
+def inherit_fields(model: type[BaseModel], base: type[BaseModel]) -> None:
+    """Give `model` the fields of `base` that it lacks.
+
+    The models that are made for a declared model are given most of their fields after they are made,
+    by putting them in `model_fields`. A model made from one of them afterwards (the variant with an edge
+    model) does not take those fields: pydantic finds the fields of a subclass from the annotations of
+    its bases. Without this, `ViaEdge[Note, Weight]` offered a model with only `type` and `edge_properties`,
+    and the note's own fields were silently left out."""
+    changed = False
+    for name, field in base.model_fields.items():
+        if name not in model.model_fields:
+            model.model_fields[name] = copy(field)
+            changed = True
+    if changed:
+        model.model_rebuild(force=True)
+
+
+def make_id(model: type[BaseModel], data: dict[str, Any]) -> None:
+    """Give a thing that is to be written the id it does not have yet.
+
+    An id that is made now is a new thing's, so for a class that can be given an id (`create_with_id`)
+    `create_new` goes with it: an id without it is refused, which made it impossible to write one that
+    had been created without an id."""
+    data["id"] = uuid7()
+    if "create_new" in model.model_fields:
+        data["create_new"] = True
+
+
 class _ActionClass(_BaseObject):
     _owner: ClassVar[type[_DeclaredClass]]
     _meta: ClassVar = MetaGetter[type[Self]]()
@@ -210,6 +238,7 @@ class _ActionClass(_BaseObject):
             __base__=cls,
             edge_properties=edge_model,
         )
+        inherit_fields(model, cls)
         cls._via[edge_model.__name__] = model
         return model
 
@@ -490,9 +519,9 @@ class _CreateDBBase(_ActionClass):
     @model_validator(mode="before")
     @classmethod
     def ensure_id(cls, data: Any) -> Any:
-        """Create an ID for writing in advance;"""
-        if not data.get("id", None):
-            data["id"] = uuid7()
+        """Create an ID for writing in advance"""
+        if isinstance(data, dict) and not data.get("id", None):
+            make_id(cls, data)
         return data
 
     def __init__(self, **kwargs):

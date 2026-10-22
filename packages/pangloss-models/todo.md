@@ -201,10 +201,10 @@ These were code that **no test reached**. Done ones are marked; the snapshot (`t
   Trait with a Document implementation as a relation target; an `AnnotatedValue` with a relation (the error); an
   invalid `list[...]` literal field (the `AssertionError` path). **Done.**
 - [x] **`require_label=False`** for `HeadView` (only reached in the other models). **Done.**
-- [ ] **Properties, not lines:** the tests assert on the shape of the generated models for chosen cases. Add
+- [x] **Properties, not lines:** the tests assert on the shape of the generated models for chosen cases. Add
   a property test over the registry: for every model kind, `Create(...)` accepts what `View` returns for the same
   data (round trip), the JSON schema is valid, and `initialise()` of the same classes in a different declaration
-  order gives the same schemas. **Not done: still wanted (a round trip `View` to `Create`).**
+  order gives the same schemas.  **Done, in part (2026-10-22):** `test_cross_kind_properties.py` (samples from the field definitions; Create, Update, conversions for writing, aliases, field agreement, nothing lost). It found three older bugs (see docs/initialise-models-cleanup.md). The read-edit-send-back and write/read cycle through the real database is `pangloss-memgraph/tests/test_edit_cycle.py`.
 - [ ] A **line-coverage run in CI.** `coverage` needs a Python it supports (or the `sys.monitoring` tracer used
   here, `COVERAGE_CORE=sysmon`, once `coverage` installs on 3.15); then fail below a floor for
   `initialise_models/`. **Not done.**

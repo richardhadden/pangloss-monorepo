@@ -55,6 +55,7 @@ lazy from pangloss_models.initialise_models.initialise_view_model import (
 lazy from pangloss_models.model_bases.base_models import (
     _ActionClass,
     _DeclaredClass,
+    inherit_fields,
 )
 lazy from pangloss_models.model_bases.document import (
     Document,
@@ -344,6 +345,12 @@ class ModelRegistry:
                 initialise_head_view_model(model)
             if can_have_edit_view_model(model):
                 initialise_edit_view_model(model)
+
+        # The variants with an edge model were made when their base had the fields it had then:
+        # give them the ones it was given since
+        for action_class in list(cls._action_classes):
+            for variant in action_class._via.values():
+                inherit_fields(variant, action_class)
 
         # The fields added to the models above have to be given their camelCase
         # aliases (the `alias_generator` of the models only sees the fields they are

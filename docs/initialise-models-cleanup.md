@@ -15,9 +15,9 @@ the copying.
 | | Before | After |
 |---|---|---|
 | The five builders | 5 modules, 2,907 lines | `builder.py` (one implementation, about 440 lines), `kinds.py` (what differs, as data), `common.py`, and five 10 to 30 line entry points |
-| Tests (all packages) | 1,220 passing, 17 expected to fail | 1,235 passing, none expected to fail |
+| Tests (all packages) | 1,220 passing, 17 expected to fail | 1,271 passing, none expected to fail |
 | Line coverage of `initialise_models/` | 79% | 93%, of a module less than half the size |
-| Known bugs | 10 | 0 (see below) |
+| Known bugs | 14 | 0 (see below) |
 | `model_fields` written directly | 65 places | one function in `builder.py` (`set_field`), and the head and edit views |
 
 ## How it was done
@@ -112,6 +112,31 @@ How the five models are made is described in [Generated models](generated-models
   the builder has `# type: ignore[...]` with the error named; the rest of the module has the old three.
 - Field and relation analysis in `initialise_field_definitions.py` (`build_relation_options`) is unchanged, apart
   from the fixes above.
+
+## Found by the cross-kind property tests (2026-10-22)
+
+`test_cross_kind_properties.py` gives every model of the kitchen sink four samples made from its field definitions
+(`sample_data.py`; they reach different members of each union) and checks what must hold between the five models:
+every sample is accepted by `Create`; with an id, by `Update`; both convert for writing (`CreateDB`, `UpdateDB`) and
+keep their values; a model survives a round trip through its `camelCase` aliases; the models have the same fields and
+agree on which are required; and **nothing that was given is lost** at any depth (a key not among a model's fields is
+ignored when it is made, silently). It found four bugs, all older than the cleanup (checked against the code from
+before it), each now fixed with a test of its own:
+
+| Bug | Effect | Fix |
+|---|---|---|
+| **A relation with an edge model to a document or a wrapper dropped the document's or wrapper's own fields.** The variant made by `apply_edge_model` (`...ViaWeight`) had only `type` and `edge_properties`, because fields put on a model after it is made are not inherited by a subclass made afterwards | `ViaEdge[Note, Weight]` lost the note's label and text; `ViaEdge[InRole[Person], Weight]` lost the role and the targets. In `Create`, in `CreateDB` (what is written), and in `View`. With bindings, validation crashed (`AttributeError: ... no attribute 'target'`). Only edges to *entities* worked, which is all the demo uses | `apply_edge_model` gives the variant the fields it lacks (`inherit_fields`), and the registry does it again for all variants once everything is built |
+| **A class with `create_with_id=True` could not be written without an id** (`If an id is provided to PersonCreateDB, the create_new=True flag must also be set`): `Create` allows no id, but the database model made one and then refused it | any `Entity`/`Document` with `create_with_id` saved the normal way, and a nested one given no id | an id that is made is a new thing's: `create_new` is set with it (`make_id`, one function for the three copies of `ensure_id`) |
+| **A `Fulfils` class with a relation to an entity that has `create_inline` could not be written** (`AttributeError: 'PersonReferenceSet' object has no attribute 'get'`): `ensure_id` assumed a dict, and a union tries each member on a reference | such a class's `_to_db_model()` | `ensure_id` leaves anything but a dict to the other members of the union |
+| **A `Document` with `require_label=False` could not be saved**: the generated `ReferenceView.label` was required | saving or reading back such a document | `ReferenceView.label` is optional when the label is not required |
+
+`packages/pangloss-memgraph/tests/test_edit_cycle.py` does the read, edit, send-back and write/read cycle through the real database for the kitchen-sink models.
+
+**An open question the first fix exposes.** `ViaEdge[InRole[Person], Weight]` passes the edge model down to what the
+wrapper is made for, so the wrapper's *targets* need `edgeProperties` as well as the wrapper itself (this was never
+visible, as the targets were dropped). If the intended meaning is the edge from the document to the wrapper only, the
+targets should not have them; that is a change to `build_relation_options`. It is kept as it was, and a test shows
+what it does today.
 
 ## Decisions made (2026-10-22): the `Update` quirks
 

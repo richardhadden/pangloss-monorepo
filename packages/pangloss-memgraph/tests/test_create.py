@@ -126,6 +126,56 @@ async def test_write_entity(clear_database):
 
 
 @no_type_check
+async def test_write_entity_that_can_be_given_an_id_without_one(clear_database):
+    """`create_with_id` allows an id to be given; it does not require one"""
+
+    class Person(Entity):
+        _meta = Entity.Meta(create_with_id=True, create_inline=True)
+
+    class Note(Document):
+        _meta = Document.Meta(create_with_id=True)
+        text: str
+
+    initialise()
+
+    person = await Person.Create(label="John Smith").save()
+    note = await Note.Create(label="A note", text="t").save()
+
+    assert person.id and note.id
+    assert (await Person.get(id=person.id)).label == "John Smith"
+    assert (await Note.get(id=note.id)).text == "t"
+
+    # (and with an id of its own, as before)
+    named = await Person.Create(label="Jane Doe", id=uuid7(), create_new=True).save()
+    assert (await Person.get(id=named.id)).label == "Jane Doe"
+
+
+@no_type_check
+async def test_write_and_read_a_document_that_requires_no_label(clear_database):
+    class Note(Document):
+        _meta = Document.Meta(require_label=False)
+        text: str
+
+    class Statement(Document):
+        text: str
+        note: Note
+
+    initialise()
+
+    note = await Note.Create(text="t").save()  # (this failed: its reference view needed a label)
+    assert note.id and note.label is None
+
+    read = await Note.get(id=note.id)
+    assert read.text == "t" and not hasattr(read, "label")
+    assert [n.id for n in (await Note.list()).results] == [note.id]
+
+    statement = await Statement.Create(
+        label="S", text="s", note={"type": "Note", "text": "nested"}
+    ).save()
+    assert (await Statement.get(id=statement.id)).note.text == "nested"
+
+
+@no_type_check
 async def test_write_existing_related_entity(db_driver, clear_database):
     class Person(Entity):
         pass

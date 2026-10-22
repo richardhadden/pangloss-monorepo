@@ -1280,7 +1280,7 @@
      ]
     },
     "db_flag": {
-     "annotated_type": "bool",
+     "annotated_type": "None | bool",
      "db_field": true,
      "description": null,
      "field_on_model": "Person",
@@ -11730,6 +11730,65 @@
    ],
    "owner": "Group"
   },
+  "GroupReferenceSetViaWeight": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "GroupReferenceSet"
+   ],
+   "doc": null,
+   "field_validators": [],
+   "fields": {
+    "edge_properties": {
+     "alias": "edgeProperties",
+     "annotation": "Weight",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'edgeProperties'"
+    },
+    "id": {
+     "alias": "id",
+     "annotation": "AnyHttpUrl | UUID",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'id'"
+    },
+    "label": {
+     "alias": "label",
+     "annotation": "None | str",
+     "default": "None",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'label'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['Group']",
+     "default": "'Group'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "remove_label"
+   ],
+   "owner": "Group"
+  },
   "GroupReferenceViewViaCertainty": {
    "alias_generator": "to_camel",
    "bases": [
@@ -11741,6 +11800,63 @@
     "edge_properties": {
      "alias": "edgeProperties",
      "annotation": "Certainty",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'edgeProperties'"
+    },
+    "id": {
+     "alias": "id",
+     "annotation": "UUID",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'id'"
+    },
+    "label": {
+     "alias": "label",
+     "annotation": "str",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'label'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['Group']",
+     "default": "'Group'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [],
+   "owner": "Group"
+  },
+  "GroupReferenceViewViaWeight": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "GroupReferenceView"
+   ],
+   "doc": null,
+   "field_validators": [],
+   "fields": {
+    "edge_properties": {
+     "alias": "edgeProperties",
+     "annotation": "Weight",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -14620,6 +14736,17 @@
      "required": true,
      "validation_alias": "'id'"
     },
+    "role": {
+     "alias": null,
+     "annotation": "Role",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'role'"
+    },
     "semantic_spaces": {
      "alias": "semanticSpaces",
      "annotation": "list[str]",
@@ -14630,6 +14757,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'semanticSpaces'"
+    },
+    "target": {
+     "alias": null,
+     "annotation": "list[Annotated[GroupReferenceSetViaWeight | PersonCreateDBViaWeight > PersonReferenceSetViaWeight; Field()]]",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'target'"
     },
     "type": {
      "alias": "type",
@@ -14690,6 +14828,17 @@
      "required": true,
      "validation_alias": "'id'"
     },
+    "role": {
+     "alias": null,
+     "annotation": "Role",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'role'"
+    },
     "semantic_spaces": {
      "alias": "semanticSpaces",
      "annotation": "list[str]",
@@ -14700,6 +14849,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'semanticSpaces'"
+    },
+    "target": {
+     "alias": null,
+     "annotation": "list[Annotated[GroupReferenceSetViaWeight | PersonCreateDBViaWeight > PersonReferenceSetViaWeight; Field()]]",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'target'"
     },
     "type": {
      "alias": "type",
@@ -14738,6 +14898,28 @@
      "required": true,
      "validation_alias": "'edgeProperties'"
     },
+    "role": {
+     "alias": null,
+     "annotation": "Role",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'role'"
+    },
+    "target": {
+     "alias": null,
+     "annotation": "list[Annotated[GroupReferenceSetViaWeight | PersonReferenceSetViaWeight > PersonCreateViaWeight; Field()]]",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'target'"
+    },
     "type": {
      "alias": "type",
      "annotation": "Literal['InRole']",
@@ -14774,6 +14956,28 @@
      "metadata": [],
      "required": true,
      "validation_alias": "'edgeProperties'"
+    },
+    "role": {
+     "alias": null,
+     "annotation": "Role",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'role'"
+    },
+    "target": {
+     "alias": null,
+     "annotation": "list[Annotated[GroupReferenceSetViaWeight | PersonReferenceSetViaWeight > PersonCreateViaWeight; Field()]]",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'target'"
     },
     "type": {
      "alias": "type",
@@ -14908,6 +15112,28 @@
      "required": true,
      "validation_alias": "'edgeProperties'"
     },
+    "role": {
+     "alias": null,
+     "annotation": "Role",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'role'"
+    },
+    "target": {
+     "alias": null,
+     "annotation": "list[Annotated[GroupReferenceSetViaWeight | PersonReferenceSetViaWeight > PersonCreateViaWeight; Field()]]",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'target'"
+    },
     "type": {
      "alias": "type",
      "annotation": "Literal['InRole']",
@@ -14944,6 +15170,28 @@
      "metadata": [],
      "required": true,
      "validation_alias": "'edgeProperties'"
+    },
+    "role": {
+     "alias": null,
+     "annotation": "Role",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'role'"
+    },
+    "target": {
+     "alias": null,
+     "annotation": "list[Annotated[GroupReferenceSetViaWeight | PersonReferenceSetViaWeight > PersonCreateViaWeight; Field()]]",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'target'"
     },
     "type": {
      "alias": "type",
@@ -15359,6 +15607,17 @@
      "required": true,
      "validation_alias": "'id'"
     },
+    "role": {
+     "alias": null,
+     "annotation": "Role",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'role'"
+    },
     "semantic_spaces": {
      "alias": "semanticSpaces",
      "annotation": "list[str]",
@@ -15369,6 +15628,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'semanticSpaces'"
+    },
+    "target": {
+     "alias": null,
+     "annotation": "list[Annotated[GroupReferenceSetViaWeight | PersonCreateDBViaWeight > PersonReferenceSetViaWeight; Field()]]",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'target'"
     },
     "type": {
      "alias": "type",
@@ -15415,6 +15685,28 @@
      "metadata": [],
      "required": true,
      "validation_alias": "'id'"
+    },
+    "role": {
+     "alias": null,
+     "annotation": "Role",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'role'"
+    },
+    "target": {
+     "alias": null,
+     "annotation": "list[Annotated[GroupReferenceSetViaWeight | PersonReferenceSetViaWeight > PersonCreateViaWeight; Field()]]",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'target'"
     },
     "type": {
      "alias": "type",
@@ -15463,6 +15755,28 @@
      "metadata": [],
      "required": true,
      "validation_alias": "'id'"
+    },
+    "role": {
+     "alias": null,
+     "annotation": "Role",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'role'"
+    },
+    "target": {
+     "alias": null,
+     "annotation": "list[Annotated[GroupReferenceSetViaWeight | PersonReferenceSetViaWeight > PersonCreateViaWeight; Field()]]",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'target'"
     },
     "type": {
      "alias": "type",
@@ -15932,6 +16246,28 @@
      "required": true,
      "validation_alias": "'id'"
     },
+    "role": {
+     "alias": null,
+     "annotation": "Role",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'role'"
+    },
+    "target": {
+     "alias": null,
+     "annotation": "list[Annotated[GroupReferenceViewViaWeight | PersonReferenceViewViaWeight; Field(discriminator='type')]]",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'target'"
+    },
     "type": {
      "alias": "type",
      "annotation": "Literal['InRole']",
@@ -15981,6 +16317,28 @@
      "required": true,
      "validation_alias": "'id'"
     },
+    "role": {
+     "alias": null,
+     "annotation": "Role",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'role'"
+    },
+    "target": {
+     "alias": null,
+     "annotation": "list[Annotated[GroupReferenceViewViaWeight | PersonReferenceViewViaWeight; Field(discriminator='type')]]",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'target'"
+    },
     "type": {
      "alias": "type",
      "annotation": "Literal['InRole']",
@@ -16029,6 +16387,28 @@
      "metadata": [],
      "required": true,
      "validation_alias": "'id'"
+    },
+    "role": {
+     "alias": null,
+     "annotation": "Role",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'role'"
+    },
+    "target": {
+     "alias": null,
+     "annotation": "list[Annotated[GroupReferenceViewViaWeight | PersonReferenceViewViaWeight; Field(discriminator='type')]]",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'target'"
     },
     "type": {
      "alias": "type",
@@ -16138,6 +16518,28 @@
      "metadata": [],
      "required": true,
      "validation_alias": "'id'"
+    },
+    "role": {
+     "alias": null,
+     "annotation": "Role",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'role'"
+    },
+    "target": {
+     "alias": null,
+     "annotation": "list[Annotated[GroupReferenceViewViaWeight | PersonReferenceViewViaWeight; Field(discriminator='type')]]",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'target'"
     },
     "type": {
      "alias": "type",
@@ -19460,13 +19862,13 @@
     },
     "label": {
      "alias": "label",
-     "annotation": "str",
-     "default": null,
+     "annotation": "None | str",
+     "default": "None",
      "default_factory": null,
      "description": null,
      "discriminator": null,
      "metadata": [],
-     "required": true,
+     "required": false,
      "validation_alias": "'label'"
     },
     "meta": {
@@ -20683,13 +21085,13 @@
     },
     "db_flag": {
      "alias": "dbFlag",
-     "annotation": "bool",
-     "default": null,
+     "annotation": "None | bool",
+     "default": "None",
      "default_factory": null,
      "description": null,
      "discriminator": null,
      "metadata": [],
-     "required": true,
+     "required": false,
      "validation_alias": "'dbFlag'"
     },
     "id": {
@@ -21447,13 +21849,13 @@
     },
     "db_flag": {
      "alias": "dbFlag",
-     "annotation": "bool",
-     "default": null,
+     "annotation": "None | bool",
+     "default": "None",
      "default_factory": null,
      "description": null,
      "discriminator": null,
      "metadata": [],
-     "required": true,
+     "required": false,
      "validation_alias": "'dbFlag'"
     },
     "id": {
@@ -21661,6 +22063,28 @@
    "doc": null,
    "field_validators": [],
    "fields": {
+    "aliases": {
+     "alias": null,
+     "annotation": "list[str]",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'aliases'"
+    },
+    "born": {
+     "alias": null,
+     "annotation": "DateCreateDB",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'born'"
+    },
     "context_labels": {
      "alias": "contextLabels",
      "annotation": "None | list[ContextLabel]",
@@ -21671,6 +22095,28 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'contextLabels'"
+    },
+    "create_new": {
+     "alias": "createNew",
+     "annotation": "Literal[True] | None",
+     "default": "None",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'createNew'"
+    },
+    "db_flag": {
+     "alias": "dbFlag",
+     "annotation": "None | bool",
+     "default": "None",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'dbFlag'"
     },
     "edge_properties": {
      "alias": "edgeProperties",
@@ -21693,6 +22139,50 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'id'"
+    },
+    "known_as": {
+     "alias": "knownAs",
+     "annotation": "WithCertainty[str]",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'knownAs'"
+    },
+    "label": {
+     "alias": null,
+     "annotation": "str",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": null
+    },
+    "nickname": {
+     "alias": null,
+     "annotation": "None | str",
+     "default": "None",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'nickname'"
+    },
+    "note": {
+     "alias": null,
+     "annotation": "None | str",
+     "default": "None",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'note'"
     },
     "semantic_spaces": {
      "alias": "semanticSpaces",
@@ -21732,6 +22222,302 @@
    "model_validators": [
     "check_create_and_id_present",
     "ensure_id"
+   ],
+   "owner": "Person"
+  },
+  "PersonCreateDBViaWeight": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "PersonCreateDB"
+   ],
+   "doc": null,
+   "field_validators": [],
+   "fields": {
+    "aliases": {
+     "alias": null,
+     "annotation": "list[str]",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'aliases'"
+    },
+    "born": {
+     "alias": null,
+     "annotation": "DateCreateDB",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'born'"
+    },
+    "context_labels": {
+     "alias": "contextLabels",
+     "annotation": "None | list[ContextLabel]",
+     "default": "None",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextLabels'"
+    },
+    "create_new": {
+     "alias": "createNew",
+     "annotation": "Literal[True] | None",
+     "default": "None",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'createNew'"
+    },
+    "db_flag": {
+     "alias": "dbFlag",
+     "annotation": "None | bool",
+     "default": "None",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'dbFlag'"
+    },
+    "edge_properties": {
+     "alias": "edgeProperties",
+     "annotation": "Weight",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'edgeProperties'"
+    },
+    "id": {
+     "alias": "id",
+     "annotation": "AnyHttpUrl | None | UUID",
+     "default": "None",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'id'"
+    },
+    "known_as": {
+     "alias": "knownAs",
+     "annotation": "WithCertainty[str]",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'knownAs'"
+    },
+    "label": {
+     "alias": null,
+     "annotation": "str",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": null
+    },
+    "nickname": {
+     "alias": null,
+     "annotation": "None | str",
+     "default": "None",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'nickname'"
+    },
+    "note": {
+     "alias": null,
+     "annotation": "None | str",
+     "default": "None",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'note'"
+    },
+    "semantic_spaces": {
+     "alias": "semanticSpaces",
+     "annotation": "list[str]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'semanticSpaces'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['Person']",
+     "default": "'Person'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    },
+    "urls": {
+     "alias": "urls",
+     "annotation": "set[AnyHttpUrl]",
+     "default": null,
+     "default_factory": "set",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'urls'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "check_create_and_id_present",
+    "ensure_id"
+   ],
+   "owner": "Person"
+  },
+  "PersonCreateViaWeight": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "PersonCreate"
+   ],
+   "doc": null,
+   "field_validators": [],
+   "fields": {
+    "aliases": {
+     "alias": null,
+     "annotation": "list[str]",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'aliases'"
+    },
+    "born": {
+     "alias": null,
+     "annotation": "DateCreate",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'born'"
+    },
+    "create_new": {
+     "alias": "createNew",
+     "annotation": "Literal[True] | None",
+     "default": "None",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'createNew'"
+    },
+    "edge_properties": {
+     "alias": "edgeProperties",
+     "annotation": "Weight",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'edgeProperties'"
+    },
+    "id": {
+     "alias": null,
+     "annotation": "AnyHttpUrl | None | UUID",
+     "default": "None",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": null
+    },
+    "known_as": {
+     "alias": "knownAs",
+     "annotation": "WithCertainty[str]",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'knownAs'"
+    },
+    "label": {
+     "alias": null,
+     "annotation": "str",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": null
+    },
+    "nickname": {
+     "alias": null,
+     "annotation": "None | str",
+     "default": "None",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'nickname'"
+    },
+    "note": {
+     "alias": null,
+     "annotation": "None | str",
+     "default": "None",
+     "default_factory": null,
+     "description": "A note on the person",
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'note'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['Person']",
+     "default": "'Person'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "check_create_and_id_present",
+    "propagate_bound_values"
    ],
    "owner": "Person"
   },
@@ -21794,6 +22580,65 @@
    ],
    "owner": "Person"
   },
+  "PersonReferenceSetViaWeight": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "PersonReferenceSet"
+   ],
+   "doc": null,
+   "field_validators": [],
+   "fields": {
+    "edge_properties": {
+     "alias": "edgeProperties",
+     "annotation": "Weight",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'edgeProperties'"
+    },
+    "id": {
+     "alias": "id",
+     "annotation": "AnyHttpUrl | UUID",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'id'"
+    },
+    "label": {
+     "alias": "label",
+     "annotation": "None | str",
+     "default": "None",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'label'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['Person']",
+     "default": "'Person'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "remove_label"
+   ],
+   "owner": "Person"
+  },
   "PersonReferenceViewViaCertainty": {
    "alias_generator": "to_camel",
    "bases": [
@@ -21805,6 +22650,63 @@
     "edge_properties": {
      "alias": "edgeProperties",
      "annotation": "Certainty",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'edgeProperties'"
+    },
+    "id": {
+     "alias": "id",
+     "annotation": "UUID",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'id'"
+    },
+    "label": {
+     "alias": "label",
+     "annotation": "str",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'label'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['Person']",
+     "default": "'Person'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [],
+   "owner": "Person"
+  },
+  "PersonReferenceViewViaWeight": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "PersonReferenceView"
+   ],
+   "doc": null,
+   "field_validators": [],
+   "fields": {
+    "edge_properties": {
+     "alias": "edgeProperties",
+     "annotation": "Weight",
      "default": null,
      "default_factory": null,
      "description": null,

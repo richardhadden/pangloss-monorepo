@@ -92,7 +92,7 @@ def declare() -> None:
         aliases: list[str]
         nickname: str | None
         note: str | None = Field(default=None, description="A note on the person")
-        db_flag: Annotated[bool, DBField]
+        db_flag: Annotated[bool | None, DBField]
 
     class Group(Entity, Agent):
         name: Annotated[str, MinLen(2), MaxLen(100)]
