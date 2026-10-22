@@ -256,7 +256,7 @@ class AddField(Change):
     from_narrowing: bool = False
 
     @property
-    def safety(self) -> Safety:  # type: ignore[override]
+    def safety(self) -> Safety:  # ty: ignore[invalid-property-type-override]
         return "additive" if self.needs_value and not self.from_narrowing else "safe"
 
     def describe(self) -> str:
@@ -274,7 +274,7 @@ class RemoveField(Change):
     absorbed: bool = False
 
     @property
-    def safety(self) -> Safety:  # type: ignore[override]
+    def safety(self) -> Safety:  # ty: ignore[invalid-property-type-override]
         return "safe" if self.absorbed else "lossy"
 
     def describe(self) -> str:
@@ -338,7 +338,7 @@ class AlterNullability(Change):
     default: Any = None
 
     @property
-    def safety(self) -> Safety:  # type: ignore[override]
+    def safety(self) -> Safety:  # ty: ignore[invalid-property-type-override]
         return "safe" if self.nullable else "additive"
 
     def describe(self) -> str:
@@ -413,7 +413,7 @@ class AlterEmbedded(Change):
     types: list[str] = field(default_factory=list)
 
     @property
-    def safety(self) -> Safety:  # type: ignore[override]
+    def safety(self) -> Safety:  # ty: ignore[invalid-property-type-override]
         return "lossy" if self.removed_types or self.old_model != self.new_model else "safe"
 
     def describe(self) -> str:
@@ -438,7 +438,7 @@ class AlterRelationTarget(Change):
     on_narrowing: str | None = None
 
     @property
-    def safety(self) -> Safety:  # type: ignore[override]
+    def safety(self) -> Safety:  # ty: ignore[invalid-property-type-override]
         return "lossy" if self.removed else "safe"
 
     def describe(self) -> str:
@@ -457,7 +457,7 @@ class AlterCardinality(Change):
     keep: str | None = None
 
     @property
-    def safety(self) -> Safety:  # type: ignore[override]
+    def safety(self) -> Safety:  # ty: ignore[invalid-property-type-override]
         return "safe" if self.many else "lossy"
 
     def describe(self) -> str:
@@ -489,7 +489,7 @@ class AlterEdgeModel(Change):
     defaults: dict[str, Any] | None = None
 
     @property
-    def safety(self) -> Safety:  # type: ignore[override]
+    def safety(self) -> Safety:  # ty: ignore[invalid-property-type-override]
         return "additive" if self.new else "lossy"
 
     def describe(self) -> str:
@@ -509,7 +509,7 @@ class AlterParentFields(Change):
     edges: list[list[str | None]] = field(default_factory=list)
 
     @property
-    def safety(self) -> Safety:  # type: ignore[override]
+    def safety(self) -> Safety:  # ty: ignore[invalid-property-type-override]
         return "lossy" if self.removed else "additive"
 
     def describe(self) -> str:
@@ -709,7 +709,7 @@ class RunCypher(Change):
     reverse_parameters: dict[str, Any] | None = None
 
     @property
-    def safety(self) -> Safety:  # type: ignore[override]
+    def safety(self) -> Safety:  # ty: ignore[invalid-property-type-override]
         return "lossy" if self.lossy else "transforming"
 
     def describe(self) -> str:
@@ -738,7 +738,7 @@ class RunPython(Change):
                 object.__setattr__(self, name, f"{function.__module__}:{function.__qualname__}")
 
     @property
-    def safety(self) -> Safety:  # type: ignore[override]
+    def safety(self) -> Safety:  # ty: ignore[invalid-property-type-override]
         return "lossy" if self.lossy else "transforming"
 
     def resolve(self, function: str | None = None) -> Any:

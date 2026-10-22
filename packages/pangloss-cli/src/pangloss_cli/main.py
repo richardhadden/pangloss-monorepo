@@ -207,7 +207,7 @@ def add_app_commands(app: typer.Typer, project: Project) -> None:
         return
 
     taken = {
-        command.name or command.callback.__name__.replace("_", "-")
+        command.name or getattr(command.callback, "__name__", "").replace("_", "-")
         for command in app.registered_commands
         if command.callback
     } | {group.name for group in app.registered_groups}

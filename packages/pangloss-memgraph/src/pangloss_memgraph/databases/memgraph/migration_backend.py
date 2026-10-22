@@ -165,7 +165,7 @@ async def restore(path: str, database: Database | None = None) -> None:
         )
     async with _session(database) as session:
         try:
-            result = await session.run(f'RECOVER SNAPSHOT "{path}" FORCE')
+            result = await session.run(f'RECOVER SNAPSHOT "{path}" FORCE')  # ty: ignore[invalid-argument-type]
             await result.consume()
         except neo4j.exceptions.Neo4jError as error:
             raise PanglossMigrationError(f"Cannot restore {path}: {error.message}") from error
@@ -275,7 +275,7 @@ def progress_saver(database: Database, migration: Migration):
             await result.consume()
             return
         async with _session(database) as session:
-            result = await session.run(query, **parameters)
+            result = await session.run(query, **parameters)  # ty: ignore[invalid-argument-type]
             await result.consume()
 
     return save

@@ -247,7 +247,7 @@ def created_by(groups: dict[str, list[c.Change]]) -> dict[str, str]:
     for app, group in groups.items():
         for change in group:
             if isinstance(change, (c.CreateModel, c.CreateEnum)):
-                created[getattr(change, "model", None) or change.enum] = app  # type: ignore[attr-defined]
+                created[change.model if isinstance(change, c.CreateModel) else change.enum] = app
     return created
 
 

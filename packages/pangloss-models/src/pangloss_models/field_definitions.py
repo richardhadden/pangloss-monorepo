@@ -243,7 +243,7 @@ class RelationToReifiedRelationDocument(RelationOption):
 @dataclass(frozen=True, kw_only=True)
 class RelationToTypeVar(RelationOption):
     type_var_name: str
-    annotated_type: TypeVar  # pyright: ignore[reportIncompatibleVariableOverride]
+    annotated_type: TypeVar  # pyright: ignore[reportIncompatibleVariableOverride]  # ty: ignore[invalid-attribute-override]
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -256,7 +256,7 @@ class IncomingRelationDefinition:
 class ModelFieldDict[K, V](dict[K, V]):
     @property
     def typevar_fields(self) -> dict[K, RelationFieldDefinition]:
-        typevar_fields = {}
+        typevar_fields: dict[K, Any] = {}
         for field_name, field in self.items():
             typevar_fields[field_name] = field
         return typevar_fields

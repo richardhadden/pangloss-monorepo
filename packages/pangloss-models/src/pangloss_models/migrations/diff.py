@@ -127,22 +127,24 @@ def diff(
             old = rename_enum(old, rename.old, rename.new)
             result.changes.append(RenameEnum(old=rename.old, new=rename.new))
     for rename in (r for r in confirmed if r.what == "field"):
-        model = old["models"].get(rename.scope)
-        if model and rename.old in fields_of(model) and rename.new in fields_of(
+        scope = rename.scope
+        model = old["models"].get(scope) if scope else None
+        if scope and model and rename.old in fields_of(model) and rename.new in fields_of(
             new["models"].get(rename.scope, {})
         ):
-            old = rename_field(old, rename.scope, rename.old, rename.new)
+            old = rename_field(old, scope, rename.old, rename.new)
             result.changes.append(
-                RenameField(model=rename.scope, old=rename.old, new=rename.new)
+                RenameField(model=scope, old=rename.old, new=rename.new)
             )
     for rename in (r for r in confirmed if r.what == "enum_member"):
-        enum = old["enums"].get(rename.scope)
-        if enum and rename.old in members_of(enum) and rename.new in members_of(
+        scope = rename.scope
+        enum = old["enums"].get(scope) if scope else None
+        if scope and enum and rename.old in members_of(enum) and rename.new in members_of(
             new["enums"].get(rename.scope, {})
         ):
-            old = rename_enum_member(old, rename.scope, rename.old, rename.new)
+            old = rename_enum_member(old, scope, rename.old, rename.new)
             result.changes.append(
-                RenameEnumMember(enum=rename.scope, old=rename.old, new=rename.new)
+                RenameEnumMember(enum=scope, old=rename.old, new=rename.new)
             )
 
     old = rename_members_with_the_same_value(old, new, result)
@@ -382,7 +384,7 @@ def merge_embedded_changes(
     for remove in [r for r in removed.values() if r.field_kind == "embedded"]:
         embedded_name = old_fields[remove.name].get("model")
         embedded = old_snapshot["models"].get(embedded_name)
-        if not embedded:
+        if not embedded or not embedded_name:
             continue
         own = fields_of(embedded)
         covered = sorted(

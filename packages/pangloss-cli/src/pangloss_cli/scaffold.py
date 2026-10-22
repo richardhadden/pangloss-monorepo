@@ -193,14 +193,14 @@ def add_to_installed_apps(source: str, app: str) -> str | None:
         return source
 
     start = offset_of(source, node.lineno, node.col_offset)
-    end = offset_of(source, node.end_lineno, node.end_col_offset)  # type: ignore[arg-type]
+    end = offset_of(source, node.end_lineno, node.end_col_offset)  # ty: ignore[invalid-argument-type]
     quoted = f'"{app}"'
 
     if not node.elts:
         edited = source[:start] + f"[{quoted}]" + source[end:]
     else:
         last_element = node.elts[-1]
-        last = offset_of(source, last_element.end_lineno, last_element.end_col_offset)  # type: ignore[arg-type]
+        last = offset_of(source, last_element.end_lineno, last_element.end_col_offset)  # ty: ignore[invalid-argument-type]
         if node.lineno == node.end_lineno or node.end_lineno == last_element.end_lineno:
             # The last one shares its line with the end of the list: `["a", "b"]`
             edited = source[:last] + f", {quoted}" + source[last:]
@@ -227,8 +227,8 @@ def add_to_installed_apps(source: str, app: str) -> str | None:
         new_node = installed_apps_list(ast.parse(edited))
     except SyntaxError:
         return None
-    if new_node is None or [e.value for e in new_node.elts] != [  # type: ignore[attr-defined]
-        *[e.value for e in node.elts],  # type: ignore[attr-defined]
+    if new_node is None or [e.value for e in new_node.elts] != [  # ty: ignore[unresolved-attribute]
+        *[e.value for e in node.elts],  # ty: ignore[unresolved-attribute]
         app,
     ]:
         return None

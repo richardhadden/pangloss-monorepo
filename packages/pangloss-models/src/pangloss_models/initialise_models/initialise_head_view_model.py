@@ -106,7 +106,7 @@ def initialise_head_view_model(
     if not head_view_base_type:
         return
 
-    model.HeadView = pydantic_create_model(  # ty:ignore[invalid-assignment]
+    model.HeadView = pydantic_create_model(
         f"{model.__name__}HeadView",
         __base__=(head_view_base_type, model.View),
         __module__=model.__module__,

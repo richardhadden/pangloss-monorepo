@@ -26,7 +26,7 @@ def migration_backend_of(database_module: str) -> ModuleType | None:
         raise
 
 
-def structure_of(backend: ModuleType) -> dict[str, Any] | None:
+def structure_of(backend: ModuleType | None) -> dict[str, Any] | None:
     """The indexes and constraints the database needs (for the snapshot), if it says"""
     return backend.structure() if hasattr(backend, "structure") else None
 

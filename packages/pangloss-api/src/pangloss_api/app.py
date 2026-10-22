@@ -11,7 +11,7 @@ made from them; starting the server (the lifespan) connects to the database thro
 import importlib
 import os
 import warnings
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 from fastapi import APIRouter, FastAPI
@@ -85,7 +85,7 @@ async def check_migrations(settings: core_settings.BaseSettings) -> None:
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     settings = ensure_settings()
     backend = importlib.import_module(f"{settings.DATABASE_MODULE}.setup")
     await backend.connect()

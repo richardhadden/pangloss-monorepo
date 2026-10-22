@@ -197,7 +197,7 @@ def _alter_nullability(change: c.AlterNullability, before):
     return swapped(change, nullable=not change.nullable, default=None)
 
 
-def _replace_back(kind: type[c.Change], **extra: Any):
+def _replace_back(kind: Callable[..., c.Change], **extra: Any):
     def inverse(change, before):
         entry = copy.deepcopy(field_entry(before, change.model, change.name))
         return [

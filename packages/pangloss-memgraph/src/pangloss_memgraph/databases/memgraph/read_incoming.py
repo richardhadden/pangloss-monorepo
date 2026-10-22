@@ -126,7 +126,7 @@ async def fetch_held(tx: Transaction, node_ids: list[str]) -> dict[str, list[dic
     if not node_ids:
         return {}
     query, params = build_fetch_held_query(sorted(set(node_ids)))
-    result = await tx.run(query, **params)
+    result = await tx.run(query, **params)  # ty: ignore[invalid-argument-type]
     return {row["id"]: row["held"] for row in await result.data()}
 
 
@@ -143,7 +143,7 @@ async def fetch_incoming_relations(
     incoming_definitions = entity_class._meta.field_definitions.incoming_fields
 
     query, params = build_fetch_incoming_query(entity_class, entity_id)
-    result = await tx.run(query, **params)
+    result = await tx.run(query, **params)  # ty: ignore[invalid-argument-type]
     records = await result.data()
 
     # What the wrappers next to the entity hold (their targets), for those that come to it through one

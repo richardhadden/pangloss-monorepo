@@ -94,7 +94,7 @@ class Sampler:
 
     # --- values of one kind of field ------------------------------------------------------------
 
-    def fields(self, model, skip: set[str] = frozenset(), types: dict[str, Any] | None = None) -> dict[str, Any]:
+    def fields(self, model, skip: frozenset[str] | set[str] = frozenset(), types: dict[str, Any] | None = None) -> dict[str, Any]:
         """A value for each field of a declared model (or wrapper) that is not a database field.
         `types` is what the type variables of a wrapper stand for."""
         payload: dict[str, Any] = {}

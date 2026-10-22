@@ -299,7 +299,7 @@ class Stubifier:
             case ast.Import() | ast.ImportFrom():
                 # (a lazy import is imported as usual in a stub)
                 if getattr(node, "is_lazy", 0):
-                    node.is_lazy = 0  # ty: ignore[unresolved-attribute]
+                    setattr(node, "is_lazy", 0)
                 return [node]
             case ast.ClassDef():
                 return [self.class_definition(node, prefix)]

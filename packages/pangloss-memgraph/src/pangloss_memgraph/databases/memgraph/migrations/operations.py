@@ -106,7 +106,7 @@ async def run(tx: Transaction, query: str, /, **params: Any) -> list[dict[str, A
 async def run_with(tx: Transaction, query: str, params: dict[str, Any]) -> list[dict[str, Any]]:
     """`run`, with the parameters as a dict (a name may be `query`, which the driver's `run` takes)"""
     try:
-        result = await tx.run(query, params)  # type: ignore[arg-type]
+        result = await tx.run(query, params)  # ty: ignore[invalid-argument-type]
         rows = await result.data()
         counters = COUNTERS.get()
         if counters is not None:
@@ -892,8 +892,8 @@ async def alter_parent_fields(
     elif removed_pairs:
         for removed_forward, removed_reverse in removed_pairs:
             for query, name in (
-                (f"MATCH (n:{label})-[e:{ident(removed_forward)}]->() WITH e LIMIT {int(limit)} DELETE e RETURN count(e) AS done", removed_forward),
-                (f"MATCH ()-[e:{ident(removed_reverse)}]->(n:{label}) WITH e LIMIT {int(limit)} DELETE e RETURN count(e) AS done", removed_reverse),
+                (f"MATCH (n:{label})-[e:{ident(removed_forward)}]->() WITH e LIMIT {int(limit)} DELETE e RETURN count(e) AS done", removed_forward),  # ty: ignore[invalid-argument-type]
+                (f"MATCH ()-[e:{ident(removed_reverse)}]->(n:{label}) WITH e LIMIT {int(limit)} DELETE e RETURN count(e) AS done", removed_reverse),  # ty: ignore[invalid-argument-type]
             ):
                 rows = await run(tx, query)
                 done = max(done, rows[0]["done"] if rows else 0)
@@ -1985,7 +1985,7 @@ def manual(why: str) -> Callable[[Transaction, Any, dict], Awaitable[None]]:
     return refuse
 
 
-DATA_HANDLERS: dict[type, Callable[[Transaction, Any, dict], Awaitable[None]]] = {
+DATA_HANDLERS: dict[type, Callable[[Transaction, Any, dict], Awaitable[None]]] = {  # ty: ignore[invalid-assignment]
     c.CreateModel: nothing,
     c.DeleteModel: delete_model,
     c.RenameModel: rename_model,

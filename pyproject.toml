@@ -19,4 +19,57 @@ target-version = "py315"
 dev = [
     "pytest>=9.0.3",
     "pytest-asyncio>=1.4.0",
+    "ty>=0.0.90",
 ]
+
+# Static types: the models are generated at run time (`Person.Create`, `Person.get`, `_meta`, ...), which a
+# type checker cannot see. In the code that makes or uses them, and in tests and the demo, which declare
+# models inside functions, the rules that report only that are turned off; everywhere else they are on.
+[[tool.ty.overrides]]
+include = [
+    "packages/*/tests/**",
+    "pangloss-demo/**",
+]
+[tool.ty.overrides.rules]
+unresolved-attribute = "ignore"
+invalid-await = "ignore"
+invalid-argument-type = "ignore"
+unknown-argument = "ignore"
+missing-argument = "ignore"
+pydantic-discarded-extra-argument = "ignore"
+invalid-type-form = "ignore"
+invalid-method-override = "ignore"
+invalid-attribute-override = "ignore"
+invalid-assignment = "ignore"
+unused-type-ignore-comment = "ignore"
+truthiness-test-of-callable = "ignore"
+unsupported-base = "ignore"
+unresolved-import = "ignore"  # (the test modules import each other by name)
+
+[[tool.ty.overrides]]
+include = [
+    "packages/pangloss-models/src/pangloss_models/initialise_models/**",
+    "packages/pangloss-models/src/pangloss_models/model_bases/**",
+    "packages/pangloss-models/src/pangloss_models/export.py",
+    "packages/pangloss-models/src/pangloss_models/migrations/check.py",
+    "packages/pangloss-api/src/pangloss_api/routes/models.py",
+    "packages/pangloss-sdk/src/**",
+    "packages/pangloss-memgraph/src/pangloss_memgraph/databases/memgraph/build_*_query.py",
+    "packages/pangloss-memgraph/src/pangloss_memgraph/databases/memgraph/exposed_functions.py",
+]
+[tool.ty.overrides.rules]
+unresolved-attribute = "ignore"
+invalid-argument-type = "ignore"
+invalid-attribute-access = "ignore"
+invalid-attribute-override = "ignore"
+invalid-mutable-override = "ignore"
+invalid-type-form = "ignore"
+invalid-type-arguments = "ignore"
+invalid-return-type = "ignore"
+invalid-assignment = "ignore"
+no-matching-overload = "ignore"
+unknown-argument = "ignore"
+missing-argument = "ignore"
+empty-body = "ignore"
+pydantic-discarded-extra-argument = "ignore"
+unused-type-ignore-comment = "ignore"

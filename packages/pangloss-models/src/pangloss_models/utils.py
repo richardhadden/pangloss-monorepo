@@ -31,6 +31,7 @@ from pydantic_meta_kit import WithMeta
 from pangloss_models.exceptions import PanglossModelError
 from pangloss_models.field_definitions import FieldBinding
 from pangloss_models.model_bases.annotated_value import AnnotatedValue
+from pangloss_models.model_bases.base_types import BaseTypes
 from pangloss_models.model_bases.base_models import _BaseObject, _DeclaredClass
 from pangloss_models.model_bases.configs import RelationConfig
 from pangloss_models.model_bases.conjunction import Conjunction
@@ -260,9 +261,7 @@ def check_enum_values(enumeration: type[Enum]) -> None:
 
 def is_literal(
     annotation: type[Any] | None | UnionType,
-) -> TypeIs[
-    type[str | int | float | bool | Decimal | Enum | date | datetime | TypedDict]
-]:
+) -> TypeIs[type[BaseTypes]]:
     """Checks whether an annotation is of a literal type: one stored as a property
     of its node, rather than as a node of its own.
 
@@ -293,7 +292,7 @@ def is_literal(
 
 def is_list_of_literal(
     annotation: type[Any] | None,
-) -> TypeIs[type[list[str | int | float | bool | Decimal | Enum | date | datetime | TypedDict]]]:
+) -> TypeIs[type[list[BaseTypes]]]:
     inner_type = get_list_item_type(annotation)
     return inner_type is not None and is_literal(inner_type)
 

@@ -325,7 +325,7 @@ class MigrationGraph:
         for migration in self.order():
             for change in migration.changes:
                 if isinstance(change, (c.CreateModel, c.CreateEnum)):
-                    owners[getattr(change, "model", None) or change.enum] = migration.app  # type: ignore[attr-defined]
+                    owners[change.model if isinstance(change, c.CreateModel) else change.enum] = migration.app
                 elif isinstance(change, (c.RenameModel, c.RenameEnum)):
                     owners[change.new] = owners.pop(change.old, migration.app)
                 elif isinstance(change, (c.AddIndex, c.AddConstraint)):
@@ -333,7 +333,7 @@ class MigrationGraph:
                 elif isinstance(change, (c.RemoveIndex, c.RemoveConstraint)):
                     owners.pop(structure_id(change), None)
                 elif isinstance(change, (c.DeleteModel, c.RemoveEnum)):
-                    owners.pop(getattr(change, "model", None) or change.enum, None)  # type: ignore[attr-defined]
+                    owners.pop(change.model if isinstance(change, c.DeleteModel) else change.enum, None)
         return owners
 
     def closure(self, keys: Iterable[tuple[str, str]]) -> set[tuple[str, str]]:

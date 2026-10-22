@@ -140,7 +140,7 @@ async def find_existing_entities(
     ):
         if not values:
             continue
-        result = await tx.run(query, values=values)  # type: ignore
+        result = await tx.run(query, values=values)
         for value, id, labels, deleted in await result.values():
             existing.setdefault(
                 (kind, value),
@@ -227,7 +227,7 @@ async def get_existing_head(
     tx: Transaction, head_id: uuid.UUID, head_type: str
 ) -> ExistingHead:
     query, params = build_head_query(head_id)
-    result = await tx.run(query, **params)
+    result = await tx.run(query, **params)  # ty: ignore[invalid-argument-type]
     records = await result.values()
     if not records or head_type not in records[0][0] or records[0][3]:
         raise PanglossNotFoundError(f"There is no {head_type} with id {head_id}")
@@ -241,7 +241,7 @@ async def get_tree_meta(
     tx: Transaction, head_id: uuid.UUID
 ) -> dict[str, dict[str, typing.Any]]:
     query, params = build_tree_meta_query(head_id)
-    result = await tx.run(query, **params)
+    result = await tx.run(query, **params)  # ty: ignore[invalid-argument-type]
     return {id: meta for id, meta in await result.values()}
 
 

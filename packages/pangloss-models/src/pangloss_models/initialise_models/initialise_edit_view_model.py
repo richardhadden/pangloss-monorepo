@@ -25,7 +25,7 @@ def initialise_edit_view_model(model: type[Entity]) -> None:
     if "EditView" in model.__dict__:
         return
 
-    model.EditView = pydantic_create_model(  # ty:ignore[invalid-assignment]
+    model.EditView = pydantic_create_model(
         f"{model.__name__}EditView",
         __base__=(_EntityEditViewBase, model.View),
         __module__=model.__module__,

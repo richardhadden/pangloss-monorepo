@@ -17,6 +17,7 @@ import sys
 import tomllib
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
+from typing import NoReturn
 from pathlib import Path
 from types import ModuleType
 
@@ -135,7 +136,7 @@ class Project:
             import_if_present(f"{app}.models")
 
 
-def fail(message: str, code: int = 1):
+def fail(message: str, code: int = 1) -> NoReturn:
     typer.secho(message, fg="red", err=True)
     raise typer.Exit(code)
 

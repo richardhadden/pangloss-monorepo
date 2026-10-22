@@ -93,7 +93,7 @@ async def dry_run(
                     counters: dict[str, int] = {}
                     token = COUNTERS.set(counters)
                     try:
-                        await apply_change(tx, change, before)  # type: ignore[arg-type]
+                        await apply_change(tx, change, before)  # ty: ignore[invalid-argument-type]
                         reports.append(ChangeReport(change, "counted", dict(counters)))
                     except Exception as error:
                         failed = True
@@ -183,7 +183,7 @@ async def apply_changes_in_batches(
             while True:
 
                 async def wrap_work(tx: Transaction) -> int:
-                    wrapped = await wrap_reified(tx, change, before, limit=size)  # type: ignore[arg-type]
+                    wrapped = await wrap_reified(tx, change, before, limit=size)  # ty: ignore[invalid-argument-type]
                     if save:
                         await save(tx, Progress(index))
                     return wrapped
