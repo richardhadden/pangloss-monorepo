@@ -43,6 +43,7 @@ from pangloss_models.initialise_models.kinds import (
     ModelKind,
     Site,
 )
+from pangloss_models.model_bases.model_tools import set_field
 from pangloss_models.utils import (
     annotation_is_optional,
     field_has_inherited_field_bindings,
@@ -61,12 +62,6 @@ def clear_caches() -> None:
     """Forget the models made for bindings and generics (the registry has been emptied)"""
     _bound_models.clear()
     _generic_models.clear()
-
-
-def set_field(model: type, name: str, field: FieldInfo) -> None:
-    """The one place that puts a field on a generated model. (Pydantic offers no way to add a field
-    to a model that has been made; the model is rebuilt afterwards.)"""
-    model.model_fields[name] = field  # type: ignore[attr-defined]
 
 
 # --- the model itself ------------------------------------------------------------------------------

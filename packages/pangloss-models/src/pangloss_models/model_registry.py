@@ -11,9 +11,6 @@ from pangloss_models.exceptions import (
     PanglossImportError,
     PanglossInitialisationError,
 )
-lazy from pangloss_models.initialise_models.initialise_incoming_relation_definitions import (
-    initialise_incoming_relation_definitions,
-)
 lazy from pangloss_models.initialise_models.initialise_create_db_model import (
     add_fields_to_create_db_model,
     initialise_create_db_model,
@@ -23,16 +20,19 @@ lazy from pangloss_models.initialise_models.initialise_create_model import (
     can_have_create_model,
     initialise_create_model,
 )
-lazy from pangloss_models.initialise_models.initialise_field_definitions import (
-    initialise_field_definitions,
-)
 lazy from pangloss_models.initialise_models.initialise_edit_view_model import (
     can_have_edit_view_model,
     initialise_edit_view_model,
 )
+lazy from pangloss_models.initialise_models.initialise_field_definitions import (
+    initialise_field_definitions,
+)
 lazy from pangloss_models.initialise_models.initialise_head_view_model import (
     can_have_head_view_model,
     initialise_head_view_model,
+)
+lazy from pangloss_models.initialise_models.initialise_incoming_relation_definitions import (
+    initialise_incoming_relation_definitions,
 )
 lazy from pangloss_models.initialise_models.initialise_reference_models import (
     initialise_reference_set_model,
@@ -55,7 +55,6 @@ lazy from pangloss_models.initialise_models.initialise_view_model import (
 lazy from pangloss_models.model_bases.base_models import (
     _ActionClass,
     _DeclaredClass,
-    inherit_fields,
 )
 lazy from pangloss_models.model_bases.document import (
     Document,
@@ -67,6 +66,7 @@ lazy from pangloss_models.model_bases.entity import (
     _EntityCreateBase,
     _EntityUpdateBase,
 )
+lazy from pangloss_models.model_bases.model_tools import inherit_fields
 
 
 def apply_camel_case_aliases(model: type[BaseModel]) -> None:

@@ -25,7 +25,7 @@ Everything about *declaring* and *initialising* models:
 
 | Path | Purpose |
 |------|---------|
-| `model_bases/` | The declarable base classes (`Document`, `Entity`, `Embedded`, `Trait`, ...) and the generated-model base classes in `base_models.py` |
+| `model_bases/` | The declarable base classes (`Document`, `Entity`, `Embedded`, `Trait`, ...) and the generated-model base classes in `base_models.py` (Create / Update / the `...DB` models / the views), with what they use in `labels.py`, `fulfilment.py`, `binding.py`, `instance_context.py`, `from_database.py` and `model_tools.py` |
 | `field_definitions.py` | Dataclasses describing each field after analysis (`LiteralFieldDefinition`, `RelationFieldDefinition`, `FieldBinding`, ...) |
 | `initialise_models/` | Field-definition and incoming-relation analysis, and the builder of the generated models (`kinds.py` describes `Create`, `CreateDB`, `Update`, `UpdateDB` and `View`; `builder.py` makes them); see [the pipeline](generated-models.md#the-initialisation-pipeline) |
 | `model_registry.py` | `ModelRegistry`: registration, dependency ordering, and the `finalise()` entry point |

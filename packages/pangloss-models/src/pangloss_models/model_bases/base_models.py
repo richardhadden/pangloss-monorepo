@@ -1,58 +1,56 @@
 import datetime
 import warnings
 from abc import ABC, abstractmethod
-from collections import defaultdict
-from copy import copy
-from functools import cache
 from typing import (
     TYPE_CHECKING,
     Any,
     ClassVar,
     Literal,
-    NamedTuple,
-    NotRequired,
     Self,
-    TypedDict,
     cast,
 )
-from uuid import UUID, uuid7
+from uuid import UUID
 
-import neo4j
 from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
     PrivateAttr,
-    ValidationError,
     create_model,
     field_validator,
     model_validator,
 )
 from pydantic.alias_generators import to_camel
 
-from pangloss_models.context import propagate_context
+from pangloss_models.model_bases.binding import bind_values_to_children
+from pangloss_models.model_bases.context_label import ContextLabel
+from pangloss_models.model_bases.from_database import (
+    convert_neo4j_datetimes,
+    unwrap_single_item_lists,
+)
+from pangloss_models.model_bases.fulfilment import (
+    build_fulfilled_model,
+    get_fulfilled_classes,
+)
+from pangloss_models.model_bases.instance_context import recursively_propagate_context_types
+from pangloss_models.model_bases.labels import get_labels_for_db_classes
+from pangloss_models.model_bases.model_tools import (
+    data_for_db,
+    inherit_fields,
+    make_id,
+)
 from pangloss_models.model_registry import ModelRegistry
-lazy from pangloss_models.model_bases.entity import (
-    _EntityCreateDBBase,
-    _EntityUpdateDBBase,
-)
-lazy from pangloss_models.model_bases.document import (
-    _DocumentCreateDBBase,
-    _DocumentUpdateDBBase,
-)
-lazy from pangloss_models.model_bases.semantic_space import (
-    _SemanticSpaceCreateDBBase,
-    _SemanticSpaceUpdateDBBase,
-)
 
 if TYPE_CHECKING:
     from pangloss_models.field_definitions import (
-        FieldBinding,
         FieldDefinition,
         ModelFieldDict,
         ModelFields,
     )
     from pangloss_models.model_bases.edge_model import EdgeModel
+
+
+# --- what every generated model is made of ----------------------------------------------------------
 
 
 class _BaseObject(BaseModel):
@@ -107,7 +105,8 @@ class MetaGetter[T: type[_ActionClass]]:
     the _DeclaredClass of an _ActionClass"""
 
     def __get__(self, instance, owner: T):
-        return owner._owner._meta  # type: ignore
+        return owner._owner._meta
+
 
 
 class GetItemViaAttrDict[T](dict):
@@ -116,88 +115,6 @@ class GetItemViaAttrDict[T](dict):
             return self[name]
         return super().__getattribute__(name)
 
-
-def labels_for_model(owner: type[_DeclaredClass], metatype: str) -> list[str]:
-    """The labels of the nodes of a model in the database: its name, those of its
-    parents and traits, and its kind"""
-
-    from pangloss_models.model_bases.trait import NonHeritableTrait, Trait
-    from pangloss_models.utils import get_all_parent_classes, model_is_trait
-
-    labels = [owner.__name__]
-
-    parent_labels = []
-    for c in get_all_parent_classes(owner):
-        if not hasattr(c, "__pydantic_generic_metadata__"):
-            continue  # (`Fulfils[...]`, and the like: not a model, so not a label)
-        if (
-            model_is_trait(c)
-            and issubclass(c, NonHeritableTrait)
-            and owner not in c.__subclasses__()
-        ) or (
-            c.__pydantic_generic_metadata__["parameters"] and not issubclass(c, Trait)
-        ):
-            pass
-        else:
-            parent_labels.append(c.__name__)
-    labels.extend(parent_labels)
-    labels.append(metatype)
-
-    return labels
-
-
-def get_labels_for_db_classes(self):
-    """The labels of the node an instance is written as: those of its model and, for each class it
-    fulfils (`Fulfils`, decided by what it holds: see `get_fulfilled_classes`), the labels of that
-    class, before the kind"""
-    labels = labels_for_model(self._owner, self.__metatype__)
-    fulfilled = getattr(self, "_fulfils_classes", None)
-    if not fulfilled:
-        return labels
-    kind = labels.pop()
-    for fulfilled_class in fulfilled:
-        for label in labels_for_model(fulfilled_class, fulfilled_class.__metatype__)[:-1]:
-            if label not in labels:
-                labels.append(label)
-    labels.append(kind)
-    return labels
-
-
-def fulfillable_labels(self) -> set[str]:
-    """Every label that a class this instance could fulfil can give it (so that the labels of a
-    node that no longer fulfils one can be taken off)"""
-    found: set[str] = set()
-    for fulfillable in get_fulfillable_models(self):
-        found.update(labels_for_model(fulfillable, fulfillable.__metatype__))
-    return found
-
-
-def inherit_fields(model: type[BaseModel], base: type[BaseModel]) -> None:
-    """Give `model` the fields of `base` that it lacks.
-
-    The models that are made for a declared model are given most of their fields after they are made,
-    by putting them in `model_fields`. A model made from one of them afterwards (the variant with an edge
-    model) does not take those fields: pydantic finds the fields of a subclass from the annotations of
-    its bases. Without this, `ViaEdge[Note, Weight]` offered a model with only `type` and `edge_properties`,
-    and the note's own fields were silently left out."""
-    changed = False
-    for name, field in base.model_fields.items():
-        if name not in model.model_fields:
-            model.model_fields[name] = copy(field)
-            changed = True
-    if changed:
-        model.model_rebuild(force=True)
-
-
-def make_id(model: type[BaseModel], data: dict[str, Any]) -> None:
-    """Give a thing that is to be written the id it does not have yet.
-
-    An id that is made now is a new thing's, so for a class that can be given an id (`create_with_id`)
-    `create_new` goes with it: an id without it is refused, which made it impossible to write one that
-    had been created without an id."""
-    data["id"] = uuid7()
-    if "create_new" in model.model_fields:
-        data["create_new"] = True
 
 
 class _ActionClass(_BaseObject):
@@ -216,10 +133,13 @@ class _ActionClass(_BaseObject):
         return super().__pydantic_init_subclass__(**kwargs)
 
     @classmethod
-    @cache
     def apply_edge_model(cls, edge_model: type[EdgeModel]) -> type[Self]:
         """Creates a variant of the model with additional 'edge_property' field
-        of the type supplied"""
+        of the type supplied (once: it is kept in `_via`)"""
+
+        made = cls._via.get(edge_model.__name__)
+        if made is not None and made.model_fields["edge_properties"].annotation is edge_model:
+            return made
 
         # For a ReifiedRelationDocument, we need to construct a better name for the class by
         # some introspection of the origin and args
@@ -260,119 +180,13 @@ class _ReferenceSetBase(_ActionClass):
         return self
 
 
-def allow_bind_on_this_item(
-    item: _CreateBase | _UpdateBase, binding: FieldBinding
-) -> bool:
-    return bool(
-        (binding.allowed_type_names and item.type in binding.allowed_type_names)
-        or (
-            binding.excluded_type_names and item.type not in binding.excluded_type_names
-        )
-        or (not binding.allowed_type_names and not binding.excluded_type_names)
-    )
-
-
-def recursively_add_bound_field_values(
-    item: _CreateBase | _UpdateBase, binding: FieldBinding, value=None
-):
-    """Given an item, a FieldBinding instance and a value, try to
-    bind values where rules are followed, and call itself to try on
-    all nested items"""
-    # (the value of a relation to a list of things is a list)
-    if isinstance(item, list | tuple):
-        for list_item in item:
-            recursively_add_bound_field_values(list_item, binding, value)
-        return
-
-    child_bound_fields = binding.child_fields
-    if isinstance(item, _CreateBase | _UpdateBase) and allow_bind_on_this_item(
-        item, binding
-    ):
-        for child_bound_field in child_bound_fields:
-            if isinstance(item, list):
-                for ri in item:
-                    if hasattr(ri, child_bound_field) and not getattr(
-                        ri, child_bound_field, None
-                    ):
-                        setattr(ri, child_bound_field, value)
-            else:
-                if hasattr(item, child_bound_field) and not getattr(
-                    item, child_bound_field, None
-                ):
-                    setattr(item, child_bound_field, value)
-    for related_field_name in item._meta.fields.relation_fields.keys():
-        child_item = getattr(item, related_field_name)
-        if isinstance(child_item, list):
-            for ci in child_item:
-                recursively_add_bound_field_values(ci, binding, value)
-        else:
-            recursively_add_bound_field_values(child_item, binding, value)
-
-
-def build_fulfilled_model[T: _CreateDBBase | _UpdateDBBase](
-    instance: T, fulfilled_classes: list[type[_DeclaredClass]]
-) -> T:
-    if isinstance(instance, _CreateDBBase):
-        metafunction = "Create"
-    elif isinstance(instance, _UpdateDBBase):
-        metafunction = "Update"
-
-    base_models: list[type[_DeclaredClass]] = [instance._owner]
-    base_models.extend(fulfilled_classes)
-
-    names = [c.__name__ for c in base_models]
-
-    if metafunction == "Create":
-        base_db_models = [m.CreateDB for m in base_models]  # type: ignore
-    else:
-        base_db_models = [m.UpdateDB for m in base_models]  # type: ignore
-
-    new_fulfilled_model = create_model(
-        f"({','.join(names)}){metafunction}DB",
-        __base__=tuple(base_db_models),
-        __module__=instance.__class__.__module__,
-    )
-
-    fulfilled_fields = {}
-    fulfilled_data = instance.model_dump()
-
-    fulfillable_models = get_fulfillable_models(instance)
-    for fm, fulfilments in fulfillable_models.items():
-        if fm in fulfilled_classes:
-            for f in fulfilments:
-                fulfilled_fields[f.field_on_class_to_fulfil] = getattr(
-                    fm, f"{metafunction}DB"
-                ).model_fields[f.field_on_class_to_fulfil]
-                fulfilled_data[f.field_on_class_to_fulfil] = getattr(
-                    instance, f.this_field_name
-                )
-
-    instance_fields = instance.__class__.model_fields
-
-    all_new_fields = {
-        **fulfilled_fields,
-        **instance_fields,
-    }
-    for field_name, field_info in all_new_fields.items():
-        new_fulfilled_model.model_fields[field_name] = field_info
-
-    ## can't just duplicate fields because because...
-    # relations might be pointing some kind of new Create object...
-    # unless that's ... already assigned an ID?
-
-    new_fulfilled_model.model_rebuild(force=True)
-
-    # TODO: find a way to copy _meta fields...
-
-    new_instance = new_fulfilled_model(**fulfilled_data)
-
-    return new_instance
+# --- writing: Create and Update, and what is written to the database -----------------------------------
 
 
 class _CreateBase(_ActionClass):
     def _to_db_model(self):
 
-        db_model_instance: _CreateDBBase = self._owner.CreateDB(**self.model_dump())  # type: ignore
+        db_model_instance: _CreateDBBase = self._owner.CreateDB(**self.model_dump())
         recursively_propagate_context_types(db_model_instance, [], [], None)
 
         if db_model_instance._fulfils_classes:
@@ -384,126 +198,9 @@ class _CreateBase(_ActionClass):
 
     @model_validator(mode="after")
     def propagate_bound_values(self) -> Self:
-        """Get any binding-fields for this model and try to bind
-        on nested objects"""
-        for (
-            field_name,
-            bindings,
-        ) in self._meta.fields.bind_to_child_field_bindings.items():
-            for binding in bindings:
-                value = getattr(self, binding.bound_field)
-                if binding.converter:
-                    value = binding.converter(value)
-                related_item = getattr(self, field_name)
-                recursively_add_bound_field_values(related_item, binding, value=value)
-
+        """Get any binding-fields for this model and try to bind on nested objects"""
+        bind_values_to_children(self)
         return self
-
-
-class ContextLabel(TypedDict):
-    type: str | None
-    id: NotRequired[str]
-    contents: NotRequired[list[ContextLabel]]
-
-
-class _InstanceContext:
-    """How the models look at an instance they are about to write, for `propagate_context`"""
-
-    def is_entity(self, node):
-        return isinstance(node, (_EntityCreateDBBase, _EntityUpdateDBBase))
-
-    def is_space(self, node):
-        return isinstance(node, (_SemanticSpaceCreateDBBase, _SemanticSpaceUpdateDBBase))
-
-    def in_context(self, node):
-        return isinstance(
-            node, (_DocumentCreateDBBase, _DocumentUpdateDBBase)
-        ) and node._meta.use_in_semantic_space_label  # type: ignore
-
-    def type_of(self, node):
-        return node.type
-
-    def id_of(self, node):
-        return str(node.id)
-
-    def children(self, node):
-        for field_name in node._meta.fields.relation_fields:
-            if related_item := getattr(node, field_name, None):
-                if isinstance(related_item, list):
-                    for ri in related_item:
-                        if isinstance(ri, (_CreateDBBase, _UpdateDBBase)):
-                            yield ri, True
-                elif isinstance(related_item, (_CreateDBBase, _UpdateDBBase)):
-                    yield related_item, False
-
-    def assign(self, node, semantic_spaces, context_labels):
-        node.semantic_spaces = semantic_spaces
-        node.context_labels = context_labels
-
-
-def recursively_propagate_context_types(
-    item: _CreateDBBase | _UpdateDBBase,
-    semantic_spaces: list[str],
-    context_labels: list[ContextLabel],
-    parent: _CreateDBBase | _UpdateDBBase | None,
-):
-    """Takes a _CreateDBBase instance and recursively adds type of semantic
-    spaces to each contained type below that semantic space node (see
-    `pangloss_models.context`, which migrations use too)"""
-    propagate_context(item, semantic_spaces, context_labels, parent, _InstanceContext())  # type: ignore[arg-type]
-    return item
-
-
-class Fulfilment(NamedTuple):
-    this_field_name: str
-    class_to_fulfil: type[_DeclaredClass]
-    field_on_class_to_fulfil: str
-
-
-def get_fulfillable_models(self):
-    ffs: list[Fulfilment] = []
-    for field_name, field_info in self._meta.fields.items():
-        for field_fulfilment in field_info.field_required_to_fulfil:
-            ffs.append(
-                Fulfilment(
-                    this_field_name=field_name,
-                    class_to_fulfil=field_fulfilment.fulfils_class,
-                    field_on_class_to_fulfil=field_fulfilment.field_name,
-                )
-            )
-
-    model_fulfilments: dict[type[_DeclaredClass], list[Fulfilment]] = defaultdict(list)
-    for ff in ffs:
-        model_fulfilments[ff.class_to_fulfil].append(ff)
-    return model_fulfilments
-
-
-def get_fulfilled_classes(self, metafunction: Literal["Update", "Create"]):
-    model_fulfilments = get_fulfillable_models(self)
-
-    models_fulfilled = []
-    for model_to_fulfil_base, fulfilments in model_fulfilments.items():
-        if metafunction == "Update":
-            model_to_fulfil: type[_UpdateDBBase | _CreateDBBase] = (
-                model_to_fulfil_base.UpdateDB  # type: ignore
-            )
-        elif metafunction == "Create":
-            model_to_fulfil: type[_UpdateDBBase | _CreateDBBase] = (
-                model_to_fulfil_base.CreateDB  # type: ignore
-            )
-        data = self.model_dump()
-        del data["type"]
-        for fulfilment in fulfilments:
-            data[fulfilment.field_on_class_to_fulfil] = getattr(
-                self, fulfilment.this_field_name
-            )
-        try:
-            model_to_fulfil(**data, type=model_to_fulfil_base.__name__)
-            models_fulfilled.append(model_to_fulfil_base)
-        except ValidationError:
-            pass
-
-    return models_fulfilled
 
 
 class _CreateDBBase(_ActionClass):
@@ -525,26 +222,46 @@ class _CreateDBBase(_ActionClass):
         return data
 
     def __init__(self, **kwargs):
-
-        # Calling model_construct emits a warning that the data might not be valid,
-        # so catch these and supress. This is fine as we later pass the data back to
-        # the class.__init__, which will validate it
+        # (`model_construct` warns that the data might not be valid; it is validated by `__init__`)
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            if f := getattr(
-                self._owner, "to_db_create", getattr(self._owner, "to_db", None)
-            ):
-                data = f(self.__class__.model_construct(**kwargs))
-                if isinstance(data, dict):
-                    super().__init__(**data)
-                else:
-                    super().__init__(**data.model_dump())
-            else:
-                super().__init__(**kwargs)
+            super().__init__(**data_for_db(self, kwargs, "to_db_create", "to_db"))
 
 
-class _ViewBase(_ActionClass):
+class _UpdateBase(_ActionClass):
     id: UUID
+
+    def _to_db_model(self):
+
+        db_model_instance = self._owner.UpdateDB(**self.model_dump())
+        recursively_propagate_context_types(db_model_instance, [], [], None)
+        return db_model_instance
+
+    @model_validator(mode="after")
+    def propagate_bound_values(self) -> Self:
+        """Get any binding-fields for this model and try to bind on nested objects"""
+        bind_values_to_children(self)
+        return self
+
+
+class _UpdateDBBase(_ActionClass):
+    id: UUID
+    semantic_spaces: list[str] = Field(default_factory=list)
+    context_labels: list[ContextLabel] = Field(default_factory=list)
+    _labels = property(get_labels_for_db_classes)
+    _fulfils_classes = property(lambda self: get_fulfilled_classes(self, "Update"))
+
+    def __init__(self, **kwargs):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            super().__init__(**data_for_db(self, kwargs, "to_db_update", "to_db"))
+
+
+# --- reading: what the database returns ---------------------------------------------------------------
+
+
+class _FromDatabaseBase(_ActionClass):
+    """A model that is made from what the database returns"""
 
     @model_validator(mode="before")
     @classmethod
@@ -557,34 +274,8 @@ class _ViewBase(_ActionClass):
         return unwrap_single_item_lists(cls, data)
 
 
-def unwrap_single_item_lists(cls: Any, data: Any) -> Any:
-    """Single relations and embedded objects come back from the database as lists of
-    one: take the item out"""
-    for k, v in data.items():
-        if not isinstance(v, list):
-            continue
-        if k in cls._meta.fields.relation_fields:
-            if cls._meta.fields.relation_fields[k].wrapper is not None:
-                continue
-        elif k not in cls._meta.fields.embedded_fields:
-            continue
-        if len(v) > 1:
-            raise ValueError(
-                f"{cls.__name__}.{k}: More than one value returned for field"
-            )
-        data[k] = v[0]
-    return data
-
-
-def convert_neo4j_datetimes(data: Any) -> Any:
-    """Recursively convert neo4j DateTime objects in a dict."""
-    if isinstance(data, dict):
-        return {k: convert_neo4j_datetimes(v) for k, v in data.items()}
-    if isinstance(data, list):
-        return [convert_neo4j_datetimes(v) for v in data]
-    if isinstance(data, (neo4j.time.DateTime, neo4j.time.Date, neo4j.time.Time)):
-        return data.to_native()
-    return data
+class _ViewBase(_FromDatabaseBase):
+    id: UUID
 
 
 class _APIHeadMeta(_BaseObject):
@@ -633,7 +324,7 @@ class _ListItems[T: _ReferenceViewBase](_BaseObject):
     previous_page: int | None
 
 
-class _HeadViewBase(_ActionClass):
+class _HeadViewBase(_FromDatabaseBase):
     id: UUID
     meta: _APIHeadMeta
 
@@ -643,16 +334,6 @@ class _HeadViewBase(_ActionClass):
     def __str__(self):
         return f"<{self._owner.__name__}.HeadView {super().__str__()}>"
 
-    @model_validator(mode="before")
-    @classmethod
-    def convert_neo4j_types(cls, data: Any) -> Any:
-        return convert_neo4j_datetimes(data)
-
-    @model_validator(mode="before")
-    @classmethod
-    def convert_lists(cls, data: Any) -> Any:
-        return unwrap_single_item_lists(cls, data)
-
 
 class _EditViewBase(_HeadViewBase):
     """A head node as it is edited: its own values and outgoing relations, but none of
@@ -660,57 +341,3 @@ class _EditViewBase(_HeadViewBase):
 
     def __str__(self):
         return f"<{self._owner.__name__}.EditView {_ActionClass.__str__(self)}>"
-
-
-class _UpdateBase(_ActionClass):
-    id: UUID
-
-    def _to_db_model(self):
-
-        db_model_instance = self._owner.UpdateDB(**self.model_dump())  # type: ignore
-        recursively_propagate_context_types(db_model_instance, [], [], None)
-        return db_model_instance
-
-    @model_validator(mode="after")
-    def propagate_bound_values(self) -> Self:
-        """Get any binding-fields for this model and try to bind
-        on nested objects"""
-        for (
-            field_name,
-            bindings,
-        ) in self._meta.fields.bind_to_child_field_bindings.items():
-            for binding in bindings:
-                value = getattr(self, binding.bound_field)
-                if binding.converter:
-                    value = binding.converter(value)
-                related_item = getattr(self, field_name)
-                recursively_add_bound_field_values(related_item, binding, value=value)
-
-        return self
-
-
-class _UpdateDBBase(_ActionClass):
-    id: UUID
-    semantic_spaces: list[str] = Field(default_factory=list)
-    context_labels: list[ContextLabel] = Field(default_factory=list)
-    _labels = property(get_labels_for_db_classes)
-    _fulfils_classes = property(lambda self: get_fulfilled_classes(self, "Update"))
-
-    def __init__(self, **kwargs):
-
-        # Calling model_construct emits a warning that the data might not be valid,
-        # so catch these and supress. This is fine as we later pass the data back to
-        # the class.__init__, which will validate it
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            if f := getattr(
-                self._owner, "to_db_update", getattr(self._owner, "to_db", None)
-            ):
-                data = f(self.__class__.model_construct(**kwargs))
-
-                if isinstance(data, dict):
-                    super().__init__(**data)
-                else:
-                    super().__init__(**data.model_dump())
-            else:
-                super().__init__(**kwargs)

@@ -1098,3 +1098,31 @@ def test_models_can_be_made_without_the_database_functions(monkeypatch):
     initialise(bind_database=False)
 
     assert "name" in Thing.Create.model_fields
+
+
+@no_type_check
+def test_a_binding_does_not_look_into_a_reference_to_something_that_exists():
+    """A reference (`PersonReferenceSet`) has only an id and a type: a binding on the relation
+    must not look for the relations of the person in it (it raised `AttributeError`)"""
+
+    class Place(Entity):
+        pass
+
+    class Person(Entity):
+        born: Place
+
+    class Report(Document):
+        year: int
+        witnesses: Annotated[
+            list[Person],
+            RelationConfig(
+                bind_to_child_field=[FieldBinding(bound_field="year", child_fields=["year"])]
+            ),
+        ]
+
+    initialise(bind_database=False)
+
+    report = Report.Create(
+        label="R", year=1900, witnesses=[{"type": "Person", "id": uuid7()}]
+    )
+    assert len(report.witnesses) == 1

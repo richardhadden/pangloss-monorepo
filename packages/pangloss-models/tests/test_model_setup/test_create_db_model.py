@@ -1747,7 +1747,7 @@ def test_recursive_type():
 @no_type_check
 def test_each_class_fulfils_what_it_says_and_the_fulfils_class_is_not_a_label():
     from pangloss_models.initialise_models.initialise_field_definitions import get_fulfilled_types
-    from pangloss_models.model_bases.base_models import labels_for_model
+    from pangloss_models.model_bases.labels import labels_for_model
 
     class Person(Entity):
         pass

@@ -11,8 +11,8 @@ from pangloss_models.field_definitions import (
     ModelFieldDict,
     ModelFields,
 )
+from pangloss_models.model_bases.model_tools import make_id
 from pangloss_models.model_bases.base_models import (
-    make_id,
     DeclaredClassMeta,
     _CreateBase,
     _CreateDBBase,

@@ -1,7 +1,8 @@
 from collections import defaultdict
+from collections.abc import Callable
 from dataclasses import dataclass
 from dataclasses import field as dataclass_field
-from typing import TYPE_CHECKING, Any, Callable, Protocol, TypeVar, runtime_checkable
+from typing import TYPE_CHECKING, Any, Protocol, TypeVar, runtime_checkable
 
 from annotated_types import BaseMetadata
 from frozendict import frozendict
@@ -76,10 +77,9 @@ class AnnotatedValueFieldDefinition(FieldDefinition):
     annotated_type: type[AnnotatedValue]
 
 
-type TRelationFieldDefinitionAnnotation = (
-    type[_DeclaredClass | BaseTypes | list]
-    | type[list[type[_DeclaredClass | BaseTypes | list]]]
-)
+type TRelationFieldDefinitionAnnotation = type[
+    _DeclaredClass | BaseTypes | list | list[type[_DeclaredClass | BaseTypes | list]]
+]
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -90,7 +90,7 @@ class LiteralTypeVarFieldDefinition(FieldDefinition):
 
 @dataclass(frozen=True, kw_only=True)
 class EmbeddedFieldDefinition(FieldDefinition):
-    annotated_type: type[Embedded] | type[Embedded | Embedded]
+    annotated_type: type[Embedded]
     type_options: set[EmbeddedOption]
 
 

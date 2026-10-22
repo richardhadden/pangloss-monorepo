@@ -19,7 +19,7 @@ import datetime
 import typing
 import uuid
 
-from pangloss_models.model_bases.base_models import fulfillable_labels
+from pangloss_models.model_bases.labels import fulfillable_labels
 from pangloss_models.model_bases.document import _DocumentUpdateDBBase
 from pangloss_models.model_bases.entity import _EntityUpdateDBBase
 from pangloss_users import current_request_username

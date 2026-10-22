@@ -23,7 +23,7 @@ from pangloss_models.field_definitions import (
     FieldDefinition,
     RelationFieldDefinition,
 )
-from pangloss_models.model_bases.base_models import labels_for_model
+from pangloss_models.model_bases.labels import labels_for_model
 from pangloss_models.model_registry import ModelRegistry
 
 SNAPSHOT_VERSION = 1

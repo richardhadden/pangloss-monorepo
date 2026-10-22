@@ -8,8 +8,8 @@ from pangloss_models.field_definitions import (
     ModelFieldDict,
     ModelFields,
 )
+from pangloss_models.model_bases.context_label import ContextLabel
 from pangloss_models.model_bases.base_models import (
-    ContextLabel,
     DeclaredClassMeta,
     _BaseObject,
     _CreateBase,

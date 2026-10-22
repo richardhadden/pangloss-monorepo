@@ -11,7 +11,7 @@ from pydantic.alias_generators import to_camel
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined
 
-from pangloss_models.initialise_models.builder import set_field
+from pangloss_models.model_bases.model_tools import set_field
 from pangloss_models.exceptions import PanglossModelError
 from pangloss_models.model_bases.base_models import _DeclaredClass
 from pangloss_models.model_bases.document import Document
