@@ -54,7 +54,6 @@ from pangloss_models.model_bases.reified_relation import (
 from pangloss_models.model_bases.semantic_space import SemanticSpace
 from pangloss_models.model_bases.trait import NonHeritableTrait, Trait
 from pangloss_models.utils import (
-    extract_relation_config,
     extract_validators,
     flatten,
     get_all_parent_classes,
@@ -308,7 +307,7 @@ def build_relatable_field_definition(
     Applies relation subclassing hints from relation config and records the classes the
     model depends on in `model._depends_on_classes`.
     """
-    relation_config = extract_relation_config(field_info)
+    relation_config = get_relation_config(field_info)
     annotation = field_info.annotation
 
     if (
@@ -675,7 +674,7 @@ def check_subclass_type(field_definition: RelationFieldDefinition):
 def extract_field_description(field_info: FieldInfo) -> str | None:
     """The description of a field: that of its `RelationConfig`, else the `description` of its
     `Field(...)`, else a bare string given in `Annotated[...]`"""
-    relation_config = extract_relation_config(field_info)
+    relation_config = get_relation_config(field_info)
     if relation_config and relation_config.description:
         return relation_config.description
 

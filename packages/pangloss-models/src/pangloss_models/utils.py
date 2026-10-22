@@ -203,11 +203,7 @@ def is_subclass_of_heritable_trait(
 
     This should work by not having BaseNode in its class hierarchy
     """
-    for parent in cls.mro()[1:]:
-        if issubclass(parent, (Document, Entity)):
-            return False
-    else:
-        return True
+    return not any(issubclass(parent, (Document, Entity)) for parent in cls.mro()[1:])
 
 
 def get_trait_subclasses(
@@ -298,27 +294,8 @@ def is_literal(
 def is_list_of_literal(
     annotation: type[Any] | None,
 ) -> TypeIs[type[list[str | int | float | bool | Decimal | Enum | date | datetime | TypedDict]]]:
-
-    # list[X]
-    if get_origin(annotation) is not list:
-        return False
-    # (X,)
-    args = get_args(annotation)
-    if not args:
-        return False
-
-    inner_type = args[0]
-
-    if is_literal(inner_type):
-        return True
-
-    if get_origin(inner_type) is Annotated:
-        inner_type_args = get_args(inner_type)
-        if not inner_type_args:
-            return False
-        if is_literal(inner_type_args[0]):
-            return True
-    return False
+    inner_type = get_list_item_type(annotation)
+    return inner_type is not None and is_literal(inner_type)
 
 
 def get_list_item_type(annotation: Any) -> Any:
@@ -420,27 +397,8 @@ def is_single_relatable(annotation: type[Any]) -> TypeIs[type[_DeclaredClass]]:
 
 
 def is_list_relatable(annotation: type[Any] | None) -> bool:
-
-    # list[X]
-    if get_origin(annotation) is not list:
-        return False
-    # (X,)
-    args = get_args(annotation)
-    if not args:
-        return False
-
-    inner_type = args[0]
-
-    if is_relatable(inner_type):
-        return True
-
-    if get_origin(inner_type) is Annotated:
-        inner_type_args = get_args(inner_type)
-        if not inner_type_args:
-            return False
-        if is_relatable(inner_type_args[0]):
-            return True
-    return False
+    inner_type = get_list_item_type(annotation)
+    return inner_type is not None and is_relatable(inner_type)
 
 
 def is_parameterized_generic(tp):
@@ -451,12 +409,12 @@ def flatten[T](xss: Iterable[Iterable[T]]) -> list[T]:
     return [x for xs in xss for x in xs]
 
 
-def extract_relation_config(field_info: FieldInfo) -> RelationConfig | None:
-    if not field_info.metadata:
-        return None
+def get_relation_config(field_info: FieldInfo) -> RelationConfig | None:
+    """The `RelationConfig` in a field's metadata, if it has one"""
     for metadata_object in field_info.metadata:
         if isinstance(metadata_object, RelationConfig):
             return metadata_object
+    return None
 
 
 def extract_validators(field_info: FieldInfo):
@@ -468,19 +426,9 @@ def extract_validators(field_info: FieldInfo):
     for metadata_object in field_info.metadata:
         if isinstance(metadata_object, BaseMetadata):
             validators.append(metadata_object)
-    if relation_config := extract_relation_config(field_info):
+    if relation_config := get_relation_config(field_info):
         validators.extend(relation_config.validators)
     return validators
-
-
-@cache
-def get_relation_config(field_info: FieldInfo) -> RelationConfig | None:
-    if field_info.metadata and (
-        rcs := [md for md in field_info.metadata if isinstance(md, RelationConfig)]
-    ):
-        relation_config = cast(RelationConfig, rcs[0])
-        return relation_config
-    return None
 
 
 @cache
@@ -624,18 +572,6 @@ def is_subclass_of_with_meta(cls):
     if pgm := getattr(cls, "__pydantic_generic_metadata__", None):
         if pgm["origin"] is WithMeta:
             return True
-    return False
-
-
-def class_is_direct_descendent_of_non_heritable_trait(
-    model, trait: type[NonHeritableTrait]
-) -> bool:
-    if not issubclass(trait, NonHeritableTrait):
-        return True
-
-    if model in get_direct_instantiations_of_trait(trait):
-        return True
-
     return False
 
 
