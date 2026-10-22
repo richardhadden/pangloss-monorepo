@@ -1,3 +1,4 @@
+from collections.abc import Iterable
 from inspect import isclass
 from types import UnionType
 from typing import (
@@ -39,6 +40,7 @@ from pangloss_models.field_definitions import (
 )
 from pangloss_models.model_bases.annotated_value import AnnotatedValue
 from pangloss_models.model_bases.base_models import _DeclaredClass
+from pangloss_models.model_bases.configs import RelationConfig
 from pangloss_models.model_bases.conjunction import Conjunction
 from pangloss_models.model_bases.document import Document
 from pangloss_models.model_bases.edge_model import EdgeModel
@@ -291,8 +293,12 @@ def build_relatable_field_definition(
     field_info: FieldInfo,
     model: type[_DeclaredClass],
     is_db_field: bool = False,
+    subclasses_parent_fields: Iterable[str | FieldSubclassing] | None = None,
 ) -> RelationFieldDefinition:
     """Build a RelationFieldDefinition from model field metadata.
+
+    `subclasses_parent_fields` are the normalised declarations (see
+    `normalise_and_get_subclassed_fields`); if not given, those written in the relation config.
 
     Supports:
     - TypeVar relation annotations (`T`, `list[T]`: the relations of a generic wrapper)
@@ -349,8 +355,10 @@ def build_relatable_field_definition(
         field_on_model=model,
         annotated_type=annotation,  # pyright: ignore[reportArgumentType]
         type_options=type_options,
-        subclasses_parent_fields=(
-            set(relation_config.subclasses_parent_fields) if relation_config else set()
+        subclasses_parent_fields=set(
+            subclasses_parent_fields
+            if subclasses_parent_fields is not None
+            else relation_config.subclasses_parent_fields if relation_config else ()
         ),
         reverse_name=(
             relation_config.reverse_name
@@ -441,18 +449,33 @@ def recursively_add_field_subclassings(
             )
 
 
+def declaring_class(model: type[_DeclaredClass], field_name: str, config: RelationConfig):
+    """The most basic class in `model`'s MRO that has this field with this relation config: the class
+    that wrote the declaration, which its names are to be resolved against."""
+    for cls in reversed(model.mro()):
+        info = getattr(cls, "model_fields", {}).get(field_name)
+        if info is not None and get_relation_config(info) is config:
+            return cls
+    return model
+
+
 def normalise_and_get_subclassed_fields(
     model: type[_DeclaredClass],
-) -> dict[str, FieldSubclassing]:
+) -> tuple[dict[str, FieldSubclassing], dict[str, list[FieldSubclassing]]]:
     """Normalize relation subclass declarations from model fields.
 
     For each field with relation config subclass declarations, validate the
     target field exists and generate a set of `FieldSubclassing` objects.
+    Returns the fields that are subclassed (by name), and, for each relation field of `model`,
+    its normalised declarations. (The `RelationConfig` is shared with other classes and is not changed.)
     """
 
     subclassed_fields = {}
+    normalised: dict[str, list[FieldSubclassing]] = {}
     for field_name, field_info in model.model_fields.items():
         if relation_config := get_relation_config(field_info):
+            # (a field inherited from a parent is resolved from where it was declared)
+            declared_on = declaring_class(model, field_name, relation_config)
             field_subclassings: set[FieldSubclassing] = set()
             for field_subclassing in relation_config.subclasses_parent_fields:
                 if isinstance(field_subclassing, FieldSubclassing):
@@ -484,7 +507,7 @@ def normalise_and_get_subclassed_fields(
                 else:
                     assert isinstance(field_subclassing, str)
                     origin_classes_and_definitions = (
-                        get_field_origin_model_and_definition(model, field_subclassing)
+                        get_field_origin_model_and_definition(declared_on, field_subclassing)
                     )
 
                     if not origin_classes_and_definitions:
@@ -505,8 +528,8 @@ def normalise_and_get_subclassed_fields(
                         )
                         field_subclassings.add(subclassed_fields[field_subclassing])
 
-            relation_config.subclasses_parent_fields = list(field_subclassings)
-    return subclassed_fields
+            normalised[field_name] = list(field_subclassings)
+    return subclassed_fields, normalised
 
 
 def field_is_from_indirect_non_heritable_model(model: type[_DeclaredClass], field_name):
@@ -550,12 +573,16 @@ def get_fields_on_model(model: type[_DeclaredClass]):
     """Yields an iterable of field name, field info and set of FieldFulfilment objects for a model, removing subclassed
     fields"""
 
-    subclassed_fields = normalise_and_get_subclassed_fields(model)
+    subclassed_fields, own_normalised = normalise_and_get_subclassed_fields(model)
 
     fulfilled_types = fulfilled_types_in_order(model)
 
+    fulfilled_normalised: dict[type[_DeclaredClass], dict[str, list[FieldSubclassing]]] = {}
     for fulfilled in fulfilled_types:
-        subclassed_fields.update(normalise_and_get_subclassed_fields(fulfilled))
+        fulfilled_subclassed, fulfilled_normalised[fulfilled] = (
+            normalise_and_get_subclassed_fields(fulfilled)
+        )
+        subclassed_fields.update(fulfilled_subclassed)
 
     # the fields of the classes it fulfils, each once (the first class that has it gives its definition)
     fulfilled_field_names = dict.fromkeys(
@@ -574,6 +601,7 @@ def get_fields_on_model(model: type[_DeclaredClass]):
             field_name,
             having[0].model_fields[field_name],
             set(FieldFulfilment(field_name=field_name, fulfils_class=f) for f in having),
+            fulfilled_normalised[having[0]].get(field_name),
         )
 
     # its own fields
@@ -593,13 +621,13 @@ def get_fields_on_model(model: type[_DeclaredClass]):
                     FieldFulfilment(
                         field_name=fsc.field_name, fulfils_class=fsc.field_on_model
                     )
-                    for fsc in config.subclasses_parent_fields
-                    if isinstance(fsc, FieldSubclassing)
-                    and fsc.field_on_model in fulfilled_types
+                    for fsc in own_normalised[field_name]
+                    if fsc.field_on_model in fulfilled_types
                 ),
+                own_normalised[field_name],
             )
         else:
-            yield field_name, field_info, set()
+            yield field_name, field_info, set(), None
 
 
 def check_subclass_type(field_definition: RelationFieldDefinition):
@@ -744,6 +772,7 @@ def define_field(
     field_info: FieldInfo,
     is_db_field: bool,
     field_fulfilment: set[FieldFulfilment],
+    subclasses_parent_fields: Iterable[str | FieldSubclassing] | None = None,
 ) -> FieldDefinition | None:
     """The definition of a field, by what its type is. None if the type is not one that is supported."""
     annotation = field_info.annotation
@@ -764,7 +793,11 @@ def define_field(
 
     if is_relatable(annotation) or is_list_relatable(annotation):
         definition = build_relatable_field_definition(
-            field_name, field_info, model, is_db_field=is_db_field
+            field_name,
+            field_info,
+            model,
+            is_db_field=is_db_field,
+            subclasses_parent_fields=subclasses_parent_fields,
         )
         if field_fulfilment:
             definition.field_required_to_fulfil.update(field_fulfilment)
@@ -798,7 +831,7 @@ def initialise_field_definitions(model: type[_DeclaredClass]):
     """
     check_model_fields_are_allowed(model)
 
-    for field_name, field_info, field_fulfilment in get_fields_on_model(model):
+    for field_name, field_info, field_fulfilment, normalised in get_fields_on_model(model):
         is_db_field = any(
             isclass(md) and issubclass(md, DBField) or isinstance(md, DBField)
             for md in field_info.metadata
@@ -816,7 +849,9 @@ def initialise_field_definitions(model: type[_DeclaredClass]):
                 "AnnotatedValues are not supported (a field can have only one)"
             )
 
-        definition = define_field(model, field_name, field_info, is_db_field, field_fulfilment)
+        definition = define_field(
+            model, field_name, field_info, is_db_field, field_fulfilment, normalised
+        )
         if definition is not None:
             model._meta.field_definitions.add_field(name=field_name, field_definition=definition)
         elif not supported_as_wrapper_field:

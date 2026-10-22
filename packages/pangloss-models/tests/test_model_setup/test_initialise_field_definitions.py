@@ -1475,7 +1475,7 @@ def test_get_fields_basic():
 
     initialise()
 
-    assert list(field_name for field_name, _, _ in get_fields_on_model(Action)) == [
+    assert list(field_name for field_name, *_ in get_fields_on_model(Action)) == [
         "carried_out_by_person",
         "carried_out_when",
         "carried_out_where",
@@ -1509,7 +1509,7 @@ def test_get_fields_with_overridden():
 
     initialise()
 
-    assert list(field_name for field_name, _, _ in get_fields_on_model(Action)) == [
+    assert list(field_name for field_name, *_ in get_fields_on_model(Action)) == [
         "carried_out_by_person",
         "carried_out_when",
         "carried_out_where",

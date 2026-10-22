@@ -8,6 +8,7 @@ from pydantic import ConfigDict
 from pydantic import create_model as pydantic_create_model
 from pydantic.alias_generators import to_camel
 
+from pangloss_models.initialise_models.builder import set_field
 from pangloss_models.model_bases.base_models import _DeclaredClass
 from pangloss_models.model_bases.entity import Entity, _EntityEditViewBase
 
@@ -37,6 +38,6 @@ def initialise_edit_view_model(model: type[Entity]) -> None:
     for field_name, field_info in model.View.model_fields.items():
         if field_name == "meta":
             continue
-        model.EditView.model_fields[field_name] = field_info
+        set_field(model.EditView, field_name, field_info)
 
     model.EditView.model_rebuild(force=True)

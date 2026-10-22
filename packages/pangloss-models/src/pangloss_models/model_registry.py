@@ -270,10 +270,12 @@ class ModelRegistry:
     # ----------------------------
 
     @classmethod
-    def finalise(cls, *, allow_cycles: bool = True):
+    def finalise(cls, *, allow_cycles: bool = True, bind_database: bool = True):
         """
         1. Resolve Pydantic types
         2. Run topo-ordered initialisation
+        3. Attach the database functions (`get`, `save`, ...), which needs the settings to be loaded;
+           `bind_database=False` makes the models alone, without them
         """
 
         # --- Phase 1: Pydantic rebuild ---
@@ -283,7 +285,8 @@ class ModelRegistry:
             model.model_rebuild(force=True, _types_namespace=namespace)
 
         cls._initialise_models()
-        cls._bind_database_functions()
+        if bind_database:
+            cls._bind_database_functions()
 
     # ----------------------------
     # Model initialisation

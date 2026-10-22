@@ -83,11 +83,11 @@ How the five models are made is described in [Generated models](generated-models
 
 ## Not done
 
-- **`normalise_and_get_subclassed_fields` still writes back** into the shared `RelationConfig`
-  (`subclasses_parent_fields`), and is run for the model and for each class it fulfils. The result is the same however
-  often it runs (it accepts both forms), but it should return a value instead. Pinned by the snapshot; not yet changed.
-- **The head view, edit view and reference models** still write `model_fields` directly and share `FieldInfo`
-  objects between models (`HeadView` copies `View`'s). Small, and they are not duplicated code.
+- ~~`normalise_and_get_subclassed_fields` wrote back~~ **Done (2026-10-22):** it returns the normalised declarations (and
+  the subclassed fields) and `get_fields_on_model` hands them on to `define_field`; the shared `RelationConfig` is
+  not changed. A field inherited from a parent is resolved against the class that declared it (`declaring_class`).
+- ~~The head view, edit view and reference models wrote `model_fields` directly~~ **Done:** they use `set_field`. (`HeadView`
+  still shares `FieldInfo` objects with `View`.)
 - **The models made for a generic are not shared** (measured 2026-10-22; five runs each, fresh process, laptop). Each
   use of `InRole[Person]` in a relation makes new classes (the snapshot has `...Create#2`: two classes with one name),
   and only `Update` caches them. Turning the cache on for every kind (the `cache_generic` field of `ModelKind`) gives:
@@ -107,9 +107,10 @@ How the five models are made is described in [Generated models](generated-models
   than half of those (520 calls, about 45% of the time) are the two loops at the end of `ModelRegistry._initialise_models`
   that rebuild every action class again. Whether one of those loops can go has not been tried; it is the only
   lever of any size. (An earlier figure of 0.9 s was measured under `tracemalloc`, which slows this code about 4×.)
-- **`initialise()` needs settings loaded** (`_bind_database_functions` reads `SETTINGS`) even to make pure models.
+- ~~`initialise()` needs settings loaded~~ **Done:** `initialise(bind_database=False)` makes the models alone.
 - Type-checker ignore comments (`# type: ignore`, `# pyright: ignore[...]`, `# ty:ignore[...]`) on the same lines:
-  the builder has `# type: ignore[...]` with the error named; the rest of the module has the old three.
+  the builder has `# type: ignore[...]` with the error named; the rest of the module has the old three. Not removed: no
+  type checker is installed here to show which are still needed.
 - Field and relation analysis in `initialise_field_definitions.py` (`build_relation_options`) is unchanged, apart
   from the fixes above.
 

@@ -47,7 +47,7 @@ Items below marked `[x]` are fixed (with a test); `[x] not a bug` were suspected
   `[...][0]` of an unordered `set` (`get_fulfiled_types` returns a `set`, so *which* class's `FieldInfo` is used
   is by hash order, so could differ between runs). Use an ordered, de-duplicated structure, and decide what happens
   when two fulfilled classes disagree about a field's type. **Fixed (ordered, each once). What happens when two fulfilled classes disagree about a type is not decided.**
-- [ ] **(suspected) `normalise_and_get_subclassed_fields` mutates `relation_config.subclasses_parent_fields`**
+- [x] **(fixed 2026-10-22) `normalise_and_get_subclassed_fields` mutated `relation_config.subclasses_parent_fields`**
   (a list on a config shared through `FieldInfo`), and is called for the model and again for every fulfilled
   class. Result depends on call order and on how often it ran. Compute a new value, do not write back. In the string
   branch, `subclassed_fields[name]` is overwritten for each origin class, so only the last survives when a field
@@ -94,7 +94,7 @@ Items below marked `[x]` are fixed (with a test); `[x] not a bug` were suspected
 - [ ] **`FieldInfo` objects are shared between models** (`HeadView`/`EditView` copy `View`'s `FieldInfo`s), and
   the code later sets `.default` / `.default_factory` on `FieldInfo`s it has just put in. A later mutation would
   leak between models. Copy (`copy.copy`) when sharing.
-- [ ] **`initialise()` needs settings loaded** (`_bind_database_functions` reads
+- [x] **(fixed: `initialise(bind_database=False)`) `initialise()` needs settings loaded** (`_bind_database_functions` reads
   `pangloss_core.settings.SETTINGS`) even to generate pure models: `AttributeError: module 'pangloss_core.settings'
   has no attribute 'SETTINGS'`. Generation should not need a database; bind lazily or split the step.
 - [x] **`initialise_reference_models`: `try: get_type_hints(...) except Exception: return`** with a

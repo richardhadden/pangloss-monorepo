@@ -5,6 +5,7 @@ from pydantic import create_model as pydantic_create_model
 from pydantic.alias_generators import to_camel
 from pydantic.fields import FieldInfo
 
+from pangloss_models.initialise_models.builder import set_field
 from pangloss_models.field_definitions import IncomingRelationDefinition
 from pangloss_models.initialise_models.initialise_view_model import (
     get_relation_annotation_types,
@@ -56,7 +57,7 @@ def build_label_field_on_head_view_model(
 ):
 
     if getattr(head_view_model._meta, "require_label", True):
-        head_view_model.model_fields["label"] = FieldInfo(annotation=str)
+        set_field(head_view_model, "label", FieldInfo(annotation=str))
 
 
 def build_incoming_bound_model(
@@ -118,7 +119,7 @@ def initialise_head_view_model(
     for field_name, field_info in model.View.model_fields.items():
         if field_name == "meta":
             continue
-        model.HeadView.model_fields[field_name] = field_info
+        set_field(model.HeadView, field_name, field_info)
 
     for (
         incoming_field_name,
@@ -140,8 +141,10 @@ def initialise_head_view_model(
         if annotation_types:
             annotation = Union[*annotation_types]  # type:ignore
 
-            model.HeadView.model_fields[incoming_field_name] = FieldInfo(
-                annotation=list[annotation], default_factory=list
+            set_field(
+                model.HeadView,
+                incoming_field_name,
+                FieldInfo(annotation=list[annotation], default_factory=list),
             )
 
     model.HeadView.model_rebuild(force=True)

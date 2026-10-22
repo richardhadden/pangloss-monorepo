@@ -11,6 +11,7 @@ from pydantic.alias_generators import to_camel
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined
 
+from pangloss_models.initialise_models.builder import set_field
 from pangloss_models.exceptions import PanglossModelError
 from pangloss_models.model_bases.base_models import _DeclaredClass
 from pangloss_models.model_bases.document import Document
@@ -111,7 +112,10 @@ def initialise_reference_view_model(model: type[_DeclaredClass]):
 
         field_definition = model._meta.fields[field_name]
 
-        model.ReferenceView.model_fields[field_name] = FieldInfo(
+        set_field(
+            model.ReferenceView,
+            field_name,
+            FieldInfo(
             annotation=field_definition.annotated_type,  # type: ignore
             validation_alias=to_camel(field_name),
             metadata=field_definition.validators,  # type: ignore
@@ -121,6 +125,7 @@ def initialise_reference_view_model(model: type[_DeclaredClass]):
             default=None
             if annotation_is_optional(field_definition.annotated_type)
             else PydanticUndefined,
+        ),
         )
 
     model.ReferenceView.model_rebuild(force=True)

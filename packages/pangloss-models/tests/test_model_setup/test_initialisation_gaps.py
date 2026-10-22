@@ -1081,3 +1081,19 @@ def test_the_name_of_a_generic_model_does_not_depend_on_the_order_of_a_set(modul
     assert module.recursively_get_generic_naming(options([Person, Group])) == (
         module.recursively_get_generic_naming(options([Group, Person]))
     )
+
+
+def test_models_can_be_made_without_the_database_functions(monkeypatch):
+    from pangloss_models.model_registry import ModelRegistry
+
+    def fail():
+        raise AssertionError("the database functions should not be bound")
+
+    monkeypatch.setattr(ModelRegistry, "_bind_database_functions", fail)
+
+    class Thing(Entity):
+        name: str
+
+    initialise(bind_database=False)
+
+    assert "name" in Thing.Create.model_fields
