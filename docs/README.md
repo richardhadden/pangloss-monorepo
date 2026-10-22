@@ -29,6 +29,7 @@ Each feature in these docs is marked with its status:
 | [Command line](cli.md) | The `pangloss` command, and adding commands from apps |
 | [Meta slots](meta-slots.md) ⏳ | A design for letting optional packages (the interface) keep their own `_<name>_meta` on a model class |
 | [History](history.md) ⏳ | A design for recording every version of a document or entity (best effort, in SQLite), and restoring one, including after the models have changed |
+| [Dates and the calendar](dates.md) ⏳ | A design for two optional packages: uncertain dates, periods and recurrence with probabilities (`pangloss-dates`), and a calendar of days, observances and a background worker (`pangloss-calendar`) |
 | [Database migrations](migrations.md) 🚧 | The design and progress of migrations: how changes to the models are applied to existing data. To use them, see the [user guide](../guide/migrations/README.md) |
 | [Development](development.md) | Setting up, running tests, repository layout |
 | [Status and roadmap](status.md) | What is and is not implemented |
