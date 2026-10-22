@@ -97,6 +97,12 @@ def build_fetch_document_query(
     return (query, query_params)
 
 
+# The nodes that a relation to an entity can pass through on its way up to the document that holds it:
+# the generic wrappers (a reified relation, a semantic space, a conjunction), and embedded objects
+WRAPPER_LABELS = ("ReifiedRelation", "ReifiedRelationDocument", "SemanticSpace", "Conjunction")
+CHAIN_LABELS = (*WRAPPER_LABELS, "Embedded")
+
+
 def build_fetch_incoming_query(
     entity_class: type[Entity], entity_id: uuid.UUID
 ) -> tuple[str, dict]:
@@ -104,26 +110,35 @@ def build_fetch_incoming_query(
 
     Every relation is stored as a forward edge and a reverse edge marked
     `reverse: true`, so the relations to an entity are the reverse edges leading
-    out of it. An entity can be related to through a chain of reified relations
-    and embedded objects (`Statement -> Date -> Identification -> Person`); for
-    each reverse edge, this follows the chain up to the node that holds the
-    relation (the document, or entity, that the chain starts from).
+    out of it. An entity can be related to through a chain of generic wrappers
+    (reified relations, semantic spaces, conjunctions) and embedded objects
+    (`Statement -> Date -> Identification -> Person`); for each reverse edge, this
+    follows the chain up to the node that holds the relation (the document, or
+    entity, that the chain starts from).
 
     Each row has the reverse edge's name, the nodes of the chain from the one next
-    to the entity up to that node (and the names of the edges between them), the
-    targets of the first of them, and what is needed for the `meta` of that node.
+    to the entity up to that node (and the names of the edges between them), and
+    what is needed for the `meta` of that node. (What the nodes of the chain hold is
+    read by `build_fetch_held_query`: with it in this query, the server returned a
+    different path.)
     """
-    params = {"id": str(entity_id), "type": entity_class.__name__}
+    params = {
+        "id": str(entity_id),
+        "type": entity_class.__name__,
+        "chain_labels": list(CHAIN_LABELS),
+    }
+    # (the labels are tested as a list: written as `a:X OR a:Y OR ...`, a longer list made the server
+    # return the wrong path for a chain of several nodes)
     query = """
     MATCH (entity:PGIndexableNode {id: $id})
     WHERE $type IN labels(entity)
     MATCH (entity)-[first]->(next)
     WHERE coalesce(first.reverse, false)
     OPTIONAL MATCH ascent = (next)-[*BFS ..10 (edge, node | coalesce(edge.reverse, false))]->(top)
-    WHERE (next:ReifiedRelation OR next:ReifiedRelationDocument OR next:Embedded)
+    WHERE ANY(label IN labels(next) WHERE label IN $chain_labels)
       AND ALL(chain_node IN nodes(ascent)[0..-1]
-              WHERE chain_node:ReifiedRelation OR chain_node:ReifiedRelationDocument OR chain_node:Embedded)
-      AND NOT (top:ReifiedRelation OR top:ReifiedRelationDocument OR top:Embedded)
+              WHERE ANY(label IN labels(chain_node) WHERE label IN $chain_labels))
+      AND NONE(label IN labels(top) WHERE label IN $chain_labels)
     WITH first, next, ascent, coalesce(top, next) AS holder
     OPTIONAL MATCH (hn:HeadNode {id: holder.head_node_id})
     WITH first, next, ascent, holder, coalesce(hn, holder) AS headnode
@@ -143,9 +158,6 @@ def build_fetch_incoming_query(
             THEN [next{.*, _labels: labels(next)}]
             ELSE [chain_node IN nodes(ascent) | chain_node{.*, _labels: labels(chain_node)}]
         END AS chain,
-        // All the targets of the reified relation next to the entity (the entity
-        // itself, and any others). The others in the chain only lead to it.
-        [(next)-[:target]->(target) | target{.*}] AS next_targets,
         CASE WHEN ascent IS NULL THEN [] ELSE [edge IN relationships(ascent) | type(edge)] END AS chain_edge_types,
         {
             created_by: creator.username,
@@ -157,3 +169,20 @@ def build_fetch_incoming_query(
         } AS creation_meta
     """
     return query, params
+
+
+def build_fetch_held_query(node_ids: list[str]) -> tuple[str, dict]:
+    """Build the query for what generic wrappers hold: for each node, the forward edges from it (not
+    the reverse ones that lead back up) with what they lead to.
+
+    A reified relation holds its targets in `target`, a semantic space its contents in `contents`, a
+    conjunction its parts in the fields it names (`cause`, `result`)."""
+    query = """
+    UNWIND $node_ids AS node_id
+    MATCH (node:PGIndexableNode {id: node_id})
+    OPTIONAL MATCH (node)-[held]->(target)
+    WHERE NOT coalesce(held.reverse, false)
+    RETURN node_id AS id,
+           collect(CASE WHEN held IS NULL THEN null ELSE {edge: type(held), node: target{.*}, labels: labels(target)} END) AS held
+    """
+    return query, {"node_ids": node_ids}

@@ -169,6 +169,193 @@ def test_a_generic_inside_a_generic_with_an_edge_model_has_only_the_edge_variant
         assert all("ViaWeight" in n for n in roles), roles
 
 
+# --- Incoming relations ----------------------------------------------------------------------------
+
+
+@no_type_check
+def test_an_entity_has_an_incoming_relation_for_every_way_it_is_reached():
+    """Directly, through a reified relation, a semantic space, a conjunction, or any of them inside
+    another, from a document or from an embedded object"""
+    from pangloss_models.model_bases.conjunction import Conjunction
+
+    class Person(Entity):
+        pass
+
+    class Place(Entity):
+        pass
+
+    class InRole[T](ReifiedRelation[T]):
+        role: str
+
+    class Negative[T](SemanticSpace[T]):
+        pass
+
+    class Causes[A, B](Conjunction):
+        cause: A
+        result: B
+
+    class Date(Embedded):
+        spaced_in_date: Negative[Person]
+
+    class Statement(Document):
+        direct: Person
+        reified: InRole[Person]
+        spaced: Negative[Person]
+        joined: Causes[Person, Place]
+        both: Negative[InRole[Person]]
+        spaces: list[Negative[Person]]
+        date: Date
+
+    initialise()
+
+    def incoming(entity):
+        return {
+            name: {(i.source.__name__, i.via_reified) for i in found}
+            for name, found in entity._meta.field_definitions.incoming_fields.items()
+        }
+
+    assert incoming(Person) == {
+        "direct_reverse": {("Statement", False)},
+        "reified_reverse": {("Statement", True)},
+        "spaced_reverse": {("Statement", True)},
+        "joined_reverse": {("Statement", True)},
+        "both_reverse": {("Statement", True)},
+        "spaces_reverse": {("Statement", True)},
+        "spaced_in_date_reverse": {("Statement", True)},
+    }
+    assert incoming(Place) == {"joined_reverse": {("Statement", True)}}
+    assert {n for n in Person.HeadView.model_fields if n.endswith("_reverse")} == set(
+        incoming(Person)
+    )
+
+
+@pytest.mark.parametrize("model", ["Update", "UpdateDB"])
+@no_type_check
+def test_what_a_generic_holds_of_its_own_can_be_given_as_an_update(model):
+    """A document or an embedded object that a wrapper has of its own may be given as an update (with
+    its id, so it keeps its identity) or as a new one, as it may be when held directly. (The model made for
+    a use of the wrapper offered only the new one.)"""
+
+    class Date(Embedded):
+        when: datetime.date
+
+    class Note(Document):
+        text: str
+
+    class Person(Entity):
+        pass
+
+    class Attested[T](ReifiedRelation[T]):
+        note: Note
+        dated: Date
+
+    class Statement(Document):
+        held_directly: Note
+        who: Attested[Person]
+
+    initialise()
+
+    def offered(owner, field):
+        fields = getattr(owner, model).model_fields
+        return {c.__name__ for c in classes_in(fields[field].annotation)}
+
+    # the model itself
+    assert {"NoteUpdate", "NoteCreate"} <= {n.replace("DB", "") for n in offered(Statement, "held_directly")}
+
+    # and the model made for a use of the wrapper
+    wrapper = next(
+        c for c in classes_in(getattr(Statement, model).model_fields["who"].annotation)
+        if c.__name__.startswith("Attested[Person]") and c.__name__.endswith(model)
+    )
+    for field, new, existing in (("note", "NoteCreate", "NoteUpdate"), ("dated", "DateCreate", "DateUpdate")):
+        names = {n.replace("DB", "") for n in {c.__name__ for c in classes_in(wrapper.model_fields[field].annotation)}}
+        assert {new, existing} <= names, (field, names)
+
+
+@no_type_check
+def test_an_update_of_a_generic_keeps_the_identity_of_what_it_holds():
+    class Note(Document):
+        text: str
+
+    class Person(Entity):
+        pass
+
+    class Attested[T](ReifiedRelation[T]):
+        note: Note
+
+    class Statement(Document):
+        who: Attested[Person]
+
+    initialise()
+
+    note_id = uuid7()
+    person = {"type": "Person", "id": uuid7()}
+    # an existing wrapper (it has an id) with an existing note
+    update = Statement.Update(
+        id=uuid7(),
+        label="S",
+        who={
+            "type": "Attested",
+            "id": uuid7(),
+            "target": [person],
+            "note": {"type": "Note", "id": note_id, "label": "N", "text": "t"},
+        },
+    )
+    assert isinstance(update.who.note, Note.Update)
+    assert update.who.note.id == note_id
+
+    # an existing wrapper with a new note
+    new_note = Statement.Update(
+        id=uuid7(),
+        label="S",
+        who={
+            "type": "Attested",
+            "id": uuid7(),
+            "target": [person],
+            "note": {"type": "Note", "label": "N", "text": "t"},
+        },
+    )
+    assert isinstance(new_note.who.note, Note.Create)
+
+
+@no_type_check
+def test_bindings_reach_what_a_generic_holds_but_not_its_own_fields():
+    """A binding fills the fields of the documents a wrapper holds (tested above), not the wrapper's own
+    fields, which stay required (a pinned limitation: it is the same in every model)"""
+
+    class Note(Document):
+        text: str
+        year: int
+
+    class Person(Entity):
+        pass
+
+    class Attested[T](ReifiedRelation[T]):
+        year: int
+        note: Note
+
+    class Factoid(Document):
+        year: int
+        who: Annotated[
+            Attested[Person],
+            RelationConfig(
+                bind_to_child_field=[FieldBinding(bound_field="year", child_fields=["year"])]
+            ),
+        ]
+
+    initialise()
+
+    for model in ("Create", "Update", "View"):
+        wrapper = next(
+            c
+            for c in classes_in(getattr(Factoid, model).model_fields["who"].annotation)
+            if c.__name__.startswith("Attested[Person]")
+        )
+        assert wrapper.model_fields["year"].is_required(), model
+        note = next(c for c in classes_in(wrapper.model_fields["note"].annotation) if "year" in c.model_fields)
+        assert not note.model_fields["year"].is_required(), model
+
+
 # --- Field bindings --------------------------------------------------------------------------------
 
 

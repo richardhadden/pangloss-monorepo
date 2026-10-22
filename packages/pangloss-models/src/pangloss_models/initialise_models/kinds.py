@@ -124,15 +124,10 @@ class ModelKind:
     """If a document that a wrapper's type variable stands for offers its models in another order than
     `offers`. quirk: `Update` puts `Create` first there (the order of a union can decide which member
     pydantic uses when more than one fits)"""
-    document_direct: tuple[str, ...] | None = None
-    """If a generic's own document relation offers other models than `offers`. quirk: `Update` offers
-    only `Create` there, so a document of a wrapper cannot be given as an update"""
 
     # --- how the models are made ------------------------------------------------------------------
     bound_suffix: str = ""
     """The end of the name of a model made for bindings. quirk: `Update` has none"""
-    type_uses_field: bool = False
-    """quirk: the `type` of `Update` is given as `Field(default=...)`, the others as a plain default"""
     id_fields: bool = False
     """Whether `id` and `create_new` are added (if the class can be given an id)"""
     bound_id_fields: bool = False
@@ -151,13 +146,16 @@ class ModelKind:
     empty_list_default: bool = False
     """Whether a list relation with nothing in it has an empty list (nothing is stored, so none read)"""
     bind_generic_itself: bool = False
-    """Whether the bindings are applied to the model made for a generic. quirk: not for `Update`
-    (the code that did so assigned its result to a name that was never used)"""
+    """Whether the model made for a generic is itself made for the bindings. quirk: this has no effect on
+    its fields (the wrapper's own fields are copied over afterwards, so stay required in every kind: the
+    bindings reach what the wrapper holds, not its own fields); it only gives the model its name and
+    base class. Not done for `Update`, and removing it from the others would change the names of the
+    generated models"""
     cache_generic: bool = False
     """quirk: only the models made for generics in `Update` are cached"""
     copy_fields_from: str = ""
-    """quirk: the model whose fields are copied onto the model made for a generic. For `Update` that is
-    `Create`"""
+    """The model whose fields are copied onto the model made for a generic (a model made from a base
+    class does not take its fields). Always the same kind of model"""
 
     # --- the optional fields ----------------------------------------------------------------------
     literal: FieldRule = FieldRule()
@@ -266,16 +264,14 @@ UPDATE = ModelKind(
     inline_with_edge=frozenset({"typevar", "direct"}),
     inline_first=frozenset(),
     document_typevar=("Create", "Update"),
-    document_direct=("Create",),
     bound_suffix="",
-    type_uses_field=True,
     generic_validators=True,
     bound_validators=True,
     applies_bindings=True,
     skip_db_fields=True,
     descriptions=True,
     cache_generic=True,
-    copy_fields_from="Create",
+    copy_fields_from="Update",
     literal=CLIENT_LITERAL,
     embedded=rule({"bound", "fulfil"}, {"bound"}),
     relation=rule({"bound", "fulfil"}, {"bound", "fulfil"}),

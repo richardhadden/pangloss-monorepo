@@ -287,6 +287,119 @@
     "require_label": "False"
    }
   },
+  "Attested": {
+   "depends_on": [
+    "Date",
+    "Note"
+   ],
+   "field_definitions": {
+    "dated": {
+     "annotated_type": "Date",
+     "db_field": false,
+     "description": null,
+     "field_on_model": "Attested",
+     "kind": "EmbeddedFieldDefinition",
+     "required_to_fulfil": [],
+     "type_options": [
+      "(EmbeddedOption, annotated_type=Date)"
+     ]
+    },
+    "note": {
+     "annotated_type": "Note",
+     "bind_to_child_field": [],
+     "db_field": false,
+     "description": null,
+     "field_on_model": "Attested",
+     "kind": "RelationFieldDefinition",
+     "required_to_fulfil": [],
+     "reverse_name": "note_reverse",
+     "subclasses_parent_fields": [],
+     "type_options": [
+      "(RelationToDocument, annotated_type=Note)"
+     ],
+     "validators": [],
+     "wrapper": null
+    },
+    "target": {
+     "annotated_type": "list[TypeVar(T)]",
+     "bind_to_child_field": [],
+     "db_field": false,
+     "description": null,
+     "field_on_model": "Attested",
+     "kind": "RelationFieldDefinition",
+     "required_to_fulfil": [],
+     "reverse_name": "target_reverse",
+     "subclasses_parent_fields": [],
+     "type_options": [
+      "(RelationToTypeVar, annotated_type=TypeVar(T), type_var_name='T')"
+     ],
+     "validators": [],
+     "wrapper": "list"
+    }
+   },
+   "incoming": {},
+   "kind": "ReifiedRelation",
+   "meta": {
+    "require_label": "False"
+   }
+  },
+  "Attested[declare.<locals>.Person]": {
+   "depends_on": [
+    "Date",
+    "Note",
+    "Person"
+   ],
+   "field_definitions": {
+    "dated": {
+     "annotated_type": "Date",
+     "db_field": false,
+     "description": null,
+     "field_on_model": "Attested[declare.<locals>.Person]",
+     "kind": "EmbeddedFieldDefinition",
+     "required_to_fulfil": [],
+     "type_options": [
+      "(EmbeddedOption, annotated_type=Date)"
+     ]
+    },
+    "note": {
+     "annotated_type": "Note",
+     "bind_to_child_field": [],
+     "db_field": false,
+     "description": null,
+     "field_on_model": "Attested[declare.<locals>.Person]",
+     "kind": "RelationFieldDefinition",
+     "required_to_fulfil": [],
+     "reverse_name": "note_reverse",
+     "subclasses_parent_fields": [],
+     "type_options": [
+      "(RelationToDocument, annotated_type=Note)"
+     ],
+     "validators": [],
+     "wrapper": null
+    },
+    "target": {
+     "annotated_type": "list[Person]",
+     "bind_to_child_field": [],
+     "db_field": false,
+     "description": null,
+     "field_on_model": "Attested[declare.<locals>.Person]",
+     "kind": "RelationFieldDefinition",
+     "required_to_fulfil": [],
+     "reverse_name": "target_reverse",
+     "subclasses_parent_fields": [],
+     "type_options": [
+      "(RelationToEntity, annotated_type=Person)"
+     ],
+     "validators": [],
+     "wrapper": "list"
+    }
+   },
+   "incoming": {},
+   "kind": "ReifiedRelation",
+   "meta": {
+    "require_label": "False"
+   }
+  },
   "Causes": {
    "depends_on": [],
    "field_definitions": {
@@ -318,6 +431,52 @@
      "subclasses_parent_fields": [],
      "type_options": [
       "(RelationToTypeVar, annotated_type=TypeVar(TResult), type_var_name='TResult')"
+     ],
+     "validators": [],
+     "wrapper": null
+    }
+   },
+   "incoming": {},
+   "kind": "Conjunction",
+   "meta": {
+    "abstract": "False",
+    "require_label": "False"
+   }
+  },
+  "Causes[declare.<locals>.Place, declare.<locals>.Person]": {
+   "depends_on": [
+    "Person",
+    "Place"
+   ],
+   "field_definitions": {
+    "cause": {
+     "annotated_type": "Place",
+     "bind_to_child_field": [],
+     "db_field": false,
+     "description": null,
+     "field_on_model": "Causes[declare.<locals>.Place, declare.<locals>.Person]",
+     "kind": "RelationFieldDefinition",
+     "required_to_fulfil": [],
+     "reverse_name": "cause_reverse",
+     "subclasses_parent_fields": [],
+     "type_options": [
+      "(RelationToEntity, annotated_type=Place)"
+     ],
+     "validators": [],
+     "wrapper": null
+    },
+    "result": {
+     "annotated_type": "Person",
+     "bind_to_child_field": [],
+     "db_field": false,
+     "description": null,
+     "field_on_model": "Causes[declare.<locals>.Place, declare.<locals>.Person]",
+     "kind": "RelationFieldDefinition",
+     "required_to_fulfil": [],
+     "reverse_name": "result_reverse",
+     "subclasses_parent_fields": [],
+     "type_options": [
+      "(RelationToEntity, annotated_type=Person)"
      ],
      "validators": [],
      "wrapper": null
@@ -423,6 +582,82 @@
    "meta": {
     "abstract": "False",
     "require_label": "False"
+   }
+  },
+  "Doubt": {
+   "depends_on": [
+    "Agent",
+    "Attested",
+    "Attested[declare.<locals>.Person]",
+    "Causes",
+    "Causes[declare.<locals>.Place, declare.<locals>.Person]",
+    "Hypothetical",
+    "Hypothetical[InRole[declare.<locals>.Agent]]",
+    "InRole",
+    "InRole[declare.<locals>.Agent]",
+    "Person",
+    "Place"
+   ],
+   "field_definitions": {
+    "attested": {
+     "annotated_type": "Attested[declare.<locals>.Person]",
+     "bind_to_child_field": [],
+     "db_field": false,
+     "description": null,
+     "field_on_model": "Doubt",
+     "kind": "RelationFieldDefinition",
+     "required_to_fulfil": [],
+     "reverse_name": "attested_reverse",
+     "subclasses_parent_fields": [],
+     "type_options": [
+      "(RelationToReifiedRelation, annotated_type=Attested[declare.<locals>.Person], base_type=Attested, parameters={'T': ['(RelationToEntity, annotated_type=Person)']})"
+     ],
+     "validators": [],
+     "wrapper": null
+    },
+    "joined": {
+     "annotated_type": "Causes[declare.<locals>.Person, declare.<locals>.Place]",
+     "bind_to_child_field": [],
+     "db_field": false,
+     "description": null,
+     "field_on_model": "Doubt",
+     "kind": "RelationFieldDefinition",
+     "required_to_fulfil": [],
+     "reverse_name": "joined_reverse",
+     "subclasses_parent_fields": [],
+     "type_options": [
+      "(RelationToConjunction, annotated_type=Causes[declare.<locals>.Person, declare.<locals>.Place], base_type=Causes, parameters={'TCause': ['(RelationToEntity, annotated_type=Place)'], 'TResult': ['(RelationToEntity, annotated_type=Person)']})"
+     ],
+     "validators": [],
+     "wrapper": null
+    },
+    "perhaps": {
+     "annotated_type": "Hypothetical[InRole[declare.<locals>.Agent]]",
+     "bind_to_child_field": [],
+     "db_field": false,
+     "description": null,
+     "field_on_model": "Doubt",
+     "kind": "RelationFieldDefinition",
+     "required_to_fulfil": [],
+     "reverse_name": "perhaps_reverse",
+     "subclasses_parent_fields": [],
+     "type_options": [
+      "(RelationToSemanticSpace, annotated_type=Hypothetical[InRole[declare.<locals>.Agent]], base_type=Hypothetical, parameters={'T': [\"(RelationToReifiedRelation, annotated_type=InRole[declare.<locals>.Agent], base_type=InRole, parameters={'T': ['(RelationToEntity, annotated_type=Group)', '(RelationToEntity, annotated_type=Person)']})\"]})"
+     ],
+     "validators": [],
+     "wrapper": null
+    }
+   },
+   "incoming": {},
+   "kind": "Document",
+   "meta": {
+    "abstract": "False",
+    "accept_url_as_id": "False",
+    "create_with_id": "False",
+    "reference_view_extra_fields": "[]",
+    "require_label": "True",
+    "use_in_semantic_space_label": "True",
+    "view_extra_fields": "[]"
    }
   },
   "Factoid": {
@@ -624,6 +859,9 @@
     "participants_reverse": [
      "Activity.participants (reified=True)"
     ],
+    "perhaps_reverse": [
+     "Doubt.perhaps (reified=True)"
+    ],
     "received": [
      "Transfer.given_to (reified=False)"
     ],
@@ -656,6 +894,37 @@
      "subclasses_parent_fields": [],
      "type_options": [
       "(RelationToTypeVar, annotated_type=TypeVar(T), type_var_name='T')"
+     ],
+     "validators": [],
+     "wrapper": "list"
+    }
+   },
+   "incoming": {},
+   "kind": "SemanticSpace",
+   "meta": {
+    "abstract": "False",
+    "require_label": "False"
+   }
+  },
+  "Hypothetical[InRole[declare.<locals>.Agent]]": {
+   "depends_on": [
+    "Agent",
+    "InRole",
+    "InRole[declare.<locals>.Agent]"
+   ],
+   "field_definitions": {
+    "contents": {
+     "annotated_type": "list[InRole[declare.<locals>.Agent]]",
+     "bind_to_child_field": [],
+     "db_field": false,
+     "description": null,
+     "field_on_model": "Hypothetical[InRole[declare.<locals>.Agent]]",
+     "kind": "RelationFieldDefinition",
+     "required_to_fulfil": [],
+     "reverse_name": "contents_reverse",
+     "subclasses_parent_fields": [],
+     "type_options": [
+      "(RelationToReifiedRelation, annotated_type=InRole[declare.<locals>.Agent], base_type=InRole, parameters={'T': ['(RelationToEntity, annotated_type=Group)', '(RelationToEntity, annotated_type=Person)']})"
      ],
      "validators": [],
      "wrapper": "list"
@@ -1050,6 +1319,9 @@
     "about_reverse": [
      "Note.about (reified=False)"
     ],
+    "attested_reverse": [
+     "Doubt.attested (reified=True)"
+    ],
     "carried_out": [
      "Activity.carried_out_by (reified=False)"
     ],
@@ -1068,8 +1340,14 @@
     "involves_reverse": [
      "Statement.involves (reified=False)"
     ],
+    "joined_reverse": [
+     "Doubt.joined (reified=True)"
+    ],
     "participants_reverse": [
      "Activity.participants (reified=True)"
+    ],
+    "perhaps_reverse": [
+     "Doubt.perhaps (reified=True)"
     ],
     "received": [
      "Transfer.given_to (reified=False)"
@@ -1102,6 +1380,9 @@
     }
    },
    "incoming": {
+    "joined_reverse": [
+     "Doubt.joined (reified=True)"
+    ],
     "lived_reverse": [
      "Activity.lived (reified=True)"
     ],
@@ -4836,6 +5117,1319 @@
    ],
    "owner": "AtPage[declare.<locals>.Source]"
   },
+  "Attested.Create": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "_ReifiedRelationCreateBase"
+   ],
+   "doc": "A relation with a document and an embedded object of its own",
+   "field_validators": [],
+   "fields": {
+    "dated": {
+     "alias": null,
+     "annotation": "DateCreate",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'dated'"
+    },
+    "note": {
+     "alias": null,
+     "annotation": "NoteCreate",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'note'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['Attested']",
+     "default": "'Attested'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "propagate_bound_values"
+   ],
+   "owner": "Attested"
+  },
+  "Attested.CreateDB": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "_ReifiedRelationCreateDBBase"
+   ],
+   "doc": "A relation with a document and an embedded object of its own",
+   "field_validators": [],
+   "fields": {
+    "context_labels": {
+     "alias": "contextLabels",
+     "annotation": "None | list[ContextLabel]",
+     "default": "None",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextLabels'"
+    },
+    "dated": {
+     "alias": null,
+     "annotation": "DateCreateDB",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'dated'"
+    },
+    "id": {
+     "alias": "id",
+     "annotation": "UUID",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'id'"
+    },
+    "note": {
+     "alias": null,
+     "annotation": "NoteCreateDB",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'note'"
+    },
+    "semantic_spaces": {
+     "alias": "semanticSpaces",
+     "annotation": "list[str]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'semanticSpaces'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['Attested']",
+     "default": "'Attested'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "ensure_id"
+   ],
+   "owner": "Attested"
+  },
+  "Attested.Update": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "_ReifiedRelationUpdateBase"
+   ],
+   "doc": "A relation with a document and an embedded object of its own",
+   "field_validators": [],
+   "fields": {
+    "dated": {
+     "alias": null,
+     "annotation": "DateUpdate > DateCreate",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'dated'"
+    },
+    "id": {
+     "alias": "id",
+     "annotation": "UUID",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'id'"
+    },
+    "note": {
+     "alias": null,
+     "annotation": "NoteUpdate > NoteCreate",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'note'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['Attested']",
+     "default": "'Attested'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "propagate_bound_values"
+   ],
+   "owner": "Attested"
+  },
+  "Attested.UpdateDB": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "_ReifiedRelationUpdateDBBase"
+   ],
+   "doc": "A relation with a document and an embedded object of its own",
+   "field_validators": [],
+   "fields": {
+    "context_labels": {
+     "alias": "contextLabels",
+     "annotation": "list[ContextLabel]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextLabels'"
+    },
+    "dated": {
+     "alias": null,
+     "annotation": "DateUpdateDB > DateCreateDB",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'dated'"
+    },
+    "id": {
+     "alias": "id",
+     "annotation": "UUID",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'id'"
+    },
+    "note": {
+     "alias": null,
+     "annotation": "NoteUpdateDB > NoteCreateDB",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'note'"
+    },
+    "semantic_spaces": {
+     "alias": "semanticSpaces",
+     "annotation": "list[str]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'semanticSpaces'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['Attested']",
+     "default": "'Attested'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [],
+   "owner": "Attested"
+  },
+  "Attested.View": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "_ReifiedRelationViewBase"
+   ],
+   "doc": "A relation with a document and an embedded object of its own",
+   "field_validators": [],
+   "fields": {
+    "dated": {
+     "alias": null,
+     "annotation": "DateView",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": "'type'",
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'dated'"
+    },
+    "id": {
+     "alias": "id",
+     "annotation": "UUID",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'id'"
+    },
+    "note": {
+     "alias": null,
+     "annotation": "NoteView",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": "'type'",
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'note'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['Attested']",
+     "default": "'Attested'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "convert_lists",
+    "convert_neo4j_types"
+   ],
+   "owner": "Attested"
+  },
+  "Attested[Person]Create": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "AttestedCreate"
+   ],
+   "doc": null,
+   "field_validators": [],
+   "fields": {
+    "dated": {
+     "alias": null,
+     "annotation": "DateCreate",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'dated'"
+    },
+    "note": {
+     "alias": null,
+     "annotation": "NoteCreate",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'note'"
+    },
+    "target": {
+     "alias": null,
+     "annotation": "list[Annotated[PersonCreate > PersonReferenceSet; Field()]]",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'target'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['Attested']",
+     "default": "'Attested'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "propagate_bound_values"
+   ],
+   "owner": "Attested"
+  },
+  "Attested[Person]Create#2": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "AttestedCreate"
+   ],
+   "doc": null,
+   "field_validators": [],
+   "fields": {
+    "dated": {
+     "alias": null,
+     "annotation": "DateCreate",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'dated'"
+    },
+    "note": {
+     "alias": null,
+     "annotation": "NoteCreate",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'note'"
+    },
+    "target": {
+     "alias": null,
+     "annotation": "list[Annotated[PersonCreate > PersonReferenceSet; Field()]]",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'target'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['Attested']",
+     "default": "'Attested'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "propagate_bound_values"
+   ],
+   "owner": "Attested"
+  },
+  "Attested[Person]CreateDB": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "AttestedCreateDB"
+   ],
+   "doc": null,
+   "field_validators": [],
+   "fields": {
+    "context_labels": {
+     "alias": "contextLabels",
+     "annotation": "None | list[ContextLabel]",
+     "default": "None",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextLabels'"
+    },
+    "dated": {
+     "alias": null,
+     "annotation": "DateCreateDB",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'dated'"
+    },
+    "id": {
+     "alias": "id",
+     "annotation": "UUID",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'id'"
+    },
+    "note": {
+     "alias": null,
+     "annotation": "NoteCreateDB",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'note'"
+    },
+    "semantic_spaces": {
+     "alias": "semanticSpaces",
+     "annotation": "list[str]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'semanticSpaces'"
+    },
+    "target": {
+     "alias": null,
+     "annotation": "list[Annotated[PersonCreateDB > PersonReferenceSet; Field()]]",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'target'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['Attested']",
+     "default": "'Attested'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "ensure_id"
+   ],
+   "owner": "Attested"
+  },
+  "Attested[Person]CreateDB#2": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "AttestedCreateDB"
+   ],
+   "doc": null,
+   "field_validators": [],
+   "fields": {
+    "context_labels": {
+     "alias": "contextLabels",
+     "annotation": "None | list[ContextLabel]",
+     "default": "None",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextLabels'"
+    },
+    "dated": {
+     "alias": null,
+     "annotation": "DateCreateDB",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'dated'"
+    },
+    "id": {
+     "alias": "id",
+     "annotation": "UUID",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'id'"
+    },
+    "note": {
+     "alias": null,
+     "annotation": "NoteCreateDB",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'note'"
+    },
+    "semantic_spaces": {
+     "alias": "semanticSpaces",
+     "annotation": "list[str]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'semanticSpaces'"
+    },
+    "target": {
+     "alias": null,
+     "annotation": "list[Annotated[PersonCreateDB > PersonReferenceSet; Field()]]",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'target'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['Attested']",
+     "default": "'Attested'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "ensure_id"
+   ],
+   "owner": "Attested"
+  },
+  "Attested[Person]Update": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "AttestedUpdate"
+   ],
+   "doc": null,
+   "field_validators": [],
+   "fields": {
+    "dated": {
+     "alias": null,
+     "annotation": "DateUpdate > DateCreate",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'dated'"
+    },
+    "id": {
+     "alias": "id",
+     "annotation": "UUID",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'id'"
+    },
+    "note": {
+     "alias": null,
+     "annotation": "NoteUpdate > NoteCreate",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'note'"
+    },
+    "target": {
+     "alias": null,
+     "annotation": "list[Annotated[PersonReferenceSet > PersonCreate; Field()]]",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'target'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['Attested']",
+     "default": "'Attested'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "propagate_bound_values"
+   ],
+   "owner": "Attested"
+  },
+  "Attested[Person]UpdateDB": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "AttestedUpdateDB"
+   ],
+   "doc": null,
+   "field_validators": [],
+   "fields": {
+    "context_labels": {
+     "alias": "contextLabels",
+     "annotation": "list[ContextLabel]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextLabels'"
+    },
+    "dated": {
+     "alias": null,
+     "annotation": "DateUpdateDB > DateCreateDB",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'dated'"
+    },
+    "id": {
+     "alias": "id",
+     "annotation": "UUID",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'id'"
+    },
+    "note": {
+     "alias": null,
+     "annotation": "NoteUpdateDB > NoteCreateDB",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'note'"
+    },
+    "semantic_spaces": {
+     "alias": "semanticSpaces",
+     "annotation": "list[str]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'semanticSpaces'"
+    },
+    "target": {
+     "alias": null,
+     "annotation": "list[Annotated[PersonCreateDB > PersonReferenceSet; Field()]]",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'target'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['Attested']",
+     "default": "'Attested'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [],
+   "owner": "Attested"
+  },
+  "Attested[Person]View": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "AttestedView"
+   ],
+   "doc": null,
+   "field_validators": [],
+   "fields": {
+    "dated": {
+     "alias": null,
+     "annotation": "DateView",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": "'type'",
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'dated'"
+    },
+    "id": {
+     "alias": "id",
+     "annotation": "UUID",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'id'"
+    },
+    "note": {
+     "alias": null,
+     "annotation": "NoteView",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": "'type'",
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'note'"
+    },
+    "target": {
+     "alias": null,
+     "annotation": "list[Annotated[PersonReferenceView; Field(discriminator='type')]]",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'target'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['Attested']",
+     "default": "'Attested'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "convert_lists",
+    "convert_neo4j_types"
+   ],
+   "owner": "Attested"
+  },
+  "Attested[Person]View#2": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "AttestedView"
+   ],
+   "doc": null,
+   "field_validators": [],
+   "fields": {
+    "dated": {
+     "alias": null,
+     "annotation": "DateView",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": "'type'",
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'dated'"
+    },
+    "id": {
+     "alias": "id",
+     "annotation": "UUID",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'id'"
+    },
+    "note": {
+     "alias": null,
+     "annotation": "NoteView",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": "'type'",
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'note'"
+    },
+    "target": {
+     "alias": null,
+     "annotation": "list[Annotated[PersonReferenceView; Field(discriminator='type')]]",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'target'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['Attested']",
+     "default": "'Attested'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "convert_lists",
+    "convert_neo4j_types"
+   ],
+   "owner": "Attested"
+  },
+  "Attested[declare.<locals>.Person].Create": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "_ReifiedRelationCreateBase"
+   ],
+   "doc": null,
+   "field_validators": [],
+   "fields": {
+    "dated": {
+     "alias": null,
+     "annotation": "DateCreate",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'dated'"
+    },
+    "note": {
+     "alias": null,
+     "annotation": "NoteCreate",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'note'"
+    },
+    "target": {
+     "alias": null,
+     "annotation": "list[Annotated[PersonReferenceSet > PersonCreate; Field()]]",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'target'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['Attested[declare.<locals>.Person]']",
+     "default": "'Attested[declare.<locals>.Person]'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "propagate_bound_values"
+   ],
+   "owner": "Attested[declare.<locals>.Person]"
+  },
+  "Attested[declare.<locals>.Person].CreateDB": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "_ReifiedRelationCreateDBBase"
+   ],
+   "doc": null,
+   "field_validators": [],
+   "fields": {
+    "context_labels": {
+     "alias": "contextLabels",
+     "annotation": "None | list[ContextLabel]",
+     "default": "None",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextLabels'"
+    },
+    "dated": {
+     "alias": null,
+     "annotation": "DateCreateDB",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'dated'"
+    },
+    "id": {
+     "alias": "id",
+     "annotation": "UUID",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'id'"
+    },
+    "note": {
+     "alias": null,
+     "annotation": "NoteCreateDB",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'note'"
+    },
+    "semantic_spaces": {
+     "alias": "semanticSpaces",
+     "annotation": "list[str]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'semanticSpaces'"
+    },
+    "target": {
+     "alias": null,
+     "annotation": "list[Annotated[PersonCreateDB > PersonReferenceSet; Field()]]",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'target'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['Attested[declare.<locals>.Person]']",
+     "default": "'Attested[declare.<locals>.Person]'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "ensure_id"
+   ],
+   "owner": "Attested[declare.<locals>.Person]"
+  },
+  "Attested[declare.<locals>.Person].Update": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "_ReifiedRelationUpdateBase"
+   ],
+   "doc": null,
+   "field_validators": [],
+   "fields": {
+    "dated": {
+     "alias": null,
+     "annotation": "DateUpdate > DateCreate",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'dated'"
+    },
+    "id": {
+     "alias": "id",
+     "annotation": "UUID",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'id'"
+    },
+    "note": {
+     "alias": null,
+     "annotation": "NoteUpdate > NoteCreate",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'note'"
+    },
+    "target": {
+     "alias": null,
+     "annotation": "list[Annotated[PersonReferenceSet > PersonCreate; Field()]]",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'target'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['Attested[declare.<locals>.Person]']",
+     "default": "'Attested[declare.<locals>.Person]'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "propagate_bound_values"
+   ],
+   "owner": "Attested[declare.<locals>.Person]"
+  },
+  "Attested[declare.<locals>.Person].UpdateDB": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "_ReifiedRelationUpdateDBBase"
+   ],
+   "doc": null,
+   "field_validators": [],
+   "fields": {
+    "context_labels": {
+     "alias": "contextLabels",
+     "annotation": "list[ContextLabel]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextLabels'"
+    },
+    "dated": {
+     "alias": null,
+     "annotation": "DateUpdateDB > DateCreateDB",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'dated'"
+    },
+    "id": {
+     "alias": "id",
+     "annotation": "UUID",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'id'"
+    },
+    "note": {
+     "alias": null,
+     "annotation": "NoteUpdateDB > NoteCreateDB",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'note'"
+    },
+    "semantic_spaces": {
+     "alias": "semanticSpaces",
+     "annotation": "list[str]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'semanticSpaces'"
+    },
+    "target": {
+     "alias": null,
+     "annotation": "list[Annotated[PersonCreateDB > PersonReferenceSet; Field()]]",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'target'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['Attested[declare.<locals>.Person]']",
+     "default": "'Attested[declare.<locals>.Person]'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [],
+   "owner": "Attested[declare.<locals>.Person]"
+  },
+  "Attested[declare.<locals>.Person].View": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "_ReifiedRelationViewBase"
+   ],
+   "doc": null,
+   "field_validators": [],
+   "fields": {
+    "dated": {
+     "alias": null,
+     "annotation": "DateView",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": "'type'",
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'dated'"
+    },
+    "id": {
+     "alias": "id",
+     "annotation": "UUID",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'id'"
+    },
+    "note": {
+     "alias": null,
+     "annotation": "NoteView",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": "'type'",
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'note'"
+    },
+    "target": {
+     "alias": null,
+     "annotation": "list[Annotated[PersonReferenceView; Field(discriminator='type')]]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'target'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['Attested[declare.<locals>.Person]']",
+     "default": "'Attested[declare.<locals>.Person]'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "convert_lists",
+    "convert_neo4j_types"
+   ],
+   "owner": "Attested[declare.<locals>.Person]"
+  },
   "Causes.Create": {
    "alias_generator": "to_camel",
    "bases": [
@@ -5508,6 +7102,909 @@
     "convert_neo4j_types"
    ],
    "owner": "Causes"
+  },
+  "Causes[Person, Place]Create": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "CausesCreate"
+   ],
+   "doc": null,
+   "field_validators": [],
+   "fields": {
+    "cause": {
+     "alias": null,
+     "annotation": "PlaceReferenceSet",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'cause'"
+    },
+    "result": {
+     "alias": null,
+     "annotation": "PersonCreate > PersonReferenceSet",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'result'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['Causes']",
+     "default": "'Causes'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "propagate_bound_values"
+   ],
+   "owner": "Causes"
+  },
+  "Causes[Person, Place]Create#2": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "CausesCreate"
+   ],
+   "doc": null,
+   "field_validators": [],
+   "fields": {
+    "cause": {
+     "alias": null,
+     "annotation": "PlaceReferenceSet",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'cause'"
+    },
+    "result": {
+     "alias": null,
+     "annotation": "PersonCreate > PersonReferenceSet",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'result'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['Causes']",
+     "default": "'Causes'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "propagate_bound_values"
+   ],
+   "owner": "Causes"
+  },
+  "Causes[Person, Place]CreateDB": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "CausesCreateDB"
+   ],
+   "doc": null,
+   "field_validators": [],
+   "fields": {
+    "cause": {
+     "alias": null,
+     "annotation": "PlaceReferenceSet",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'cause'"
+    },
+    "context_labels": {
+     "alias": "contextLabels",
+     "annotation": "None | list[ContextLabel]",
+     "default": "None",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextLabels'"
+    },
+    "id": {
+     "alias": "id",
+     "annotation": "UUID",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'id'"
+    },
+    "result": {
+     "alias": null,
+     "annotation": "PersonCreateDB > PersonReferenceSet",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'result'"
+    },
+    "semantic_spaces": {
+     "alias": "semanticSpaces",
+     "annotation": "list[str]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'semanticSpaces'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['Causes']",
+     "default": "'Causes'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "ensure_id"
+   ],
+   "owner": "Causes"
+  },
+  "Causes[Person, Place]CreateDB#2": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "CausesCreateDB"
+   ],
+   "doc": null,
+   "field_validators": [],
+   "fields": {
+    "cause": {
+     "alias": null,
+     "annotation": "PlaceReferenceSet",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'cause'"
+    },
+    "context_labels": {
+     "alias": "contextLabels",
+     "annotation": "None | list[ContextLabel]",
+     "default": "None",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextLabels'"
+    },
+    "id": {
+     "alias": "id",
+     "annotation": "UUID",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'id'"
+    },
+    "result": {
+     "alias": null,
+     "annotation": "PersonCreateDB > PersonReferenceSet",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'result'"
+    },
+    "semantic_spaces": {
+     "alias": "semanticSpaces",
+     "annotation": "list[str]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'semanticSpaces'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['Causes']",
+     "default": "'Causes'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "ensure_id"
+   ],
+   "owner": "Causes"
+  },
+  "Causes[Person, Place]Update": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "CausesUpdate"
+   ],
+   "doc": null,
+   "field_validators": [],
+   "fields": {
+    "cause": {
+     "alias": null,
+     "annotation": "PlaceReferenceSet",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'cause'"
+    },
+    "id": {
+     "alias": "id",
+     "annotation": "UUID",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'id'"
+    },
+    "result": {
+     "alias": null,
+     "annotation": "PersonReferenceSet > PersonCreate",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'result'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['Causes']",
+     "default": "'Causes'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "propagate_bound_values"
+   ],
+   "owner": "Causes"
+  },
+  "Causes[Person, Place]UpdateDB": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "CausesUpdateDB"
+   ],
+   "doc": null,
+   "field_validators": [],
+   "fields": {
+    "cause": {
+     "alias": null,
+     "annotation": "PlaceReferenceSet",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'cause'"
+    },
+    "context_labels": {
+     "alias": "contextLabels",
+     "annotation": "list[ContextLabel]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextLabels'"
+    },
+    "id": {
+     "alias": "id",
+     "annotation": "UUID",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'id'"
+    },
+    "result": {
+     "alias": null,
+     "annotation": "PersonCreateDB > PersonReferenceSet",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'result'"
+    },
+    "semantic_spaces": {
+     "alias": "semanticSpaces",
+     "annotation": "list[str]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'semanticSpaces'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['Causes']",
+     "default": "'Causes'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [],
+   "owner": "Causes"
+  },
+  "Causes[Person, Place]View": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "CausesView"
+   ],
+   "doc": null,
+   "field_validators": [],
+   "fields": {
+    "cause": {
+     "alias": null,
+     "annotation": "PlaceReferenceView",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": "'type'",
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'cause'"
+    },
+    "id": {
+     "alias": "id",
+     "annotation": "UUID",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'id'"
+    },
+    "result": {
+     "alias": null,
+     "annotation": "PersonReferenceView",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": "'type'",
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'result'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['Causes']",
+     "default": "'Causes'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "convert_lists",
+    "convert_neo4j_types"
+   ],
+   "owner": "Causes"
+  },
+  "Causes[Person, Place]View#2": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "CausesView"
+   ],
+   "doc": null,
+   "field_validators": [],
+   "fields": {
+    "cause": {
+     "alias": null,
+     "annotation": "PlaceReferenceView",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": "'type'",
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'cause'"
+    },
+    "id": {
+     "alias": "id",
+     "annotation": "UUID",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'id'"
+    },
+    "result": {
+     "alias": null,
+     "annotation": "PersonReferenceView",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": "'type'",
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'result'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['Causes']",
+     "default": "'Causes'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "convert_lists",
+    "convert_neo4j_types"
+   ],
+   "owner": "Causes"
+  },
+  "Causes[Person, Place]View#3": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "CausesView"
+   ],
+   "doc": null,
+   "field_validators": [],
+   "fields": {
+    "cause": {
+     "alias": null,
+     "annotation": "PlaceReferenceView",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": "'type'",
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'cause'"
+    },
+    "id": {
+     "alias": "id",
+     "annotation": "UUID",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'id'"
+    },
+    "result": {
+     "alias": null,
+     "annotation": "PersonReferenceView",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": "'type'",
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'result'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['Causes']",
+     "default": "'Causes'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "convert_lists",
+    "convert_neo4j_types"
+   ],
+   "owner": "Causes"
+  },
+  "Causes[declare.<locals>.Person, declare.<locals>.Place].Create": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "_ConjunctionCreateBase"
+   ],
+   "doc": null,
+   "field_validators": [],
+   "fields": {
+    "cause": {
+     "alias": null,
+     "annotation": "PlaceReferenceSet",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'cause'"
+    },
+    "result": {
+     "alias": null,
+     "annotation": "PersonReferenceSet > PersonCreate",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'result'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['Causes[declare.<locals>.Place, declare.<locals>.Person]']",
+     "default": "'Causes[declare.<locals>.Place, declare.<locals>.Person]'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "propagate_bound_values"
+   ],
+   "owner": "Causes[declare.<locals>.Place, declare.<locals>.Person]"
+  },
+  "Causes[declare.<locals>.Person, declare.<locals>.Place].CreateDB": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "_ConjunctionCreateDBBase"
+   ],
+   "doc": null,
+   "field_validators": [],
+   "fields": {
+    "cause": {
+     "alias": null,
+     "annotation": "PlaceReferenceSet",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'cause'"
+    },
+    "context_labels": {
+     "alias": "contextLabels",
+     "annotation": "None | list[ContextLabel]",
+     "default": "None",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextLabels'"
+    },
+    "id": {
+     "alias": "id",
+     "annotation": "UUID",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'id'"
+    },
+    "result": {
+     "alias": null,
+     "annotation": "PersonCreateDB > PersonReferenceSet",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'result'"
+    },
+    "semantic_spaces": {
+     "alias": "semanticSpaces",
+     "annotation": "list[str]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'semanticSpaces'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['Causes[declare.<locals>.Place, declare.<locals>.Person]']",
+     "default": "'Causes[declare.<locals>.Place, declare.<locals>.Person]'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "ensure_id"
+   ],
+   "owner": "Causes[declare.<locals>.Place, declare.<locals>.Person]"
+  },
+  "Causes[declare.<locals>.Person, declare.<locals>.Place].Update": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "_ConjunctionUpdateBase"
+   ],
+   "doc": null,
+   "field_validators": [],
+   "fields": {
+    "cause": {
+     "alias": null,
+     "annotation": "PlaceReferenceSet",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'cause'"
+    },
+    "id": {
+     "alias": "id",
+     "annotation": "UUID",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'id'"
+    },
+    "result": {
+     "alias": null,
+     "annotation": "PersonReferenceSet > PersonCreate",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'result'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['Causes[declare.<locals>.Place, declare.<locals>.Person]']",
+     "default": "'Causes[declare.<locals>.Place, declare.<locals>.Person]'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "propagate_bound_values"
+   ],
+   "owner": "Causes[declare.<locals>.Place, declare.<locals>.Person]"
+  },
+  "Causes[declare.<locals>.Person, declare.<locals>.Place].UpdateDB": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "_ConjunctionUpdateDBBase"
+   ],
+   "doc": null,
+   "field_validators": [],
+   "fields": {
+    "cause": {
+     "alias": null,
+     "annotation": "PlaceReferenceSet",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'cause'"
+    },
+    "context_labels": {
+     "alias": "contextLabels",
+     "annotation": "list[ContextLabel]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextLabels'"
+    },
+    "id": {
+     "alias": "id",
+     "annotation": "UUID",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'id'"
+    },
+    "result": {
+     "alias": null,
+     "annotation": "PersonCreateDB > PersonReferenceSet",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'result'"
+    },
+    "semantic_spaces": {
+     "alias": "semanticSpaces",
+     "annotation": "list[str]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'semanticSpaces'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['Causes[declare.<locals>.Place, declare.<locals>.Person]']",
+     "default": "'Causes[declare.<locals>.Place, declare.<locals>.Person]'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [],
+   "owner": "Causes[declare.<locals>.Place, declare.<locals>.Person]"
+  },
+  "Causes[declare.<locals>.Person, declare.<locals>.Place].View": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "_ConjunctionViewBase"
+   ],
+   "doc": null,
+   "field_validators": [],
+   "fields": {
+    "cause": {
+     "alias": null,
+     "annotation": "PlaceReferenceView",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": "'type'",
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'cause'"
+    },
+    "id": {
+     "alias": "id",
+     "annotation": "UUID",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'id'"
+    },
+    "result": {
+     "alias": null,
+     "annotation": "PersonReferenceView",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": "'type'",
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'result'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['Causes[declare.<locals>.Place, declare.<locals>.Person]']",
+     "default": "'Causes[declare.<locals>.Place, declare.<locals>.Person]'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "convert_lists",
+    "convert_neo4j_types"
+   ],
+   "owner": "Causes[declare.<locals>.Place, declare.<locals>.Person]"
   },
   "Causes[declare.<locals>.Statement, declare.<locals>.Statement].Create": {
    "alias_generator": "to_camel",
@@ -6188,6 +8685,916 @@
     "convert_neo4j_types"
    ],
    "owner": "Date"
+  },
+  "Doubt.Create": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "_DocumentCreateBase"
+   ],
+   "doc": "An entity reached through a wrapper inside a semantic space (it has a reverse relation)",
+   "field_validators": [],
+   "fields": {
+    "attested": {
+     "alias": null,
+     "annotation": "Attested[Person]Create",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'attested'"
+    },
+    "joined": {
+     "alias": null,
+     "annotation": "Causes[Person, Place]Create",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'joined'"
+    },
+    "label": {
+     "alias": null,
+     "annotation": "str",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": null
+    },
+    "perhaps": {
+     "alias": null,
+     "annotation": "Hypothetical[InRole[Group, Person]]Create",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'perhaps'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['Doubt']",
+     "default": "'Doubt'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "propagate_bound_values"
+   ],
+   "owner": "Doubt"
+  },
+  "Doubt.CreateDB": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "_DocumentCreateDBBase"
+   ],
+   "doc": "An entity reached through a wrapper inside a semantic space (it has a reverse relation)",
+   "field_validators": [],
+   "fields": {
+    "attested": {
+     "alias": null,
+     "annotation": "Attested[Person]CreateDB",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'attested'"
+    },
+    "context_labels": {
+     "alias": "contextLabels",
+     "annotation": "None | list[ContextLabel]",
+     "default": "None",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextLabels'"
+    },
+    "db_labels": {
+     "alias": "dbLabels",
+     "annotation": "set[str]",
+     "default": null,
+     "default_factory": "set",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'dbLabels'"
+    },
+    "id": {
+     "alias": "id",
+     "annotation": "UUID",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'id'"
+    },
+    "joined": {
+     "alias": null,
+     "annotation": "Causes[Person, Place]CreateDB",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'joined'"
+    },
+    "label": {
+     "alias": null,
+     "annotation": "str",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": null
+    },
+    "perhaps": {
+     "alias": null,
+     "annotation": "Hypothetical[InRole[Group, Person]]CreateDB",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'perhaps'"
+    },
+    "semantic_spaces": {
+     "alias": "semanticSpaces",
+     "annotation": "list[str]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'semanticSpaces'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['Doubt']",
+     "default": "'Doubt'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "ensure_id"
+   ],
+   "owner": "Doubt"
+  },
+  "Doubt.HeadView": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "_DocumentHeadViewBase",
+    "DoubtView"
+   ],
+   "doc": "An entity reached through a wrapper inside a semantic space (it has a reverse relation)",
+   "field_validators": [],
+   "fields": {
+    "attested": {
+     "alias": null,
+     "annotation": "Attested[Person]View",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": "'type'",
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'attested'"
+    },
+    "id": {
+     "alias": "id",
+     "annotation": "UUID",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'id'"
+    },
+    "joined": {
+     "alias": null,
+     "annotation": "Causes[Person, Place]View",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": "'type'",
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'joined'"
+    },
+    "label": {
+     "alias": null,
+     "annotation": "str",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": null
+    },
+    "meta": {
+     "alias": "meta",
+     "annotation": "_APIHeadMeta",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'meta'"
+    },
+    "perhaps": {
+     "alias": null,
+     "annotation": "Hypothetical[InRole[Group, Person]]View",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": "'type'",
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'perhaps'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['Doubt']",
+     "default": "'Doubt'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "convert_lists",
+    "convert_neo4j_types"
+   ],
+   "owner": "Doubt"
+  },
+  "Doubt.ReferenceView": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "_DocumentReferenceViewBase"
+   ],
+   "doc": "An entity reached through a wrapper inside a semantic space (it has a reverse relation)",
+   "field_validators": [],
+   "fields": {
+    "id": {
+     "alias": "id",
+     "annotation": "UUID",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'id'"
+    },
+    "label": {
+     "alias": "label",
+     "annotation": "str",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'label'"
+    },
+    "meta": {
+     "alias": "meta",
+     "annotation": "_DocumentReferenceViewAPIMeta",
+     "default": null,
+     "default_factory": "_DocumentReferenceViewAPIMeta",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'meta'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['Doubt']",
+     "default": "'Doubt'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [],
+   "owner": "Doubt"
+  },
+  "Doubt.Update": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "_DocumentUpdateBase"
+   ],
+   "doc": "An entity reached through a wrapper inside a semantic space (it has a reverse relation)",
+   "field_validators": [],
+   "fields": {
+    "attested": {
+     "alias": null,
+     "annotation": "Attested[Person]Update > Attested[Person]Create",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'attested'"
+    },
+    "id": {
+     "alias": "id",
+     "annotation": "UUID",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'id'"
+    },
+    "joined": {
+     "alias": null,
+     "annotation": "Causes[Person, Place]Update > Causes[Person, Place]Create",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'joined'"
+    },
+    "label": {
+     "alias": null,
+     "annotation": "str",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": null
+    },
+    "perhaps": {
+     "alias": null,
+     "annotation": "Hypothetical[InRole[Group, Person]]Update > Hypothetical[InRole[Group, Person]]Create",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'perhaps'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['Doubt']",
+     "default": "'Doubt'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "propagate_bound_values"
+   ],
+   "owner": "Doubt"
+  },
+  "Doubt.UpdateDB": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "_DocumentUpdateDBBase"
+   ],
+   "doc": "An entity reached through a wrapper inside a semantic space (it has a reverse relation)",
+   "field_validators": [],
+   "fields": {
+    "attested": {
+     "alias": null,
+     "annotation": "Attested[Person]UpdateDB > Attested[Person]CreateDB",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'attested'"
+    },
+    "context_labels": {
+     "alias": "contextLabels",
+     "annotation": "list[ContextLabel]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextLabels'"
+    },
+    "id": {
+     "alias": "id",
+     "annotation": "UUID",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'id'"
+    },
+    "joined": {
+     "alias": null,
+     "annotation": "Causes[Person, Place]UpdateDB > Causes[Person, Place]CreateDB",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'joined'"
+    },
+    "label": {
+     "alias": null,
+     "annotation": "str",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": null
+    },
+    "perhaps": {
+     "alias": null,
+     "annotation": "Hypothetical[InRole[Group, Person]]UpdateDB > Hypothetical[InRole[Group, Person]]CreateDB",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'perhaps'"
+    },
+    "semantic_spaces": {
+     "alias": "semanticSpaces",
+     "annotation": "list[str]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'semanticSpaces'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['Doubt']",
+     "default": "'Doubt'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [],
+   "owner": "Doubt"
+  },
+  "Doubt.View": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "_DocumentViewBase"
+   ],
+   "doc": "An entity reached through a wrapper inside a semantic space (it has a reverse relation)",
+   "field_validators": [],
+   "fields": {
+    "attested": {
+     "alias": null,
+     "annotation": "Attested[Person]View",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": "'type'",
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'attested'"
+    },
+    "id": {
+     "alias": "id",
+     "annotation": "UUID",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'id'"
+    },
+    "joined": {
+     "alias": null,
+     "annotation": "Causes[Person, Place]View",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": "'type'",
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'joined'"
+    },
+    "label": {
+     "alias": null,
+     "annotation": "str",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": null
+    },
+    "meta": {
+     "alias": "meta",
+     "annotation": "_DocumentViewAPIMeta",
+     "default": null,
+     "default_factory": "_DocumentViewAPIMeta",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'meta'"
+    },
+    "perhaps": {
+     "alias": null,
+     "annotation": "Hypothetical[InRole[Group, Person]]View",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": "'type'",
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'perhaps'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['Doubt']",
+     "default": "'Doubt'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "convert_lists",
+    "convert_neo4j_types"
+   ],
+   "owner": "Doubt"
+  },
+  "DoubtView.from.Group.perhaps_reverse": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "DoubtView"
+   ],
+   "doc": "An entity reached through a wrapper inside a semantic space (it has a reverse relation)",
+   "field_validators": [],
+   "fields": {
+    "id": {
+     "alias": "id",
+     "annotation": "UUID",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'id'"
+    },
+    "meta": {
+     "alias": "meta",
+     "annotation": "_DocumentViewAPIMeta",
+     "default": null,
+     "default_factory": "_DocumentViewAPIMeta",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'meta'"
+    },
+    "perhaps": {
+     "alias": null,
+     "annotation": "Hypothetical[InRole[Group, Person]]View",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": null
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['Doubt']",
+     "default": "'Doubt'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "convert_lists",
+    "convert_neo4j_types"
+   ],
+   "owner": "Doubt"
+  },
+  "DoubtView.from.Person.attested_reverse": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "DoubtView"
+   ],
+   "doc": "An entity reached through a wrapper inside a semantic space (it has a reverse relation)",
+   "field_validators": [],
+   "fields": {
+    "attested": {
+     "alias": null,
+     "annotation": "Attested[Person]View",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": null
+    },
+    "id": {
+     "alias": "id",
+     "annotation": "UUID",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'id'"
+    },
+    "meta": {
+     "alias": "meta",
+     "annotation": "_DocumentViewAPIMeta",
+     "default": null,
+     "default_factory": "_DocumentViewAPIMeta",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'meta'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['Doubt']",
+     "default": "'Doubt'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "convert_lists",
+    "convert_neo4j_types"
+   ],
+   "owner": "Doubt"
+  },
+  "DoubtView.from.Person.joined_reverse": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "DoubtView"
+   ],
+   "doc": "An entity reached through a wrapper inside a semantic space (it has a reverse relation)",
+   "field_validators": [],
+   "fields": {
+    "id": {
+     "alias": "id",
+     "annotation": "UUID",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'id'"
+    },
+    "joined": {
+     "alias": null,
+     "annotation": "Causes[Person, Place]View",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": null
+    },
+    "meta": {
+     "alias": "meta",
+     "annotation": "_DocumentViewAPIMeta",
+     "default": null,
+     "default_factory": "_DocumentViewAPIMeta",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'meta'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['Doubt']",
+     "default": "'Doubt'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "convert_lists",
+    "convert_neo4j_types"
+   ],
+   "owner": "Doubt"
+  },
+  "DoubtView.from.Person.perhaps_reverse": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "DoubtView"
+   ],
+   "doc": "An entity reached through a wrapper inside a semantic space (it has a reverse relation)",
+   "field_validators": [],
+   "fields": {
+    "id": {
+     "alias": "id",
+     "annotation": "UUID",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'id'"
+    },
+    "meta": {
+     "alias": "meta",
+     "annotation": "_DocumentViewAPIMeta",
+     "default": null,
+     "default_factory": "_DocumentViewAPIMeta",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'meta'"
+    },
+    "perhaps": {
+     "alias": null,
+     "annotation": "Hypothetical[InRole[Group, Person]]View",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": null
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['Doubt']",
+     "default": "'Doubt'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "convert_lists",
+    "convert_neo4j_types"
+   ],
+   "owner": "Doubt"
+  },
+  "DoubtView.from.Place.joined_reverse": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "DoubtView"
+   ],
+   "doc": "An entity reached through a wrapper inside a semantic space (it has a reverse relation)",
+   "field_validators": [],
+   "fields": {
+    "id": {
+     "alias": "id",
+     "annotation": "UUID",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'id'"
+    },
+    "joined": {
+     "alias": null,
+     "annotation": "Causes[Person, Place]View",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": null
+    },
+    "meta": {
+     "alias": "meta",
+     "annotation": "_DocumentViewAPIMeta",
+     "default": null,
+     "default_factory": "_DocumentViewAPIMeta",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'meta'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['Doubt']",
+     "default": "'Doubt'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "convert_lists",
+    "convert_neo4j_types"
+   ],
+   "owner": "Doubt"
   },
   "Factoid.Create": {
    "alias_generator": "to_camel",
@@ -7878,6 +11285,17 @@
      "required": false,
      "validation_alias": "'participantsReverse'"
     },
+    "perhaps_reverse": {
+     "alias": "perhapsReverse",
+     "annotation": "list[DoubtView.from.Group.perhaps_reverse]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'perhapsReverse'"
+    },
     "received": {
      "alias": null,
      "annotation": "list[TransferReferenceView]",
@@ -8965,6 +12383,755 @@
    ],
    "owner": "Hypothetical"
   },
+  "Hypothetical[InRole[Group, Person]]Create": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "HypotheticalCreate"
+   ],
+   "doc": null,
+   "field_validators": [],
+   "fields": {
+    "contents": {
+     "alias": null,
+     "annotation": "list[Annotated[InRole[Group, Person]Create; Field()]]",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'contents'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['Hypothetical']",
+     "default": "'Hypothetical'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "propagate_bound_values"
+   ],
+   "owner": "Hypothetical"
+  },
+  "Hypothetical[InRole[Group, Person]]Create#2": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "HypotheticalCreate"
+   ],
+   "doc": null,
+   "field_validators": [],
+   "fields": {
+    "contents": {
+     "alias": null,
+     "annotation": "list[Annotated[InRole[Group, Person]Create; Field()]]",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'contents'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['Hypothetical']",
+     "default": "'Hypothetical'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "propagate_bound_values"
+   ],
+   "owner": "Hypothetical"
+  },
+  "Hypothetical[InRole[Group, Person]]CreateDB": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "HypotheticalCreateDB"
+   ],
+   "doc": null,
+   "field_validators": [],
+   "fields": {
+    "contents": {
+     "alias": null,
+     "annotation": "list[Annotated[InRole[Group, Person]CreateDB; Field()]]",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'contents'"
+    },
+    "context_labels": {
+     "alias": "contextLabels",
+     "annotation": "None | list[ContextLabel]",
+     "default": "None",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextLabels'"
+    },
+    "id": {
+     "alias": "id",
+     "annotation": "UUID",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'id'"
+    },
+    "semantic_spaces": {
+     "alias": "semanticSpaces",
+     "annotation": "list[str]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'semanticSpaces'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['Hypothetical']",
+     "default": "'Hypothetical'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "ensure_id"
+   ],
+   "owner": "Hypothetical"
+  },
+  "Hypothetical[InRole[Group, Person]]CreateDB#2": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "HypotheticalCreateDB"
+   ],
+   "doc": null,
+   "field_validators": [],
+   "fields": {
+    "contents": {
+     "alias": null,
+     "annotation": "list[Annotated[InRole[Group, Person]CreateDB; Field()]]",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'contents'"
+    },
+    "context_labels": {
+     "alias": "contextLabels",
+     "annotation": "None | list[ContextLabel]",
+     "default": "None",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextLabels'"
+    },
+    "id": {
+     "alias": "id",
+     "annotation": "UUID",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'id'"
+    },
+    "semantic_spaces": {
+     "alias": "semanticSpaces",
+     "annotation": "list[str]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'semanticSpaces'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['Hypothetical']",
+     "default": "'Hypothetical'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "ensure_id"
+   ],
+   "owner": "Hypothetical"
+  },
+  "Hypothetical[InRole[Group, Person]]Update": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "HypotheticalUpdate"
+   ],
+   "doc": null,
+   "field_validators": [],
+   "fields": {
+    "contents": {
+     "alias": null,
+     "annotation": "list[Annotated[InRole[Group, Person]Update > InRole[Group, Person]Create; Field()]]",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'contents'"
+    },
+    "id": {
+     "alias": "id",
+     "annotation": "UUID",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'id'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['Hypothetical']",
+     "default": "'Hypothetical'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "propagate_bound_values"
+   ],
+   "owner": "Hypothetical"
+  },
+  "Hypothetical[InRole[Group, Person]]UpdateDB": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "HypotheticalUpdateDB"
+   ],
+   "doc": null,
+   "field_validators": [],
+   "fields": {
+    "contents": {
+     "alias": null,
+     "annotation": "list[Annotated[InRole[Group, Person]UpdateDB > InRole[Group, Person]CreateDB; Field()]]",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'contents'"
+    },
+    "context_labels": {
+     "alias": "contextLabels",
+     "annotation": "list[ContextLabel]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextLabels'"
+    },
+    "id": {
+     "alias": "id",
+     "annotation": "UUID",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'id'"
+    },
+    "semantic_spaces": {
+     "alias": "semanticSpaces",
+     "annotation": "list[str]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'semanticSpaces'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['Hypothetical']",
+     "default": "'Hypothetical'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [],
+   "owner": "Hypothetical"
+  },
+  "Hypothetical[InRole[Group, Person]]View": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "HypotheticalView"
+   ],
+   "doc": null,
+   "field_validators": [],
+   "fields": {
+    "contents": {
+     "alias": null,
+     "annotation": "list[Annotated[InRole[Group, Person]View; Field(discriminator='type')]]",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'contents'"
+    },
+    "id": {
+     "alias": "id",
+     "annotation": "UUID",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'id'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['Hypothetical']",
+     "default": "'Hypothetical'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "convert_lists",
+    "convert_neo4j_types"
+   ],
+   "owner": "Hypothetical"
+  },
+  "Hypothetical[InRole[Group, Person]]View#2": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "HypotheticalView"
+   ],
+   "doc": null,
+   "field_validators": [],
+   "fields": {
+    "contents": {
+     "alias": null,
+     "annotation": "list[Annotated[InRole[Group, Person]View; Field(discriminator='type')]]",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'contents'"
+    },
+    "id": {
+     "alias": "id",
+     "annotation": "UUID",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'id'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['Hypothetical']",
+     "default": "'Hypothetical'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "convert_lists",
+    "convert_neo4j_types"
+   ],
+   "owner": "Hypothetical"
+  },
+  "Hypothetical[InRole[Group, Person]]View#3": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "HypotheticalView"
+   ],
+   "doc": null,
+   "field_validators": [],
+   "fields": {
+    "contents": {
+     "alias": null,
+     "annotation": "list[Annotated[InRole[Group, Person]View; Field(discriminator='type')]]",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'contents'"
+    },
+    "id": {
+     "alias": "id",
+     "annotation": "UUID",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'id'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['Hypothetical']",
+     "default": "'Hypothetical'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "convert_lists",
+    "convert_neo4j_types"
+   ],
+   "owner": "Hypothetical"
+  },
+  "Hypothetical[InRole[declare.<locals>.Agent]].Create": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "_SemanticSpaceCreateBase"
+   ],
+   "doc": null,
+   "field_validators": [],
+   "fields": {
+    "contents": {
+     "alias": null,
+     "annotation": "list[Annotated[InRole[Group, Person]Create; Field()]]",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'contents'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['Hypothetical[InRole[declare.<locals>.Agent]]']",
+     "default": "'Hypothetical[InRole[declare.<locals>.Agent]]'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "propagate_bound_values"
+   ],
+   "owner": "Hypothetical[InRole[declare.<locals>.Agent]]"
+  },
+  "Hypothetical[InRole[declare.<locals>.Agent]].CreateDB": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "_SemanticSpaceCreateDBBase"
+   ],
+   "doc": null,
+   "field_validators": [],
+   "fields": {
+    "contents": {
+     "alias": null,
+     "annotation": "list[Annotated[InRole[Group, Person]CreateDB; Field()]]",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'contents'"
+    },
+    "context_labels": {
+     "alias": "contextLabels",
+     "annotation": "None | list[ContextLabel]",
+     "default": "None",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextLabels'"
+    },
+    "id": {
+     "alias": "id",
+     "annotation": "UUID",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'id'"
+    },
+    "semantic_spaces": {
+     "alias": "semanticSpaces",
+     "annotation": "list[str]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'semanticSpaces'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['Hypothetical[InRole[declare.<locals>.Agent]]']",
+     "default": "'Hypothetical[InRole[declare.<locals>.Agent]]'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "ensure_id"
+   ],
+   "owner": "Hypothetical[InRole[declare.<locals>.Agent]]"
+  },
+  "Hypothetical[InRole[declare.<locals>.Agent]].Update": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "_SemanticSpaceUpdateBase"
+   ],
+   "doc": null,
+   "field_validators": [],
+   "fields": {
+    "contents": {
+     "alias": null,
+     "annotation": "list[Annotated[InRole[Group, Person]Update > InRole[Group, Person]Create; Field()]]",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'contents'"
+    },
+    "id": {
+     "alias": "id",
+     "annotation": "UUID",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'id'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['Hypothetical[InRole[declare.<locals>.Agent]]']",
+     "default": "'Hypothetical[InRole[declare.<locals>.Agent]]'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "propagate_bound_values"
+   ],
+   "owner": "Hypothetical[InRole[declare.<locals>.Agent]]"
+  },
+  "Hypothetical[InRole[declare.<locals>.Agent]].UpdateDB": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "_SemanticSpaceUpdateDBBase"
+   ],
+   "doc": null,
+   "field_validators": [],
+   "fields": {
+    "contents": {
+     "alias": null,
+     "annotation": "list[Annotated[InRole[Group, Person]UpdateDB > InRole[Group, Person]CreateDB; Field()]]",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'contents'"
+    },
+    "context_labels": {
+     "alias": "contextLabels",
+     "annotation": "list[ContextLabel]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextLabels'"
+    },
+    "id": {
+     "alias": "id",
+     "annotation": "UUID",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'id'"
+    },
+    "semantic_spaces": {
+     "alias": "semanticSpaces",
+     "annotation": "list[str]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'semanticSpaces'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['Hypothetical[InRole[declare.<locals>.Agent]]']",
+     "default": "'Hypothetical[InRole[declare.<locals>.Agent]]'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [],
+   "owner": "Hypothetical[InRole[declare.<locals>.Agent]]"
+  },
+  "Hypothetical[InRole[declare.<locals>.Agent]].View": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "_SemanticSpaceViewBase"
+   ],
+   "doc": null,
+   "field_validators": [],
+   "fields": {
+    "contents": {
+     "alias": null,
+     "annotation": "list[Annotated[InRole[Group, Person]View; Field(discriminator='type')]]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contents'"
+    },
+    "id": {
+     "alias": "id",
+     "annotation": "UUID",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'id'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['Hypothetical[InRole[declare.<locals>.Agent]]']",
+     "default": "'Hypothetical[InRole[declare.<locals>.Agent]]'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "convert_lists",
+    "convert_neo4j_types"
+   ],
+   "owner": "Hypothetical[InRole[declare.<locals>.Agent]]"
+  },
   "Hypothetical[declare.<locals>.Statement].Create": {
    "alias_generator": "to_camel",
    "bases": [
@@ -9605,6 +13772,246 @@
    ],
    "owner": "InRole"
   },
+  "InRole[Group, Person]Create#3": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "InRoleCreate"
+   ],
+   "doc": null,
+   "field_validators": [],
+   "fields": {
+    "role": {
+     "alias": null,
+     "annotation": "Role",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'role'"
+    },
+    "target": {
+     "alias": null,
+     "annotation": "list[Annotated[GroupReferenceSet | PersonCreate > PersonReferenceSet; Field()]]",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'target'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['InRole']",
+     "default": "'InRole'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "propagate_bound_values"
+   ],
+   "owner": "InRole"
+  },
+  "InRole[Group, Person]Create#4": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "InRoleCreate"
+   ],
+   "doc": null,
+   "field_validators": [],
+   "fields": {
+    "role": {
+     "alias": null,
+     "annotation": "Role",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'role'"
+    },
+    "target": {
+     "alias": null,
+     "annotation": "list[Annotated[GroupReferenceSet | PersonCreate > PersonReferenceSet; Field()]]",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'target'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['InRole']",
+     "default": "'InRole'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "propagate_bound_values"
+   ],
+   "owner": "InRole"
+  },
+  "InRole[Group, Person]Create#5": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "InRoleCreate"
+   ],
+   "doc": null,
+   "field_validators": [],
+   "fields": {
+    "role": {
+     "alias": null,
+     "annotation": "Role",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'role'"
+    },
+    "target": {
+     "alias": null,
+     "annotation": "list[Annotated[GroupReferenceSet | PersonCreate > PersonReferenceSet; Field()]]",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'target'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['InRole']",
+     "default": "'InRole'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "propagate_bound_values"
+   ],
+   "owner": "InRole"
+  },
+  "InRole[Group, Person]Create#6": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "InRoleCreate"
+   ],
+   "doc": null,
+   "field_validators": [],
+   "fields": {
+    "role": {
+     "alias": null,
+     "annotation": "Role",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'role'"
+    },
+    "target": {
+     "alias": null,
+     "annotation": "list[Annotated[GroupReferenceSet | PersonCreate > PersonReferenceSet; Field()]]",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'target'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['InRole']",
+     "default": "'InRole'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "propagate_bound_values"
+   ],
+   "owner": "InRole"
+  },
+  "InRole[Group, Person]Create#7": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "InRoleCreate"
+   ],
+   "doc": null,
+   "field_validators": [],
+   "fields": {
+    "role": {
+     "alias": null,
+     "annotation": "Role",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'role'"
+    },
+    "target": {
+     "alias": null,
+     "annotation": "list[Annotated[GroupReferenceSet | PersonCreate > PersonReferenceSet; Field()]]",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'target'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['InRole']",
+     "default": "'InRole'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "propagate_bound_values"
+   ],
+   "owner": "InRole"
+  },
   "InRole[Group, Person]CreateDB": {
    "alias_generator": "to_camel",
    "bases": [
@@ -9687,6 +14094,411 @@
    "owner": "InRole"
   },
   "InRole[Group, Person]CreateDB#2": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "InRoleCreateDB"
+   ],
+   "doc": null,
+   "field_validators": [],
+   "fields": {
+    "context_labels": {
+     "alias": "contextLabels",
+     "annotation": "None | list[ContextLabel]",
+     "default": "None",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextLabels'"
+    },
+    "id": {
+     "alias": "id",
+     "annotation": "UUID",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'id'"
+    },
+    "role": {
+     "alias": null,
+     "annotation": "Role",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'role'"
+    },
+    "semantic_spaces": {
+     "alias": "semanticSpaces",
+     "annotation": "list[str]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'semanticSpaces'"
+    },
+    "target": {
+     "alias": null,
+     "annotation": "list[Annotated[GroupReferenceSet | PersonCreateDB > PersonReferenceSet; Field()]]",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'target'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['InRole']",
+     "default": "'InRole'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "ensure_id"
+   ],
+   "owner": "InRole"
+  },
+  "InRole[Group, Person]CreateDB#3": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "InRoleCreateDB"
+   ],
+   "doc": null,
+   "field_validators": [],
+   "fields": {
+    "context_labels": {
+     "alias": "contextLabels",
+     "annotation": "None | list[ContextLabel]",
+     "default": "None",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextLabels'"
+    },
+    "id": {
+     "alias": "id",
+     "annotation": "UUID",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'id'"
+    },
+    "role": {
+     "alias": null,
+     "annotation": "Role",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'role'"
+    },
+    "semantic_spaces": {
+     "alias": "semanticSpaces",
+     "annotation": "list[str]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'semanticSpaces'"
+    },
+    "target": {
+     "alias": null,
+     "annotation": "list[Annotated[GroupReferenceSet | PersonCreateDB > PersonReferenceSet; Field()]]",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'target'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['InRole']",
+     "default": "'InRole'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "ensure_id"
+   ],
+   "owner": "InRole"
+  },
+  "InRole[Group, Person]CreateDB#4": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "InRoleCreateDB"
+   ],
+   "doc": null,
+   "field_validators": [],
+   "fields": {
+    "context_labels": {
+     "alias": "contextLabels",
+     "annotation": "None | list[ContextLabel]",
+     "default": "None",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextLabels'"
+    },
+    "id": {
+     "alias": "id",
+     "annotation": "UUID",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'id'"
+    },
+    "role": {
+     "alias": null,
+     "annotation": "Role",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'role'"
+    },
+    "semantic_spaces": {
+     "alias": "semanticSpaces",
+     "annotation": "list[str]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'semanticSpaces'"
+    },
+    "target": {
+     "alias": null,
+     "annotation": "list[Annotated[GroupReferenceSet | PersonCreateDB > PersonReferenceSet; Field()]]",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'target'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['InRole']",
+     "default": "'InRole'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "ensure_id"
+   ],
+   "owner": "InRole"
+  },
+  "InRole[Group, Person]CreateDB#5": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "InRoleCreateDB"
+   ],
+   "doc": null,
+   "field_validators": [],
+   "fields": {
+    "context_labels": {
+     "alias": "contextLabels",
+     "annotation": "None | list[ContextLabel]",
+     "default": "None",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextLabels'"
+    },
+    "id": {
+     "alias": "id",
+     "annotation": "UUID",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'id'"
+    },
+    "role": {
+     "alias": null,
+     "annotation": "Role",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'role'"
+    },
+    "semantic_spaces": {
+     "alias": "semanticSpaces",
+     "annotation": "list[str]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'semanticSpaces'"
+    },
+    "target": {
+     "alias": null,
+     "annotation": "list[Annotated[GroupReferenceSet | PersonCreateDB > PersonReferenceSet; Field()]]",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'target'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['InRole']",
+     "default": "'InRole'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "ensure_id"
+   ],
+   "owner": "InRole"
+  },
+  "InRole[Group, Person]CreateDB#6": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "InRoleCreateDB"
+   ],
+   "doc": null,
+   "field_validators": [],
+   "fields": {
+    "context_labels": {
+     "alias": "contextLabels",
+     "annotation": "None | list[ContextLabel]",
+     "default": "None",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextLabels'"
+    },
+    "id": {
+     "alias": "id",
+     "annotation": "UUID",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'id'"
+    },
+    "role": {
+     "alias": null,
+     "annotation": "Role",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'role'"
+    },
+    "semantic_spaces": {
+     "alias": "semanticSpaces",
+     "annotation": "list[str]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'semanticSpaces'"
+    },
+    "target": {
+     "alias": null,
+     "annotation": "list[Annotated[GroupReferenceSet | PersonCreateDB > PersonReferenceSet; Field()]]",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'target'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['InRole']",
+     "default": "'InRole'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "ensure_id"
+   ],
+   "owner": "InRole"
+  },
+  "InRole[Group, Person]CreateDB#7": {
    "alias_generator": "to_camel",
    "bases": [
     "InRoleCreateDB"
@@ -10348,6 +15160,164 @@
    "model_validators": [],
    "owner": "InRole"
   },
+  "InRole[Group, Person]UpdateDB#2": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "InRoleUpdateDB"
+   ],
+   "doc": null,
+   "field_validators": [],
+   "fields": {
+    "context_labels": {
+     "alias": "contextLabels",
+     "annotation": "list[ContextLabel]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextLabels'"
+    },
+    "id": {
+     "alias": "id",
+     "annotation": "UUID",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'id'"
+    },
+    "role": {
+     "alias": null,
+     "annotation": "Role",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'role'"
+    },
+    "semantic_spaces": {
+     "alias": "semanticSpaces",
+     "annotation": "list[str]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'semanticSpaces'"
+    },
+    "target": {
+     "alias": null,
+     "annotation": "list[Annotated[GroupReferenceSet | PersonCreateDB > PersonReferenceSet; Field()]]",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'target'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['InRole']",
+     "default": "'InRole'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [],
+   "owner": "InRole"
+  },
+  "InRole[Group, Person]UpdateDB#3": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "InRoleUpdateDB"
+   ],
+   "doc": null,
+   "field_validators": [],
+   "fields": {
+    "context_labels": {
+     "alias": "contextLabels",
+     "annotation": "list[ContextLabel]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextLabels'"
+    },
+    "id": {
+     "alias": "id",
+     "annotation": "UUID",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'id'"
+    },
+    "role": {
+     "alias": null,
+     "annotation": "Role",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'role'"
+    },
+    "semantic_spaces": {
+     "alias": "semanticSpaces",
+     "annotation": "list[str]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'semanticSpaces'"
+    },
+    "target": {
+     "alias": null,
+     "annotation": "list[Annotated[GroupReferenceSet | PersonCreateDB > PersonReferenceSet; Field()]]",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'target'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['InRole']",
+     "default": "'InRole'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [],
+   "owner": "InRole"
+  },
   "InRole[Group, Person]UpdateDBViaWeight": {
    "alias_generator": "to_camel",
    "bases": [
@@ -10633,6 +15603,246 @@
    "owner": "InRole"
   },
   "InRole[Group, Person]View#3": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "InRoleView"
+   ],
+   "doc": null,
+   "field_validators": [],
+   "fields": {
+    "id": {
+     "alias": "id",
+     "annotation": "UUID",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'id'"
+    },
+    "role": {
+     "alias": null,
+     "annotation": "Role",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'role'"
+    },
+    "target": {
+     "alias": null,
+     "annotation": "list[Annotated[GroupReferenceView | PersonReferenceView; Field(discriminator='type')]]",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'target'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['InRole']",
+     "default": "'InRole'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "convert_lists",
+    "convert_neo4j_types"
+   ],
+   "owner": "InRole"
+  },
+  "InRole[Group, Person]View#4": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "InRoleView"
+   ],
+   "doc": null,
+   "field_validators": [],
+   "fields": {
+    "id": {
+     "alias": "id",
+     "annotation": "UUID",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'id'"
+    },
+    "role": {
+     "alias": null,
+     "annotation": "Role",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'role'"
+    },
+    "target": {
+     "alias": null,
+     "annotation": "list[Annotated[GroupReferenceView | PersonReferenceView; Field(discriminator='type')]]",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'target'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['InRole']",
+     "default": "'InRole'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "convert_lists",
+    "convert_neo4j_types"
+   ],
+   "owner": "InRole"
+  },
+  "InRole[Group, Person]View#5": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "InRoleView"
+   ],
+   "doc": null,
+   "field_validators": [],
+   "fields": {
+    "id": {
+     "alias": "id",
+     "annotation": "UUID",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'id'"
+    },
+    "role": {
+     "alias": null,
+     "annotation": "Role",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'role'"
+    },
+    "target": {
+     "alias": null,
+     "annotation": "list[Annotated[GroupReferenceView | PersonReferenceView; Field(discriminator='type')]]",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'target'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['InRole']",
+     "default": "'InRole'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "convert_lists",
+    "convert_neo4j_types"
+   ],
+   "owner": "InRole"
+  },
+  "InRole[Group, Person]View#6": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "InRoleView"
+   ],
+   "doc": null,
+   "field_validators": [],
+   "fields": {
+    "id": {
+     "alias": "id",
+     "annotation": "UUID",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'id'"
+    },
+    "role": {
+     "alias": null,
+     "annotation": "Role",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'role'"
+    },
+    "target": {
+     "alias": null,
+     "annotation": "list[Annotated[GroupReferenceView | PersonReferenceView; Field(discriminator='type')]]",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'target'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['InRole']",
+     "default": "'InRole'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "convert_lists",
+    "convert_neo4j_types"
+   ],
+   "owner": "InRole"
+  },
+  "InRole[Group, Person]View#7": {
    "alias_generator": "to_camel",
    "bases": [
     "InRoleView"
@@ -15736,6 +20946,17 @@
      "required": true,
      "validation_alias": "'aliases'"
     },
+    "attested_reverse": {
+     "alias": "attestedReverse",
+     "annotation": "list[DoubtView.from.Person.attested_reverse]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'attestedReverse'"
+    },
     "born": {
      "alias": null,
      "annotation": "DateView",
@@ -15824,6 +21045,17 @@
      "required": false,
      "validation_alias": "'involvesReverse'"
     },
+    "joined_reverse": {
+     "alias": "joinedReverse",
+     "annotation": "list[DoubtView.from.Person.joined_reverse]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'joinedReverse'"
+    },
     "known_as": {
      "alias": "knownAs",
      "annotation": "WithCertainty[str]",
@@ -15889,6 +21121,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'participantsReverse'"
+    },
+    "perhaps_reverse": {
+     "alias": "perhapsReverse",
+     "annotation": "list[DoubtView.from.Person.perhaps_reverse]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'perhapsReverse'"
     },
     "received": {
      "alias": null,
@@ -16862,6 +22105,17 @@
      "required": true,
      "validation_alias": "'id'"
     },
+    "joined_reverse": {
+     "alias": "joinedReverse",
+     "annotation": "list[DoubtView.from.Place.joined_reverse]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'joinedReverse'"
+    },
     "label": {
      "alias": null,
      "annotation": "str",
@@ -17703,6 +22957,32 @@
    ],
    "owner": "ReifiedRelation[TypeVar]"
   },
+  "ReifiedRelation[TypeVar].Create#3": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "_ReifiedRelationCreateBase"
+   ],
+   "doc": null,
+   "field_validators": [],
+   "fields": {
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['ReifiedRelation[TypeVar]']",
+     "default": "'ReifiedRelation[TypeVar]'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "propagate_bound_values"
+   ],
+   "owner": "ReifiedRelation[TypeVar]"
+  },
   "ReifiedRelation[TypeVar].CreateDB": {
    "alias_generator": "to_camel",
    "bases": [
@@ -17821,6 +23101,65 @@
    ],
    "owner": "ReifiedRelation[TypeVar]"
   },
+  "ReifiedRelation[TypeVar].CreateDB#3": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "_ReifiedRelationCreateDBBase"
+   ],
+   "doc": null,
+   "field_validators": [],
+   "fields": {
+    "context_labels": {
+     "alias": "contextLabels",
+     "annotation": "None | list[ContextLabel]",
+     "default": "None",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextLabels'"
+    },
+    "id": {
+     "alias": "id",
+     "annotation": "UUID",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'id'"
+    },
+    "semantic_spaces": {
+     "alias": "semanticSpaces",
+     "annotation": "list[str]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'semanticSpaces'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['ReifiedRelation[TypeVar]']",
+     "default": "'ReifiedRelation[TypeVar]'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "ensure_id"
+   ],
+   "owner": "ReifiedRelation[TypeVar]"
+  },
   "ReifiedRelation[TypeVar].Update": {
    "alias_generator": "to_camel",
    "bases": [
@@ -17859,6 +23198,43 @@
    "owner": "ReifiedRelation[TypeVar]"
   },
   "ReifiedRelation[TypeVar].Update#2": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "_ReifiedRelationUpdateBase"
+   ],
+   "doc": null,
+   "field_validators": [],
+   "fields": {
+    "id": {
+     "alias": "id",
+     "annotation": "UUID",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'id'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['ReifiedRelation[TypeVar]']",
+     "default": "'ReifiedRelation[TypeVar]'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "propagate_bound_values"
+   ],
+   "owner": "ReifiedRelation[TypeVar]"
+  },
+  "ReifiedRelation[TypeVar].Update#3": {
    "alias_generator": "to_camel",
    "bases": [
     "_ReifiedRelationUpdateBase"
@@ -18009,6 +23385,63 @@
    "model_validators": [],
    "owner": "ReifiedRelation[TypeVar]"
   },
+  "ReifiedRelation[TypeVar].UpdateDB#3": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "_ReifiedRelationUpdateDBBase"
+   ],
+   "doc": null,
+   "field_validators": [],
+   "fields": {
+    "context_labels": {
+     "alias": "contextLabels",
+     "annotation": "list[ContextLabel]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextLabels'"
+    },
+    "id": {
+     "alias": "id",
+     "annotation": "UUID",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'id'"
+    },
+    "semantic_spaces": {
+     "alias": "semanticSpaces",
+     "annotation": "list[str]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'semanticSpaces'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['ReifiedRelation[TypeVar]']",
+     "default": "'ReifiedRelation[TypeVar]'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [],
+   "owner": "ReifiedRelation[TypeVar]"
+  },
   "ReifiedRelation[TypeVar].View": {
    "alias_generator": "to_camel",
    "bases": [
@@ -18048,6 +23481,44 @@
    "owner": "ReifiedRelation[TypeVar]"
   },
   "ReifiedRelation[TypeVar].View#2": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "_ReifiedRelationViewBase"
+   ],
+   "doc": null,
+   "field_validators": [],
+   "fields": {
+    "id": {
+     "alias": "id",
+     "annotation": "UUID",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'id'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['ReifiedRelation[TypeVar]']",
+     "default": "'ReifiedRelation[TypeVar]'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "convert_lists",
+    "convert_neo4j_types"
+   ],
+   "owner": "ReifiedRelation[TypeVar]"
+  },
+  "ReifiedRelation[TypeVar].View#3": {
    "alias_generator": "to_camel",
    "bases": [
     "_ReifiedRelationViewBase"

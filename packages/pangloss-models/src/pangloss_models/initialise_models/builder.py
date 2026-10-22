@@ -84,9 +84,6 @@ def initialise_model(kind: ModelKind, model: type) -> None:
         return
 
     name = model.__name__
-    type_field: Any = (
-        (Literal[name], Field(default=name)) if kind.type_uses_field else (Literal[name], name)
-    )
     made = pydantic_create_model(
         f"{name}{kind.attribute}",
         __base__=base,
@@ -95,7 +92,7 @@ def initialise_model(kind: ModelKind, model: type) -> None:
         _owner=(ClassVar[model], model),
         __doc__=model._meta.description if model._meta.description else "",  # type: ignore[attr-defined]
         __config__=ConfigDict(alias_generator=to_camel),
-        type=type_field,
+        type=(Literal[name], name),
     )
     setattr(model, kind.attribute, made)
 
@@ -280,11 +277,7 @@ def document_types(
 ) -> list[type]:
     """What may be given for a relation to a document: the document, made with any bindings"""
     document = option.annotated_type
-    names = kind.offers
-    if site == "direct" and kind.document_direct:
-        names = kind.document_direct
-    elif site == "typevar" and kind.document_typevar:
-        names = kind.document_typevar
+    names = kind.document_typevar if site == "typevar" and kind.document_typevar else kind.offers
     types = []
     for name in names:
         offered = KINDS[name]

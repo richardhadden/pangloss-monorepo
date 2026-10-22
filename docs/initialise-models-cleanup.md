@@ -17,7 +17,7 @@ the copying.
 | The five builders | 5 modules, 2,907 lines | `builder.py` (one implementation, about 440 lines), `kinds.py` (what differs, as data), `common.py`, and five 10 to 30 line entry points |
 | Tests (all packages) | 1,220 passing, 17 expected to fail | 1,235 passing, none expected to fail |
 | Line coverage of `initialise_models/` | 79% | 93%, of a module less than half the size |
-| Known bugs | 9 | 0 (see below) |
+| Known bugs | 10 | 0 (see below) |
 | `model_fields` written directly | 65 places | one function in `builder.py` (`set_field`), and the head and edit views |
 
 ## How it was done
@@ -52,6 +52,7 @@ the copying.
 | Subclassing a field **by name** from a `Fulfils[...]` parent crashed (`AttributeError: ... has no attribute 'model_fields'`) | the classes a model fulfils are used directly |
 | A model that refers to itself by name, defined in a function, was left without a `ReferenceView` (the `get_type_hints` failure was swallowed), and `initialise()` failed later with `AttributeError` | only the one annotation that names the base class is read; a missing one is an error naming the model |
 | A relation narrowing a literal field gave a bare `AssertionError` | a `PanglossModelError` |
+| An entity reached through a `SemanticSpace` or `Conjunction` (`Negative[Person]`, `Negative[InRole[Person]]`, `Causes[Person, Place]`) was written but had no reverse relation, so was invisible from the entity | supported: the incoming analysis, the incoming read in `pangloss-memgraph` (it climbs the wrappers and reads what each holds), and the view of the chain |
 
 Also: `assert` used for validation in `initialise_field_definitions.py` is now an error; the order of the fields of a
 model that `Fulfils` several classes no longer depends on the hash of the classes; `build_relatable_field_definition`
@@ -96,11 +97,26 @@ How the five models are made is described in [Generated models](generated-models
 - Field and relation analysis in `initialise_field_definitions.py` (`build_relation_options`) is unchanged, apart
   from the fixes above.
 
+## Decisions made (2026-10-22): the `Update` quirks
+
+Checked against a wrapper that has a document, an embedded object and a bound field of its own (the kitchen sink has
+`Attested`), and decided:
+
+| Quirk | Finding | Decision |
+|---|---|---|
+| A wrapper's own documents in `Update` offered only `Create` | A note held by a wrapper was always read as new when a document was updated, whatever its `id` (the `id` was silently dropped), while a note held directly kept its identity. The wrapper's base `Update` model offered both | **Fixed**: `Update` and `Create`, as everywhere else |
+| The models made for a wrapper in `Update` copied the fields of `Create` | Invisible for literals; for a wrapper's own embedded object it again offered only `Create` | **Fixed**: copied from `Update` (`copy_fields_from` is now always the kind itself) |
+| `Update.type` was `Field(default=...)` on the model and a plain default elsewhere | The same field either way | **Unified**; the flag is gone |
+| Bindings not applied to the model made for a wrapper in `Update` | They have **no effect on its fields in any kind**: the wrapper's own fields are copied over the bound ones, so they stay required in `Create`, `Update` and `View` (the bindings do reach the documents the wrapper holds). `bind_generic_itself` only gives the model its name and base class | **Left as it is**, described accurately in `kinds.py`, and pinned by a test (`test_bindings_reach_what_a_generic_holds_but_not_its_own_fields`). Removing it would rename the generated models. Making bindings fill a wrapper's own fields would be a feature |
+
+Tests: `test_what_a_generic_holds_of_its_own_can_be_given_as_an_update`,
+`test_an_update_of_a_generic_keeps_the_identity_of_what_it_holds`, and the new `Attested` in the snapshot (one generated
+model changes: `Attested[Person]Update`).
+
 ## Decisions needed
 
 These change what clients see. They are kept as named fields of `ModelKind` (marked `quirk:`) until decided.
 
-- `Update.type`: `Field(default=...)` on the model, a plain default on the models made for bindings and generics.
 - Whether `CreateDB` / `UpdateDB` optional literals should be `X | None` (now `X`, with a default of `None`).
 - The order of the reference and the in-place `Create` of an entity in a union (it differs by model, by site and by
   whether there is an edge model; the exact rules are in `inline_first`). Pydantic's smart union picks the best
@@ -110,7 +126,4 @@ These change what clients see. They are kept as named fields of `ModelKind` (mar
 - Whether the database models should carry field descriptions (a wrapper's relation fields do).
 - Whether an `Update` embedded field that is optional because a class `Fulfils` it should default to `None` (now it is
   nullable but required).
-- The `Update` of a wrapper: its own document relations offer only `Create` (so a document of a wrapper cannot be given
-  as an update), the bindings are not applied to the wrapper itself, and its fields are copied from `Create`
-  (`document_direct`, `bind_generic_itself`, `copy_fields_from`).
 - Whether the models made for generics should be cached for every kind (see "Not done").

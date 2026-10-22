@@ -75,6 +75,12 @@ def declare() -> None:
     class Agent(Trait):
         """Anyone who can act"""
 
+    class Attested[T](ReifiedRelation[T]):
+        """A relation with a document and an embedded object of its own"""
+
+        note: Note
+        dated: Date
+
     class Marker(NonHeritableTrait):
         """A trait whose fields are not inherited indirectly"""
 
@@ -180,6 +186,13 @@ def declare() -> None:
 
         body: str
         about: Person
+
+    class Doubt(Document):
+        """An entity reached through a wrapper inside a semantic space (it has a reverse relation)"""
+
+        perhaps: Hypothetical[InRole[Agent]]
+        joined: Causes[Place, Person]
+        attested: Attested[Person]
 
     class Factoid(Document):
         year: int

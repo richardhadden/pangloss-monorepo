@@ -35,7 +35,7 @@ Items below marked `[x]` are fixed (with a test); `[x] not a bug` were suspected
   `generic_relation_type.Create.model_fields` (not `.Update`) onto the `Update` model; and `@cache` is on a
   function of `(type_option, field_bindings)`, so it is also a process-global cache (see below). The lines
   run in the tests (so it is covered but not asserted). Write a test with a generic relation + `bind_to_child_field`
-  + `Update` and check the bound field is optional. **Not a bug that a test could find: the discarded assignment was dead code and is removed; the `Create` fields copied onto the `Update` model are kept (a `quirk`, to decide).**
+  + `Update` and check the bound field is optional. **Not a bug that a test could find: the discarded assignment was dead code and is removed; the `Create` fields copied onto the `Update` model were an accident, and are now the `Update` fields (decided 2026-10-22, with the other `Update` quirks: see "Decisions made" in docs/initialise-models-cleanup.md).**
 - [x] **(suspected) Generic branches append the plain variant even when there is an edge model.** In every
   `build_generic_*_from_type_option` the `RelationToGeneric` case is
   `if to.edge_model: annotations.append(edge version)` followed by an unconditional
@@ -64,10 +64,21 @@ Items below marked `[x]` are fixed (with a test); `[x] not a bug` were suspected
 - [ ] **(suspected) `CreateDB` literals that are optional get `default=None` but a non-optional annotation**
   (`Create` and `View` use `X | None`). Harmless at runtime (defaults are not validated), but the schema and type
   hints disagree.
-- [ ] **(suspected) The `incoming` analysis misses wrappers.** `initialise_incoming_relation_definitions` handles
-  `RelationToEntity` and `ReifiedRelation[...]` only. A relation whose type is `SemanticSpace[...]` or
-  `Conjunction[...]` around an entity (`RelationToSemanticSpace`, `RelationToConjunction`) is ignored, so the
-  entity gets no reverse field for it. `docs/models.md` says these are included (via nesting): check which cases. **Not checked; unchanged.**
+- [x] **(confirmed 2026-10-22) An entity reached only through a `SemanticSpace` or `Conjunction` has no reverse relation.**
+  Tested on the real database, with `Plain.direct: Person`, `ViaReified.reified: InRole[Person]`,
+  `ViaSpace.spaced: Negative[Person]` and `ViaSpaceReified.both: Negative[InRole[Person]]`: all four documents are
+  **written** without error, and the graph holds the reverse edges (`contents_reverse` from the person to the
+  `Negative` node, `target_reverse` to the `InRole`), but `Person.get(...)` has only `direct_reverse` and
+  `reified_reverse`. The entity has no `spaced_reverse` or `both_reverse` field, so the relation is accepted, stored, and
+  invisible from the entity. Two places leave it out: `initialise_incoming_relation_definitions` handles
+  `RelationToEntity` and `RelationToReifiedRelation[Document]` only (not `RelationToSemanticSpace` /
+  `RelationToConjunction`), and the read in `pangloss-memgraph` (`build_fetch_incoming_query`, `read_incoming.py`)
+  climbs only reified relations and embedded objects (`CHAIN_LABELS`), so the `Negative` node ends the climb and is dropped
+  as an unknown holder. A document that refers to the entity directly, nested inside a semantic space
+  (`Negative[Statement]` where `Statement.by: Person`), is not affected. **Decide: support it** (both packages: the
+  analysis, the climb, and a view that shows the chain of wrappers) **or refuse it** at `initialise()` with a clear error
+  (currently the data is written and cannot be seen from the entity). No test yet; if it is to be supported, write the
+  `pangloss-memgraph` test first. **Fixed 2026-10-22, supported in both packages** (model analysis, the incoming read and its view assembly; tests in `test_read_entity.py` and `test_initialisation_gaps.py`). A conjunction above the wrapper next to the entity whose other part is not an entity is left out of the entity's view, with a log warning.
 ### Global state and fragile mechanisms
 
 - [x] **`bound_models_built` (module global, in both `initialise_create_model` and `initialise_view_model`)** is

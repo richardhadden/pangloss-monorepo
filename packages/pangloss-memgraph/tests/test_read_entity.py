@@ -16,6 +16,7 @@ from pangloss_models.model_bases.reified_relation import (
     ReifiedRelation,
     ReifiedRelationDocument,
 )
+from pangloss_models.model_bases.conjunction import Conjunction
 from pangloss_models.model_bases.semantic_space import SemanticSpace
 from pydantic import AnyHttpUrl
 
@@ -812,6 +813,414 @@ async def test_incoming_relations_of_different_kinds_together(clear_database):
     assert [s.id for s in read.about_reverse] == [statement.id]
     assert [s.id for s in read.involves_person_reverse] == [statement.id]
     assert read.involves_person_reverse[0].involves_person.certainty == 1
+
+
+# ---------------------------------------------------------------------------
+# Through semantic spaces and conjunctions
+# ---------------------------------------------------------------------------
+
+
+@no_type_check
+async def test_incoming_relation_through_a_semantic_space(clear_database):
+    """A document that puts an entity in a semantic space (`Negative[Person]`) is among what
+    refers to it, with the semantic space and its contents"""
+
+    class Person(Entity):
+        pass
+
+    class Negative[T](SemanticSpace[T]):
+        pass
+
+    class Statement(Document):
+        text: str
+        spaced: Negative[Person]
+
+    initialise()
+
+    person = await Person.Create(label="John Smith").save()
+    other = await Person.Create(label="Jane Doe").save()
+    statement = await Statement.Create(
+        label="A Statement",
+        text="some text",
+        spaced={
+            "type": "Negative",
+            "contents": [
+                {"type": "Person", "id": person.id},
+                {"type": "Person", "id": other.id},
+            ],
+        },
+    ).save()
+
+    read = await Person.get(id=person.id)
+
+    assert len(read.spaced_reverse) == 1
+    item = read.spaced_reverse[0]
+    assert item.id == statement.id
+    assert item.type == "Statement"
+    assert not hasattr(item, "text")
+    assert item.spaced.type == "Negative"
+    assert {t.id for t in item.spaced.contents} == {person.id, other.id}
+
+    # (and from the other person)
+    assert [i.id for i in (await Person.get(id=other.id)).spaced_reverse] == [statement.id]
+
+
+@no_type_check
+async def test_incoming_relation_through_a_list_of_semantic_spaces(clear_database):
+    class Person(Entity):
+        pass
+
+    class Negative[T](SemanticSpace[T]):
+        pass
+
+    class Statement(Document):
+        spaces: list[Negative[Person]]
+
+    initialise()
+
+    person = await Person.Create(label="John Smith").save()
+    reference = {"type": "Person", "id": person.id}
+    await Statement.Create(
+        label="A Statement",
+        spaces=[{"type": "Negative", "contents": [reference]} for _ in range(2)],
+    ).save()
+
+    read = await Person.get(id=person.id)
+    assert len(read.spaces_reverse) == 2
+    for item in read.spaces_reverse:
+        assert len(item.spaces) == 1
+        assert item.spaces[0].contents[0].id == person.id
+
+
+@no_type_check
+async def test_incoming_relation_through_a_reified_relation_in_a_semantic_space(
+    clear_database,
+):
+    class Person(Entity):
+        pass
+
+    class Identification[T](ReifiedRelation[T]):
+        certainty: int
+
+    class Negative[T](SemanticSpace[T]):
+        pass
+
+    class Statement(Document):
+        involves: Negative[Identification[Person]]
+
+    initialise()
+
+    person = await Person.Create(label="John Smith").save()
+    statement = await Statement.Create(
+        label="A Statement",
+        involves={
+            "type": "Negative",
+            "contents": [
+                {
+                    "type": "Identification",
+                    "certainty": 4,
+                    "target": [{"type": "Person", "id": person.id}],
+                }
+            ],
+        },
+    ).save()
+
+    read = await Person.get(id=person.id)
+
+    assert len(read.involves_reverse) == 1
+    item = read.involves_reverse[0]
+    assert item.id == statement.id
+    # Outermost first, each with the next in the chain inside it
+    assert item.involves.type == "Negative"
+    assert len(item.involves.contents) == 1
+    identification = item.involves.contents[0]
+    assert identification.certainty == 4
+    assert [t.id for t in identification.target] == [person.id]
+
+
+@no_type_check
+async def test_incoming_relation_through_a_semantic_space_in_a_reified_relation(
+    clear_database,
+):
+    class Person(Entity):
+        pass
+
+    class Identification[T](ReifiedRelation[T]):
+        certainty: int
+
+    class Negative[T](SemanticSpace[T]):
+        pass
+
+    class Statement(Document):
+        involves: Identification[Negative[Person]]
+
+    initialise()
+
+    person = await Person.Create(label="John Smith").save()
+    await Statement.Create(
+        label="A Statement",
+        involves={
+            "type": "Identification",
+            "certainty": 2,
+            "target": [
+                {"type": "Negative", "contents": [{"type": "Person", "id": person.id}]}
+            ],
+        },
+    ).save()
+
+    read = await Person.get(id=person.id)
+
+    assert len(read.involves_reverse) == 1
+    identification = read.involves_reverse[0].involves
+    assert identification.certainty == 2
+    assert len(identification.target) == 1
+    assert identification.target[0].type == "Negative"
+    assert [t.id for t in identification.target[0].contents] == [person.id]
+
+
+@no_type_check
+async def test_incoming_relation_through_a_semantic_space_in_a_nested_document(
+    clear_database,
+):
+    class Person(Entity):
+        pass
+
+    class Negative[T](SemanticSpace[T]):
+        pass
+
+    class Action(Document):
+        spaced: Negative[Person]
+
+    class Statement(Document):
+        action: Action
+
+    initialise()
+
+    person = await Person.Create(label="John Smith").save()
+    await Statement.Create(
+        label="A Statement",
+        action={
+            "type": "Action",
+            "label": "An Action",
+            "spaced": {
+                "type": "Negative",
+                "contents": [{"type": "Person", "id": person.id}],
+            },
+        },
+    ).save()
+
+    read = await Person.get(id=person.id)
+    assert len(read.spaced_reverse) == 1
+    item = read.spaced_reverse[0]
+    # The immediate (nested) document holding the relation
+    assert item.type == "Action"
+    assert [t.id for t in item.spaced.contents] == [person.id]
+
+
+@no_type_check
+async def test_incoming_relation_through_a_conjunction(clear_database):
+    """A conjunction joins things by name (`cause`, `result`): both are shown, as the targets of
+    a reified relation are"""
+
+    class Person(Entity):
+        pass
+
+    class Place(Entity):
+        pass
+
+    class Causes[TCause, TResult](Conjunction):
+        cause: TCause
+        result: TResult
+
+    class Statement(Document):
+        joined: Causes[Person, Place]
+
+    initialise()
+
+    person = await Person.Create(label="John Smith").save()
+    place = await Place.Create(label="Rome").save()
+    statement = await Statement.Create(
+        label="A Statement",
+        joined={
+            "type": "Causes",
+            "cause": {"type": "Person", "id": person.id},
+            "result": {"type": "Place", "id": place.id},
+        },
+    ).save()
+
+    from_person = await Person.get(id=person.id)
+    assert [i.id for i in from_person.joined_reverse] == [statement.id]
+    joined = from_person.joined_reverse[0].joined
+    assert joined.type == "Causes"
+    assert joined.cause.id == person.id
+    assert joined.result.id == place.id
+
+    from_place = await Place.get(id=place.id)
+    assert [i.id for i in from_place.joined_reverse] == [statement.id]
+    assert from_place.joined_reverse[0].joined.result.id == place.id
+
+
+@no_type_check
+async def test_incoming_relation_through_a_conjunction_above_a_reified_relation(
+    clear_database,
+):
+    """The part of the conjunction that is not on the way to the entity is shown too, if it is an entity"""
+
+    class Person(Entity):
+        pass
+
+    class Place(Entity):
+        pass
+
+    class Identification[T](ReifiedRelation[T]):
+        certainty: int
+
+    class Causes[TCause, TResult](Conjunction):
+        cause: TCause
+        result: TResult
+
+    class Statement(Document):
+        joined: Causes[Identification[Person], Place]
+
+    initialise()
+
+    person = await Person.Create(label="John Smith").save()
+    place = await Place.Create(label="Rome").save()
+    statement = await Statement.Create(
+        label="A Statement",
+        joined={
+            "type": "Causes",
+            "cause": {
+                "type": "Identification",
+                "certainty": 3,
+                "target": [{"type": "Person", "id": person.id}],
+            },
+            "result": {"type": "Place", "id": place.id},
+        },
+    ).save()
+
+    read = await Person.get(id=person.id)
+    assert [i.id for i in read.joined_reverse] == [statement.id]
+    joined = read.joined_reverse[0].joined
+    assert joined.cause.certainty == 3
+    assert [t.id for t in joined.cause.target] == [person.id]
+    assert joined.result.id == place.id
+
+
+@no_type_check
+async def test_a_relation_that_cannot_be_shown_from_the_entity_is_left_out_with_a_warning(
+    clear_database, caplog
+):
+    """A conjunction of the entity's relation and a document: the document has nothing to show here.
+    The entity is still read, without that item, and the log says what is not shown"""
+
+    class Person(Entity):
+        pass
+
+    class Identification[T](ReifiedRelation[T]):
+        certainty: int
+
+    class Note(Document):
+        text: str
+
+    class Causes[TCause, TResult](Conjunction):
+        cause: TCause
+        result: TResult
+
+    class Statement(Document):
+        direct: Person
+        joined: Causes[Identification[Person], Note]
+
+    initialise()
+
+    person = await Person.Create(label="John Smith").save()
+    reference = {"type": "Person", "id": person.id}
+    statement = await Statement.Create(
+        label="A Statement",
+        direct=reference,
+        joined={
+            "type": "Causes",
+            "cause": {"type": "Identification", "certainty": 1, "target": [reference]},
+            "result": {"type": "Note", "label": "A Note", "text": "t"},
+        },
+    ).save()
+
+    with caplog.at_level("WARNING"):
+        read = await Person.get(id=person.id)
+
+    assert [i.id for i in read.direct_reverse] == [statement.id]  # (the rest is there)
+    assert read.joined_reverse == []
+    assert any("is not shown" in r.message and "Causes.result" in r.message for r in caplog.records)
+
+
+@no_type_check
+async def test_incoming_relations_by_three_routes_are_in_three_fields(
+    clear_database,
+):
+    """Direct, reified, and in a semantic space: three relations, three fields"""
+
+    class Person(Entity):
+        pass
+
+    class Identification[T](ReifiedRelation[T]):
+        certainty: int
+
+    class Negative[T](SemanticSpace[T]):
+        pass
+
+    class Statement(Document):
+        direct: Person
+        reified: Identification[Person]
+        spaced: Negative[Person]
+
+    initialise()
+
+    person = await Person.Create(label="John Smith").save()
+    reference = {"type": "Person", "id": person.id}
+    statement = await Statement.Create(
+        label="A Statement",
+        direct=reference,
+        reified={"type": "Identification", "certainty": 1, "target": [reference]},
+        spaced={"type": "Negative", "contents": [reference]},
+    ).save()
+
+    read = await Person.get(id=person.id)
+    assert [s.id for s in read.direct_reverse] == [statement.id]
+    assert [s.id for s in read.reified_reverse] == [statement.id]
+    assert [s.id for s in read.spaced_reverse] == [statement.id]
+    assert read.reified_reverse[0].reified.certainty == 1
+    assert read.spaced_reverse[0].spaced.contents[0].id == person.id
+
+
+@no_type_check
+async def test_incoming_relations_through_a_semantic_space_follow_updates(clear_database):
+    class Person(Entity):
+        pass
+
+    class Negative[T](SemanticSpace[T]):
+        pass
+
+    class Statement(Document):
+        spaced: Negative[Person]
+
+    initialise()
+
+    person = await Person.Create(label="John Smith").save()
+    other = await Person.Create(label="Jane Doe").save()
+    statement = await Statement.Create(
+        label="A Statement",
+        spaced={"type": "Negative", "contents": [{"type": "Person", "id": person.id}]},
+    ).save()
+    assert len((await Person.get(id=person.id)).spaced_reverse) == 1
+
+    await Statement.Update(
+        id=statement.id,
+        label="A Statement",
+        spaced={"type": "Negative", "contents": [{"type": "Person", "id": other.id}]},
+    ).save()
+
+    assert (await Person.get(id=person.id)).spaced_reverse == []
+    assert [i.id for i in (await Person.get(id=other.id)).spaced_reverse] == [statement.id]
 
 
 # ---------------------------------------------------------------------------
