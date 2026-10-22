@@ -21,6 +21,7 @@ Each feature in these docs is marked with its status:
 | [Defining models](models.md) | Documents, Entities, Embedded, Traits, EdgeModels, and the other model kinds |
 | [Relations and fields](relations.md) | Literal fields, relations, `ViaEdge`, `RelationConfig`, field binding, `Fulfils` |
 | [Generated models](generated-models.md) | The `Create`, `CreateDB`, `Update`, `UpdateDB`, `View`, `HeadView` and reference models, and the initialisation pipeline |
+| [Cleaning up initialise_models](initialise-models-cleanup.md) | How the five generated models are now made by one builder, what was fixed, and what is left to decide |
 | [Semantic spaces and context labels](semantic-spaces.md) | How nesting inside `SemanticSpace` wrappers is tracked |
 | [Memgraph backend](memgraph.md) | Graph schema, query builders, and the database API |
 | [Settings](settings.md) | `BaseSettings` and database settings |

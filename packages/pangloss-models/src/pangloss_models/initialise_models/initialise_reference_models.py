@@ -1,5 +1,8 @@
-import warnings
-from typing import ClassVar, Literal, get_args, get_type_hints
+"""`ReferenceSet` (what is given to refer to an entity) and `ReferenceView` (a short form of a
+document or entity, as it is read)."""
+
+import annotationlib
+from typing import Any, ClassVar, Literal, get_args
 from uuid import UUID
 
 from pydantic import AnyHttpUrl, ConfigDict
@@ -19,26 +22,35 @@ from pangloss_models.model_bases.reified_relation import (
 from pangloss_models.utils import annotation_is_optional
 
 
+def declared_reference_base(model: type[_DeclaredClass], attribute: str) -> type:
+    """The class that the model made for `attribute` (`ReferenceSet`, `ReferenceView`) is based on.
+
+    The base class of the kind of model declares it, as `ReferenceSet: ClassVar[type[Base]]`. Only that
+    annotation is read (not those of the fields, which may refer to models that are not defined in
+    a place `typing.get_type_hints` can see, such as one defined in a function)."""
+    for cls in model.__mro__:
+        annotations = annotationlib.get_annotations(cls, format=annotationlib.Format.FORWARDREF)
+        if attribute in annotations:
+            hint: Any = annotations[attribute]
+            try:
+                return get_args(get_args(hint)[0])[0]
+            except IndexError:
+                break
+    raise PanglossModelError(
+        f"{model.__name__} has no base class for its {attribute}: it should be declared as "
+        f"`{attribute}: ClassVar[type[<base class>]]` on the class that it is a kind of"
+    )
+
+
 def initialise_reference_set_model(model: type[_DeclaredClass]):
     if not issubclass(model, (Entity,)):
         return
 
-    # Checks if Create model has already been created; do not duplicate as we depend
-    # on model reference!
+    # (the model is referred to by other models: make it once)
     if "ReferenceSet" in model.__dict__:
         return
 
-    try:  # TODO! Remove this guard once all tests passing
-        type_hints = get_type_hints(model)
-    except Exception:
-        return
-
-    if "ReferenceSet" not in type_hints:
-        warnings.warn(f"ReferenceSet class hint missing from {model.__name__}")
-        return
-
-    # Extracts from the _DeclaredClass definition the annotation for .Create
-    reference_set_base_type = get_args(get_args(type_hints["ReferenceSet"])[0])[0]
+    reference_set_base_type = declared_reference_base(model, "ReferenceSet")
 
     if model._meta.accept_url_as_id:
         id_type = UUID | AnyHttpUrl
@@ -63,22 +75,11 @@ def initialise_reference_view_model(model: type[_DeclaredClass]):
     if not issubclass(model, (Entity, Document, ReifiedRelationDocument)):
         return
 
-    # Checks if Create model has already been created; do not duplicate as we depend
-    # on model reference!
+    # (the model is referred to by other models: make it once)
     if "ReferenceView" in model.__dict__:
         return
 
-    try:  # TODO! Remove this guard once all tests passing
-        type_hints = get_type_hints(model)
-    except Exception:
-        return
-
-    if "ReferenceView" not in type_hints:
-        warnings.warn(f"ReferenceView class hint missing from {model.__name__}")
-        return
-
-    # Extracts from the _DeclaredClass definition the annotation for .Create
-    reference_view_base_type = get_args(get_args(type_hints["ReferenceView"])[0])[0]
+    reference_view_base_type = declared_reference_base(model, "ReferenceView")
 
     id_type = UUID
 

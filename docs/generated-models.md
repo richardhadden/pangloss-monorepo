@@ -56,7 +56,13 @@ Optional literal fields (`X | None`) default to `None` in all of these models, s
 
    A missing module raises `PanglossImportError`.
 
-`ModelRegistry._reset()` clears all registrations; the tests call it before every test.
+### How the five models are made
+
+`Create`, `CreateDB`, `Update`, `UpdateDB` and `View` are made by one implementation, `initialise_models/builder.py`, driven by a `ModelKind` for each (`initialise_models/kinds.py`). A `ModelKind` is data: the base class for each kind of declared model, which models a relation offers (`Update` offers a new `Create` as well as an `Update`), how an entity is referred to (`ReferenceSet` to write, `ReferenceView` to read), whether bindings and descriptions apply, and when a field is optional. What the five do differently is therefore in one table, with the differences that look accidental marked `quirk` (see [Cleaning up initialise_models](initialise-models-cleanup.md)).
+
+The builder has two steps for a kind: `initialise_model` makes the empty model (named, with `type`, `label`, and `id` and `create_new` if the class can be given an id), and `add_fields` gives it its fields from the field definitions. A relation field's annotation (`relation_annotation`) is a union of what may be given for each type the relation allows: for an entity, a reference and, if the class allows it (`create_inline`), the entity itself; for a document, its model for this kind, made again with the parent's bindings if there are any (`build_bound_model`); for a generic wrapper such as `InRole[Person]`, a model made for that use (`build_generic_model`). The modules `initialise_create_model.py`, `initialise_update_model.py` and the like are the entry points the registry calls.
+
+`ModelRegistry._reset()` clears all registrations and the models made for bindings and generics; the tests call it before every test. Calling `initialise()` again is harmless: models that exist are not made again, and the incoming relations are worked out afresh.
 
 ## Exceptions
 

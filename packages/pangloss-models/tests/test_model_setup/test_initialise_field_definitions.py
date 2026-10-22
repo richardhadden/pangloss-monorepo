@@ -38,7 +38,6 @@ from pangloss_models.field_definitions import (
 )
 from pangloss_models.initialise_models.initialise_field_definitions import (
     get_fields_on_model,
-    is_single_relatable,
 )
 from pangloss_models.model_bases.annotated_value import AnnotatedValue
 from pangloss_models.model_bases.configs import RelationConfig
@@ -56,7 +55,7 @@ from pangloss_models.model_bases.semantic_space import SemanticSpace
 from pangloss_models.model_bases.trait import NonHeritableTrait, Trait
 from pangloss_models.model_registry import ModelRegistry
 from pydantic import ValidationError
-from pangloss_models.utils import get_all_parent_classes
+from pangloss_models.utils import get_all_parent_classes, is_single_relatable
 
 
 def test_meta_fields():

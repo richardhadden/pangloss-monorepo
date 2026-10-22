@@ -11,7 +11,7 @@ from pangloss_models.exceptions import (
     PanglossImportError,
     PanglossInitialisationError,
 )
-lazy from pangloss_models.initialise_models.initalise_incoming_relation_definitions import (
+lazy from pangloss_models.initialise_models.initialise_incoming_relation_definitions import (
     initialise_incoming_relation_definitions,
 )
 lazy from pangloss_models.initialise_models.initialise_create_db_model import (
@@ -117,6 +117,11 @@ class ModelRegistry:
         cls._model_set = set()
         cls._model_dict = {}
         cls._action_classes = []
+
+        # (the models made for bindings and generics refer to the classes that were registered)
+        from pangloss_models.initialise_models.builder import clear_caches
+
+        clear_caches()
 
     _models: ClassVar[list[type[_DeclaredClass]]] = []
     _model_set: ClassVar[set[type[_DeclaredClass]]] = set()
@@ -294,6 +299,10 @@ class ModelRegistry:
         # declaration order
         for model in cls._model_dict.values():
             initialise_field_definitions(model)
+
+        # (the incoming relations are worked out from all the models, so start again if this is not the first time)
+        for model in cls._model_dict.values():
+            model._meta.field_definitions.incoming_fields.clear()
 
         for model in cls._model_dict.values():
             if hasattr(model, "__metatype__") and model.__metatype__ in [

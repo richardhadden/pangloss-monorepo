@@ -67,10 +67,27 @@ from pangloss_models.utils import (
     is_literal,
     is_parameterized_generic,
     is_relatable,
-    is_single_relatable,
     is_union_of_embedded,
     is_via_edge,
     model_is_trait,
+)
+
+
+# The names of fields that the models made from a declared model have for themselves.
+# (`label` is not here: a model may say `label: str` for itself, and the model made from it
+# then has the label that it always has.)
+RESERVED_FIELD_NAMES = frozenset(
+    {
+        "id",
+        "type",
+        "meta",
+        "urls",
+        "create_new",
+        "db_labels",
+        "context_labels",
+        "semantic_spaces",
+        "edge_properties",
+    }
 )
 
 
@@ -89,39 +106,34 @@ def build_list_field_definition(
     Raises:
         PanglossModelError: when field annotation is not a valid literal list.
     """
-    try:
-        assert field_info.annotation
-        list_inner_type_tuple: tuple[Any, ...] = get_args(field_info.annotation)
-        assert list_inner_type_tuple
-        list_inner_type: Any = list_inner_type_tuple[0]
+    invalid = PanglossModelError(
+        f"{model.__name__}.{field_name} has an invalid list field definition"
+    )
+    arguments = get_args(field_info.annotation) if field_info.annotation else ()
+    if not arguments:
+        raise invalid
+    list_inner_type: Any = arguments[0]
 
-        inner_type_validators: list[BaseMetadata] = []
-        if get_origin(list_inner_type) is Annotated:
-            annotated_inner_type_tuple: tuple[Any, ...] = get_args(list_inner_type)
-            assert annotated_inner_type_tuple
-            list_inner_type = annotated_inner_type_tuple[0]
-            inner_type_validators: list[BaseMetadata] = [
-                arg
-                for arg in annotated_inner_type_tuple
-                if isinstance(arg, BaseMetadata)
-            ]
-        assert is_literal(list_inner_type)
-        return ListFieldDefinition(
-            field_on_model=model,
-            field_name=field_name,
-            annotated_type=field_info.annotation,
-            validators=[
-                md for md in field_info.metadata if isinstance(md, BaseMetadata)
-            ],
-            inner_type=list_inner_type,
-            inner_type_validators=inner_type_validators,
-            db_field=is_db_field,
-            description=extract_field_description(field_info),
-        )
-    except AssertionError:
-        raise PanglossModelError(
-            f"{model.__name__}.{field_name} has an invalid list field definition"
-        )
+    inner_type_validators: list[BaseMetadata] = []
+    if get_origin(list_inner_type) is Annotated:
+        annotated_arguments = get_args(list_inner_type)
+        list_inner_type = annotated_arguments[0]
+        inner_type_validators = [
+            arg for arg in annotated_arguments if isinstance(arg, BaseMetadata)
+        ]
+    if not is_literal(list_inner_type):
+        raise invalid
+
+    return ListFieldDefinition(
+        field_on_model=model,
+        field_name=field_name,
+        annotated_type=field_info.annotation,
+        validators=[md for md in field_info.metadata if isinstance(md, BaseMetadata)],
+        inner_type=list_inner_type,
+        inner_type_validators=inner_type_validators,
+        db_field=is_db_field,
+        description=extract_field_description(field_info),
+    )
 
 
 def build_relation_options(
@@ -282,131 +294,75 @@ def build_relatable_field_definition(
 ) -> RelationFieldDefinition:
     """Build a RelationFieldDefinition from model field metadata.
 
-    Supports t:
-    - TypeVar relation annotations
-    - list[T] relations
-    - named relation model types (Document/Entity/Relation etc.)
+    Supports:
+    - TypeVar relation annotations (`T`, `list[T]`: the relations of a generic wrapper)
+    - list[X] relations
+    - single relations to a Document, Entity, trait or generic
 
-    Applies relation subclassing hints from relation config and updates
-    `model.depends_on_classes`.
+    Applies relation subclassing hints from relation config and records the classes the
+    model depends on in `model._depends_on_classes`.
     """
-
     relation_config = extract_relation_config(field_info)
-
-    validators = extract_validators(field_info)
-
-    if relation_config:
-        field_subclassings = set(relation_config.subclasses_parent_fields)
-    else:
-        field_subclassings = set()
-
-    if relation_config:
-        bind_to_child_field = relation_config.bind_to_child_field
-    else:
-        bind_to_child_field = []
-
-    reverse_name = (
-        relation_config.reverse_name
-        if relation_config and relation_config.reverse_name
-        else f"{field_name}_reverse"
-    )
+    annotation = field_info.annotation
 
     if (
-        is_parameterized_generic(field_info.annotation)
-        and isinstance((arg := get_args(field_info.annotation)[0]), TypeVar)
-        and get_origin(field_info.annotation) is list
+        is_parameterized_generic(annotation)
+        and isinstance((type_var := get_args(annotation)[0]), TypeVar)
+        and get_origin(annotation) is list
     ):
-        return RelationFieldDefinition(
-            field_name=field_name,
-            field_on_model=model,
-            annotated_type=field_info.annotation,  # pyright: ignore[reportArgumentType]
-            type_options=set(
-                [RelationToTypeVar(annotated_type=arg, type_var_name=arg.__name__)]
-            ),
-            subclasses_parent_fields=field_subclassings,
-            reverse_name=reverse_name,
-            wrapper=list,
-            db_field=is_db_field,
-            bind_to_child_field=bind_to_child_field,
-            validators=validators,
-            description=extract_field_description(field_info),
-        )
-    elif isinstance(field_info.annotation, TypeVar):
-        return RelationFieldDefinition(
-            field_name=field_name,
-            field_on_model=model,
-            annotated_type=field_info.annotation,  # pyright: ignore[reportArgumentType]
-            type_options=set(
-                [
-                    RelationToTypeVar(
-                        annotated_type=field_info.annotation,
-                        type_var_name=field_info.annotation.__name__,
-                    )
-                ]
-            ),
-            subclasses_parent_fields=field_subclassings,
-            reverse_name=reverse_name,
-            wrapper=None,
-            db_field=is_db_field,
-            bind_to_child_field=bind_to_child_field,
-            validators=validators,
-            description=extract_field_description(field_info),
-        )
+        wrapper = list
+        type_options: set[RelationOption] = {
+            RelationToTypeVar(annotated_type=type_var, type_var_name=type_var.__name__)
+        }
 
-    elif is_list_relatable(field_info.annotation):
-        if TYPE_CHECKING:
-            assert field_info.annotation
+    elif isinstance(annotation, TypeVar):
+        wrapper = None
+        type_options = {
+            RelationToTypeVar(annotated_type=annotation, type_var_name=annotation.__name__)
+        }
 
+    elif is_list_relatable(annotation):
         # If wrapped in a list, unwrap the list type
-        annotation = get_args(field_info.annotation)[0]
+        wrapper = list
+        inner = get_args(annotation)[0]
 
-        if is_parameterized_generic(annotation) and isclass(
-            (origin := get_origin(annotation))
-        ):
+        if is_parameterized_generic(inner) and isclass((origin := get_origin(inner))):
             model._depends_on_classes.add(origin)
-        elif isclass(annotation):
-            model._depends_on_classes.add(annotation)
+        elif isclass(inner):
+            model._depends_on_classes.add(inner)
 
-        return RelationFieldDefinition(
-            field_name=field_name,
-            field_on_model=model,
-            annotated_type=field_info.annotation,
-            type_options=build_relation_options(model, annotation),
-            subclasses_parent_fields=field_subclassings,
-            reverse_name=reverse_name,
-            wrapper=list,
-            db_field=is_db_field,
-            bind_to_child_field=bind_to_child_field,
-            validators=validators,
-            description=extract_field_description(field_info),
-        )
+        type_options = build_relation_options(model, inner)
 
     else:
-        if TYPE_CHECKING:
-            assert is_relatable(field_info.annotation)
-            assert is_single_relatable(field_info.annotation)
+        wrapper = None
 
-        if is_parameterized_generic(field_info.annotation) and isclass(
-            (origin := get_origin(field_info.annotation))
-        ):
+        if is_parameterized_generic(annotation) and isclass((origin := get_origin(annotation))):
             model._depends_on_classes.add(origin)  # pyright: ignore[reportArgumentType]
-            model._depends_on_classes.update(get_args(field_info.annotation))
+            model._depends_on_classes.update(get_args(annotation))
         else:
-            model._depends_on_classes.add(field_info.annotation)
+            model._depends_on_classes.add(annotation)
 
-        return RelationFieldDefinition(
-            field_name=field_name,
-            field_on_model=model,
-            annotated_type=field_info.annotation,
-            type_options=build_relation_options(model, field_info.annotation),
-            subclasses_parent_fields=field_subclassings,
-            reverse_name=reverse_name,
-            wrapper=None,
-            db_field=is_db_field,
-            bind_to_child_field=bind_to_child_field,
-            validators=validators,
-            description=extract_field_description(field_info),
-        )
+        type_options = build_relation_options(model, annotation)
+
+    return RelationFieldDefinition(
+        field_name=field_name,
+        field_on_model=model,
+        annotated_type=annotation,  # pyright: ignore[reportArgumentType]
+        type_options=type_options,
+        subclasses_parent_fields=(
+            set(relation_config.subclasses_parent_fields) if relation_config else set()
+        ),
+        reverse_name=(
+            relation_config.reverse_name
+            if relation_config and relation_config.reverse_name
+            else f"{field_name}_reverse"
+        ),
+        wrapper=wrapper,
+        db_field=is_db_field,
+        bind_to_child_field=relation_config.bind_to_child_field if relation_config else [],
+        validators=extract_validators(field_info),
+        description=extract_field_description(field_info),
+    )
 
 
 def build_embedded_field_definition(
@@ -446,33 +402,22 @@ def build_embedded_field_definition(
 
 def get_field_origin_model_and_definition(
     model: type[_DeclaredClass], field_name: str
-) -> list[tuple[type[_DeclaredClass], FieldDefinition]] | None:
-    """Find all parent models (including traits) that define a given field.
+) -> list[tuple[type[_DeclaredClass], FieldDefinition]]:
+    """Find all parent models (including traits, and the classes that the model `Fulfils`) that
+    define a given field.
 
-    Returns a list of (origin_model, field_definition) tuples for each parent
-    class where `field_name` is present. Used to resolve subclassed fields.
-    """
+    Returns a list of (origin_model, field_definition) tuples. Used to resolve subclassed fields."""
 
     parents_with_field: list[tuple[type[_DeclaredClass], FieldDefinition]] = []
 
     for parent_class in get_all_parent_classes(model):
-        if get_origin(parent_class) is Fulfils:
-            fulfiled_classes = get_args(parent_class)
-            for fulfiled_class in fulfiled_classes:
-                if (
-                    issubclass(fulfiled_class, _DeclaredClass)
-                    and field_name in fulfiled_class.model_fields
-                ):
-                    parents_with_field.append(
-                        (fulfiled_class, fulfiled_class._meta.fields[field_name])
-                    )
-        elif field_name in parent_class.model_fields:
-            parents_with_field.append(
-                (parent_class, parent_class._meta.fields[field_name])
-            )
+        # (`Fulfils[X]` is a parent too, but it is not a model: what it fulfils is added below)
+        if field_name in getattr(parent_class, "model_fields", {}):
+            parents_with_field.append((parent_class, parent_class._meta.fields[field_name]))
 
-        else:
-            continue
+    for fulfilled_class in sorted(get_fulfiled_types(model), key=lambda c: c.__qualname__):
+        if field_name in fulfilled_class.model_fields:
+            parents_with_field.append((fulfilled_class, fulfilled_class._meta.fields[field_name]))
 
     return parents_with_field
 
@@ -584,15 +529,21 @@ def field_is_from_indirect_non_heritable_model(model: type[_DeclaredClass], fiel
     return False
 
 
-def get_fulfiled_types(model: type[_DeclaredClass]) -> set[type[_DeclaredClass]]:
-    """Return all types fulfilled by `model` via `Fulfils` parent classes."""
-    fulfilled_types = set()
+def fulfilled_types_in_order(model: type[_DeclaredClass]) -> list[type[_DeclaredClass]]:
+    """The classes `model` fulfils (through `Fulfils[...]` parents), in the order they are met, each once.
+    (A set would make the order of the fields depend on the hash of the classes.)"""
+    found: dict[type[_DeclaredClass], None] = {}
     for parent in model.mro():
         # (each `Fulfils[...]` holds its own classes: not those of `Fulfils`, or of another)
         if isinstance(parent, type) and issubclass(parent, Fulfils):
-            fulfilled_types.update(parent.__dict__.get("_fulfiling_types", ()))
+            for fulfilled in parent.__dict__.get("_fulfiling_types", ()):
+                found.setdefault(fulfilled)
+    return list(found)
 
-    return fulfilled_types
+
+def get_fulfiled_types(model: type[_DeclaredClass]) -> set[type[_DeclaredClass]]:
+    """Return all types fulfilled by `model` via `Fulfils` parent classes."""
+    return set(fulfilled_types_in_order(model))
 
 
 def get_fields_on_model(model: type[_DeclaredClass]):
@@ -601,14 +552,15 @@ def get_fields_on_model(model: type[_DeclaredClass]):
 
     subclassed_fields = normalise_and_get_subclassed_fields(model)
 
-    fulfiled_types = get_fulfiled_types(model)
+    fulfilled_types = fulfilled_types_in_order(model)
 
-    for ft in fulfiled_types:
-        subclassed_fields.update(normalise_and_get_subclassed_fields(ft))
+    for fulfilled in fulfilled_types:
+        subclassed_fields.update(normalise_and_get_subclassed_fields(fulfilled))
 
-    fulfilled_field_names = []
-    for ft in fulfiled_types:
-        fulfilled_field_names.extend(ft.model_fields.keys())
+    # the fields of the classes it fulfils, each once (the first class that has it gives its definition)
+    fulfilled_field_names = dict.fromkeys(
+        name for fulfilled in fulfilled_types for name in fulfilled.model_fields
+    )
 
     for field_name in fulfilled_field_names:
         if field_name in ("type", "fulfiling_types"):
@@ -617,24 +569,17 @@ def get_fields_on_model(model: type[_DeclaredClass]):
         if field_name in subclassed_fields:
             continue
 
+        having = [f for f in fulfilled_types if field_name in f.model_fields]
         yield (
             field_name,
-            [
-                ft.model_fields[field_name]
-                for ft in fulfiled_types
-                if field_name in ft.model_fields
-            ][0],
-            set(
-                FieldFulfilment(field_name=field_name, fulfils_class=ft)
-                for ft in fulfiled_types
-                if field_name in ft.model_fields
-            ),
+            having[0].model_fields[field_name],
+            set(FieldFulfilment(field_name=field_name, fulfils_class=f) for f in having),
         )
 
+    # its own fields
     for field_name, field_info in model.model_fields.items():
-        if (
-            field_name in subclassed_fields
-            or field_is_from_indirect_non_heritable_model(model, field_name)
+        if field_name in subclassed_fields or field_is_from_indirect_non_heritable_model(
+            model, field_name
         ):
             continue
 
@@ -650,7 +595,7 @@ def get_fields_on_model(model: type[_DeclaredClass]):
                     )
                     for fsc in config.subclasses_parent_fields
                     if isinstance(fsc, FieldSubclassing)
-                    and fsc.field_on_model in fulfiled_types
+                    and fsc.field_on_model in fulfilled_types
                 ),
             )
         else:
@@ -664,9 +609,20 @@ def check_subclass_type(field_definition: RelationFieldDefinition):
     concrete type options of the child field are a subset of the parent.
     Raises a `PanglossModelError` if the type narrowing contract is violated.
     """
+    model_name = field_definition.field_on_model.__name__
     for spf in field_definition.subclasses_parent_fields:
-        assert isinstance(spf, FieldSubclassing)
-        assert isinstance(spf.subclassed_field_definition, RelationFieldDefinition)
+        parent = (
+            f"{getattr(spf.field_on_model, '__name__', spf.field_on_model)}.{spf.field_name}"
+            if isinstance(spf, FieldSubclassing)
+            else spf
+        )
+        if not isinstance(spf, FieldSubclassing) or not isinstance(
+            spf.subclassed_field_definition, RelationFieldDefinition
+        ):
+            raise PanglossModelError(
+                f"{model_name}.{field_definition.field_name} subclasses {parent}, "
+                "which is not a relation: only a relation can be narrowed by a relation"
+            )
 
         field_type_options = set(
             flatten(
@@ -683,27 +639,154 @@ def check_subclass_type(field_definition: RelationFieldDefinition):
 
         if not field_type_options.issubset(subclassed_field_type_options):
             raise PanglossModelError(
-                f"{field_definition.field_on_model.__name__}.{field_definition.field_name} subclasses {spf.field_on_model}.{spf.field_name} "
+                f"{model_name}.{field_definition.field_name} subclasses {parent} "
                 "but is not of the same type or narrowing of type"
             )
 
 
 def extract_field_description(field_info: FieldInfo) -> str | None:
-    description_objects_or_strings_from_metadata = [
-        str(md) for md in field_info.metadata if isinstance(md, str)
-    ]
-    if (
-        relation_config := extract_relation_config(field_info)
-    ) and relation_config.description:
-        description = relation_config.description
+    """The description of a field: that of its `RelationConfig`, else the `description` of its
+    `Field(...)`, else a bare string given in `Annotated[...]`"""
+    relation_config = extract_relation_config(field_info)
+    if relation_config and relation_config.description:
+        return relation_config.description
 
-    elif description_objects_or_strings_from_metadata:
-        description = description_objects_or_strings_from_metadata[0]
+    if field_info.description:
+        return field_info.description
 
+    strings = [str(md) for md in field_info.metadata if isinstance(md, str)]
+    return strings[0] if strings else None
+
+
+def check_model_fields_are_allowed(model: type[_DeclaredClass]) -> None:
+    """The names a model may not use, and the models that may not have relations"""
+    for field_name in model.model_fields:
+        if field_name in RESERVED_FIELD_NAMES:
+            raise PanglossModelError(
+                f"'{field_name}' is a Pangloss reserved name and cannot be used as a model field "
+                f"in ({model.__name__}): the models made from it have a field of that name"
+            )
+
+    for kind, name in ((EdgeModel, "EdgeModel"), (AnnotatedValue, "AnnotatedValue")):
+        if issubclass(model, kind):
+            for field_name, field_info in model.model_fields.items():
+                if is_relatable(field_info.annotation) or is_list_relatable(
+                    field_info.annotation
+                ):
+                    raise PanglossModelError(
+                        f"{name} {model.__name__} does not support relations ({model.__name__}.{field_name})"
+                    )
+
+
+def is_generic_wrapper(model: type[_DeclaredClass]) -> bool:
+    """A generic wrapper (`Negative`, `InRole`, ...), or a use of one (`Negative[Statement]`): its
+    fields are in terms of its type variables, and are defined on the wrapper itself"""
+    return model.__pydantic_generic_metadata__["origin"] is not None or model in (
+        AnnotatedValue,
+        Conjunction,
+        ReifiedRelation,
+        ReifiedRelationDocument,
+        SemanticSpace,
+    )
+
+
+def define_wrapper_field(
+    model: type[_DeclaredClass], field_name: str, field_info: FieldInfo, is_db_field: bool
+) -> bool:
+    """Define a field of a generic wrapper that is in terms of its type variable. Returns whether it
+    was one. (These are in addition to the definition any field gets, below.)"""
+    definition: FieldDefinition | None = None
+
+    if issubclass(model, AnnotatedValue) and field_name == "value":
+        definition = LiteralTypeVarFieldDefinition(
+            field_name=field_name,
+            field_on_model=model,
+            annotated_type=cast(TypeVar, field_info.annotation),
+            type_var_name=str(field_info.annotation),
+            db_field=is_db_field,
+            description=extract_field_description(field_info),
+        )
+        model._meta.field_definitions.add_field(name=field_name, field_definition=definition)
+        found = True
     else:
-        description = None
+        found = False
 
-    return description
+    # (the fields of a subclass of SemanticSpace or Conjunction are all relations to what the
+    # wrapper stands for)
+    for base in (SemanticSpace, Conjunction):
+        if (
+            issubclass(model, base)
+            and model is not base
+            and model.__pydantic_generic_metadata__["origin"] is None
+        ):
+            definition = build_relatable_field_definition(
+                field_name, field_info, model, is_db_field=is_db_field
+            )
+            model._meta.field_definitions.add_field(name=field_name, field_definition=definition)
+            found = True
+
+    if issubclass(model, (ReifiedRelation, ReifiedRelationDocument)):
+        if get_origin(field_info.annotation) and isinstance(
+            get_args(field_info.annotation)[0], TypeVar
+        ):
+            definition = build_relatable_field_definition(
+                field_name, field_info, model, is_db_field=is_db_field
+            )
+            model._meta.field_definitions.add_field(name=field_name, field_definition=definition)
+            found = True
+
+    return found
+
+
+def define_field(
+    model: type[_DeclaredClass],
+    field_name: str,
+    field_info: FieldInfo,
+    is_db_field: bool,
+    field_fulfilment: set[FieldFulfilment],
+) -> FieldDefinition | None:
+    """The definition of a field, by what its type is. None if the type is not one that is supported."""
+    annotation = field_info.annotation
+
+    if is_embedded(annotation) or is_union_of_embedded(annotation):
+        return build_embedded_field_definition(
+            field_name, field_info, model, is_db_field=is_db_field
+        )
+
+    if isclass(annotation) and issubclass(annotation, AnnotatedValue):
+        return AnnotatedValueFieldDefinition(
+            field_on_model=model,
+            field_name=field_name,
+            annotated_type=annotation,
+            db_field=is_db_field,
+            description=extract_field_description(field_info),
+        )
+
+    if is_relatable(annotation) or is_list_relatable(annotation):
+        definition = build_relatable_field_definition(
+            field_name, field_info, model, is_db_field=is_db_field
+        )
+        if field_fulfilment:
+            definition.field_required_to_fulfil.update(field_fulfilment)
+        check_subclass_type(definition)
+        return definition
+
+    if is_list_of_literal(annotation):
+        return build_list_field_definition(
+            field_name, field_info, model, is_db_field=is_db_field
+        )
+
+    if is_literal(annotation):
+        return LiteralFieldDefinition(
+            field_on_model=model,
+            field_name=field_name,
+            annotated_type=annotation,
+            validators=[md for md in field_info.metadata if isinstance(md, BaseMetadata)],
+            db_field=is_db_field,
+            description=extract_field_description(field_info),
+        )
+
+    return None
 
 
 def initialise_field_definitions(model: type[_DeclaredClass]):
@@ -713,31 +796,7 @@ def initialise_field_definitions(model: type[_DeclaredClass]):
     appropriate field definitions, including literal/list/embedded/relation
     field types, while applying subclassing rules and relation config.
     """
-
-    if issubclass(model, _DeclaredClass):
-        for field_name in model.model_fields.keys():
-            if field_name == "meta":
-                raise PanglossModelError(
-                    "'meta' is a Pangloss reserved name"
-                    f"and cannot be used as a model field in ({model.__name__})"
-                )
-
-    if issubclass(model, EdgeModel):
-        for field_name, field_info in model.model_fields.items():
-            if is_relatable(field_info.annotation) or is_list_relatable(
-                field_info.annotation
-            ):
-                raise PanglossModelError(
-                    f"EdgeModel {model.__name__} does not support relations ({model.__name__}.{field_name})"
-                )
-    if issubclass(model, AnnotatedValue):
-        for field_name, field_info in model.model_fields.items():
-            if is_relatable(field_info.annotation) or is_list_relatable(
-                field_info.annotation
-            ):
-                raise PanglossModelError(
-                    f"AnnotatedValue {model.__name__} does not support relations ({model.__name__}.{field_name})"
-                )
+    check_model_fields_are_allowed(model)
 
     for field_name, field_info, field_fulfilment in get_fields_on_model(model):
         is_db_field = any(
@@ -747,75 +806,9 @@ def initialise_field_definitions(model: type[_DeclaredClass]):
 
         # Fields of the generic wrapper base classes (`target: list[T]`) and of their
         # parametrisations (`Negative[Statement]`) are defined elsewhere (or on the
-        # unparametrised subclass), so are never "unsupported". Set also when one of
-        # the generic-wrapper cases below defines this field.
-        handled_as_type_variable = (
-            model.__pydantic_generic_metadata__["origin"] is not None
-            or model
-            in (
-                AnnotatedValue,
-                Conjunction,
-                ReifiedRelation,
-                ReifiedRelationDocument,
-                SemanticSpace,
-            )
-        )
-
-        if issubclass(model, AnnotatedValue) and field_name == "value":
-            handled_as_type_variable = True
-            model._meta.field_definitions.add_field(
-                name=field_name,
-                field_definition=LiteralTypeVarFieldDefinition(
-                    field_name=field_name,
-                    field_on_model=model,
-                    annotated_type=cast(TypeVar, field_info.annotation),
-                    type_var_name=str(field_info.annotation),
-                    db_field=is_db_field,
-                    description=extract_field_description(field_info),
-                ),
-            )
-
-        if (
-            issubclass(model, SemanticSpace)
-            and model is not SemanticSpace
-            and model.__pydantic_generic_metadata__["origin"] is None
-        ):
-            handled_as_type_variable = True
-            field_definition = build_relatable_field_definition(
-                field_name, field_info, model, is_db_field=is_db_field
-            )
-
-            model._meta.field_definitions.add_field(
-                name=field_name,
-                field_definition=field_definition,
-            )
-
-        if (
-            issubclass(model, Conjunction)
-            and model is not Conjunction
-            and model.__pydantic_generic_metadata__["origin"] is None
-        ):
-            handled_as_type_variable = True
-            field_definition = build_relatable_field_definition(
-                field_name, field_info, model, is_db_field=is_db_field
-            )
-            model._meta.field_definitions.add_field(
-                name=field_name,
-                field_definition=field_definition,
-            )
-
-        if issubclass(model, (ReifiedRelation, ReifiedRelationDocument)):
-            if get_origin(field_info.annotation) and isinstance(
-                get_args(field_info.annotation)[0], TypeVar
-            ):
-                handled_as_type_variable = True
-                field_definition = build_relatable_field_definition(
-                    field_name, field_info, model, is_db_field=is_db_field
-                )
-                model._meta.field_definitions.add_field(
-                    name=field_name,
-                    field_definition=field_definition,
-                )
+        # unparametrised subclass), so are never "unsupported".
+        is_wrapper_field = define_wrapper_field(model, field_name, field_info, is_db_field)
+        supported_as_wrapper_field = is_generic_wrapper(model) or is_wrapper_field
 
         if is_list_of_embedded_or_annotated_value(field_info.annotation):
             raise PanglossModelError(
@@ -823,74 +816,10 @@ def initialise_field_definitions(model: type[_DeclaredClass]):
                 "AnnotatedValues are not supported (a field can have only one)"
             )
 
-        if is_embedded(field_info.annotation) or is_union_of_embedded(
-            field_info.annotation
-        ):
-            field_definition = build_embedded_field_definition(
-                field_name, field_info, model, is_db_field=is_db_field
-            )
-            model._meta.field_definitions.add_field(
-                name=field_name,
-                field_definition=field_definition,
-            )
-        elif isclass(field_info.annotation) and issubclass(
-            field_info.annotation, AnnotatedValue
-        ):
-            field_definition = AnnotatedValueFieldDefinition(
-                field_on_model=model,
-                field_name=field_name,
-                annotated_type=field_info.annotation,
-                db_field=is_db_field,
-                description=extract_field_description(field_info),
-            )
-
-            model._meta.field_definitions.add_field(
-                name=field_name,
-                field_definition=field_definition,
-            )
-
-        elif is_relatable(field_info.annotation) or is_list_relatable(
-            field_info.annotation
-        ):
-            field_definition = build_relatable_field_definition(
-                field_name, field_info, model, is_db_field=is_db_field
-            )
-            if field_fulfilment:
-                field_definition.field_required_to_fulfil.update(field_fulfilment)
-
-            check_subclass_type(field_definition)
-
-            model._meta.field_definitions.add_field(
-                name=field_name,
-                field_definition=field_definition,
-            )
-
-        elif is_list_of_literal(field_info.annotation):
-            field_definition = build_list_field_definition(
-                field_name, field_info, model, is_db_field=is_db_field
-            )
-            model._meta.field_definitions.add_field(
-                name=field_name,
-                field_definition=field_definition,
-            )
-
-        elif is_literal(field_info.annotation):
-            field_definition = LiteralFieldDefinition(
-                field_on_model=model,
-                field_name=field_name,
-                annotated_type=field_info.annotation,
-                validators=[
-                    md for md in field_info.metadata if isinstance(md, BaseMetadata)
-                ],
-                db_field=is_db_field,
-                description=extract_field_description(field_info),
-            )
-
-            model._meta.field_definitions.add_field(
-                name=field_name,
-                field_definition=field_definition,
-            )
-        elif not handled_as_type_variable:
+        definition = define_field(model, field_name, field_info, is_db_field, field_fulfilment)
+        if definition is not None:
+            model._meta.field_definitions.add_field(name=field_name, field_definition=definition)
+        elif not supported_as_wrapper_field:
             raise PanglossModelError(
                 f"Unsupported type for field {model.__name__}.{field_name}: "
                 f"{field_info.annotation!r}. Supported field types are str, int, "

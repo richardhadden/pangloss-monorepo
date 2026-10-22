@@ -27,7 +27,7 @@ Everything about *declaring* and *initialising* models:
 |------|---------|
 | `model_bases/` | The declarable base classes (`Document`, `Entity`, `Embedded`, `Trait`, ...) and the generated-model base classes in `base_models.py` |
 | `field_definitions.py` | Dataclasses describing each field after analysis (`LiteralFieldDefinition`, `RelationFieldDefinition`, `FieldBinding`, ...) |
-| `initialise_models/` | One module per generated model kind, plus field-definition and incoming-relation analysis |
+| `initialise_models/` | Field-definition and incoming-relation analysis, and the builder of the generated models (`kinds.py` describes `Create`, `CreateDB`, `Update`, `UpdateDB` and `View`; `builder.py` makes them); see [the pipeline](generated-models.md#the-initialisation-pipeline) |
 | `model_registry.py` | `ModelRegistry`: registration, dependency ordering, and the `finalise()` entry point |
 | `utils.py` | Type-introspection helpers (parent classes, traits, concrete subclasses, relation detection) |
 | `exceptions.py` | `PanglossInitialisationError`, `PanglossModelError`, `PanglossMetaError`, `PanglossImportError`, ... |
