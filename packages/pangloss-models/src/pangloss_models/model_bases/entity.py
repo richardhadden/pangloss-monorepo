@@ -121,7 +121,7 @@ class _EntityEditViewBase(_EditViewBase):
 class Entity(_DeclaredClass, WithMeta[EntityMeta]):
     __metatype__ = "Entity"
     Meta: ClassVar[type[EntityMeta]] = EntityMeta
-    _meta: ClassVar[EntityMeta] = EntityMeta(create_with_id=False)  # pyright: ignore[reportIncompatibleVariableOverride]
+    _meta: ClassVar[EntityMeta] = EntityMeta(create_with_id=False)
 
     Create: ClassVar[type[_EntityCreateBase]]
     CreateDB: ClassVar[type[_EntityCreateDBBase]]
@@ -139,7 +139,7 @@ class Entity(_DeclaredClass, WithMeta[EntityMeta]):
 
         cls._initialised = False
 
-        cls._meta = cls.__dict__.get("_meta", EntityMeta(_owner_class=cls))  # pyright: ignore[reportIncompatibleVariableOverride]
+        cls._meta = cls.__dict__.get("_meta", EntityMeta(_owner_class=cls))
 
         cls._meta._owner_class = cls
 

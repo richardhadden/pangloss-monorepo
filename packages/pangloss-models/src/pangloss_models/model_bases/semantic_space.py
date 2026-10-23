@@ -53,7 +53,7 @@ class _SemanticSpaceViewBase(_ViewBase):
 
 class SemanticSpace[TContents](_DeclaredClass):
     __metatype__ = "SemanticSpace"
-    _meta: ClassVar[SemanticSpaceMeta] = SemanticSpaceMeta()  # pyright: ignore[reportIncompatibleVariableOverride]
+    _meta: ClassVar[SemanticSpaceMeta] = SemanticSpaceMeta()
 
     Create: ClassVar[type[_SemanticSpaceCreateBase]]
     CreateDB: ClassVar[type[_SemanticSpaceCreateDBBase]]
@@ -71,7 +71,7 @@ class SemanticSpace[TContents](_DeclaredClass):
         cls._initialised = False
 
         # Make sure _meta class is new and not inherited
-        cls._meta = cls.__dict__.get("_meta", SemanticSpaceMeta())  # pyright: ignore[reportIncompatibleVariableOverride]
+        cls._meta = cls.__dict__.get("_meta", SemanticSpaceMeta())
 
         # Set owner class on cls._meta
         cls._meta._owner_class = cls

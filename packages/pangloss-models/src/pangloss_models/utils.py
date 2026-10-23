@@ -18,7 +18,6 @@ from typing import (
     get_origin,
     get_type_hints,
     is_typeddict,
-    overload,
 )
 
 import annotated_types
@@ -56,56 +55,9 @@ type ConcreteUnionType[T] = type[type[T] | type[T]]
 LITERAL_TYPES = {str, int, float, bool, Decimal, date, datetime}
 
 
-@overload
 def get_concrete_types[T](
-    model: ConcreteUnionType[T], include_abstract: bool = False
-) -> set[type[T]]: ...
-
-
-@overload
-def get_concrete_types(
-    model: type[Entity],
-    include_abstract: bool = False,
-) -> set[type[Entity]]: ...
-
-
-@overload
-def get_concrete_types(
-    model: type[Document],
-    include_abstract: bool = False,
-) -> set[type[Document]]: ...
-
-
-@overload
-def get_concrete_types(
-    model: type[Embedded],
-    include_abstract: bool = False,
-) -> set[type[Embedded]]: ...
-
-
-@overload
-def get_concrete_types(
-    model: type[SemanticSpace], include_abstract: bool = False
-) -> set[type[SemanticSpace]]: ...
-
-
-@overload
-def get_concrete_types(
-    model: type[Conjunction], include_abstract: bool = False
-) -> set[type[Conjunction]]: ...
-
-
-@overload
-def get_concrete_types(
-    model: type[Trait | NonHeritableTrait],
-    include_abstract: bool = False,
-) -> set[type[Document]] | set[type[Entity]]: ...
-
-
-def get_concrete_types(
-    model: Any,
-    include_abstract: bool = False,
-):
+    model: ConcreteUnionType[T] | type[T], include_abstract: bool = False
+) -> set[type[T]]:
     """Return concrete (non-abstract) subclasses for a model.
 
     This is a convenience wrapper around :func:`generic_get_subclasses` that
@@ -120,7 +72,7 @@ def get_concrete_types(
         A set of concrete subclasses (and possibly the model itself).
     """
 
-    concrete_types = []
+    concrete_types: list[Any] = []
     if isinstance(model, UnionType):
         for type_in_union in get_args(model):
             concrete_types.extend(
@@ -443,128 +395,22 @@ def get_top_level_classes():
             _DeclaredClass,
             _BaseObject,
             WithMeta,
-            Generic,  # pyright: ignore[reportArgumentType]
+            Generic,
             object,
         ]
     )
     return set(usable_subclasses)
 
 
-@overload
-def get_parent_class(model: type[Document]) -> type[Document] | None: ...
-
-
-@overload
-def get_parent_class(model: type[Entity]) -> type[Entity] | None: ...
-
-
-@overload
-def get_parent_class(model: type[Embedded]) -> type[Embedded] | None: ...
-
-
-@overload
-def get_parent_class(model: type[ReifiedRelation]) -> type[ReifiedRelation] | None: ...
-
-
-@overload
-def get_parent_class(
-    model: type[ReifiedRelationDocument],
-) -> type[ReifiedRelationDocument] | None: ...
-
-
-@overload
-def get_parent_class(model: type[SemanticSpace]) -> type[SemanticSpace] | None: ...
-
-
-@overload
-def get_parent_class(model: type[Conjunction]) -> type[Conjunction] | None: ...
-
-
-@overload
-def get_parent_class(
-    model: type[Trait],
-) -> type[Trait] | None: ...
-
-
-@overload
-def get_parent_class(
-    model: type[NonHeritableTrait],
-) -> type[NonHeritableTrait] | None: ...
-
-
-@overload
-def get_parent_class(
-    model: type[_DeclaredClass],
-) -> type[_DeclaredClass] | None: ...
-
-
-def get_parent_class(model) -> Any:
+def get_parent_class[T: _DeclaredClass](model: type[T]) -> type[T] | None:
     for parent_class in model.mro():
         if parent_class is model:
             continue
         elif parent_class in get_top_level_classes():
             return None
         else:
-            return parent_class
+            return cast(type[T], parent_class)
     return None
-
-
-@overload
-def get_all_parent_classes(
-    model: type[Document],
-) -> list[type[Document] | type[Trait] | type[NonHeritableTrait]]: ...
-
-
-@overload
-def get_all_parent_classes(
-    model: type[Entity],
-) -> list[type[Entity] | type[Trait] | type[NonHeritableTrait]]: ...
-
-
-@overload
-def get_all_parent_classes(model: type[Embedded]) -> list[type[Embedded]]: ...
-
-
-@overload
-def get_all_parent_classes(
-    model: type[ReifiedRelation],
-) -> list[type[ReifiedRelation]]: ...
-
-
-@overload
-def get_all_parent_classes(
-    model: type[ReifiedRelationDocument],
-) -> list[type[ReifiedRelationDocument] | type[Trait] | type[NonHeritableTrait]]: ...
-
-
-@overload
-def get_all_parent_classes(
-    model: type[SemanticSpace],
-) -> list[type[SemanticSpace]]: ...
-
-
-@overload
-def get_all_parent_classes(
-    model: type[Conjunction],
-) -> list[type[Conjunction]]: ...
-
-
-@overload
-def get_all_parent_classes(
-    model: type[Trait],
-) -> list[type[Trait]]: ...
-
-
-@overload
-def get_all_parent_classes(
-    model: type[NonHeritableTrait],
-) -> list[type[NonHeritableTrait]]: ...
-
-
-@overload
-def get_all_parent_classes[T](
-    model: T,
-) -> list[T]: ...
 
 
 def is_subclass_of_with_meta(cls):
@@ -574,7 +420,7 @@ def is_subclass_of_with_meta(cls):
     return False
 
 
-def get_all_parent_classes(model):
+def get_all_parent_classes[T](model: type[T]) -> list[type[Any]]:
     parent_classes = []
 
     for parent_class in model.mro():

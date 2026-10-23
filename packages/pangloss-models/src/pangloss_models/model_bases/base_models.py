@@ -30,7 +30,7 @@ from pangloss_models.model_bases.from_database import (
 )
 from pangloss_models.model_bases.fulfilment import (
     build_fulfilled_model,
-    get_fulfilled_classes,
+    fulfilled_classes_of,
 )
 from pangloss_models.model_bases.instance_context import recursively_propagate_context_types
 from pangloss_models.model_bases.labels import get_labels_for_db_classes
@@ -208,7 +208,8 @@ class _CreateDBBase(_ActionClass):
     semantic_spaces: list[str] = Field(default_factory=list)
     context_labels: list[ContextLabel] | None = None
     _labels = property(get_labels_for_db_classes)
-    _fulfils_classes = property(lambda self: get_fulfilled_classes(self, "Create"))
+    _fulfils_cache: list | None = None
+    _fulfils_classes = property(lambda self: fulfilled_classes_of(self, "Create"))
 
     type: str
     id: UUID
@@ -249,7 +250,8 @@ class _UpdateDBBase(_ActionClass):
     semantic_spaces: list[str] = Field(default_factory=list)
     context_labels: list[ContextLabel] = Field(default_factory=list)
     _labels = property(get_labels_for_db_classes)
-    _fulfils_classes = property(lambda self: get_fulfilled_classes(self, "Update"))
+    _fulfils_cache: list | None = None
+    _fulfils_classes = property(lambda self: fulfilled_classes_of(self, "Update"))
 
     def __init__(self, **kwargs):
         with warnings.catch_warnings():

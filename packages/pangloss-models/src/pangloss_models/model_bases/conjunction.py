@@ -53,7 +53,7 @@ class _ConjunctionViewBase(_ViewBase):
 
 class Conjunction(_DeclaredClass, WithMeta[ConjunctionMeta]):
     __metatype__ = "Conjunction"
-    _meta: ClassVar[ConjunctionMeta] = ConjunctionMeta()  # pyright: ignore[reportIncompatibleVariableOverride]
+    _meta: ClassVar[ConjunctionMeta] = ConjunctionMeta()
 
     Create: ClassVar[type[_ConjunctionCreateBase]]
     CreateDB: ClassVar[type[_ConjunctionCreateDBBase]]
@@ -67,7 +67,7 @@ class Conjunction(_DeclaredClass, WithMeta[ConjunctionMeta]):
         cls._initialised = False
 
         # Make sure _meta class is new and not inherited
-        cls._meta = cls.__dict__.get("_meta", ConjunctionMeta())  # pyright: ignore[reportIncompatibleVariableOverride]
+        cls._meta = cls.__dict__.get("_meta", ConjunctionMeta())
 
         # Set owner class on cls._meta
         cls._meta._owner_class = cls

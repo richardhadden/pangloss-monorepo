@@ -85,9 +85,9 @@ Items below marked `[x]` are fixed (with a test); `[x] not a bug` were suspected
   the tuple `(model, bindings)` and clear it in `_reset`. Same for the `@cache` on
   `build_generic_update_model_from_type_option`. **Fixed.**
 - [x] **Writes to `Model.model_fields[...]` directly** now go through `set_field` (`builder.py`): one place to change if pydantic does.
-- [ ] **`FieldInfo` objects are shared between models** (`HeadView`/`EditView` copy `View`'s `FieldInfo`s), and
+- [x] **`FieldInfo` objects are shared between models** (`HeadView`/`EditView` copy `View`'s `FieldInfo`s), and
   the code later sets `.default` / `.default_factory` on `FieldInfo`s it has just put in. A later mutation would
-  leak between models. Copy (`copy.copy`) when sharing.
+  leak between models. **Fixed (2026-10-23): `copy` when sharing; the incoming-relation field goes through `set_field`.**
 - [x] **(fixed: `initialise(bind_database=False)`) `initialise()` needs settings loaded** (`_bind_database_functions` reads
   `pangloss_core.settings.SETTINGS`) even to generate pure models: `AttributeError: module 'pangloss_core.settings'
   has no attribute 'SETTINGS'`. Generation should not need a database; bind lazily or split the step.
@@ -193,3 +193,16 @@ These were code that **no test reached**. Done ones are marked; the snapshot (`t
 - [ ] A **line-coverage run in CI.** `coverage` needs a Python it supports (or the `sys.monitoring` tracer used
   here, `COVERAGE_CORE=sysmon`, once `coverage` installs on 3.15); then fail below a floor for
   `initialise_models/`. **Not done.**
+## Tidying done 2026-10-23, and what is left
+
+- Done: the `# pyright: ignore` comments are gone (`ty` is the checker); `_fulfils_classes` is worked out once per instance;
+  `allow_bind_on_this_item` is "allowed (if any) and not excluded" (it was an OR; tested in `test_binding_rules.py`); the ~25
+  type-only `@overload`s in `utils.py` are three generic signatures.
+- [ ] **Reorganise the tests.** `tests/test_model_setup/` holds everything, including tests that are not about setup (the
+  migration tests, the snapshot and property tests, binding rules, union order...). Split by what they test, for example
+  `tests/setup/`, `tests/migrations/`, `tests/models/` (the generated models and how they behave together), with the shared
+  helpers (`kitchen_sink.py`, `sample_data.py`, `snapshot_support.py`, `migration_support.py`) in a `tests/support/` or the
+  `conftest.py` of the root. Move with `git mv`, then fix the imports (they are bare, relying on the folder being on the path).
+- [ ] `is_literal` calls `check_enum_values` (a check with a side effect inside a predicate): move the check to where the field
+  definition is made (it must also cover `list[Enum]`, `Enum | None` and the values of a `TypedDict`).
+- [ ] `get_top_level_classes` is `@cache`d (it reads the subclasses at the time of the first call).

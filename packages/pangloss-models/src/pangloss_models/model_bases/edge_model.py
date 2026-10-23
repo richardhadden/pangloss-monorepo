@@ -24,7 +24,7 @@ class EdgeModelMeta(BaseMeta, DeclaredClassMeta):
     @property
     def fields(  # type: ignore
         self,
-    ) -> ModelFieldDict[str, LiteralFieldDefinition | ListFieldDefinition]:  # pyright: ignore[reportIncompatibleMethodOverride]
+    ) -> ModelFieldDict[str, LiteralFieldDefinition | ListFieldDefinition]:
         if self.field_definitions:
             return cast(
                 ModelFieldDict[str, LiteralFieldDefinition | ListFieldDefinition],
@@ -35,7 +35,7 @@ class EdgeModelMeta(BaseMeta, DeclaredClassMeta):
 
 class EdgeModel(_DeclaredClass):
     __metatype__ = "EdgeModel"
-    _meta: ClassVar[EdgeModelMeta] = EdgeModelMeta()  # pyright: ignore[reportIncompatibleVariableOverride]
+    _meta: ClassVar[EdgeModelMeta] = EdgeModelMeta()
 
     @classmethod
     def __pydantic_init_subclass__(cls, **kwargs) -> None:
@@ -44,7 +44,7 @@ class EdgeModel(_DeclaredClass):
         cls._initialised = False
 
         # Make sure _meta class is new and not inherited
-        cls._meta = cls.__dict__.get("_meta", EdgeModelMeta())  # pyright: ignore[reportIncompatibleVariableOverride]
+        cls._meta = cls.__dict__.get("_meta", EdgeModelMeta())
 
         # Set owner class on cls._meta
         cls._meta._owner_class = cls

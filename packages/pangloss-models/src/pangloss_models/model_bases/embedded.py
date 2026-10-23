@@ -53,7 +53,7 @@ class _EmbeddedViewBase(_ViewBase):
 
 class Embedded(_DeclaredClass, WithMeta[EmbeddedMeta]):
     __metatype__ = "Embedded"
-    _meta: ClassVar[EmbeddedMeta] = EmbeddedMeta()  # pyright: ignore[reportIncompatibleVariableOverride]
+    _meta: ClassVar[EmbeddedMeta] = EmbeddedMeta()
 
     Create: ClassVar[type[_EmbeddedCreateBase]]
     CreateDB: ClassVar[type[_EmbeddedCreateDBBase]]
@@ -68,7 +68,7 @@ class Embedded(_DeclaredClass, WithMeta[EmbeddedMeta]):
         cls._initialised = False
 
         # Make sure _meta class is new and not inherited
-        cls._meta = cls.__dict__.get("_meta", EmbeddedMeta())  # pyright: ignore[reportIncompatibleVariableOverride]
+        cls._meta = cls.__dict__.get("_meta", EmbeddedMeta())
 
         # Set owner class on cls._meta
         cls._meta._owner_class = cls

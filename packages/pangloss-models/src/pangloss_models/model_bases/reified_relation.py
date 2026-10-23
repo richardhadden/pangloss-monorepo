@@ -79,7 +79,7 @@ class ReifiedRelation[TTarget](_DeclaredClass):
         cls._initialised = False
 
         # Make sure _meta class is new and not inherited
-        cls._meta = cls.__dict__.get("_meta", ReifiedRelationMeta())  # pyright: ignore[reportIncompatibleVariableOverride]
+        cls._meta = cls.__dict__.get("_meta", ReifiedRelationMeta())
 
         # Set owner class on cls._meta
         cls._meta._owner_class = cls
@@ -144,7 +144,7 @@ class ReifiedRelationDocument[TTarget](_DeclaredClass):
     __metatype__ = "ReifiedRelationDocument"
     Meta: ClassVar[type[ReifiedRelationDocumentMeta]] = ReifiedRelationDocumentMeta
     model_config = ConfigDict(validate_assignment=True)
-    _meta: ClassVar[ReifiedRelationDocumentMeta] = ReifiedRelationDocumentMeta()  # pyright: ignore[reportIncompatibleVariableOverride]
+    _meta: ClassVar[ReifiedRelationDocumentMeta] = ReifiedRelationDocumentMeta()
 
     Create: ClassVar[type[_ReifiedRelationDocumentCreateBase]]
     CreateDB: ClassVar[type[_ReifiedRelationDocumentCreateDBBase]]
@@ -168,7 +168,7 @@ class ReifiedRelationDocument[TTarget](_DeclaredClass):
         cls._initialised = False
 
         # Make sure _meta class is new and not inherited
-        cls._meta = cls.__dict__.get("_meta", ReifiedRelationDocumentMeta())  # pyright: ignore[reportIncompatibleVariableOverride]
+        cls._meta = cls.__dict__.get("_meta", ReifiedRelationDocumentMeta())
 
         # Set owner class on cls._meta
         cls._meta._owner_class = cls

@@ -1,3 +1,4 @@
+from copy import copy
 from typing import Any, ClassVar, Literal, Union, cast
 
 from pydantic import ConfigDict
@@ -82,9 +83,11 @@ def build_incoming_bound_model(
         incoming_relation_definition.field_definition, field_bindings=[]
     )
     if annotation:
-        incoming_bound_model.model_fields[
-            incoming_relation_definition.field_definition.field_name
-        ] = FieldInfo(annotation=annotation)  # type: ignore
+        set_field(
+            incoming_bound_model,
+            incoming_relation_definition.field_definition.field_name,
+            FieldInfo(annotation=annotation),
+        )
 
     return incoming_bound_model
 
@@ -119,7 +122,7 @@ def initialise_head_view_model(
     for field_name, field_info in model.View.model_fields.items():
         if field_name == "meta":
             continue
-        set_field(model.HeadView, field_name, field_info)
+        set_field(model.HeadView, field_name, copy(field_info))
 
     for (
         incoming_field_name,

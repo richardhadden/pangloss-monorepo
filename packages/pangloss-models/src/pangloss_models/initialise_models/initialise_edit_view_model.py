@@ -2,6 +2,7 @@
 relations: only the node's own values and its outgoing relations. (An incoming relation
 is written in the document that holds it, so it is not for editing here.)"""
 
+from copy import copy
 from typing import ClassVar, Literal
 
 from pydantic import ConfigDict
@@ -38,6 +39,6 @@ def initialise_edit_view_model(model: type[Entity]) -> None:
     for field_name, field_info in model.View.model_fields.items():
         if field_name == "meta":
             continue
-        set_field(model.EditView, field_name, field_info)
+        set_field(model.EditView, field_name, copy(field_info))
 
     model.EditView.model_rebuild(force=True)

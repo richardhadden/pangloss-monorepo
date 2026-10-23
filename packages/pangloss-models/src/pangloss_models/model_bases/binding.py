@@ -10,11 +10,11 @@ if TYPE_CHECKING:
 
 
 def allow_bind_on_this_item(item: _CreateBase | _UpdateBase, binding: FieldBinding) -> bool:
-    return bool(
-        (binding.allowed_type_names and item.type in binding.allowed_type_names)
-        or (binding.excluded_type_names and item.type not in binding.excluded_type_names)
-        or (not binding.allowed_type_names and not binding.excluded_type_names)
-    )
+    """Whether a binding applies to an item of this type: it must be one of `allowed_type_names`
+    (if there are any) and none of `excluded_type_names`"""
+    if binding.allowed_type_names and item.type not in binding.allowed_type_names:
+        return False
+    return item.type not in binding.excluded_type_names
 
 
 def recursively_add_bound_field_values(item, binding: FieldBinding, value=None) -> None:

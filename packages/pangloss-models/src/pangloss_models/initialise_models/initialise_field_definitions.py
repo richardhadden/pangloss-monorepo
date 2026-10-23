@@ -157,7 +157,7 @@ def build_relation_options(
     relation_options = []
 
     if is_via_edge(annotation):
-        annotation, edge_model = get_model_and_edge_type(annotation)  # pyright: ignore[reportArgumentType]
+        annotation, edge_model = get_model_and_edge_type(annotation)
     else:
         annotation = annotation
         edge_model = edge_model
@@ -344,7 +344,7 @@ def build_relatable_field_definition(
         wrapper = None
 
         if is_parameterized_generic(annotation) and isclass((origin := get_origin(annotation))):
-            model._depends_on_classes.add(origin)  # pyright: ignore[reportArgumentType]
+            model._depends_on_classes.add(origin)
             model._depends_on_classes.update(get_args(annotation))
         else:
             model._depends_on_classes.add(annotation)
@@ -354,7 +354,7 @@ def build_relatable_field_definition(
     return RelationFieldDefinition(
         field_name=field_name,
         field_on_model=model,
-        annotated_type=annotation,  # pyright: ignore[reportArgumentType]
+        annotated_type=annotation,
         type_options=type_options,
         subclasses_parent_fields=set(
             subclasses_parent_fields

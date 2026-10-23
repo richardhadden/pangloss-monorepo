@@ -57,9 +57,9 @@ class NonHeritableTrait(_Trait):
         cls._initialised = False
 
         # Make sure _meta class is new and not inherited
-        cls._meta = cls.__dict__.get("_meta", TraitMeta())  # pyright: ignore[reportIncompatibleVariableOverride]
+        cls._meta = cls.__dict__.get("_meta", TraitMeta())
 
         # Set owner class on cls._meta
-        cls._meta._owner_class = cls  # pyright: ignore[reportAttributeAccessIssue]
+        cls._meta._owner_class = cls
 
         cls._register()

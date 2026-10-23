@@ -144,7 +144,7 @@ class Document(_DeclaredClass, WithMeta[DocumentMeta]):
     Meta: ClassVar[type[DocumentMeta]] = DocumentMeta
     model_config = ConfigDict(validate_assignment=True)
 
-    _meta: ClassVar[DocumentMeta] = DocumentMeta(create_with_id=False)  # pyright: ignore[reportIncompatibleVariableOverride]
+    _meta: ClassVar[DocumentMeta] = DocumentMeta(create_with_id=False)
 
     Create: ClassVar[type[_DocumentCreateBase]]
     CreateDB: ClassVar[type[_DocumentCreateDBBase]]
@@ -193,7 +193,7 @@ class Document(_DeclaredClass, WithMeta[DocumentMeta]):
         cls._initialised = False
 
         # Make sure _meta class is new and not inherited
-        cls._meta = cls.__dict__.get("_meta", DocumentMeta())  # pyright: ignore[reportIncompatibleVariableOverride]
+        cls._meta = cls.__dict__.get("_meta", DocumentMeta())
 
         # Set owner class on cls._meta
         cls._meta._owner_class = cls

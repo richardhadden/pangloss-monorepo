@@ -63,6 +63,14 @@ def get_fulfilled_classes(self, metafunction: Literal["Update", "Create"]):
     return models_fulfilled
 
 
+def fulfilled_classes_of(self, metafunction: Literal["Update", "Create"]):
+    """`get_fulfilled_classes`, worked out once for an instance (it builds models to find out, and is
+    asked for by the labels and by the write; an instance that is written is not changed after)"""
+    if self._fulfils_cache is None:
+        self._fulfils_cache = get_fulfilled_classes(self, metafunction)
+    return self._fulfils_cache
+
+
 def build_fulfilled_model[T: _CreateDBBase | _UpdateDBBase](
     instance: T, fulfilled_classes: list[type[_DeclaredClass]]
 ) -> T:

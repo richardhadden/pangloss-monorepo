@@ -67,7 +67,7 @@ def initialise_reference_set_model(model: type[_DeclaredClass]):
         __doc__=model._meta.description if model._meta.description else "",
         id=id_type,
         label=(str | None, None),
-    )  # pyright: ignore[reportAttributeAccessIssue]
+    )
 
     model.ReferenceSet.model_rebuild(force=True)
 
@@ -101,7 +101,7 @@ def initialise_reference_view_model(model: type[_DeclaredClass]):
         id=id_type,
         # (a thing that requires no label may have none)
         label=str if getattr(model._meta, "require_label", True) else (str | None, None),
-    )  # pyright: ignore[reportAttributeAccessIssue]
+    )
 
     for field_name in model._meta.reference_view_extra_fields:
         if field_name not in model._meta.fields.literal_fields:

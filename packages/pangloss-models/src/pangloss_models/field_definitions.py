@@ -154,7 +154,7 @@ class FieldBinding:
 
 @dataclass(frozen=True, kw_only=True)
 class RelationFieldDefinition(FieldDefinition):
-    annotated_type: TRelationFieldDefinitionAnnotation  # pyright: ignore[reportIncompatibleVariableOverride]
+    annotated_type: TRelationFieldDefinitionAnnotation
     type_options: set[RelationOption] = dataclass_field(default_factory=set)
     reverse_name: str
     subclasses_parent_fields: set[str | FieldSubclassing]
@@ -243,7 +243,7 @@ class RelationToReifiedRelationDocument(RelationOption):
 @dataclass(frozen=True, kw_only=True)
 class RelationToTypeVar(RelationOption):
     type_var_name: str
-    annotated_type: TypeVar  # pyright: ignore[reportIncompatibleVariableOverride]  # ty: ignore[invalid-attribute-override]
+    annotated_type: TypeVar  # ty: ignore[invalid-attribute-override]
 
 
 @dataclass(frozen=True, kw_only=True)
