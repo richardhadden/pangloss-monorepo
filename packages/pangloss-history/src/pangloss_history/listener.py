@@ -1,5 +1,6 @@
 """The listener that makes a record of each write (`pangloss_models.hooks.after_write`)"""
 
+import json
 import logging
 from typing import Any
 
@@ -39,10 +40,36 @@ def reset_recorder() -> None:
     _recorder = None
 
 
+def as_reference(node: dict[str, Any]) -> dict[str, Any]:
+    """An entity written in a document (`create_new`) as a reference to it: the entity is a head
+    node with its own history, and the document holds only the reference (which is also what an
+    update of it holds)"""
+    return {
+        "id": node["id"],
+        "type": node["type"],
+        "label": None,
+        **({"edge_properties": node["edge_properties"]} if node.get("edge_properties") else {}),
+    }
+
+
+def references_to_written_entities(value: Any) -> Any:
+    if isinstance(value, dict):
+        if value.get("create_new") and "id" in value and "type" in value:
+            return as_reference(value)
+        return {k: references_to_written_entities(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [references_to_written_entities(v) for v in value]
+    return value
+
+
 def serialise(payload: Any) -> str:
     """The write form as JSON. (Done now, so that what is kept is what was written, even if
-    the caller changes the object afterwards)"""
-    return payload.model_dump_json()
+    the caller changes the object afterwards.) An entity written inside a document is kept as the
+    reference to it; the entity itself has its own record. (A head node that is an entity has
+    `create_new` itself, and is kept whole.)"""
+    data = json.loads(payload.model_dump_json())
+    data = {k: references_to_written_entities(v) for k, v in data.items()}
+    return json.dumps(data)
 
 
 def records_of(event: WriteEvent, position: dict[str, str]) -> list[HistoryRecord]:

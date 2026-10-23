@@ -528,3 +528,27 @@ Known limits:
   entity, ask the history store for the versions that refer to it (a restore would then report `reference-missing`,
   which is the fallback and is already handled). `pangloss history purge` and the policy for erasure still wait for
   someone who needs them.
+
+## Run against the demo project (2026-10-23)
+
+`"pangloss_history"` was added to `INSTALLED_APPS` of `pangloss-demo`, and a real server was started
+(`pangloss run`) against its Memgraph. Through the HTTP API and the command line:
+
+- **Worked as designed:** create, update, delete, undelete and restore of an entity (`Person`) and of a nested
+  document (`Factoid`, with statements, an `AtPage` relation and a source written inline); the listing, a version, the
+  diff, the draft; `428` without `If-Match`; `401` without a login; `pangloss history list|show|diff|restore` (the
+  restore from the command line is itself recorded, as the command imports the models and drains the queue on exit);
+  the history file made at `.pangloss/history.sqlite3` of the project (now in the demo's `.gitignore`); the queue
+  drained when the server is stopped; the source written inline in the factoid had its own `create` record.
+- **Found, and fixed:** (1) the factoid's snapshot held the *whole* inline entity (its fields, `create_new`), so a diff
+  between its creation and its update showed the entity's fields as removed. Now an entity written in a document is
+  kept there as the reference to it (`{id, type, label: null}`, with `edge_properties` if it has them), and its own
+  record has the content, as the design said. (2) A diff between a creation and an update showed `create_new`,
+  `context_labels` and `db_labels`, which are only the bookkeeping of the write form: they are left out of a diff.
+- **Not caused by history, found on the way:** the demo database had been filled before the change to store enums as
+  plain values, so reading the old factoids and people fails (`mg_enum` values): the demo needs its data made again
+  (`populate.py` on an empty database). And `pangloss_memgraph.0001_initial` was not recorded as applied, so the server
+  refused to start until `pangloss migrate --fake` (as `demo-setup.md` says).
+- **Not tried:** a schema change with real old versions in a running project (covered by the equivalence tests, not
+  by hand), more than one user, a large document, and a server killed without a clean stop (the queue is then lost, by
+  design).

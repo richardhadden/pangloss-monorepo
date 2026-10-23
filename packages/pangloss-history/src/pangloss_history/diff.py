@@ -15,6 +15,10 @@ class Change:
         return asdict(self)
 
 
+# Only in the write form of a creation, or worked out when it is written: not a change a person made
+BOOKKEEPING = {"create_new", "context_labels", "db_labels"}
+
+
 def is_identified(items: list[Any]) -> bool:
     """A list of objects that each have an id (nested nodes), which are compared by id and
     not by place"""
@@ -24,7 +28,7 @@ def is_identified(items: list[Any]) -> bool:
 def diff(old: Any, new: Any, path: str = "") -> list[Change]:
     if isinstance(old, dict) and isinstance(new, dict):
         changes: list[Change] = []
-        for key in sorted(old.keys() | new.keys()):
+        for key in sorted((old.keys() | new.keys()) - BOOKKEEPING):
             here = f"{path}.{key}" if path else key
             if key not in new:
                 changes.append(Change(here, "removed", old=old[key]))

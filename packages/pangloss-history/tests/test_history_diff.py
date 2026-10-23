@@ -42,3 +42,10 @@ def test_gaps_are_the_versions_that_have_no_record_of_content():
     assert find_gaps(records, 5) == [3, 4]
     assert find_gaps(records, 2) == []
     assert find_gaps([record(version=2, op="delete")], 2) == [1, 2]
+
+
+def test_what_is_only_bookkeeping_of_the_write_is_not_a_difference():
+    assert diff(
+        {"a": 1, "create_new": True, "context_labels": None, "db_labels": []},
+        {"a": 1, "context_labels": [], "db_labels": None},
+    ) == []

@@ -106,3 +106,25 @@ def test_a_store_that_cannot_be_made_does_not_fail_the_write(history, tmp_path, 
     (tmp_path / "a-file").write_text("not a directory")
     emit_write_event(event(payload=Statement(id=uuid7(), text="x")))  # (does not raise)
     assert "listener to writes failed" in caplog.text
+
+
+def test_an_entity_written_in_a_document_is_kept_there_only_as_a_reference(history):
+    import json
+
+    doc, person = uuid7(), uuid7()
+    inline = {"type": "Person", "id": str(person), "create_new": True, "label": "P", "text": "p",
+              "edge_properties": {"level": 3}}
+
+    class WithInline(Statement):
+        about: dict
+        nested: list
+
+    payload = WithInline(id=doc, text="s", about=inline, nested=[inline])
+    emit_write_event(event(payload=payload, id=doc, created=[Person(id=person, text="p")]))
+    store = recorded(history, doc)
+
+    kept = store.get(doc, 1).data()
+    reference = {"id": str(person), "type": "Person", "label": None, "edge_properties": {"level": 3}}
+    assert kept["about"] == reference and kept["nested"] == [reference]
+    assert store.get(person, 1).data()["text"] == "p"  # (the entity is kept whole, as its own head node)
+    assert json.dumps(kept)

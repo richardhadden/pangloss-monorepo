@@ -22,6 +22,7 @@ class Settings(BaseSettings[MemgraphDatabaseSettings]):
         "pangloss_memgraph",
         "demo_app",
         "pangloss_interface",
+        "pangloss_history",
     ]
 
     DATABASE_MODULE: str = "pangloss_memgraph.databases.memgraph"
