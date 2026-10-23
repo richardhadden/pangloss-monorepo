@@ -17,3 +17,6 @@ wheels/
 .zed
 .ropeproject
 
+
+# a separate repository, cloned here
+packages/pydantic-meta-kit/

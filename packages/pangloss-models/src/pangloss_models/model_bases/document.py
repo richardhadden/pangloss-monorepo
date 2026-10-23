@@ -42,7 +42,9 @@ class DocumentMeta(BaseMeta, DeclaredClassMeta):
         default_factory=list
     )
     use_in_semantic_space_label: bool = True
-    field_definitions: ModelFields = Field(default_factory=ModelFields)
+    field_definitions: Annotated[ModelFields, MetaRules.DO_NOT_INHERIT] = Field(
+        default_factory=ModelFields
+    )
     _owner_class: type[Document] | InheritValue = InheritValue.AS_DEFAULT
 
     @property
@@ -186,16 +188,3 @@ class Document(_DeclaredClass, WithMeta[DocumentMeta]):
     def __new__(cls, *args, **kwargs) -> _DocumentCreateBase:
         return cls.Create(*args, **kwargs)
 
-    @classmethod
-    def __pydantic_init_subclass__(cls, **_):
-
-        # Set model it uninitialised, as may inherit _initialised from parent class
-        cls._initialised = False
-
-        # Make sure _meta class is new and not inherited
-        cls._meta = cls.__dict__.get("_meta", DocumentMeta())
-
-        # Set owner class on cls._meta
-        cls._meta._owner_class = cls
-
-        cls._register()

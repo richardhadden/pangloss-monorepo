@@ -1,7 +1,7 @@
 from typing import Annotated, ClassVar, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
-from pydantic_meta_kit import InheritValue, MetaRules
+from pydantic_meta_kit import BaseMeta, InheritValue, MetaRules, WithMeta
 
 from pangloss_models.field_definitions import (
     FieldDefinition,
@@ -23,12 +23,14 @@ from pangloss_models.model_bases.base_models import (
 )
 
 
-class ReifiedRelationMeta(BaseModel, DeclaredClassMeta):
+class ReifiedRelationMeta(BaseMeta, DeclaredClassMeta):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     _owner_class: type[ReifiedRelation] | InheritValue = InheritValue.AS_DEFAULT
     require_label: Literal[False] = False
 
-    field_definitions: ModelFields = Field(default_factory=ModelFields)
+    field_definitions: Annotated[ModelFields, MetaRules.DO_NOT_INHERIT] = Field(
+        default_factory=ModelFields
+    )
 
     @property
     def fields(self) -> ModelFieldDict[str, FieldDefinition]:
@@ -55,7 +57,7 @@ class _ReifiedRelationViewBase(_ViewBase):
     pass
 
 
-class ReifiedRelation[TTarget](_DeclaredClass):
+class ReifiedRelation[TTarget](_DeclaredClass, WithMeta[ReifiedRelationMeta]):
     __metatype__ = "ReifiedRelation"
     Meta: ClassVar[type[ReifiedRelationMeta]] = ReifiedRelationMeta
     model_config = ConfigDict(validate_assignment=True)
@@ -70,24 +72,9 @@ class ReifiedRelation[TTarget](_DeclaredClass):
 
     target: list[TTarget]
 
-    @classmethod
-    def __pydantic_init_subclass__(cls, **kwargs) -> None:
-
-        if cls is ReifiedRelation:
-            return
-
-        cls._initialised = False
-
-        # Make sure _meta class is new and not inherited
-        cls._meta = cls.__dict__.get("_meta", ReifiedRelationMeta())
-
-        # Set owner class on cls._meta
-        cls._meta._owner_class = cls
-
-        cls._register()
 
 
-class ReifiedRelationDocumentMeta(BaseModel, DeclaredClassMeta):
+class ReifiedRelationDocumentMeta(BaseMeta, DeclaredClassMeta):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     _owner_class: type[ReifiedRelationDocument] | InheritValue = InheritValue.AS_DEFAULT
     require_label: bool | InheritValue = True
@@ -98,7 +85,9 @@ class ReifiedRelationDocumentMeta(BaseModel, DeclaredClassMeta):
         default_factory=list
     )
 
-    field_definitions: ModelFields = Field(default_factory=ModelFields)
+    field_definitions: Annotated[ModelFields, MetaRules.DO_NOT_INHERIT] = Field(
+        default_factory=ModelFields
+    )
 
     @property
     def fields(self) -> ModelFieldDict[str, FieldDefinition]:
@@ -140,7 +129,9 @@ class _ReifiedRelationDocumentHeadViewBase(_HeadViewBase):
     pass
 
 
-class ReifiedRelationDocument[TTarget](_DeclaredClass):
+class ReifiedRelationDocument[TTarget](
+    _DeclaredClass, WithMeta[ReifiedRelationDocumentMeta]
+):
     __metatype__ = "ReifiedRelationDocument"
     Meta: ClassVar[type[ReifiedRelationDocumentMeta]] = ReifiedRelationDocumentMeta
     model_config = ConfigDict(validate_assignment=True)
@@ -157,20 +148,3 @@ class ReifiedRelationDocument[TTarget](_DeclaredClass):
 
     target: list[TTarget]
 
-    @classmethod
-    def __pydantic_init_subclass__(cls, **kwargs) -> None:
-
-        if (
-            cls is ReifiedRelationDocument
-        ):  # or cls.__pydantic_generic_metadata__["args"]:
-            return
-
-        cls._initialised = False
-
-        # Make sure _meta class is new and not inherited
-        cls._meta = cls.__dict__.get("_meta", ReifiedRelationDocumentMeta())
-
-        # Set owner class on cls._meta
-        cls._meta._owner_class = cls
-
-        cls._register()

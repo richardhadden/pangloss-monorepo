@@ -7,9 +7,12 @@ description = "Modelling, REST API and database bindings for Graph databases"
 members = [
     "packages/*",
 ]
+# a separate repository, cloned here to work on; Pangloss depends on it through git
+exclude = ["packages/pydantic-meta-kit"]
 
 [tool.pytest.ini_options]
 testpaths = ["packages"]
+norecursedirs = ["pydantic-meta-kit"]
 asyncio_default_fixture_loop_scope = "session"
 
 [tool.ruff]

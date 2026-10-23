@@ -27,39 +27,18 @@ class TraitMeta[T: Trait | NonHeritableTrait](BaseMeta, DeclaredClassMeta):
 
 
 class _Trait(_DeclaredClass):
-    pass
+    _kind_base: ClassVar[bool] = True
 
 
 class Trait[T: Document | Entity](_Trait):
+    _kind_base: ClassVar[bool] = True
     Meta: ClassVar[Any] = TraitMeta
     _meta: Any  # type: ignore
 
-    @classmethod
-    def __pydantic_init_subclass__(cls, **kwargs) -> None:
-
-        cls._initialised = False
-
-        # Make sure _meta class is new and not inherited
-        cls._meta = cls.__dict__.get("_meta", TraitMeta())
-        # Set owner class on cls._meta
-        cls._meta._owner_class = cls
-
-        cls._register()
 
 
 class NonHeritableTrait(_Trait):
+    _kind_base: ClassVar[bool] = True
     Meta: ClassVar[Any] = TraitMeta
     _meta: Any  # type: ignore
 
-    @classmethod
-    def __pydantic_init_subclass__(cls, **kwargs) -> None:
-
-        cls._initialised = False
-
-        # Make sure _meta class is new and not inherited
-        cls._meta = cls.__dict__.get("_meta", TraitMeta())
-
-        # Set owner class on cls._meta
-        cls._meta._owner_class = cls
-
-        cls._register()

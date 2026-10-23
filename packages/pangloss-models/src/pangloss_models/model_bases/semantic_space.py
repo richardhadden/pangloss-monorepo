@@ -1,7 +1,7 @@
 from typing import Annotated, ClassVar
 
 from pydantic import ConfigDict, Field
-from pydantic_meta_kit import BaseMeta, InheritValue, MetaRules
+from pydantic_meta_kit import BaseMeta, InheritValue, MetaRules, WithMeta
 
 from pangloss_models.field_definitions import (
     FieldDefinition,
@@ -24,7 +24,9 @@ class SemanticSpaceMeta(BaseMeta, DeclaredClassMeta):
     _owner_class: type[SemanticSpace] | InheritValue = InheritValue.AS_DEFAULT
     abstract: Annotated[bool, MetaRules.DO_NOT_INHERIT] = False
     require_label: bool | InheritValue = False
-    field_definitions: ModelFields = Field(default_factory=ModelFields)
+    field_definitions: Annotated[ModelFields, MetaRules.DO_NOT_INHERIT] = Field(
+        default_factory=ModelFields
+    )
 
     @property
     def fields(self) -> ModelFieldDict[str, FieldDefinition]:
@@ -51,7 +53,7 @@ class _SemanticSpaceViewBase(_ViewBase):
     pass
 
 
-class SemanticSpace[TContents](_DeclaredClass):
+class SemanticSpace[TContents](_DeclaredClass, WithMeta[SemanticSpaceMeta]):
     __metatype__ = "SemanticSpace"
     _meta: ClassVar[SemanticSpaceMeta] = SemanticSpaceMeta()
 
@@ -64,16 +66,3 @@ class SemanticSpace[TContents](_DeclaredClass):
 
     contents: list[TContents]
 
-    @classmethod
-    def __pydantic_init_subclass__(cls, **_):
-
-        # Set model it uninitialised, as may inherit _initialised from parent class
-        cls._initialised = False
-
-        # Make sure _meta class is new and not inherited
-        cls._meta = cls.__dict__.get("_meta", SemanticSpaceMeta())
-
-        # Set owner class on cls._meta
-        cls._meta._owner_class = cls
-
-        cls._register()

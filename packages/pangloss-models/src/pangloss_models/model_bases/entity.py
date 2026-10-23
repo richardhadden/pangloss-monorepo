@@ -41,7 +41,9 @@ class EntityMeta(BaseMeta, DeclaredClassMeta):
     reference_view_extra_fields: Annotated[list[str], MetaRules.ACCUMULATE] = Field(
         default_factory=list
     )
-    field_definitions: ModelFields = Field(default_factory=ModelFields)
+    field_definitions: Annotated[ModelFields, MetaRules.DO_NOT_INHERIT] = Field(
+        default_factory=ModelFields
+    )
 
     @property
     def fields(self) -> ModelFieldDict[str, FieldDefinition]:
@@ -134,16 +136,6 @@ class Entity(_DeclaredClass, WithMeta[EntityMeta]):
     HeadView: ClassVar[type[_HeadViewBase]]
     EditView: ClassVar[type[_EntityEditViewBase]]
 
-    @classmethod
-    def __pydantic_init_subclass__(cls, **_):
-
-        cls._initialised = False
-
-        cls._meta = cls.__dict__.get("_meta", EntityMeta(_owner_class=cls))
-
-        cls._meta._owner_class = cls
-
-        cls._register()
 
     get: ClassVar[
         Callable[

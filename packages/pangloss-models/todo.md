@@ -205,3 +205,12 @@ These were code that **no test reached**. Done ones are marked; the snapshot (`t
 ## Later
 
 - [ ] Add a "subtract" type wrapper (the opposite of `Fulfils`). Not designed: what it should do is not yet written down. Postponed on 2026-10-23.
+
+## Meta inheritance (2026-10-23)
+
+Found while checking the `pydantic-meta-kit` fixes: the hooks of the kinds never called `super()`, so a model never inherited its
+parent's `_meta` (`create_with_id`, `create_inline`, `require_label`, accumulated `view_extra_fields`...), though the metas are written
+to. Now one hook in `_DeclaredClass` (`base_models.py`) lets `WithMeta` merge, sets the owner and registers; every kind except the traits
+is `WithMeta[...]` (traits are not, so that a document may also implement one), with `field_definitions` marked `DO_NOT_INHERIT`.
+**Behaviour change:** settings now inherit; check projects that relied on a child *not* having its parent's `create_inline` etc.
+Tested in `tests/initialisation/test_meta.py`. Left: the `# type: ignore` on the `_meta: ClassVar` overrides.

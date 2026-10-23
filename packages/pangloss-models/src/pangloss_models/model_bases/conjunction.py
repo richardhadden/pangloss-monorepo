@@ -24,7 +24,9 @@ class ConjunctionMeta(BaseMeta, DeclaredClassMeta):
     _owner_class: type[Conjunction] | InheritValue = InheritValue.AS_DEFAULT
     abstract: Annotated[bool, MetaRules.DO_NOT_INHERIT] = False
     require_label: bool | InheritValue = False
-    field_definitions: ModelFields = Field(default_factory=ModelFields)
+    field_definitions: Annotated[ModelFields, MetaRules.DO_NOT_INHERIT] = Field(
+        default_factory=ModelFields
+    )
 
     @property
     def fields(self) -> ModelFieldDict[str, FieldDefinition]:
@@ -61,15 +63,3 @@ class Conjunction(_DeclaredClass, WithMeta[ConjunctionMeta]):
     UpdateDB: ClassVar[type[_ConjunctionUpdateDBBase]]
     View: ClassVar[type[_ConjunctionViewBase]]
 
-    @classmethod
-    def __pydantic_init_subclass__(cls, **kwargs) -> None:
-
-        cls._initialised = False
-
-        # Make sure _meta class is new and not inherited
-        cls._meta = cls.__dict__.get("_meta", ConjunctionMeta())
-
-        # Set owner class on cls._meta
-        cls._meta._owner_class = cls
-
-        cls._register()

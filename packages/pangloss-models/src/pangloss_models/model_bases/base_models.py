@@ -21,6 +21,7 @@ from pydantic import (
     model_validator,
 )
 from pydantic.alias_generators import to_camel
+from pydantic_meta_kit import WithMeta
 
 from pangloss_models.model_bases.binding import bind_values_to_children
 from pangloss_models.model_bases.context_label import ContextLabel
@@ -92,6 +93,30 @@ class _DeclaredClass(_BaseObject):
             "SemanticSpace",
         ]
     ]
+
+    _kind_base: ClassVar[bool] = False
+    """Set on the classes of the library that stand for a kind (`Document`, `Trait`), which are not declared models"""
+
+    @classmethod
+    def __pydantic_init_subclass__(cls, **kwargs: Any) -> None:
+        """Every declared model: its `_meta` is made from its parent's (by `WithMeta`), says which class owns
+        it, and the class is registered."""
+        super().__pydantic_init_subclass__(**kwargs)
+        own = cls.__dict__
+        if "__metatype__" in own or own.get("_kind_base"):
+            return
+        cls._initialised = False
+        if not issubclass(cls, WithMeta):
+            # (a trait: it has a meta of its own, and does not inherit one)
+            if (meta_class := getattr(cls, "Meta", None)) is None:
+                return
+            cls._meta = own.get("_meta", meta_class())
+        elif origin := cls.__pydantic_generic_metadata__["origin"]:
+            # (`WithMeta` gives a parametrisation of a generic, `AnnotatedValue[str]`, the meta of the generic itself:
+            # it needs its own, made as for a subclass with none)
+            cls._meta = origin._meta & None  # type: ignore[operator]
+        cls._meta._owner_class = cls  # type: ignore[attr-defined]
+        cls._register()
 
     @classmethod
     def _register(cls):

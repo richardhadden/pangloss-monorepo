@@ -924,7 +924,7 @@ wheels = [
 [[package]]
 name = "pydantic-meta-kit"
 version = "0.1.0"
-source = { git = "https://github.com/richardhadden/pydantic-meta-kit.git#6fcb4e5d1602a9492f1964a27fee28c048d0dd7f" }
+source = { git = "https://github.com/richardhadden/pydantic-meta-kit.git#6f8ea9cd70580aa59d431b0ea67fcf09d11ed4b3" }
 dependencies = [
     { name = "pydantic" },
 ]

@@ -1,7 +1,7 @@
-from typing import ClassVar, cast
+from typing import Annotated, ClassVar, cast
 
 from pydantic import ConfigDict, Field
-from pydantic_meta_kit import BaseMeta, InheritValue
+from pydantic_meta_kit import BaseMeta, InheritValue, MetaRules, WithMeta
 
 from pangloss_models.field_definitions import (
     ListFieldDefinition,
@@ -19,7 +19,9 @@ class EdgeModelMeta(BaseMeta, DeclaredClassMeta):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     _owner_class: type[EdgeModel] | InheritValue = InheritValue.AS_DEFAULT
 
-    field_definitions: ModelFields = Field(default_factory=ModelFields)
+    field_definitions: Annotated[ModelFields, MetaRules.DO_NOT_INHERIT] = Field(
+        default_factory=ModelFields
+    )
 
     @property
     def fields(  # type: ignore
@@ -33,20 +35,7 @@ class EdgeModelMeta(BaseMeta, DeclaredClassMeta):
         raise Exception(f"{self.__class__.__name__}.field_definition missing")
 
 
-class EdgeModel(_DeclaredClass):
+class EdgeModel(_DeclaredClass, WithMeta[EdgeModelMeta]):
     __metatype__ = "EdgeModel"
     _meta: ClassVar[EdgeModelMeta] = EdgeModelMeta()
 
-    @classmethod
-    def __pydantic_init_subclass__(cls, **kwargs) -> None:
-
-        # Set model it uninitialised, as may inherit _initialised from parent class
-        cls._initialised = False
-
-        # Make sure _meta class is new and not inherited
-        cls._meta = cls.__dict__.get("_meta", EdgeModelMeta())
-
-        # Set owner class on cls._meta
-        cls._meta._owner_class = cls
-
-        cls._register()
