@@ -6,6 +6,7 @@ import base64
 import hashlib
 import io
 import json
+import re
 import subprocess
 import sys
 import tarfile
@@ -316,3 +317,32 @@ async def test_a_client_with_the_built_manifest_is_current_against_the_app(make_
     finally:
         sdk_client.install(None)
         await client.close()
+
+
+# --- a package index (PEP 503) ------------------------------------------------------------------
+
+
+def test_the_index_lists_the_one_project_and_links_its_files_with_hashes(make_app):
+    with TestClient(make_app()) as client:
+        user("root", admin=True)
+        assert client.get("/api/sdk/simple/").status_code == 401
+
+        root = client.get("/api/sdk/simple/", headers=basic("root"))
+        assert root.status_code == 200 and '<a href="shop-sdk/">shop-sdk</a>' in root.text
+
+        # (any spelling pip may use for the name)
+        project = client.get("/api/sdk/simple/Shop_SDK/", headers=basic("root"))
+        assert project.status_code == 200
+        assert client.get("/api/sdk/simple/other/", headers=basic("root")).status_code == 404
+
+        links = re.findall(r'href="([^"#]+)#sha256=([0-9a-f]{64})"', project.text)
+        assert [file for file, _ in links] == [
+            "../../download/shop_sdk-0.1-py3-none-any.whl",
+            "../../download/shop-sdk-0.1.tar.gz",
+        ]
+        assert "data-requires-python" in project.text
+        for link, digest in links:
+            # (pip resolves it against the page: /api/sdk/simple/shop-sdk/)
+            path = "/api/sdk/" + link.removeprefix("../../")
+            content = client.get(path, headers=basic("root")).content
+            assert hashlib.sha256(content).hexdigest() == digest

@@ -5,12 +5,17 @@
 | `GET` | `/api/sdk/version` | which SDK the server has built (anyone: a client checks itself) |
 | `GET` | `/api/sdk` | the manifest, and where to download it (`SDK_ACCESS`) |
 | `GET` | `/api/sdk/git/...` | the SDK as a read-only git repository (`git clone`; the same access) |
+| `GET` | `/api/sdk/simple/`, `/api/sdk/simple/{project}/` | a package index (PEP 503), for `pip install --extra-index-url https://user:password@host/api/sdk/simple/ NAME` (`SDK_ACCESS`) |
 | `GET` | `/api/sdk/download/{file}` | the wheel or the sdist (`SDK_ACCESS`; the names are in the manifest, as an installer wants a real file name) |
 """
 
+import hashlib
+import html
+import re
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request, Response, status
+from fastapi.responses import HTMLResponse
 
 from pangloss_sdk_server import archives, current
 from pangloss_sdk_server.access import sdk_access
@@ -89,6 +94,49 @@ async def download(filename: str, built: Served) -> Response:
         media_type=media_type,
         headers={"ETag": f'"{built.fingerprint}"', "Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+def normalised(name: str) -> str:
+    return re.sub(r"[-_.]+", "-", name).lower()
+
+
+def page(title: str, links: list[str]) -> HTMLResponse:
+    body = "\n".join(links)
+    return HTMLResponse(
+        "<!DOCTYPE html>\n<html><head><meta name=\"pypi:repository-version\" content=\"1.0\">"
+        f"<title>{html.escape(title)}</title></head><body>\n{body}\n</body></html>"
+    )
+
+
+@router.get("/simple/", dependencies=[Depends(sdk_access)], include_in_schema=False)
+async def simple_index(built: Served) -> HTMLResponse:
+    name = normalised(built.manifest["distribution"])
+    return page("Links for the SDK", [f'<a href="{name}/">{name}</a>'])
+
+
+@router.get("/simple/{project}/", dependencies=[Depends(sdk_access)], include_in_schema=False)
+async def simple_project(project: str, built: Served) -> HTMLResponse:
+    """The files of the SDK, as pip looks for them (the one version the server has)"""
+    manifest = built.manifest
+    name = normalised(manifest["distribution"])
+    if normalised(project) != name:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=f"There is no project '{project}'")
+
+    python = built.files.get("pyproject.toml", b"").decode()
+    requires = next(
+        (line.split(">=")[1].strip(' "') for line in python.splitlines() if line.startswith("requires-python")),
+        None,
+    )
+    attribute = f' data-requires-python="{html.escape(">=" + requires)}"' if requires else ""
+    files = {
+        archives.wheel_name(manifest): archives.wheel_bytes(built.files, manifest),
+        archives.sdist_name(manifest): archives.sdist_bytes(built.files, manifest),
+    }
+    links = [
+        f'<a href="../../download/{file}#sha256={hashlib.sha256(content).hexdigest()}"{attribute}>{file}</a><br>'
+        for file, content in files.items()
+    ]
+    return page(f"Links for {name}", links)
 
 
 def configure_app(app: FastAPI, settings: Any) -> None:

@@ -57,14 +57,14 @@ A Python package that holds the JavaScript of the web interface: `interface-core
 
 ## pangloss-sdk-server 🚧
 
-Optional: `"pangloss_sdk_server"` in `INSTALLED_APPS`. Builds the SDK of the project: `pangloss sdk build|status|show`. It also serves it: `/api/sdk` (manifest, wheel, sdist; `SDK_ACCESS`) and tells a client whether its SDK is current; and `git clone` of it (read-only). See [the SDK](sdk.md).
+Optional: `"pangloss_sdk_server"` in `INSTALLED_APPS`. Builds the SDK of the project: `pangloss sdk build|status|show`. It also serves it: `/api/sdk` (manifest, wheel, sdist; `SDK_ACCESS`) and tells a client whether its SDK is current; `git clone` of it (read-only), and a package index (`/api/sdk/simple/`). See [the SDK](sdk.md).
 
 ## pangloss-sdk 🚧
 
-Lets Pangloss models be used locally and read and write a remote Pangloss instance through its API ("API as database"). The client is built; the generated per-project SDK is not (see [the SDK](sdk.md)).
+Lets Pangloss models be used locally and read and write a remote Pangloss instance through its API ("API as database"). The client and the generated per-project SDK are built (see [the SDK](sdk.md)); `sdk-demo/` in the repository shows it used from outside a project.
 
 - `databases/api` (async) and `databases/api_sync` (blocking) are database modules whose functions are requests: set `DATABASE_MODULE` to one, or call `pangloss_sdk.connect(url, apps=[...])`.
-- `SdkSettings`, login (settings, prompt, tokens kept in memory), the errors the server's database module raises, and `iterate`.
+- `SdkSettings`, login (settings, prompt, tokens kept in memory, or a kept refresh token: `pangloss-sdk login|logout|status`), `pangloss-sdk update` (installs the SDK the server has now, the way it was installed before), the errors the server's database module raises, and `iterate`.
 - The model tests use `databases/api` as a database module because it needs no live connection.
 
 ## pangloss-users 🚧

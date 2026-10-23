@@ -534,3 +534,10 @@ async def list_access_tokens_in_db(
 @Database.default.write_transaction
 async def delete_access_token_in_db(tx: Transaction, username: str, id: str) -> bool:
     return await users.delete_access_token(tx, username, id)
+
+
+@Database.default.write_transaction
+async def touch_access_token_in_db(
+    tx: Transaction, id: str, when: datetime.datetime
+) -> None:
+    await users.touch_access_token(tx, id, when)

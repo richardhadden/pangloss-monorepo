@@ -4,6 +4,7 @@
     pangloss-sdk login URL --token                      # keeps a personal access token instead
     pangloss-sdk status [URL]
     pangloss-sdk logout [URL]
+    pangloss-sdk update [PACKAGE] [--dry-run]           # install what the server has now
 
 The password is never kept: a **refresh token** is (see `pangloss_sdk.credentials` for where).
 """
@@ -11,6 +12,7 @@ The password is never kept: a **refresh token** is (see `pangloss_sdk.credential
 import argparse
 import getpass
 import os
+import subprocess
 import sys
 from typing import Any
 
@@ -121,6 +123,24 @@ def status(args: argparse.Namespace, transport: Any, prompt: Any, out: Any) -> i
     return 0
 
 
+def update(args: argparse.Namespace, transport: Any, prompt: Any, out: Any) -> int:
+    from pangloss_sdk import update as updating
+
+    try:
+        distribution = updating.choose(args.package, updating.sdk_distributions())
+        plan = updating.make_plan(distribution, transport, prompt)
+    except updating.UpdateError as error:
+        print(str(error), file=sys.stderr)
+        return 1
+    print(plan.message, file=out)
+    if plan.command is None:
+        return 0
+    print(f"  $ {plan.shown}", file=out)
+    if args.dry_run:
+        return 0
+    return subprocess.run(plan.command, check=False).returncode
+
+
 def parser() -> argparse.ArgumentParser:
     main_parser = argparse.ArgumentParser(prog="pangloss-sdk", description=__doc__.split("\n\n")[0])
     commands = main_parser.add_subparsers(dest="command", required=True)
@@ -138,12 +158,21 @@ def parser() -> argparse.ArgumentParser:
     status_parser = commands.add_parser("status", help="Where you are logged in, and the SDK there")
     status_parser.add_argument("url", nargs="?")
     status_parser.set_defaults(run=status)
+
+    update_parser = commands.add_parser("update", help="Install the SDK the server has now")
+    update_parser.add_argument("package", nargs="?", help="The SDK, if more than one is installed")
+    update_parser.add_argument("--dry-run", action="store_true", help="Say what would be run")
+    update_parser.set_defaults(run=update)
     return main_parser
 
 
 def main(argv: list[str] | None = None, transport: Any = None, prompt: Any = None, out: Any = None) -> int:
     args = parser().parse_args(argv)
-    return args.run(args, transport, prompt, out or sys.stdout)
+    try:
+        return args.run(args, transport, prompt, out or sys.stdout)
+    except (EOFError, KeyboardInterrupt):
+        print("\nStopped: nothing was asked for, or it was not answered", file=sys.stderr)
+        return 1
 
 
 if __name__ == "__main__":

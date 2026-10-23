@@ -1,6 +1,6 @@
 # SDK: using a project's models against its API ⏳
 
-**Status: a design, not built.** Nothing here exists yet except the stub `pangloss-sdk` package (settings, and an
+**Status: built (phases 0 to 6; see the end).** What follows begins as the design, and each phase has an "As built" section. (The first line of the design said: nothing here exists yet except the stub `pangloss-sdk` package (settings, and an
 `exposed_functions` module of placeholders). Statements about the existing code were checked on 2026-10-23.
 
 The aim: someone who works with a Pangloss project's data (a script, a notebook, an analysis, a data import) gets
@@ -361,7 +361,7 @@ fingerprint, whether stale.
 | `pangloss-sdk login [URL]` | client | Logs in and (if the user says so) keeps the refresh token |
 | `pangloss-sdk logout` | client | Forgets the stored token; revokes it when the server supports that |
 | `pangloss-sdk status` | client | As above |
-| `pangloss-sdk update` | client | Runs the right `pip`/`uv` command for how the SDK was installed (from `direct_url.json`) |
+| `pangloss-sdk update` | client | Runs the right `pip`/`uv` command for how the SDK was installed (from `direct_url.json`); built in phase 6 |
 
 `pangloss-sdk` is a small `argparse` program (no typer, to keep the client light). `pangloss` is the existing CLI.
 
@@ -432,7 +432,7 @@ converters, and `pangloss-memgraph` registers its datetime one when its database
    real-`git` round trip.
 5. ✅ **Tokens**: the server's revocation and personal access tokens, and the client's `pangloss-sdk login/logout` with
    stored refresh token. (Separable: phases 1 to 4 work with passwords at the prompt and in memory.)
-6. **The demo**: `pangloss-demo` builds its SDK; a notebook-style script outside the project clones it, installs it,
+6. ✅ **The demo and the rest**: `pangloss-demo` builds its SDK; a notebook-style script outside the project clones it, installs it,
    and populates and reads the demo data through the API. Docs updated (`packages.md`, `status.md`, `api.md`,
    `settings.md`, `cli.md`, `overview.md`).
 
@@ -554,7 +554,7 @@ Settings (all optional, on the project's settings class): `SDK_APPS`, `SDK_EXCLU
 
 **The client** (`pangloss-sdk`) sends the two headers when it was given the manifest (`connect(..., sdk=MANIFEST)`, which the generated `connect()` does), warns **once** (`PanglossSdkOutOfDateWarning`) when the status is not `current`, raises `PanglossSdkOutOfDate` for the 409, and has `check()` / `check_sync()` (`GET /api/sdk/version`, set against its manifest: raises `PanglossSdkMismatch` for another project or no SDK, warns if it is out of date; returns `current`, `same_schema`, the server's and its own details). The generated module has `check`, `check_sync`, `connect`, `connect_offline`.
 
-**Differences from the spec above:** the downloads are `/api/sdk/download/<real file name>` (not `package.whl`); `/api/sdk/version` is open and `/api/sdk` is gated (the spec had one gated endpoint, which would stop a non-admin from checking); the server's current schema is that of the build it serves (made as it started), not recomputed per request. Not built: `status()` on the generated module (`check()` returns the same), a PEP 503 index (`pip install --extra-index-url`), and personal access tokens (the access token as the Basic password stands in).
+**Differences from the spec above:** the downloads are `/api/sdk/download/<real file name>` (not `package.whl`); `/api/sdk/version` is open and `/api/sdk` is gated (the spec had one gated endpoint, which would stop a non-admin from checking); the server's current schema is that of the build it serves (made as it started), not recomputed per request. Not built: `status()` on the generated module (`check()` returns the same). (A PEP 503 index and personal access tokens came later: phases 5 and 6.)
 
 **Run against the demo project, with the real server and Memgraph** (a temporary admin user, since removed): the server built `pangloss-demo-sdk` as it started; `/api/sdk` was 401 without a login and 200 with one; the wheel was installed with `uv pip install "http://user:password@127.0.0.1:8765/api/sdk/download/pangloss_demo_sdk-0.4-py3-none-any.whl"` into a **new environment with only `pangloss-core`, `pangloss-models` and `pangloss-sdk`**; and a script there connected (`check()` said current, with warnings turned into errors), created a `Person` (with detail), listed, read it for edit, updated it with `expected_version`, got `PanglossVersionConflictError` (`current_version` 2) for a stale update, deleted it, and read `None`. The test data was removed.
 
@@ -588,8 +588,30 @@ Differences from the spec above: the **commit time is the build's**, not fixed (
 | `Session` | With no `TOKEN`, no `USERNAME` and `PASSWORD` in the settings, and `USE_STORED_LOGIN` (default true), the kept login is used: a refresh token gets an access token **before** any password is asked for (`_refresh` first, then `_login`); a personal access token is used as it is. Settings credentials win over the kept login. A kept refresh token that is no good falls back to the settings or the prompt. Nothing is ever written by a running program: only `login` writes |
 | `pangloss-sdk` (`cli.py`, `python -m pangloss_sdk`; `argparse`, so the client stays light) | `login [URL] [--username] [--token]` (prompts; three tries; `--token` checks a personal access token with `GET /api/users/me` and keeps it), `logout [URL]` (revokes the refresh token on the server, then forgets it; says so if the server could not be reached), `status [URL]` (the kept login and whether it is still good, the SDK on the server). The URL can be `PANGLOSS_URL` |
 
-**Not built:** `pangloss-sdk update` (running the right `pip` or `uv` command for how the SDK was installed), personal access tokens in the `pangloss` command (`pangloss users tokens ...`), `last_used` on a token, an index on `PGAccessToken.token_hash` and `PGRevokedSession.jti`, and limiting login attempts.
+**Not built then, built in phase 6** (below): `pangloss-sdk update`, `pangloss users tokens ...`, `last_used` on a token, indexes, and limiting login attempts.
 
 **Run against the demo, with the real server and Memgraph** (a temporary admin user, since removed): `pangloss-sdk login` kept a refresh token in a file of mode `600`; a script with **no credentials** connected, created a `Person` with the kept login (no prompt) and made a **read-only personal access token**; with that token it read, and a delete raised `PanglossPermissionError` ("This token can only read"); `logout` revoked the refresh token (200 before, **401 after**) and emptied the file; a password change ended the session of the token used to make it (200, then 401). `git clone` of the real server worked, a wrong password and a push were refused, and `pip install "git+http://..."` installed the SDK into a new environment with no `neo4j`.
 
 **Tests**: `pangloss-api` `test_revocation_and_access_tokens.py` (13: revoke, cookies, logout everywhere, a password change by the user and by an admin, personal tokens: shown once, scope, revoked, expired, disabled, owner, not made with a token), `pangloss-memgraph` `test_users.py` (+4, in Memgraph), `pangloss-sdk` `test_stored_login.py` (19: the store, the keyring, using it, the command).
+
+
+## As built: phase 6 (what was left, and the demo) ✅
+
+**What was left over from phases 3 to 5, now built:**
+
+| | |
+|---|---|
+| `pangloss-sdk update [PACKAGE] [--dry-run]` (`pangloss_sdk/update.py`) | Finds the installed SDK (a distribution that needs `pangloss-sdk`) and runs the command that matches how it was installed (`direct_url.json`): **from the server's wheel**, it asks `/api/sdk/version`, says so if the version is the same, else gets the manifest (with the kept login, a refresh token turned into an access token for the Basic password, or a prompt) and installs the new wheel; **from git**, the install again from the repository (a pinned revision stays pinned, and says so); **from an index**, an upgrade by name; **from a directory**, nothing (it says to update the directory). `uv pip` if `uv` is there, else `pip`. What is printed has the password hidden; the real command has it in the URL for as long as it runs (so use a personal access token, or the short-lived access token a refresh gives). It refuses an SDK of another name on the server |
+| `pangloss users tokens create|list|revoke USERNAME` | Personal access tokens from the command line, for the user the command names (it is the administrator's tool, as the rest of `pangloss users`). `create` prints the token once |
+| `last_used_when` on a token | Set when the token is used, **at most once in 10 minutes** (`LAST_USED_RESOLUTION`), so a busy script does not write on every request. `touch_access_token_in_db(id, when)` is optional for a backend |
+| Indexes | `PGAccessToken.token_hash` and `PGRevokedSession.jti` are **unique** (so indexed too), in `UNIQUE_CONSTRAINTS`. **This is a migration of `pangloss_memgraph`** (`0002_addindex_addindex_addconstraint`): an existing database needs `pangloss migrate` before the server starts (the migration check says so otherwise) |
+| Login attempts (`pangloss_api/throttle.py`) | After `LOGIN_MAX_FAILURES` (10) wrong passwords for a username within `LOGIN_FAILURE_WINDOW_SECONDS` (300), that username gets **429** with `Retry-After`, even for the right password, until the oldest failure leaves the window; a right password clears the count; 0 turns it off. Applies to `/token`, `/session` and the Basic login for the SDK and git. **In memory, per server process**: several workers each count (the limit is that many times as high) and a restart forgets: it slows guessing, and is not a replacement for a proxy's limit. (A locked-out username can also be locked out by someone else: the usual price) |
+| A package index (PEP 503) | `/api/sdk/simple/` and `/api/sdk/simple/<project>/` (`SDK_ACCESS`): the one project, with its wheel and sdist, `#sha256=` and `data-requires-python`. `uv pip install --extra-index-url http://user:password@host/api/sdk/simple/ pangloss-demo-sdk` works (tried against the demo with `uv`); the credentials in the URL are not kept in the installed package's metadata |
+
+Still **not built**: type-checking the built stubs with `ty` (a build-time dependency we do not want), the `@server_only` decorator (nothing needed it), a test that installs into a fresh environment from the network, `status()` on the generated module, and the union-member order at its source (the models' unions come from sets; the schemas and the stubs are written in a fixed order, so nothing in the SDK depends on it). The Python 3.15 requirement is as before.
+
+**The demo** is `sdk-demo/` (in the root of the repository, outside `pangloss-demo`): `sdk_demo.py`, a script in `# %%` cells (an editor or Jupytext opens it as a notebook), and `run.sh`, which makes a **new environment with only `pangloss-core`, `pangloss-models` and `pangloss-sdk`**, **`git clone`s the SDK from the server** (git is given the username and password by an `GIT_ASKPASS` helper, so they are neither in the URL nor in the process list, and `credential.helper=` is turned off so that a stale one in the keychain is not used), installs the clone, lists what is installed (no `neo4j`, no FastAPI), and runs the script. The script connects, checks the SDK against the server, lists people (no login), then **creates** a person, a place and a source, **a factoid** that refers to them with a statement in it, reads back, **updates** with `expected_version` and gets `PanglossVersionConflictError` for the stale one, goes through the list with `iterate`, and removes what it made (a delete only marks: the data is removed with Cypher if it is to be as it was; `--keep` leaves it).
+
+Run against the real demo server and Memgraph: it did all of that. The clone had two commits and the tags; the environment had `pangloss-demo-sdk 0.4` and no database or web packages; `pangloss-sdk update --dry-run` said it was the latest.
+
+**Tests** this phase: `pangloss-sdk` `test_update.py` (17), `pangloss-api` (+5: last used, the three of the throttle), `pangloss-cli` (+2: tokens), `pangloss-sdk-server` (+1: the index), `pangloss-memgraph` (last used and the migrations).

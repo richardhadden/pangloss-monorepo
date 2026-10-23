@@ -33,6 +33,10 @@ loaded = await Statement.get(saved.id)  # reads it back as Statement.HeadView
 
 `initialise()` needs a `BaseSettings` instance to exist first, because it reads `DATABASE_MODULE` to decide which backend to bind `save`, `get` and `list` to. See [Settings](settings.md).
 
+## Using the models from outside the project
+
+`DATABASE_MODULE` can also be one whose functions are **requests to the project's API**. `pangloss sdk build` (with `pangloss_sdk_server` installed) makes a package of the project's models and their type stubs, which the server hands out (`pip install` of a wheel, or `git clone` of a read-only repository, for an admin). A script, a notebook or another service installs it with `pangloss-sdk` (no database driver, no web framework), and `Person.get(...)`, `Factoid.Create(...).save()` and the rest are the same code as on the server, doing HTTP: the login is asked for when a request needs one, and the server says when the SDK is out of date. See [the SDK](sdk.md), and `sdk-demo/` for a script that does it.
+
 ## Core concepts
 
 - **Declared classes** are the classes you write: `Document`, `Entity`, `Embedded`, `ReifiedRelation`, and so on. See [Defining models](models.md).

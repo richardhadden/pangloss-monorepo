@@ -190,9 +190,13 @@ async def set_disabled(username: str, disabled: bool) -> User:
 # - `get_access_token_in_db_by_hash(token_hash) -> AccessTokenRecord | None`
 # - `list_access_tokens_in_db(username) -> list[AccessTokenRecord]`
 # - `delete_access_token_in_db(username, id) -> bool`
+# - `touch_access_token_in_db(id, when)`: when a token was last used (optional)
 # ---------------------------------------------------------------------------
 
 ACCESS_TOKEN_PREFIX = "pgl_"
+
+# A token being used is not written more often than this (not a write for every request)
+LAST_USED_RESOLUTION = datetime.timedelta(minutes=10)
 
 
 async def revoke_session(jti: str, expires: datetime.datetime) -> None:
@@ -270,4 +274,14 @@ async def authenticate_access_token(token: str) -> tuple[User, str] | None:
     user = await get_user(record.username)
     if user is None or user.disabled:
         return None
+    await note_use(record)
     return user, record.scope
+
+
+async def note_use(record: AccessTokenRecord) -> None:
+    now = datetime.datetime.now(datetime.UTC)
+    function = getattr(_backend(), "touch_access_token_in_db", None)
+    if function is not None and (
+        record.last_used_when is None or now - record.last_used_when >= LAST_USED_RESOLUTION
+    ):
+        await function(record.id, now)

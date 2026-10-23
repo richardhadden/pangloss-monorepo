@@ -123,3 +123,54 @@ def disable(ctx: typer.Context, username: str) -> None:
 def enable(ctx: typer.Context, username: str) -> None:
     """Let a disabled user log in and write again"""
     set_flag(ctx, username, lambda: service.set_disabled(username, False), "is enabled")
+
+
+# ---------------------------------------------------------------------------
+# Personal access tokens (for scripts, `git` and the SDK)
+# ---------------------------------------------------------------------------
+
+tokens_cli = typer.Typer(
+    name="tokens", help="Personal access tokens of users", no_args_is_help=True
+)
+users_cli.add_typer(tokens_cli, name="tokens")
+
+
+@tokens_cli.command("create")
+def create_token(
+    ctx: typer.Context,
+    username: str,
+    name: str = typer.Option(..., prompt="What is the token for?"),
+    scope: str = typer.Option("write", help="'read' (can only read) or 'write'"),
+    expires_days: int | None = typer.Option(None, help="Days until it stops working"),
+) -> None:
+    """Make a token for a user. It is shown once: it is not kept, and cannot be found again"""
+    info, token = run_with_database(
+        project_of(ctx),
+        lambda: service.create_access_token(username, name, scope, expires_days),
+    )
+    typer.secho(f"Token '{info.name}' ({info.scope}) for '{username}', id {info.id}:", fg="green")
+    typer.echo(token)
+    typer.echo("Keep it now: it cannot be shown again.", err=True)
+
+
+@tokens_cli.command("list")
+def list_tokens(ctx: typer.Context, username: str) -> None:
+    """A user's tokens (not the tokens themselves)"""
+    found = run_with_database(project_of(ctx), lambda: service.list_access_tokens(username))
+    if not found:
+        typer.echo(f"'{username}' has no tokens")
+    for info in found:
+        expires = f"expires {info.expires_when:%Y-%m-%d}" if info.expires_when else "no expiry"
+        used = f"last used {info.last_used_when:%Y-%m-%d %H:%M}" if info.last_used_when else "never used"
+        typer.echo(f"{info.id}  {info.name}  [{info.scope}]  {expires}  {used}")
+
+
+@tokens_cli.command("revoke")
+def revoke_token(ctx: typer.Context, username: str, token_id: str) -> None:
+    """Delete one of a user's tokens, by its id (see `list`)"""
+    revoked = run_with_database(
+        project_of(ctx), lambda: service.revoke_access_token(username, token_id)
+    )
+    if not revoked:
+        fail(f"'{username}' has no token with the id {token_id}")
+    typer.secho(f"Revoked the token {token_id} of '{username}'", fg="green")

@@ -71,6 +71,8 @@ class AccessTokenInfo(CamelCaseModel):
     scope: str = "write"
     created_when: datetime.datetime
     expires_when: datetime.datetime | None = None
+    # (roughly: it is only written when more than `LAST_USED_RESOLUTION` has passed)
+    last_used_when: datetime.datetime | None = None
 
 
 class AccessTokenRecord(AccessTokenInfo):

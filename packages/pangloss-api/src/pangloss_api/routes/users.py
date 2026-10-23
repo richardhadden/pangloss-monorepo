@@ -18,6 +18,7 @@ from pangloss_users.exceptions import (
 )
 from pangloss_users.models import AccessTokenInfo, User, UserUpdate
 
+from pangloss_api import throttle
 from pangloss_api.dependencies import (
     ACCESS_COOKIE_NAME,
     REFRESH_COOKIE_NAME,
@@ -51,9 +52,12 @@ LoginForm = Annotated[OAuth2PasswordRequestForm, Depends()]
 
 
 async def authenticated_user(form: OAuth2PasswordRequestForm) -> User:
+    throttle.check(form.username)
     user = await service.authenticate(form.username, form.password)
     if user is None:
+        throttle.failed(form.username)
         raise unauthorised("Incorrect username or password")
+    throttle.succeeded(form.username)
     return user
 
 

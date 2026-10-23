@@ -63,6 +63,21 @@ FAKE_DB_EXPOSED = """
             raise PanglossUserDoesNotExistError(f"There is no user '{username}'")
         USERS[username] = USERS[username].model_copy(update=changes)
         return USERS[username]
+
+    TOKENS = {}
+
+    async def create_access_token_in_db(record):
+        TOKENS[record.id] = record
+
+    async def list_access_tokens_in_db(username):
+        return [t for t in TOKENS.values() if t.username == username]
+
+    async def delete_access_token_in_db(username, id):
+        record = TOKENS.get(id)
+        if record is None or record.username != username:
+            return False
+        del TOKENS[id]
+        return True
 """
 
 SETTINGS = """

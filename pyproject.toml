@@ -33,6 +33,7 @@ dev = [
 include = [
     "packages/*/tests/**",
     "pangloss-demo/**",
+    "sdk-demo/**",
 ]
 [tool.ty.overrides.rules]
 unresolved-attribute = "ignore"

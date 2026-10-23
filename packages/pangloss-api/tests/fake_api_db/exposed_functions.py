@@ -81,3 +81,7 @@ async def delete_access_token_in_db(username, id):
         return False
     del ACCESS_TOKENS[id]
     return True
+
+
+async def touch_access_token_in_db(id, when):
+    ACCESS_TOKENS[id] = ACCESS_TOKENS[id].model_copy(update={"last_used_when": when})

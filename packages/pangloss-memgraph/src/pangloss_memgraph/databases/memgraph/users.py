@@ -178,6 +178,16 @@ async def list_access_tokens(tx: Transaction, username: str) -> list[AccessToken
     return [token_from_node(node) for node in await result.value()]
 
 
+async def touch_access_token(tx: Transaction, id: str, when: datetime.datetime) -> None:
+    await (
+        await tx.run(
+            "MATCH (token:PGAccessToken {id: $id}) SET token.last_used_when = $when",
+            id=id,
+            when=when,
+        )
+    ).consume()
+
+
 async def delete_access_token(tx: Transaction, username: str, id: str) -> bool:
     result = await tx.run(
         "MATCH (token:PGAccessToken {username: $username, id: $id}) "

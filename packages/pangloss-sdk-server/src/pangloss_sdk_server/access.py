@@ -6,6 +6,7 @@ the password)."""
 import base64
 import binascii
 from fastapi import HTTPException, Request, status
+from pangloss_api import throttle
 from pangloss_api.dependencies import ACCESS_COOKIE_NAME, user_for_token
 from pangloss_users import current_request_username, service
 from pangloss_users.models import User
@@ -40,6 +41,7 @@ async def basic_user(header: str) -> User:
             raise needs_login("Invalid username or password")
         return user
 
+    throttle.check(username)
     user = await service.authenticate(username, password)
     if user is None:
         # (an access token may be given as the password)
@@ -48,7 +50,9 @@ async def basic_user(header: str) -> User:
         except HTTPException:
             raise needs_login("Invalid username or password") from None
         if user.username != username:
+            throttle.failed(username)
             raise needs_login("Invalid username or password")
+    throttle.succeeded(username)
     current_request_username.set(user.username)
     return user
 

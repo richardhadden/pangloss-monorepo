@@ -92,3 +92,31 @@ def test_unknown_user(project):
     result = invoke("users", "disable", "nobody")
     assert result.exit_code == 1
     assert "There is no user 'nobody'" in result.output
+
+
+def test_tokens_are_made_listed_and_revoked(project):
+    create()
+
+    made = invoke("users", "tokens", "create", "john", "--name", "for scripts", "--scope", "read")
+    assert made.exit_code == 0, made.output
+    token = next(line for line in made.output.splitlines() if line.startswith("pgl_"))
+    token_id = made.output.split("id ")[1].split(":")[0]
+
+    listed = invoke("users", "tokens", "list", "john").output
+    assert token_id in listed and "for scripts" in listed and "[read]" in listed
+    assert token not in listed  # (never shown again)
+
+    assert invoke("users", "tokens", "revoke", "john", token_id).exit_code == 0
+    assert "has no tokens" in invoke("users", "tokens", "list", "john").output
+
+    missing = invoke("users", "tokens", "revoke", "john", token_id)
+    assert missing.exit_code == 1 and "no token" in missing.output
+
+
+def test_a_token_needs_a_known_user_and_a_scope(project):
+    nobody = invoke("users", "tokens", "create", "nobody", "--name", "x")
+    assert nobody.exit_code == 1 and "no user" in nobody.output
+
+    create()
+    bad = invoke("users", "tokens", "create", "john", "--name", "x", "--scope", "root")
+    assert bad.exit_code == 1

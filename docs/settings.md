@@ -44,6 +44,7 @@ Values can also come from environment variables or a `.env` file (`pydantic-sett
 | Class | Package | Fields |
 |-------|---------|--------|
 | `MemgraphDatabaseSettings` | pangloss-memgraph | `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `DATABASE_NAME` |
+| `LOGIN_MAX_FAILURES`, `LOGIN_FAILURE_WINDOW_SECONDS` | `BaseSettings` | Default 10 and 300: wrong passwords for a username before it is refused (`429`) for the rest of the window. 0 turns it off. Per server process. See [the API](api.md) |
 | `SdkSettings` (a `ClientSettings`) | pangloss-sdk | `URL`; optional `USERNAME`, `PASSWORD`, `TOKEN`, `TIMEOUT`, `MAX_CONNECTIONS`, `VERIFY_TLS`, `READ_RETRIES`. Environment prefix `PANGLOSS_`. See [the SDK](sdk.md) |
 
 For the Memgraph backend you also need to construct `Database(settings)` before `initialise()` so that `Database.default` exists; see the test fixture `initialise_settings` in `packages/pangloss-memgraph/tests/conftest.py` for a complete example.

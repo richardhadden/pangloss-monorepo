@@ -75,6 +75,11 @@ class BaseSettings[TDatabaseSettings: DatabaseSettings](ClientSettings):
     AUTH_COOKIE_SAMESITE: typing.Literal["lax", "strict", "none"] = "lax"
     AUTH_COOKIE_SECURE: bool = False
 
+    # After this many wrong passwords for a username within the window, it is refused
+    # (`429`) until they are out of it. 0 turns it off. Kept per server process
+    LOGIN_MAX_FAILURES: int = 10
+    LOGIN_FAILURE_WINDOW_SECONDS: int = 300
+
     ENTITY_BASE_URL: AnyHttpUrl
 
     # What the server does at start-up if the project has migrations and the database is not

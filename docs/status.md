@@ -32,7 +32,7 @@ A snapshot of what works and what does not, as of this writing.
 
 | Area | State |
 |------|-------|
-| `pangloss-sdk` (API as database) | The client, the builder and the serving work (phases 1 to 3 of [the SDK](sdk.md)); also git, personal access tokens and a kept login (phases 4 and 5); not built: `pangloss-sdk update` |
+| `pangloss-sdk` (API as database) | The client, the builder and the serving work (phases 1 to 3 of [the SDK](sdk.md)); also git, personal access tokens and a kept login (phases 4 and 5); `pangloss-sdk update`, a package index, login-attempt limiting and the demo (`sdk-demo/`): phase 6. Everything planned is built |
 
 ## Not implemented
 

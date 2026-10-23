@@ -227,7 +227,10 @@ async def test_personal_access_tokens_are_kept_hashed_and_found_by_the_token(
     assert await service.authenticate_access_token(token + "x") is None
     assert await service.authenticate_access_token("not a token") is None
 
-    assert [t.id for t in await service.list_access_tokens("john")] == [info.id]
+    # (using it is noted, once in a while)
+    listed = await service.list_access_tokens("john")
+    assert [t.id for t in listed] == [info.id]
+    assert listed[0].last_used_when is not None
     assert await service.list_access_tokens("jane") == []
     assert not await service.revoke_access_token("jane", info.id)
     assert await service.revoke_access_token("john", info.id)

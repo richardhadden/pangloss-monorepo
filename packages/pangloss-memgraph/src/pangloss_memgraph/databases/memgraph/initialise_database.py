@@ -31,6 +31,8 @@ UNIQUE_CONSTRAINTS = [
     ("PGUrl", "url"),
     ("PGUser", "username"),
     ("PGUser", "email"),
+    ("PGAccessToken", "token_hash"),
+    ("PGRevokedSession", "jti"),
 ]
 
 # (label, properties). Each unique property is indexed, for finding a node; and an id
