@@ -362,6 +362,17 @@ def restore(
     typer.secho("Restored. Run `pangloss showmigrations` to see where the database is.", fg="green")
 
 
+def history_warnings(project: Project, squashed: list[Migration]) -> list[str]:
+    """What deleting would do to the versions kept by `pangloss-history` (nothing, if it is not
+    installed)"""
+    settings = project.require_settings()
+    if "pangloss_history" not in settings.INSTALLED_APPS:
+        return []
+    from pangloss_history.cleanup import warnings_for
+
+    return warnings_for(settings, squashed)
+
+
 def cleanmigrations(
     ctx: typer.Context,
     app: str | None = typer.Argument(None, help="Only this app's"),
@@ -421,6 +432,8 @@ def cleanmigrations(
         "No other database is looked at. One that is part way through them cannot go on without them.",
         fg="yellow",
     )
+    for warning in history_warnings(project, list({id(s): s for s, _ in files}.values())):
+        typer.secho(f"History: {warning}", fg="yellow")
     if not yes:
         typer.confirm("Delete them?", abort=True)
     for _, path in files:

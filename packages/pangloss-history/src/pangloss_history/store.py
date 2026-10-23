@@ -68,6 +68,9 @@ class HistoryStore(Protocol):
     def latest_version(self, head_id: UUID) -> int | None:
         """The highest version recorded for a head node"""
 
+    def position_counts(self) -> list[tuple[dict[str, str], int]]:
+        """Each schema position that records were made at, and how many versions were"""
+
     def close(self) -> None: ...
 
 
@@ -193,6 +196,14 @@ class SqliteStore:
                 "SELECT max(version) FROM history WHERE head_id = ?", (str(head_id),)
             ).fetchone()
         return version
+
+    def position_counts(self) -> list[tuple[dict[str, str], int]]:
+        with self.connection() as db:
+            rows = db.execute(
+                "SELECT schema_position, count(*) FROM history WHERE content_hash IS NOT NULL "
+                "GROUP BY schema_position"
+            ).fetchall()
+        return [(json.loads(position), count) for position, count in rows]
 
     def close(self) -> None:
         pass

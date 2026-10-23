@@ -372,7 +372,7 @@ The same operation has to cope with:
 
 ### Reversing
 
-`UnwrapReified` runs the same in the other direction (`MATCH (s)-[:person]->(r:IdentifiedAs)-[:target]->(p)`), re-creates the direct edges and **deletes `r` and its `certainty`**. It is reversible as a graph but not as data: `certainty` is lost, so the migration is marked **lossy** and `migrate --backwards` asks for confirmation (or saves the lost values, if the migration was written with `keep=True`).
+`UnwrapReified` runs the same in the other direction (`MATCH (s)-[:person]->(r:IdentifiedAs)-[:target]->(p)`), re-creates the direct edges and **deletes `r` and its `certainty`**. It is reversible as a graph but not as data: `certainty` is lost, so the migration is marked **lossy** and `migrate --backwards` asks for confirmation (`--backup` keeps what is lost; so does [history](history.md), if it is installed: the earlier versions have it).
 
 ## 7. How operations are run
 
@@ -661,7 +661,7 @@ A batch that is retried by the driver after a transient error runs again, so a c
 - A backup cannot be copied off the server by Pangloss: the file is on the server.
 - `check-data` reads a node at a time because the models' `get` does (several transactions each). A batched read is a change to the read layer, not to migrations; `--parallel` was measured and is not faster against a local database.
 - A migration decides that a node fulfils a class by what it has, not by running the class's Python validators.
-- `keep=True` (saving what a lossy change would remove, so that going back can restore it) is not built: `--backup` is how to keep what a migration would lose.
+- `keep=True` (saving what a lossy change would remove, so that going back can restore it) is **not built, and will not be**: `--backup` keeps what a migration would lose, and [history](history.md) has the earlier versions of every document.
 
 **Next**
 

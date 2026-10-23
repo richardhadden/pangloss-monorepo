@@ -863,6 +863,24 @@ def test_the_originals_of_a_squashed_migration_can_be_deleted(three_migrations: 
     assert "No changes" in invoke("makemigrations")[1]
 
 
+def test_cleaning_warns_of_the_history_that_would_be_left_part_way(three_migrations: Path, monkeypatch):
+    from pangloss_cli import migrations as module
+
+    assert invoke("squashmigrations", "fakeapp", "0001", "0003")[0] == 0
+    asked = []
+
+    def warn(project, squashed):
+        asked.extend(m.name for m in squashed)
+        return ["3 recorded versions were written part way through it"]
+
+    monkeypatch.setattr(module, "history_warnings", warn)
+    exit_code, output = invoke("cleanmigrations", "fakeapp", "--yes")
+    assert exit_code == 0, output  # (a warning, not a refusal)
+    assert "History: 3 recorded versions" in output
+    assert len(asked) == 1 and "squashed_0003" in asked[0]
+    assert len(migration_files(three_migrations)) == 1
+
+
 def test_nothing_is_deleted_for_a_database_that_is_part_way_through(three_migrations: Path):
     assert invoke("migrate", "fakeapp", "0001")[0] == 0  # (only the first applied)
     assert invoke("squashmigrations", "fakeapp", "0001", "0003")[0] == 0

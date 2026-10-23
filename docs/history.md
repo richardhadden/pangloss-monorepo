@@ -363,7 +363,7 @@ explained. The policy, and a `pangloss history purge` command, wait until someon
    checks, and `POST .../restore`.
 3. **The document interpreter and the draft. Done (2026-10-23), see "As built (phase 3)".** The function per change, the equivalence tests, the `problems`
    list, `GET .../draft`, and the interface's form for it.
-4. **Interactions.** The `cleanmigrations` warning, the purge rule, and deciding about `keep=True`.
+4. **Interactions. Done (2026-10-23), see "As built (phase 4)".** The `cleanmigrations` warning, the purge rule, and deciding about `keep=True`.
 
 ## Decisions
 
@@ -509,3 +509,22 @@ Known limits:
 - `RecomputeFulfils` is not applied: the labels of a restored node come from its content when written.
 - A migration that **changes nothing for this model** still counts as "after" the version; it is applied (as nothing).
 - Cases not in the table are reported, never guessed.
+
+## As built (phase 4)
+
+- **`pangloss cleanmigrations` warns.** `pangloss_history.cleanup` counts the recorded versions that were written
+  part way through what a squashed migration replaces (their `schema_position` is an original other than the last;
+  one at the last original is fine, since the squash stands for it). The command prints it in yellow before it asks to
+  delete (`History: 3 recorded versions were written part way through what 0001_squashed_0003 replaces, and could
+  not be upgraded or restored once the originals are gone`). It does not refuse. Nothing is said if
+  `pangloss_history` is not installed or has no store yet. (`pangloss-cli` finds it by `INSTALLED_APPS`, with a soft
+  import, so it does not depend on it.) `HistoryStore` has a new method, `position_counts()`, for this.
+- **`keep=True` is not built, and will not be.** History keeps what a lossy change removes (the earlier versions have
+  it, and `removed-field` problems carry the old value), and `migrate --backup` keeps the whole database. It is
+  taken out of `docs/migrations.md`. (A lossy migration still loses it *from the graph*: history is best effort and
+  starts when it is installed, so for data from before that, `--backup` is the way.)
+- **Purge: the rule is recorded, nothing is built, because nothing removes deleted nodes yet** ([TODO.md](../TODO.md)).
+  When something does, it must not remove a node that a **retained version still refers to**: before removing an
+  entity, ask the history store for the versions that refer to it (a restore would then report `reference-missing`,
+  which is the fallback and is already handled). `pangloss history purge` and the policy for erasure still wait for
+  someone who needs them.
