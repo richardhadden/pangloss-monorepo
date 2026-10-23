@@ -6,6 +6,7 @@ from pydantic import create_model as pydantic_create_model
 from pydantic.alias_generators import to_camel
 from pydantic.fields import FieldInfo
 
+from pangloss_models.initialise_models.builder import union_order
 from pangloss_models.model_bases.model_tools import set_field
 from pangloss_models.field_definitions import IncomingRelationDefinition
 from pangloss_models.initialise_models.initialise_view_model import (
@@ -142,7 +143,7 @@ def initialise_head_view_model(
                 )
 
         if annotation_types:
-            annotation = Union[*annotation_types]  # type:ignore
+            annotation = Union[*sorted(annotation_types, key=union_order)]  # type:ignore
 
             set_field(
                 model.HeadView,

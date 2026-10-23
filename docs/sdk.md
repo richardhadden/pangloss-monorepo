@@ -395,8 +395,7 @@ converters, and `pangloss-memgraph` registers its datetime one when its database
 4. **`pydantic-meta-kit`** from a git URL cannot be a dependency of a published package. Either publish it to PyPI
    (it is the author's), or vendor it into `pangloss-models`. Until then the SDK is installed from a project's own
    index or with `SDK_REQUIREMENT` pointing at git URLs (so it works for now, privately).
-5. **Python.** The packages need Python 3.14 (`uuid7`, template strings). The client has the same requirement, so
-   the SDK's `requires-python` says so. (See the Python versions item of [TODO](../TODO.md).)
+5. **Python.** The packages need **Python 3.15** (`lazy from ... import`, PEP 810, in `pangloss-models`; also `uuid7`, template strings). Every `requires-python` says `>=3.15`, the client's too, and the generated SDK's says the Python it was built with.
 
 ## Tests
 
@@ -531,7 +530,7 @@ Settings (all optional, on the project's settings class): `SDK_APPS`, `SDK_EXCLU
 **Found on the way** (also in `TODO.md`):
 
 - The members of a union in the generated models differ between processes (they come from sets). It made the JSON schemas and the `.pyi` files differ from run to run, so the stub writer (`make-stubs` too: the demo's committed stub was reordered) and the schema comparison now use a fixed order. The models themselves are not changed.
-- `pangloss-models` uses `lazy from ... import`, which is **Python 3.15** syntax, though `requires-python` says 3.14: so a client needs 3.15, and the generated `requires-python` says the Python it was built with.
+- `pangloss-models` uses `lazy from ... import`, which is **Python 3.15** syntax, so a client needs 3.15 (now every package says `>=3.15`: decided in phase 7).
 
 **Not built** (from the spec): type-checking the stubs of the package (`ty`), `SDK_BUILD = "start"` (building at server start: phase 3), the `@server_only` decorator, a test that installs the built package into a fresh virtual environment (done by hand above; it needs network access for the build backend).
 
@@ -615,3 +614,29 @@ Still **not built**: type-checking the built stubs with `ty` (a build-time depen
 Run against the real demo server and Memgraph: it did all of that. The clone had two commits and the tags; the environment had `pangloss-demo-sdk 0.4` and no database or web packages; `pangloss-sdk update --dry-run` said it was the latest.
 
 **Tests** this phase: `pangloss-sdk` `test_update.py` (17), `pangloss-api` (+5: last used, the three of the throttle), `pangloss-cli` (+2: tokens), `pangloss-sdk-server` (+1: the index), `pangloss-memgraph` (last used and the migrations).
+
+
+## As built: phase 7 (stubs that are checked, `@server_only`, Python 3.15) ✅
+
+**Python 3.15 is required throughout**: every `requires-python` (the packages, the demo, the template of `pangloss new-project`) says `>=3.15`, as the models use `lazy from ... import` (PEP 810). The generated SDK's still says the Python it was built with.
+
+**Stubs for the operations, in two kinds.** Until now the stubs had the generated classes (`Person.Create`, `Person.HeadView`, ...) and nothing for the functions the database module binds, so `await Person.get(id)` was untyped. Now `stub_for_module(..., operations="async" | "sync")` adds, to every non-abstract Document and Entity: `get`, `list`, `delete`, `undelete` (and `get_for_edit` for an entity) as class methods, and `save` of `Create` and `Update` as **overloads** (`ReferenceView`, or `HeadView` with `detail=True`; `Update.save` has `expected_version`). Whether they are `async` depends on the database module that is bound, which is a choice made at `connect(sync=...)`, and **a stub can only say one**. So the package has both:
+
+| | |
+|---|---|
+| `shop/models.pyi` | Next to the module, as before: **async** (the default, and what the server's own database modules are) |
+| `shop_sdk/sync_stubs/shop/models.pyi` (and the other modules, as they are) | **Blocking**, for `connect(url, sync=True)`. A whole package, so that a checker takes it from where it is found first |
+| `pangloss-sdk sync-stubs [DIR]` | Copies it to `DIR` (default `typings`), which a checker uses **before the installed package**: pyright does from `typings`, mypy with `MYPYPATH=typings`, ty with `extra-paths = ["typings"]` under `[tool.ty.environment]` (tried with ty: with it, `Person.get(i)` is `HeadView | None` and `await Person.get(i)` is an error; without it the other way round). `--remove` takes it away |
+
+A model with a method called `list` would make a checker read `list[str]` in its own fields as the method: the stubs name `builtins.list` in those fields.
+
+**Type-checking the stubs (`typecheck.py`).** A build runs `ty` over each kind after the clean-client check: a generated file that uses every model as the kind says (`assert_type(await Person.get(i), Person.HeadView | None)`, `list`, `delete`, `undelete`, the four `save` forms, `get_for_edit`), and the stubs themselves. A wrong type, a name that is not there, or syntax that does not parse is an error that stops the build and leaves the last one (messages are prefixed `[async]` or `[sync]`). `ty` is looked for beside the Python running the server, then on the path. `SDK_TYPECHECK` is `"auto"` (default: run if found; a note, printed by `pangloss sdk build` and logged at start, says if it was not), `"required"` or `"off"`. Two of ty's rules are ignored for the stub files (an unused `type: ignore`, and `_meta`), as the stubs override what their base classes declare, as `make-stubs` does.
+
+**`@server_only`** (`from pangloss_models import server_only`). A function marked with it is the function on the server; in the SDK its **body is replaced** (text, so the file keeps its comments and layout; a docstring is kept) by an import and `raise PanglossServerOnly("name is only available on the server")`, and the imports inside it are not followed by the closure, so `import neo4j` in the body is not an error. A body on the line of its `def` is refused. Not needed by the demo; built because a project with a method that reads the database otherwise has no way to ship its models.
+
+**The order of unions at its source.** The members of a relation's union were taken from a set of options, so their order depended on the process. The options are now taken in a fixed order (`option_order`). I could not reproduce the variation in the demo before or after (four hash seeds each, the same schemas), so the canonical order in the schemas and stubs (phase 2) stays as it was: this removes a cause, not the need for it. (A union has to keep the order of the members that one option gives, which the tests depend on: a first attempt to sort all the members broke 17 tests.)
+
+**Also:** a test installs the built wheel with `uv pip install --no-deps --target`, which reads `METADATA`, `WHEEL` and `RECORD`, and checks that the installed package imports on a clean client and makes the server's models. Still **not built:** `status()` on the generated module (`check()` is the same), and a test that installs from the network (the dependencies are not on an index).
+
+**Tests**: `test_typecheck.py` (8: the two kinds, `list`, the blocking directory, ty passes, a wrong stub is named `[sync]`, bad syntax, the three settings), `test_server_only.py` (6), `test_update.py` (+2: `sync-stubs`), `test_serving.py` (+1: the installer).
+

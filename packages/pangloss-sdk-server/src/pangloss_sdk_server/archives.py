@@ -40,7 +40,7 @@ def python_of(files: dict[str, bytes]) -> str:
     for line in files["pyproject.toml"].decode().splitlines():
         if line.startswith("requires-python"):
             return line.split(">=")[1].strip(' "')
-    return "3.14"
+    return "3.15"
 
 
 def record_line(path: str, content: bytes) -> str:

@@ -64,7 +64,7 @@ class Plan:
 MINIMAL_PYPROJECT = """[project]
 name = "{name}"
 version = "0.1.0"
-requires-python = ">=3.14"
+requires-python = ">=3.15"
 # Add the Pangloss packages you use, such as pangloss-cli and pangloss-memgraph
 dependencies = []
 

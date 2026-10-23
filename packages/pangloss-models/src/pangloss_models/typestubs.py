@@ -200,7 +200,82 @@ def registered_class_names() -> dict[type, tuple[str, str]]:
 # ---------------------------------------------------------------------------
 
 
-def stub_nested_class(renderer: TypeRenderer, name: str, cls: type[BaseModel]) -> str:
+Operations = typing.Literal["async", "sync"]
+
+# (aliases, so that they cannot be the name of something in the module)
+OPERATION_IMPORTS = (
+    "import builtins as _pg_builtins",
+    "import typing as _pg_typing",
+    "import uuid as _pg_uuid",
+    "import pydantic as _pg_pydantic",
+    "from pangloss_models.model_bases.base_models import _ListItems as _PgListItems",
+)
+
+
+def has_operations(model: type) -> bool:
+    """Whether the model has `get`, `list`, `save` and the like: a Document or Entity that is
+    not abstract"""
+    from pangloss_models.model_bases.document import Document
+    from pangloss_models.model_bases.entity import Entity
+
+    return (
+        issubclass(model, (Document, Entity))
+        and not getattr(model._meta, "abstract", False)
+        and hasattr(model, "HeadView")
+    )
+
+
+def save_methods(model_name: str, name: str, mode: Operations) -> list[str]:
+    """`save` of a `Create` or `Update`: the reference view, or with `detail=True` the head view"""
+    define = "async def" if mode == "async" else "def"
+    more = ", expected_version: int | None = None" if name == "Update" else ""
+    reference, head = f"{model_name}.ReferenceView", f"{model_name}.HeadView"
+    return [
+        "@_pg_typing.overload  # type: ignore",
+        f"{define} save(self, detail: _pg_typing.Literal[False] = False{more}) -> {reference}: ...  # type: ignore",
+        "@_pg_typing.overload  # type: ignore",
+        f"{define} save(self, detail: _pg_typing.Literal[True]{more}) -> {head}: ...  # type: ignore",
+    ]
+
+
+def operations_source(model: type, qualified_name: str, mode: Operations) -> str:
+    """The functions bound to a model by the database module, as the stub of a class body:
+    `async` or blocking according to the database module they are for"""
+    from pangloss_models.model_bases.entity import Entity
+
+    define = "async def" if mode == "async" else "def"
+    is_entity = issubclass(model, Entity)
+    id_type = "_pg_uuid.UUID | _pg_pydantic.AnyHttpUrl" if is_entity else "_pg_uuid.UUID"
+    head = f"{qualified_name}.HeadView"
+    lines = [
+        "@classmethod",
+        f"{define} get(cls, id: {id_type}) -> {head} | None: ...  # type: ignore",
+    ]
+    if is_entity:
+        lines += [
+            "@classmethod",
+            f"{define} get_for_edit(cls, id: {id_type}) -> {qualified_name}.EditView | None: ...  # type: ignore",
+        ]
+    lines += [
+        "@classmethod",
+        f"{define} list(cls, search_terms: str | None = None, page_number: int | None = None, "
+        f"page_size: int | None = None, deep_search: bool = False) "
+        f"-> _PgListItems[{qualified_name}.ReferenceView]: ...  # type: ignore",
+        "@classmethod",
+        f"{define} delete(cls, id: {id_type}) -> None: ...  # type: ignore",
+        "@classmethod",
+        f"{define} undelete(cls, id: {id_type}) -> None: ...  # type: ignore",
+    ]
+    return "\n".join(lines)
+
+
+def stub_nested_class(
+    renderer: TypeRenderer,
+    name: str,
+    cls: type[BaseModel],
+    operations: Operations | None = None,
+    model_name: str = "",
+) -> str:
     # (the class overrides the one of the base class of the model, which a type checker
     # takes for a mistake)
     bases = ", ".join(renderer.base_names(cls))
@@ -227,18 +302,30 @@ def stub_nested_class(renderer: TypeRenderer, name: str, cls: type[BaseModel]) -
             continue
         ignore = "  # type: ignore" if inherited else ""
         lines.append(f"    {field_name}: {annotation}{default}{ignore}")
+    if operations and name in ("Create", "Update"):
+        lines += [f"    {line}" for line in save_methods(model_name, name, operations)]
     if len(lines) == 1:
         lines.append("    ...")
     return "\n".join(lines)
 
 
-def nested_classes_of(renderer: TypeRenderer, model: type) -> str:
-    """The source of the nested classes to add to a model"""
-    return "\n\n".join(
-        stub_nested_class(renderer, name, cls)
+def nested_classes_of(
+    renderer: TypeRenderer,
+    model: type,
+    operations: Operations | None = None,
+    qualified_name: str = "",
+) -> str:
+    """The source of the nested classes to add to a model (with the `save` of `Create` and
+    `Update`, and the model's own `get`, `list` and so on, if `operations` says which kind)"""
+    operations = operations if operations and has_operations(model) else None
+    parts = [
+        stub_nested_class(renderer, name, cls, operations, qualified_name)
         for name, cls in generated_classes(model).items()
         if is_for_users(name)
-    )
+    ]
+    if operations:
+        parts.append(operations_source(model, qualified_name, operations))
+    return "\n\n".join(parts)
 
 
 # ---------------------------------------------------------------------------
@@ -273,12 +360,25 @@ def is_kept_value(node: ast.expr | None, definitions: bool = False) -> bool:
     return False
 
 
+class _BuiltinList(ast.NodeTransformer):
+    def visit_Name(self, node: ast.Name) -> ast.AST:
+        if node.id == "list":
+            return ast.Attribute(ast.Name("_pg_builtins"), "list")
+        return node
+
+
 class Stubifier:
     """Makes the stub of a module from its source: the same declarations, without
     function bodies, and with nested classes added to the models"""
 
-    def __init__(self, renderer: TypeRenderer, models: dict[str, type]) -> None:
+    def __init__(
+        self,
+        renderer: TypeRenderer,
+        models: dict[str, type],
+        operations: Operations | None = None,
+    ) -> None:
         self.renderer = renderer
+        self.operations = operations
         # The models of the module, by qualified name
         self.models = models
         # The source to put in place of a placeholder statement (`ast.unparse` does
@@ -342,31 +442,53 @@ class Stubifier:
         qualified_name = f"{prefix}{node.name}"
         body = self.body(node.body, f"{qualified_name}.")
         if model := self.models.get(qualified_name):
-            if source := nested_classes_of(self.renderer, model):
+            if source := nested_classes_of(
+                self.renderer, model, self.operations, qualified_name
+            ):
                 placeholder = f"__nested_classes_of_{len(self.insertions)}__"
                 self.insertions[placeholder] = source
                 body.append(ast.Expr(ast.Name(placeholder)))
+        if self.operations and qualified_name in self.models:
+            # (the model has a method `list`, which a checker would take for the type)
+            body = [self.unshadowed(statement) for statement in body]
         node.body = body or [ELLIPSIS]
         return node
+
+    @staticmethod
+    def unshadowed(statement: ast.stmt) -> ast.stmt:
+        if isinstance(statement, ast.AnnAssign):
+            statement.annotation = _BuiltinList().visit(statement.annotation)
+        return statement
 
 
 def stub_for_module(
     module: types.ModuleType,
     models: Iterable[type],
     names: dict[type, tuple[str, str]] | None = None,
+    operations: Operations | None = None,
 ) -> str:
-    """The source of the stub of a module, for the models (initialised) in it"""
+    """The source of the stub of a module, for the models (initialised) in it.
+
+    With `operations`, the functions the database module binds to the models (`Person.get`,
+    `Person.Create(...).save()`) are in it too, `async` (the default database modules, and the
+    SDK's `api`) or blocking (the SDK's `api_sync`): which they are depends on the module
+    bound, so a stub for one is wrong for the other."""
     path = module_source_path(module)
     tree = ast.parse(path.read_text())
 
     renderer = TypeRenderer(module.__name__, names)
-    stubifier = Stubifier(renderer, {m.__qualname__: m for m in models})
+    stubifier = Stubifier(
+        renderer, {m.__qualname__: m for m in models}, operations
+    )
     stub = stubifier.module(tree)
     code = ast.unparse(ast.fix_missing_locations(stub))
     for placeholder, source in stubifier.insertions.items():
         code = insert_source(code, placeholder, source)
 
-    imports = "\n".join(renderer.import_lines())
+    import_lines = renderer.import_lines()
+    if operations:
+        import_lines += OPERATION_IMPORTS
+    imports = "\n".join(import_lines)
     return "\n".join([GENERATED_HEADER, *CHECKER_COMMENTS, imports, "", code, ""])
 
 

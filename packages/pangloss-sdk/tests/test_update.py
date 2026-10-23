@@ -18,6 +18,7 @@ class FakeDistribution:
         self.version = version
         self.requires = list(requires)
         self._direct = direct
+        self.files = []
 
     def read_text(self, filename):
         assert filename == "direct_url.json"
@@ -205,3 +206,44 @@ def test_a_problem_is_a_message_and_a_status_not_a_traceback(monkeypatch, capsys
     monkeypatch.setattr(update, "sdk_distributions", lambda: [])
     assert sdk_cli.main(["update"], out=io.StringIO()) == 1
     assert "No Pangloss SDK" in capsys.readouterr().err
+
+
+# --- stubs for the blocking SDK ----------------------------------------------------------------------
+
+
+def test_sync_stubs_are_copied_to_a_directory_a_checker_uses_and_taken_away(tmp_path, monkeypatch, capsys):
+    from pathlib import PurePosixPath
+
+    installed = tmp_path / "site"
+    (installed / "demo_sdk/sync_stubs/demo_app").mkdir(parents=True)
+    (installed / "demo_sdk/sync_stubs/demo_app/models.pyi").write_text("class Person: ...\n")
+    (installed / "demo_sdk/sync_stubs/demo_app/__init__.py").write_text("")
+
+    class Installed(FakeDistribution):
+        def __init__(self):
+            super().__init__()
+            self.files = [
+                PurePosixPath("demo_sdk/__init__.py"),
+                PurePosixPath("demo_sdk/sync_stubs/demo_app/models.pyi"),
+                PurePosixPath("demo_sdk/sync_stubs/demo_app/__init__.py"),
+            ]
+
+        def locate_file(self, path):
+            return installed / path
+
+    monkeypatch.setattr(update, "sdk_distributions", lambda: [Installed()])
+    target = tmp_path / "typings"
+
+    assert sdk_cli.main(["sync-stubs", str(target)], out=io.StringIO()) == 0
+    assert (target / "demo_app/models.pyi").read_text() == "class Person: ...\n"
+    assert (target / "demo_app/__init__.py").exists()
+    assert not (target / "demo_sdk").exists()
+
+    assert sdk_cli.main(["sync-stubs", str(target), "--remove"], out=io.StringIO()) == 0
+    assert not (target / "demo_app/models.pyi").exists()
+
+
+def test_an_sdk_without_blocking_stubs_says_so(monkeypatch, capsys):
+    monkeypatch.setattr(update, "sdk_distributions", lambda: [FakeDistribution()])
+    assert sdk_cli.main(["sync-stubs"], out=io.StringIO()) == 1
+    assert "no blocking stubs" in capsys.readouterr().err

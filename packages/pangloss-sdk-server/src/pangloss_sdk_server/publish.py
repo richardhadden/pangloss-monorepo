@@ -12,6 +12,7 @@ from typing import Any
 from pangloss_sdk_server import config, gitrepo
 from pangloss_sdk_server.builder import Package, build_package
 from pangloss_sdk_server.check import check_package
+from pangloss_sdk_server.typecheck import check_types
 
 STATE_FILE = "state.json"
 PACKAGE_DIRECTORY = "package"
@@ -22,6 +23,8 @@ class Built:
     changed: bool
     manifest: dict[str, Any]
     directory: Path
+    # What was not done, and why (e.g. no `ty` to check the stubs with)
+    notes: list[str] = dataclasses.field(default_factory=list)
 
 
 def read_state(output: Path) -> dict[str, Any]:
@@ -85,6 +88,12 @@ def build(root: Path, settings: Any, force: bool = False) -> Built:
         check_package(
             staging, package.manifest["module"], set(package.manifest["modules"])
         )
+        note = check_types(
+            staging,
+            package.manifest["module"],
+            shipped_models(root, set(package.manifest["modules"])),
+            config.setting("SDK_TYPECHECK", "auto", settings),
+        )
     except Exception:
         shutil.rmtree(staging, ignore_errors=True)
         raise
@@ -104,7 +113,19 @@ def build(root: Path, settings: Any, force: bool = False) -> Built:
         + "\n"
     )
     gitrepo.commit_safely(output, package.files, package.manifest)
-    return Built(True, package.manifest, final)
+    return Built(True, package.manifest, final, [note] if note else [])
+
+
+def shipped_models(root: Path, modules: set[str]) -> list[type]:
+    """The registered models declared in the modules the SDK has"""
+    from pangloss_models.typestubs import modules_with_models
+
+    return [
+        model
+        for module_name, models in sorted(modules_with_models(root).items())
+        if module_name in modules
+        for model in models
+    ]
 
 
 def diff_against_built(package: Package, output: Path) -> list[str]:

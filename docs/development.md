@@ -2,7 +2,7 @@
 
 ## Setup
 
-Requires Python 3.14 (`.python-version`) and [uv](https://docs.astral.sh/uv/).
+Requires Python 3.15 (`.python-version`; the models use `lazy import`, PEP 810) and [uv](https://docs.astral.sh/uv/).
 
 ```sh
 uv sync            # installs all workspace packages into .venv

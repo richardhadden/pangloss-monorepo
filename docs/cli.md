@@ -120,7 +120,9 @@ For Memgraph this is `pangloss_memgraph.databases.memgraph.setup`; the SDK has a
 
 With `pangloss_sdk_server` in `INSTALLED_APPS` (see [the SDK](sdk.md)): `pangloss sdk build [--force]` builds the SDK of the project into `.pangloss/sdk/package` (only if the models changed, and after trying it on a clean client), `pangloss sdk status` says what is built and whether the models have changed since (exit 2 if so), and `pangloss sdk show [--diff]` lists the files, or the change since the last build.
 
-`pangloss users tokens create|list|revoke USERNAME` makes (and shows once), lists (with when each was last used) and deletes a user's personal access tokens. The client has its own command, `pangloss-sdk login|logout|status|update` (in the `pangloss-sdk` package, which does not have `pangloss`).
+`pangloss sdk build` also type-checks the stubs it makes (see `SDK_TYPECHECK` in [settings](settings.md)); a failure stops the build and leaves the last one.
+
+`pangloss users tokens create|list|revoke USERNAME` makes (and shows once), lists (with when each was last used) and deletes a user's personal access tokens. The client has its own command, `pangloss-sdk login|logout|status|update|sync-stubs` (in the `pangloss-sdk` package, which does not have `pangloss`).
 
 ## Type stubs
 

@@ -6,7 +6,7 @@ readme = "README.md"
 authors = [
     { name = "Richard Hadden", email = "richard.hadden@oeaw.ac.at" }
 ]
-requires-python = ">=3.14"
+requires-python = ">=3.15"
 dependencies = [
     "frozendict>=2.4.7",
     "pangloss-core",

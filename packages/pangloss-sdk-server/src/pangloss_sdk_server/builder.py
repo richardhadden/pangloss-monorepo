@@ -23,6 +23,7 @@ from pangloss_models.typestubs import (
 
 from pangloss_sdk_server import config
 from pangloss_sdk_server.closure import Closure, closure_of, locate
+from pangloss_sdk_server.sources import ServerOnlyProblem, shipped_source
 
 # Distributions the SDK has already (through `pangloss-sdk`), or that name Pangloss itself
 ALREADY_THERE = {"annotated-types", "pydantic", "pydantic-core", "frozendict", "pydantic-settings"}
@@ -113,6 +114,18 @@ def requirements_for(closure: Closure, settings: Any = None) -> list[str]:
 def sdk_requirement(settings: Any = None) -> str:
     default = f"pangloss-sdk=={importlib.metadata.version('pangloss-sdk')}"
     return config.setting("SDK_REQUIREMENT", default, settings)
+
+
+# (in the generated module's package: the stubs of the blocking SDK)
+SYNC_STUBS = "sync_stubs"
+
+
+def shipped(path: Path) -> bytes:
+    """A module's source as shipped (the bodies of `@server_only` functions taken out)"""
+    try:
+        return shipped_source(path.read_text(), str(path)).encode()
+    except ServerOnlyProblem as error:
+        raise SdkBuildError("The models cannot be shipped as they are", [str(error)]) from error
 
 
 def client_module_source(distribution: str, project: str) -> str:
@@ -231,7 +244,7 @@ def build_package(
 
     files: dict[str, bytes] = {}
     for name, path in closure.modules.items():
-        files[path.resolve().relative_to(root).as_posix()] = path.read_bytes()
+        files[path.resolve().relative_to(root).as_posix()] = shipped(path)
 
     names = registered_class_names()
     for module_name, models in modules_with_models(root).items():
@@ -241,9 +254,22 @@ def build_package(
 
         imported = importlib.import_module(module_name)
         path = closure.modules[module_name].resolve().relative_to(root)
-        files[path.with_suffix(".pyi").as_posix()] = stub_for_module(
-            imported, models, names
+        # The stubs for `await Person.get(...)` (next to the module, so that they are what a
+        # type checker uses), and for the blocking `Person.get(...)` of `connect(sync=True)`:
+        # a different stub, as the same function is `async` or not, and a stub can only say
+        # one. `pangloss-sdk sync-stubs` puts the second where a checker will use it
+        stub = path.with_suffix(".pyi").as_posix()
+        files[stub] = stub_for_module(imported, models, names, "async").encode()
+        files[f"{module}/{SYNC_STUBS}/{stub}"] = stub_for_module(
+            imported, models, names, "sync"
         ).encode()
+
+    # (a checker takes a package from the first place it is found whole: so the directory of the
+    # blocking stubs has every module of the models, the others as they are)
+    for name, path in closure.modules.items():
+        relative = path.resolve().relative_to(root).as_posix()
+        if f"{module}/{SYNC_STUBS}/{Path(relative).with_suffix('.pyi').as_posix()}" not in files:
+            files[f"{module}/{SYNC_STUBS}/{relative}"] = files[relative]
 
     tops = sorted({name.split(".")[0] for name in closure.modules})
     for top in tops:

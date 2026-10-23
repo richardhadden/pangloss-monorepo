@@ -5,6 +5,7 @@ import asyncio
 import base64
 import hashlib
 import io
+import shutil
 import json
 import re
 import subprocess
@@ -346,3 +347,26 @@ def test_the_index_lists_the_one_project_and_links_its_files_with_hashes(make_ap
             path = "/api/sdk/" + link.removeprefix("../../")
             content = client.get(path, headers=basic("root")).content
             assert hashlib.sha256(content).hexdigest() == digest
+
+
+@pytest.mark.skipif(shutil.which("uv") is None, reason="uv is not installed")
+def test_an_installer_accepts_the_wheel_and_the_installed_package_works(make_app, tmp_path):
+    """`uv pip install` reads METADATA, WHEEL and RECORD (no network: the dependencies are not
+    fetched, and the check imports with this environment's)"""
+    with TestClient(make_app()) as client:
+        body = info(client)
+        url = body["downloads"]["wheel"].removeprefix("http://testserver")
+        wheel = tmp_path / "shop_sdk-0.1-py3-none-any.whl"
+        wheel.write_bytes(client.get(url, headers=basic("root")).content)
+
+    target = tmp_path / "installed"
+    result = subprocess.run(
+        ["uv", "pip", "install", "--no-deps", "--target", str(target), str(wheel)],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stderr
+    assert (target / "shop/models.pyi").is_file()
+    assert (target / "shop_sdk/sync_stubs/shop/models.pyi").is_file()
+    assert (target / "shop_sdk-0.1.dist-info/METADATA").is_file()
+    assert set(check.run_in_clean_process(target, "shop_sdk")) == {"Person", "Statement"}

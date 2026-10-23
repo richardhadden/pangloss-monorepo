@@ -5,6 +5,7 @@
     pangloss-sdk status [URL]
     pangloss-sdk logout [URL]
     pangloss-sdk update [PACKAGE] [--dry-run]           # install what the server has now
+    pangloss-sdk sync-stubs [DIR] [--remove]            # type stubs for the blocking SDK
 
 The password is never kept: a **refresh token** is (see `pangloss_sdk.credentials` for where).
 """
@@ -141,6 +142,50 @@ def update(args: argparse.Namespace, transport: Any, prompt: Any, out: Any) -> i
     return subprocess.run(plan.command, check=False).returncode
 
 
+SYNC_STUBS = "sync_stubs"
+
+
+def sync_stubs(args: argparse.Namespace, transport: Any, prompt: Any, out: Any) -> int:
+    """Type stubs for `connect(sync=True)`. The stubs that come with the SDK say that `Person.get`
+    and `save` are `async`, as they are by default; these say that they are not. A type checker
+    uses what is in `typings` (pyright does by itself; mypy with `MYPYPATH=typings`; ty with
+    `extra-paths = ["typings"]` under `[tool.ty.environment]`) before the installed package."""
+    from pathlib import Path
+
+    from pangloss_sdk import update as updating
+
+    try:
+        distribution = updating.choose(args.package, updating.sdk_distributions())
+    except updating.UpdateError as error:
+        print(str(error), file=sys.stderr)
+        return 1
+    found = [
+        (path, distribution.locate_file(path))
+        for path in distribution.files or []
+        if SYNC_STUBS in path.parts
+    ]
+    if not found:
+        print(f"{distribution.metadata['Name']} has no blocking stubs (it was made by an older server)", file=sys.stderr)
+        return 1
+
+    target = Path(args.directory)
+    for path, source in found:
+        destination = target / Path(*path.parts[path.parts.index(SYNC_STUBS) + 1 :])
+        if args.remove:
+            destination.unlink(missing_ok=True)
+        else:
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_bytes(Path(str(source)).read_bytes())
+    if args.remove:
+        print(f"Removed the blocking stubs from {target}", file=out)
+    else:
+        print(f"Wrote the blocking stubs of {distribution.metadata['Name']} to {target}/", file=out)
+        print("A type checker has to use it before the installed package: pyright does, from `typings`;", file=out)
+        print("mypy with MYPYPATH=" + str(target) + "; ty with extra-paths = [\"" + str(target) + "\"] under [tool.ty.environment].", file=out)
+        print("Use it with `connect(url, sync=True)`; remove it (--remove) to go back to async.", file=out)
+    return 0
+
+
 def parser() -> argparse.ArgumentParser:
     main_parser = argparse.ArgumentParser(prog="pangloss-sdk", description=__doc__.split("\n\n")[0])
     commands = main_parser.add_subparsers(dest="command", required=True)
@@ -163,6 +208,12 @@ def parser() -> argparse.ArgumentParser:
     update_parser.add_argument("package", nargs="?", help="The SDK, if more than one is installed")
     update_parser.add_argument("--dry-run", action="store_true", help="Say what would be run")
     update_parser.set_defaults(run=update)
+
+    stubs_parser = commands.add_parser("sync-stubs", help="Type stubs for the blocking SDK (connect(sync=True))")
+    stubs_parser.add_argument("directory", nargs="?", default="typings", help="Where a type checker looks first (default: typings)")
+    stubs_parser.add_argument("--package", help="The SDK, if more than one is installed")
+    stubs_parser.add_argument("--remove", action="store_true", help="Take them away again")
+    stubs_parser.set_defaults(run=sync_stubs)
     return main_parser
 
 

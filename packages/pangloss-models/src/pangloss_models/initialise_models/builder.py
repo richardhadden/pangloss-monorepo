@@ -303,7 +303,8 @@ def relation_annotation(
     """The annotation of a relation field: a union of what may be given for each type it allows
     (in a list, if it is one). None if it allows nothing."""
     types: list[type] = []
-    for option in definition.type_options:
+    # (in a fixed order: the options are a set, and the order of a union is the order here)
+    for option in sorted(definition.type_options, key=option_order):
         if isinstance(option, RelationToEntity):
             types.extend(entity_types(kind, option, "field"))
         elif isinstance(option, RelationToDocument):
@@ -314,6 +315,19 @@ def relation_annotation(
     if not types:
         return None
     return wrap_in_union(kind, definition, types)
+
+
+def union_order(member: Any) -> tuple[str, str]:
+    """A fixed order for the members of a union that come from a set (whose order differs from
+    one run to the next: hash randomisation, and so would the schemas and stubs made from it)"""
+    return (
+        str(getattr(member, "__module__", "")),
+        str(getattr(member, "__qualname__", member)),
+    )
+
+
+def option_order(option: Any) -> tuple[str, str]:
+    return (type(option).__name__, repr(getattr(option, "annotated_type", option)))
 
 
 def wrap_in_union(kind: ModelKind, definition: RelationFieldDefinition, types: list[type]) -> Any:

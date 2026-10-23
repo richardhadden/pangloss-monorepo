@@ -1,6 +1,7 @@
 """The SDK this server has built and serves, and building it as the server starts or on the
 first request."""
 
+import dataclasses
 import asyncio
 import json
 import logging
@@ -23,6 +24,7 @@ class Current:
     manifest: dict[str, Any]
     files: dict[str, bytes]
     built_at: str | None
+    notes: list[str] = dataclasses.field(default_factory=list)
 
     @property
     def fingerprint(self) -> str:
@@ -120,6 +122,7 @@ async def ensure_built(settings: Any = None, force: bool = False) -> Current:
             manifest=built.manifest,
             files=files,
             built_at=publish.read_state(output).get("built_at"),
+            notes=built.notes,
         )
         return _current
 
@@ -148,5 +151,7 @@ async def on_start(settings: Any) -> None:
     try:
         built = await ensure_built(settings)
         logger.info("SDK %s %s", built.manifest["distribution"], built.manifest["version"])
+        for note in built.notes:
+            logger.warning("SDK: %s", note)
     except SdkBuildError as error:
         logger.error("The SDK could not be built: %s %s", error, error.problems)

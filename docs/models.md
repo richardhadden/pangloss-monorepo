@@ -116,6 +116,10 @@ A relation that a subclass narrows is shown only under the narrower name. If `Ac
 - **An entity that is referred to is not deleted, but marked.** `delete` raises `PanglossEntityInUseError` (it has `entity_id` and `referenced_by`, with the `id`, `type` and `label` of up to 10 of the head documents or entities that refer to it), and the entity is flagged `marked_for_deletion`, which its `HeadView` shows as `meta.marked_for_deletion`. The mark is kept although the call raised. Delete it again once nothing refers to it, and it is deleted, and the mark cleared. Nothing deletes it automatically.
 - A deleted document or entity that does not exist, or is of another type, raises `PanglossNotFoundError`.
 
+## Methods that only the server can run (`@server_only`)
+
+A method that reads the database, or needs anything a client of the API does not have, can be marked `from pangloss_models import server_only` (as the nearest decorator to the function, under `@classmethod`). On the server it is the function. In the SDK the body is replaced by one that raises `PanglossServerOnly`, and what the function imports is not followed, so the models can still be shipped. (Better: keep such code in another module, which the models do not import.) See [the SDK](sdk.md).
+
 ## Embedded
 
 Structured data without its own identity or head node, for example a date range belonging to the object that contains it. It is stored as a separate node, linked from its container, and written together with it, and read back with it (tested). `Embedded` classes are used as field types, singly or as a union (`Date | DateRange`), and get their own `Create`/`Update`/`View`/`CreateDB`/`UpdateDB` models. They never require a label. A list of embedded objects (`list[Date]`) and an optional embedded object (`Date | None`) are **not supported**, and raise an error at `initialise()`.

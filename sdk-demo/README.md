@@ -26,5 +26,9 @@ PANGLOSS_USERNAME=me PANGLOSS_PASSWORD=... ./run.sh          # --keep leaves wha
 To keep the server's SDK up to date later: `pangloss-sdk update` (or `git pull` in the clone). To keep a login
 between runs: `pangloss-sdk login http://127.0.0.1:8765`.
 
+For type checking, the stubs that come with the SDK are for `await Person.get(...)`. To use `connect(url, sync=True)`
+(a script with no event loop) and have the checker agree: `pangloss-sdk sync-stubs` writes `typings/`, which a checker
+uses first (see [the SDK](../docs/sdk.md)).
+
 What it removes is only **marked** as deleted (as everything is): to leave the database as it was, remove the nodes
 labelled `(SDK demo)` and their records with Cypher.

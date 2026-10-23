@@ -6,7 +6,7 @@ readme = "README.md"
 authors = [
     { name = "Richard Hadden", email = "rwjhadden@gmail.com" }
 ]
-requires-python = ">=3.14"
+requires-python = ">=3.15"
 dependencies = [
     "argon2-cffi>=25.1.0",
     "pangloss-core",

@@ -11,6 +11,8 @@ import dataclasses
 import sys
 from pathlib import Path
 
+from pangloss_sdk_server.sources import is_server_only
+
 # What only a server has: a model module that imports one of these cannot run on a client
 SERVER_ONLY = {
     "neo4j",
@@ -69,13 +71,29 @@ def resolve_relative(module: str, is_init: bool, level: int, name: str | None) -
     return ".".join(base) or None
 
 
+def walk_shipped(tree: ast.AST):
+    """Every node of what the SDK ships: not the body of a `@server_only` function (it is
+    taken out), though its signature and decorators are read"""
+    stack = [tree]
+    while stack:
+        node = stack.pop()
+        yield node
+        if is_server_only(node):
+            assert isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef)
+            stack.extend(
+                [*node.decorator_list, node.args, *([node.returns] if node.returns else [])]
+            )
+            continue
+        stack.extend(ast.iter_child_nodes(node))
+
+
 def imports_of(module: str, path: Path) -> tuple[list[str], list[str]]:
     """The names a module imports, as dotted module names (for `from a import b`, both `a`
     and `a.b`, as either may be a module), and what could not be resolved"""
     tree = ast.parse(path.read_text(), filename=str(path))
     names: list[str] = []
     unresolved: list[str] = []
-    for node in ast.walk(tree):
+    for node in walk_shipped(tree):
         if isinstance(node, ast.Import):
             for alias in node.names:
                 parts = alias.name.split(".")

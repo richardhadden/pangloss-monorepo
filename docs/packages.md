@@ -1,6 +1,6 @@
 # Packages
 
-This is a [uv workspace](https://docs.astral.sh/uv/concepts/projects/workspaces/); each directory under `packages/` is a separate distributable package. Python 3.14 or newer is required.
+This is a [uv workspace](https://docs.astral.sh/uv/concepts/projects/workspaces/); each directory under `packages/` is a separate distributable package. Python 3.15 or newer is required (the models use `lazy from ... import`, PEP 810).
 
 ```
 pangloss-memgraph ──► pangloss-models ──► pangloss-core
@@ -64,7 +64,7 @@ Optional: `"pangloss_sdk_server"` in `INSTALLED_APPS`. Builds the SDK of the pro
 Lets Pangloss models be used locally and read and write a remote Pangloss instance through its API ("API as database"). The client and the generated per-project SDK are built (see [the SDK](sdk.md)); `sdk-demo/` in the repository shows it used from outside a project.
 
 - `databases/api` (async) and `databases/api_sync` (blocking) are database modules whose functions are requests: set `DATABASE_MODULE` to one, or call `pangloss_sdk.connect(url, apps=[...])`.
-- `SdkSettings`, login (settings, prompt, tokens kept in memory, or a kept refresh token: `pangloss-sdk login|logout|status`), `pangloss-sdk update` (installs the SDK the server has now, the way it was installed before), the errors the server's database module raises, and `iterate`.
+- `SdkSettings`, login (settings, prompt, tokens kept in memory, or a kept refresh token: `pangloss-sdk login|logout|status`), `pangloss-sdk update` (installs the SDK the server has now, the way it was installed before), `pangloss-sdk sync-stubs` (type stubs for the blocking SDK), the errors the server's database module raises, and `iterate`.
 - The model tests use `databases/api` as a database module because it needs no live connection.
 
 ## pangloss-users 🚧

@@ -102,3 +102,8 @@ class PanglossMigrationIrreversible(PanglossMigrationError):
 class PanglossMigrationNotSupported(PanglossMigrationError):
     """A change that has to be written by hand (`RunCypher`): it is found, but there is no
     general way to apply it"""
+
+
+class PanglossServerOnly(Exception):
+    """A function marked `@server_only` was called on a client of the API (the SDK), which
+    does not have its body"""

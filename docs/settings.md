@@ -44,6 +44,7 @@ Values can also come from environment variables or a `.env` file (`pydantic-sett
 | Class | Package | Fields |
 |-------|---------|--------|
 | `MemgraphDatabaseSettings` | pangloss-memgraph | `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `DATABASE_NAME` |
+| `SDK_TYPECHECK` | `pangloss_sdk_server` (read from the settings if set) | Default `"auto"`: the stubs of the SDK are type-checked with `ty` when a build is made if `ty` is installed beside the server (and a note says if it is not); `"required"` fails the build without it; `"off"` does not look. See [the SDK](sdk.md) |
 | `LOGIN_MAX_FAILURES`, `LOGIN_FAILURE_WINDOW_SECONDS` | `BaseSettings` | Default 10 and 300: wrong passwords for a username before it is refused (`429`) for the rest of the window. 0 turns it off. Per server process. See [the API](api.md) |
 | `SdkSettings` (a `ClientSettings`) | pangloss-sdk | `URL`; optional `USERNAME`, `PASSWORD`, `TOKEN`, `TIMEOUT`, `MAX_CONNECTIONS`, `VERIFY_TLS`, `READ_RETRIES`. Environment prefix `PANGLOSS_`. See [the SDK](sdk.md) |
 

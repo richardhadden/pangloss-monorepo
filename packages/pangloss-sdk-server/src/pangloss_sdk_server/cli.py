@@ -61,6 +61,8 @@ def build(
     typer.echo(f"  apps: {', '.join(manifest['apps'])}")
     typer.echo(f"  modules: {len(manifest['modules'])}")
     typer.echo(f"  in {built.directory}")
+    for note in built.notes:
+        typer.secho(f"  note: {note}", fg="yellow")
 
 
 @cli.command()
