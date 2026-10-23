@@ -3,9 +3,9 @@ rewritten). See docs/history.md, "Restoring".
 
 What is done, in order, and nothing is written until the checks have passed:
 
-1. the version must have been recorded, at the schema position the database is at now (an older
-   one needs upgrading, which is not done yet);
-2. its content must still be a valid `Update` of the model;
+1. the version must have been recorded;
+2. it is upgraded to the models of now (`upgrade.py`), and what is then wrong with it (a problem that
+   needs someone's decision, or content that is not a valid `Update`) stops the restore;
 3. the entities it refers to must exist: ones that were deleted since are undeleted (an undeletion
    writes no content, and is harmless if the restore then fails); one that is gone is a problem;
 4. a deleted head node is undeleted, and the update is made conditional on the version it has;
@@ -19,16 +19,14 @@ from collections.abc import Iterator
 from typing import Any
 from uuid import UUID
 
-from pangloss_core import settings as core_settings
 from pangloss_models.exceptions import (
     PanglossConflictError,
     PanglossNotFoundError,
 )
 from pangloss_models.model_bases.entity import Entity
 from pangloss_models.model_registry import ModelRegistry
-from pydantic import ValidationError
 
-from pangloss_history.schema_position import schema_position
+from pangloss_history.draft import make_draft
 from pangloss_history.store import HistoryStore
 
 
@@ -96,30 +94,16 @@ async def restore(
             f"Version {version} of {model.__name__} {id} was not recorded"
         )
 
-    settings = core_settings.__dict__.get("SETTINGS")
-    position = schema_position(settings.INSTALLED_APPS if settings is not None else [])
-    if record.schema_position != position:
-        raise PanglossRestoreError(
-            [
-                {
-                    "kind": "schema-changed",
-                    "message": f"Version {version} was written when the migrations were at "
-                    f"{record.schema_position}, and they are at {position} now: it has to be "
-                    "upgraded first, which is not done yet",
-                }
-            ]
-        )
+    draft = make_draft(record, model)
+    if draft.blocking:
+        raise PanglossRestoreError([p.to_dict() for p in draft.blocking])
+    data = draft.data
 
-    try:
-        update = model.Update.model_validate(record.data())
-    except ValidationError as error:
-        raise PanglossRestoreError(
-            [{"kind": "validation", "message": f"Version {version} is not valid now: {error}"}]
-        ) from error
-
-    problems = await bring_back_entities(record.data(), id)
+    problems = await bring_back_entities(data, id)
     if problems:
         raise PanglossRestoreError(problems)
+
+    update = model.Update.model_validate(data)
 
     if await called(model.get(id)) is None:
         # (deleted, or not there at all, which `undelete` says)

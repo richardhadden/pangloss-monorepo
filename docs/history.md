@@ -183,7 +183,9 @@ SQLite, a worker thread and a growing set of endpoints part of the core for ever
 upgrader (phase 3) to the core's release. The one thing that does tie `pangloss-history` to another package is
 phase 3: the structured migration operations live in `pangloss_memgraph.databases.memgraph.migrations` (with
 their Cypher), so the document-upgrade functions either live in `pangloss-history` and depend on that, or the
-operation *data* (not the Cypher) is split out of the memgraph package first. That is a phase 3 decision and
+operation *data* (not the Cypher) is split out of the memgraph package first. (*Resolved when phase 3 was built:* the
+changes are plain data in `pangloss_models.migrations.changes`, with the snapshot replay in `...migrations.state`;
+only the Cypher is in `pangloss_memgraph`. `pangloss-history` depends on `pangloss-models` alone.) That is a phase 3 decision and
 does not affect phases 1 and 2.
 
 Settings: `HISTORY_DB_PATH` (default `.pangloss/history.sqlite3`), `HISTORY_QUEUE_SIZE`, `HISTORY_BATCH_SIZE`,
@@ -359,7 +361,7 @@ explained. The policy, and a `pangloss history purge` command, wait until someon
    interplay. Includes recording the schema position, which cannot be added later.
 2. **Restore at the same schema position. Done (2026-10-23), see "As built (phase 2)".** The restore as a new version, the entity undeletion, the conflict
    checks, and `POST .../restore`.
-3. **The document interpreter and the draft.** The function per change, the equivalence tests, the `problems`
+3. **The document interpreter and the draft. Done (2026-10-23), see "As built (phase 3)".** The function per change, the equivalence tests, the `problems`
    list, `GET .../draft`, and the interface's form for it.
 4. **Interactions.** The `cleanmigrations` warning, the purge rule, and deciding about `keep=True`.
 
@@ -453,3 +455,57 @@ Tests: `pangloss-memgraph/tests/test_history_restore.py` (against Memgraph: new 
 refused and nothing written; deleted document; entity deleted since, and one that is gone; a URL taken since; an
 entity; unrecorded version, wrong model, changed schema position) and, in `pangloss-history/tests`, the route and the
 command.
+
+## As built (phase 3)
+
+`upgrade.py` and `draft.py` in `pangloss-history`.
+
+**The upgrade.** `upgrade(data, position, apps)` finds the migrations after the version's `schema_position`
+(`migrations_after`: those not at or before the position of each app, in the order of the migration graph, with the
+snapshot of the models as they were at the position, from `states_around`), and applies each change in turn to a
+copy of the document (`apply_migrations`), keeping the snapshot up to date change by change, so that a field or a
+parent class means what it did at that point. A node gets a change to model `M` if `M` is in the `labels` of its
+type (so parents and traits count). An entity that the document refers to is a reference, not part of it, and is
+not walked.
+
+| Change | On the document |
+|---|---|
+| `AddField` | the migration's default; `[]` for a list; `None` for a nullable field; else the problem `missing-required` |
+| `RemoveField` | dropped; the problem `removed-field` with the old value (**not blocking**: it is in history) |
+| `RenameField`, `RenameModel` | the key; the `type` of the node, and of every reference to the model |
+| `AlterLiteralType`, `AlterListItemType` | converted as `conversion.py` converts it in Cypher (`on_failure` `null` / `default`); otherwise `type-changed` |
+| `AlterNullability` (to not null) | the migration's default, else `missing-required` |
+| `AlterEnumMemberValue`, `RemoveEnumMember` | values mapped (the replacement, else `type-changed`) |
+| `AlterRelationTarget` (narrowing), `AlterCardinality` | `reference-not-allowed` (or removed, with `on_narrowing = "remove"`); a list made single keeps the first (`keep = "first"`), else `cardinality-changed` |
+| `DeleteModel` | `model-removed` |
+| `RunCypher`, `RunPython` | `hand-written-migration`: the structure around it is still upgraded |
+| Enum creation, renames, model labels and options, indexes, constraints, reverse names, parent fields, `RecomputeFulfils`, `StateOnly` | nothing: not in the stored document, or worked out again on write |
+| Everything else (wrapping and unwrapping relations, annotated values, embedded objects and literals into each other, edge models) | `unsupported-change`: **not applied yet** |
+
+Each `Problem` is `{kind, message, path?, oldValue?, migration?, blocking}`. The equivalence tests
+(`pangloss-memgraph/tests/test_history_upgrade.py`) write data with the old models, then migrate the database with
+the real operations and read it with the new models, **and** upgrade the stored version and validate it as the new
+`Update`: they must agree. They cover add, remove, rename (field and model), type conversion (with each
+`on_failure`), nullability, enum value changes and removal, and cardinality. The unit tests
+(`test_history_upgrade_unit.py`) cover the rest of the table (positions, squashes, hand-written, problems).
+
+**The draft.** `make_draft(record, model)` upgrades the version if its position is not the current one, and adds the
+`validation` problems of the model's `Update` on the result. `GET .../history/{v}` now returns the upgraded content
+by default (`?upgrade=false` for what was written), with `upgraded` and `problems`; `GET .../history/{v}/draft`
+returns the document of "Restore as a draft" (`fromVersion`, `schemaPosition`, `draft`, `problems`).
+
+**Restore** now upgrades first: it refuses (`409`) only if there is a *blocking* problem, and says which. A version
+whose only problems are non-blocking (a removed field) is restored, and the values dropped are in the earlier
+version. (This differs from the design above, where every problem blocked: a removed field blocking every restore
+across it would make the restore of an old version impossible without the interface, and nothing is lost.)
+`unknown-position` (the position is a migration that is gone, as part way through a squash) blocks and returns the
+version as written.
+
+Known limits:
+
+- **The interface's form for a draft is not built** (it is the interface's phase, not this package's).
+- **Enum values inside annotated values and edge properties** are not mapped (only those of literal and list
+  fields); nor are those fields upgraded at all when annotated values change (`unsupported-change`).
+- `RecomputeFulfils` is not applied: the labels of a restored node come from its content when written.
+- A migration that **changes nothing for this model** still counts as "after" the version; it is applied (as nothing).
+- Cases not in the table are reported, never guessed.

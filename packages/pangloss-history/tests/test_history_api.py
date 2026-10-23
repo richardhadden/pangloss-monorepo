@@ -65,8 +65,9 @@ def test_the_versions_are_listed_with_the_ones_that_were_not_recorded(client):
 
 def test_a_version_is_given_as_it_was_written(client):
     id = seed(client)
-    body = client.get(f"/api/Statement/{id}/history/1").json()
+    body = client.get(f"/api/Statement/{id}/history/1", params={"upgrade": False}).json()
     assert body["content"]["text"] == "one" and body["op"] == "create"
+    assert body["upgraded"] is False and body["problems"] == []
 
 
 def test_the_difference_between_two_versions(client):
@@ -139,3 +140,25 @@ def test_a_restore_that_cannot_be_done_is_a_conflict(client, monkeypatch):
     monkeypatch.setattr(api, "restore", refuse)
     response = client.post(f"/api/Statement/{id}/history/1/restore", headers={"If-Match": "*"})
     assert response.status_code == 409 and "upgrade it first" in response.json()["detail"]
+
+
+def test_a_version_and_its_draft_are_upgraded_with_the_problems(client, monkeypatch):
+    from pangloss_history.draft import Draft
+    from pangloss_history.upgrade import Problem
+
+    id = seed(client)
+    problem = Problem("removed-field", "gone", path="nickname", old_value="Ada", blocking=False)
+    monkeypatch.setattr(api, "make_draft", lambda record, model: Draft({"text": "up"}, [problem], True))
+
+    version = client.get(f"/api/Statement/{id}/history/1").json()
+    assert version["content"] == {"text": "up"} and version["upgraded"] is True
+    assert version["problems"] == [
+        {"kind": "removed-field", "message": "gone", "blocking": False, "path": "nickname", "oldValue": "Ada"}
+    ]
+
+    body = client.get(f"/api/Statement/{id}/history/1/draft").json()
+    assert body["fromVersion"] == 1 and body["draft"] == {"text": "up"}
+    assert body["schemaPosition"] == {"letters": "0001_initial"}
+    assert body["problems"][0]["kind"] == "removed-field"
+
+    assert client.get(f"/api/Statement/{id}/history/9/draft").status_code == 404

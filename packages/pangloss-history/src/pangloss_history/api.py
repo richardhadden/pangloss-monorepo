@@ -14,6 +14,7 @@ from pangloss_api.routes.models import etag, expected_version, routable_models
 
 from pangloss_history import config
 from pangloss_history.diff import diff
+from pangloss_history.draft import make_draft
 from pangloss_history.gaps import find_gaps
 from pangloss_history.restore import restore
 from pangloss_history.store import HistoryRecord, HistoryStore, SqliteStore
@@ -106,10 +107,43 @@ def version_content(store: HistoryStore, model: type, id: UUID, version: int) ->
 
 
 @router.get("/{model_name}/{id}/history/{version}")
-async def get_version(model_name: str, id: UUID, version: int, store: Store) -> dict[str, Any]:
-    """A version, as it was written (not yet upgraded to the models of now)"""
-    record = version_content(store, find_model(model_name), id, version)
-    return {**describe(record), "content": record.data()}
+async def get_version(
+    model_name: str,
+    id: UUID,
+    version: int,
+    store: Store,
+    upgrade: Annotated[
+        bool, Query(description="Upgrade it to the models of now (false: as it was written)")
+    ] = True,
+) -> dict[str, Any]:
+    """A version, upgraded to the models of now (with what could not be upgraded in `problems`)"""
+    model = find_model(model_name)
+    record = version_content(store, model, id, version)
+    body = describe(record)
+    if upgrade:
+        draft = make_draft(record, model)
+        return {
+            **body,
+            "content": draft.data,
+            "upgraded": draft.upgraded,
+            "problems": [p.to_dict() for p in draft.problems],
+        }
+    return {**body, "content": record.data(), "upgraded": False, "problems": []}
+
+
+@router.get("/{model_name}/{id}/history/{version}/draft")
+async def get_draft(model_name: str, id: UUID, version: int, store: Store) -> dict[str, Any]:
+    """A restore as a draft to reconcile: the version upgraded as far as it can be, and the
+    problems that someone has to decide (it may be incomplete or invalid)"""
+    model = find_model(model_name)
+    record = version_content(store, model, id, version)
+    draft = make_draft(record, model)
+    return {
+        "fromVersion": version,
+        "schemaPosition": record.schema_position,
+        "draft": draft.data,
+        "problems": [p.to_dict() for p in draft.problems],
+    }
 
 
 @router.get("/{model_name}/{id}/history/{version}/diff")

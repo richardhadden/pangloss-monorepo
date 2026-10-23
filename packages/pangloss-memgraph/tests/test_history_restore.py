@@ -1,5 +1,6 @@
 """Restoring a version from history (`pangloss-history`): the old content as a new version."""
 
+from dataclasses import replace
 from types import SimpleNamespace
 from typing import no_type_check
 from uuid import uuid7
@@ -182,7 +183,7 @@ async def test_an_entity_is_restored_with_its_own_values(db_driver, clear_databa
 
 
 @no_type_check
-async def test_what_cannot_be_restored_is_refused(db_driver, clear_database, history, monkeypatch):
+async def test_what_cannot_be_restored_is_refused(db_driver, clear_database, history):
     Person, Statement = models()
     store = history()
     person = await Person.Create(label="John").save()
@@ -194,10 +195,9 @@ async def test_what_cannot_be_restored_is_refused(db_driver, clear_database, his
     with pytest.raises(PanglossNotFoundError):
         await restore(store, Person, s.id, 1)  # (it is a Statement)
 
-    # Written when the migrations were somewhere else
-    from pangloss_history import restore as module
-
-    monkeypatch.setattr(module, "schema_position", lambda apps: {"letters": "0009_later"})
+    # Written when the migrations were somewhere that is not a migration now: it cannot be upgraded
+    old = replace(store.get(s.id, 1), schema_position={"letters": "0009_gone"})
+    store.append([old])
     with pytest.raises(PanglossRestoreError) as error:
         await restore(store, Statement, s.id, 1)
-    assert error.value.problems[0]["kind"] == "schema-changed"
+    assert error.value.problems[0]["kind"] == "unknown-position"
