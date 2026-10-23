@@ -673,15 +673,11 @@ name = "pangloss-core"
 version = "0.1.0"
 source = { editable = "packages/pangloss-core" }
 dependencies = [
-    { name = "pangloss-sdk" },
     { name = "pydantic-settings" },
 ]
 
 [package.metadata]
-requires-dist = [
-    { name = "pangloss-sdk", editable = "packages/pangloss-sdk" },
-    { name = "pydantic-settings", specifier = ">=2.14.1" },
-]
+requires-dist = [{ name = "pydantic-settings", specifier = ">=2.14.1" }]
 
 [[package]]
 name = "pangloss-history"
@@ -749,7 +745,6 @@ dependencies = [
     { name = "more-itertools" },
     { name = "neo4j" },
     { name = "pangloss-models" },
-    { name = "pangloss-sdk" },
     { name = "pangloss-users" },
     { name = "pytest-asyncio" },
     { name = "typer" },
@@ -769,7 +764,6 @@ requires-dist = [
     { name = "more-itertools", specifier = ">=11.1.0" },
     { name = "neo4j", specifier = ">=6.2.0" },
     { name = "pangloss-models", editable = "packages/pangloss-models" },
-    { name = "pangloss-sdk", editable = "packages/pangloss-sdk" },
     { name = "pangloss-users", editable = "packages/pangloss-users" },
     { name = "pytest-asyncio", specifier = ">=1.4.0" },
     { name = "typer", specifier = ">=0.27.3" },
@@ -798,6 +792,7 @@ dependencies = [
 [package.dev-dependencies]
 dev = [
     { name = "dirty-equals" },
+    { name = "pangloss-sdk" },
     { name = "pytest" },
     { name = "pytest-xdist" },
     { name = "python-lsp-server" },
@@ -814,6 +809,7 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "dirty-equals", specifier = ">=0.11" },
+    { name = "pangloss-sdk", editable = "packages/pangloss-sdk" },
     { name = "pytest", specifier = ">=9.0.3" },
     { name = "pytest-xdist", specifier = ">=3.8.0" },
     { name = "python-lsp-server", specifier = ">=1.14.0" },
@@ -823,6 +819,16 @@ dev = [
 name = "pangloss-sdk"
 version = "0.1.0"
 source = { editable = "packages/pangloss-sdk" }
+dependencies = [
+    { name = "pangloss-core" },
+    { name = "pangloss-models" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "pangloss-core", editable = "packages/pangloss-core" },
+    { name = "pangloss-models", editable = "packages/pangloss-models" },
+]
 
 [[package]]
 name = "pangloss-users"

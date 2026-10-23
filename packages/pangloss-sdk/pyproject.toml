@@ -7,8 +7,15 @@ authors = [
     { name = "Richard Hadden", email = "rwjhadden@gmail.com" }
 ]
 requires-python = ">=3.14"
-dependencies = []
+dependencies = [
+    "pangloss-core",
+    "pangloss-models",
+]
 
 [build-system]
 requires = ["uv_build>=0.11.8,<0.12.0"]
 build-backend = "uv_build"
+
+[tool.uv.sources]
+pangloss-core = { workspace = true }
+pangloss-models = { workspace = true }

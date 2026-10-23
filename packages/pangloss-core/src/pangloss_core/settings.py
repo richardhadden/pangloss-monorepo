@@ -38,13 +38,30 @@ class DatabaseSettings(PydanticBaseSettings):
     pass
 
 
-class BaseSettings[TDatabaseSettings: DatabaseSettings](PydanticBaseSettings):
+class ClientSettings(PydanticBaseSettings):
+    """What the models need of the settings: which apps declare them, and which database
+    module `save`, `get` and so on are bound to. A client of the API (the SDK) has no
+    more than this; the server's `BaseSettings` adds the rest."""
+
+    INSTALLED_APPS: list[str]
+    DATABASE_MODULE: str
+
+    model_config = SettingsConfigDict(case_sensitive=True, env_file=".env")
+
+    def __init__(self, *args, **kwargs):
+        # When initialising settings, copy it to this global var for access
+        # within pangloss_core
+        global SETTINGS
+
+        SETTINGS = typing.cast("BaseSettings", self)
+        super().__init__(*args, **kwargs)
+
+
+class BaseSettings[TDatabaseSettings: DatabaseSettings](ClientSettings):
     PROJECT_NAME: str
     # The origins (`http://localhost:5173`) of the frontends that may use the API
     # from a browser. A comma-separated string is accepted too, as is `*` (see the API)
     BACKEND_CORS_ORIGINS: typing.Annotated[list[typing.Any], NoDecode]
-    INSTALLED_APPS: list[str]
-    DATABASE_MODULE: str
     DATABASE: TDatabaseSettings
 
     INTERFACE_LANGUAGES: list[str] = []
@@ -70,15 +87,7 @@ class BaseSettings[TDatabaseSettings: DatabaseSettings](PydanticBaseSettings):
     def assemble_cors_origins(cls, v: typing.Any) -> list[str]:
         return normalise_cors_origins(v)
 
-    model_config = SettingsConfigDict(case_sensitive=True, env_file=".env")
 
-    def __init__(self, *args, **kwargs):
-        # When initialising settings, copy it to this global var for access
-        # within pangloss_core
-        global SETTINGS
-
-        SETTINGS = self
-        super().__init__(*args, **kwargs)
-
-
+# (a client has only the `ClientSettings` part: the server code that uses the rest runs
+# only where there is a `BaseSettings`)
 SETTINGS: BaseSettings

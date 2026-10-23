@@ -3,19 +3,20 @@
 This is a [uv workspace](https://docs.astral.sh/uv/concepts/projects/workspaces/); each directory under `packages/` is a separate distributable package. Python 3.14 or newer is required.
 
 ```
-pangloss-memgraph ──► pangloss-models ──► pangloss-core ──► pangloss-sdk
-        │──────────────────────────────────────────────────────►│
+pangloss-memgraph ──► pangloss-models ──► pangloss-core
         └──► pangloss-users ──► pangloss-core
+
+pangloss-sdk ──► pangloss-models, pangloss-core
 
 pangloss-cli ──► pangloss-core, pangloss-models, pangloss-users
 pangloss-api ──► pangloss-core, pangloss-models, pangloss-users
 ```
 
-Arrows show declared dependencies. The SDK's code also imports `pangloss_core` and `pangloss_models`, which `pangloss-sdk/pyproject.toml` does not declare (a cycle with `pangloss-core`'s declared dependency on the SDK).
+Arrows show declared dependencies. (`pangloss-models` uses `pangloss-sdk` only in its tests, as a database module that needs no connection: a dev dependency.) A client of the API needs only the SDK's side of this: it needs no `neo4j`, FastAPI or Memgraph package.
 
 ## pangloss-core ✅ / 🚧
 
-Settings shared by every module: `DatabaseSettings` and the generic `BaseSettings[TDatabaseSettings]`. Constructing a `BaseSettings` stores it in the module global `pangloss_core.settings.SETTINGS`. See [Settings](settings.md).
+Settings shared by every module: `DatabaseSettings`, `ClientSettings` (only `INSTALLED_APPS` and `DATABASE_MODULE`, which is all the models read; what a client of the API uses) and the generic `BaseSettings[TDatabaseSettings]` (the server's, which extends it). Constructing a `BaseSettings` stores it in the module global `pangloss_core.settings.SETTINGS`. See [Settings](settings.md).
 
 The package `__init__` only contains a placeholder `hello()`.
 

@@ -380,7 +380,11 @@ fingerprint, whether stale.
 
 ## Packaging prerequisites (work this design needs first)
 
-These are the **known problems** above; none is large, and phase 0 does them.
+These are the **known problems** above; none is large, and phase 0 does them. **Phase 0 is done** except the
+`pydantic-meta-kit` item (4): the cycle is broken, `ClientSettings` exists, and the models run without `neo4j` (the
+import is optional, and `pangloss-sdk`'s `test_clean_client.py` checks the dependency closure and a run with `neo4j`
+blocked). Moving the datetime conversion into `pangloss-memgraph` as a registered pre-validator is still the tidier
+end state.
 
 1. **Break the cycle.** `pangloss-core` stops depending on `pangloss-sdk`. `pangloss-sdk` depends on `pangloss-core`
    and `pangloss-models` (declared). The dependency is then `sdk → models → core`.
@@ -417,7 +421,7 @@ These are the **known problems** above; none is large, and phase 0 does them.
 
 ## Phases
 
-0. **Prerequisites**: break the cycle, `ClientSettings`, `neo4j` out of the models, a decision on
+0. **Prerequisites** (done, but `pydantic-meta-kit`): break the cycle, `ClientSettings`, `neo4j` out of the models, a decision on
    `pydantic-meta-kit`. (Each has its own tests; the clean-client check starts here.)
 1. **The client**: `databases/api` and `api_sync` with the error mapping, `SdkSettings`, login (memory, environment
    variables, prompt), iterating helper. Tests: unit and the **contract tests** against the real API, using models
