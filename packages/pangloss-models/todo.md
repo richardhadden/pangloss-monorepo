@@ -2,7 +2,6 @@
 
 
 
-- [ ] Add "subtract" type wrapper (opposite of Fulfil)
 
 ## `initialise_models/`: review (2026-10-21)
 
@@ -202,3 +201,7 @@ These were code that **no test reached**. Done ones are marked; the snapshot (`t
 - [x] (done: `check_enum_values_in`, called when the field definition is made; tested for lists, optionals and `TypedDict`s) `is_literal` calls `check_enum_values` (a check with a side effect inside a predicate): move the check to where the field
   definition is made (it must also cover `list[Enum]`, `Enum | None` and the values of a `TypedDict`).
 - [x] `get_top_level_classes` is `@cache`d: kept (it is read in loops over every class's MRO), and says in its docstring that it reads the library's own classes, which exist once the package is imported.
+
+## Later
+
+- [ ] Add a "subtract" type wrapper (the opposite of `Fulfils`). Not designed: what it should do is not yet written down. Postponed on 2026-10-23.
