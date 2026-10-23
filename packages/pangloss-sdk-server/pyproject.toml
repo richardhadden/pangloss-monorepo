@@ -8,9 +8,12 @@ authors = [
 ]
 requires-python = ">=3.14"
 dependencies = [
+    "fastapi>=0.115",
+    "pangloss-api",
     "pangloss-core",
     "pangloss-models",
     "pangloss-sdk",
+    "pangloss-users",
     "typer>=0.12",
 ]
 
@@ -19,6 +22,8 @@ requires = ["uv_build>=0.11.8,<0.12.0"]
 build-backend = "uv_build"
 
 [tool.uv.sources]
+pangloss-api = { workspace = true }
+pangloss-users = { workspace = true }
 pangloss-core = { workspace = true }
 pangloss-models = { workspace = true }
 pangloss-sdk = { workspace = true }
@@ -26,6 +31,8 @@ pangloss-cli = { workspace = true }
 
 [dependency-groups]
 dev = [
+    "httpx2>=2.15",
     "pangloss-cli",
     "pytest>=9.0.3",
+    "pytest-asyncio>=1.4.0",
 ]

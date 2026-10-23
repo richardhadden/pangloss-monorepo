@@ -46,3 +46,16 @@ class PanglossRequestError(PanglossSdkError):
 
 class PanglossNotConnected(PanglossSdkError):
     """A model function was used before `connect()`"""
+
+
+class PanglossSdkOutOfDate(PanglossSdkError):
+    """The server refused a write because the models of this SDK are not the server's (a
+    migration it does not have). Update the SDK"""
+
+
+class PanglossSdkMismatch(PanglossSdkError):
+    """The server has no SDK, or this is the SDK of another project"""
+
+
+class PanglossSdkOutOfDateWarning(UserWarning):
+    """The server's models are not those of this SDK: update the SDK"""

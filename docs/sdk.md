@@ -281,8 +281,9 @@ shape of the data model, not data. A project that shares its data openly can mak
 
 | Endpoint | | |
 |---|---|---|
-| `GET /api/sdk` | | The manifest: project, fingerprint, schema position, pangloss version, build time, and the ways to get it, with URLs. Used by `connect()` to check for staleness |
-| `GET /api/sdk/package.tar.gz`, `/package.whl` | | The SDK as an sdist and a wheel. `pip install https://.../package.whl` works, with credentials in the URL or `~/.netrc` |
+| `GET /api/sdk/version` | anyone | Project, distribution, version, fingerprint, schema position and its hash: what a client compares itself with (it is not gated, so a user who is not an admin can check; it shows nothing but these) |
+| `GET /api/sdk` | `SDK_ACCESS` | The manifest, the build time, and the download URLs |
+| `GET /api/sdk/download/{file}` | `SDK_ACCESS` | The wheel (`shop_sdk-0.3-py3-none-any.whl`) and the sdist (`shop-sdk-0.3.tar.gz`). The file name is real, as `pip` wants one: the names are in the manifest |
 | `GET /api/sdk/git/...` | | A **read-only git repository** (smart HTTP): `git clone`, `git fetch`, `git pull`, and what `pip install git+...` uses |
 
 ### `git clone`
@@ -426,7 +427,7 @@ converters, and `pangloss-memgraph` registers its datetime one when its database
    copied by hand (the demo's), before any builder exists.
 2. ✅ **The builder**: the import closure, the package, the manifest, the build-time check, `pangloss sdk build/status/show`,
    the stubs inside it. Tests: builder and clean-client check.
-3. **Serving**: `/api/sdk` (manifest, tarball and wheel), `SDK_ACCESS`, staleness headers and the `connect()` check.
+3. ✅ **Serving**: `/api/sdk` (manifest, tarball and wheel), `SDK_ACCESS`, staleness headers and the `connect()` check.
 4. **Git**: dulwich repository, smart HTTP read-only, Basic auth, tags, `pangloss sdk` commit handling. Tests: the
    real-`git` round trip.
 5. **Tokens**: the server's revocation and personal access tokens, and the client's `pangloss-sdk login/logout` with
@@ -535,3 +536,26 @@ Settings (all optional, on the project's settings class): `SDK_APPS`, `SDK_EXCLU
 **Not built** (from the spec): type-checking the stubs of the package (`ty`), `SDK_BUILD = "start"` (building at server start: phase 3), the `@server_only` decorator, a test that installs the built package into a fresh virtual environment (done by hand above; it needs network access for the build backend).
 
 **Tests** (`pangloss-sdk-server/tests`, 26): the closure (relative imports, imports in functions, `__init__` rules, server-only imports, a virtual environment inside the project), the package (files, manifest, stable fingerprint, requirements, app selection), and publishing (unchanged builds, new versions, a package that fails to import on a client leaves the last build, models that differ fail the check, the diff, the commands).
+
+
+## As built: phase 3 (serving) ✅
+
+**`pangloss-api`** gained two things for apps: `configure_app(app, settings)` in an app's `api.py` (to add middleware, and to add to `app.state.startup_hooks`, which the lifespan runs after the migration check), and `sdk` as a reserved model name.
+
+**`pangloss_sdk_server`**:
+
+| Module | |
+|---|---|
+| `api.py` | The routes above, and `configure_app`, which adds the version middleware and a start-up hook that builds. `/api/sdk/version` is 503 (with the reason) if nothing is built or the build failed: the server still starts |
+| `access.py` | `SDK_ACCESS` (`"admin"` default, `"user"`, `"public"`). A login is `Authorization: Bearer`, the session cookie, or **HTTP Basic**, which is what `pip` and `git` send: the username and a password, **or an access token as the password**. With nothing, the answer is `401` with `WWW-Authenticate: Basic`, so `pip` and a browser ask |
+| `current.py` | What is served: set by a build at start (`SDK_BUILD = "start"`, which only builds if the content changed, in a thread), else the last build on disk, else (unless `SDK_BUILD = "off"`) a build on the first request. The project directory is `SDK_ROOT`, or the nearest directory up from the working directory with `[tool.pangloss]` |
+| `archives.py` | A **wheel** and an **sdist** made in memory, the same bytes for the same content (no times; sorted). The wheel is written here, not by a build backend, so installing it needs nothing but its dependencies (`RECORD` has the hash and size of every file); the sdist has `pyproject.toml` and `PKG-INFO` |
+| `version_check.py` | Middleware for `/api/...`: reads `X-Pangloss-SDK` (the client package's fingerprint) and `X-Pangloss-Schema` (a hash of its migration position), and answers with `X-Pangloss-SDK-Status`: `current`, `stale` (another package, the same schema: allowed) or `schema-changed`. With `SDK_STALE_WRITES = "refuse"` (default) a **write** from a `schema-changed` client is answered with **409** `PanglossSdkOutOfDate` before any route; `"warn"` lets it through. Reads, logins (`/api/users`) and the SDK routes are never refused. A request without the headers is not touched |
+
+**The client** (`pangloss-sdk`) sends the two headers when it was given the manifest (`connect(..., sdk=MANIFEST)`, which the generated `connect()` does), warns **once** (`PanglossSdkOutOfDateWarning`) when the status is not `current`, raises `PanglossSdkOutOfDate` for the 409, and has `check()` / `check_sync()` (`GET /api/sdk/version`, set against its manifest: raises `PanglossSdkMismatch` for another project or no SDK, warns if it is out of date; returns `current`, `same_schema`, the server's and its own details). The generated module has `check`, `check_sync`, `connect`, `connect_offline`.
+
+**Differences from the spec above:** the downloads are `/api/sdk/download/<real file name>` (not `package.whl`); `/api/sdk/version` is open and `/api/sdk` is gated (the spec had one gated endpoint, which would stop a non-admin from checking); the server's current schema is that of the build it serves (made as it started), not recomputed per request. Not built: `status()` on the generated module (`check()` returns the same), a PEP 503 index (`pip install --extra-index-url`), and personal access tokens (the access token as the Basic password stands in).
+
+**Run against the demo project, with the real server and Memgraph** (a temporary admin user, since removed): the server built `pangloss-demo-sdk` as it started; `/api/sdk` was 401 without a login and 200 with one; the wheel was installed with `uv pip install "http://user:password@127.0.0.1:8765/api/sdk/download/pangloss_demo_sdk-0.4-py3-none-any.whl"` into a **new environment with only `pangloss-core`, `pangloss-models` and `pangloss-sdk`**; and a script there connected (`check()` said current, with warnings turned into errors), created a `Person` (with detail), listed, read it for edit, updated it with `expected_version`, got `PanglossVersionConflictError` (`current_version` 2) for a stale update, deleted it, and read `None`. The test data was removed.
+
+**Tests** (`pangloss-sdk-server`, now 41; `pangloss-sdk`, now 58): building as the server starts, building off, a failing build that leaves the server up; access (admin, user, public, Basic, token as password, 401 challenge); the manifest; the wheel (a valid zip, `RECORD` hashes right, **imports on a clean client and makes the server's models**) and the sdist; the same bytes twice; the status header for each case; the refusal of a stale write, and `warn`; a client with the real manifest is `current` against the app; and, in the client, the headers, the warning once, the 409, and `check()`.

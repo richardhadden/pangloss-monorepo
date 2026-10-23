@@ -140,9 +140,14 @@ disconnect = pangloss_sdk.disconnect
 disconnect_sync = pangloss_sdk.disconnect_sync
 
 
+check = pangloss_sdk.check
+check_sync = pangloss_sdk.check_sync
+
+
 def connect(url: str | None = None, **options: Any) -> None:
-    """Connect to the server (see `pangloss_sdk.connect`): initialises the models"""
-    pangloss_sdk.connect(url, apps=APPS, **options)
+    """Connect to the server (see `pangloss_sdk.connect`): initialises the models. The
+    server is told which SDK this is, and says if it is out of date"""
+    pangloss_sdk.connect(url, apps=APPS, sdk=MANIFEST, **options)
 
 
 def connect_offline() -> None:

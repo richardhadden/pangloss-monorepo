@@ -21,9 +21,13 @@ from pangloss_sdk.exceptions import (
     PanglossPermissionError,
     PanglossRequestError,
     PanglossSdkError,
+    PanglossSdkMismatch,
+    PanglossSdkOutOfDate,
+    PanglossSdkOutOfDateWarning,
     PanglossServerError,
 )
 from pangloss_sdk.iterate import iterate, iterate_sync
+from pangloss_sdk.status import check, check_sync
 from pangloss_sdk.settings import (
     ASYNC_DATABASE_MODULE,
     SYNC_DATABASE_MODULE,
@@ -33,6 +37,11 @@ from pangloss_sdk.settings import (
 __all__ = (
     "connect",
     "connect_offline",
+    "check",
+    "check_sync",
+    "PanglossSdkMismatch",
+    "PanglossSdkOutOfDate",
+    "PanglossSdkOutOfDateWarning",
     "disconnect",
     "disconnect_sync",
     "iterate",
@@ -56,6 +65,7 @@ def connect(
     sync: bool = False,
     transport: Any = None,
     prompt: Prompt | None = None,
+    sdk: dict[str, Any] | None = None,
     **settings: Any,
 ) -> None:
     """Connect to a Pangloss API: makes the settings, imports `<app>.models` of each app,
@@ -64,7 +74,9 @@ def connect(
     `sync=True` binds the blocking functions (a script or a notebook with no event loop to
     spare); the default is async, like the server's own. `username`, `password` and `token`
     are optional: a login is asked for when a request needs one. Any of the settings can
-    be in the environment instead (`PANGLOSS_URL`, ...). `transport` is for tests."""
+    be in the environment instead (`PANGLOSS_URL`, ...). `sdk` is the manifest of a generated SDK,
+    which tells the server which one this is (so it can say when it is out of date). `transport`
+    is for tests."""
     from pangloss_models import initialise
 
     if url is not None:
@@ -79,9 +91,9 @@ def connect(
         **settings,
     )
     _client.install(
-        _client.Client(configured, transport, prompt)
+        _client.Client(configured, transport, prompt, sdk)
         if sync
-        else _client.AsyncClient(configured, transport, prompt)
+        else _client.AsyncClient(configured, transport, prompt, sdk)
     )
     for app in app_list:
         importlib.import_module(f"{app}.models")

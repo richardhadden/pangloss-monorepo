@@ -8,6 +8,7 @@ the database module.
 import asyncio
 import threading
 import time
+import warnings
 from typing import Any
 
 import httpx2 as httpx
@@ -19,7 +20,9 @@ from pangloss_sdk.exceptions import (
     PanglossAuthenticationError,
     PanglossConnectionError,
     PanglossNotConnected,
+    PanglossSdkOutOfDateWarning,
 )
+from pangloss_sdk.schemas import schema_hash
 from pangloss_sdk.protocol import Call
 from pangloss_sdk.settings import SdkSettings
 
@@ -35,14 +38,46 @@ def client_arguments(settings: SdkSettings) -> dict[str, Any]:
     )
 
 
-def request_arguments(call: Call, session: Session) -> dict[str, Any]:
+def sdk_headers(sdk: dict[str, Any] | None) -> dict[str, str]:
+    """What tells the server which SDK this is (from the manifest of the generated SDK)"""
+    if not sdk:
+        return {}
+    return {
+        "X-Pangloss-SDK": sdk["fingerprint"],
+        "X-Pangloss-Schema": schema_hash(sdk.get("schema_position", {})),
+    }
+
+
+def request_arguments(call: Call, session: Session, sdk: dict[str, Any] | None = None) -> dict[str, Any]:
     return dict(
         method=call.method,
         url=call.path,
         params=call.params,
         json=call.json,
-        headers={**session.headers(), **(call.headers or {})},
+        headers={**sdk_headers(sdk), **session.headers(), **(call.headers or {})},
     )
+
+
+class Observer:
+    """Says once that the SDK is out of date, when the server says so"""
+
+    def __init__(self) -> None:
+        self.status: str | None = None
+        self._warned = False
+
+    def observe(self, response: Any) -> None:
+        status = response.headers.get("x-pangloss-sdk-status")
+        if status is None:
+            return
+        self.status = status
+        if status != "current" and not self._warned:
+            self._warned = True
+            warnings.warn(
+                "The server's models are not those of this SDK "
+                f"({status}): update it (`pip install -U` the SDK, or `git pull`)",
+                PanglossSdkOutOfDateWarning,
+                stacklevel=4,
+            )
 
 
 def connection_error(error: Exception, session: Session) -> PanglossConnectionError:
@@ -55,7 +90,10 @@ class AsyncClient:
         settings: SdkSettings,
         transport: httpx.AsyncBaseTransport | None = None,
         prompt: Prompt | None = None,
+        sdk: dict[str, Any] | None = None,
     ) -> None:
+        self.sdk = sdk
+        self.observer = Observer()
         self.settings = settings
         self.session = Session(settings, prompt)
         self.transport = transport
@@ -83,7 +121,11 @@ class AsyncClient:
         attempts = 1 + (self.settings.READ_RETRIES if call.is_read else 0)
         for attempt in range(attempts):
             try:
-                return await self.http().request(**request_arguments(call, self.session))
+                response = await self.http().request(
+                    **request_arguments(call, self.session, self.sdk)
+                )
+                self.observer.observe(response)
+                return response
             except httpx.TransportError as error:
                 if attempt + 1 == attempts:
                     raise connection_error(error, self.session) from error
@@ -157,7 +199,10 @@ class Client:
         settings: SdkSettings,
         transport: httpx.BaseTransport | None = None,
         prompt: Prompt | None = None,
+        sdk: dict[str, Any] | None = None,
     ) -> None:
+        self.sdk = sdk
+        self.observer = Observer()
         self.settings = settings
         self.session = Session(settings, prompt)
         self.transport = transport
@@ -180,7 +225,11 @@ class Client:
         attempts = 1 + (self.settings.READ_RETRIES if call.is_read else 0)
         for attempt in range(attempts):
             try:
-                return self.http().request(**request_arguments(call, self.session))
+                response = self.http().request(
+                    **request_arguments(call, self.session, self.sdk)
+                )
+                self.observer.observe(response)
+                return response
             except httpx.TransportError as error:
                 if attempt + 1 == attempts:
                     raise connection_error(error, self.session) from error

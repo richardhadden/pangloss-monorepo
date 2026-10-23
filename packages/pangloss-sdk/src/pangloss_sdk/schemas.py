@@ -1,5 +1,6 @@
 """The shape of the models, to compare what a client has with what the server has"""
 
+import hashlib
 import json
 from typing import Any
 
@@ -42,3 +43,10 @@ def head_model_schemas(module_names: set[str] | None = None) -> dict[str, dict[s
                 schemas[kind] = f"error: {type(error).__name__}"
         out[model.__name__] = schemas
     return out
+
+
+def schema_hash(position: dict[str, str]) -> str:
+    """A short hash of where the migrations are (`{app: last migration}`): what a client
+    and a server compare to know whether they have the same schema"""
+    canonical_text = json.dumps(position, sort_keys=True)
+    return hashlib.sha256(canonical_text.encode()).hexdigest()[:16]

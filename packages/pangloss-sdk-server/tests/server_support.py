@@ -24,3 +24,6 @@ def load_models(settings=None):
 
     importlib.import_module("shop.models")
     initialise()
+
+
+API_TESTS = Path(__file__).parents[2] / "pangloss-api/tests"

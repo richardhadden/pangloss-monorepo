@@ -91,6 +91,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     await backend.connect()
     try:
         await check_migrations(settings)
+        # (what installed apps asked to be done when the server starts; see `configure_apps`)
+        for hook in app.state.startup_hooks:
+            await hook()
         yield
     finally:
         await backend.disconnect()
@@ -121,6 +124,22 @@ def app_routers(apps: list[str]) -> list[APIRouter]:
             raise TypeError(f"{app}.api has a 'router' that is not a FastAPI APIRouter")
         routers.append(router)
     return routers
+
+
+def configure_apps(app: FastAPI, settings: core_settings.BaseSettings) -> None:
+    """Let each installed app that has a `configure_app(app, settings)` in its `api` module
+    set up the app: add middleware, or add a function to `app.state.startup_hooks` (async,
+    called as the server starts, after the migrations are checked)"""
+    for installed_app in settings.INSTALLED_APPS:
+        try:
+            module = importlib.import_module(f"{installed_app}.api")
+        except ModuleNotFoundError as error:
+            if error.name in (installed_app, f"{installed_app}.api"):
+                continue
+            raise
+        configure = getattr(module, "configure_app", None)
+        if configure is not None:
+            configure(app, settings)
 
 
 def add_cors(app: FastAPI, origins: list[str]) -> None:
@@ -165,11 +184,13 @@ def create_app() -> FastAPI:
     prepare_models(settings)
 
     app = FastAPI(title=settings.PROJECT_NAME, lifespan=lifespan)
+    app.state.startup_hooks = []
 
     # (added first, so inside the CORS middleware: a 500 then has the CORS headers)
     app.add_middleware(ServerErrorResponder)
     add_cors(app, settings.BACKEND_CORS_ORIGINS)
     register_error_handlers(app)
+    configure_apps(app, settings)
     app.include_router(users.router)
     for router in app_routers(settings.INSTALLED_APPS):
         app.include_router(router)

@@ -138,7 +138,7 @@ The OpenAPI document (`/openapi.json`, with the interactive `/docs`) describes e
 
 ## Routes from installed apps
 
-An app in `INSTALLED_APPS` that has an `api.py` with a `router` (a FastAPI `APIRouter`) has it included in the API, as an app with a `cli.py` adds commands. The router gives its own prefix (`pangloss_interface` uses `/api/interface`). An error in the module is not hidden, and a `router` that is not an `APIRouter` is a `TypeError`.
+An app in `INSTALLED_APPS` that has an `api.py` with a `router` (a FastAPI `APIRouter`) has it included in the API, as an app with a `cli.py` adds commands. An `api.py` can also have `configure_app(app, settings)`, called as the app is made, to add middleware or to add an async function to `app.state.startup_hooks`, which the server calls as it starts (after the migrations are checked). (`pangloss_sdk_server` uses both: see [the SDK](sdk.md).) A model cannot be called `sdk` (it is reserved with `users`). The router gives its own prefix (`pangloss_interface` uses `/api/interface`). An error in the module is not hidden, and a `router` that is not an `APIRouter` is a `TypeError`.
 
 ## Not done yet ⏳
 

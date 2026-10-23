@@ -32,7 +32,7 @@ A snapshot of what works and what does not, as of this writing.
 
 | Area | State |
 |------|-------|
-| `pangloss-sdk` (API as database) | The client works (phase 1 of [the SDK](sdk.md)): every model function as a request to the API, login, errors. Not built: the generated project SDK, its serving, git |
+| `pangloss-sdk` (API as database) | The client, the builder and the serving work (phases 1 to 3 of [the SDK](sdk.md)); not built: git, personal access tokens |
 
 ## Not implemented
 

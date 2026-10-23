@@ -16,6 +16,7 @@ from pydantic import TypeAdapter
 
 from pangloss_sdk.exceptions import (
     PanglossAuthenticationError,
+    PanglossSdkOutOfDate,
     PanglossPermissionError,
     PanglossRequestError,
     PanglossServerError,
@@ -45,6 +46,7 @@ class Call:
 ERRORS_BY_NAME: dict[str, type[Exception]] = {
     cls.__name__: cls
     for cls in (
+        PanglossSdkOutOfDate,
         models_exceptions.PanglossNotFoundError,
         models_exceptions.PanglossReferenceError,
         models_exceptions.PanglossConflictError,
@@ -229,3 +231,8 @@ def undelete(cls: type, id: Any) -> Call:
 
 def done(response: Any) -> None:
     check(response)
+
+
+def server_version() -> Call:
+    """Which SDK the server has built (open to anyone)"""
+    return Call("GET", "/api/sdk/version")

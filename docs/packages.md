@@ -57,7 +57,7 @@ A Python package that holds the JavaScript of the web interface: `interface-core
 
 ## pangloss-sdk-server 🚧
 
-Optional: `"pangloss_sdk_server"` in `INSTALLED_APPS`. Builds the SDK of the project: `pangloss sdk build|status|show`. Serving it (HTTP, git) is not built yet. See [the SDK](sdk.md).
+Optional: `"pangloss_sdk_server"` in `INSTALLED_APPS`. Builds the SDK of the project: `pangloss sdk build|status|show`. It also serves it: `/api/sdk` (manifest, wheel, sdist; `SDK_ACCESS`) and tells a client whether its SDK is current; git is not built yet. See [the SDK](sdk.md).
 
 ## pangloss-sdk 🚧
 
