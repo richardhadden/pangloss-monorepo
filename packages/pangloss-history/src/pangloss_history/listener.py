@@ -65,12 +65,13 @@ def records_of(event: WriteEvent, position: dict[str, str]) -> list[HistoryRecor
         HistoryRecord(
             head_id=event.id,
             version=event.version,
-            op=event.op,
+            op="restore" if event.restored_from is not None else event.op,
             model=event.model.__name__,
             at=event.at,
             who=event.user,
             schema_position=position,
             content=serialise(event.payload) if event.payload is not None else None,
+            restored_from=event.restored_from,
         )
     )
     return records

@@ -39,6 +39,8 @@ class WriteEvent:
     # there before: each is the `CreateDB` instance of an entity, and a head node of its own,
     # at version 1
     created_entities: tuple[Any, ...] = ()
+    # For an update that put an earlier version back (`history`): the version it came from
+    restored_from: int | None = None
 
 
 type WriteListener = Callable[[WriteEvent], None]

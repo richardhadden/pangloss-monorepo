@@ -1,6 +1,7 @@
 """`pangloss history <command>`: look at the history of a head node (added to the `pangloss`
 command for an installed app with a `cli.py`)."""
 
+import asyncio
 import json
 from uuid import UUID
 
@@ -8,6 +9,7 @@ import typer
 
 from pangloss_history import config
 from pangloss_history.diff import diff
+from pangloss_history.restore import restore
 from pangloss_history.store import SqliteStore
 
 cli = typer.Typer(name="history", help="Look at the history of documents and entities", no_args_is_help=True)
@@ -70,3 +72,46 @@ def show_difference(
             typer.echo(f"+ {c.path}: {json.dumps(c.new)}")
         else:
             typer.echo(f"- {c.path}: {json.dumps(c.old)}")
+
+
+@cli.command("restore")
+def restore_version(
+    ctx: typer.Context,
+    model: str,
+    id: UUID,
+    version: int,
+    user: str = typer.Option(..., "--user", help="The user the new version is made by"),
+    expected: int | None = typer.Option(
+        None, "--expected-version", help="Only if the head node is at this version now"
+    ),
+) -> None:
+    """Write an earlier version again, as a new version"""
+    from pangloss_models import initialise
+    from pangloss_models.exceptions import PanglossWriteError
+    from pangloss_models.model_registry import ModelRegistry
+    from pangloss_users import current_request_username
+
+    project = ctx.obj
+    store = open_store(ctx)
+    backend = project.require_database()
+    project.import_models()
+    initialise()
+    found = ModelRegistry.all_models().get(model)
+    if found is None:
+        typer.secho(f"There is no model '{model}'", fg="red", err=True)
+        raise typer.Exit(1)
+
+    async def main() -> int:
+        await backend.connect()
+        try:
+            current_request_username.set(user)
+            return await restore(store, found, id, version, expected)
+        finally:
+            await backend.disconnect()
+
+    try:
+        new_version = asyncio.run(main())
+    except PanglossWriteError as error:
+        typer.secho(f"Not restored: {error}", fg="red", err=True)
+        raise typer.Exit(1) from error
+    typer.echo(f"Version {version} is now version {new_version}")

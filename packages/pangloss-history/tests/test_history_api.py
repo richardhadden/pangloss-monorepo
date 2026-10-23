@@ -103,3 +103,39 @@ def test_a_node_that_is_not_in_the_graph_still_has_its_history(client):
 def test_it_needs_a_logged_in_user(client):
     client.app.dependency_overrides.clear()
     assert client.get(f"/api/Statement/{seed(client)}/history").status_code == 401
+
+
+def test_restore_needs_the_version_it_replaces_and_gives_the_new_one(client, monkeypatch):
+    id = seed(client)
+    calls = []
+
+    async def fake_restore(store, model, id, version, expected):
+        calls.append((model, version, expected))
+        return 4
+
+    monkeypatch.setattr(api, "restore", fake_restore)
+
+    assert client.post(f"/api/Statement/{id}/history/1/restore").status_code == 428
+    response = client.post(f"/api/Statement/{id}/history/1/restore", headers={"If-Match": '"3"'})
+    assert response.status_code == 200
+    assert response.json() == {"id": str(id), "version": 4, "restoredFrom": 1}
+    assert response.headers["ETag"] == '"4"'
+    assert calls == [(Statement, 1, 3)]
+
+    client.post(f"/api/Statement/{id}/history/1/restore", headers={"If-Match": "*"})
+    assert calls[-1][2] is None
+
+
+def test_a_restore_that_cannot_be_done_is_a_conflict(client, monkeypatch):
+    from pangloss_api.errors import register_error_handlers
+    from pangloss_history.restore import PanglossRestoreError
+
+    register_error_handlers(client.app)
+    id = seed(client)
+
+    async def refuse(*args):
+        raise PanglossRestoreError([{"kind": "schema-changed", "message": "upgrade it first"}])
+
+    monkeypatch.setattr(api, "restore", refuse)
+    response = client.post(f"/api/Statement/{id}/history/1/restore", headers={"If-Match": "*"})
+    assert response.status_code == 409 and "upgrade it first" in response.json()["detail"]

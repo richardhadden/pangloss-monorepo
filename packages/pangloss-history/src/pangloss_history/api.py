@@ -8,13 +8,14 @@ import inspect
 from typing import Annotated, Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Response, status
 from pangloss_api.dependencies import get_current_user
-from pangloss_api.routes.models import routable_models
+from pangloss_api.routes.models import etag, expected_version, routable_models
 
 from pangloss_history import config
 from pangloss_history.diff import diff
 from pangloss_history.gaps import find_gaps
+from pangloss_history.restore import restore
 from pangloss_history.store import HistoryRecord, HistoryStore, SqliteStore
 
 router = APIRouter(
@@ -134,3 +135,27 @@ async def get_difference(
         "to": to,
         "changes": [c.to_dict() for c in diff(before.data(), after.data())],
     }
+
+
+@router.post("/{model_name}/{id}/history/{version}/restore")
+async def restore_version(
+    model_name: str,
+    id: UUID,
+    version: int,
+    store: Store,
+    response: Response,
+    if_match: Annotated[
+        str | None,
+        Header(
+            alias="If-Match",
+            description='The version that is being replaced: its ETag ("3"), or * for whatever it is now.',
+        ),
+    ] = None,
+) -> dict[str, Any]:
+    """Write an earlier version again, as a new version. 409 if it cannot be restored as it is
+    (the reasons are in the message)"""
+    model = find_model(model_name)
+    records_of_model(store, model, id)
+    new_version = await restore(store, model, id, version, expected_version(if_match))
+    response.headers["ETag"] = etag(new_version)
+    return {"id": str(id), "version": new_version, "restoredFrom": version}

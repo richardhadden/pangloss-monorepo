@@ -223,6 +223,7 @@ def announce(
     version: int,
     payload: Any | None = None,
     created_entities: tuple[Any, ...] = (),
+    restored_from: int | None = None,
 ) -> None:
     """Tell the listeners (`pangloss_models.hooks`) of a write that has committed"""
     emit_write_event(
@@ -235,6 +236,7 @@ def announce(
             at=datetime.datetime.now(datetime.UTC),
             payload=payload,
             created_entities=created_entities,
+            restored_from=restored_from,
         )
     )
 
@@ -425,9 +427,13 @@ async def update_head_node(
     instance: _DocumentUpdateBase | _EntityUpdateBase,
     detail: bool = False,
     expected_version: int | None = None,
+    restored_from: int | None = None,
 ):
     """Replace a Document or Entity (and, for a Document, everything nested in it)
     with the given version.
+
+    `restored_from` is only for what listens to writes (history): that this update puts
+    back that earlier version.
 
     `expected_version` is the `meta.version` that the new version was made from:
     if someone has updated it since, `PanglossVersionConflictError` is raised and
@@ -447,6 +453,7 @@ async def update_head_node(
         existing_head.version + 1,
         db_instance,
         created_entities,
+        restored_from,
     )
     if detail:
         return await _get_head_view(owner, db_instance.id)

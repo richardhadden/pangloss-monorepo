@@ -357,7 +357,7 @@ explained. The policy, and a `pangloss history purge` command, wait until someon
 1. **Record and read. Done (2026-10-23), see "As built".** `pangloss-history` with the SQLite store, the hook, the queue and worker, the listing, the
    single version and the diff, and `pangloss history show|diff`. Read-only; immediately useful; no migration
    interplay. Includes recording the schema position, which cannot be added later.
-2. **Restore at the same schema position.** The restore as a new version, the entity undeletion, the conflict
+2. **Restore at the same schema position. Done (2026-10-23), see "As built (phase 2)".** The restore as a new version, the entity undeletion, the conflict
    checks, and `POST .../restore`.
 3. **The document interpreter and the draft.** The function per change, the equivalence tests, the `problems`
    list, `GET .../draft`, and the interface's form for it.
@@ -418,3 +418,38 @@ the class it was written as).
 
 Tests: `packages/pangloss-history/tests` (store, recorder, listener, diff and gaps, API, CLI, schema position) and
 `pangloss-memgraph/tests/test_history_records.py` (real writes to Memgraph).
+
+## As built (phase 2)
+
+`restore.py` in `pangloss-history`; `POST /api/{Model}/{id}/history/{v}/restore` (needs `If-Match`, as an update
+does; answers `{id, version, restoredFrom}` and an `ETag`); `pangloss history restore <Model> <id> <version> --user NAME
+[--expected-version N]` (connects to the database itself; the user is required, since the new version has an author).
+
+In order, and nothing is written until the checks have passed:
+
+1. the version must be recorded for this model, **at the schema position the database is at now**, or `409` with the
+   problem `schema-changed` (an older one needs the upgrade of phase 3);
+2. its content must still validate as the model's `Update` (else `validation`);
+3. the entities it refers to must exist: any deleted since are **undeleted**; one that is gone is `reference-missing`;
+4. a deleted head node is undeleted;
+5. the update is made with `expected_version` (the `If-Match`, or the version just read for `*`), and told to
+   listeners with `restored_from`, which the listener records as `op = restore`.
+
+Errors are `PanglossRestoreError` (a `PanglossConflictError`, so `409`, with `problems` of `{kind, message}`), a
+stale version is the usual `412`, and a taken URL or id is the usual conflict from the update.
+
+Differences from the design above, all deliberate:
+
+- The undeletions of step 3 and 4 are **separate transactions from the update**, not one. They write no content and
+  are harmless if the update then fails (a later restore finds them already done). One transaction would have needed a
+  restore written inside the database module.
+- The schema position is compared **exactly**: any migration between then and now blocks a restore, even one that
+  would change nothing in this model, until phase 3 can say that.
+- A restore through the API names the version only; there is no `draft` yet.
+- `restored_from` is carried by the event (`WriteEvent.restored_from`) and by `update_head_node(..., restored_from=)`,
+  which exists only for listeners.
+
+Tests: `pangloss-memgraph/tests/test_history_restore.py` (against Memgraph: new version and content; stale version
+refused and nothing written; deleted document; entity deleted since, and one that is gone; a URL taken since; an
+entity; unrecorded version, wrong model, changed schema position) and, in `pangloss-history/tests`, the route and the
+command.
