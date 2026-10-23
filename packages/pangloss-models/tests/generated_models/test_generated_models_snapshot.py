@@ -10,7 +10,7 @@ It does not say the snapshot is *right*, only that it has not changed. So it is 
 code that makes the models to be restructured: if the snapshot is the same, the same models are made.
 When a change is meant, look at the difference it reports, then write the new snapshot:
 
-    UPDATE_SNAPSHOTS=1 uv run pytest packages/pangloss-models/tests/test_model_setup/test_generated_models_snapshot.py
+    UPDATE_SNAPSHOTS=1 uv run pytest packages/pangloss-models/tests/generated_models/test_generated_models_snapshot.py
 
 and commit it with the reason. (The snapshot is the same whatever `PYTHONHASHSEED` is: unions, sets and
 the names of generated classes are put in order. If it is ever not, that is a bug in the describing.)

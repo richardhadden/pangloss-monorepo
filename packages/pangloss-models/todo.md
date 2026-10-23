@@ -198,11 +198,7 @@ These were code that **no test reached**. Done ones are marked; the snapshot (`t
 - Done: the `# pyright: ignore` comments are gone (`ty` is the checker); `_fulfils_classes` is worked out once per instance;
   `allow_bind_on_this_item` is "allowed (if any) and not excluded" (it was an OR; tested in `test_binding_rules.py`); the ~25
   type-only `@overload`s in `utils.py` are three generic signatures.
-- [ ] **Reorganise the tests.** `tests/test_model_setup/` holds everything, including tests that are not about setup (the
-  migration tests, the snapshot and property tests, binding rules, union order...). Split by what they test, for example
-  `tests/setup/`, `tests/migrations/`, `tests/models/` (the generated models and how they behave together), with the shared
-  helpers (`kitchen_sink.py`, `sample_data.py`, `snapshot_support.py`, `migration_support.py`) in a `tests/support/` or the
-  `conftest.py` of the root. Move with `git mv`, then fix the imports (they are bare, relying on the folder being on the path).
+- [x] **Reorganise the tests.** Done: `tests/initialisation/`, `generated_models/` (with `snapshots/`), `migrations/`, `export/`, helpers in `support/` (put on the path by `tests/conftest.py`).
 - [ ] `is_literal` calls `check_enum_values` (a check with a side effect inside a predicate): move the check to where the field
   definition is made (it must also cover `list[Enum]`, `Enum | None` and the values of a `TypedDict`).
 - [ ] `get_top_level_classes` is `@cache`d (it reads the subclasses at the time of the first call).

@@ -1,10 +1,15 @@
+import sys
 import typing
+from pathlib import Path
 
 from pangloss_core.settings import BaseSettings, DatabaseSettings
 from pangloss_models.model_registry import ModelRegistry
 from pangloss_sdk.databases.api.settings import ApiAsDatabaseSettings
 from pydantic import AnyHttpUrl
 from pytest import fixture
+
+# the helpers shared by the tests (`kitchen_sink`, `sample_data`, ...) are imported by name
+sys.path.insert(0, str(Path(__file__).parent / "support"))
 
 
 @fixture(scope="function", autouse=True)

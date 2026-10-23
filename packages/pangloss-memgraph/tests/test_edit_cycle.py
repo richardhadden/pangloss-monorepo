@@ -15,7 +15,7 @@ import pytest
 from pangloss_models import initialise
 from pangloss_models.model_registry import ModelRegistry
 
-sys.path.insert(0, str(pathlib.Path(__file__).parents[2] / "pangloss-models/tests/test_model_setup"))
+sys.path.insert(0, str(pathlib.Path(__file__).parents[2] / "pangloss-models/tests/support"))
 
 import kitchen_sink  # noqa: E402
 import sample_data  # noqa: E402

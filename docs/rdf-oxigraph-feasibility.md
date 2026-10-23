@@ -49,4 +49,4 @@ A short report (2026-10-22). Written from the code in this repository and genera
 
 ## Suggested way in
 
-A one-to-two day spike before any decision: store the kitchen-sink models' sample data (`tests/test_model_setup/sample_data.py`) as triples in `pyoxigraph`, one named graph per document; write the three hard queries (a nested document read, the incoming relations through a reified relation and a semantic space, an edge with properties); time them on a generated dataset of about a million triples. If those three are acceptable, the rest is known work.
+A one-to-two day spike before any decision: store the kitchen-sink models' sample data (`packages/pangloss-models/tests/support/sample_data.py`) as triples in `pyoxigraph`, one named graph per document; write the three hard queries (a nested document read, the incoming relations through a reified relation and a semantic space, an edge with properties); time them on a generated dataset of about a million triples. If those three are acceptable, the rest is known work.
