@@ -4,6 +4,7 @@ from typing import Annotated, get_args, get_origin, no_type_check
 from uuid import UUID, uuid7
 
 from pangloss_models import initialise
+from pangloss_models.model_registry import ModelRegistry
 from pangloss_models.model_bases.base_models import _APIHeadMeta
 from pangloss_models.model_bases.document import Document
 from pangloss_models.model_bases.embedded import Embedded
@@ -387,3 +388,21 @@ def test_incoming_relations_through_a_union_of_embedded():
         annotation = entity.HeadView.model_fields[field].annotation
         assert get_origin(annotation) is list
         assert get_args(annotation)[0] is Statement.ReferenceView
+
+
+def test_the_head_view_of_a_document_is_its_view_so_it_needs_no_edit_view():
+    """Only an entity has incoming relations; the `HeadView` without them is the `EditView`, so what a document
+    is edited as is its `HeadView`, which has no more fields than its `View`"""
+    import kitchen_sink
+
+    kitchen_sink.declare()
+    initialise()
+    documents = [
+        m
+        for m in ModelRegistry._models
+        if getattr(m, "HeadView", None) is not None and m.__metatype__ != "Entity"
+    ]
+    assert len(documents) >= 5
+    for document in documents:
+        assert set(document.HeadView.model_fields) == set(document.View.model_fields), document.__name__
+        assert not hasattr(document, "EditView"), document.__name__

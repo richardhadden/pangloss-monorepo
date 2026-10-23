@@ -211,6 +211,19 @@ def check_enum_values(enumeration: type[Enum]) -> None:
         )
 
 
+def check_enum_values_in(annotation: Any) -> None:
+    """Check the enums in the annotation of a literal field (the enum itself, a list of it, an optional
+    one, or one in the value of a `TypedDict`)"""
+    if annotation_is_optional(annotation):
+        annotation = [t for t in get_args(annotation) if t is not NoneType][0]
+    annotation = get_list_item_type(annotation) or annotation
+    if isclass(annotation) and issubclass(annotation, Enum):
+        check_enum_values(annotation)
+    elif is_typeddict(annotation):
+        for value_type in get_type_hints(annotation).values():
+            check_enum_values_in(value_type)
+
+
 def is_literal(
     annotation: type[Any] | None | UnionType,
 ) -> TypeIs[type[BaseTypes]]:
@@ -230,7 +243,6 @@ def is_literal(
         return False
 
     if issubclass(annotation, Enum):
-        check_enum_values(annotation)
         return True
 
     if is_typeddict(annotation):
@@ -384,6 +396,9 @@ def extract_validators(field_info: FieldInfo):
 
 @cache
 def get_top_level_classes():
+    """The classes of the library itself (the bases of the declared kinds, pydantic's and `object`), that are not
+    parents a user declared. Cached: it is asked for in loops over the MRO of every class, and the library's
+    classes all exist once the package is imported."""
     usable_subclasses: list[type[Any]] = _DeclaredClass.__subclasses__()
     usable_subclasses.remove(_Trait)
     usable_subclasses.extend(

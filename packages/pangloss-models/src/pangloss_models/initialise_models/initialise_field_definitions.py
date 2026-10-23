@@ -63,6 +63,7 @@ from pangloss_models.utils import (
     get_relation_config,
     is_embedded,
     is_list_of_embedded_or_annotated_value,
+    check_enum_values_in,
     is_list_of_literal,
     is_list_relatable,
     is_literal,
@@ -805,11 +806,13 @@ def define_field(
         return definition
 
     if is_list_of_literal(annotation):
+        check_enum_values_in(annotation)
         return build_list_field_definition(
             field_name, field_info, model, is_db_field=is_db_field
         )
 
     if is_literal(annotation):
+        check_enum_values_in(annotation)
         return LiteralFieldDefinition(
             field_on_model=model,
             field_name=field_name,

@@ -2346,3 +2346,26 @@ def test_the_values_of_an_enum_must_be_strings_or_numbers():
 
     with pytest.raises(PanglossModelError, match="WHEN, ALSO.*not a string or a number"):
         initialise()
+
+
+@pytest.mark.parametrize("shape", ["list", "optional", "typeddict", "list of typeddict"])
+def test_an_enum_with_values_that_cannot_be_stored_is_refused_wherever_it_is_used(shape):
+    class Odd(Enum):
+        WHEN = date(2020, 1, 1)
+
+    class Holder(TypedDict):
+        odd: Odd
+        many: list[Odd]
+
+    annotations = {
+        "list": list[Odd],
+        "optional": Odd | None,
+        "typeddict": Holder,
+        "list of typeddict": list[Holder],
+    }
+
+    class Other(Document):
+        odd: annotations[shape]  # type: ignore[valid-type]
+
+    with pytest.raises(PanglossModelError, match="WHEN.*not a string or a number"):
+        initialise()

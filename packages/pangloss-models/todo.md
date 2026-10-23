@@ -60,7 +60,7 @@ Items below marked `[x]` are fixed (with a test); `[x] not a bug` were suspected
   `assert`-as-validation is in `build_list_field_definition`, which then catches `AssertionError` to turn it into a
   generic message (this would hide a real assertion error from elsewhere in the `try`). **Fixed.**
 - [x] **(checked 2026-10-22) A relation field that ends with no usable types** is left out of the model (`builder.py`, `if annotation is None: continue`), not made a field of type `None`. Whether it should be an error is open.
-- [ ] **(confirmed, a decision) `CreateDB` literals that are optional get `default=None` but a non-optional annotation**
+- [x] **(decided and done 2026-10-23: `X | None`) `CreateDB` literals that are optional get `default=None` but a non-optional annotation**
   (`Create` and `View` use `X | None`). Harmless at runtime, but the schema and type hints disagree. Listed under "Decisions needed" in `docs/initialise-models-cleanup.md`.
 - [x] **(confirmed 2026-10-22) An entity reached only through a `SemanticSpace` or `Conjunction` has no reverse relation.**
   Tested on the real database, with `Plain.direct: Person`, `ViaReified.reified: InRole[Person]`,
@@ -96,8 +96,9 @@ Items below marked `[x]` are fixed (with a test); `[x] not a bug` were suspected
   `ReferenceView`. Remove the guard and let the error show. The models are found from the class's *type hints*
   (`get_args(get_args(hints["ReferenceSet"])[0])[0]`), a fragile way to find a base class; use an explicit
   attribute. A missing hint is a `warnings.warn`, should be an error. **Fixed.**
-- [ ] `EditView` exists only for `Entity` (`can_have_edit_view_model`), but the API has `/edit` for Documents too:
-  check what the Document route returns and whether it should have the same model.
+- [x] `EditView` exists only for `Entity` (`can_have_edit_view_model`), but the API has `/edit` for Documents too:
+  **Checked 2026-10-23: no `EditView` is needed.** It is the `HeadView` without the incoming relations, and a document has none, so its
+  `HeadView` is what is edited (the API says so; `test_head_view_model.py` pins that a document's `HeadView` has the fields of its `View`).
 
 ### Refactoring
 
@@ -199,6 +200,6 @@ These were code that **no test reached**. Done ones are marked; the snapshot (`t
   `allow_bind_on_this_item` is "allowed (if any) and not excluded" (it was an OR; tested in `test_binding_rules.py`); the ~25
   type-only `@overload`s in `utils.py` are three generic signatures.
 - [x] **Reorganise the tests.** Done: `tests/initialisation/`, `generated_models/` (with `snapshots/`), `migrations/`, `export/`, helpers in `support/` (put on the path by `tests/conftest.py`).
-- [ ] `is_literal` calls `check_enum_values` (a check with a side effect inside a predicate): move the check to where the field
+- [x] (done: `check_enum_values_in`, called when the field definition is made; tested for lists, optionals and `TypedDict`s) `is_literal` calls `check_enum_values` (a check with a side effect inside a predicate): move the check to where the field
   definition is made (it must also cover `list[Enum]`, `Enum | None` and the values of a `TypedDict`).
-- [ ] `get_top_level_classes` is `@cache`d (it reads the subclasses at the time of the first call).
+- [x] `get_top_level_classes` is `@cache`d: kept (it is read in loops over every class's MRO), and says in its docstring that it reads the library's own classes, which exist once the package is imported.
