@@ -2,7 +2,7 @@
 
 All declarable classes live in `pangloss_models.model_bases` and are Pydantic models. Subclassing one registers the class with `ModelRegistry`; nothing is generated until you call `pangloss_models.initialise()` after all classes are defined.
 
-Per-class options are given through a `_meta` attribute, e.g. `_meta = Document.Meta(create_with_id=True)`. Options marked *accumulates* are merged with the parent's; options marked *not inherited* reset on each subclass; the rest are inherited. (This is implemented by `pydantic-meta-kit`.)
+Per-class options are given through a `_meta` attribute, e.g. `_meta = Document.Meta(create_with_id=True)`. Options marked *accumulates* are merged with the parent's; options marked *not inherited* reset on each subclass; the rest are inherited. (This is implemented by `pangloss_models.meta_kit`.)
 
 | Kind | Module | Status | Gets `Create` / `Update` / `View` | Has `HeadView` |
 |------|--------|--------|:---:|:---:|

@@ -8,7 +8,7 @@ Requires Python 3.14 (`.python-version`) and [uv](https://docs.astral.sh/uv/).
 uv sync            # installs all workspace packages into .venv
 ```
 
-`pangloss-models` depends on `pydantic-meta-kit` straight from GitHub (`[tool.uv.sources]`).
+`pangloss-models` contains its own copy of `pydantic-meta-kit` (`pangloss_models.meta_kit`, with its tests in `tests/meta_kit`); the separate clone in `packages/pydantic-meta-kit` is no longer used.
 
 ## Tests
 

@@ -3,7 +3,7 @@ from typing import Annotated, Generic
 
 from annotated_types import MaxLen
 from pydantic import BaseModel
-from pydantic_meta_kit import WithMeta
+from pangloss_models.meta_kit import WithMeta
 
 from pangloss_models.model_bases.annotated_value import AnnotatedValue
 from pangloss_models.model_bases.base_models import _BaseObject, _DeclaredClass

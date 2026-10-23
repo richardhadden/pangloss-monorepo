@@ -25,7 +25,7 @@ from annotated_types import BaseMetadata
 from pydantic import BaseModel
 from pydantic._internal._generics import PydanticGenericMetadata
 from pydantic.fields import FieldInfo
-from pydantic_meta_kit import WithMeta
+from pangloss_models.meta_kit import WithMeta
 
 from pangloss_models.exceptions import PanglossModelError
 from pangloss_models.field_definitions import FieldBinding

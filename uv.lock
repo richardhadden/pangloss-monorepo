@@ -786,7 +786,6 @@ dependencies = [
     { name = "frozendict" },
     { name = "pangloss-core" },
     { name = "pydantic" },
-    { name = "pydantic-meta-kit" },
 ]
 
 [package.dev-dependencies]
@@ -803,7 +802,6 @@ requires-dist = [
     { name = "frozendict", specifier = ">=2.4.7" },
     { name = "pangloss-core", editable = "packages/pangloss-core" },
     { name = "pydantic", specifier = ">=2.13.3" },
-    { name = "pydantic-meta-kit", git = "https://github.com/richardhadden/pydantic-meta-kit.git" },
 ]
 
 [package.metadata.requires-dev]
@@ -951,14 +949,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/30/a6/9f9f380dbb301f67023bf8f707aaa75daadf84f7152d95c410fd7e81d994/pydantic_core-2.46.4-cp314-cp314t-win32.whl", hash = "sha256:e846ae7835bf0703ae43f534ab79a867146dadd59dc9ca5c8b53d5c8f7c9ef02", size = 1955575, upload-time = "2026-05-06T13:38:51.116Z" },
     { url = "https://files.pythonhosted.org/packages/40/1f/f1eb9eb350e795d1af8586289746f5c5677d16043040d63710e22abc43c9/pydantic_core-2.46.4-cp314-cp314t-win_amd64.whl", hash = "sha256:2108ba5c1c1eca18030634489dc544844144ee36357f2f9f780b93e7ddbb44b5", size = 2051624, upload-time = "2026-05-06T13:38:21.672Z" },
     { url = "https://files.pythonhosted.org/packages/f6/d2/42dd53d0a85c27606f316d3aa5d2869c4e8470a5ed6dec30e4a1abe19192/pydantic_core-2.46.4-cp314-cp314t-win_arm64.whl", hash = "sha256:4fcbe087dbc2068af7eda3aa87634eba216dbda64d1ae73c8684b621d33f6596", size = 2017325, upload-time = "2026-05-06T13:40:52.723Z" },
-]
-
-[[package]]
-name = "pydantic-meta-kit"
-version = "0.1.0"
-source = { git = "https://github.com/richardhadden/pydantic-meta-kit.git#6f8ea9cd70580aa59d431b0ea67fcf09d11ed4b3" }
-dependencies = [
-    { name = "pydantic" },
 ]
 
 [[package]]

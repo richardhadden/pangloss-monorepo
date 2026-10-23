@@ -3,7 +3,7 @@ from typing import Annotated, Any, ClassVar, Self
 from uuid import UUID, uuid7
 
 from pydantic import AnyHttpUrl, ConfigDict, Field, model_validator
-from pydantic_meta_kit import BaseMeta, InheritValue, MetaRules, WithMeta
+from pangloss_models.meta_kit import BaseMeta, InheritValue, MetaRules, WithMeta
 
 from pangloss_models.exceptions import PanglossMetaError
 from pangloss_models.field_definitions import (

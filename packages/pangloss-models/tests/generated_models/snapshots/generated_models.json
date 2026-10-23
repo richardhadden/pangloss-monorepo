@@ -2281,8 +2281,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "Activity"
   },
@@ -2784,8 +2784,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "Activity"
   },
@@ -3109,8 +3109,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "Activity"
   },
@@ -3169,8 +3169,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "Activity"
   },
@@ -3229,8 +3229,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "Activity"
   },
@@ -3289,8 +3289,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "Activity"
   },
@@ -3349,8 +3349,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "Activity"
   },
@@ -3499,8 +3499,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "Activity"
   },
@@ -3810,8 +3810,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "Appointment"
   },
@@ -4175,8 +4175,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "Appointment"
   },
@@ -4447,8 +4447,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "AtPage"
   },
@@ -4903,8 +4903,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "AtPage"
   },
@@ -4963,8 +4963,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "AtPage"
   },
@@ -5290,8 +5290,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "AtPage[declare.<locals>.Source]"
   },
@@ -5617,8 +5617,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "Attested"
   },
@@ -6150,8 +6150,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "Attested"
   },
@@ -6221,8 +6221,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "Attested"
   },
@@ -6603,8 +6603,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "Attested[declare.<locals>.Person]"
   },
@@ -6820,8 +6820,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "Causes"
   },
@@ -7276,8 +7276,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "Causes"
   },
@@ -7732,8 +7732,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "Causes"
   },
@@ -7792,8 +7792,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "Causes"
   },
@@ -7852,8 +7852,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "Causes"
   },
@@ -8179,8 +8179,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "Causes[declare.<locals>.Place, declare.<locals>.Person]"
   },
@@ -8506,8 +8506,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "Causes[declare.<locals>.Statement, declare.<locals>.Statement]"
   },
@@ -8859,8 +8859,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "Date"
   },
@@ -9137,8 +9137,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "Doubt"
   },
@@ -9469,8 +9469,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "Doubt"
   },
@@ -9529,8 +9529,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "Doubt"
   },
@@ -9589,8 +9589,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "Doubt"
   },
@@ -9649,8 +9649,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "Doubt"
   },
@@ -9709,8 +9709,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "Doubt"
   },
@@ -9769,8 +9769,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "Doubt"
   },
@@ -10113,8 +10113,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "Factoid"
   },
@@ -10511,8 +10511,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "Factoid"
   },
@@ -10571,8 +10571,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "Factoid"
   },
@@ -10882,8 +10882,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "Grant"
   },
@@ -11247,8 +11247,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "Grant"
   },
@@ -11479,8 +11479,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "Group"
   },
@@ -11653,8 +11653,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "Group"
   },
@@ -11976,8 +11976,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "Group"
   },
@@ -12309,8 +12309,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "Hypothetical"
   },
@@ -12688,8 +12688,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "Hypothetical"
   },
@@ -13067,8 +13067,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "Hypothetical"
   },
@@ -13116,8 +13116,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "Hypothetical"
   },
@@ -13165,8 +13165,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "Hypothetical"
   },
@@ -13437,8 +13437,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "Hypothetical[InRole[declare.<locals>.Agent]]"
   },
@@ -13709,8 +13709,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "Hypothetical[declare.<locals>.Statement]"
   },
@@ -13981,8 +13981,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "InRole"
   },
@@ -16045,8 +16045,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "InRole"
   },
@@ -16105,8 +16105,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "InRole"
   },
@@ -16165,8 +16165,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "InRole"
   },
@@ -16225,8 +16225,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "InRole"
   },
@@ -16285,8 +16285,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "InRole"
   },
@@ -16345,8 +16345,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "InRole"
   },
@@ -16405,8 +16405,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "InRole"
   },
@@ -16476,8 +16476,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "InRole"
   },
@@ -16547,8 +16547,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "InRole"
   },
@@ -16618,8 +16618,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "InRole"
   },
@@ -16678,8 +16678,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "InRole"
   },
@@ -16749,8 +16749,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "InRole"
   },
@@ -17076,8 +17076,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "InRole[declare.<locals>.Agent]"
   },
@@ -17277,8 +17277,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "LivedIn"
   },
@@ -17532,8 +17532,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "LivedIn"
   },
@@ -18264,8 +18264,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "LivedIn"
   },
@@ -18346,8 +18346,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "LivedIn"
   },
@@ -18428,8 +18428,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "LivedIn"
   },
@@ -18662,8 +18662,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "LivedIn[declare.<locals>.Place]"
   },
@@ -18950,8 +18950,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "LivedIn[declare.<locals>.Place]"
   },
@@ -19167,8 +19167,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "Negative"
   },
@@ -19546,8 +19546,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "Negative"
   },
@@ -19818,8 +19818,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "Negative[declare.<locals>.Statement]"
   },
@@ -20030,8 +20030,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "Note"
   },
@@ -20296,8 +20296,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "Note"
   },
@@ -20474,8 +20474,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "Note"
   },
@@ -20697,8 +20697,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "Office"
   },
@@ -20791,8 +20791,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "Office"
   },
@@ -21105,8 +21105,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "Office"
   },
@@ -21506,8 +21506,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "Person"
   },
@@ -21776,8 +21776,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "Person"
   },
@@ -22244,8 +22244,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "Person"
   },
@@ -22879,8 +22879,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "Place"
   },
@@ -23006,8 +23006,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "Place"
   },
@@ -23320,8 +23320,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "Place"
   },
@@ -23488,8 +23488,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "ReifiedRelationDocument[TypeVar]"
   },
@@ -23710,8 +23710,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "ReifiedRelationDocument[TypeVar]"
   },
@@ -24285,8 +24285,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "ReifiedRelation[TypeVar]"
   },
@@ -24323,8 +24323,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "ReifiedRelation[TypeVar]"
   },
@@ -24361,8 +24361,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "ReifiedRelation[TypeVar]"
   },
@@ -24757,8 +24757,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "SemanticSpace[TypeVar]"
   },
@@ -24795,8 +24795,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "SemanticSpace[TypeVar]"
   },
@@ -25119,8 +25119,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "Source"
   },
@@ -25235,8 +25235,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "Source"
   },
@@ -25626,8 +25626,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "Source"
   },
@@ -25976,8 +25976,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "Statement"
   },
@@ -26380,8 +26380,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "Statement"
   },
@@ -26829,8 +26829,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "Transfer"
   },
@@ -27332,8 +27332,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "Transfer"
   },
@@ -27747,8 +27747,8 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_lists",
-    "convert_neo4j_types"
+    "convert_database_types",
+    "convert_lists"
    ],
    "owner": "Transfer"
   },
@@ -27936,7 +27936,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
-    "convert_neo4j_types"
+    "convert_database_types"
    ],
    "owner": null
   },
@@ -27948,8 +27948,8 @@
    "doc": null,
    "field_validators": [
     "context_labels_to_empty_list",
-    "convert_neo4j_created_when_date",
-    "convert_neo4j_updated_when_date",
+    "convert_database_created_when_date",
+    "convert_database_updated_when_date",
     "semantic_spaces_to_empty_list"
    ],
    "fields": {

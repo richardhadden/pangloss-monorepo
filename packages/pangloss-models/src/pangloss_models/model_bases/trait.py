@@ -1,7 +1,7 @@
 from typing import Any, ClassVar
 
 from pydantic import ConfigDict, Field
-from pydantic_meta_kit import BaseMeta, InheritValue
+from pangloss_models.meta_kit import BaseMeta, InheritValue
 
 from pangloss_models.field_definitions import (
     FieldDefinition,

@@ -61,3 +61,20 @@ def emit_write_event(event: WriteEvent) -> None:
                 event.model.__name__,
                 event.id,
             )
+
+
+# What the database returns, made into what the models read.
+#
+# A database returns its own types (Memgraph's driver, `neo4j.time.DateTime`). The models do
+# not know which database they have: the database module adds a function here that
+# converts what it knows of, anywhere in the data, and the models call `convert_from_database`
+# on what they are made from. With none, the data is as it is.
+type FromDatabaseConverter = Callable[[Any], Any]
+
+from_database: list[FromDatabaseConverter] = []
+
+
+def convert_from_database(data: Any) -> Any:
+    for converter in from_database:
+        data = converter(data)
+    return data

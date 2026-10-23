@@ -4,7 +4,8 @@ from typing import Annotated, Any, ClassVar, Self
 from uuid import UUID
 
 from pydantic import AnyHttpUrl, ConfigDict, Field, field_validator, model_validator
-from pydantic_meta_kit import BaseMeta, InheritValue, MetaRules, WithMeta
+from pangloss_models.hooks import convert_from_database
+from pangloss_models.meta_kit import BaseMeta, InheritValue, MetaRules, WithMeta
 
 from pangloss_models.field_definitions import (
     FieldDefinition,
@@ -116,17 +117,13 @@ class _DocumentReferenceViewAPIMeta(_BaseObject):
 
     @field_validator("created_when", mode="before")
     @classmethod
-    def convert_neo4j_created_when_date(cls, v) -> Any:
-        if hasattr(v, "to_native"):
-            return v.to_native()
-        return v
+    def convert_database_created_when_date(cls, v) -> Any:
+        return convert_from_database(v)
 
     @field_validator("updated_when", mode="before")
     @classmethod
-    def convert_neo4j_updated_when_date(cls, v) -> Any:
-        if hasattr(v, "to_native"):
-            return v.to_native()
-        return v
+    def convert_database_updated_when_date(cls, v) -> Any:
+        return convert_from_database(v)
 
 
 class _DocumentReferenceViewBase(_ReferenceViewBase):

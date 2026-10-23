@@ -53,7 +53,7 @@ Choices that block, or shape, other work. Not tasks to start yet; each says what
 
 - [ ] `pangloss-sdk` ("API as database") is stubs; only Memgraph exists as a real backend.
 - [x] `pangloss-core` depended on `pangloss-sdk`, which imports `pangloss-core` back: broken (SDK phase 0).
-- [ ] `pydantic-meta-kit` is a git dependency of `pangloss-models`: a published package cannot have it. Publish it or vendor it (needed before the SDK can be installed outside the monorepo; see `docs/sdk.md`).
+- [x] `pydantic-meta-kit` is vendored into `pangloss-models` as `pangloss_models.meta_kit` (SDK phase 0). The clone in `packages/pydantic-meta-kit` is unused and can be deleted.
 - [ ] A project made by `pangloss new-project` has `dependencies = []`, as the Pangloss packages are not published.
 - [ ] Running in production: workers, deployment notes (`pangloss run` is one process).
 

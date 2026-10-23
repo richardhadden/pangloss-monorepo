@@ -21,12 +21,12 @@ from pydantic import (
     model_validator,
 )
 from pydantic.alias_generators import to_camel
-from pydantic_meta_kit import WithMeta
+from pangloss_models.hooks import convert_from_database
+from pangloss_models.meta_kit import WithMeta
 
 from pangloss_models.model_bases.binding import bind_values_to_children
 from pangloss_models.model_bases.context_label import ContextLabel
 from pangloss_models.model_bases.from_database import (
-    convert_neo4j_datetimes,
     unwrap_single_item_lists,
 )
 from pangloss_models.model_bases.fulfilment import (
@@ -292,8 +292,8 @@ class _FromDatabaseBase(_ActionClass):
 
     @model_validator(mode="before")
     @classmethod
-    def convert_neo4j_types(cls, data: Any) -> Any:
-        return convert_neo4j_datetimes(data)
+    def convert_database_types(cls, data: Any) -> Any:
+        return convert_from_database(data)
 
     @model_validator(mode="before")
     @classmethod
@@ -338,8 +338,8 @@ class _APIHeadMeta(_BaseObject):
 
     @model_validator(mode="before")
     @classmethod
-    def convert_neo4j_types(cls, data: Any) -> Any:
-        return convert_neo4j_datetimes(data)
+    def convert_database_types(cls, data: Any) -> Any:
+        return convert_from_database(data)
 
 
 class _ListItems[T: _ReferenceViewBase](_BaseObject):
