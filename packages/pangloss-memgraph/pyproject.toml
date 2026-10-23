@@ -1,7 +1,7 @@
 [project]
 name = "pangloss-memgraph"
 version = "0.1.0"
-description = "Add your description here"
+description = "The Memgraph database module for Pangloss, with its migrations"
 readme = "README.md"
 authors = [
     { name = "Richard Hadden", email = "rwjhadden@gmail.com" }
@@ -15,6 +15,9 @@ dependencies = [
     "pytest-asyncio>=1.4.0",
     "typer>=0.27.3",
 ]
+
+[project.urls]
+Repository = "https://github.com/richardhadden/pangloss-monorepo"
 
 [build-system]
 requires = ["uv_build>=0.11.8,<0.12.0"]

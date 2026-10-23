@@ -1,7 +1,7 @@
 [project]
 name = "pangloss-users"
 version = "0.1.0"
-description = "Add your description here"
+description = "Users, passwords and personal access tokens for Pangloss"
 readme = "README.md"
 authors = [
     { name = "Richard Hadden", email = "rwjhadden@gmail.com" }
@@ -12,6 +12,9 @@ dependencies = [
     "pangloss-core",
     "pydantic[email]>=2.13.4",
 ]
+
+[project.urls]
+Repository = "https://github.com/richardhadden/pangloss-monorepo"
 
 [build-system]
 requires = ["uv_build>=0.11.8,<0.12.0"]

@@ -18,6 +18,9 @@ dependencies = [
     "watchfiles>=0.21",
 ]
 
+[project.urls]
+Repository = "https://github.com/richardhadden/pangloss-monorepo"
+
 [build-system]
 requires = ["uv_build>=0.11.8,<0.12.0"]
 build-backend = "uv_build"

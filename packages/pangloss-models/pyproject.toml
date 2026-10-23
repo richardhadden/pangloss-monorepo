@@ -1,7 +1,7 @@
 [project]
 name = "pangloss-models"
 version = "0.1.0"
-description = "Add your description here"
+description = "Pangloss models: declare research data as Python classes, and generate their create, update and view models"
 readme = "README.md"
 authors = [
     { name = "Richard Hadden", email = "richard.hadden@oeaw.ac.at" }
@@ -12,6 +12,9 @@ dependencies = [
     "pangloss-core",
     "pydantic>=2.13.3",
 ]
+
+[project.urls]
+Repository = "https://github.com/richardhadden/pangloss-monorepo"
 
 [build-system]
 requires = ["hatchling"]

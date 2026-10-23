@@ -1,7 +1,7 @@
 [project]
 name = "pangloss-sdk"
 version = "0.1.0"
-description = "Add your description here"
+description = "Use a Pangloss project's models from outside it, as requests to its API (client, login, errors)"
 readme = "README.md"
 authors = [
     { name = "Richard Hadden", email = "rwjhadden@gmail.com" }
@@ -18,6 +18,9 @@ pangloss-sdk = "pangloss_sdk.cli:main"
 
 [project.optional-dependencies]
 keyring = ["keyring>=25"]
+
+[project.urls]
+Repository = "https://github.com/richardhadden/pangloss-monorepo"
 
 [build-system]
 requires = ["uv_build>=0.11.8,<0.12.0"]
