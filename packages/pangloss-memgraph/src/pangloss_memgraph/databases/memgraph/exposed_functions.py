@@ -1,5 +1,5 @@
 import datetime
-from typing import Any, Union, cast
+from typing import Any, Literal, Union, cast
 from uuid import UUID
 
 from neo4j.exceptions import ClientError
@@ -28,6 +28,7 @@ from pangloss_models.model_bases.entity import (
     _EntityUpdateBase,
     _EntityUpdateDBBase,
 )
+from pangloss_models.hooks import WriteEvent, emit_write_event
 from pangloss_models.utils import get_concrete_types
 from pangloss_users import current_request_username
 from pangloss_users.models import UserInDB
@@ -215,10 +216,35 @@ async def soft_delete_node(
     return await soft_delete(tx, cls, id)
 
 
+def announce(
+    op: Literal["create", "update", "delete", "undelete"],
+    model: type,
+    id: UUID,
+    version: int,
+    payload: Any | None = None,
+    created_entities: tuple[Any, ...] = (),
+) -> None:
+    """Tell the listeners (`pangloss_models.hooks`) of a write that has committed"""
+    emit_write_event(
+        WriteEvent(
+            op=op,
+            model=model,
+            id=id,
+            version=version,
+            user=current_request_username.get(),
+            at=datetime.datetime.now(datetime.UTC),
+            payload=payload,
+            created_entities=created_entities,
+        )
+    )
+
+
 async def delete_document(cls: type[Document], id: UUID) -> None:
     """Delete a head document (it is flagged, not removed). A document that is nested
     in another cannot be deleted."""
-    await soft_delete_node(cls, id)
+    result = await soft_delete_node(cls, id)
+    if result.id is not None:
+        announce("delete", cls, result.id, result.version)
 
 
 async def delete_entity(cls: type[Entity], id: UUID | AnyHttpUrl) -> None:
@@ -227,6 +253,8 @@ async def delete_entity(cls: type[Entity], id: UUID | AnyHttpUrl) -> None:
     If something does, it is not deleted, but marked for deletion
     (`meta.marked_for_deletion`), and a `PanglossEntityInUseError` is raised."""
     result = await soft_delete_node(cls, id)
+    if result.deleted and result.id is not None:
+        announce("delete", cls, result.id, result.version)
     if not result.deleted:
         raise PanglossEntityInUseError(
             f"{cls.__name__} {id} is referred to by {result.reference_count} "
@@ -240,27 +268,31 @@ async def delete_entity(cls: type[Entity], id: UUID | AnyHttpUrl) -> None:
 @Database.default.write_transaction
 async def undelete_node(
     tx: Transaction, cls: type[Document | Entity], id: UUID | AnyHttpUrl
-) -> None:
-    await undelete(tx, cls, id)
+) -> tuple[UUID, int]:
+    return await undelete(tx, cls, id)
 
 
 async def undelete_document(cls: type[Document], id: UUID) -> None:
     """Restore a deleted head document. `PanglossNotDeletedError` is raised if it has
     not been deleted."""
-    await undelete_node(cls, id)
+    node_id, version = await undelete_node(cls, id)
+    announce("undelete", cls, node_id, version)
 
 
 async def undelete_entity(cls: type[Entity], id: UUID | AnyHttpUrl) -> None:
     """Restore a deleted entity (by id or URL). `PanglossNotDeletedError` is raised if
     it has not been deleted."""
-    await undelete_node(cls, id)
+    node_id, version = await undelete_node(cls, id)
+    announce("undelete", cls, node_id, version)
 
 
 @Database.default.write_transaction
 async def write_head_node(
     tx: Transaction,
     db_instance: _DocumentCreateDBBase,
-) -> list:
+) -> tuple[Any, ...]:
+    """Write a new head node. Gives the entities that the write made as well (named in
+    the document, and not there before)"""
 
     await check_user_exists(tx)
 
@@ -281,7 +313,7 @@ async def write_head_node(
     )
     if not result:
         raise PanglossWriteError("Nothing was written")
-    return result
+    return query_object.created_entities()
 
 
 # How many times a write is tried, if it loses a race to write the same id or URL
@@ -323,9 +355,10 @@ async def create_head_node(
     db_instance: _DocumentCreateDBBase = cast(
         _DocumentCreateDBBase, instance._to_db_model()
     )
-    await write_with_retries(write_head_node, db_instance)
+    created_entities = await write_with_retries(write_head_node, db_instance)
 
     owner = cast(type[Document | Entity], instance._owner)
+    announce("create", owner, db_instance.id, 1, db_instance, created_entities)
     if detail:
         return await _get_head_view(owner, db_instance.id)
     return owner.ReferenceView(
@@ -339,7 +372,7 @@ async def replace_head_node(
     tx: Transaction,
     db_instance: _DocumentUpdateDBBase | _EntityUpdateDBBase,
     expected_version: int | None = None,
-) -> ExistingHead:
+) -> tuple[ExistingHead, tuple[Any, ...]]:
     """Replace everything below a head node, and its properties, with the new
     version. All checks are made before anything is deleted, and if anything
     fails the transaction is rolled back.
@@ -385,7 +418,7 @@ async def replace_head_node(
     ):
         raise PanglossWriteError("Nothing was written")
 
-    return existing_head
+    return existing_head, query_object.created_entities()
 
 
 async def update_head_node(
@@ -402,11 +435,19 @@ async def update_head_node(
     db_instance = cast(
         _DocumentUpdateDBBase | _EntityUpdateDBBase, instance._to_db_model()
     )
-    existing_head = await write_with_retries(
+    existing_head, created_entities = await write_with_retries(
         replace_head_node, db_instance, expected_version
     )
 
     owner = cast(type[Document | Entity], instance._owner)
+    announce(
+        "update",
+        owner,
+        db_instance.id,
+        existing_head.version + 1,
+        db_instance,
+        created_entities,
+    )
     if detail:
         return await _get_head_view(owner, db_instance.id)
     return owner.ReferenceView(

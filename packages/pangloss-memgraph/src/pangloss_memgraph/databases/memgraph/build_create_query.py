@@ -123,6 +123,8 @@ class InlineEntity:
     type: str
     field_name: str
     allowed_types: tuple[str, ...]
+    # The `CreateDB` instance (what is written, if it does not exist)
+    instance: typing.Any = dataclasses.field(compare=False, repr=False, default=None)
 
 
 @dataclasses.dataclass(frozen=True)
@@ -198,6 +200,15 @@ class QueryObject:
         self.inline_entities = []
         self.existing_entities = existing_entities or {}
         self.inline_entity_identifiers = {}
+
+    def created_entities(self) -> tuple[typing.Any, ...]:
+        """The entities that the query makes: written in the document, and not there already
+        (`CreateDB` instances, one for each)"""
+        created: dict[InlineEntityKey, typing.Any] = {}
+        for entity in self.inline_entities:
+            if entity.key not in self.existing_entities:
+                created.setdefault(entity.key, entity.instance)
+        return tuple(created.values())
 
     def to_query_string(self) -> typing.LiteralString:
         if not self.return_identifier:
@@ -598,6 +609,7 @@ def build_inline_entity_query(
             type=instance.type,
             field_name=field_name,
             allowed_types=tuple(allowed_type_names(type_options)),
+            instance=instance,
         )
     )
 

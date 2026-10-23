@@ -66,8 +66,10 @@ batches of data from other sources can be uploaded without creating each entity 
 exist, the same write creates it, as a separate head node, exactly as `Entity.Create(...).save()` would.) That
 entity needs its own `create` record (version 1), or its history would begin with a gap. The document's snapshot
 holds only the reference to it, which is all restoring needs, since an entity that exists is used as it is
-(*to check:* what the write payload holds for such an entity, and where the "was it created by this write?"
-information is known).
+(*checked:* `write_head_node` / `replace_head_node` find which of these entities exist already
+(`find_existing_entities`) and build the query from that, so "created by this write" is known inside the write
+function, and not after it. It has to be **returned** from the write (as `existing_head` is for updates) and put
+in the event as `created_entities`.)
 
 Decisions:
 
@@ -78,10 +80,18 @@ Decisions:
 - **The post-image (what was written), not the pre-image.** The payload is already in hand, validated, when the
   write is made: no extra read. The first record is the creation.
 - **Content-addressed.** Identical content (a restore, a revert, a re-save with no changes) is stored once.
-- *To check:* that the payload has everything a restore needs, in particular the **ids given to nested nodes
-  during the write** (whether they are made before or by the query), and whether nested nodes keep their ids
-  across updates. If the query makes them, the payload has to be completed after the write, or the ids kept out of
-  what restoring needs.
+- **The payload has what a restore needs** (*checked in the code, 2026-10-23*): the ids are made **before** the
+  write, not by the query. `CreateDB` gives every node an `id` in a `before` validator (`ensure_id`, in
+  `base_models.py`), and `UpdateDB` has `id` as a required field, so the client supplies the ids of nested nodes
+  and the update query writes them as they are (`previous_meta` is looked up by node id, so a node that keeps its
+  id keeps its `meta`). So the validated DB model, dumped, is a complete snapshot, with ids, and a restore is the
+  ordinary update with it. Nested nodes **keep their ids across updates only if the client sends them back**;
+  that is the client's concern, and history stores whatever was written.
+- **Which model to dump:** the `CreateDB` / `UpdateDB` instance at the point of the write, after
+  `_to_db_model()` (in `create_head_node` and `update_head_node`), not the client's `Create`/`Update`: it has the
+  ids and the propagated context types. (For a `Fulfils` write, the instance is the *fulfilled* class: dump it as
+  it is, with its `type`.) A restore feeds the snapshot back through `Update` validation, which also catches a
+  payload that no longer fits (the "upgrade" and "draft" sections).
 
 ## Where it is kept
 
@@ -126,13 +136,58 @@ recorded"), and nothing else is done about it. It is information, not an error.
 
 ### Hook, and where the code lives
 
-An optional package, `pangloss-history`, added to `INSTALLED_APPS` like `pangloss_interface`:
+**A separate package, `pangloss-history`, is possible and is the recommendation.** Nothing in history needs to be
+inside `pangloss-models`: a snapshot is the write-form payload, which the writer already has; the store, the
+queue, the endpoints and the commands are all additions. What it needs from the rest is **one small seam**, which is
+in the code that writes, not in the models.
 
-- registers a function to be called after each committed write (a small `after_write` hook list in the database
-  layer; the package is a no-op when not installed);
-- adds `pangloss history <command>` (see below) and the endpoints under each model;
-- settings: `HISTORY_DB_PATH` (default `.pangloss/history.sqlite3`), `HISTORY_QUEUE_SIZE`,
-  `HISTORY_BATCH_SIZE`, `HISTORY_BATCH_MS`.
+*Checked in the code (2026-10-23):*
+
+- Writes go through four functions in the database module's `exposed_functions.py`: `create_head_node`,
+  `update_head_node`, `soft_delete_node` (`delete_document`/`delete_entity`) and `undelete_node`. The models only
+  *bind* them (`_bind_database_functions` in `model_registry.py` assigns `save`, `delete` and `undelete`). The
+  `@write_transaction` functions (`write_head_node`, `replace_head_node`) run inside a transaction, and may be run
+  again by `write_with_retries`, so a hook placed there would fire before the commit and perhaps twice. The
+  right place is **in `create_head_node` / `update_head_node` / the delete and undelete wrappers, after the
+  transaction has returned**.
+- Apps are found by `INSTALLED_APPS`: the API includes `{app}.api.router`, the CLI loads `{app}.cli`, and models
+  come from `{app}.models`. `pangloss-history` fits this with no change: `history.api` (endpoints),
+  `history.cli` (commands), and a `history.models` only if it needs any. What is *missing* is a way for an app to
+  react to a write.
+
+So the seam is a **write event**, defined in `pangloss_models` (not in `pangloss_memgraph`, so a second backend
+emits the same event and history works on it):
+
+```python
+@dataclass(frozen=True)
+class WriteEvent:
+    op: Literal["create", "update", "delete", "undelete"]
+    model: type[Document | Entity]
+    id: UUID
+    version: int               # the version this write made; for delete and undelete, the version at the time
+    user: str
+    at: datetime
+    payload: _CreateDBBase | _UpdateDBBase | None      # the validated write form; None for delete / undelete
+    created_entities: tuple[_EntityCreateDBBase, ...]  # entities this write made (see "What is stored")
+
+after_write: list[Callable[[WriteEvent], None]]    # `pangloss_models.hooks`
+```
+
+The backend calls the listeners, after the commit, **synchronously and cheaply** (the listener only serialises
+and puts the record on the queue, as under "Recording"); a listener that raises is logged and ignored, since
+history is best effort and must not fail a write. `pangloss_history` registers its listener when it is imported
+as an installed app. When it is not installed, the list is empty and the cost is nothing.
+
+Why not the alternative of putting history in `pangloss-models`/`pangloss-memgraph` itself: it would make
+SQLite, a worker thread and a growing set of endpoints part of the core for everyone, and tie the document
+upgrader (phase 3) to the core's release. The one thing that does tie `pangloss-history` to another package is
+phase 3: the structured migration operations live in `pangloss_memgraph.databases.memgraph.migrations` (with
+their Cypher), so the document-upgrade functions either live in `pangloss-history` and depend on that, or the
+operation *data* (not the Cypher) is split out of the memgraph package first. That is a phase 3 decision and
+does not affect phases 1 and 2.
+
+Settings: `HISTORY_DB_PATH` (default `.pangloss/history.sqlite3`), `HISTORY_QUEUE_SIZE`, `HISTORY_BATCH_SIZE`,
+`HISTORY_BATCH_MS`. Commands: `pangloss history <command>` (see "Reading").
 
 ### Cost (*measured*, laptop, synthetic documents)
 
@@ -295,6 +350,10 @@ explained. The policy, and a `pangloss history purge` command, wait until someon
 
 ## Phases
 
+0. **The seam (in the core). Done (2026-10-23):** `pangloss_models/hooks.py`; `announce` in
+   `exposed_functions.py`; `packages/pangloss-memgraph/tests/test_write_events.py`. `WriteEvent` and `after_write` in `pangloss_models`; the four write wrappers
+   in `pangloss_memgraph` emit it after the commit; the write functions return the entities they created. A test
+   with a listener, and with a listener that raises. Small, and useful on its own.
 1. **Record and read.** `pangloss-history` with the SQLite store, the hook, the queue and worker, the listing, the
    single version and the diff, and `pangloss history show|diff`. Read-only; immediately useful; no migration
    interplay. Includes recording the schema position, which cannot be added later.
@@ -304,18 +363,33 @@ explained. The policy, and a `pangloss history purge` command, wait until someon
    list, `GET .../draft`, and the interface's form for it.
 4. **Interactions.** The `cleanmigrations` warning, the purge rule, and deciding about `keep=True`.
 
-## Open questions
+## Decisions
 
-- **Entities created by a document's write** (named by UUID or URL, with `create_new`): are they recorded as their own `create`, and held in the document's snapshot as references only? (*to check*)
-- **The payload:** does it contain everything a restore needs (ids of nested nodes)? Do nested nodes keep ids
-  across updates? (*to check*, in `build_attached_nodes` and the `Update` path.)
-- **The hook:** one `after_write` list in `pangloss_memgraph`, or in `pangloss_models` so a second backend gets it?
-- **Where the schema position comes from at write time** when the server and `migrate` are different processes
-  (read at start and after a migration, or each time with a short cache).
-- **Per-model opt-out:** some models (high-volume, or not worth keeping) might not want history; a flag in `_meta`
-  or in the history package's own config (see [meta slots](meta-slots.md)).
-- **Which operations count as versions:** a delete and an undelete change no content; are they versions of the
-  head node? (They are in the `PGUpdate` count today only for updates.)
-- **Storage of very large documents**: a size limit, or storing only a hash and keeping the body out.
-- **Erasure policy** (above), and whether history is exposed to every reader or only to some (it is the old
-  content of documents, so it is as sensitive as they were at the time).
+Settled by checking the code (2026-10-23):
+
+- **A separate package, `pangloss-history`**, optional, in `INSTALLED_APPS`, with one seam in the core: a
+  `WriteEvent` and an `after_write` list in `pangloss_models` (see "Hook"). Called after the commit, from
+  `create_head_node`, `update_head_node`, and the delete and undelete wrappers.
+- **The payload is complete** (ids are made before the write); dump the `CreateDB` / `UpdateDB` instance.
+- **Entities created by a document's write** get their own `create` record; the document's snapshot holds only the
+  reference. The write function must return which entities it created.
+
+Still to decide. Each has a recommendation; none blocks phase 1 except the first two, which are about the record.
+
+1. **Do delete and undelete get a version number?** Today only updates make a version (`PGUpdate` count + 1).
+   *Recommend:* a record per operation, keyed by `(head_id, seq)` with `seq` counting records of that head, and
+   `version` the head node's version *at the time* (unchanged by a delete). This keeps the "gap" check simple
+   (compare the highest recorded `version`) and lets the listing show "deleted by X".
+2. **What the record keeps for the graph's own `meta`** (created_by, created_when): nothing; it is derived from
+   the first record. *Recommend:* leave it out.
+3. **Where the schema position comes from.** The server already checks at start-up that the database matches the
+   migrations (`MIGRATION_CHECK`), and a migration run while the server is up is already unsupported for writes.
+   *Recommend:* read it at start, and again when the server's own migration check is run; no per-write read.
+4. **Per-model opt-out.** *Recommend:* on by default; `HISTORY_EXCLUDE = ["ModelName", ...]` in the settings, and
+   a `_meta` slot later if [meta slots](meta-slots.md) are built.
+5. **Large documents.** *Recommend:* no limit at first (zstd gives ≈ 5:1; the cost table above), count sizes in
+   the listing, and revisit when there is a document that is a problem.
+6. **Who may read history.** It is the old content, so as sensitive as the document was. Access control is open in
+   [TODO.md](../TODO.md); *recommend:* history endpoints need a logged-in user for now, and use whatever the
+   decision there is for reading the model itself.
+7. **Erasure policy** (above): wait until needed; rows individually deletable, no hash chain.

@@ -31,6 +31,7 @@ from pangloss_models.model_bases.entity import Entity
 from pangloss_users import current_request_username
 from pydantic import AnyHttpUrl
 
+from pangloss_memgraph.databases.memgraph.build_update_query import VERSION_OF_HEAD
 from pangloss_memgraph.databases.memgraph.database import Transaction
 from pangloss_memgraph.databases.memgraph.lookup import resolve_id
 from pangloss_memgraph.databases.memgraph.validate_write import check_user_exists
@@ -42,6 +43,10 @@ MAX_REFERENCES_REPORTED = 10
 @dataclasses.dataclass
 class DeletionResult:
     deleted: bool
+    # The version of the head node (a delete changes no content, so it is the one it had)
+    version: int = 1
+    # The id of the node (an entity may have been named by a URL)
+    id: UUID | None = None
     # (if not deleted) what refers to the entity: dicts with `id`, `type` and `label`
     referenced_by: list[dict[str, typing.Any]] = dataclasses.field(default_factory=list)
     reference_count: int = 0
@@ -77,6 +82,11 @@ MARK_QUERY = """
         entity.marked_for_deletion_when = $when
 """
 
+VERSION_QUERY = f"""
+    MATCH (head:HeadNode {{id: $id}})
+    RETURN {VERSION_OF_HEAD} AS version
+"""
+
 DELETE_QUERY = """
     MATCH (user:PGUser {username: $username})
     MATCH (node:PGIndexableNode {id: $id})
@@ -90,6 +100,13 @@ DELETE_QUERY = """
            node.marked_for_deletion_when
     RETURN node.id AS id
 """
+
+
+async def version_of(tx: Transaction, node_id: str) -> int:
+    """The version of a head node (1 if it is not one)"""
+    result = await tx.run(VERSION_QUERY, id=node_id)
+    records = await result.values()
+    return records[0][0] if records else 1
 
 
 async def soft_delete(
@@ -146,7 +163,9 @@ async def soft_delete(
         },
     )
     await result.consume()
-    return DeletionResult(deleted=True)
+    return DeletionResult(
+        deleted=True, version=await version_of(tx, node_id), id=UUID(node_id)
+    )
 
 
 UNDELETE_QUERY = """
@@ -163,8 +182,8 @@ UNDELETE_QUERY = """
 
 async def undelete(
     tx: Transaction, cls: type[Document | Entity], id: UUID | AnyHttpUrl
-) -> None:
-    """Restore a deleted head document or entity"""
+) -> tuple[UUID, int]:
+    """Restore a deleted head document or entity. Gives its id, and its version"""
 
     is_entity = cls.__metatype__ == "Entity"
 
@@ -199,3 +218,4 @@ async def undelete(
         },
     )
     await result.consume()
+    return UUID(node_id), await version_of(tx, node_id)
