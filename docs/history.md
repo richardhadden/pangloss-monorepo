@@ -354,7 +354,7 @@ explained. The policy, and a `pangloss history purge` command, wait until someon
    `exposed_functions.py`; `packages/pangloss-memgraph/tests/test_write_events.py`. `WriteEvent` and `after_write` in `pangloss_models`; the four write wrappers
    in `pangloss_memgraph` emit it after the commit; the write functions return the entities they created. A test
    with a listener, and with a listener that raises. Small, and useful on its own.
-1. **Record and read.** `pangloss-history` with the SQLite store, the hook, the queue and worker, the listing, the
+1. **Record and read. Done (2026-10-23), see "As built".** `pangloss-history` with the SQLite store, the hook, the queue and worker, the listing, the
    single version and the diff, and `pangloss history show|diff`. Read-only; immediately useful; no migration
    interplay. Includes recording the schema position, which cannot be added later.
 2. **Restore at the same schema position.** The restore as a new version, the entity undeletion, the conflict
@@ -384,7 +384,9 @@ Still to decide. Each has a recommendation; none blocks phase 1 except the first
    the first record. *Recommend:* leave it out.
 3. **Where the schema position comes from.** The server already checks at start-up that the database matches the
    migrations (`MIGRATION_CHECK`), and a migration run while the server is up is already unsupported for writes.
-   *Recommend:* read it at start, and again when the server's own migration check is run; no per-write read.
+   *Decided:* the last migration of each app **in the migration files**, read once (not from the database, so no
+   async read in a synchronous listener). It is right whenever the start-up check passed; with `MIGRATION_CHECK = "off"`
+   it is only as right as the project.
 4. **Per-model opt-out.** *Recommend:* on by default; `HISTORY_EXCLUDE = ["ModelName", ...]` in the settings, and
    a `_meta` slot later if [meta slots](meta-slots.md) are built.
 5. **Large documents.** *Recommend:* no limit at first (zstd gives ≈ 5:1; the cost table above), count sizes in
@@ -393,3 +395,26 @@ Still to decide. Each has a recommendation; none blocks phase 1 except the first
    [TODO.md](../TODO.md); *recommend:* history endpoints need a logged-in user for now, and use whatever the
    decision there is for reading the model itself.
 7. **Erasure policy** (above): wait until needed; rows individually deletable, no hash chain.
+
+## As built (phase 1)
+
+`packages/pangloss-history`, in `INSTALLED_APPS` as `"pangloss_history"`. Its `models` module (imported as the
+server and commands start) registers the listener; it has no models of its own.
+
+| | |
+|---|---|
+| `store.py` | `HistoryRecord`, the `HistoryStore` protocol, and `SqliteStore` (WAL, `synchronous=NORMAL`, a `history` table keyed `(head_id, seq)` and a `blobs` table by content hash, zstd). A short-lived connection for each operation, so any thread may use it |
+| `recorder.py` | The bounded queue and the one worker thread (started on first use, daemon, drained at exit). A full queue drops and counts; a failing store is counted and logged |
+| `listener.py` | `on_write`: serialises the payload at once (`model_dump_json`), adds a `create` record for each entity the write made, and puts the records on the queue. `HISTORY_EXCLUDE` skips models |
+| `schema_position.py` | `{app: last migration}`, from the migration files |
+| `diff.py`, `gaps.py` | The structural diff (nested objects with an `id` are compared by id, other lists by place); the versions with no record |
+| `api.py` | `GET /api/{Model}/{id}/history`, `.../history/{v}`, `.../history/{v}/diff?to=` (logged-in users). Not yet upgraded to the current models (phase 3), and no `draft` or `restore` |
+| `cli.py` | `pangloss history list <id>`, `show <id> <version>`, `diff <id> <version> [--to N]` (these read only the store: they need no database) |
+
+Known limits, on purpose: the endpoints take an **id** (an entity at a URL is not looked up); the `missing` list
+needs the node to be in the graph (a deleted node shows its history with `currentVersion: null`); there is no
+`pangloss history purge`; the `model` of a record is the class that was written (a `Fulfils` write is recorded as
+the class it was written as).
+
+Tests: `packages/pangloss-history/tests` (store, recorder, listener, diff and gaps, API, CLI, schema position) and
+`pangloss-memgraph/tests/test_history_records.py` (real writes to Memgraph).

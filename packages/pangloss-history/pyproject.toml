@@ -1,0 +1,28 @@
+[project]
+name = "pangloss-history"
+version = "0.1.0"
+description = "Optional history for Pangloss: every version of every Document and Entity, kept apart from the graph"
+readme = "README.md"
+authors = [
+    { name = "Richard Hadden", email = "rwjhadden@gmail.com" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "fastapi>=0.115",
+    "pangloss-api",
+    "pangloss-core",
+    "pangloss-models",
+    "pangloss-users",
+    "typer>=0.12",
+    "zstandard>=0.23",
+]
+
+[build-system]
+requires = ["uv_build>=0.11.8,<0.12.0"]
+build-backend = "uv_build"
+
+[tool.uv.sources]
+pangloss-api = { workspace = true }
+pangloss-core = { workspace = true }
+pangloss-models = { workspace = true }
+pangloss-users = { workspace = true }
