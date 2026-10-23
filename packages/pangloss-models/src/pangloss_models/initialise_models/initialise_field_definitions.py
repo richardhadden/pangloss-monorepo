@@ -774,7 +774,6 @@ def define_field(
     field_name: str,
     field_info: FieldInfo,
     is_db_field: bool,
-    field_fulfilment: set[FieldFulfilment],
     subclasses_parent_fields: Iterable[str | FieldSubclassing] | None = None,
 ) -> FieldDefinition | None:
     """The definition of a field, by what its type is. None if the type is not one that is supported."""
@@ -802,8 +801,6 @@ def define_field(
             is_db_field=is_db_field,
             subclasses_parent_fields=subclasses_parent_fields,
         )
-        if field_fulfilment:
-            definition.field_required_to_fulfil.update(field_fulfilment)
         check_subclass_type(definition)
         return definition
 
@@ -852,10 +849,11 @@ def initialise_field_definitions(model: type[_DeclaredClass]):
                 "AnnotatedValues are not supported (a field can have only one)"
             )
 
-        definition = define_field(
-            model, field_name, field_info, is_db_field, field_fulfilment, normalised
-        )
+        definition = define_field(model, field_name, field_info, is_db_field, normalised)
         if definition is not None:
+            # (what a class that `Fulfils` another must hold for every field it has from it, of any
+            # kind: without them it is not that class)
+            definition.field_required_to_fulfil.update(field_fulfilment)
             model._meta.field_definitions.add_field(name=field_name, field_definition=definition)
         elif not supported_as_wrapper_field:
             raise PanglossModelError(

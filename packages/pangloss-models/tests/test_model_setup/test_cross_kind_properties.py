@@ -148,3 +148,28 @@ def test_nothing_that_is_given_is_lost(heads):
         assert not gone, f"CreateDB lost {gone[:5]}"
 
     check(heads, work)
+
+
+def test_a_class_that_fulfils_another_is_both_only_if_it_holds_every_field_of_it():
+    """`Grant` fulfils `Appointment`: with an office, a start and a code (a relation, an embedded object and a
+    literal) it is written as both; without any one of them it is a `Grant` only"""
+    kitchen_sink.declare()
+    initialise()
+    models = {m.__name__: m for m in ModelRegistry._models}
+    Grant = models["Grant"]
+    everything = {
+        "label": "A grant",
+        "grantedBy": {"type": "Person", "id": str(uuid7())},
+        "office": {"type": "Office", "id": str(uuid7())},
+        "started": {"type": "Date", "when": "2000-01-01", "precision": "day"},
+        "referenceCode": "G-1",
+    }
+
+    def written_as(payload) -> str:
+        """The name of the model it is written as: `(Grant,Appointment)CreateDB` if it is both"""
+        return type(Grant.Create(**payload)._to_db_model()).__name__
+
+    assert written_as(everything) == "(Grant,Appointment)CreateDB"
+    for missing in ("office", "started", "referenceCode"):
+        without = {k: v for k, v in everything.items() if k != missing}
+        assert written_as(without) == "GrantCreateDB", f"without {missing}"

@@ -166,6 +166,7 @@
   },
   "Appointment": {
    "depends_on": [
+    "Date",
     "Office",
     "Person"
    ],
@@ -201,6 +202,26 @@
      ],
      "validators": [],
      "wrapper": null
+    },
+    "reference_code": {
+     "annotated_type": "str",
+     "db_field": false,
+     "description": null,
+     "field_on_model": "Appointment",
+     "kind": "LiteralFieldDefinition",
+     "required_to_fulfil": [],
+     "validators": []
+    },
+    "started": {
+     "annotated_type": "Date",
+     "db_field": false,
+     "description": null,
+     "field_on_model": "Appointment",
+     "kind": "EmbeddedFieldDefinition",
+     "required_to_fulfil": [],
+     "type_options": [
+      "(EmbeddedOption, annotated_type=Date)"
+     ]
     }
    },
    "incoming": {},
@@ -308,7 +329,7 @@
      "annotated_type": "Note",
      "bind_to_child_field": [],
      "db_field": false,
-     "description": null,
+     "description": "The note made when it was attested",
      "field_on_model": "Attested",
      "kind": "RelationFieldDefinition",
      "required_to_fulfil": [],
@@ -365,7 +386,7 @@
      "annotated_type": "Note",
      "bind_to_child_field": [],
      "db_field": false,
-     "description": null,
+     "description": "The note made when it was attested",
      "field_on_model": "Attested[declare.<locals>.Person]",
      "kind": "RelationFieldDefinition",
      "required_to_fulfil": [],
@@ -772,6 +793,7 @@
   },
   "Grant": {
    "depends_on": [
+    "Date",
     "Office",
     "Person"
    ],
@@ -813,6 +835,30 @@
      ],
      "validators": [],
      "wrapper": null
+    },
+    "reference_code": {
+     "annotated_type": "str",
+     "db_field": false,
+     "description": null,
+     "field_on_model": "Grant",
+     "kind": "LiteralFieldDefinition",
+     "required_to_fulfil": [
+      "reference_code@Appointment"
+     ],
+     "validators": []
+    },
+    "started": {
+     "annotated_type": "Date",
+     "db_field": false,
+     "description": null,
+     "field_on_model": "Grant",
+     "kind": "EmbeddedFieldDefinition",
+     "required_to_fulfil": [
+      "started@Appointment"
+     ],
+     "type_options": [
+      "(EmbeddedOption, annotated_type=Date)"
+     ]
     }
    },
    "incoming": {},
@@ -1801,7 +1847,7 @@
    "fields": {
     "carried_out_by": {
      "alias": "carriedOutBy",
-     "annotation": "GroupReferenceSetViaCertainty | PersonReferenceSetViaCertainty",
+     "annotation": "GroupReferenceSetViaCertainty | PersonReferenceSetViaCertainty > PersonCreateViaCertainty",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -1928,7 +1974,7 @@
    "fields": {
     "carried_out_by": {
      "alias": "carriedOutBy",
-     "annotation": "GroupReferenceSetViaCertainty | PersonReferenceSetViaCertainty > PersonCreateDBViaCertainty",
+     "annotation": "GroupReferenceSetViaCertainty | PersonCreateDBViaCertainty > PersonReferenceSetViaCertainty",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -2307,7 +2353,7 @@
    "fields": {
     "carried_out_by": {
      "alias": "carriedOutBy",
-     "annotation": "GroupReferenceSetViaCertainty | PersonReferenceSetViaCertainty",
+     "annotation": "GroupReferenceSetViaCertainty | PersonReferenceSetViaCertainty > PersonCreateViaCertainty",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -2753,7 +2799,7 @@
    "fields": {
     "carried_out_by": {
      "alias": "carriedOutBy",
-     "annotation": "GroupReferenceSetViaCertainty | PersonReferenceSetViaCertainty",
+     "annotation": "GroupReferenceSetViaCertainty | PersonReferenceSetViaCertainty > PersonCreateViaCertainty",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -2880,7 +2926,7 @@
    "fields": {
     "carried_out_by": {
      "alias": "carriedOutBy",
-     "annotation": "GroupReferenceSetViaCertainty | PersonReferenceSetViaCertainty",
+     "annotation": "GroupReferenceSetViaCertainty | PersonReferenceSetViaCertainty > PersonCreateViaCertainty",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -3499,6 +3545,28 @@
      "required": true,
      "validation_alias": "'office'"
     },
+    "reference_code": {
+     "alias": "referenceCode",
+     "annotation": "str",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'referenceCode'"
+    },
+    "started": {
+     "alias": null,
+     "annotation": "DateCreate",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'started'"
+    },
     "type": {
      "alias": "type",
      "annotation": "Literal['Appointment']",
@@ -3591,6 +3659,17 @@
      "required": true,
      "validation_alias": "'office'"
     },
+    "reference_code": {
+     "alias": "referenceCode",
+     "annotation": "str",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'referenceCode'"
+    },
     "semantic_spaces": {
      "alias": "semanticSpaces",
      "annotation": "list[str]",
@@ -3601,6 +3680,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'semanticSpaces'"
+    },
+    "started": {
+     "alias": null,
+     "annotation": "DateCreateDB",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'started'"
     },
     "type": {
      "alias": "type",
@@ -3683,6 +3773,28 @@
      "metadata": [],
      "required": true,
      "validation_alias": "'office'"
+    },
+    "reference_code": {
+     "alias": "referenceCode",
+     "annotation": "str",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'referenceCode'"
+    },
+    "started": {
+     "alias": null,
+     "annotation": "DateView",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": "'type'",
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'started'"
     },
     "type": {
      "alias": "type",
@@ -3812,6 +3924,28 @@
      "required": true,
      "validation_alias": "'office'"
     },
+    "reference_code": {
+     "alias": "referenceCode",
+     "annotation": "str",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'referenceCode'"
+    },
+    "started": {
+     "alias": null,
+     "annotation": "DateUpdate > DateCreate",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'started'"
+    },
     "type": {
      "alias": "type",
      "annotation": "Literal['Appointment']",
@@ -3893,6 +4027,17 @@
      "required": true,
      "validation_alias": "'office'"
     },
+    "reference_code": {
+     "alias": "referenceCode",
+     "annotation": "str",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'referenceCode'"
+    },
     "semantic_spaces": {
      "alias": "semanticSpaces",
      "annotation": "list[str]",
@@ -3903,6 +4048,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'semanticSpaces'"
+    },
+    "started": {
+     "alias": null,
+     "annotation": "DateUpdateDB > DateCreateDB",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'started'"
     },
     "type": {
      "alias": "type",
@@ -3982,6 +4138,28 @@
      "metadata": [],
      "required": true,
      "validation_alias": "'office'"
+    },
+    "reference_code": {
+     "alias": "referenceCode",
+     "annotation": "str",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'referenceCode'"
+    },
+    "started": {
+     "alias": null,
+     "annotation": "DateView",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": "'type'",
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'started'"
     },
     "type": {
      "alias": "type",
@@ -4295,7 +4473,7 @@
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[SourceCreate > SourceReferenceSet; Field()]]",
+     "annotation": "list[Annotated[SourceReferenceSet > SourceCreate; Field()]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -4343,7 +4521,7 @@
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[SourceCreate > SourceReferenceSet; Field()]]",
+     "annotation": "list[Annotated[SourceReferenceSet > SourceCreate; Field()]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -5141,7 +5319,7 @@
      "annotation": "NoteCreate",
      "default": null,
      "default_factory": null,
-     "description": null,
+     "description": "The note made when it was attested",
      "discriminator": null,
      "metadata": [],
      "required": true,
@@ -5281,7 +5459,7 @@
      "annotation": "NoteUpdate > NoteCreate",
      "default": null,
      "default_factory": null,
-     "description": null,
+     "description": "The note made when it was attested",
      "discriminator": null,
      "metadata": [],
      "required": true,
@@ -5419,7 +5597,7 @@
      "annotation": "NoteView",
      "default": null,
      "default_factory": null,
-     "description": null,
+     "description": "The note made when it was attested",
      "discriminator": "'type'",
      "metadata": [],
      "required": true,
@@ -5468,7 +5646,7 @@
      "annotation": "NoteCreate",
      "default": null,
      "default_factory": null,
-     "description": null,
+     "description": "The note made when it was attested",
      "discriminator": null,
      "metadata": [],
      "required": true,
@@ -5476,7 +5654,7 @@
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[PersonCreate > PersonReferenceSet; Field()]]",
+     "annotation": "list[Annotated[PersonReferenceSet > PersonCreate; Field()]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -5527,7 +5705,7 @@
      "annotation": "NoteCreate",
      "default": null,
      "default_factory": null,
-     "description": null,
+     "description": "The note made when it was attested",
      "discriminator": null,
      "metadata": [],
      "required": true,
@@ -5535,7 +5713,7 @@
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[PersonCreate > PersonReferenceSet; Field()]]",
+     "annotation": "list[Annotated[PersonReferenceSet > PersonCreate; Field()]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -5781,7 +5959,7 @@
      "annotation": "NoteUpdate > NoteCreate",
      "default": null,
      "default_factory": null,
-     "description": null,
+     "description": "The note made when it was attested",
      "discriminator": null,
      "metadata": [],
      "required": true,
@@ -5941,7 +6119,7 @@
      "annotation": "NoteView",
      "default": null,
      "default_factory": null,
-     "description": null,
+     "description": "The note made when it was attested",
      "discriminator": "'type'",
      "metadata": [],
      "required": true,
@@ -6012,7 +6190,7 @@
      "annotation": "NoteView",
      "default": null,
      "default_factory": null,
-     "description": null,
+     "description": "The note made when it was attested",
      "discriminator": "'type'",
      "metadata": [],
      "required": true,
@@ -6072,7 +6250,7 @@
      "annotation": "NoteCreate",
      "default": null,
      "default_factory": null,
-     "description": null,
+     "description": "The note made when it was attested",
      "discriminator": null,
      "metadata": [],
      "required": true,
@@ -6234,7 +6412,7 @@
      "annotation": "NoteUpdate > NoteCreate",
      "default": null,
      "default_factory": null,
-     "description": null,
+     "description": "The note made when it was attested",
      "discriminator": null,
      "metadata": [],
      "required": true,
@@ -6394,7 +6572,7 @@
      "annotation": "NoteView",
      "default": null,
      "default_factory": null,
-     "description": null,
+     "description": "The note made when it was attested",
      "discriminator": "'type'",
      "metadata": [],
      "required": true,
@@ -7124,7 +7302,7 @@
     },
     "result": {
      "alias": null,
-     "annotation": "PersonCreate > PersonReferenceSet",
+     "annotation": "PersonReferenceSet > PersonCreate",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -7172,7 +7350,7 @@
     },
     "result": {
      "alias": null,
-     "annotation": "PersonCreate > PersonReferenceSet",
+     "annotation": "PersonReferenceSet > PersonCreate",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -10439,6 +10617,28 @@
      "required": false,
      "validation_alias": "'office'"
     },
+    "reference_code": {
+     "alias": "referenceCode",
+     "annotation": "None | str",
+     "default": "None",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'referenceCode'"
+    },
+    "started": {
+     "alias": null,
+     "annotation": "DateCreate | None",
+     "default": "None",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'started'"
+    },
     "type": {
      "alias": "type",
      "annotation": "Literal['Grant']",
@@ -10531,6 +10731,17 @@
      "required": false,
      "validation_alias": "'office'"
     },
+    "reference_code": {
+     "alias": "referenceCode",
+     "annotation": "None | str",
+     "default": "None",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'referenceCode'"
+    },
     "semantic_spaces": {
      "alias": "semanticSpaces",
      "annotation": "list[str]",
@@ -10541,6 +10752,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'semanticSpaces'"
+    },
+    "started": {
+     "alias": null,
+     "annotation": "DateCreateDB | None",
+     "default": "None",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'started'"
     },
     "type": {
      "alias": "type",
@@ -10623,6 +10845,28 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'office'"
+    },
+    "reference_code": {
+     "alias": "referenceCode",
+     "annotation": "None | str",
+     "default": "None",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'referenceCode'"
+    },
+    "started": {
+     "alias": null,
+     "annotation": "DateView | None",
+     "default": "None",
+     "default_factory": null,
+     "description": null,
+     "discriminator": "'type'",
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'started'"
     },
     "type": {
      "alias": "type",
@@ -10752,6 +10996,28 @@
      "required": false,
      "validation_alias": "'office'"
     },
+    "reference_code": {
+     "alias": "referenceCode",
+     "annotation": "None | str",
+     "default": "None",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'referenceCode'"
+    },
+    "started": {
+     "alias": null,
+     "annotation": "DateUpdate > DateCreate | None",
+     "default": "None",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'started'"
+    },
     "type": {
      "alias": "type",
      "annotation": "Literal['Grant']",
@@ -10833,6 +11099,17 @@
      "required": false,
      "validation_alias": "'office'"
     },
+    "reference_code": {
+     "alias": "referenceCode",
+     "annotation": "None | str",
+     "default": "None",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'referenceCode'"
+    },
     "semantic_spaces": {
      "alias": "semanticSpaces",
      "annotation": "list[str]",
@@ -10843,6 +11120,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'semanticSpaces'"
+    },
+    "started": {
+     "alias": null,
+     "annotation": "DateUpdateDB > DateCreateDB | None",
+     "default": "None",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'started'"
     },
     "type": {
      "alias": "type",
@@ -10922,6 +11210,28 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'office'"
+    },
+    "reference_code": {
+     "alias": "referenceCode",
+     "annotation": "None | str",
+     "default": "None",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'referenceCode'"
+    },
+    "started": {
+     "alias": null,
+     "annotation": "DateView | None",
+     "default": "None",
+     "default_factory": null,
+     "description": null,
+     "discriminator": "'type'",
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'started'"
     },
     "type": {
      "alias": "type",
@@ -13697,7 +14007,7 @@
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[GroupReferenceSet | PersonCreate > PersonReferenceSet; Field()]]",
+     "annotation": "list[Annotated[GroupReferenceSet | PersonReferenceSet > PersonCreate; Field()]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -13745,7 +14055,7 @@
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[GroupReferenceSet | PersonCreate > PersonReferenceSet; Field()]]",
+     "annotation": "list[Annotated[GroupReferenceSet | PersonReferenceSet > PersonCreate; Field()]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -13793,7 +14103,7 @@
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[GroupReferenceSet | PersonCreate > PersonReferenceSet; Field()]]",
+     "annotation": "list[Annotated[GroupReferenceSet | PersonReferenceSet > PersonCreate; Field()]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -13841,7 +14151,7 @@
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[GroupReferenceSet | PersonCreate > PersonReferenceSet; Field()]]",
+     "annotation": "list[Annotated[GroupReferenceSet | PersonReferenceSet > PersonCreate; Field()]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -13889,7 +14199,7 @@
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[GroupReferenceSet | PersonCreate > PersonReferenceSet; Field()]]",
+     "annotation": "list[Annotated[GroupReferenceSet | PersonReferenceSet > PersonCreate; Field()]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -13937,7 +14247,7 @@
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[GroupReferenceSet | PersonCreate > PersonReferenceSet; Field()]]",
+     "annotation": "list[Annotated[GroupReferenceSet | PersonReferenceSet > PersonCreate; Field()]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -13985,7 +14295,7 @@
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[GroupReferenceSet | PersonCreate > PersonReferenceSet; Field()]]",
+     "annotation": "list[Annotated[GroupReferenceSet | PersonReferenceSet > PersonCreate; Field()]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -14795,7 +15105,7 @@
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[GroupReferenceSet | PersonCreate > PersonReferenceSet; Field()]]",
+     "annotation": "list[Annotated[GroupReferenceSet | PersonReferenceSet > PersonCreate; Field()]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -14854,7 +15164,7 @@
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[GroupReferenceSet | PersonCreate > PersonReferenceSet; Field()]]",
+     "annotation": "list[Annotated[GroupReferenceSet | PersonReferenceSet > PersonCreate; Field()]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -14902,7 +15212,7 @@
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[GroupReferenceSet | PersonCreate > PersonReferenceSet; Field()]]",
+     "annotation": "list[Annotated[GroupReferenceSet | PersonReferenceSet > PersonCreate; Field()]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -14950,7 +15260,7 @@
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[GroupReferenceSet | PersonCreate > PersonReferenceSet; Field()]]",
+     "annotation": "list[Annotated[GroupReferenceSet | PersonReferenceSet > PersonCreate; Field()]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -15009,7 +15319,7 @@
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[GroupReferenceSet | PersonCreate > PersonReferenceSet; Field()]]",
+     "annotation": "list[Annotated[GroupReferenceSet | PersonReferenceSet > PersonCreate; Field()]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -15068,7 +15378,7 @@
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[GroupReferenceSet | PersonCreate > PersonReferenceSet; Field()]]",
+     "annotation": "list[Annotated[GroupReferenceSet | PersonReferenceSet > PersonCreate; Field()]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -22106,6 +22416,132 @@
    "model_validators": [
     "check_create_and_id_present",
     "ensure_id"
+   ],
+   "owner": "Person"
+  },
+  "PersonCreateViaCertainty": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "PersonCreate"
+   ],
+   "doc": null,
+   "field_validators": [],
+   "fields": {
+    "aliases": {
+     "alias": null,
+     "annotation": "list[str]",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'aliases'"
+    },
+    "born": {
+     "alias": null,
+     "annotation": "DateCreate",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'born'"
+    },
+    "create_new": {
+     "alias": "createNew",
+     "annotation": "Literal[True] | None",
+     "default": "None",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'createNew'"
+    },
+    "edge_properties": {
+     "alias": "edgeProperties",
+     "annotation": "Certainty",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'edgeProperties'"
+    },
+    "id": {
+     "alias": null,
+     "annotation": "AnyHttpUrl | None | UUID",
+     "default": "None",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": null
+    },
+    "known_as": {
+     "alias": "knownAs",
+     "annotation": "WithCertainty[str]",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'knownAs'"
+    },
+    "label": {
+     "alias": null,
+     "annotation": "str",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": null
+    },
+    "nickname": {
+     "alias": null,
+     "annotation": "None | str",
+     "default": "None",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'nickname'"
+    },
+    "note": {
+     "alias": null,
+     "annotation": "None | str",
+     "default": "None",
+     "default_factory": null,
+     "description": "A note on the person",
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'note'"
+    },
+    "type": {
+     "alias": "type",
+     "annotation": "Literal['Person']",
+     "default": "'Person'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'type'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [
+    "check_create_and_id_present",
+    "propagate_bound_values"
    ],
    "owner": "Person"
   },

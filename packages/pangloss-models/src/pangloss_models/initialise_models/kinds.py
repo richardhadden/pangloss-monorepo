@@ -112,8 +112,7 @@ class ModelKind:
     inline_plain: bool
     """Whether it is offered for a relation with no edge model"""
     inline_with_edge: frozenset[Site]
-    """The sites where it is offered for a relation with an edge model. quirk: a relation field of a
-    declared model in a client model does not offer it, and everywhere else does"""
+    """The sites where it is offered for a relation with an edge model"""
     inline_first: frozenset[tuple[Site, bool]]
     """Where it comes before the reference in the union, as (site, has an edge model). The database
     models put it first so that a new entity is not taken for a reference to an existing one.
@@ -235,8 +234,8 @@ CREATE = ModelKind(
     reference="ReferenceSet",
     inline="Create",
     inline_plain=True,
-    inline_with_edge=frozenset({"typevar", "direct"}),
-    inline_first=frozenset({("typevar", False)}),
+    inline_with_edge=frozenset({"field", "typevar", "direct"}),
+    inline_first=frozenset(),
     bound_suffix="Create",
     id_fields=True,
     bound_id_fields=True,
@@ -249,9 +248,9 @@ CREATE = ModelKind(
     bind_generic_itself=True,
     copy_fields_from="Create",
     literal=CLIENT_LITERAL,
-    embedded=rule({"bound"}, {"bound"}),
+    embedded=rule({"bound", "fulfil"}, {"bound", "fulfil"}),
     relation=rule({"bound", "fulfil"}, {"bound", "fulfil"}),
-    annotated_value=rule({"bound"}, {"bound"}),
+    annotated_value=rule({"bound", "fulfil"}, {"bound", "fulfil"}),
 )
 
 UPDATE = ModelKind(
@@ -261,7 +260,7 @@ UPDATE = ModelKind(
     reference="ReferenceSet",
     inline="Create",
     inline_plain=True,
-    inline_with_edge=frozenset({"typevar", "direct"}),
+    inline_with_edge=frozenset({"field", "typevar", "direct"}),
     inline_first=frozenset(),
     document_typevar=("Create", "Update"),
     bound_suffix="",
@@ -273,9 +272,9 @@ UPDATE = ModelKind(
     cache_generic=True,
     copy_fields_from="Update",
     literal=CLIENT_LITERAL,
-    embedded=rule({"bound", "fulfil"}, {"bound"}),
+    embedded=rule({"bound", "fulfil"}, {"bound", "fulfil"}),
     relation=rule({"bound", "fulfil"}, {"bound", "fulfil"}),
-    annotated_value=rule({"bound", "fulfil"}, {"bound"}),
+    annotated_value=rule({"bound", "fulfil"}, {"bound", "fulfil"}),
 )
 
 CREATE_DB = ModelKind(
@@ -287,16 +286,23 @@ CREATE_DB = ModelKind(
     inline_plain=True,
     inline_with_edge=frozenset({"field", "typevar", "direct"}),
     inline_first=frozenset(
-        {("field", False), ("typevar", True), ("typevar", False), ("direct", True)}
+        {
+            ("field", False),
+            ("field", True),
+            ("typevar", True),
+            ("typevar", False),
+            ("direct", True),
+            ("direct", False),
+        }
     ),
     id_fields=True,
     base_validators=True,
     generic_validators=True,
     copy_fields_from="CreateDB",
-    literal=rule(set(), {"fulfil", "optional"}),
-    embedded=rule(set(), {"fulfil"}),
+    literal=rule({"optional", "fulfil"}, {"fulfil", "optional"}),
+    embedded=rule({"fulfil"}, {"fulfil"}),
     relation=rule({"fulfil"}, {"fulfil"}),
-    annotated_value=rule(set(), {"fulfil"}),
+    annotated_value=rule({"fulfil"}, {"fulfil"}),
 )
 
 UPDATE_DB = ModelKind(
@@ -319,10 +325,10 @@ UPDATE_DB = ModelKind(
     ),
     id_fields=True,
     copy_fields_from="UpdateDB",
-    literal=rule(set(), {"optional"}),
-    embedded=rule(set(), set()),
+    literal=rule({"optional", "fulfil"}, {"optional", "fulfil"}),
+    embedded=rule({"fulfil"}, {"fulfil"}),
     relation=rule({"fulfil"}, {"fulfil"}),
-    annotated_value=rule(set(), set()),
+    annotated_value=rule({"fulfil"}, {"fulfil"}),
 )
 
 VIEW = ModelKind(
@@ -343,9 +349,9 @@ VIEW = ModelKind(
     bind_generic_itself=True,
     copy_fields_from="View",
     literal=CLIENT_LITERAL,
-    embedded=rule({"bound"}, {"bound"}),
+    embedded=rule({"bound", "fulfil"}, {"bound", "fulfil"}),
     relation=rule({"bound", "fulfil"}, {"bound", "fulfil"}),
-    annotated_value=rule({"bound"}, {"bound"}),
+    annotated_value=rule({"bound", "fulfil"}, {"bound", "fulfil"}),
 )
 
 KINDS: dict[str, ModelKind] = {

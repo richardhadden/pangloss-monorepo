@@ -154,16 +154,28 @@ Tests: `test_what_a_generic_holds_of_its_own_can_be_given_as_an_update`,
 `test_an_update_of_a_generic_keeps_the_identity_of_what_it_holds`, and the new `Attested` in the snapshot (one generated
 model changes: `Attested[Person]Update`).
 
-## Decisions needed
+## Decisions (made and implemented 2026-10-23)
 
-These change what clients see. They are kept as named fields of `ModelKind` (marked `quirk:`) until decided.
+Each was a named field of `ModelKind`; the snapshot was regenerated deliberately. 1,274 tests pass.
 
-- Whether `CreateDB` / `UpdateDB` optional literals should be `X | None` (now `X`, with a default of `None`).
-- The order of the reference and the in-place `Create` of an entity in a union (it differs by model, by site and by
-  whether there is an edge model; the exact rules are in `inline_first`). Pydantic's smart union picks the best
-  match whatever the order, so this should not matter; it is kept because tests and the snapshot show it.
-- Whether a plain relation with an edge model should offer the in-place `Create` (a wrapper's relations do, a model's
-  own relation does not: `inline_with_edge`).
-- Whether the database models should carry field descriptions (a wrapper's relation fields do).
-- Whether an `Update` embedded field that is optional because a class `Fulfils` it should default to `None` (now it is
-  nullable but required).
+1. `CreateDB` / `UpdateDB` optional literals become `X | None` (as `Create` and `View`).
+2. Union order: `Create` first in the database models only; the client models share one order (reference first). `test_union_order.py` checks, for every
+   reference/entity pair in the kitchen sink (with and without an edge model, in all four writing kinds), that pydantic's smart
+   union chooses the same member in either order. It does, so the order is a convention and the test would catch a change that
+   made it matter.
+3. A declared model's own relation with an edge model offers the in-place `Create`, as a wrapper's does (`inline_with_edge`).
+4. The database models carry no field descriptions (remove them from the wrapper's relation fields).
+5. An `Update` embedded field that is optional because a class `Fulfils` it defaults to `None`. Done for embedded fields only; an
+   `AnnotatedValue` field that is optional because of `Fulfils` is still nullable but required (the same quirk, not decided).
+
+Kitchen sink cases (added 2026-10-23): `Attested.note` has a description (decision 4: the database models carry none);
+`Appointment` has an embedded field (`started`) and a literal (`reference_code`) that `Grant` (which `Fulfils` it) inherits
+(decision 5). Decision 1 needs no case: the optional literals (`nickname`, `author`...) already come out `None | X`.
+
+**Found by the Grant case, and fixed: `Fulfils` made only *relation* fields optional.** `define_field` passed the fulfilment
+to relation fields only, so on `Grant` the relation `office` was nullable but the embedded `started` and the literal
+`reference_code` stayed required, and the `"fulfil"` rules for them in `kinds.py` never fired. Decided: a class that `Fulfils`
+another is both only if it holds every field of it, whatever their kind, so the fulfilment is now recorded on every field
+definition (`initialise_field_definitions`) and the rules for literals, embedded objects and annotated values say "fulfil"
+makes them nullable and `None` by default in every kind. `test_a_class_that_fulfils_another_is_both_only_if_it_holds_every_field_of_it`
+checks it through `_to_db_model`. This also settles the `AnnotatedValue` quirk above.

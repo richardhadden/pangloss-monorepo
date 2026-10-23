@@ -78,7 +78,7 @@ def declare() -> None:
     class Attested[T](ReifiedRelation[T]):
         """A relation with a document and an embedded object of its own"""
 
-        note: Note
+        note: Annotated[Note, RelationConfig(description="The note made when it was attested")]
         dated: Date
 
     class Marker(NonHeritableTrait):
@@ -117,6 +117,8 @@ def declare() -> None:
     class Appointment(Document):
         holder: Person
         office: Office
+        started: Date
+        reference_code: str
 
     class Grant(Document, Fulfils[Appointment]):
         granted_by: Annotated[

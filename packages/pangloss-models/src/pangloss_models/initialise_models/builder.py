@@ -396,7 +396,7 @@ def _build_generic_model(
                 validation_alias=to_camel(name),
                 metadata=definition.validators,  # type: ignore[arg-type]
                 discriminator="type" if kind.discriminated and not definition.wrapper else None,
-                description=definition.description,
+                description=definition.description if kind.descriptions else None,
             ),
         )
         bound.model_rebuild(force=True)
