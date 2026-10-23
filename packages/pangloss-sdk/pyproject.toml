@@ -10,6 +10,7 @@ requires-python = ">=3.14"
 dependencies = [
     "pangloss-core",
     "pangloss-models",
+    "httpx2>=2.15",
 ]
 
 [build-system]

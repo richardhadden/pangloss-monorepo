@@ -57,11 +57,11 @@ A Python package that holds the JavaScript of the web interface: `interface-core
 
 ## pangloss-sdk 🚧
 
-Intended to let Pangloss models be used locally and read/write a remote Pangloss instance through its standard API ("API as database"). Currently:
+Lets Pangloss models be used locally and read and write a remote Pangloss instance through its API ("API as database"). The client is built; the generated per-project SDK is not (see [the SDK](sdk.md)).
 
-- `ApiAsDatabaseSettings` (URL, username, password) exists.
-- `databases/api/exposed_functions.py` is a **stub**: `get_document` returns a fabricated placeholder object, `create_head_node` and `list_items` do nothing.
-- The model tests use it as a database module because it needs no live connection.
+- `databases/api` (async) and `databases/api_sync` (blocking) are database modules whose functions are requests: set `DATABASE_MODULE` to one, or call `pangloss_sdk.connect(url, apps=[...])`.
+- `SdkSettings`, login (settings, prompt, tokens kept in memory), the errors the server's database module raises, and `iterate`.
+- The model tests use `databases/api` as a database module because it needs no live connection.
 
 ## pangloss-users 🚧
 

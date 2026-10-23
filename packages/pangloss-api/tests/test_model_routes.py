@@ -336,7 +336,7 @@ def test_errors_from_the_database_become_statuses(settings, monkeypatch, error, 
     stub(monkeypatch, Person, "delete", delete)
     response = client.delete(f"/api/Person/{uuid7()}", headers=headers)
     assert response.status_code == status_code
-    assert response.json() == {"detail": str(error)}
+    assert response.json() == {"detail": str(error), "error": type(error).__name__}
 
 
 def test_an_entity_in_use_says_what_refers_to_it(settings, monkeypatch):
@@ -359,6 +359,7 @@ def test_an_entity_in_use_says_what_refers_to_it(settings, monkeypatch):
     assert response.status_code == 409
     assert response.json() == {
         "detail": "in use",
+        "error": "PanglossEntityInUseError",
         "referencedBy": [{"id": str(referrer), "type": "Statement", "label": "S"}],
     }
 
@@ -696,5 +697,9 @@ def test_an_update_of_an_old_version_is_refused_with_the_new_one(settings, monke
         headers={**headers, "If-Match": '"4"'},
     )
     assert response.status_code == 412
-    assert response.json() == {"detail": "it has been updated", "currentVersion": 5}
+    assert response.json() == {
+        "detail": "it has been updated",
+        "error": "PanglossVersionConflictError",
+        "currentVersion": 5,
+    }
     assert response.headers["etag"] == '"5"'

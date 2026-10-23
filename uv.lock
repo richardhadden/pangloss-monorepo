@@ -755,6 +755,7 @@ dev = [
     { name = "docker" },
     { name = "httpx2" },
     { name = "pangloss-api" },
+    { name = "pangloss-sdk" },
     { name = "pytest-asyncio" },
     { name = "tenacity" },
 ]
@@ -774,6 +775,7 @@ dev = [
     { name = "docker", specifier = ">=7.1.0" },
     { name = "httpx2", specifier = ">=2.15" },
     { name = "pangloss-api", editable = "packages/pangloss-api" },
+    { name = "pangloss-sdk", editable = "packages/pangloss-sdk" },
     { name = "pytest-asyncio", specifier = ">=1.4.0" },
     { name = "tenacity", specifier = ">=9.1.4" },
 ]
@@ -818,12 +820,14 @@ name = "pangloss-sdk"
 version = "0.1.0"
 source = { editable = "packages/pangloss-sdk" }
 dependencies = [
+    { name = "httpx2" },
     { name = "pangloss-core" },
     { name = "pangloss-models" },
 ]
 
 [package.metadata]
 requires-dist = [
+    { name = "httpx2", specifier = ">=2.15" },
     { name = "pangloss-core", editable = "packages/pangloss-core" },
     { name = "pangloss-models", editable = "packages/pangloss-models" },
 ]

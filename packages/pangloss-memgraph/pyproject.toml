@@ -24,12 +24,14 @@ build-backend = "uv_build"
 pangloss-users = { workspace = true }
 pangloss-models = { workspace = true }
 pangloss-api = { workspace = true }
+pangloss-sdk = { workspace = true }
 
 [dependency-groups]
 dev = [
     "docker>=7.1.0",
     "httpx2>=2.15",
     "pangloss-api",
+    "pangloss-sdk",
     "pytest-asyncio>=1.4.0",
     "tenacity>=9.1.4",
 ]

@@ -4,7 +4,6 @@ from pathlib import Path
 
 from pangloss_core.settings import BaseSettings, DatabaseSettings
 from pangloss_models.model_registry import ModelRegistry
-from pangloss_sdk.databases.api.settings import ApiAsDatabaseSettings
 from pydantic import AnyHttpUrl
 from pytest import fixture
 
@@ -29,9 +28,7 @@ def initialise_database():
         BACKEND_CORS_ORIGINS: list[typing.Any] = []
         INSTALLED_APPS: list[str] = []
         DATABASE_MODULE: str = "pangloss_sdk.databases.api"
-        DATABASE: DatabaseSettings = ApiAsDatabaseSettings(
-            URL=AnyHttpUrl("http://testing.com"), USERNAME="test", PASSWORD="test"
-        )
+        DATABASE: DatabaseSettings = DatabaseSettings()
         INTERFACE_LANGUAGES: list[str] = []
         DEFAULT_INTERFACE_LANGUAGE: str = "en"
         AUTHJWT_SECRET_KEY: str = "asdf"

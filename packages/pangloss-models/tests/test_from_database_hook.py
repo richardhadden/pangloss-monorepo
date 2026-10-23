@@ -16,16 +16,15 @@ def convert(data):
     return data.to_native() if isinstance(data, Native) else data
 
 
-def test_without_a_converter_data_is_as_it_is():
+def test_without_a_converter_data_is_as_it_is(monkeypatch):
+    # (a database module imported in the same run may have added its own)
+    monkeypatch.setattr(hooks, "from_database", [])
     data = {"a": Native()}
     assert hooks.convert_from_database(data) is data
 
 
-def test_a_registered_converter_is_applied():
-    hooks.from_database.append(convert)
-    try:
-        assert hooks.convert_from_database({"a": Native()}) == {
-            "a": datetime.datetime(2026, 1, 1)
-        }
-    finally:
-        hooks.from_database.remove(convert)
+def test_a_registered_converter_is_applied(monkeypatch):
+    monkeypatch.setattr(hooks, "from_database", [convert])
+    assert hooks.convert_from_database({"a": Native()}) == {
+        "a": datetime.datetime(2026, 1, 1)
+    }

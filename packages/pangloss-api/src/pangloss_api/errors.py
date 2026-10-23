@@ -54,7 +54,8 @@ def status_for(error: Exception) -> int:
 
 
 async def error_handler(request: Request, error: Exception) -> JSONResponse:
-    content: dict = {"detail": str(error)}
+    # (`error` is the class, for a client to raise the same one: see `pangloss-sdk`)
+    content: dict = {"detail": str(error), "error": type(error).__name__}
     if isinstance(error, PanglossEntityInUseError):
         # What refers to the entity (it has been marked for deletion)
         content["referencedBy"] = [

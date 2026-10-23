@@ -180,7 +180,7 @@ models are validated**, on the client as well as the server, if they are in the 
 
 | Function | Request | Result |
 |---|---|---|
-| `get_document(cls, id)`, `get_entity(cls, id)` | `GET /api/NAME/{id}` (an entity's URL is put in the path as it is) | `cls.HeadView` from the JSON. A 404 raises `PanglossNotFoundError` for a document; for an entity it returns `None`, as `get_entity` does now |
+| `get_document(cls, id)`, `get_entity(cls, id)` | `GET /api/NAME/{id}` (an entity's URL is put in the path as it is) | `cls.HeadView` from the JSON. A 404 returns `None`, for a document and an entity, as the Memgraph functions do |
 | `get_entity_for_edit(cls, id)` | `GET /api/NAME/{id}/edit` | `cls.EditView`; the `ETag` is kept as its version |
 | `list_items(cls, search_terms, page_number, page_size, deep_search)` | `GET /api/NAME?q=&page=&page_size=&deep=` | `_ListItems` of `ReferenceView` |
 | `create_head_node(self, detail)` | `POST /api/NAME`, body `self` (the **`Create`**, by alias, JSON mode), `?detail=` | `ReferenceView`, or `HeadView` with `detail` |
@@ -191,12 +191,11 @@ Points that need deciding or care:
 
 - **Bodies are `Create` / `Update`, not `CreateDB`.** Ids, labels, semantic spaces and context labels are the
   server's to fill in. The client only has to produce a valid `Create`.
-- **The API's `PUT` needs `If-Match`** (428 without it). A bare `.save()` on an `Update` has no `expected_version`.
-  Decision: **an `Update` made from an `EditView` read through the SDK carries the version it was read at** (so
-  `save()` is a checked update by default, and a concurrent edit gives `PanglossVersionConflictError`, with
-  `current_version`). An `Update` built by hand without one sends `If-Match: *` **only** if the caller passes
-  `expected_version="*"`; otherwise the SDK raises before sending (`PanglossVersionRequired`), so a blind overwrite
-  is always chosen, never fallen into.
+- **The API's `PUT` needs `If-Match`** (428 without it). The SDK follows the database module: `expected_version=3`
+  sends `If-Match: "3"`; without one, **`If-Match: *`**, an update whatever the version is, as `update_head_node`
+  does with no `expected_version`. (The first design refused a bare update. That would make code written for the
+  server's database module behave differently on the client, which is what the SDK must not do. A checked update is
+  asked for the same way in both: `save(expected_version=edit.meta.version)`.)
 - **Errors map back to the exceptions the database module raises**, so the same `except` clauses work:
 
   | Status | Raised |
@@ -422,7 +421,7 @@ converters, and `pangloss-memgraph` registers its datetime one when its database
 
 0. **Prerequisites** (done): break the cycle, `ClientSettings`, `neo4j` out of the models, a decision on
    `pydantic-meta-kit`. (Each has its own tests; the clean-client check starts here.)
-1. **The client**: `databases/api` and `api_sync` with the error mapping, `SdkSettings`, login (memory, environment
+1. ✅ **The client**: `databases/api` and `api_sync` with the error mapping, `SdkSettings`, login (memory, environment
    variables, prompt), iterating helper. Tests: unit and the **contract tests** against the real API, using models
    copied by hand (the demo's), before any builder exists.
 2. **The builder**: the import closure, the package, the manifest, the build-time check, `pangloss sdk build/status/show`,
@@ -471,3 +470,42 @@ These are the points where I have a recommendation, but they change what is buil
   (`Person.history(id)`), as another module of the client. Later.
 - Realtime and bulk endpoints: `create_inline` is the batch-upload convenience today; a bulk route would be a
   server feature first.
+
+
+## As built: phase 1 (the client) ✅
+
+`pangloss-sdk` is now the client. It depends on `pangloss-core`, `pangloss-models` and `httpx2` (the HTTP library the
+rest of the project already uses), and on nothing of the server.
+
+| Module | |
+|---|---|
+| `settings.py` | `SdkSettings(ClientSettings)`: `URL`, `USERNAME`, `PASSWORD`, `TOKEN`, `TIMEOUT` (30), `MAX_CONNECTIONS` (10), `VERIFY_TLS`, `READ_RETRIES` (2); environment prefix `PANGLOSS_`, `.env` read, other keys ignored |
+| `protocol.py` | No input or output: each operation is a `Call` (method, path, params, body, headers, `needs_login`) and a function that turns the response into the result, or raises. The error table is here |
+| `auth.py` | `Session`: the tokens, and where credentials come from (the settings, once; then the prompt, three tries; else `PanglossAuthenticationRequired`, or `PanglossAuthenticationError` if the settings' were refused). The prompt is `getpass` at a terminal or in a notebook (`ipykernel`); `connect(prompt=...)` replaces it |
+| `client.py` | `AsyncClient` and `Client` (blocking), the same logic: log in before a request known to need it (writes, `get_for_edit`); on a 401 renew the token with the refresh token (once, if several requests were refused together: a lock), else log in again; a **read** with a dead token that cannot be renewed is sent again without one. A connection pool per event loop (so `asyncio.run` twice is fine). A read is tried again after a network error (2 times, backing off), a write **never** |
+| `databases/api`, `databases/api_sync` | The `exposed_functions` of the table above, async and blocking; `setup` as the stub had |
+| `iterate.py` | `iterate` (async generator) and `iterate_sync`, following `next_page` |
+| `__init__.py` | `connect(url, apps=, sync=, transport=, prompt=, **settings)`: makes the settings (or reads the environment), the client, imports `<app>.models` for each app, `initialise()`s. `disconnect()` and `disconnect_sync()` |
+| `exceptions.py` | `PanglossSdkError` and `PanglossConnectionError`, `PanglossServerError`, `PanglossAuthenticationError` (and `...Required`), `PanglossPermissionError`, `PanglossRequestError` (400 or 422 that is not a write's error: usually an SDK out of date), `PanglossNotConnected` |
+
+**A server change.** Every error answer of the API now has `error`, the name of the exception class, next to `detail`
+(`{"detail": "...", "error": "PanglossNotFoundError"}`), so the client raises the same class rather than guessing from
+the status. Without `error` (an older server, a proxy) the status decides: 404, 409, 412 and 503 as in the table,
+403 `PanglossPermissionError`, 5xx `PanglossServerError`.
+
+**Differences from the spec above:**
+
+- `ApiAsDatabaseSettings` and the stub user functions are gone.
+- A password is never kept on the session; the token is held in memory only. Nothing is written to disk (phase 5).
+- The password at a prompt is not asked for again after a *success*; a later re-login (the refresh token ran out) uses
+  the settings' credentials again, or asks again.
+
+**Tests.** `pangloss-sdk/tests` (50): each operation's request and result, the error table, the login order and the
+prompt, renewing once, retries, the blocking client, `connect`, `iterate`, and the clean-client checks, all against a
+fake server (`httpx2.MockTransport`). `pangloss-memgraph/tests/test_sdk_contract.py` is the **contract test**: the
+client's functions are called by hand, over an in-process connection to the real app with the data in Memgraph (the
+models stay bound to Memgraph), and for **every kind of model of the kitchen sink** (four samples each) what is
+created through the API reads, through the API, **exactly as the database module reads it directly**, in the normal
+view and in the edit view, and an edit saved through the API changes nothing; a second test covers lists, versions
+(`PanglossVersionConflictError` with its `current_version`, as raised directly), not found, a bad reference, an
+entity in use (with `referenced_by`), and delete and undelete.

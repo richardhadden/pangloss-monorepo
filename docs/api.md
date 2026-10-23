@@ -116,7 +116,7 @@ The JSON is `camelCase` throughout (`bornIn`, `meta.createdBy`, `aboutPersonReve
 | 400 | The `id` in an update body is not the one in the path; loading to edit, updating, deleting or undeleting an entity at a URL; deleting a document that is part of another (`PanglossNotDeletableError`); other rejected writes |
 | 401 | Not logged in |
 | 404 | No such item (also: update, delete or undelete of one that does not exist) |
-| 409 | An id already in use; undeleting what is not deleted; deleting an entity that is referred to. For the last, the response also has `referencedBy`, a list of `{id, type, label}`, and the entity is marked for deletion |
+| 409 | (Every error answer has `detail` and `error`, the name of the exception class, which the SDK raises again.) An id already in use; undeleting what is not deleted; deleting an entity that is referred to. For the last, the response also has `referencedBy`, a list of `{id, type, label}`, and the entity is marked for deletion |
 | 422 | A body that is not valid for the model; a reference to an entity that does not exist or is of the wrong type; a bad page |
 
 **URLs.** An entity can be given URLs, such as its address in another database, by creating it with a URL as its `id` (if its class has `create_with_id`; the entity still gets an id of its own). To get an entity, one of its URLs can be put in the path instead of its `{id}`, as it is:
