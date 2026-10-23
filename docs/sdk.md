@@ -424,7 +424,7 @@ converters, and `pangloss-memgraph` registers its datetime one when its database
 1. ✅ **The client**: `databases/api` and `api_sync` with the error mapping, `SdkSettings`, login (memory, environment
    variables, prompt), iterating helper. Tests: unit and the **contract tests** against the real API, using models
    copied by hand (the demo's), before any builder exists.
-2. **The builder**: the import closure, the package, the manifest, the build-time check, `pangloss sdk build/status/show`,
+2. ✅ **The builder**: the import closure, the package, the manifest, the build-time check, `pangloss sdk build/status/show`,
    the stubs inside it. Tests: builder and clean-client check.
 3. **Serving**: `/api/sdk` (manifest, tarball and wheel), `SDK_ACCESS`, staleness headers and the `connect()` check.
 4. **Git**: dulwich repository, smart HTTP read-only, Basic auth, tags, `pangloss sdk` commit handling. Tests: the
@@ -509,3 +509,29 @@ created through the API reads, through the API, **exactly as the database module
 view and in the edit view, and an edit saved through the API changes nothing; a second test covers lists, versions
 (`PanglossVersionConflictError` with its `current_version`, as raised directly), not found, a bad reference, an
 entity in use (with `referenced_by`), and delete and undelete.
+
+
+## As built: phase 2 (the builder) ✅
+
+The package `pangloss-sdk-server` (`pangloss_sdk_server`), an optional app (`cli.py`, no routes yet).
+
+| Module | |
+|---|---|
+| `closure.py` | Which files ship: starting from `<app>.models` of each shipped app, every module **of the project** (a file under the project root, not in a virtual environment) that is imported, anywhere in the file (inside functions and `if TYPE_CHECKING` too), found with `ast`, never by running it; and the `__init__.py` of every package above. A package's `__init__.py` may hold only a docstring, imports and `__all__`. A module that imports what a client does not have (`SERVER_ONLY`: `neo4j`, FastAPI, `pangloss_api`, `pangloss_memgraph`, `pangloss_users`, `pangloss_history`, ...) is a build error naming the module |
+| `builder.py` | `build_package(root, settings, build_number)`: the files in memory: the modules as written, `.pyi` for each that declares models (`typestubs.stub_for_module`, from the server's initialised models), `py.typed`, `<project>_sdk/__init__.py` (`connect()`, `connect_offline()`, `MANIFEST`, `APPS`), `manifest.json`, `pyproject.toml` (hatchling; `requires-python` is the Python it was built with), `README.md`. Requirements: `SDK_REQUIREMENT` (default `pangloss-sdk==<this version>`), the distribution of each third-party import (from `importlib.metadata.packages_distributions`; an import with no known distribution is an error), and `SDK_EXTRA_REQUIREMENTS` |
+| `check.py` | The build-time check: a subprocess (`python -I -B`) puts the package first on the path, **forbids the server-only modules**, imports it, `connect_offline()`s, and prints the JSON schema of the `Create`, `Update`, `HeadView`, `EditView`, `ReferenceView` and `ReferenceSet` of every Document and Entity; they must equal the server's (`pangloss_sdk.schemas`). The order of the members of a union and of `required` is normalised: it differs from one process to the next |
+| `publish.py` | `build`: the fingerprint is the hash of the shipped files (and the requirements, apps and name), not of the manifest or the version, so it changes only with the content. Unchanged: nothing is done (`--force` builds again). Changed: the version is `0.<n>` (n counts builds that changed something), the package is written to `.pangloss/sdk/.building`, **checked**, and only then replaces `.pangloss/sdk/package`; a failure leaves the last build. `state.json` has the fingerprint, number, time and schema position |
+| `cli.py` | `pangloss sdk build [--force]`, `status` (exit 2 if the models changed since), `show [--diff]` |
+
+Settings (all optional, on the project's settings class): `SDK_APPS`, `SDK_EXCLUDE_APPS`, `SDK_NAME`, `SDK_REQUIREMENT`, `SDK_EXTRA_REQUIREMENTS`, `SDK_OUTPUT` (default `.pangloss/sdk`). Framework packages (`pangloss_*`) are never shipped.
+
+**Run against the demo project.** `pangloss sdk build` gives `pangloss-demo-sdk` with `demo_app` (models and stub). The package was installed with `uv pip` into a **new Python 3.15 environment with only** `pangloss-core`, `pangloss-models` and `pangloss-sdk` (and their dependencies: no `neo4j`, no FastAPI), where `import pangloss_demo_sdk; connect(...)` initialised the models and `Person.get(...)` made a request and validated the answer.
+
+**Found on the way** (also in `TODO.md`):
+
+- The members of a union in the generated models differ between processes (they come from sets). It made the JSON schemas and the `.pyi` files differ from run to run, so the stub writer (`make-stubs` too: the demo's committed stub was reordered) and the schema comparison now use a fixed order. The models themselves are not changed.
+- `pangloss-models` uses `lazy from ... import`, which is **Python 3.15** syntax, though `requires-python` says 3.14: so a client needs 3.15, and the generated `requires-python` says the Python it was built with.
+
+**Not built** (from the spec): type-checking the stubs of the package (`ty`), `SDK_BUILD = "start"` (building at server start: phase 3), the `@server_only` decorator, a test that installs the built package into a fresh virtual environment (done by hand above; it needs network access for the build backend).
+
+**Tests** (`pangloss-sdk-server/tests`, 26): the closure (relative imports, imports in functions, `__init__` rules, server-only imports, a virtual environment inside the project), the package (files, manifest, stable fingerprint, requirements, app selection), and publishing (unchanged builds, new versions, a package that fails to import on a client leaves the last build, models that differ fail the check, the diff, the commands).

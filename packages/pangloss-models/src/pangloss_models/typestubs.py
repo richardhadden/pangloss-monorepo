@@ -124,7 +124,10 @@ class TypeRenderer:
         if origin is typing.Literal:
             return "typing.Literal[" + ", ".join(self._literal(a) for a in args) + "]"
         if origin is typing.Union or origin is types.UnionType:
-            return " | ".join(self._render(a) for a in args)
+            # (in a fixed order: the members of a union come from sets, whose order differs
+            # from one run to the next, and a stub must not change when nothing did)
+            members = sorted({self._render(a) for a in args}, key=lambda m: (m == "None", m))
+            return " | ".join(members)
         if origin is not None:
             if not isinstance(origin, type):
                 raise _Unwritable

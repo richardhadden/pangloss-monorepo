@@ -32,6 +32,7 @@ from pangloss_sdk.settings import (
 
 __all__ = (
     "connect",
+    "connect_offline",
     "disconnect",
     "disconnect_sync",
     "iterate",
@@ -82,6 +83,20 @@ def connect(
         if sync
         else _client.AsyncClient(configured, transport, prompt)
     )
+    for app in app_list:
+        importlib.import_module(f"{app}.models")
+    initialise()
+
+
+def connect_offline(apps: Iterable[str]) -> None:
+    """Import and initialise the models of the apps with no server: the model functions
+    are bound to the API, and fail if used. For checking that an SDK imports and that its
+    models are the server's."""
+    from pangloss_core.settings import ClientSettings
+    from pangloss_models import initialise
+
+    app_list = list(apps)
+    ClientSettings(INSTALLED_APPS=app_list, DATABASE_MODULE=ASYNC_DATABASE_MODULE)
     for app in app_list:
         importlib.import_module(f"{app}.models")
     initialise()

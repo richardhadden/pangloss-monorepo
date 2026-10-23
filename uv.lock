@@ -13,6 +13,7 @@ members = [
     "pangloss-memgraph",
     "pangloss-models",
     "pangloss-sdk",
+    "pangloss-sdk-server",
     "pangloss-users",
 ]
 
@@ -830,6 +831,37 @@ requires-dist = [
     { name = "httpx2", specifier = ">=2.15" },
     { name = "pangloss-core", editable = "packages/pangloss-core" },
     { name = "pangloss-models", editable = "packages/pangloss-models" },
+]
+
+[[package]]
+name = "pangloss-sdk-server"
+version = "0.1.0"
+source = { editable = "packages/pangloss-sdk-server" }
+dependencies = [
+    { name = "pangloss-core" },
+    { name = "pangloss-models" },
+    { name = "pangloss-sdk" },
+    { name = "typer" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "pangloss-cli" },
+    { name = "pytest" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "pangloss-core", editable = "packages/pangloss-core" },
+    { name = "pangloss-models", editable = "packages/pangloss-models" },
+    { name = "pangloss-sdk", editable = "packages/pangloss-sdk" },
+    { name = "typer", specifier = ">=0.12" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "pangloss-cli", editable = "packages/pangloss-cli" },
+    { name = "pytest", specifier = ">=9.0.3" },
 ]
 
 [[package]]

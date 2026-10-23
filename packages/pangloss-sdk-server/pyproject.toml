@@ -1,0 +1,31 @@
+[project]
+name = "pangloss-sdk-server"
+version = "0.1.0"
+description = "Optional: builds a project's SDK (its models, as a package) and serves it"
+readme = "README.md"
+authors = [
+    { name = "Richard Hadden", email = "rwjhadden@gmail.com" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "pangloss-core",
+    "pangloss-models",
+    "pangloss-sdk",
+    "typer>=0.12",
+]
+
+[build-system]
+requires = ["uv_build>=0.11.8,<0.12.0"]
+build-backend = "uv_build"
+
+[tool.uv.sources]
+pangloss-core = { workspace = true }
+pangloss-models = { workspace = true }
+pangloss-sdk = { workspace = true }
+pangloss-cli = { workspace = true }
+
+[dependency-groups]
+dev = [
+    "pangloss-cli",
+    "pytest>=9.0.3",
+]

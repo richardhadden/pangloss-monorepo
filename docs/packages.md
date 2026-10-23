@@ -55,6 +55,10 @@ The FastAPI application (`pangloss_api.app.create_app`). Done: token and session
 
 A Python package that holds the JavaScript of the web interface: `interface-core` (a Solid 2.0 component library) and `interface-app` (a server-rendered Solid 2.0 application), with `pangloss interface` commands that wrap Node or Bun and endpoints under `/api/interface`. See [The interface](interface.md).
 
+## pangloss-sdk-server 🚧
+
+Optional: `"pangloss_sdk_server"` in `INSTALLED_APPS`. Builds the SDK of the project: `pangloss sdk build|status|show`. Serving it (HTTP, git) is not built yet. See [the SDK](sdk.md).
+
 ## pangloss-sdk 🚧
 
 Lets Pangloss models be used locally and read and write a remote Pangloss instance through its API ("API as database"). The client is built; the generated per-project SDK is not (see [the SDK](sdk.md)).

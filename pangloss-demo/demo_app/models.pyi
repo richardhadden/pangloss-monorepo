@@ -116,7 +116,7 @@ class Person(Entity, Agent):
     born: Date
     aliases: list[str]
     class ReferenceSet(pangloss_models.model_bases.entity._EntityReferenceSetBase):  # type: ignore
-        id: uuid.UUID | pydantic.networks.AnyHttpUrl  # type: ignore
+        id: pydantic.networks.AnyHttpUrl | uuid.UUID  # type: ignore
         type: typing.Literal['Person'] = ...
         label: str | None = ...
 
@@ -125,7 +125,7 @@ class Person(Entity, Agent):
 
     class Create(pangloss_models.model_bases.entity._EntityCreateBase):  # type: ignore
         type: typing.Literal['Person'] = ...
-        id: uuid.UUID | pydantic.networks.AnyHttpUrl | None = ...
+        id: pydantic.networks.AnyHttpUrl | uuid.UUID | None = ...
         create_new: typing.Literal[True] | None = ...
         label: str
         aliases: list[str]
@@ -136,7 +136,7 @@ class Person(Entity, Agent):
         type: typing.Literal['Person'] = ...
         label: str
         aliases: list[str]
-        born: Date.Update | Date.Create
+        born: Date.Create | Date.Update
         known_as: WithCertainty[str]
 
     class View(pangloss_models.model_bases.entity._EntityViewBase):  # type: ignore
@@ -159,7 +159,7 @@ class Person(Entity, Agent):
 class Group(Entity, Agent):
     name: Annotated[str, MinLen(2), MaxLen(100)]
     class ReferenceSet(pangloss_models.model_bases.entity._EntityReferenceSetBase):  # type: ignore
-        id: uuid.UUID | pydantic.networks.AnyHttpUrl  # type: ignore
+        id: pydantic.networks.AnyHttpUrl | uuid.UUID  # type: ignore
         type: typing.Literal['Group'] = ...
         label: str | None = ...
 
@@ -194,7 +194,7 @@ class Group(Entity, Agent):
 class Place(Entity):
     coordinates: Coordinates | None = None
     class ReferenceSet(pangloss_models.model_bases.entity._EntityReferenceSetBase):  # type: ignore
-        id: uuid.UUID | pydantic.networks.AnyHttpUrl  # type: ignore
+        id: pydantic.networks.AnyHttpUrl | uuid.UUID  # type: ignore
         type: typing.Literal['Place'] = ...
         label: str | None = ...
 
@@ -217,7 +217,7 @@ class Place(Entity):
         coordinates: Coordinates | None = ...
 
     class HeadView(pangloss_models.model_bases.entity._EntityHeadViewBase, Place.View):  # type: ignore
-        places_reverse: list[Statement.ReferenceView | Activity.ReferenceView | Transfer.ReferenceView] = ...
+        places_reverse: list[Activity.ReferenceView | Statement.ReferenceView | Transfer.ReferenceView] = ...
 
     class EditView(pangloss_models.model_bases.entity._EntityEditViewBase, Place.View):  # type: ignore
         ...
@@ -228,7 +228,7 @@ class Source(Entity):
     written: datetime.date | None = None
     edition_price: Decimal | None = None
     class ReferenceSet(pangloss_models.model_bases.entity._EntityReferenceSetBase):  # type: ignore
-        id: uuid.UUID | pydantic.networks.AnyHttpUrl  # type: ignore
+        id: pydantic.networks.AnyHttpUrl | uuid.UUID  # type: ignore
         type: typing.Literal['Source'] = ...
         label: str | None = ...
 
@@ -237,7 +237,7 @@ class Source(Entity):
 
     class Create(pangloss_models.model_bases.entity._EntityCreateBase):  # type: ignore
         type: typing.Literal['Source'] = ...
-        id: uuid.UUID | pydantic.networks.AnyHttpUrl | None = ...
+        id: pydantic.networks.AnyHttpUrl | uuid.UUID | None = ...
         create_new: typing.Literal[True] | None = ...
         label: str
         author: str | None = ...
@@ -280,7 +280,7 @@ class Statement(Document):
         text: str
         year: int
         date: Date.Create
-        involves: list[Person.ReferenceSet | Person.Create | Group.ReferenceSet]
+        involves: list[Group.ReferenceSet | Person.Create | Person.ReferenceSet]
         places: list[Place.ReferenceSet]
 
     class Update(pangloss_models.model_bases.document._DocumentUpdateBase):  # type: ignore
@@ -288,8 +288,8 @@ class Statement(Document):
         label: str
         text: str
         year: int
-        date: Date.Update | Date.Create
-        involves: list[Person.ReferenceSet | Person.Create | Group.ReferenceSet]
+        date: Date.Create | Date.Update
+        involves: list[Group.ReferenceSet | Person.Create | Person.ReferenceSet]
         places: list[Place.ReferenceSet]
 
     class View(pangloss_models.model_bases.document._DocumentViewBase):  # type: ignore
@@ -298,7 +298,7 @@ class Statement(Document):
         text: str
         year: int
         date: Date.View
-        involves: list[Person.ReferenceView | Group.ReferenceView] = ...
+        involves: list[Group.ReferenceView | Person.ReferenceView] = ...
         places: list[Place.ReferenceView] = ...
 
     class HeadView(pangloss_models.model_bases.document._DocumentHeadViewBase, Statement.View):  # type: ignore
@@ -328,7 +328,7 @@ class Activity(Statement):
         text: str
         year: int
         activity_type: ActivityType
-        date: Date.Update | Date.Create
+        date: Date.Create | Date.Update
         places: list[Place.ReferenceSet]
         carried_out_by: typing.Any
         participants: typing.Any
@@ -364,8 +364,8 @@ class Transfer(Statement):
         quantity: decimal.Decimal
         date: Date.Create
         places: list[Place.ReferenceSet]
-        given_by: Person.ReferenceSet | Person.Create | Group.ReferenceSet
-        given_to: Person.ReferenceSet | Person.Create | Group.ReferenceSet
+        given_by: Group.ReferenceSet | Person.Create | Person.ReferenceSet
+        given_to: Group.ReferenceSet | Person.Create | Person.ReferenceSet
 
     class Update(pangloss_models.model_bases.document._DocumentUpdateBase):  # type: ignore
         type: typing.Literal['Transfer'] = ...
@@ -374,10 +374,10 @@ class Transfer(Statement):
         year: int
         item: str
         quantity: decimal.Decimal
-        date: Date.Update | Date.Create
+        date: Date.Create | Date.Update
         places: list[Place.ReferenceSet]
-        given_by: Person.ReferenceSet | Person.Create | Group.ReferenceSet
-        given_to: Person.ReferenceSet | Person.Create | Group.ReferenceSet
+        given_by: Group.ReferenceSet | Person.Create | Person.ReferenceSet
+        given_to: Group.ReferenceSet | Person.Create | Person.ReferenceSet
 
     class View(pangloss_models.model_bases.document._DocumentViewBase):  # type: ignore
         type: typing.Literal['Transfer'] = ...
@@ -388,8 +388,8 @@ class Transfer(Statement):
         quantity: decimal.Decimal
         date: Date.View
         places: list[Place.ReferenceView] = ...
-        given_by: Person.ReferenceView | Group.ReferenceView
-        given_to: Person.ReferenceView | Group.ReferenceView
+        given_by: Group.ReferenceView | Person.ReferenceView
+        given_to: Group.ReferenceView | Person.ReferenceView
 
     class HeadView(pangloss_models.model_bases.document._DocumentHeadViewBase, Transfer.View):  # type: ignore
         ...

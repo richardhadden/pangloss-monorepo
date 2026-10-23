@@ -116,6 +116,10 @@ The core commands do not know about any database. The backend named by `DATABASE
 
 For Memgraph this is `pangloss_memgraph.databases.memgraph.setup`; the SDK has a stub.
 
+## SDK commands
+
+With `pangloss_sdk_server` in `INSTALLED_APPS` (see [the SDK](sdk.md)): `pangloss sdk build [--force]` builds the SDK of the project into `.pangloss/sdk/package` (only if the models changed, and after trying it on a clean client), `pangloss sdk status` says what is built and whether the models have changed since (exit 2 if so), and `pangloss sdk show [--diff]` lists the files, or the change since the last build.
+
 ## Type stubs
 
 `Person.Create`, `Person.Update`, `Person.HeadView` and the other classes of a model are made when the models are initialised, so an editor or type checker cannot see them. `pangloss make-stubs` imports the models of the installed apps, initialises them, and writes a `.pyi` file beside each module in the project that declares models (`myapp/models.pyi` next to `myapp/models.py`). In it each model has those classes as nested classes, with their fields typed (a relation is the `ReferenceSet` or `ReferenceView` of its target, an enum is the enum).
