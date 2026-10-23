@@ -31,7 +31,7 @@ from pangloss_models.model_bases.entity import (
 from pangloss_models.hooks import WriteEvent, emit_write_event
 from pangloss_models.utils import get_concrete_types
 from pangloss_users import current_request_username
-from pangloss_users.models import UserInDB
+from pangloss_users.models import AccessTokenRecord, UserInDB
 from pydantic import AnyHttpUrl, TypeAdapter
 
 from pangloss_memgraph.databases.memgraph.build_create_query import (
@@ -498,3 +498,39 @@ async def update_user_in_db(
     tx: Transaction, username: str, changes: dict[str, Any]
 ) -> UserInDB:
     return await users.update_user(tx, username, changes)
+
+
+@Database.default.write_transaction
+async def revoke_session_in_db(
+    tx: Transaction, jti: str, expires: datetime.datetime
+) -> None:
+    await users.revoke_session(tx, jti, expires)
+
+
+@Database.default.read_transaction
+async def is_session_revoked_in_db(tx: Transaction, jti: str) -> bool:
+    return await users.is_session_revoked(tx, jti)
+
+
+@Database.default.write_transaction
+async def create_access_token_in_db(tx: Transaction, record: AccessTokenRecord) -> None:
+    await users.create_access_token(tx, record)
+
+
+@Database.default.read_transaction
+async def get_access_token_in_db_by_hash(
+    tx: Transaction, token_hash: str
+) -> AccessTokenRecord | None:
+    return await users.get_access_token_by_hash(tx, token_hash)
+
+
+@Database.default.read_transaction
+async def list_access_tokens_in_db(
+    tx: Transaction, username: str
+) -> list[AccessTokenRecord]:
+    return await users.list_access_tokens(tx, username)
+
+
+@Database.default.write_transaction
+async def delete_access_token_in_db(tx: Transaction, username: str, id: str) -> bool:
+    return await users.delete_access_token(tx, username, id)

@@ -41,3 +41,10 @@ def an_app(tmp_path, monkeypatch):
     yield "an_sdk_test_app"
     sys.modules.pop("an_sdk_test_app.models", None)
     sys.modules.pop("an_sdk_test_app", None)
+
+
+@pytest.fixture(autouse=True)
+def credentials_in_a_temporary_file(tmp_path, monkeypatch):
+    """A kept login goes to a file in the test's directory, never to the real keyring or home"""
+    monkeypatch.setenv("PANGLOSS_CREDENTIALS_FILE", str(tmp_path / "credentials.json"))
+    monkeypatch.setenv("PANGLOSS_NO_KEYRING", "1")

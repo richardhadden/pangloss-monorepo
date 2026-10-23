@@ -9,7 +9,7 @@ import shutil
 from pathlib import Path
 from typing import Any
 
-from pangloss_sdk_server import config
+from pangloss_sdk_server import config, gitrepo
 from pangloss_sdk_server.builder import Package, build_package
 from pangloss_sdk_server.check import check_package
 
@@ -68,6 +68,8 @@ def build(root: Path, settings: Any, force: bool = False) -> Built:
     if not needs_build(package, output) and not force:
         # (as built: the number is of the last build)
         package = build_package(root, settings, max(state.get("number", 1), 1))
+        # (a repository made after the build, or lost)
+        gitrepo.commit_safely(output, package.files, package.manifest)
         return Built(False, package.manifest, final)
 
     number = state.get("number", 0)
@@ -101,6 +103,7 @@ def build(root: Path, settings: Any, force: bool = False) -> Built:
         )
         + "\n"
     )
+    gitrepo.commit_safely(output, package.files, package.manifest)
     return Built(True, package.manifest, final)
 
 

@@ -12,8 +12,11 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 from pangloss_core import settings as core_settings
 from pangloss_users import service
-from pangloss_users.exceptions import PanglossUserDoesNotExistError
-from pangloss_users.models import User, UserUpdate
+from pangloss_users.exceptions import (
+    PanglossInvalidUserError,
+    PanglossUserDoesNotExistError,
+)
+from pangloss_users.models import AccessTokenInfo, User, UserUpdate
 
 from pangloss_api.dependencies import (
     ACCESS_COOKIE_NAME,
@@ -25,7 +28,9 @@ from pangloss_api.dependencies import (
 from pangloss_api.schemas import (
     AccessTokenResponse,
     ChangePassword,
+    CreatedAccessToken,
     Message,
+    NewAccessToken,
     NewUser,
     RefreshRequest,
     SetAdmin,
@@ -52,9 +57,9 @@ async def authenticated_user(form: OAuth2PasswordRequestForm) -> User:
     return user
 
 
-def access_token_for(username: str) -> AccessTokenResponse:
+def access_token_for(user: User) -> AccessTokenResponse:
     return AccessTokenResponse(
-        access_token=create_token(username, "access"),
+        access_token=create_token(user.username, "access", user.token_generation),
         expires_in=int(lifetime("access").total_seconds()),
     )
 
@@ -80,11 +85,33 @@ def refresh_claims(token: str | None):
         raise unauthorised("Invalid or expired refresh token") from error
 
 
-async def active_user_for_refresh(username: str) -> User:
-    user = await service.get_user(username)
-    if user is None or user.disabled:
+async def active_user_for_refresh(claims) -> User:
+    """The user of a refresh token that is still good: not revoked, and not made before
+    the user's sessions were ended"""
+    user = await service.get_user(claims.username)
+    if (
+        user is None
+        or user.disabled
+        or claims.generation < user.token_generation
+        or (claims.jti and await service.is_session_revoked(claims.jti))
+    ):
         raise unauthorised("Invalid or expired refresh token")
     return user
+
+
+async def revoke(token: str | None) -> None:
+    """Revoke a token (of either kind) that is good, until it would have expired. One that
+    is not good, or not there, is ignored: it cannot be used anyway"""
+    if not token:
+        return
+    for token_type in ("access", "refresh"):
+        try:
+            claims = decode_token(token, token_type)  # type: ignore[arg-type]
+        except TokenError:
+            continue
+        if claims.jti:
+            await service.revoke_session(claims.jti, claims.expires)
+        return
 
 
 # ---------------------------------------------------------------------------
@@ -96,10 +123,10 @@ async def active_user_for_refresh(username: str) -> User:
 async def get_tokens(form: LoginForm):
     """Log in with a username and password (as a form, the OAuth2 way)"""
     user = await authenticated_user(form)
-    access = access_token_for(user.username)
+    access = access_token_for(user)
     return TokenResponse(
         access_token=access.access_token,
-        refresh_token=create_token(user.username, "refresh"),
+        refresh_token=create_token(user.username, "refresh", user.token_generation),
         expires_in=access.expires_in,
     )
 
@@ -108,8 +135,17 @@ async def get_tokens(form: LoginForm):
 async def refresh_token(body: RefreshRequest):
     """A new access token, given a refresh token"""
     claims = refresh_claims(body.refresh_token)
-    user = await active_user_for_refresh(claims.username)
-    return access_token_for(user.username)
+    user = await active_user_for_refresh(claims)
+    return access_token_for(user)
+
+
+@router.post("/token/revoke", status_code=status.HTTP_204_NO_CONTENT)
+async def revoke_token(body: RefreshRequest):
+    """Log out: the refresh token (given by whoever has it) stops working, so no more access
+    tokens can be got with it. (An access token already made lasts until it expires; to end
+    those too, `POST /me/logout-all`.)"""
+    await revoke(body.refresh_token)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 # ---------------------------------------------------------------------------
@@ -122,10 +158,16 @@ async def start_session(form: LoginForm, response: Response):
     """Log in, keeping the tokens in (HTTP-only) cookies"""
     user = await authenticated_user(form)
     set_cookie(
-        response, ACCESS_COOKIE_NAME, create_token(user.username, "access"), "access"
+        response,
+        ACCESS_COOKIE_NAME,
+        create_token(user.username, "access", user.token_generation),
+        "access",
     )
     set_cookie(
-        response, REFRESH_COOKIE_NAME, create_token(user.username, "refresh"), "refresh"
+        response,
+        REFRESH_COOKIE_NAME,
+        create_token(user.username, "refresh", user.token_generation),
+        "refresh",
     )
     return Message(message="success")
 
@@ -134,16 +176,21 @@ async def start_session(form: LoginForm, response: Response):
 async def refresh_session(request: Request, response: Response):
     """A new access cookie, given the refresh cookie"""
     claims = refresh_claims(request.cookies.get(REFRESH_COOKIE_NAME))
-    user = await active_user_for_refresh(claims.username)
+    user = await active_user_for_refresh(claims)
     set_cookie(
-        response, ACCESS_COOKIE_NAME, create_token(user.username, "access"), "access"
+        response,
+        ACCESS_COOKIE_NAME,
+        create_token(user.username, "access", user.token_generation),
+        "access",
     )
     return Message(message="success")
 
 
 @router.delete("/session", response_model=Message)
-async def end_session(response: Response):
-    """Log out"""
+async def end_session(request: Request, response: Response):
+    """Log out: the cookies are cleared, and the tokens in them stop working"""
+    await revoke(request.cookies.get(REFRESH_COOKIE_NAME))
+    await revoke(request.cookies.get(ACCESS_COOKIE_NAME))
     response.delete_cookie(ACCESS_COOKIE_NAME)
     response.delete_cookie(REFRESH_COOKIE_NAME)
     return Message(message="success")
@@ -167,8 +214,62 @@ async def update_me(update: UserUpdate, user: CurrentUser):
 
 @router.put("/me/password", response_model=Message)
 async def change_my_password(body: ChangePassword, user: CurrentUser):
+    """Change your password. This ends every session (this one too: log in again)"""
     await service.change_password(user.username, body.old_password, body.new_password)
     return Message(message="success")
+
+
+@router.post("/me/logout-all", status_code=status.HTTP_204_NO_CONTENT)
+async def logout_everywhere(user: CurrentUser):
+    """End every session of yours: every token made until now stops working (personal
+    access tokens are not tokens of a session, and go on: revoke them one by one)"""
+    await service.end_sessions(user.username)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# ---------------------------------------------------------------------------
+# Personal access tokens: long-lived, named and revocable, for scripts and for git
+# ---------------------------------------------------------------------------
+
+
+def not_with_an_access_token(request: Request) -> None:
+    """A personal access token cannot make more of them"""
+    header = request.headers.get("authorization", "")
+    if header.removeprefix("Bearer ").startswith(service.ACCESS_TOKEN_PREFIX):
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            detail="Personal access tokens are made when logged in, not with another",
+        )
+
+
+@router.post(
+    "/me/tokens", response_model=CreatedAccessToken, status_code=status.HTTP_201_CREATED
+)
+async def create_access_token(body: NewAccessToken, user: CurrentUser, request: Request):
+    """Make a personal access token. The token is in the answer **once**: it is not kept,
+    and cannot be shown again. Use it as `Authorization: Bearer <token>`, or as the password
+    of HTTP Basic (with your username). `scope` `read` can only read"""
+    not_with_an_access_token(request)
+    try:
+        info, token = await service.create_access_token(
+            user.username, body.name, body.scope, body.expires_days
+        )
+    except PanglossInvalidUserError as error:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(error))
+    return CreatedAccessToken(**info.model_dump(), token=token)
+
+
+@router.get("/me/tokens", response_model=list[AccessTokenInfo])
+async def list_access_tokens(user: CurrentUser):
+    """Your personal access tokens (not the tokens themselves)"""
+    return await service.list_access_tokens(user.username)
+
+
+@router.delete("/me/tokens/{token_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def revoke_access_token(token_id: str, user: CurrentUser):
+    if not await service.revoke_access_token(user.username, token_id):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="There is no such token")
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 # ---------------------------------------------------------------------------

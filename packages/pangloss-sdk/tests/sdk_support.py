@@ -47,6 +47,7 @@ class FakeServer:
         self.requests: list[httpx.Request] = []
         self.answer = answer or (lambda request: (200, {}))
         self.password = password
+        self.revoked: list[str] = []
         self.logins = 0
         self.refreshes = 0
         self.valid_tokens: set[str] = set()
@@ -79,6 +80,16 @@ class FakeServer:
             access = f"access-r{self.refreshes}"
             self.valid_tokens.add(access)
             return httpx.Response(200, json={"access_token": access, "token_type": "bearer", "expires_in": 1800})
+        if path == "/api/users/token/revoke":
+            self.revoked.append(json.loads(request.content)["refresh_token"])
+            self.valid_refresh.discard(json.loads(request.content)["refresh_token"])
+            return httpx.Response(204)
+        if path == "/api/users/me":
+            header = request.headers.get("authorization", "")
+            token = header.removeprefix("Bearer ")
+            if token not in self.valid_tokens:
+                return httpx.Response(401, json={"detail": "Not logged in"})
+            return httpx.Response(200, json={"username": "ada"})
         header = request.headers.get("authorization")
         if header is not None and header.removeprefix("Bearer ") not in self.valid_tokens:
             return httpx.Response(401, json={"detail": "Invalid or expired token"})

@@ -47,6 +47,8 @@ def settings_class(root):
 def make_app(project):
     saved = core_settings.__dict__.get("SETTINGS")
     exposed_functions.USERS.clear()
+    exposed_functions.REVOKED.clear()
+    exposed_functions.ACCESS_TOKENS.clear()
     current.reset()
 
     def make(**options):
@@ -58,6 +60,8 @@ def make_app(project):
 
     yield make
     exposed_functions.USERS.clear()
+    exposed_functions.REVOKED.clear()
+    exposed_functions.ACCESS_TOKENS.clear()
     current.reset()
     if saved is None:
         core_settings.__dict__.pop("SETTINGS", None)

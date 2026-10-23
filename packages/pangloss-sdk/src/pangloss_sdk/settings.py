@@ -20,6 +20,9 @@ class SdkSettings(ClientSettings):
     # An access token to use as it is (it is not renewed)
     TOKEN: SecretStr | None = None
 
+    # Whether a login kept by `pangloss-sdk login` is used when there is no other
+    USE_STORED_LOGIN: bool = True
+
     # Seconds
     TIMEOUT: float = 30.0
     # The most requests in flight at once

@@ -8,6 +8,8 @@ authors = [
 ]
 requires-python = ">=3.14"
 dependencies = [
+    "a2wsgi>=1.10.10",
+    "dulwich>=1.2.19",
     "fastapi>=0.115",
     "pangloss-api",
     "pangloss-core",

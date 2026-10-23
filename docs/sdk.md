@@ -428,9 +428,9 @@ converters, and `pangloss-memgraph` registers its datetime one when its database
 2. ✅ **The builder**: the import closure, the package, the manifest, the build-time check, `pangloss sdk build/status/show`,
    the stubs inside it. Tests: builder and clean-client check.
 3. ✅ **Serving**: `/api/sdk` (manifest, tarball and wheel), `SDK_ACCESS`, staleness headers and the `connect()` check.
-4. **Git**: dulwich repository, smart HTTP read-only, Basic auth, tags, `pangloss sdk` commit handling. Tests: the
+4. ✅ **Git**: dulwich repository, smart HTTP read-only, Basic auth, tags, `pangloss sdk` commit handling. Tests: the
    real-`git` round trip.
-5. **Tokens**: the server's revocation and personal access tokens, and the client's `pangloss-sdk login/logout` with
+5. ✅ **Tokens**: the server's revocation and personal access tokens, and the client's `pangloss-sdk login/logout` with
    stored refresh token. (Separable: phases 1 to 4 work with passwords at the prompt and in memory.)
 6. **The demo**: `pangloss-demo` builds its SDK; a notebook-style script outside the project clones it, installs it,
    and populates and reads the demo data through the API. Docs updated (`packages.md`, `status.md`, `api.md`,
@@ -458,7 +458,7 @@ These are the points where I have a recommendation, but they change what is buil
 6. **Stale writes refused by default.** Recommended yes (a stale `Create` fails server-side anyway, or is
    accepted wrongly); the setting allows a warning instead.
 7. **Credential storage.** Recommended: password never stored; refresh token only on explicit `pangloss-sdk login`,
-   and only once the server can revoke it (phase 5). Until then, memory only, plus environment variables.
+   and only once the server can revoke it (done: phase 5).
 8. **Sync and async.** Recommended: both modules, chosen at `connect()`; async is the default because it is what
    the models' functions are, and what the server uses.
 
@@ -559,3 +559,37 @@ Settings (all optional, on the project's settings class): `SDK_APPS`, `SDK_EXCLU
 **Run against the demo project, with the real server and Memgraph** (a temporary admin user, since removed): the server built `pangloss-demo-sdk` as it started; `/api/sdk` was 401 without a login and 200 with one; the wheel was installed with `uv pip install "http://user:password@127.0.0.1:8765/api/sdk/download/pangloss_demo_sdk-0.4-py3-none-any.whl"` into a **new environment with only `pangloss-core`, `pangloss-models` and `pangloss-sdk`**; and a script there connected (`check()` said current, with warnings turned into errors), created a `Person` (with detail), listed, read it for edit, updated it with `expected_version`, got `PanglossVersionConflictError` (`current_version` 2) for a stale update, deleted it, and read `None`. The test data was removed.
 
 **Tests** (`pangloss-sdk-server`, now 41; `pangloss-sdk`, now 58): building as the server starts, building off, a failing build that leaves the server up; access (admin, user, public, Basic, token as password, 401 challenge); the manifest; the wheel (a valid zip, `RECORD` hashes right, **imports on a clean client and makes the server's models**) and the sdist; the same bytes twice; the status header for each case; the refusal of a stale write, and `warn`; a client with the real manifest is `current` against the app; and, in the client, the headers, the warning once, the 409, and `check()`.
+
+
+## As built: phase 4 (git) ✅
+
+`git clone http://host/api/sdk/git` works, with the real `git` (and `pip install "git+http://user:password@host/api/sdk/git"` into a clean environment, which builds the package with its `pyproject.toml`).
+
+| Module | |
+|---|---|
+| `gitrepo.py` | A **bare repository** `.pangloss/sdk/sdk.git`, written with dulwich (no `git` on the server). `commit_package` puts the package's files in a tree and commits it on `main` **only if the tree differs** from the last commit's (so a build with no change, and `--force` of the same content, leave the head where it was). The message has the distribution and version, the fingerprint and the schema position; the commit is tagged `v<version>`, and `schema-<hash>` if no commit has that tag yet (the first SDK at a schema). Called by `publish.build` after a build, and also for an unchanged one (a repository made after the build, or lost); a failure is logged and does not fail the build |
+| `git_endpoint.py` | An ASGI app mounted at `/api/sdk/git` (by `configure_app`): the **same access** as the rest of the SDK (`authorise`: Basic, Bearer or cookie; 401 with `WWW-Authenticate: Basic` so that git asks for a username and password, and a credential helper keeps them), then dulwich's smart HTTP application, behind `a2wsgi`, with **upload-pack only**. dulwich *adds* the handlers given to its defaults, which have `receive-pack`: the first test of a push **succeeded**, so the handler is taken out, and a push (`git-receive-pack` in the path, or `service=git-receive-pack`) is also answered `403` before dulwich |
+
+`access.py` now has `authorise(request)` (a plain function: git's endpoint is not a FastAPI route) and the Basic password can be a personal access token.
+
+Differences from the spec above: the **commit time is the build's**, not fixed (the history says when each version was made; a repository made again from nothing would have other ids either way); the schema tag is on the first commit at a schema only (a tag that moves would not reach clients that fetched it).
+
+**Tests** (`test_git.py`, 8, skipped without `git`): a real uvicorn server on a free port; clone (files, no unrelated modules, the log, branch, tags); refused for a wrong password, an unknown user and an ordinary user; a personal access token as the password; **a push is refused and changes nothing**; a changed model is a new commit that `git pull` brings; an unchanged build leaves the head; `SDK_ACCESS = "public"` needs no login.
+
+## As built: phase 5 (tokens and the kept login) ✅
+
+**Server** (see [the API](api.md#sessions-ending-and-personal-access-tokens)): tokens have an id and the user's `token_generation`; logout (`POST /api/users/token/revoke`, `DELETE /session`) revokes; a password change and `POST /me/logout-all` end every session; **personal access tokens** (`pgl_...`, hashed, named, optionally expiring, scope `read` or `write`) at `/api/users/me/tokens`, usable as a Bearer token or the Basic password, and so for `pip` and `git`. This is what made it safe to let the client keep a refresh token. Memgraph and the API tests' in-memory backend both implement the six new storage functions.
+
+**Client** (`pangloss-sdk`):
+
+| | |
+|---|---|
+| `credentials.py` | What `pangloss-sdk login` keeps, for one server URL: **a refresh token, never the password** (or a personal access token). In the OS **keyring** if `keyring` is installed (`pip install pangloss-sdk[keyring]`) and has a backend, else a **file** `~/.config/pangloss/credentials.json` (`PANGLOSS_CREDENTIALS_FILE` for another) of mode `600` in a directory of `700`; a file others can read is **not used** (a warning) |
+| `Session` | With no `TOKEN`, no `USERNAME` and `PASSWORD` in the settings, and `USE_STORED_LOGIN` (default true), the kept login is used: a refresh token gets an access token **before** any password is asked for (`_refresh` first, then `_login`); a personal access token is used as it is. Settings credentials win over the kept login. A kept refresh token that is no good falls back to the settings or the prompt. Nothing is ever written by a running program: only `login` writes |
+| `pangloss-sdk` (`cli.py`, `python -m pangloss_sdk`; `argparse`, so the client stays light) | `login [URL] [--username] [--token]` (prompts; three tries; `--token` checks a personal access token with `GET /api/users/me` and keeps it), `logout [URL]` (revokes the refresh token on the server, then forgets it; says so if the server could not be reached), `status [URL]` (the kept login and whether it is still good, the SDK on the server). The URL can be `PANGLOSS_URL` |
+
+**Not built:** `pangloss-sdk update` (running the right `pip` or `uv` command for how the SDK was installed), personal access tokens in the `pangloss` command (`pangloss users tokens ...`), `last_used` on a token, an index on `PGAccessToken.token_hash` and `PGRevokedSession.jti`, and limiting login attempts.
+
+**Run against the demo, with the real server and Memgraph** (a temporary admin user, since removed): `pangloss-sdk login` kept a refresh token in a file of mode `600`; a script with **no credentials** connected, created a `Person` with the kept login (no prompt) and made a **read-only personal access token**; with that token it read, and a delete raised `PanglossPermissionError` ("This token can only read"); `logout` revoked the refresh token (200 before, **401 after**) and emptied the file; a password change ended the session of the token used to make it (200, then 401). `git clone` of the real server worked, a wrong password and a push were refused, and `pip install "git+http://..."` installed the SDK into a new environment with no `neo4j`.
+
+**Tests**: `pangloss-api` `test_revocation_and_access_tokens.py` (13: revoke, cookies, logout everywhere, a password change by the user and by an admin, personal tokens: shown once, scope, revoked, expired, disabled, owner, not made with a token), `pangloss-memgraph` `test_users.py` (+4, in Memgraph), `pangloss-sdk` `test_stored_login.py` (19: the store, the keyring, using it, the command).

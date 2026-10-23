@@ -13,13 +13,15 @@ from pangloss_users.exceptions import (
     PanglossUserDoesNotExistError,
     PanglossUserExistsError,
 )
-from pangloss_users.models import UserInDB
+import datetime
+
+from pangloss_users.models import AccessTokenRecord, UserInDB
 
 from pangloss_memgraph.databases.memgraph.database import Transaction
 
 # What `update_user` can change
 UPDATABLE_PROPERTIES = frozenset(
-    {"email", "full_name", "admin", "disabled", "hashed_password"}
+    {"email", "full_name", "admin", "disabled", "hashed_password", "token_generation"}
 )
 
 
@@ -106,3 +108,82 @@ async def update_user(
     if record is None:
         raise PanglossUserDoesNotExistError(f"There is no user '{username}'")
     return user_from_node(record["user"])
+
+
+# ---------------------------------------------------------------------------
+# Revoked tokens (`PGRevokedSession`) and personal access tokens (`PGAccessToken`)
+# ---------------------------------------------------------------------------
+
+
+async def revoke_session(tx: Transaction, jti: str, expires: datetime.datetime) -> None:
+    # (one that would have expired anyway need not be kept)
+    await (
+        await tx.run(
+            "MATCH (revoked:PGRevokedSession) WHERE revoked.expires < $now DELETE revoked",
+            now=datetime.datetime.now(datetime.UTC),
+        )
+    ).consume()
+    await (
+        await tx.run(
+            "MERGE (revoked:PGRevokedSession {jti: $jti}) SET revoked.expires = $expires",
+            jti=jti,
+            expires=expires,
+        )
+    ).consume()
+
+
+async def is_session_revoked(tx: Transaction, jti: str) -> bool:
+    result = await tx.run(
+        "MATCH (revoked:PGRevokedSession {jti: $jti}) RETURN count(revoked) AS count",
+        jti=jti,
+    )
+    record = await result.single()
+    return bool(record and record["count"])
+
+
+def token_from_node(node: Any) -> AccessTokenRecord:
+    properties = {
+        key: value.to_native() if hasattr(value, "to_native") else value
+        for key, value in dict(node).items()
+    }
+    return AccessTokenRecord(**properties)
+
+
+async def create_access_token(tx: Transaction, record: AccessTokenRecord) -> None:
+    await (
+        await tx.run(
+            "CREATE (token:PGAccessToken) SET token = $token",
+            token=record.model_dump(exclude_none=True),
+        )
+    ).consume()
+
+
+async def get_access_token_by_hash(
+    tx: Transaction, token_hash: str
+) -> AccessTokenRecord | None:
+    result = await tx.run(
+        "MATCH (token:PGAccessToken {token_hash: $token_hash}) RETURN token",
+        token_hash=token_hash,
+    )
+    record = await result.single()
+    return token_from_node(record["token"]) if record else None
+
+
+async def list_access_tokens(tx: Transaction, username: str) -> list[AccessTokenRecord]:
+    result = await tx.run(
+        "MATCH (token:PGAccessToken {username: $username}) RETURN token "
+        "ORDER BY token.created_when",
+        username=username,
+    )
+    return [token_from_node(node) for node in await result.value()]
+
+
+async def delete_access_token(tx: Transaction, username: str, id: str) -> bool:
+    result = await tx.run(
+        "MATCH (token:PGAccessToken {username: $username, id: $id}) "
+        "DELETE token RETURN count(*) AS deleted",
+        username=username,
+        id=id,
+    )
+    record = await result.single()
+    return bool(record and record["deleted"])

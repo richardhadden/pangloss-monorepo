@@ -12,6 +12,7 @@ import sys
 from collections.abc import Callable
 from typing import Any
 
+from pangloss_sdk import credentials
 from pangloss_sdk.exceptions import (
     PanglossAuthenticationError,
     PanglossAuthenticationRequired,
@@ -58,9 +59,23 @@ class Session:
     _prompts: int = 0
 
     def __post_init__(self) -> None:
+        self.username = self.settings.USERNAME
         if self.settings.TOKEN is not None:
             self.access_token = self.settings.TOKEN.get_secret_value()
-        self.username = self.settings.USERNAME
+        elif self.settings.USE_STORED_LOGIN and not self.has_credentials():
+            self.use_stored_login()
+
+    def use_stored_login(self) -> None:
+        """A login kept by `pangloss-sdk login`: a refresh token (to get access tokens with),
+        or a personal access token (used as it is)"""
+        stored = credentials.load(self.url)
+        if not stored:
+            return
+        self.username = stored.get("username", self.username)
+        if "token" in stored:
+            self.access_token = stored["token"]
+        else:
+            self.refresh_token = stored.get("refresh_token")
 
     @property
     def url(self) -> str:

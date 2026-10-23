@@ -170,3 +170,73 @@ async def test_a_disabled_user_cannot_write(db_driver, clear_database):
         r["label"] for r in run(db_driver, "MATCH (s:Statement) RETURN s.label AS label")
     }
     assert labels == {"One", "Three"}
+
+
+# --- revoked sessions, sessions ended, personal access tokens ----------------------------
+
+
+async def test_a_password_change_and_logout_everywhere_raise_the_token_generation(
+    db_driver, clear_database
+):
+    user = await make_user()
+    assert user.token_generation == 0
+
+    assert (await service.set_password("john", "another horse")).token_generation == 1
+    assert (await service.end_sessions("john")).token_generation == 2
+    assert (await service.get_user("john")).token_generation == 2  # type: ignore[union-attr]
+    assert stored(db_driver, "john")["token_generation"] == 2
+
+
+async def test_a_revoked_session_is_remembered_until_it_would_have_expired(
+    db_driver, clear_database
+):
+    import datetime
+
+    now = datetime.datetime.now(datetime.UTC)
+    assert not await service.is_session_revoked("abc")
+
+    await service.revoke_session("abc", now + datetime.timedelta(hours=1))
+    await service.revoke_session("abc", now + datetime.timedelta(hours=1))  # (once)
+    assert await service.is_session_revoked("abc")
+    assert not await service.is_session_revoked("other")
+    assert len(run(db_driver, "MATCH (r:PGRevokedSession) RETURN r")) == 1
+
+    # (one that has expired is cleared out when the next is revoked)
+    await service.revoke_session("old", now - datetime.timedelta(hours=1))
+    await service.revoke_session("new", now + datetime.timedelta(hours=1))
+    assert not await service.is_session_revoked("old")
+    assert await service.is_session_revoked("abc")
+
+
+async def test_personal_access_tokens_are_kept_hashed_and_found_by_the_token(
+    db_driver, clear_database
+):
+    await make_user()
+    await make_user("jane", "jane@example.com")
+
+    info, token = await service.create_access_token("john", "scripts", "read", expires_days=7)
+    assert token.startswith("pgl_")
+    assert info.scope == "read" and info.expires_when is not None
+
+    node = run(db_driver, "MATCH (t:PGAccessToken) RETURN t")[0]["t"]
+    assert node["token_hash"] == service.hash_access_token(token)
+    assert token not in str(dict(node))
+
+    found = await service.authenticate_access_token(token)
+    assert found is not None and found[0].username == "john" and found[1] == "read"
+    assert await service.authenticate_access_token(token + "x") is None
+    assert await service.authenticate_access_token("not a token") is None
+
+    assert [t.id for t in await service.list_access_tokens("john")] == [info.id]
+    assert await service.list_access_tokens("jane") == []
+    assert not await service.revoke_access_token("jane", info.id)
+    assert await service.revoke_access_token("john", info.id)
+    assert await service.authenticate_access_token(token) is None
+    assert not await service.revoke_access_token("john", info.id)
+
+
+async def test_a_token_of_a_disabled_user_is_not_good(db_driver, clear_database):
+    await make_user()
+    _, token = await service.create_access_token("john", "scripts")
+    await service.set_disabled("john", True)
+    assert await service.authenticate_access_token(token) is None

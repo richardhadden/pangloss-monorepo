@@ -4,6 +4,7 @@
 |-|-|-|
 | `GET` | `/api/sdk/version` | which SDK the server has built (anyone: a client checks itself) |
 | `GET` | `/api/sdk` | the manifest, and where to download it (`SDK_ACCESS`) |
+| `GET` | `/api/sdk/git/...` | the SDK as a read-only git repository (`git clone`; the same access) |
 | `GET` | `/api/sdk/download/{file}` | the wheel or the sdist (`SDK_ACCESS`; the names are in the manifest, as an installer wants a real file name) |
 """
 
@@ -13,6 +14,7 @@ from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request, Respons
 
 from pangloss_sdk_server import archives, current
 from pangloss_sdk_server.access import sdk_access
+from pangloss_sdk_server.git_endpoint import GitEndpoint
 from pangloss_sdk_server.version_check import SdkVersionMiddleware
 
 router = APIRouter(prefix="/api/sdk", tags=["sdk"])
@@ -93,6 +95,7 @@ def configure_app(app: FastAPI, settings: Any) -> None:
     """(called by `pangloss-api`): say whether a client's SDK is the server's, and build as
     the server starts"""
     app.add_middleware(SdkVersionMiddleware)
+    app.mount("/api/sdk/git", GitEndpoint())
 
     async def build_as_it_starts() -> None:
         await current.on_start(settings)

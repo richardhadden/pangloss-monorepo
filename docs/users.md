@@ -19,6 +19,9 @@ await service.set_disabled("john", True)
 | `UserCreate` | `username`, `email`, `password`, `full_name` |
 | `UserUpdate` | `email`, `full_name`; what is left out is kept |
 | `UserInDB` | A `User` with `hashed_password`; only the backend and `service` see it |
+| `AccessTokenInfo`, `AccessTokenRecord` | A personal access token as it can be shown, and as it is stored (with `token_hash`) |
+
+`User` also has `token_generation` (not shown): raising it ends the user's sessions. `set_password` and `end_sessions` do. `service` also has `revoke_session` / `is_session_revoked`, and `create_access_token`, `list_access_tokens`, `revoke_access_token` and `authenticate_access_token` (see [the API](api.md#sessions-ending-and-personal-access-tokens)); a backend supplies `revoke_session_in_db`, `is_session_revoked_in_db`, `create_access_token_in_db`, `get_access_token_in_db_by_hash`, `list_access_tokens_in_db` and `delete_access_token_in_db`.
 
 A username can contain letters, numbers, `_`, `.` and `-` (at most 64 characters). A user made by hand, such as `pangloss_default_user` in the tests, may have no email or password; it cannot log in.
 

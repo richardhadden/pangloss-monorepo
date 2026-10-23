@@ -46,3 +46,38 @@ async def update_user_in_db(username, changes):
         raise PanglossUserExistsError("That email is already in use")
     USERS[username] = USERS[username].model_copy(update=changes)
     return USERS[username]
+
+
+REVOKED: dict = {}
+ACCESS_TOKENS: dict = {}
+
+
+async def revoke_session_in_db(jti, expires):
+    REVOKED[jti] = expires
+
+
+async def is_session_revoked_in_db(jti):
+    return jti in REVOKED
+
+
+async def create_access_token_in_db(record):
+    ACCESS_TOKENS[record.id] = record
+
+
+async def get_access_token_in_db_by_hash(token_hash):
+    return next((r for r in ACCESS_TOKENS.values() if r.token_hash == token_hash), None)
+
+
+async def list_access_tokens_in_db(username):
+    return sorted(
+        (r for r in ACCESS_TOKENS.values() if r.username == username),
+        key=lambda r: r.created_when,
+    )
+
+
+async def delete_access_token_in_db(username, id):
+    record = ACCESS_TOKENS.get(id)
+    if record is None or record.username != username:
+        return False
+    del ACCESS_TOKENS[id]
+    return True

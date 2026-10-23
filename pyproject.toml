@@ -78,6 +78,18 @@ empty-body = "ignore"
 pydantic-discarded-extra-argument = "ignore"
 unused-type-ignore-comment = "ignore"
 
+# dulwich's types are strict about object ids and refs (bytes are accepted at run time)
+[[tool.ty.overrides]]
+include = [
+    "packages/pangloss-sdk-server/src/pangloss_sdk_server/gitrepo.py",
+    "packages/pangloss-sdk-server/src/pangloss_sdk_server/git_endpoint.py",
+]
+[tool.ty.overrides.rules]
+invalid-argument-type = "ignore"
+unresolved-attribute = "ignore"
+invalid-assignment = "ignore"
+unsupported-operator = "ignore"
+
 # Line coverage: `uv run coverage run -m pytest packages && uv run coverage report`
 [tool.coverage.run]
 source_pkgs = ["pangloss_models"]

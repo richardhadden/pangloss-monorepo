@@ -48,6 +48,12 @@ An authenticated request sets `current_request_username`, so what the user write
 
 Cookies are protected from CSRF only by `SameSite`; there is no CSRF token. With `"none"` (a frontend on another site), prefer tokens in the `Authorization` header.
 
+## Sessions ending, and personal access tokens
+
+Each access and refresh token has an id (`jti`) and the user's `token_generation` at the time. A token is refused (401) if it has been **revoked** (logout: `POST /token/revoke`, `DELETE /session`; the id is kept until the token would have expired anyway), or if it was made before the user's sessions were **ended**: a password change (by the user, an admin, or the CLI) and `POST /me/logout-all` raise the user's generation. The access token is checked on every request, as the user already is, at the cost of one more lookup.
+
+A **personal access token** (`pgl_...`) is for scripts and `git`: long-lived, named, revocable, optionally expiring, and with a scope: `read` can only use `GET`, `HEAD` and `OPTIONS` (403 otherwise), `write` does what the user can. It is used as `Authorization: Bearer pgl_...`, or as the password of HTTP Basic (the SDK's downloads and git). It is not a session's: `logout-all` does not end it, only revoking it does, or disabling the user. Memgraph keeps them as `PGAccessToken` nodes (the hash, never the token) and revocations as `PGRevokedSession`; there is no index on them yet.
+
 ## User endpoints
 
 All under `/api/users`. A `User` never includes a password or its hash.
@@ -58,10 +64,15 @@ All under `/api/users`. A `User` never includes a password or its hash.
 | `POST /token/refresh` | anyone | `{"refresh_token": ...}` returns a new access token |
 | `POST /session` | anyone | Same form; sets the cookies |
 | `POST /session/refresh` | the refresh cookie | A new access cookie |
-| `DELETE /session` | anyone | Clears the cookies |
+| `DELETE /session` | anyone | Clears the cookies, and revokes the tokens in them |
+| `POST /token/revoke` | anyone with the token | `{"refresh_token": ...}`: it stops working (204; a token that is not good is ignored). An access token already made lasts until it expires |
 | `GET /me` | logged in | The current `User` |
 | `PATCH /me` | logged in | `email` and/or `full_name` |
-| `PUT /me/password` | logged in | `{"old_password", "new_password"}` |
+| `PUT /me/password` | logged in | `{"old_password", "new_password"}`. **Ends every session**, this one too: log in again |
+| `POST /me/logout-all` | logged in | End every session of yours: all tokens made until now stop working (204). Personal access tokens go on |
+| `POST /me/tokens` | logged in (not with a personal access token) | `{"name", "scope": "read" \| "write", "expiresDays"}`: a **personal access token**. The token is in the answer once (`token`); it is kept only as a hash. 201 |
+| `GET /me/tokens` | logged in | Your tokens (id, name, scope, dates), never the tokens |
+| `DELETE /me/tokens/{id}` | logged in | Revoke one (204; 404 if it is not yours) |
 | `GET /` | admin | All users |
 | `POST /` | admin | `username`, `email`, `password`, `full_name`, `admin`. Returns 201 |
 | `GET /{username}` | admin, or that user | |
@@ -142,7 +153,6 @@ An app in `INSTALLED_APPS` that has an `api.py` with a `router` (a FastAPI `APIR
 
 ## Not done yet ⏳
 
-- Revoking tokens: changing a password does not end sessions already open (their tokens last until they expire).
 - Limiting login attempts.
 - A route to list the types.
 - Per-type or per-object permissions.

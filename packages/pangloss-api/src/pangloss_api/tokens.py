@@ -6,6 +6,7 @@ a refresh token cannot be used as an access token, or the other way round.
 
 import dataclasses
 import datetime
+import uuid
 from typing import Literal
 
 import jwt
@@ -25,6 +26,10 @@ class TokenClaims:
     username: str
     type: TokenType
     expires: datetime.datetime
+    # Which token this is (to revoke it), and the user's `token_generation` when it was made
+    # (the user's sessions are ended by raising theirs)
+    jti: str = ""
+    generation: int = 0
 
 
 def lifetime(token_type: TokenType) -> datetime.timedelta:
@@ -34,7 +39,7 @@ def lifetime(token_type: TokenType) -> datetime.timedelta:
     return datetime.timedelta(days=settings.AUTH_REFRESH_TOKEN_EXPIRE_DAYS)
 
 
-def create_token(username: str, token_type: TokenType) -> str:
+def create_token(username: str, token_type: TokenType, generation: int = 0) -> str:
     now = datetime.datetime.now(datetime.UTC)
     return jwt.encode(
         {
@@ -42,6 +47,8 @@ def create_token(username: str, token_type: TokenType) -> str:
             "type": token_type,
             "iat": now,
             "exp": now + lifetime(token_type),
+            "jti": uuid.uuid4().hex,
+            "gen": generation,
         },
         core_settings.SETTINGS.AUTHJWT_SECRET_KEY,
         algorithm=ALGORITHM,
@@ -65,4 +72,6 @@ def decode_token(token: str, expected_type: TokenType) -> TokenClaims:
         username=claims["sub"],
         type=claims["type"],
         expires=datetime.datetime.fromtimestamp(claims["exp"], datetime.UTC),
+        jti=claims.get("jti", ""),
+        generation=claims.get("gen", 0),
     )

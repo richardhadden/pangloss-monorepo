@@ -177,7 +177,7 @@ class AsyncClient:
     async def send(self, call: Call) -> httpx.Response:
         if call.needs_login and not self.session.access_token:
             async with self._lock:
-                if not self.session.access_token:
+                if not self.session.access_token and not await self._refresh():
                     await self._login()
 
         used = self.session.access_token
@@ -278,7 +278,7 @@ class Client:
     def send(self, call: Call) -> httpx.Response:
         if call.needs_login and not self.session.access_token:
             with self._lock:
-                if not self.session.access_token:
+                if not self.session.access_token and not self._refresh():
                     self._login()
 
         used = self.session.access_token

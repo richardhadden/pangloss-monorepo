@@ -2,7 +2,7 @@
 
 from typing import Literal
 
-from pangloss_users.models import CamelCaseModel, UserCreate
+from pangloss_users.models import AccessTokenInfo, CamelCaseModel, UserCreate
 from pydantic import BaseModel
 
 
@@ -49,3 +49,17 @@ class SetDisabled(BaseModel):
 
 class Message(BaseModel):
     message: str
+
+
+class NewAccessToken(CamelCaseModel):
+    name: str
+    # "read" can only read; "write" does whatever the user can
+    scope: Literal["read", "write"] = "write"
+    # Days until it expires; without, it does not
+    expires_days: int | None = None
+
+
+class CreatedAccessToken(AccessTokenInfo):
+    """The only time the token is shown"""
+
+    token: str
