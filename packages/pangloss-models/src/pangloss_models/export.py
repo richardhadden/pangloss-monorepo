@@ -259,19 +259,16 @@ class Exporter:
         description = model.__dict__.get("__doc__")
         parent = None
         concrete: list[str] = []
-        try:
-            parent_class = get_parent_class(model)
-            if parent_class is not None:
-                origin = (parent_class.__pydantic_generic_metadata__ or {}).get("origin")
-                parent_class = origin or parent_class
-            # (not the base classes of the library, such as `AnnotatedValue[T]`)
-            if parent_class is not None and not parent_class.__module__.startswith(
-                "pangloss_models.model_bases"
-            ):
-                parent = parent_class.__name__
-            concrete = sorted(c.__name__ for c in get_concrete_types(model))
-        except Exception:
-            pass
+        parent_class = get_parent_class(model)
+        if parent_class is not None:
+            origin = (parent_class.__pydantic_generic_metadata__ or {}).get("origin")
+            parent_class = origin or parent_class
+        # (not the base classes of the library, such as `AnnotatedValue[T]`)
+        if parent_class is not None and not parent_class.__module__.startswith(
+            "pangloss_models.model_bases"
+        ):
+            parent = parent_class.__name__
+        concrete = sorted(c.__name__ for c in get_concrete_types(model))
 
         generic = getattr(model, "__pydantic_generic_metadata__", None) or {}
         return {

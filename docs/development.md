@@ -27,6 +27,14 @@ Tests for known bugs and missing features are written as the behaviour we want a
 
 The root `pyproject.toml` sets `testpaths = ["packages"]` and the session-scoped asyncio loop.
 
+Line coverage of `pangloss_models` (the Python must be one `coverage` supports: 3.15.1 or later):
+
+```bash
+uv run coverage run -m pytest packages && uv run coverage report    # fails below 94% (pyproject.toml)
+```
+
+The tests of `pangloss-models` are in `tests/initialisation/` (declaring and initialising models), `tests/generated_models/` (the models made, with the snapshot), `tests/migrations/`, `tests/export/` and `tests/typestubs/`; the helpers they share (`kitchen_sink`, `sample_data`, ...) are in `tests/support/`.
+
 ## Repository layout
 
 ```

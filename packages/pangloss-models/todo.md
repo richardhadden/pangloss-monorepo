@@ -191,9 +191,8 @@ These were code that **no test reached**. Done ones are marked; the snapshot (`t
   a property test over the registry: for every model kind, `Create(...)` accepts what `View` returns for the same
   data (round trip), the JSON schema is valid, and `initialise()` of the same classes in a different declaration
   order gives the same schemas.  **Done, in part (2026-10-22):** `test_cross_kind_properties.py` (samples from the field definitions; Create, Update, conversions for writing, aliases, field agreement, nothing lost). It found three older bugs (see docs/initialise-models-cleanup.md). The read-edit-send-back and write/read cycle through the real database is `pangloss-memgraph/tests/test_edit_cycle.py`.
-- [ ] A **line-coverage run in CI.** `coverage` needs a Python it supports (or the `sys.monitoring` tracer used
-  here, `COVERAGE_CORE=sysmon`, once `coverage` installs on 3.15); then fail below a floor for
-  `initialise_models/`. **Not done.**
+- [x] **Line coverage:** `coverage` is configured in the root `pyproject.toml` (Python 3.15.1); 95% of `pangloss_models`, floor 94%. Added `tests/typestubs/`; dead code found by it removed (`typevar_fields`, `contains_typevar`) and a swallowed `except Exception` in `export.py`. There is no CI yet (no workflow files), so the run is by hand: see `docs/development.md`.
+
 ## Tidying done 2026-10-23, and what is left
 
 - Done: the `# pyright: ignore` comments are gone (`ty` is the checker); `_fulfils_classes` is worked out once per instance;

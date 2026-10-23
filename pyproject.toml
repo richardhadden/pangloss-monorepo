@@ -17,6 +17,7 @@ target-version = "py315"
 
 [dependency-groups]
 dev = [
+    "coverage>=7.14",
     "pytest>=9.0.3",
     "pytest-asyncio>=1.4.0",
     "ty>=0.0.90",
@@ -73,3 +74,18 @@ missing-argument = "ignore"
 empty-body = "ignore"
 pydantic-discarded-extra-argument = "ignore"
 unused-type-ignore-comment = "ignore"
+
+# Line coverage: `uv run coverage run -m pytest packages && uv run coverage report`
+[tool.coverage.run]
+source_pkgs = ["pangloss_models"]
+branch = false
+
+[tool.coverage.report]
+fail_under = 94
+show_missing = true
+skip_covered = true
+exclude_also = [
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "\\.\\.\\.$",
+]

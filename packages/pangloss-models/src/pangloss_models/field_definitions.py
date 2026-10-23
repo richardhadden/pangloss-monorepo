@@ -162,24 +162,6 @@ class RelationFieldDefinition(FieldDefinition):
     validators: list[BaseMetadata] = dataclass_field(default_factory=list)
     bind_to_child_field: list[FieldBinding] = dataclass_field(default_factory=list)
 
-    @staticmethod
-    def type_option_contains_typevar(
-        type_options: set[RelationOption] | frozenset[RelationOption],
-    ) -> bool:
-        for type_option in type_options:
-            if isinstance(type_option, RelationToTypeVar):
-                return True
-            if isinstance(type_option, RelationToReifiedRelation):
-                for param_type_option in type_option.parameter_type_options.values():
-                    if isinstance(param_type_option.type_var, TypeVar):
-                        return True
-
-        return False
-
-    @property
-    def contains_typevar(self) -> bool:
-        return self.type_option_contains_typevar(self.type_options)
-
 
 @dataclass(frozen=True, kw_only=True)
 class RelationOption:
@@ -254,13 +236,6 @@ class IncomingRelationDefinition:
 
 
 class ModelFieldDict[K, V](dict[K, V]):
-    @property
-    def typevar_fields(self) -> dict[K, RelationFieldDefinition]:
-        typevar_fields: dict[K, Any] = {}
-        for field_name, field in self.items():
-            typevar_fields[field_name] = field
-        return typevar_fields
-
     @property
     def literal_fields(self) -> dict[K, LiteralFieldDefinition | ListFieldDefinition]:
         return {
