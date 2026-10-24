@@ -4,7 +4,7 @@ from uuid import uuid7
 from history_support import record
 from pangloss_history.cleanup import versions_inside, warnings_for
 from pangloss_history.store import SqliteStore
-from pangloss_models.migrations.files import Migration
+from pangloss_models.meta_kit.migrations.files import Migration
 
 
 def squash():

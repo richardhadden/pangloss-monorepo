@@ -19,7 +19,7 @@ import json
 from collections.abc import Iterable
 from typing import Any
 
-from pangloss_models.migrations import changes as c
+from pangloss_models.meta_kit.migrations import changes as c
 
 # Changes to the models, or to what the data says, that nothing existing is made to disagree with
 NO_EFFECT = (
@@ -38,10 +38,18 @@ NO_EFFECT = (
     c.RemoveConstraint,
     c.DeleteModel,  # (what refers to it has changed in its own right)
 )
-OWNED_KINDS = {"reifiedRelation", "reifiedRelationDocument", "semanticSpace", "conjunction", "document"}
+OWNED_KINDS = {
+    "reifiedRelation",
+    "reifiedRelationDocument",
+    "semanticSpace",
+    "conjunction",
+    "document",
+}
 
 
-def model_names_in(options: Iterable[dict[str, Any]], owned_only: bool = False) -> set[str]:
+def model_names_in(
+    options: Iterable[dict[str, Any]], owned_only: bool = False
+) -> set[str]:
     """The models an option list leads to (itself, and through the parameters of a wrapper)"""
     names: set[str] = set()
     for option in options:
@@ -57,7 +65,9 @@ def model_names_in(options: Iterable[dict[str, Any]], owned_only: bool = False) 
     return names
 
 
-def entity_targets(options: Iterable[dict[str, Any]], snapshot: dict[str, Any]) -> set[str]:
+def entity_targets(
+    options: Iterable[dict[str, Any]], snapshot: dict[str, Any]
+) -> set[str]:
     """The entities a relation is to (directly, or in the parameters of a wrapper)"""
     found: set[str] = set()
     for option in options:
@@ -71,7 +81,9 @@ def entity_targets(options: Iterable[dict[str, Any]], snapshot: dict[str, Any]) 
 def owned_by(field: dict[str, Any]) -> set[str]:
     """The models a field holds in the node that has it (not those it only refers to)"""
     if field["kind"] == "embedded":
-        return set(field.get("types", [])) | ({field["model"]} if field.get("model") else set())
+        return set(field.get("types", [])) | (
+            {field["model"]} if field.get("model") else set()
+        )
     if field["kind"] == "annotatedValue":
         return {field["model"]} if field.get("model") else set()
     if field["kind"] == "relation":
@@ -81,14 +93,18 @@ def owned_by(field: dict[str, Any]) -> set[str]:
                 owned.add(option["type"])
                 for parameter in option.get("params", {}).values():
                     owned |= {
-                        o["type"] for o in parameter["options"] if o.get("kind") in OWNED_KINDS
+                        o["type"]
+                        for o in parameter["options"]
+                        if o.get("kind") in OWNED_KINDS
                     }
         return owned
     return set()
 
 
 def enums_in(field: dict[str, Any]) -> set[str]:
-    text = json.dumps({k: v for k, v in field.items() if k in ("type", "item", "valueType")})
+    text = json.dumps(
+        {k: v for k, v in field.items() if k in ("type", "item", "valueType")}
+    )
     found = set()
     pending = [json.loads(text)]
     while pending:
@@ -110,7 +126,9 @@ def adds_nothing_unreadable(change: c.Change) -> bool:
         return True
     kind = change.definition.get("kind")
     if kind in ("literal", "list", "annotatedValue", "typeVar"):
-        return not change.needs_value  # (a required one is given a value, which is worth reading)
+        return (
+            not change.needs_value
+        )  # (a required one is given a value, which is worth reading)
     if kind == "relation":
         return bool(change.definition.get("many"))
     return False  # (an embedded object, or a single relation, is needed)
@@ -120,7 +138,9 @@ def named_by(change: c.Change) -> set[str]:
     names: set[str] = set()
     for attribute in ("model", "new"):
         value = getattr(change, attribute, None)
-        if isinstance(value, str) and (attribute == "model" or isinstance(change, c.RenameModel)):
+        if isinstance(value, str) and (
+            attribute == "model" or isinstance(change, c.RenameModel)
+        ):
             names.add(value)
     return names
 
@@ -135,7 +155,9 @@ def affected_models(changes: Iterable[c.Change], snapshot: dict[str, Any]) -> se
     expanded: list[c.Change] = []
     for change in changes:
         if isinstance(change, c.StateOnly):
-            expanded.extend(change.changes)  # (the data was moved by hand, but is worth reading)
+            expanded.extend(
+                change.changes
+            )  # (the data was moved by hand, but is worth reading)
         elif isinstance(change, (c.RunCypher, c.RunPython)):
             # (by hand: it may have changed anything, unless it says what)
             touched |= set(models) if change.affects is None else set(change.affects)
@@ -158,7 +180,12 @@ def affected_models(changes: Iterable[c.Change], snapshot: dict[str, Any]) -> se
                 continue
             field_name = getattr(change, "name", None)
             fields = [f for f in model["fields"] if f["name"] == field_name] or (
-                model["fields"] if not field_name or isinstance(change, (c.RenameModel, c.AlterModelLabels, c.AlterModelKind)) else []
+                model["fields"]
+                if not field_name
+                or isinstance(
+                    change, (c.RenameModel, c.AlterModelLabels, c.AlterModelKind)
+                )
+                else []
             )
             for entry in fields:
                 if entry["kind"] == "relation":

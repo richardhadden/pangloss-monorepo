@@ -7,10 +7,10 @@ import pytest
 from pangloss_memgraph.databases.memgraph import migration_backend as backend
 from pangloss_memgraph.databases.memgraph.database import Database
 from pangloss_memgraph.databases.memgraph.migrations import dry_run
-from pangloss_models.migrations.check import check_data
-from pangloss_models.migrations.files import EMPTY_SNAPSHOT, MigrationGraph
-from pangloss_models.migrations.planner import plan
-from pangloss_models.migrations.questions import with_answer
+from pangloss_models.meta_kit.migrations.check import check_data
+from pangloss_models.meta_kit.migrations.files import EMPTY_SNAPSHOT, MigrationGraph
+from pangloss_models.meta_kit.migrations.planner import plan
+from pangloss_models.meta_kit.migrations.questions import with_answer
 from pangloss_models.model_bases.document import Document
 from pangloss_models.model_bases.entity import Entity
 from pangloss_models.model_bases.reified_relation import ReifiedRelation
@@ -177,7 +177,7 @@ async def test_a_dry_run_finds_what_would_fail(db_driver, clear_database):
 async def test_changes_to_indexes_are_listed_and_not_tried_but_those_to_enums_are(
     db_driver, clear_database
 ):
-    from pangloss_models.migrations import changes as c
+    from pangloss_models.meta_kit.migrations import changes as c
 
     index = {"kind": "label+property", "label": "DryRunScratch", "properties": ["a"]}
     shade = {"type": "enum", "enum": "DryRunShade"}

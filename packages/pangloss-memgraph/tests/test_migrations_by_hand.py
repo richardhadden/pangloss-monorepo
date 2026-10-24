@@ -11,7 +11,7 @@ from pangloss_memgraph.databases.memgraph.migrations import (
     dry_run,
 )
 from pangloss_models.exceptions import PanglossMigrationError
-from pangloss_models.migrations import changes as c
+from pangloss_models.meta_kit.migrations import changes as c
 from pangloss_models.model_bases.entity import Entity
 
 from .helpers import run

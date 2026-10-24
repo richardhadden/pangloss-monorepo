@@ -9,11 +9,11 @@ from pangloss_models.exceptions import (
     PanglossMigrationAnswerNeeded,
     PanglossMigrationError,
 )
-from pangloss_models.migrations import data_view
-from pangloss_models.migrations.files import EMPTY_SNAPSHOT, Migration, MigrationGraph
-from pangloss_models.migrations.history import pending, problems
-from pangloss_models.migrations.planner import plan
-from pangloss_models.migrations.questions import with_answer
+from pangloss_models.meta_kit.migrations import data_view
+from pangloss_models.meta_kit.migrations.files import EMPTY_SNAPSHOT, Migration, MigrationGraph
+from pangloss_models.meta_kit.migrations.history import pending, problems
+from pangloss_models.meta_kit.migrations.planner import plan
+from pangloss_models.meta_kit.migrations.questions import with_answer
 from pangloss_models.model_bases.entity import Entity
 
 from .helpers import run
@@ -204,7 +204,7 @@ async def test_a_backup_is_a_snapshot_the_server_has(db_driver, clear_database):
 async def test_a_migration_is_undone_and_its_record_removed(db_driver, clear_database):
     from dataclasses import replace
 
-    from pangloss_models.migrations.reverse import reverse_changes
+    from pangloss_models.meta_kit.migrations.reverse import reverse_changes
 
     def v1():
         class Person(Entity):
@@ -256,7 +256,7 @@ async def test_a_migration_is_undone_and_its_record_removed(db_driver, clear_dat
 async def test_an_undoing_that_fails_leaves_the_record(db_driver, clear_database):
     from dataclasses import replace
 
-    from pangloss_models.migrations import changes as c
+    from pangloss_models.meta_kit.migrations import changes as c
 
     def v1():
         class Person(Entity):
@@ -281,8 +281,8 @@ async def test_a_squashed_migration_makes_what_the_originals_made(
 ):
     from dataclasses import replace
 
-    from pangloss_models.migrations.files import squash
-    from pangloss_models.migrations.reverse import reverse_changes
+    from pangloss_models.meta_kit.migrations.files import squash
+    from pangloss_models.meta_kit.migrations.reverse import reverse_changes
 
     def v1():
         class Person(Entity):

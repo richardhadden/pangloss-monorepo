@@ -54,7 +54,7 @@ def setup_database(ctx: typer.Context) -> None:
     except PanglossInitialisationError as error:
         fail(f"Cannot initialise the models: {error}")
 
-    from pangloss_models.migrations.files import graph_of
+    from pangloss_models.meta_kit.migrations.files import graph_of
 
     if graph_of(list(project.require_settings().INSTALLED_APPS)).migrations:
         typer.secho(

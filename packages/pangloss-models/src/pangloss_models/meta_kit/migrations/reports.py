@@ -3,7 +3,7 @@
 from dataclasses import dataclass, field
 from typing import Literal
 
-from pangloss_models.migrations import changes as c
+from pangloss_models.meta_kit.migrations import changes as c
 
 COUNT_NAMES = {
     "nodes_created": "nodes made",
@@ -33,7 +33,11 @@ class ChangeReport:
             return "not tried (an earlier change failed)"
         if self.status == "error":
             return f"WOULD FAIL: {self.message}"
-        parts = [f"{self.counts[key]} {name}" for key, name in COUNT_NAMES.items() if self.counts.get(key)]
+        parts = [
+            f"{self.counts[key]} {name}"
+            for key, name in COUNT_NAMES.items()
+            if self.counts.get(key)
+        ]
         return ", ".join(parts) if parts else "no change to the data"
 
 

@@ -29,7 +29,9 @@ def required(field: dict[str, Any]) -> bool:
     return False
 
 
-def needs_of(snapshot: dict[str, Any], model: str, fulfilled: dict[str, Any]) -> list[dict[str, Any]]:
+def needs_of(
+    snapshot: dict[str, Any], model: str, fulfilled: dict[str, Any]
+) -> list[dict[str, Any]]:
     """What a node of `model` must have to fulfil a class: for each field the class requires, where
     the node keeps its value (a `property` or an `edge`), or `never` if it has no such field"""
     own = {f["name"]: f for f in snapshot["models"][model]["fields"]}

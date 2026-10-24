@@ -11,9 +11,9 @@ from typing import no_type_check
 import pytest
 from pangloss_history.upgrade import apply_migrations
 from pangloss_models import hooks
-from pangloss_models.migrations import PossibleRename
-from pangloss_models.migrations.files import Migration
-from pangloss_models.migrations.snapshot import data_view
+from pangloss_models.meta_kit.migrations import PossibleRename
+from pangloss_models.meta_kit.migrations.files import Migration
+from pangloss_models.meta_kit.migrations.snapshot import data_view
 from pangloss_models.model_bases.document import Document
 from pangloss_models.model_bases.entity import Entity
 
@@ -239,7 +239,7 @@ async def test_a_value_that_cannot_be_converted_is_a_problem_when_the_migration_
     saved = await old_models.Person.Create(label="Ann", age="forty").save()
     new_models, new = declare(v2)
     # (the migration is not applied to the database; only its changes are used)
-    from pangloss_models.migrations import diff
+    from pangloss_models.meta_kit.migrations import diff
 
     changes = diff(old, new).changes
     result = apply_migrations(

@@ -68,8 +68,8 @@ async def try_to_write(tx, state):
 async def test_a_migration_that_is_running_holds_the_lock(db_driver, clear_database):
     """What `pangloss migrate` does (the lock, then `apply`): a write made by a change in the middle of
     it, by something else, is refused"""
-    from pangloss_models.migrations import changes as c
-    from pangloss_models.migrations.files import EMPTY_SNAPSHOT, Migration
+    from pangloss_models.meta_kit.migrations import changes as c
+    from pangloss_models.meta_kit.migrations.files import EMPTY_SNAPSHOT, Migration
 
     class Person(Entity):
         name: str

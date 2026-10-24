@@ -56,7 +56,7 @@ FAKE_MIGRATION_BACKEND = """
         CALLS.append("unlock")
 
     async def dry_run(migrations, state):
-        from pangloss_models.migrations.reports import ChangeReport, MigrationReport
+        from pangloss_models.meta_kit.migrations.reports import ChangeReport, MigrationReport
 
         CALLS.append("dry_run")
         reports = []
@@ -122,7 +122,7 @@ def data_is_readable(monkeypatch):
     import pangloss_cli.migrations as module
 
     async def nothing_to_read(types=None, limit=None, **_):
-        from pangloss_models.migrations.check import DataCheck
+        from pangloss_models.meta_kit.migrations.check import DataCheck
 
         return DataCheck()
 
@@ -231,7 +231,7 @@ def test_an_empty_migration_is_made_to_write_by_hand(models_project: Path):
     path.write_text(
         path.read_text().replace(
             "changes = changes_from_data([])",
-            "from pangloss_models.migrations.changes import RunCypher\n\n"
+            "from pangloss_models.meta_kit.migrations.changes import RunCypher\n\n"
             "changes = changes_from_data([RunCypher(query='MATCH (n) SET n.x = 1', lossy=True)])",
         )
     )
@@ -420,7 +420,7 @@ def test_a_dry_run_that_would_fail_says_so(models_project: Path):
 
 class Checked:
     def __init__(self, problems=()):
-        from pangloss_models.migrations.check import DataCheck, DataProblem
+        from pangloss_models.meta_kit.migrations.check import DataCheck, DataProblem
 
         self.result = DataCheck(
             checked=5,
@@ -593,7 +593,7 @@ def test_a_migration_that_cannot_be_undone_is_said_to_be(two_migrations: Path):
     path.write_text(
         path.read_text().replace(
             "changes = changes_from_data(",
-            "from pangloss_models.migrations.changes import RunCypher\n\n"
+            "from pangloss_models.meta_kit.migrations.changes import RunCypher\n\n"
             "changes = changes_from_data([RunCypher(query='RETURN 1')] + ",
         )
     )
@@ -746,7 +746,7 @@ def test_indexes_the_database_needs_are_migrations(models_project: Path):
     # ... which the server's check notices until they are made
     import asyncio
 
-    from pangloss_models.migrations.startup import migration_problems
+    from pangloss_models.meta_kit.migrations.startup import migration_problems
 
     found = asyncio.run(migration_problems(["fakeapp"], backend()))
     assert any("have not been applied" in line for line in found)

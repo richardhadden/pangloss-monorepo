@@ -23,6 +23,7 @@ dev = [
     "coverage>=7.14",
     "pytest>=9.0.3",
     "pytest-asyncio>=1.4.0",
+    "ruff>=0.17.2",
     "ty>=0.0.90",
 ]
 
@@ -56,7 +57,7 @@ include = [
     "packages/pangloss-models/src/pangloss_models/initialise_models/**",
     "packages/pangloss-models/src/pangloss_models/model_bases/**",
     "packages/pangloss-models/src/pangloss_models/export.py",
-    "packages/pangloss-models/src/pangloss_models/migrations/check.py",
+    "packages/pangloss-models/src/pangloss_models/meta_kit/migrations/check.py",
     "packages/pangloss-api/src/pangloss_api/routes/models.py",
     "packages/pangloss-sdk/src/**",
     "packages/pangloss-memgraph/src/pangloss_memgraph/databases/memgraph/build_*_query.py",

@@ -12,21 +12,25 @@ it mentions.
 
 import dataclasses
 import json
+from collections.abc import Iterable
 from dataclasses import dataclass, field
-from typing import Any, Iterable
+from typing import Any
 
-from pangloss_models.exceptions import PanglossMigrationError, PanglossMigrationNotSupported
-from pangloss_models.migrations import changes as c
-from pangloss_models.migrations.diff import diff, needs_value
-from pangloss_models.migrations.files import (
+from pangloss_models.exceptions import (
+    PanglossMigrationError,
+    PanglossMigrationNotSupported,
+)
+from pangloss_models.meta_kit.migrations import changes as c
+from pangloss_models.meta_kit.migrations.diff import diff, needs_value
+from pangloss_models.meta_kit.migrations.files import (
     Migration,
     MigrationGraph,
     next_name,
     slug_of,
     structure_id,
 )
-from pangloss_models.migrations.snapshot import data_view, snapshot_hash
-from pangloss_models.migrations.state import replay, same_structure
+from pangloss_models.meta_kit.migrations.snapshot import data_view, snapshot_hash
+from pangloss_models.meta_kit.migrations.state import replay, same_structure
 
 
 @dataclass
@@ -76,7 +80,9 @@ def owner_of(
         return owners[name]
     if name in new["enums"]:
         for model in new["models"].values():
-            if json.dumps(model.get("fields", [])).count(f'"{name}"') and model.get("module"):
+            if json.dumps(model.get("fields", [])).count(f'"{name}"') and model.get(
+                "module"
+            ):
                 app = app_of_module(model["module"], apps)
                 if app:
                     return app
@@ -90,7 +96,7 @@ def structure_owner(
 ) -> str:
     """The app that makes (or drops) an index or constraint: the one the database package says,
     for one that is new; the one that made it, for one that is dropped; otherwise the first"""
-    entry = getattr(change, "index", None) or getattr(change, "constraint")
+    entry = getattr(change, "index", None) or getattr(change, "constraint")  # noqa: B009
     key = "indexes" if hasattr(change, "index") else "constraints"
     for candidate in new.get(key, []):
         if same_structure(candidate, entry) and candidate.get("app") in apps:
@@ -102,7 +108,9 @@ def app_of_change(
     change: c.Change, new: dict[str, Any], owners: dict[str, str], apps: list[str]
 ) -> str:
     """The app whose migration a change is written in"""
-    if isinstance(change, (c.AddIndex, c.RemoveIndex, c.AddConstraint, c.RemoveConstraint)):
+    if isinstance(
+        change, (c.AddIndex, c.RemoveIndex, c.AddConstraint, c.RemoveConstraint)
+    ):
         return structure_owner(change, new, owners, apps)
     subject = subject_of(change)
     return owner_of(subject, new, owners, apps) if subject else apps[0]
@@ -131,7 +139,9 @@ def mentioned(change: c.Change, names: Iterable[str]) -> set[str]:
 def refuse_kind_changes(changes: list[c.Change]) -> None:
     """A model or a field that is another kind (an Entity that is a Document, a plain field that is a
     relation) is stored differently, and nothing can be made of it: it is not allowed."""
-    refused = [ch for ch in changes if isinstance(ch, (c.AlterModelKind, c.ChangeFieldKind))]
+    refused = [
+        ch for ch in changes if isinstance(ch, (c.AlterModelKind, c.ChangeFieldKind))
+    ]
     if refused:
         raise PanglossMigrationNotSupported(
             "Changing the kind of a model or a field is not supported:\n  "
@@ -174,7 +184,9 @@ def split(
     name: str | None = None,
 ) -> list[Migration]:
     owners = graph.owners()
-    names = set(new["models"]) | set(new["enums"]) | set(old["models"]) | set(old["enums"])
+    names = (
+        set(new["models"]) | set(new["enums"]) | set(old["models"]) | set(old["enums"])
+    )
 
     groups: dict[str, list[c.Change]] = {}
     for change in changes:
@@ -191,12 +203,18 @@ def split(
         taken = [m for m in existing if m.app == app] + [
             m for (a, _), m in migrations.items() if a == app
         ]
-        migration_name = name if name and len(layers) == 1 else next_name(
-            taken, slug_of(group, initial=graph.leaf(app) is None and layer == 0)
+        migration_name = (
+            name
+            if name and len(layers) == 1
+            else next_name(
+                taken, slug_of(group, initial=graph.leaf(app) is None and layer == 0)
+            )
         )
         names_of[(app, layer)] = migration_name
         # (a placeholder, so that the next layer of the app is numbered after it)
-        migrations[(app, layer)] = Migration(app=app, name=migration_name, changes=tuple(group))
+        migrations[(app, layer)] = Migration(
+            app=app, name=migration_name, changes=tuple(group)
+        )
 
     for (app, layer), group in layers.items():
         dependencies: set[tuple[str, str]] = set()
@@ -205,7 +223,9 @@ def split(
                 other = created.get(mention) or owners.get(mention)
                 if other and other != app:
                     if mention in created and (other, 0) in names_of:
-                        dependencies.add((other, names_of[(other, 0)]))  # (made in the first layer)
+                        dependencies.add(
+                            (other, names_of[(other, 0)])
+                        )  # (made in the first layer)
                     else:
                         leaf = graph.leaf(other)
                         if leaf:
@@ -247,11 +267,15 @@ def created_by(groups: dict[str, list[c.Change]]) -> dict[str, str]:
     for app, group in groups.items():
         for change in group:
             if isinstance(change, (c.CreateModel, c.CreateEnum)):
-                created[change.model if isinstance(change, c.CreateModel) else change.enum] = app
+                created[
+                    change.model if isinstance(change, c.CreateModel) else change.enum
+                ] = app
     return created
 
 
-def needs_other_apps(group: list[c.Change], app: str, created: dict[str, str], names: set[str]) -> set[str]:
+def needs_other_apps(
+    group: list[c.Change], app: str, created: dict[str, str], names: set[str]
+) -> set[str]:
     """The other apps whose new models or enums the changes mention"""
     others = {n for n, a in created.items() if a != app}
     found: set[str] = set()
@@ -260,9 +284,14 @@ def needs_other_apps(group: list[c.Change], app: str, created: dict[str, str], n
     return found
 
 
-def cyclic_apps(groups: dict[str, list[c.Change]], created: dict[str, str], names: set[str]) -> set[str]:
+def cyclic_apps(
+    groups: dict[str, list[c.Change]], created: dict[str, str], names: set[str]
+) -> set[str]:
     """The apps whose new models need those of an app that needs theirs, however far round"""
-    needs = {app: needs_other_apps(group, app, created, names) for app, group in groups.items()}
+    needs = {
+        app: needs_other_apps(group, app, created, names)
+        for app, group in groups.items()
+    }
 
     def reaches(start: str, goal: str, seen: set[str]) -> bool:
         return any(
@@ -298,12 +327,16 @@ def layers_of(
             )
         first[app] = moved_first
         second[app] = second.get(app, []) + moved_second
-    layers: dict[tuple[str, int], list[c.Change]] = {(app, 0): group for app, group in first.items()}
+    layers: dict[tuple[str, int], list[c.Change]] = {
+        (app, 0): group for app, group in first.items()
+    }
     layers.update({(app, 1): group for app, group in second.items() if group})
     return layers
 
 
-def split_app(group: list[c.Change], app: str, created: dict[str, str]) -> tuple[list[c.Change], list[c.Change]]:
+def split_app(
+    group: list[c.Change], app: str, created: dict[str, str]
+) -> tuple[list[c.Change], list[c.Change]]:
     """The changes of an app that do not need the new models of other apps, and those that do (a
     model's fields that refer to them are added after it is made)"""
     others = {n for n, a in created.items() if a != app}
@@ -316,8 +349,12 @@ def split_app(group: list[c.Change], app: str, created: dict[str, str]) -> tuple
                 (moved if mentioned_in(entry, others) else kept).append(entry)
             # (a parent class that is another app's new model is a label, and the `parent`: given once
             # it is there)
-            own_labels = [l for l in change.definition.get("labels", []) if l not in others]
-            parent_labels = [l for l in change.definition.get("labels", []) if l in others]
+            own_labels = [
+                l for l in change.definition.get("labels", []) if l not in others
+            ]
+            parent_labels = [
+                l for l in change.definition.get("labels", []) if l in others
+            ]
             parent = change.definition.get("parent")
             late_parent = parent if parent in others else None
             definition = {**change.definition, "fields": kept, "labels": own_labels}
@@ -329,10 +366,14 @@ def split_app(group: list[c.Change], app: str, created: dict[str, str]) -> tuple
                 else change
             )
             if parent_labels:
-                second.append(c.AlterModelLabels(model=change.model, added=parent_labels))
+                second.append(
+                    c.AlterModelLabels(model=change.model, added=parent_labels)
+                )
             if late_parent:
                 second.append(
-                    c.AlterModelOption(model=change.model, option="parent", old=None, new=late_parent)
+                    c.AlterModelOption(
+                        model=change.model, option="parent", old=None, new=late_parent
+                    )
                 )
             second += [
                 c.AddField(
@@ -367,7 +408,8 @@ def order_migrations(migrations: dict[tuple[str, int], Migration]) -> list[Migra
             for key, m in remaining.items()
             if all(
                 f"{dep_app}.{dep_name}" in placed
-                or (dep_app, dep_name) not in {(a, mm.name) for (a, _), mm in migrations.items()}
+                or (dep_app, dep_name)
+                not in {(a, mm.name) for (a, _), mm in migrations.items()}
                 for dep_app, dep_name in m.dependencies
             )
             and not any(a == key[0] and layer < key[1] for (a, layer) in remaining)

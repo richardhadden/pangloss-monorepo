@@ -3,8 +3,8 @@ nullability, enum members, relation targets and cardinality, and the problems ea
 
 import pytest
 from pangloss_history.upgrade import Unconvertible, apply_migrations, convert_value
-from pangloss_models.migrations import changes as c
-from pangloss_models.migrations.files import Migration
+from pangloss_models.meta_kit.migrations import changes as c
+from pangloss_models.meta_kit.migrations.files import Migration
 
 
 def literal(name, type="str", nullable=False, **more):

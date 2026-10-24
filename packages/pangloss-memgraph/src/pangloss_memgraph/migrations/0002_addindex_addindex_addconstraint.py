@@ -3,7 +3,7 @@
 Made by `pangloss makemigrations`; the answers a change needs may be filled in here.
 """
 
-from pangloss_models.migrations.files import changes_from_data
+from pangloss_models.meta_kit.migrations.files import changes_from_data
 
 dependencies = []
 schema_hash = "2c35a6a1bba7cdbf337b77840d50cf0fba9b8e58c40ae53d6b33033e3dd31b89"

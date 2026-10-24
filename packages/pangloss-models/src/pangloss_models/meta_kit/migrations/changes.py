@@ -148,9 +148,7 @@ class RemoveEnumMember(Change):
     replacement: str | None = None
 
     def describe(self) -> str:
-        return (
-            f"Stop using {self.enum}.{self.member}: values that have it are moved"
-        )
+        return f"Stop using {self.enum}.{self.member}: values that have it are moved"
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -221,8 +219,10 @@ class AlterModelLabels(Change):
     removed: list[str] = field(default_factory=list)
 
     def describe(self) -> str:
-        parts = [f"add the labels {', '.join(self.added)}" if self.added else "",
-                 f"remove the labels {', '.join(self.removed)}" if self.removed else ""]
+        parts = [
+            f"add the labels {', '.join(self.added)}" if self.added else "",
+            f"remove the labels {', '.join(self.removed)}" if self.removed else "",
+        ]
         return f"On {self.model}: " + "; ".join(p for p in parts if p)
 
 
@@ -260,7 +260,9 @@ class AddField(Change):
         return "additive" if self.needs_value and not self.from_narrowing else "safe"
 
     def describe(self) -> str:
-        extra = " (a value is needed for the nodes that exist)" if self.needs_value else ""
+        extra = (
+            " (a value is needed for the nodes that exist)" if self.needs_value else ""
+        )
         return f"Add the {self.field_kind} field {self.model}.{self.name}{extra}"
 
 
@@ -279,8 +281,12 @@ class RemoveField(Change):
 
     def describe(self) -> str:
         if self.absorbed:
-            return f"{self.model}.{self.name} is now written by the field that narrows it"
-        return f"Remove the {self.field_kind} field {self.model}.{self.name} and its data"
+            return (
+                f"{self.model}.{self.name} is now written by the field that narrows it"
+            )
+        return (
+            f"Remove the {self.field_kind} field {self.model}.{self.name} and its data"
+        )
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -324,9 +330,7 @@ class AlterListItemType(Change):
     mapping: dict[str, Any] | None = None
 
     def describe(self) -> str:
-        return (
-            f"{self.model}.{self.name}: items {_type_name(self.old)} -> {_type_name(self.new)}"
-        )
+        return f"{self.model}.{self.name}: items {_type_name(self.old)} -> {_type_name(self.new)}"
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -414,10 +418,16 @@ class AlterEmbedded(Change):
 
     @property
     def safety(self) -> Safety:  # ty: ignore[invalid-property-type-override]
-        return "lossy" if self.removed_types or self.old_model != self.new_model else "safe"
+        return (
+            "lossy"
+            if self.removed_types or self.old_model != self.new_model
+            else "safe"
+        )
 
     def describe(self) -> str:
-        return f"{self.model}.{self.name}: embedded {self.old_model} -> {self.new_model}"
+        return (
+            f"{self.model}.{self.name}: embedded {self.old_model} -> {self.new_model}"
+        )
 
 
 # --- relations ---------------------------------------------------------------------------
@@ -442,8 +452,10 @@ class AlterRelationTarget(Change):
         return "lossy" if self.removed else "safe"
 
     def describe(self) -> str:
-        parts = [f"now also {', '.join(self.added)}" if self.added else "",
-                 f"no longer {', '.join(self.removed)}" if self.removed else ""]
+        parts = [
+            f"now also {', '.join(self.added)}" if self.added else "",
+            f"no longer {', '.join(self.removed)}" if self.removed else "",
+        ]
         return f"{self.model}.{self.name}: " + "; ".join(p for p in parts if p)
 
 
@@ -493,7 +505,9 @@ class AlterEdgeModel(Change):
         return "additive" if self.new else "lossy"
 
     def describe(self) -> str:
-        return f"{self.model}.{self.name}: properties on the edge {self.old} -> {self.new}"
+        return (
+            f"{self.model}.{self.name}: properties on the edge {self.old} -> {self.new}"
+        )
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -513,8 +527,10 @@ class AlterParentFields(Change):
         return "lossy" if self.removed else "additive"
 
     def describe(self) -> str:
-        parts = [f"now also narrows {', '.join(self.added)}" if self.added else "",
-                 f"no longer narrows {', '.join(self.removed)}" if self.removed else ""]
+        parts = [
+            f"now also narrows {', '.join(self.added)}" if self.added else "",
+            f"no longer narrows {', '.join(self.removed)}" if self.removed else "",
+        ]
         return f"{self.model}.{self.name}: " + "; ".join(p for p in parts if p)
 
 
@@ -735,7 +751,9 @@ class RunPython(Change):
         for name in ("function", "reverse_function"):
             function = getattr(self, name)
             if callable(function):
-                object.__setattr__(self, name, f"{function.__module__}:{function.__qualname__}")
+                object.__setattr__(
+                    self, name, f"{function.__module__}:{function.__qualname__}"
+                )
 
     @property
     def safety(self) -> Safety:  # ty: ignore[invalid-property-type-override]
@@ -769,7 +787,9 @@ class StateOnly(Change):
         object.__setattr__(
             self,
             "changes",
-            tuple(change_from_dict(i) if isinstance(i, dict) else i for i in self.changes),
+            tuple(
+                change_from_dict(i) if isinstance(i, dict) else i for i in self.changes
+            ),
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -780,7 +800,9 @@ class StateOnly(Change):
         }
 
     def describe(self) -> str:
-        return "The models (only): " + "; ".join(change.describe() for change in self.changes)
+        return "The models (only): " + "; ".join(
+            change.describe() for change in self.changes
+        )
 
 
 def _type_name(descriptor: dict[str, Any]) -> str:

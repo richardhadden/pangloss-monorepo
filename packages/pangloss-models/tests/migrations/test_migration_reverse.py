@@ -5,10 +5,10 @@ from typing import no_type_check
 import pytest
 from migration_support import snapshot_of
 from pangloss_models.exceptions import PanglossMigrationIrreversible
-from pangloss_models.migrations import changes as c
-from pangloss_models.migrations import data_view, diff, replay
-from pangloss_models.migrations.questions import collect_questions
-from pangloss_models.migrations.reverse import reverse_changes
+from pangloss_models.meta_kit.migrations import changes as c
+from pangloss_models.meta_kit.migrations import data_view, diff, replay
+from pangloss_models.meta_kit.migrations.questions import collect_questions
+from pangloss_models.meta_kit.migrations.reverse import reverse_changes
 from pangloss_models.model_bases.entity import Entity
 
 
@@ -32,7 +32,7 @@ def test_a_rename_is_undone_by_the_rename_back():
             full_name: str
 
     old, new = snapshot_of(v1), snapshot_of(v2)
-    from pangloss_models.migrations import PossibleRename
+    from pangloss_models.meta_kit.migrations import PossibleRename
 
     rename = PossibleRename(what="field", scope="Person", old="name", new="full_name")
     found = diff(old, new, confirmed=[rename]).changes

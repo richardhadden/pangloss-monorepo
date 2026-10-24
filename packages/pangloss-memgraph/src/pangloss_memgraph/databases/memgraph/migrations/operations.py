@@ -2,7 +2,7 @@
 
 `apply_change(tx, change, state)` makes a change to the data, in the transaction `tx`.
 `state` is the snapshot of the models *before* the change (see
-`pangloss_models.migrations.state`): it says the labels of a model and how a field is stored,
+`pangloss_models.meta_kit.migrations.state`): it says the labels of a model and how a field is stored,
 so nothing here needs the classes of the models, which may have changed since.
 
 Changes are written for a model and a field, and select by label (`MATCH (n:Statement)`), so
@@ -30,9 +30,9 @@ from pangloss_models.exceptions import (
     PanglossMigrationError,
     PanglossMigrationNotSupported,
 )
-from pangloss_models.migrations import changes as c
-from pangloss_models.migrations.state import rename_field
-from pangloss_models.migrations.state import rename_model as state_after_rename
+from pangloss_models.meta_kit.migrations import changes as c
+from pangloss_models.meta_kit.migrations.state import rename_field
+from pangloss_models.meta_kit.migrations.state import rename_model as state_after_rename
 
 from pangloss_memgraph.databases.memgraph.database import Database, Transaction
 from pangloss_memgraph.databases.memgraph.initialise_database import run_statement

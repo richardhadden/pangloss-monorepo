@@ -16,22 +16,22 @@ new name; a declined one is left as a removal and an addition. `result.is_final`
 nothing is left to ask.
 """
 
-import json
 import copy
+import json
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 from typing import Any
 
-from pangloss_models.migrations.changes import (
+from pangloss_models.meta_kit.migrations.changes import (
     AddConstraint,
     AddEnumMember,
-    AddIndex,
-    AlterEnumMemberValue,
     AddField,
+    AddIndex,
     AlterAnnotatedValue,
     AlterCardinality,
     AlterEdgeModel,
     AlterEmbedded,
+    AlterEnumMemberValue,
     AlterListItemType,
     AlterLiteralType,
     AlterModelKind,
@@ -41,23 +41,23 @@ from pangloss_models.migrations.changes import (
     AlterParentFields,
     AlterRelationTarget,
     AlterReverseName,
-    ChangeWrapper,
-    EmbeddedToLiterals,
-    LiteralsToEmbedded,
     AnnotatedValueToLiteral,
     Change,
     ChangeFieldKind,
+    ChangeWrapper,
     CreateEnum,
     CreateModel,
     DeleteModel,
+    EmbeddedToLiterals,
+    LiteralsToEmbedded,
     LiteralToAnnotatedValue,
     PossibleRename,
     RecomputeFulfils,
     RemoveConstraint,
     RemoveEnum,
-    RemoveIndex,
     RemoveEnumMember,
     RemoveField,
+    RemoveIndex,
     RenameEnum,
     RenameEnumMember,
     RenameField,
@@ -65,13 +65,13 @@ from pangloss_models.migrations.changes import (
     UnwrapRelation,
     WrapRelation,
 )
-from pangloss_models.migrations.snapshot import data_view
-from pangloss_models.migrations.state import (
-    same_structure,
+from pangloss_models.meta_kit.migrations.snapshot import data_view
+from pangloss_models.meta_kit.migrations.state import (
     rename_enum,
     rename_enum_member,
     rename_field,
     rename_model,
+    same_structure,
 )
 
 DIRECT_OPTION_KINDS = {"document", "entity"}
@@ -129,8 +129,11 @@ def diff(
     for rename in (r for r in confirmed if r.what == "field"):
         scope = rename.scope
         model = old["models"].get(scope) if scope else None
-        if scope and model and rename.old in fields_of(model) and rename.new in fields_of(
-            new["models"].get(rename.scope, {})
+        if (
+            scope
+            and model
+            and rename.old in fields_of(model)
+            and rename.new in fields_of(new["models"].get(rename.scope, {}))
         ):
             old = rename_field(old, scope, rename.old, rename.new)
             result.changes.append(
@@ -139,8 +142,11 @@ def diff(
     for rename in (r for r in confirmed if r.what == "enum_member"):
         scope = rename.scope
         enum = old["enums"].get(scope) if scope else None
-        if scope and enum and rename.old in members_of(enum) and rename.new in members_of(
-            new["enums"].get(rename.scope, {})
+        if (
+            scope
+            and enum
+            and rename.old in members_of(enum)
+            and rename.new in members_of(new["enums"].get(rename.scope, {}))
         ):
             old = rename_enum_member(old, scope, rename.old, rename.new)
             result.changes.append(
@@ -153,10 +159,10 @@ def diff(
     diff_models(old, new, result)
     diff_fulfils(old, new, result)
 
-    result.questions = [
-        q for q in possible_renames(old, new) if q not in declined
-    ]
-    result.changes.sort(key=lambda change: change.phase)  # (stable: keeps the order found)
+    result.questions = [q for q in possible_renames(old, new) if q not in declined]
+    result.changes.sort(
+        key=lambda change: change.phase
+    )  # (stable: keeps the order found)
     return result
 
 
@@ -166,16 +172,21 @@ def diff(
 def diff_fulfils(old: dict, new: dict, result: DiffResult) -> None:
     """A model whose fulfilment changed (what it fulfils, which of its fields stand in, what the
     classes require, their labels) has its nodes' labels worked out again"""
-    from pangloss_models.migrations.fulfils import fulfilment
+    from pangloss_models.meta_kit.migrations.fulfils import fulfilment
 
     for name, model in new["models"].items():
         if name not in old["models"]:
             continue  # (no nodes yet)
         before, after = fulfilment(old, name), fulfilment(new, name)
-        if before != after or old["models"][name].get("fulfils", []) != model.get("fulfils", []):
+        if before != after or old["models"][name].get("fulfils", []) != model.get(
+            "fulfils", []
+        ):
             result.changes.append(
                 RecomputeFulfils(
-                    model=name, fulfils=copy.deepcopy(model.get("fulfils", [])), before=before, after=after
+                    model=name,
+                    fulfils=copy.deepcopy(model.get("fulfils", [])),
+                    before=before,
+                    after=after,
                 )
             )
 
@@ -189,8 +200,16 @@ def diff_structure(old: dict, new: dict, result: DiffResult) -> None:
         ("constraints", AddConstraint, RemoveConstraint, "constraint"),
     ):
         had, have = old.get(key, []), new.get(key, [])
-        result.changes += [add(**{attribute: e}) for e in have if not any(same_structure(e, o) for o in had)]
-        result.changes += [remove(**{attribute: e}) for e in had if not any(same_structure(e, n) for n in have)]
+        result.changes += [
+            add(**{attribute: e})
+            for e in have
+            if not any(same_structure(e, o) for o in had)
+        ]
+        result.changes += [
+            remove(**{attribute: e})
+            for e in had
+            if not any(same_structure(e, n) for n in have)
+        ]
 
 
 # --- enums --------------------------------------------------------------------------------------
@@ -204,7 +223,9 @@ def member_value(enum: dict, name: str) -> Any:
     return next((m["value"] for m in enum["members"] if m["name"] == name), None)
 
 
-def rename_members_with_the_same_value(old: dict, new: dict, result: DiffResult) -> dict:
+def rename_members_with_the_same_value(
+    old: dict, new: dict, result: DiffResult
+) -> dict:
     """A member that has gone and one that has come with the same value are the same member under
     another name: an enum is stored as the values, so that is not a question, and it needs nothing
     done to the data"""
@@ -217,10 +238,14 @@ def rename_members_with_the_same_value(old: dict, new: dict, result: DiffResult)
         for old_member in gone:
             value = member_value(old["enums"][name], old_member)
             matches = [m for m in came if member_value(enum, m) == value]
-            same_value_before = [g for g in gone if member_value(old["enums"][name], g) == value]
+            same_value_before = [
+                g for g in gone if member_value(old["enums"][name], g) == value
+            ]
             if len(matches) == 1 and len(same_value_before) == 1:
                 old = rename_enum_member(old, name, old_member, matches[0])
-                result.changes.append(RenameEnumMember(enum=name, old=old_member, new=matches[0]))
+                result.changes.append(
+                    RenameEnumMember(enum=name, old=old_member, new=matches[0])
+                )
                 came.remove(matches[0])
     return old
 
@@ -234,7 +259,9 @@ def diff_enums(old: dict, new: dict, result: DiffResult) -> None:
         for member in members_of(enum):
             if member not in had:
                 result.changes.append(
-                    AddEnumMember(enum=name, member=member, value=member_value(enum, member))
+                    AddEnumMember(
+                        enum=name, member=member, value=member_value(enum, member)
+                    )
                 )
             elif member_value(old["enums"][name], member) != member_value(enum, member):
                 result.changes.append(
@@ -275,15 +302,25 @@ def diff_models(old: dict, new: dict, result: DiffResult) -> None:
 
 
 def diff_model(
-    name: str, old: dict, new: dict, result: DiffResult, old_snapshot: dict, new_snapshot: dict
+    name: str,
+    old: dict,
+    new: dict,
+    result: DiffResult,
+    old_snapshot: dict,
+    new_snapshot: dict,
 ) -> None:
     start = len(result.changes)
     if old["kind"] != new["kind"]:
-        result.changes.append(AlterModelKind(model=name, old=old["kind"], new=new["kind"]))
+        result.changes.append(
+            AlterModelKind(model=name, old=old["kind"], new=new["kind"])
+        )
 
     # (the kind and the model's own name are labels too; they are not changes of the parents)
     own = {name, old["kind"], new["kind"], "PGIndexableNode"}
-    old_labels, new_labels = set(old.get("labels", [])) - own, set(new.get("labels", [])) - own
+    old_labels, new_labels = (
+        set(old.get("labels", [])) - own,
+        set(new.get("labels", [])) - own,
+    )
     if old_labels != new_labels:
         result.changes.append(
             AlterModelLabels(
@@ -334,7 +371,10 @@ def diff_model(
 
 def literal_shape(entry: dict) -> tuple:
     """What a literal field is, apart from its name"""
-    return (entry["kind"], json.dumps(entry.get("type") or entry.get("item"), sort_keys=True))
+    return (
+        entry["kind"],
+        json.dumps(entry.get("type") or entry.get("item"), sort_keys=True),
+    )
 
 
 def merge_embedded_changes(
@@ -366,7 +406,9 @@ def merge_embedded_changes(
             and removed[n].field_kind in ("literal", "list")
             and literal_shape(old_fields[n]) == literal_shape(f)
         )
-        uncovered_required = [n for n, f in own.items() if n not in covered and not f.get("nullable")]
+        uncovered_required = [
+            n for n, f in own.items() if n not in covered and not f.get("nullable")
+        ]
         if not covered:
             continue
         merged = LiteralsToEmbedded(
@@ -457,12 +499,16 @@ def diff_field(model: str, old: dict, new: dict, result: DiffResult) -> None:
     if old_kind == "literal":
         if old["type"] != new["type"]:
             result.changes.append(
-                AlterLiteralType(model=model, name=name, old=old["type"], new=new["type"])
+                AlterLiteralType(
+                    model=model, name=name, old=old["type"], new=new["type"]
+                )
             )
     elif old_kind == "list":
         if old["item"] != new["item"]:
             result.changes.append(
-                AlterListItemType(model=model, name=name, old=old["item"], new=new["item"])
+                AlterListItemType(
+                    model=model, name=name, old=old["item"], new=new["item"]
+                )
             )
     elif old_kind == "annotatedValue":
         if old["model"] != new["model"] or old.get("valueType") != new.get("valueType"):
@@ -493,9 +539,9 @@ def diff_field(model: str, old: dict, new: dict, result: DiffResult) -> None:
     elif old_kind == "relation":
         diff_relation(model, old, new, result)
 
-    if old_kind in ("literal", "list", "annotatedValue") and old.get("nullable") != new.get(
+    if old_kind in ("literal", "list", "annotatedValue") and old.get(
         "nullable"
-    ):
+    ) != new.get("nullable"):
         result.changes.append(
             AlterNullability(model=model, name=name, nullable=bool(new.get("nullable")))
         )
@@ -582,11 +628,15 @@ def diff_relation(model: str, old: dict, new: dict, result: DiffResult) -> None:
             )
 
     if old["many"] != new["many"]:
-        result.changes.append(AlterCardinality(model=model, name=name, many=new["many"]))
+        result.changes.append(
+            AlterCardinality(model=model, name=name, many=new["many"])
+        )
 
     if old["reverseName"] != new["reverseName"]:
         result.changes.append(
-            AlterReverseName(model=model, name=name, old=old["reverseName"], new=new["reverseName"])
+            AlterReverseName(
+                model=model, name=name, old=old["reverseName"], new=new["reverseName"]
+            )
         )
 
     if edge_models(old) != edge_models(new):
@@ -621,8 +671,8 @@ def detect_change_of_wrapper(old_options: list[dict], new_options: list[dict]):
     new_wrappers = {(o["type"], o["kind"]) for o in new_options}
     if len(old_wrappers) != 1 or len(new_wrappers) != 1 or old_wrappers == new_wrappers:
         return None
-    (old_wrapper, old_kind), = old_wrappers
-    (new_wrapper, new_kind), = new_wrappers
+    ((old_wrapper, old_kind),) = old_wrappers
+    ((new_wrapper, new_kind),) = new_wrappers
     if old_kind != new_kind:
         return None
     old_targets = set().union(*(option_leaves(o) for o in old_options))
@@ -677,7 +727,7 @@ def detect_wrap(old_options: list[dict], new_options: list[dict]):
     if not direct_targets & wrapped_targets:
         return None
 
-    (wrapper, wrapper_kind), = wrappers
+    ((wrapper, wrapper_kind),) = wrappers
     old_targets, new_targets = (
         (direct_targets, wrapped_targets)
         if direction == "wrap"
@@ -702,7 +752,10 @@ def field_shape(entry: dict) -> Any:
     storage = shape.get("storage")
     if storage and storage.get("edges"):
         # (the edge names are made from the name)
-        shape["storage"] = {"kind": storage["kind"], "parents": len(storage["edges"]) - 1}
+        shape["storage"] = {
+            "kind": storage["kind"],
+            "parents": len(storage["edges"]) - 1,
+        }
     if "reverseName" in shape:
         shape["reverseName"] = None
     return shape
@@ -717,14 +770,20 @@ def possible_renames(old: dict, new: dict) -> list[PossibleRename]:
     for old_name in removed_models:
         for new_name in added_models:
             if similar_models(old["models"][old_name], new["models"][new_name]):
-                questions.append(PossibleRename(what="model", old=old_name, new=new_name))
+                questions.append(
+                    PossibleRename(what="model", old=old_name, new=new_name)
+                )
 
     removed_enums = [n for n in old["enums"] if n not in new["enums"]]
     added_enums = [n for n in new["enums"] if n not in old["enums"]]
     for old_name in removed_enums:
         for new_name in added_enums:
-            if set(members_of(old["enums"][old_name])) & set(members_of(new["enums"][new_name])):
-                questions.append(PossibleRename(what="enum", old=old_name, new=new_name))
+            if set(members_of(old["enums"][old_name])) & set(
+                members_of(new["enums"][new_name])
+            ):
+                questions.append(
+                    PossibleRename(what="enum", old=old_name, new=new_name)
+                )
 
     for name, model in new["models"].items():
         if name not in old["models"]:
@@ -738,7 +797,9 @@ def possible_renames(old: dict, new: dict) -> list[PossibleRename]:
                     continue
                 if field_shape(old_entry) == field_shape(new_entry):
                     questions.append(
-                        PossibleRename(what="field", scope=name, old=old_field, new=new_field)
+                        PossibleRename(
+                            what="field", scope=name, old=old_field, new=new_field
+                        )
                     )
 
     for name, enum in new["enums"].items():
@@ -748,7 +809,9 @@ def possible_renames(old: dict, new: dict) -> list[PossibleRename]:
         for old_member in (m for m in had if m not in has):
             for new_member in (m for m in has if m not in had):
                 questions.append(
-                    PossibleRename(what="enum_member", scope=name, old=old_member, new=new_member)
+                    PossibleRename(
+                        what="enum_member", scope=name, old=old_member, new=new_member
+                    )
                 )
     return questions
 

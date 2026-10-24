@@ -7,7 +7,7 @@ read once, and again if the server is told that a migration was run (`forget`)."
 
 from typing import Any
 
-from pangloss_models.migrations.files import graph_of
+from pangloss_models.meta_kit.migrations.files import graph_of
 
 _cache: dict[str, str] | None = None
 

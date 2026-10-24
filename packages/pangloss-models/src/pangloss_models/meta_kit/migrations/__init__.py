@@ -13,24 +13,28 @@ Nothing here touches a database; applying a change to one is the business of the
 package (`pangloss_memgraph.databases.memgraph.migrations`).
 """
 
-from pangloss_models.migrations.changes import Change, PossibleRename, change_from_dict
-from pangloss_models.migrations.diff import DiffResult, diff
-from pangloss_models.migrations.state import apply_change, replay
-from pangloss_models.migrations.snapshot import (
+from pangloss_models.meta_kit.migrations.changes import (
+    Change,
+    PossibleRename,
+    change_from_dict,
+)
+from pangloss_models.meta_kit.migrations.diff import DiffResult, diff
+from pangloss_models.meta_kit.migrations.snapshot import (
     build_snapshot,
     data_view,
     snapshot_hash,
 )
+from pangloss_models.meta_kit.migrations.state import apply_change, replay
 
 __all__ = [
     "Change",
-    "apply_change",
-    "change_from_dict",
-    "replay",
     "DiffResult",
     "PossibleRename",
+    "apply_change",
     "build_snapshot",
+    "change_from_dict",
     "data_view",
     "diff",
+    "replay",
     "snapshot_hash",
 ]

@@ -20,11 +20,11 @@ from collections.abc import Iterable
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
-from pangloss_models import migrations as _migrations  # noqa: F401  (imports the package)
-from pangloss_models.migrations import changes as c
-from pangloss_models.migrations.files import Migration, MigrationGraph, graph_of
-from pangloss_models.migrations.history import states_around
-from pangloss_models.migrations.state import apply_change
+from pangloss_models.meta_kit import migrations as _migrations  # noqa: F401  (imports the package)
+from pangloss_models.meta_kit.migrations import changes as c
+from pangloss_models.meta_kit.migrations.files import Migration, MigrationGraph, graph_of
+from pangloss_models.meta_kit.migrations.history import states_around
+from pangloss_models.meta_kit.migrations.state import apply_change
 
 
 @dataclasses.dataclass

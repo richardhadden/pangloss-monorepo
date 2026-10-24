@@ -15,8 +15,8 @@ from typing import Any
 
 from pydantic.alias_generators import to_camel
 
-from pangloss_models.migrations import changes as c
-from pangloss_models.migrations.snapshot import data_view
+from pangloss_models.meta_kit.migrations import changes as c
+from pangloss_models.meta_kit.migrations.snapshot import data_view
 
 
 def replay(old: dict[str, Any], changes: Iterable[c.Change]) -> dict[str, Any]:
@@ -32,7 +32,9 @@ def apply_change(snapshot: dict[str, Any], change: c.Change) -> dict[str, Any]:
     """The snapshot after one change. (The snapshot given is not changed.)"""
     handler = HANDLERS.get(type(change))
     if handler is None:
-        raise NotImplementedError(f"No way to apply {type(change).__name__} to a snapshot")
+        raise NotImplementedError(
+            f"No way to apply {type(change).__name__} to a snapshot"
+        )
     snapshot = copy.deepcopy(snapshot)
     handler(snapshot, change)
     return snapshot
@@ -182,7 +184,9 @@ def _delete_model(snapshot, change: c.DeleteModel):
 def _alter_model_kind(snapshot, change: c.AlterModelKind):
     entry = model_entry(snapshot, change.model)
     entry["kind"] = change.new
-    entry["labels"] = [change.new if label == change.old else label for label in entry["labels"]]
+    entry["labels"] = [
+        change.new if label == change.old else label for label in entry["labels"]
+    ]
 
 
 def _alter_model_labels(snapshot, change: c.AlterModelLabels):
@@ -196,7 +200,9 @@ def _alter_model_option(snapshot, change: c.AlterModelOption):
 
 
 def _add_field(snapshot, change: c.AddField):
-    model_entry(snapshot, change.model)["fields"].append(copy.deepcopy(change.definition))
+    model_entry(snapshot, change.model)["fields"].append(
+        copy.deepcopy(change.definition)
+    )
 
 
 def _remove_field(snapshot, change: c.RemoveField):
@@ -238,7 +244,9 @@ def _alter_embedded(snapshot, change: c.AlterEmbedded):
 
 
 def _set_options(snapshot, change):
-    field_entry(snapshot, change.model, change.name)["options"] = copy.deepcopy(change.options)
+    field_entry(snapshot, change.model, change.name)["options"] = copy.deepcopy(
+        change.options
+    )
 
 
 def _literals_to_embedded(snapshot, change: c.LiteralsToEmbedded):
@@ -265,8 +273,8 @@ def _alter_reverse_name(snapshot, change: c.AlterReverseName):
 
 
 def _alter_parent_fields(snapshot, change: c.AlterParentFields):
-    field_entry(snapshot, change.model, change.name)["storage"]["edges"] = copy.deepcopy(
-        change.edges
+    field_entry(snapshot, change.model, change.name)["storage"]["edges"] = (
+        copy.deepcopy(change.edges)
     )
 
 
@@ -283,7 +291,9 @@ def _add_structure(key: str, attribute: str):
 def _remove_structure(key: str, attribute: str):
     def remove(snapshot, change):
         entry = getattr(change, attribute)
-        snapshot[key] = [e for e in snapshot.get(key, []) if not same_structure(e, entry)]
+        snapshot[key] = [
+            e for e in snapshot.get(key, []) if not same_structure(e, entry)
+        ]
 
     return remove
 

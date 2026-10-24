@@ -19,11 +19,11 @@ from pangloss_models.exceptions import (
     PanglossMigrationError,
     PanglossMigrationIrreversible,
 )
-from pangloss_models.migrations import PossibleRename, build_snapshot, data_view
-from pangloss_models.migrations import changes as c
-from pangloss_models.migrations.affected import affected_models
-from pangloss_models.migrations.check import check_data
-from pangloss_models.migrations.files import (
+from pangloss_models.meta_kit.migrations import PossibleRename, build_snapshot, data_view
+from pangloss_models.meta_kit.migrations import changes as c
+from pangloss_models.meta_kit.migrations.affected import affected_models
+from pangloss_models.meta_kit.migrations.check import check_data
+from pangloss_models.meta_kit.migrations.files import (
     EMPTY_SNAPSHOT,
     Migration,
     MigrationGraph,
@@ -34,21 +34,21 @@ from pangloss_models.migrations.files import (
     squash,
     write,
 )
-from pangloss_models.migrations.history import (
+from pangloss_models.meta_kit.migrations.history import (
     pending,
     problems,
     resolve_target,
     states_around,
     to_unapply,
 )
-from pangloss_models.migrations.planner import app_of_change, plan, with_what_they_need
-from pangloss_models.migrations.questions import (
+from pangloss_models.meta_kit.migrations.planner import app_of_change, plan, with_what_they_need
+from pangloss_models.meta_kit.migrations.questions import (
     collect_questions,
     parse_value,
     with_answer,
 )
-from pangloss_models.migrations.reverse import reverse_changes
-from pangloss_models.migrations.startup import migration_backend_of, structure_of
+from pangloss_models.meta_kit.migrations.reverse import reverse_changes
+from pangloss_models.meta_kit.migrations.startup import migration_backend_of, structure_of
 
 from pangloss_cli.project import Project, fail
 from pangloss_cli.users import run_with_database

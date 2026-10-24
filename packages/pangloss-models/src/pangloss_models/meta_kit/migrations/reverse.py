@@ -22,9 +22,13 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from pangloss_models.exceptions import PanglossMigrationIrreversible
-from pangloss_models.migrations import changes as c
-from pangloss_models.migrations.snapshot import data_view
-from pangloss_models.migrations.state import apply_change, field_entry, model_entry
+from pangloss_models.meta_kit.migrations import changes as c
+from pangloss_models.meta_kit.migrations.snapshot import data_view
+from pangloss_models.meta_kit.migrations.state import (
+    apply_change,
+    field_entry,
+    model_entry,
+)
 
 Inverse = Callable[[Any, dict[str, Any]], list[c.Change]]
 
@@ -45,16 +49,22 @@ def reverse_changes(changes: Sequence[c.Change], state: dict[str, Any]) -> Rever
     for change in changes:
         inverse = INVERSES.get(type(change))
         if inverse is None:
-            raise PanglossMigrationIrreversible(f"{change.describe()}: cannot be undone")
+            raise PanglossMigrationIrreversible(
+                f"{change.describe()}: cannot be undone"
+            )
         try:
             inverses.append(inverse(change, current))
         except PanglossMigrationIrreversible as error:
-            raise PanglossMigrationIrreversible(f"{change.describe()}: {error}") from None
+            raise PanglossMigrationIrreversible(
+                f"{change.describe()}: {error}"
+            ) from None
         except KeyError as error:
             raise PanglossMigrationIrreversible(
                 f"{change.describe()}: {error.args[0] if error.args else error}"
             ) from None
-        reversal.lossy = reversal.lossy or change.safety == "lossy" or loses_information(change)
+        reversal.lossy = (
+            reversal.lossy or change.safety == "lossy" or loses_information(change)
+        )
         current = apply_change(current, change)
     for inverse in reversed(inverses):
         reversal.changes.extend(inverse)
@@ -62,7 +72,9 @@ def reverse_changes(changes: Sequence[c.Change], state: dict[str, Any]) -> Rever
         raise PanglossMigrationIrreversible(
             "undoing it does not bring back the models as they were before it"
         )
-    reversal.lossy = reversal.lossy or any(ch.safety == "lossy" for ch in reversal.changes)
+    reversal.lossy = reversal.lossy or any(
+        ch.safety == "lossy" for ch in reversal.changes
+    )
     return reversal
 
 
@@ -108,7 +120,11 @@ def _create_enum(change: c.CreateEnum, before):
 
 
 def _remove_enum(change: c.RemoveEnum, before):
-    return [c.CreateEnum(enum=change.enum, definition=copy.deepcopy(before["enums"][change.enum]))]
+    return [
+        c.CreateEnum(
+            enum=change.enum, definition=copy.deepcopy(before["enums"][change.enum])
+        )
+    ]
 
 
 def _add_enum_member(change: c.AddEnumMember, before):
@@ -120,7 +136,9 @@ def _remove_enum_member(change: c.RemoveEnumMember, before):
     members = {m["name"]: m for m in before["enums"][change.enum]["members"]}
     return [
         c.AddEnumMember(
-            enum=change.enum, member=change.member, value=members[change.member].get("value")
+            enum=change.enum,
+            member=change.member,
+            value=members[change.member].get("value"),
         )
     ]
 
@@ -152,15 +170,22 @@ def _add_field(change: c.AddField, before):
     if change.from_narrowing:
         return [
             c.RemoveField(
-                model=change.model, name=change.name, field_kind=entry["kind"], absorbed=True
+                model=change.model,
+                name=change.name,
+                field_kind=entry["kind"],
+                absorbed=True,
             )
         ]
-    return [c.RemoveField(model=change.model, name=change.name, field_kind=change.field_kind)]
+    return [
+        c.RemoveField(
+            model=change.model, name=change.name, field_kind=change.field_kind
+        )
+    ]
 
 
 def _remove_field(change: c.RemoveField, before):
     entry = copy.deepcopy(field_entry(before, change.model, change.name))
-    from pangloss_models.migrations.diff import needs_value
+    from pangloss_models.meta_kit.migrations.diff import needs_value
 
     return [
         c.AddField(
@@ -248,7 +273,9 @@ def _alter_relation_target(change: c.AlterRelationTarget, before):
 
 
 def _alter_cardinality(change: c.AlterCardinality, before):
-    return swapped(change, many=not change.many, keep=None if change.many is False else "fail")
+    return swapped(
+        change, many=not change.many, keep=None if change.many is False else "fail"
+    )
 
 
 def _alter_reverse_name(change: c.AlterReverseName, before):
@@ -315,7 +342,9 @@ def _change_wrapper(change: c.ChangeWrapper, before):
 
 def _literals_to_embedded(change: c.LiteralsToEmbedded, before):
     model = model_entry(before, change.model)
-    definitions = [copy.deepcopy(f) for f in model["fields"] if f["name"] in change.fields]
+    definitions = [
+        copy.deepcopy(f) for f in model["fields"] if f["name"] in change.fields
+    ]
     return [
         c.EmbeddedToLiterals(
             model=change.model,
@@ -432,4 +461,6 @@ def loses_information(change: c.Change) -> bool:
     values moved to another member or type, nulls that were given a value"""
     if isinstance(change, c.AlterNullability):
         return not change.nullable
-    return isinstance(change, (c.RemoveEnumMember, c.AlterLiteralType, c.AlterListItemType))
+    return isinstance(
+        change, (c.RemoveEnumMember, c.AlterLiteralType, c.AlterListItemType)
+    )

@@ -11,9 +11,9 @@ import json
 from collections.abc import Awaitable, Callable
 from typing import Any
 
-from pangloss_models.migrations import apply_change as apply_to_snapshot
-from pangloss_models.migrations import changes as c
-from pangloss_models.migrations.reports import ChangeReport
+from pangloss_models.meta_kit.migrations import apply_change as apply_to_snapshot
+from pangloss_models.meta_kit.migrations import changes as c
+from pangloss_models.meta_kit.migrations.reports import ChangeReport
 
 from pangloss_memgraph.databases.memgraph.database import Database, Transaction
 from pangloss_memgraph.databases.memgraph.migrations.operations import (

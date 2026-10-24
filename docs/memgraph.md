@@ -20,7 +20,7 @@ Requirements: a Memgraph server with text search (the `text_search` module), sta
 | `build_read_query.py` | `build_fetch_document_query` |
 | `build_list_query.py` | `build_generic_list_query`: pagination, text search, and deep search |
 | `settings.py` | `MemgraphDatabaseSettings` |
-| `migrations/` | Applying the changes that `pangloss_models.migrations` finds, to the data and to the enums: see [Database migrations](migrations.md#12-progress) |
+| `migrations/` | Applying the changes that `pangloss_models.meta_kit.migrations` finds, to the data and to the enums: see [Database migrations](migrations.md#12-progress) |
 | `indexes.py` | Empty. ⏳ Index creation is currently done in the test fixtures |
 
 ## Graph schema

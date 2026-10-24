@@ -74,15 +74,20 @@ def field_storage(definition: FieldDefinition) -> dict[str, Any]:
 def fulfils_of(model) -> list[dict[str, Any]]:
     """The classes a model fulfils (`Fulfils[...]`, also from a parent class), and which of their
     fields its own fields stand in for. (Nothing for most models, which then have no `fulfils`.)"""
-    from pangloss_models.initialise_models.initialise_field_definitions import get_fulfilled_types
+    from pangloss_models.initialise_models.initialise_field_definitions import (
+        get_fulfilled_types,
+    )
 
     classes = get_fulfilled_types(model)
     stands_in: dict[str, dict[str, str]] = {cls.__name__: {} for cls in classes}
     for name, definition in model._meta.field_definitions.fields.items():
         for fulfilment in getattr(definition, "field_required_to_fulfil", ()):
-            stands_in.setdefault(fulfilment.fulfils_class.__name__, {})[fulfilment.field_name] = name
+            stands_in.setdefault(fulfilment.fulfils_class.__name__, {})[
+                fulfilment.field_name
+            ] = name
     return [
-        {"class": cls, "fields": dict(sorted(fields.items()))} for cls, fields in sorted(stands_in.items())
+        {"class": cls, "fields": dict(sorted(fields.items()))}
+        for cls, fields in sorted(stands_in.items())
     ]
 
 

@@ -46,7 +46,8 @@ class DataCheck:
 def describe_error(error: Exception) -> list[str]:
     if isinstance(error, ValidationError):
         return [
-            f"{'.'.join(str(part) for part in e['loc'])}: {e['msg']}" for e in error.errors()
+            f"{'.'.join(str(part) for part in e['loc'])}: {e['msg']}"
+            for e in error.errors()
         ]
     return [f"{type(error).__name__}: {error}"]
 
@@ -108,7 +109,9 @@ async def check_data(
                 if limit is not None and count > limit:
                     break
                 to_read.append(reference)
-            found = await asyncio.gather(*(read(model, reference) for reference in to_read))
+            found = await asyncio.gather(
+                *(read(model, reference) for reference in to_read)
+            )
             result.checked += len(to_read)
             result.problems += [problem for problem in found if problem is not None]
             if (limit is not None and count > limit) or listing.next_page is None:

@@ -8,10 +8,10 @@ import pytest
 from pangloss_memgraph.databases.memgraph import migration_backend as backend
 from pangloss_memgraph.databases.memgraph.migrations import runner
 from pangloss_models.exceptions import PanglossMigrationAnswerNeeded
-from pangloss_models.migrations.files import EMPTY_SNAPSHOT, MigrationGraph
-from pangloss_models.migrations.history import pending
-from pangloss_models.migrations.planner import plan
-from pangloss_models.migrations.questions import with_answer
+from pangloss_models.meta_kit.migrations.files import EMPTY_SNAPSHOT, MigrationGraph
+from pangloss_models.meta_kit.migrations.history import pending
+from pangloss_models.meta_kit.migrations.planner import plan
+from pangloss_models.meta_kit.migrations.questions import with_answer
 from pangloss_models.model_bases.document import Document
 from pangloss_models.model_bases.entity import Entity
 from pangloss_models.model_bases.reified_relation import ReifiedRelation
@@ -337,7 +337,7 @@ async def test_a_migration_can_say_how_big_its_batches_are(
 async def test_a_renamed_relation_is_renamed_in_batches_even_when_stopped(
     db_driver, clear_database, monkeypatch
 ):
-    from pangloss_models.migrations import PossibleRename
+    from pangloss_models.meta_kit.migrations import PossibleRename
     from pangloss_models.model_bases.document import Document
 
     def v1():

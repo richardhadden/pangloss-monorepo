@@ -11,8 +11,8 @@ from dataclasses import dataclass
 from typing import Any
 
 from pangloss_models.exceptions import PanglossMigrationError
-from pangloss_models.migrations import changes as c
-from pangloss_models.migrations.state import apply_change
+from pangloss_models.meta_kit.migrations import changes as c
+from pangloss_models.meta_kit.migrations.state import apply_change
 
 
 @dataclass(frozen=True)
@@ -39,7 +39,9 @@ def required_literals(model: dict[str, Any]) -> list[dict[str, Any]]:
     return [
         f
         for f in model.get("fields", [])
-        if f["kind"] in ("literal", "list") and not f.get("nullable") and f["name"] != "value"
+        if f["kind"] in ("literal", "list")
+        and not f.get("nullable")
+        and f["name"] != "value"
     ]
 
 
@@ -62,7 +64,11 @@ def answers_needed(change: c.Change, state: dict[str, Any]) -> list[Question]:
             for f in required_literals(embedded)
             if f["name"] not in have
         ]
-    if isinstance(change, c.AddField) and change.needs_value and not change.from_narrowing:
+    if (
+        isinstance(change, c.AddField)
+        and change.needs_value
+        and not change.from_narrowing
+    ):
         if change.default is None and change.definition["kind"] != "list":
             return [
                 Question(
@@ -71,9 +77,15 @@ def answers_needed(change: c.Change, state: dict[str, Any]) -> list[Question]:
                     field_descriptor(change.definition),
                 )
             ]
-    if isinstance(change, c.AlterNullability) and not change.nullable and change.default is None:
+    if (
+        isinstance(change, c.AlterNullability)
+        and not change.nullable
+        and change.default is None
+    ):
         model = state["models"].get(change.model, {})
-        entry = next((f for f in model.get("fields", []) if f["name"] == change.name), None)
+        entry = next(
+            (f for f in model.get("fields", []) if f["name"] == change.name), None
+        )
         return [
             Question(
                 "default",
@@ -94,7 +106,10 @@ def answers_needed(change: c.Change, state: dict[str, Any]) -> list[Question]:
             if f["name"] not in have
         ]
     if isinstance(change, c.ChangeWrapper):
-        old = {f["name"] for f in state["models"].get(change.old_wrapper, {}).get("fields", [])}
+        old = {
+            f["name"]
+            for f in state["models"].get(change.old_wrapper, {}).get("fields", [])
+        }
         new = state["models"].get(change.new_wrapper, {})
         have = change.defaults or {}
         return [
@@ -107,7 +122,9 @@ def answers_needed(change: c.Change, state: dict[str, Any]) -> list[Question]:
             if f["name"] not in old and f["name"] not in have
         ]
     if isinstance(change, c.LiteralsToEmbedded):
-        embedded = state["models"].get(change.embedded_type or change.embedded_model, {})
+        embedded = state["models"].get(
+            change.embedded_type or change.embedded_model, {}
+        )
         have = change.defaults or {}
         return [
             Question(
@@ -146,7 +163,9 @@ def answers_needed(change: c.Change, state: dict[str, Any]) -> list[Question]:
             ]
         return asked
     if isinstance(change, c.RemoveEnumMember) and change.replacement is None:
-        members = [m["name"] for m in state["enums"].get(change.enum, {}).get("members", [])]
+        members = [
+            m["name"] for m in state["enums"].get(change.enum, {}).get("members", [])
+        ]
         others = [m for m in members if m != change.member]
         return [
             Question(

@@ -8,7 +8,7 @@ history is best effort, but the person is told how many versions are inside."""
 from collections.abc import Iterable
 from typing import Any
 
-from pangloss_models.migrations.files import Migration
+from pangloss_models.meta_kit.migrations.files import Migration
 
 from pangloss_history import config
 from pangloss_history.store import HistoryStore, SqliteStore
