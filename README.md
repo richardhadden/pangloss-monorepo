@@ -1,8 +1,8 @@
 <div align="center">
 
-# ☀︎ Pangloss
+# Pangloss
 
-**Prosopography and Network Graph Labyrinth Orientation System**
+**Prosopography and Network Graph Labyrinth Orientation System ☀︎**
 
 Describe your research data as Python classes. Get validated models, a graph-database store and a REST API.
 
