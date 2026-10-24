@@ -141,6 +141,8 @@ export interface ModelDefinition {
   createWithId: boolean;
   acceptUrlAsId: boolean;
   requireLabel: boolean;
+  /** Whether its label is used in the label of a semantic space that contains it */
+  useInSemanticSpaceLabel: boolean;
   fields: FieldDefinition[];
   incoming: IncomingRelation[];
 }

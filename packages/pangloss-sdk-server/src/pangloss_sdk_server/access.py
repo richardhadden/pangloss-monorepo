@@ -39,6 +39,7 @@ async def basic_user(header: str) -> User:
             raise needs_login("Invalid username or password") from None
         if user.username != username:
             raise needs_login("Invalid username or password")
+        current_request_username.set(user.username)
         return user
 
     throttle.check(username)
@@ -48,6 +49,8 @@ async def basic_user(header: str) -> User:
         try:
             user = await user_for_token(password)
         except HTTPException:
+            # (neither the password nor a token: a wrong password, which counts)
+            throttle.failed(username)
             raise needs_login("Invalid username or password") from None
         if user.username != username:
             throttle.failed(username)

@@ -640,3 +640,12 @@ A model with a method called `list` would make a checker read `list[str]` in its
 
 **Tests**: `test_typecheck.py` (8: the two kinds, `list`, the blocking directory, ty passes, a wrong stub is named `[sync]`, bad syntax, the three settings), `test_server_only.py` (6), `test_update.py` (+2: `sync-stubs`), `test_serving.py` (+1: the installer).
 
+
+## Review (2026-10-24)
+
+A check over everything before work on the interface found, for the SDK:
+
+- **Wrong passwords given by HTTP Basic (pip, git, `/api/sdk`) were not counted** by the limit on login attempts: a password that was wrong fell through to "is it an access token?", and that failure raised without counting. Fixed (`access.py`), with a test that ten wrong passwords by Basic refuse the eleventh, and git's endpoint with it.
+- **The API tests of phase 6 for the limit and for `last_used_when` had never been written**: the command that added them was chained after one that failed, and the count of tests was misread as including them. They are written now (`test_revocation_and_access_tokens.py`), with the limit turned off and the cap on the usernames it remembers.
+- The blocking client (`api_sync`, `iterate_sync`) had tests for `get` and `save` only: now also `list`, the pages, updates with and without a version, a stale update, delete and undelete of an entity and a document, a read tried again when the connection fails, a write that is not, a server that cannot be reached, a login refused for another reason, logging in again when the refresh token is no good, and not being connected.
+- Also tested now: the project's root found from the working directory (`find_root`).

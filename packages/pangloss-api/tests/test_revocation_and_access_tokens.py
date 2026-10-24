@@ -183,3 +183,89 @@ def test_logout_everywhere_leaves_personal_access_tokens(client):
     token = make_token(client, headers).json()["token"]
     client.post("/api/users/me/logout-all", headers=headers)
     assert me(client, token).status_code == 200
+
+
+
+# --- when a token was last used -------------------------------------------------------------
+
+
+def test_a_token_notes_when_it_was_last_used_not_on_every_request(client):
+    make_user()
+    headers = bearer(client)
+    created = make_token(client, headers).json()
+    assert created["lastUsedWhen"] is None
+
+    assert me(client, created["token"]).status_code == 200
+    first = client.get("/api/users/me/tokens", headers=headers).json()[0]["lastUsedWhen"]
+    assert first is not None
+
+    # (a second use soon after is not written)
+    assert me(client, created["token"]).status_code == 200
+    assert client.get("/api/users/me/tokens", headers=headers).json()[0]["lastUsedWhen"] == first
+
+
+# --- guessing at a password -------------------------------------------------------------------
+
+
+def attempt(client, password, username="john"):
+    return client.post("/api/users/token", data={"username": username, "password": password})
+
+
+def test_a_username_is_refused_after_too_many_wrong_passwords(client, settings):
+    make_user()
+    for _ in range(settings.LOGIN_MAX_FAILURES):
+        assert attempt(client, "wrong").status_code == 401
+
+    refused = attempt(client, PASSWORD)  # (even the right one: that is the point)
+    assert refused.status_code == 429
+    assert int(refused.headers["Retry-After"]) > 0
+    # (the session login is refused too; another username is not affected)
+    session = client.post("/api/users/session", data={"username": "john", "password": PASSWORD})
+    assert session.status_code == 429
+    assert attempt(client, "x", username="nobody").status_code == 401
+
+
+def test_a_right_password_clears_the_count(client, settings):
+    make_user()
+    for _ in range(settings.LOGIN_MAX_FAILURES - 1):
+        attempt(client, "wrong")
+    assert attempt(client, PASSWORD).status_code == 200
+    for _ in range(settings.LOGIN_MAX_FAILURES - 1):
+        assert attempt(client, "wrong").status_code == 401
+    assert attempt(client, PASSWORD).status_code == 200
+
+
+def test_failures_out_of_the_window_do_not_count(client, settings, monkeypatch):
+    from pangloss_api import throttle
+
+    make_user()
+    for _ in range(settings.LOGIN_MAX_FAILURES):
+        attempt(client, "wrong")
+    assert attempt(client, PASSWORD).status_code == 429
+
+    now = throttle.time.monotonic()
+    later = now + settings.LOGIN_FAILURE_WINDOW_SECONDS + 1
+    monkeypatch.setattr(throttle.time, "monotonic", lambda: later)
+    assert attempt(client, PASSWORD).status_code == 200
+
+
+def test_limiting_can_be_turned_off(client, settings):
+    make_user()
+    settings.LOGIN_MAX_FAILURES = 0
+    for _ in range(15):
+        assert attempt(client, "wrong").status_code == 401
+    assert attempt(client, PASSWORD).status_code == 200
+
+
+def test_guesses_at_many_usernames_do_not_grow_the_record_without_end(monkeypatch):
+    from pangloss_api import throttle
+
+    monkeypatch.setattr(throttle, "MAX_USERNAMES", 3)
+    now = [1000.0]
+    monkeypatch.setattr(throttle.time, "monotonic", lambda: now[0])
+    for name in ("a", "b", "c"):
+        throttle.failed(name)
+    # (once the window has passed, the old ones are dropped to make room)
+    now[0] += 301
+    throttle.failed("d")
+    assert set(throttle.FAILURES) == {"d"}

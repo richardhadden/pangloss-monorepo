@@ -8,7 +8,7 @@ export default function Home() {
   return (
     <main>
       <Title>Pangloss</Title>
-      <h1>Pangloss</h1>
+      <h1>Pangloss Yo!</h1>
       <ul>
         <For each={models}>
           {(model) => (

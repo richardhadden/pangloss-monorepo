@@ -184,3 +184,44 @@ def test_dev_link_needs_the_source(commands, project, monkeypatch):
     assert result.exit_code == 1
     assert "editable install" in result.output
     assert commands == []
+
+
+def test_info_says_what_is_there_and_what_will_run_it(commands, project):
+    before = invoke(project, "info")
+    assert before.exit_code == 0, before.output
+    assert "Prepared:   no" in before.output and "Built:      no" in before.output
+    assert "Runtime:    node (/bin/node)" in before.output
+
+    invoke(project, "install")
+    directory = working_directory(project.location.root)
+    (directory / "node_modules").mkdir()
+    (directory / "interface-app/dist/server").mkdir(parents=True)
+    (directory / "interface-app/dist/server/node.js").write_text("")
+    after = invoke(project, "info").output
+    assert "Prepared:   yes" in after and "Installed:  yes" in after and "Built:      yes" in after
+
+
+def test_check_type_checks_with_the_models_and_checks_the_layers(commands, project):
+    result = invoke(project, "check")
+    assert result.exit_code == 0, result.output
+    directory = working_directory(project.location.root)
+    assert [c[0] for c in commands] == [
+        ["/bin/npm", "install"],
+        ["/bin/npm", "run", "typecheck"],
+        ["/bin/npm", "run", "check:layers"],
+    ]
+    assert all(c[1] == directory for c in commands)
+    # (with the project's models in place)
+    assert 'ModelName = "Person"' in (directory / "interface-app/src/generated/models.ts").read_text()
+
+
+def test_models_that_cannot_be_initialised_are_explained(commands, project, monkeypatch):
+    from pangloss_models.exceptions import PanglossInitialisationError
+
+    def broken(project):
+        raise PanglossInitialisationError("Person.friend: no such model")
+
+    monkeypatch.setattr(interface_cli, "export_project_models", broken)
+    result = invoke(project, "build")
+    assert result.exit_code == 1
+    assert "Cannot initialise the models: Person.friend: no such model" in result.output

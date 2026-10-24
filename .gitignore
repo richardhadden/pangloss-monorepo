@@ -20,3 +20,7 @@ wheels/
 
 # a separate repository, cloned here
 packages/pydantic-meta-kit/
+
+# coverage data
+.coverage
+.coverage.*

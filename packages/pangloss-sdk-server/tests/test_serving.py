@@ -370,3 +370,35 @@ def test_an_installer_accepts_the_wheel_and_the_installed_package_works(make_app
     assert (target / "shop_sdk/sync_stubs/shop/models.pyi").is_file()
     assert (target / "shop_sdk-0.1.dist-info/METADATA").is_file()
     assert set(check.run_in_clean_process(target, "shop_sdk")) == {"Person", "Statement"}
+
+
+def test_wrong_passwords_by_basic_login_are_limited_too(make_app):
+    from pangloss_api import throttle
+
+    throttle.reset()
+    with TestClient(make_app()) as client:
+        user("root", admin=True)
+        for _ in range(10):
+            assert client.get("/api/sdk", headers=basic("root", "wrong")).status_code == 401
+        refused = client.get("/api/sdk", headers=basic("root"))
+        assert refused.status_code == 429 and "Retry-After" in refused.headers
+        # (git is behind the same login)
+        assert client.get("/api/sdk/git/info/refs?service=git-upload-pack", headers=basic("root")).status_code == 429
+    throttle.reset()
+
+
+def test_the_project_is_found_from_the_working_directory(tmp_path, monkeypatch):
+    project = tmp_path / "project"
+    (project / "app" / "deep").mkdir(parents=True)
+    (project / "pyproject.toml").write_text("[tool.pangloss]\nsettings = 'x'\n")
+    (tmp_path / "pyproject.toml").write_text("[tool.other]\n")
+    (project / "app" / "pyproject.toml").write_text("not toml [")
+
+    monkeypatch.chdir(project / "app" / "deep")
+    assert current.find_root() == project.resolve()
+    # (SDK_ROOT wins; with no project above, it is where it is run)
+    from types import SimpleNamespace
+
+    assert current.find_root(SimpleNamespace(SDK_ROOT=str(tmp_path))) == tmp_path.resolve()
+    monkeypatch.chdir(tmp_path)
+    assert current.find_root(SimpleNamespace()) == tmp_path.resolve()

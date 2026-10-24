@@ -9,7 +9,7 @@ Python names, because both are needed: `key` is what is in the JSON of a request
 Its shape (`ModelsExport`), for each model:
 
     name, kind, abstract, description, parent, concreteTypes, typeParameters,
-    createWithId, acceptUrlAsId, requireLabel, fields, incoming
+    createWithId, acceptUrlAsId, requireLabel, useInSemanticSpaceLabel, fields, incoming
 
 and each field has a `kind`:
 

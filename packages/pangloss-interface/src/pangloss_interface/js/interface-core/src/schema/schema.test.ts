@@ -14,6 +14,7 @@ function model(name: string, kind: ModelDefinition["kind"], abstract = false): M
     createWithId: false,
     acceptUrlAsId: false,
     requireLabel: true,
+    useInSemanticSpaceLabel: true,
     fields: [],
     incoming: [],
   };
