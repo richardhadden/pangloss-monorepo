@@ -42,10 +42,16 @@ async def called(value: Any) -> Any:
     return await value if inspect.isawaitable(value) else value
 
 
-def entity_references(data: Any, entities: set[str], skip: UUID) -> Iterator[tuple[str, UUID]]:
+def entity_references(
+    data: Any, entities: set[str], skip: UUID
+) -> Iterator[tuple[str, UUID]]:
     """The `(type, id)` of each reference to an entity in a snapshot (not the head node itself)"""
     if isinstance(data, dict):
-        if data.get("type") in entities and data.get("id") and str(data["id"]) != str(skip):
+        if (
+            data.get("type") in entities
+            and data.get("id")
+            and str(data["id"]) != str(skip)
+        ):
             yield data["type"], UUID(str(data["id"]))
         for value in data.values():
             yield from entity_references(value, entities, skip)
@@ -58,7 +64,11 @@ async def bring_back_entities(data: Any, head_id: UUID) -> list[dict[str, Any]]:
     """Undelete the entities that the content refers to and that were deleted. Gives the
     problems: those that cannot be found at all"""
     models = ModelRegistry.all_models()
-    entities = {name for name, m in models.items() if isinstance(m, type) and issubclass(m, Entity)}
+    entities = {
+        name
+        for name, m in models.items()
+        if isinstance(m, type) and issubclass(m, Entity)
+    }
     problems = []
     for type_name, id in dict.fromkeys(entity_references(data, entities, head_id)):
         model: Any = models[type_name]

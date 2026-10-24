@@ -17,7 +17,6 @@ from pangloss_models.migrations.files import (
 )
 from pangloss_models.migrations.planner import app_of_module, plan
 from pangloss_models.migrations.questions import (
-    answers_needed,
     collect_questions,
     parse_value,
     with_answer,
@@ -138,7 +137,9 @@ def test_a_rename_is_a_question_until_it_is_answered(apps):
 
 
 @no_type_check
-def test_changes_are_shared_among_the_apps_and_the_migrations_depend_on_each_other(apps):
+def test_changes_are_shared_among_the_apps_and_the_migrations_depend_on_each_other(
+    apps,
+):
     """A statement (in one app) that is a relation to a person made by the other: the second
     app's migration comes after the first's"""
 
@@ -168,7 +169,10 @@ def test_changes_are_shared_among_the_apps_and_the_migrations_depend_on_each_oth
 
     graph = write_all(result.migrations, apps)
     assert graph.state() == data_view(new)
-    assert [str(m) for m in graph.order()] == ["appone.0001_initial", "apptwo.0001_initial"]
+    assert [str(m) for m in graph.order()] == [
+        "appone.0001_initial",
+        "apptwo.0001_initial",
+    ]
 
     # a later change to the model of the second app goes in the second
     def later():
@@ -210,7 +214,9 @@ def test_models_that_need_each_other_in_two_apps_are_made_in_two_steps(apps):
     # one app makes its models and the other's follow (they need the first); then the first adds
     # the fields that refer to the second's, which exist by then
     assert len(result.migrations) == 3
-    steps = [(m.app, m.name[:4], [ch.kind for ch in m.changes]) for m in result.migrations]
+    steps = [
+        (m.app, m.name[:4], [ch.kind for ch in m.changes]) for m in result.migrations
+    ]
     assert sorted(a for a, _, _ in steps) == ["appone", "appone", "apptwo"]
     late = [m for m in result.migrations if m.name.startswith("0002")][0]
     assert all(ch.kind == "AddField" for ch in late.changes)
@@ -239,7 +245,9 @@ def test_three_apps_that_need_each_other_round_a_circle(apps, tmp_path, monkeypa
         class C(Entity):
             a: A
 
-    new = in_app(snapshot_of(declare), A="appone.models", B="apptwo.models", C="appthree.models")
+    new = in_app(
+        snapshot_of(declare), A="appone.models", B="apptwo.models", C="appthree.models"
+    )
     result = plan(MigrationGraph(), new, three)
     graph = write_all(result.migrations, three)
     assert graph.state() == data_view(new)
@@ -283,7 +291,10 @@ def test_a_field_added_between_models_that_exist_depends_on_the_other_app(apps):
             home: Place
 
     modules = dict(Place="appone.models", Person="apptwo.models")
-    graph = write_all(plan(MigrationGraph(), in_app(snapshot_of(before), **modules), apps).migrations, apps)
+    graph = write_all(
+        plan(MigrationGraph(), in_app(snapshot_of(before), **modules), apps).migrations,
+        apps,
+    )
     new = in_app(snapshot_of(after), **modules)
     result = plan(graph, new, apps)
     graph = write_all(result.migrations, apps)
@@ -292,7 +303,9 @@ def test_a_field_added_between_models_that_exist_depends_on_the_other_app(apps):
 
 
 @no_type_check
-def test_a_model_moved_to_another_app_needs_no_migration_and_its_later_changes_follow_it(apps):
+def test_a_model_moved_to_another_app_needs_no_migration_and_its_later_changes_follow_it(
+    apps,
+):
     def v1():
         class Person(Entity):
             name: str
@@ -303,7 +316,10 @@ def test_a_model_moved_to_another_app_needs_no_migration_and_its_later_changes_f
             born: int | None
 
     graph = write_all(
-        plan(MigrationGraph(), in_app(snapshot_of(v1), Person="appone.models"), apps).migrations, apps
+        plan(
+            MigrationGraph(), in_app(snapshot_of(v1), Person="appone.models"), apps
+        ).migrations,
+        apps,
     )
     # the class is in another app now: that is not stored, so nothing has changed
     moved = in_app(snapshot_of(v1), Person="apptwo.models")
@@ -374,7 +390,9 @@ def test_the_fields_of_a_wrapper_are_asked_for():
     old, new = snapshot_of(one), snapshot_of(two)
     changes = diff(old, new).changes
     asked = collect_questions(changes, old)
-    assert [(changes[i].kind, q.field) for i, q in asked] == [("WrapRelation", "defaults.certainty")]
+    assert [(changes[i].kind, q.field) for i, q in asked] == [
+        ("WrapRelation", "defaults.certainty")
+    ]
 
     answered = with_answer(changes[1], "defaults.certainty", 3)
     assert answered.defaults == {"certainty": 3}
@@ -389,7 +407,10 @@ def test_answers_are_parsed_by_type():
     assert parse_value("yes", {"type": "bool"}, enums) is True
     assert parse_value("2020-01-02", {"type": "date"}, enums) == "2020-01-02"
     assert parse_value("red", {"type": "enum", "enum": "Colour"}, enums) == "RED"
-    assert parse_value("a, b", {"type": "list", "item": {"type": "str"}}, enums) == ["a", "b"]
+    assert parse_value("a, b", {"type": "list", "item": {"type": "str"}}, enums) == [
+        "a",
+        "b",
+    ]
     with pytest.raises(PanglossMigrationError):
         parse_value("x", {"type": "int"}, enums)
     with pytest.raises(PanglossMigrationError):
@@ -429,9 +450,13 @@ def test_what_the_new_wrapper_or_the_embedded_object_has_more_is_asked():
             date: Date
 
     old, new = snapshot_of(one), snapshot_of(two)
-    changes = diff(old, new, declined=[
-        c.PossibleRename(what="model", old="IdentifiedAs", new="ProxyFor"),
-    ]).changes
+    changes = diff(
+        old,
+        new,
+        declined=[
+            c.PossibleRename(what="model", old="IdentifiedAs", new="ProxyFor"),
+        ],
+    ).changes
     asked = {(changes[i].kind, q.field) for i, q in collect_questions(changes, old)}
     # the field the old wrapper has not; and what the embedded object has besides the literals
     assert ("ChangeWrapper", "defaults.reason") in asked
@@ -452,15 +477,29 @@ def test_the_migrations_of_one_app_come_with_those_of_others_that_they_need(apps
         class Thing(Entity):
             pass
 
-    new = in_app(snapshot_of(declare), Place="appone.models", Person="apptwo.models", Thing="appone.models")
+    new = in_app(
+        snapshot_of(declare),
+        Place="appone.models",
+        Person="apptwo.models",
+        Thing="appone.models",
+    )
     result = plan(MigrationGraph(), new, apps)
     # (apptwo's migration needs appone's, so it cannot be written without it)
-    assert [m.app for m in with_what_they_need(result.migrations, "apptwo")] == ["appone", "apptwo"]
+    assert [m.app for m in with_what_they_need(result.migrations, "apptwo")] == [
+        "appone",
+        "apptwo",
+    ]
     # (and appone's needs nothing)
-    assert [m.app for m in with_what_they_need(result.migrations, "appone")] == ["appone"]
+    assert [m.app for m in with_what_they_need(result.migrations, "appone")] == [
+        "appone"
+    ]
 
     owners = MigrationGraph().owners()
-    where = {ch.model: app_of_change(ch, new, owners, apps) for ch in result.changes if isinstance(ch, c.CreateModel)}
+    where = {
+        ch.model: app_of_change(ch, new, owners, apps)
+        for ch in result.changes
+        if isinstance(ch, c.CreateModel)
+    }
     assert where == {"Place": "appone", "Thing": "appone", "Person": "apptwo"}
 
 
@@ -479,7 +518,9 @@ def test_changing_the_kind_of_a_model_or_a_field_is_refused(apps):
     first = in_app(snapshot_of(entity), Thing="appone.models")
     graph = write_all(plan(MigrationGraph(), first, apps).migrations, apps)
 
-    with pytest.raises(PanglossMigrationNotSupported, match="kind of a model cannot be changed"):
+    with pytest.raises(
+        PanglossMigrationNotSupported, match="kind of a model cannot be changed"
+    ):
         plan(graph, in_app(snapshot_of(document), Thing="appone.models"), apps)
 
 
@@ -487,15 +528,24 @@ def test_changing_the_kind_of_a_field_is_refused_too():
     from pangloss_models.exceptions import PanglossMigrationNotSupported
     from pangloss_models.migrations.planner import refuse_kind_changes
 
-    with pytest.raises(PanglossMigrationNotSupported, match="kind of a field cannot be changed"):
-        refuse_kind_changes([c.ChangeFieldKind(model="Thing", name="home", old="literal", new="relation")])
-    refuse_kind_changes([c.AddField(model="Thing", name="x", field_kind="literal", needs_value=False)])
+    with pytest.raises(
+        PanglossMigrationNotSupported, match="kind of a field cannot be changed"
+    ):
+        refuse_kind_changes(
+            [
+                c.ChangeFieldKind(
+                    model="Thing", name="home", old="literal", new="relation"
+                )
+            ]
+        )
+    refuse_kind_changes(
+        [c.AddField(model="Thing", name="x", field_kind="literal", needs_value=False)]
+    )
 
 
 @no_type_check
 def test_a_new_embedded_object_asks_for_the_values_it_requires():
     from pangloss_models.migrations import diff
-    from pangloss_models.migrations.files import EMPTY_SNAPSHOT
     from pangloss_models.model_bases.embedded import Embedded
 
     def before():
@@ -514,7 +564,11 @@ def test_a_new_embedded_object_asks_for_the_values_it_requires():
     old, new = snapshot_of(before), snapshot_of(after)
     found = diff(old, new).changes
     added = next(ch for ch in found if isinstance(ch, c.AddField) and ch.name == "date")
-    asked = [q for _, q in collect_questions(found, data_view(old)) if q.field.startswith("default")]
+    asked = [
+        q
+        for _, q in collect_questions(found, data_view(old))
+        if q.field.startswith("default")
+    ]
     assert [q.field for q in asked] == ["default.when"]  # (`precision` may be left out)
 
     answered = with_answer(added, "default.when", "unknown")
@@ -556,15 +610,31 @@ def test_a_model_that_fulfils_a_class_of_another_app_depends_on_that_app(apps):
         class Meeting(Document, Fulfils[Dated]):
             attendee: Annotated[
                 Person,
-                RelationConfig(subclasses_parent_fields=[FieldSubclassing("who", field_on_model=Dated)]),
+                RelationConfig(
+                    subclasses_parent_fields=[
+                        FieldSubclassing("who", field_on_model=Dated)
+                    ]
+                ),
             ]
 
-    modules = dict(Person="appone.models", Place="appone.models", Dated="appone.models", Meeting="apptwo.models")
-    graph = write_all(plan(MigrationGraph(), in_app(snapshot_of(plain), **modules), apps).migrations, apps)
+    modules = dict(
+        Person="appone.models",
+        Place="appone.models",
+        Dated="appone.models",
+        Meeting="apptwo.models",
+    )
+    graph = write_all(
+        plan(MigrationGraph(), in_app(snapshot_of(plain), **modules), apps).migrations,
+        apps,
+    )
 
     new = in_app(snapshot_of(fulfilling), **modules)
     result = plan(graph, new, apps)
-    recompute = [(m.app, m.dependencies) for m in result.migrations if any(isinstance(ch, c.RecomputeFulfils) for ch in m.changes)]
+    recompute = [
+        (m.app, m.dependencies)
+        for m in result.migrations
+        if any(isinstance(ch, c.RecomputeFulfils) for ch in m.changes)
+    ]
     # (it is Meeting's, so apptwo's; and it needs what Dated is, which is appone's)
     assert [app for app, _ in recompute] == ["apptwo"]
     assert ("appone", graph.leaf("appone").name) in recompute[0][1]
@@ -575,7 +645,9 @@ def test_a_model_that_fulfils_a_class_of_another_app_depends_on_that_app(apps):
 
 
 @no_type_check
-def test_apps_whose_models_inherit_from_each_other_round_a_circle_are_made_in_two_steps(apps):
+def test_apps_whose_models_inherit_from_each_other_round_a_circle_are_made_in_two_steps(
+    apps,
+):
     def declare():
         class Base(Document):
             pass
@@ -591,11 +663,17 @@ def test_apps_whose_models_inherit_from_each_other_round_a_circle_are_made_in_tw
 
     new = in_app(
         snapshot_of(declare),
-        Base="apptwo.models", Holder="apptwo.models", Child="appone.models", Child2="appone.models",
+        Base="apptwo.models",
+        Holder="apptwo.models",
+        Child="appone.models",
+        Child2="appone.models",
     )
     result = plan(MigrationGraph(), new, apps)
     # appone's Child needs apptwo's Base (to inherit from) and apptwo's Holder needs appone's Child2
-    kinds = {(m.app, m.name[:4]): [type(ch).__name__ for ch in m.changes] for m in result.migrations}
+    kinds = {
+        (m.app, m.name[:4]): [type(ch).__name__ for ch in m.changes]
+        for m in result.migrations
+    }
     assert any("AlterModelLabels" in changes for changes in kinds.values())
 
     graph = write_all(result.migrations, apps)
@@ -609,7 +687,11 @@ def test_a_circle_that_cannot_be_split_is_an_error_and_not_an_endless_loop(monke
     from pangloss_models.migrations import planner
 
     def create(name):
-        return c.CreateModel(model=name, model_kind="Document", definition={"fields": [], "labels": [name]})
+        return c.CreateModel(
+            model=name,
+            model_kind="Document",
+            definition={"fields": [], "labels": [name]},
+        )
 
     groups = {"one": [create("A")], "two": [create("B")]}
     created = {"A": "one", "B": "two"}

@@ -19,11 +19,16 @@ pytestmark = pytest.mark.asyncio(loop_scope="session")
 def history(tmp_path, monkeypatch):
     path = tmp_path / "h.sqlite3"
     # (after `initialise`, which reads the real settings, the ones history reads are swapped)
-    yield path, lambda: monkeypatch.setattr(
-        core_settings,
-        "SETTINGS",
-        SimpleNamespace(INSTALLED_APPS=[], HISTORY_DB_PATH=str(path), HISTORY_BATCH_MS=1),
-        raising=False,
+    yield (
+        path,
+        lambda: monkeypatch.setattr(
+            core_settings,
+            "SETTINGS",
+            SimpleNamespace(
+                INSTALLED_APPS=[], HISTORY_DB_PATH=str(path), HISTORY_BATCH_MS=1
+            ),
+            raising=False,
+        ),
     )
     listener.reset_recorder()
     hooks.after_write[:] = [h for h in hooks.after_write if h is not listener.on_write]
@@ -51,7 +56,10 @@ async def test_the_whole_life_of_a_document_and_the_entity_it_made_is_recorded(
     about = {"type": "Person", "id": person_id, "label": "P", "create_new": True}
     statement = await Statement.Create(label="S", text="one", about=about).save()
     await Statement.Update(
-        id=statement.id, label="S", text="two", about={"type": "Person", "id": person_id}
+        id=statement.id,
+        label="S",
+        text="two",
+        about={"type": "Person", "id": person_id},
     ).save()
     await Statement.delete(statement.id)
     await Statement.undelete(statement.id)

@@ -10,9 +10,10 @@ from pangloss_sdk import (
     PanglossAuthenticationRequired,
     PanglossConnectionError,
     auth,
+)
+from pangloss_sdk import (
     client as sdk_client,
 )
-
 from sdk_support import (
     FakeServer,
     async_client,
@@ -20,7 +21,6 @@ from sdk_support import (
     make_models,
     reference_json,
     settings,
-    sync_client,
 )
 
 pytestmark = pytest.mark.asyncio

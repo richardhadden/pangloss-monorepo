@@ -20,8 +20,8 @@ from pangloss_memgraph.databases.memgraph.migrations.operations import (
     COUNTERS,
     Window,
     apply_change,
-    apply_window,
     apply_edges,
+    apply_window,
     batch_kind,
     is_ddl,
     run_ddl,
@@ -79,7 +79,9 @@ async def dry_run(
         await database._initialise_driver()
     reports: list[ChangeReport] = []
     failed = False
-    async with database.driver.session(database=database.settings.DATABASE.DATABASE_NAME) as session:
+    async with database.driver.session(
+        database=database.settings.DATABASE.DATABASE_NAME
+    ) as session:
         tx = await session.begin_transaction()
         try:
             for change in changes:
@@ -97,7 +99,11 @@ async def dry_run(
                         reports.append(ChangeReport(change, "counted", dict(counters)))
                     except Exception as error:
                         failed = True
-                        reports.append(ChangeReport(change, "error", message=str(error).split("\n")[0]))
+                        reports.append(
+                            ChangeReport(
+                                change, "error", message=str(error).split("\n")[0]
+                            )
+                        )
                     finally:
                         COUNTERS.reset(token)
         finally:
@@ -117,7 +123,7 @@ class Progress:
         return json.dumps(dataclasses.asdict(self))
 
     @classmethod
-    def from_json(cls, text: str | None) -> "Progress":
+    def from_json(cls, text: str | None) -> Progress:
         return cls(**json.loads(text)) if text else cls()
 
 

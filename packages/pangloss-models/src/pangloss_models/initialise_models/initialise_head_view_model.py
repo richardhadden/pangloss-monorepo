@@ -6,15 +6,15 @@ from pydantic import create_model as pydantic_create_model
 from pydantic.alias_generators import to_camel
 from pydantic.fields import FieldInfo
 
-from pangloss_models.initialise_models.builder import union_order
-from pangloss_models.model_bases.model_tools import set_field
 from pangloss_models.field_definitions import IncomingRelationDefinition
+from pangloss_models.initialise_models.builder import union_order
 from pangloss_models.initialise_models.initialise_view_model import (
     get_relation_annotation_types,
 )
 from pangloss_models.model_bases.base_models import _DeclaredClass
 from pangloss_models.model_bases.document import Document, _DocumentHeadViewBase
 from pangloss_models.model_bases.entity import Entity, _EntityHeadViewBase
+from pangloss_models.model_bases.model_tools import set_field
 from pangloss_models.model_bases.reified_relation import (
     ReifiedRelationDocument,
     _ReifiedRelationDocumentHeadViewBase,

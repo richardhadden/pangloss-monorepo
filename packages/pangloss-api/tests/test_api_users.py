@@ -99,9 +99,7 @@ def test_an_expired_token(client, settings):
 
 def test_a_token_for_a_user_who_no_longer_exists(client):
     token = create_token("ghost", "access")
-    response = client.get(
-        "/api/users/me", headers={"Authorization": f"Bearer {token}"}
-    )
+    response = client.get("/api/users/me", headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == 401
 
 
@@ -290,19 +288,26 @@ def test_only_admins_manage_users(client):
         ).status_code
         == 403
     )
-    for path, body in (
-        ("/api/users/root", {"fullName": "Root"}),
-    ):
+    for path, body in (("/api/users/root", {"fullName": "Root"}),):
         assert client.patch(path, json=body, headers=headers).status_code == 403
-    assert client.put(
-        "/api/users/root/password", json={"password": PASSWORD}, headers=headers
-    ).status_code == 403
-    assert client.put(
-        "/api/users/john/admin", json={"admin": True}, headers=headers
-    ).status_code == 403
-    assert client.put(
-        "/api/users/root/disabled", json={"disabled": True}, headers=headers
-    ).status_code == 403
+    assert (
+        client.put(
+            "/api/users/root/password", json={"password": PASSWORD}, headers=headers
+        ).status_code
+        == 403
+    )
+    assert (
+        client.put(
+            "/api/users/john/admin", json={"admin": True}, headers=headers
+        ).status_code
+        == 403
+    )
+    assert (
+        client.put(
+            "/api/users/root/disabled", json={"disabled": True}, headers=headers
+        ).status_code
+        == 403
+    )
 
     # (nor without logging in)
     assert client.get("/api/users").status_code == 401
@@ -383,17 +388,27 @@ def test_admin_changes_another_user(client):
     )
     assert response.json()["fullName"] == "John Smith"
     assert (
-        client.patch("/api/users/nobody", json={"fullName": "N"}, headers=admin).status_code
+        client.patch(
+            "/api/users/nobody", json={"fullName": "N"}, headers=admin
+        ).status_code
         == 404
     )
 
-    assert client.put(
-        "/api/users/john/password", json={"password": "set by an admin"}, headers=admin
-    ).status_code == 200
+    assert (
+        client.put(
+            "/api/users/john/password",
+            json={"password": "set by an admin"},
+            headers=admin,
+        ).status_code
+        == 200
+    )
     assert login(client, password="set by an admin").status_code == 200
-    assert client.put(
-        "/api/users/john/password", json={"password": "short"}, headers=admin
-    ).status_code == 422
+    assert (
+        client.put(
+            "/api/users/john/password", json={"password": "short"}, headers=admin
+        ).status_code
+        == 422
+    )
 
     response = client.put("/api/users/john/admin", json={"admin": True}, headers=admin)
     assert response.json()["admin"] is True
@@ -407,12 +422,18 @@ def test_admin_changes_another_user(client):
 def test_admins_cannot_change_their_own_status(client):
     make_user("root", admin=True)
     admin = bearer(client, "root")
-    assert client.put(
-        "/api/users/root/admin", json={"admin": False}, headers=admin
-    ).status_code == 400
-    assert client.put(
-        "/api/users/root/disabled", json={"disabled": True}, headers=admin
-    ).status_code == 400
+    assert (
+        client.put(
+            "/api/users/root/admin", json={"admin": False}, headers=admin
+        ).status_code
+        == 400
+    )
+    assert (
+        client.put(
+            "/api/users/root/disabled", json={"disabled": True}, headers=admin
+        ).status_code
+        == 400
+    )
     assert client.get("/api/users/me", headers=admin).json()["admin"] is True
 
 

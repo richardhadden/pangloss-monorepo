@@ -38,8 +38,16 @@ def test_revoking_a_refresh_token_ends_it(client):
 
 
 def test_revoking_is_for_whoever_has_the_token_and_ignores_what_is_not_good(client):
-    assert client.post("/api/users/token/revoke", json={"refresh_token": "nonsense"}).status_code == 204
-    assert client.post("/api/users/token/revoke", json={"refresh_token": ""}).status_code == 204
+    assert (
+        client.post(
+            "/api/users/token/revoke", json={"refresh_token": "nonsense"}
+        ).status_code
+        == 204
+    )
+    assert (
+        client.post("/api/users/token/revoke", json={"refresh_token": ""}).status_code
+        == 204
+    )
 
 
 def test_ending_a_session_revokes_the_tokens_in_its_cookies(client):
@@ -51,18 +59,34 @@ def test_ending_a_session_revokes_the_tokens_in_its_cookies(client):
     assert client.delete("/api/users/session").status_code == 200
 
     assert me(client, access).status_code == 401
-    assert client.post("/api/users/token/refresh", json={"refresh_token": refresh}).status_code == 401
+    assert (
+        client.post(
+            "/api/users/token/refresh", json={"refresh_token": refresh}
+        ).status_code
+        == 401
+    )
 
 
 def test_logout_everywhere_ends_every_token_made_until_then(client):
     make_user()
     first, second = tokens(client), tokens(client)
 
-    assert client.post("/api/users/me/logout-all", headers=auth(first["access_token"])).status_code == 204
+    assert (
+        client.post(
+            "/api/users/me/logout-all", headers=auth(first["access_token"])
+        ).status_code
+        == 204
+    )
 
     for given in (first, second):
         assert me(client, given["access_token"]).status_code == 401
-        assert client.post("/api/users/token/refresh", json={"refresh_token": given["refresh_token"]}).status_code == 401
+        assert (
+            client.post(
+                "/api/users/token/refresh",
+                json={"refresh_token": given["refresh_token"]},
+            ).status_code
+            == 401
+        )
     # (a new login is fine)
     assert me(client, tokens(client)["access_token"]).status_code == 200
 
@@ -81,8 +105,15 @@ def test_changing_your_password_ends_your_sessions(client):
     assert response.status_code == 200
 
     assert me(client, old["access_token"]).status_code == 401
-    assert client.post("/api/users/token/refresh", json={"refresh_token": old["refresh_token"]}).status_code == 401
-    new = client.post("/api/users/token", data={"username": "john", "password": "a better password"})
+    assert (
+        client.post(
+            "/api/users/token/refresh", json={"refresh_token": old["refresh_token"]}
+        ).status_code
+        == 401
+    )
+    new = client.post(
+        "/api/users/token", data={"username": "john", "password": "a better password"}
+    )
     assert me(client, new.json()["access_token"]).status_code == 200
 
 
@@ -91,7 +122,11 @@ def test_an_admin_setting_a_password_ends_that_users_sessions_not_their_own(clie
     make_user("jane")
     jane, root = tokens(client, "jane"), tokens(client, "root")
 
-    client.put("/api/users/jane/password", json={"password": "another password"}, headers=auth(root["access_token"]))
+    client.put(
+        "/api/users/jane/password",
+        json={"password": "another password"},
+        headers=auth(root["access_token"]),
+    )
 
     assert me(client, jane["access_token"]).status_code == 401
     assert me(client, root["access_token"]).status_code == 200
@@ -101,7 +136,9 @@ def test_an_admin_setting_a_password_ends_that_users_sessions_not_their_own(clie
 
 
 def make_token(client, headers, **body):
-    return client.post("/api/users/me/tokens", json={"name": "for scripts", **body}, headers=headers)
+    return client.post(
+        "/api/users/me/tokens", json={"name": "for scripts", **body}, headers=headers
+    )
 
 
 def test_a_personal_access_token_is_shown_once_and_works_as_a_bearer_token(client):
@@ -139,16 +176,29 @@ def test_a_token_stops_when_revoked_when_expired_or_when_the_user_is_disabled(cl
     headers = bearer(client)
 
     first = make_token(client, headers).json()
-    assert client.delete(f"/api/users/me/tokens/{first['id']}", headers=headers).status_code == 204
+    assert (
+        client.delete(
+            f"/api/users/me/tokens/{first['id']}", headers=headers
+        ).status_code
+        == 204
+    )
     assert me(client, first["token"]).status_code == 401
-    assert client.delete(f"/api/users/me/tokens/{first['id']}", headers=headers).status_code == 404
+    assert (
+        client.delete(
+            f"/api/users/me/tokens/{first['id']}", headers=headers
+        ).status_code
+        == 404
+    )
 
     expiring = make_token(client, headers, expiresDays=1).json()
     from fake_api_db import exposed_functions
 
     record = exposed_functions.ACCESS_TOKENS[expiring["id"]]
     exposed_functions.ACCESS_TOKENS[expiring["id"]] = record.model_copy(
-        update={"expires_when": datetime.datetime.now(datetime.UTC) - datetime.timedelta(seconds=1)}
+        update={
+            "expires_when": datetime.datetime.now(datetime.UTC)
+            - datetime.timedelta(seconds=1)
+        }
     )
     assert me(client, expiring["token"]).status_code == 401
 
@@ -162,8 +212,15 @@ def test_a_token_belongs_to_its_user(client):
     make_user("jane")
     mine = make_token(client, bearer(client, "john")).json()
 
-    assert client.get("/api/users/me/tokens", headers=bearer(client, "jane")).json() == []
-    assert client.delete(f"/api/users/me/tokens/{mine['id']}", headers=bearer(client, "jane")).status_code == 404
+    assert (
+        client.get("/api/users/me/tokens", headers=bearer(client, "jane")).json() == []
+    )
+    assert (
+        client.delete(
+            f"/api/users/me/tokens/{mine['id']}", headers=bearer(client, "jane")
+        ).status_code
+        == 404
+    )
     assert me(client, mine["token"]).status_code == 200
 
 
@@ -174,7 +231,12 @@ def test_tokens_are_not_made_with_a_token_and_need_a_login(client):
     assert make_token(client, auth(token)).status_code == 403
     assert make_token(client, {}).status_code == 401
     assert make_token(client, bearer(client), scope="admin").status_code == 422
-    assert client.post("/api/users/me/tokens", json={"name": " "}, headers=bearer(client)).status_code == 422
+    assert (
+        client.post(
+            "/api/users/me/tokens", json={"name": " "}, headers=bearer(client)
+        ).status_code
+        == 422
+    )
 
 
 def test_logout_everywhere_leaves_personal_access_tokens(client):
@@ -183,7 +245,6 @@ def test_logout_everywhere_leaves_personal_access_tokens(client):
     token = make_token(client, headers).json()["token"]
     client.post("/api/users/me/logout-all", headers=headers)
     assert me(client, token).status_code == 200
-
 
 
 # --- when a token was last used -------------------------------------------------------------
@@ -196,19 +257,26 @@ def test_a_token_notes_when_it_was_last_used_not_on_every_request(client):
     assert created["lastUsedWhen"] is None
 
     assert me(client, created["token"]).status_code == 200
-    first = client.get("/api/users/me/tokens", headers=headers).json()[0]["lastUsedWhen"]
+    first = client.get("/api/users/me/tokens", headers=headers).json()[0][
+        "lastUsedWhen"
+    ]
     assert first is not None
 
     # (a second use soon after is not written)
     assert me(client, created["token"]).status_code == 200
-    assert client.get("/api/users/me/tokens", headers=headers).json()[0]["lastUsedWhen"] == first
+    assert (
+        client.get("/api/users/me/tokens", headers=headers).json()[0]["lastUsedWhen"]
+        == first
+    )
 
 
 # --- guessing at a password -------------------------------------------------------------------
 
 
 def attempt(client, password, username="john"):
-    return client.post("/api/users/token", data={"username": username, "password": password})
+    return client.post(
+        "/api/users/token", data={"username": username, "password": password}
+    )
 
 
 def test_a_username_is_refused_after_too_many_wrong_passwords(client, settings):
@@ -220,7 +288,9 @@ def test_a_username_is_refused_after_too_many_wrong_passwords(client, settings):
     assert refused.status_code == 429
     assert int(refused.headers["Retry-After"]) > 0
     # (the session login is refused too; another username is not affected)
-    session = client.post("/api/users/session", data={"username": "john", "password": PASSWORD})
+    session = client.post(
+        "/api/users/session", data={"username": "john", "password": PASSWORD}
+    )
     assert session.status_code == 429
     assert attempt(client, "x", username="nobody").status_code == 401
 

@@ -18,7 +18,6 @@ from pydantic import AnyHttpUrl
 
 from .helpers import count_nodes, labels_of, run
 
-
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
 
@@ -174,7 +173,9 @@ async def test_an_inline_entity_in_a_nested_document(db_driver, clear_database):
 
 
 @no_type_check
-async def test_an_inline_entity_can_have_relations_of_its_own(db_driver, clear_database):
+async def test_an_inline_entity_can_have_relations_of_its_own(
+    db_driver, clear_database
+):
     class Place(Entity):
         pass
 
@@ -293,11 +294,17 @@ async def test_the_same_inline_entity_twice_in_a_document_is_one_entity(
 
     assert count_nodes(db_driver, "Person") == 2
     assert (
-        run(db_driver, "MATCH (:Order)-[r:order_given_by]->(:Person) RETURN count(r) AS c")[0]["c"]
+        run(
+            db_driver,
+            "MATCH (:Order)-[r:order_given_by]->(:Person) RETURN count(r) AS c",
+        )[0]["c"]
         == 2
     )
     assert (
-        run(db_driver, "MATCH (:Order)-[r:order_received_by]->(:Person) RETURN count(r) AS c")[0]["c"]
+        run(
+            db_driver,
+            "MATCH (:Order)-[r:order_received_by]->(:Person) RETURN count(r) AS c",
+        )[0]["c"]
         == 2
     )
     # (each was created once: one record of creation each)
@@ -658,7 +665,9 @@ async def test_documents_written_at_the_same_time_with_the_same_id_are_a_conflic
     given_id = uuid7()
     results = await asyncio.gather(
         *[
-            Statement.Create(id=given_id, create_new=True, label=f"Statement {i}").save()
+            Statement.Create(
+                id=given_id, create_new=True, label=f"Statement {i}"
+            ).save()
             for i in range(5)
         ],
         return_exceptions=True,

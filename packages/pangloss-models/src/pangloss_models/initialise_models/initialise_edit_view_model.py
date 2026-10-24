@@ -9,9 +9,9 @@ from pydantic import ConfigDict
 from pydantic import create_model as pydantic_create_model
 from pydantic.alias_generators import to_camel
 
-from pangloss_models.model_bases.model_tools import set_field
 from pangloss_models.model_bases.base_models import _DeclaredClass
 from pangloss_models.model_bases.entity import Entity, _EntityEditViewBase
+from pangloss_models.model_bases.model_tools import set_field
 
 
 def can_have_edit_view_model(model: type[_DeclaredClass]) -> bool:

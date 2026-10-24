@@ -56,7 +56,9 @@ async def test_an_update_from_the_latest_version_is_made(db_driver, clear_databa
     saved = await Statement.Create(label="S", text="one").save()
 
     await Statement.Update(id=saved.id, label="S", text="two").save(expected_version=1)
-    await Statement.Update(id=saved.id, label="S", text="three").save(expected_version=2)
+    await Statement.Update(id=saved.id, label="S", text="three").save(
+        expected_version=2
+    )
     read = await Statement.get(saved.id)
     assert read.text == "three"
     assert read.meta.version == 3

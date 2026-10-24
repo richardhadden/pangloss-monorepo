@@ -3,7 +3,6 @@
 from dataclasses import replace
 from types import SimpleNamespace
 from typing import no_type_check
-from uuid import uuid7
 
 import pytest
 from pangloss_core import settings as core_settings
@@ -33,7 +32,9 @@ def history(tmp_path, monkeypatch):
         monkeypatch.setattr(
             core_settings,
             "SETTINGS",
-            SimpleNamespace(INSTALLED_APPS=[], HISTORY_DB_PATH=str(path), HISTORY_BATCH_MS=1),
+            SimpleNamespace(
+                INSTALLED_APPS=[], HISTORY_DB_PATH=str(path), HISTORY_BATCH_MS=1
+            ),
             raising=False,
         )
         listener.reset_recorder()
@@ -171,7 +172,9 @@ async def test_a_url_that_another_entity_has_taken_is_a_conflict(
 
 
 @no_type_check
-async def test_an_entity_is_restored_with_its_own_values(db_driver, clear_database, history):
+async def test_an_entity_is_restored_with_its_own_values(
+    db_driver, clear_database, history
+):
     Person, Statement = models()
     store = history()
     john = await Person.Create(label="John").save()

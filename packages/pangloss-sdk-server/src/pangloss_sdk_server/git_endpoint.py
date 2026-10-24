@@ -44,7 +44,9 @@ class GitEndpoint:
             await authorise(request)
         except HTTPException as error:
             await JSONResponse(
-                {"detail": error.detail}, status_code=error.status_code, headers=error.headers
+                {"detail": error.detail},
+                status_code=error.status_code,
+                headers=error.headers,
             )(scope, receive, send)
             return
 
@@ -68,4 +70,6 @@ class GitEndpoint:
 
 def gitrepository(output: Any) -> str | None:
     path = gitrepo.repository_path(output)
-    return str(path) if (path / "HEAD").exists() and publish.read_state(output) else None
+    return (
+        str(path) if (path / "HEAD").exists() and publish.read_state(output) else None
+    )

@@ -68,7 +68,7 @@ def check_name_is_free(name: str) -> None:
         )
 
 
-def routable_models() -> list[type[Document] | type[Entity]]:
+def routable_models() -> list[type[Document | Entity]]:
     """The registered Documents and Entities that routes are made for"""
     return [
         model
@@ -88,7 +88,8 @@ async def called(value: Any) -> Any:
 def not_found(model: type, id: UUID | AnyHttpUrl) -> HTTPException:
     what = "id" if isinstance(id, UUID) else "URL"
     return HTTPException(
-        status.HTTP_404_NOT_FOUND, detail=f"There is no {model.__name__} with {what} {id}"
+        status.HTTP_404_NOT_FOUND,
+        detail=f"There is no {model.__name__} with {what} {id}",
     )
 
 
@@ -121,9 +122,7 @@ def parse_reference(reference: str, query: str = "") -> UUID | AnyHttpUrl:
 
 async def entity_reference(
     request: Request,
-    ref: Annotated[
-        str, Path(description="The id of the entity, or one of its URLs")
-    ],
+    ref: Annotated[str, Path(description="The id of the entity, or one of its URLs")],
 ) -> UUID | AnyHttpUrl:
     return parse_reference(ref, request.url.query)
 
@@ -167,7 +166,7 @@ def expected_version(if_match: str | None) -> int | None:
     if value.startswith("W/"):
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
-            detail="If-Match must be a strong ETag, such as \"3\"",
+            detail='If-Match must be a strong ETag, such as "3"',
         )
     try:
         version = int(value.strip('"'))
@@ -181,12 +180,12 @@ def expected_version(if_match: str | None) -> int | None:
     return version
 
 
-def list_response_model(model: type[Document] | type[Entity]) -> Any:
+def list_response_model(model: type[Document | Entity]) -> Any:
     reference_views = [t.ReferenceView for t in get_concrete_types(model)]  # type: ignore[attr-defined]
     return _ListItems[Union[*reference_views]]  # type: ignore[valid-type]
 
 
-def build_router(model: type[Document] | type[Entity]) -> APIRouter:
+def build_router(model: type[Document | Entity]) -> APIRouter:
     is_entity = issubclass(model, Entity)
     name = model.__name__
 
@@ -211,7 +210,9 @@ def build_router(model: type[Document] | type[Entity]) -> APIRouter:
         item = "/{id}"
         ItemId = ChangeId = UUID
 
-    @router.get("", response_model=list_response_model(model), operation_id=f"list_{name}")
+    @router.get(
+        "", response_model=list_response_model(model), operation_id=f"list_{name}"
+    )
     async def list_items(
         q: Annotated[str | None, Query(description="Search the labels")] = None,
         deep: Annotated[bool, Query(description="Search more than the labels")] = False,
@@ -289,7 +290,7 @@ def build_router(model: type[Document] | type[Entity]) -> APIRouter:
             str | None,
             Header(
                 alias="If-Match",
-                description='The version this update is based on: the ETag of the '
+                description="The version this update is based on: the ETag of the "
                 'edit view ("3"). `*` updates whatever the version is. 412 if it is '
                 "not the latest.",
             ),

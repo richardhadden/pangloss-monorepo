@@ -15,7 +15,6 @@ from enum import Enum
 from typing import Annotated, TypedDict
 
 from annotated_types import Ge, MaxLen, MinLen
-from pydantic import Field
 from pangloss_models.field_definitions import FieldBinding, FieldSubclassing
 from pangloss_models.model_bases.annotated_value import AnnotatedValue
 from pangloss_models.model_bases.configs import RelationConfig
@@ -31,6 +30,7 @@ from pangloss_models.model_bases.reified_relation import (
 )
 from pangloss_models.model_bases.semantic_space import SemanticSpace
 from pangloss_models.model_bases.trait import NonHeritableTrait, Trait
+from pydantic import Field
 
 
 def declare() -> None:
@@ -78,7 +78,9 @@ def declare() -> None:
     class Attested[T](ReifiedRelation[T]):
         """A relation with a document and an embedded object of its own"""
 
-        note: Annotated[Note, RelationConfig(description="The note made when it was attested")]
+        note: Annotated[
+            Note, RelationConfig(description="The note made when it was attested")
+        ]
         dated: Date
 
     class Marker(NonHeritableTrait):

@@ -249,7 +249,9 @@ def not_with_an_access_token(request: Request) -> None:
 @router.post(
     "/me/tokens", response_model=CreatedAccessToken, status_code=status.HTTP_201_CREATED
 )
-async def create_access_token(body: NewAccessToken, user: CurrentUser, request: Request):
+async def create_access_token(
+    body: NewAccessToken, user: CurrentUser, request: Request
+):
     """Make a personal access token. The token is in the answer **once**: it is not kept,
     and cannot be shown again. Use it as `Authorization: Bearer <token>`, or as the password
     of HTTP Basic (with your username). `scope` `read` can only read"""

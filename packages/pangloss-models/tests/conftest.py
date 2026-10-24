@@ -32,7 +32,6 @@ def initialise_database():
         INTERFACE_LANGUAGES: list[str] = []
         DEFAULT_INTERFACE_LANGUAGE: str = "en"
         AUTHJWT_SECRET_KEY: str = "asdf"
-        INTERFACE_LANGUAGES: list[str] = []
         ENTITY_BASE_URL: AnyHttpUrl = AnyHttpUrl("http://test.com/")
 
     Settings()

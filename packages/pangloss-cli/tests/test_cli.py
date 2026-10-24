@@ -1,11 +1,10 @@
 import sys
 from pathlib import Path
 
+from cli_support import SETTINGS, write
 from pangloss_cli.main import build_app
 from pangloss_cli.project import find_settings, settings_option_from
 from typer.testing import CliRunner
-
-from cli_support import SETTINGS, write
 
 runner = CliRunner()
 
@@ -112,7 +111,12 @@ def test_setup_database_calls_the_backend(project: Path):
     assert "created: something" in result.output
 
     fakedb = sys.modules["fakedb.setup"]
-    assert fakedb.CALLS == ["create_database", "connect", "setup_database", "disconnect"]
+    assert fakedb.CALLS == [
+        "create_database",
+        "connect",
+        "setup_database",
+        "disconnect",
+    ]
     # The models of the installed apps were imported
     assert sys.modules["fakeapp.models"].IMPORTED
 
@@ -180,9 +184,7 @@ def test_the_name_defaults_to_the_app_without_its_prefix(project: Path):
         "myproject/settings_thing.py",
         SETTINGS.format(apps=["pangloss_thing"], database="fakedb"),
     )
-    result = invoke(
-        "thing", "go", argv=["--settings", "myproject.settings_thing"]
-    )
+    result = invoke("thing", "go", argv=["--settings", "myproject.settings_thing"])
     assert result.exit_code == 0, result.output
     assert "going" in result.output
     del sys.modules["pangloss_thing.cli"], sys.modules["pangloss_thing"]

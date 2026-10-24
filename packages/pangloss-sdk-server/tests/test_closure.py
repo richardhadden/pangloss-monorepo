@@ -1,5 +1,4 @@
 from pangloss_sdk_server.closure import closure_of
-
 from server_support import write
 
 
@@ -14,7 +13,9 @@ def test_the_models_and_what_they_import_are_in_the_closure(project):
 def test_what_is_imported_from_outside_the_project_is_listed(project):
     write(
         project,
-        {"shop/helpers.py": "import zstandard\nimport json\nfrom pydantic import BaseModel\n"},
+        {
+            "shop/helpers.py": "import zstandard\nimport json\nfrom pydantic import BaseModel\n"
+        },
     )
     closure = closure_of(project, ["shop.models"])
     assert {"zstandard", "pydantic", "pangloss_models"} <= closure.outside
@@ -31,7 +32,9 @@ def test_relative_imports_and_from_imports_of_modules_are_followed(project):
         },
     )
     closure = closure_of(project, ["shop.models"])
-    assert {"shop.helpers", "shop.extra", "shop.extra.more", "shop.unrelated"} <= set(closure.modules)
+    assert {"shop.helpers", "shop.extra", "shop.extra.more", "shop.unrelated"} <= set(
+        closure.modules
+    )
 
 
 def test_imports_inside_functions_and_type_checking_blocks_count(project):
@@ -47,7 +50,9 @@ def test_imports_inside_functions_and_type_checking_blocks_count(project):
             """
         },
     )
-    assert {"shop.helpers", "shop.unrelated"} <= set(closure_of(project, ["shop.models"]).modules)
+    assert {"shop.helpers", "shop.unrelated"} <= set(
+        closure_of(project, ["shop.models"]).modules
+    )
 
 
 def test_an_init_that_does_more_than_import_is_a_problem(project):
@@ -58,19 +63,29 @@ def test_an_init_that_does_more_than_import_is_a_problem(project):
 
 
 def test_an_init_of_docstring_imports_and_all_is_fine(project):
-    write(project, {"shop/__init__.py": '"""Shop"""\nfrom shop.helpers import SHOUT\n__all__ = ["SHOUT"]\n'})
+    write(
+        project,
+        {
+            "shop/__init__.py": '"""Shop"""\nfrom shop.helpers import SHOUT\n__all__ = ["SHOUT"]\n'
+        },
+    )
     assert not closure_of(project, ["shop.models"]).problems
 
 
 def test_a_server_only_import_is_a_problem_naming_the_module(project):
-    write(project, {"shop/helpers.py": "import neo4j\nfrom pangloss_memgraph import x\n"})
+    write(
+        project, {"shop/helpers.py": "import neo4j\nfrom pangloss_memgraph import x\n"}
+    )
     problems = closure_of(project, ["shop.models"]).problems
     assert any("`shop.helpers` imports `neo4j`" in p for p in problems)
     assert any("imports `pangloss_memgraph`" in p for p in problems)
 
 
 def test_a_virtual_environment_inside_the_project_is_not_the_project(project):
-    write(project, {".venv/pyvenv.cfg": "", ".venv/lib/site-packages/shop/helpers.py": "X = 1\n"})
+    write(
+        project,
+        {".venv/pyvenv.cfg": "", ".venv/lib/site-packages/shop/helpers.py": "X = 1\n"},
+    )
     (project / "shop" / "helpers.py").unlink()
     closure = closure_of(project, ["shop.models"])
     assert "shop.helpers" not in closure.modules

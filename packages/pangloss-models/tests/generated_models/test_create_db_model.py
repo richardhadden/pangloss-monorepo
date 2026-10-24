@@ -747,7 +747,7 @@ def test_relation_to_trait():
         | Posse.ReferenceSet
     )
 
-    st = Statement(
+    Statement(
         label="A Statement", thing_carried_out_by={"type": "Group", "id": uuid7()}
     )
 
@@ -1746,7 +1746,9 @@ def test_recursive_type():
 
 @no_type_check
 def test_each_class_fulfils_what_it_says_and_the_fulfils_class_is_not_a_label():
-    from pangloss_models.initialise_models.initialise_field_definitions import get_fulfilled_types
+    from pangloss_models.initialise_models.initialise_field_definitions import (
+        get_fulfilled_types,
+    )
     from pangloss_models.model_bases.labels import labels_for_model
 
     class Person(Entity):
@@ -1772,12 +1774,16 @@ def test_each_class_fulfils_what_it_says_and_the_fulfils_class_is_not_a_label():
     # (`Fulfils` used to be one class, holding what the last use of it gave)
     assert get_fulfilled_types(Activity) == {PersonInPlace}
     assert get_fulfilled_types(Meeting) == {Other}
-    assert get_fulfilled_types(SpecialMeeting) == {Other}  # (a subclass fulfils what its parent does)
+    assert get_fulfilled_types(SpecialMeeting) == {
+        Other
+    }  # (a subclass fulfils what its parent does)
     assert get_fulfilled_types(Person) == set()
 
     # ... and it is not a model, so it is not a label
     assert labels_for_model(Activity, "Document") == ["Activity", "Document"]
-    assert Activity.CreateDB(label="A", person_responsible={"type": "Person", "id": uuid7()})._labels == [
+    assert Activity.CreateDB(
+        label="A", person_responsible={"type": "Person", "id": uuid7()}
+    )._labels == [
         "Activity",
         "Document",
     ]

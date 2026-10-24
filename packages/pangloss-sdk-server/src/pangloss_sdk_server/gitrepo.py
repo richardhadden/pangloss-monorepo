@@ -100,7 +100,9 @@ def commit_package(
         repo.close()
 
 
-def commit_safely(output: Path, files: dict[str, bytes], manifest: dict[str, Any]) -> None:
+def commit_safely(
+    output: Path, files: dict[str, bytes], manifest: dict[str, Any]
+) -> None:
     """(a failure here is logged: the build itself stands)"""
     try:
         commit_package(output, files, manifest)

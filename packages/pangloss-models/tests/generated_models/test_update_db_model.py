@@ -6,8 +6,6 @@ from uuid import UUID, uuid7
 
 import pytest
 from annotated_types import Gt, MinLen
-from pydantic import AnyHttpUrl, ValidationError
-
 from pangloss_models import initialise
 from pangloss_models.field_definitions import (
     FieldSubclassing,
@@ -37,6 +35,7 @@ from pangloss_models.model_bases.semantic_space import (
     _SemanticSpaceUpdateDBBase,
 )
 from pangloss_models.model_bases.trait import Trait
+from pydantic import AnyHttpUrl, ValidationError
 
 
 @no_type_check
@@ -773,7 +772,7 @@ def test_relation_to_trait():
         | Posse.ReferenceSet
     )
 
-    st = Statement.UpdateDB(
+    Statement.UpdateDB(
         id=uuid7(),
         label="A Statement",
         thing_carried_out_by={"type": "Group", "id": uuid7()},
@@ -1130,34 +1129,32 @@ def test_document_update_db_in_semantic_spaces_propagated():
     assert Factoid.Update
 
     factoid = Factoid.Update(
-        **{
-            "id": uuid7(),
-            "label": "A Factoid",
-            "statements": [
-                {
-                    "id": uuid7(),
-                    "type": "Negative",
-                    "contents": [
-                        {
+        id=uuid7(),
+        label="A Factoid",
+        statements=[
+            {
+                "id": uuid7(),
+                "type": "Negative",
+                "contents": [
+                    {
+                        "id": uuid7(),
+                        "type": "Order",
+                        "label": "An Order",
+                        "thing_ordered": {
                             "id": uuid7(),
-                            "type": "Order",
-                            "label": "An Order",
-                            "thing_ordered": {
-                                "id": uuid7(),
-                                "type": "Subjunctive",
-                                "contents": [
-                                    {
-                                        "id": uuid7(),
-                                        "type": "Action",
-                                        "label": "An Action",
-                                    }
-                                ],
-                            },
-                        }
-                    ],
-                }
-            ],
-        }
+                            "type": "Subjunctive",
+                            "contents": [
+                                {
+                                    "id": uuid7(),
+                                    "type": "Action",
+                                    "label": "An Action",
+                                }
+                            ],
+                        },
+                    }
+                ],
+            }
+        ],
     )
 
     factoid_db = factoid._to_db_model()

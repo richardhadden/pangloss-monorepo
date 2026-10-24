@@ -5,6 +5,7 @@ import subprocess
 import sys
 import textwrap
 from importlib.metadata import PackageNotFoundError, requires
+
 from packaging.requirements import Requirement
 
 SERVER_ONLY = {"neo4j", "fastapi", "uvicorn", "pangloss-memgraph", "pangloss-api"}

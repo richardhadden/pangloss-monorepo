@@ -1,13 +1,13 @@
 from typing import Annotated, ClassVar
 
 from pydantic import ConfigDict, Field
-from pangloss_models.meta_kit import BaseMeta, InheritValue, MetaRules, WithMeta
 
 from pangloss_models.field_definitions import (
     FieldDefinition,
     ModelFieldDict,
     ModelFields,
 )
+from pangloss_models.meta_kit import BaseMeta, InheritValue, MetaRules, WithMeta
 from pangloss_models.model_bases.base_models import (
     DeclaredClassMeta,
     _CreateBase,
@@ -62,4 +62,3 @@ class Conjunction(_DeclaredClass, WithMeta[ConjunctionMeta]):
     Update: ClassVar[type[_ConjunctionUpdateBase]]
     UpdateDB: ClassVar[type[_ConjunctionUpdateDBBase]]
     View: ClassVar[type[_ConjunctionViewBase]]
-

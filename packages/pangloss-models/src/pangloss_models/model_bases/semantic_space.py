@@ -1,13 +1,13 @@
 from typing import Annotated, ClassVar
 
 from pydantic import ConfigDict, Field
-from pangloss_models.meta_kit import BaseMeta, InheritValue, MetaRules, WithMeta
 
 from pangloss_models.field_definitions import (
     FieldDefinition,
     ModelFieldDict,
     ModelFields,
 )
+from pangloss_models.meta_kit import BaseMeta, InheritValue, MetaRules, WithMeta
 from pangloss_models.model_bases.base_models import (
     DeclaredClassMeta,
     _CreateBase,
@@ -65,4 +65,3 @@ class SemanticSpace[TContents](_DeclaredClass, WithMeta[SemanticSpaceMeta]):
     View: ClassVar[type[_SemanticSpaceViewBase]]
 
     contents: list[TContents]
-

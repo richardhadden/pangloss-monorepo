@@ -164,13 +164,18 @@ class WriteEvent:
     op: Literal["create", "update", "delete", "undelete"]
     model: type[Document | Entity]
     id: UUID
-    version: int               # the version this write made; for delete and undelete, the version at the time
+    version: int  # the version this write made; for delete and undelete, the version at the time
     user: str
     at: datetime
-    payload: _CreateDBBase | _UpdateDBBase | None      # the validated write form; None for delete / undelete
-    created_entities: tuple[_EntityCreateDBBase, ...]  # entities this write made (see "What is stored")
+    payload: (
+        _CreateDBBase | _UpdateDBBase | None
+    )  # the validated write form; None for delete / undelete
+    created_entities: tuple[
+        _EntityCreateDBBase, ...
+    ]  # entities this write made (see "What is stored")
 
-after_write: list[Callable[[WriteEvent], None]]    # `pangloss_models.hooks`
+
+after_write: list[Callable[[WriteEvent], None]]  # `pangloss_models.hooks`
 ```
 
 The backend calls the listeners, after the commit, **synchronously and cheaply** (the listener only serialises

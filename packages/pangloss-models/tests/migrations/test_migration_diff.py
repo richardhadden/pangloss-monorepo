@@ -5,14 +5,11 @@ from enum import Enum
 from typing import Annotated, no_type_check
 
 from annotated_types import Ge
-from pangloss_models import initialise
+from migration_support import changes, snapshot_of
 from pangloss_models.field_definitions import FieldSubclassing
 from pangloss_models.migrations import (
     PossibleRename,
-    build_snapshot,
-    data_view,
     diff,
-    replay,
     snapshot_hash,
 )
 from pangloss_models.migrations.changes import (
@@ -21,6 +18,7 @@ from pangloss_models.migrations.changes import (
     AlterAnnotatedValue,
     AlterCardinality,
     AlterEdgeModel,
+    AlterEnumMemberValue,
     AlterLiteralType,
     AlterModelKind,
     AlterModelLabels,
@@ -36,9 +34,7 @@ from pangloss_models.migrations.changes import (
     DeleteModel,
     LiteralToAnnotatedValue,
     RemoveEnumMember,
-    AlterEnumMemberValue,
     RenameEnum,
-    RemoveField,
     RenameEnumMember,
     RenameField,
     RenameModel,
@@ -55,7 +51,6 @@ from pangloss_models.model_bases.helpers import ViaEdge
 from pangloss_models.model_bases.reified_relation import ReifiedRelation
 from pangloss_models.model_bases.semantic_space import SemanticSpace
 from pangloss_models.model_bases.trait import Trait
-from migration_support import changes, snapshot_of
 
 
 def kinds(result) -> list[str]:
@@ -412,7 +407,11 @@ def test_a_member_renamed_and_given_another_value_is_asked_about_and_then_both()
             colour: Colour
 
     question = changes(before, after).questions[0]
-    assert (question.what, question.old, question.new) == ("enum_member", "GREEN", "LIME")
+    assert (question.what, question.old, question.new) == (
+        "enum_member",
+        "GREEN",
+        "LIME",
+    )
     result = changes(before, after, confirmed=[question])
     assert kinds(result) == ["RenameEnumMember", "AlterEnumMemberValue"]
     assert result.is_final
@@ -461,7 +460,9 @@ def test_adding_an_optional_and_a_required_field():
             nickname: str | None
             born: int
 
-    added = {c.name: c for c in changes(before, after).changes if isinstance(c, AddField)}
+    added = {
+        c.name: c for c in changes(before, after).changes if isinstance(c, AddField)
+    }
     assert added["nickname"].needs_value is False
     assert added["nickname"].safety == "safe"
     assert added["born"].needs_value is True
@@ -706,7 +707,9 @@ def test_a_renamed_model():
             about: Person
 
     first = changes(before, after)
-    assert [(q.what, q.old, q.new) for q in first.questions] == [("model", "Human", "Person")]
+    assert [(q.what, q.old, q.new) for q in first.questions] == [
+        ("model", "Human", "Person")
+    ]
 
     result = changes(before, after, confirmed=first.questions)
     # the relation to it is the same relation, to the model under its new name
@@ -1050,7 +1053,10 @@ def test_a_relation_that_changes_its_wrapper():
 
 @no_type_check
 def test_literals_that_become_an_embedded_object_and_back():
-    from pangloss_models.migrations.changes import EmbeddedToLiterals, LiteralsToEmbedded
+    from pangloss_models.migrations.changes import (
+        EmbeddedToLiterals,
+        LiteralsToEmbedded,
+    )
 
     def literals():
         class Statement(Document):
@@ -1069,7 +1075,11 @@ def test_literals_that_become_an_embedded_object_and_back():
 
     wrapped = changes(literals, embedded)
     change = one(wrapped, LiteralsToEmbedded)
-    assert (change.model, change.name, change.embedded_model) == ("Statement", "date", "Date")
+    assert (change.model, change.name, change.embedded_model) == (
+        "Statement",
+        "date",
+        "Date",
+    )
     assert change.fields == ["precision", "when"]
     # (the data is moved: not removed, and written again)
     assert "RemoveField" not in kinds(wrapped) and "AddField" not in kinds(wrapped)

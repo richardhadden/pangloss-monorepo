@@ -1,7 +1,6 @@
 """Helpers shared by the tests"""
 
 
-
 def run(db_driver, cypher: str, **params) -> list[dict]:
     """Run a query against the test database and return each record as a dict"""
     records, _, _ = db_driver.execute_query(cypher, parameters_=params)

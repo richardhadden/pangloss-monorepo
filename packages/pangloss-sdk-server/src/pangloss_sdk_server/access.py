@@ -5,6 +5,7 @@ the password)."""
 
 import base64
 import binascii
+
 from fastapi import HTTPException, Request, status
 from pangloss_api import throttle
 from pangloss_api.dependencies import ACCESS_COOKIE_NAME, user_for_token
@@ -28,7 +29,7 @@ async def basic_user(header: str) -> User:
     token or an access token as the password (what a script, `pip` and `git` can keep)"""
     try:
         username, _, password = base64.b64decode(header[6:]).decode().partition(":")
-    except (binascii.Error, UnicodeDecodeError):
+    except binascii.Error, UnicodeDecodeError:
         raise needs_login("Invalid credentials") from None
 
     if password.startswith(service.ACCESS_TOKEN_PREFIX):

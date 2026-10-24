@@ -9,7 +9,9 @@ from typing import no_type_check
 
 import pytest
 from pangloss_memgraph.databases.memgraph.database import Database
-from pangloss_memgraph.databases.memgraph.migrations.operations import recompute_contexts
+from pangloss_memgraph.databases.memgraph.migrations.operations import (
+    recompute_contexts,
+)
 from pangloss_models.model_bases.document import Document
 from pangloss_models.model_bases.entity import Entity
 from pangloss_models.model_bases.semantic_space import SemanticSpace
@@ -57,7 +59,7 @@ def meta_of_all(db_driver, head_id) -> list[tuple]:
         id=str(head_id),
     )
     return sorted(
-        ((r["id"], r["type"], tuple(r["spaces"] or ()), repr(r["labels"])) for r in rows)
+        (r["id"], r["type"], tuple(r["spaces"] or ()), repr(r["labels"])) for r in rows
     )
 
 
@@ -72,7 +74,14 @@ async def test_working_contexts_out_again_changes_nothing_for_what_the_models_wr
     note = {"type": "Note", "label": "n", "text": "t"}
 
     def statement(label, **extra):
-        return {"type": "Statement", "label": label, "person": reference, "note": note, "also": [], **extra}
+        return {
+            "type": "Statement",
+            "label": label,
+            "person": reference,
+            "note": note,
+            "also": [],
+            **extra,
+        }
 
     factoid = await made.Factoid.Create(
         label="F",
@@ -83,7 +92,10 @@ async def test_working_contexts_out_again_changes_nothing_for_what_the_models_wr
             {
                 "type": "Doubt",
                 "contents": [
-                    {"type": "Negative", "contents": [statement("Deep", also=[note, note])]}
+                    {
+                        "type": "Negative",
+                        "contents": [statement("Deep", also=[note, note])],
+                    }
                 ],
             },
         ],
@@ -97,7 +109,9 @@ async def test_working_contexts_out_again_changes_nothing_for_what_the_models_wr
     assert any(row[2] == () for row in before)
 
     database = Database.default
-    async with database.driver.session(database=database.settings.DATABASE.DATABASE_NAME) as session:
+    async with database.driver.session(
+        database=database.settings.DATABASE.DATABASE_NAME
+    ) as session:
 
         async def work(tx):
             await recompute_contexts(tx, [str(factoid.id)], state)

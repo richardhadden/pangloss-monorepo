@@ -30,7 +30,9 @@ def models():
     class Meeting(Document, Fulfils[Dated]):
         attendee: Annotated[
             Person,
-            RelationConfig(subclasses_parent_fields=[FieldSubclassing("who", field_on_model=Dated)]),
+            RelationConfig(
+                subclasses_parent_fields=[FieldSubclassing("who", field_on_model=Dated)]
+            ),
         ]
 
     class Minutes(Document):
@@ -40,7 +42,11 @@ def models():
 
 
 def labels_of(db_driver, label: str) -> set[str]:
-    rows = run(db_driver, "MATCH (n:Meeting {label: $label}) RETURN labels(n) AS labels", label=label)
+    rows = run(
+        db_driver,
+        "MATCH (n:Meeting {label: $label}) RETURN labels(n) AS labels",
+        label=label,
+    )
     assert len(rows) == 1
     return set(rows[0]["labels"])
 
@@ -60,7 +66,9 @@ async def test_a_node_that_fulfils_a_class_has_its_labels(db_driver, clear_datab
     assert {"Meeting", "Dated", "Document"} <= labels_of(db_driver, "With")
     assert "Dated" not in labels_of(db_driver, "Without")
     assert labels_of(db_driver, "With")  # (and the first label is still the class)
-    first = run(db_driver, "MATCH (n:Meeting {label: 'With'}) RETURN labels(n)[0] AS first")
+    first = run(
+        db_driver, "MATCH (n:Meeting {label: 'With'}) RETURN labels(n)[0] AS first"
+    )
     assert first == [{"first": "Meeting"}]
 
 
@@ -86,7 +94,9 @@ async def test_a_nested_node_has_them_too(db_driver, clear_database):
 
 
 @no_type_check
-async def test_an_update_puts_the_labels_on_and_takes_them_off(db_driver, clear_database):
+async def test_an_update_puts_the_labels_on_and_takes_them_off(
+    db_driver, clear_database
+):
     Person, Place, Dated, Meeting, Minutes = models()
     initialise()
     person = await Person.Create(label="P").save()
@@ -96,7 +106,9 @@ async def test_an_update_puts_the_labels_on_and_takes_them_off(db_driver, clear_
     meeting = await Meeting.Create(label="Meeting", attendee=ref).save()
     assert "Dated" not in labels_of(db_driver, "Meeting")
 
-    await Meeting.Update(id=meeting.id, label="Meeting", attendee=ref, place=where).save()
+    await Meeting.Update(
+        id=meeting.id, label="Meeting", attendee=ref, place=where
+    ).save()
     assert {"Meeting", "Dated"} <= labels_of(db_driver, "Meeting")
 
     await Meeting.Update(id=meeting.id, label="Meeting", attendee=ref).save()

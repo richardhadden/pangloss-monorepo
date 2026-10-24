@@ -17,7 +17,6 @@ from typing import Any, get_args, get_origin
 from uuid import UUID, uuid7
 
 from annotated_types import Ge, Gt, Le, Lt, MaxLen, MinLen
-
 from pangloss_models.field_definitions import (
     AnnotatedValueFieldDefinition,
     EmbeddedFieldDefinition,
@@ -34,7 +33,9 @@ from pangloss_models.field_definitions import (
 def sample_literal(tp: Any, validators: list[Any] | tuple[Any, ...] = ()) -> Any:
     """A value of a literal type that satisfies its validators"""
     origin = get_origin(tp)
-    if origin is typing.Union or origin is getattr(__import__("types"), "UnionType", None):
+    if origin is typing.Union or origin is getattr(
+        __import__("types"), "UnionType", None
+    ):
         options = [a for a in get_args(tp) if a is not type(None)]
         return sample_literal(options[0], validators)
     if origin is list:
@@ -73,12 +74,17 @@ def sample_literal(tp: Any, validators: list[Any] | tuple[Any, ...] = ()) -> Any
     if isinstance(tp, type) and issubclass(tp, enum.Enum):
         return next(iter(tp)).value
     if isinstance(tp, type) and typing.is_typeddict(tp):
-        return {name: sample_literal(t) for name, t in typing.get_type_hints(tp).items()}
+        return {
+            name: sample_literal(t) for name, t in typing.get_type_hints(tp).items()
+        }
     raise NotImplementedError(f"no sample for the literal type {tp!r}")
 
 
 def by_name(options):
-    return sorted(options, key=lambda o: getattr(o.annotated_type, "__name__", str(o.annotated_type)))
+    return sorted(
+        options,
+        key=lambda o: getattr(o.annotated_type, "__name__", str(o.annotated_type)),
+    )
 
 
 class Sampler:
@@ -94,7 +100,12 @@ class Sampler:
 
     # --- values of one kind of field ------------------------------------------------------------
 
-    def fields(self, model, skip: frozenset[str] | set[str] = frozenset(), types: dict[str, Any] | None = None) -> dict[str, Any]:
+    def fields(
+        self,
+        model,
+        skip: frozenset[str] | set[str] = frozenset(),
+        types: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """A value for each field of a declared model (or wrapper) that is not a database field.
         `types` is what the type variables of a wrapper stand for."""
         payload: dict[str, Any] = {}
@@ -108,7 +119,9 @@ class Sampler:
         if isinstance(definition, LiteralFieldDefinition):
             return sample_literal(definition.annotated_type, definition.validators)
         if isinstance(definition, ListFieldDefinition):
-            return [sample_literal(definition.inner_type, definition.inner_type_validators)]
+            return [
+                sample_literal(definition.inner_type, definition.inner_type_validators)
+            ]
         if isinstance(definition, LiteralTypeVarFieldDefinition):
             return sample_literal(types[definition.type_var_name.split("~")[-1]])
         if isinstance(definition, EmbeddedFieldDefinition):
@@ -125,17 +138,31 @@ class Sampler:
     def annotated_value(self, tp) -> dict[str, Any]:
         """`WithCertainty[str]`: its `value`, and its own fields"""
         generic = tp.__pydantic_generic_metadata__
-        arguments = dict(zip((p.__name__ for p in generic["origin"].__pydantic_generic_metadata__["parameters"]), generic["args"]))
+        arguments = dict(
+            zip(
+                (
+                    p.__name__
+                    for p in generic["origin"].__pydantic_generic_metadata__[
+                        "parameters"
+                    ]
+                ),
+                generic["args"],
+            )
+        )
         payload: dict[str, Any] = {}
         for name, definition in tp._meta.fields.items():
             payload[name] = (
-                sample_literal(arguments["T"]) if isinstance(definition, LiteralTypeVarFieldDefinition) else self.field(definition, arguments)
+                sample_literal(arguments["T"])
+                if isinstance(definition, LiteralTypeVarFieldDefinition)
+                else self.field(definition, arguments)
             )
         return payload
 
     # --- relations ------------------------------------------------------------------------------
 
-    def relation(self, definition: RelationFieldDefinition, types: dict[str, Any]) -> Any:
+    def relation(
+        self, definition: RelationFieldDefinition, types: dict[str, Any]
+    ) -> Any:
         """One value for a relation: for the first of the types it allows"""
         option = self.pick(definition.type_options)
         if isinstance(option, RelationToTypeVar):
@@ -168,16 +195,22 @@ class Sampler:
             for name, parameter in option.parameter_type_options.items()
         }
         payload: dict[str, Any] = {"type": base.__name__}
-        if getattr(base._meta, "require_label", False):  # (a reified relation that is a document)
+        if getattr(
+            base._meta, "require_label", False
+        ):  # (a reified relation that is a document)
             payload["label"] = f"A {base.__name__}"
         for name, definition in base._meta.fields.items():
             if definition.db_field or name == "label":
                 continue
-            holds_type_variable = isinstance(definition, RelationFieldDefinition) and any(
-                isinstance(o, RelationToTypeVar) for o in definition.type_options
-            )
+            holds_type_variable = isinstance(
+                definition, RelationFieldDefinition
+            ) and any(isinstance(o, RelationToTypeVar) for o in definition.type_options)
             if holds_type_variable:
-                variable = next(o for o in definition.type_options if isinstance(o, RelationToTypeVar))
+                variable = next(
+                    o
+                    for o in definition.type_options
+                    if isinstance(o, RelationToTypeVar)
+                )
                 value = standing_for[variable.type_var_name]
                 payload[name] = [value] if definition.wrapper else value
             else:

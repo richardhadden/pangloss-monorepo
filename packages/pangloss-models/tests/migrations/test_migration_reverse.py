@@ -37,7 +37,9 @@ def test_a_rename_is_undone_by_the_rename_back():
     rename = PossibleRename(what="field", scope="Person", old="name", new="full_name")
     found = diff(old, new, confirmed=[rename]).changes
     reversal = reverse_changes(found, data_view(old))
-    assert reversal.changes == [c.RenameField(model="Person", old="full_name", new="name")]
+    assert reversal.changes == [
+        c.RenameField(model="Person", old="full_name", new="name")
+    ]
     assert not reversal.lossy
 
 
@@ -127,7 +129,8 @@ def test_changes_are_undone_in_the_opposite_order():
     found, reversal = undo(v1, v2)
     assert len(found) == len(reversal.changes) == 2
     assert [type(ch) for ch in reversal.changes] == [
-        {c.CreateModel: c.DeleteModel, c.AddField: c.RemoveField}[type(ch)] for ch in reversed(found)
+        {c.CreateModel: c.DeleteModel, c.AddField: c.RemoveField}[type(ch)]
+        for ch in reversed(found)
     ]
 
 
@@ -140,14 +143,19 @@ def test_a_change_made_by_hand_is_undone_only_if_it_says_how():
 
     reversal = reverse_changes(
         [
-            c.RunCypher(query="SET 1", reverse_query="SET 2", reverse_parameters={"x": 1}),
+            c.RunCypher(
+                query="SET 1", reverse_query="SET 2", reverse_parameters={"x": 1}
+            ),
             c.RunPython(function="a:b", reverse_function="a:c"),
         ],
         state,
     )
     # (last first, and each undoes the other)
     assert reversal.changes[0] == c.RunPython(function="a:c", reverse_function="a:b")
-    assert reversal.changes[1].query == "SET 2" and reversal.changes[1].reverse_query == "SET 1"
+    assert (
+        reversal.changes[1].query == "SET 2"
+        and reversal.changes[1].reverse_query == "SET 1"
+    )
     assert reversal.changes[1].parameters == {"x": 1}
 
 
@@ -159,7 +167,9 @@ def test_a_change_that_was_done_by_hand_cannot_be_undone_by_machine():
 
     old = data_view(snapshot_of(v1))
     with pytest.raises(PanglossMigrationIrreversible, match="cannot be undone"):
-        reverse_changes([c.AlterModelKind(model="Thing", old="entity", new="document")], old)
+        reverse_changes(
+            [c.AlterModelKind(model="Thing", old="entity", new="document")], old
+        )
 
 
 @no_type_check
@@ -171,7 +181,9 @@ def test_state_only_changes_are_undone_as_state_only():
     old = data_view(snapshot_of(v1))
     forward = c.StateOnly(changes=(c.RenameModel(old="Thing", new="Item"),))
     reversal = reverse_changes([forward], old)
-    assert reversal.changes == [c.StateOnly(changes=(c.RenameModel(old="Item", new="Thing"),))]
+    assert reversal.changes == [
+        c.StateOnly(changes=(c.RenameModel(old="Item", new="Thing"),))
+    ]
 
 
 @no_type_check

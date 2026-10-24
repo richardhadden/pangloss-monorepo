@@ -94,10 +94,12 @@ Each migration file has:
 
 ```python
 class Migration(MigrationBase):
-    dependencies = [("demo_app", "0001_initial")]       # also other apps' migrations
+    dependencies = [("demo_app", "0001_initial")]  # also other apps' migrations
     operations = [
         operations.WrapInReified(
-            model="Statement", field="person", wrapper="IdentifiedAs",
+            model="Statement",
+            field="person",
+            wrapper="IdentifiedAs",
             defaults={"certainty": 3},
         ),
     ]
@@ -291,9 +293,11 @@ So "replace all of them" is what happens either way; the procedure only saves wr
 class Statement(Document):
     person: Person
 
+
 # after
 class IdentifiedAs[T](ReifiedRelation[T]):
     certainty: int
+
 
 class Statement(Document):
     person: IdentifiedAs[Person]
@@ -309,9 +313,18 @@ The snapshots differ in two places: a **new model** `IdentifiedAs` (kind `Reifie
 
 ```python
 operations = [
-    CreateModel("IdentifiedAs", kind="ReifiedRelation", parameters=["T"], fields=[("certainty", "int")]),
-    WrapInReified(model="Statement", field="person", wrapper="IdentifiedAs",
-                  defaults={"certainty": 3}),
+    CreateModel(
+        "IdentifiedAs",
+        kind="ReifiedRelation",
+        parameters=["T"],
+        fields=[("certainty", "int")],
+    ),
+    WrapInReified(
+        model="Statement",
+        field="person",
+        wrapper="IdentifiedAs",
+        defaults={"certainty": 3},
+    ),
 ]
 ```
 
@@ -382,10 +395,11 @@ The same operation has to cope with:
 class Operation:
     reversible: bool
     lossy: bool
-    def state_forwards(self, state): ...             # change the snapshot
-    def database_forwards(self, tx, state): ...      # change the data; state is *before*
-    def database_backwards(self, tx, state): ...     # optional
-    def describe(self) -> str: ...                   # for --plan
+
+    def state_forwards(self, state): ...  # change the snapshot
+    def database_forwards(self, tx, state): ...  # change the data; state is *before*
+    def database_backwards(self, tx, state): ...  # optional
+    def describe(self) -> str: ...  # for --plan
 ```
 
 | Operation | |

@@ -1,6 +1,10 @@
 import pytest
 from pangloss_interface import runtime
-from pangloss_interface.runtime import InterfaceRuntimeError, choose_runtime, find_runtime
+from pangloss_interface.runtime import (
+    InterfaceRuntimeError,
+    choose_runtime,
+    find_runtime,
+)
 
 
 def test_node_is_the_default():
@@ -30,7 +34,12 @@ def test_node_commands(monkeypatch):
     assert node.install() == ["/bin/npm", "install"]
     assert node.script("build") == ["/bin/npm", "run", "build"]
     assert node.script("dev", "--port", "3001") == [
-        "/bin/npm", "run", "dev", "--", "--port", "3001",
+        "/bin/npm",
+        "run",
+        "dev",
+        "--",
+        "--port",
+        "3001",
     ]
 
 

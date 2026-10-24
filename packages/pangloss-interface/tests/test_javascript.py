@@ -6,16 +6,16 @@ import shutil
 import subprocess
 from pathlib import Path
 
-import pytest
-
 import pangloss_interface
+import pytest
 
 JS = Path(pangloss_interface.__file__).parent / "js"
 
 pytestmark = [
     pytest.mark.skipif(shutil.which("npm") is None, reason="npm is not installed"),
     pytest.mark.skipif(
-        not (JS / "node_modules").is_dir(), reason=f"the packages are not installed: npm install in {JS}"
+        not (JS / "node_modules").is_dir(),
+        reason=f"the packages are not installed: npm install in {JS}",
     ),
     # (one worker: the scripts share the workspace's caches)
     pytest.mark.xdist_group("javascript"),

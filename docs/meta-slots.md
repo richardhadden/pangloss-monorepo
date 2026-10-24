@@ -48,9 +48,11 @@ def register_meta_slot(name: str, meta_class: type) -> None:
     """An optional package says: `name` (a leading-underscore name, ending `_meta`) on a model class
     holds an instance of `meta_class`."""
 
+
 def apply_meta_slots(cls) -> None:
     """For each registered slot: find the value, check it, and set it on `cls` as a plain class
     attribute."""
+
 
 def meta_slots() -> dict[str, type]: ...
 ```
@@ -96,7 +98,7 @@ before it, the value is whatever their own private attribute holds.
 # pangloss_interface/meta.py
 @dataclass(frozen=True)
 class InterfaceMeta:
-    card: str | None = None      # name of a component, see the component map
+    card: str | None = None  # name of a component, see the component map
     view: str | None = None
     edit: str | None = None
 

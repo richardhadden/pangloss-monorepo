@@ -5,7 +5,7 @@ The API is the `pangloss-api` package, built with [FastAPI](https://fastapi.tian
 ```python
 from pangloss_api.app import create_app
 
-app = create_app()   # or: uvicorn "pangloss_api.app:create_app" --factory
+app = create_app()  # or: uvicorn "pangloss_api.app:create_app" --factory
 ```
 
 `create_app()` uses the settings already imported, or else the module named by the environment variable `PANGLOSS_SETTINGS`. Building the app imports the `models` module of each installed app and runs `initialise()` (the routes are made from the models); starting the server (the app's lifespan) connects to the database through the `setup` module of `DATABASE_MODULE` (see [Command line](cli.md#what-a-database-backend-supplies)). A short `AUTHJWT_SECRET_KEY` (under 32 characters) gives a warning.

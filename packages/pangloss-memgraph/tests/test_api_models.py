@@ -142,9 +142,7 @@ async def test_crud_flow(db_driver, clear_database):
         assert [p["id"] for p in found["results"]] == [person_id]
         none = (await client.get("/api/Person", params={"q": "nobody"})).json()
         assert none["results"] == []
-        assert (
-            await client.get("/api/Person", params={"page": 0})
-        ).status_code == 422
+        assert (await client.get("/api/Person", params={"page": 0})).status_code == 422
 
         # Updating (a full replacement, which the edit view can be sent back as)
         changes = edit.json()
@@ -298,13 +296,9 @@ async def test_the_json_is_camel_case_throughout(db_driver, clear_database):
             "created person": person,
             "created statement": statement.json(),
             "person": (await client.get(f"/api/Person/{person['id']}")).json(),
-            "statement": (
-                await client.get(f"/api/Statement/{statement_id}")
-            ).json(),
+            "statement": (await client.get(f"/api/Statement/{statement_id}")).json(),
             "edit": (
-                await client.get(
-                    f"/api/Person/{person['id']}/edit", headers=headers
-                )
+                await client.get(f"/api/Person/{person['id']}/edit", headers=headers)
             ).json(),
             "list": (await client.get("/api/Statement")).json(),
             "conflict": (
@@ -352,9 +346,7 @@ async def test_a_nested_document_is_not_deleted_on_its_own(db_driver, clear_data
             headers=headers,
         )
         action_id = saved.json()["action"]["id"]
-        response = await client.delete(
-            f"/api/Action/{action_id}", headers=headers
-        )
+        response = await client.delete(f"/api/Action/{action_id}", headers=headers)
         assert response.status_code == 400
 
 
@@ -502,7 +494,12 @@ async def test_an_entity_is_found_by_its_url(db_driver, clear_database):
 
         place = await client.post(
             "/api/Place",
-            json={"type": "Place", "id": place_url, "createNew": True, "label": "Paris"},
+            json={
+                "type": "Place",
+                "id": place_url,
+                "createNew": True,
+                "label": "Paris",
+            },
             headers=headers,
         )
         assert place.status_code == 201, place.text
@@ -548,8 +545,12 @@ async def test_an_entity_is_found_by_its_url(db_driver, clear_database):
         assert (await client.get(f"/api/Person/{person_url}")).status_code == 404
         taken = await client.put(
             f"/api/Place/{place.json()['id']}",
-            json={"type": "Place", "id": place.json()["id"], "label": "Paris",
-                  "urls": [other_url]},
+            json={
+                "type": "Place",
+                "id": place.json()["id"],
+                "label": "Paris",
+                "urls": [other_url],
+            },
             headers=anyversion,
         )
         assert taken.status_code == 409, taken.text
@@ -598,9 +599,7 @@ async def test_an_entity_is_found_by_its_url(db_driver, clear_database):
 
         # Loading to edit, and changes, are only at an id
         url_path = f"/api/Person/{person_url}"
-        edit = await client.get(
-            f"/api/Person/{person_id}/edit", headers=headers
-        )
+        edit = await client.get(f"/api/Person/{person_id}/edit", headers=headers)
         assert edit.status_code == 200, edit.text
         assert "aboutReverse" not in edit.json()
         for response in (
@@ -619,16 +618,12 @@ async def test_an_entity_is_found_by_its_url(db_driver, clear_database):
         assert put.status_code == 200, put.text
 
         # A document is found by its id only
-        assert (
-            await client.get(f"/api/Statement/{person_url}")
-        ).status_code == 404
+        assert (await client.get(f"/api/Statement/{person_url}")).status_code == 404
 
         # Deleting is at the id; the URL finds it only while it is not deleted
         id_path = f"/api/Person/{person_id}"
         assert (await client.delete(id_path, headers=headers)).status_code == 409
-        await client.delete(
-            f"/api/Statement/{statement.json()['id']}", headers=headers
-        )
+        await client.delete(f"/api/Statement/{statement.json()['id']}", headers=headers)
         assert (await client.delete(id_path, headers=headers)).status_code == 204
         assert (await client.get(url_path)).status_code == 404
 
@@ -708,7 +703,9 @@ async def test_an_update_of_a_version_that_is_no_longer_the_latest_is_refused(
         assert (await client.get(url)).json()["meta"]["version"] == 3
 
         # Not saying which version is refused; `*` is not
-        blind = await client.put(url, json={**again.json(), "text": "x"}, headers=headers)
+        blind = await client.put(
+            url, json={**again.json(), "text": "x"}, headers=headers
+        )
         assert blind.status_code == 428
         assert (await client.get(url)).json()["text"] == "alice and bob"
         forced = await client.put(

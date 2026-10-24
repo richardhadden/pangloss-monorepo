@@ -45,7 +45,9 @@ def fulfilling():
     class Meeting(Document, Fulfils[Dated]):
         attendee: Annotated[
             Person,
-            RelationConfig(subclasses_parent_fields=[FieldSubclassing("who", field_on_model=Dated)]),
+            RelationConfig(
+                subclasses_parent_fields=[FieldSubclassing("who", field_on_model=Dated)]
+            ),
         ]
 
 
@@ -67,13 +69,19 @@ def two_that_fulfil_different_classes():
     class Meeting(Document, Fulfils[Dated]):
         attendee: Annotated[
             Person,
-            RelationConfig(subclasses_parent_fields=[FieldSubclassing("who", field_on_model=Dated)]),
+            RelationConfig(
+                subclasses_parent_fields=[FieldSubclassing("who", field_on_model=Dated)]
+            ),
         ]
 
     class Deed(Document, Fulfils[Owned]):
         holder: Annotated[
             Person,
-            RelationConfig(subclasses_parent_fields=[FieldSubclassing("owner", field_on_model=Owned)]),
+            RelationConfig(
+                subclasses_parent_fields=[
+                    FieldSubclassing("owner", field_on_model=Owned)
+                ]
+            ),
         ]
 
 
@@ -92,12 +100,16 @@ def test_what_a_model_fulfils_is_in_its_entry_and_each_has_its_own():
 def test_beginning_and_ceasing_to_fulfil_is_found_and_undone():
     old, new = snapshot_of(plain), snapshot_of(fulfilling)
 
-    found = changes(plain, fulfilling).changes  # (replay gives the new snapshot: checked there)
+    found = changes(
+        plain, fulfilling
+    ).changes  # (replay gives the new snapshot: checked there)
     recompute = [ch for ch in found if isinstance(ch, c.RecomputeFulfils)]
     assert [ch.model for ch in recompute] == ["Meeting"]
     assert recompute[0].before == [] and recompute[0].after[0]["class"] == "Dated"
     assert recompute[0].safety == "transforming"
-    assert found[-1] is recompute[0]  # (last: it is worked out from the models as they then are)
+    assert (
+        found[-1] is recompute[0]
+    )  # (last: it is worked out from the models as they then are)
 
     reversal = reverse_changes(found, data_view(old))
     assert replay(replay(old, found), reversal.changes) == data_view(old)
@@ -107,8 +119,13 @@ def test_beginning_and_ceasing_to_fulfil_is_found_and_undone():
 
     # ... and the other way round
     back = diff(new, old).changes
-    assert [ch.model for ch in back if isinstance(ch, c.RecomputeFulfils)] == ["Meeting"]
+    assert [ch.model for ch in back if isinstance(ch, c.RecomputeFulfils)] == [
+        "Meeting"
+    ]
 
 
 def test_nothing_is_found_when_nothing_about_fulfilment_changed():
-    assert not any(isinstance(ch, c.RecomputeFulfils) for ch in changes(fulfilling, fulfilling).changes)
+    assert not any(
+        isinstance(ch, c.RecomputeFulfils)
+        for ch in changes(fulfilling, fulfilling).changes
+    )

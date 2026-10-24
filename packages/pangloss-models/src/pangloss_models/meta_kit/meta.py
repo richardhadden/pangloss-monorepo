@@ -1,7 +1,7 @@
 import inspect
 from collections.abc import Iterable
 from enum import Enum
-from typing import Any, ClassVar
+from typing import Any, ClassVar, Self
 
 from pydantic import BaseModel, ValidationError
 from pydantic.fields import FieldInfo
@@ -55,8 +55,6 @@ class InheritValue(metaclass=_InheritValueMetaclass):
         number: int | InheritValue = InheritValue.AS_DEFAULT
     ```
     """
-
-    pass
 
 
 def _merge_fields[T: list | set | dict](
@@ -174,7 +172,7 @@ class BaseMeta(BaseModel):
                 )
             )
 
-    def __and__[T: BaseMeta](self: T, child: T | None) -> T:
+    def __and__(self, child: Self | None) -> Self:
         """Merge this (parent) meta with a child meta according to the field rules,
         returning a new meta object. `child` may be `None`, meaning the child
         declares no meta of its own."""

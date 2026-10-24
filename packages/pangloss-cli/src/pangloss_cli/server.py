@@ -26,7 +26,7 @@ def installed_app_directories(project: Project, root: Path) -> list[Path]:
     for app in project.settings.INSTALLED_APPS:
         try:
             spec = importlib.util.find_spec(app)
-        except (ImportError, ValueError):
+        except ImportError, ValueError:
             continue
         for location in (spec.submodule_search_locations or []) if spec else []:
             path = Path(location).resolve()

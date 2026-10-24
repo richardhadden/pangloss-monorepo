@@ -24,7 +24,7 @@ To write only one app's migrations, name it: `pangloss makemigrations people`. Y
 The migrations of all apps together are one history. Each app's are numbered in order, and a migration can **depend on** another app's:
 
 ```python
-dependencies = [('people', '0001_initial')]
+dependencies = [("people", "0001_initial")]
 ```
 
 Pangloss writes these for you whenever a change mentions a model of another app. `migrate` then applies everything in an order that respects them, regardless of which app you list first.

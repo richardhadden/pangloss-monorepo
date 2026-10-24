@@ -14,7 +14,15 @@ import html
 import re
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request, Response, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    FastAPI,
+    HTTPException,
+    Request,
+    Response,
+    status,
+)
 from fastapi.responses import HTMLResponse
 
 from pangloss_sdk_server import archives, current
@@ -29,7 +37,8 @@ def unavailable() -> HTTPException:
     reason = current.last_error()
     return HTTPException(
         status.HTTP_503_SERVICE_UNAVAILABLE,
-        detail="The SDK is not built" + (f": {reason}" if reason else " (pangloss sdk build)"),
+        detail="The SDK is not built"
+        + (f": {reason}" if reason else " (pangloss sdk build)"),
     )
 
 
@@ -78,7 +87,11 @@ async def sdk(built: Served, request: Request) -> dict[str, Any]:
     }
 
 
-@router.get("/download/{filename}", dependencies=[Depends(sdk_access)], operation_id="sdk_download")
+@router.get(
+    "/download/{filename}",
+    dependencies=[Depends(sdk_access)],
+    operation_id="sdk_download",
+)
 async def download(filename: str, built: Served) -> Response:
     manifest = built.manifest
     if filename == archives.wheel_name(manifest):
@@ -88,11 +101,16 @@ async def download(filename: str, built: Served) -> Response:
         content = archives.sdist_bytes(built.files, manifest)
         media_type = "application/gzip"
     else:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=f"There is no file '{filename}'")
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND, detail=f"There is no file '{filename}'"
+        )
     return Response(
         content,
         media_type=media_type,
-        headers={"ETag": f'"{built.fingerprint}"', "Content-Disposition": f'attachment; filename="{filename}"'},
+        headers={
+            "ETag": f'"{built.fingerprint}"',
+            "Content-Disposition": f'attachment; filename="{filename}"',
+        },
     )
 
 
@@ -103,7 +121,7 @@ def normalised(name: str) -> str:
 def page(title: str, links: list[str]) -> HTMLResponse:
     body = "\n".join(links)
     return HTMLResponse(
-        "<!DOCTYPE html>\n<html><head><meta name=\"pypi:repository-version\" content=\"1.0\">"
+        '<!DOCTYPE html>\n<html><head><meta name="pypi:repository-version" content="1.0">'
         f"<title>{html.escape(title)}</title></head><body>\n{body}\n</body></html>"
     )
 
@@ -114,20 +132,30 @@ async def simple_index(built: Served) -> HTMLResponse:
     return page("Links for the SDK", [f'<a href="{name}/">{name}</a>'])
 
 
-@router.get("/simple/{project}/", dependencies=[Depends(sdk_access)], include_in_schema=False)
+@router.get(
+    "/simple/{project}/", dependencies=[Depends(sdk_access)], include_in_schema=False
+)
 async def simple_project(project: str, built: Served) -> HTMLResponse:
     """The files of the SDK, as pip looks for them (the one version the server has)"""
     manifest = built.manifest
     name = normalised(manifest["distribution"])
     if normalised(project) != name:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=f"There is no project '{project}'")
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND, detail=f"There is no project '{project}'"
+        )
 
     python = built.files.get("pyproject.toml", b"").decode()
     requires = next(
-        (line.split(">=")[1].strip(' "') for line in python.splitlines() if line.startswith("requires-python")),
+        (
+            line.split(">=")[1].strip(' "')
+            for line in python.splitlines()
+            if line.startswith("requires-python")
+        ),
         None,
     )
-    attribute = f' data-requires-python="{html.escape(">=" + requires)}"' if requires else ""
+    attribute = (
+        f' data-requires-python="{html.escape(">=" + requires)}"' if requires else ""
+    )
     files = {
         archives.wheel_name(manifest): archives.wheel_bytes(built.files, manifest),
         archives.sdist_name(manifest): archives.sdist_bytes(built.files, manifest),

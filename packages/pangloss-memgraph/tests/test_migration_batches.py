@@ -39,7 +39,10 @@ def migrations_between(graph, new, answer=None):
 
 def answering(**by_kind):
     def answer(changes, old):
-        return [with_answer(ch, *by_kind[ch.kind]) if ch.kind in by_kind else ch for ch in changes]
+        return [
+            with_answer(ch, *by_kind[ch.kind]) if ch.kind in by_kind else ch
+            for ch in changes
+        ]
 
     return answer
 
@@ -85,29 +88,46 @@ async def start_with_people(count: int):
     graph = MigrationGraph.of(initial)
     await backend.ensure_ready()
     state = await backend.apply(initial, EMPTY_SNAPSHOT)
-    people = [await old_models.Person.Create(label=f"P{i}", name=f"P{i}").save() for i in range(count)]
+    people = [
+        await old_models.Person.Create(label=f"P{i}", name=f"P{i}").save()
+        for i in range(count)
+    ]
     new_models, second = declare(v2)
-    later = migrations_between(graph, second, answer=answering(AddField=("default", 1900)))
+    later = migrations_between(
+        graph, second, answer=answering(AddField=("default", 1900))
+    )
     return ns(models=new_models, state=state, later=later, graph=graph, people=people)
 
 
 @no_type_check
-async def test_a_batched_migration_does_what_a_whole_one_does(db_driver, clear_database, monkeypatch):
+async def test_a_batched_migration_does_what_a_whole_one_does(
+    db_driver, clear_database, monkeypatch
+):
     world = await start_with_people(10)
     stopper = Stopper(monkeypatch, runner, "apply_window")
 
     await backend.apply(world.later, world.state, batch_size=3)
 
     assert stopper.calls == 4  # (3 + 3 + 3 + 1)
-    assert run(db_driver, "MATCH (p:Person) WHERE p.born = 1900 RETURN count(p) AS n") == [{"n": 10}]
+    assert run(
+        db_driver, "MATCH (p:Person) WHERE p.born = 1900 RETURN count(p) AS n"
+    ) == [{"n": 10}]
     record = (await backend.applied())[("migapp", world.later[0].name)]
     assert record["status"] == "applied"
     assert record.get("cursor") is None
-    assert pending(MigrationGraph.of([*world.graph.migrations.values(), *world.later]), await backend.applied()) == []
+    assert (
+        pending(
+            MigrationGraph.of([*world.graph.migrations.values(), *world.later]),
+            await backend.applied(),
+        )
+        == []
+    )
 
 
 @no_type_check
-async def test_a_migration_that_stops_goes_on_from_where_it_was(db_driver, clear_database, monkeypatch):
+async def test_a_migration_that_stops_goes_on_from_where_it_was(
+    db_driver, clear_database, monkeypatch
+):
     world = await start_with_people(10)
     stopper = Stopper(monkeypatch, runner, "apply_window", fail_on=3)
 
@@ -115,7 +135,10 @@ async def test_a_migration_that_stops_goes_on_from_where_it_was(db_driver, clear
         await backend.apply(world.later, world.state, batch_size=3)
 
     # two batches were made, and kept: the six first (by id)
-    done = run(db_driver, "MATCH (p:Person) WHERE p.born IS NOT NULL RETURN p.id AS id ORDER BY id")
+    done = run(
+        db_driver,
+        "MATCH (p:Person) WHERE p.born IS NOT NULL RETURN p.id AS id ORDER BY id",
+    )
     everyone = run(db_driver, "MATCH (p:Person) RETURN p.id AS id ORDER BY id")
     assert [row["id"] for row in done] == [row["id"] for row in everyone][:6]
     record = (await backend.applied())[("migapp", world.later[0].name)]
@@ -127,11 +150,20 @@ async def test_a_migration_that_stops_goes_on_from_where_it_was(db_driver, clear
     stopper.fail_on = None
     stopper.calls = 0
     notes = []
-    await backend.apply(world.later, world.state, batch_size=3, progress=lambda m, what: notes.append(what))
+    await backend.apply(
+        world.later,
+        world.state,
+        batch_size=3,
+        progress=lambda m, what: notes.append(what),
+    )
     assert stopper.calls == 2  # (3 + 1: the four that were left)
     assert any("going on from" in note for note in notes)
-    assert run(db_driver, "MATCH (p:Person) WHERE p.born = 1900 RETURN count(p) AS n") == [{"n": 10}]
-    assert (await backend.applied())[("migapp", world.later[0].name)]["status"] == "applied"
+    assert run(
+        db_driver, "MATCH (p:Person) WHERE p.born = 1900 RETURN count(p) AS n"
+    ) == [{"n": 10}]
+    assert (await backend.applied())[("migapp", world.later[0].name)][
+        "status"
+    ] == "applied"
 
 
 @no_type_check
@@ -157,20 +189,30 @@ async def test_what_cannot_be_converted_is_found_before_anything_is_changed(
     state = await backend.apply(initial, EMPTY_SNAPSHOT)
     for i in range(9):
         await old_models.Person.Create(label=f"P{i}", age=str(i)).save()
-    await old_models.Person.Create(label="Bad", age="old").save()  # (the last by id, or not: any)
+    await old_models.Person.Create(
+        label="Bad", age="old"
+    ).save()  # (the last by id, or not: any)
     _, second = declare(v2)
     later = migrations_between(graph, second)
 
     with pytest.raises(PanglossMigrationAnswerNeeded, match="cannot be converted"):
         await backend.apply(later, state, batch_size=3)
     ages = run(db_driver, "MATCH (p:Person) RETURN DISTINCT valueType(p.age) AS kind")
-    assert [row["kind"] for row in ages] == ["STRING"]  # (none was converted before it was found)
+    assert [row["kind"] for row in ages] == [
+        "STRING"
+    ]  # (none was converted before it was found)
 
     # with an answer, the same, in batches
-    answered = migrations_between(graph, second, answer=answering(AlterLiteralType=("on_failure", "null")))
+    answered = migrations_between(
+        graph, second, answer=answering(AlterLiteralType=("on_failure", "null"))
+    )
     await backend.apply(answered, state, batch_size=3)
-    assert run(db_driver, "MATCH (p:Person) WHERE p.age IS NULL RETURN count(p) AS n") == [{"n": 1}]
-    assert run(db_driver, "MATCH (p:Person) WHERE p.age IS NOT NULL RETURN max(p.age) AS n") == [{"n": 8}]
+    assert run(
+        db_driver, "MATCH (p:Person) WHERE p.age IS NULL RETURN count(p) AS n"
+    ) == [{"n": 1}]
+    assert run(
+        db_driver, "MATCH (p:Person) WHERE p.age IS NOT NULL RETURN max(p.age) AS n"
+    ) == [{"n": 8}]
 
 
 def wrap_versions():
@@ -210,32 +252,46 @@ async def test_wrapping_relations_in_batches_wraps_each_once_even_when_stopped(
     state = await backend.apply(initial, EMPTY_SNAPSHOT)
     person = await old_models.Person.Create(label="Ann").save()
     statements = [
-        await old_models.Statement.Create(label=f"S{i}", person={"type": "Person", "id": person.id}).save()
+        await old_models.Statement.Create(
+            label=f"S{i}", person={"type": "Person", "id": person.id}
+        ).save()
         for i in range(10)
     ]
     new_models, second = declare(v2)
-    later = migrations_between(graph, second, answer=answering(WrapRelation=("defaults.certainty", 3)))
+    later = migrations_between(
+        graph, second, answer=answering(WrapRelation=("defaults.certainty", 3))
+    )
 
     stopper = Stopper(monkeypatch, runner, "wrap_reified", fail_on=2)
     with pytest.raises(RuntimeError):
         await backend.apply(later, state, batch_size=3)
-    assert run(db_driver, "MATCH (r:IdentifiedAs) RETURN count(r) AS n") == [{"n": 3}]  # (one batch)
+    assert run(db_driver, "MATCH (r:IdentifiedAs) RETURN count(r) AS n") == [
+        {"n": 3}
+    ]  # (one batch)
 
     stopper.fail_on = None
     await backend.apply(later, state, batch_size=3)
     assert run(db_driver, "MATCH (r:IdentifiedAs) RETURN count(r) AS n") == [{"n": 10}]
-    assert run(db_driver, "MATCH (:Statement)-[e:person]->(:Person) RETURN count(e) AS n") == [{"n": 0}]
+    assert run(
+        db_driver, "MATCH (:Statement)-[e:person]->(:Person) RETURN count(e) AS n"
+    ) == [{"n": 0}]
 
     # and each is what the new models write
     native = await new_models.Statement.Create(
         label="S0",
-        person={"type": "IdentifiedAs", "certainty": 3, "target": [{"type": "Person", "id": person.id}]},
+        person={
+            "type": "IdentifiedAs",
+            "certainty": 3,
+            "target": [{"type": "Person", "id": person.id}],
+        },
     ).save()
     assert signature(db_driver, statements[0].id) == signature(db_driver, native.id)
 
 
 @no_type_check
-async def test_a_migration_that_is_not_atomic_is_made_in_batches(db_driver, clear_database, monkeypatch):
+async def test_a_migration_that_is_not_atomic_is_made_in_batches(
+    db_driver, clear_database, monkeypatch
+):
     world = await start_with_people(5)
     monkeypatch.setattr(backend, "DEFAULT_BATCH_SIZE", 2)
     stopper = Stopper(monkeypatch, runner, "apply_window")
@@ -243,7 +299,9 @@ async def test_a_migration_that_is_not_atomic_is_made_in_batches(db_driver, clea
 
     await backend.apply(not_atomic, world.state)
     assert stopper.calls == 3  # (2 + 2 + 1)
-    assert run(db_driver, "MATCH (p:Person) WHERE p.born = 1900 RETURN count(p) AS n") == [{"n": 5}]
+    assert run(
+        db_driver, "MATCH (p:Person) WHERE p.born = 1900 RETURN count(p) AS n"
+    ) == [{"n": 5}]
 
     # one that is atomic is made at once, whatever the default
     world = await start_with_people(5)
@@ -253,14 +311,20 @@ async def test_a_migration_that_is_not_atomic_is_made_in_batches(db_driver, clea
 
 
 @no_type_check
-async def test_a_migration_can_say_how_big_its_batches_are(db_driver, clear_database, monkeypatch):
+async def test_a_migration_can_say_how_big_its_batches_are(
+    db_driver, clear_database, monkeypatch
+):
     world = await start_with_people(5)
     stopper = Stopper(monkeypatch, runner, "apply_window")
-    sized = [dataclasses.replace(m, batch_size=2) for m in world.later]  # (atomic, but sized)
+    sized = [
+        dataclasses.replace(m, batch_size=2) for m in world.later
+    ]  # (atomic, but sized)
 
     await backend.apply(sized, world.state)
     assert stopper.calls == 3  # (2 + 2 + 1)
-    assert run(db_driver, "MATCH (p:Person) WHERE p.born = 1900 RETURN count(p) AS n") == [{"n": 5}]
+    assert run(
+        db_driver, "MATCH (p:Person) WHERE p.born = 1900 RETURN count(p) AS n"
+    ) == [{"n": 5}]
 
     # the command line's size wins over the migration's
     world = await start_with_people(5)
@@ -312,7 +376,9 @@ async def test_a_renamed_relation_is_renamed_in_batches_even_when_stopped(
         graph,
         in_app(second),
         APPS,
-        confirmed=[PossibleRename(what="field", scope="Statement", old="home", new="residence")],
+        confirmed=[
+            PossibleRename(what="field", scope="Statement", old="home", new="residence")
+        ],
     )
     later = result.migrations
 
@@ -320,16 +386,23 @@ async def test_a_renamed_relation_is_renamed_in_batches_even_when_stopped(
     with pytest.raises(RuntimeError, match="stopped part way"):
         await backend.apply(later, state, batch_size=2)
     # (one batch of 2 forward edges and 2 reverse edges was done)
-    assert run(db_driver, "MATCH ()-[e:residence]->() RETURN count(e) AS n") == [{"n": 2}]
+    assert run(db_driver, "MATCH ()-[e:residence]->() RETURN count(e) AS n") == [
+        {"n": 2}
+    ]
     assert run(db_driver, "MATCH ()-[e:home]->() RETURN count(e) AS n") == [{"n": 3}]
 
     calls.fail_on = None
     calls.calls = 0
     await backend.apply(later, state, batch_size=2)
     assert calls.calls == 2  # (2, then the last 1)
-    assert run(db_driver, "MATCH ()-[e:residence]->() RETURN count(e) AS n") == [{"n": 5}]
+    assert run(db_driver, "MATCH ()-[e:residence]->() RETURN count(e) AS n") == [
+        {"n": 5}
+    ]
     assert run(db_driver, "MATCH ()-[e:home]->() RETURN count(e) AS n") == [{"n": 0}]
-    assert run(db_driver, "MATCH ()-[e:residence_reverse {reverse: true}]->() RETURN count(e) AS n") == [{"n": 5}]
+    assert run(
+        db_driver,
+        "MATCH ()-[e:residence_reverse {reverse: true}]->() RETURN count(e) AS n",
+    ) == [{"n": 5}]
     read = await new_models.Statement.get(id=statements[0].id)
     assert read.residence.id == place.id
     assert len((await new_models.Place.get(id=place.id)).residence_reverse) == 5
@@ -379,7 +452,12 @@ async def test_a_removed_relation_is_removed_in_batches_with_what_it_owned(
             label=f"F{n}",
             home=reference,
             statements=[
-                {"type": "Statement", "label": f"S{n}{m}", "text": "t", "where": reference}
+                {
+                    "type": "Statement",
+                    "label": f"S{n}{m}",
+                    "text": "t",
+                    "where": reference,
+                }
                 for m in range(2)
             ],
         ).save()
@@ -394,13 +472,19 @@ async def test_a_removed_relation_is_removed_in_batches_with_what_it_owned(
     calls = Stopper(monkeypatch, runner, "apply_edges", fail_on=2)
     with pytest.raises(RuntimeError, match="stopped part way"):
         await backend.apply(later, state, batch_size=2)
-    assert run(db_driver, "MATCH (s:Statement) RETURN count(s) AS n") == [{"n": 4}]  # (a batch of 2)
+    assert run(db_driver, "MATCH (s:Statement) RETURN count(s) AS n") == [
+        {"n": 4}
+    ]  # (a batch of 2)
 
     calls.fail_on = None
     await backend.apply(later, state, batch_size=2)
     assert run(db_driver, "MATCH (s:Statement) RETURN count(s) AS n") == [{"n": 0}]
-    assert run(db_driver, "MATCH ()-[e:statements]->() RETURN count(e) AS n") == [{"n": 0}]
-    assert run(db_driver, "MATCH ()-[e:statements_reverse]->() RETURN count(e) AS n") == [{"n": 0}]
+    assert run(db_driver, "MATCH ()-[e:statements]->() RETURN count(e) AS n") == [
+        {"n": 0}
+    ]
+    assert run(
+        db_driver, "MATCH ()-[e:statements_reverse]->() RETURN count(e) AS n"
+    ) == [{"n": 0}]
     # the entity is still there, and so are the other relations to it
     assert (await new_models.Place.get(id=place.id)).label == "Paris"
     assert (await new_models.Factoid.get(id=factoids[0].id)).home.id == place.id

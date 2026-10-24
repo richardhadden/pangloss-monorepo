@@ -95,7 +95,9 @@ async def list_versions(model_name: str, id: UUID, store: Store) -> dict[str, An
     }
 
 
-def version_content(store: HistoryStore, model: type, id: UUID, version: int) -> HistoryRecord:
+def version_content(
+    store: HistoryStore, model: type, id: UUID, version: int
+) -> HistoryRecord:
     records_of_model(store, model, id)
     record = store.get(id, version)
     if record is None:
@@ -113,7 +115,8 @@ async def get_version(
     version: int,
     store: Store,
     upgrade: Annotated[
-        bool, Query(description="Upgrade it to the models of now (false: as it was written)")
+        bool,
+        Query(description="Upgrade it to the models of now (false: as it was written)"),
     ] = True,
 ) -> dict[str, Any]:
     """A version, upgraded to the models of now (with what could not be upgraded in `problems`)"""
@@ -132,7 +135,9 @@ async def get_version(
 
 
 @router.get("/{model_name}/{id}/history/{version}/draft")
-async def get_draft(model_name: str, id: UUID, version: int, store: Store) -> dict[str, Any]:
+async def get_draft(
+    model_name: str, id: UUID, version: int, store: Store
+) -> dict[str, Any]:
     """A restore as a draft to reconcile: the version upgraded as far as it can be, and the
     problems that someone has to decide (it may be incomplete or invalid)"""
     model = find_model(model_name)
@@ -152,7 +157,9 @@ async def get_difference(
     id: UUID,
     version: int,
     store: Store,
-    to: Annotated[int | None, Query(description="Defaults to the latest recorded")] = None,
+    to: Annotated[
+        int | None, Query(description="Defaults to the latest recorded")
+    ] = None,
 ) -> dict[str, Any]:
     """What changed from one version to another"""
     model = find_model(model_name)

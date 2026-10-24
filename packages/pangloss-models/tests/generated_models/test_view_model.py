@@ -649,7 +649,7 @@ def test_relation_to_trait():
         | Posse.ReferenceView
     )
 
-    st = Statement.View(
+    Statement.View(
         id=uuid7(),
         label="A Statement",
         thing_carried_out_by={"type": "Group", "id": uuid7(), "label": "A Group"},
@@ -891,7 +891,11 @@ def test_list_relations_default_to_empty_in_view_models():
 
     initialise()
 
-    view = Statement.View(id=uuid7(), label="A statement", singlePerson={"type": "Person", "id": uuid7(), "label": "P"})
+    view = Statement.View(
+        id=uuid7(),
+        label="A statement",
+        singlePerson={"type": "Person", "id": uuid7(), "label": "P"},
+    )
     assert view.people == []
     assert view.actions == []
 

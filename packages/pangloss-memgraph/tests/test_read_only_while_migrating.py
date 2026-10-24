@@ -1,23 +1,23 @@
 """While `pangloss migrate` runs (it holds a lock) the database can be read and not written to"""
 
-from types import SimpleNamespace as ns
 from typing import no_type_check
 
 import pytest
 from pangloss_memgraph.databases.memgraph import migration_backend as backend
-from pangloss_memgraph.databases.memgraph.database import Database
 from pangloss_models import initialise
 from pangloss_models.exceptions import PanglossReadOnlyError, PanglossWriteError
 from pangloss_models.model_bases.document import Document
 from pangloss_models.model_bases.entity import Entity
 
-from .helpers import count_nodes, run
+from .helpers import count_nodes
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
 
 @no_type_check
-async def test_nothing_is_written_while_the_lock_is_held_and_all_can_be_read(db_driver, clear_database):
+async def test_nothing_is_written_while_the_lock_is_held_and_all_can_be_read(
+    db_driver, clear_database
+):
     class Person(Entity):
         name: str
 

@@ -14,13 +14,17 @@ from pangloss_history import config
 from pangloss_history.store import HistoryStore, SqliteStore
 
 
-def versions_inside(store: HistoryStore, squashed: Iterable[Migration]) -> list[tuple[Migration, int]]:
+def versions_inside(
+    store: HistoryStore, squashed: Iterable[Migration]
+) -> list[tuple[Migration, int]]:
     """For each squashed migration, the versions recorded part way through what it replaces"""
     positions = store.position_counts()
     found = []
     for migration in squashed:
         inside = {name for app, name in migration.replaces[:-1] if app == migration.app}
-        count = sum(n for position, n in positions if position.get(migration.app) in inside)
+        count = sum(
+            n for position, n in positions if position.get(migration.app) in inside
+        )
         if count:
             found.append((migration, count))
     return found

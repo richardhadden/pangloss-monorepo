@@ -18,5 +18,9 @@ def test_sessions_are_not_implemented_yet():
 def test_the_js_is_where_the_commands_expect():
     from pangloss_interface.paths import APP_PATH, CORE_PATH, JS_ROOT
 
-    for path in (JS_ROOT / "package.json", APP_PATH / "package.json", CORE_PATH / "package.json"):
+    for path in (
+        JS_ROOT / "package.json",
+        APP_PATH / "package.json",
+        CORE_PATH / "package.json",
+    ):
         assert path.is_file(), path

@@ -770,7 +770,7 @@ def test_relation_to_trait():
         | Posse.ReferenceSet
     )
 
-    st = Statement(
+    Statement(
         label="A Statement", thing_carried_out_by={"type": "Group", "id": uuid7()}
     )
 

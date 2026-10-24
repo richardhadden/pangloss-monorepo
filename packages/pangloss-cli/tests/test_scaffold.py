@@ -55,7 +55,9 @@ def test_new_project(workdir: Path):
     env = (workdir / ".env").read_text()
     assert env.startswith("AUTHJWT_SECRET_KEY=")
     assert len(env.split("=", 1)[1].strip()) >= 32
-    assert "AUTHJWT_SECRET_KEY=" not in (workdir / "my_site" / "settings.py").read_text()
+    assert (
+        "AUTHJWT_SECRET_KEY=" not in (workdir / "my_site" / "settings.py").read_text()
+    )
     assert ".env" in (workdir / ".gitignore").read_text().splitlines()
 
 
@@ -66,7 +68,6 @@ def test_each_project_gets_its_own_secret(workdir: Path):
     two.mkdir()
     secrets = []
     for directory in (one, two):
-    
         os.chdir(directory)
         assert invoke("new-project", "shop").exit_code == 0
         secrets.append((directory / ".env").read_text())
@@ -219,7 +220,7 @@ def test_new_app_when_the_settings_cannot_be_edited(workdir: Path):
     settings.write_text(
         settings.read_text().replace(
             '    INSTALLED_APPS: list[str] = [\n        "pangloss_memgraph",\n    ]',
-            '    INSTALLED_APPS: list[str] = get_apps()',
+            "    INSTALLED_APPS: list[str] = get_apps()",
         )
     )
     before = settings.read_text()
@@ -239,7 +240,7 @@ def test_new_app_when_the_settings_cannot_be_edited(workdir: Path):
 @pytest.mark.parametrize(
     ("before", "after"),
     [
-        ('INSTALLED_APPS = []', 'INSTALLED_APPS = ["blog"]'),
+        ("INSTALLED_APPS = []", 'INSTALLED_APPS = ["blog"]'),
         ('INSTALLED_APPS = ["a"]', 'INSTALLED_APPS = ["a", "blog"]'),
         ("INSTALLED_APPS = ['a', 'b']", "INSTALLED_APPS = ['a', 'b', \"blog\"]"),
         (
@@ -278,7 +279,9 @@ def test_add_to_installed_apps(before: str, after: str):
 
 def test_add_to_installed_apps_exact_layouts():
     assert (
-        add_to_installed_apps('class S:\n    INSTALLED_APPS = [\n        "a",\n    ]\n', "b")
+        add_to_installed_apps(
+            'class S:\n    INSTALLED_APPS = [\n        "a",\n    ]\n', "b"
+        )
         == 'class S:\n    INSTALLED_APPS = [\n        "a",\n        "b",\n    ]\n'
     )
     assert add_to_installed_apps('INSTALLED_APPS = ["a"]', "b") == (

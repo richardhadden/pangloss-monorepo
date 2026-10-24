@@ -95,7 +95,7 @@ Pangloss cannot tell a rename from "removed one field, added another". It **alwa
 class Person(Entity):
     name: str
     nickname: str | None
-    birth_year: int          # was: born
+    birth_year: int  # was: born
 ```
 
 ```console

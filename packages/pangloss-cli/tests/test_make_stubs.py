@@ -2,11 +2,10 @@ import ast
 from pathlib import Path
 
 import pytest
+from cli_support import write
 from pangloss_cli.main import build_app
 from pangloss_models.model_registry import ModelRegistry
 from typer.testing import CliRunner
-
-from cli_support import write
 
 runner = CliRunner()
 
@@ -53,9 +52,7 @@ def make_stubs(*args: str):
 
 
 def nested(tree: ast.Module, model: str) -> dict[str, ast.ClassDef]:
-    (cls,) = [
-        n for n in tree.body if isinstance(n, ast.ClassDef) and n.name == model
-    ]
+    (cls,) = [n for n in tree.body if isinstance(n, ast.ClassDef) and n.name == model]
     return {n.name: n for n in cls.body if isinstance(n, ast.ClassDef)}
 
 
@@ -135,7 +132,9 @@ def test_models_in_another_module_of_the_project_have_a_stub_too(project: Path):
     assert exit_code == 0, output
     assert "wrote fakeapp/people.pyi" in output
     assert "fakeapp/models.pyi" not in output
-    assert "Create" in nested(ast.parse((project / "fakeapp/people.pyi").read_text()), "Person")
+    assert "Create" in nested(
+        ast.parse((project / "fakeapp/people.pyi").read_text()), "Person"
+    )
 
 
 def test_no_models(project: Path):

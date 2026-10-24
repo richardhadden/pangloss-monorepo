@@ -9,6 +9,7 @@ from pangloss_models.exceptions import (
     PanglossVersionConflictError,
     PanglossWriteError,
 )
+from pangloss_models.hooks import WriteEvent, emit_write_event
 from pangloss_models.model_bases.base_models import _ListItems
 from pangloss_models.model_bases.document import (
     Document,
@@ -28,12 +29,12 @@ from pangloss_models.model_bases.entity import (
     _EntityUpdateBase,
     _EntityUpdateDBBase,
 )
-from pangloss_models.hooks import WriteEvent, emit_write_event
 from pangloss_models.utils import get_concrete_types
 from pangloss_users import current_request_username
 from pangloss_users.models import AccessTokenRecord, UserInDB
 from pydantic import AnyHttpUrl, TypeAdapter
 
+from pangloss_memgraph.databases.memgraph import users
 from pangloss_memgraph.databases.memgraph.build_create_query import (
     build_head_create_query,
 )
@@ -49,7 +50,6 @@ from pangloss_memgraph.databases.memgraph.build_update_query import (
     build_replace_head_query,
 )
 from pangloss_memgraph.databases.memgraph.database import Database, Transaction
-from pangloss_memgraph.databases.memgraph import users
 from pangloss_memgraph.databases.memgraph.delete_node import (
     DeletionResult,
     soft_delete,
@@ -73,9 +73,7 @@ from pangloss_memgraph.databases.memgraph.validate_write import (
 )
 
 
-async def empty_page(
-    tx: Transaction, query: str, params: dict
-) -> dict[str, Any]:
+async def empty_page(tx: Transaction, query: str, params: dict) -> dict[str, Any]:
     """The result of a list that has no items on the page asked for: nothing is
     listed, but there may be a count of what there is on the other pages. (The query
     gives no row at all then, so the count comes from the first page.)"""
@@ -118,7 +116,6 @@ async def list_items(
         deep_search=deep_search,
     )
 
-
     concrete_types = get_concrete_types(cls)
     concrete_ref_types = [t.ReferenceView for t in concrete_types]
 
@@ -132,9 +129,7 @@ async def list_items(
         result_values[0] if result_values else await empty_page(tx, query, params)
     )
 
-    results["results"] = type_adapter.validate_python(
-        results["results"]
-    )
+    results["results"] = type_adapter.validate_python(results["results"])
     result = _ListItems(**results)
 
     return result
@@ -308,7 +303,6 @@ async def write_head_node(
     await check_references_exist(tx, query_object)
     await check_ids_available(tx, query_object, is_update=False)
     await check_urls_available(tx, query_object)
-
 
     result = await run_write_query(
         tx, query_object.to_query_string(), query_object.params

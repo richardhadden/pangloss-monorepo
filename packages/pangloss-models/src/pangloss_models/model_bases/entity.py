@@ -3,7 +3,6 @@ from typing import Annotated, Any, ClassVar, Self
 from uuid import UUID, uuid7
 
 from pydantic import AnyHttpUrl, ConfigDict, Field, model_validator
-from pangloss_models.meta_kit import BaseMeta, InheritValue, MetaRules, WithMeta
 
 from pangloss_models.exceptions import PanglossMetaError
 from pangloss_models.field_definitions import (
@@ -11,7 +10,7 @@ from pangloss_models.field_definitions import (
     ModelFieldDict,
     ModelFields,
 )
-from pangloss_models.model_bases.model_tools import make_id
+from pangloss_models.meta_kit import BaseMeta, InheritValue, MetaRules, WithMeta
 from pangloss_models.model_bases.base_models import (
     DeclaredClassMeta,
     _CreateBase,
@@ -26,6 +25,7 @@ from pangloss_models.model_bases.base_models import (
     _UpdateDBBase,
     _ViewBase,
 )
+from pangloss_models.model_bases.model_tools import make_id
 
 
 class EntityMeta(BaseMeta, DeclaredClassMeta):
@@ -135,7 +135,6 @@ class Entity(_DeclaredClass, WithMeta[EntityMeta]):
     View: ClassVar[type[_EntityViewBase]]
     HeadView: ClassVar[type[_HeadViewBase]]
     EditView: ClassVar[type[_EntityEditViewBase]]
-
 
     get: ClassVar[
         Callable[

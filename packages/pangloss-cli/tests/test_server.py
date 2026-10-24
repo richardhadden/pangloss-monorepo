@@ -34,7 +34,9 @@ def uvicorn_run(monkeypatch):
     import uvicorn
 
     calls = []
-    monkeypatch.setattr(uvicorn, "run", lambda *args, **kwargs: calls.append((args, kwargs)))
+    monkeypatch.setattr(
+        uvicorn, "run", lambda *args, **kwargs: calls.append((args, kwargs))
+    )
     # (the command changes these; put them back afterwards)
     monkeypatch.setenv("PANGLOSS_SETTINGS", "before")
     monkeypatch.setenv("PYTHONPATH", "before")
@@ -182,7 +184,7 @@ def get_title(port: int) -> str | None:
             f"http://127.0.0.1:{port}/openapi.json", timeout=2
         ) as response:
             return json.load(response)["info"]["title"]
-    except (urllib.error.URLError, OSError, ValueError, KeyError):
+    except urllib.error.URLError, OSError, ValueError, KeyError:
         return None
 
 

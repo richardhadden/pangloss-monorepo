@@ -13,7 +13,10 @@ def canonical(value: Any) -> Any:
     set), and means nothing for what is accepted"""
     if isinstance(value, dict):
         return {
-            key: sorted((canonical(v) for v in item), key=lambda v: json.dumps(v, sort_keys=True, default=str))
+            key: sorted(
+                (canonical(v) for v in item),
+                key=lambda v: json.dumps(v, sort_keys=True, default=str),
+            )
             if key in ("anyOf", "oneOf", "required") and isinstance(item, list)
             else canonical(item)
             for key, item in value.items()
@@ -23,7 +26,9 @@ def canonical(value: Any) -> Any:
     return value
 
 
-def head_model_schemas(module_names: set[str] | None = None) -> dict[str, dict[str, Any]]:
+def head_model_schemas(
+    module_names: set[str] | None = None,
+) -> dict[str, dict[str, Any]]:
     """The JSON schema of the generated models of each registered Document and Entity (of
     the given modules, if any): to compare what a client makes with what the server has"""
     out: dict[str, dict[str, Any]] = {}
@@ -33,7 +38,14 @@ def head_model_schemas(module_names: set[str] | None = None) -> dict[str, dict[s
         if module_names is not None and model.__module__ not in module_names:
             continue
         schemas: dict[str, Any] = {}
-        for kind in ("Create", "Update", "HeadView", "EditView", "ReferenceView", "ReferenceSet"):
+        for kind in (
+            "Create",
+            "Update",
+            "HeadView",
+            "EditView",
+            "ReferenceView",
+            "ReferenceSet",
+        ):
             cls = getattr(model, kind, None)
             if cls is None or "<locals>" in model.__qualname__:
                 continue

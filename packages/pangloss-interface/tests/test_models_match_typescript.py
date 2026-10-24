@@ -8,6 +8,7 @@ import re
 import sys
 from pathlib import Path
 
+import pangloss_interface
 import pytest
 from pangloss_core import settings as core_settings
 from pangloss_core.settings import ClientSettings
@@ -15,9 +16,9 @@ from pangloss_models import initialise
 from pangloss_models.export import export_models
 from pangloss_models.model_registry import ModelRegistry
 
-import pangloss_interface
-
-MODELS_TS = Path(pangloss_interface.__file__).parent / "js/interface-core/src/types/models.ts"
+MODELS_TS = (
+    Path(pangloss_interface.__file__).parent / "js/interface-core/src/types/models.ts"
+)
 SUPPORT = Path(__file__).parents[2] / "pangloss-models/tests/support"
 
 FIELD_INTERFACES = {
@@ -34,9 +35,11 @@ FIELD_INTERFACES = {
 def interfaces(source: str) -> dict[str, set[str]]:
     """The keys of each `export interface` (with those of what it extends)"""
     found: dict[str, tuple[str | None, set[str]]] = {}
-    pattern = re.compile(r"export interface (\w+)(?: extends (\w+))? \{\n(.*?)\n\}", re.S)
+    pattern = re.compile(
+        r"export interface (\w+)(?: extends (\w+))? \{\n(.*?)\n\}", re.DOTALL
+    )
     for name, parent, body in pattern.findall(source):
-        keys = set(re.findall(r"^  (\w+)\??:", body, re.M))
+        keys = set(re.findall(r"^  (\w+)\??:", body, re.MULTILINE))
         found[name] = (parent or None, keys)
 
     def all_keys(name: str) -> set[str]:
@@ -48,7 +51,7 @@ def interfaces(source: str) -> dict[str, set[str]]:
 
 def literals_of(source: str, type_name: str) -> set[str]:
     """The string literals in `export type NAME = ...;`"""
-    match = re.search(rf"export type {type_name} =(.*?);\n", source, re.S)
+    match = re.search(rf"export type {type_name} =(.*?);\n", source, re.DOTALL)
     assert match, type_name
     return set(re.findall(r'"(\w+)"', match.group(1)))
 
@@ -98,12 +101,18 @@ def test_every_field_has_the_keys_of_its_kind(exported, typescript):
         for field in model["fields"]:
             seen.add(field["kind"])
             interface = FIELD_INTERFACES[field["kind"]]
-            assert set(field) == types[interface], (model["name"], field["name"], interface)
+            assert set(field) == types[interface], (
+                model["name"],
+                field["name"],
+                interface,
+            )
     # (the kitchen sink has every kind but "unknown", which is for what the export cannot say)
     assert seen == set(FIELD_INTERFACES) - {"unknown"}
 
 
-def test_relation_options_and_incoming_relations_have_the_known_shapes(exported, typescript):
+def test_relation_options_and_incoming_relations_have_the_known_shapes(
+    exported, typescript
+):
     source, types = typescript
     option_kinds = literals_of(source, "RelationOption")
     for model in exported["models"].values():

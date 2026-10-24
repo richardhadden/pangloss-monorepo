@@ -1,13 +1,13 @@
 from typing import Annotated, ClassVar
 
 from pydantic import Field
-from pangloss_models.meta_kit import BaseMeta, InheritValue, MetaRules, WithMeta
 
 from pangloss_models.field_definitions import (
     FieldDefinition,
     ModelFieldDict,
     ModelFields,
 )
+from pangloss_models.meta_kit import BaseMeta, InheritValue, MetaRules, WithMeta
 from pangloss_models.model_bases.base_models import _DeclaredClass
 
 
@@ -32,4 +32,3 @@ class AnnotatedValue[T](_DeclaredClass, WithMeta[AnnotatedValueMeta]):
     _meta: ClassVar[AnnotatedValueMeta] = AnnotatedValueMeta()
 
     value: T
-

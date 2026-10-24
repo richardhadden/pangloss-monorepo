@@ -5,8 +5,10 @@
 ```python
 from pangloss_users import service
 
-user = await service.create_user("john", "john@example.com", "a long password", admin=True)
-user = await service.authenticate("john", "a long password")   # a User, or None
+user = await service.create_user(
+    "john", "john@example.com", "a long password", admin=True
+)
+user = await service.authenticate("john", "a long password")  # a User, or None
 await service.change_password("john", "a long password", "another password")
 await service.set_disabled("john", True)
 ```

@@ -2,11 +2,9 @@
 
 from uuid import uuid7
 
+import pangloss_sdk
 import pytest
 from pangloss_core import settings as core_settings
-import pangloss_sdk
-from pangloss_sdk import client as sdk_client
-
 from sdk_support import FakeServer, head_json, make_models, reference_json
 
 pytestmark = pytest.mark.asyncio
@@ -64,9 +62,7 @@ async def test_iterate_goes_through_every_page():
         }
 
     server = FakeServer(answer)
-    pangloss_sdk.connect(
-        "http://pangloss.test", transport=server.async_transport()
-    )
+    pangloss_sdk.connect("http://pangloss.test", transport=server.async_transport())
     # (connect() has initialised the models: use the ones that are registered)
     labels = [item.label async for item in pangloss_sdk.iterate(Person.list)]  # type: ignore[attr-defined]
 

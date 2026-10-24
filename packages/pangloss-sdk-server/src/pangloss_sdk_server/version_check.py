@@ -46,7 +46,9 @@ class SdkVersionMiddleware:
             await self.app(scope, receive, send)
             return
 
-        is_write = scope["method"] not in READS and not scope["path"].startswith(NOT_MODELS)
+        is_write = scope["method"] not in READS and not scope["path"].startswith(
+            NOT_MODELS
+        )
         if (
             status == "schema-changed"
             and is_write
@@ -75,7 +77,10 @@ class SdkVersionMiddleware:
 
         async def send_with_status(message: Message) -> None:
             if message["type"] == "http.response.start":
-                message["headers"] = [*message.get("headers", []), (HEADER, status.encode())]
+                message["headers"] = [
+                    *message.get("headers", []),
+                    (HEADER, status.encode()),
+                ]
             await send(message)
 
         await self.app(scope, receive, send_with_status)

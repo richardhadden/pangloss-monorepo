@@ -4,7 +4,12 @@ import warnings
 from typing import Any
 
 from pangloss_sdk import protocol
-from pangloss_sdk.client import AsyncClient, Client, current_async_client, current_client
+from pangloss_sdk.client import (
+    AsyncClient,
+    Client,
+    current_async_client,
+    current_client,
+)
 from pangloss_sdk.exceptions import (
     PanglossSdkMismatch,
     PanglossSdkOutOfDateWarning,
@@ -18,14 +23,20 @@ def judge(client: AsyncClient | Client, response: Any) -> dict[str, Any]:
     if response.status_code in (404, 503):
         raise PanglossSdkMismatch(
             "The server has no SDK built"
-            + (f": {response.json().get('detail')}" if response.status_code == 503 else "")
+            + (
+                f": {response.json().get('detail')}"
+                if response.status_code == 503
+                else ""
+            )
         )
     protocol.check(response)
     server = response.json()
     local = client.sdk
     result: dict[str, Any] = {
         "url": client.session.url,
-        "logged_in_as": client.session.username if client.session.access_token else None,
+        "logged_in_as": client.session.username
+        if client.session.access_token
+        else None,
         "server": server,
         "local": local,
         "current": None,

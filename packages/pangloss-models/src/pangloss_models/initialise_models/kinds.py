@@ -163,7 +163,9 @@ class ModelKind:
     annotated_value: FieldRule = FieldRule()
 
 
-def bases_for(suffix: str, embedded_base: type | None = None) -> tuple[tuple[type, type], ...]:
+def bases_for(
+    suffix: str, embedded_base: type | None = None
+) -> tuple[tuple[type, type], ...]:
     """The base classes `_<Kind><Suffix>Base` of the generated model of each declared kind"""
     pairs = {
         "Create": (

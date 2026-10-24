@@ -47,7 +47,10 @@ def signature(db_driver, head_id) -> dict:
 
     def freeze(rows):
         return sorted(
-            json.dumps({k: sorted(v) if isinstance(v, list) else v for k, v in row.items()}, sort_keys=True)
+            json.dumps(
+                {k: sorted(v) if isinstance(v, list) else v for k, v in row.items()},
+                sort_keys=True,
+            )
             for row in rows
         )
 
@@ -60,7 +63,9 @@ def signature(db_driver, head_id) -> dict:
 
 
 @no_type_check
-async def test_a_renamed_relation_keeps_its_edges_and_its_reverse(db_driver, clear_database):
+async def test_a_renamed_relation_keeps_its_edges_and_its_reverse(
+    db_driver, clear_database
+):
     def v1():
         class Place(Entity):
             pass
@@ -87,7 +92,11 @@ async def test_a_renamed_relation_keeps_its_edges_and_its_reverse(db_driver, cle
     new_models, new = declare(v2)
 
     await migrate(
-        old, new, confirmed=[PossibleRename(what="field", scope="Statement", old="home", new="residence")]
+        old,
+        new,
+        confirmed=[
+            PossibleRename(what="field", scope="Statement", old="home", new="residence")
+        ],
     )
 
     read = await new_models.Statement.get(id=statement.id)
@@ -95,7 +104,10 @@ async def test_a_renamed_relation_keeps_its_edges_and_its_reverse(db_driver, cle
     # ... and from the entity, under the new reverse name
     entity = await new_models.Place.get(id=place.id)
     assert [s.id for s in entity.residence_reverse] == [statement.id]
-    edges = run(db_driver, "MATCH ()-[e]->() WHERE NOT type(e) STARTS WITH 'is_' AND NOT type(e) = 'created_by' RETURN DISTINCT type(e) AS t ORDER BY t")
+    edges = run(
+        db_driver,
+        "MATCH ()-[e]->() WHERE NOT type(e) STARTS WITH 'is_' AND NOT type(e) = 'created_by' RETURN DISTINCT type(e) AS t ORDER BY t",
+    )
     assert [e["t"] for e in edges] == ["residence", "residence_reverse"]
 
 
@@ -132,7 +144,9 @@ async def test_the_reverse_name_alone_changes(db_driver, clear_database):
 
 
 @no_type_check
-async def test_removing_a_relation_to_an_entity_leaves_the_entity(db_driver, clear_database):
+async def test_removing_a_relation_to_an_entity_leaves_the_entity(
+    db_driver, clear_database
+):
     def v1():
         class Place(Entity):
             pass
@@ -153,17 +167,25 @@ async def test_removing_a_relation_to_an_entity_leaves_the_entity(db_driver, cle
 
     old_models, old = declare(v1)
     place = await old_models.Place.Create(label="Paris").save()
-    await old_models.Statement.Create(label="S", home={"type": "Place", "id": place.id}).save()
+    await old_models.Statement.Create(
+        label="S", home={"type": "Place", "id": place.id}
+    ).save()
     new_models, new = declare(v2)
     await migrate(old, new)
 
-    assert run(db_driver, "MATCH (:Statement)-[e]->(:Place) RETURN count(e) AS n") == [{"n": 0}]
-    assert run(db_driver, "MATCH (:Place)-[e]->(:Statement) RETURN count(e) AS n") == [{"n": 0}]
+    assert run(db_driver, "MATCH (:Statement)-[e]->(:Place) RETURN count(e) AS n") == [
+        {"n": 0}
+    ]
+    assert run(db_driver, "MATCH (:Place)-[e]->(:Statement) RETURN count(e) AS n") == [
+        {"n": 0}
+    ]
     assert (await new_models.Place.get(id=place.id)).label == "Paris"
 
 
 @no_type_check
-async def test_removing_a_relation_to_a_document_removes_what_it_held(db_driver, clear_database):
+async def test_removing_a_relation_to_a_document_removes_what_it_held(
+    db_driver, clear_database
+):
     def v1():
         class Action(Document):
             pass
@@ -180,7 +202,9 @@ async def test_removing_a_relation_to_a_document_removes_what_it_held(db_driver,
         return ns(Statement=Statement)
 
     old_models, old = declare(v1)
-    await old_models.Statement.Create(label="S", action={"type": "Action", "label": "A"}).save()
+    await old_models.Statement.Create(
+        label="S", action={"type": "Action", "label": "A"}
+    ).save()
     new_models, new = declare(v2)
     await migrate(old, new)
 
@@ -234,7 +258,9 @@ async def test_a_list_that_becomes_one_value(db_driver, clear_database):
     assert read.homes.id == first.id
     assert (await new_models.Statement.get(id=one.id)).homes.id == second.id
     # the other place has lost the reverse edge too
-    assert [s.label for s in (await new_models.Place.get(id=second.id)).homes_reverse] == ["One"]
+    assert [
+        s.label for s in (await new_models.Place.get(id=second.id)).homes_reverse
+    ] == ["One"]
 
 
 @no_type_check
@@ -266,17 +292,27 @@ async def test_a_relation_that_can_no_longer_be_to_something(db_driver, clear_da
     old_models, old = declare(v1)
     person = await old_models.Person.Create(label="P").save()
     group = await old_models.Group.Create(label="G").save()
-    to_person = await old_models.Statement.Create(label="A", about={"type": "Person", "id": person.id}).save()
-    await old_models.Statement.Create(label="B", about={"type": "Group", "id": group.id}).save()
+    to_person = await old_models.Statement.Create(
+        label="A", about={"type": "Person", "id": person.id}
+    ).save()
+    await old_models.Statement.Create(
+        label="B", about={"type": "Group", "id": group.id}
+    ).save()
     new_models, new = declare(v2)
 
     with pytest.raises(PanglossMigrationAnswerNeeded, match="no longer be to"):
         await migrate(old, new)
-    await migrate(old, new, answer=with_answers(AlterRelationTarget={"on_narrowing": "remove"}))
+    await migrate(
+        old, new, answer=with_answers(AlterRelationTarget={"on_narrowing": "remove"})
+    )
 
     assert (await new_models.Statement.get(id=to_person.id)).about.id == person.id
-    assert run(db_driver, "MATCH (:Statement)-[e:about]->(:Group) RETURN count(e) AS n") == [{"n": 0}]
-    assert run(db_driver, "MATCH (:Group)-[e]->(:Statement) RETURN count(e) AS n") == [{"n": 0}]
+    assert run(
+        db_driver, "MATCH (:Statement)-[e:about]->(:Group) RETURN count(e) AS n"
+    ) == [{"n": 0}]
+    assert run(db_driver, "MATCH (:Group)-[e]->(:Statement) RETURN count(e) AS n") == [
+        {"n": 0}
+    ]
 
 
 @no_type_check
@@ -304,12 +340,16 @@ async def test_properties_on_the_edges_are_added(db_driver, clear_database):
 
     old_models, old = declare(v1)
     person = await old_models.Person.Create(label="P").save()
-    statement = await old_models.Statement.Create(label="S", about={"type": "Person", "id": person.id}).save()
+    statement = await old_models.Statement.Create(
+        label="S", about={"type": "Person", "id": person.id}
+    ).save()
     new_models, new = declare(v2)
 
     with pytest.raises(PanglossMigrationAnswerNeeded, match="level"):
         await migrate(old, new)
-    await migrate(old, new, answer=with_answers(AlterEdgeModel={"defaults": {"level": 3}}))
+    await migrate(
+        old, new, answer=with_answers(AlterEdgeModel={"defaults": {"level": 3}})
+    )
 
     read = await new_models.Statement.get(id=statement.id)
     assert read.about.edge_properties.level == 3
@@ -318,7 +358,9 @@ async def test_properties_on_the_edges_are_added(db_driver, clear_database):
 
 
 @no_type_check
-async def test_narrowing_a_parent_field_writes_the_edges_of_the_parent(db_driver, clear_database):
+async def test_narrowing_a_parent_field_writes_the_edges_of_the_parent(
+    db_driver, clear_database
+):
     def v1():
         class Person(Entity):
             pass
@@ -342,7 +384,9 @@ async def test_narrowing_a_parent_field_writes_the_edges_of_the_parent(db_driver
             carried_out_by: Annotated[
                 Person,
                 RelationConfig(
-                    subclasses_parent_fields=[FieldSubclassing("involves", field_on_model=Statement)]
+                    subclasses_parent_fields=[
+                        FieldSubclassing("involves", field_on_model=Statement)
+                    ]
                 ),
             ]
 
@@ -361,8 +405,14 @@ async def test_narrowing_a_parent_field_writes_the_edges_of_the_parent(db_driver
         "MATCH (:Action)-[e]->(:Person) RETURN type(e) AS t ORDER BY t",
     )
     assert [row["t"] for row in types] == ["carried_out_by", "involves"]
-    reverse = run(db_driver, "MATCH (:Person)-[e]->(:Action) WHERE e.reverse RETURN type(e) AS t ORDER BY t")
-    assert [row["t"] for row in reverse] == ["carried_out_by_reverse", "involves_reverse"]
+    reverse = run(
+        db_driver,
+        "MATCH (:Person)-[e]->(:Action) WHERE e.reverse RETURN type(e) AS t ORDER BY t",
+    )
+    assert [row["t"] for row in reverse] == [
+        "carried_out_by_reverse",
+        "involves_reverse",
+    ]
     # (as the new models read it: under the narrower name)
     assert (await new_models.Action.get(id=action.id)).carried_out_by.id == person.id
 
@@ -396,7 +446,9 @@ def person_models(wrapped: bool):
                     IdentifiedAs[Person],
                     RelationConfig(
                         reverse_name="carried_out",
-                        subclasses_parent_fields=[FieldSubclassing("person", field_on_model=Statement)],
+                        subclasses_parent_fields=[
+                            FieldSubclassing("person", field_on_model=Statement)
+                        ],
                     ),
                 ]
 
@@ -410,7 +462,9 @@ def person_models(wrapped: bool):
                     Person,
                     RelationConfig(
                         reverse_name="carried_out",
-                        subclasses_parent_fields=[FieldSubclassing("person", field_on_model=Statement)],
+                        subclasses_parent_fields=[
+                            FieldSubclassing("person", field_on_model=Statement)
+                        ],
                     ),
                 ]
 
@@ -424,7 +478,11 @@ def person_models(wrapped: bool):
 
 def person_payload(person, wrapped: bool, certainty=3):
     reference = {"type": "Person", "id": person.id}
-    return {"type": "IdentifiedAs", "certainty": certainty, "target": [reference]} if wrapped else reference
+    return (
+        {"type": "IdentifiedAs", "certainty": certainty, "target": [reference]}
+        if wrapped
+        else reference
+    )
 
 
 @no_type_check
@@ -434,11 +492,17 @@ async def test_a_relation_is_wrapped_in_a_reified_relation(db_driver, clear_data
     wherever it is. The result is what the new models would have written."""
     old_models, old = declare(person_models(wrapped=False))
     person = await old_models.Person.Create(label="Ann").save()
-    plain = await old_models.Statement.Create(label="Plain", person=person_payload(person, False)).save()
+    plain = await old_models.Statement.Create(
+        label="Plain", person=person_payload(person, False)
+    ).save()
     factoid = await old_models.Factoid.Create(
         label="F",
         statements=[
-            {"type": "Statement", "label": "Nested", "person": person_payload(person, False)},
+            {
+                "type": "Statement",
+                "label": "Nested",
+                "person": person_payload(person, False),
+            },
             {
                 "type": "Action",
                 "label": "Narrowed",
@@ -449,7 +513,9 @@ async def test_a_relation_is_wrapped_in_a_reified_relation(db_driver, clear_data
     ).save()
 
     new_models, new = declare(person_models(wrapped=True))
-    await migrate(old, new, answer=with_answers(WrapRelation={"defaults": {"certainty": 5}}))
+    await migrate(
+        old, new, answer=with_answers(WrapRelation={"defaults": {"certainty": 5}})
+    )
 
     # a statement that is a head
     head = await new_models.Statement.get(id=plain.id)
@@ -464,18 +530,27 @@ async def test_a_relation_is_wrapped_in_a_reified_relation(db_driver, clear_data
     assert by_label["Narrowed"].carried_out_by.certainty == 5
 
     # the person, read from the other end, through the relation
-    entity = await new_models.Person.get(id=person.id)
-    wrappers = run(db_driver, "MATCH (r:IdentifiedAs) RETURN r.head_node_id AS head, r.head_node_type AS type, r.certainty AS c")
+    await new_models.Person.get(id=person.id)
+    wrappers = run(
+        db_driver,
+        "MATCH (r:IdentifiedAs) RETURN r.head_node_id AS head, r.head_node_type AS type, r.certainty AS c",
+    )
     assert len(wrappers) == 3
     assert {row["c"] for row in wrappers} == {5}
     assert {row["type"] for row in wrappers} == {"Statement", "Factoid"}
 
     # it is what the new models write: the same nodes and the same edges
-    native_plain = await new_models.Statement.Create(label="Plain", person=person_payload(person, True, 5)).save()
+    native_plain = await new_models.Statement.Create(
+        label="Plain", person=person_payload(person, True, 5)
+    ).save()
     native_factoid = await new_models.Factoid.Create(
         label="F",
         statements=[
-            {"type": "Statement", "label": "Nested", "person": person_payload(person, True, 5)},
+            {
+                "type": "Statement",
+                "label": "Nested",
+                "person": person_payload(person, True, 5),
+            },
             {
                 "type": "Action",
                 "label": "Narrowed",
@@ -489,10 +564,14 @@ async def test_a_relation_is_wrapped_in_a_reified_relation(db_driver, clear_data
 
 
 @no_type_check
-async def test_wrapping_is_repeatable_and_needs_the_values_of_the_wrapper(db_driver, clear_database):
+async def test_wrapping_is_repeatable_and_needs_the_values_of_the_wrapper(
+    db_driver, clear_database
+):
     old_models, old = declare(person_models(wrapped=False))
     person = await old_models.Person.Create(label="Ann").save()
-    await old_models.Statement.Create(label="S", person=person_payload(person, False)).save()
+    await old_models.Statement.Create(
+        label="S", person=person_payload(person, False)
+    ).save()
     new_models, new = declare(person_models(wrapped=True))
 
     with pytest.raises(PanglossMigrationAnswerNeeded, match="certainty"):
@@ -510,7 +589,9 @@ async def test_wrapping_is_repeatable_and_needs_the_values_of_the_wrapper(db_dri
 async def test_a_wrapped_relation_is_unwrapped(db_driver, clear_database):
     old_models, old = declare(person_models(wrapped=True))
     person = await old_models.Person.Create(label="Ann").save()
-    statement = await old_models.Statement.Create(label="S", person=person_payload(person, True)).save()
+    statement = await old_models.Statement.Create(
+        label="S", person=person_payload(person, True)
+    ).save()
     new_models, new = declare(person_models(wrapped=False))
 
     await migrate(old, new)
@@ -518,8 +599,12 @@ async def test_a_wrapped_relation_is_unwrapped(db_driver, clear_database):
     assert run(db_driver, "MATCH (r:IdentifiedAs) RETURN count(r) AS n") == [{"n": 0}]
     read = await new_models.Statement.get(id=statement.id)
     assert read.person.id == person.id
-    assert [s.label for s in (await new_models.Person.get(id=person.id)).person_reverse] == ["S"]
-    native = await new_models.Statement.Create(label="S", person=person_payload(person, False)).save()
+    assert [
+        s.label for s in (await new_models.Person.get(id=person.id)).person_reverse
+    ] == ["S"]
+    native = await new_models.Statement.Create(
+        label="S", person=person_payload(person, False)
+    ).save()
     assert signature(db_driver, statement.id) == signature(db_driver, native.id)
 
 
@@ -579,10 +664,14 @@ async def test_a_renamed_model(db_driver, clear_database):
 
     old_models, old = declare(v1)
     human = await old_models.Human.Create(label="Ann", name="Ann").save()
-    statement = await old_models.Statement.Create(label="S", about={"type": "Human", "id": human.id}).save()
+    statement = await old_models.Statement.Create(
+        label="S", about={"type": "Human", "id": human.id}
+    ).save()
     new_models, new = declare(v2)
 
-    await migrate(old, new, confirmed=[PossibleRename(what="model", old="Human", new="Person")])
+    await migrate(
+        old, new, confirmed=[PossibleRename(what="model", old="Human", new="Person")]
+    )
 
     person = await new_models.Person.get(id=human.id)
     assert person.type == "Person"
@@ -591,7 +680,9 @@ async def test_a_renamed_model(db_driver, clear_database):
 
 
 @no_type_check
-async def test_a_deleted_model_takes_its_nodes_and_their_records(db_driver, clear_database):
+async def test_a_deleted_model_takes_its_nodes_and_their_records(
+    db_driver, clear_database
+):
     def v1():
         class Place(Entity):
             pass
@@ -631,11 +722,16 @@ def contexts(db_driver, head_id) -> list[str]:
         """,
         id=str(head_id),
     )
-    return sorted(re.sub(r'"id": "[^"]+"', '"id": "…"', json.dumps(row, sort_keys=True)) for row in rows)
+    return sorted(
+        re.sub(r'"id": "[^"]+"', '"id": "…"', json.dumps(row, sort_keys=True))
+        for row in rows
+    )
 
 
 @no_type_check
-async def test_a_wrapper_is_in_the_semantic_space_of_what_it_is_on(db_driver, clear_database):
+async def test_a_wrapper_is_in_the_semantic_space_of_what_it_is_on(
+    db_driver, clear_database
+):
     """The context of the new node is what the models give it: inside a semantic space, and
     the statement that holds it is a part of the context"""
     from pangloss_models.model_bases.semantic_space import SemanticSpace
@@ -674,16 +770,24 @@ async def test_a_wrapper_is_in_the_semantic_space_of_what_it_is_on(db_driver, cl
             {"type": "Statement", "label": "Outside", "person": reference},
             {
                 "type": "Negative",
-                "contents": [{"type": "Statement", "label": "Inside", "person": reference}],
+                "contents": [
+                    {"type": "Statement", "label": "Inside", "person": reference}
+                ],
             },
         ]
 
     old_models, old = declare(models(wrapped=False))
     person = await old_models.Person.Create(label="Ann").save()
-    factoid = await old_models.Factoid.Create(label="F", statements=statements(person, False)).save()
+    factoid = await old_models.Factoid.Create(
+        label="F", statements=statements(person, False)
+    ).save()
     new_models, new = declare(models(wrapped=True))
-    await migrate(old, new, answer=with_answers(WrapRelation={"defaults": {"certainty": 5}}))
-    native = await new_models.Factoid.Create(label="F", statements=statements(person, True)).save()
+    await migrate(
+        old, new, answer=with_answers(WrapRelation={"defaults": {"certainty": 5}})
+    )
+    native = await new_models.Factoid.Create(
+        label="F", statements=statements(person, True)
+    ).save()
 
     migrated, written = contexts(db_driver, factoid.id), contexts(db_driver, native.id)
     assert migrated == written

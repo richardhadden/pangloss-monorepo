@@ -54,6 +54,7 @@ from pangloss_models.model_bases.reified_relation import (
 from pangloss_models.model_bases.semantic_space import SemanticSpace
 from pangloss_models.model_bases.trait import NonHeritableTrait, Trait
 from pangloss_models.utils import (
+    check_enum_values_in,
     extract_validators,
     flatten,
     get_all_parent_classes,
@@ -63,7 +64,6 @@ from pangloss_models.utils import (
     get_relation_config,
     is_embedded,
     is_list_of_embedded_or_annotated_value,
-    check_enum_values_in,
     is_list_of_literal,
     is_list_relatable,
     is_literal,
@@ -73,7 +73,6 @@ from pangloss_models.utils import (
     is_via_edge,
     model_is_trait,
 )
-
 
 # The names of fields that the models made from a declared model have for themselves.
 # (`label` is not here: a model may say `label: str` for itself, and the model made from it
@@ -159,9 +158,6 @@ def build_relation_options(
 
     if is_via_edge(annotation):
         annotation, edge_model = get_model_and_edge_type(annotation)
-    else:
-        annotation = annotation
-        edge_model = edge_model
 
     origin = get_origin(annotation)
 
@@ -326,7 +322,9 @@ def build_relatable_field_definition(
     elif isinstance(annotation, TypeVar):
         wrapper = None
         type_options = {
-            RelationToTypeVar(annotated_type=annotation, type_var_name=annotation.__name__)
+            RelationToTypeVar(
+                annotated_type=annotation, type_var_name=annotation.__name__
+            )
         }
 
     elif is_list_relatable(annotation):
@@ -334,7 +332,7 @@ def build_relatable_field_definition(
         wrapper = list
         inner = get_args(annotation)[0]
 
-        if is_parameterized_generic(inner) and isclass((origin := get_origin(inner))):
+        if is_parameterized_generic(inner) and isclass(origin := get_origin(inner)):
             model._depends_on_classes.add(origin)
         elif isclass(inner):
             model._depends_on_classes.add(inner)
@@ -344,7 +342,9 @@ def build_relatable_field_definition(
     else:
         wrapper = None
 
-        if is_parameterized_generic(annotation) and isclass((origin := get_origin(annotation))):
+        if is_parameterized_generic(annotation) and isclass(
+            origin := get_origin(annotation)
+        ):
             model._depends_on_classes.add(origin)
             model._depends_on_classes.update(get_args(annotation))
         else:
@@ -360,7 +360,9 @@ def build_relatable_field_definition(
         subclasses_parent_fields=set(
             subclasses_parent_fields
             if subclasses_parent_fields is not None
-            else relation_config.subclasses_parent_fields if relation_config else ()
+            else relation_config.subclasses_parent_fields
+            if relation_config
+            else ()
         ),
         reverse_name=(
             relation_config.reverse_name
@@ -369,7 +371,9 @@ def build_relatable_field_definition(
         ),
         wrapper=wrapper,
         db_field=is_db_field,
-        bind_to_child_field=relation_config.bind_to_child_field if relation_config else [],
+        bind_to_child_field=relation_config.bind_to_child_field
+        if relation_config
+        else [],
         validators=extract_validators(field_info),
         description=extract_field_description(field_info),
     )
@@ -399,9 +403,7 @@ def build_embedded_field_definition(
     return EmbeddedFieldDefinition(
         field_name=field_name,
         field_on_model=model,
-        annotated_type=cast(
-            type[Embedded] | type[Embedded | Embedded], field_info.annotation
-        ),
+        annotated_type=cast(type[Embedded], field_info.annotation),
         type_options=set(
             EmbeddedOption(annotated_type=option) for option in field_options
         ),
@@ -423,11 +425,17 @@ def get_field_origin_model_and_definition(
     for parent_class in get_all_parent_classes(model):
         # (`Fulfils[X]` is a parent too, but it is not a model: what it fulfils is added below)
         if field_name in getattr(parent_class, "model_fields", {}):
-            parents_with_field.append((parent_class, parent_class._meta.fields[field_name]))
+            parents_with_field.append(
+                (parent_class, parent_class._meta.fields[field_name])
+            )
 
-    for fulfilled_class in sorted(get_fulfilled_types(model), key=lambda c: c.__qualname__):
+    for fulfilled_class in sorted(
+        get_fulfilled_types(model), key=lambda c: c.__qualname__
+    ):
         if field_name in fulfilled_class.model_fields:
-            parents_with_field.append((fulfilled_class, fulfilled_class._meta.fields[field_name]))
+            parents_with_field.append(
+                (fulfilled_class, fulfilled_class._meta.fields[field_name])
+            )
 
     return parents_with_field
 
@@ -451,7 +459,9 @@ def recursively_add_field_subclassings(
             )
 
 
-def declaring_class(model: type[_DeclaredClass], field_name: str, config: RelationConfig):
+def declaring_class(
+    model: type[_DeclaredClass], field_name: str, config: RelationConfig
+):
     """The most basic class in `model`'s MRO that has this field with this relation config: the class
     that wrote the declaration, which its names are to be resolved against."""
     for cls in reversed(model.mro()):
@@ -511,7 +521,9 @@ def normalise_and_get_subclassed_fields(
                 else:
                     assert isinstance(field_subclassing, str)
                     origin_classes_and_definitions = (
-                        get_field_origin_model_and_definition(declared_on, field_subclassing)
+                        get_field_origin_model_and_definition(
+                            declared_on, field_subclassing
+                        )
                     )
 
                     if not origin_classes_and_definitions:
@@ -581,7 +593,9 @@ def get_fields_on_model(model: type[_DeclaredClass]):
 
     fulfilled_types = fulfilled_types_in_order(model)
 
-    fulfilled_normalised: dict[type[_DeclaredClass], dict[str, list[FieldSubclassing]]] = {}
+    fulfilled_normalised: dict[
+        type[_DeclaredClass], dict[str, list[FieldSubclassing]]
+    ] = {}
     for fulfilled in fulfilled_types:
         fulfilled_subclassed, fulfilled_normalised[fulfilled] = (
             normalise_and_get_subclassed_fields(fulfilled)
@@ -604,14 +618,17 @@ def get_fields_on_model(model: type[_DeclaredClass]):
         yield (
             field_name,
             having[0].model_fields[field_name],
-            set(FieldFulfilment(field_name=field_name, fulfils_class=f) for f in having),
+            set(
+                FieldFulfilment(field_name=field_name, fulfils_class=f) for f in having
+            ),
             fulfilled_normalised[having[0]].get(field_name),
         )
 
     # its own fields
     for field_name, field_info in model.model_fields.items():
-        if field_name in subclassed_fields or field_is_from_indirect_non_heritable_model(
-            model, field_name
+        if (
+            field_name in subclassed_fields
+            or field_is_from_indirect_non_heritable_model(model, field_name)
         ):
             continue
 
@@ -723,7 +740,10 @@ def is_generic_wrapper(model: type[_DeclaredClass]) -> bool:
 
 
 def define_wrapper_field(
-    model: type[_DeclaredClass], field_name: str, field_info: FieldInfo, is_db_field: bool
+    model: type[_DeclaredClass],
+    field_name: str,
+    field_info: FieldInfo,
+    is_db_field: bool,
 ) -> bool:
     """Define a field of a generic wrapper that is in terms of its type variable. Returns whether it
     was one. (These are in addition to the definition any field gets, below.)"""
@@ -738,7 +758,9 @@ def define_wrapper_field(
             db_field=is_db_field,
             description=extract_field_description(field_info),
         )
-        model._meta.field_definitions.add_field(name=field_name, field_definition=definition)
+        model._meta.field_definitions.add_field(
+            name=field_name, field_definition=definition
+        )
         found = True
     else:
         found = False
@@ -754,7 +776,9 @@ def define_wrapper_field(
             definition = build_relatable_field_definition(
                 field_name, field_info, model, is_db_field=is_db_field
             )
-            model._meta.field_definitions.add_field(name=field_name, field_definition=definition)
+            model._meta.field_definitions.add_field(
+                name=field_name, field_definition=definition
+            )
             found = True
 
     if issubclass(model, (ReifiedRelation, ReifiedRelationDocument)):
@@ -764,7 +788,9 @@ def define_wrapper_field(
             definition = build_relatable_field_definition(
                 field_name, field_info, model, is_db_field=is_db_field
             )
-            model._meta.field_definitions.add_field(name=field_name, field_definition=definition)
+            model._meta.field_definitions.add_field(
+                name=field_name, field_definition=definition
+            )
             found = True
 
     return found
@@ -817,7 +843,9 @@ def define_field(
             field_on_model=model,
             field_name=field_name,
             annotated_type=annotation,
-            validators=[md for md in field_info.metadata if isinstance(md, BaseMetadata)],
+            validators=[
+                md for md in field_info.metadata if isinstance(md, BaseMetadata)
+            ],
             db_field=is_db_field,
             description=extract_field_description(field_info),
         )
@@ -834,7 +862,9 @@ def initialise_field_definitions(model: type[_DeclaredClass]):
     """
     check_model_fields_are_allowed(model)
 
-    for field_name, field_info, field_fulfilment, normalised in get_fields_on_model(model):
+    for field_name, field_info, field_fulfilment, normalised in get_fields_on_model(
+        model
+    ):
         is_db_field = any(
             isclass(md) and issubclass(md, DBField) or isinstance(md, DBField)
             for md in field_info.metadata
@@ -843,7 +873,9 @@ def initialise_field_definitions(model: type[_DeclaredClass]):
         # Fields of the generic wrapper base classes (`target: list[T]`) and of their
         # parametrisations (`Negative[Statement]`) are defined elsewhere (or on the
         # unparametrised subclass), so are never "unsupported".
-        is_wrapper_field = define_wrapper_field(model, field_name, field_info, is_db_field)
+        is_wrapper_field = define_wrapper_field(
+            model, field_name, field_info, is_db_field
+        )
         supported_as_wrapper_field = is_generic_wrapper(model) or is_wrapper_field
 
         if is_list_of_embedded_or_annotated_value(field_info.annotation):
@@ -852,12 +884,16 @@ def initialise_field_definitions(model: type[_DeclaredClass]):
                 "AnnotatedValues are not supported (a field can have only one)"
             )
 
-        definition = define_field(model, field_name, field_info, is_db_field, normalised)
+        definition = define_field(
+            model, field_name, field_info, is_db_field, normalised
+        )
         if definition is not None:
             # (what a class that `Fulfils` another must hold for every field it has from it, of any
             # kind: without them it is not that class)
             definition.field_required_to_fulfil.update(field_fulfilment)
-            model._meta.field_definitions.add_field(name=field_name, field_definition=definition)
+            model._meta.field_definitions.add_field(
+                name=field_name, field_definition=definition
+            )
         elif not supported_as_wrapper_field:
             raise PanglossModelError(
                 f"Unsupported type for field {model.__name__}.{field_name}: "

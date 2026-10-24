@@ -116,7 +116,9 @@ async def test_a_deleted_document_cannot_be_deleted_again_or_updated(
 
 
 @no_type_check
-async def test_a_document_nested_in_another_cannot_be_deleted(db_driver, clear_database):
+async def test_a_document_nested_in_another_cannot_be_deleted(
+    db_driver, clear_database
+):
     class Action(Document):
         pass
 

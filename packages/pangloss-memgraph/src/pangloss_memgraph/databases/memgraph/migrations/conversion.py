@@ -41,7 +41,10 @@ def convert_expression(
         ("str", "bool"): (
             f"CASE toLower({ref}) WHEN 'true' THEN true WHEN 'false' THEN false ELSE null END"
         ),
-        ("str", "decimal"): f"CASE WHEN toFloat({ref}) IS NULL THEN null ELSE {ref} END",
+        (
+            "str",
+            "decimal",
+        ): f"CASE WHEN toFloat({ref}) IS NULL THEN null ELSE {ref} END",
         ("str", "date"): f"date({ref})",
         ("int", "float"): f"toFloat({ref})",
         ("int", "str"): f"toString({ref})",
@@ -89,11 +92,11 @@ def _to_enum(old, new, ref, enums, mapping, params) -> tuple[str, dict]:
         pairs = {str(value): value for value in by_name.values()}
         for old_value, new_name in (mapping or {}).items():
             if new_name not in by_name:
-                raise PanglossMigrationNotSupported(f"{new_name!r} is not a member of {new['enum']}")
+                raise PanglossMigrationNotSupported(
+                    f"{new_name!r} is not a member of {new['enum']}"
+                )
             pairs[str(old_value)] = by_name[new_name]
 
     params["enum_map"] = pairs
-    expression = (
-        f"CASE WHEN toString({ref}) IN keys($enum_map) THEN $enum_map[toString({ref})] ELSE null END"
-    )
+    expression = f"CASE WHEN toString({ref}) IN keys($enum_map) THEN $enum_map[toString({ref})] ELSE null END"
     return expression, params

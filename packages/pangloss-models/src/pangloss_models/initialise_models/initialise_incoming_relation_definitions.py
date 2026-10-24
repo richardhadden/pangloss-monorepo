@@ -50,14 +50,18 @@ def recursive_get_target_of_wrappers(
     return accumulated_targets
 
 
-def entities_reached(relation_field_definition: RelationFieldDefinition) -> list[tuple[type, bool]]:
+def entities_reached(
+    relation_field_definition: RelationFieldDefinition,
+) -> list[tuple[type, bool]]:
     """The entities that a relation field leads to, and whether through a wrapper"""
     reached: list[tuple[type, bool]] = []
     for type_option in relation_field_definition.type_options:
         if isinstance(type_option, RelationToEntity):
             reached.append((type_option.annotated_type, False))
         elif isinstance(type_option, RELATIONS_TO_WRAPPERS):
-            for target in recursive_get_target_of_wrappers(type_option.parameter_type_options, []):
+            for target in recursive_get_target_of_wrappers(
+                type_option.parameter_type_options, []
+            ):
                 reached.append((target, True))
     return reached
 
@@ -77,7 +81,9 @@ def initialise_incoming_relation_definitions(model: type[_DeclaredClass]):
             )
 
     for embedded_field_definition in model._meta.fields.embedded_fields.values():
-        for incoming_def in recurse_embedded_for_incoming(embedded_field_definition, []):
+        for incoming_def in recurse_embedded_for_incoming(
+            embedded_field_definition, []
+        ):
             incoming_def.target._meta.field_definitions.incoming_fields[
                 incoming_def.field_definition.reverse_name
             ].append(
@@ -100,14 +106,20 @@ def recurse_embedded_for_incoming(
     accumulated_targets: list[IncomingRelationTargetDef],
 ):
     for embedded_option in embedded_field_definition.type_options:
-        for relation_field_definition in embedded_option.annotated_type._meta.fields.relation_fields.values():
+        for (
+            relation_field_definition
+        ) in embedded_option.annotated_type._meta.fields.relation_fields.values():
             for target_type, via_wrapper in entities_reached(relation_field_definition):
                 accumulated_targets.append(
-                    IncomingRelationTargetDef(target_type, relation_field_definition, via_wrapper)
+                    IncomingRelationTargetDef(
+                        target_type, relation_field_definition, via_wrapper
+                    )
                 )
 
     for embedded_type_option in embedded_field_definition.type_options:
-        for nested_embedded in embedded_type_option.annotated_type._meta.fields.embedded_fields.values():
+        for (
+            nested_embedded
+        ) in embedded_type_option.annotated_type._meta.fields.embedded_fields.values():
             recurse_embedded_for_incoming(nested_embedded, accumulated_targets)
 
     return accumulated_targets

@@ -2,9 +2,7 @@ from datetime import date, datetime
 from typing import Annotated, Generic
 
 from annotated_types import MaxLen
-from pydantic import BaseModel
 from pangloss_models.meta_kit import WithMeta
-
 from pangloss_models.model_bases.annotated_value import AnnotatedValue
 from pangloss_models.model_bases.base_models import _BaseObject, _DeclaredClass
 from pangloss_models.model_bases.configs import RelationConfig
@@ -39,6 +37,7 @@ from pangloss_models.utils import (
     is_relatable,
     is_union_of_embedded,
 )
+from pydantic import BaseModel
 
 
 def test_is_literal():

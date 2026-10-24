@@ -52,7 +52,11 @@ async def test_a_query_is_run_with_its_parameters(db_driver, clear_database):
     await apply_changes(
         Database.default,
         state,
-        [c.RunCypher(query="MATCH (n:Person) SET n.born = $year", parameters={"year": 1900})],
+        [
+            c.RunCypher(
+                query="MATCH (n:Person) SET n.born = $year", parameters={"year": 1900}
+            )
+        ],
     )
     assert (await made.Person.get(id=saved.id)).born == 1900
 
@@ -64,7 +68,11 @@ async def test_a_query_may_have_a_parameter_called_query(db_driver, clear_databa
     await apply_changes(
         Database.default,
         state,
-        [c.RunCypher(query="MATCH (n:Person) SET n.name = $query", parameters={"query": "Q"})],
+        [
+            c.RunCypher(
+                query="MATCH (n:Person) SET n.name = $query", parameters={"query": "Q"}
+            )
+        ],
     )
     assert (await made.Person.get(id=saved.id)).name == "Q"
 
@@ -99,9 +107,13 @@ async def test_a_function_that_fails_changes_nothing(db_driver, clear_database):
 async def test_a_function_that_is_not_there_is_an_error(db_driver, clear_database):
     _, state = declare(models)
     with pytest.raises(PanglossMigrationError, match="Cannot find"):
-        await apply_changes(Database.default, state, [c.RunPython(function="no_such_module:f")])
+        await apply_changes(
+            Database.default, state, [c.RunPython(function="no_such_module:f")]
+        )
     with pytest.raises(PanglossMigrationError, match="Cannot find"):
-        await apply_changes(Database.default, state, [c.RunPython(function=f"{__name__}:nothing")])
+        await apply_changes(
+            Database.default, state, [c.RunPython(function=f"{__name__}:nothing")]
+        )
 
 
 @no_type_check

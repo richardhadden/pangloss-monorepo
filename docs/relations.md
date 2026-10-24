@@ -65,10 +65,12 @@ Incoming relations (what points at an object) are analysed in `initialise_incomi
 class Statement(Document):
     was_carried_out_by: ViaEdge[Person, Certainty]
 
+
 Statement.Create(
     label="...",
     was_carried_out_by={
-        "type": "Person", "id": some_id,
+        "type": "Person",
+        "id": some_id,
         "edge_properties": {"level": 3},
     },
 )
@@ -83,6 +85,7 @@ Attach options to a relation by wrapping the type in `Annotated`:
 ```python
 from typing import Annotated
 from pangloss_models.model_bases.configs import RelationConfig
+
 
 class Statement(Document):
     person: Annotated[Person, RelationConfig(reverse_name="is_subject_of")]
@@ -104,17 +107,20 @@ Bind a field on the parent to fields on nested children, so the user only enters
 class Action(Document):
     action_when: datetime.date
 
+
 class Statement(Document):
     when: datetime.date
     action: Annotated[
         Action,
-        RelationConfig(bind_to_child_field=[
-            FieldBinding(
-                bound_field="when",
-                child_fields=["action_when"],
-                allowed_type_names=["Action"],
-            )
-        ]),
+        RelationConfig(
+            bind_to_child_field=[
+                FieldBinding(
+                    bound_field="when",
+                    child_fields=["action_when"],
+                    allowed_type_names=["Action"],
+                )
+            ]
+        ),
     ]
 ```
 
@@ -132,11 +138,16 @@ class PersonInPlace(Document):
     located_person: Person
     place: Place
 
+
 class Activity(Document, Fulfils[PersonInPlace]):
-    person_responsible: Annotated[Person, RelationConfig(
-        subclasses_parent_fields=[
-            FieldSubclassing("located_person", field_on_model=PersonInPlace)]
-    )]
+    person_responsible: Annotated[
+        Person,
+        RelationConfig(
+            subclasses_parent_fields=[
+                FieldSubclassing("located_person", field_on_model=PersonInPlace)
+            ]
+        ),
+    ]
 ```
 
 `Activity.Create` gains `place` (inherited from `PersonInPlace`) with `person_responsible` standing in for `located_person`. When saving, `_to_db_model()` tries each fulfilable class and, if the data validates against its `CreateDB`, builds a combined model so the node carries both sets of labels and the extra edges are written.

@@ -4,7 +4,6 @@ from typing import Annotated, get_args, get_origin, no_type_check
 from uuid import UUID, uuid7
 
 from pangloss_models import initialise
-from pangloss_models.model_registry import ModelRegistry
 from pangloss_models.model_bases.base_models import _APIHeadMeta
 from pangloss_models.model_bases.document import Document
 from pangloss_models.model_bases.embedded import Embedded
@@ -13,6 +12,7 @@ from pangloss_models.model_bases.reified_relation import (
     ReifiedRelation,
     ReifiedRelationDocument,
 )
+from pangloss_models.model_registry import ModelRegistry
 
 
 @no_type_check
@@ -140,7 +140,7 @@ def test_incoming_relation_simple():
         == list[Statement.ReferenceView]
     )
 
-    p = Person.HeadView(id=uuid7(), label="A Person", meta=TEST_META)
+    Person.HeadView(id=uuid7(), label="A Person", meta=TEST_META)
 
     p2 = Person.HeadView(
         id=uuid7(),
@@ -289,29 +289,27 @@ def test_head_view_converts_non_list_fields():
     initialise()
 
     factoid = Factoid.HeadView(
-        **{
-            "label": "A Factoid",
-            "meta": {
-                "created_by": "user",
-                "created_when": datetime.now(),
-                "updated_by": "user",
-                "updated_when": datetime.now(),
-            },
-            "id": uuid7(),
-            "statements": [
-                {
-                    "type": "Action",
-                    "label": "An Action",
-                    "id": uuid7(),
-                    "person_carrying_out_action": [
-                        {"type": "Person", "id": uuid7(), "label": "Dude 1"},
-                    ],
-                    "persons_affected_by_action": [
-                        {"type": "Person", "id": uuid7(), "label": "Dude 2"},
-                    ],
-                }
-            ],
-        }
+        label="A Factoid",
+        meta={
+            "created_by": "user",
+            "created_when": datetime.now(),
+            "updated_by": "user",
+            "updated_when": datetime.now(),
+        },
+        id=uuid7(),
+        statements=[
+            {
+                "type": "Action",
+                "label": "An Action",
+                "id": uuid7(),
+                "person_carrying_out_action": [
+                    {"type": "Person", "id": uuid7(), "label": "Dude 1"},
+                ],
+                "persons_affected_by_action": [
+                    {"type": "Person", "id": uuid7(), "label": "Dude 2"},
+                ],
+            }
+        ],
     )
     assert isinstance(factoid.statements, list)
     assert isinstance(
@@ -404,5 +402,7 @@ def test_the_head_view_of_a_document_is_its_view_so_it_needs_no_edit_view():
     ]
     assert len(documents) >= 5
     for document in documents:
-        assert set(document.HeadView.model_fields) == set(document.View.model_fields), document.__name__
+        assert set(document.HeadView.model_fields) == set(document.View.model_fields), (
+            document.__name__
+        )
         assert not hasattr(document, "EditView"), document.__name__

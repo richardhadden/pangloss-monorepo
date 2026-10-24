@@ -2,6 +2,7 @@
 
 from typing import Any
 
+
 def unwrap_single_item_lists(cls: Any, data: Any) -> Any:
     """Single relations and embedded objects come back from the database as lists of
     one: take the item out"""

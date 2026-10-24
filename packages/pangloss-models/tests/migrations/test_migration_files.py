@@ -2,7 +2,6 @@
 
 import importlib
 import sys
-import textwrap
 from typing import no_type_check
 
 import pytest
@@ -18,7 +17,6 @@ from pangloss_models.migrations.files import (
     load,
     migrations_directory,
     next_name,
-    render,
     slug_of,
     write,
 )
@@ -41,7 +39,10 @@ def app(tmp_path, monkeypatch):
 def migration_for(old, new, app="fileapp", name="0001_initial", dependencies=()):
     result = diff(old, new)
     return Migration(
-        app=app, name=name, changes=tuple(result.changes), dependencies=tuple(dependencies)
+        app=app,
+        name=name,
+        changes=tuple(result.changes),
+        dependencies=tuple(dependencies),
     )
 
 
@@ -85,7 +86,9 @@ def test_an_edited_migration_has_another_checksum(app):
 
     migration = migration_for(EMPTY_SNAPSHOT, snapshot_of(declare))
     path = write(migration, migrations_directory(app))
-    path.write_text(path.read_text().replace("'name': 'Person'", "'name': 'Persona'", 1))
+    path.write_text(
+        path.read_text().replace("'name': 'Person'", "'name': 'Persona'", 1)
+    )
     assert load(app, "0001_initial").checksum != migration.checksum
 
 
@@ -96,10 +99,15 @@ def test_an_app_without_migrations_has_none(app):
 
 def test_names():
     assert next_name([], "initial") == "0001_initial"
-    existing = [Migration(app="a", name="0001_initial", changes=()), Migration(app="a", name="0002_x", changes=())]
+    existing = [
+        Migration(app="a", name="0001_initial", changes=()),
+        Migration(app="a", name="0002_x", changes=()),
+    ]
     assert next_name(existing, "more") == "0003_more"
     assert slug_of([], initial=True) == "initial"
-    add = c.AddField(model="Person", name="born", field_kind="literal", needs_value=False)
+    add = c.AddField(
+        model="Person", name="born", field_kind="literal", needs_value=False
+    )
     slug = slug_of([add])
     assert slug.startswith("addfield_person_born")
     assert " " not in slug and len(slug) <= 60
@@ -108,7 +116,9 @@ def test_names():
 @no_type_check
 def test_migrations_are_ordered_by_what_they_depend_on():
     a1 = Migration(app="a", name="0001_initial", changes=())
-    a2 = Migration(app="a", name="0002_x", changes=(), dependencies=(("b", "0001_initial"),))
+    a2 = Migration(
+        app="a", name="0002_x", changes=(), dependencies=(("b", "0001_initial"),)
+    )
     b1 = Migration(app="b", name="0001_initial", changes=())
     graph = MigrationGraph.of([a2, a1, b1])
     order = [str(m) for m in graph.order()]
@@ -119,14 +129,20 @@ def test_migrations_are_ordered_by_what_they_depend_on():
 
 
 def test_a_dependency_that_there_is_not_is_an_error():
-    lost = Migration(app="a", name="0001_initial", changes=(), dependencies=(("b", "0001_initial"),))
+    lost = Migration(
+        app="a", name="0001_initial", changes=(), dependencies=(("b", "0001_initial"),)
+    )
     with pytest.raises(PanglossMigrationError, match="which there is not"):
         MigrationGraph.of([lost])
 
 
 def test_migrations_that_depend_on_each_other_in_a_circle_are_an_error():
-    a = Migration(app="a", name="0001_initial", changes=(), dependencies=(("b", "0001_initial"),))
-    b = Migration(app="b", name="0001_initial", changes=(), dependencies=(("a", "0001_initial"),))
+    a = Migration(
+        app="a", name="0001_initial", changes=(), dependencies=(("b", "0001_initial"),)
+    )
+    b = Migration(
+        app="b", name="0001_initial", changes=(), dependencies=(("a", "0001_initial"),)
+    )
     with pytest.raises(PanglossMigrationError, match="circle"):
         MigrationGraph.of([a, b])
 
@@ -147,7 +163,9 @@ def test_the_state_is_what_the_migrations_come_to_and_who_made_what():
 
     s1, s2 = snapshot_of(one), snapshot_of(two)
     first = migration_for(EMPTY_SNAPSHOT, s1, app="a", name="0001_initial")
-    second = migration_for(s1, s2, app="b", name="0001_initial", dependencies=(("a", "0001_initial"),))
+    second = migration_for(
+        s1, s2, app="b", name="0001_initial", dependencies=(("a", "0001_initial"),)
+    )
     graph = MigrationGraph.of([first, second])
     assert graph.state() == data_view(s2)
     assert graph.state([("a", "0001_initial")]) == data_view(s1)
@@ -155,7 +173,9 @@ def test_the_state_is_what_the_migrations_come_to_and_who_made_what():
 
 
 def test_a_migration_may_say_its_batch_size(app):
-    migration = Migration(app="fileapp", name="0001_initial", changes=(), batch_size=250)
+    migration = Migration(
+        app="fileapp", name="0001_initial", changes=(), batch_size=250
+    )
     path = write(migration, migrations_directory(app))
     assert "batch_size = 250" in path.read_text()
     assert load(app, "0001_initial").batch_size == 250

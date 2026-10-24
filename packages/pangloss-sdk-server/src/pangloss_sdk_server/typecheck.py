@@ -47,7 +47,9 @@ def usage_source(models: Iterable[type], mode: str) -> str:
     ]
     imports: dict[str, set[str]] = {}
     for model in models:
-        imports.setdefault(model.__module__, set()).add(model.__qualname__.split(".")[0])
+        imports.setdefault(model.__module__, set()).add(
+            model.__qualname__.split(".")[0]
+        )
     for module, names in sorted(imports.items()):
         lines.append(f"from {module} import {', '.join(sorted(names))}")
     lines.append("")
@@ -67,7 +69,9 @@ def usage_source(models: Iterable[type], mode: str) -> str:
             f"    assert_type({wait}u.save(detail=True, expected_version=3), {name}.HeadView)",
         ]
         if entity:
-            lines.append(f"    assert_type({wait}{name}.get_for_edit(i), {name}.EditView | None)")
+            lines.append(
+                f"    assert_type({wait}{name}.get_for_edit(i), {name}.EditView | None)"
+            )
         lines.append("")
     return "\n".join(lines)
 
@@ -94,8 +98,12 @@ def run_ty(
         return [f"ty did not finish in {TIMEOUT} seconds"]
     if result.returncode == 0:
         return []
-    output = [line for line in (result.stdout + result.stderr).splitlines() if line.strip()]
-    return output[:15] + ([f"... and {len(output) - 15} more"] if len(output) > 15 else [])
+    output = [
+        line for line in (result.stdout + result.stderr).splitlines() if line.strip()
+    ]
+    return output[:15] + (
+        [f"... and {len(output) - 15} more"] if len(output) > 15 else []
+    )
 
 
 def check_types(
@@ -115,7 +123,9 @@ def check_types(
             )
         return "the stubs were not type-checked: `ty` is not installed (SDK_TYPECHECK = 'auto')"
 
-    operations = [m for m in models if has_operations(m) and "<locals>" not in m.__qualname__]
+    operations = [
+        m for m in models if has_operations(m) and "<locals>" not in m.__qualname__
+    ]
     sync_directory = package / module / SYNC_STUBS
     problems: list[str] = []
     for mode in ("async", "sync"):
@@ -132,7 +142,8 @@ def check_types(
                 search = [sync_directory, package]
                 stubs = list(sync_directory.rglob("*.pyi"))
             problems += [
-                f"[{mode}] {line}" for line in run_ty(ty, directory, search, [usage, *stubs])
+                f"[{mode}] {line}"
+                for line in run_ty(ty, directory, search, [usage, *stubs])
             ]
     if problems:
         raise SdkBuildError("The stubs of the SDK do not type-check", problems)

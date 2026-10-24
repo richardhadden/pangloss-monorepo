@@ -54,7 +54,9 @@ def choose_runtime(
     environment = os.environ if environment is None else environment
     name = requested or environment.get(RUNTIME_ENVIRONMENT_VARIABLE) or DEFAULT_RUNTIME
     if name not in RUNTIMES:
-        raise InterfaceRuntimeError(f"Unknown runtime '{name}': use one of {', '.join(RUNTIMES)}")
+        raise InterfaceRuntimeError(
+            f"Unknown runtime '{name}': use one of {', '.join(RUNTIMES)}"
+        )
     return name  # type: ignore[return-value]
 
 
@@ -73,7 +75,9 @@ def find_runtime(
         return Runtime("node", node, npm)
     bun = shutil.which("bun")
     if not bun:
-        raise InterfaceRuntimeError("Bun was asked for, but is not installed (https://bun.sh)")
+        raise InterfaceRuntimeError(
+            "Bun was asked for, but is not installed (https://bun.sh)"
+        )
     return Runtime("bun", bun, bun)
 
 

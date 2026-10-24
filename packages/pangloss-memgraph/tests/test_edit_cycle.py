@@ -15,10 +15,12 @@ import pytest
 from pangloss_models import initialise
 from pangloss_models.model_registry import ModelRegistry
 
-sys.path.insert(0, str(pathlib.Path(__file__).parents[2] / "pangloss-models/tests/support"))
+sys.path.insert(
+    0, str(pathlib.Path(__file__).parents[2] / "pangloss-models/tests/support")
+)
 
-import kitchen_sink  # noqa: E402
-import sample_data  # noqa: E402
+import kitchen_sink
+import sample_data
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -27,7 +29,11 @@ def with_real_ids(value, ids: dict):
     """The sample with the ids of the entities it refers to replaced by those of entities that were made"""
     if isinstance(value, dict):
         return {
-            k: (ids.get(v, v) if k == "id" and not isinstance(v, (dict, list)) else with_real_ids(v, ids))
+            k: (
+                ids.get(v, v)
+                if k == "id" and not isinstance(v, (dict, list))
+                else with_real_ids(v, ids)
+            )
             for k, v in value.items()
         }
     if isinstance(value, list):
@@ -71,14 +77,24 @@ def differences(a, b, path="") -> list[str]:
     if isinstance(a, dict) and isinstance(b, dict):
         out = []
         for key in sorted(set(a) | set(b)):
-            out.extend(differences(a.get(key, "<absent>"), b.get(key, "<absent>"), f"{path}.{key}"))
+            out.extend(
+                differences(
+                    a.get(key, "<absent>"), b.get(key, "<absent>"), f"{path}.{key}"
+                )
+            )
         return out
     if isinstance(a, list) and isinstance(b, list) and len(a) == len(b):
-        return [d for i, (x, y) in enumerate(zip(a, b)) for d in differences(x, y, f"{path}[{i}]")]
+        return [
+            d
+            for i, (x, y) in enumerate(zip(a, b))
+            for d in differences(x, y, f"{path}[{i}]")
+        ]
     return [] if a == b else [f"{path}: {str(a)[:40]} -> {str(b)[:40]}"]
 
 
-async def test_every_kind_of_model_is_written_read_edited_and_saved_again(clear_database):
+async def test_every_kind_of_model_is_written_read_edited_and_saved_again(
+    clear_database,
+):
     kitchen_sink.declare()
     initialise()
     heads = {
@@ -90,7 +106,9 @@ async def test_every_kind_of_model_is_written_read_edited_and_saved_again(clear_
     failures: list[str] = []
 
     async def read(model, identifier):
-        edit = model.__metatype__ == "Entity"  # (the edit route gives an entity's EditView, a document's HeadView)
+        edit = (
+            model.__metatype__ == "Entity"
+        )  # (the edit route gives an entity's EditView, a document's HeadView)
         return await (model.get_for_edit(identifier) if edit else model.get(identifier))
 
     for model in samplable:
@@ -102,9 +120,14 @@ async def test_every_kind_of_model_is_written_read_edited_and_saved_again(clear_
                 payload = sampler.head(model)
                 payload.pop("type")
                 ids = {}
-                for entity_name, fake in sampler.references:  # (the entities it refers to must exist)
+                for (
+                    entity_name,
+                    fake,
+                ) in sampler.references:  # (the entities it refers to must exist)
                     entity = heads[entity_name]
-                    made = await entity.Create(**sample_data.sample_payload(entity)).save()
+                    made = await entity.Create(
+                        **sample_data.sample_payload(entity)
+                    ).save()
                     ids[fake] = made.id
                 payload = with_real_ids(payload, ids)
 
@@ -126,8 +149,12 @@ async def test_every_kind_of_model_is_written_read_edited_and_saved_again(clear_
                 step = "reading again"
                 second = without((await read(model, saved.id)).model_dump())
                 changed = differences(dumped, second)
-                assert not changed, f"changed by saving what was read, unchanged: {changed[:4]}"
+                assert not changed, (
+                    f"changed by saving what was read, unchanged: {changed[:4]}"
+                )
             except Exception as error:
-                failures.append(f"{label} while {step}: {type(error).__name__}: {str(error).replace(chr(10), ' ')[:260]}")
+                failures.append(
+                    f"{label} while {step}: {type(error).__name__}: {str(error).replace(chr(10), ' ')[:260]}"
+                )
 
     assert not failures, "\n" + "\n".join(failures)

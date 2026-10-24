@@ -24,9 +24,9 @@ async def make_user(username="john", email="john@example.com", **kwargs):
 
 
 def stored(db_driver, username) -> dict:
-    return run(
-        db_driver, "MATCH (u:PGUser {username: $u}) RETURN u", u=username
-    )[0]["u"]
+    return run(db_driver, "MATCH (u:PGUser {username: $u}) RETURN u", u=username)[0][
+        "u"
+    ]
 
 
 async def test_create_and_get_a_user(db_driver, clear_database):
@@ -78,7 +78,9 @@ async def test_authenticate(db_driver, clear_database):
 async def test_a_user_with_no_password_cannot_log_in(db_driver, clear_database):
     # (as the default user, made by hand, has none)
     assert await service.authenticate("pangloss_default_user", "") is None
-    assert await service.authenticate("pangloss_default_user", "anything at all") is None
+    assert (
+        await service.authenticate("pangloss_default_user", "anything at all") is None
+    )
     user = await service.get_user("pangloss_default_user")
     assert user is not None and user.email is None
 
@@ -167,7 +169,8 @@ async def test_a_disabled_user_cannot_write(db_driver, clear_database):
 
     # What the user wrote while enabled is still there
     labels = {
-        r["label"] for r in run(db_driver, "MATCH (s:Statement) RETURN s.label AS label")
+        r["label"]
+        for r in run(db_driver, "MATCH (s:Statement) RETURN s.label AS label")
     }
     assert labels == {"One", "Three"}
 
@@ -214,7 +217,9 @@ async def test_personal_access_tokens_are_kept_hashed_and_found_by_the_token(
     await make_user()
     await make_user("jane", "jane@example.com")
 
-    info, token = await service.create_access_token("john", "scripts", "read", expires_days=7)
+    info, token = await service.create_access_token(
+        "john", "scripts", "read", expires_days=7
+    )
     assert token.startswith("pgl_")
     assert info.scope == "read" and info.expires_when is not None
 

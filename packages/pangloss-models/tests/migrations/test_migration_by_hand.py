@@ -32,9 +32,13 @@ def snapshot():
 
 def test_changes_by_hand_are_data_that_can_be_written_and_read():
     changes = [
-        c.RunCypher(query="MATCH (n:Person) SET n.x = $x", parameters={"x": 1}, note="set x"),
+        c.RunCypher(
+            query="MATCH (n:Person) SET n.x = $x", parameters={"x": 1}, note="set x"
+        ),
         c.RunPython(function=a_function, lossy=True, affects=["Person"]),
-        c.StateOnly(changes=(c.AlterModelKind(model="Person", old="entity", new="document"),)),
+        c.StateOnly(
+            changes=(c.AlterModelKind(model="Person", old="entity", new="document"),)
+        ),
     ]
     again = [c.change_from_dict(change.to_dict()) for change in changes]
     assert again == changes
@@ -58,7 +62,9 @@ def test_a_change_by_hand_loses_data_when_it_says_so():
 
 def test_only_state_only_changes_the_models():
     old = data_view(snapshot())
-    assert replay(old, [c.RunCypher(query="RETURN 1"), c.RunPython(function="a:b")]) == old
+    assert (
+        replay(old, [c.RunCypher(query="RETURN 1"), c.RunPython(function="a:b")]) == old
+    )
 
     rename = c.RenameModel(old="Place", new="Location")
     after = replay(old, [c.StateOnly(changes=(rename,))])
@@ -68,19 +74,31 @@ def test_only_state_only_changes_the_models():
 
 def test_what_is_read_afterwards_is_what_the_change_says():
     models = snapshot()
-    assert affected_models([c.RunCypher(query="RETURN 1")], models) == {"Person", "Place"}
-    assert affected_models([c.RunCypher(query="RETURN 1", affects=["Place"])], models) == {"Place"}
+    assert affected_models([c.RunCypher(query="RETURN 1")], models) == {
+        "Person",
+        "Place",
+    }
+    assert affected_models(
+        [c.RunCypher(query="RETURN 1", affects=["Place"])], models
+    ) == {"Place"}
     assert affected_models([c.RunPython(function="a:b", affects=[])], models) == set()
     # (a StateOnly is what the changes in it are)
-    renamed = c.StateOnly(changes=(c.AlterModelLabels(model="Person", added=["Extra"]),))
+    renamed = c.StateOnly(
+        changes=(c.AlterModelLabels(model="Person", added=["Extra"]),)
+    )
     assert affected_models([renamed], models) == {"Person"}
-    assert affected_models([c.StateOnly(changes=(c.CreateEnum(enum="E"),))], models) == set()
+    assert (
+        affected_models([c.StateOnly(changes=(c.CreateEnum(enum="E"),))], models)
+        == set()
+    )
 
 
 def test_a_migration_that_is_only_by_hand_is_fine_for_the_graph():
     from pangloss_models.migrations.files import Migration, MigrationGraph
 
     first = Migration(app="x", name="0001_initial", changes=())
-    second = Migration(app="x", name="0002_by_hand", changes=(c.RunCypher(query="RETURN 1"),))
+    second = Migration(
+        app="x", name="0002_by_hand", changes=(c.RunCypher(query="RETURN 1"),)
+    )
     graph = MigrationGraph.of([first, second])
     assert graph.state() == data_view(EMPTY_SNAPSHOT)

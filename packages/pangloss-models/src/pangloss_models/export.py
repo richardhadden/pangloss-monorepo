@@ -86,7 +86,12 @@ class Exporter:
             return {"type": "literal", "values": [self.plain(v) for v in get_args(tp)]}
         if origin in (list, set, frozenset, tuple):
             args = get_args(tp)
-            return {"type": "list", "item": self.describe_type(args[0]) if args else {"type": "unknown", "repr": "?"}}
+            return {
+                "type": "list",
+                "item": self.describe_type(args[0])
+                if args
+                else {"type": "unknown", "repr": "?"},
+            }
         if origin is typing.Union or origin is UnionType:
             options = [a for a in get_args(tp) if a is not type(None)]
             if len(options) == 1:
@@ -169,8 +174,12 @@ class Exporter:
         elif isinstance(definition, LiteralTypeVarFieldDefinition):
             entry |= {"kind": "typeVar", "typeVar": definition.type_var_name}
         elif isinstance(definition, AnnotatedValueFieldDefinition):
-            origin = definition.annotated_type.__pydantic_generic_metadata__.get("origin")
-            args = definition.annotated_type.__pydantic_generic_metadata__.get("args", ())
+            origin = definition.annotated_type.__pydantic_generic_metadata__.get(
+                "origin"
+            )
+            args = definition.annotated_type.__pydantic_generic_metadata__.get(
+                "args", ()
+            )
             entry |= {
                 "kind": "annotatedValue",
                 "model": (origin or definition.annotated_type).__name__,
@@ -182,7 +191,9 @@ class Exporter:
                 "model": definition.annotated_type.__name__
                 if isinstance(definition.annotated_type, type)
                 else None,
-                "types": sorted(o.annotated_type.__name__ for o in definition.type_options),
+                "types": sorted(
+                    o.annotated_type.__name__ for o in definition.type_options
+                ),
             }
         elif isinstance(definition, RelationFieldDefinition):
             entry |= {
@@ -210,17 +221,31 @@ class Exporter:
 
     def options(self, options: Any) -> list[dict[str, Any]]:
         exported = [self.option(o) for o in options]
-        return sorted(exported, key=lambda o: (o["kind"], str(o.get("type") or o.get("name"))))
+        return sorted(
+            exported, key=lambda o: (o["kind"], str(o.get("type") or o.get("name")))
+        )
 
     def option(self, option: RelationOption) -> dict[str, Any]:
         edge_model = option.edge_model.__name__ if option.edge_model else None
         match option:
             case RelationToDocument():
-                return {"kind": "document", "type": option.annotated_type.__name__, "edgeModel": edge_model}
+                return {
+                    "kind": "document",
+                    "type": option.annotated_type.__name__,
+                    "edgeModel": edge_model,
+                }
             case RelationToEntity():
-                return {"kind": "entity", "type": option.annotated_type.__name__, "edgeModel": edge_model}
+                return {
+                    "kind": "entity",
+                    "type": option.annotated_type.__name__,
+                    "edgeModel": edge_model,
+                }
             case RelationToTypeVar():
-                return {"kind": "typeVar", "name": option.type_var_name, "edgeModel": edge_model}
+                return {
+                    "kind": "typeVar",
+                    "name": option.type_var_name,
+                    "edgeModel": edge_model,
+                }
             case (
                 RelationToSemanticSpace()
                 | RelationToConjunction()
@@ -239,10 +264,17 @@ class Exporter:
                     "edgeModel": edge_model,
                     "params": {
                         name: self.parameter(parameter)
-                        for name, parameter in sorted(option.parameter_type_options.items())
+                        for name, parameter in sorted(
+                            option.parameter_type_options.items()
+                        )
                     },
                 }
-        return {"kind": "unknown", "type": getattr(option.annotated_type, "__name__", repr(option.annotated_type))}
+        return {
+            "kind": "unknown",
+            "type": getattr(
+                option.annotated_type, "__name__", repr(option.annotated_type)
+            ),
+        }
 
     def parameter(self, parameter: ParameterTypeOptions) -> dict[str, Any]:
         return {
@@ -282,12 +314,19 @@ class Exporter:
             "createWithId": bool(getattr(meta, "create_with_id", False)),
             "acceptUrlAsId": bool(getattr(meta, "accept_url_as_id", False)),
             "requireLabel": bool(getattr(meta, "require_label", True)),
-            "useInSemanticSpaceLabel": bool(getattr(meta, "use_in_semantic_space_label", True)),
-            "fields": [self.export_field(n, d) for n, d in meta.field_definitions.fields.items()],
+            "useInSemanticSpaceLabel": bool(
+                getattr(meta, "use_in_semantic_space_label", True)
+            ),
+            "fields": [
+                self.export_field(n, d)
+                for n, d in meta.field_definitions.fields.items()
+            ],
             "incoming": self.incoming(meta.field_definitions.incoming_fields),
         }
 
-    def incoming(self, incoming_fields: dict[str, list[IncomingRelationDefinition]]) -> list[dict[str, Any]]:
+    def incoming(
+        self, incoming_fields: dict[str, list[IncomingRelationDefinition]]
+    ) -> list[dict[str, Any]]:
         return [
             {
                 "name": name,
@@ -320,7 +359,9 @@ def export_models() -> dict[str, Any]:
         # parameters; the model is `Negative`, and the field says what it is used with)
         if (getattr(model, "__pydantic_generic_metadata__", None) or {}).get("origin"):
             continue
-        field_definitions = getattr(getattr(model, "_meta", None), "field_definitions", None)
+        field_definitions = getattr(
+            getattr(model, "_meta", None), "field_definitions", None
+        )
         if field_definitions is None:
             continue
         models[model.__name__] = exporter.export_model(model)

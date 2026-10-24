@@ -96,9 +96,7 @@ CREATE TABLE IF NOT EXISTS blobs (
 ) WITHOUT ROWID;
 """
 
-COLUMNS = (
-    "head_id, seq, version, op, model, at, who, schema_position, content_hash, restored_from"
-)
+COLUMNS = "head_id, seq, version, op, model, at, who, schema_position, content_hash, restored_from"
 
 
 def record_from_row(row: tuple, content: str | None = None) -> HistoryRecord:
@@ -150,7 +148,10 @@ class SqliteStore:
                 if content_hash is not None and record.content is not None:
                     db.execute(
                         "INSERT OR IGNORE INTO blobs VALUES (?, ?)",
-                        (content_hash, self.compressor.compress(record.content.encode())),
+                        (
+                            content_hash,
+                            self.compressor.compress(record.content.encode()),
+                        ),
                     )
                 db.execute(
                     f"INSERT INTO history ({COLUMNS}) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",

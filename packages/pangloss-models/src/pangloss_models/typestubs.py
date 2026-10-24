@@ -126,7 +126,9 @@ class TypeRenderer:
         if origin is typing.Union or origin is types.UnionType:
             # (in a fixed order: the members of a union come from sets, whose order differs
             # from one run to the next, and a stub must not change when nothing did)
-            members = sorted({self._render(a) for a in args}, key=lambda m: (m == "None", m))
+            members = sorted(
+                {self._render(a) for a in args}, key=lambda m: (m == "None", m)
+            )
             return " | ".join(members)
         if origin is not None:
             if not isinstance(origin, type):
@@ -245,7 +247,9 @@ def operations_source(model: type, qualified_name: str, mode: Operations) -> str
 
     define = "async def" if mode == "async" else "def"
     is_entity = issubclass(model, Entity)
-    id_type = "_pg_uuid.UUID | _pg_pydantic.AnyHttpUrl" if is_entity else "_pg_uuid.UUID"
+    id_type = (
+        "_pg_uuid.UUID | _pg_pydantic.AnyHttpUrl" if is_entity else "_pg_uuid.UUID"
+    )
     head = f"{qualified_name}.HeadView"
     lines = [
         "@classmethod",
@@ -395,14 +399,12 @@ class Stubifier:
             result.extend(self.statement(statement, prefix, in_class))
         return result
 
-    def statement(
-        self, node: ast.stmt, prefix: str, in_class: bool
-    ) -> list[ast.stmt]:
+    def statement(self, node: ast.stmt, prefix: str, in_class: bool) -> list[ast.stmt]:
         match node:
             case ast.Import() | ast.ImportFrom():
                 # (a lazy import is imported as usual in a stub)
                 if getattr(node, "is_lazy", 0):
-                    setattr(node, "is_lazy", 0)
+                    setattr(node, "is_lazy", 0)  # noqa: B010
                 return [node]
             case ast.ClassDef():
                 return [self.class_definition(node, prefix)]
@@ -477,9 +479,7 @@ def stub_for_module(
     tree = ast.parse(path.read_text())
 
     renderer = TypeRenderer(module.__name__, names)
-    stubifier = Stubifier(
-        renderer, {m.__qualname__: m for m in models}, operations
-    )
+    stubifier = Stubifier(renderer, {m.__qualname__: m for m in models}, operations)
     stub = stubifier.module(tree)
     code = ast.unparse(ast.fix_missing_locations(stub))
     for placeholder, source in stubifier.insertions.items():

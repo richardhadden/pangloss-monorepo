@@ -44,20 +44,24 @@ def python_of(files: dict[str, bytes]) -> str:
 
 
 def record_line(path: str, content: bytes) -> str:
-    digest = base64.urlsafe_b64encode(hashlib.sha256(content).digest()).rstrip(b"=").decode()
+    digest = (
+        base64.urlsafe_b64encode(hashlib.sha256(content).digest()).rstrip(b"=").decode()
+    )
     return f"{path},sha256={digest},{len(content)}"
 
 
 def wheel_bytes(files: dict[str, bytes], manifest: dict[str, Any]) -> bytes:
-    dist_info = f"{manifest['distribution'].replace('-', '_')}-{manifest['version']}.dist-info"
+    dist_info = (
+        f"{manifest['distribution'].replace('-', '_')}-{manifest['version']}.dist-info"
+    )
     contents = {
         path: content for path, content in files.items() if path not in NOT_IN_WHEEL
     }
     contents[f"{dist_info}/METADATA"] = metadata(manifest, python_of(files)).encode()
     contents[f"{dist_info}/WHEEL"] = (
-        "Wheel-Version: 1.0\nGenerator: pangloss-sdk-server\nRoot-Is-Purelib: true\n"
-        "Tag: py3-none-any\n"
-    ).encode()
+        b"Wheel-Version: 1.0\nGenerator: pangloss-sdk-server\nRoot-Is-Purelib: true\n"
+        b"Tag: py3-none-any\n"
+    )
     record = [record_line(path, content) for path, content in sorted(contents.items())]
     record.append(f"{dist_info}/RECORD,,")
     contents[f"{dist_info}/RECORD"] = ("\n".join(record) + "\n").encode()
@@ -80,7 +84,9 @@ def sdist_bytes(files: dict[str, bytes], manifest: dict[str, Any]) -> bytes:
     ).encode()
 
     tar_buffer = io.BytesIO()
-    with tarfile.open(fileobj=tar_buffer, mode="w", format=tarfile.PAX_FORMAT) as archive:
+    with tarfile.open(
+        fileobj=tar_buffer, mode="w", format=tarfile.PAX_FORMAT
+    ) as archive:
         for path, content in sorted(contents.items()):
             info = tarfile.TarInfo(f"{top}/{path}")
             info.size = len(content)

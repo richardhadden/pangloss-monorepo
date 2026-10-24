@@ -1,6 +1,5 @@
-from typer.testing import CliRunner
-
 from pangloss_cli.main import build_app
+from typer.testing import CliRunner
 
 runner = CliRunner()
 
@@ -64,8 +63,15 @@ def test_create_reports_errors_without_a_traceback(project):
     assert bad_email.exit_code == 1
 
     short = invoke(
-        "users", "create", "--username", "jane", "--email", "jane@example.com",
-        "--password", "short", "--no-admin",
+        "users",
+        "create",
+        "--username",
+        "jane",
+        "--email",
+        "jane@example.com",
+        "--password",
+        "short",
+        "--no-admin",
     )
     assert short.exit_code == 1
     assert "at least 8 characters" in short.output
@@ -97,7 +103,9 @@ def test_unknown_user(project):
 def test_tokens_are_made_listed_and_revoked(project):
     create()
 
-    made = invoke("users", "tokens", "create", "john", "--name", "for scripts", "--scope", "read")
+    made = invoke(
+        "users", "tokens", "create", "john", "--name", "for scripts", "--scope", "read"
+    )
     assert made.exit_code == 0, made.output
     token = next(line for line in made.output.splitlines() if line.startswith("pgl_"))
     token_id = made.output.split("id ")[1].split(":")[0]

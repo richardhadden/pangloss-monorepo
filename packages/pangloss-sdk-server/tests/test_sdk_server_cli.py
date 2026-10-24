@@ -1,9 +1,8 @@
 import pytest
 from pangloss_cli.project import Project, SettingsLocation
 from pangloss_sdk_server.cli import cli
-from typer.testing import CliRunner
-
 from server_support import settings_for, write
+from typer.testing import CliRunner
 
 runner = CliRunner()
 

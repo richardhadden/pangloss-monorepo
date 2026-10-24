@@ -28,7 +28,7 @@ KEEP = "--keep" in sys.argv
 sdk.connect(os.environ.get("PANGLOSS_URL", "http://127.0.0.1:8765"))
 
 # (these are the project's own models, under their own names: the code is the same as on the server)
-from demo_app.models import Factoid, Person, Place, Source  # noqa: E402
+from demo_app.models import Factoid, Person, Place, Source
 
 
 def date(year: int, month: int = 1, day: int = 1, precision: str = "day") -> dict:
@@ -55,7 +55,9 @@ async def main() -> None:
         born=date(748, precision="year"),
         aliases=["Charles the Great"],
     ).save()
-    rome = await Place.Create(label="Rome (SDK demo)", coordinates={"latitude": 41.9, "longitude": 12.5}).save()
+    rome = await Place.Create(
+        label="Rome (SDK demo)", coordinates={"latitude": 41.9, "longitude": 12.5}
+    ).save()
     annales = await Source.Create(
         label="Annales regni Francorum (SDK demo)", written=datetime.date(829, 1, 1)
     ).save()

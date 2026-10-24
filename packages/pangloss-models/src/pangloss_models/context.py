@@ -11,8 +11,9 @@ of the node (so what is added to the context below it is seen by what comes afte
 of a list is given a copy (so that the items do not see each other's).
 """
 
+from collections.abc import Iterable
 from copy import copy, deepcopy
-from typing import Any, Iterable, Protocol
+from typing import Any, Protocol
 
 
 class ContextView(Protocol):
@@ -34,7 +35,9 @@ class ContextView(Protocol):
     def children(self, node: Any) -> Iterable[tuple[Any, bool]]:
         """What the node holds through its relations, each with whether it is one of a list"""
 
-    def assign(self, node: Any, semantic_spaces: list[str], context_labels: list[dict]) -> None:
+    def assign(
+        self, node: Any, semantic_spaces: list[str], context_labels: list[dict]
+    ) -> None:
         """Give the node its semantic spaces and context labels (not called for a space)"""
 
 
@@ -67,6 +70,8 @@ def propagate_context(
 
     for child, many in view.children(node):
         if many:
-            propagate_context(child, copy(semantic_spaces), deepcopy(context_labels), node, view)
+            propagate_context(
+                child, copy(semantic_spaces), deepcopy(context_labels), node, view
+            )
         else:
             propagate_context(child, semantic_spaces, context_labels, node, view)

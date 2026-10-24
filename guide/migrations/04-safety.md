@@ -129,8 +129,8 @@ pangloss migrate --batch-size 5000
 or mark one migration in its file:
 
 ```python
-atomic = False        # batches of 5000
-batch_size = 1000     # or: batches of this many (this implies atomic = False)
+atomic = False  # batches of 5000
+batch_size = 1000  # or: batches of this many (this implies atomic = False)
 ```
 
 (The command line's `--batch-size` wins over the file's.)

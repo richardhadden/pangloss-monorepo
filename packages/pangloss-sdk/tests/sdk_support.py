@@ -58,7 +58,12 @@ class FakeServer:
         access, refresh = f"access-{n}", f"refresh-{n}"
         self.valid_tokens.add(access)
         self.valid_refresh.add(refresh)
-        return {"access_token": access, "refresh_token": refresh, "token_type": "bearer", "expires_in": 1800}
+        return {
+            "access_token": access,
+            "refresh_token": refresh,
+            "token_type": "bearer",
+            "expires_in": 1800,
+        }
 
     def expire_access_tokens(self) -> None:
         self.valid_tokens.clear()
@@ -70,7 +75,9 @@ class FakeServer:
             self.logins += 1
             form = dict(item.split("=") for item in request.content.decode().split("&"))
             if form.get("password") != self.password:
-                return httpx.Response(401, json={"detail": "Incorrect username or password"})
+                return httpx.Response(
+                    401, json={"detail": "Incorrect username or password"}
+                )
             return httpx.Response(200, json=self.issue())
         if path == "/api/users/token/refresh":
             self.refreshes += 1
@@ -79,7 +86,14 @@ class FakeServer:
                 return httpx.Response(401, json={"detail": "Invalid or expired token"})
             access = f"access-r{self.refreshes}"
             self.valid_tokens.add(access)
-            return httpx.Response(200, json={"access_token": access, "token_type": "bearer", "expires_in": 1800})
+            return httpx.Response(
+                200,
+                json={
+                    "access_token": access,
+                    "token_type": "bearer",
+                    "expires_in": 1800,
+                },
+            )
         if path == "/api/users/token/revoke":
             self.revoked.append(json.loads(request.content)["refresh_token"])
             self.valid_refresh.discard(json.loads(request.content)["refresh_token"])
@@ -91,7 +105,10 @@ class FakeServer:
                 return httpx.Response(401, json={"detail": "Not logged in"})
             return httpx.Response(200, json={"username": "ada"})
         header = request.headers.get("authorization")
-        if header is not None and header.removeprefix("Bearer ") not in self.valid_tokens:
+        if (
+            header is not None
+            and header.removeprefix("Bearer ") not in self.valid_tokens
+        ):
             return httpx.Response(401, json={"detail": "Invalid or expired token"})
         status, body = self.answer(request)
         return httpx.Response(status, json=body)
@@ -111,7 +128,9 @@ def settings(**values) -> SdkSettings:
 
 
 def async_client(server: FakeServer, prompt=None, **values) -> sdk_client.AsyncClient:
-    client = sdk_client.AsyncClient(settings(**values), server.async_transport(), prompt)
+    client = sdk_client.AsyncClient(
+        settings(**values), server.async_transport(), prompt
+    )
     sdk_client.install(client)
     return client
 

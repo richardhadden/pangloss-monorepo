@@ -6,7 +6,10 @@ from uuid import uuid7
 
 import pytest
 from pangloss_models import initialise
-from pangloss_models.exceptions import PanglossEntityInUseError, PanglossVersionConflictError
+from pangloss_models.exceptions import (
+    PanglossEntityInUseError,
+    PanglossVersionConflictError,
+)
 from pangloss_models.hooks import WriteEvent, after_write
 from pangloss_models.model_bases.document import Document
 from pangloss_models.model_bases.entity import Entity

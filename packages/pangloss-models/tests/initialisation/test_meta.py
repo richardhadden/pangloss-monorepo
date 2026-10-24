@@ -43,7 +43,9 @@ def test_an_entity_inherits_the_meta_of_its_parent():
     from pangloss_models.model_bases.entity import Entity
 
     class Base(Entity):
-        _meta = Entity.Meta(create_with_id=True, create_inline=True, view_extra_fields=["a"])
+        _meta = Entity.Meta(
+            create_with_id=True, create_inline=True, view_extra_fields=["a"]
+        )
 
     class Child(Base):
         pass
@@ -57,7 +59,10 @@ def test_an_entity_inherits_the_meta_of_its_parent():
     # (a value is inherited, and a list is added to)
     assert (Child._meta.create_with_id, Child._meta.create_inline) == (True, True)
     assert Child._meta.view_extra_fields == ["a"]
-    assert (Grandchild._meta.create_with_id, Grandchild._meta.create_inline) == (True, True)
+    assert (Grandchild._meta.create_with_id, Grandchild._meta.create_inline) == (
+        True,
+        True,
+    )
     assert Grandchild._meta.view_extra_fields == ["a", "b"]
     assert Grandchild._meta.accept_url_as_id is False
     # (from the nearest parent, not the farthest)
@@ -67,7 +72,9 @@ def test_an_entity_inherits_the_meta_of_its_parent():
 
 def test_a_document_inherits_the_meta_of_its_parent():
     class Base(Document):
-        _meta = Document.Meta(create_with_id=True, require_label=False, view_extra_fields=["a"])
+        _meta = Document.Meta(
+            create_with_id=True, require_label=False, view_extra_fields=["a"]
+        )
 
     class Child(Base):
         _meta = Document.Meta(view_extra_fields=["b"])
@@ -136,7 +143,10 @@ def test_every_kind_of_model_has_its_own_meta_made_from_its_parents():
         ReifiedRelationDocument,
         ReifiedRelationDocumentMeta,
     )
-    from pangloss_models.model_bases.semantic_space import SemanticSpace, SemanticSpaceMeta
+    from pangloss_models.model_bases.semantic_space import (
+        SemanticSpace,
+        SemanticSpaceMeta,
+    )
 
     class Date(Embedded):
         _meta = EmbeddedMeta(abstract=True)
@@ -151,7 +161,9 @@ def test_every_kind_of_model_has_its_own_meta_made_from_its_parents():
         _meta = ReifiedRelationDocumentMeta(view_extra_fields=["a"])
 
     class SubDoc[T](Doc[T]):
-        _meta = ReifiedRelationDocumentMeta(view_extra_fields=["b"], require_label=False)
+        _meta = ReifiedRelationDocumentMeta(
+            view_extra_fields=["b"], require_label=False
+        )
 
     class Space[T](SemanticSpace[T]):
         _meta = SemanticSpaceMeta(require_label=True)
@@ -172,11 +184,20 @@ def test_every_kind_of_model_has_its_own_meta_made_from_its_parents():
         pass
 
     assert Date._meta.abstract is True and ExactDate._meta.abstract is False
-    assert SubDoc._meta.view_extra_fields == ["a", "b"] and SubDoc._meta.require_label is False
+    assert (
+        SubDoc._meta.view_extra_fields == ["a", "b"]
+        and SubDoc._meta.require_label is False
+    )
     assert Doc._meta.view_extra_fields == ["a"]
     assert SubSpace._meta.require_label is True
     assert SubJoins._meta.require_label is True
-    for model, parent in ((ExactDate, Date), (SubDoc, Doc), (SubSpace, Space), (SubJoins, Joins), (Heavy, Weight)):
+    for model, parent in (
+        (ExactDate, Date),
+        (SubDoc, Doc),
+        (SubSpace, Space),
+        (SubJoins, Joins),
+        (Heavy, Weight),
+    ):
         assert model._meta._owner_class is model
         assert model._meta is not parent._meta
         assert model._meta.field_definitions is not parent._meta.field_definitions

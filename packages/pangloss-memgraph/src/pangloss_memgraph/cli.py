@@ -15,7 +15,9 @@ from pangloss_memgraph.databases.memgraph.database import Database
 from pangloss_memgraph.databases.memgraph.initialise_database import run_statement
 from pangloss_memgraph.databases.memgraph.setup import connect, disconnect
 
-cli = typer.Typer(name="memgraph", help="Memgraph database commands", no_args_is_help=True)
+cli = typer.Typer(
+    name="memgraph", help="Memgraph database commands", no_args_is_help=True
+)
 
 
 def run_connected[T](function: Callable[[], Awaitable[T]]) -> T:
@@ -56,7 +58,9 @@ def info() -> None:
 
     typer.secho("Indexes", bold=True)
     for row in found["indexes"]:
-        typer.echo(f"  {row['index type']}: :{row['label']}({', '.join(row['property'])})")
+        typer.echo(
+            f"  {row['index type']}: :{row['label']}({', '.join(row['property'])})"
+        )
     typer.secho("Unique constraints", bold=True)
     for row in found["constraints"]:
         typer.echo(

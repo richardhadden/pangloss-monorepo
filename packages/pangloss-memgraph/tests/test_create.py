@@ -3,14 +3,15 @@ from decimal import Decimal
 from enum import Enum, IntEnum
 from inspect import iscoroutinefunction
 from typing import Annotated, NotRequired, TypedDict, no_type_check
-from uuid import uuid4, uuid7
+from uuid import uuid7
 
 import pytest
+from pangloss_memgraph.databases.memgraph.initialise_database import (
+    initialise_database,
+)
 from pangloss_models import initialise
-from pangloss_models.model_registry import ModelRegistry
 from pangloss_models.exceptions import (
     PanglossConflictError,
-    PanglossWriteError,
     PanglossReferenceError,
     PanglossUserNotFoundError,
 )
@@ -31,10 +32,6 @@ from pangloss_models.model_bases.semantic_space import SemanticSpace
 from pangloss_models.model_bases.trait import Trait
 from pangloss_users import current_request_username
 from pydantic import AnyHttpUrl
-
-from pangloss_memgraph.databases.memgraph.initialise_database import (
-    initialise_database,
-)
 
 from .helpers import count_nodes, labels_of, native, run
 
@@ -162,7 +159,9 @@ async def test_write_and_read_a_document_that_requires_no_label(clear_database):
 
     initialise()
 
-    note = await Note.Create(text="t").save()  # (this failed: its reference view needed a label)
+    note = await Note.Create(
+        text="t"
+    ).save()  # (this failed: its reference view needed a label)
     assert note.id and note.label is None
 
     read = await Note.get(id=note.id)
@@ -699,9 +698,7 @@ async def test_creating_with_an_id_already_in_use_raises(db_driver, clear_databa
         await Statement.Create(id=given_id, create_new=True, label="Second").save()
 
     assert count_nodes(db_driver, "Statement") == 1
-    assert run(db_driver, "MATCH (n:Statement) RETURN n.label AS l") == [
-        {"l": "First"}
-    ]
+    assert run(db_driver, "MATCH (n:Statement) RETURN n.label AS l") == [{"l": "First"}]
 
 
 @no_type_check
@@ -964,7 +961,7 @@ async def test_decimal_is_written_exactly_and_read_back(db_driver, clear_databas
 
     read = await Statement.get(id=saved.id)
     assert read.price == Decimal("1234567890.123456789012345678")
-    assert read.prices == [Decimal("0.10"), Decimal("2.50"), Decimal("0")]
+    assert read.prices == [Decimal("0.10"), Decimal("2.50"), Decimal(0)]
 
 
 @no_type_check
@@ -2766,9 +2763,7 @@ async def test_annotated_value(db_driver, clear_database):
 
     initialise()
 
-    await Naming.Create(
-        label="A Naming", name={"value": "John", "certainty": 2}
-    ).save()
+    await Naming.Create(label="A Naming", name={"value": "John", "certainty": 2}).save()
 
     # An annotated value is a map on the node it belongs to, not a node of its own
     node = run(db_driver, "MATCH (n:Naming) RETURN n")[0]["n"]
@@ -2928,7 +2923,6 @@ async def test_annotated_value_is_written_on_nested_documents_and_entities(
     assert naming["name"] == {"value": "Johann", "certainty": 2}
 
 
-
 @no_type_check
 async def test_save_detail_for_an_entity(db_driver, clear_database):
     class Person(Entity):
@@ -2949,7 +2943,9 @@ async def test_save_detail_for_an_entity(db_driver, clear_database):
 
 
 @no_type_check
-async def test_a_stored_value_that_is_not_a_member_cannot_be_read(db_driver, clear_database):
+async def test_a_stored_value_that_is_not_a_member_cannot_be_read(
+    db_driver, clear_database
+):
     """The database does not check the value (the models do): a bad one is found on reading"""
 
     class Statement(Document):
@@ -2966,12 +2962,16 @@ async def test_a_stored_value_that_is_not_a_member_cannot_be_read(db_driver, cle
 
 
 @no_type_check
-async def test_a_write_of_the_same_shape_is_the_same_query_text(db_driver, clear_database):
+async def test_a_write_of_the_same_shape_is_the_same_query_text(
+    db_driver, clear_database
+):
     """Memgraph keeps the plan of a query by its text. Names for the variables and parameters made at
     random planned every write afresh; they are counted, so the text depends only on the shape"""
     import uuid
 
-    from pangloss_memgraph.databases.memgraph.build_create_query import build_head_create_query
+    from pangloss_memgraph.databases.memgraph.build_create_query import (
+        build_head_create_query,
+    )
 
     class Person(Entity):
         pass
@@ -2995,5 +2995,7 @@ async def test_a_write_of_the_same_shape_is_the_same_query_text(db_driver, clear
 
     first, second = build("one"), build("two")
     assert first.to_query_string() == second.to_query_string()
-    assert dict(first.params) != dict(second.params)  # (what differs is in the parameters)
+    assert dict(first.params) != dict(
+        second.params
+    )  # (what differs is in the parameters)
     assert all(name.startswith("x") and name[1:].isdigit() for name in first.params)

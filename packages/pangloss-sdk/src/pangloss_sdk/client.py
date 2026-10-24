@@ -22,8 +22,8 @@ from pangloss_sdk.exceptions import (
     PanglossNotConnected,
     PanglossSdkOutOfDateWarning,
 )
-from pangloss_sdk.schemas import schema_hash
 from pangloss_sdk.protocol import Call
+from pangloss_sdk.schemas import schema_hash
 from pangloss_sdk.settings import SdkSettings
 
 BACKOFF_SECONDS = 0.2
@@ -48,7 +48,9 @@ def sdk_headers(sdk: dict[str, Any] | None) -> dict[str, str]:
     }
 
 
-def request_arguments(call: Call, session: Session, sdk: dict[str, Any] | None = None) -> dict[str, Any]:
+def request_arguments(
+    call: Call, session: Session, sdk: dict[str, Any] | None = None
+) -> dict[str, Any]:
     return dict(
         method=call.method,
         url=call.path,
@@ -186,8 +188,9 @@ class AsyncClient:
             await self._renew(used, call)
             response = await self._once(call)
         elif response.status_code == 401 and call.needs_login:
-            raise PanglossAuthenticationError(protocol.message_of(
-                response, protocol.body_of(response)))
+            raise PanglossAuthenticationError(
+                protocol.message_of(response, protocol.body_of(response))
+            )
         return response
 
 
@@ -306,18 +309,24 @@ def install(client: AsyncClient | Client | None) -> None:
 
 def current_async_client() -> AsyncClient:
     if _async_client is None:
-        raise PanglossNotConnected("Not connected: call pangloss_sdk.connect(url) first")
+        raise PanglossNotConnected(
+            "Not connected: call pangloss_sdk.connect(url) first"
+        )
     return _async_client
 
 
 def current_client() -> Client:
     if _client is None:
-        raise PanglossNotConnected("Not connected: call pangloss_sdk.connect(url) first")
+        raise PanglossNotConnected(
+            "Not connected: call pangloss_sdk.connect(url) first"
+        )
     return _client
 
 
 def settings() -> SdkSettings:
     current = core_settings.SETTINGS
     if not isinstance(current, SdkSettings):
-        raise PanglossNotConnected("Not connected: call pangloss_sdk.connect(url) first")
+        raise PanglossNotConnected(
+            "Not connected: call pangloss_sdk.connect(url) first"
+        )
     return current

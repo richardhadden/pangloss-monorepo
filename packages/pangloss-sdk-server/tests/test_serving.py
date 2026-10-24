@@ -5,9 +5,9 @@ import asyncio
 import base64
 import hashlib
 import io
-import shutil
 import json
 import re
+import shutil
 import subprocess
 import sys
 import tarfile
@@ -20,14 +20,12 @@ from pangloss_sdk.schemas import schema_hash
 from pangloss_sdk_server import archives, check, current
 from pangloss_users import service
 from pydantic import AnyHttpUrl
-
 from server_support import API_TESTS, write
 
 sys.path.insert(0, str(API_TESTS))
-import fake_api_db  # noqa: E402
-from fake_api_db import exposed_functions  # noqa: E402
-from fastapi.testclient import TestClient  # noqa: E402
-from pangloss_api.app import create_app  # noqa: E402
+from fake_api_db import exposed_functions
+from fastapi.testclient import TestClient
+from pangloss_api.app import create_app
 
 PASSWORD = "correct horse"
 
@@ -72,7 +70,9 @@ def make_app(project):
 
 
 def user(username="ada", admin=False):
-    asyncio.run(service.create_user(username, f"{username}@example.com", PASSWORD, admin=admin))
+    asyncio.run(
+        service.create_user(username, f"{username}@example.com", PASSWORD, admin=admin)
+    )
     return username
 
 
@@ -84,13 +84,18 @@ def bearer(client, username):
 
 
 def basic(username, password=PASSWORD):
-    return {"Authorization": "Basic " + base64.b64encode(f"{username}:{password}".encode()).decode()}
+    return {
+        "Authorization": "Basic "
+        + base64.b64encode(f"{username}:{password}".encode()).decode()
+    }
 
 
 # --- building and the version --------------------------------------------------------------
 
 
-def test_the_sdk_is_built_as_the_server_starts_and_its_version_is_public(make_app, project):
+def test_the_sdk_is_built_as_the_server_starts_and_its_version_is_public(
+    make_app, project
+):
     with TestClient(make_app()) as client:
         response = client.get("/api/sdk/version")
 
@@ -103,7 +108,9 @@ def test_the_sdk_is_built_as_the_server_starts_and_its_version_is_public(make_ap
     assert (project / ".pangloss/sdk/package/shop/models.py").is_file()
 
 
-def test_with_building_off_the_last_build_on_disk_is_served_or_there_is_none(make_app, project):
+def test_with_building_off_the_last_build_on_disk_is_served_or_there_is_none(
+    make_app, project
+):
     with TestClient(make_app(SDK_BUILD="off")) as client:
         response = client.get("/api/sdk/version")
     assert response.status_code == 503
@@ -151,7 +158,9 @@ def test_an_access_token_works_as_the_basic_password(make_app):
         user("root", admin=True)
         token = bearer(client, "root")["Authorization"].removeprefix("Bearer ")
         assert client.get("/api/sdk", headers=basic("root", token)).status_code == 200
-        assert client.get("/api/sdk", headers=basic("someone", token)).status_code == 401
+        assert (
+            client.get("/api/sdk", headers=basic("someone", token)).status_code == 401
+        )
 
 
 def test_the_access_can_be_for_any_user_or_for_everyone(make_app):
@@ -176,7 +185,9 @@ def test_the_manifest_has_the_downloads(make_app):
     with TestClient(make_app(SDK_ACCESS="public")) as client:
         body = client.get("/api/sdk").json()
     assert body["apps"] == ["shop"]
-    assert body["downloads"]["wheel"].endswith("/api/sdk/download/shop_sdk-0.1-py3-none-any.whl")
+    assert body["downloads"]["wheel"].endswith(
+        "/api/sdk/download/shop_sdk-0.1-py3-none-any.whl"
+    )
     assert body["downloads"]["sdist"].endswith("/api/sdk/download/shop-sdk-0.1.tar.gz")
     assert body["requires"][0].startswith("pangloss-sdk==")
 
@@ -196,17 +207,26 @@ def test_the_wheel_is_a_valid_wheel_that_works_on_a_clean_client(make_app, tmp_p
     assert {"shop/models.py", "shop/models.pyi", "shop_sdk/manifest.json"} <= names
     assert "pyproject.toml" not in names
     dist_info = "shop_sdk-0.1.dist-info"
-    assert {f"{dist_info}/METADATA", f"{dist_info}/WHEEL", f"{dist_info}/RECORD"} <= names
+    assert {
+        f"{dist_info}/METADATA",
+        f"{dist_info}/WHEEL",
+        f"{dist_info}/RECORD",
+    } <= names
     metadata = archive.read(f"{dist_info}/METADATA").decode()
     assert "Name: shop-sdk" in metadata and "Requires-Dist: pangloss-sdk==" in metadata
 
     # (RECORD has the hash and size of every file)
     record = dict(
-        (line.split(",")[0], line.split(",")[1:]) for line in archive.read(f"{dist_info}/RECORD").decode().splitlines()
+        (line.split(",")[0], line.split(",")[1:])
+        for line in archive.read(f"{dist_info}/RECORD").decode().splitlines()
     )
     for name in names - {f"{dist_info}/RECORD"}:
         content = archive.read(name)
-        digest = base64.urlsafe_b64encode(hashlib.sha256(content).digest()).rstrip(b"=").decode()
+        digest = (
+            base64.urlsafe_b64encode(hashlib.sha256(content).digest())
+            .rstrip(b"=")
+            .decode()
+        )
         assert record[name] == [f"sha256={digest}", str(len(content))], name
 
     # (and what is in it is the SDK: it imports, and makes the server's models, on a clean client)
@@ -225,13 +245,20 @@ def test_the_sdist_has_the_source_and_pkg_info(make_app):
     assert response.content == again.content
     with tarfile.open(fileobj=io.BytesIO(response.content), mode="r:gz") as archive:
         names = set(archive.getnames())
-        assert {"shop-sdk-0.1/pyproject.toml", "shop-sdk-0.1/PKG-INFO", "shop-sdk-0.1/shop/models.py"} <= names
+        assert {
+            "shop-sdk-0.1/pyproject.toml",
+            "shop-sdk-0.1/PKG-INFO",
+            "shop-sdk-0.1/shop/models.py",
+        } <= names
         assert b"Name: shop-sdk" in archive.extractfile("shop-sdk-0.1/PKG-INFO").read()  # type: ignore[union-attr]
 
 
 def test_any_other_file_name_is_not_found(make_app):
     with TestClient(make_app(SDK_ACCESS="public")) as client:
-        assert client.get("/api/sdk/download/shop_sdk-0.9-py3-none-any.whl").status_code == 404
+        assert (
+            client.get("/api/sdk/download/shop_sdk-0.9-py3-none-any.whl").status_code
+            == 404
+        )
         assert client.get("/api/sdk/download/pyproject.toml").status_code == 404
 
 
@@ -256,13 +283,19 @@ def test_the_status_of_a_clients_sdk_is_in_the_answer(make_app):
 
         assert "x-pangloss-sdk-status" not in client.get("/api/users/me").headers
 
-        same = client.get("/api/users/me", headers={sdk: fingerprint, "X-Pangloss-Schema": schema})
+        same = client.get(
+            "/api/users/me", headers={sdk: fingerprint, "X-Pangloss-Schema": schema}
+        )
         assert same.headers["x-pangloss-sdk-status"] == "current"
 
-        other_package = client.get("/api/users/me", headers={sdk: "0" * 64, "X-Pangloss-Schema": schema})
+        other_package = client.get(
+            "/api/users/me", headers={sdk: "0" * 64, "X-Pangloss-Schema": schema}
+        )
         assert other_package.headers["x-pangloss-sdk-status"] == "stale"
 
-        moved_on = client.get("/api/users/me", headers={sdk: fingerprint, "X-Pangloss-Schema": "f" * 16})
+        moved_on = client.get(
+            "/api/users/me", headers={sdk: fingerprint, "X-Pangloss-Schema": "f" * 16}
+        )
         assert moved_on.headers["x-pangloss-sdk-status"] == "schema-changed"
         assert moved_on.status_code != 409  # (a read is never refused)
 
@@ -273,13 +306,19 @@ def test_a_write_from_a_client_whose_schema_has_moved_on_is_refused(make_app):
         user("ada")
         headers = {**bearer(client, "ada"), **old}
 
-        refused = client.post("/api/Person", json={"type": "Person", "label": "x"}, headers=headers)
+        refused = client.post(
+            "/api/Person", json={"type": "Person", "label": "x"}, headers=headers
+        )
         assert refused.status_code == 409
         assert refused.json()["error"] == "PanglossSdkOutOfDate"
         assert refused.headers["x-pangloss-sdk-status"] == "schema-changed"
 
         # a login, and the SDK itself, are not refused
-        login = client.post("/api/users/token", data={"username": "ada", "password": PASSWORD}, headers=old)
+        login = client.post(
+            "/api/users/token",
+            data={"username": "ada", "password": PASSWORD},
+            headers=old,
+        )
         assert login.status_code == 200
 
 
@@ -288,32 +327,42 @@ def test_stale_writes_can_be_let_through(make_app):
     with TestClient(make_app(SDK_STALE_WRITES="warn")) as client:
         user("ada")
         response = client.post(
-            "/api/Person", json={"type": "Person", "label": "x"}, headers={**bearer(client, "ada"), **old}
+            "/api/Person",
+            json={"type": "Person", "label": "x"},
+            headers={**bearer(client, "ada"), **old},
         )
     assert response.status_code != 409
     assert response.headers["x-pangloss-sdk-status"] == "schema-changed"
 
 
 @pytest.mark.asyncio
-async def test_a_client_with_the_built_manifest_is_current_against_the_app(make_app, project):
+async def test_a_client_with_the_built_manifest_is_current_against_the_app(
+    make_app, project
+):
     import httpx2 as httpx
-    from pangloss_sdk import client as sdk_client
     from pangloss_sdk import check as check_version
+    from pangloss_sdk import client as sdk_client
     from pangloss_sdk.settings import SdkSettings
 
     app = make_app()
     await current.ensure_built(core_settings.SETTINGS)
-    manifest = json.loads((project / ".pangloss/sdk/package/shop_sdk/manifest.json").read_text())
+    manifest = json.loads(
+        (project / ".pangloss/sdk/package/shop_sdk/manifest.json").read_text()
+    )
     server_settings = core_settings.SETTINGS
     sdk_settings = SdkSettings(URL="http://test", INSTALLED_APPS=[])  # type: ignore[arg-type]
     core_settings.SETTINGS = server_settings
 
-    client = sdk_client.AsyncClient(sdk_settings, httpx.ASGITransport(app=app), None, manifest)
+    client = sdk_client.AsyncClient(
+        sdk_settings, httpx.ASGITransport(app=app), None, manifest
+    )
     sdk_client.install(client)
     try:
         result = await check_version()
         assert result["current"] is True and result["same_schema"] is True
-        await client.send(__import__("pangloss_sdk.protocol", fromlist=["x"]).server_version())
+        await client.send(
+            __import__("pangloss_sdk.protocol", fromlist=["x"]).server_version()
+        )
         assert client.observer.status == "current"
     finally:
         sdk_client.install(None)
@@ -329,12 +378,17 @@ def test_the_index_lists_the_one_project_and_links_its_files_with_hashes(make_ap
         assert client.get("/api/sdk/simple/").status_code == 401
 
         root = client.get("/api/sdk/simple/", headers=basic("root"))
-        assert root.status_code == 200 and '<a href="shop-sdk/">shop-sdk</a>' in root.text
+        assert (
+            root.status_code == 200 and '<a href="shop-sdk/">shop-sdk</a>' in root.text
+        )
 
         # (any spelling pip may use for the name)
         project = client.get("/api/sdk/simple/Shop_SDK/", headers=basic("root"))
         assert project.status_code == 200
-        assert client.get("/api/sdk/simple/other/", headers=basic("root")).status_code == 404
+        assert (
+            client.get("/api/sdk/simple/other/", headers=basic("root")).status_code
+            == 404
+        )
 
         links = re.findall(r'href="([^"#]+)#sha256=([0-9a-f]{64})"', project.text)
         assert [file for file, _ in links] == [
@@ -350,7 +404,9 @@ def test_the_index_lists_the_one_project_and_links_its_files_with_hashes(make_ap
 
 
 @pytest.mark.skipif(shutil.which("uv") is None, reason="uv is not installed")
-def test_an_installer_accepts_the_wheel_and_the_installed_package_works(make_app, tmp_path):
+def test_an_installer_accepts_the_wheel_and_the_installed_package_works(
+    make_app, tmp_path
+):
     """`uv pip install` reads METADATA, WHEEL and RECORD (no network: the dependencies are not
     fetched, and the check imports with this environment's)"""
     with TestClient(make_app()) as client:
@@ -369,7 +425,10 @@ def test_an_installer_accepts_the_wheel_and_the_installed_package_works(make_app
     assert (target / "shop/models.pyi").is_file()
     assert (target / "shop_sdk/sync_stubs/shop/models.pyi").is_file()
     assert (target / "shop_sdk-0.1.dist-info/METADATA").is_file()
-    assert set(check.run_in_clean_process(target, "shop_sdk")) == {"Person", "Statement"}
+    assert set(check.run_in_clean_process(target, "shop_sdk")) == {
+        "Person",
+        "Statement",
+    }
 
 
 def test_wrong_passwords_by_basic_login_are_limited_too(make_app):
@@ -379,11 +438,19 @@ def test_wrong_passwords_by_basic_login_are_limited_too(make_app):
     with TestClient(make_app()) as client:
         user("root", admin=True)
         for _ in range(10):
-            assert client.get("/api/sdk", headers=basic("root", "wrong")).status_code == 401
+            assert (
+                client.get("/api/sdk", headers=basic("root", "wrong")).status_code
+                == 401
+            )
         refused = client.get("/api/sdk", headers=basic("root"))
         assert refused.status_code == 429 and "Retry-After" in refused.headers
         # (git is behind the same login)
-        assert client.get("/api/sdk/git/info/refs?service=git-upload-pack", headers=basic("root")).status_code == 429
+        assert (
+            client.get(
+                "/api/sdk/git/info/refs?service=git-upload-pack", headers=basic("root")
+            ).status_code
+            == 429
+        )
     throttle.reset()
 
 
@@ -399,6 +466,8 @@ def test_the_project_is_found_from_the_working_directory(tmp_path, monkeypatch):
     # (SDK_ROOT wins; with no project above, it is where it is run)
     from types import SimpleNamespace
 
-    assert current.find_root(SimpleNamespace(SDK_ROOT=str(tmp_path))) == tmp_path.resolve()
+    assert (
+        current.find_root(SimpleNamespace(SDK_ROOT=str(tmp_path))) == tmp_path.resolve()
+    )
     monkeypatch.chdir(tmp_path)
     assert current.find_root(SimpleNamespace()) == tmp_path.resolve()

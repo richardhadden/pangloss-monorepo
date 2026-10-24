@@ -30,11 +30,14 @@ from pangloss_sdk.databases.api import exposed_functions as sdk
 from pangloss_sdk.settings import SdkSettings
 from pangloss_users import service
 
-sys.path.insert(0, str(pathlib.Path(__file__).parents[2] / "pangloss-models/tests/support"))
+sys.path.insert(
+    0, str(pathlib.Path(__file__).parents[2] / "pangloss-models/tests/support")
+)
 
-import kitchen_sink  # noqa: E402
-import sample_data  # noqa: E402
-from .test_edit_cycle import differences, lost, with_real_ids, without  # noqa: E402
+import kitchen_sink
+import sample_data
+
+from .test_edit_cycle import differences, with_real_ids, without
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -82,7 +85,9 @@ async def read_directly_and_through_the_api(model, id, edit=False):
     return await model.get(id), await sdk.get_document(model, id)
 
 
-async def test_every_kind_of_model_through_the_api_reads_as_it_does_directly(through_the_api):
+async def test_every_kind_of_model_through_the_api_reads_as_it_does_directly(
+    through_the_api,
+):
     kitchen_sink.declare()
     initialise()
     app = create_app()
@@ -116,7 +121,9 @@ async def test_every_kind_of_model_through_the_api_reads_as_it_does_directly(thr
                 created = await sdk.create_head_node(model.Create(**payload))
 
                 step = "reading"
-                directly, through = await read_directly_and_through_the_api(model, created.id)
+                directly, through = await read_directly_and_through_the_api(
+                    model, created.id
+                )
                 assert through is not None, "not found through the API"
                 assert directly is not None
                 same = differences(directly.model_dump(), through.model_dump())
@@ -137,7 +144,9 @@ async def test_every_kind_of_model_through_the_api_reads_as_it_does_directly(thr
                 )
 
                 step = "reading again"
-                directly, through = await read_directly_and_through_the_api(model, created.id)
+                directly, through = await read_directly_and_through_the_api(
+                    model, created.id
+                )
                 assert through is not None and directly is not None
                 same = differences(directly.model_dump(), through.model_dump())
                 assert not same, f"the API read after the edit differs: {same[:4]}"
@@ -146,7 +155,9 @@ async def test_every_kind_of_model_through_the_api_reads_as_it_does_directly(thr
                 )
                 assert edited_again is not None
                 changed = differences(dumped, without(edited_again.model_dump()))
-                assert not changed, f"changed by saving what was read, unchanged: {changed[:4]}"
+                assert not changed, (
+                    f"changed by saving what was read, unchanged: {changed[:4]}"
+                )
             except Exception as error:
                 failures.append(
                     f"{label} while {step}: {type(error).__name__}: "
@@ -189,7 +200,9 @@ async def test_lists_and_errors_are_those_of_the_database_module(through_the_api
     assert edit is not None and edit.meta.version == 1
     await sdk.update_head_node(Person.Update(id=bo.id, label="Bob"), expected_version=1)
     with pytest.raises(PanglossVersionConflictError) as conflict:
-        await sdk.update_head_node(Person.Update(id=bo.id, label="Bobby"), expected_version=1)
+        await sdk.update_head_node(
+            Person.Update(id=bo.id, label="Bobby"), expected_version=1
+        )
     assert conflict.value.current_version == 2
     with pytest.raises(PanglossVersionConflictError) as directly_raised:
         await Person.Update(id=bo.id, label="Bobby").save(expected_version=1)  # type: ignore[attr-defined]
@@ -203,7 +216,9 @@ async def test_lists_and_errors_are_those_of_the_database_module(through_the_api
         await sdk.delete_entity(Person, uuid7())
     with pytest.raises(PanglossReferenceError):
         await sdk.create_head_node(
-            Statement.Create(label="S", text="t", about={"type": "Person", "id": uuid7()})
+            Statement.Create(
+                label="S", text="t", about={"type": "Person", "id": uuid7()}
+            )
         )
 
     # an entity in use cannot be deleted; a document can, and be brought back

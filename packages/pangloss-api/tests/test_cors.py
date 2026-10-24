@@ -2,7 +2,11 @@ import pytest
 from conftest import PASSWORD, Settings
 from fastapi.testclient import TestClient
 from pangloss_api.app import create_app
-from pangloss_core.settings import BaseSettings, DatabaseSettings, normalise_cors_origins
+from pangloss_core.settings import (
+    BaseSettings,
+    DatabaseSettings,
+    normalise_cors_origins,
+)
 from pangloss_users import service
 from pydantic import AnyHttpUrl, ValidationError
 
@@ -14,7 +18,9 @@ def client_allowing(*origins) -> TestClient:
     return TestClient(create_app())
 
 
-def preflight(client, origin=FRONTEND, method="PUT", headers="authorization,content-type"):
+def preflight(
+    client, origin=FRONTEND, method="PUT", headers="authorization,content-type"
+):
     return client.options(
         "/api/users/me",
         headers={
@@ -66,7 +72,11 @@ def test_another_origin_is_not_allowed(settings):
     assert "access-control-allow-origin" not in response.headers
 
     # (the origin has to be the whole of it: scheme, host and port)
-    for origin in ("https://localhost:5173", "http://localhost:5174", "http://localhost"):
+    for origin in (
+        "https://localhost:5173",
+        "http://localhost:5174",
+        "http://localhost",
+    ):
         response = client.get("/api/users/me", headers={"Origin": origin})
         assert "access-control-allow-origin" not in response.headers, origin
 
@@ -142,7 +152,9 @@ def test_any_origin_is_allowed_without_credentials_and_with_a_warning(settings):
     with pytest.warns(UserWarning, match="any site"):
         client = client_allowing("*")
 
-    response = client.get("/api/users/me", headers={"Origin": "http://anywhere.example"})
+    response = client.get(
+        "/api/users/me", headers={"Origin": "http://anywhere.example"}
+    )
     assert response.headers["access-control-allow-origin"] == "*"
     # (the cookies of a user must not be usable by any site)
     assert "access-control-allow-credentials" not in response.headers
@@ -155,7 +167,9 @@ def test_any_origin_is_allowed_without_credentials_and_with_a_warning(settings):
 
 
 def test_origins_are_made_as_a_browser_sends_them():
-    assert normalise_cors_origins(["http://localhost:5173/"]) == ["http://localhost:5173"]
+    assert normalise_cors_origins(["http://localhost:5173/"]) == [
+        "http://localhost:5173"
+    ]
     assert normalise_cors_origins([AnyHttpUrl("http://localhost:5173")]) == [
         "http://localhost:5173"
     ]
@@ -177,7 +191,9 @@ def test_what_is_not_an_origin_is_refused(bad):
 
 
 def test_the_setting_is_checked_and_normalised(settings):
-    assert Settings(BACKEND_CORS_ORIGINS="http://a.com/, http://b.com").BACKEND_CORS_ORIGINS == [
+    assert Settings(
+        BACKEND_CORS_ORIGINS="http://a.com/, http://b.com"
+    ).BACKEND_CORS_ORIGINS == [
         "http://a.com",
         "http://b.com",
     ]
@@ -197,7 +213,9 @@ def test_the_setting_can_be_given_as_a_comma_separated_environment_variable(
         AUTHJWT_SECRET_KEY: str = "a secret for the tests, of a decent length"
         ENTITY_BASE_URL: AnyHttpUrl = AnyHttpUrl("http://test.com/")
 
-    monkeypatch.setenv("BACKEND_CORS_ORIGINS", "http://localhost:5173, https://app.example.com/")
+    monkeypatch.setenv(
+        "BACKEND_CORS_ORIGINS", "http://localhost:5173, https://app.example.com/"
+    )
     assert FromEnvironment().BACKEND_CORS_ORIGINS == [
         "http://localhost:5173",
         "https://app.example.com",

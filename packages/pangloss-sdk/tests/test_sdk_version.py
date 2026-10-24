@@ -3,19 +3,19 @@
 import warnings
 from uuid import uuid7
 
-import httpx2 as httpx
+import pangloss_sdk
 import pytest
 from pangloss_models.exceptions import PanglossWriteError
-import pangloss_sdk
 from pangloss_sdk import (
     PanglossSdkMismatch,
     PanglossSdkOutOfDate,
     PanglossSdkOutOfDateWarning,
+)
+from pangloss_sdk import (
     client as sdk_client,
 )
 from pangloss_sdk.schemas import schema_hash
-
-from sdk_support import FakeServer, head_json, make_models, reference_json, settings
+from sdk_support import FakeServer, head_json, make_models, settings
 
 pytestmark = pytest.mark.asyncio
 
@@ -27,7 +27,9 @@ MANIFEST = {
 
 
 def client_with(server, sdk=MANIFEST, **values):
-    client = sdk_client.AsyncClient(settings(**values), server.async_transport(), None, sdk)
+    client = sdk_client.AsyncClient(
+        settings(**values), server.async_transport(), None, sdk
+    )
     sdk_client.install(client)
     return client
 
@@ -135,7 +137,9 @@ async def test_check_raises_for_another_project_or_no_sdk():
     with pytest.raises(PanglossSdkMismatch, match="'shop'.*'other'"):
         await pangloss_sdk.check()
 
-    client_with(FakeServer(lambda request: (503, {"detail": "The SDK is not built: x"})))
+    client_with(
+        FakeServer(lambda request: (503, {"detail": "The SDK is not built: x"}))
+    )
     with pytest.raises(PanglossSdkMismatch, match="not built"):
         await pangloss_sdk.check()
 

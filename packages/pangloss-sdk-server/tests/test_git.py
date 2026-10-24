@@ -13,11 +13,12 @@ import pytest
 import uvicorn
 from pangloss_sdk_server import current, gitrepo
 from pangloss_users import service
-
 from server_support import write
-from test_serving import PASSWORD, make_app, user  # noqa: F401
+from test_serving import PASSWORD, make_app, user  # noqa: F401, F811
 
-pytestmark = pytest.mark.skipif(shutil.which("git") is None, reason="git is not installed")
+pytestmark = pytest.mark.skipif(
+    shutil.which("git") is None, reason="git is not installed"
+)
 
 
 @pytest.fixture
@@ -30,7 +31,9 @@ def server(make_app):
         sock.bind(("127.0.0.1", 0))
         port = sock.getsockname()[1]
         instance = uvicorn.Server(uvicorn.Config(app, log_level="warning"))
-        thread = threading.Thread(target=instance.run, kwargs={"sockets": [sock]}, daemon=True)
+        thread = threading.Thread(
+            target=instance.run, kwargs={"sockets": [sock]}, daemon=True
+        )
         thread.start()
         deadline = time.time() + 10
         while not instance.started and time.time() < deadline:
@@ -67,7 +70,12 @@ def git(*args, cwd, check=True):
 
 
 def credentials(url: str, username="root", password=PASSWORD) -> str:
-    return url.replace("http://", f"http://{quote(username, safe='')}:{quote(password, safe='')}@") + "/api/sdk/git"
+    return (
+        url.replace(
+            "http://", f"http://{quote(username, safe='')}:{quote(password, safe='')}@"
+        )
+        + "/api/sdk/git"
+    )
 
 
 def test_the_sdk_can_be_cloned_with_git(server, tmp_path):
@@ -95,9 +103,17 @@ def test_git_is_refused_without_the_right_login(server, tmp_path):
     user("ada")
 
     for who, password in (("root", "wrong"), ("nobody", PASSWORD), ("ada", PASSWORD)):
-        result = git("clone", credentials(base, who, password), f"c-{who}", cwd=tmp_path, check=False)
+        result = git(
+            "clone",
+            credentials(base, who, password),
+            f"c-{who}",
+            cwd=tmp_path,
+            check=False,
+        )
         assert result.returncode != 0, who
-        assert not (tmp_path / f"c-{who}").exists() or not any((tmp_path / f"c-{who}").iterdir())
+        assert not (tmp_path / f"c-{who}").exists() or not any(
+            (tmp_path / f"c-{who}").iterdir()
+        )
 
 
 def test_a_personal_access_token_is_the_password(server, tmp_path):
@@ -121,14 +137,15 @@ def test_nothing_can_be_pushed(server, tmp_path):
     pushed = git("push", "origin", "main", cwd=clone, check=False)
 
     assert pushed.returncode != 0
-    from pangloss_sdk_server import publish
 
     fresh = tmp_path / "again"
     git("clone", credentials(base), str(fresh), cwd=tmp_path)
     assert not (fresh / "extra.txt").exists()
 
 
-def test_a_change_to_the_models_is_a_new_commit_that_git_pull_brings(server, project, tmp_path):
+def test_a_change_to_the_models_is_a_new_commit_that_git_pull_brings(
+    server, project, tmp_path
+):
     base = server()
     user("root", admin=True)
     git("clone", credentials(base), "sdk", cwd=tmp_path)
@@ -156,11 +173,15 @@ def test_a_build_with_no_change_leaves_the_head_where_it_was(server, project, tm
     from pangloss_sdk_server import config
 
     before = gitrepo.open_repository(
-        gitrepo.repository_path(config.output_directory(project, core_settings.SETTINGS))
+        gitrepo.repository_path(
+            config.output_directory(project, core_settings.SETTINGS)
+        )
     ).refs.read_ref(gitrepo.BRANCH)
     asyncio.run(current.ensure_built(core_settings.SETTINGS, force=True))
     after = gitrepo.open_repository(
-        gitrepo.repository_path(config.output_directory(project, core_settings.SETTINGS))
+        gitrepo.repository_path(
+            config.output_directory(project, core_settings.SETTINGS)
+        )
     ).refs.read_ref(gitrepo.BRANCH)
     assert before == after
 
@@ -177,4 +198,7 @@ def test_pip_installable_layout(server, tmp_path):
     user("root", admin=True)
     git("clone", credentials(base), "sdk", cwd=tmp_path)
     pyproject = (tmp_path / "sdk/pyproject.toml").read_text()
-    assert 'name = "shop-sdk"' in pyproject and 'packages = ["shop", "shop_sdk"]' in pyproject
+    assert (
+        'name = "shop-sdk"' in pyproject
+        and 'packages = ["shop", "shop_sdk"]' in pyproject
+    )

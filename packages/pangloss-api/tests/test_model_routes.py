@@ -249,7 +249,11 @@ def test_create_passes_detail_and_accepts_either_naming(settings, monkeypatch):
     for key in ("born_in", "bornIn"):
         response = client.post(
             "/api/Person",
-            json={"type": "Person", "label": "John", key: {"type": "Place", "id": place_id}},
+            json={
+                "type": "Person",
+                "label": "John",
+                key: {"type": "Place", "id": place_id},
+            },
             headers=headers,
         )
         assert response.status_code == 201, response.text
@@ -323,7 +327,9 @@ def test_update_needs_the_same_id_in_the_path_and_the_body(settings, monkeypatch
         (PanglossWriteError("rejected"), 400),
     ],
 )
-def test_errors_from_the_database_become_statuses(settings, monkeypatch, error, status_code):
+def test_errors_from_the_database_become_statuses(
+    settings, monkeypatch, error, status_code
+):
     from fastapi.testclient import TestClient
 
     _, Person, _ = make_models()
@@ -649,7 +655,11 @@ def test_etags_are_the_versions(settings, monkeypatch):
     # A new one is at version 1
     response = client.post(
         "/api/Person",
-        json={"type": "Person", "label": "J", "bornIn": {"type": "Place", "id": str(uuid7())}},
+        json={
+            "type": "Person",
+            "label": "J",
+            "bornIn": {"type": "Place", "id": str(uuid7())},
+        },
         headers=headers,
     )
     assert response.status_code == 201

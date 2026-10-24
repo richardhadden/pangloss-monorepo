@@ -25,8 +25,8 @@ Per-class options are given through a `_meta` attribute, e.g. `_meta = Document.
 ```python
 class Statement(Document):
     text: str
-    was_carried_out_by: Person       # relation to an Entity (by reference)
-    action: Action                   # relation to a Document (nested, created together)
+    was_carried_out_by: Person  # relation to an Entity (by reference)
+    action: Action  # relation to a Document (nested, created together)
 ```
 
 - Calling `Statement(...)` is the same as `Statement.Create(...)`.
@@ -128,6 +128,7 @@ Structured data without its own identity or head node, for example a date range 
 class Date(Embedded):
     when: datetime.datetime
 
+
 class Statement(Document):
     date: Date
 ```
@@ -138,11 +139,16 @@ A trait is a mixin that lets a relation target "any of these entities/documents"
 
 ```python
 class Agent(Trait): ...
+
+
 class Person(Entity, Agent): ...
+
+
 class Group(Entity, Agent): ...
 
+
 class Statement(Document):
-    thing_carried_out_by: Agent    # accepts Person | Group (and their subclasses)
+    thing_carried_out_by: Agent  # accepts Person | Group (and their subclasses)
 ```
 
 - `Trait[T]` is heritable: subclasses of `Person` are also `Agent`s and the trait's name is added to the node labels.
@@ -167,6 +173,7 @@ Binds extra literal fields to a single value.
 class WithCertainty[T](AnnotatedValue[T]):
     certainty: int
 
+
 class Naming(Document):
     name: WithCertainty[str]
 ```
@@ -180,6 +187,7 @@ A relationship that is itself an object with fields, for example "proxy identifi
 ```python
 class IdentificationProxy[T](ReifiedRelation[T]):
     certainty: int
+
 
 class Statement(Document):
     identified: IdentificationProxy[Person]
@@ -198,6 +206,7 @@ A generic wrapper that places its contents in a named context, such as "Negative
 ```python
 class Negative[T](SemanticSpace[T]): ...
 
+
 class Factoid(Document):
     has_statement: list[Statement | Negative[Statement]]
 ```
@@ -212,6 +221,7 @@ A generic multi-slot join between related objects.
 class Causes[TCause, TResult](Conjunction):
     cause: TCause
     result: TResult
+
 
 class Factoid(Document):
     has_statements: Statement | Causes[Statement, Statement]

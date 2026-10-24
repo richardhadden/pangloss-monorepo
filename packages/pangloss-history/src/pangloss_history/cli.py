@@ -12,14 +12,20 @@ from pangloss_history.diff import diff
 from pangloss_history.restore import restore
 from pangloss_history.store import SqliteStore
 
-cli = typer.Typer(name="history", help="Look at the history of documents and entities", no_args_is_help=True)
+cli = typer.Typer(
+    name="history",
+    help="Look at the history of documents and entities",
+    no_args_is_help=True,
+)
 
 
 def open_store(ctx: typer.Context) -> SqliteStore:
     settings = getattr(ctx.obj, "settings", None)
     path = config.db_path(settings)
     if not path.exists():
-        typer.secho(f"There is no history yet ({path} does not exist)", fg="red", err=True)
+        typer.secho(
+            f"There is no history yet ({path} does not exist)", fg="red", err=True
+        )
         raise typer.Exit(1)
     return SqliteStore(path)
 
@@ -41,7 +47,9 @@ def list_versions(ctx: typer.Context, id: UUID) -> None:
         raise typer.Exit(1)
     for r in records:
         restored = f" (from version {r.restored_from})" if r.restored_from else ""
-        typer.echo(f"v{r.version}  {r.op:<8} {r.at:%Y-%m-%d %H:%M:%S}  {r.who}{restored}")
+        typer.echo(
+            f"v{r.version}  {r.op:<8} {r.at:%Y-%m-%d %H:%M:%S}  {r.who}{restored}"
+        )
 
 
 @cli.command()
@@ -53,7 +61,10 @@ def show(ctx: typer.Context, id: UUID, version: int) -> None:
 
 @cli.command("diff")
 def show_difference(
-    ctx: typer.Context, id: UUID, version: int, to: int | None = typer.Option(None, "--to")
+    ctx: typer.Context,
+    id: UUID,
+    version: int,
+    to: int | None = typer.Option(None, "--to"),
 ) -> None:
     """What changed from one version to another (to the latest, if --to is not given)"""
     store = open_store(ctx)

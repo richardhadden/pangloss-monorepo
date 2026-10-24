@@ -44,7 +44,12 @@ def seed(client):
     client.store.append(
         [
             record(id, 1, content={"text": "one", "parts": [{"id": "a", "n": 1}]}),
-            record(id, 3, "update", content={"text": "three", "parts": [{"id": "a", "n": 2}]}),
+            record(
+                id,
+                3,
+                "update",
+                content={"text": "three", "parts": [{"id": "a", "n": 2}]},
+            ),
             record(id, 3, "delete"),
         ]
     )
@@ -65,7 +70,9 @@ def test_the_versions_are_listed_with_the_ones_that_were_not_recorded(client):
 
 def test_a_version_is_given_as_it_was_written(client):
     id = seed(client)
-    body = client.get(f"/api/Statement/{id}/history/1", params={"upgrade": False}).json()
+    body = client.get(
+        f"/api/Statement/{id}/history/1", params={"upgrade": False}
+    ).json()
     assert body["content"]["text"] == "one" and body["op"] == "create"
     assert body["upgraded"] is False and body["problems"] == []
 
@@ -85,7 +92,9 @@ def test_what_is_not_there_is_not_found(client):
     id = seed(client)
     assert client.get(f"/api/Nothing/{id}/history").status_code == 404
     assert client.get(f"/api/Statement/{uuid7()}/history").status_code == 404
-    assert client.get(f"/api/Person/{id}/history").status_code == 404  # (it is a Statement)
+    assert (
+        client.get(f"/api/Person/{id}/history").status_code == 404
+    )  # (it is a Statement)
     assert client.get(f"/api/Statement/{id}/history/2").status_code == 404
     assert client.get(f"/api/Statement/{id}/history/1/diff?to=2").status_code == 404
 
@@ -106,7 +115,9 @@ def test_it_needs_a_logged_in_user(client):
     assert client.get(f"/api/Statement/{seed(client)}/history").status_code == 401
 
 
-def test_restore_needs_the_version_it_replaces_and_gives_the_new_one(client, monkeypatch):
+def test_restore_needs_the_version_it_replaces_and_gives_the_new_one(
+    client, monkeypatch
+):
     id = seed(client)
     calls = []
 
@@ -117,7 +128,9 @@ def test_restore_needs_the_version_it_replaces_and_gives_the_new_one(client, mon
     monkeypatch.setattr(api, "restore", fake_restore)
 
     assert client.post(f"/api/Statement/{id}/history/1/restore").status_code == 428
-    response = client.post(f"/api/Statement/{id}/history/1/restore", headers={"If-Match": '"3"'})
+    response = client.post(
+        f"/api/Statement/{id}/history/1/restore", headers={"If-Match": '"3"'}
+    )
     assert response.status_code == 200
     assert response.json() == {"id": str(id), "version": 4, "restoredFrom": 1}
     assert response.headers["ETag"] == '"4"'
@@ -135,11 +148,17 @@ def test_a_restore_that_cannot_be_done_is_a_conflict(client, monkeypatch):
     id = seed(client)
 
     async def refuse(*args):
-        raise PanglossRestoreError([{"kind": "schema-changed", "message": "upgrade it first"}])
+        raise PanglossRestoreError(
+            [{"kind": "schema-changed", "message": "upgrade it first"}]
+        )
 
     monkeypatch.setattr(api, "restore", refuse)
-    response = client.post(f"/api/Statement/{id}/history/1/restore", headers={"If-Match": "*"})
-    assert response.status_code == 409 and "upgrade it first" in response.json()["detail"]
+    response = client.post(
+        f"/api/Statement/{id}/history/1/restore", headers={"If-Match": "*"}
+    )
+    assert (
+        response.status_code == 409 and "upgrade it first" in response.json()["detail"]
+    )
 
 
 def test_a_version_and_its_draft_are_upgraded_with_the_problems(client, monkeypatch):
@@ -147,13 +166,23 @@ def test_a_version_and_its_draft_are_upgraded_with_the_problems(client, monkeypa
     from pangloss_history.upgrade import Problem
 
     id = seed(client)
-    problem = Problem("removed-field", "gone", path="nickname", old_value="Ada", blocking=False)
-    monkeypatch.setattr(api, "make_draft", lambda record, model: Draft({"text": "up"}, [problem], True))
+    problem = Problem(
+        "removed-field", "gone", path="nickname", old_value="Ada", blocking=False
+    )
+    monkeypatch.setattr(
+        api, "make_draft", lambda record, model: Draft({"text": "up"}, [problem], True)
+    )
 
     version = client.get(f"/api/Statement/{id}/history/1").json()
     assert version["content"] == {"text": "up"} and version["upgraded"] is True
     assert version["problems"] == [
-        {"kind": "removed-field", "message": "gone", "blocking": False, "path": "nickname", "oldValue": "Ada"}
+        {
+            "kind": "removed-field",
+            "message": "gone",
+            "blocking": False,
+            "path": "nickname",
+            "oldValue": "Ada",
+        }
     ]
 
     body = client.get(f"/api/Statement/{id}/history/1/draft").json()

@@ -7,7 +7,10 @@ from types import SimpleNamespace as ns
 from typing import TypedDict, no_type_check
 
 import pytest
-from pangloss_models.exceptions import PanglossMigrationAnswerNeeded, PanglossMigrationNotSupported
+from pangloss_models.exceptions import (
+    PanglossMigrationAnswerNeeded,
+    PanglossMigrationNotSupported,
+)
 from pangloss_models.migrations import PossibleRename
 from pangloss_models.model_bases.annotated_value import AnnotatedValue
 from pangloss_models.model_bases.document import Document
@@ -89,7 +92,9 @@ V1 = {"RED": "red", "GREEN": "green", "BLUE": "blue"}
 
 
 @no_type_check
-async def test_a_value_that_changes_is_changed_wherever_it_is_stored(db_driver, clear_database):
+async def test_a_value_that_changes_is_changed_wherever_it_is_stored(
+    db_driver, clear_database
+):
     old_enum, new_enum = shade(**V1), shade(**{**V1, "GREEN": "verde"})
     old_models, old = declare(models(old_enum))
     saved = await write_one(old_models, "S", old_enum.GREEN, old_enum.BLUE)
@@ -115,17 +120,23 @@ async def test_a_value_that_changes_is_changed_wherever_it_is_stored(db_driver, 
 
 
 @no_type_check
-async def test_values_that_are_taken_off_a_member_go_to_the_one_it_is_given(db_driver, clear_database):
+async def test_values_that_are_taken_off_a_member_go_to_the_one_it_is_given(
+    db_driver, clear_database
+):
     old_enum, new_enum = shade(**V1), shade(RED="red", BLUE="blue")
     old_models, old = declare(models(old_enum))
     saved = await write_one(old_models, "S", old_enum.GREEN, old_enum.BLUE)
     new_models, new = declare(models(new_enum))
 
     # (it has values: where, and how many, are said)
-    with pytest.raises(PanglossMigrationAnswerNeeded, match=r"Statement\.favourite.*replacement"):
+    with pytest.raises(
+        PanglossMigrationAnswerNeeded, match=r"Statement\.favourite.*replacement"
+    ):
         await migrate(old, new)
 
-    await migrate(old, new, answer=with_answers(RemoveEnumMember={"replacement": "RED"}))
+    await migrate(
+        old, new, answer=with_answers(RemoveEnumMember={"replacement": "RED"})
+    )
     assert stored(db_driver) == {
         "favourite": "red",
         "others": ["red", "blue", "red"],
@@ -139,7 +150,9 @@ async def test_values_that_are_taken_off_a_member_go_to_the_one_it_is_given(db_d
 
 
 @no_type_check
-async def test_a_member_with_no_values_can_go_without_an_answer(db_driver, clear_database):
+async def test_a_member_with_no_values_can_go_without_an_answer(
+    db_driver, clear_database
+):
     old_enum, new_enum = shade(**V1), shade(RED="red", GREEN="green")
     old_models, old = declare(models(old_enum))
     saved = await write_one(old_models, "S", old_enum.GREEN, old_enum.RED)
@@ -150,7 +163,9 @@ async def test_a_member_with_no_values_can_go_without_an_answer(db_driver, clear
 
 
 @no_type_check
-async def test_a_member_renamed_with_its_value_changes_no_data(db_driver, clear_database):
+async def test_a_member_renamed_with_its_value_changes_no_data(
+    db_driver, clear_database
+):
     old_enum, new_enum = shade(**V1), shade(RED="red", LIME="green", BLUE="blue")
     old_models, old = declare(models(old_enum))
     saved = await write_one(old_models, "S", old_enum.GREEN, old_enum.BLUE)
@@ -164,7 +179,9 @@ async def test_a_member_renamed_with_its_value_changes_no_data(db_driver, clear_
 
 
 @no_type_check
-async def test_a_member_renamed_and_given_another_value_is_both(db_driver, clear_database):
+async def test_a_member_renamed_and_given_another_value_is_both(
+    db_driver, clear_database
+):
     old_enum, new_enum = shade(**V1), shade(RED="red", LIME="lime", BLUE="blue")
     old_models, old = declare(models(old_enum))
     saved = await write_one(old_models, "S", old_enum.GREEN, old_enum.BLUE)
@@ -219,9 +236,17 @@ async def test_a_string_becomes_an_enum_and_back(db_driver, clear_database):
     # (one of them is not a member: that is said before anything changes)
     with pytest.raises(PanglossMigrationAnswerNeeded, match="cannot be converted"):
         await migrate(old, new)
-    assert run(db_driver, "MATCH (i:Item) WHERE i.kind = 'medium' RETURN count(i) AS n") == [{"n": 1}]
+    assert run(
+        db_driver, "MATCH (i:Item) WHERE i.kind = 'medium' RETURN count(i) AS n"
+    ) == [{"n": 1}]
 
-    await migrate(old, new, answer=with_answers(AlterLiteralType={"on_failure": "default", "default": "small"}))
+    await migrate(
+        old,
+        new,
+        answer=with_answers(
+            AlterLiteralType={"on_failure": "default", "default": "small"}
+        ),
+    )
     assert (await new_models.Item.get(id=good.id)).kind is enum.BIG
     assert (await new_models.Item.get(id=bad.id)).kind is enum.SMALL
 
@@ -232,7 +257,9 @@ async def test_a_string_becomes_an_enum_and_back(db_driver, clear_database):
 
 
 @no_type_check
-async def test_one_enum_becomes_another_by_the_names_of_the_members_or_a_mapping(db_driver, clear_database):
+async def test_one_enum_becomes_another_by_the_names_of_the_members_or_a_mapping(
+    db_driver, clear_database
+):
     old_enum = Enum("Kind", {"BIG": "b", "SMALL": "s"})
     new_enum = Enum("Size", {"BIG": "large", "TINY": "tiny"})
     old_models, old = declare(one_field(old_enum))
@@ -247,15 +274,23 @@ async def test_one_enum_becomes_another_by_the_names_of_the_members_or_a_mapping
         await migrate(old, new, declined=declined)
 
     await migrate(
-        old, new, declined=declined, answer=with_answers(AlterLiteralType={"mapping": {"SMALL": "TINY"}})
+        old,
+        new,
+        declined=declined,
+        answer=with_answers(AlterLiteralType={"mapping": {"SMALL": "TINY"}}),
     )
     assert (await new_models.Item.get(id=big.id)).kind is new_enum.BIG
     assert (await new_models.Item.get(id=small.id)).kind is new_enum.TINY
-    assert run(db_driver, "MATCH (i:Item) RETURN i.kind AS k ORDER BY k") == [{"k": "large"}, {"k": "tiny"}]
+    assert run(db_driver, "MATCH (i:Item) RETURN i.kind AS k ORDER BY k") == [
+        {"k": "large"},
+        {"k": "tiny"},
+    ]
 
 
 @no_type_check
-async def test_a_mapping_to_a_member_that_is_not_there_is_refused(db_driver, clear_database):
+async def test_a_mapping_to_a_member_that_is_not_there_is_refused(
+    db_driver, clear_database
+):
     old_enum = Enum("Kind", {"BIG": "b"})
     new_enum = Enum("Size", {"HUGE": "h"})
     old_models, old = declare(one_field(old_enum))

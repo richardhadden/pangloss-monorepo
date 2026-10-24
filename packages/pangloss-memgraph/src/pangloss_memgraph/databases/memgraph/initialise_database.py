@@ -61,7 +61,9 @@ def structure() -> dict[str, list[dict[str, Any]]]:
         for label, properties in INDEXES
     ]
     name, label, property_name = TEXT_INDEX
-    indexes.append({"kind": "text", "label": label, "properties": [property_name], "name": name})
+    indexes.append(
+        {"kind": "text", "label": label, "properties": [property_name], "name": name}
+    )
     constraints = [
         {"kind": "unique", "label": label, "properties": [property_name]}
         for label, property_name in UNIQUE_CONSTRAINTS

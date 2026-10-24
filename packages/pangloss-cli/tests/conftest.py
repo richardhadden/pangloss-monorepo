@@ -1,8 +1,6 @@
 import sys
 
 import pytest
-from pangloss_core import settings as core_settings
-
 from cli_support import (
     FAKE_DB_EXPOSED,
     FAKE_DB_SETUP,
@@ -10,6 +8,7 @@ from cli_support import (
     SETTINGS,
     write,
 )
+from pangloss_core import settings as core_settings
 
 
 @pytest.fixture
@@ -49,9 +48,7 @@ def project(tmp_path, monkeypatch):
     write(
         tmp_path,
         "myproject/settings.py",
-        SETTINGS.format(
-            apps=["fakeapp", "brokenapp", "plainapp"], database="fakedb"
-        ),
+        SETTINGS.format(apps=["fakeapp", "brokenapp", "plainapp"], database="fakedb"),
     )
     write(
         tmp_path,

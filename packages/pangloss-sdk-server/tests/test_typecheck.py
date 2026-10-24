@@ -4,7 +4,6 @@ import pytest
 from pangloss_sdk_server import typecheck
 from pangloss_sdk_server.builder import SYNC_STUBS, SdkBuildError, build_package
 from pangloss_sdk_server.publish import shipped_models, write_files
-
 from server_support import load_models, settings_for
 
 needs_ty = pytest.mark.skipif(typecheck.find_ty() is None, reason="ty is not installed")
@@ -40,10 +39,15 @@ def test_a_model_with_a_method_called_list_does_not_shadow_the_type_list(package
     stub = built.files["shop/models.pyi"].decode()
     assert "def list(cls" in stub
     # (the model's own fields that are lists name the builtin)
-    assert "_pg_builtins.list[" in stub or "list[" not in stub.split("class Person", 1)[1].split("class ", 1)[0]
+    assert (
+        "_pg_builtins.list[" in stub
+        or "list[" not in stub.split("class Person", 1)[1].split("class ", 1)[0]
+    )
 
 
-def test_the_blocking_directory_has_every_module_so_that_a_checker_takes_it_whole(package):
+def test_the_blocking_directory_has_every_module_so_that_a_checker_takes_it_whole(
+    package,
+):
     built, _, _ = package
     shipped = {p for p in built.files if p.startswith(f"shop_sdk/{SYNC_STUBS}/")}
     assert shipped == {
@@ -56,7 +60,10 @@ def test_the_blocking_directory_has_every_module_so_that_a_checker_takes_it_whol
 @needs_ty
 def test_both_kinds_of_stub_type_check(package):
     built, directory, models = package
-    assert typecheck.check_types(directory, built.manifest["module"], models, "required") is None
+    assert (
+        typecheck.check_types(directory, built.manifest["module"], models, "required")
+        is None
+    )
 
 
 @needs_ty
@@ -64,7 +71,9 @@ def test_a_stub_with_the_wrong_type_is_an_error_that_names_the_kind(package):
     built, directory, models = package
     path = directory / "shop_sdk" / SYNC_STUBS / "shop" / "models.pyi"
     # (the blocking `get` made to say what the async one says)
-    path.write_text(path.read_text().replace("    def get(cls", "    async def get(cls", 1))
+    path.write_text(
+        path.read_text().replace("    def get(cls", "    async def get(cls", 1)
+    )
 
     with pytest.raises(SdkBuildError) as error:
         typecheck.check_types(directory, built.manifest["module"], models, "required")
@@ -81,12 +90,17 @@ def test_a_stub_that_is_not_python_is_an_error(package):
         typecheck.check_types(directory, built.manifest["module"], models, "required")
 
 
-def test_without_ty_auto_says_so_required_fails_and_off_does_not_look(package, monkeypatch):
+def test_without_ty_auto_says_so_required_fails_and_off_does_not_look(
+    package, monkeypatch
+):
     built, directory, models = package
     monkeypatch.setattr(typecheck, "find_ty", lambda: None)
 
     note = typecheck.check_types(directory, built.manifest["module"], models, "auto")
     assert note is not None and "not type-checked" in note
-    assert typecheck.check_types(directory, built.manifest["module"], models, "off") is None
+    assert (
+        typecheck.check_types(directory, built.manifest["module"], models, "off")
+        is None
+    )
     with pytest.raises(SdkBuildError, match="not installed"):
         typecheck.check_types(directory, built.manifest["module"], models, "required")

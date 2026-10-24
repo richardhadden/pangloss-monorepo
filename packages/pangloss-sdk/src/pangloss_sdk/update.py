@@ -13,11 +13,11 @@ that matches how it was installed (what `direct_url.json` in its metadata says):
 
 import base64
 import dataclasses
-import importlib.metadata as metadata
 import json
 import re
 import shutil
 import sys
+from importlib import metadata
 from typing import Any
 from urllib.parse import quote, urlsplit, urlunsplit
 
@@ -54,20 +54,29 @@ def sdk_distributions() -> list[metadata.Distribution]:
         if name in NOT_CLIENTS:
             continue
         for requirement in distribution.requires or []:
-            if normalise(re.split(r"[ ;<>=!~\[(@]", requirement, maxsplit=1)[0]) == MARKER:
+            if (
+                normalise(re.split(r"[ ;<>=!~\[(@]", requirement, maxsplit=1)[0])
+                == MARKER
+            ):
                 found.append(distribution)
                 break
     return found
 
 
-def choose(package: str | None, distributions: list[metadata.Distribution]) -> metadata.Distribution:
+def choose(
+    package: str | None, distributions: list[metadata.Distribution]
+) -> metadata.Distribution:
     if package:
         for distribution in distributions:
             if normalise(distribution.metadata["Name"]) == normalise(package):
                 return distribution
-        raise UpdateError(f"'{package}' is not installed here, or is not a Pangloss SDK")
+        raise UpdateError(
+            f"'{package}' is not installed here, or is not a Pangloss SDK"
+        )
     if not distributions:
-        raise UpdateError("No Pangloss SDK is installed here (a package that needs pangloss-sdk)")
+        raise UpdateError(
+            "No Pangloss SDK is installed here (a package that needs pangloss-sdk)"
+        )
     if len(distributions) > 1:
         names = ", ".join(sorted(d.metadata["Name"] for d in distributions))
         raise UpdateError(f"There are several SDKs installed ({names}): say which")
@@ -92,7 +101,11 @@ def server_base(url: str) -> str | None:
 
 def with_login(url: str, username: str, password: str) -> str:
     parts = urlsplit(url)
-    return urlunsplit(parts._replace(netloc=f"{quote(username, safe='')}:{quote(password, safe='')}@{parts.netloc}"))
+    return urlunsplit(
+        parts._replace(
+            netloc=f"{quote(username, safe='')}:{quote(password, safe='')}@{parts.netloc}"
+        )
+    )
 
 
 def basic(username: str, password: str) -> dict[str, str]:
@@ -100,7 +113,9 @@ def basic(username: str, password: str) -> dict[str, str]:
     return {"Authorization": f"Basic {encoded}"}
 
 
-def login_for_download(base: str, http: httpx.Client, prompt: Any) -> tuple[str, str] | None:
+def login_for_download(
+    base: str, http: httpx.Client, prompt: Any
+) -> tuple[str, str] | None:
     """What to give as the username and password to download the SDK: None if the server
     gives it to anyone. The kept login is used (a refresh token gives an access token, which
     the server takes as a password); if there is none, the user is asked."""
@@ -111,12 +126,19 @@ def login_for_download(base: str, http: httpx.Client, prompt: Any) -> tuple[str,
     if stored and "token" in stored:
         return stored.get("username", "token"), stored["token"]
     if stored and "refresh_token" in stored:
-        refreshed = http.post(f"{base}/api/users/token/refresh", json={"refresh_token": stored["refresh_token"]})
+        refreshed = http.post(
+            f"{base}/api/users/token/refresh",
+            json={"refresh_token": stored["refresh_token"]},
+        )
         if refreshed.status_code == 200:
             return stored.get("username", ""), refreshed.json()["access_token"]
     if prompt is None and not can_prompt():
-        raise UpdateError(f"{base} wants a login: run `pangloss-sdk login {base}` first")
-    username, password = (prompt or terminal_prompt)(base, stored.get("username") if stored else None)
+        raise UpdateError(
+            f"{base} wants a login: run `pangloss-sdk login {base}` first"
+        )
+    username, password = (prompt or terminal_prompt)(
+        base, stored.get("username") if stored else None
+    )
     return username, password
 
 
@@ -130,7 +152,9 @@ def plan_from_server(
         except httpx.TransportError as error:
             raise UpdateError(f"{base} could not be reached: {error}") from error
         if version.status_code != 200:
-            raise UpdateError(f"{base} has no SDK to give (it answered {version.status_code})")
+            raise UpdateError(
+                f"{base} has no SDK to give (it answered {version.status_code})"
+            )
         latest = version.json()
         if normalise(latest["distribution"]) != normalise(name):
             raise UpdateError(
@@ -143,7 +167,9 @@ def plan_from_server(
         headers = basic(*login) if login else {}
         manifest = http.get(f"{base}/api/sdk", headers=headers)
         if manifest.status_code != 200:
-            raise UpdateError(f"{base} refused the login for the SDK ({manifest.status_code})")
+            raise UpdateError(
+                f"{base} refused the login for the SDK ({manifest.status_code})"
+            )
         wheel = manifest.json()["downloads"]["wheel"]
 
     shown = installer(wheel)
@@ -164,20 +190,32 @@ def make_plan(
 
     if not direct:
         # (an index: a name)
-        return Plan(f"{name} {distribution.version}: from an index", installer(name), " ".join(installer(name)))
+        return Plan(
+            f"{name} {distribution.version}: from an index",
+            installer(name),
+            " ".join(installer(name)),
+        )
 
     if "dir_info" in direct:
         editable = direct["dir_info"].get("editable")
         where = direct["url"]
-        how = "it is editable, so it follows the directory" if editable else "install it again from there"
-        return Plan(f"{name} was installed from {where}: update that directory (`git pull`); {how}")
+        how = (
+            "it is editable, so it follows the directory"
+            if editable
+            else "install it again from there"
+        )
+        return Plan(
+            f"{name} was installed from {where}: update that directory (`git pull`); {how}"
+        )
 
     url = direct["url"]
     if "vcs_info" in direct:
         revision = direct["vcs_info"].get("requested_revision")
         spec = f"git+{url}" + (f"@{revision}" if revision else "")
         note = f" (at '{revision}': it stays there)" if revision else ""
-        return Plan(f"{name}: from {url}{note}", installer(spec), " ".join(installer(spec)))
+        return Plan(
+            f"{name}: from {url}{note}", installer(spec), " ".join(installer(spec))
+        )
 
     base = server_base(url)
     if base is None:

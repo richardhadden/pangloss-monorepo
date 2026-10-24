@@ -4,7 +4,10 @@ from pathlib import Path
 from pangloss_interface import workspace
 from pangloss_interface.typescript import models_module
 
-EXPORTED = {"models": {"Person": {"name": "Person"}, "Place": {"name": "Place"}}, "enums": {}}
+EXPORTED = {
+    "models": {"Person": {"name": "Person"}, "Place": {"name": "Place"}},
+    "enums": {},
+}
 
 
 def make_source(root: Path, files: dict[str, str]) -> Path:
@@ -21,7 +24,9 @@ def test_the_module_has_the_definitions_and_the_names():
     assert 'export type ModelName = "Person" | "Place";' in text
     body = text.split("export const definitions: ModelDefinitions = ")[1].rstrip(";\n")
     assert json.loads(body) == EXPORTED
-    assert "export type ModelName = never;" in models_module({"models": {}, "enums": {}})
+    assert "export type ModelName = never;" in models_module(
+        {"models": {}, "enums": {}}
+    )
 
 
 def test_what_npm_makes_is_not_copied(tmp_path):

@@ -18,11 +18,15 @@ async def main():
     project.import_models()
     initialise()
 
-    current_request_username.set("alice")  # what is written is recorded as written by this user
+    current_request_username.set(
+        "alice"
+    )  # what is written is recorded as written by this user
     await backend.connect()
     try:
         ada = await Person.Create(label="Ada Lovelace", name="Ada Lovelace").save()
-        babbage = await Person.Create(label="Charles Babbage", name="Charles Babbage").save()
+        babbage = await Person.Create(
+            label="Charles Babbage", name="Charles Babbage"
+        ).save()
         london = await Place.Create(label="London", name="London").save()
 
         letter = await Letter.Create(
@@ -69,7 +73,14 @@ Ada Lovelace wrote: ['Ada to Babbage, 1843']
 ## Updating and deleting
 
 ```python
-await Letter.Update(id=letter.id, label="Ada to Babbage", text="...", sent_by=..., sent_to=..., sent_from=[...]).save()
+await Letter.Update(
+    id=letter.id,
+    label="Ada to Babbage",
+    text="...",
+    sent_by=...,
+    sent_to=...,
+    sent_from=[...],
+).save()
 await Letter.delete(letter.id)
 ```
 

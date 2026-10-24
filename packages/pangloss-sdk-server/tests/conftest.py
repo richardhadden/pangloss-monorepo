@@ -3,7 +3,6 @@ import sys
 import pytest
 from pangloss_core.settings import ClientSettings
 from pangloss_models.model_registry import ModelRegistry
-
 from server_support import write
 
 MODELS = """

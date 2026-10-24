@@ -21,7 +21,6 @@ from pangloss_sdk import (
     PanglossServerError,
 )
 from pangloss_sdk.databases.api import exposed_functions as api
-
 from sdk_support import (
     FakeServer,
     async_client,
@@ -143,9 +142,7 @@ async def test_create_with_detail_reads_a_head_view():
     assert server.requests[-1].url.params["detail"] == "true"
 
 
-@pytest.mark.parametrize(
-    ("expected_version", "if_match"), [(None, "*"), (3, '"3"')]
-)
+@pytest.mark.parametrize(("expected_version", "if_match"), [(None, "*"), (3, '"3"')])
 async def test_update_says_which_version_it_is_based_on(expected_version, if_match):
     Person = make_models()
     id = uuid7()
@@ -183,21 +180,43 @@ async def test_delete_and_undelete():
 @pytest.mark.parametrize(
     ("status", "body", "raised"),
     [
-        (404, {"detail": "no", "error": "PanglossNotFoundError"}, PanglossNotFoundError),
+        (
+            404,
+            {"detail": "no", "error": "PanglossNotFoundError"},
+            PanglossNotFoundError,
+        ),
         (404, {"detail": "no"}, PanglossNotFoundError),
-        (409, {"detail": "used", "error": "PanglossConflictError"}, PanglossConflictError),
+        (
+            409,
+            {"detail": "used", "error": "PanglossConflictError"},
+            PanglossConflictError,
+        ),
         (409, {"detail": "used"}, PanglossConflictError),
-        (400, {"detail": "part", "error": "PanglossNotDeletableError"}, PanglossNotDeletableError),
-        (422, {"detail": "bad ref", "error": "PanglossReferenceError"}, PanglossReferenceError),
+        (
+            400,
+            {"detail": "part", "error": "PanglossNotDeletableError"},
+            PanglossNotDeletableError,
+        ),
+        (
+            422,
+            {"detail": "bad ref", "error": "PanglossReferenceError"},
+            PanglossReferenceError,
+        ),
         (400, {"detail": "no", "error": "PanglossWriteError"}, PanglossWriteError),
-        (503, {"detail": "migrating", "error": "PanglossReadOnlyError"}, PanglossReadOnlyError),
+        (
+            503,
+            {"detail": "migrating", "error": "PanglossReadOnlyError"},
+            PanglossReadOnlyError,
+        ),
         (403, {"detail": "Not authorised"}, PanglossPermissionError),
         (400, {"detail": "bad"}, PanglossRequestError),
         (422, {"detail": [{"loc": ["body"], "msg": "x"}]}, PanglossRequestError),
         (500, {"detail": "Internal server error"}, PanglossServerError),
     ],
 )
-async def test_errors_are_raised_as_the_database_module_raises_them(status, body, raised):
+async def test_errors_are_raised_as_the_database_module_raises_them(
+    status, body, raised
+):
     Person = make_models()
     server = FakeServer(lambda request: (status, body))
     logged_in_client(server)
@@ -209,7 +228,11 @@ async def test_errors_are_raised_as_the_database_module_raises_them(status, body
 async def test_a_version_conflict_has_the_current_version():
     Person = make_models()
     id = uuid7()
-    body = {"detail": "updated since", "error": "PanglossVersionConflictError", "currentVersion": 4}
+    body = {
+        "detail": "updated since",
+        "error": "PanglossVersionConflictError",
+        "currentVersion": 4,
+    }
     server = FakeServer(lambda request: (412, body))
     logged_in_client(server)
 

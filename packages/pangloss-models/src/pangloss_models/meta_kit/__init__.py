@@ -7,4 +7,4 @@ made here now.
 
 from pangloss_models.meta_kit.meta import BaseMeta, InheritValue, MetaRules, WithMeta
 
-__all__ = ("BaseMeta", "MetaRules", "InheritValue", "WithMeta")
+__all__ = ("BaseMeta", "InheritValue", "MetaRules", "WithMeta")

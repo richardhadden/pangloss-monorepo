@@ -1,5 +1,4 @@
 import json
-from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -34,9 +33,13 @@ def commands(monkeypatch):
     monkeypatch.setattr(
         interface_cli,
         "run",
-        lambda command, cwd, environment=None: ran.append((command, cwd, environment)) or 0,
+        lambda command, cwd, environment=None: (
+            ran.append((command, cwd, environment)) or 0
+        ),
     )
-    monkeypatch.setattr(interface_cli, "export_project_models", lambda project: EXPORTED)
+    monkeypatch.setattr(
+        interface_cli, "export_project_models", lambda project: EXPORTED
+    )
     return ran
 
 
@@ -53,7 +56,9 @@ def test_install_prepares_the_project_directory(commands, project):
     # the package's JavaScript is there, with the definitions of the models
     assert (directory / "package.json").is_file()
     assert (directory / "interface-core" / "src" / "index.ts").is_file()
-    models = (directory / "interface-app" / "src" / "generated" / "models.ts").read_text()
+    models = (
+        directory / "interface-app" / "src" / "generated" / "models.ts"
+    ).read_text()
     assert 'export type ModelName = "Person";' in models
     assert "export const definitions: ModelDefinitions" in models
     # ... and not what is built or installed
@@ -87,7 +92,9 @@ def test_the_models_are_exported_before_it_is_built(commands, project, monkeypat
         return 0
 
     monkeypatch.setattr(interface_cli, "run", run_checking)
-    working_directory(project.location.root).joinpath("node_modules").mkdir(parents=True)
+    working_directory(project.location.root).joinpath("node_modules").mkdir(
+        parents=True
+    )
     assert invoke(project, "build").exit_code == 0
     assert seen == [True]
 
@@ -111,10 +118,14 @@ def test_serve_needs_a_build(commands, project):
     assert result.exit_code == 1
     assert "pangloss interface build" in result.output
 
-    entry = working_directory(project.location.root) / "interface-app/dist/server/node.js"
+    entry = (
+        working_directory(project.location.root) / "interface-app/dist/server/node.js"
+    )
     entry.parent.mkdir(parents=True)
     entry.write_text("")
-    assert invoke(project, "serve", "--host", "0.0.0.0", "--port", "8080").exit_code == 0
+    assert (
+        invoke(project, "serve", "--host", "0.0.0.0", "--port", "8080").exit_code == 0
+    )
     command, cwd, environment = commands[-1]
     assert command == ["/bin/node", str(entry)]
     assert environment == {"HOST": "0.0.0.0", "PORT": "8080"}
@@ -128,14 +139,22 @@ def test_export_models_prints_or_writes(commands, project, tmp_path):
     assert "export const definitions" in result.output
 
     target = tmp_path / "out.json"
-    assert invoke(project, "export-models", "--format", "json", "-o", str(target)).exit_code == 0
+    assert (
+        invoke(
+            project, "export-models", "--format", "json", "-o", str(target)
+        ).exit_code
+        == 0
+    )
     assert json.loads(target.read_text()) == EXPORTED
     assert invoke(project, "export-models", "--format", "xml").exit_code == 1
     assert commands == []
 
 
 def test_a_project_is_needed(commands):
-    for obj in (None, SimpleNamespace(location=None, settings_error="No settings found")):
+    for obj in (
+        None,
+        SimpleNamespace(location=None, settings_error="No settings found"),
+    ):
         result = invoke(obj, "build")
         assert result.exit_code == 1
         assert "No" in result.output
@@ -145,7 +164,9 @@ def test_a_project_is_needed(commands):
 def test_a_failing_command_fails(project, monkeypatch):
     monkeypatch.setattr(runtime_module.shutil, "which", lambda name: f"/bin/{name}")
     monkeypatch.setattr(interface_cli, "run", lambda *args, **kwargs: 3)
-    monkeypatch.setattr(interface_cli, "export_project_models", lambda project: EXPORTED)
+    monkeypatch.setattr(
+        interface_cli, "export_project_models", lambda project: EXPORTED
+    )
     assert invoke(project, "install").exit_code == 3
 
 
@@ -156,7 +177,9 @@ def test_a_missing_runtime_is_explained(project, monkeypatch):
     assert "Node.js" in result.output
 
 
-def test_dev_link_runs_the_package_source_with_the_projects_models(commands, project, monkeypatch):
+def test_dev_link_runs_the_package_source_with_the_projects_models(
+    commands, project, monkeypatch
+):
     from pangloss_interface.paths import APP_PATH, JS_ROOT
 
     monkeypatch.setattr(interface_cli, "is_source_checkout", lambda: True)
@@ -170,7 +193,10 @@ def test_dev_link_runs_the_package_source_with_the_projects_models(commands, pro
         (
             ["/bin/npm", "run", "dev", "--", "--port", "3000"],
             APP_PATH,
-            {"PANGLOSS_API_URL": "http://api:9000", "PANGLOSS_MODELS_MODULE": str(models)},
+            {
+                "PANGLOSS_API_URL": "http://api:9000",
+                "PANGLOSS_MODELS_MODULE": str(models),
+            },
         )
     ]
     # nothing is copied: the source of the package is what runs
@@ -198,7 +224,11 @@ def test_info_says_what_is_there_and_what_will_run_it(commands, project):
     (directory / "interface-app/dist/server").mkdir(parents=True)
     (directory / "interface-app/dist/server/node.js").write_text("")
     after = invoke(project, "info").output
-    assert "Prepared:   yes" in after and "Installed:  yes" in after and "Built:      yes" in after
+    assert (
+        "Prepared:   yes" in after
+        and "Installed:  yes" in after
+        and "Built:      yes" in after
+    )
 
 
 def test_check_type_checks_with_the_models_and_checks_the_layers(commands, project):
@@ -212,10 +242,15 @@ def test_check_type_checks_with_the_models_and_checks_the_layers(commands, proje
     ]
     assert all(c[1] == directory for c in commands)
     # (with the project's models in place)
-    assert 'ModelName = "Person"' in (directory / "interface-app/src/generated/models.ts").read_text()
+    assert (
+        'ModelName = "Person"'
+        in (directory / "interface-app/src/generated/models.ts").read_text()
+    )
 
 
-def test_models_that_cannot_be_initialised_are_explained(commands, project, monkeypatch):
+def test_models_that_cannot_be_initialised_are_explained(
+    commands, project, monkeypatch
+):
     from pangloss_models.exceptions import PanglossInitialisationError
 
     def broken(project):

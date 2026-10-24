@@ -15,7 +15,10 @@ _cache: dict[str, str] | None = None
 def compute(apps: list[str]) -> dict[str, str]:
     latest: dict[str, Any] = {}
     for migration in graph_of(apps).migrations.values():
-        if migration.app not in latest or migration.number > latest[migration.app].number:
+        if (
+            migration.app not in latest
+            or migration.number > latest[migration.app].number
+        ):
             latest[migration.app] = migration
     return {app: migration.name for app, migration in sorted(latest.items())}
 

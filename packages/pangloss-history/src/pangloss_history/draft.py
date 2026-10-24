@@ -37,7 +37,9 @@ def validation_problems(model: Any, data: Any) -> list[Problem]:
                 "validation",
                 item["msg"],
                 path=".".join(str(part) for part in item["loc"]) or None,
-                old_value=item.get("input") if isinstance(item.get("input"), (str, int, float, bool)) else None,
+                old_value=item.get("input")
+                if isinstance(item.get("input"), (str, int, float, bool))
+                else None,
             )
             for item in error.errors()
         ]

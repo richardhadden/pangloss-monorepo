@@ -19,7 +19,8 @@ from pangloss_models.model_bases.semantic_space import SemanticSpace
 
 from .helpers import run
 from .migration_support import declare, migrate, with_answers
-from .test_migrations_enums import V1, models as enum_models, shade, write_one
+from .test_migrations_enums import V1, shade, write_one
+from .test_migrations_enums import models as enum_models
 from .test_migrations_relations import person_models, person_payload
 from .test_migrations_structure import (
     date_models,
@@ -56,7 +57,11 @@ def dump(db_driver) -> dict:
         }
         meta = props.get("meta")
         if isinstance(meta, dict):
-            props["meta"] = {k: v for k, v in meta.items() if k not in ("created_when", "updated_when")}
+            props["meta"] = {
+                k: v
+                for k, v in meta.items()
+                if k not in ("created_when", "updated_when")
+            }
         shown.append(clean({"labels": sorted(node["labels"]), "props": props}))
     edges = run(
         db_driver,
@@ -66,7 +71,14 @@ def dump(db_driver) -> dict:
     return {
         "nodes": sorted(shown),
         "edges": sorted(
-            clean({"a": sorted(e["a"]), "type": e["type"], "props": e["props"], "b": sorted(e["b"])})
+            clean(
+                {
+                    "a": sorted(e["a"]),
+                    "type": e["type"],
+                    "props": e["props"],
+                    "b": sorted(e["b"]),
+                }
+            )
             for e in edges
         ),
     }
@@ -153,11 +165,17 @@ async def test_unwrapping_a_reified_relation(db_driver, clear_database):
         old_models, old = declare(person_models(wrapped=True))
         person = await old_models.Person.Create(label="Ann").save()
         for n in range(5):
-            await old_models.Statement.Create(label=f"S{n}", person=person_payload(person, True, n)).save()
+            await old_models.Statement.Create(
+                label=f"S{n}", person=person_payload(person, True, n)
+            ).save()
         await old_models.Factoid.Create(
             label="F",
             statements=[
-                {"type": "Statement", "label": "Nested", "person": person_payload(person, True, 9)},
+                {
+                    "type": "Statement",
+                    "label": "Nested",
+                    "person": person_payload(person, True, 9),
+                },
                 {
                     "type": "Action",
                     "label": "Narrowed",
@@ -193,12 +211,20 @@ async def test_wrapping_in_a_semantic_space(db_driver, clear_database):
     async def case(batch):
         old_models, old = declare(space_models(wrapped=False))
         for n in range(4):
-            await old_models.Factoid.Create(label=f"F{n}", statements=space_payload(False)).save()
+            await old_models.Factoid.Create(
+                label=f"F{n}", statements=space_payload(False)
+            ).save()
         _, new = declare(only_negative)
         await migrate(old, new, batch_size=batch)
 
     graph = await both_ways(db_driver, case)
-    assert sum('"Negative"' in node and '"SemanticSpace"' in node for node in graph["nodes"]) == 8
+    assert (
+        sum(
+            '"Negative"' in node and '"SemanticSpace"' in node
+            for node in graph["nodes"]
+        )
+        == 8
+    )
 
 
 @no_type_check
@@ -233,7 +259,9 @@ async def test_unwrapping_a_semantic_space(db_driver, clear_database):
     async def case(batch):
         old_models, old = declare(wrapped)
         for n in range(4):
-            await old_models.Factoid.Create(label=f"F{n}", statements=space_payload(True)).save()
+            await old_models.Factoid.Create(
+                label=f"F{n}", statements=space_payload(True)
+            ).save()
         _, new = declare(plain)
         await migrate(old, new, batch_size=batch)
 
@@ -249,10 +277,20 @@ async def test_one_wrapper_for_another(db_driver, clear_database):
         for n in range(5):
             await old_models.Statement.Create(
                 label=f"S{n}",
-                person={"type": "IdentifiedAs", "certainty": n, "old_note": "x", "target": [{"type": "Person", "id": person.id}]},
+                person={
+                    "type": "IdentifiedAs",
+                    "certainty": n,
+                    "old_note": "x",
+                    "target": [{"type": "Person", "id": person.id}],
+                },
             ).save()
         _, new = declare(wrapper_models(second=True))
-        await migrate(old, new, batch_size=batch, declined=[PossibleRename(what="model", old="IdentifiedAs", new="ProxyFor")])
+        await migrate(
+            old,
+            new,
+            batch_size=batch,
+            declined=[PossibleRename(what="model", old="IdentifiedAs", new="ProxyFor")],
+        )
 
     graph = await both_ways(db_driver, case)
     assert sum('"ProxyFor"' in node for node in graph["nodes"]) == 5
@@ -263,7 +301,9 @@ async def test_literals_to_an_embedded_object_and_back(db_driver, clear_database
     async def forward(batch):
         old_models, old = declare(date_models(embedded=False))
         for n in range(5):
-            await old_models.Statement.Create(label=f"S{n}", when=str(n), precision=n, text="T").save()
+            await old_models.Statement.Create(
+                label=f"S{n}", when=str(n), precision=n, text="T"
+            ).save()
         _, new = declare(date_models(embedded=True))
         await migrate(old, new, batch_size=batch)
 
@@ -315,12 +355,21 @@ async def test_a_model_renamed(db_driver, clear_database):
             await old_models.Factoid.Create(
                 label=f"F{n}",
                 statements=[
-                    {"type": "Statement", "label": f"S{n}{m}", "action": {"type": "Action", "label": "A"}}
+                    {
+                        "type": "Statement",
+                        "label": f"S{n}{m}",
+                        "action": {"type": "Action", "label": "A"},
+                    }
                     for m in range(2)
                 ],
             ).save()
         _, new = declare(v2)
-        await migrate(old, new, batch_size=batch, confirmed=[PossibleRename(what="model", old="Statement", new="Claim")])
+        await migrate(
+            old,
+            new,
+            batch_size=batch,
+            confirmed=[PossibleRename(what="model", old="Statement", new="Claim")],
+        )
 
     graph = await both_ways(db_driver, case)
     assert not any('"Statement"' in node for node in graph["nodes"])
@@ -351,7 +400,9 @@ async def test_models_deleted_heads_and_nested(db_driver, clear_database):
         old_models, old = declare(v1)
         for n in range(5):
             await old_models.Place.Create(label=f"P{n}").save()
-            await old_models.Statement.Create(label=f"S{n}", action={"type": "Action", "label": f"A{n}"}).save()
+            await old_models.Statement.Create(
+                label=f"S{n}", action={"type": "Action", "label": f"A{n}"}
+            ).save()
         _, new = declare(v2)
         await migrate(old, new, batch_size=batch, declined=[])
 
@@ -378,7 +429,9 @@ async def test_a_reverse_name_changed(db_driver, clear_database):
         old_models, old = declare(named("residents"))
         place = await old_models.Place.Create(label="Paris").save()
         for n in range(5):
-            await old_models.Statement.Create(label=f"S{n}", home={"type": "Place", "id": place.id}).save()
+            await old_models.Statement.Create(
+                label=f"S{n}", home={"type": "Place", "id": place.id}
+            ).save()
         _, new = declare(named("lived_here"))
         await migrate(old, new, batch_size=batch)
 
@@ -407,7 +460,12 @@ async def test_enum_values_changed_and_removed(db_driver, clear_database):
         for n in range(5):
             await write_one(old_models, f"S{n}", old_enum.GREEN, old_enum.BLUE)
         _, new = declare(enum_models(new_enum))
-        await migrate(old, new, batch_size=batch, answer=with_answers(RemoveEnumMember={"replacement": "RED"}))
+        await migrate(
+            old,
+            new,
+            batch_size=batch,
+            answer=with_answers(RemoveEnumMember={"replacement": "RED"}),
+        )
 
     graph = await both_ways(db_driver, removed)
     assert not any('"favourite": "green"' in node for node in graph["nodes"])
@@ -438,13 +496,24 @@ async def test_a_list_that_becomes_one_value(db_driver, clear_database):
         places = [await old_models.Place.Create(label=f"P{n}").save() for n in range(3)]
         for n in range(9):
             await old_models.Statement.Create(
-                label=f"S{n}", homes=[{"type": "Place", "id": place.id} for place in places[: 1 + n % 3]]
+                label=f"S{n}",
+                homes=[
+                    {"type": "Place", "id": place.id} for place in places[: 1 + n % 3]
+                ],
             ).save()
         _, new = declare(v2)
-        await migrate(old, new, batch_size=batch, answer=with_answers(AlterCardinality={"keep": "first"}))
+        await migrate(
+            old,
+            new,
+            batch_size=batch,
+            answer=with_answers(AlterCardinality={"keep": "first"}),
+        )
 
     graph = await both_ways(db_driver, case)
-    assert sum('"homes"' in edge and '"reverse"' not in edge for edge in graph["edges"]) == 9
+    assert (
+        sum('"homes"' in edge and '"reverse"' not in edge for edge in graph["edges"])
+        == 9
+    )
 
 
 @no_type_check
@@ -478,10 +547,19 @@ async def test_a_relation_narrowed_so_that_edges_are_removed(db_driver, clear_da
         person = await old_models.Person.Create(label="P").save()
         group = await old_models.Group.Create(label="G").save()
         for n in range(6):
-            target = {"type": "Group", "id": group.id} if n % 3 else {"type": "Person", "id": person.id}
+            target = (
+                {"type": "Group", "id": group.id}
+                if n % 3
+                else {"type": "Person", "id": person.id}
+            )
             await old_models.Statement.Create(label=f"S{n}", about=target).save()
         _, new = declare(v2)
-        await migrate(old, new, batch_size=batch, answer=with_answers(AlterRelationTarget={"on_narrowing": "remove"}))
+        await migrate(
+            old,
+            new,
+            batch_size=batch,
+            answer=with_answers(AlterRelationTarget={"on_narrowing": "remove"}),
+        )
 
     graph = await both_ways(db_driver, case)
     assert not any('"Group"' in edge and '"about' in edge for edge in graph["edges"])
@@ -514,9 +592,16 @@ async def test_properties_given_to_edges(db_driver, clear_database):
         old_models, old = declare(v1)
         person = await old_models.Person.Create(label="P").save()
         for n in range(5):
-            await old_models.Statement.Create(label=f"S{n}", about={"type": "Person", "id": person.id}).save()
+            await old_models.Statement.Create(
+                label=f"S{n}", about={"type": "Person", "id": person.id}
+            ).save()
         _, new = declare(v2)
-        await migrate(old, new, batch_size=batch, answer=with_answers(AlterEdgeModel={"defaults": {"level": 3}}))
+        await migrate(
+            old,
+            new,
+            batch_size=batch,
+            answer=with_answers(AlterEdgeModel={"defaults": {"level": 3}}),
+        )
 
     graph = await both_ways(db_driver, case)
     assert sum('"level": 3' in edge for edge in graph["edges"]) == 10
@@ -528,7 +613,11 @@ async def test_properties_given_to_edges(db_driver, clear_database):
         for n in range(5):
             await old_models.Statement.Create(
                 label=f"S{n}",
-                about={"type": "Person", "id": person.id, "edge_properties": {"level": n}},
+                about={
+                    "type": "Person",
+                    "id": person.id,
+                    "edge_properties": {"level": n},
+                },
             ).save()
         _, new = declare(v1)
         await migrate(old, new, batch_size=batch)
@@ -562,7 +651,9 @@ async def test_a_field_that_narrows_a_parent_field_and_stops(db_driver, clear_da
             carried_out_by: Annotated[
                 Person,
                 RelationConfig(
-                    subclasses_parent_fields=[FieldSubclassing("involves", field_on_model=Statement)]
+                    subclasses_parent_fields=[
+                        FieldSubclassing("involves", field_on_model=Statement)
+                    ]
                 ),
             ]
 
@@ -573,7 +664,9 @@ async def test_a_field_that_narrows_a_parent_field_and_stops(db_driver, clear_da
         person = await old_models.Person.Create(label="P").save()
         for n in range(5):
             await old_models.Action.Create(
-                label=f"A{n}", carried_out_by={"type": "Person", "id": person.id}, involves=[]
+                label=f"A{n}",
+                carried_out_by={"type": "Person", "id": person.id},
+                involves=[],
             ).save()
         _, new = declare(narrowing)
         await migrate(old, new, batch_size=batch)
@@ -587,7 +680,9 @@ async def test_a_field_that_narrows_a_parent_field_and_stops(db_driver, clear_da
         person = await old_models.Person.Create(label="P").save()
         for n in range(5):
             await old_models.Action.Create(
-                label=f"A{n}", carried_out_by={"type": "Person", "id": person.id}, involves=[]
+                label=f"A{n}",
+                carried_out_by={"type": "Person", "id": person.id},
+                involves=[],
             ).save()
         _, new = declare(plain)
         await migrate(old, new, batch_size=batch)
@@ -629,15 +724,22 @@ async def test_a_semantic_space_renamed(db_driver, clear_database):
     async def case(batch):
         old_models, old = declare(named("Negative"))
         for n in range(5):
-            await old_models.Factoid.Create(label=f"F{n}", statements=space_payload(True)).save()
+            await old_models.Factoid.Create(
+                label=f"F{n}", statements=space_payload(True)
+            ).save()
         _, new = declare(named("Doubtful"))
         await migrate(
-            old, new, batch_size=batch, confirmed=[PossibleRename(what="model", old="Negative", new="Doubtful")]
+            old,
+            new,
+            batch_size=batch,
+            confirmed=[PossibleRename(what="model", old="Negative", new="Doubtful")],
         )
 
     graph = await both_ways(db_driver, case)
     assert not any('"Negative"' in node for node in graph["nodes"])
-    assert any('"Doubtful"' in node and '"semantic_spaces"' in node for node in graph["nodes"])
+    assert any(
+        '"Doubtful"' in node and '"semantic_spaces"' in node for node in graph["nodes"]
+    )
 
 
 @no_type_check
@@ -648,8 +750,12 @@ async def test_a_new_embedded_object(db_driver, clear_database):
             await old_models.Statement.Create(label=f"S{n}", text="T").save()
         _, new = declare(new_embedded_models(embedded=True))
         await migrate(
-            old, new, batch_size=batch,
-            answer=with_answers(AddField={"default": {"when": "unknown", "precision": 0}}),
+            old,
+            new,
+            batch_size=batch,
+            answer=with_answers(
+                AddField={"default": {"when": "unknown", "precision": 0}}
+            ),
         )
 
     graph = await both_ways(db_driver, case)

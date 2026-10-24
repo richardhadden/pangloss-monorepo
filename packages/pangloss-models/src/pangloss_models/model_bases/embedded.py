@@ -1,13 +1,13 @@
 from typing import Annotated, ClassVar, Literal
 
 from pydantic import ConfigDict, Field
-from pangloss_models.meta_kit import BaseMeta, InheritValue, MetaRules, WithMeta
 
 from pangloss_models.field_definitions import (
     FieldDefinition,
     ModelFieldDict,
     ModelFields,
 )
+from pangloss_models.meta_kit import BaseMeta, InheritValue, MetaRules, WithMeta
 from pangloss_models.model_bases.base_models import (
     DeclaredClassMeta,
     _CreateBase,
@@ -63,4 +63,3 @@ class Embedded(_DeclaredClass, WithMeta[EmbeddedMeta]):
     UpdateDB: ClassVar[type[_EmbeddedUpdateDBBAse]]
 
     View: ClassVar[type[_EmbeddedViewBase]]
-

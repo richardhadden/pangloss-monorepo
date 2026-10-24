@@ -3,6 +3,9 @@ from typing import no_type_check
 from uuid import uuid7
 
 import pytest
+from pangloss_memgraph.databases.memgraph.initialise_database import (
+    initialise_database,
+)
 from pangloss_models import initialise
 from pangloss_models.exceptions import (
     PanglossConflictError,
@@ -22,13 +25,8 @@ from pangloss_models.model_bases.semantic_space import SemanticSpace
 from pangloss_users import current_request_username
 from pydantic import AnyHttpUrl
 
-from pangloss_memgraph.databases.memgraph.initialise_database import (
-    initialise_database,
-)
-
 from .helpers import count_nodes, labels_of, native, run
-
-from .test_create import Colour, Dimensions, Size  # noqa: E402
+from .test_create import Colour, Dimensions, Size
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -127,9 +125,9 @@ async def test_update_keeps_creation_record_and_adds_update_record(
     make_user(db_driver, "editor")
 
     saved = await Statement.Create(label="Original").save()
-    created_when = run(
-        db_driver, "MATCH (c:PGCreation) RETURN c.created_when AS when"
-    )[0]["when"]
+    created_when = run(db_driver, "MATCH (c:PGCreation) RETURN c.created_when AS when")[
+        0
+    ]["when"]
 
     with as_user("editor"):
         await Statement.Update(id=saved.id, label="Edited").save()
@@ -178,9 +176,9 @@ async def test_update_return_types_and_meta(db_driver, clear_database):
         reference = await Statement.Update(
             id=saved.id, label="Second", text="two"
         ).save()
-        full = await Statement.Update(
-            id=saved.id, label="Third", text="three"
-        ).save(detail=True)
+        full = await Statement.Update(id=saved.id, label="Third", text="three").save(
+            detail=True
+        )
 
     assert isinstance(reference, Statement.ReferenceView)
     assert reference.id == saved.id
@@ -479,7 +477,9 @@ async def test_update_replaces_deeply_nested_documents(db_driver, clear_database
 
     assert count_nodes(db_driver, "Leaf") == 1
     assert count_nodes(db_driver, "Branch") == 1
-    leaf = run(db_driver, "MATCH (:Root)-[:branch]->(:Branch)-[:leaf]->(l:Leaf) RETURN l")
+    leaf = run(
+        db_driver, "MATCH (:Root)-[:branch]->(:Branch)-[:leaf]->(l:Leaf) RETURN l"
+    )
     assert leaf[0]["l"]["value"] == "new"
     assert leaf[0]["l"]["head_node_id"] == str(saved.id)
 
@@ -533,7 +533,9 @@ async def test_update_replaces_wrapper_nodes_rather_than_adding_to_them(
         )
 
     saved = await Statement.Create(**payload("old", 1, "2020-01-01T00:00:00")).save()
-    await Statement.Update(id=saved.id, **payload("new", 2, "2021-02-03T04:05:06")).save()
+    await Statement.Update(
+        id=saved.id, **payload("new", 2, "2021-02-03T04:05:06")
+    ).save()
 
     for label in ("Date", "Located", "Place", "Causes"):
         assert count_nodes(db_driver, label) == 1, label
@@ -550,7 +552,9 @@ async def test_update_replaces_wrapper_nodes_rather_than_adding_to_them(
     assert count_nodes(db_driver, "WithCertainty") == 0
     assert run(db_driver, "MATCH (n:Located) RETURN n.certainty AS c")[0]["c"] == 2
     assert run(db_driver, "MATCH (n:Place) RETURN n.label AS l")[0]["l"] == "place new"
-    assert sorted(r["l"] for r in run(db_driver, "MATCH (n:Action) RETURN n.label AS l")) == [
+    assert sorted(
+        r["l"] for r in run(db_driver, "MATCH (n:Action) RETURN n.label AS l")
+    ) == [
         "cause new",
         "result new",
     ]
@@ -780,7 +784,10 @@ async def test_update_can_create_inline_entities(db_driver, clear_database):
     assert "head_node_id" not in person
     assert "HeadNode" in labels_of(db_driver, new_id)
     assert (
-        run(db_driver, "MATCH (:Statement)-[r:concerns_people]->(:Person) RETURN count(r) AS c")[0]["c"]
+        run(
+            db_driver,
+            "MATCH (:Statement)-[r:concerns_people]->(:Person) RETURN count(r) AS c",
+        )[0]["c"]
         == 1
     )
 
@@ -894,7 +901,9 @@ async def test_update_replaces_the_urls_of_an_entity(db_driver, clear_database):
     edit = await Person.get_for_edit(id=saved.id)
     assert [str(u) for u in edit.urls] == [a]
 
-    await Person.Update(id=saved.id, label="JS", urls=[AnyHttpUrl(b), AnyHttpUrl(c)]).save()
+    await Person.Update(
+        id=saved.id, label="JS", urls=[AnyHttpUrl(b), AnyHttpUrl(c)]
+    ).save()
     read = await Person.get(id=saved.id)
     assert [str(u) for u in read.urls] == [b, c]
     assert await Person.get(id=AnyHttpUrl(a)) is None  # (a is no longer taken)
@@ -903,7 +912,9 @@ async def test_update_replaces_the_urls_of_an_entity(db_driver, clear_database):
     assert rows == [{"url": b}, {"url": c}]
 
     # (the same list again changes nothing)
-    await Person.Update(id=saved.id, label="JS", urls=[AnyHttpUrl(b), AnyHttpUrl(c)]).save()
+    await Person.Update(
+        id=saved.id, label="JS", urls=[AnyHttpUrl(b), AnyHttpUrl(c)]
+    ).save()
     assert [str(u) for u in (await Person.get(id=saved.id)).urls] == [b, c]
 
     # (not given: left as they are; empty: all removed)
@@ -1103,9 +1114,8 @@ async def test_update_as_unknown_user_raises_and_changes_nothing(
     saved = await Statement.Create(label="Original").save()
     before = snapshot(db_driver)
 
-    with as_user("nobody_by_this_name"):
-        with pytest.raises(PanglossUserNotFoundError):
-            await Statement.Update(id=saved.id, label="Changed").save()
+    with as_user("nobody_by_this_name"), pytest.raises(PanglossUserNotFoundError):
+        await Statement.Update(id=saved.id, label="Changed").save()
 
     assert snapshot(db_driver) == before
 
@@ -1178,7 +1188,9 @@ async def test_update_replaces_enum_values(db_driver, clear_database):
 
 
 @no_type_check
-async def test_update_with_enums_on_nested_documents_and_edges(db_driver, clear_database):
+async def test_update_with_enums_on_nested_documents_and_edges(
+    db_driver, clear_database
+):
     class Certainty(EdgeModel):
         colour: Colour
 
@@ -1212,7 +1224,9 @@ async def test_update_with_enums_on_nested_documents_and_edges(db_driver, clear_
     action = run(db_driver, "MATCH (a:Action) RETURN a")[0]["a"]
     assert action["size"] == Size.LARGE.value
     for edge in ("concerns", "concerns_reverse"):
-        props = run(db_driver, f"MATCH ()-[r:{edge}]->() RETURN properties(r) AS p")[0]["p"]
+        props = run(db_driver, f"MATCH ()-[r:{edge}]->() RETURN properties(r) AS p")[0][
+            "p"
+        ]
         assert props["colour"] == Colour.BLUE.value, edge
 
 

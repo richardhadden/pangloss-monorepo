@@ -99,7 +99,12 @@ def build_fetch_document_query(
 
 # The nodes that a relation to an entity can pass through on its way up to the document that holds it:
 # the generic wrappers (a reified relation, a semantic space, a conjunction), and embedded objects
-WRAPPER_LABELS = ("ReifiedRelation", "ReifiedRelationDocument", "SemanticSpace", "Conjunction")
+WRAPPER_LABELS = (
+    "ReifiedRelation",
+    "ReifiedRelationDocument",
+    "SemanticSpace",
+    "Conjunction",
+)
 CHAIN_LABELS = (*WRAPPER_LABELS, "Embedded")
 
 

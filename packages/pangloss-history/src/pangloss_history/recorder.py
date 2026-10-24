@@ -88,7 +88,9 @@ class Recorder:
                 self.written += len(batch)
             except Exception:
                 self.failed += len(batch)
-                logger.exception("History could not be written: %s records lost", len(batch))
+                logger.exception(
+                    "History could not be written: %s records lost", len(batch)
+                )
             finally:
                 for _ in batch:
                     self.queue.task_done()

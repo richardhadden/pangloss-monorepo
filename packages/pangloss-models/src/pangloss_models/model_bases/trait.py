@@ -1,13 +1,13 @@
 from typing import Any, ClassVar
 
 from pydantic import ConfigDict, Field
-from pangloss_models.meta_kit import BaseMeta, InheritValue
 
 from pangloss_models.field_definitions import (
     FieldDefinition,
     ModelFieldDict,
     ModelFields,
 )
+from pangloss_models.meta_kit import BaseMeta, InheritValue
 from pangloss_models.model_bases.base_models import (
     DeclaredClassMeta,
     _DeclaredClass,
@@ -36,9 +36,7 @@ class Trait[T: Document | Entity](_Trait):
     _meta: Any  # type: ignore
 
 
-
 class NonHeritableTrait(_Trait):
     _kind_base: ClassVar[bool] = True
     Meta: ClassVar[Any] = TraitMeta
     _meta: Any  # type: ignore
-

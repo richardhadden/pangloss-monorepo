@@ -30,14 +30,16 @@ from pangloss_models.migrations.changes import RunCypher, RunPython, StateOnly
 from pangloss_models.migrations.files import changes_from_data
 
 dependencies = []
-schema_hash = '...'          # leave what makemigrations wrote
+schema_hash = "..."  # leave what makemigrations wrote
 
-changes = changes_from_data([
-    RunCypher(
-        query="MATCH (p:Person) WHERE p.nickname IS NULL SET p.nickname = p.name",
-        note="give everyone a nickname",
-    ),
-])
+changes = changes_from_data(
+    [
+        RunCypher(
+            query="MATCH (p:Person) WHERE p.nickname IS NULL SET p.nickname = p.name",
+            note="give everyone a nickname",
+        ),
+    ]
+)
 ```
 
 ## `RunCypher`
@@ -46,10 +48,10 @@ changes = changes_from_data([
 RunCypher(
     query="MATCH (p:Person) WHERE p.born < $year SET p.era = $era",
     parameters={"year": 1800, "era": "early"},
-    note="mark the early people",          # shown in the plan
-    lossy=False,                           # True if it destroys information
-    affects=["Person"],                    # models to read afterwards
-    reverse_query=None,                    # how to undo it (see below)
+    note="mark the early people",  # shown in the plan
+    lossy=False,  # True if it destroys information
+    affects=["Person"],  # models to read afterwards
+    reverse_query=None,  # how to undo it (see below)
     reverse_parameters=None,
 )
 ```
@@ -68,14 +70,20 @@ async def split_names(tx, state):
         first, _, last = row["name"].partition(" ")
         await tx.run(
             "MATCH (p:Person {id: $id}) SET p.first = $first, p.last = $last",
-            id=row["id"], first=first, last=last,
+            id=row["id"],
+            first=first,
+            last=last,
         )
 ```
 
 ```python
-changes = changes_from_data([
-    RunPython(function="library.migrations.helpers:split_names", note="split full names"),
-])
+changes = changes_from_data(
+    [
+        RunPython(
+            function="library.migrations.helpers:split_names", note="split full names"
+        ),
+    ]
+)
 ```
 
 - The function takes `(tx, state)`; it may be `async` or plain. `tx.run(...)` makes a query. `state` is the description of the models **as they were before this change** (a plain dictionary), if you need to look something up.
@@ -93,8 +101,10 @@ RunCypher(
     query="MATCH (p:Person) SET p.era = 'early'",
     reverse_query="MATCH (p:Person) REMOVE p.era",
 )
-RunPython(function="library.migrations.helpers:split_names",
-          reverse_function="library.migrations.helpers:join_names")
+RunPython(
+    function="library.migrations.helpers:split_names",
+    reverse_function="library.migrations.helpers:join_names",
+)
 ```
 
 ## Refused changes: `RunCypher` plus `StateOnly`
@@ -109,20 +119,29 @@ When `makemigrations` finds a change that `migrate` will not apply, it still wri
 Here `Event.when` was a `datetime` and is now a `str`. Pangloss does not convert a datetime to text, so `makemigrations` wrote an `AlterLiteralType` entry that `migrate` refuses. The edited migration:
 
 ```python
-changes = changes_from_data([
-    # 1. turn the datetime into text
-    {'change': 'RunCypher',
-     'note': 'store Event.when as ISO text',
-     'query': "MATCH (e:Event) WHERE e.when IS NOT NULL SET e.when = toString(e.when)",
-    },
-
-    # 2. the entry makemigrations wrote, now wrapped so that it changes the models only
-    {'change': 'StateOnly',
-     'changes': [
-         {'change': 'AlterLiteralType', 'model': 'Event', 'name': 'when',
-          'old': {'type': 'datetime'}, 'new': {'type': 'str'}},
-     ]},
-])
+changes = changes_from_data(
+    [
+        # 1. turn the datetime into text
+        {
+            "change": "RunCypher",
+            "note": "store Event.when as ISO text",
+            "query": "MATCH (e:Event) WHERE e.when IS NOT NULL SET e.when = toString(e.when)",
+        },
+        # 2. the entry makemigrations wrote, now wrapped so that it changes the models only
+        {
+            "change": "StateOnly",
+            "changes": [
+                {
+                    "change": "AlterLiteralType",
+                    "model": "Event",
+                    "name": "when",
+                    "old": {"type": "datetime"},
+                    "new": {"type": "str"},
+                },
+            ],
+        },
+    ]
+)
 ```
 
 (This example is illustrative. Check how your own values are stored, and try it on a copy.) The pattern is always the same: **data first, then `StateOnly` of the refused change**. If you forget the second part, `makemigrations` will notice that the migrations no longer come to the models and offer the change again.

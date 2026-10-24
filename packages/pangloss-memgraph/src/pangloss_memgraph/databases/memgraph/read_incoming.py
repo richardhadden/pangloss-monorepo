@@ -14,11 +14,10 @@ For each relation, the `HeadView` has a field named after the reverse relation
   end of the chain are all the targets of the wrapper next to the entity.
 """
 
-import typing
-import uuid
-
 import functools
 import logging
+import typing
+import uuid
 
 from pangloss_models.field_definitions import RelationFieldDefinition, RelationToTypeVar
 from pangloss_models.model_bases.entity import Entity
@@ -50,7 +49,9 @@ def held_fields(wrapper_name: str) -> dict[str, RelationFieldDefinition]:
     return {
         name: definition
         for name, definition in wrapper._meta.fields.relation_fields.items()
-        if any(isinstance(option, RelationToTypeVar) for option in definition.type_options)
+        if any(
+            isinstance(option, RelationToTypeVar) for option in definition.type_options
+        )
     }
 
 
@@ -79,7 +80,9 @@ def wrapper_view(
     (for the one next to the entity, that is every target of it, the entity itself and any others)."""
     node = {k: v for k, v in chain[index].items() if k not in INTERNAL_KEYS}
     holds = held.get(node["id"], [])
-    leading = field_leading_to(node["type"], edge_types[index - 1]) if index > 0 else None
+    leading = (
+        field_leading_to(node["type"], edge_types[index - 1]) if index > 0 else None
+    )
 
     for name, definition in held_fields(node["type"]).items():
         if name == leading:
@@ -163,7 +166,9 @@ async def fetch_incoming_relations(
         edge_types: list[str] = record["chain_edge_types"]
         holder = chain[-1]
 
-        via_reified = bool(chain[0]["_labels"]) and bool(set(chain[0]["_labels"]) & WRAPPERS)
+        via_reified = bool(chain[0]["_labels"]) and bool(
+            set(chain[0]["_labels"]) & WRAPPERS
+        )
 
         # The name of the relation (as seen from the entity) is the reverse edge
         # that the chain of wrappers, if any, ends with, or else the first reverse edge

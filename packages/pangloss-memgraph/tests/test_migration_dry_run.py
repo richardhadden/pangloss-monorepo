@@ -1,13 +1,12 @@
 """A dry run says what a migration would do, and does nothing; `check_data` reads everything"""
 
-from enum import Enum
 from types import SimpleNamespace as ns
-from typing import Annotated, no_type_check
+from typing import no_type_check
 
 import pytest
+from pangloss_memgraph.databases.memgraph import migration_backend as backend
 from pangloss_memgraph.databases.memgraph.database import Database
 from pangloss_memgraph.databases.memgraph.migrations import dry_run
-from pangloss_memgraph.databases.memgraph import migration_backend as backend
 from pangloss_models.migrations.check import check_data
 from pangloss_models.migrations.files import EMPTY_SNAPSHOT, MigrationGraph
 from pangloss_models.migrations.planner import plan
@@ -24,7 +23,6 @@ pytestmark = pytest.mark.asyncio(loop_scope="session")
 APPS = ["migapp"]
 
 
-
 def in_app(snapshot: dict) -> dict:
     for model in snapshot["models"].values():
         model["module"] = "migapp.models"
@@ -39,13 +37,18 @@ def migrations_between(graph, new, answer=None):
 
 def answering(**by_kind):
     def answer(changes, old):
-        return [with_answer(ch, *by_kind[ch.kind]) if ch.kind in by_kind else ch for ch in changes]
+        return [
+            with_answer(ch, *by_kind[ch.kind]) if ch.kind in by_kind else ch
+            for ch in changes
+        ]
 
     return answer
 
 
 @no_type_check
-async def test_a_dry_run_counts_what_a_migration_would_do_and_does_nothing(db_driver, clear_database):
+async def test_a_dry_run_counts_what_a_migration_would_do_and_does_nothing(
+    db_driver, clear_database
+):
     def v1():
         class Person(Entity):
             name: str
@@ -67,7 +70,9 @@ async def test_a_dry_run_counts_what_a_migration_would_do_and_does_nothing(db_dr
     for name in ("Ann", "Bob", "Cat"):
         await old_models.Person.Create(label=name, name=name).save()
     _, second = declare(v2)
-    later = migrations_between(graph, second, answer=answering(AddField=("default", 1900)))
+    later = migrations_between(
+        graph, second, answer=answering(AddField=("default", 1900))
+    )
 
     (report,) = await backend.dry_run(later, state)
     (change,) = report.changes
@@ -75,8 +80,13 @@ async def test_a_dry_run_counts_what_a_migration_would_do_and_does_nothing(db_dr
     assert change.counts["properties_set"] == 3
     assert "3 properties set" in change.summary()
     # nothing was done
-    assert run(db_driver, "MATCH (p:Person) WHERE p.born IS NOT NULL RETURN count(p) AS n") == [{"n": 0}]
-    assert await backend.applied() and ("migapp", later[0].name) not in await backend.applied()
+    assert run(
+        db_driver, "MATCH (p:Person) WHERE p.born IS NOT NULL RETURN count(p) AS n"
+    ) == [{"n": 0}]
+    assert (
+        await backend.applied()
+        and ("migapp", later[0].name) not in await backend.applied()
+    )
 
 
 @no_type_check
@@ -109,9 +119,13 @@ async def test_a_dry_run_counts_the_nodes_a_wrapper_makes(db_driver, clear_datab
     state = await backend.apply(initial, EMPTY_SNAPSHOT)
     person = await old_models.Person.Create(label="Ann").save()
     for label in ("A", "B"):
-        await old_models.Statement.Create(label=label, person={"type": "Person", "id": person.id}).save()
+        await old_models.Statement.Create(
+            label=label, person={"type": "Person", "id": person.id}
+        ).save()
     _, second = declare(v2)
-    later = migrations_between(graph, second, answer=answering(WrapRelation=("defaults.certainty", 3)))
+    later = migrations_between(
+        graph, second, answer=answering(WrapRelation=("defaults.certainty", 3))
+    )
 
     (report,) = await backend.dry_run(later, state)
     wrap = next(r for r in report.changes if r.change.kind == "WrapRelation")
@@ -119,7 +133,9 @@ async def test_a_dry_run_counts_the_nodes_a_wrapper_makes(db_driver, clear_datab
     assert wrap.counts["nodes_created"] == 2
     assert wrap.counts["relationships_deleted"] >= 4
     assert run(db_driver, "MATCH (r:IdentifiedAs) RETURN count(r) AS n") == [{"n": 0}]
-    assert run(db_driver, "MATCH (:Statement)-[e:person]->(:Person) RETURN count(e) AS n") == [{"n": 2}]
+    assert run(
+        db_driver, "MATCH (:Statement)-[e:person]->(:Person) RETURN count(e) AS n"
+    ) == [{"n": 2}]
 
 
 @no_type_check
@@ -158,7 +174,9 @@ async def test_a_dry_run_finds_what_would_fail(db_driver, clear_database):
 
 
 @no_type_check
-async def test_changes_to_indexes_are_listed_and_not_tried_but_those_to_enums_are(db_driver, clear_database):
+async def test_changes_to_indexes_are_listed_and_not_tried_but_those_to_enums_are(
+    db_driver, clear_database
+):
     from pangloss_models.migrations import changes as c
 
     index = {"kind": "label+property", "label": "DryRunScratch", "properties": ["a"]}
@@ -177,7 +195,14 @@ async def test_changes_to_indexes_are_listed_and_not_tried_but_those_to_enums_ar
             "DryRunThing": {
                 "kind": "Entity",
                 "labels": ["DryRunThing", "Entity"],
-                "fields": [{"name": "shade", "kind": "literal", "type": shade, "nullable": False}],
+                "fields": [
+                    {
+                        "name": "shade",
+                        "kind": "literal",
+                        "type": shade,
+                        "nullable": False,
+                    }
+                ],
             }
         },
     }
@@ -194,11 +219,17 @@ async def test_changes_to_indexes_are_listed_and_not_tried_but_those_to_enums_ar
     # (nothing was done: not the index, and the rolled-back value is as it was)
     assert run(db_driver, "MATCH (n:DryRunThing) RETURN n.shade AS s") == [{"s": "a"}]
     with db_driver.session() as session:
-        assert not [r for r in session.run("SHOW INDEX INFO").data() if r["label"] == "DryRunScratch"]
+        assert not [
+            r
+            for r in session.run("SHOW INDEX INFO").data()
+            if r["label"] == "DryRunScratch"
+        ]
 
 
 @no_type_check
-async def test_check_data_reads_everything_the_models_can_and_reports_the_rest(db_driver, clear_database):
+async def test_check_data_reads_everything_the_models_can_and_reports_the_rest(
+    db_driver, clear_database
+):
     def v1():
         class Person(Entity):
             name: str
@@ -235,11 +266,16 @@ async def test_check_data_reads_everything_the_models_can_and_reports_the_rest(d
     check = await check_data()
     assert check.checked == 3
     assert sorted(p.label for p in check.problems) == ["Ann", "Bob"]
-    assert all(p.model == "Person" and any("born" in e for e in p.errors) for p in check.problems)
+    assert all(
+        p.model == "Person" and any("born" in e for e in p.errors)
+        for p in check.problems
+    )
     assert "Person" in str(check.problems[0])
 
     # ... until it is migrated
-    later = migrations_between(graph, second, answer=answering(AddField=("default", 1900)))
+    later = migrations_between(
+        graph, second, answer=answering(AddField=("default", 1900))
+    )
     await backend.apply(later, state)
     check = await check_data()
     assert check.ok
@@ -254,7 +290,9 @@ async def test_check_data_reads_everything_the_models_can_and_reports_the_rest(d
 
 
 @no_type_check
-async def test_reading_several_at_once_finds_the_same_in_the_same_order(db_driver, clear_database):
+async def test_reading_several_at_once_finds_the_same_in_the_same_order(
+    db_driver, clear_database
+):
     def v1():
         class Person(Entity):
             name: str

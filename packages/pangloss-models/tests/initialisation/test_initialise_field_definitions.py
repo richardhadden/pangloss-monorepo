@@ -5,7 +5,6 @@ from types import NoneType, UnionType
 from typing import (
     Annotated,
     NotRequired,
-    Optional,
     TypedDict,
     TypeVar,
     get_args,
@@ -54,8 +53,8 @@ from pangloss_models.model_bases.reified_relation import (
 from pangloss_models.model_bases.semantic_space import SemanticSpace
 from pangloss_models.model_bases.trait import NonHeritableTrait, Trait
 from pangloss_models.model_registry import ModelRegistry
-from pydantic import ValidationError
 from pangloss_models.utils import get_all_parent_classes, is_single_relatable
+from pydantic import ValidationError
 
 
 def test_meta_fields():
@@ -380,7 +379,7 @@ def test_unsupported_field_type_raises():
 def test_field_definition_for_optional_literal_field():
     class Statement(Document):
         integer: int | None = None
-        integer_two: Optional[int]
+        integer_two: int | None
 
     initialise()
 
@@ -2344,12 +2343,18 @@ def test_the_values_of_an_enum_must_be_strings_or_numbers():
     class Other(Document):
         odd: Odd
 
-    with pytest.raises(PanglossModelError, match="WHEN, ALSO.*not a string or a number"):
+    with pytest.raises(
+        PanglossModelError, match="WHEN, ALSO.*not a string or a number"
+    ):
         initialise()
 
 
-@pytest.mark.parametrize("shape", ["list", "optional", "typeddict", "list of typeddict"])
-def test_an_enum_with_values_that_cannot_be_stored_is_refused_wherever_it_is_used(shape):
+@pytest.mark.parametrize(
+    "shape", ["list", "optional", "typeddict", "list of typeddict"]
+)
+def test_an_enum_with_values_that_cannot_be_stored_is_refused_wherever_it_is_used(
+    shape,
+):
     class Odd(Enum):
         WHEN = date(2020, 1, 1)
 

@@ -1,6 +1,6 @@
+from history_support import record
 from pangloss_history.diff import Change, diff
 from pangloss_history.gaps import find_gaps
-from history_support import record
 
 
 def test_values_that_are_added_removed_and_changed():
@@ -33,19 +33,28 @@ def test_lists_without_ids_are_compared_by_place():
 
 
 def test_a_value_that_changes_type():
-    assert diff({"a": 1}, {"a": {"b": 1}}) == [Change("a", "changed", old=1, new={"b": 1})]
+    assert diff({"a": 1}, {"a": {"b": 1}}) == [
+        Change("a", "changed", old=1, new={"b": 1})
+    ]
 
 
 def test_gaps_are_the_versions_that_have_no_record_of_content():
-    records = [record(version=1), record(version=2, op="update"), record(version=2, op="delete"),
-               record(version=5, op="update")]
+    records = [
+        record(version=1),
+        record(version=2, op="update"),
+        record(version=2, op="delete"),
+        record(version=5, op="update"),
+    ]
     assert find_gaps(records, 5) == [3, 4]
     assert find_gaps(records, 2) == []
     assert find_gaps([record(version=2, op="delete")], 2) == [1, 2]
 
 
 def test_what_is_only_bookkeeping_of_the_write_is_not_a_difference():
-    assert diff(
-        {"a": 1, "create_new": True, "context_labels": None, "db_labels": []},
-        {"a": 1, "context_labels": [], "db_labels": None},
-    ) == []
+    assert (
+        diff(
+            {"a": 1, "create_new": True, "context_labels": None, "db_labels": []},
+            {"a": 1, "context_labels": [], "db_labels": None},
+        )
+        == []
+    )

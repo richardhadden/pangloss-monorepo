@@ -1,13 +1,12 @@
 from typing import Literal, no_type_check
 from uuid import UUID, uuid7
 
-from pydantic import AnyHttpUrl
-
 from pangloss_models import initialise
 from pangloss_models.model_bases.document import Document
 from pangloss_models.model_bases.edge_model import EdgeModel
 from pangloss_models.model_bases.entity import Entity
 from pangloss_models.model_bases.reified_relation import ReifiedRelationDocument
+from pydantic import AnyHttpUrl
 
 
 def test_reference_set_on_entities():

@@ -26,7 +26,9 @@ async def go_back(old: dict, new: dict, forward: list):
 
 
 @no_type_check
-async def test_a_renamed_relation_is_renamed_back_with_its_reverse(db_driver, clear_database):
+async def test_a_renamed_relation_is_renamed_back_with_its_reverse(
+    db_driver, clear_database
+):
     def v1():
         class Place(Entity):
             pass
@@ -53,26 +55,38 @@ async def test_a_renamed_relation_is_renamed_back_with_its_reverse(db_driver, cl
     before = signature(db_driver, statement.id)
 
     _, new = declare(v2)
-    rename = PossibleRename(what="field", scope="Statement", old="home", new="residence")
+    rename = PossibleRename(
+        what="field", scope="Statement", old="home", new="residence"
+    )
     forward = await migrate(old, new, confirmed=[rename])
     reversal = await go_back(old, new, forward)
     assert not reversal.lossy
 
     old_models, _ = declare(v1)
     assert (await old_models.Statement.get(id=statement.id)).home.id == place.id
-    assert [s.id for s in (await old_models.Place.get(id=place.id)).home_reverse] == [statement.id]
+    assert [s.id for s in (await old_models.Place.get(id=place.id)).home_reverse] == [
+        statement.id
+    ]
     assert signature(db_driver, statement.id) == before
 
 
 @no_type_check
-async def test_a_wrapped_relation_is_unwrapped_to_what_it_was(db_driver, clear_database):
+async def test_a_wrapped_relation_is_unwrapped_to_what_it_was(
+    db_driver, clear_database
+):
     old_models, old = declare(person_models(wrapped=False))
     person = await old_models.Person.Create(label="Ann").save()
-    plain = await old_models.Statement.Create(label="Plain", person=person_payload(person, False)).save()
+    plain = await old_models.Statement.Create(
+        label="Plain", person=person_payload(person, False)
+    ).save()
     factoid = await old_models.Factoid.Create(
         label="F",
         statements=[
-            {"type": "Statement", "label": "Nested", "person": person_payload(person, False)},
+            {
+                "type": "Statement",
+                "label": "Nested",
+                "person": person_payload(person, False),
+            },
             {
                 "type": "Action",
                 "label": "Narrowed",
@@ -84,7 +98,9 @@ async def test_a_wrapped_relation_is_unwrapped_to_what_it_was(db_driver, clear_d
     before = (signature(db_driver, plain.id), signature(db_driver, factoid.id))
 
     _, new = declare(person_models(wrapped=True))
-    forward = await migrate(old, new, answer=with_answers(WrapRelation={"defaults": {"certainty": 5}}))
+    forward = await migrate(
+        old, new, answer=with_answers(WrapRelation={"defaults": {"certainty": 5}})
+    )
     assert run(db_driver, "MATCH (r:IdentifiedAs) RETURN count(r) AS c") == [{"c": 3}]
 
     reversal = await go_back(old, new, forward)
@@ -101,7 +117,9 @@ async def test_a_wrapped_relation_is_unwrapped_to_what_it_was(db_driver, clear_d
 
 
 @no_type_check
-async def test_a_converted_type_is_converted_back_and_an_added_field_removed(db_driver, clear_database):
+async def test_a_converted_type_is_converted_back_and_an_added_field_removed(
+    db_driver, clear_database
+):
     def v1():
         class Item(Entity):
             count: int
@@ -133,7 +151,9 @@ async def test_a_converted_type_is_converted_back_and_an_added_field_removed(db_
 
 
 @no_type_check
-async def test_a_value_that_cannot_go_back_fails_and_changes_nothing(db_driver, clear_database):
+async def test_a_value_that_cannot_go_back_fails_and_changes_nothing(
+    db_driver, clear_database
+):
     def v1():
         class Item(Entity):
             count: int
@@ -158,12 +178,13 @@ async def test_a_value_that_cannot_go_back_fails_and_changes_nothing(db_driver, 
 
 
 @no_type_check
-async def test_undoing_in_batches_and_again_after_a_stop(db_driver, clear_database, monkeypatch):
-    from dataclasses import replace
+async def test_undoing_in_batches_and_again_after_a_stop(
+    db_driver, clear_database, monkeypatch
+):
 
     from pangloss_memgraph.databases.memgraph import migration_backend as backend
     from pangloss_memgraph.databases.memgraph.migrations import runner
-    from pangloss_models.migrations.files import EMPTY_SNAPSHOT, Migration
+    from pangloss_models.migrations.files import Migration
 
     def v1():
         class Item(Entity):
@@ -183,12 +204,17 @@ async def test_undoing_in_batches_and_again_after_a_stop(db_driver, clear_databa
         await old_models.Item.Create(label=f"I{n}", name=f"n{n}").save()
     new_models, new = declare(v2)
     forward = await migrate(old, new, answer=with_answers(AddField={"default": 3}))
-    assert run(db_driver, "MATCH (i:Item) WHERE i.count = 3 RETURN count(i) AS n") == [{"n": 5}]
+    assert run(db_driver, "MATCH (i:Item) WHERE i.count = 3 RETURN count(i) AS n") == [
+        {"n": 5}
+    ]
 
     await backend.ensure_ready()
     reversal = reverse_changes(forward, data_view(old))
     migration = Migration(app="back", name="0001_x", changes=tuple(reversal.changes))
-    run(db_driver, "CREATE (:PGMigration {app: 'back', name: '0001_x', status: 'applied'})")
+    run(
+        db_driver,
+        "CREATE (:PGMigration {app: 'back', name: '0001_x', status: 'applied'})",
+    )
 
     # the second batch fails
     calls = []
@@ -203,12 +229,20 @@ async def test_undoing_in_batches_and_again_after_a_stop(db_driver, clear_databa
     monkeypatch.setattr(runner, "apply_window", failing)
     with pytest.raises(RuntimeError, match="stopped part way"):
         await backend.unapply([migration], data_view(new), batch_size=2)
-    assert [r["key"] for r in run(db_driver, "MATCH (m:PGMigration) RETURN m.name AS key")] == ["0001_x"]  # (still recorded)
-    assert run(db_driver, "MATCH (i:Item) WHERE i.count IS NOT NULL RETURN count(i) AS n") == [{"n": 3}]  # (2 done)
+    assert [
+        r["key"] for r in run(db_driver, "MATCH (m:PGMigration) RETURN m.name AS key")
+    ] == ["0001_x"]  # (still recorded)
+    assert run(
+        db_driver, "MATCH (i:Item) WHERE i.count IS NOT NULL RETURN count(i) AS n"
+    ) == [{"n": 3}]  # (2 done)
 
     # ... and run again from the start: the rest is done, and what was done is not found again
     monkeypatch.setattr(runner, "apply_window", original)
     state = await backend.unapply([migration], data_view(new), batch_size=2)
-    assert run(db_driver, "MATCH (i:Item) WHERE i.count IS NOT NULL RETURN count(i) AS n") == [{"n": 0}]
-    assert run(db_driver, "MATCH (m:PGMigration {app: 'back'}) RETURN count(m) AS n") == [{"n": 0}]
+    assert run(
+        db_driver, "MATCH (i:Item) WHERE i.count IS NOT NULL RETURN count(i) AS n"
+    ) == [{"n": 0}]
+    assert run(
+        db_driver, "MATCH (m:PGMigration {app: 'back'}) RETURN count(m) AS n"
+    ) == [{"n": 0}]
     assert state == data_view(old)

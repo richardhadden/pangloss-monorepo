@@ -71,12 +71,16 @@ def write_if_changed(path: Path, content: bytes) -> bool:
     return True
 
 
-def sync_sources(destination: Path, source: Path = JS_ROOT) -> tuple[list[str], list[str]]:
+def sync_sources(
+    destination: Path, source: Path = JS_ROOT
+) -> tuple[list[str], list[str]]:
     """Copy the JavaScript of the package. Returns the files written, and those removed
     (that an earlier copy had, and the package no longer has)."""
     files = package_files(source)
     written = [
-        name for name in files if write_if_changed(destination / name, (source / name).read_bytes())
+        name
+        for name in files
+        if write_if_changed(destination / name, (source / name).read_bytes())
     ]
 
     manifest = destination / MANIFEST
@@ -107,7 +111,9 @@ def prepare(project_root: Path, exported: dict[str, Any]) -> Prepared:
     directory = working_directory(project_root)
     directory.mkdir(parents=True, exist_ok=True)
     written, removed = sync_sources(directory)
-    if write_if_changed(directory / MODELS_MODULE_PATH, models_module(exported).encode()):
+    if write_if_changed(
+        directory / MODELS_MODULE_PATH, models_module(exported).encode()
+    ):
         written.append(MODELS_MODULE_PATH)
     return Prepared(directory, written, removed)
 

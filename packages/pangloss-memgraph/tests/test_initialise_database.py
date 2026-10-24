@@ -1,5 +1,4 @@
 from enum import Enum
-from typing import TypedDict
 from uuid import uuid4
 
 import neo4j
@@ -10,14 +9,6 @@ from pangloss_memgraph.databases.memgraph.initialise_database import (
     UNIQUE_CONSTRAINTS,
     initialise_database,
 )
-from pangloss_models import initialise
-from pangloss_models.exceptions import PanglossInitialisationError
-from pangloss_models.model_bases.annotated_value import AnnotatedValue
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.edge_model import EdgeModel
-from pangloss_models.model_bases.entity import Entity
-from pangloss_models.model_bases.helpers import ViaEdge
-from pangloss_models.model_registry import ModelRegistry
 
 from .helpers import run
 
@@ -98,7 +89,9 @@ async def test_initialise_database_can_be_run_again(db_driver):
     second = await initialise_database()
 
     assert second.created == []
-    assert len(second.already_present) == len(first.created) + len(first.already_present)
+    assert len(second.already_present) == len(first.created) + len(
+        first.already_present
+    )
     assert first.created == []  # (it had already been run for the tests)
 
 

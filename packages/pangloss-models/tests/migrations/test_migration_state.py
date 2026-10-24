@@ -4,6 +4,7 @@ import json
 from typing import no_type_check
 
 import pytest
+from migration_support import changes, snapshot_of
 from pangloss_models.migrations import (
     apply_change,
     change_from_dict,
@@ -12,10 +13,8 @@ from pangloss_models.migrations import (
 )
 from pangloss_models.migrations import changes as c
 from pangloss_models.migrations.state import HANDLERS
-
-from migration_support import changes, snapshot_of
-from pangloss_models.model_bases.entity import Entity
 from pangloss_models.model_bases.document import Document
+from pangloss_models.model_bases.entity import Entity
 from pangloss_models.model_bases.reified_relation import ReifiedRelation
 
 
@@ -78,7 +77,9 @@ def test_applying_a_change_does_not_change_the_snapshot_given():
 
     snapshot = data_view(snapshot_of(declare))
     before = json.dumps(snapshot, sort_keys=True)
-    after = apply_change(snapshot, c.RemoveField(model="Person", name="name", field_kind="literal"))
+    after = apply_change(
+        snapshot, c.RemoveField(model="Person", name="name", field_kind="literal")
+    )
     assert json.dumps(snapshot, sort_keys=True) == before
     assert after["models"]["Person"]["fields"] == []
 
@@ -86,7 +87,11 @@ def test_applying_a_change_does_not_change_the_snapshot_given():
 @no_type_check
 def test_answers_are_kept_with_the_change():
     change = c.AddField(
-        model="Person", name="born", field_kind="literal", needs_value=True, default=1900
+        model="Person",
+        name="born",
+        field_kind="literal",
+        needs_value=True,
+        default=1900,
     )
     assert change_from_dict(change.to_dict()).default == 1900
     wrap = c.WrapRelation(

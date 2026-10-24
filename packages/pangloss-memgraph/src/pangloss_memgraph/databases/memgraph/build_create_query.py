@@ -136,7 +136,7 @@ class ExistingEntity:
     deleted: bool
 
 
-def inline_entity_key(instance: "_EntityCreateDBBase") -> InlineEntityKey:
+def inline_entity_key(instance: _EntityCreateDBBase) -> InlineEntityKey:
     if instance.urls:
         return ("url", str(sorted(instance.urls, key=str)[0]))
     return ("id", str(instance.id))
@@ -409,9 +409,7 @@ def build_attached_nodes(
         )
         for item in iter_values(getattr(instance, related_field_name, None)):
             match item:
-                case _CreateDBBase() | _UpdateDBBase() if (
-                    item.__metatype__ == "Entity"
-                ):
+                case _CreateDBBase() | _UpdateDBBase() if item.__metatype__ == "Entity":
                     # (an entity of its own, not part of this document)
                     build_inline_entity_query(
                         query_object=query_object,
@@ -463,7 +461,9 @@ def build_attached_nodes(
 
 
 def build_url_nodes(
-    query_object: QueryObject, instance: "_EntityCreateDBBase", node_identifier: Identifier
+    query_object: QueryObject,
+    instance: _EntityCreateDBBase,
+    node_identifier: Identifier,
 ) -> None:
     """The URLs of a new entity, as nodes (`PGUrl`) that it has, rather than as a
     property: a URL is unique, so that two entities cannot have it, even if they are
@@ -589,7 +589,7 @@ def build_related_node_query(
 
 def build_inline_entity_query(
     query_object: QueryObject,
-    instance: "_EntityCreateDBBase",
+    instance: _EntityCreateDBBase,
     source_identifier: Identifier,
     field_name: str,
     reverse_name: str,

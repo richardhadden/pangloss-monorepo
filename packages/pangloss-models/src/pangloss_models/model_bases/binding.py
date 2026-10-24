@@ -9,7 +9,9 @@ if TYPE_CHECKING:
     from pangloss_models.model_bases.base_models import _CreateBase, _UpdateBase
 
 
-def allow_bind_on_this_item(item: _CreateBase | _UpdateBase, binding: FieldBinding) -> bool:
+def allow_bind_on_this_item(
+    item: _CreateBase | _UpdateBase, binding: FieldBinding
+) -> bool:
     """Whether a binding applies to an item of this type: it must be one of `allowed_type_names`
     (if there are any) and none of `excluded_type_names`"""
     if binding.allowed_type_names and item.type not in binding.allowed_type_names:
@@ -36,11 +38,15 @@ def recursively_add_bound_field_values(item, binding: FieldBinding, value=None) 
 
     if allow_bind_on_this_item(item, binding):
         for child_bound_field in binding.child_fields:
-            if hasattr(item, child_bound_field) and not getattr(item, child_bound_field, None):
+            if hasattr(item, child_bound_field) and not getattr(
+                item, child_bound_field, None
+            ):
                 setattr(item, child_bound_field, value)
 
-    for related_field_name in item._meta.fields.relation_fields.keys():
-        recursively_add_bound_field_values(getattr(item, related_field_name), binding, value)
+    for related_field_name in item._meta.fields.relation_fields:
+        recursively_add_bound_field_values(
+            getattr(item, related_field_name), binding, value
+        )
 
 
 def bind_values_to_children(item: _CreateBase | _UpdateBase) -> None:
@@ -50,4 +56,6 @@ def bind_values_to_children(item: _CreateBase | _UpdateBase) -> None:
             value = getattr(item, binding.bound_field)
             if binding.converter:
                 value = binding.converter(value)
-            recursively_add_bound_field_values(getattr(item, field_name), binding, value=value)
+            recursively_add_bound_field_values(
+                getattr(item, field_name), binding, value=value
+            )

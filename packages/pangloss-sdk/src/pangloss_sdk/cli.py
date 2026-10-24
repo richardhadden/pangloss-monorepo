@@ -47,7 +47,10 @@ def login(args: argparse.Namespace, transport: Any, prompt: Any, out: Any) -> in
                 return 1
             username = me.json()["username"]
             where = credentials.save(url, {"token": token, "username": username})
-            print(f"Logged in to {url} as {username} with a token; kept in {where}", file=out)
+            print(
+                f"Logged in to {url} as {username} with a token; kept in {where}",
+                file=out,
+            )
             return 0
 
         username = args.username
@@ -65,10 +68,13 @@ def login(args: argparse.Namespace, transport: Any, prompt: Any, out: Any) -> in
         else:
             return 1
         where = credentials.save(
-            url, {"refresh_token": response.json()["refresh_token"], "username": username}
+            url,
+            {"refresh_token": response.json()["refresh_token"], "username": username},
         )
         print(f"Logged in to {url} as {username}; kept in {where}", file=out)
-        print("(the password is not kept: only a token that `logout` revokes)", file=out)
+        print(
+            "(the password is not kept: only a token that `logout` revokes)", file=out
+        )
     return 0
 
 
@@ -81,7 +87,10 @@ def logout(args: argparse.Namespace, transport: Any, prompt: Any, out: Any) -> i
     if "refresh_token" in stored:
         try:
             with client_for(url, transport) as http:
-                http.post("/api/users/token/revoke", json={"refresh_token": stored["refresh_token"]})
+                http.post(
+                    "/api/users/token/revoke",
+                    json={"refresh_token": stored["refresh_token"]},
+                )
             revoked = "revoked on the server, and "
         except httpx.TransportError:
             revoked = "NOT revoked on the server (it could not be reached), but "
@@ -106,18 +115,34 @@ def status(args: argparse.Namespace, transport: Any, prompt: Any, out: Any) -> i
             version = http.get("/api/sdk/version")
             if version.status_code == 200:
                 body = version.json()
-                print(f"SDK on the server: {body['distribution']} {body['version']}", file=out)
+                print(
+                    f"SDK on the server: {body['distribution']} {body['version']}",
+                    file=out,
+                )
             else:
                 print("SDK on the server: none built", file=out)
             if stored and "token" in stored:
                 headers = {"Authorization": f"Bearer {stored['token']}"}
                 me = http.get("/api/users/me", headers=headers)
-                print("Token: " + ("accepted" if me.status_code == 200 else "NOT accepted"), file=out)
+                print(
+                    "Token: "
+                    + ("accepted" if me.status_code == 200 else "NOT accepted"),
+                    file=out,
+                )
             elif stored and "refresh_token" in stored:
                 refreshed = http.post(
-                    "/api/users/token/refresh", json={"refresh_token": stored["refresh_token"]}
+                    "/api/users/token/refresh",
+                    json={"refresh_token": stored["refresh_token"]},
                 )
-                print("Login: " + ("still good" if refreshed.status_code == 200 else "NOT good any more (log in again)"), file=out)
+                print(
+                    "Login: "
+                    + (
+                        "still good"
+                        if refreshed.status_code == 200
+                        else "NOT good any more (log in again)"
+                    ),
+                    file=out,
+                )
     except httpx.TransportError as error:
         print(f"The server could not be reached: {error}", file=sys.stderr)
         return 1
@@ -165,7 +190,10 @@ def sync_stubs(args: argparse.Namespace, transport: Any, prompt: Any, out: Any) 
         if SYNC_STUBS in path.parts
     ]
     if not found:
-        print(f"{distribution.metadata['Name']} has no blocking stubs (it was made by an older server)", file=sys.stderr)
+        print(
+            f"{distribution.metadata['Name']} has no blocking stubs (it was made by an older server)",
+            file=sys.stderr,
+        )
         return 1
 
     target = Path(args.directory)
@@ -179,50 +207,100 @@ def sync_stubs(args: argparse.Namespace, transport: Any, prompt: Any, out: Any) 
     if args.remove:
         print(f"Removed the blocking stubs from {target}", file=out)
     else:
-        print(f"Wrote the blocking stubs of {distribution.metadata['Name']} to {target}/", file=out)
-        print("A type checker has to use it before the installed package: pyright does, from `typings`;", file=out)
-        print("mypy with MYPYPATH=" + str(target) + "; ty with extra-paths = [\"" + str(target) + "\"] under [tool.ty.environment].", file=out)
-        print("Use it with `connect(url, sync=True)`; remove it (--remove) to go back to async.", file=out)
+        print(
+            f"Wrote the blocking stubs of {distribution.metadata['Name']} to {target}/",
+            file=out,
+        )
+        print(
+            "A type checker has to use it before the installed package: pyright does, from `typings`;",
+            file=out,
+        )
+        print(
+            "mypy with MYPYPATH="
+            + str(target)
+            + '; ty with extra-paths = ["'
+            + str(target)
+            + '"] under [tool.ty.environment].',
+            file=out,
+        )
+        print(
+            "Use it with `connect(url, sync=True)`; remove it (--remove) to go back to async.",
+            file=out,
+        )
     return 0
 
 
 def parser() -> argparse.ArgumentParser:
-    main_parser = argparse.ArgumentParser(prog="pangloss-sdk", description=__doc__.split("\n\n")[0])
+    main_parser = argparse.ArgumentParser(
+        prog="pangloss-sdk", description=__doc__.split("\n\n")[0]
+    )
     commands = main_parser.add_subparsers(dest="command", required=True)
 
     login_parser = commands.add_parser("login", help="Log in and keep the login")
-    login_parser.add_argument("url", nargs="?", help=f"The server (or set {DEFAULT_ENV})")
+    login_parser.add_argument(
+        "url", nargs="?", help=f"The server (or set {DEFAULT_ENV})"
+    )
     login_parser.add_argument("--username", help="A username to suggest")
-    login_parser.add_argument("--token", action="store_true", help="Keep a personal access token")
+    login_parser.add_argument(
+        "--token", action="store_true", help="Keep a personal access token"
+    )
     login_parser.set_defaults(run=login)
 
-    logout_parser = commands.add_parser("logout", help="Revoke the kept login and forget it")
+    logout_parser = commands.add_parser(
+        "logout", help="Revoke the kept login and forget it"
+    )
     logout_parser.add_argument("url", nargs="?")
     logout_parser.set_defaults(run=logout)
 
-    status_parser = commands.add_parser("status", help="Where you are logged in, and the SDK there")
+    status_parser = commands.add_parser(
+        "status", help="Where you are logged in, and the SDK there"
+    )
     status_parser.add_argument("url", nargs="?")
     status_parser.set_defaults(run=status)
 
-    update_parser = commands.add_parser("update", help="Install the SDK the server has now")
-    update_parser.add_argument("package", nargs="?", help="The SDK, if more than one is installed")
-    update_parser.add_argument("--dry-run", action="store_true", help="Say what would be run")
+    update_parser = commands.add_parser(
+        "update", help="Install the SDK the server has now"
+    )
+    update_parser.add_argument(
+        "package", nargs="?", help="The SDK, if more than one is installed"
+    )
+    update_parser.add_argument(
+        "--dry-run", action="store_true", help="Say what would be run"
+    )
     update_parser.set_defaults(run=update)
 
-    stubs_parser = commands.add_parser("sync-stubs", help="Type stubs for the blocking SDK (connect(sync=True))")
-    stubs_parser.add_argument("directory", nargs="?", default="typings", help="Where a type checker looks first (default: typings)")
-    stubs_parser.add_argument("--package", help="The SDK, if more than one is installed")
-    stubs_parser.add_argument("--remove", action="store_true", help="Take them away again")
+    stubs_parser = commands.add_parser(
+        "sync-stubs", help="Type stubs for the blocking SDK (connect(sync=True))"
+    )
+    stubs_parser.add_argument(
+        "directory",
+        nargs="?",
+        default="typings",
+        help="Where a type checker looks first (default: typings)",
+    )
+    stubs_parser.add_argument(
+        "--package", help="The SDK, if more than one is installed"
+    )
+    stubs_parser.add_argument(
+        "--remove", action="store_true", help="Take them away again"
+    )
     stubs_parser.set_defaults(run=sync_stubs)
     return main_parser
 
 
-def main(argv: list[str] | None = None, transport: Any = None, prompt: Any = None, out: Any = None) -> int:
+def main(
+    argv: list[str] | None = None,
+    transport: Any = None,
+    prompt: Any = None,
+    out: Any = None,
+) -> int:
     args = parser().parse_args(argv)
     try:
         return args.run(args, transport, prompt, out or sys.stdout)
-    except (EOFError, KeyboardInterrupt):
-        print("\nStopped: nothing was asked for, or it was not answered", file=sys.stderr)
+    except EOFError, KeyboardInterrupt:
+        print(
+            "\nStopped: nothing was asked for, or it was not answered", file=sys.stderr
+        )
         return 1
 
 

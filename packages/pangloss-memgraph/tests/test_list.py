@@ -382,7 +382,9 @@ async def test_list_with_nothing_in_it_or_a_page_past_the_end(clear_database):
 
 
 @no_type_check
-async def test_a_page_of_documents_that_refer_to_entities_is_one_page(db_driver, clear_database):
+async def test_a_page_of_documents_that_refer_to_entities_is_one_page(
+    db_driver, clear_database
+):
     """(the facets were worked out for each document, and a page of them came back as many)"""
 
     class Person(Entity):

@@ -42,7 +42,9 @@ def fail(error: SdkBuildError) -> None:
 @cli.command()
 def build(
     ctx: typer.Context,
-    force: bool = typer.Option(False, "--force", help="Build again even if nothing changed"),
+    force: bool = typer.Option(
+        False, "--force", help="Build again even if nothing changed"
+    ),
 ) -> None:
     """Build the SDK: the models of the apps, with stubs, as a package. It is checked on
     a clean client before it replaces the last build."""
@@ -78,8 +80,10 @@ def status(ctx: typer.Context) -> None:
         package = publish.current_package(root, settings, output)
     except SdkBuildError as error:
         fail(error)
-    typer.echo(f"Built {state['built_at']}: version 0.{state['number']}, "
-               f"fingerprint {state['fingerprint'][:12]}")
+    typer.echo(
+        f"Built {state['built_at']}: version 0.{state['number']}, "
+        f"fingerprint {state['fingerprint'][:12]}"
+    )
     if state["schema_position"]:
         typer.echo(f"  schema position: {state['schema_position']}")
     if publish.needs_build(package, output):
@@ -97,7 +101,9 @@ def show(
     settings, root = load(ctx)
     output = config.output_directory(root, settings)
     try:
-        package = build_package(root, settings, publish.read_state(output).get("number", 0) + 1)
+        package = build_package(
+            root, settings, publish.read_state(output).get("number", 0) + 1
+        )
     except SdkBuildError as error:
         fail(error)
     if diff:

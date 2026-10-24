@@ -4,7 +4,10 @@ the first, migrated, and read with the second"""
 from types import SimpleNamespace
 
 from pangloss_memgraph.databases.memgraph.database import Database
-from pangloss_memgraph.databases.memgraph.migrations import apply_changes, apply_changes_in_batches
+from pangloss_memgraph.databases.memgraph.migrations import (
+    apply_changes,
+    apply_changes_in_batches,
+)
 from pangloss_models import initialise
 from pangloss_models.migrations import build_snapshot, diff
 from pangloss_models.model_registry import ModelRegistry
@@ -19,7 +22,9 @@ def declare(version) -> tuple[SimpleNamespace, dict]:
     return models, build_snapshot()
 
 
-async def migrate(old: dict, new: dict, answer=None, batch_size: int | None = None, **diff_answers):
+async def migrate(
+    old: dict, new: dict, answer=None, batch_size: int | None = None, **diff_answers
+):
     """Apply the changes from `old` to `new` to the database. `answer(changes)` may fill in
     the answers a change needs: it returns the changes to apply. With a `batch_size` they are made
     in batches of that size. Returns them."""

@@ -21,9 +21,9 @@ from pydantic import (
     model_validator,
 )
 from pydantic.alias_generators import to_camel
+
 from pangloss_models.hooks import convert_from_database
 from pangloss_models.meta_kit import WithMeta
-
 from pangloss_models.model_bases.binding import bind_values_to_children
 from pangloss_models.model_bases.context_label import ContextLabel
 from pangloss_models.model_bases.from_database import (
@@ -33,7 +33,9 @@ from pangloss_models.model_bases.fulfilment import (
     build_fulfilled_model,
     fulfilled_classes_of,
 )
-from pangloss_models.model_bases.instance_context import recursively_propagate_context_types
+from pangloss_models.model_bases.instance_context import (
+    recursively_propagate_context_types,
+)
 from pangloss_models.model_bases.labels import get_labels_for_db_classes
 from pangloss_models.model_bases.model_tools import (
     data_for_db,
@@ -133,13 +135,11 @@ class MetaGetter[T: type[_ActionClass]]:
         return owner._owner._meta
 
 
-
 class GetItemViaAttrDict[T](dict):
     def __getattr__(self, name) -> type[T]:
         if name in self:
             return self[name]
         return super().__getattribute__(name)
-
 
 
 class _ActionClass(_BaseObject):
@@ -163,7 +163,10 @@ class _ActionClass(_BaseObject):
         of the type supplied (once: it is kept in `_via`)"""
 
         made = cls._via.get(edge_model.__name__)
-        if made is not None and made.model_fields["edge_properties"].annotation is edge_model:
+        if (
+            made is not None
+            and made.model_fields["edge_properties"].annotation is edge_model
+        ):
             return made
 
         # For a ReifiedRelationDocument, we need to construct a better name for the class by

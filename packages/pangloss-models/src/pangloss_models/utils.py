@@ -1,4 +1,5 @@
 import typing
+from collections.abc import Iterable
 from datetime import date, datetime
 from decimal import Decimal
 from enum import Enum
@@ -9,10 +10,7 @@ from typing import (
     Annotated,
     Any,
     Generic,
-    Iterable,
-    TypedDict,
     TypeIs,
-    Union,
     cast,
     get_args,
     get_origin,
@@ -25,13 +23,13 @@ from annotated_types import BaseMetadata
 from pydantic import BaseModel
 from pydantic._internal._generics import PydanticGenericMetadata
 from pydantic.fields import FieldInfo
-from pangloss_models.meta_kit import WithMeta
 
 from pangloss_models.exceptions import PanglossModelError
 from pangloss_models.field_definitions import FieldBinding
+from pangloss_models.meta_kit import WithMeta
 from pangloss_models.model_bases.annotated_value import AnnotatedValue
-from pangloss_models.model_bases.base_types import BaseTypes
 from pangloss_models.model_bases.base_models import _BaseObject, _DeclaredClass
+from pangloss_models.model_bases.base_types import BaseTypes
 from pangloss_models.model_bases.configs import RelationConfig
 from pangloss_models.model_bases.conjunction import Conjunction
 from pangloss_models.model_bases.document import Document
@@ -39,10 +37,6 @@ from pangloss_models.model_bases.edge_model import EdgeModel
 from pangloss_models.model_bases.embedded import Embedded
 from pangloss_models.model_bases.entity import Entity
 from pangloss_models.model_bases.helpers import ViaEdge
-from pangloss_models.model_bases.reified_relation import (
-    ReifiedRelation,
-    ReifiedRelationDocument,
-)
 from pangloss_models.model_bases.semantic_space import SemanticSpace
 from pangloss_models.model_bases.trait import (
     NonHeritableTrait,
@@ -50,7 +44,7 @@ from pangloss_models.model_bases.trait import (
     _Trait,
 )
 
-type ConcreteUnionType[T] = type[type[T] | type[T]]
+type ConcreteUnionType[T] = type[type[T] | type[T]]  # noqa: PYI016
 
 LITERAL_TYPES = {str, int, float, bool, Decimal, date, datetime}
 
@@ -136,7 +130,7 @@ def generic_get_subclasses[
 
 
 def model_is_trait(
-    cls: type[_DeclaredClass] | type[Trait] | type[NonHeritableTrait],
+    cls: type[_DeclaredClass | Trait | NonHeritableTrait],
 ):
     """Determines whether a model is a Trait, or subclass of a Trait,
     rather than a _DeclaredClass type to which a Trait has been applied"""
@@ -149,7 +143,7 @@ def model_is_trait(
 
 
 def is_subclass_of_heritable_trait(
-    cls: type[Trait] | type[NonHeritableTrait],
+    cls: type[Trait | NonHeritableTrait],
 ) -> bool:
     """Determine whether a class is a subclass of a Trait,
     not the application of a trait to a real Document or Entity class.
@@ -160,8 +154,8 @@ def is_subclass_of_heritable_trait(
 
 
 def get_trait_subclasses(
-    trait: type[Trait] | type[NonHeritableTrait],
-) -> set[type[Trait] | type[NonHeritableTrait]]:
+    trait: type[Trait | NonHeritableTrait],
+) -> set[type[Trait | NonHeritableTrait]]:
     """Get subclasses of a Trait that are Traits, not instantiations
     of a Trait"""
 
@@ -173,9 +167,9 @@ def get_trait_subclasses(
 
 
 def get_direct_instantiations_of_trait(
-    trait: type[Trait] | type[NonHeritableTrait],
+    trait: type[Trait | NonHeritableTrait],
     follow_trait_subclasses: bool = False,
-) -> set[type[Document] | type[Entity]]:
+) -> set[type[Document | Entity]]:
     """Given a Trait class, find the models to which it is *directly* applied,
     i.e. omitting children"""
 
@@ -294,7 +288,7 @@ def is_embedded(annotation: type[Any] | UnionType | None) -> TypeIs[type[Embedde
 
 def is_union_of_embedded(
     annotation: type[Any] | None | UnionType,
-) -> TypeIs[type[Embedded | Embedded]]:
+) -> TypeIs[type[Embedded]]:
     if isinstance(annotation, UnionType):
         if all(is_embedded(arg) for arg in get_args(annotation)):
             return True
@@ -340,8 +334,8 @@ def get_model_and_edge_type(
 
 
 def is_relatable(
-    annotation: type[Any] | None | type[Any | Any] | UnionType,
-) -> TypeIs[type[_DeclaredClass] | type[Union[_DeclaredClass, _DeclaredClass]]]:
+    annotation: type[Any] | None | UnionType,
+) -> TypeIs[type[_DeclaredClass]]:
     if is_union_of_relatable(annotation):
         return True
 

@@ -40,7 +40,9 @@ from pangloss_users import current_request_username
 
 from pangloss_memgraph.databases.memgraph.database import Database
 from pangloss_memgraph.databases.memgraph.initialise_database import run_statement
-from pangloss_memgraph.databases.memgraph.initialise_database import structure as initialise_structure
+from pangloss_memgraph.databases.memgraph.initialise_database import (
+    structure as initialise_structure,
+)
 from pangloss_memgraph.databases.memgraph.migrations import (
     Progress,
     apply_changes,
@@ -67,7 +69,11 @@ async def ensure_ready(database: Database | None = None) -> None:
         await database._initialise_driver()
     name = database.settings.DATABASE.DATABASE_NAME
     existing = await run_statement(database.driver, name, "SHOW CONSTRAINT INFO")
-    have = {(row["label"], tuple(row["properties"])) for row in existing if row["constraint type"] == "unique"}
+    have = {
+        (row["label"], tuple(row["properties"]))
+        for row in existing
+        if row["constraint type"] == "unique"
+    }
     if ("PGMigration", ("app", "name")) not in have:
         await run_statement(database.driver, name, CONSTRAINTS[0])
     if ("PGMigrationLock", ("id",)) not in have:
@@ -91,12 +97,16 @@ async def has_data(database: Database | None = None) -> bool:
         return await result.single() is not None
 
 
-async def applied(database: Database | None = None) -> dict[tuple[str, str], dict[str, Any]]:
+async def applied(
+    database: Database | None = None,
+) -> dict[tuple[str, str], dict[str, Any]]:
     database = database or Database.default
     if not hasattr(database, "driver"):
         await database._initialise_driver()
     async with _session(database) as session:
-        result = await session.run("MATCH (m:PGMigration) RETURN properties(m) AS record")
+        result = await session.run(
+            "MATCH (m:PGMigration) RETURN properties(m) AS record"
+        )
         records = [row["record"] async for row in result]
     return {(r["app"], r["name"]): r for r in records}
 
@@ -110,12 +120,16 @@ async def backup(database: Database | None = None) -> str:
     database = database or Database.default
     if not hasattr(database, "driver"):
         await database._initialise_driver()
-    async with _session(database) as session:  # (an auto-commit session: not in a transaction)
+    async with _session(
+        database
+    ) as session:  # (an auto-commit session: not in a transaction)
         try:
             result = await session.run("CREATE SNAPSHOT")
             rows = await result.data()
         except neo4j.exceptions.Neo4jError as error:
-            raise PanglossMigrationError(f"Cannot take a snapshot: {error.message}") from error
+            raise PanglossMigrationError(
+                f"Cannot take a snapshot: {error.message}"
+            ) from error
     return str(rows[0]["path"]) if rows else "(the snapshot directory of the server)"
 
 
@@ -142,7 +156,7 @@ async def backup_notice(database: Database | None = None) -> str | None:
     try:
         keep = int(config["storage_snapshot_retention_count"])
         every = int(config.get("storage_snapshot_interval_sec") or 0)
-    except (KeyError, ValueError):
+    except KeyError, ValueError:
         return None
     if not every:
         return f"Memgraph keeps the newest {keep} snapshots: this one is removed after {keep} more are made"
@@ -168,7 +182,9 @@ async def restore(path: str, database: Database | None = None) -> None:
             result = await session.run(f'RECOVER SNAPSHOT "{path}" FORCE')  # ty: ignore[invalid-argument-type]
             await result.consume()
         except neo4j.exceptions.Neo4jError as error:
-            raise PanglossMigrationError(f"Cannot restore {path}: {error.message}") from error
+            raise PanglossMigrationError(
+                f"Cannot restore {path}: {error.message}"
+            ) from error
     await rebuild_text_indexes(database)
 
 
@@ -183,7 +199,9 @@ async def rebuild_text_indexes(database: Database) -> None:
             continue
         index, label, prop = match.group(1), row["label"], row["property"][0]
         await run_statement(database.driver, name, f"DROP TEXT INDEX {index}")
-        await run_statement(database.driver, name, f"CREATE TEXT INDEX {index} ON :{label}({prop})")
+        await run_statement(
+            database.driver, name, f"CREATE TEXT INDEX {index} ON :{label}({prop})"
+        )
 
 
 async def lock(who: str | None = None, database: Database | None = None) -> None:
@@ -213,7 +231,9 @@ async def unlock(database: Database | None = None) -> None:
     if not hasattr(database, "driver"):
         await database._initialise_driver()
     async with _session(database) as session:
-        result = await session.run("MATCH (l:PGMigrationLock {id: $id}) DELETE l", id=LOCK_ID)
+        result = await session.run(
+            "MATCH (l:PGMigrationLock {id: $id}) DELETE l", id=LOCK_ID
+        )
         await result.consume()
 
 
@@ -269,7 +289,11 @@ async def stored_progress(database: Database, migration: Migration) -> Progress:
 def progress_saver(database: Database, migration: Migration):
     async def save(tx, progress: Progress) -> None:
         query = "MATCH (m:PGMigration {app: $app, name: $name}) SET m.cursor = $cursor"
-        parameters = {"app": migration.app, "name": migration.name, "cursor": progress.to_json()}
+        parameters = {
+            "app": migration.app,
+            "name": migration.name,
+            "cursor": progress.to_json(),
+        }
         if tx is not None:
             result = await tx.run(query, **parameters)
             await result.consume()
@@ -313,7 +337,11 @@ async def apply(
             say(migration, "faked")
             continue
 
-        size = batch_size or migration.batch_size or (None if migration.atomic else DEFAULT_BATCH_SIZE)
+        size = (
+            batch_size
+            or migration.batch_size
+            or (None if migration.atomic else DEFAULT_BATCH_SIZE)
+        )
         start = await stored_progress(database, migration) if size else Progress()
         if start.change or start.after:
             say(migration, f"going on from change {start.change + 1}")
@@ -342,7 +370,9 @@ async def apply(
             )
             say(migration, "failed")
             raise
-        await record(database, migration, "applied", duration=time.monotonic() - started)
+        await record(
+            database, migration, "applied", duration=time.monotonic() - started
+        )
         async with _session(database) as session:  # (nothing is left to go on from)
             result = await session.run(
                 "MATCH (m:PGMigration {app: $app, name: $name}) SET m.cursor = null",
@@ -381,9 +411,15 @@ async def unapply(
             for change in migration.changes:
                 state = apply_to_snapshot(state, change)
         else:
-            size = batch_size or migration.batch_size or (None if migration.atomic else DEFAULT_BATCH_SIZE)
+            size = (
+                batch_size
+                or migration.batch_size
+                or (None if migration.atomic else DEFAULT_BATCH_SIZE)
+            )
             if size:
-                state = await apply_changes_in_batches(database, state, list(migration.changes), size)
+                state = await apply_changes_in_batches(
+                    database, state, list(migration.changes), size
+                )
             else:
                 state = await apply_changes(database, state, list(migration.changes))
         async with _session(database) as session:
@@ -406,6 +442,8 @@ async def dry_run(
     database = database or Database.default
     reports: list[MigrationReport] = []
     for migration in migrations:
-        change_reports, state = await try_changes(database, state, list(migration.changes))
+        change_reports, state = await try_changes(
+            database, state, list(migration.changes)
+        )
         reports.append(MigrationReport(migration.app, migration.name, change_reports))
     return reports

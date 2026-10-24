@@ -6,6 +6,7 @@ A user is a node with the properties of `UserInDB` that are set: `username`,
 a `username`) are read with the other properties unset.
 """
 
+import datetime
 from typing import Any
 
 from neo4j.exceptions import ConstraintError
@@ -13,8 +14,6 @@ from pangloss_users.exceptions import (
     PanglossUserDoesNotExistError,
     PanglossUserExistsError,
 )
-import datetime
-
 from pangloss_users.models import AccessTokenRecord, UserInDB
 
 from pangloss_memgraph.databases.memgraph.database import Transaction

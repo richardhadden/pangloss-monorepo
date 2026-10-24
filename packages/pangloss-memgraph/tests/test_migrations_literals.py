@@ -1,12 +1,10 @@
 """Applying changes to literal fields: data written with the old models, migrated,
 and read with the new"""
 
-from enum import Enum
 from types import SimpleNamespace as ns
-from typing import Annotated, no_type_check
+from typing import no_type_check
 
 import pytest
-from pangloss_memgraph.databases.memgraph.database import Database
 from pangloss_models.exceptions import PanglossMigrationAnswerNeeded
 from pangloss_models.migrations import PossibleRename
 from pangloss_models.model_bases.annotated_value import AnnotatedValue
@@ -24,7 +22,9 @@ pytestmark = pytest.mark.asyncio(loop_scope="session")
 
 
 @no_type_check
-async def test_a_required_field_is_given_a_value_for_what_exists(db_driver, clear_database):
+async def test_a_required_field_is_given_a_value_for_what_exists(
+    db_driver, clear_database
+):
     def v1():
         class Person(Entity):
             name: str
@@ -43,7 +43,9 @@ async def test_a_required_field_is_given_a_value_for_what_exists(db_driver, clea
     new_models, new = declare(v2)
 
     # (it needs an answer, and says so)
-    with pytest.raises(PanglossMigrationAnswerNeeded, match="value for the nodes that exist"):
+    with pytest.raises(
+        PanglossMigrationAnswerNeeded, match="value for the nodes that exist"
+    ):
         await migrate(old, new)
 
     await migrate(old, new, answer=with_answers(AddField={"default": 1900}))
@@ -52,7 +54,9 @@ async def test_a_required_field_is_given_a_value_for_what_exists(db_driver, clea
 
 
 @no_type_check
-async def test_an_optional_field_is_added_and_a_field_removed(db_driver, clear_database):
+async def test_an_optional_field_is_added_and_a_field_removed(
+    db_driver, clear_database
+):
     def v1():
         class Person(Entity):
             name: str
@@ -71,7 +75,9 @@ async def test_an_optional_field_is_added_and_a_field_removed(db_driver, clear_d
     saved = await old_models.Person.Create(label="Ann", name="Ann", nickname="A").save()
     new_models, new = declare(v2)
     # (nickname and title: a removal and an addition, as the answer is that it is not a rename)
-    not_a_rename = PossibleRename(what="field", scope="Person", old="nickname", new="title")
+    not_a_rename = PossibleRename(
+        what="field", scope="Person", old="nickname", new="title"
+    )
     await migrate(old, new, declined=[not_a_rename])
 
     props = run(db_driver, "MATCH (p:Person) RETURN properties(p) AS p")[0]["p"]
@@ -154,7 +160,9 @@ async def test_a_type_is_converted(db_driver, clear_database):
         return ns(Person=Person)
 
     old_models, old = declare(v1)
-    saved = await old_models.Person.Create(label="Ann", age="42", weights=["1.5", "2"]).save()
+    saved = await old_models.Person.Create(
+        label="Ann", age="42", weights=["1.5", "2"]
+    ).save()
     new_models, new = declare(v2)
     await migrate(old, new)
 
@@ -188,7 +196,11 @@ async def test_what_does_not_convert_has_to_be_dealt_with(db_driver, clear_datab
     ages = run(db_driver, "MATCH (p:Person) RETURN p.age AS age ORDER BY age")
     assert [row["age"] for row in ages] == ["42", "forty"]
 
-    await migrate(old, new, answer=with_answers(AlterLiteralType={"on_failure": "default", "default": -1}))
+    await migrate(
+        old,
+        new,
+        answer=with_answers(AlterLiteralType={"on_failure": "default", "default": -1}),
+    )
     assert (await new_models.Person.get(id=good.id)).age == 42
     assert (await new_models.Person.get(id=bad.id)).age == -1
 
@@ -210,7 +222,9 @@ async def test_what_does_not_convert_can_be_dropped(db_driver, clear_database):
     old_models, old = declare(v1)
     bad = await old_models.Person.Create(label="Bob", age="forty").save()
     new_models, new = declare(v2)
-    await migrate(old, new, answer=with_answers(AlterLiteralType={"on_failure": "null"}))
+    await migrate(
+        old, new, answer=with_answers(AlterLiteralType={"on_failure": "null"})
+    )
     assert (await new_models.Person.get(id=bad.id)).age is None
 
 
@@ -237,13 +251,19 @@ async def test_a_field_becomes_an_annotated_value_and_back(db_driver, clear_data
 
     with pytest.raises(PanglossMigrationAnswerNeeded, match="certainty"):
         await migrate(old, new)
-    await migrate(old, new, answer=with_answers(LiteralToAnnotatedValue={"defaults": {"certainty": 3}}))
+    await migrate(
+        old,
+        new,
+        answer=with_answers(LiteralToAnnotatedValue={"defaults": {"certainty": 3}}),
+    )
     read = await new_models.Person.get(id=saved.id)
     assert (read.name.value, read.name.certainty) == ("Ann", 3)
 
     # ... and back
     await migrate(new, old)
-    assert (await old_models.Person.get(id=saved.id)).name == "Ann"  # (the extra field is lost)
+    assert (
+        await old_models.Person.get(id=saved.id)
+    ).name == "Ann"  # (the extra field is lost)
     props = run(db_driver, "MATCH (p:Person) RETURN p.name AS name")
     assert props == [{"name": "Ann"}]
 

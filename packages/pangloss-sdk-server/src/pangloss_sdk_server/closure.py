@@ -60,7 +60,9 @@ def is_package(path: Path) -> bool:
     return path.name == "__init__.py"
 
 
-def resolve_relative(module: str, is_init: bool, level: int, name: str | None) -> str | None:
+def resolve_relative(
+    module: str, is_init: bool, level: int, name: str | None
+) -> str | None:
     package = module if is_init else module.rpartition(".")[0]
     parts = package.split(".") if package else []
     if level - 1 > len(parts):
@@ -81,7 +83,11 @@ def walk_shipped(tree: ast.AST):
         if is_server_only(node):
             assert isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef)
             stack.extend(
-                [*node.decorator_list, node.args, *([node.returns] if node.returns else [])]
+                [
+                    *node.decorator_list,
+                    node.args,
+                    *([node.returns] if node.returns else []),
+                ]
             )
             continue
         stack.extend(ast.iter_child_nodes(node))
@@ -100,7 +106,9 @@ def imports_of(module: str, path: Path) -> tuple[list[str], list[str]]:
                 names.extend(".".join(parts[: i + 1]) for i in range(len(parts)))
         elif isinstance(node, ast.ImportFrom):
             if node.level:
-                base = resolve_relative(module, is_package(path), node.level, node.module)
+                base = resolve_relative(
+                    module, is_package(path), node.level, node.module
+                )
                 if base is None:
                     unresolved.append(f"{module}: a relative import goes above the top")
                     continue
@@ -108,7 +116,9 @@ def imports_of(module: str, path: Path) -> tuple[list[str], list[str]]:
                 base = node.module or ""
             parts = base.split(".")
             names.extend(".".join(parts[: i + 1]) for i in range(len(parts)))
-            names.extend(f"{base}.{alias.name}" for alias in node.names if alias.name != "*")
+            names.extend(
+                f"{base}.{alias.name}" for alias in node.names if alias.name != "*"
+            )
     return names, unresolved
 
 
@@ -122,9 +132,8 @@ def init_problems(module: str, path: Path) -> list[str]:
             continue
         if isinstance(node, ast.Expr) and isinstance(node.value, ast.Constant):
             continue
-        if (
-            isinstance(node, ast.Assign)
-            and all(isinstance(t, ast.Name) and t.id == "__all__" for t in node.targets)
+        if isinstance(node, ast.Assign) and all(
+            isinstance(t, ast.Name) and t.id == "__all__" for t in node.targets
         ):
             continue
         problems.append(
@@ -167,9 +176,7 @@ def closure_of(root: Path, start: list[str]) -> Closure:
         queue.extend(names)
 
     for name, path in sorted(result.modules.items()):
-        imported_top = {
-            n.split(".")[0] for n in imports_of(name, path)[0]
-        }
+        imported_top = {n.split(".")[0] for n in imports_of(name, path)[0]}
         for forbidden in sorted(imported_top & SERVER_ONLY):
             result.problems.append(
                 f"{path}: `{name}` imports `{forbidden}`, which a client of the API does "

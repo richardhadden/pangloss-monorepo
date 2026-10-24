@@ -16,12 +16,19 @@ def test_list_show_and_diff(tmp_path):
     path = tmp_path / "h.sqlite3"
     id = uuid7()
     SqliteStore(path).append(
-        [record(id, 1, content={"text": "one"}), record(id, 2, "update", content={"text": "two"})]
+        [
+            record(id, 1, content={"text": "one"}),
+            record(id, 2, "update", content={"text": "two"}),
+        ]
     )
 
     listed = run(path, "list", str(id))
     assert listed.exit_code == 0
-    assert "v1  create" in listed.output and "v2  update" in listed.output and "john" in listed.output
+    assert (
+        "v1  create" in listed.output
+        and "v2  update" in listed.output
+        and "john" in listed.output
+    )
 
     assert '"text": "one"' in run(path, "show", str(id), "1").output
 
@@ -41,7 +48,9 @@ def test_what_is_not_there_is_reported(tmp_path):
     assert run(path, "show", str(uuid7()), "1").exit_code == 1
 
 
-def test_restore_runs_with_the_database_connected_and_says_what_it_made(tmp_path, monkeypatch):
+def test_restore_runs_with_the_database_connected_and_says_what_it_made(
+    tmp_path, monkeypatch
+):
     from pangloss_history import cli as module
     from pangloss_models.exceptions import PanglossVersionConflictError
     from pangloss_models.model_registry import ModelRegistry
@@ -71,8 +80,12 @@ def test_restore_runs_with_the_database_connected_and_says_what_it_made(tmp_path
         return 5
 
     monkeypatch.setattr(module, "restore", fake_restore)
-    monkeypatch.setattr("pangloss_models.initialise", lambda: events.append("initialise"))
-    monkeypatch.setattr(ModelRegistry, "all_models", classmethod(lambda cls: {"Statement": "S"}))
+    monkeypatch.setattr(
+        "pangloss_models.initialise", lambda: events.append("initialise")
+    )
+    monkeypatch.setattr(
+        ModelRegistry, "all_models", classmethod(lambda cls: {"Statement": "S"})
+    )
     id = str(uuid7())
 
     done = CliRunner().invoke(
@@ -81,8 +94,15 @@ def test_restore_runs_with_the_database_connected_and_says_what_it_made(tmp_path
     assert done.exit_code == 0 and "Version 2 is now version 5" in done.output
     assert events == ["initialise", "connect", ("S", 2, None), "disconnect"]
 
-    assert CliRunner().invoke(cli, ["restore", "Nothing", id, "2", "--user", "j"], obj=project).exit_code == 1
+    assert (
+        CliRunner()
+        .invoke(cli, ["restore", "Nothing", id, "2", "--user", "j"], obj=project)
+        .exit_code
+        == 1
+    )
 
     outcome["raise"] = True
-    refused = CliRunner().invoke(cli, ["restore", "Statement", id, "2", "--user", "j"], obj=project)
+    refused = CliRunner().invoke(
+        cli, ["restore", "Statement", id, "2", "--user", "j"], obj=project
+    )
     assert refused.exit_code == 1 and "Not restored" in refused.output

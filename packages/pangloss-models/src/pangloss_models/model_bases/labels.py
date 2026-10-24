@@ -47,7 +47,9 @@ def get_labels_for_db_classes(self):
         return labels
     kind = labels.pop()
     for fulfilled_class in fulfilled:
-        for label in labels_for_model(fulfilled_class, fulfilled_class.__metatype__)[:-1]:
+        for label in labels_for_model(fulfilled_class, fulfilled_class.__metatype__)[
+            :-1
+        ]:
             if label not in labels:
                 labels.append(label)
     labels.append(kind)

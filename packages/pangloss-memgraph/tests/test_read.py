@@ -2,6 +2,9 @@ import datetime
 from typing import TypedDict, no_type_check
 
 import pytest
+from pangloss_memgraph.databases.memgraph.initialise_database import (
+    initialise_database,
+)
 from pangloss_models import initialise
 from pangloss_models.model_bases.annotated_value import AnnotatedValue
 from pangloss_models.model_bases.document import Document
@@ -15,11 +18,7 @@ from pangloss_models.model_bases.reified_relation import (
 )
 from pangloss_models.model_bases.semantic_space import SemanticSpace
 
-from pangloss_memgraph.databases.memgraph.initialise_database import (
-    initialise_database,
-)
-
-from .test_create import Colour, Size  # noqa: E402
+from .test_create import Colour, Size
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -648,8 +647,6 @@ async def test_read_annotated_value(clear_database):
     assert read.name.certainty == 2
 
 
-
-
 @no_type_check
 async def test_read_annotated_value_with_a_list_of_literals(clear_database):
     class WithCertainty[T](AnnotatedValue[T]):
@@ -753,7 +750,12 @@ async def test_read_enums_everywhere(clear_database):
         optional_colour=Colour.BLUE,
         dimensions={"size": Size.LARGE, "colours": [Colour.RED, Colour.BLUE]},
         name={"value": "John", "colour": Colour.BLUE},
-        action={"type": "Action", "label": "A", "size": Size.SMALL, "sizes": [Size.LARGE]},
+        action={
+            "type": "Action",
+            "label": "A",
+            "size": Size.SMALL,
+            "sizes": [Size.LARGE],
+        },
         actions=[
             {"type": "Action", "label": "B", "size": Size.LARGE, "sizes": []},
         ],
@@ -822,7 +824,9 @@ async def test_the_read_query_is_the_same_text_for_every_document():
     each call it planned the query afresh each time, which was most of what a read took"""
     import uuid
 
-    from pangloss_memgraph.databases.memgraph.build_read_query import build_fetch_document_query
+    from pangloss_memgraph.databases.memgraph.build_read_query import (
+        build_fetch_document_query,
+    )
     from pangloss_models.model_bases.entity import Entity
 
     class Thing(Entity):

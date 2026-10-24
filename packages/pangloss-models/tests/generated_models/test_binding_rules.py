@@ -3,7 +3,6 @@
 from types import SimpleNamespace
 
 import pytest
-
 from pangloss_models.field_definitions import FieldBinding
 from pangloss_models.model_bases.binding import allow_bind_on_this_item
 
@@ -22,7 +21,9 @@ from pangloss_models.model_bases.binding import allow_bind_on_this_item
         (["Activity"], ["Transfer"], "Place", False),
     ],
 )
-def test_a_binding_applies_to_the_types_allowed_and_not_excluded(allowed, excluded, type_name, applies):
+def test_a_binding_applies_to_the_types_allowed_and_not_excluded(
+    allowed, excluded, type_name, applies
+):
     binding = FieldBinding(
         bound_field="year",
         child_fields=["year"],

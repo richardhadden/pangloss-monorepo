@@ -14,7 +14,12 @@ from pangloss_models.model_bases.entity import Entity
 NAME = {"kind": "label+property", "label": "Thing", "properties": ["name"]}
 TEXT = {"kind": "text", "label": "Thing", "properties": ["label"], "name": "thing_text"}
 UNIQUE = {"kind": "unique", "label": "Thing", "properties": ["name"]}
-USERS = {"kind": "unique", "label": "PGUser", "properties": ["username"], "app": "users"}
+USERS = {
+    "kind": "unique",
+    "label": "PGUser",
+    "properties": ["username"],
+    "app": "users",
+}
 
 
 @no_type_check
@@ -33,14 +38,24 @@ def test_structure_added_and_removed_is_found_and_replays():
     old = snapshot(indexes=[NAME], constraints=[UNIQUE])
     new = snapshot(indexes=[TEXT], constraints=[])
     result = diff(old, new)
-    assert result.changes == [c.AddIndex(index=TEXT), c.RemoveIndex(index=NAME), c.RemoveConstraint(constraint=UNIQUE)]
+    assert result.changes == [
+        c.AddIndex(index=TEXT),
+        c.RemoveIndex(index=NAME),
+        c.RemoveConstraint(constraint=UNIQUE),
+    ]
     assert replay(old, result.changes) == data_view(new)
     # (nothing is found where nothing changed, whatever order they are in)
-    assert diff(snapshot(indexes=[NAME, TEXT]), snapshot(indexes=[TEXT, NAME])).changes == []
+    assert (
+        diff(snapshot(indexes=[NAME, TEXT]), snapshot(indexes=[TEXT, NAME])).changes
+        == []
+    )
 
 
 def test_which_app_makes_it_is_not_what_is_stored():
-    with_app, without = snapshot(constraints=[USERS]), snapshot(constraints=[{**USERS, "app": "other"}])
+    with_app, without = (
+        snapshot(constraints=[USERS]),
+        snapshot(constraints=[{**USERS, "app": "other"}]),
+    )
     assert data_view(with_app) == data_view(without)
     assert snapshot_hash(with_app) == snapshot_hash(without)
     assert diff(with_app, without).changes == []
@@ -52,10 +67,18 @@ def test_a_snapshot_without_structure_has_none():
 
 
 def test_structure_is_undone_by_its_opposite_and_loses_nothing():
-    changes = [c.AddIndex(index=NAME), c.AddConstraint(constraint=UNIQUE), c.RemoveIndex(index=TEXT)]
+    changes = [
+        c.AddIndex(index=NAME),
+        c.AddConstraint(constraint=UNIQUE),
+        c.RemoveIndex(index=TEXT),
+    ]
     state = data_view(snapshot(indexes=[TEXT]))
     reversal = reverse_changes(changes, state)
-    assert reversal.changes == [c.AddIndex(index=TEXT), c.RemoveConstraint(constraint=UNIQUE), c.RemoveIndex(index=NAME)]
+    assert reversal.changes == [
+        c.AddIndex(index=TEXT),
+        c.RemoveConstraint(constraint=UNIQUE),
+        c.RemoveIndex(index=NAME),
+    ]
     assert not reversal.lossy
 
 
@@ -81,6 +104,8 @@ def test_a_migration_is_made_for_the_app_the_database_names_and_for_the_one_that
 
 
 def test_structure_is_part_of_what_the_migrations_come_to():
-    migration = Migration(app="x", name="0001_initial", changes=(c.AddIndex(index=NAME),))
+    migration = Migration(
+        app="x", name="0001_initial", changes=(c.AddIndex(index=NAME),)
+    )
     graph = MigrationGraph.of([migration])
     assert graph.state()["indexes"] == [NAME]

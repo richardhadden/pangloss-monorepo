@@ -12,7 +12,11 @@ def is_server_only(node: ast.AST) -> bool:
     if not isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
         return False
     for decorator in node.decorator_list:
-        name = decorator.attr if isinstance(decorator, ast.Attribute) else getattr(decorator, "id", None)
+        name = (
+            decorator.attr
+            if isinstance(decorator, ast.Attribute)
+            else getattr(decorator, "id", None)
+        )
         if name == "server_only":
             return True
     return False

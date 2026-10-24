@@ -48,7 +48,11 @@ def as_reference(node: dict[str, Any]) -> dict[str, Any]:
         "id": node["id"],
         "type": node["type"],
         "label": None,
-        **({"edge_properties": node["edge_properties"]} if node.get("edge_properties") else {}),
+        **(
+            {"edge_properties": node["edge_properties"]}
+            if node.get("edge_properties")
+            else {}
+        ),
     }
 
 

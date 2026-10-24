@@ -19,14 +19,13 @@ import datetime
 import typing
 import uuid
 
-from pangloss_models.model_bases.labels import fulfillable_labels
 from pangloss_models.model_bases.document import _DocumentUpdateDBBase
 from pangloss_models.model_bases.entity import _EntityUpdateDBBase
+from pangloss_models.model_bases.labels import fulfillable_labels
 from pangloss_users import current_request_username
 
 from pangloss_memgraph.databases.memgraph.build_create_query import (
     ExistingEntity,
-    Identifier,
     InlineEntityKey,
     PropertyAssignments,
     QueryObject,
@@ -37,9 +36,7 @@ from pangloss_memgraph.databases.memgraph.build_create_query import (
 
 # Walks forward edges from the head node, without entering entities
 # (The URLs of an entity are not part of what it owns)
-TREE_TRAVERSAL = (
-    "[*BFS (edge, node | NOT node:Entity AND NOT node:PGUrl AND NOT coalesce(edge.reverse, false))]"
-)
+TREE_TRAVERSAL = "[*BFS (edge, node | NOT node:Entity AND NOT node:PGUrl AND NOT coalesce(edge.reverse, false))]"
 
 
 # The version of a head node: 1, and 1 more for each update of it
@@ -89,8 +86,12 @@ def build_replace_head_query(
     gone = sorted(fulfillable_labels(instance) - set(labels))
     relabel = "".join(
         [
-            f"SET head{''.join(':' + label for label in labels)}\n        " if labels else "",
-            f"REMOVE head{''.join(':' + label for label in gone)}\n        " if gone else "",
+            f"SET head{''.join(':' + label for label in labels)}\n        "
+            if labels
+            else "",
+            f"REMOVE head{''.join(':' + label for label in gone)}\n        "
+            if gone
+            else "",
         ]
     )
     return (

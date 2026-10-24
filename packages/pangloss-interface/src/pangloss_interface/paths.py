@@ -6,4 +6,3 @@ from pathlib import Path
 JS_ROOT = Path(__file__).parent / "js"
 APP_PATH = JS_ROOT / "interface-app"
 CORE_PATH = JS_ROOT / "interface-core"
-

@@ -3,7 +3,6 @@ import json
 import pytest
 from pangloss_sdk_server import check, publish
 from pangloss_sdk_server.builder import SdkBuildError, build_package
-
 from server_support import load_models, settings_for, write
 
 
@@ -22,7 +21,10 @@ def test_a_build_writes_the_package_and_the_state(project):
     assert built.directory == directory
     assert (directory / "shop/models.py").is_file()
     assert (directory / "shop/models.pyi").is_file()
-    assert json.loads((directory / "shop_sdk/manifest.json").read_text())["version"] == "0.1"
+    assert (
+        json.loads((directory / "shop_sdk/manifest.json").read_text())["version"]
+        == "0.1"
+    )
     state = publish.read_state(output_of(project))
     assert state["fingerprint"] == built.manifest["fingerprint"]
     assert state["number"] == 1
@@ -71,7 +73,9 @@ def test_a_package_that_fails_the_check_leaves_the_last_build(project):
     # (fine to read, and fails when it runs on a client: the check runs it isolated)
     write(
         project,
-        {"shop/helpers.py": "import sys\nif sys.flags.isolated:\n    raise RuntimeError('only on a client')\nSHOUT = 1\n"},
+        {
+            "shop/helpers.py": "import sys\nif sys.flags.isolated:\n    raise RuntimeError('only on a client')\nSHOUT = 1\n"
+        },
     )
     with pytest.raises(SdkBuildError, match="clean client") as error:
         publish.build(project, settings)
@@ -95,7 +99,9 @@ def test_models_that_differ_from_the_servers_fail_the_check(project, monkeypatch
     monkeypatch.setattr(check, "run_in_clean_process", altered)
     with pytest.raises(SdkBuildError, match="not those of the server") as error:
         publish.build(project, settings)
-    assert error.value.problems == ["Person.Create: the client's model is not the server's"]
+    assert error.value.problems == [
+        "Person.Create: the client's model is not the server's"
+    ]
 
 
 def test_the_check_sees_the_models_of_the_clean_client(project):
@@ -108,7 +114,12 @@ def test_the_check_sees_the_models_of_the_clean_client(project):
     schemas = check.run_in_clean_process(directory, "shop_sdk")
 
     assert set(schemas) == {"Person", "Statement"}
-    assert set(schemas["Statement"]) >= {"Create", "Update", "HeadView", "ReferenceView"}
+    assert set(schemas["Statement"]) >= {
+        "Create",
+        "Update",
+        "HeadView",
+        "ReferenceView",
+    }
     assert "EditView" not in schemas["Statement"]  # (a document has no edit view)
 
 
@@ -116,8 +127,13 @@ def test_the_diff_shows_what_changed_since_the_build(project):
     settings = settings_for()
     load_models()
     publish.build(project, settings)
-    assert publish.diff_against_built(build_package(project, settings), output_of(project)) == []
+    assert (
+        publish.diff_against_built(build_package(project, settings), output_of(project))
+        == []
+    )
 
     write(project, {"shop/helpers.py": "SHOUT = 'hello'\n"})
-    lines = publish.diff_against_built(build_package(project, settings), output_of(project))
+    lines = publish.diff_against_built(
+        build_package(project, settings), output_of(project)
+    )
     assert "-SHOUT = 'hey'" in lines and "+SHOUT = 'hello'" in lines

@@ -44,7 +44,9 @@ def in_role(entity, role: str) -> dict:
 
 
 async def already_populated() -> bool:
-    return await models.Source.get(id=url("source", "annales-regni-francorum")) is not None
+    return (
+        await models.Source.get(id=url("source", "annales-regni-francorum")) is not None
+    )
 
 
 async def populate() -> None:
@@ -65,8 +67,12 @@ async def populate() -> None:
         born=date(750, precision="decade"),
         aliases=[],
     ).save()
-    frankish_army = await models.Group.Create(label="The Frankish army", name="Franks").save()
-    roman_church = await models.Group.Create(label="The Roman Church", name="Roman Church").save()
+    frankish_army = await models.Group.Create(
+        label="The Frankish army", name="Franks"
+    ).save()
+    roman_church = await models.Group.Create(
+        label="The Roman Church", name="Roman Church"
+    ).save()
 
     rome = await models.Place.Create(
         label="Rome", coordinates={"latitude": 41.9, "longitude": 12.5}

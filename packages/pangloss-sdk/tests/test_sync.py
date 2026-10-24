@@ -3,21 +3,17 @@
 from uuid import uuid7
 
 import pangloss_sdk
-
+from pangloss_core.settings import ClientSettings
 from pangloss_models import initialise
 from pangloss_models.model_bases.entity import Entity
 from pangloss_models.model_registry import ModelRegistry
-from pangloss_core.settings import ClientSettings
 from pangloss_sdk.databases.api_sync import exposed_functions as sync_api
-
 from sdk_support import FakeServer, head_json, reference_json, sync_client
 
 
 def make_sync_models():
     ModelRegistry._reset()
-    ClientSettings(
-        INSTALLED_APPS=[], DATABASE_MODULE="pangloss_sdk.databases.api_sync"
-    )
+    ClientSettings(INSTALLED_APPS=[], DATABASE_MODULE="pangloss_sdk.databases.api_sync")
 
     class Person(Entity):
         pass
@@ -64,7 +60,10 @@ def test_an_expired_token_is_renewed():
 def test_connect_sync_binds_the_blocking_module(an_app):
     server = FakeServer(lambda request: (200, head_json(label="Ada")))
     pangloss_sdk.connect(
-        "http://pangloss.test", apps=[an_app], sync=True, transport=server.sync_transport()
+        "http://pangloss.test",
+        apps=[an_app],
+        sync=True,
+        transport=server.sync_transport(),
     )
     from an_sdk_test_app.models import Person  # type: ignore[import-not-found]
 
@@ -132,7 +131,11 @@ def test_a_stale_update_raises_the_error_of_the_database_module():
     from pangloss_models.exceptions import PanglossVersionConflictError
 
     Person = make_sync_models()
-    body = {"detail": "changed", "error": "PanglossVersionConflictError", "currentVersion": 4}
+    body = {
+        "detail": "changed",
+        "error": "PanglossVersionConflictError",
+        "currentVersion": 4,
+    }
     server = FakeServer(lambda request: (412, body))
     sync_client(server, USERNAME="ada", PASSWORD="secret")
 
@@ -147,12 +150,18 @@ def test_a_stale_update_raises_the_error_of_the_database_module():
 def test_get_for_edit_delete_and_undelete_of_an_entity():
     Person = make_sync_models()
     id = uuid7()
-    server = FakeServer(lambda request: (204, None) if request.method != "GET" else (200, head_json(id)))
+    server = FakeServer(
+        lambda request: (204, None) if request.method != "GET" else (200, head_json(id))
+    )
     sync_client(server, USERNAME="ada", PASSWORD="secret")
 
     assert Person.delete(id) is None
     assert Person.undelete(id) is None
-    assert [(r.method, r.url.path) for r in server.requests if r.url.path.startswith("/api/Person")] == [
+    assert [
+        (r.method, r.url.path)
+        for r in server.requests
+        if r.url.path.startswith("/api/Person")
+    ] == [
         ("DELETE", f"/api/Person/{id}"),
         ("POST", f"/api/Person/{id}/undelete"),
     ]
@@ -178,7 +187,11 @@ def test_a_document_is_got_deleted_and_undeleted():
     assert Note.get(id).text == "hi"
     assert Note.get(missing) is None  # (as the database module: not found is None)
     assert Note.delete(id) is None and Note.undelete(id) is None
-    assert [(r.method, r.url.path) for r in server.requests if r.url.path.startswith("/api/Note")][-2:] == [
+    assert [
+        (r.method, r.url.path)
+        for r in server.requests
+        if r.url.path.startswith("/api/Note")
+    ][-2:] == [
         ("DELETE", f"/api/Note/{id}"),
         ("POST", f"/api/Note/{id}/undelete"),
     ]
@@ -187,9 +200,9 @@ def test_a_document_is_got_deleted_and_undeleted():
 # --- when things go wrong (the blocking client) -------------------------------------------------
 
 
-import httpx2 as httpx  # noqa: E402
-import pytest  # noqa: E402
-from pangloss_sdk import client as sdk_client  # noqa: E402
+import httpx2 as httpx
+import pytest
+from pangloss_sdk import client as sdk_client
 
 
 @pytest.fixture
@@ -244,7 +257,13 @@ def test_a_login_that_fails_for_another_reason_raises_that():
 
     def respond(request):
         if request.url.path == "/api/users/token":
-            return httpx.Response(503, json={"detail": "Down for a migration", "error": "PanglossReadOnlyError"})
+            return httpx.Response(
+                503,
+                json={
+                    "detail": "Down for a migration",
+                    "error": "PanglossReadOnlyError",
+                },
+            )
         return original(request)
 
     server._respond = respond

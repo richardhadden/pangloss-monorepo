@@ -6,6 +6,7 @@ Defined in `pangloss_core.settings`. Create **one** `BaseSettings` subclass for 
 from pangloss_core.settings import BaseSettings
 from pangloss_memgraph.databases.memgraph.settings import MemgraphDatabaseSettings
 
+
 class Settings(BaseSettings[MemgraphDatabaseSettings]):
     PROJECT_NAME: str = "My project"
     BACKEND_CORS_ORIGINS: list = []
@@ -13,11 +14,14 @@ class Settings(BaseSettings[MemgraphDatabaseSettings]):
     DATABASE_MODULE: str = "pangloss_memgraph.databases.memgraph"
     DATABASE: MemgraphDatabaseSettings = MemgraphDatabaseSettings(
         DB_URL="bolt://localhost:7687",
-        DB_USERNAME="...", DB_PASSWORD="...", DATABASE_NAME="memgraph",
+        DB_USERNAME="...",
+        DB_PASSWORD="...",
+        DATABASE_NAME="memgraph",
     )
     INTERFACE_LANGUAGES: list[str] = ["en"]
     AUTHJWT_SECRET_KEY: str = "change me"
     ENTITY_BASE_URL: AnyHttpUrl = AnyHttpUrl("https://example.org/")
+
 
 Settings()
 ```

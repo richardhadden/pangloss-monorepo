@@ -51,7 +51,7 @@ after_write: list[WriteListener] = []
 def emit_write_event(event: WriteEvent) -> None:
     """Tell each of `after_write` of a write. A listener that fails is logged, and the
     others are still told"""
-    for listener in list(after_write):
+    for listener in after_write:
         try:
             listener(event)
         except Exception:

@@ -11,11 +11,11 @@ from pydantic.alias_generators import to_camel
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined
 
-from pangloss_models.model_bases.model_tools import set_field
 from pangloss_models.exceptions import PanglossModelError
 from pangloss_models.model_bases.base_models import _DeclaredClass
 from pangloss_models.model_bases.document import Document
 from pangloss_models.model_bases.entity import Entity
+from pangloss_models.model_bases.model_tools import set_field
 from pangloss_models.model_bases.reified_relation import (
     ReifiedRelation,
     ReifiedRelationDocument,
@@ -30,7 +30,9 @@ def declared_reference_base(model: type[_DeclaredClass], attribute: str) -> type
     annotation is read (not those of the fields, which may refer to models that are not defined in
     a place `typing.get_type_hints` can see, such as one defined in a function)."""
     for cls in model.__mro__:
-        annotations = annotationlib.get_annotations(cls, format=annotationlib.Format.FORWARDREF)
+        annotations = annotationlib.get_annotations(
+            cls, format=annotationlib.Format.FORWARDREF
+        )
         if attribute in annotations:
             hint: Any = annotations[attribute]
             try:
@@ -100,7 +102,9 @@ def initialise_reference_view_model(model: type[_DeclaredClass]):
         __doc__=model._meta.description if model._meta.description else "",
         id=id_type,
         # (a thing that requires no label may have none)
-        label=str if getattr(model._meta, "require_label", True) else (str | None, None),
+        label=str
+        if getattr(model._meta, "require_label", True)
+        else (str | None, None),
     )
 
     for field_name in model._meta.reference_view_extra_fields:
@@ -116,16 +120,16 @@ def initialise_reference_view_model(model: type[_DeclaredClass]):
             model.ReferenceView,
             field_name,
             FieldInfo(
-            annotation=field_definition.annotated_type,  # type: ignore
-            validation_alias=to_camel(field_name),
-            metadata=field_definition.validators,  # type: ignore
-            description=field_definition.description,
-            # An optional literal that is unset is not stored, so cannot be
-            # required when reading it back
-            default=None
-            if annotation_is_optional(field_definition.annotated_type)
-            else PydanticUndefined,
-        ),
+                annotation=field_definition.annotated_type,  # type: ignore
+                validation_alias=to_camel(field_name),
+                metadata=field_definition.validators,  # type: ignore
+                description=field_definition.description,
+                # An optional literal that is unset is not stored, so cannot be
+                # required when reading it back
+                default=None
+                if annotation_is_optional(field_definition.annotated_type)
+                else PydanticUndefined,
+            ),
         )
 
     model.ReferenceView.model_rebuild(force=True)

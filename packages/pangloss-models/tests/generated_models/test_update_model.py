@@ -13,8 +13,6 @@ from uuid import uuid7
 
 import pytest
 from annotated_types import Gt, MinLen
-from pydantic import ValidationError
-
 from pangloss_models import initialise
 from pangloss_models.field_definitions import (
     FieldBinding,
@@ -44,6 +42,7 @@ from pangloss_models.model_bases.semantic_space import (
     _SemanticSpaceUpdateBase,
 )
 from pangloss_models.model_bases.trait import Trait
+from pydantic import ValidationError
 
 
 def test_document_has_update_model():
@@ -53,7 +52,7 @@ def test_document_has_update_model():
     initialise()
 
     assert Statement.Update
-    for field_name in {"id", "label", "type"}:
+    for field_name in ("id", "label", "type"):
         assert field_name in Statement.Update.model_fields
 
     assert Statement.Update.model_fields["type"].annotation == Literal["Statement"]
@@ -66,7 +65,7 @@ def test_entity_has_update_model():
     initialise()
 
     assert Person.Update
-    for field_name in {"id", "label", "type"}:
+    for field_name in ("id", "label", "type"):
         assert field_name in Person.Update.model_fields
 
     assert Person.Update.model_fields["type"].annotation == Literal["Person"]
@@ -86,7 +85,7 @@ def test_conjunction_has_update_model():
 
     assert Alternative[Person].Update
 
-    for field_name in {"id", "type"}:
+    for field_name in ("id", "type"):
         assert field_name in Alternative.Update.model_fields
 
     assert Alternative.Update.model_fields["type"].annotation == Literal["Alternative"]
@@ -109,7 +108,7 @@ def test_reified_relation_has_update_model():
     assert Identification.Update
     assert Identification[Person].Update
 
-    for field_name in {"id", "type"}:
+    for field_name in ("id", "type"):
         assert field_name in Identification.Update.model_fields
         assert field_name in Identification[Person].Update.model_fields
 
@@ -137,7 +136,7 @@ def test_reified_relation_document_has_update_model():
 
     assert PersonInPlace[Person].Update
 
-    for field_name in {"id", "type"}:
+    for field_name in ("id", "type"):
         assert field_name in PersonInPlace.Update.model_fields
         assert field_name in PersonInPlace[Person].Update.model_fields
 
@@ -163,7 +162,7 @@ def test_semantic_space_has_update_model():
     assert Negative.Update
     assert Negative[Action].Update
 
-    for field_name in {"id", "type"}:
+    for field_name in ("id", "type"):
         assert field_name in Negative.Update.model_fields
         assert field_name in Negative[Action].Update.model_fields
 
@@ -721,32 +720,30 @@ def test_relation_with_double_reified_relation():
     )
 
     st_update = Statement.Update(
-        **{
-            "type": "Statement",
-            "label": "A Statement",
-            "id": uuid7(),
-            "is_about_person": {
-                "type": "WithProxy",
-                "target": [
-                    {
-                        "type": "Identification",
-                        "target": [
-                            {"type": "Person", "id": uuid7()},
-                        ],
-                        "some_value": 1,
-                    }
-                ],
-                "proxy": [
-                    {
-                        "type": "Identification",
-                        "target": [
-                            {"type": "Person", "id": uuid7()},
-                        ],
-                        "some_value": 1,
-                    }
-                ],
-            },
-        }
+        type="Statement",
+        label="A Statement",
+        id=uuid7(),
+        is_about_person={
+            "type": "WithProxy",
+            "target": [
+                {
+                    "type": "Identification",
+                    "target": [
+                        {"type": "Person", "id": uuid7()},
+                    ],
+                    "some_value": 1,
+                }
+            ],
+            "proxy": [
+                {
+                    "type": "Identification",
+                    "target": [
+                        {"type": "Person", "id": uuid7()},
+                    ],
+                    "some_value": 1,
+                }
+            ],
+        },
     )
 
     assert isinstance(st_update.is_about_person, WithProxy.Create)
@@ -754,33 +751,31 @@ def test_relation_with_double_reified_relation():
     assert isinstance(st_update.is_about_person.proxy[0], Identification.Create)
 
     st_update2 = Statement.Update(
-        **{
-            "type": "Statement",
-            "label": "A Statement",
+        type="Statement",
+        label="A Statement",
+        id=uuid7(),
+        is_about_person={
+            "type": "WithProxy",
             "id": uuid7(),
-            "is_about_person": {
-                "type": "WithProxy",
-                "id": uuid7(),
-                "target": [
-                    {
-                        "type": "Identification",
-                        "target": [
-                            {"type": "Person", "id": uuid7()},
-                        ],
-                        "some_value": 1,
-                    }
-                ],
-                "proxy": [
-                    {
-                        "type": "Identification",
-                        "target": [
-                            {"type": "Person", "id": uuid7()},
-                        ],
-                        "some_value": 1,
-                    }
-                ],
-            },
-        }
+            "target": [
+                {
+                    "type": "Identification",
+                    "target": [
+                        {"type": "Person", "id": uuid7()},
+                    ],
+                    "some_value": 1,
+                }
+            ],
+            "proxy": [
+                {
+                    "type": "Identification",
+                    "target": [
+                        {"type": "Person", "id": uuid7()},
+                    ],
+                    "some_value": 1,
+                }
+            ],
+        },
     )
 
     assert isinstance(st_update2.is_about_person, WithProxy.Update)
@@ -788,34 +783,32 @@ def test_relation_with_double_reified_relation():
     assert isinstance(st_update2.is_about_person.proxy[0], Identification.Create)
 
     st_update3 = Statement.Update(
-        **{
-            "type": "Statement",
-            "label": "A Statement",
+        type="Statement",
+        label="A Statement",
+        id=uuid7(),
+        is_about_person={
+            "type": "WithProxy",
             "id": uuid7(),
-            "is_about_person": {
-                "type": "WithProxy",
-                "id": uuid7(),
-                "target": [
-                    {
-                        "type": "Identification",
-                        "id": uuid7(),
-                        "target": [
-                            {"type": "Person", "id": uuid7()},
-                        ],
-                        "some_value": 1,
-                    }
-                ],
-                "proxy": [
-                    {
-                        "type": "Identification",
-                        "target": [
-                            {"type": "Person", "id": uuid7()},
-                        ],
-                        "some_value": 1,
-                    }
-                ],
-            },
-        }
+            "target": [
+                {
+                    "type": "Identification",
+                    "id": uuid7(),
+                    "target": [
+                        {"type": "Person", "id": uuid7()},
+                    ],
+                    "some_value": 1,
+                }
+            ],
+            "proxy": [
+                {
+                    "type": "Identification",
+                    "target": [
+                        {"type": "Person", "id": uuid7()},
+                    ],
+                    "some_value": 1,
+                }
+            ],
+        },
     )
 
     assert isinstance(st_update3.is_about_person, WithProxy.Update)
@@ -1076,7 +1069,7 @@ def test_relation_to_trait():
         | Posse.ReferenceSet
     )
 
-    st = Statement(
+    Statement(
         label="A Statement", thing_carried_out_by={"type": "Group", "id": uuid7()}
     )
 

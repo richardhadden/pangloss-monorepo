@@ -30,8 +30,8 @@ from pangloss_users.exceptions import (
     PanglossUserDoesNotExistError,
 )
 from pangloss_users.models import (
-    AccessTokenInfo,
     TOKEN_SCOPES,
+    AccessTokenInfo,
     AccessTokenRecord,
     User,
     UserCreate,
@@ -238,7 +238,9 @@ async def create_access_token(
         name=name.strip(),
         scope=scope,
         created_when=now,
-        expires_when=now + datetime.timedelta(days=expires_days) if expires_days else None,
+        expires_when=now + datetime.timedelta(days=expires_days)
+        if expires_days
+        else None,
         username=username,
         token_hash=hash_access_token(token),
     )
@@ -282,6 +284,7 @@ async def note_use(record: AccessTokenRecord) -> None:
     now = datetime.datetime.now(datetime.UTC)
     function = getattr(_backend(), "touch_access_token_in_db", None)
     if function is not None and (
-        record.last_used_when is None or now - record.last_used_when >= LAST_USED_RESOLUTION
+        record.last_used_when is None
+        or now - record.last_used_when >= LAST_USED_RESOLUTION
     ):
         await function(record.id, now)

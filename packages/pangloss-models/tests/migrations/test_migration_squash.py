@@ -107,13 +107,17 @@ def test_changes_by_hand_are_kept_even_from_the_start():
         changes=(*migrations[2].changes, c.RunCypher(query="MATCH (n) SET n.x = 1")),
         schema_hash="hash3",
     )
-    squashed = squash(MigrationGraph.of(migrations), "sq", "0001", "0004", optimize=True)
+    squashed = squash(
+        MigrationGraph.of(migrations), "sq", "0001", "0004", optimize=True
+    )
     assert list(squashed.changes) == [ch for m in migrations for ch in m.changes]
 
 
 def test_the_options_can_keep_every_change():
     migrations = run_of_migrations()
-    squashed = squash(MigrationGraph.of(migrations), "sq", "0001", "0004", optimize=False)
+    squashed = squash(
+        MigrationGraph.of(migrations), "sq", "0001", "0004", optimize=False
+    )
     assert list(squashed.changes) == [ch for m in migrations for ch in m.changes]
 
 
@@ -134,7 +138,10 @@ def test_the_squashed_migration_stands_in_for_the_originals_with_no_record():
 
     # (the later migration follows it, and the originals are not there to be run)
     assert [m.name for m in graph.order()] == ["0001_squashed_0003_step", "0004_step"]
-    assert [m.name for m in pending(graph, {})] == ["0001_squashed_0003_step", "0004_step"]
+    assert [m.name for m in pending(graph, {})] == [
+        "0001_squashed_0003_step",
+        "0004_step",
+    ]
     assert graph.state() == MigrationGraph.of(migrations).state()
 
 
@@ -171,9 +178,18 @@ def test_a_database_part_way_through_the_originals_goes_on_with_them():
     record = applied_record("0001_initial")
 
     graph = MigrationGraph.of([*migrations, squashed], record)
-    assert [m.name for m in graph.order()] == ["0001_initial", "0002_step", "0003_step", "0004_step"]
+    assert [m.name for m in graph.order()] == [
+        "0001_initial",
+        "0002_step",
+        "0003_step",
+        "0004_step",
+    ]
     assert graph.reconcile(record) == record
-    assert [m.name for m in pending(graph, record)] == ["0002_step", "0003_step", "0004_step"]
+    assert [m.name for m in pending(graph, record)] == [
+        "0002_step",
+        "0003_step",
+        "0004_step",
+    ]
 
     # (the originals are needed: they cannot have been deleted)
     with pytest.raises(PanglossMigrationError, match="only begun"):
@@ -188,17 +204,24 @@ def test_a_database_part_way_through_the_originals_goes_on_with_them():
 
 def test_a_dependency_on_an_original_is_on_the_squashed_one():
     other = Migration(
-        app="other", name="0001_initial", changes=(), dependencies=(("sq", "0002_step"),)
+        app="other",
+        name="0001_initial",
+        changes=(),
+        dependencies=(("sq", "0002_step"),),
     )
     migrations = run_of_migrations()
     squashed = squash(MigrationGraph.of(migrations), "sq", "0001", "0003")
 
     graph = MigrationGraph.of([*migrations, squashed, other])
-    assert graph.migrations[("other", "0001_initial")].dependencies == (("sq", squashed.name),)
+    assert graph.migrations[("other", "0001_initial")].dependencies == (
+        ("sq", squashed.name),
+    )
     # (and on the last of the originals, where they are the ones used)
     part = applied_record("0001_initial")
     graph = MigrationGraph.of([*migrations, squashed, other], part)
-    assert graph.migrations[("other", "0001_initial")].dependencies == (("sq", "0002_step"),)
+    assert graph.migrations[("other", "0001_initial")].dependencies == (
+        ("sq", "0002_step"),
+    )
 
     # the squashed migration depends on what the run did, outside the app
     with_dependency = run_of_migrations(dependencies={2: [("other", "0001_initial")]})
@@ -248,7 +271,9 @@ def test_a_squashed_migration_is_written_and_read_back(app):
 def test_a_squashed_migration_can_be_squashed_again_with_what_follows_it():
     migrations = run_of_migrations()
     first = squash(MigrationGraph.of(migrations), "sq", "0001", "0003")
-    graph = MigrationGraph.of([*migrations, first])  # (the originals are not in it: the squashed one is)
+    graph = MigrationGraph.of(
+        [*migrations, first]
+    )  # (the originals are not in it: the squashed one is)
     assert [m.name for m in graph.order()] == ["0001_squashed_0003_step", "0004_step"]
 
     again = squash(graph, "sq", "0001", "0004")
@@ -272,7 +297,8 @@ def test_each_database_uses_the_squashed_migration_or_the_ones_it_has_part_way()
 
     def had(*which):
         return {
-            by_name[name].key: {"status": "applied", "checksum": by_name[name].checksum} for name in which
+            by_name[name].key: {"status": "applied", "checksum": by_name[name].checksum}
+            for name in which
         }
 
     # a new database: only the last
@@ -283,7 +309,11 @@ def test_each_database_uses_the_squashed_migration_or_the_ones_it_has_part_way()
     graph = MigrationGraph.of(everything, record)
     assert names(graph) == [again.name]
     view = graph.reconcile(record)
-    assert set(view) == {again.key} and pending(graph, view) == [] and problems(graph, view) == []
+    assert (
+        set(view) == {again.key}
+        and pending(graph, view) == []
+        and problems(graph, view) == []
+    )
 
     # one that had the first squashed migration and the one after it
     record = had(first.name, "0004_step")
@@ -308,4 +338,8 @@ def test_each_database_uses_the_squashed_migration_or_the_ones_it_has_part_way()
     record = had(again.name)
     graph = MigrationGraph.of(everything, record)
     view = graph.reconcile(record)
-    assert names(graph) == [again.name] and pending(graph, view) == [] and problems(graph, view) == []
+    assert (
+        names(graph) == [again.name]
+        and pending(graph, view) == []
+        and problems(graph, view) == []
+    )

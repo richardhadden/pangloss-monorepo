@@ -87,9 +87,10 @@ import typer
 
 cli = typer.Typer(name="my-app")
 
+
 @cli.command()
 def hello():
-    typer.echo("hello")      # pangloss my-app hello
+    typer.echo("hello")  # pangloss my-app hello
 ```
 
 An app's `models.py` (if it has one) is imported by `setup-database`, so that its models are registered.

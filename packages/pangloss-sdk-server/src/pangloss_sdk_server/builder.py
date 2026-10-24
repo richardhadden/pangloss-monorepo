@@ -26,7 +26,13 @@ from pangloss_sdk_server.closure import Closure, closure_of, locate
 from pangloss_sdk_server.sources import ServerOnlyProblem, shipped_source
 
 # Distributions the SDK has already (through `pangloss-sdk`), or that name Pangloss itself
-ALREADY_THERE = {"annotated-types", "pydantic", "pydantic-core", "frozendict", "pydantic-settings"}
+ALREADY_THERE = {
+    "annotated-types",
+    "pydantic",
+    "pydantic-core",
+    "frozendict",
+    "pydantic-settings",
+}
 
 
 class SdkBuildError(Exception):
@@ -55,7 +61,9 @@ def normalise(name: str) -> str:
 
 def names_for(project_name: str, settings: Any = None) -> tuple[str, str]:
     """The distribution name (`pangloss-demo-sdk`) and the import name (`pangloss_demo_sdk`)"""
-    distribution = normalise(config.setting("SDK_NAME", f"{project_name}-sdk", settings))
+    distribution = normalise(
+        config.setting("SDK_NAME", f"{project_name}-sdk", settings)
+    )
     return distribution, distribution.replace("-", "_")
 
 
@@ -82,7 +90,10 @@ def schema_position(apps: list[str]) -> dict[str, str]:
         return {}
     latest: dict[str, Any] = {}
     for migration in graph.migrations.values():
-        if migration.app not in latest or migration.number > latest[migration.app].number:
+        if (
+            migration.app not in latest
+            or migration.number > latest[migration.app].number
+        ):
             latest[migration.app] = migration
     return {app: migration.name for app, migration in sorted(latest.items())}
 
@@ -125,7 +136,9 @@ def shipped(path: Path) -> bytes:
     try:
         return shipped_source(path.read_text(), str(path)).encode()
     except ServerOnlyProblem as error:
-        raise SdkBuildError("The models cannot be shipped as they are", [str(error)]) from error
+        raise SdkBuildError(
+            "The models cannot be shipped as they are", [str(error)]
+        ) from error
 
 
 def client_module_source(distribution: str, project: str) -> str:
@@ -170,7 +183,11 @@ def connect_offline() -> None:
 
 
 def pyproject_source(
-    distribution: str, module: str, version: str, requires: list[str], top_levels: list[str]
+    distribution: str,
+    module: str,
+    version: str,
+    requires: list[str],
+    top_levels: list[str],
 ) -> str:
     dependencies = ",\n".join(f'    "{r}"' for r in requires)
     packages = ", ".join(f'"{p}"' for p in sorted({module, *top_levels}))
@@ -195,7 +212,9 @@ packages = [{packages}]
 """
 
 
-def readme_source(distribution: str, module: str, project: str, fingerprint: str) -> str:
+def readme_source(
+    distribution: str, module: str, project: str, fingerprint: str
+) -> str:
     return f"""# {distribution}
 
 The SDK of **{project}**: its model classes, with type stubs, for use against its API.
@@ -238,7 +257,9 @@ def build_package(
         )
     closure = closure_of(root, [f"{app}.models" for app in apps])
     if closure.problems:
-        raise SdkBuildError("The models cannot be shipped as they are", closure.problems)
+        raise SdkBuildError(
+            "The models cannot be shipped as they are", closure.problems
+        )
     requires = [sdk_requirement(settings), *requirements_for(closure, settings)]
     distribution, module = names_for(project, settings)
 
@@ -268,13 +289,18 @@ def build_package(
     # blocking stubs has every module of the models, the others as they are)
     for name, path in closure.modules.items():
         relative = path.resolve().relative_to(root).as_posix()
-        if f"{module}/{SYNC_STUBS}/{Path(relative).with_suffix('.pyi').as_posix()}" not in files:
+        if (
+            f"{module}/{SYNC_STUBS}/{Path(relative).with_suffix('.pyi').as_posix()}"
+            not in files
+        ):
             files[f"{module}/{SYNC_STUBS}/{relative}"] = files[relative]
 
     tops = sorted({name.split(".")[0] for name in closure.modules})
     for top in tops:
         files[f"{top}/py.typed"] = b""
-    files[f"{module}/__init__.py"] = client_module_source(distribution, project).encode()
+    files[f"{module}/__init__.py"] = client_module_source(
+        distribution, project
+    ).encode()
     files[f"{module}/py.typed"] = b""
 
     position = schema_position(list(settings.INSTALLED_APPS))
@@ -294,9 +320,13 @@ def build_package(
         "schema_position": position,
         "pangloss_sdk_version": importlib.metadata.version("pangloss-sdk"),
     }
-    files[f"{module}/manifest.json"] = (json.dumps(manifest, indent=2, sort_keys=True) + "\n").encode()
+    files[f"{module}/manifest.json"] = (
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n"
+    ).encode()
     files["pyproject.toml"] = pyproject_source(
         distribution, module, version, requires, tops
     ).encode()
-    files["README.md"] = readme_source(distribution, module, project, fingerprint).encode()
+    files["README.md"] = readme_source(
+        distribution, module, project, fingerprint
+    ).encode()
     return Package(files, manifest)

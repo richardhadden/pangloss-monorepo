@@ -25,9 +25,13 @@ def invoke(*args: str):
 def own_database(monkeypatch, **database_settings) -> Database:
     shared = Database.default
     settings = shared.settings.model_copy(
-        update={"DATABASE": shared.settings.DATABASE.model_copy(update=database_settings)}
+        update={
+            "DATABASE": shared.settings.DATABASE.model_copy(update=database_settings)
+        }
     )
-    database = object.__new__(Database)  # (the constructor would make it the default for good)
+    database = object.__new__(
+        Database
+    )  # (the constructor would make it the default for good)
     database.settings = settings
     monkeypatch.setattr(Database, "default", database)
     return database
@@ -91,4 +95,7 @@ def test_create_database_makes_the_default_only_if_there_is_none(monkeypatch):
 
     monkeypatch.delattr(Database, "default")
     setup.create_database(database.settings)
-    assert Database.default is not database and Database.default.settings is database.settings
+    assert (
+        Database.default is not database
+        and Database.default.settings is database.settings
+    )

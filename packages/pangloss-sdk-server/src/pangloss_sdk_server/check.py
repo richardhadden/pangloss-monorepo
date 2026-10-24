@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from pangloss_sdk.schemas import head_model_schemas
+
 from pangloss_sdk_server.builder import SdkBuildError
 from pangloss_sdk_server.closure import SERVER_ONLY
 
@@ -57,11 +58,11 @@ def run_in_clean_process(directory: Path, module: str) -> dict[str, Any]:
         raise SdkBuildError(
             "The SDK does not import or initialise on a clean client", [tail]
         )
-    line = next(
-        (l for l in result.stdout.splitlines() if l.startswith(MARKER)), None
-    )
+    line = next((l for l in result.stdout.splitlines() if l.startswith(MARKER)), None)
     if line is None:
-        raise SdkBuildError("The check of the SDK gave no answer", [result.stdout[-300:]])
+        raise SdkBuildError(
+            "The check of the SDK gave no answer", [result.stdout[-300:]]
+        )
     return json.loads(line.removeprefix(MARKER))
 
 
@@ -73,7 +74,9 @@ def differences(server: dict[str, Any], client: dict[str, Any]) -> list[str]:
             continue
         for kind, schema in schemas.items():
             if json.loads(json.dumps(server[name].get(kind), default=str)) != schema:
-                problems.append(f"{name}.{kind}: the client's model is not the server's")
+                problems.append(
+                    f"{name}.{kind}: the client's model is not the server's"
+                )
     for name in sorted(set(server) - set(client)):
         problems.append(f"{name}: the server has it, the SDK does not")
     return problems

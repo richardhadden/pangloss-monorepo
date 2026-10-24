@@ -48,7 +48,11 @@ def report(expected: dict, actual: dict) -> str:
             if old[name] != new[name]:
                 before = json.dumps(old[name], indent=1, sort_keys=True).splitlines()
                 after = json.dumps(new[name], indent=1, sort_keys=True).splitlines()
-                diff = list(difflib.unified_diff(before, after, "stored", "now", lineterm="", n=1))
+                diff = list(
+                    difflib.unified_diff(
+                        before, after, "stored", "now", lineterm="", n=1
+                    )
+                )
                 lines.append(f"{section}: changed: {name}")
                 lines.extend("    " + line for line in diff[2:22])
                 if len(diff) > 22:
@@ -63,10 +67,15 @@ def test_generated_models_match_the_snapshot():
         SNAPSHOT.write_text(snapshot_support.dumps(actual))
         pytest.skip(f"snapshot written to {SNAPSHOT}")
 
-    assert SNAPSHOT.exists(), f"no snapshot: run once with UPDATE_SNAPSHOTS=1 to write {SNAPSHOT}"
+    assert SNAPSHOT.exists(), (
+        f"no snapshot: run once with UPDATE_SNAPSHOTS=1 to write {SNAPSHOT}"
+    )
     expected = json.loads(SNAPSHOT.read_text())
     if expected != actual:
-        pytest.fail("the generated models have changed:\n" + report(expected, actual), pytrace=False)
+        pytest.fail(
+            "the generated models have changed:\n" + report(expected, actual),
+            pytrace=False,
+        )
 
 
 def test_the_snapshot_covers_every_kind_of_model():

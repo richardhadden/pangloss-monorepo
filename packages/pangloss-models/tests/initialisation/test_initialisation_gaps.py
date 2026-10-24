@@ -7,7 +7,6 @@ fixed; the last section keeps their tests.)
 """
 
 import datetime
-import warnings
 from typing import Annotated, no_type_check
 from uuid import uuid7
 
@@ -166,7 +165,9 @@ def test_a_generic_inside_a_generic_with_an_edge_model_has_only_the_edge_variant
     negatives = [c for c in outer if c.__name__.startswith("Negative[")]
     assert negatives
     for negative in negatives:
-        inner = {c.__name__ for c in classes_in(negative.model_fields["contents"].annotation)}
+        inner = {
+            c.__name__ for c in classes_in(negative.model_fields["contents"].annotation)
+        }
         roles = {n for n in inner if n.startswith("InRole[")}
         assert roles, inner
         assert all("ViaWeight" in n for n in roles), roles
@@ -193,7 +194,9 @@ def test_a_document_that_requires_no_label_has_no_label_to_refer_to_it_by():
     thing = Thing.ReferenceView(id=uuid7(), type="Thing")
     assert thing.label is None
     assert not Thing.ReferenceView.model_fields["label"].is_required()
-    assert Labelled.ReferenceView.model_fields["label"].is_required()  # (the others, as ever)
+    assert Labelled.ReferenceView.model_fields[
+        "label"
+    ].is_required()  # (the others, as ever)
 
 
 # --- Conversion for writing ------------------------------------------------------------------------
@@ -219,7 +222,9 @@ def test_a_fulfilling_class_with_a_relation_to_an_entity_that_can_be_named_can_b
         granted_by: Annotated[
             Person,
             RelationConfig(
-                subclasses_parent_fields=[FieldSubclassing("holder", field_on_model=Appointment)]
+                subclasses_parent_fields=[
+                    FieldSubclassing("holder", field_on_model=Appointment)
+                ]
             ),
         ]
 
@@ -308,19 +313,27 @@ def test_an_edge_variant_has_all_the_fields_of_what_it_is_a_variant_of(model):
     initialise()
 
     fields = getattr(Activity, model).model_fields
-    for field, expected in (("witnesses", {"role", "target"}), ("notes", {"label", "text"})):
+    for field, expected in (
+        ("witnesses", {"role", "target"}),
+        ("notes", {"label", "text"}),
+    ):
         variants = [
-            c for c in classes_in(fields[field].annotation) if c.__name__.endswith("ViaWeight")
+            c
+            for c in classes_in(fields[field].annotation)
+            if c.__name__.endswith("ViaWeight")
         ]
         assert variants, field
         for variant in variants:
             assert "edge_properties" in variant.model_fields
-            missing = (expected & set(getattr(variant, "__base__").model_fields)) - set(
+            missing = (expected & set(variant.__base__.model_fields)) - set(
                 variant.model_fields
             )
             assert not missing, (variant.__name__, missing)
             # (at least, what the document or wrapper itself has)
-            assert expected - {"label"} <= set(variant.model_fields), (variant.__name__, field)
+            assert expected - {"label"} <= set(variant.model_fields), (
+                variant.__name__,
+                field,
+            )
 
 
 @no_type_check
@@ -351,19 +364,34 @@ def test_what_is_given_for_a_relation_with_an_edge_model_is_kept():
                 "type": "InRole",
                 "role": "witness",
                 "target": [
-                    {"type": "Person", "id": person_id, "edgeProperties": {"weight": 0.5}}
+                    {
+                        "type": "Person",
+                        "id": person_id,
+                        "edgeProperties": {"weight": 0.5},
+                    }
                 ],
                 "edgeProperties": {"weight": 0.5},
             }
         ],
-        notes=[{"type": "Note", "label": "N", "text": "the text", "edgeProperties": {"weight": 0.9}}],
+        notes=[
+            {
+                "type": "Note",
+                "label": "N",
+                "text": "the text",
+                "edgeProperties": {"weight": 0.9},
+            }
+        ],
     )
 
     witness, note = activity.witnesses[0], activity.notes[0]
     assert witness.role == "witness"
     assert [t.id for t in witness.target] == [person_id]
     assert witness.edge_properties.weight == 0.5
-    assert (note.label, note.text, note.edge_properties.weight) == ("N", "the text", 0.9)
+    assert (note.label, note.text, note.edge_properties.weight) == (
+        "N",
+        "the text",
+        0.9,
+    )
 
     # ... and in what is written
     written = activity._to_db_model()
@@ -402,7 +430,9 @@ def test_a_binding_goes_through_a_relation_with_an_edge_model():
         activities: Annotated[
             list[Activity],
             RelationConfig(
-                bind_to_child_field=[FieldBinding(bound_field="year", child_fields=["year"])]
+                bind_to_child_field=[
+                    FieldBinding(bound_field="year", child_fields=["year"])
+                ]
             ),
         ]
 
@@ -420,7 +450,11 @@ def test_a_binding_goes_through_a_relation_with_an_edge_model():
                         "type": "InRole",
                         "role": "witness",
                         "target": [
-                            {"type": "Person", "id": uuid7(), "edgeProperties": {"weight": 0.5}}
+                            {
+                                "type": "Person",
+                                "id": uuid7(),
+                                "edgeProperties": {"weight": 0.5},
+                            }
                         ],
                         "edgeProperties": {"weight": 0.5},
                     }
@@ -439,7 +473,6 @@ def test_a_binding_goes_through_a_relation_with_an_edge_model():
 def test_an_entity_has_an_incoming_relation_for_every_way_it_is_reached():
     """Directly, through a reified relation, a semantic space, a conjunction, or any of them inside
     another, from a document or from an embedded object"""
-    from pangloss_models.model_bases.conjunction import Conjunction
 
     class Person(Entity):
         pass
@@ -523,15 +556,26 @@ def test_what_a_generic_holds_of_its_own_can_be_given_as_an_update(model):
         return {c.__name__ for c in classes_in(fields[field].annotation)}
 
     # the model itself
-    assert {"NoteUpdate", "NoteCreate"} <= {n.replace("DB", "") for n in offered(Statement, "held_directly")}
+    assert {"NoteUpdate", "NoteCreate"} <= {
+        n.replace("DB", "") for n in offered(Statement, "held_directly")
+    }
 
     # and the model made for a use of the wrapper
     wrapper = next(
-        c for c in classes_in(getattr(Statement, model).model_fields["who"].annotation)
+        c
+        for c in classes_in(getattr(Statement, model).model_fields["who"].annotation)
         if c.__name__.startswith("Attested[Person]") and c.__name__.endswith(model)
     )
-    for field, new, existing in (("note", "NoteCreate", "NoteUpdate"), ("dated", "DateCreate", "DateUpdate")):
-        names = {n.replace("DB", "") for n in {c.__name__ for c in classes_in(wrapper.model_fields[field].annotation)}}
+    for field, new, existing in (
+        ("note", "NoteCreate", "NoteUpdate"),
+        ("dated", "DateCreate", "DateUpdate"),
+    ):
+        names = {
+            n.replace("DB", "")
+            for n in {
+                c.__name__ for c in classes_in(wrapper.model_fields[field].annotation)
+            }
+        }
         assert {new, existing} <= names, (field, names)
 
 
@@ -602,7 +646,9 @@ def test_bindings_reach_what_a_generic_holds_but_not_its_own_fields():
         who: Annotated[
             Attested[Person],
             RelationConfig(
-                bind_to_child_field=[FieldBinding(bound_field="year", child_fields=["year"])]
+                bind_to_child_field=[
+                    FieldBinding(bound_field="year", child_fields=["year"])
+                ]
             ),
         ]
 
@@ -615,7 +661,11 @@ def test_bindings_reach_what_a_generic_holds_but_not_its_own_fields():
             if c.__name__.startswith("Attested[Person]")
         )
         assert wrapper.model_fields["year"].is_required(), model
-        note = next(c for c in classes_in(wrapper.model_fields["note"].annotation) if "year" in c.model_fields)
+        note = next(
+            c
+            for c in classes_in(wrapper.model_fields["note"].annotation)
+            if "year" in c.model_fields
+        )
         assert not note.model_fields["year"].is_required(), model
 
 
@@ -703,7 +753,9 @@ def test_a_binding_reaches_a_document_inside_a_bound_update_generic():
         actions: Annotated[
             list[Negative[Action]],
             RelationConfig(
-                bind_to_child_field=[FieldBinding(bound_field="year", child_fields=["year"])]
+                bind_to_child_field=[
+                    FieldBinding(bound_field="year", child_fields=["year"])
+                ]
             ),
         ]
 
@@ -788,7 +840,9 @@ def test_the_db_model_makes_an_id_when_none_is_given():
 # --- Models with no label --------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("model", ["Create", "CreateDB", "Update", "UpdateDB", "View", "HeadView"])
+@pytest.mark.parametrize(
+    "model", ["Create", "CreateDB", "Update", "UpdateDB", "View", "HeadView"]
+)
 @no_type_check
 def test_a_document_that_requires_no_label_has_none(model):
     class Note(Document):
@@ -833,7 +887,7 @@ def test_an_undefined_name_in_an_annotation_is_reported():
 
     class Factoid(Document):
         about: list[Person]
-        later: list["NoSuchModel"]
+        later: list[NoSuchModel]  # noqa: F821
 
     with pytest.raises(Exception, match="NoSuchModel"):
         initialise()
@@ -846,7 +900,7 @@ def test_a_model_that_refers_to_itself_by_name_has_its_reference_models():
 
     class Factoid(Document):
         about: list[Person]
-        see_also: list["Factoid"]
+        see_also: list[Factoid]
 
     initialise()
 
@@ -893,7 +947,9 @@ def test_a_field_of_a_fulfilled_class_can_be_subclassed_by_name():
         holder: Person
 
     class Grant(Document, Fulfils[Appointment]):
-        granted_to: Annotated[Person, RelationConfig(subclasses_parent_fields=["holder"])]
+        granted_to: Annotated[
+            Person, RelationConfig(subclasses_parent_fields=["holder"])
+        ]
 
     initialise()
 
@@ -1037,7 +1093,9 @@ def test_the_cache_of_bound_models_is_cleared_with_the_registry():
         actions: Annotated[
             list[Action],
             RelationConfig(
-                bind_to_child_field=[FieldBinding(bound_field="year", child_fields=["year"])]
+                bind_to_child_field=[
+                    FieldBinding(bound_field="year", child_fields=["year"])
+                ]
             ),
         ]
 
@@ -1075,7 +1133,9 @@ def test_the_name_of_a_generic_model_does_not_depend_on_the_order_of_a_set(modul
                 annotated_type=Person,
                 type_var=None,
                 type_var_name="T",
-                type_options=[RelationToEntity(annotated_type=c, edge_model=None) for c in order],
+                type_options=[
+                    RelationToEntity(annotated_type=c, edge_model=None) for c in order
+                ],
             )
         )
 
@@ -1116,7 +1176,9 @@ def test_a_binding_does_not_look_into_a_reference_to_something_that_exists():
         witnesses: Annotated[
             list[Person],
             RelationConfig(
-                bind_to_child_field=[FieldBinding(bound_field="year", child_fields=["year"])]
+                bind_to_child_field=[
+                    FieldBinding(bound_field="year", child_fields=["year"])
+                ]
             ),
         ]
 

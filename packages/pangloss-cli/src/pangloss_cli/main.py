@@ -11,14 +11,6 @@ from pathlib import Path
 
 import typer
 
-from pangloss_cli.project import (
-    NO_SETTINGS_MESSAGE,
-    Project,
-    app_command_group,
-    fail,
-    group_name,
-    load_project,
-)
 from pangloss_cli.migrations import (
     backups,
     check_data_command,
@@ -28,6 +20,14 @@ from pangloss_cli.migrations import (
     restore,
     showmigrations,
     squashmigrations,
+)
+from pangloss_cli.project import (
+    NO_SETTINGS_MESSAGE,
+    Project,
+    app_command_group,
+    fail,
+    group_name,
+    load_project,
 )
 from pangloss_cli.scaffold import (
     ScaffoldError,
@@ -76,7 +76,9 @@ def setup_database(ctx: typer.Context) -> None:
 def make_stubs(
     ctx: typer.Context,
     force: bool = typer.Option(
-        False, "--force", help="Write over a .pyi file that was not made by this command"
+        False,
+        "--force",
+        help="Write over a .pyi file that was not made by this command",
     ),
 ) -> None:
     """Write type stubs (.pyi) for the modules that declare models, so that an editor
@@ -113,7 +115,9 @@ def make_stubs(
             fg="yellow",
         )
     if not written and not skipped:
-        typer.echo(f"No models found in {', '.join(settings.INSTALLED_APPS) or 'the project'}")
+        typer.echo(
+            f"No models found in {', '.join(settings.INSTALLED_APPS) or 'the project'}"
+        )
     else:
         typer.secho(f"Wrote {len(written)} stub file(s)", fg="green")
 

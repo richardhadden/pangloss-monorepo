@@ -10,7 +10,11 @@ from fastapi.testclient import TestClient
 from pangloss_api.app import create_app
 from pangloss_models.exceptions import PanglossMigrationError
 from pangloss_models.migrations import build_snapshot
-from pangloss_models.migrations.files import MigrationGraph, graph_of, migrations_directory, write
+from pangloss_models.migrations.files import (
+    graph_of,
+    migrations_directory,
+    write,
+)
 from pangloss_models.migrations.planner import plan
 
 
@@ -62,7 +66,9 @@ def test_migrations_that_have_not_been_applied_stop_the_server(project):
     Settings(INSTALLED_APPS=["checkapp"])
     create_app()
     write_migrations()
-    with pytest.raises(PanglossMigrationError, match="have not been applied.*pangloss migrate"):
+    with pytest.raises(
+        PanglossMigrationError, match="have not been applied.*pangloss migrate"
+    ):
         start()
 
 
@@ -94,7 +100,9 @@ def test_a_migration_changed_after_it_was_applied_stops_the_server(project):
     create_app()
     write_migrations()
     mark_applied()
-    migration_backend.APPLIED[("checkapp", "0001_initial")]["checksum"] = "something else"
+    migration_backend.APPLIED[("checkapp", "0001_initial")]["checksum"] = (
+        "something else"
+    )
     with pytest.raises(PanglossMigrationError, match="has been changed since"):
         start()
 
@@ -116,7 +124,9 @@ def test_a_write_during_a_migration_is_answered_with_unavailable_and_when_to_try
 
     error = PanglossReadOnlyError("The database is being migrated")
     assert status_for(error) == 503
-    assert status_for(PanglossWriteError("x")) == 400  # (an ordinary write error is as it was)
+    assert (
+        status_for(PanglossWriteError("x")) == 400
+    )  # (an ordinary write error is as it was)
 
     response = asyncio.run(error_handler(None, error))  # type: ignore[arg-type]
     assert response.status_code == 503

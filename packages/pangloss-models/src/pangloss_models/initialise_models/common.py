@@ -40,7 +40,9 @@ def can_have_action_models(model: type[_DeclaredClass]) -> bool:
     return issubclass(model, MODEL_KINDS_WITH_ACTION_MODELS)
 
 
-def pick_base_class(model: type[_DeclaredClass], bases: tuple[tuple[type, type], ...]) -> type | None:
+def pick_base_class(
+    model: type[_DeclaredClass], bases: tuple[tuple[type, type], ...]
+) -> type | None:
     """The base class for the generated model of `model`: that of the first declared kind it is a
     subclass of (the order of `bases` matters)"""
     for declared_kind, base in bases:

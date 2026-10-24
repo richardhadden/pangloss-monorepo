@@ -37,7 +37,9 @@ def project_of(ctx: typer.Context) -> Project:
 
 
 def describe(user: User) -> str:
-    flags = [flag for flag, on in (("admin", user.admin), ("disabled", user.disabled)) if on]
+    flags = [
+        flag for flag, on in (("admin", user.admin), ("disabled", user.disabled)) if on
+    ]
     parts = [user.username, user.email or "(no email)"]
     if user.full_name:
         parts.append(user.full_name)
@@ -88,13 +90,13 @@ def set_password(
     ),
 ) -> None:
     """Set a user's password"""
-    run_with_database(
-        project_of(ctx), lambda: service.set_password(username, password)
-    )
+    run_with_database(project_of(ctx), lambda: service.set_password(username, password))
     typer.secho(f"Changed the password of '{username}'", fg="green")
 
 
-def set_flag(ctx: typer.Context, username: str, change: Callable[[], Awaitable], done: str):
+def set_flag(
+    ctx: typer.Context, username: str, change: Callable[[], Awaitable], done: str
+):
     run_with_database(project_of(ctx), change)
     typer.secho(f"'{username}' {done}", fg="green")
 
@@ -102,14 +104,19 @@ def set_flag(ctx: typer.Context, username: str, change: Callable[[], Awaitable],
 @users_cli.command("make-admin")
 def make_admin(ctx: typer.Context, username: str) -> None:
     """Make a user an admin"""
-    set_flag(ctx, username, lambda: service.set_admin(username, True), "is now an admin")
+    set_flag(
+        ctx, username, lambda: service.set_admin(username, True), "is now an admin"
+    )
 
 
 @users_cli.command("remove-admin")
 def remove_admin(ctx: typer.Context, username: str) -> None:
     """Make an admin an ordinary user"""
     set_flag(
-        ctx, username, lambda: service.set_admin(username, False), "is no longer an admin"
+        ctx,
+        username,
+        lambda: service.set_admin(username, False),
+        "is no longer an admin",
     )
 
 
@@ -148,7 +155,10 @@ def create_token(
         project_of(ctx),
         lambda: service.create_access_token(username, name, scope, expires_days),
     )
-    typer.secho(f"Token '{info.name}' ({info.scope}) for '{username}', id {info.id}:", fg="green")
+    typer.secho(
+        f"Token '{info.name}' ({info.scope}) for '{username}', id {info.id}:",
+        fg="green",
+    )
     typer.echo(token)
     typer.echo("Keep it now: it cannot be shown again.", err=True)
 
@@ -156,12 +166,22 @@ def create_token(
 @tokens_cli.command("list")
 def list_tokens(ctx: typer.Context, username: str) -> None:
     """A user's tokens (not the tokens themselves)"""
-    found = run_with_database(project_of(ctx), lambda: service.list_access_tokens(username))
+    found = run_with_database(
+        project_of(ctx), lambda: service.list_access_tokens(username)
+    )
     if not found:
         typer.echo(f"'{username}' has no tokens")
     for info in found:
-        expires = f"expires {info.expires_when:%Y-%m-%d}" if info.expires_when else "no expiry"
-        used = f"last used {info.last_used_when:%Y-%m-%d %H:%M}" if info.last_used_when else "never used"
+        expires = (
+            f"expires {info.expires_when:%Y-%m-%d}"
+            if info.expires_when
+            else "no expiry"
+        )
+        used = (
+            f"last used {info.last_used_when:%Y-%m-%d %H:%M}"
+            if info.last_used_when
+            else "never used"
+        )
         typer.echo(f"{info.id}  {info.name}  [{info.scope}]  {expires}  {used}")
 
 

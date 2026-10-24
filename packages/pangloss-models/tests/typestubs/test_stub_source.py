@@ -7,7 +7,6 @@ import types
 import typing
 
 import pytest
-
 from pangloss_models.typestubs import (
     Stubifier,
     TypeRenderer,
@@ -16,7 +15,6 @@ from pangloss_models.typestubs import (
     module_source_path,
     stub_path,
 )
-
 
 T = typing.TypeVar("T")
 
@@ -61,8 +59,12 @@ def test_types_are_written_as_annotations(annotation, written):
 
 def test_an_enum_member_in_a_literal_is_written_by_name_and_noted_as_an_import():
     rendered = TypeRenderer("here", {Colour: ("elsewhere", "Colour")})
-    assert rendered.render(typing.Literal[Colour.RED]) == "typing.Literal[elsewhere.Colour.RED]"
+    assert (
+        rendered.render(typing.Literal[Colour.RED])
+        == "typing.Literal[elsewhere.Colour.RED]"
+    )
     assert "elsewhere" in rendered.imports
+
     # (one that cannot be named is not written)
     class Local(enum.Enum):
         A = 1
@@ -77,7 +79,10 @@ def test_a_class_of_the_module_itself_is_not_imported():
 
 
 def test_a_generic_alias_of_a_class_made_at_run_time_is_any():
-    assert renderer().render(types.GenericAlias(type("Made", (), {}), (int,))) == "typing.Any"
+    assert (
+        renderer().render(types.GenericAlias(type("Made", (), {}), (int,)))
+        == "typing.Any"
+    )
 
 
 def test_the_bases_of_a_class_that_cannot_be_named_are_replaced_by_its_ancestors():
@@ -111,7 +116,7 @@ def stubbed(source: str) -> str:
 
 def test_function_bodies_are_dropped_and_annotated_values_kept_only_if_they_say_something():
     stub = stubbed(
-        '''
+        """
 import os
 from typing import TypeVar
 
@@ -135,7 +140,7 @@ class Config:
 
     def method(self):
         return 1
-'''
+"""
     )
     assert "import os" in stub
     assert "T = TypeVar('T')" in stub
@@ -154,7 +159,7 @@ class Config:
 
 def test_conditions_and_alternative_imports_are_kept_as_they_are():
     stub = stubbed(
-        '''
+        """
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -171,7 +176,7 @@ else:
 
 print("not a declaration")
 x.y = 1
-'''
+"""
     )
     assert "if TYPE_CHECKING:\n    from a import B" in stub
     assert "import fast" in stub and "import slow" in stub and "import extra" in stub
@@ -209,10 +214,14 @@ def test_a_module_with_no_python_source_has_no_stub(tmp_path):
 
 def test_no_stub_is_written_in_an_environment(tmp_path):
     (tmp_path / "project" / "pkg").mkdir(parents=True)
-    (tmp_path / "project" / ".venv" / "lib" / "site-packages" / "lib").mkdir(parents=True)
+    (tmp_path / "project" / ".venv" / "lib" / "site-packages" / "lib").mkdir(
+        parents=True
+    )
     (tmp_path / "project" / "venv2").mkdir()
     (tmp_path / "project" / "venv2" / "pyvenv.cfg").write_text("")
     root = tmp_path / "project"
     assert not is_in_environment(root, root / "pkg" / "models.py")
-    assert is_in_environment(root, root / ".venv" / "lib" / "site-packages" / "lib" / "m.py")
+    assert is_in_environment(
+        root, root / ".venv" / "lib" / "site-packages" / "lib" / "m.py"
+    )
     assert is_in_environment(root, root / "venv2" / "m.py")

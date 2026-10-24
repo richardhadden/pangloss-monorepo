@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING
 
 from pangloss_models.context import propagate_context
 from pangloss_models.model_bases.context_label import ContextLabel
-
 lazy from pangloss_models.model_bases.document import (
     _DocumentCreateDBBase,
     _DocumentUpdateDBBase,
@@ -30,12 +29,15 @@ class _InstanceContext:
         return isinstance(node, (_EntityCreateDBBase, _EntityUpdateDBBase))
 
     def is_space(self, node):
-        return isinstance(node, (_SemanticSpaceCreateDBBase, _SemanticSpaceUpdateDBBase))
+        return isinstance(
+            node, (_SemanticSpaceCreateDBBase, _SemanticSpaceUpdateDBBase)
+        )
 
     def in_context(self, node):
-        return isinstance(
-            node, (_DocumentCreateDBBase, _DocumentUpdateDBBase)
-        ) and node._meta.use_in_semantic_space_label
+        return (
+            isinstance(node, (_DocumentCreateDBBase, _DocumentUpdateDBBase))
+            and node._meta.use_in_semantic_space_label
+        )
 
     def type_of(self, node):
         return node.type

@@ -25,6 +25,7 @@ def test_models_are_exported_as_plain_data():
 
     class Place(Entity):
         """A place"""
+
         name: str | None = None
 
     class City(Place):
@@ -65,7 +66,14 @@ def test_models_are_exported_as_plain_data():
     models = exported["models"]
     # The models, not what the library makes of them with parameters
     assert set(models) == {
-        "City", "Date", "Negative", "Person", "Place", "Statement", "WithCertainty", "WithProxy",
+        "City",
+        "Date",
+        "Negative",
+        "Person",
+        "Place",
+        "Statement",
+        "WithCertainty",
+        "WithProxy",
     }
 
     place = models["Place"]
@@ -105,7 +113,10 @@ def test_models_are_exported_as_plain_data():
 
     statement = by_name(models["Statement"])
     assert statement["date"] == {
-        **statement["date"], "kind": "embedded", "model": "Date", "types": ["Date"],
+        **statement["date"],
+        "kind": "embedded",
+        "model": "Date",
+        "types": ["Date"],
     }
     assert statement["name"]["kind"] == "annotatedValue"
     assert statement["name"]["model"] == "WithCertainty"

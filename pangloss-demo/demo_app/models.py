@@ -230,6 +230,8 @@ class Factoid(Document):
         ],
         # The year is entered once, and given to every statement that does not have one
         RelationConfig(
-            bind_to_child_field=[FieldBinding(bound_field="year", child_fields=["year"])]
+            bind_to_child_field=[
+                FieldBinding(bound_field="year", child_fields=["year"])
+            ]
         ),
     ]

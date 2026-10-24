@@ -53,7 +53,9 @@ def get_fulfilled_classes(self, metafunction: Literal["Update", "Create"]):
         data = self.model_dump()
         del data["type"]
         for fulfilment in fulfilments:
-            data[fulfilment.field_on_class_to_fulfil] = getattr(self, fulfilment.this_field_name)
+            data[fulfilment.field_on_class_to_fulfil] = getattr(
+                self, fulfilment.this_field_name
+            )
         try:
             model_to_fulfil(**data, type=model_to_fulfil_base.__name__)
             models_fulfilled.append(model_to_fulfil_base)
@@ -98,9 +100,14 @@ def build_fulfilled_model[T: _CreateDBBase | _UpdateDBBase](
                 fulfilled_fields[f.field_on_class_to_fulfil] = getattr(
                     fm, f"{metafunction}DB"
                 ).model_fields[f.field_on_class_to_fulfil]
-                fulfilled_data[f.field_on_class_to_fulfil] = getattr(instance, f.this_field_name)
+                fulfilled_data[f.field_on_class_to_fulfil] = getattr(
+                    instance, f.this_field_name
+                )
 
-    for field_name, field_info in {**fulfilled_fields, **instance.__class__.model_fields}.items():
+    for field_name, field_info in {
+        **fulfilled_fields,
+        **instance.__class__.model_fields,
+    }.items():
         set_field(new_fulfilled_model, field_name, field_info)
 
     # (the fields are not copied: a relation might point at a new Create that has been given an id)

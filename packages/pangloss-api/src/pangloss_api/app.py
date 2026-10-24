@@ -78,7 +78,10 @@ async def check_migrations(settings: core_settings.BaseSettings) -> None:
     found = await migration_problems(settings.INSTALLED_APPS, migrations)
     if not found:
         return
-    message = "The database and the models do not agree with the migrations:\n  " + "\n  ".join(found)
+    message = (
+        "The database and the models do not agree with the migrations:\n  "
+        + "\n  ".join(found)
+    )
     if settings.MIGRATION_CHECK == "error":
         raise PanglossMigrationError(message)
     warnings.warn(message, stacklevel=2)

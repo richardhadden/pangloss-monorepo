@@ -11,13 +11,12 @@ import types
 import typing
 from uuid import uuid7
 
-import pytest
-from pydantic import BaseModel, TypeAdapter
-
 import kitchen_sink
+import pytest
 import sample_data
 from pangloss_models import initialise
 from pangloss_models.model_registry import ModelRegistry
+from pydantic import BaseModel, TypeAdapter
 
 EDGE_SAMPLES = {"Certainty": {"level": 1}, "Weight": {"weight": 1.5}}
 
@@ -31,7 +30,10 @@ def members(annotation) -> list[type]:
         if isinstance(item, type) and issubclass(item, BaseModel):
             found.append(item)
         args = typing.get_args(item)
-        if args and (typing.get_origin(item) in (typing.Union, types.UnionType, typing.Annotated) or True):
+        if args and (
+            typing.get_origin(item) in (typing.Union, types.UnionType, typing.Annotated)
+            or True
+        ):
             stack.extend(args)
     return found
 
@@ -58,15 +60,19 @@ def pairs():
                 for entity in entities:
                     inline_kind = "CreateDB" if kind.endswith("DB") else "Create"
                     refs = [m for m in offered if issubclass(m, entity.ReferenceSet)]
-                    inlines = [m for m in offered if issubclass(m, getattr(entity, inline_kind))]
+                    inlines = [
+                        m
+                        for m in offered
+                        if issubclass(m, getattr(entity, inline_kind))
+                    ]
                     for ref in refs:
                         for inline in inlines:
                             # (the same edge model on both)
-                            if ref.model_fields.get("edge_properties") == inline.model_fields.get(
+                            if ref.model_fields.get(
                                 "edge_properties"
-                            ) or str(ref.model_fields["edge_properties"].annotation) == str(
-                                inline.model_fields["edge_properties"].annotation
-                            ):
+                            ) == inline.model_fields.get("edge_properties") or str(
+                                ref.model_fields["edge_properties"].annotation
+                            ) == str(inline.model_fields["edge_properties"].annotation):
                                 found[(entity, kind, ref, inline)] = True
     assert found, "no union with both a reference and an entity was found"
     return list(found)
@@ -97,7 +103,10 @@ def test_the_order_of_a_union_does_not_change_what_is_chosen(pairs):
         reference, new = payloads(entity, kind, ref, inline)
         for order in ((ref, inline), (inline, ref)):
             adapter = TypeAdapter(typing.Union[order])
-            for name, payload, expected in (("reference", reference, ref), ("new", new, inline)):
+            for name, payload, expected in (
+                ("reference", reference, ref),
+                ("new", new, inline),
+            ):
                 try:
                     chosen = type(adapter.validate_python(payload))
                 except Exception as error:
@@ -109,4 +118,3 @@ def test_the_order_of_a_union_does_not_change_what_is_chosen(pairs):
                         f"not {expected.__name__}"
                     )
     assert not failures, "\n" + "\n".join(failures)
-

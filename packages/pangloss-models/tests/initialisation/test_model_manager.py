@@ -1,7 +1,6 @@
-from pytest import raises
-
 from pangloss_models.exceptions import PanglossInitialisationError
 from pangloss_models.model_registry import ModelRegistry
+from pytest import raises
 
 
 def test_model_manager_cannot_be_initialised_or_subclassed():

@@ -1,13 +1,11 @@
 import sys
-import textwrap
 from pathlib import Path
 
 import pytest
+from cli_support import write
 from pangloss_cli.main import build_app
 from pangloss_models.model_registry import ModelRegistry
 from typer.testing import CliRunner
-
-from cli_support import write
 
 runner = CliRunner()
 
@@ -219,7 +217,9 @@ def test_an_empty_migration_is_made_to_write_by_hand(models_project: Path):
     exit_code, output = invoke("makemigrations", "--empty", "nonsense")
     assert exit_code == 1 and "INSTALLED_APPS" in output
 
-    exit_code, output = invoke("makemigrations", "--empty", "fakeapp", "--name", "by_hand")
+    exit_code, output = invoke(
+        "makemigrations", "--empty", "fakeapp", "--name", "by_hand"
+    )
     assert exit_code == 0, output
     assert migration_files(models_project) == ["0001_initial.py", "0002_by_hand.py"]
     path = models_project / "fakeapp/migrations/0002_by_hand.py"
@@ -248,7 +248,9 @@ def test_a_rename_is_asked_and_the_answer_is_used(models_project: Path):
 
     exit_code, output = invoke("makemigrations", input="y\n")
     assert exit_code == 0, output
-    assert "was the field 'born' renamed to 'birth_year'" in output.replace("Was", "was")
+    assert "was the field 'born' renamed to 'birth_year'" in output.replace(
+        "Was", "was"
+    )
     assert "Rename the field Person.born to birth_year" in output
     assert "Remove" not in output
 
@@ -311,7 +313,9 @@ def test_migrate_check_says_whether_there_is_something_to_do(models_project: Pat
 
 
 def test_data_that_would_be_lost_is_asked_about(models_project: Path):
-    set_models(models_project, V2.replace("born: int", "born: int\n        extra: str | None"))
+    set_models(
+        models_project, V2.replace("born: int", "born: int\n        extra: str | None")
+    )
     assert invoke("makemigrations", "--noinput")[0] in (0, 1)
     # a migration that removes a field
     set_models(models_project, V1)
@@ -340,10 +344,14 @@ def test_a_backup_is_taken_after_the_lock_and_before_applying(models_project: Pa
     assert exit_code == 0, output
     assert "Backup: /snapshots/1" in output
     assert backend().CALLS.index("lock") < backend().CALLS.index("backup")
-    assert backend().CALLS.index("backup") < backend().CALLS.index(("apply", "0001_initial", False))
+    assert backend().CALLS.index("backup") < backend().CALLS.index(
+        ("apply", "0001_initial", False)
+    )
 
 
-def test_nothing_is_backed_up_for_a_fake_or_when_it_failed_to_be_taken(models_project: Path):
+def test_nothing_is_backed_up_for_a_fake_or_when_it_failed_to_be_taken(
+    models_project: Path,
+):
     assert invoke("makemigrations")[0] == 0
     assert invoke("migrate", "--fake", "--backup")[0] == 0
     assert "backup" not in backend().CALLS
@@ -400,7 +408,9 @@ def test_a_dry_run_says_what_would_happen_and_applies_nothing(models_project: Pa
 
 def test_a_dry_run_that_would_fail_says_so(models_project: Path):
     assert invoke("makemigrations")[0] == 0
-    set_models(models_project, V1.replace("name: str", "name: str\n        boom: str | None"))
+    set_models(
+        models_project, V1.replace("name: str", "name: str\n        boom: str | None")
+    )
     assert invoke("makemigrations")[0] == 0
     exit_code, output = invoke("migrate", "--dry-run")
     assert exit_code == 1
@@ -413,7 +423,11 @@ class Checked:
         from pangloss_models.migrations.check import DataCheck, DataProblem
 
         self.result = DataCheck(
-            checked=5, problems=[DataProblem("Person", "1", "Ann", ["born: Field required"]) for _ in problems]
+            checked=5,
+            problems=[
+                DataProblem("Person", "1", "Ann", ["born: Field required"])
+                for _ in problems
+            ],
         )
 
     async def __call__(self, types=None, limit=None, concurrency=8):
@@ -462,7 +476,9 @@ def test_migrate_can_read_everything_or_nothing(models_project: Path, monkeypatc
     assert checked.asked == (None, None)
 
 
-def test_data_that_cannot_be_read_after_a_migration_is_an_error(models_project: Path, monkeypatch):
+def test_data_that_cannot_be_read_after_a_migration_is_an_error(
+    models_project: Path, monkeypatch
+):
     import pangloss_cli.migrations as module
 
     assert invoke("makemigrations")[0] == 0
@@ -481,7 +497,9 @@ def test_check_data_reads_the_data(models_project: Path, monkeypatch):
 
     checked = Checked()
     monkeypatch.setattr(module, "check_data", checked)
-    exit_code, output = invoke("check-data", "--type", "Person", "--limit", "10", "--parallel", "3")
+    exit_code, output = invoke(
+        "check-data", "--type", "Person", "--limit", "10", "--parallel", "3"
+    )
     assert exit_code == 0, output
     assert checked.asked == (["Person"], 10) and checked.concurrency == 3
     monkeypatch.setattr(module, "check_data", Checked(problems=[1]))
@@ -493,7 +511,9 @@ def test_migrate_can_be_told_to_work_in_batches(models_project: Path):
     exit_code, output = invoke("migrate", "--batch-size", "500")
     assert exit_code == 0, output
     assert backend().BATCHES == [500]
-    assert invoke("migrate", "--batch-size", "0")[0] != 0  # (a batch has at least one node)
+    assert (
+        invoke("migrate", "--batch-size", "0")[0] != 0
+    )  # (a batch has at least one node)
 
 
 # ---------------------------------------------------------------------------
@@ -509,7 +529,10 @@ def two_migrations(models_project: Path):
     set_models(models_project, V1_NICKNAME)
     assert invoke("makemigrations")[0] == 0
     assert invoke("migrate")[0] == 0
-    assert [name for _, name in backend().APPLIED] == ["0001_initial", migration_files(models_project)[1][:-3]]
+    assert [name for _, name in backend().APPLIED] == [
+        "0001_initial",
+        migration_files(models_project)[1][:-3],
+    ]
     return models_project
 
 
@@ -522,7 +545,9 @@ def test_a_plan_back_says_what_would_be_undone(two_migrations: Path):
     assert len(backend().APPLIED) == 2
 
 
-def test_going_back_undoes_what_follows_and_it_can_be_applied_again(two_migrations: Path):
+def test_going_back_undoes_what_follows_and_it_can_be_applied_again(
+    two_migrations: Path,
+):
     exit_code, output = invoke("migrate", "fakeapp", "0001", "--yes")
     assert exit_code != 0 and "--backup" in output
     assert len(backend().APPLIED) == 2
@@ -550,7 +575,9 @@ def test_zero_undoes_them_all_and_a_target_ahead_goes_forward(two_migrations: Pa
 
     exit_code, output = invoke("migrate", "fakeapp", "0001")
     assert exit_code == 0, output
-    assert [name for _, name in backend().APPLIED] == ["0001_initial"]  # (and not the second)
+    assert [name for _, name in backend().APPLIED] == [
+        "0001_initial"
+    ]  # (and not the second)
 
 
 def test_a_target_has_to_be_one_migration_of_an_app(two_migrations: Path):
@@ -584,7 +611,9 @@ def test_a_migration_that_cannot_be_undone_is_said_to_be(two_migrations: Path):
 # squashing
 # ---------------------------------------------------------------------------
 
-V1_NICKNAME_BORN = V1_NICKNAME.replace("nickname: str | None", "nickname: str | None\n        born: int | None")
+V1_NICKNAME_BORN = V1_NICKNAME.replace(
+    "nickname: str | None", "nickname: str | None\n        born: int | None"
+)
 
 
 @pytest.fixture
@@ -599,7 +628,9 @@ def three_migrations(models_project: Path):
 
 
 def test_a_run_is_squashed_and_the_originals_are_kept(three_migrations: Path):
-    exit_code, output = invoke("squashmigrations", "fakeapp", "0001", "0003", "--dry-run")
+    exit_code, output = invoke(
+        "squashmigrations", "fakeapp", "0001", "0003", "--dry-run"
+    )
     assert exit_code == 0, output
     assert "nothing was written" in output and "replaces" in output
     assert len(migration_files(three_migrations)) == 3
@@ -613,7 +644,12 @@ def test_a_run_is_squashed_and_the_originals_are_kept(three_migrations: Path):
     # nothing has changed in the models, so nothing is to be made
     assert "No changes" in invoke("makemigrations")[1]
     # (and the next migration comes after the squashed one)
-    set_models(three_migrations, V1_NICKNAME_BORN.replace("born: int | None", "born: int | None\n        age: int | None"))
+    set_models(
+        three_migrations,
+        V1_NICKNAME_BORN.replace(
+            "born: int | None", "born: int | None\n        age: int | None"
+        ),
+    )
     assert invoke("makemigrations")[0] == 0
     assert any(f.startswith("0004_") for f in migration_files(three_migrations))
 
@@ -655,7 +691,9 @@ def test_a_database_part_way_goes_on_with_the_originals(three_migrations: Path):
     assert sorted(name[:4] for _, name in backend().APPLIED) == ["0001", "0002", "0003"]
 
 
-def test_a_part_way_database_without_the_originals_can_still_be_listed(three_migrations: Path):
+def test_a_part_way_database_without_the_originals_can_still_be_listed(
+    three_migrations: Path,
+):
     assert invoke("migrate", "fakeapp", "0001")[0] == 0
     assert invoke("squashmigrations", "fakeapp", "0001", "0003")[0] == 0
     for name in migration_files(three_migrations):
@@ -699,12 +737,16 @@ def test_indexes_the_database_needs_are_migrations(models_project: Path):
     structure["indexes"] = [INDEX_B]
     exit_code, output = invoke("makemigrations")
     assert exit_code == 0, output
-    assert "Create the index :Person(born)" in output and "Drop the index :Person(name)" in output
+    assert (
+        "Create the index :Person(born)" in output
+        and "Drop the index :Person(name)" in output
+    )
     assert len(migration_files(models_project)) == 2
 
     # ... which the server's check notices until they are made
-    from pangloss_models.migrations.startup import migration_problems
     import asyncio
+
+    from pangloss_models.migrations.startup import migration_problems
 
     found = asyncio.run(migration_problems(["fakeapp"], backend()))
     assert any("have not been applied" in line for line in found)
@@ -712,7 +754,9 @@ def test_indexes_the_database_needs_are_migrations(models_project: Path):
     assert asyncio.run(migration_problems(["fakeapp"], backend())) == []
 
 
-def test_setting_up_a_database_that_has_migrations_is_warned_about(models_project: Path):
+def test_setting_up_a_database_that_has_migrations_is_warned_about(
+    models_project: Path,
+):
     exit_code, output = invoke("setup-database")
     assert exit_code == 0, output
     assert "has migrations" not in output
@@ -728,7 +772,9 @@ def test_a_database_with_data_and_no_record_is_pointed_to_fake(models_project: P
     invoke("migrate", "--plan")  # (loads the backend)
     backend().HAS_DATA = True
     exit_code, output = invoke("migrate", "--plan")
-    assert exit_code == 0 and "no record of any migration" in output and "--fake" in output
+    assert (
+        exit_code == 0 and "no record of any migration" in output and "--fake" in output
+    )
 
     # not once there is a record, nor when faking
     backend().APPLIED.clear()
@@ -765,16 +811,16 @@ def test_a_model_that_changes_kind_is_refused_by_makemigrations(models_project: 
     assert invoke("makemigrations")[0] == 0
     set_models(
         models_project,
-        V1.replace("from pangloss_models.model_bases.entity import Entity", "from pangloss_models.model_bases.document import Document")
-        .replace("(Entity)", "(Document)"),
+        V1.replace(
+            "from pangloss_models.model_bases.entity import Entity",
+            "from pangloss_models.model_bases.document import Document",
+        ).replace("(Entity)", "(Document)"),
     )
     exit_code, output = invoke("makemigrations")
     assert exit_code == 1
     assert "kind of a model cannot be changed" in output and "Keep its kind" in output
     assert migration_files(models_project) == ["0001_initial.py"]
     assert invoke("makemigrations", "--check")[0] == 1
-
-
 
 
 @pytest.fixture
@@ -797,10 +843,14 @@ def test_a_plan_back_says_what_going_back_will_ask_for(born_then_removed: Path):
     assert len(backend().APPLIED) == 3
 
     # not asked in a plan; asked when it is done (and by a dry run, which tries it)
-    exit_code, output = invoke("migrate", "fakeapp", "0002", "--dry-run", input="1950\n")
+    exit_code, output = invoke(
+        "migrate", "fakeapp", "0002", "--dry-run", input="1950\n"
+    )
     assert exit_code == 0, output
     assert len(backend().APPLIED) == 3
-    exit_code, output = invoke("migrate", "fakeapp", "0002", "--no-backup", "--yes", input="1950\n")
+    exit_code, output = invoke(
+        "migrate", "fakeapp", "0002", "--no-backup", "--yes", input="1950\n"
+    )
     assert exit_code == 0, output
     assert len(backend().APPLIED) == 2
     undone = [call for call in backend().CALLS if call[0] == "unapply"]
@@ -809,22 +859,35 @@ def test_a_plan_back_says_what_going_back_will_ask_for(born_then_removed: Path):
 
 def test_going_back_can_be_in_batches(born_then_removed: Path):
     exit_code, output = invoke(
-        "migrate", "fakeapp", "0002", "--no-backup", "--yes", "--batch-size", "7", input="1950\n"
+        "migrate",
+        "fakeapp",
+        "0002",
+        "--no-backup",
+        "--yes",
+        "--batch-size",
+        "7",
+        input="1950\n",
     )
     assert exit_code == 0, output
     assert backend().BATCHES[-1] == 7
 
 
-def test_a_migration_that_failed_or_was_left_running_is_undone_too(born_then_removed: Path):
+def test_a_migration_that_failed_or_was_left_running_is_undone_too(
+    born_then_removed: Path,
+):
     last = sorted(backend().APPLIED)[-1]
     backend().APPLIED[last]["status"] = "failed"
-    exit_code, output = invoke("migrate", "fakeapp", "0002", "--no-backup", "--yes", input="1950\n")
+    exit_code, output = invoke(
+        "migrate", "fakeapp", "0002", "--no-backup", "--yes", input="1950\n"
+    )
     assert exit_code == 0, output
     assert last not in backend().APPLIED
     assert len(backend().APPLIED) == 2
 
 
-def test_a_squashed_migration_is_squashed_again_with_the_ones_after_it(three_migrations: Path):
+def test_a_squashed_migration_is_squashed_again_with_the_ones_after_it(
+    three_migrations: Path,
+):
     assert invoke("squashmigrations", "fakeapp", "0001", "0002")[0] == 0
     files = migration_files(three_migrations)
     assert len(files) == 4 and any("squashed_0002" in f for f in files)
@@ -849,7 +912,11 @@ def test_the_originals_of_a_squashed_migration_can_be_deleted(three_migrations: 
     assert len(migration_files(three_migrations)) == 4
 
     exit_code, output = invoke("cleanmigrations", "fakeapp", input="n\n")
-    assert exit_code != 0 and "0001_initial.py" in output and "No other database is looked at" in output
+    assert (
+        exit_code != 0
+        and "0001_initial.py" in output
+        and "No other database is looked at" in output
+    )
     assert len(migration_files(three_migrations)) == 4
 
     exit_code, output = invoke("cleanmigrations", "fakeapp", "--yes")
@@ -863,7 +930,9 @@ def test_the_originals_of_a_squashed_migration_can_be_deleted(three_migrations: 
     assert "No changes" in invoke("makemigrations")[1]
 
 
-def test_cleaning_warns_of_the_history_that_would_be_left_part_way(three_migrations: Path, monkeypatch):
+def test_cleaning_warns_of_the_history_that_would_be_left_part_way(
+    three_migrations: Path, monkeypatch
+):
     from pangloss_cli import migrations as module
 
     assert invoke("squashmigrations", "fakeapp", "0001", "0003")[0] == 0
@@ -881,7 +950,9 @@ def test_cleaning_warns_of_the_history_that_would_be_left_part_way(three_migrati
     assert len(migration_files(three_migrations)) == 1
 
 
-def test_nothing_is_deleted_for_a_database_that_is_part_way_through(three_migrations: Path):
+def test_nothing_is_deleted_for_a_database_that_is_part_way_through(
+    three_migrations: Path,
+):
     assert invoke("migrate", "fakeapp", "0001")[0] == 0  # (only the first applied)
     assert invoke("squashmigrations", "fakeapp", "0001", "0003")[0] == 0
 
@@ -900,7 +971,9 @@ def test_a_squash_of_a_squash_deletes_both_sets(three_migrations: Path):
     assert len(left) == 1 and "squashed_0003" in left[0]
 
 
-def test_a_backup_says_how_long_it_lasts_and_backups_can_be_listed_and_restored(models_project: Path):
+def test_a_backup_says_how_long_it_lasts_and_backups_can_be_listed_and_restored(
+    models_project: Path,
+):
     assert invoke("makemigrations")[0] == 0
     exit_code, output = invoke("migrate", "--backup")
     assert exit_code == 0, output

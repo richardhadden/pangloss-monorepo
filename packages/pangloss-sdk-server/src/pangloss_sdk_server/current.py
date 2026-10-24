@@ -1,8 +1,8 @@
 """The SDK this server has built and serves, and building it as the server starts or on the
 first request."""
 
-import dataclasses
 import asyncio
+import dataclasses
 import json
 import logging
 import tomllib
@@ -150,7 +150,9 @@ async def on_start(settings: Any) -> None:
         return
     try:
         built = await ensure_built(settings)
-        logger.info("SDK %s %s", built.manifest["distribution"], built.manifest["version"])
+        logger.info(
+            "SDK %s %s", built.manifest["distribution"], built.manifest["version"]
+        )
         for note in built.notes:
             logger.warning("SDK: %s", note)
     except SdkBuildError as error:

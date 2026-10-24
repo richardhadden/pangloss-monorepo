@@ -20,7 +20,6 @@ def settings_for(**extra) -> SimpleNamespace:
 
 
 def load_models(settings=None):
-    import importlib
 
     importlib.import_module("shop.models")
     initialise()

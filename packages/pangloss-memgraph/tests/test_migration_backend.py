@@ -5,8 +5,10 @@ from typing import no_type_check
 
 import pytest
 from pangloss_memgraph.databases.memgraph import migration_backend as backend
-from pangloss_memgraph.databases.memgraph.database import Database
-from pangloss_models.exceptions import PanglossMigrationAnswerNeeded, PanglossMigrationError
+from pangloss_models.exceptions import (
+    PanglossMigrationAnswerNeeded,
+    PanglossMigrationError,
+)
 from pangloss_models.migrations import data_view
 from pangloss_models.migrations.files import EMPTY_SNAPSHOT, Migration, MigrationGraph
 from pangloss_models.migrations.history import pending, problems
@@ -28,7 +30,9 @@ def in_app(snapshot: dict) -> dict:
     return snapshot
 
 
-def migrations_between(graph: MigrationGraph, new: dict, answer=None) -> list[Migration]:
+def migrations_between(
+    graph: MigrationGraph, new: dict, answer=None
+) -> list[Migration]:
     result = plan(graph, in_app(new), APPS, answer=answer)
     assert result.is_final
     return result.migrations
@@ -73,7 +77,10 @@ async def test_migrations_are_applied_and_recorded(db_driver, clear_database):
     new_models, second_snapshot = declare(v2)
 
     def answer(changes, old):
-        return [with_answer(ch, "default", 1900) if ch.kind == "AddField" else ch for ch in changes]
+        return [
+            with_answer(ch, "default", 1900) if ch.kind == "AddField" else ch
+            for ch in changes
+        ]
 
     later = migrations_between(graph, second_snapshot, answer=answer)
     graph = MigrationGraph.of([*initial, *later])
@@ -85,7 +92,9 @@ async def test_migrations_are_applied_and_recorded(db_driver, clear_database):
 
 
 @no_type_check
-async def test_a_failed_migration_is_recorded_and_tried_again(db_driver, clear_database):
+async def test_a_failed_migration_is_recorded_and_tried_again(
+    db_driver, clear_database
+):
     def v1():
         class Person(Entity):
             name: str
@@ -121,7 +130,9 @@ async def test_a_failed_migration_is_recorded_and_tried_again(db_driver, clear_d
 
 
 @no_type_check
-async def test_a_migration_that_was_edited_after_it_was_applied_is_noticed(db_driver, clear_database):
+async def test_a_migration_that_was_edited_after_it_was_applied_is_noticed(
+    db_driver, clear_database
+):
     def v1():
         class Person(Entity):
             name: str
@@ -133,7 +144,9 @@ async def test_a_migration_that_was_edited_after_it_was_applied_is_noticed(db_dr
     await backend.ensure_ready()
     await backend.apply(initial, EMPTY_SNAPSHOT)
 
-    edited = Migration(app="migapp", name="0001_initial", changes=initial[0].changes[:0])
+    edited = Migration(
+        app="migapp", name="0001_initial", changes=initial[0].changes[:0]
+    )
     found = problems(MigrationGraph.of([edited]), await backend.applied())
     assert found and "has been changed since" in found[0]
 
@@ -142,7 +155,9 @@ async def test_a_migration_that_was_edited_after_it_was_applied_is_noticed(db_dr
 
 
 @no_type_check
-async def test_a_migration_can_be_marked_applied_without_running_it(db_driver, clear_database):
+async def test_a_migration_can_be_marked_applied_without_running_it(
+    db_driver, clear_database
+):
     def v1():
         class Person(Entity):
             name: str
@@ -165,12 +180,16 @@ async def test_only_one_migrate_at_a_time(db_driver, clear_database):
     try:
         with pytest.raises(PanglossMigrationError, match="Another migrate is running"):
             await backend.lock("bob")
-        assert run(db_driver, "MATCH (l:PGMigrationLock) RETURN l.acquired_by AS who") == [{"who": "ann"}]
+        assert run(
+            db_driver, "MATCH (l:PGMigrationLock) RETURN l.acquired_by AS who"
+        ) == [{"who": "ann"}]
     finally:
         await backend.unlock()
     await backend.lock("bob")
     await backend.unlock()
-    assert run(db_driver, "MATCH (l:PGMigrationLock) RETURN count(l) AS n") == [{"n": 0}]
+    assert run(db_driver, "MATCH (l:PGMigrationLock) RETURN count(l) AS n") == [
+        {"n": 0}
+    ]
 
 
 async def test_a_backup_is_a_snapshot_the_server_has(db_driver, clear_database):
@@ -210,7 +229,10 @@ async def test_a_migration_is_undone_and_its_record_removed(db_driver, clear_dat
     new_models, second_snapshot = declare(v2)
 
     def answer(changes, old):
-        return [with_answer(ch, "default", 1900) if ch.kind == "AddField" else ch for ch in changes]
+        return [
+            with_answer(ch, "default", 1900) if ch.kind == "AddField" else ch
+            for ch in changes
+        ]
 
     later = migrations_between(graph, second_snapshot, answer=answer)
     after = await backend.apply(later, state)
@@ -254,7 +276,9 @@ async def test_an_undoing_that_fails_leaves_the_record(db_driver, clear_database
 
 
 @no_type_check
-async def test_a_squashed_migration_makes_what_the_originals_made(db_driver, clear_database):
+async def test_a_squashed_migration_makes_what_the_originals_made(
+    db_driver, clear_database
+):
     from dataclasses import replace
 
     from pangloss_models.migrations.files import squash
@@ -296,7 +320,11 @@ async def test_a_squashed_migration_makes_what_the_originals_made(db_driver, cle
     assert [key[1] for key in await backend.applied()] == [squashed.name]
 
     # ... that can be undone, and takes the records of the originals with it
-    run(db_driver, "MERGE (:PGMigration {app: 'migapp', name: $name, status: 'applied'})", name=originals[0].name)
+    run(
+        db_driver,
+        "MERGE (:PGMigration {app: 'migapp', name: $name, status: 'applied'})",
+        name=originals[0].name,
+    )
     reversal = reverse_changes(squashed.changes, EMPTY_SNAPSHOT)
     undoing = replace(squashed, changes=tuple(reversal.changes))
     assert await backend.unapply([undoing], state) == data_view(EMPTY_SNAPSHOT)
@@ -309,14 +337,19 @@ async def test_data_is_told_from_the_record_of_migrations(db_driver, clear_datab
     await backend.ensure_ready()
     assert await backend.has_data() is False
 
-    run(db_driver, "CREATE (:PGMigration {app: 'x', name: '0001_initial', status: 'applied'})")
+    run(
+        db_driver,
+        "CREATE (:PGMigration {app: 'x', name: '0001_initial', status: 'applied'})",
+    )
     assert await backend.has_data() is False  # (the record is not data)
 
     run(db_driver, "CREATE (:Person {id: 'a'})")
     assert await backend.has_data() is True
 
 
-async def test_a_backup_can_be_listed_and_the_database_put_back_to_it(db_driver, clear_database):
+async def test_a_backup_can_be_listed_and_the_database_put_back_to_it(
+    db_driver, clear_database
+):
     run(db_driver, "MATCH (n:BackedUp) DETACH DELETE n")
     run(db_driver, "CREATE (:BackedUp {v: 'before'})")
     path = await backend.backup()
@@ -334,11 +367,16 @@ async def test_a_backup_can_be_listed_and_the_database_put_back_to_it(db_driver,
 
     # ... and it can be written to: a recovered snapshot has the text indexes, and not their files
     # (so the indexes are made again)
-    run(db_driver, "CREATE (:PGIndexableNode {id: 'after-restore', label: 'written after'})")
+    run(
+        db_driver,
+        "CREATE (:PGIndexableNode {id: 'after-restore', label: 'written after'})",
+    )
     run(db_driver, "MATCH (n {id: 'after-restore'}) DELETE n")
 
 
-async def test_only_a_snapshot_the_server_has_can_be_restored(db_driver, clear_database):
+async def test_only_a_snapshot_the_server_has_can_be_restored(
+    db_driver, clear_database
+):
     with pytest.raises(PanglossMigrationError, match="not a snapshot the server has"):
         await backend.restore('/etc/passwd" FORCE; MATCH (n) DETACH DELETE n; //')
     with pytest.raises(PanglossMigrationError, match="not a snapshot"):

@@ -1,14 +1,13 @@
 from typing import Annotated, ClassVar, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
-from pangloss_models.meta_kit import BaseMeta, InheritValue, MetaRules, WithMeta
+from pydantic import ConfigDict, Field
 
 from pangloss_models.field_definitions import (
     FieldDefinition,
     ModelFieldDict,
     ModelFields,
 )
-from pangloss_models.model_bases.context_label import ContextLabel
+from pangloss_models.meta_kit import BaseMeta, InheritValue, MetaRules, WithMeta
 from pangloss_models.model_bases.base_models import (
     DeclaredClassMeta,
     _BaseObject,
@@ -21,6 +20,7 @@ from pangloss_models.model_bases.base_models import (
     _UpdateDBBase,
     _ViewBase,
 )
+from pangloss_models.model_bases.context_label import ContextLabel
 
 
 class ReifiedRelationMeta(BaseMeta, DeclaredClassMeta):
@@ -71,7 +71,6 @@ class ReifiedRelation[TTarget](_DeclaredClass, WithMeta[ReifiedRelationMeta]):
     View: ClassVar[type[_ReifiedRelationViewBase]]
 
     target: list[TTarget]
-
 
 
 class ReifiedRelationDocumentMeta(BaseMeta, DeclaredClassMeta):
@@ -147,4 +146,3 @@ class ReifiedRelationDocument[TTarget](
     HeadView: ClassVar[type[_ReifiedRelationDocumentHeadViewBase]]
 
     target: list[TTarget]
-

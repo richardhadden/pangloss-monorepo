@@ -7,7 +7,6 @@ from pangloss_sdk_server.builder import (
     build_package,
     names_for,
 )
-
 from server_support import load_models, settings_for, write
 
 
@@ -59,7 +58,9 @@ def test_the_manifest_and_pyproject_name_the_package(project):
     assert "pangloss-sdk==" in pyproject
 
 
-def test_the_fingerprint_is_stable_and_follows_the_content_not_the_build_number(project):
+def test_the_fingerprint_is_stable_and_follows_the_content_not_the_build_number(
+    project,
+):
     settings = settings_for()
     load_models()
 
@@ -97,12 +98,21 @@ def test_what_cannot_be_shipped_is_an_error_with_the_reasons(project):
 
 
 def test_apps_are_chosen_by_the_settings(project):
-    write(project, {"other/__init__.py": "", "other/models.py": "X = 1\n", "nomodels/__init__.py": ""})
+    write(
+        project,
+        {
+            "other/__init__.py": "",
+            "other/models.py": "X = 1\n",
+            "nomodels/__init__.py": "",
+        },
+    )
     installed = ["shop", "other", "nomodels", "pangloss_history", "missing"]
 
     assert apps_to_ship(project, installed, settings_for()) == ["shop", "other"]
     assert apps_to_ship(project, installed, settings_for(SDK_APPS=["shop"])) == ["shop"]
-    assert apps_to_ship(project, installed, settings_for(SDK_EXCLUDE_APPS=["shop"])) == ["other"]
+    assert apps_to_ship(
+        project, installed, settings_for(SDK_EXCLUDE_APPS=["shop"])
+    ) == ["other"]
 
 
 def test_nothing_to_ship_is_an_error(project):
@@ -112,4 +122,7 @@ def test_nothing_to_ship_is_an_error(project):
 
 def test_the_name_can_be_set():
     assert names_for("My_Project") == ("my-project-sdk", "my_project_sdk")
-    assert names_for("x", settings_for(SDK_NAME="Other.Name")) == ("other-name", "other_name")
+    assert names_for("x", settings_for(SDK_NAME="Other.Name")) == (
+        "other-name",
+        "other_name",
+    )

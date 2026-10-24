@@ -52,7 +52,7 @@ Values are converted by `convert_type_for_writing`: UUIDs and URLs become string
 ```python
 from pangloss_memgraph.databases.memgraph.initialise_database import initialise_database
 
-setup = await initialise_database()   # uses the default Database, or give one
+setup = await initialise_database()  # uses the default Database, or give one
 setup.created, setup.already_present  # lists of what it did and what was there
 ```
 

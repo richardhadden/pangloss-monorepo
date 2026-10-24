@@ -15,6 +15,7 @@ from typing import Any
 
 import typer
 
+from pangloss_interface.paths import APP_PATH, JS_ROOT
 from pangloss_interface.runtime import (
     InterfaceRuntimeError,
     Runtime,
@@ -22,7 +23,6 @@ from pangloss_interface.runtime import (
     run,
 )
 from pangloss_interface.typescript import models_module
-from pangloss_interface.paths import APP_PATH, JS_ROOT
 from pangloss_interface.workspace import (
     export_project_models,
     is_source_checkout,
@@ -61,7 +61,9 @@ def runtime_or_exit(requested: str | None) -> Runtime:
         raise  # (for the checker: fail does not return)
 
 
-def run_or_exit(command: list[str], cwd: Path, environment: dict[str, str] | None = None):
+def run_or_exit(
+    command: list[str], cwd: Path, environment: dict[str, str] | None = None
+):
     code = run(command, cwd, environment)
     if code != 0:
         raise typer.Exit(code)
@@ -94,7 +96,9 @@ def prepare_workspace(ctx: typer.Context) -> Path:
     project = project_of(ctx)
     prepared = prepare(project.location.root, export_or_exit(project))
     for name in prepared.written:
-        typer.echo(f"  wrote {(prepared.directory / name).relative_to(project.location.root)}")
+        typer.echo(
+            f"  wrote {(prepared.directory / name).relative_to(project.location.root)}"
+        )
     for name in prepared.removed:
         typer.echo(f"  removed {name}")
     return prepared.directory
@@ -120,7 +124,9 @@ def info(ctx: typer.Context, runtime: str | None = RuntimeOption) -> None:
     project = project_of(ctx)
     directory = working_directory(project.location.root)
     typer.echo(f"Directory:  {directory}")
-    typer.echo(f"Prepared:   {'yes' if directory.is_dir() else 'no (pangloss interface build)'}")
+    typer.echo(
+        f"Prepared:   {'yes' if directory.is_dir() else 'no (pangloss interface build)'}"
+    )
     typer.echo(f"Installed:  {'yes' if installed(directory) else 'no'}")
     typer.echo(f"Built:      {'yes' if built_server(directory).is_file() else 'no'}")
     found = runtime_or_exit(runtime)
@@ -130,14 +136,22 @@ def info(ctx: typer.Context, runtime: str | None = RuntimeOption) -> None:
 @cli.command("export-models")
 def export_models(
     ctx: typer.Context,
-    format: str = typer.Option("ts", "--format", help="'ts' (the module the interface imports) or 'json'"),
-    output: Path | None = typer.Option(None, "--output", "-o", help="A file to write (otherwise it is printed)"),
+    format: str = typer.Option(
+        "ts", "--format", help="'ts' (the module the interface imports) or 'json'"
+    ),
+    output: Path | None = typer.Option(
+        None, "--output", "-o", help="A file to write (otherwise it is printed)"
+    ),
 ) -> None:
     """Export the definitions of the project's models, as the interface reads them"""
     if format not in ("ts", "json"):
         fail("--format is 'ts' or 'json'")
     exported = export_or_exit(project_of(ctx))
-    text = models_module(exported) if format == "ts" else json.dumps(exported, indent=2) + "\n"
+    text = (
+        models_module(exported)
+        if format == "ts"
+        else json.dumps(exported, indent=2) + "\n"
+    )
     if output is None:
         typer.echo(text, nl=False)
     else:

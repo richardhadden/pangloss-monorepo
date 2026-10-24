@@ -16,9 +16,9 @@ from pydantic import TypeAdapter
 
 from pangloss_sdk.exceptions import (
     PanglossAuthenticationError,
-    PanglossSdkOutOfDate,
     PanglossPermissionError,
     PanglossRequestError,
+    PanglossSdkOutOfDate,
     PanglossServerError,
 )
 

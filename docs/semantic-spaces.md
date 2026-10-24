@@ -6,7 +6,10 @@ A `SemanticSpace[T]` subclass wraps content in a named context that changes how 
 
 ```python
 class Negative[T](SemanticSpace[T]): ...
+
+
 class Hypothetical[T](SemanticSpace[T]): ...
+
 
 class Factoid(Document):
     has_statement: list[Statement | Negative[Statement]]
@@ -15,9 +18,15 @@ class Factoid(Document):
 A payload looks like:
 
 ```python
-Factoid(label="F", has_statement=[
-    {"type": "Negative", "contents": [{"type": "Statement", "label": "S", "text": "..."}]},
-])
+Factoid(
+    label="F",
+    has_statement=[
+        {
+            "type": "Negative",
+            "contents": [{"type": "Statement", "label": "S", "text": "..."}],
+        },
+    ],
+)
 ```
 
 The space is stored as a node of its own (type `Negative`), connected to its contents through the `contents` relation, and read back the same way (`factoid.statements[0].type == "Negative"`, `.contents[0].type == "Order"`). In addition, when an object is converted to its `CreateDB` form, `recursively_propagate_context_types` walks the tree and annotates **every contained object** with the spaces it sits inside, so a node can be filtered by context without traversing up.

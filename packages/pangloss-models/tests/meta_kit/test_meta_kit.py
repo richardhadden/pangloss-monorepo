@@ -1,8 +1,5 @@
 from typing import Annotated, ClassVar
 
-from pydantic import BaseModel, Field
-from pytest import raises
-
 from pangloss_models.meta_kit import (
     BaseMeta,
     InheritValue,
@@ -10,6 +7,8 @@ from pangloss_models.meta_kit import (
     WithMeta,
 )
 from pangloss_models.meta_kit.exceptions import PydanticMetaKitException
+from pydantic import BaseModel, Field
+from pytest import raises
 
 
 def test_meta_add_with_none():

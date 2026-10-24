@@ -13,21 +13,24 @@ from pangloss_models import initialise
 from pangloss_models.model_bases.document import Document
 from pangloss_models.model_bases.entity import Entity
 
+
 class Person(Entity):
     pass
+
 
 class Statement(Document):
     text: str
     was_carried_out_by: Person
 
-initialise()   # generates Person.Create, Statement.Create, Statement.View, ...
+
+initialise()  # generates Person.Create, Statement.Create, Statement.View, ...
 
 st = Statement.Create(
     label="A statement",
     text="...",
     was_carried_out_by={"type": "Person", "id": some_uuid},
 )
-saved = await st.save()                 # writes to the configured database
+saved = await st.save()  # writes to the configured database
 loaded = await Statement.get(saved.id)  # reads it back as Statement.HeadView
 ```
 

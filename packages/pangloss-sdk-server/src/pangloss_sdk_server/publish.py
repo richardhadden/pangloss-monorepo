@@ -30,7 +30,7 @@ class Built:
 def read_state(output: Path) -> dict[str, Any]:
     try:
         return json.loads((output / STATE_FILE).read_text())
-    except (FileNotFoundError, ValueError):
+    except FileNotFoundError, ValueError:
         return {}
 
 

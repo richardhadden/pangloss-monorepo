@@ -4,16 +4,14 @@ from typing import Annotated, Any, ClassVar, Self
 from uuid import UUID
 
 from pydantic import AnyHttpUrl, ConfigDict, Field, field_validator, model_validator
-from pangloss_models.hooks import convert_from_database
-from pangloss_models.meta_kit import BaseMeta, InheritValue, MetaRules, WithMeta
 
 from pangloss_models.field_definitions import (
     FieldDefinition,
     ModelFieldDict,
     ModelFields,
 )
-from pangloss_models.model_bases.model_tools import make_id
-from pangloss_models.model_bases.context_label import ContextLabel
+from pangloss_models.hooks import convert_from_database
+from pangloss_models.meta_kit import BaseMeta, InheritValue, MetaRules, WithMeta
 from pangloss_models.model_bases.base_models import (
     DeclaredClassMeta,
     _BaseObject,
@@ -28,6 +26,8 @@ from pangloss_models.model_bases.base_models import (
     _UpdateDBBase,
     _ViewBase,
 )
+from pangloss_models.model_bases.context_label import ContextLabel
+from pangloss_models.model_bases.model_tools import make_id
 
 
 class DocumentMeta(BaseMeta, DeclaredClassMeta):
@@ -184,4 +184,3 @@ class Document(_DeclaredClass, WithMeta[DocumentMeta]):
 
     def __new__(cls, *args, **kwargs) -> _DocumentCreateBase:
         return cls.Create(*args, **kwargs)
-

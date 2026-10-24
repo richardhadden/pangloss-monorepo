@@ -38,7 +38,11 @@ class Problem:
     blocking: bool = True
 
     def to_dict(self) -> dict[str, Any]:
-        out: dict[str, Any] = {"kind": self.kind, "message": self.message, "blocking": self.blocking}
+        out: dict[str, Any] = {
+            "kind": self.kind,
+            "message": self.message,
+            "blocking": self.blocking,
+        }
         if self.path is not None:
             out["path"] = self.path
         if self.old_value is not None:
@@ -91,13 +95,21 @@ def migrations_after(
                 )
             key = squash
         number = graph.migrations[key].number
-        done |= {m.key for m in graph.migrations.values() if m.app == app and m.number <= number}
+        done |= {
+            m.key
+            for m in graph.migrations.values()
+            if m.app == app and m.number <= number
+        }
     _, _, state = states_around(graph, done)
     return [m for m in graph.order() if m.key not in done], state
 
 
 def is_node(value: Any, state: dict[str, Any]) -> bool:
-    return isinstance(value, dict) and isinstance(value.get("type"), str) and value["type"] in state["models"]
+    return (
+        isinstance(value, dict)
+        and isinstance(value.get("type"), str)
+        and value["type"] in state["models"]
+    )
 
 
 def is_reference(value: Any, state: dict[str, Any]) -> bool:
@@ -176,7 +188,9 @@ class Upgrader:
                 continue
             if change.default is not None:
                 node[change.name] = copy.deepcopy(change.default)
-            elif change.field_kind == "list" or (change.field_kind == "relation" and definition.get("many")):
+            elif change.field_kind == "list" or (
+                change.field_kind == "relation" and definition.get("many")
+            ):
                 node[change.name] = []
             elif definition.get("nullable") or not change.needs_value:
                 node[change.name] = None
@@ -237,7 +251,9 @@ class Upgrader:
             value = node[change.name]
             if isinstance(change, c.AlterListItemType):
                 if isinstance(value, list):
-                    node[change.name] = [self.convert_one(change, v, enums, here) for v in value]
+                    node[change.name] = [
+                        self.convert_one(change, v, enums, here) for v in value
+                    ]
             else:
                 node[change.name] = self.convert_one(change, value, enums, here)
 
@@ -273,13 +289,17 @@ class Upgrader:
                         path=self.at(path, change.name),
                     )
 
-    def enum_fields(self, enum: str) -> Iterable[tuple[str, dict[str, Any], dict[str, Any]]]:
+    def enum_fields(
+        self, enum: str
+    ) -> Iterable[tuple[str, dict[str, Any], dict[str, Any]]]:
         for path, node in self.nodes():
             for entry in self.state["models"][node["type"]]["fields"]:
                 if entry["name"] not in node:
                     continue
-                kind = entry.get("type") if entry["kind"] == "literal" else (
-                    entry.get("item") if entry["kind"] == "list" else None
+                kind = (
+                    entry.get("type")
+                    if entry["kind"] == "literal"
+                    else (entry.get("item") if entry["kind"] == "list" else None)
                 )
                 if kind and kind.get("type") == "enum" and kind.get("enum") == enum:
                     yield path, node, entry
@@ -290,10 +310,16 @@ class Upgrader:
 
         for _, node, entry in self.enum_fields(change.enum):
             current = node[entry["name"]]
-            node[entry["name"]] = [swap(v) for v in current] if isinstance(current, list) else swap(current)
+            node[entry["name"]] = (
+                [swap(v) for v in current]
+                if isinstance(current, list)
+                else swap(current)
+            )
 
     def remove_enum_member(self, change: c.RemoveEnumMember) -> None:
-        members = {m["name"]: m["value"] for m in self.state["enums"][change.enum]["members"]}
+        members = {
+            m["name"]: m["value"] for m in self.state["enums"][change.enum]["members"]
+        }
         gone = members.get(change.member)
         replacement = members.get(change.replacement) if change.replacement else None
         for path, node, entry in self.enum_fields(change.enum):
@@ -374,7 +400,9 @@ class Unconvertible(Exception):
     pass
 
 
-def convert_value(old: dict, new: dict, value: Any, enums: dict, mapping: dict | None = None) -> Any:
+def convert_value(
+    old: dict, new: dict, value: Any, enums: dict, mapping: dict | None = None
+) -> Any:
     """What a stored value is as another type, as the Cypher of the migration makes it
     (`conversion.py`). Raises `Unconvertible` if it cannot be"""
     old_type, new_type = old["type"], new["type"]
@@ -496,7 +524,9 @@ HANDLERS: dict[type, Any] = {
 }
 
 
-def apply_migrations(data: Any, state: dict[str, Any], migrations: Iterable[Migration]) -> Upgraded:
+def apply_migrations(
+    data: Any, state: dict[str, Any], migrations: Iterable[Migration]
+) -> Upgraded:
     """`data` upgraded by the migrations, from models that were `state`"""
     upgrader = Upgrader(data, state)
     applied = []

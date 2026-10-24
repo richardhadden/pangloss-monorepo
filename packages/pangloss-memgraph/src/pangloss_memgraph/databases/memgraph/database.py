@@ -1,8 +1,9 @@
-from typing import Awaitable, Callable, ClassVar, Concatenate
+from collections.abc import Awaitable, Callable
+from typing import ClassVar, Concatenate
 
 import neo4j
-from pangloss_models.exceptions import PanglossReadOnlyError
 from pangloss_core.settings import BaseSettings
+from pangloss_models.exceptions import PanglossReadOnlyError
 
 from pangloss_memgraph.databases.memgraph.settings import MemgraphDatabaseSettings
 
@@ -13,9 +14,9 @@ class Database:
     settings: BaseSettings[MemgraphDatabaseSettings]
     driver: neo4j.AsyncDriver
 
-    _instances: dict[int, "Database"] = {}
+    _instances: dict[int, Database] = {}
     _initialised: bool = False
-    default: ClassVar["Database"]
+    default: ClassVar[Database]
 
     def __init__(self, settings: BaseSettings, instance_identifier: int | None = None):
         if settings is None:
@@ -104,20 +105,20 @@ class Database:
         return wrapper
 
     def with_database[ReturnType, **Params](
-        self, func: Callable[["Database"], Awaitable[ReturnType]]
+        self, func: Callable[[Database], Awaitable[ReturnType]]
     ) -> Callable[Params, Awaitable[ReturnType]]:
         """Decorator to allow access to the database instance inside a function,
         taking a `database` argument as its first argument"""
 
         async def wrapper(*args, **kwargs) -> ReturnType:
-            this: "Database" = self.__class__._instances[id(self)]
+            this: Database = self.__class__._instances[id(self)]
             result = await func(this, *args, **kwargs)
             return result
 
         return wrapper
 
     @staticmethod
-    def initialise_default_database(settings: "BaseSettings") -> "Database":
+    def initialise_default_database(settings: BaseSettings) -> Database:
 
         database = Database(settings=settings)
         return database

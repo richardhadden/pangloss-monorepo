@@ -8,10 +8,10 @@ and check what must hold between the models. The models are made once for all of
 part), and a failure names every model and sample that broke it.
 """
 
-import pytest
 from uuid import uuid7
 
 import kitchen_sink
+import pytest
 import sample_data
 from pangloss_models import initialise
 from pangloss_models.model_registry import ModelRegistry
@@ -30,7 +30,11 @@ def heads():
         and not getattr(m._meta, "abstract", False)
     ]
     assert len(models) >= 10  # (the sink has twelve)
-    return [(m, c, sample_data.sample_payload(m, c)) for m in models for c in sample_data.CHOICES]
+    return [
+        (m, c, sample_data.sample_payload(m, c))
+        for m in models
+        for c in sample_data.CHOICES
+    ]
 
 
 def check(heads, work):
@@ -40,7 +44,9 @@ def check(heads, work):
         try:
             work(model, payload)
         except Exception as error:
-            failures.append(f"{model.__name__} (choice {choice}): {type(error).__name__}: {str(error)[:300]}")
+            failures.append(
+                f"{model.__name__} (choice {choice}): {type(error).__name__}: {str(error)[:300]}"
+            )
     assert not failures, "\n" + "\n".join(failures)
 
 
@@ -82,7 +88,9 @@ def test_a_model_survives_a_round_trip_through_its_aliases(heads):
 
         updated = model.Update(id=uuid7(), **payload)
         dumped = updated.model_dump(by_alias=True, mode="json")
-        assert model.Update(**dumped).model_dump(mode="json") == updated.model_dump(mode="json")
+        assert model.Update(**dumped).model_dump(mode="json") == updated.model_dump(
+            mode="json"
+        )
 
     check(heads, work)
 
@@ -94,18 +102,26 @@ def test_the_models_have_the_same_fields_and_agree_on_which_are_required(heads):
     def work(model, payload):
         fields = model._meta.fields
         for name, definition in fields.items():
-            kinds = ("CreateDB", "UpdateDB") if definition.db_field else (
-                "Create", "Update", "View", "CreateDB", "UpdateDB"
+            kinds = (
+                ("CreateDB", "UpdateDB")
+                if definition.db_field
+                else ("Create", "Update", "View", "CreateDB", "UpdateDB")
             )
             for kind in kinds:
-                assert name in getattr(model, kind).model_fields, f"{kind} has no {name}"
+                assert name in getattr(model, kind).model_fields, (
+                    f"{kind} has no {name}"
+                )
             if definition.db_field:
                 for kind in ("Create", "Update", "View"):
-                    assert name not in getattr(model, kind).model_fields, f"{kind} has {name}"
+                    assert name not in getattr(model, kind).model_fields, (
+                        f"{kind} has {name}"
+                    )
                 continue
             create = model.Create.model_fields[name].is_required()
             update = model.Update.model_fields[name].is_required()
-            assert create == update, f"{name}: required in Create {create}, in Update {update}"
+            assert create == update, (
+                f"{name}: required in Create {create}, in Update {update}"
+            )
 
     check(heads, work)
 

@@ -44,7 +44,9 @@ def same(value):
     return value
 
 
-async def both_ways(written, old, old_models, new_models, new, saved, model, fields, **migration):
+async def both_ways(
+    written, old, old_models, new_models, new, saved, model, fields, **migration
+):
     """Migrate the database and upgrade the stored version; check that they agree on `fields`.
     Returns the problems of the upgrade."""
     changes = await migrate(old, new, **migration)
@@ -83,14 +85,23 @@ async def test_a_field_that_is_added_has_the_value_the_migration_gave(
     new_models, new = declare(v2)
 
     problems = await both_ways(
-        written, old, old_models, new_models, new, saved, "Person", ["name", "born"],
+        written,
+        old,
+        old_models,
+        new_models,
+        new,
+        saved,
+        "Person",
+        ["name", "born"],
         answer=with_answers(AddField={"default": 1900}),
     )
     assert problems == []
 
 
 @no_type_check
-async def test_a_field_that_is_removed_is_dropped_and_said(db_driver, clear_database, written):
+async def test_a_field_that_is_removed_is_dropped_and_said(
+    db_driver, clear_database, written
+):
     def v1():
         class Person(Entity):
             name: str
@@ -110,12 +121,24 @@ async def test_a_field_that_is_removed_is_dropped_and_said(db_driver, clear_data
     new_models, new = declare(v2)
 
     problems = await both_ways(
-        written, old, old_models, new_models, new, saved, "Person", ["name", "title"],
-        declined=[PossibleRename(what="field", scope="Person", old="nickname", new="title")],
+        written,
+        old,
+        old_models,
+        new_models,
+        new,
+        saved,
+        "Person",
+        ["name", "title"],
+        declined=[
+            PossibleRename(what="field", scope="Person", old="nickname", new="title")
+        ],
     )
     (problem,) = problems
     assert (problem.kind, problem.path, problem.old_value, problem.blocking) == (
-        "removed-field", "nickname", "A", False,
+        "removed-field",
+        "nickname",
+        "A",
+        False,
     )
 
 
@@ -138,8 +161,17 @@ async def test_a_renamed_field_keeps_its_value(db_driver, clear_database, writte
     new_models, new = declare(v2)
 
     problems = await both_ways(
-        written, old, old_models, new_models, new, saved, "Person", ["birth_year"],
-        confirmed=[PossibleRename(what="field", scope="Person", old="born", new="birth_year")],
+        written,
+        old,
+        old_models,
+        new_models,
+        new,
+        saved,
+        "Person",
+        ["birth_year"],
+        confirmed=[
+            PossibleRename(what="field", scope="Person", old="born", new="birth_year")
+        ],
     )
     assert problems == []
 
@@ -173,7 +205,14 @@ async def test_a_value_is_converted_as_the_database_converts_it(
     new_models, new = declare(v2)
 
     problems = await both_ways(
-        written, old, old_models, new_models, new, saved, "Person", ["age"],
+        written,
+        old,
+        old_models,
+        new_models,
+        new,
+        saved,
+        "Person",
+        ["age"],
         answer=with_answers(AlterLiteralType=answer),
     )
     assert problems == []
@@ -204,11 +243,16 @@ async def test_a_value_that_cannot_be_converted_is_a_problem_when_the_migration_
 
     changes = diff(old, new).changes
     result = apply_migrations(
-        written[str(saved.id)], data_view(old), [Migration(app="t", name="0002", changes=tuple(changes))]
+        written[str(saved.id)],
+        data_view(old),
+        [Migration(app="t", name="0002", changes=tuple(changes))],
     )
     (problem,) = result.problems
     assert (problem.kind, problem.path, problem.old_value, problem.blocking) == (
-        "type-changed", "age", "forty", True,
+        "type-changed",
+        "age",
+        "forty",
+        True,
     )
     assert result.data["age"] == "forty"  # (left as it was, for the person to decide)
 
@@ -238,7 +282,14 @@ async def test_enum_values_are_mapped_when_a_member_changes_value_or_goes(
     new_enum = shade(RED="red", GREEN="verde", BLUE="blue")
     new_models, new = declare(lambda: shade_models(new_enum))
     problems = await both_ways(
-        written, old, old_models, new_models, new, saved, "Person", ["favourite", "others"]
+        written,
+        old,
+        old_models,
+        new_models,
+        new,
+        saved,
+        "Person",
+        ["favourite", "others"],
     )
     assert problems == []
 
@@ -256,7 +307,14 @@ async def test_a_member_that_goes_gives_its_values_to_the_replacement(
     new_enum = shade(RED="red", BLUE="blue")
     new_models, new = declare(lambda: shade_models(new_enum))
     problems = await both_ways(
-        written, old, old_models, new_models, new, saved, "Person", ["favourite", "others"],
+        written,
+        old,
+        old_models,
+        new_models,
+        new,
+        saved,
+        "Person",
+        ["favourite", "others"],
         answer=with_answers(RemoveEnumMember={"replacement": "RED"}),
     )
     assert problems == []
@@ -283,7 +341,14 @@ async def test_a_field_that_may_no_longer_be_null_is_given_the_default(
     new_models, new = declare(v2)
 
     problems = await both_ways(
-        written, old, old_models, new_models, new, saved, "Person", ["born"],
+        written,
+        old,
+        old_models,
+        new_models,
+        new,
+        saved,
+        "Person",
+        ["born"],
         answer=with_answers(AlterNullability={"default": 1900}),
     )
     assert problems == []
@@ -321,7 +386,14 @@ async def test_a_renamed_model_is_renamed_in_the_document_and_in_what_refers_to_
     new_models, new = declare(v2)
 
     problems = await both_ways(
-        written, old, old_models, new_models, new, saved, "Statement", ["text", "where"],
+        written,
+        old,
+        old_models,
+        new_models,
+        new,
+        saved,
+        "Statement",
+        ["text", "where"],
         confirmed=[PossibleRename(what="model", old="Place", new="Location")],
     )
     assert problems == []
@@ -357,7 +429,14 @@ async def test_a_list_that_becomes_a_single_value_keeps_the_one(
     new_models, new = declare(v2)
 
     problems = await both_ways(
-        written, old, old_models, new_models, new, saved, "Statement", [],
+        written,
+        old,
+        old_models,
+        new_models,
+        new,
+        saved,
+        "Statement",
+        [],
         answer=with_answers(AlterCardinality={"keep": "first"}),
     )
     assert problems == []

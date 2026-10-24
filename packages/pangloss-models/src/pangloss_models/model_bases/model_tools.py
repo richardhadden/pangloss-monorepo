@@ -42,7 +42,9 @@ def make_id(model: type[BaseModel], data: dict[str, Any]) -> None:
         data["create_new"] = True
 
 
-def data_for_db(instance: Any, kwargs: dict[str, Any], *hook_names: str) -> dict[str, Any]:
+def data_for_db(
+    instance: Any, kwargs: dict[str, Any], *hook_names: str
+) -> dict[str, Any]:
     """The data a `CreateDB` / `UpdateDB` is made from: what it is given, or, if the declared model has a
     hook for it (`to_db_create`, `to_db_update`, or `to_db` for both: the first of `hook_names` it has),
     what the hook makes of it"""

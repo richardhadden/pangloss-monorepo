@@ -4,13 +4,11 @@ they are what the new models write (the nodes, the edges, and what context each 
 import json
 import re
 from types import SimpleNamespace as ns
-from typing import Annotated, no_type_check
+from typing import no_type_check
 
 import pytest
 from pangloss_models.exceptions import PanglossMigrationAnswerNeeded
-from pangloss_models.field_definitions import FieldSubclassing
 from pangloss_models.migrations import PossibleRename
-from pangloss_models.model_bases.configs import RelationConfig
 from pangloss_models.model_bases.document import Document
 from pangloss_models.model_bases.embedded import Embedded
 from pangloss_models.model_bases.entity import Entity
@@ -36,7 +34,10 @@ def contexts(db_driver, head_id) -> list[str]:
         """,
         id=str(head_id),
     )
-    return sorted(re.sub(r'"id": "[^"]+"', '"id": "…"', json.dumps(row, sort_keys=True)) for row in rows)
+    return sorted(
+        re.sub(r'"id": "[^"]+"', '"id": "…"', json.dumps(row, sort_keys=True))
+        for row in rows
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -68,10 +69,17 @@ def space_models(wrapped: bool):
 
 def space_payload(wrapped: bool) -> list:
     def statement(label):
-        return {"type": "Statement", "label": label, "action": {"type": "Action", "label": f"A of {label}"}}
+        return {
+            "type": "Statement",
+            "label": label,
+            "action": {"type": "Action", "label": f"A of {label}"},
+        }
 
     if wrapped:
-        return [{"type": "Negative", "contents": [statement("One")]}, {"type": "Negative", "contents": [statement("Two")]}]
+        return [
+            {"type": "Negative", "contents": [statement("One")]},
+            {"type": "Negative", "contents": [statement("Two")]},
+        ]
     return [statement("One"), statement("Two")]
 
 
@@ -80,7 +88,9 @@ async def test_a_relation_is_wrapped_in_a_semantic_space(db_driver, clear_databa
     """`statements: list[Statement]` becomes `list[Negative[Statement]]`: a space on each edge,
     and everything below in it, with the context the models give"""
     old_models, old = declare(space_models(wrapped=False))
-    factoid = await old_models.Factoid.Create(label="F", statements=space_payload(False)).save()
+    factoid = await old_models.Factoid.Create(
+        label="F", statements=space_payload(False)
+    ).save()
     new_models, new = declare(space_models(wrapped=True))
 
     # (`Negative[Statement] | Statement` is wider, so the old edges are only a wrapped option:
@@ -107,7 +117,9 @@ async def test_a_relation_is_wrapped_in_a_semantic_space(db_driver, clear_databa
     assert sorted(s.contents[0].label for s in read.statements) == ["One", "Two"]
     assert {s.type for s in read.statements} == {"Negative"}
 
-    native = await new_models.Factoid.Create(label="F", statements=space_payload(True)).save()
+    native = await new_models.Factoid.Create(
+        label="F", statements=space_payload(True)
+    ).save()
     assert signature(db_driver, factoid.id) == signature(db_driver, native.id)
     assert contexts(db_driver, factoid.id) == contexts(db_driver, native.id)
     assert any('"Negative"' in row for row in contexts(db_driver, factoid.id))
@@ -131,8 +143,11 @@ async def test_a_relation_is_taken_out_of_a_semantic_space(db_driver, clear_data
         return ns(Action=Action, Statement=Statement, Factoid=Factoid)
 
     old_models, old = declare(wrapped)
-    factoid = await old_models.Factoid.Create(label="F", statements=space_payload(True)).save()
+    factoid = await old_models.Factoid.Create(
+        label="F", statements=space_payload(True)
+    ).save()
     new_models, new = declare(space_models(wrapped=False))
+
     # (the new models allow only a statement)
     def plain():
         class Action(Document):
@@ -152,13 +167,17 @@ async def test_a_relation_is_taken_out_of_a_semantic_space(db_driver, clear_data
     assert run(db_driver, "MATCH (n:Negative) RETURN count(n) AS n") == [{"n": 0}]
     read = await new_models.Factoid.get(id=factoid.id)
     assert sorted(s.label for s in read.statements) == ["One", "Two"]
-    native = await new_models.Factoid.Create(label="F", statements=space_payload(False)).save()
+    native = await new_models.Factoid.Create(
+        label="F", statements=space_payload(False)
+    ).save()
     assert signature(db_driver, factoid.id) == signature(db_driver, native.id)
     assert contexts(db_driver, factoid.id) == contexts(db_driver, native.id)
 
 
 @no_type_check
-async def test_a_renamed_document_is_renamed_in_the_context_of_what_it_holds(db_driver, clear_database):
+async def test_a_renamed_document_is_renamed_in_the_context_of_what_it_holds(
+    db_driver, clear_database
+):
     def v1():
         class Action(Document):
             pass
@@ -185,13 +204,29 @@ async def test_a_renamed_document_is_renamed_in_the_context_of_what_it_holds(db_
 
     old_models, old = declare(v1)
     factoid = await old_models.Factoid.Create(
-        label="F", statements=[{"type": "Statement", "label": "One", "action": {"type": "Action", "label": "A"}}]
+        label="F",
+        statements=[
+            {
+                "type": "Statement",
+                "label": "One",
+                "action": {"type": "Action", "label": "A"},
+            }
+        ],
     ).save()
     new_models, new = declare(v2)
-    await migrate(old, new, confirmed=[PossibleRename(what="model", old="Statement", new="Claim")])
+    await migrate(
+        old, new, confirmed=[PossibleRename(what="model", old="Statement", new="Claim")]
+    )
 
     native = await new_models.Factoid.Create(
-        label="F", statements=[{"type": "Claim", "label": "One", "action": {"type": "Action", "label": "A"}}]
+        label="F",
+        statements=[
+            {
+                "type": "Claim",
+                "label": "One",
+                "action": {"type": "Action", "label": "A"},
+            }
+        ],
     ).save()
     assert contexts(db_driver, factoid.id) == contexts(db_driver, native.id)
     assert "Claim" in " ".join(contexts(db_driver, factoid.id))
@@ -237,7 +272,12 @@ async def test_one_wrapper_becomes_another(db_driver, clear_database):
     person = await old_models.Person.Create(label="Ann").save()
     statement = await old_models.Statement.Create(
         label="S",
-        person={"type": "IdentifiedAs", "certainty": 4, "old_note": "x", "target": [{"type": "Person", "id": person.id}]},
+        person={
+            "type": "IdentifiedAs",
+            "certainty": 4,
+            "old_note": "x",
+            "target": [{"type": "Person", "id": person.id}],
+        },
     ).save()
     new_models, new = declare(wrapper_models(second=True))
 
@@ -255,7 +295,11 @@ async def test_one_wrapper_becomes_another(db_driver, clear_database):
 
     native = await new_models.Statement.Create(
         label="S",
-        person={"type": "ProxyFor", "certainty": 4, "target": [{"type": "Person", "id": person.id}]},
+        person={
+            "type": "ProxyFor",
+            "certainty": 4,
+            "target": [{"type": "Person", "id": person.id}],
+        },
     ).save()
     assert signature(db_driver, statement.id) == signature(db_driver, native.id)
     assert contexts(db_driver, statement.id) == contexts(db_driver, native.id)
@@ -293,7 +337,9 @@ def date_models(embedded: bool):
 @no_type_check
 async def test_literals_become_an_embedded_object_and_back(db_driver, clear_database):
     old_models, old = declare(date_models(embedded=False))
-    head = await old_models.Statement.Create(label="S", when="800", precision=2, text="T").save()
+    head = await old_models.Statement.Create(
+        label="S", when="800", precision=2, text="T"
+    ).save()
     new_models, new = declare(date_models(embedded=True))
 
     await migrate(old, new)
@@ -312,7 +358,11 @@ async def test_literals_become_an_embedded_object_and_back(db_driver, clear_data
     await migrate(new, old)
     again = await old_models.Statement.get(id=head.id)
     assert (again.when, again.precision, again.text) == ("800", 2, "T")
-    assert run(db_driver, "MATCH (d:Date) WHERE d.head_node_id = $id RETURN count(d) AS n", id=str(head.id)) == [{"n": 0}]
+    assert run(
+        db_driver,
+        "MATCH (d:Date) WHERE d.head_node_id = $id RETURN count(d) AS n",
+        id=str(head.id),
+    ) == [{"n": 0}]
 
 
 # ---------------------------------------------------------------------------
@@ -352,13 +402,17 @@ def new_embedded_models(embedded: bool, two: bool = False):
 
 
 @no_type_check
-async def test_a_new_embedded_object_is_made_for_each_node_that_exists(db_driver, clear_database):
+async def test_a_new_embedded_object_is_made_for_each_node_that_exists(
+    db_driver, clear_database
+):
     old_models, old = declare(new_embedded_models(embedded=False))
     head = await old_models.Statement.Create(label="S", text="T").save()
     new_models, new = declare(new_embedded_models(embedded=True))
 
     # (what the embedded object requires is asked)
-    with pytest.raises(PanglossMigrationAnswerNeeded, match="when, precision|precision, when"):
+    with pytest.raises(
+        PanglossMigrationAnswerNeeded, match="when, precision|precision, when"
+    ):
         await migrate(old, new)
 
     answers = {"when": "unknown", "precision": 0}
@@ -373,15 +427,27 @@ async def test_a_new_embedded_object_is_made_for_each_node_that_exists(db_driver
 
     # (repeating it makes no more: each already has one)
     await migrate(old, new, answer=with_answers(AddField={"default": answers}))
-    assert run(db_driver, "MATCH (d:Date) WHERE d.head_node_id = $id RETURN count(d) AS n", id=str(head.id)) == [{"n": 1}]
+    assert run(
+        db_driver,
+        "MATCH (d:Date) WHERE d.head_node_id = $id RETURN count(d) AS n",
+        id=str(head.id),
+    ) == [{"n": 1}]
 
 
 @no_type_check
-async def test_a_new_embedded_object_that_could_be_of_several_kinds_is_not_guessed(db_driver, clear_database):
+async def test_a_new_embedded_object_that_could_be_of_several_kinds_is_not_guessed(
+    db_driver, clear_database
+):
     from pangloss_models.exceptions import PanglossMigrationNotSupported
 
     old_models, old = declare(new_embedded_models(embedded=False))
     await old_models.Statement.Create(label="S", text="T").save()
     _, new = declare(new_embedded_models(embedded=True, two=True))
     with pytest.raises(PanglossMigrationNotSupported, match="which one"):
-        await migrate(old, new, answer=with_answers(AddField={"default": {"when": "x", "precision": 0, "at": "y"}}))
+        await migrate(
+            old,
+            new,
+            answer=with_answers(
+                AddField={"default": {"when": "x", "precision": 0, "at": "y"}}
+            ),
+        )

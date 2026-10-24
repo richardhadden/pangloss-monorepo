@@ -119,14 +119,18 @@ def plan_project(name: str, directory: Path) -> Plan:
         plan.create[env] = secret_line
     elif "AUTHJWT_SECRET_KEY=" not in env.read_text():
         text = env.read_text()
-        plan.append[env] = ("" if text.endswith("\n") or not text else "\n") + secret_line
+        plan.append[env] = (
+            "" if text.endswith("\n") or not text else "\n"
+        ) + secret_line
 
     gitignore = directory / ".gitignore"
     if not gitignore.exists():
         plan.create[gitignore] = GITIGNORE
     elif not has_line(gitignore.read_text(), ".env"):
         text = gitignore.read_text()
-        plan.append[gitignore] = ("" if text.endswith("\n") or not text else "\n") + ".env\n"
+        plan.append[gitignore] = (
+            "" if text.endswith("\n") or not text else "\n"
+        ) + ".env\n"
 
     return plan
 

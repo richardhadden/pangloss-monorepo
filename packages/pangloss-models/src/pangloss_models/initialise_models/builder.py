@@ -105,7 +105,9 @@ def add_id_fields(made: type) -> None:
         if getattr(meta, "accept_url_as_id", False):
             annotation = UUID | AnyHttpUrl | None
         set_field(made, "id", FieldInfo(annotation=annotation, default=None))
-        set_field(made, "create_new", FieldInfo(annotation=Literal[True] | None, default=None))
+        set_field(
+            made, "create_new", FieldInfo(annotation=Literal[True] | None, default=None)
+        )
         made.model_rebuild()  # type: ignore[attr-defined]
 
 
@@ -122,7 +124,9 @@ def holds(rule: FieldRule, which: str, conditions: dict[str, bool]) -> bool:
     return any(conditions[c] for c in wanted)
 
 
-def add_fields(kind: ModelKind, model: type, fields_to_bind: frozenset[FieldBinding]) -> None:
+def add_fields(
+    kind: ModelKind, model: type, fields_to_bind: frozenset[FieldBinding]
+) -> None:
     """Give a model made for `kind` its fields, from the field definitions of the declared class.
 
     `fields_to_bind` are the bindings of the relation that this model is the target of: a field that
@@ -131,9 +135,13 @@ def add_fields(kind: ModelKind, model: type, fields_to_bind: frozenset[FieldBind
     fields = owner._meta.fields
     bindings = fields_to_bind if kind.applies_bindings else frozenset()
 
-    def conditions(name: str, definition: FieldDefinition, fulfil: bool) -> dict[str, bool]:
+    def conditions(
+        name: str, definition: FieldDefinition, fulfil: bool
+    ) -> dict[str, bool]:
         return {
-            "bound": field_has_inherited_field_bindings(bindings, name, definition.field_on_model),
+            "bound": field_has_inherited_field_bindings(
+                bindings, name, definition.field_on_model
+            ),
             "fulfil": fulfil,
             "optional": annotation_is_optional(definition.annotated_type),
         }
@@ -195,7 +203,10 @@ def add_fields(kind: ModelKind, model: type, fields_to_bind: frozenset[FieldBind
         annotation = relation_annotation(kind, definition, relation_bindings)
         if annotation is None:
             continue
-        fulfil = bool(definition.field_required_to_fulfil) and not definition.subclasses_parent_fields
+        fulfil = (
+            bool(definition.field_required_to_fulfil)
+            and not definition.subclasses_parent_fields
+        )
         when = conditions(name, definition, fulfil)
         nullable = holds(kind.relation, "nullable", when)
         if nullable:
@@ -206,7 +217,9 @@ def add_fields(kind: ModelKind, model: type, fields_to_bind: frozenset[FieldBind
             FieldInfo(
                 annotation=annotation,
                 validation_alias=to_camel(name),
-                discriminator="type" if kind.discriminated and not definition.wrapper else None,
+                discriminator="type"
+                if kind.discriminated and not definition.wrapper
+                else None,
                 **describe(definition),
                 **map_validators_to_kwargs(definition.validators),
             ),
@@ -253,9 +266,8 @@ def entity_types(kind: ModelKind, option: RelationToEntity, site: Site) -> list[
     """What may be given for a relation to an entity: a reference to it and, if it is named by the
     document that needs it (`create_inline`), the entity itself"""
     entity = option.annotated_type
-    offer_inline = (
-        entity._meta.create_inline
-        and (kind.inline_plain if not option.edge_model else site in kind.inline_with_edge)
+    offer_inline = entity._meta.create_inline and (
+        kind.inline_plain if not option.edge_model else site in kind.inline_with_edge
     )
     types = [getattr(entity, kind.reference)]
     if offer_inline:
@@ -268,11 +280,18 @@ def entity_types(kind: ModelKind, option: RelationToEntity, site: Site) -> list[
 
 
 def document_types(
-    kind: ModelKind, option: RelationToDocument, bindings: frozenset[FieldBinding], site: Site
+    kind: ModelKind,
+    option: RelationToDocument,
+    bindings: frozenset[FieldBinding],
+    site: Site,
 ) -> list[type]:
     """What may be given for a relation to a document: the document, made with any bindings"""
     document = option.annotated_type
-    names = kind.document_typevar if site == "typevar" and kind.document_typevar else kind.offers
+    names = (
+        kind.document_typevar
+        if site == "typevar" and kind.document_typevar
+        else kind.offers
+    )
     types = []
     for name in names:
         offered = KINDS[name]
@@ -292,13 +311,17 @@ def generic_types(
     for name in kind.offers:
         offered = KINDS[name]
         types.append(
-            build_generic_model(offered, option, bindings if offered.applies_bindings else frozenset())
+            build_generic_model(
+                offered, option, bindings if offered.applies_bindings else frozenset()
+            )
         )
     return with_edge(types, option.edge_model)
 
 
 def relation_annotation(
-    kind: ModelKind, definition: RelationFieldDefinition, bindings: frozenset[FieldBinding]
+    kind: ModelKind,
+    definition: RelationFieldDefinition,
+    bindings: frozenset[FieldBinding],
 ) -> Any:
     """The annotation of a relation field: a union of what may be given for each type it allows
     (in a list, if it is one). None if it allows nothing."""
@@ -330,7 +353,9 @@ def option_order(option: Any) -> tuple[str, str]:
     return (type(option).__name__, repr(getattr(option, "annotated_type", option)))
 
 
-def wrap_in_union(kind: ModelKind, definition: RelationFieldDefinition, types: list[type]) -> Any:
+def wrap_in_union(
+    kind: ModelKind, definition: RelationFieldDefinition, types: list[type]
+) -> Any:
     union = Union[*types]  # type: ignore[valid-type]
     if definition.wrapper:
         discriminator = Field(discriminator="type") if kind.discriminated else Field()
@@ -389,7 +414,9 @@ def _build_generic_model(
         for generic_option in definition.type_options:
             if isinstance(generic_option, RelationToTypeVar):
                 # what the type variable stands for in this use
-                stands_for = type_option.parameter_type_options[generic_option.type_var_name]
+                stands_for = type_option.parameter_type_options[
+                    generic_option.type_var_name
+                ]
                 for option in stands_for.type_options:
                     if isinstance(option, RelationToEntity):
                         types.extend(entity_types(kind, option, "typevar"))
@@ -409,7 +436,9 @@ def _build_generic_model(
                 annotation=wrap_in_union(kind, definition, types),
                 validation_alias=to_camel(name),
                 metadata=definition.validators,  # type: ignore[arg-type]
-                discriminator="type" if kind.discriminated and not definition.wrapper else None,
+                discriminator="type"
+                if kind.discriminated and not definition.wrapper
+                else None,
                 description=definition.description if kind.descriptions else None,
             ),
         )
@@ -421,7 +450,9 @@ def _build_generic_model(
 # --- bindings --------------------------------------------------------------------------------------
 
 
-def build_bound_model(kind: ModelKind, model: type, bindings: frozenset[FieldBinding]) -> type:
+def build_bound_model(
+    kind: ModelKind, model: type, bindings: frozenset[FieldBinding]
+) -> type:
     """The model for a use of `model` where a parent gives some of its fields a value (the bindings of
     the relation): those fields need not be given"""
     key = (kind.attribute, model, bindings)

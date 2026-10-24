@@ -1,7 +1,6 @@
 from typing import Annotated, ClassVar, cast
 
 from pydantic import ConfigDict, Field
-from pangloss_models.meta_kit import BaseMeta, InheritValue, MetaRules, WithMeta
 
 from pangloss_models.field_definitions import (
     ListFieldDefinition,
@@ -9,6 +8,7 @@ from pangloss_models.field_definitions import (
     ModelFieldDict,
     ModelFields,
 )
+from pangloss_models.meta_kit import BaseMeta, InheritValue, MetaRules, WithMeta
 from pangloss_models.model_bases.base_models import (
     DeclaredClassMeta,
     _DeclaredClass,
@@ -38,4 +38,3 @@ class EdgeModelMeta(BaseMeta, DeclaredClassMeta):
 class EdgeModel(_DeclaredClass, WithMeta[EdgeModelMeta]):
     __metatype__ = "EdgeModel"
     _meta: ClassVar[EdgeModelMeta] = EdgeModelMeta()
-

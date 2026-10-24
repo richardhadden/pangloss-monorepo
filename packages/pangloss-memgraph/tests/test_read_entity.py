@@ -9,6 +9,7 @@ import pytest
 from pangloss_models import initialise
 from pangloss_models.field_definitions import FieldSubclassing
 from pangloss_models.model_bases.configs import RelationConfig
+from pangloss_models.model_bases.conjunction import Conjunction
 from pangloss_models.model_bases.document import Document
 from pangloss_models.model_bases.embedded import Embedded
 from pangloss_models.model_bases.entity import Entity
@@ -16,7 +17,6 @@ from pangloss_models.model_bases.reified_relation import (
     ReifiedRelation,
     ReifiedRelationDocument,
 )
-from pangloss_models.model_bases.conjunction import Conjunction
 from pangloss_models.model_bases.semantic_space import SemanticSpace
 from pydantic import AnyHttpUrl
 
@@ -598,7 +598,9 @@ async def test_incoming_relations_through_several_reified_relations(clear_databa
     assert len(read.involves_people_reverse) == 2
     for item in read.involves_people_reverse:
         assert len(item.involves_people) == 1
-    assert sorted(i.involves_people[0].certainty for i in read.involves_people_reverse) == [
+    assert sorted(
+        i.involves_people[0].certainty for i in read.involves_people_reverse
+    ) == [
         1,
         2,
     ]
@@ -862,7 +864,9 @@ async def test_incoming_relation_through_a_semantic_space(clear_database):
     assert {t.id for t in item.spaced.contents} == {person.id, other.id}
 
     # (and from the other person)
-    assert [i.id for i in (await Person.get(id=other.id)).spaced_reverse] == [statement.id]
+    assert [i.id for i in (await Person.get(id=other.id)).spaced_reverse] == [
+        statement.id
+    ]
 
 
 @no_type_check
@@ -1150,7 +1154,10 @@ async def test_a_relation_that_cannot_be_shown_from_the_entity_is_left_out_with_
 
     assert [i.id for i in read.direct_reverse] == [statement.id]  # (the rest is there)
     assert read.joined_reverse == []
-    assert any("is not shown" in r.message and "Causes.result" in r.message for r in caplog.records)
+    assert any(
+        "is not shown" in r.message and "Causes.result" in r.message
+        for r in caplog.records
+    )
 
 
 @no_type_check
@@ -1193,7 +1200,9 @@ async def test_incoming_relations_by_three_routes_are_in_three_fields(
 
 
 @no_type_check
-async def test_incoming_relations_through_a_semantic_space_follow_updates(clear_database):
+async def test_incoming_relations_through_a_semantic_space_follow_updates(
+    clear_database,
+):
     class Person(Entity):
         pass
 
@@ -1220,7 +1229,9 @@ async def test_incoming_relations_through_a_semantic_space_follow_updates(clear_
     ).save()
 
     assert (await Person.get(id=person.id)).spaced_reverse == []
-    assert [i.id for i in (await Person.get(id=other.id)).spaced_reverse] == [statement.id]
+    assert [i.id for i in (await Person.get(id=other.id)).spaced_reverse] == [
+        statement.id
+    ]
 
 
 # ---------------------------------------------------------------------------

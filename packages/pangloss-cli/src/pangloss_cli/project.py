@@ -17,9 +17,9 @@ import sys
 import tomllib
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
-from typing import NoReturn
 from pathlib import Path
 from types import ModuleType
+from typing import NoReturn
 
 import typer
 from pangloss_core import settings as core_settings
