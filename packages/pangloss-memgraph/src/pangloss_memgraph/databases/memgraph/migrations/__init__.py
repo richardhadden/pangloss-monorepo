@@ -1,4 +1,4 @@
-"""Applying the changes that `pangloss_models.meta_kit.migrations` finds, to a Memgraph database.
+"""Applying the changes that `pangloss_models.migrations` finds, to a Memgraph database.
 
 - `apply_change(tx, change, state)` makes a change to the data, inside a transaction.
 - `run_ddl(database, change, state)` makes the changes to the database itself (indexes and constraints), which

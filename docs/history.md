@@ -189,7 +189,7 @@ upgrader (phase 3) to the core's release. The one thing that does tie `pangloss-
 phase 3: the structured migration operations live in `pangloss_memgraph.databases.memgraph.migrations` (with
 their Cypher), so the document-upgrade functions either live in `pangloss-history` and depend on that, or the
 operation *data* (not the Cypher) is split out of the memgraph package first. (*Resolved when phase 3 was built:* the
-changes are plain data in `pangloss_models.meta_kit.migrations.changes`, with the snapshot replay in `...migrations.state`;
+changes are plain data in `pangloss_models.migrations.changes`, with the snapshot replay in `...migrations.state`;
 only the Cypher is in `pangloss_memgraph`. `pangloss-history` depends on `pangloss-models` alone.) That is a phase 3 decision and
 does not affect phases 1 and 2.
 

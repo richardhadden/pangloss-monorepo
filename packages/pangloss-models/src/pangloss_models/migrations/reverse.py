@@ -22,9 +22,9 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from pangloss_models.exceptions import PanglossMigrationIrreversible
-from pangloss_models.meta_kit.migrations import changes as c
-from pangloss_models.meta_kit.migrations.snapshot import data_view
-from pangloss_models.meta_kit.migrations.state import (
+from pangloss_models.migrations import changes as c
+from pangloss_models.migrations.snapshot import data_view
+from pangloss_models.migrations.state import (
     apply_change,
     field_entry,
     model_entry,
@@ -185,7 +185,7 @@ def _add_field(change: c.AddField, before):
 
 def _remove_field(change: c.RemoveField, before):
     entry = copy.deepcopy(field_entry(before, change.model, change.name))
-    from pangloss_models.meta_kit.migrations.diff import needs_value
+    from pangloss_models.migrations.diff import needs_value
 
     return [
         c.AddField(

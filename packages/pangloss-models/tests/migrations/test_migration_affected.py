@@ -4,8 +4,8 @@ from enum import Enum
 from typing import no_type_check
 
 from migration_support import snapshot_of
-from pangloss_models.meta_kit.migrations import PossibleRename, data_view, diff
-from pangloss_models.meta_kit.migrations.affected import affected_models
+from pangloss_models.migrations import PossibleRename, data_view, diff
+from pangloss_models.migrations.affected import affected_models
 from pangloss_models.model_bases.document import Document
 from pangloss_models.model_bases.embedded import Embedded
 from pangloss_models.model_bases.entity import Entity

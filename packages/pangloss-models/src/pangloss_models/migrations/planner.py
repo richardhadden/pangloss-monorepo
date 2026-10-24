@@ -20,17 +20,17 @@ from pangloss_models.exceptions import (
     PanglossMigrationError,
     PanglossMigrationNotSupported,
 )
-from pangloss_models.meta_kit.migrations import changes as c
-from pangloss_models.meta_kit.migrations.diff import diff, needs_value
-from pangloss_models.meta_kit.migrations.files import (
+from pangloss_models.migrations import changes as c
+from pangloss_models.migrations.diff import diff, needs_value
+from pangloss_models.migrations.files import (
     Migration,
     MigrationGraph,
     next_name,
     slug_of,
     structure_id,
 )
-from pangloss_models.meta_kit.migrations.snapshot import data_view, snapshot_hash
-from pangloss_models.meta_kit.migrations.state import replay, same_structure
+from pangloss_models.migrations.snapshot import data_view, snapshot_hash
+from pangloss_models.migrations.state import replay, same_structure
 
 
 @dataclass

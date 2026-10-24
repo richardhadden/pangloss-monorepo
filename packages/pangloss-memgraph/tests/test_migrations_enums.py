@@ -11,7 +11,7 @@ from pangloss_models.exceptions import (
     PanglossMigrationAnswerNeeded,
     PanglossMigrationNotSupported,
 )
-from pangloss_models.meta_kit.migrations import PossibleRename
+from pangloss_models.migrations import PossibleRename
 from pangloss_models.model_bases.annotated_value import AnnotatedValue
 from pangloss_models.model_bases.document import Document
 from pangloss_models.model_bases.edge_model import EdgeModel

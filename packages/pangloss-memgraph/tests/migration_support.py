@@ -9,7 +9,7 @@ from pangloss_memgraph.databases.memgraph.migrations import (
     apply_changes_in_batches,
 )
 from pangloss_models import initialise
-from pangloss_models.meta_kit.migrations import build_snapshot, diff
+from pangloss_models.migrations import build_snapshot, diff
 from pangloss_models.model_registry import ModelRegistry
 
 

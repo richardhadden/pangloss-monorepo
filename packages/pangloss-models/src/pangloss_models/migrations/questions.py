@@ -11,8 +11,8 @@ from dataclasses import dataclass
 from typing import Any
 
 from pangloss_models.exceptions import PanglossMigrationError
-from pangloss_models.meta_kit.migrations import changes as c
-from pangloss_models.meta_kit.migrations.state import apply_change
+from pangloss_models.migrations import changes as c
+from pangloss_models.migrations.state import apply_change
 
 
 @dataclass(frozen=True)

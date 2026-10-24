@@ -57,7 +57,7 @@ include = [
     "packages/pangloss-models/src/pangloss_models/initialise_models/**",
     "packages/pangloss-models/src/pangloss_models/model_bases/**",
     "packages/pangloss-models/src/pangloss_models/export.py",
-    "packages/pangloss-models/src/pangloss_models/meta_kit/migrations/check.py",
+    "packages/pangloss-models/src/pangloss_models/migrations/check.py",
     "packages/pangloss-api/src/pangloss_api/routes/models.py",
     "packages/pangloss-sdk/src/**",
     "packages/pangloss-memgraph/src/pangloss_memgraph/databases/memgraph/build_*_query.py",

@@ -3,7 +3,7 @@
 from dataclasses import dataclass, field
 from typing import Literal
 
-from pangloss_models.meta_kit.migrations import changes as c
+from pangloss_models.migrations import changes as c
 
 COUNT_NAMES = {
     "nodes_created": "nodes made",

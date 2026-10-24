@@ -7,16 +7,16 @@ from typing import Annotated, no_type_check
 import pytest
 from migration_support import snapshot_of
 from pangloss_models.exceptions import PanglossMigrationError
-from pangloss_models.meta_kit.migrations import changes as c
-from pangloss_models.meta_kit.migrations import data_view
-from pangloss_models.meta_kit.migrations.files import (
+from pangloss_models.migrations import changes as c
+from pangloss_models.migrations import data_view
+from pangloss_models.migrations.files import (
     MigrationGraph,
     graph_of,
     migrations_directory,
     write,
 )
-from pangloss_models.meta_kit.migrations.planner import app_of_module, plan
-from pangloss_models.meta_kit.migrations.questions import (
+from pangloss_models.migrations.planner import app_of_module, plan
+from pangloss_models.migrations.questions import (
     collect_questions,
     parse_value,
     with_answer,
@@ -353,7 +353,7 @@ def test_a_new_required_field_asks_for_a_value():
             nickname: str | None
 
     old, new = snapshot_of(one), snapshot_of(two)
-    from pangloss_models.meta_kit.migrations import diff
+    from pangloss_models.migrations import diff
 
     changes = diff(old, new).changes
     # (the required int is asked; a list starts empty, and an optional field needs nothing)
@@ -385,7 +385,7 @@ def test_the_fields_of_a_wrapper_are_asked_for():
         class Statement(Document):
             person: IdentifiedAs[Person]
 
-    from pangloss_models.meta_kit.migrations import diff
+    from pangloss_models.migrations import diff
 
     old, new = snapshot_of(one), snapshot_of(two)
     changes = diff(old, new).changes
@@ -419,7 +419,7 @@ def test_answers_are_parsed_by_type():
 
 @no_type_check
 def test_what_the_new_wrapper_or_the_embedded_object_has_more_is_asked():
-    from pangloss_models.meta_kit.migrations import diff
+    from pangloss_models.migrations import diff
     from pangloss_models.model_bases.embedded import Embedded
 
     def one():
@@ -465,7 +465,7 @@ def test_what_the_new_wrapper_or_the_embedded_object_has_more_is_asked():
 
 @no_type_check
 def test_the_migrations_of_one_app_come_with_those_of_others_that_they_need(apps):
-    from pangloss_models.meta_kit.migrations.planner import app_of_change, with_what_they_need
+    from pangloss_models.migrations.planner import app_of_change, with_what_they_need
 
     def declare():
         class Place(Entity):
@@ -526,7 +526,7 @@ def test_changing_the_kind_of_a_model_or_a_field_is_refused(apps):
 
 def test_changing_the_kind_of_a_field_is_refused_too():
     from pangloss_models.exceptions import PanglossMigrationNotSupported
-    from pangloss_models.meta_kit.migrations.planner import refuse_kind_changes
+    from pangloss_models.migrations.planner import refuse_kind_changes
 
     with pytest.raises(
         PanglossMigrationNotSupported, match="kind of a field cannot be changed"
@@ -545,7 +545,7 @@ def test_changing_the_kind_of_a_field_is_refused_too():
 
 @no_type_check
 def test_a_new_embedded_object_asks_for_the_values_it_requires():
-    from pangloss_models.meta_kit.migrations import diff
+    from pangloss_models.migrations import diff
     from pangloss_models.model_bases.embedded import Embedded
 
     def before():
@@ -684,7 +684,7 @@ def test_apps_whose_models_inherit_from_each_other_round_a_circle_are_made_in_tw
 
 
 def test_a_circle_that_cannot_be_split_is_an_error_and_not_an_endless_loop(monkeypatch):
-    from pangloss_models.meta_kit.migrations import planner
+    from pangloss_models.migrations import planner
 
     def create(name):
         return c.CreateModel(

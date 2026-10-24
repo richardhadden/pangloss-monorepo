@@ -22,7 +22,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass, field
 from typing import Any
 
-from pangloss_models.meta_kit.migrations.changes import (
+from pangloss_models.migrations.changes import (
     AddConstraint,
     AddEnumMember,
     AddField,
@@ -65,8 +65,8 @@ from pangloss_models.meta_kit.migrations.changes import (
     UnwrapRelation,
     WrapRelation,
 )
-from pangloss_models.meta_kit.migrations.snapshot import data_view
-from pangloss_models.meta_kit.migrations.state import (
+from pangloss_models.migrations.snapshot import data_view
+from pangloss_models.migrations.state import (
     rename_enum,
     rename_enum_member,
     rename_field,
@@ -172,7 +172,7 @@ def diff(
 def diff_fulfils(old: dict, new: dict, result: DiffResult) -> None:
     """A model whose fulfilment changed (what it fulfils, which of its fields stand in, what the
     classes require, their labels) has its nodes' labels worked out again"""
-    from pangloss_models.meta_kit.migrations.fulfils import fulfilment
+    from pangloss_models.migrations.fulfils import fulfilment
 
     for name, model in new["models"].items():
         if name not in old["models"]:

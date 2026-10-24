@@ -10,8 +10,8 @@ from pangloss_history.upgrade import (
     migrations_after,
     upgrade,
 )
-from pangloss_models.meta_kit.migrations import changes as c
-from pangloss_models.meta_kit.migrations.files import Migration, MigrationGraph
+from pangloss_models.migrations import changes as c
+from pangloss_models.migrations.files import Migration, MigrationGraph
 
 
 def literal(name, type="str", nullable=False):

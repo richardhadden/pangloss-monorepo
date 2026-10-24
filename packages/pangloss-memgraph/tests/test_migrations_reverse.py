@@ -6,8 +6,8 @@ from typing import no_type_check
 import pytest
 from pangloss_memgraph.databases.memgraph.database import Database
 from pangloss_memgraph.databases.memgraph.migrations import apply_changes
-from pangloss_models.meta_kit.migrations import PossibleRename, data_view
-from pangloss_models.meta_kit.migrations.reverse import reverse_changes
+from pangloss_models.migrations import PossibleRename, data_view
+from pangloss_models.migrations.reverse import reverse_changes
 from pangloss_models.model_bases.document import Document
 from pangloss_models.model_bases.entity import Entity
 
@@ -184,7 +184,7 @@ async def test_undoing_in_batches_and_again_after_a_stop(
 
     from pangloss_memgraph.databases.memgraph import migration_backend as backend
     from pangloss_memgraph.databases.memgraph.migrations import runner
-    from pangloss_models.meta_kit.migrations.files import Migration
+    from pangloss_models.migrations.files import Migration
 
     def v1():
         class Item(Entity):

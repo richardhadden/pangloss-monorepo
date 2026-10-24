@@ -19,7 +19,7 @@ import json
 from collections.abc import Iterable
 from typing import Any
 
-from pangloss_models.meta_kit.migrations import changes as c
+from pangloss_models.migrations import changes as c
 
 # Changes to the models, or to what the data says, that nothing existing is made to disagree with
 NO_EFFECT = (

@@ -29,9 +29,9 @@ from pathlib import Path
 from typing import Any
 
 from pangloss_models.exceptions import PanglossMigrationError
-from pangloss_models.meta_kit.migrations import changes as c
-from pangloss_models.meta_kit.migrations.snapshot import data_view
-from pangloss_models.meta_kit.migrations.state import apply_change
+from pangloss_models.migrations import changes as c
+from pangloss_models.migrations.snapshot import data_view
+from pangloss_models.migrations.state import apply_change
 
 MIGRATION_NAME = re.compile(r"^(\d{4})_\w+$")
 SQUASHED_NAME = re.compile(r"^(\d{4})_squashed_(\d{4})_\w+$")
@@ -143,7 +143,7 @@ def render(migration: Migration, summary: str | None = None) -> str:
         "",
     ]
     lines.append(
-        "from pangloss_models.meta_kit.migrations.files import changes_from_data"
+        "from pangloss_models.migrations.files import changes_from_data"
     )
     lines.append("")
     lines.append(
@@ -166,7 +166,7 @@ def render(migration: Migration, summary: str | None = None) -> str:
 
 
 EMPTY_HINT = [
-    "# Changes written by hand go here (import them from pangloss_models.meta_kit.migrations.changes):",
+    "# Changes written by hand go here (import them from pangloss_models.migrations.changes):",
     "# queries, or functions of this app, and, when a change of",
     "# the models was refused (`[NEEDS CODE]`), its data moved first and the models after it:",
     "#",
@@ -519,8 +519,8 @@ def squash(
     own in the way) and none of it is by hand: then they are the changes from the models before to
     those after, which is usually far fewer (a model created and then given fields is created with
     them)."""
-    from pangloss_models.meta_kit.migrations.diff import diff
-    from pangloss_models.meta_kit.migrations.history import resolve_target
+    from pangloss_models.migrations.diff import diff
+    from pangloss_models.migrations.history import resolve_target
 
     start, end = resolve_target(graph, app, first), resolve_target(graph, app, last)
     if start is None or end is None or start.number > end.number:

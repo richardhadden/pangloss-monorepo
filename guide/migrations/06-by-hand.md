@@ -5,7 +5,7 @@ Most migrations are written for you. You need to write one yourself when:
 - `migrate` refuses a change, because Pangloss cannot do it (wrapping in a conjunction, a type conversion it does not know, and the others listed at the end of [chapter 3](03-changes.md)); `--plan` shows it and `--dry-run` says `WOULD FAIL`;
 - you want to **change the data itself**: fill in a value computed from other values, split a field in two, clean up records, load some reference data.
 
-You get three building blocks, all in `pangloss_models.meta_kit.migrations.changes`:
+You get three building blocks, all in `pangloss_models.migrations.changes`:
 
 | | What it does |
 |-|--------------|
@@ -26,8 +26,8 @@ writes `library/migrations/0007_backfill_nicknames.py` with no changes and a com
 A migration with a hand-written change looks like this; the list may mix dictionaries and the changes themselves:
 
 ```python
-from pangloss_models.meta_kit.migrations.changes import RunCypher, RunPython, StateOnly
-from pangloss_models.meta_kit.migrations.files import changes_from_data
+from pangloss_models.migrations.changes import RunCypher, RunPython, StateOnly
+from pangloss_models.migrations.files import changes_from_data
 
 dependencies = []
 schema_hash = "..."  # leave what makemigrations wrote

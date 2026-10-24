@@ -33,9 +33,9 @@ from typing import Any
 
 import neo4j
 from pangloss_models.exceptions import PanglossMigrationError
-from pangloss_models.meta_kit.migrations.files import Migration
-from pangloss_models.meta_kit.migrations.reports import MigrationReport
-from pangloss_models.meta_kit.migrations.state import apply_change as apply_to_snapshot
+from pangloss_models.migrations.files import Migration
+from pangloss_models.migrations.reports import MigrationReport
+from pangloss_models.migrations.state import apply_change as apply_to_snapshot
 from pangloss_users import current_request_username
 
 from pangloss_memgraph.databases.memgraph.database import Database
@@ -393,7 +393,7 @@ async def unapply(
     batch_size: int | None = None,
 ) -> dict[str, Any]:
     """Undo migrations, last first: `migration.changes` are the changes that undo each (see
-    `pangloss_models.meta_kit.migrations.reverse`), `state` the snapshot after them all. The record of a
+    `pangloss_models.migrations.reverse`), `state` the snapshot after them all. The record of a
     migration is removed when it has been undone, so it is to be applied again; one that fails
     stops the rest, and is still recorded as it was (nothing of it was changed, as it is made in
     one transaction, except the indexes and constraints that cannot be).

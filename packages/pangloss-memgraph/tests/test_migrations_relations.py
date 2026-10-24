@@ -8,7 +8,7 @@ from typing import Annotated, no_type_check
 import pytest
 from pangloss_models.exceptions import PanglossMigrationAnswerNeeded
 from pangloss_models.field_definitions import FieldSubclassing
-from pangloss_models.meta_kit.migrations import PossibleRename
+from pangloss_models.migrations import PossibleRename
 from pangloss_models.model_bases.configs import RelationConfig
 from pangloss_models.model_bases.document import Document
 from pangloss_models.model_bases.edge_model import EdgeModel

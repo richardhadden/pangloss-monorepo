@@ -11,9 +11,9 @@ import importlib
 from types import ModuleType
 from typing import Any
 
-from pangloss_models.meta_kit.migrations.files import graph_of
-from pangloss_models.meta_kit.migrations.history import pending, problems
-from pangloss_models.meta_kit.migrations.snapshot import build_snapshot, data_view
+from pangloss_models.migrations.files import graph_of
+from pangloss_models.migrations.history import pending, problems
+from pangloss_models.migrations.snapshot import build_snapshot, data_view
 
 
 def migration_backend_of(database_module: str) -> ModuleType | None:

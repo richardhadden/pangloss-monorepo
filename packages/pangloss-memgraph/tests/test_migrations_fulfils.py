@@ -6,8 +6,8 @@ from typing import Annotated, no_type_check
 
 import pytest
 from pangloss_models.field_definitions import FieldSubclassing
-from pangloss_models.meta_kit.migrations import changes as c
-from pangloss_models.meta_kit.migrations import diff
+from pangloss_models.migrations import changes as c
+from pangloss_models.migrations import diff
 from pangloss_models.model_bases.configs import RelationConfig
 from pangloss_models.model_bases.document import Document
 from pangloss_models.model_bases.entity import Entity

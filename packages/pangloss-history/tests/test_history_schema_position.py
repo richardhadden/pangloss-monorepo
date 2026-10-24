@@ -1,7 +1,7 @@
 from types import SimpleNamespace
 
 from pangloss_history import schema_position as module
-from pangloss_models.meta_kit.migrations import files
+from pangloss_models.migrations import files
 
 
 def migration(app, name):

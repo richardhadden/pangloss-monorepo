@@ -8,12 +8,12 @@ import copy
 from typing import Any
 
 from pangloss_models.exceptions import PanglossMigrationError
-from pangloss_models.meta_kit.migrations.files import (
+from pangloss_models.migrations.files import (
     EMPTY_SNAPSHOT,
     Migration,
     MigrationGraph,
 )
-from pangloss_models.meta_kit.migrations.state import apply_change
+from pangloss_models.migrations.state import apply_change
 
 
 def pending(

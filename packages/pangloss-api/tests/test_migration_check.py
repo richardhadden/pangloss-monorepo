@@ -9,13 +9,13 @@ from fake_api_db import migration_backend
 from fastapi.testclient import TestClient
 from pangloss_api.app import create_app
 from pangloss_models.exceptions import PanglossMigrationError
-from pangloss_models.meta_kit.migrations import build_snapshot
-from pangloss_models.meta_kit.migrations.files import (
+from pangloss_models.migrations import build_snapshot
+from pangloss_models.migrations.files import (
     graph_of,
     migrations_directory,
     write,
 )
-from pangloss_models.meta_kit.migrations.planner import plan
+from pangloss_models.migrations.planner import plan
 
 
 @pytest.fixture

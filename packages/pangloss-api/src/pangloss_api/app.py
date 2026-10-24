@@ -65,7 +65,7 @@ async def check_migrations(settings: core_settings.BaseSettings) -> None:
     """If the project has migrations, the database must be what they say and the models what
     they come to: `MIGRATION_CHECK` says what to do if not (see `docs/migrations.md`)"""
     from pangloss_models.exceptions import PanglossMigrationError
-    from pangloss_models.meta_kit.migrations.startup import (
+    from pangloss_models.migrations.startup import (
         migration_backend_of,
         migration_problems,
     )

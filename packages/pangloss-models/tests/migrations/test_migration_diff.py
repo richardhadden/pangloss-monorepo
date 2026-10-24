@@ -7,12 +7,12 @@ from typing import Annotated, no_type_check
 from annotated_types import Ge
 from migration_support import changes, snapshot_of
 from pangloss_models.field_definitions import FieldSubclassing
-from pangloss_models.meta_kit.migrations import (
+from pangloss_models.migrations import (
     PossibleRename,
     diff,
     snapshot_hash,
 )
-from pangloss_models.meta_kit.migrations.changes import (
+from pangloss_models.migrations.changes import (
     AddEnumMember,
     AddField,
     AlterAnnotatedValue,
@@ -1021,7 +1021,7 @@ def test_adding_a_wrapped_alternative_is_only_a_new_option():
 
 @no_type_check
 def test_a_relation_that_changes_its_wrapper():
-    from pangloss_models.meta_kit.migrations.changes import ChangeWrapper
+    from pangloss_models.migrations.changes import ChangeWrapper
 
     def before():
         class IdentifiedAs[T](ReifiedRelation[T]):
@@ -1053,7 +1053,7 @@ def test_a_relation_that_changes_its_wrapper():
 
 @no_type_check
 def test_literals_that_become_an_embedded_object_and_back():
-    from pangloss_models.meta_kit.migrations.changes import (
+    from pangloss_models.migrations.changes import (
         EmbeddedToLiterals,
         LiteralsToEmbedded,
     )

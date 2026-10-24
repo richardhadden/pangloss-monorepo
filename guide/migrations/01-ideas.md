@@ -22,7 +22,7 @@ A migration is an ordinary Python file, written for you to read and, where neede
 ```python
 """0002_addfield_person_born"""
 
-from pangloss_models.meta_kit.migrations.files import changes_from_data
+from pangloss_models.migrations.files import changes_from_data
 
 dependencies = []
 schema_hash = '3f9a…'

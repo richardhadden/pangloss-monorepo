@@ -14,7 +14,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from pangloss_models.meta_kit.migrations.files import graph_of
+from pangloss_models.migrations.files import graph_of
 from pangloss_models.typestubs import (
     modules_with_models,
     registered_class_names,

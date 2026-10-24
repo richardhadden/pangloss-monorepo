@@ -4,11 +4,11 @@ import copy
 from typing import no_type_check
 
 from migration_support import snapshot_of
-from pangloss_models.meta_kit.migrations import changes as c
-from pangloss_models.meta_kit.migrations import data_view, diff, replay, snapshot_hash
-from pangloss_models.meta_kit.migrations.files import EMPTY_SNAPSHOT, Migration, MigrationGraph
-from pangloss_models.meta_kit.migrations.planner import plan
-from pangloss_models.meta_kit.migrations.reverse import reverse_changes
+from pangloss_models.migrations import changes as c
+from pangloss_models.migrations import data_view, diff, replay, snapshot_hash
+from pangloss_models.migrations.files import EMPTY_SNAPSHOT, Migration, MigrationGraph
+from pangloss_models.migrations.planner import plan
+from pangloss_models.migrations.reverse import reverse_changes
 from pangloss_models.model_bases.entity import Entity
 
 NAME = {"kind": "label+property", "label": "Thing", "properties": ["name"]}

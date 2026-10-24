@@ -4,9 +4,9 @@ from typing import Annotated, no_type_check
 
 from migration_support import changes, snapshot_of
 from pangloss_models.field_definitions import FieldSubclassing
-from pangloss_models.meta_kit.migrations import changes as c
-from pangloss_models.meta_kit.migrations import data_view, diff, replay
-from pangloss_models.meta_kit.migrations.reverse import reverse_changes
+from pangloss_models.migrations import changes as c
+from pangloss_models.migrations import data_view, diff, replay
+from pangloss_models.migrations.reverse import reverse_changes
 from pangloss_models.model_bases.configs import RelationConfig
 from pangloss_models.model_bases.document import Document
 from pangloss_models.model_bases.entity import Entity

@@ -5,8 +5,8 @@ from pangloss_memgraph.databases.memgraph.database import Database
 from pangloss_memgraph.databases.memgraph.initialise_database import structure
 from pangloss_memgraph.databases.memgraph.migrations import apply_changes
 from pangloss_models.exceptions import PanglossMigrationError
-from pangloss_models.meta_kit.migrations import changes as c
-from pangloss_models.meta_kit.migrations.files import EMPTY_SNAPSHOT
+from pangloss_models.migrations import changes as c
+from pangloss_models.migrations.files import EMPTY_SNAPSHOT
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 

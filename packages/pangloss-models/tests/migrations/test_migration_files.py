@@ -7,9 +7,9 @@ from typing import no_type_check
 import pytest
 from migration_support import snapshot_of
 from pangloss_models.exceptions import PanglossMigrationError
-from pangloss_models.meta_kit.migrations import changes as c
-from pangloss_models.meta_kit.migrations import data_view, diff, replay
-from pangloss_models.meta_kit.migrations.files import (
+from pangloss_models.migrations import changes as c
+from pangloss_models.migrations import data_view, diff, replay
+from pangloss_models.migrations.files import (
     EMPTY_SNAPSHOT,
     Migration,
     MigrationGraph,

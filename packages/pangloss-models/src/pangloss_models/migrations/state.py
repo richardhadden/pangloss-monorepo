@@ -15,8 +15,8 @@ from typing import Any
 
 from pydantic.alias_generators import to_camel
 
-from pangloss_models.meta_kit.migrations import changes as c
-from pangloss_models.meta_kit.migrations.snapshot import data_view
+from pangloss_models.migrations import changes as c
+from pangloss_models.migrations.snapshot import data_view
 
 
 def replay(old: dict[str, Any], changes: Iterable[c.Change]) -> dict[str, Any]:
