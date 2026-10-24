@@ -1,5 +1,6 @@
 import heapq
 import importlib
+import logging
 from itertools import chain
 from typing import ClassVar, get_args, get_origin
 
@@ -88,6 +89,9 @@ def apply_camel_case_aliases(model: type[BaseModel]) -> None:
         if field.serialization_alias is None:
             field.serialization_alias = alias
         field.alias_priority = 2
+
+
+logger = logging.getLogger("pangloss.models.registry")
 
 
 class ModelRegistry:
@@ -280,13 +284,21 @@ class ModelRegistry:
 
         # --- Phase 1: Pydantic rebuild ---
         namespace = cls.all_models()
+        logger.debug(
+            "Initialising %s models (bind database: %s): %s",
+            len(namespace),
+            bind_database,
+            ", ".join(namespace),
+        )
 
         for model in cls._models:
             model.model_rebuild(force=True, _types_namespace=namespace)
 
         cls._initialise_models()
+        logger.debug("Models initialised")
         if bind_database:
             cls._bind_database_functions()
+            logger.debug("Database functions bound to the models")
 
     # ----------------------------
     # Model initialisation

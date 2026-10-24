@@ -16,6 +16,7 @@ The document is never changed: an upgraded copy is made.
 import copy
 import dataclasses
 import datetime
+import logging
 from collections.abc import Iterable
 from decimal import Decimal, InvalidOperation
 from typing import Any
@@ -25,6 +26,8 @@ from pangloss_models.migrations import changes as c
 from pangloss_models.migrations.files import Migration, MigrationGraph, graph_of
 from pangloss_models.migrations.history import states_around
 from pangloss_models.migrations.state import apply_change
+
+logger = logging.getLogger("pangloss.history.upgrade")
 
 
 @dataclasses.dataclass
@@ -528,6 +531,7 @@ def apply_migrations(
     data: Any, state: dict[str, Any], migrations: Iterable[Migration]
 ) -> Upgraded:
     """`data` upgraded by the migrations, from models that were `state`"""
+    logger.debug("Upgrading a stored version")
     upgrader = Upgrader(data, state)
     applied = []
     for migration in migrations:
@@ -535,6 +539,13 @@ def apply_migrations(
         upgrader.migration = applied[-1]
         for change in migration.changes:
             upgrader.apply(change)
+    if applied:
+        logger.info(
+            "Stored version upgraded by %s migrations: %s problems (%s blocking)",
+            len(applied),
+            len(upgrader.problems),
+            sum(1 for problem in upgrader.problems if problem.blocking),
+        )
     return Upgraded(upgrader.data, upgrader.problems, applied)
 
 

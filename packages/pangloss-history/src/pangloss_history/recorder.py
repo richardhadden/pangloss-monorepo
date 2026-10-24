@@ -57,6 +57,7 @@ class Recorder:
         with self._lock:
             if self._thread is None or not self._thread.is_alive():
                 self._stopping.clear()
+                logger.info("History recording started")
                 self._thread = threading.Thread(
                     target=self._work, name="pangloss-history", daemon=True
                 )
@@ -108,6 +109,13 @@ class Recorder:
         self._stopping.set()
         if self._thread is not None:
             self._thread.join(timeout)
+            logger.log(
+                logging.WARNING if self.dropped or self.failed else logging.INFO,
+                "History recording stopped: %s written, %s dropped, %s lost",
+                self.written,
+                self.dropped,
+                self.failed,
+            )
 
 
 def stop_at_exit(recorder: Recorder) -> Callable[[], None]:

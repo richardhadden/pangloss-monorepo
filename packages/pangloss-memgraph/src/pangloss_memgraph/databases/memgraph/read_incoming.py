@@ -30,7 +30,7 @@ from pangloss_memgraph.databases.memgraph.build_read_query import (
 )
 from pangloss_memgraph.databases.memgraph.database import Transaction
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("pangloss.memgraph.read")
 
 # (the labels of the generic wrappers: what a relation to an entity can pass through)
 WRAPPERS = set(WRAPPER_LABELS)

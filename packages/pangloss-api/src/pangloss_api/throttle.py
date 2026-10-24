@@ -7,11 +7,14 @@ It is kept in memory, **in each server process**: with several workers each has 
 not a replacement for a proxy's rate limit. A `LOGIN_MAX_FAILURES` of 0 turns it off.
 """
 
+import logging
 import time
 from collections import defaultdict, deque
 
 from fastapi import HTTPException, status
 from pangloss_core import settings as core_settings
+
+logger = logging.getLogger("pangloss.api.auth")
 
 # username (lower case) -> when (monotonic seconds) each recent failure was
 FAILURES: dict[str, deque[float]] = defaultdict(deque)
@@ -43,6 +46,12 @@ def check(username: str) -> None:
     failures = recent(username, window)
     if len(failures) >= maximum:
         wait = max(1, int(failures[0] + window - time.monotonic()) + 1)
+        logger.warning(
+            "Login throttled for user %r: %s wrong passwords, try again in %s s",
+            username,
+            len(failures),
+            wait,
+        )
         raise HTTPException(
             status.HTTP_429_TOO_MANY_REQUESTS,
             detail="Too many failed logins for this username: try again later",

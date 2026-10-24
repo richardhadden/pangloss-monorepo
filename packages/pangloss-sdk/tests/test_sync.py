@@ -292,3 +292,22 @@ def test_with_no_connection_the_functions_say_to_connect():
     sdk_client.install(None)
     with pytest.raises(pangloss_sdk.PanglossNotConnected, match="connect"):
         Person.get(uuid7())
+
+
+def test_calls_and_logins_are_logged_at_debug_without_credentials(caplog):
+    import logging
+
+    Person = make_sync_models()
+    server = FakeServer(lambda request: (200, head_json()))
+    sync_client(server, USERNAME="ada", PASSWORD="secret")
+    caplog.set_level(logging.DEBUG, logger="pangloss")
+
+    Person.get_for_edit(uuid7())
+    server.expire_access_tokens()
+    Person.get_for_edit(uuid7())
+
+    lines = [r.getMessage() for r in caplog.records if r.name == "pangloss.sdk.client"]
+    assert any("GET" in line and "-> 200" in line for line in lines)
+    assert "Access token refreshed" in lines
+    for secret in ("secret", "access-1", "refresh-1"):
+        assert secret not in caplog.text

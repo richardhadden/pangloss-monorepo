@@ -27,6 +27,7 @@ See `docs/migrations.md`.
 
 import datetime
 import re
+import logging
 import time
 from collections.abc import Callable
 from typing import Any
@@ -49,6 +50,8 @@ from pangloss_memgraph.databases.memgraph.migrations import (
     apply_changes_in_batches,
 )
 from pangloss_memgraph.databases.memgraph.migrations import dry_run as try_changes
+
+logger = logging.getLogger("pangloss.memgraph.migrations")
 
 LOCK_ID = "migrate"
 CONSTRAINTS = [
@@ -130,7 +133,9 @@ async def backup(database: Database | None = None) -> str:
             raise PanglossMigrationError(
                 f"Cannot take a snapshot: {error.message}"
             ) from error
-    return str(rows[0]["path"]) if rows else "(the snapshot directory of the server)"
+    where = str(rows[0]["path"]) if rows else "(the snapshot directory of the server)"
+    logger.info("Snapshot taken: %s", where)
+    return where
 
 
 async def backups(database: Database | None = None) -> list[dict[str, Any]]:
@@ -217,8 +222,14 @@ async def lock(who: str | None = None, database: Database | None = None) -> None
                 who=who or current_request_username.get(),
             )
             await result.consume()  # (a statement runs when its result is read)
+            logger.info(
+                "Migration lock taken by %r", who or current_request_username.get()
+            )
         except neo4j.exceptions.ClientError as error:
             if "unique" in str(error).lower():
+                logger.error(
+                    "Migration lock is held by another migrate (or a stopped one)"
+                )
                 raise PanglossMigrationError(
                     "Another migrate is running, or was stopped without finishing: "
                     "`pangloss migrate --unlock` removes the lock"
@@ -235,6 +246,7 @@ async def unlock(database: Database | None = None) -> None:
             "MATCH (l:PGMigrationLock {id: $id}) DELETE l", id=LOCK_ID
         )
         await result.consume()
+        logger.info("Migration lock released")
 
 
 async def record(
@@ -328,6 +340,11 @@ async def apply(
         if progress:
             progress(migration, what)
 
+    logger.info(
+        "Migrate: %s to apply%s",
+        len(migrations),
+        " (fake: recorded only)" if fake else "",
+    )
     for migration in migrations:
         started = time.monotonic()
         if fake:
@@ -348,6 +365,13 @@ async def apply(
         else:
             say(migration, "applying")
         await record(database, migration, "running")
+        logger.info(
+            "Applying %s.%s (%s changes, %s)",
+            migration.app,
+            migration.name,
+            len(migration.changes),
+            f"batches of {size}" if size else "one transaction",
+        )
         try:
             if size:
                 state = await apply_changes_in_batches(
@@ -361,6 +385,14 @@ async def apply(
             else:
                 state = await apply_changes(database, state, list(migration.changes))
         except Exception as error:
+            logger.error(
+                "Migration %s.%s failed after %.1f s: %s: %s",
+                migration.app,
+                migration.name,
+                time.monotonic() - started,
+                type(error).__name__,
+                error,
+            )
             await record(
                 database,
                 migration,
@@ -372,6 +404,12 @@ async def apply(
             raise
         await record(
             database, migration, "applied", duration=time.monotonic() - started
+        )
+        logger.info(
+            "Applied %s.%s in %.1f s",
+            migration.app,
+            migration.name,
+            time.monotonic() - started,
         )
         async with _session(database) as session:  # (nothing is left to go on from)
             result = await session.run(
@@ -405,6 +443,9 @@ async def unapply(
     if not hasattr(database, "driver"):
         await database._initialise_driver()
     for migration in migrations:
+        logger.info(
+            "Undoing %s.%s%s", migration.app, migration.name, " (fake)" if fake else ""
+        )
         if progress:
             progress(migration, "faked" if fake else "undoing")
         if fake:
@@ -428,6 +469,7 @@ async def unapply(
                 keys=[list(migration.key), *(list(r) for r in migration.replaces)],
             )
             await result.consume()
+        logger.info("Undone %s.%s", migration.app, migration.name)
         if progress:
             progress(migration, "undone")
     return state

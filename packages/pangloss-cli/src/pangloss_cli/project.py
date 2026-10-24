@@ -23,6 +23,7 @@ from typing import NoReturn
 
 import typer
 from pangloss_core import settings as core_settings
+from pangloss_core.logs import configure_logging
 from pangloss_core.settings import BaseSettings
 
 SETTINGS_ENVIRONMENT_VARIABLE = "PANGLOSS_SETTINGS"
@@ -202,6 +203,12 @@ def load_project(
             f"Cannot load the settings '{location.module}': {error}"
         )
         return project
+
+    # (a command shows its own progress: the log adds only what is wrong, unless asked for more)
+    configure_logging(
+        "DEBUG" if project.settings.LOG_LEVEL == "DEBUG" else "WARNING",
+        project.settings.LOG_FORMAT,
+    )
 
     try:
         project.backend = load_database(project.settings)

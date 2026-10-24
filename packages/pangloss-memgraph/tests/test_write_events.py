@@ -136,3 +136,78 @@ async def test_a_listener_that_fails_does_not_fail_the_write_nor_stop_the_others
 
     assert [e.id for e in events] == [person.id]
     assert (await Person.get(person.id)).label == "John"
+
+
+@no_type_check
+async def test_each_write_is_logged_without_what_it_said(
+    db_driver, clear_database, events, caplog
+):
+    import logging
+
+    class Statement(Document):
+        text: str
+
+    initialise()
+    caplog.set_level(logging.DEBUG, logger="pangloss")
+
+    statement = await Statement.Create(label="S", text="a private sentence").save()
+    await Statement.Update(id=statement.id, label="S", text="another one").save()
+
+    writes = [
+        r.getMessage() for r in caplog.records if r.name == "pangloss.models.hooks"
+    ]
+    assert len(writes) == 2
+    assert writes[0].startswith(f"Write: create Statement {statement.id} v1 by ")
+    assert writes[1].startswith(f"Write: update Statement {statement.id} v2 by ")
+    assert "private sentence" not in caplog.text
+    assert "another one" not in caplog.text
+
+
+@no_type_check
+async def test_queries_are_logged_at_debug_by_name_of_parameter_and_not_value(
+    db_driver, clear_database, caplog
+):
+    import logging
+
+    class Statement(Document):
+        text: str
+
+    initialise()
+    caplog.set_level(logging.DEBUG, logger="pangloss")
+
+    await Statement.Create(label="S", text="a private sentence").save()
+
+    queries = [
+        r.getMessage() for r in caplog.records if r.name == "pangloss.memgraph.queries"
+    ]
+    assert queries and all("params:" in q for q in queries)
+    assert any("CREATE" in q for q in queries)
+    assert "private sentence" not in caplog.text
+    transactions = [
+        r.getMessage()
+        for r in caplog.records
+        if r.name == "pangloss.memgraph.transactions"
+    ]
+    assert any(t.startswith("write transaction") for t in transactions)
+
+
+@no_type_check
+async def test_a_slow_transaction_is_a_warning_and_queries_are_not_logged_unless_debug(
+    db_driver, clear_database, caplog
+):
+    import logging
+
+    from pangloss_memgraph.databases.memgraph.database import Database
+
+    class Statement(Document):
+        text: str
+
+    initialise()
+    caplog.set_level(logging.INFO, logger="pangloss")
+    Database.default.settings.SLOW_QUERY_MS = -1
+
+    await Statement.Create(label="S", text="x").save()
+
+    assert not [r for r in caplog.records if r.name == "pangloss.memgraph.queries"]
+    slow = [r for r in caplog.records if r.levelname == "WARNING"]
+    assert slow and "(slow)" in slow[0].getMessage()

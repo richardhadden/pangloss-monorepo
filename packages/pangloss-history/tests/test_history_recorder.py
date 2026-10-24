@@ -74,3 +74,29 @@ def test_stop_writes_what_is_queued():
         recorder.submit(record())
     recorder.stop()
     assert recorder.written == 20
+
+
+def test_stopping_says_what_was_written_and_warns_if_something_was_lost(caplog):
+    import logging
+
+    caplog.set_level(logging.INFO, logger="pangloss")
+    store = ListStore()
+    recorder = Recorder(store, batch_ms=10)
+    recorder.submit(record())
+    recorder.drain()
+    recorder.stop()
+    started = [r for r in caplog.records if "started" in r.getMessage()]
+    stopped = [r for r in caplog.records if "stopped" in r.getMessage()]
+    assert started and stopped
+    assert stopped[0].levelname == "INFO"
+    assert "1 written, 0 dropped, 0 lost" in stopped[0].getMessage()
+
+    caplog.clear()
+    store.fail = True
+    broken = Recorder(store, batch_ms=10)
+    broken.submit(record())
+    broken.drain()
+    broken.stop()
+    stopped = [r for r in caplog.records if "stopped" in r.getMessage()]
+    assert stopped[0].levelname == "WARNING"
+    assert "0 written, 0 dropped, 1 lost" in stopped[0].getMessage()

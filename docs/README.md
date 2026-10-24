@@ -25,6 +25,7 @@ Each feature in these docs is marked with its status:
 | [Semantic spaces and context labels](semantic-spaces.md) | How nesting inside `SemanticSpace` wrappers is tracked |
 | [Memgraph backend](memgraph.md) | Graph schema, query builders, and the database API |
 | [Settings](settings.md) | `BaseSettings` and database settings |
+| [Logging](logging.md) | What is logged, at what level, and how to set it up |
 | [Users](users.md) | User models, passwords and the `service` functions |
 | [REST API](api.md) | Authentication and the user endpoints |
 | [Command line](cli.md) | The `pangloss` command, and adding commands from apps |

@@ -132,3 +132,49 @@ def test_a_write_during_a_migration_is_answered_with_unavailable_and_when_to_try
     assert response.status_code == 503
     assert response.headers["Retry-After"] == "30"
     assert b"being migrated" in response.body
+
+
+def test_the_migration_check_is_logged(settings, caplog):
+    import asyncio
+    import logging
+
+    from pangloss_api import app as app_module
+
+    caplog.set_level(logging.INFO, logger="pangloss")
+
+    class Migrations:
+        pass
+
+    async def problems(apps, migrations):
+        return ["the database is behind: 1 migration to apply"]
+
+    def backend_of(module):
+        return Migrations()
+
+    import pangloss_models.migrations.startup as startup
+
+    original = (startup.migration_backend_of, startup.migration_problems)
+    startup.migration_backend_of, startup.migration_problems = backend_of, problems
+    try:
+        settings.MIGRATION_CHECK = "warn"
+        with pytest.warns(UserWarning):
+            asyncio.run(app_module.check_migrations(settings))
+        assert any(
+            r.levelname == "WARNING" and "1 migration to apply" in r.getMessage()
+            for r in caplog.records
+        )
+
+        settings.MIGRATION_CHECK = "error"
+        with pytest.raises(Exception, match="do not agree"):
+            asyncio.run(app_module.check_migrations(settings))
+        assert any(r.levelname == "ERROR" for r in caplog.records)
+
+        async def none(apps, migrations):
+            return []
+
+        startup.migration_problems = none
+        caplog.clear()
+        asyncio.run(app_module.check_migrations(settings))
+        assert "the database and the models agree" in caplog.text
+    finally:
+        startup.migration_backend_of, startup.migration_problems = original

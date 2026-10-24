@@ -15,7 +15,7 @@ from collections.abc import Callable
 from typing import Any, Literal
 from uuid import UUID
 
-logger = logging.getLogger("pangloss.hooks")
+logger = logging.getLogger("pangloss.models.hooks")
 
 
 @dataclasses.dataclass(frozen=True)
@@ -51,6 +51,15 @@ after_write: list[WriteListener] = []
 def emit_write_event(event: WriteEvent) -> None:
     """Tell each of `after_write` of a write. A listener that fails is logged, and the
     others are still told"""
+    # (what was written, never what it said)
+    logger.info(
+        "Write: %s %s %s v%s by %r",
+        event.op,
+        event.model.__name__,
+        event.id,
+        event.version,
+        event.user,
+    )
     for listener in after_write:
         try:
             listener(event)

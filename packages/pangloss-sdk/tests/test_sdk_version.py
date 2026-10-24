@@ -152,3 +152,25 @@ async def test_check_without_a_manifest_only_reports():
     client_with(FakeServer(version_answer()), sdk=None)
     result = await pangloss_sdk.check()
     assert result["current"] is None and result["server"]["version"] == "0.3"
+
+
+async def test_an_out_of_date_sdk_is_logged_as_well_as_warned_of(caplog):
+    import logging
+
+    Person = make_models()
+
+    class Stale(FakeServer):
+        def _respond(self, request):
+            response = super()._respond(request)
+            response.headers["x-pangloss-sdk-status"] = "schema-changed"
+            return response
+
+    client_with(Stale(lambda request: (200, head_json())))
+    with (
+        caplog.at_level(logging.WARNING, logger="pangloss"),
+        pytest.warns(PanglossSdkOutOfDateWarning),
+    ):
+        await Person.get(uuid7())
+        await Person.get(uuid7())
+    (record,) = [r for r in caplog.records if r.name == "pangloss.sdk.client"]
+    assert record.levelname == "WARNING" and "schema-changed" in record.getMessage()

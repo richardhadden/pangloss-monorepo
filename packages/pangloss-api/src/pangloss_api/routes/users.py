@@ -6,6 +6,7 @@ the rest is for admins (who cannot change their own admin or disabled status, so
 the last admin does not lock everyone out).
 """
 
+import logging
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
@@ -46,18 +47,33 @@ from pangloss_api.tokens import (
     lifetime,
 )
 
+logger = logging.getLogger("pangloss.api.auth")
+
 router = APIRouter(prefix="/api/users", tags=["Users"])
 
 LoginForm = Annotated[OAuth2PasswordRequestForm, Depends()]
 
 
-async def authenticated_user(form: OAuth2PasswordRequestForm) -> User:
+def client_address(request: Request) -> str:
+    return request.client.host if request.client else "unknown"
+
+
+async def authenticated_user(
+    form: OAuth2PasswordRequestForm, request: Request, via: str
+) -> User:
     throttle.check(form.username)
     user = await service.authenticate(form.username, form.password)
     if user is None:
         throttle.failed(form.username)
+        logger.warning(
+            "Login failed for user %r from %s (%s)",
+            form.username,
+            client_address(request),
+            via,
+        )
         raise unauthorised("Incorrect username or password")
     throttle.succeeded(form.username)
+    logger.info("Login: %r from %s (%s)", user.username, client_address(request), via)
     return user
 
 
@@ -124,9 +140,9 @@ async def revoke(token: str | None) -> None:
 
 
 @router.post("/token", response_model=TokenResponse)
-async def get_tokens(form: LoginForm):
+async def get_tokens(form: LoginForm, request: Request):
     """Log in with a username and password (as a form, the OAuth2 way)"""
-    user = await authenticated_user(form)
+    user = await authenticated_user(form, request, "token")
     access = access_token_for(user)
     return TokenResponse(
         access_token=access.access_token,
@@ -140,6 +156,7 @@ async def refresh_token(body: RefreshRequest):
     """A new access token, given a refresh token"""
     claims = refresh_claims(body.refresh_token)
     user = await active_user_for_refresh(claims)
+    logger.info("Token refreshed for %r", user.username)
     return access_token_for(user)
 
 
@@ -149,6 +166,7 @@ async def revoke_token(body: RefreshRequest):
     tokens can be got with it. (An access token already made lasts until it expires; to end
     those too, `POST /me/logout-all`.)"""
     await revoke(body.refresh_token)
+    logger.info("Refresh token revoked")
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
@@ -158,9 +176,9 @@ async def revoke_token(body: RefreshRequest):
 
 
 @router.post("/session", response_model=Message)
-async def start_session(form: LoginForm, response: Response):
+async def start_session(form: LoginForm, request: Request, response: Response):
     """Log in, keeping the tokens in (HTTP-only) cookies"""
-    user = await authenticated_user(form)
+    user = await authenticated_user(form, request, "session")
     set_cookie(
         response,
         ACCESS_COOKIE_NAME,
@@ -181,6 +199,7 @@ async def refresh_session(request: Request, response: Response):
     """A new access cookie, given the refresh cookie"""
     claims = refresh_claims(request.cookies.get(REFRESH_COOKIE_NAME))
     user = await active_user_for_refresh(claims)
+    logger.info("Session refreshed for %r", user.username)
     set_cookie(
         response,
         ACCESS_COOKIE_NAME,
@@ -197,6 +216,7 @@ async def end_session(request: Request, response: Response):
     await revoke(request.cookies.get(ACCESS_COOKIE_NAME))
     response.delete_cookie(ACCESS_COOKIE_NAME)
     response.delete_cookie(REFRESH_COOKIE_NAME)
+    logger.info("Session ended")
     return Message(message="success")
 
 
@@ -220,6 +240,7 @@ async def update_me(update: UserUpdate, user: CurrentUser):
 async def change_my_password(body: ChangePassword, user: CurrentUser):
     """Change your password. This ends every session (this one too: log in again)"""
     await service.change_password(user.username, body.old_password, body.new_password)
+    logger.info("Password changed by %r (all sessions ended)", user.username)
     return Message(message="success")
 
 
@@ -228,6 +249,7 @@ async def logout_everywhere(user: CurrentUser):
     """End every session of yours: every token made until now stops working (personal
     access tokens are not tokens of a session, and go on: revoke them one by one)"""
     await service.end_sessions(user.username)
+    logger.info("All sessions ended by %r", user.username)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
@@ -262,6 +284,12 @@ async def create_access_token(
         )
     except PanglossInvalidUserError as error:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(error))
+    logger.info(
+        "Personal access token %r (scope %s) made by %r",
+        body.name,
+        body.scope,
+        user.username,
+    )
     return CreatedAccessToken(**info.model_dump(), token=token)
 
 
@@ -275,6 +303,7 @@ async def list_access_tokens(user: CurrentUser):
 async def revoke_access_token(token_id: str, user: CurrentUser):
     if not await service.revoke_access_token(user.username, token_id):
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="There is no such token")
+    logger.info("Personal access token %s revoked by %r", token_id, user.username)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
@@ -297,14 +326,21 @@ async def list_users(_: CurrentAdmin):
 
 
 @router.post("", response_model=User, status_code=status.HTTP_201_CREATED)
-async def create_user(new_user: NewUser, _: CurrentAdmin):
-    return await service.create_user(
+async def create_user(new_user: NewUser, admin: CurrentAdmin):
+    created = await service.create_user(
         username=new_user.username,
         email=new_user.email,
         password=new_user.password,
         full_name=new_user.full_name,
         admin=new_user.admin,
     )
+    logger.info(
+        "User %r made by %r (admin: %s)",
+        new_user.username,
+        admin.username,
+        new_user.admin,
+    )
+    return created
 
 
 @router.get("/{username}", response_model=User)
@@ -324,18 +360,25 @@ async def update_user(username: str, update: UserUpdate, _: CurrentAdmin):
 
 
 @router.put("/{username}/password", response_model=Message)
-async def set_user_password(username: str, body: SetPassword, _: CurrentAdmin):
+async def set_user_password(username: str, body: SetPassword, admin: CurrentAdmin):
     await service.set_password(username, body.password)
+    logger.info("Password of %r set by %r", username, admin.username)
     return Message(message="success")
 
 
 @router.put("/{username}/admin", response_model=User)
 async def set_user_admin(username: str, body: SetAdmin, admin: CurrentAdmin):
     not_yourself(admin, username)
-    return await service.set_admin(username, body.admin)
+    user = await service.set_admin(username, body.admin)
+    logger.info("Admin of %r set to %s by %r", username, body.admin, admin.username)
+    return user
 
 
 @router.put("/{username}/disabled", response_model=User)
 async def set_user_disabled(username: str, body: SetDisabled, admin: CurrentAdmin):
     not_yourself(admin, username)
-    return await service.set_disabled(username, body.disabled)
+    user = await service.set_disabled(username, body.disabled)
+    logger.info(
+        "Disabled of %r set to %s by %r", username, body.disabled, admin.username
+    )
+    return user

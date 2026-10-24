@@ -386,3 +386,67 @@ async def test_only_a_snapshot_the_server_has_can_be_restored(
 async def test_a_backup_is_said_to_last_only_so_long(db_driver, clear_database):
     notice = await backend.backup_notice()
     assert notice and "keeps 3" in notice and "removed" in notice
+
+
+@no_type_check
+async def test_a_migration_run_is_logged_with_its_lock_and_its_failure(
+    db_driver, clear_database, caplog
+):
+    import logging
+
+    def v1():
+        class Person(Entity):
+            name: str
+
+        return ns(Person=Person)
+
+    def v2():
+        class Person(Entity):
+            name: str
+            born: int
+
+        return ns(Person=Person)
+
+    caplog.set_level(logging.DEBUG, logger="pangloss")
+    old_models, first_snapshot = declare(v1)
+    initial = migrations_between(MigrationGraph(), first_snapshot)
+    graph = MigrationGraph.of(initial)
+    await backend.ensure_ready()
+    await backend.lock("ann")
+    state = await backend.apply(initial, EMPTY_SNAPSHOT)
+    await backend.unlock()
+    await old_models.Person.Create(label="Ann", name="Ann").save()
+
+    _, second_snapshot = declare(v2)
+    later = migrations_between(graph, second_snapshot)  # (no default given)
+    with pytest.raises(PanglossMigrationAnswerNeeded):
+        await backend.apply(later, state)
+
+    lines = [
+        (r.levelname, r.getMessage())
+        for r in caplog.records
+        if r.name == "pangloss.memgraph.migrations"
+    ]
+    messages = [message for _, message in lines]
+    assert "Migration lock taken by 'ann'" in messages
+    assert "Migration lock released" in messages
+    assert "Migrate: 1 to apply" in messages
+    assert any(m.startswith("Applying migapp.0001_initial") for m in messages)
+    assert any(m.startswith("Applied migapp.0001_initial in") for m in messages)
+    failures = [m for level, m in lines if level == "ERROR"]
+    assert len(failures) == 1 and f"migapp.{later[0].name} failed" in failures[0]
+
+
+@no_type_check
+async def test_a_second_lock_is_an_error_in_the_log(db_driver, clear_database, caplog):
+    await backend.ensure_ready()
+    await backend.lock("ann")
+    try:
+        with pytest.raises(PanglossMigrationError):
+            await backend.lock("bob")
+    finally:
+        await backend.unlock()
+    assert any(
+        r.levelname == "ERROR" and "lock is held" in r.getMessage()
+        for r in caplog.records
+    )

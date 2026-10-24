@@ -82,6 +82,14 @@ class BaseSettings[TDatabaseSettings: DatabaseSettings](ClientSettings):
 
     ENTITY_BASE_URL: AnyHttpUrl
 
+    # Logging (see `pangloss_core.logs`): what is logged under `pangloss`, and how: a line of
+    # text, or of JSON. Over `SLOW_QUERY_MS` a database transaction, and over `SLOW_REQUEST_MS` a
+    # request, is logged as a warning
+    LOG_LEVEL: typing.Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
+    LOG_FORMAT: typing.Literal["text", "json"] = "text"
+    SLOW_QUERY_MS: int = 500
+    SLOW_REQUEST_MS: int = 2000
+
     # What the server does at start-up if the project has migrations and the database is not
     # what they say, or the models are not what they come to: "error" does not start, "warn"
     # starts and says so, "off" does not look

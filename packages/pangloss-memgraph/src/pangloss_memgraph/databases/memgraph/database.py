@@ -1,5 +1,7 @@
+import logging
+import time
 from collections.abc import Awaitable, Callable
-from typing import ClassVar, Concatenate
+from typing import Any, ClassVar, Concatenate
 
 import neo4j
 from pangloss_core.settings import BaseSettings
@@ -8,6 +10,92 @@ from pangloss_models.exceptions import PanglossReadOnlyError
 from pangloss_memgraph.databases.memgraph.settings import MemgraphDatabaseSettings
 
 Transaction = neo4j.AsyncManagedTransaction
+
+logger = logging.getLogger("pangloss.memgraph.transactions")
+queries = logging.getLogger("pangloss.memgraph.queries")
+
+MAX_LOGGED_QUERY = 600
+
+
+class LoggedTransaction:
+    """A transaction that logs each statement it runs, at DEBUG: the query and the *names* of its
+    parameters (never their values, which are the user's data), and how long the server took to
+    take it up. Only used when that is being logged; anything else is the transaction's."""
+
+    def __init__(self, tx: neo4j.AsyncManagedTransaction) -> None:
+        self._tx = tx
+
+    async def run(self, query: Any, parameters: Any = None, **kwargs: Any) -> Any:
+        started = time.monotonic()
+        result = await self._tx.run(query, parameters, **kwargs)
+        names = sorted({*(parameters or {}), *kwargs})
+        text = " ".join(str(query).split())
+        queries.debug(
+            "(%.0f ms) %s%s  params: %s",
+            (time.monotonic() - started) * 1000,
+            text[:MAX_LOGGED_QUERY],
+            "..." if len(text) > MAX_LOGGED_QUERY else "",
+            ", ".join(names) or "none",
+        )
+        return result
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._tx, name)
+
+
+def slow_query_ms(settings: BaseSettings) -> int:
+    return getattr(settings, "SLOW_QUERY_MS", 500)
+
+
+async def timed[T](
+    database: Database,
+    kind: str,
+    func: Callable[..., Awaitable[T]],
+    run: Callable[[], Awaitable[T]],
+) -> T:
+    """Run a transaction, logging how long it took (a warning if that is over `SLOW_QUERY_MS`), and
+    an error if the database cannot be reached"""
+    started = time.monotonic()
+    try:
+        return await run()
+    except (
+        neo4j.exceptions.ServiceUnavailable,
+        neo4j.exceptions.SessionExpired,
+    ) as error:
+        logger.error(
+            "The database could not be reached (%s transaction %s): %s",
+            kind,
+            getattr(func, "__qualname__", func),
+            error,
+        )
+        raise
+    finally:
+        elapsed = (time.monotonic() - started) * 1000
+        slow = elapsed > slow_query_ms(database.settings)
+        logger.log(
+            logging.WARNING if slow else logging.DEBUG,
+            "%s transaction %s took %.0f ms%s",
+            kind,
+            getattr(func, "__qualname__", func),
+            elapsed,
+            " (slow)" if slow else "",
+        )
+
+
+def logging_queries(
+    func: Callable[..., Awaitable[Any]],
+) -> Callable[..., Awaitable[Any]]:
+    """`func`, given a transaction that logs its statements if DEBUG is on for them"""
+
+    async def logged(
+        tx: neo4j.AsyncManagedTransaction, *args: Any, **kwargs: Any
+    ) -> Any:
+        if queries.isEnabledFor(logging.DEBUG):
+            tx = LoggedTransaction(tx)  # ty: ignore[invalid-assignment]
+        return await func(tx, *args, **kwargs)
+
+    logged.__qualname__ = getattr(func, "__qualname__", "transaction")
+    return logged
 
 
 class Database:
@@ -61,10 +149,15 @@ class Database:
 
             await self._check_driver()
 
-            async with self.driver.session(
-                database=self.settings.DATABASE.DATABASE_NAME
-            ) as session:
-                return await session.execute_read(func, *args, **kwargs)
+            async def run() -> T:
+                async with self.driver.session(
+                    database=self.settings.DATABASE.DATABASE_NAME
+                ) as session:
+                    return await session.execute_read(
+                        logging_queries(func), *args, **kwargs
+                    )
+
+            return await timed(self, "read", func, run)
 
         return wrapper
 
@@ -97,10 +190,15 @@ class Database:
                 await refuse_while_migrating(tx)
                 return await func(tx, *a, **k)
 
-            async with self.driver.session(
-                database=self.settings.DATABASE.DATABASE_NAME
-            ) as session:
-                return await session.execute_write(not_while_migrating, *args, **kwargs)
+            async def run() -> T:
+                async with self.driver.session(
+                    database=self.settings.DATABASE.DATABASE_NAME
+                ) as session:
+                    return await session.execute_write(
+                        logging_queries(not_while_migrating), *args, **kwargs
+                    )
+
+            return await timed(self, "write", func, run)
 
         return wrapper
 

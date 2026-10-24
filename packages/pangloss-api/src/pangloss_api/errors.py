@@ -25,7 +25,7 @@ from pangloss_users.exceptions import (
 )
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("pangloss.api.errors")
 
 # (an error is given the status of the first of these it is an instance of)
 STATUS_FOR_ERROR: list[tuple[type[Exception], int]] = [
@@ -69,7 +69,17 @@ async def error_handler(request: Request, error: Exception) -> JSONResponse:
         headers["ETag"] = f'"{error.current_version}"'
     if isinstance(error, PanglossReadOnlyError):
         headers["Retry-After"] = "30"  # (a migration takes a while: look again soon)
-    return JSONResponse(status_code=status_for(error), content=content, headers=headers)
+    code = status_for(error)
+    where = f"{request.method} {request.url.path}" if request else "(no request)"
+    if isinstance(error, PanglossVersionConflictError):
+        logger.warning(
+            "Conflict on %s: %s (now version %s)", where, error, error.current_version
+        )
+    elif isinstance(error, PanglossReadOnlyError):
+        logger.warning("Write refused during a migration: %s", where)
+    else:
+        logger.debug("%s -> %s %s", where, code, type(error).__name__)
+    return JSONResponse(status_code=code, content=content, headers=headers)
 
 
 def register_error_handlers(app: FastAPI) -> None:

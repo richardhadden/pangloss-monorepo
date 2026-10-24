@@ -11,12 +11,18 @@ A backend package (`DATABASE_MODULE`) supplies a `setup` module with these funct
   and return a description of what was done, as a list of lines to show.
 """
 
+import logging
+from urllib.parse import urlparse
+
 from pangloss_core.settings import BaseSettings
 
 from pangloss_memgraph.databases.memgraph.database import Database
 from pangloss_memgraph.databases.memgraph.initialise_database import (
     initialise_database,
 )
+
+
+logger = logging.getLogger("pangloss.memgraph.setup")
 
 
 def create_database(settings: BaseSettings) -> None:
@@ -31,16 +37,30 @@ async def connect() -> None:
     if not hasattr(database, "driver") or database.driver._closed:
         await database._initialise_driver()
     await database.driver.verify_connectivity()
+    # (the address and the database name: not the credentials)
+    address = urlparse(database.settings.DATABASE.DB_URL)
+    logger.info(
+        "Connected to Memgraph at %s:%s (database %r)",
+        address.hostname,
+        address.port,
+        database.settings.DATABASE.DATABASE_NAME,
+    )
 
 
 async def disconnect() -> None:
     database = Database.default
     if hasattr(database, "driver") and not database.driver._closed:
         await database.driver.close()
+        logger.info("Disconnected from Memgraph")
 
 
 async def setup_database() -> list[str]:
     setup = await initialise_database()
+    logger.info(
+        "Database setup: %s made, %s already there",
+        len(setup.created),
+        len(setup.already_present),
+    )
     return [
         *[f"created: {description}" for description in setup.created],
         *[f"already present: {description}" for description in setup.already_present],

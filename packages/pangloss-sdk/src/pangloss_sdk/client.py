@@ -6,6 +6,7 @@ the database module.
 """
 
 import asyncio
+import logging
 import threading
 import time
 import warnings
@@ -27,6 +28,8 @@ from pangloss_sdk.schemas import schema_hash
 from pangloss_sdk.settings import SdkSettings
 
 BACKOFF_SECONDS = 0.2
+
+logger = logging.getLogger("pangloss.sdk.client")
 
 
 def client_arguments(settings: SdkSettings) -> dict[str, Any]:
@@ -74,6 +77,7 @@ class Observer:
         self.status = status
         if status != "current" and not self._warned:
             self._warned = True
+            logger.warning("The server's models are not those of this SDK (%s)", status)
             warnings.warn(
                 "The server's models are not those of this SDK "
                 f"({status}): update it (`pip install -U` the SDK, or `git pull`)",
@@ -127,10 +131,21 @@ class AsyncClient:
                     **request_arguments(call, self.session, self.sdk)
                 )
                 self.observer.observe(response)
+                logger.debug(
+                    "%s %s -> %s", call.method, call.path, response.status_code
+                )
                 return response
             except httpx.TransportError as error:
                 if attempt + 1 == attempts:
                     raise connection_error(error, self.session) from error
+                logger.debug(
+                    "%s %s failed (%s): trying again (%s of %s)",
+                    call.method,
+                    call.path,
+                    error,
+                    attempt + 1,
+                    attempts - 1,
+                )
                 await asyncio.sleep(BACKOFF_SECONDS * 2**attempt)
         raise AssertionError("unreachable")
 
@@ -143,6 +158,7 @@ class AsyncClient:
                 raise connection_error(error, self.session) from error
             if response.status_code == 200:
                 self.session.accept(response.json())
+                logger.debug("Logged in to %s", self.session.url)
                 return
             if response.status_code != 401:
                 raise protocol.error_for(response)
@@ -160,6 +176,7 @@ class AsyncClient:
         if response.status_code != 200:
             return False
         self.session.accept(response.json())
+        logger.debug("Access token refreshed")
         return True
 
     async def _renew(self, used: str | None, call: Call) -> bool:
@@ -232,10 +249,21 @@ class Client:
                     **request_arguments(call, self.session, self.sdk)
                 )
                 self.observer.observe(response)
+                logger.debug(
+                    "%s %s -> %s", call.method, call.path, response.status_code
+                )
                 return response
             except httpx.TransportError as error:
                 if attempt + 1 == attempts:
                     raise connection_error(error, self.session) from error
+                logger.debug(
+                    "%s %s failed (%s): trying again (%s of %s)",
+                    call.method,
+                    call.path,
+                    error,
+                    attempt + 1,
+                    attempts - 1,
+                )
                 time.sleep(BACKOFF_SECONDS * 2**attempt)
         raise AssertionError("unreachable")
 
@@ -248,6 +276,7 @@ class Client:
                 raise connection_error(error, self.session) from error
             if response.status_code == 200:
                 self.session.accept(response.json())
+                logger.debug("Logged in to %s", self.session.url)
                 return
             if response.status_code != 401:
                 raise protocol.error_for(response)
@@ -264,6 +293,7 @@ class Client:
         if response.status_code != 200:
             return False
         self.session.accept(response.json())
+        logger.debug("Access token refreshed")
         return True
 
     def _renew(self, used: str | None, call: Call) -> bool:

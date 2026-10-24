@@ -9,6 +9,7 @@ made from them; starting the server (the lifespan) connects to the database thro
 """
 
 import importlib
+import logging
 import os
 import warnings
 from collections.abc import AsyncGenerator
@@ -17,12 +18,17 @@ from contextlib import asynccontextmanager
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pangloss_core import settings as core_settings
+from pangloss_core.logs import configure_from_settings
+from pangloss_models.model_registry import ModelRegistry
 
 from pangloss_api.errors import ServerErrorResponder, register_error_handlers
+from pangloss_api.request_log import RequestLogger
 from pangloss_api.routes import users
 from pangloss_api.routes.models import build_router, routable_models
 
 SETTINGS_ENVIRONMENT_VARIABLE = "PANGLOSS_SETTINGS"
+
+logger = logging.getLogger("pangloss.api.app")
 
 
 def ensure_settings() -> core_settings.BaseSettings:
@@ -77,13 +83,16 @@ async def check_migrations(settings: core_settings.BaseSettings) -> None:
         return
     found = await migration_problems(settings.INSTALLED_APPS, migrations)
     if not found:
+        logger.info("Migrations: the database and the models agree with them")
         return
     message = (
         "The database and the models do not agree with the migrations:\n  "
         + "\n  ".join(found)
     )
     if settings.MIGRATION_CHECK == "error":
+        logger.error("%s", message)
         raise PanglossMigrationError(message)
+    logger.warning("%s", message)
     warnings.warn(message, stacklevel=2)
 
 
@@ -91,15 +100,24 @@ async def check_migrations(settings: core_settings.BaseSettings) -> None:
 async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     settings = ensure_settings()
     backend = importlib.import_module(f"{settings.DATABASE_MODULE}.setup")
+    logger.info(
+        "Starting %s: %s, %s models, apps %s",
+        settings.PROJECT_NAME,
+        settings.DATABASE_MODULE,
+        len(ModelRegistry.all_models()),
+        ", ".join(settings.INSTALLED_APPS) or "(none)",
+    )
     await backend.connect()
     try:
         await check_migrations(settings)
         # (what installed apps asked to be done when the server starts; see `configure_apps`)
         for hook in app.state.startup_hooks:
             await hook()
+        logger.info("%s is ready", settings.PROJECT_NAME)
         yield
     finally:
         await backend.disconnect()
+        logger.info("%s stopped", settings.PROJECT_NAME)
 
 
 MIN_SECRET_LENGTH = 32
@@ -174,6 +192,7 @@ def add_cors(app: FastAPI, origins: list[str]) -> None:
 
 def create_app() -> FastAPI:
     settings = ensure_settings()
+    configure_from_settings(settings)
 
     if len(settings.AUTHJWT_SECRET_KEY) < MIN_SECRET_LENGTH:
         warnings.warn(
@@ -192,6 +211,8 @@ def create_app() -> FastAPI:
     # (added first, so inside the CORS middleware: a 500 then has the CORS headers)
     app.add_middleware(ServerErrorResponder)
     add_cors(app, settings.BACKEND_CORS_ORIGINS)
+    # (added last, so outermost: the request id is on everything logged for the request)
+    app.add_middleware(RequestLogger)
     register_error_handlers(app)
     configure_apps(app, settings)
     app.include_router(users.router)
