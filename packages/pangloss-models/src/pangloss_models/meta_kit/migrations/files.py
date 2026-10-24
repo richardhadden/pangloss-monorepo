@@ -55,7 +55,7 @@ def changes_from_data(data: Iterable[dict[str, Any] | c.Change]) -> list[c.Chang
 
 def structure_id(change: c.Change) -> str:
     """What an index or constraint is known by, among the owners of migrations"""
-    entry = getattr(change, "index", None) or change.constraint
+    entry = getattr(change, "index", None) or getattr(change, "constraint")  # noqa: B009
     return f"{entry.get('kind')}:{entry['label']}({','.join(entry['properties'])}){entry.get('name', '')}"
 
 
