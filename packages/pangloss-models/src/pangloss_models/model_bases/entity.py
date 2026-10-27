@@ -35,6 +35,11 @@ class EntityMeta(BaseMeta, DeclaredClassMeta):
     create_with_id: bool | InheritValue = False
     create_inline: bool | InheritValue = False
     accept_url_as_id: bool | InheritValue = True
+    # Fields of this class to keep an index of, for searching by them (see docs/structured-search.md). The
+    # nodes of its subclasses are in it too, so it is not inherited
+    indexes: Annotated[list[str], MetaRules.DO_NOT_INHERIT] = Field(
+        default_factory=list
+    )
     view_extra_fields: Annotated[list[str], MetaRules.ACCUMULATE] = Field(
         default_factory=list
     )

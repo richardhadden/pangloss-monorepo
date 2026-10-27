@@ -634,14 +634,16 @@ class EmbeddedToLiterals(Change):
 
 def structure_name(entry: dict[str, Any]) -> str:
     """How an index or a constraint is called: `:Label(property, ...)`"""
-    text = f":{entry['label']}({', '.join(entry['properties'])})"
+    text = f":{entry['label']}" + (
+        f"({', '.join(entry['properties'])})" if entry["properties"] else ""
+    )
     return f"{entry['name']} on {text}" if entry.get("name") else text
 
 
 @dataclass(frozen=True, kw_only=True)
 class AddIndex(Change):
-    """An index on a label and properties (`kind` `"label+property"`), or a text index (`"text"`,
-    with a `name`). Made outside a transaction, and if it is not there already."""
+    """An index on a label (`kind` `"label"`), on a label and properties (`"label+property"`), or a text
+    index (`"text"`, with a `name`). Made outside a transaction, and if it is not there already."""
 
     phase: ClassVar[int] = PHASE_CREATE
     index: dict[str, Any]

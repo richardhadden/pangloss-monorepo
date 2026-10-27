@@ -219,6 +219,9 @@ class Causes[TCause, TResult](Conjunction):
 class Factoid(Document):
     """What a source says, at a page: a set of statements"""
 
+    # Factoids are searched by year, so it has an index (and the label of every class has one already)
+    _meta = Document.Meta(indexes=["year"])
+
     year: int
     source: AtPage[Source]
     statements: Annotated[

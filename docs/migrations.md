@@ -181,7 +181,7 @@ For each: how it is **detected** (from the diff), what it does to **data**, and 
 | `abstract` on or off | meta differs | none (it decides what can be written, and what a relation to the parent allows) | S |
 | `create_with_id`, `accept_url_as_id`, `create_inline` | meta differs | removing `accept_url_as_id` leaves `PGUrl` nodes (kept, or dropped by choice) | S |
 | `require_label` on | meta differs | existing nodes with no label need one: **ask** (a default, or a field to copy) | A |
-| Add/remove the **text index** or an index | derived | DDL | S |
+| Add/remove the **text index** or an index (including the label index of each class of document and entity, and the fields named in `Meta(indexes=...)`; the app of the model makes them) | derived | DDL | S |
 
 ### 5.2 Literal fields
 

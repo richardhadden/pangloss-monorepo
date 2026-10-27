@@ -13,6 +13,8 @@ from typing import Any
 
 import neo4j
 
+from pangloss_models.indexes import model_indexes
+
 from pangloss_memgraph.databases.memgraph.database import Database
 
 TEXT_INDEX_NAME = "label_text"
@@ -70,6 +72,9 @@ def structure() -> dict[str, list[dict[str, Any]]]:
     ]
     for entry in [*indexes, *constraints]:
         entry["app"] = STRUCTURE_APP
+    # The indexes of the models (a label index for each class, and the fields they ask for): the app
+    # of the model makes them, which the planner works out from the model (no `app` here)
+    indexes += model_indexes()
     return {"indexes": indexes, "constraints": constraints}
 
 
@@ -96,6 +101,27 @@ async def run_statement(
         rows = await result.data()
         await result.consume()
         return rows
+
+
+def index_exists(rows: list[dict[str, Any]], entry: dict[str, Any]) -> bool:
+    """Whether the index (a label index, or a label and properties) is among the rows of `SHOW INDEX INFO`"""
+    if entry["kind"] == "label":
+        return any(
+            row["index type"] == "label" and row["label"] == entry["label"]
+            for row in rows
+        )
+    return any(
+        row["index type"] == "label+property"
+        and row["label"] == entry["label"]
+        and row["property"] == entry["properties"]
+        for row in rows
+    )
+
+
+def create_index_statement(entry: dict[str, Any]) -> str:
+    properties = ", ".join(f"`{p}`" for p in entry["properties"])
+    on = f":`{entry['label']}`" + (f"({properties})" if properties else "")
+    return f"CREATE INDEX ON {on}"
 
 
 async def initialise_database(database: Database | None = None) -> DatabaseSetup:
@@ -137,6 +163,15 @@ async def initialise_database(database: Database | None = None) -> DatabaseSetup
         )
         if not existed:
             await run(f"CREATE INDEX ON :{label}({', '.join(properties)})")
+        record(description, existed)
+
+    # The indexes of the models
+    for entry in model_indexes():
+        name = ", ".join(entry["properties"])
+        description = f"index :{entry['label']}" + (f"({name})" if name else "")
+        existed = index_exists(existing_indexes, entry)
+        if not existed:
+            await run(create_index_statement(entry))
         record(description, existed)
 
     name, label, property_name = TEXT_INDEX

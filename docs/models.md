@@ -41,6 +41,7 @@ class Statement(Document):
 | `create_with_id` | `False` | Allow a client-supplied `id` in `Create` (and an accompanying `create_new` flag) |
 | `accept_url_as_id` | `False` | Allow an `AnyHttpUrl` as `id` as well as a UUID |
 | `require_label` | `True` | Whether `label` is required |
+| `indexes` | `[]` (*not inherited*) | Fields (or `"label"`) of this class to keep a database index of, for searching by their values: each is a label-and-property index on the class (its subclasses' nodes have its label, so it covers them). Only a field with a value of its own (text, number, date, choice, a list of these); checked when the models are initialised. A change is a migration. See [Structured search](structured-search.md#step-5-measured) |
 | `view_extra_fields` | `[]` (*accumulates*) | Extra fields to include in the `View` model |
 | `reference_view_extra_fields` | `[]` (*accumulates*) | Extra fields to include in the `ReferenceView` model |
 | `use_in_semantic_space_label` | `True` | Whether this document is listed in `context_labels` when nested in a semantic space (see [Semantic spaces](semantic-spaces.md)) |
@@ -70,7 +71,7 @@ class Person(Entity):
     pass
 ```
 
-`EntityMeta` options: `abstract`, `create_with_id`, `view_extra_fields` and `reference_view_extra_fields` as for Documents, plus:
+`EntityMeta` options: `abstract`, `create_with_id`, `indexes`, `view_extra_fields` and `reference_view_extra_fields` as for Documents, plus:
 
 | Option | Default | Meaning |
 |--------|---------|---------|

@@ -69,7 +69,8 @@ def info() -> None:
     typer.secho("Indexes", bold=True)
     for row in found["indexes"]:
         typer.echo(
-            f"  {row['index type']}: :{row['label']}({', '.join(row['property'])})"
+            f"  {row['index type']}: :{row['label']}"
+            + (f"({', '.join(row['property'])})" if row["property"] else "")
         )
     typer.secho("Unique constraints", bold=True)
     for row in found["constraints"]:

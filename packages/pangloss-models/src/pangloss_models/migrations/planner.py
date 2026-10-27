@@ -101,7 +101,16 @@ def structure_owner(
     for candidate in new.get(key, []):
         if same_structure(candidate, entry) and candidate.get("app") in apps:
             return candidate["app"]
-    return owners.get(structure_id(change)) or apps[0]
+    made_by = owners.get(structure_id(change))
+    if made_by:
+        return made_by
+    # (the index of a model's label, or of a field: the app the model is in makes it)
+    if entry.get("label") in new.get("models", {}):
+        try:
+            return owner_of(entry["label"], new, owners, apps)
+        except PanglossMigrationError:
+            pass
+    return apps[0]
 
 
 def app_of_change(

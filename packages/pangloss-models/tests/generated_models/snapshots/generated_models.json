@@ -134,6 +134,7 @@
     "abstract": "False",
     "accept_url_as_id": "False",
     "create_with_id": "False",
+    "indexes": "[]",
     "reference_view_extra_fields": "[]",
     "require_label": "True",
     "use_in_semantic_space_label": "True",
@@ -230,6 +231,7 @@
     "abstract": "False",
     "accept_url_as_id": "False",
     "create_with_id": "False",
+    "indexes": "[]",
     "reference_view_extra_fields": "[]",
     "require_label": "True",
     "use_in_semantic_space_label": "True",
@@ -675,6 +677,7 @@
     "abstract": "False",
     "accept_url_as_id": "False",
     "create_with_id": "False",
+    "indexes": "[]",
     "reference_view_extra_fields": "[]",
     "require_label": "True",
     "use_in_semantic_space_label": "True",
@@ -785,6 +788,7 @@
     "abstract": "False",
     "accept_url_as_id": "False",
     "create_with_id": "False",
+    "indexes": "[]",
     "reference_view_extra_fields": "[]",
     "require_label": "True",
     "use_in_semantic_space_label": "True",
@@ -867,6 +871,7 @@
     "abstract": "False",
     "accept_url_as_id": "False",
     "create_with_id": "False",
+    "indexes": "[]",
     "reference_view_extra_fields": "[]",
     "require_label": "True",
     "use_in_semantic_space_label": "True",
@@ -921,6 +926,7 @@
     "accept_url_as_id": "True",
     "create_inline": "False",
     "create_with_id": "False",
+    "indexes": "[]",
     "reference_view_extra_fields": "[]",
     "view_extra_fields": "[]"
    }
@@ -1263,6 +1269,7 @@
     "abstract": "False",
     "accept_url_as_id": "False",
     "create_with_id": "False",
+    "indexes": "[]",
     "reference_view_extra_fields": "[]",
     "require_label": "False",
     "use_in_semantic_space_label": "True",
@@ -1294,6 +1301,7 @@
     "accept_url_as_id": "True",
     "create_inline": "False",
     "create_with_id": "False",
+    "indexes": "[]",
     "reference_view_extra_fields": "[]",
     "view_extra_fields": "[]"
    }
@@ -1408,6 +1416,7 @@
     "accept_url_as_id": "True",
     "create_inline": "True",
     "create_with_id": "True",
+    "indexes": "[]",
     "reference_view_extra_fields": "[]",
     "view_extra_fields": "[]"
    }
@@ -1447,6 +1456,7 @@
     "accept_url_as_id": "True",
     "create_inline": "False",
     "create_with_id": "False",
+    "indexes": "[]",
     "reference_view_extra_fields": "[]",
     "view_extra_fields": "[]"
    }
@@ -1557,6 +1567,7 @@
     "accept_url_as_id": "True",
     "create_inline": "True",
     "create_with_id": "True",
+    "indexes": "[]",
     "reference_view_extra_fields": "[]",
     "view_extra_fields": "[]"
    }
@@ -1639,6 +1650,7 @@
     "abstract": "True",
     "accept_url_as_id": "False",
     "create_with_id": "False",
+    "indexes": "[]",
     "reference_view_extra_fields": "[]",
     "require_label": "True",
     "use_in_semantic_space_label": "True",
@@ -1760,6 +1772,7 @@
     "abstract": "False",
     "accept_url_as_id": "False",
     "create_with_id": "False",
+    "indexes": "[]",
     "reference_view_extra_fields": "[]",
     "require_label": "True",
     "use_in_semantic_space_label": "True",

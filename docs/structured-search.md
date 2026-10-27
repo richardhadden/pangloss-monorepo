@@ -279,7 +279,7 @@ Through the whole search (page of 25, the count, and the creation record of each
 
 What an index costs to write, bare nodes in one transaction each: 3,975 a second without, 3,230 with a label index and a property index (about 0.06 ms a node). The text index costs 4.5 ms a commit, so these are small beside it.
 
-**Recommendation:** (1) **a label index for each class of document and entity** (the class name of every `Document` and `Entity` model, including abstract parents, which a search of a parent class starts from): cheap, and the cost of a search of a class stops growing with the rest of the database. (2) **A label-and-property index on a field when a project searches by it a lot** (`year`, `author`, an identifier): 100 times faster, and a choice for the project, so a setting of the model rather than of Pangloss. (3) No `head_node_id` or edge indexes. These need a change to the structure that [migrations](migrations.md) keep (`initialise_database.structure()`), which is not made; see the questions below.
+**Recommendation (done: see "Indexes of the models" below):** (1) **a label index for each class of document and entity** (the class name of every `Document` and `Entity` model, including abstract parents, which a search of a parent class starts from): cheap, and the cost of a search of a class stops growing with the rest of the database. (2) **A label-and-property index on a field when a project searches by it a lot** (`year`, `author`, an identifier): 100 times faster, and a choice for the project, so a setting of the model rather than of Pangloss. (3) No `head_node_id` or edge indexes. These need a change to the structure that [migrations](migrations.md) keep (`initialise_database.structure()`), which is not made; see the questions below.
 
 ### Limits
 
@@ -298,8 +298,15 @@ PYTHONPATH=. python search_benchmark.py --explain --only mentions           # a 
 PYTHONPATH=. python search_benchmark.py --drop-indexes
 ```
 
-### Questions
+### Indexes of the models (decided and built)
 
-1. **Label indexes**: should `initialise_database` (and so the migrations' structure) make one for each class of document and entity? They change with the models (a new class is a new index), so the migration that adds a class would add its index. Not done.
-2. **Property indexes**: a way for a model to ask for one (`Meta(indexes=[...])`, or a mark on a field)? Not done.
-3. The timeout is the same for every search and for everyone. A lower one for anonymous users, and a longer one for an export, would be a setting of the user or of the route.
+Decided 2026-10-27, after the measurements above:
+
+- **A label index for each class of document and entity**, abstract ones too (a search of a parent class starts at its label). Made by `initialise_database()` and by migrations: the entries are in the structure of the snapshot (`kind: "label"`, no properties), the app of the model makes them (a new class is an `AddIndex` in the migration of its app; a class removed, a `RemoveIndex`). `pangloss_models.indexes.model_indexes()` lists them.
+- **`Meta(indexes=["year"])`** on a document or entity: a label-and-property index of each field named (any literal field or list of literals, or `"label"`). Not inherited. Checked when the models are initialised (`PanglossMetaError` for a field that does not exist, a relation or other field with no property of its own, or a name twice). The demo asks for `Factoid.year`.
+- **Measured on the same data after the demo's migration** (`demo_app.0002_addindex_addindex_addindex`: nine label indexes and `:Factoid(year)`): a factoid by year 41 to 3 ms, 100 sources 35 to 3 ms, every factoid 47 to 25 ms, a person by what refers to them 60 to 16 ms; `$mentions` and `$somewhere`, which walk the documents, did not change.
+- **An existing database needs the migration**: `pangloss makemigrations` and `pangloss migrate` after updating (the server refuses to start while the models and the migrations differ, unless `MIGRATION_CHECK` is `warn` or `off`).
+
+### Timeout
+
+One timeout, `SEARCH_TIMEOUT_SECONDS`, for every search and every user, is what is wanted for now. A different one for some users or routes (lower for anonymous users, longer for an export) is not built.

@@ -316,6 +316,15 @@ class ModelRegistry:
         for model in cls._model_dict.values():
             initialise_field_definitions(model)
 
+        from pangloss_models.indexes import check_indexes
+
+        for model in cls._model_dict.values():
+            if hasattr(model, "__metatype__") and model.__metatype__ in [
+                "Document",
+                "Entity",
+            ]:
+                check_indexes(model)
+
         # (the incoming relations are worked out from all the models, so start again if this is not the first time)
         for model in cls._model_dict.values():
             model._meta.field_definitions.incoming_fields.clear()

@@ -35,7 +35,11 @@ from pangloss_models.migrations.state import rename_field
 from pangloss_models.migrations.state import rename_model as state_after_rename
 
 from pangloss_memgraph.databases.memgraph.database import Database, Transaction
-from pangloss_memgraph.databases.memgraph.initialise_database import run_statement
+from pangloss_memgraph.databases.memgraph.initialise_database import (
+    create_index_statement,
+    index_exists,
+    run_statement,
+)
 from pangloss_memgraph.databases.memgraph.migrations.conversion import (
     convert_expression,
 )
@@ -1909,6 +1913,10 @@ async def ddl(database: Database, statement: str) -> None:
     )
 
 
+def drop_index_statement(entry: dict) -> str:
+    return create_index_statement(entry).replace("CREATE", "DROP", 1)
+
+
 async def add_index(database: Database, change: c.AddIndex, state: dict) -> None:
     entry = change.index
     label, properties = (
@@ -1926,13 +1934,8 @@ async def add_index(database: Database, change: c.AddIndex, state: dict) -> None
                 f"CREATE TEXT INDEX {ident(entry['name'])} ON :{label}({properties})",
             )
         return
-    if not any(
-        row["index type"] == "label+property"
-        and row["label"] == entry["label"]
-        and row["property"] == entry["properties"]
-        for row in rows
-    ):
-        await ddl(database, f"CREATE INDEX ON :{label}({properties})")
+    if not index_exists(rows, entry):
+        await ddl(database, create_index_statement(entry))
 
 
 async def remove_index(database: Database, change: c.RemoveIndex, state: dict) -> None:
@@ -1950,13 +1953,8 @@ async def remove_index(database: Database, change: c.RemoveIndex, state: dict) -
         ):
             await ddl(database, f"DROP TEXT INDEX {ident(entry['name'])}")
         return
-    if any(
-        row["index type"] == "label+property"
-        and row["label"] == entry["label"]
-        and row["property"] == entry["properties"]
-        for row in rows
-    ):
-        await ddl(database, f"DROP INDEX ON :{label}({properties})")
+    if index_exists(rows, entry):
+        await ddl(database, drop_index_statement(entry))
 
 
 def constraint_exists(rows: list[dict], entry: dict) -> bool:

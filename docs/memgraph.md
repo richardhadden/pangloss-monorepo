@@ -63,6 +63,7 @@ It creates:
 | An index and a uniqueness constraint on `id` of `PGIndexableNode`, `PGCreation` and `PGUpdate` | Ids are UUIDs, and are how nodes are found. A second node with the same id fails when it is committed |
 | An index on `PGIndexableNode(id, head_node_id)` | Finding a node of a particular document |
 | An index on `HeadNode(id)` | Reads and updates look up the head node by id |
+| An index of the label of **each class of document and entity** (`:Person`; abstract classes too), and a label-and-property index for each field a class names in `Meta(indexes=[...])` (`:Factoid(year)`) | A search of a class starts at the nodes with its label: without an index that is every node of the database. See [Structured search](structured-search.md#step-5-measured) |
 | The text index `label_text` on `PGIndexableNode(label)` | Listing and searching (`text_search.regex_search("label_text", ...)`) |
 
 **Enums** are not made: they are stored as values (see above).
