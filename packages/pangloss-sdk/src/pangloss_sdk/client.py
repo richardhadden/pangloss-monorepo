@@ -38,6 +38,8 @@ def client_arguments(settings: SdkSettings) -> dict[str, Any]:
         timeout=settings.TIMEOUT,
         verify=settings.VERIFY_TLS,
         limits=httpx.Limits(max_connections=settings.MAX_CONNECTIONS),
+        # (editing an item of a subclass at its parent's route is answered with a redirect to its own)
+        follow_redirects=True,
     )
 
 

@@ -102,10 +102,10 @@ For every Document and Entity of the project that is not abstract, `NAME` being 
 | Endpoint | Login | |
 |----------|-------|--|
 | `GET /api/NAME` | no | A page of a list. Parameters: `q` (searches the labels), `deep` (search more), `page`, `page_size` (up to 500). Includes the subtypes of `NAME`. Returns `results` (summaries), `count`, `page`, `page_size`, `next_page`, `previous_page` |
-| `GET /api/NAME/{id}` | no | The `HeadView`; 404 if there is none, or it has been deleted. For an entity, `{id}` can be one of its URLs (see below) |
+| `GET /api/NAME/{id}` | no | The `HeadView`; 404 if there is none, or it has been deleted. For an entity, `{id}` can be one of its URLs (see below). **If the item is a subclass of `NAME`, this is the view of that subclass** (its `type` says which) and the header `Content-Location` is its own route (`/api/Sub/{id}`) |
 | `POST /api/NAME` | yes | Create, with the body of `NAME.Create`. Returns 201 and a summary (`ReferenceView`), or with `?detail=true` the whole `HeadView` |
-| `GET /api/NAME/{id}/edit` | yes | What to edit: for an entity its `EditView` (no incoming relations), for a document its `HeadView` |
-| `PUT /api/NAME/{id}` | yes | Update, with the body of `NAME.Update`: a full replacement, which what `/edit` returns can be sent back as. The `id` in the body must be the one in the path (400), and the header `If-Match` says which version it is based on (see below). Returns a summary, or with `?detail=true` the `HeadView` |
+| `GET /api/NAME/{id}/edit` | yes | What to edit: for an entity its `EditView` (no incoming relations), for a document its `HeadView`. For an item that is a subclass of `NAME`: **`308` to `/api/Sub/{id}/edit`**, as the edit view and the body of an update are the subclass's |
+| `PUT /api/NAME/{id}` | yes | Update, with the body of `NAME.Update`: a full replacement, which what `/edit` returns can be sent back as. The `id` in the body must be the one in the path (400); the item must be a `NAME` and not a subclass of it (409, naming the route to use); and the header `If-Match` says which version it is based on (see below). Returns a summary, or with `?detail=true` the `HeadView` |
 | `DELETE /api/NAME/{id}` | yes | Delete. 204 |
 | `POST /api/NAME/{id}/undelete` | yes | Undelete. 204 |
 

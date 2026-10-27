@@ -5,7 +5,9 @@ from typing import Any
 
 def unwrap_single_item_lists(cls: Any, data: Any) -> Any:
     """Single relations and embedded objects come back from the database as lists of
-    one: take the item out"""
+    one: take the item out. (Anything but a dict is a model already: left as it is.)"""
+    if not isinstance(data, dict):
+        return data
     for k, v in data.items():
         if not isinstance(v, list):
             continue

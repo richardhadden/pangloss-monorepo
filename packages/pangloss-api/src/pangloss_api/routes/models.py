@@ -39,6 +39,7 @@ from fastapi import (
     Response,
     status,
 )
+from fastapi.responses import RedirectResponse
 from pangloss_models.exceptions import PanglossInitialisationError
 from pangloss_models.model_bases.base_models import _ListItems
 from pangloss_models.model_bases.document import Document
@@ -208,6 +209,11 @@ def build_router(model: type[Document | Entity]) -> APIRouter:
     update_model = model.Update
     edit_response = model.EditView if is_entity else head_view  # type: ignore[attr-defined]
     protection = protection_of(model)
+    # A read by a class gives a node of a subclass as that subclass: its view is of the subclass
+    # (`type` says which), it is edited at the subclass's route, and it cannot be updated as this class
+    has_subclasses = bool(get_concrete_types(model, include_abstract=True) - {model})
+    head_views = [t.HeadView for t in get_concrete_types(model)]  # type: ignore[attr-defined]
+    get_response = Union[*head_views] if len(head_views) > 1 else head_view  # type: ignore[valid-type]
 
     # The entity in a path is its id, or, to get it, one of its URLs (which has slashes
     # in it, so the path continues to the end, or to `/edit` or `/undelete`: those
@@ -269,6 +275,12 @@ def build_router(model: type[Document | Entity]) -> APIRouter:
         found = await called(read(id))
         if found is None:
             raise not_found(model, id)
+        if found.type != name:
+            # (a subclass: its edit view, and the body of its update, are its own)
+            return RedirectResponse(
+                f"/api/{found.type}/{found.id}/edit",
+                status_code=status.HTTP_308_PERMANENT_REDIRECT,
+            )
         response.headers["ETag"] = etag(found.meta.version)
         return found
 
@@ -282,11 +294,15 @@ def build_router(model: type[Document | Entity]) -> APIRouter:
         await called(model.undelete(id))  # type: ignore[attr-defined]
         return Response(status_code=status.HTTP_204_NO_CONTENT)
 
-    @router.get(item, response_model=head_view, operation_id=f"get_{name}")
-    async def get_item(id: ItemId):  # type: ignore[valid-type]
+    @router.get(item, response_model=get_response, operation_id=f"get_{name}")
+    async def get_item(id: ItemId, response: Response):  # type: ignore[valid-type]
+        """The item, as the class it is: for a class that has subclasses, the view of the subclass (its
+        `type` says which; `Content-Location` is where it is edited)."""
         found = await called(model.get(id))  # type: ignore[arg-type]
         if found is None:
             raise not_found(model, id)
+        if found.type != name:
+            response.headers["Content-Location"] = f"/api/{found.type}/{found.id}"
         return found
 
     @router.put(
@@ -318,12 +334,19 @@ def build_router(model: type[Document | Entity]) -> APIRouter:
                 detail="The id in the body is not the id in the path",
             )
         based_on = expected_version(if_match)
-        if protection.read_only:
+        if protection.read_only or has_subclasses:
             read = model.get_for_edit if is_entity else model.get  # type: ignore[attr-defined]
             stored = await called(read(id))
             if stored is None:
                 raise not_found(model, id)
-            refuse_if_protected(changed_fields(model, body, stored))
+            if has_subclasses and stored.type != name:
+                raise HTTPException(
+                    status.HTTP_409_CONFLICT,
+                    detail=f"This is a {stored.type}, not a {name}: update it at "
+                    f"/api/{stored.type}/{id}, with a {stored.type}",
+                )
+            if protection.read_only:
+                refuse_if_protected(changed_fields(model, body, stored))
         updated = await called(
             body.save(detail=detail, expected_version=based_on)  # type: ignore[attr-defined]
         )
@@ -345,7 +368,9 @@ def build_router(model: type[Document | Entity]) -> APIRouter:
     async def delete_item(id: ChangeId):  # type: ignore[valid-type]
         if protection.delete_only_if:
             found = await called(model.get(id))  # type: ignore[arg-type]
-            if found is not None and not getattr(found, protection.delete_only_if, False):
+            if found is not None and not getattr(
+                found, protection.delete_only_if, False
+            ):
                 raise HTTPException(
                     status.HTTP_403_FORBIDDEN,
                     detail=f"A {name} is kept in step with something outside Pangloss, so it cannot be "

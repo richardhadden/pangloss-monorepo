@@ -136,12 +136,23 @@ def get(cls: type, id: Any) -> Call:
     return Call("GET", item_path(cls, id))
 
 
+def class_of_answer(cls: type, payload: Any) -> type:
+    """The class the server says an item is (its `type`), if that is a subclass of `cls`: a read by a
+    class gives an item of a subclass as that subclass"""
+    from pangloss_models.model_registry import ModelRegistry
+
+    named = payload.get("type") if isinstance(payload, dict) else None
+    found = ModelRegistry._model_dict.get(named) if named else None
+    return found if found is not None and issubclass(found, cls) else cls
+
+
 def got(cls: type, response: Any) -> Any:
-    """`cls.HeadView`, or None if there is no such item"""
+    """`cls.HeadView` (or that of the subclass the item is), or None if there is no such item"""
     if response.status_code == 404:
         return None
     check(response)
-    return cls.HeadView.model_validate(response.json())  # type: ignore[attr-defined]
+    payload = response.json()
+    return class_of_answer(cls, payload).HeadView.model_validate(payload)  # type: ignore[attr-defined]
 
 
 def get_for_edit(cls: type, id: Any) -> Call:
@@ -152,7 +163,8 @@ def got_for_edit(cls: type, response: Any) -> Any:
     if response.status_code == 404:
         return None
     check(response)
-    return cls.EditView.model_validate(response.json())  # type: ignore[attr-defined]
+    payload = response.json()
+    return class_of_answer(cls, payload).EditView.model_validate(payload)  # type: ignore[attr-defined]
 
 
 def list_items(

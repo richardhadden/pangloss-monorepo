@@ -76,7 +76,7 @@ def test_an_update_may_not_change_a_protected_field_but_may_change_the_rest(
     ).ModelRegistry.all_models()["Source"]
 
     async def get_for_edit(cls, id):
-        return SimpleNamespace(citation="Smith 1999", meta=SimpleNamespace(version=1))
+        return SimpleNamespace(type="Source", citation="Smith 1999", meta=SimpleNamespace(version=1))
 
     async def save(self, detail=False, expected_version=None):
         saved.append(self.notes)

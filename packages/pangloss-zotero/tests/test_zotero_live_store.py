@@ -212,9 +212,12 @@ async def test_a_class_with_a_required_field_the_sync_cannot_give_is_explained(l
 
     initialise()
     await ensure_sync_user(SYNC)
-    with acting_as(SYNC), pytest.raises(
-        ZoteroModelError,
-        match="Strict cannot be made from a Zotero item: must_have is required",
+    with (
+        acting_as(SYNC),
+        pytest.raises(
+            ZoteroModelError,
+            match="Strict cannot be made from a Zotero item: must_have is required",
+        ),
     ):
         await ModelStore().create(
             "Strict", stamp(convert(make_item("AAAA"), LIBRARY), NOW)

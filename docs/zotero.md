@@ -171,11 +171,10 @@ Zotero asks for: `Zotero-API-Key` and `Zotero-API-Version: 3`; waiting for `Retr
 `Backoff`; and `If-Modified-Since-Version`. The client does all of it (up to 5 attempts; a wrong key, 401 or 403, is not
 tried again); a refused key is `ZoteroAuthError`.
 
-**Finding a node by its URL.** `Model.get(url)` on a class reads a node of a *subclass* as that class and fails
-(`type` is a `Literal` of the class), so `TextObject.get` cannot read an `Atlas`. The store therefore asks the most
-specific class first. A deleted node is not found by `get`; it is found by trying `undelete`, which is also what is
-wanted. *Found, not fixed:* the API's route for a parent class would meet the same error (`get` raises) for a subclass
-node; that route was not run (see Open questions).
+**Finding a node by its URL.** `Model.get(url)` on a class gives a node of a subclass as that subclass (this was
+not so at first: it raised, and was fixed with this package: see [Defining models](models.md)), so the store asks only
+the concrete classes that have no concrete parent. A deleted node is not found by `get`; it is found by trying
+`undelete`, which is also what is wanted.
 
 ### Linking a text object made by hand
 
@@ -252,11 +251,8 @@ by hand beside the server's is safe, as writes are against the version read (the
 
 ## Open questions
 
-1. **Reading a subclass through its parent** (found above): `Model.get` on a parent class fails for a subclass node. The
-   store works round it; `GET /api/TextObject/{id}` for an `Atlas` was not tried, and would raise the same way. Is
-   that a limit of the models in general (it is not specific to Zotero), to be fixed there?
-2. **A real library**: the API calls and the stream are as remembered. Zotero's terms of use for the stream and the rate
+1. **A real library**: the API calls and the stream are as remembered. Zotero's terms of use for the stream and the rate
    were not read.
-3. **Several libraries with different classes**: the table is global, so a type is one class in all of them.
-4. **Who can see what**: a private group's items are visible to anyone who can read the API (reads need no login). That
+2. **Several libraries with different classes**: the table is global, so a type is one class in all of them.
+3. **Who can see what**: a private group's items are visible to anyone who can read the API (reads need no login). That
    is for the project, and is the [access control](../TODO.md) question.

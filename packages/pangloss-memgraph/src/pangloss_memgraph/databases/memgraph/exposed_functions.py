@@ -29,6 +29,7 @@ from pangloss_models.model_bases.entity import (
     _EntityUpdateBase,
     _EntityUpdateDBBase,
 )
+from pangloss_models.model_registry import ModelRegistry
 from pangloss_models.utils import get_concrete_types
 from pangloss_users import current_request_username
 from pangloss_users.models import AccessTokenRecord, UserInDB
@@ -37,6 +38,7 @@ from pydantic import AnyHttpUrl, TypeAdapter
 from pangloss_memgraph.databases.memgraph import users
 from pangloss_memgraph.databases.memgraph.build_create_query import (
     build_head_create_query,
+    convert_type_for_writing,
 )
 from pangloss_memgraph.databases.memgraph.build_list_query import (
     build_generic_list_query,
@@ -135,11 +137,35 @@ async def list_items(
     return result
 
 
+async def class_of_node[T: (Document, Entity)](
+    tx: Transaction, cls: type[T], id: UUID
+) -> type[T]:
+    """The class a node was made as, if that is a subclass of `cls`; otherwise `cls`.
+
+    A read by a class finds the nodes of its subclasses too (it matches the label), but must read them as
+    the subclass, whose fields are its own: so the node's `type` is looked up first. Not looked up for a
+    class that has no subclass."""
+    if get_concrete_types(cls, include_abstract=True) <= {cls}:
+        return cls
+    result = await tx.run(
+        "MATCH (node:PGIndexableNode {id: $id}) WHERE $type IN labels(node) RETURN node.type AS type",
+        id=convert_type_for_writing(id),
+        type=cls.__name__,
+    )
+    found = await result.value()
+    made_as = ModelRegistry._model_dict.get(found[0]) if found else None
+    if made_as is not None and issubclass(made_as, cls):
+        return made_as
+    return cls
+
+
 @Database.default.read_transaction
 async def get_document(
     tx: Transaction, cls: type[Document], id: UUID | AnyHttpUrl
-) -> _DocumentHeadViewBase:
-
+) -> _DocumentHeadViewBase | None:
+    """A head document. Of a class that has subclasses, this gives the view of the subclass the document
+    is (its `type` says which)"""
+    cls = await class_of_node(tx, cls, cast(UUID, id))
     query_string, query_params = build_fetch_document_query(cls, id)
 
     result = await tx.run(query_string, **query_params)
@@ -158,11 +184,13 @@ def tree_of(record: dict) -> dict:
 
 async def read_entity(
     tx: Transaction, cls: type[Entity], id: UUID | AnyHttpUrl, incoming: bool
-) -> dict | None:
-    """The data of an entity (with the incoming relations, if `incoming`)"""
+) -> tuple[dict, type[Entity]] | None:
+    """The data of an entity (with the incoming relations, if `incoming`), and the class it is: `cls`, or
+    the subclass it was made as"""
     resolved_id = await resolve_id(tx, id)
     if resolved_id is None:
         return None
+    cls = await class_of_node(tx, cls, resolved_id)
 
     query_string, query_params = build_fetch_document_query(cls, resolved_id)
 
@@ -175,7 +203,7 @@ async def read_entity(
     data["urls"] = sorted(records[0]["urls"])
     if incoming:
         data.update(await fetch_incoming_relations(tx, cls, resolved_id))
-    return data
+    return data, cls
 
 
 @Database.default.read_transaction
@@ -183,9 +211,13 @@ async def get_entity(
     tx: Transaction, cls: type[Entity], id: UUID | AnyHttpUrl
 ) -> _EntityHeadViewBase | None:
     """An entity, with its own values and relations, and the documents (and
-    entities) that refer to it, in the fields named after the reverse relations"""
-    data = await read_entity(tx, cls, id, incoming=True)
-    return cls.HeadView(**data) if data is not None else None
+    entities) that refer to it, in the fields named after the reverse relations. Of a class that has
+    subclasses, this gives the view of the subclass the entity is (its `type` says which)"""
+    read = await read_entity(tx, cls, id, incoming=True)
+    if read is None:
+        return None
+    data, made_as = read
+    return made_as.HeadView(**data)
 
 
 @Database.default.read_transaction
@@ -193,9 +225,13 @@ async def get_entity_for_edit(
     tx: Transaction, cls: type[Entity], id: UUID | AnyHttpUrl
 ) -> _EntityEditViewBase | None:
     """An entity as it is edited: its own values and outgoing relations, without
-    the incoming relations (which are not looked for)"""
-    data = await read_entity(tx, cls, id, incoming=False)
-    return cls.EditView(**data) if data is not None else None
+    the incoming relations (which are not looked for). As for `get_entity`, the subclass's view if the entity
+    is one"""
+    read = await read_entity(tx, cls, id, incoming=False)
+    if read is None:
+        return None
+    data, made_as = read
+    return made_as.EditView(**data)
 
 
 async def run_write_query(tx: Transaction, query: str, params: dict) -> list:

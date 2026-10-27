@@ -98,10 +98,15 @@ class ModelStore:
 
     @property
     def classes(self) -> list[type[ZoteroBacked]]:
+        """The concrete classes that have no concrete parent: a read by one gives a node of any subclass as
+        the subclass it is, so these find every item"""
         if self._classes is None:
-            # (a class before its parents: `TextObject.get` finds a node that is an `Atlas`, and then cannot
-            # read it as a `TextObject`, so the most specific class is asked first)
-            self._classes = sorted(concrete_classes(), key=lambda c: -len(c.__mro__))
+            every = concrete_classes()
+            self._classes = [
+                c
+                for c in every
+                if not any(o is not c and issubclass(c, o) for o in every)
+            ]
         return self._classes
 
     def model(self, name: str) -> type[ZoteroBacked]:

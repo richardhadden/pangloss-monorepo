@@ -49,7 +49,7 @@ Database-bound methods, available after `initialise()`:
 
 - `Statement.Create(...).save(detail=False | True)` ✅
 - `Statement.Update(id=..., ...).save(detail=False | True)` ✅ replaces the document and everything nested in it; see [Updating](memgraph.md#update_head_nodeinstance-detailfalse-)
-- `await Statement.get(id)` ✅ returns a `HeadView`, or `None` if not found
+- `await Statement.get(id)` ✅ returns a `HeadView`, or `None` if not found. **A read by a class gives an item of a subclass as that subclass**: `Statement.get(id)` of an `Activity` is an `Activity.HeadView`, whose `type` says so (and `Activity.get(id)` of a plain `Statement` is `None`). The same for `Entity.get` and `get_for_edit`. `list` includes the subclasses, as it always did
 - `await Statement.list(search_terms=None, page_number=None, page_size=None, deep_search=False)` ✅ returns paginated reference views
 - `await Statement.delete(id)` ✅ deletes a head document; see [Deleting](#deleting)
 

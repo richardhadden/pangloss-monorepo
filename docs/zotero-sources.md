@@ -203,9 +203,9 @@ it makes (the sync is the user `zotero_sync`), and any other version means a per
 
 1. **A merge of two entities** (re-point relations, URLs, history; delete the second). Needed for the duplicate
    case; wanted generally. Decide whether to build it before or after the package.
-2. **Reading a subclass through its parent.** Checked, and it fails: `Model.get` on a parent class raises for a node of a
-   subclass (the view's `type` is a `Literal` of the class). The Zotero store asks the most specific class first. The
-   same limit would hold for the API's route of a parent class. Is that to be fixed in the models?
+2. **Reading a subclass through its parent.** Was a fault (`Model.get` on a parent class raised for a node of a subclass),
+   **fixed**: it gives the subclass's view, the API's `GET /api/TextObject/{id}` answers with it (and `Content-Location`),
+   and `/edit` redirects to the subclass's route. See [Defining models](models.md).
 3. **Existing nodes with the wrong class** (the mapping changed, or the item type did): only reported for now. A
    way to change one node's class would be a new operation in the write path; wait to see how often it is wanted.
 4. **Should `Factoid.source` point at the text object or at a Zotero item?** With C these are the same, but the
