@@ -39,6 +39,13 @@ from pangloss_memgraph.databases.memgraph.build_create_query import (
 TREE_TRAVERSAL = "[*BFS (edge, node | NOT node:Entity AND NOT node:PGUrl AND NOT coalesce(edge.reverse, false))]"
 
 
+# Properties of a head node that are not part of what is written, and so are kept by an update: whether it is
+# published and its review state (see docs/review.md). Without them an update of an unpublished document
+# would publish it
+KEPT_PROPERTIES = ("published", "review_status", "reviewed_by", "reviewed_at")
+_KEPT = "{" + ", ".join(f"{name}: head.{name}" for name in KEPT_PROPERTIES) + "}"
+
+
 # The version of a head node: 1, and 1 more for each update of it
 VERSION_OF_HEAD = "size([(head)<-[:is_update_of]-(update:PGUpdate) | update]) + 1"
 
@@ -105,10 +112,11 @@ def build_replace_head_query(
         OPTIONAL MATCH ()-[owned_in]->(head)
         WHERE coalesce(owned_in.reverse, false)
         WITH head, tree, owned_out_edges,
-             collect(owned_in) AS owned_in_edges
+             collect(owned_in) AS owned_in_edges, {_KEPT} AS kept
         FOREACH (edge IN owned_out_edges + owned_in_edges | DELETE edge)
         FOREACH (node IN tree | DETACH DELETE node)
         SET {assignments.set_items("head", replace=True)}
+        SET head += kept
         {relabel}RETURN head.id AS id
         """,
         dict(params),

@@ -97,7 +97,13 @@ asked. Email or other notices.
 
 ## Build order
 
-0. Settle what the update builder does with ids of nested documents (for comments on parts).
+0. ✅ Ids of nested documents. An update deletes the tree under the head and writes it again, but a nested
+   document in the `Update` must carry its `id` (required), so a part sent back with its id **keeps it**; a new part
+   needs an id from the client; a part left out is gone. A comment's `target_id` is therefore stable as long as
+   the client sends parts back unchanged (the interface does). This turned up a defect: the update **replaced all
+   properties of the head node**, which would have published an unpublished document when it was edited, and lost
+   the review state. `KEPT_PROPERTIES` (`published`, `review_status`, `reviewed_by`, `reviewed_at`) in
+   `build_update_query.py` are now kept; tested in `test_unpublished_live.py`.
 1. ✅ Core: `published` in the read, list and search builders with `$see_unpublished`, the API dependency, and `test_unpublished_live.py`. (Not filtered, on purpose: autocomplete and entities, `validate_write`, deletion's "what refers to this", which must still count an unpublished document.)
 2. The package: the meta slot, the listener, the status and comment functions (Memgraph), tests.
 3. The API routes, the commands, the guide page, settings (`REVIEW_ALLOW_SELF_REVIEW`).

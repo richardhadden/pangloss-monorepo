@@ -151,3 +151,52 @@ async def test_the_api_shows_them_to_users_who_are_logged_in(clear_database, db_
             "/api/search", json={"type": "Note", "where": {}}, headers=john
         )
         assert search.status_code == 200
+
+
+@no_type_check
+async def test_an_update_keeps_published_and_the_review_state_and_ids_of_parts(
+    clear_database, db_driver
+):
+    from uuid import uuid7
+
+    Person, Note, Letter = models()
+    john = await Person.Create(label="John").save()
+    saved = await Letter.Create(
+        label="L",
+        title="t",
+        sender=Person.ReferenceSet(id=john.id),
+        notes=[Note.Create(label="n", text="a")],
+    ).save()
+    db_driver.execute_query(
+        "MATCH (n:HeadNode {id: $id}) SET n.published = false, n.review_status = 'errors_found'",
+        parameters_={"id": str(saved.id)},
+        database=MEMGRAPH_DATABASE,
+    )
+    note = (await Letter.get(id=saved.id)).notes[0]
+
+    await Letter.Update(
+        id=saved.id,
+        label="L",
+        title="changed",
+        sender=Person.ReferenceSet(id=john.id),
+        notes=[
+            Note.Update(id=note.id, label="n", text="b"),
+            Note.Update(id=uuid7(), label="m", text="c"),
+        ],
+    ).save()
+
+    record = db_driver.execute_query(
+        "MATCH (n:HeadNode {id: $id}) RETURN n.published AS published, n.review_status AS status",
+        parameters_={"id": str(saved.id)},
+        database=MEMGRAPH_DATABASE,
+    ).records[0]
+    assert (record["published"], record["status"]) == (False, "errors_found")
+    # (still hidden from those who may not see it)
+    token = see_unpublished.set(False)
+    try:
+        assert await Letter.get(id=saved.id) is None
+    finally:
+        see_unpublished.reset(token)
+    # a part that is sent back with its id keeps it
+    parts = {n.label: n for n in (await Letter.get(id=saved.id)).notes}
+    assert parts["n"].id == note.id and parts["n"].text == "b"
