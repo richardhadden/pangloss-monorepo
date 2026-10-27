@@ -58,7 +58,7 @@ logged_in = [Depends(get_current_user)]
 
 
 # What else is at `/api/...` or in the root of the app
-RESERVED_NAMES = {"users", "autocomplete", "sdk", "docs", "redoc", "openapi.json"}
+RESERVED_NAMES = {"users", "autocomplete", "search", "sdk", "docs", "redoc", "openapi.json"}
 
 
 def check_name_is_free(name: str) -> None:

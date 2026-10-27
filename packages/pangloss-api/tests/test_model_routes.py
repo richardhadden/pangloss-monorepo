@@ -98,7 +98,7 @@ def test_no_models_no_model_routes(settings):
     from fastapi.testclient import TestClient
 
     paths = set(TestClient(create_app()).get("/openapi.json").json()["paths"])
-    assert all(path.startswith(("/api/users", "/api/autocomplete")) for path in paths)
+    assert all(path.startswith(("/api/users", "/api/autocomplete", "/api/search")) for path in paths)
 
 
 # ---------------------------------------------------------------------------

@@ -196,6 +196,21 @@ def listed(cls: type, response: Any) -> Any:
     return _ListItems.model_validate({**data, "results": results})
 
 
+def search(
+    match: Any, page_number: int | None = None, page_size: int | None = None
+) -> Call:
+    body = match.model_dump(by_alias=True, exclude_unset=True, mode="json")
+    if page_number is not None:
+        body["page"] = page_number
+    if page_size is not None:
+        body["page_size"] = page_size
+    return Call("POST", "/api/search", json=body)
+
+
+def searched(cls: type, response: Any) -> Any:
+    return listed(cls, response)
+
+
 def autocomplete(
     search_terms: str,
     types: list[type],

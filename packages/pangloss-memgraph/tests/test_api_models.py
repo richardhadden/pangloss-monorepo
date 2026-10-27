@@ -771,3 +771,64 @@ async def test_autocomplete_over_http_with_the_data_in_memgraph(
                 "/api/autocomplete", params={"q": "smi", "type": ["Agent"]}
             )
         ).json()["count"] == 1
+
+
+async def test_search_over_http_with_the_data_in_memgraph(db_driver, clear_database):
+    class Person(Entity):
+        pass
+
+    class Letter(Document):
+        title: str
+        pages: int
+        sender: Person
+
+    app = create_app()
+    async with client_for(app) as client:
+        john = await logged_in(client)
+        made = await client.post(
+            "/api/Person", json={"type": "Person", "label": "John"}, headers=john
+        )
+        person_id = made.json()["id"]
+        for title, pages in (("Plague", 3), ("Wedding", 10)):
+            created = await client.post(
+                "/api/Letter",
+                json={
+                    "type": "Letter",
+                    "label": title,
+                    "title": title,
+                    "pages": pages,
+                    "sender": {"type": "Person", "id": person_id},
+                },
+                headers=john,
+            )
+            assert created.status_code == 201, created.text
+
+        found = await client.post(
+            "/api/search",
+            json={
+                "type": "Letter",
+                "where": {"pages": {"gt": 5}, "sender": {"is": person_id}},
+            },
+        )
+
+        assert found.status_code == 200, found.text
+        body = found.json()
+        assert body["count"] == 1
+        assert [(i["type"], i["label"]) for i in body["results"]] == [
+            ("Letter", "Wedding")
+        ]
+        nested = await client.post(
+            "/api/search",
+            json={
+                "type": "Letter",
+                "where": {
+                    "sender": {"where": {"label": {"contains": "joh"}}},
+                    "$not": {"title": {"eq": "Plague"}},
+                },
+            },
+        )
+        assert [i["label"] for i in nested.json()["results"]] == ["Wedding"]
+        refused = await client.post(
+            "/api/search", json={"type": "Letter", "where": {"pages": {"contains": 1}}}
+        )
+        assert refused.status_code == 422 and "pages.contains" in refused.text

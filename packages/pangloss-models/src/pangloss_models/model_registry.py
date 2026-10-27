@@ -414,6 +414,8 @@ class ModelRegistry:
         Document.list = classmethod(exposed_functions.list_items)  # type: ignore
         Entity.list = classmethod(exposed_functions.list_items)  # type: ignore
         Entity.autocomplete = classmethod(exposed_functions.autocomplete)  # type: ignore
+        Document.search = classmethod(exposed_functions.search)  # type: ignore
+        Entity.search = classmethod(exposed_functions.search)  # type: ignore
 
         _DocumentCreateBase.save = exposed_functions.create_head_node
         _EntityCreateBase.save = exposed_functions.create_head_node

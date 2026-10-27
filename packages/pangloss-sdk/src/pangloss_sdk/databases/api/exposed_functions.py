@@ -9,6 +9,7 @@ from typing import Any
 from uuid import UUID
 
 from pangloss_models.autocomplete import AutocompleteResults
+from pangloss_models.search import Match
 from pangloss_models.model_bases.base_models import _ListItems
 from pangloss_models.model_bases.document import Document
 from pangloss_models.model_bases.entity import Entity
@@ -39,6 +40,20 @@ async def list_items(
 ) -> _ListItems:
     call = protocol.list_items(cls, search_terms, page_number, page_size, deep_search)
     return protocol.listed(cls, await current_async_client().send(call))
+
+
+async def search(
+    cls: type[Document | Entity],
+    match: Match,
+    page_number: int | None = None,
+    page_size: int | None = None,
+) -> _ListItems:
+    call = protocol.search(
+        match if match.type else match.model_copy(update={"type": cls.__name__}),
+        page_number,
+        page_size,
+    )
+    return protocol.searched(cls, await current_async_client().send(call))
 
 
 async def autocomplete(

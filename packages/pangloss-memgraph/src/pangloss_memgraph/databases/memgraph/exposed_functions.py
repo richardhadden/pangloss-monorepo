@@ -14,6 +14,7 @@ from pangloss_models.exceptions import (
     PanglossVersionConflictError,
     PanglossWriteError,
 )
+from pangloss_models.search import Match, check_match
 from pangloss_models.hooks import WriteEvent, emit_write_event
 from pangloss_models.model_bases.base_models import _ListItems
 from pangloss_models.model_bases.document import (
@@ -48,6 +49,7 @@ from pangloss_memgraph.databases.memgraph.build_create_query import (
     build_head_create_query,
     convert_type_for_writing,
 )
+from pangloss_memgraph.databases.memgraph.build_search_query import build_search_query
 from pangloss_memgraph.databases.memgraph.build_list_query import (
     build_generic_list_query,
 )
@@ -143,6 +145,30 @@ async def list_items(
     result = _ListItems(**results)
 
     return result
+
+
+@Database.default.read_transaction
+async def search(
+    tx: Transaction,
+    cls: type[Document | Entity],
+    match: Match,
+    page_number: int | None = None,
+    page_size: int | None = None,
+) -> _ListItems[_DocumentReferenceViewBase | _EntityReferenceViewBase]:
+    """The head documents (or entities) of the class, and its subclasses, that fit the pattern, as a page of
+    reference views, like `list_items`. A pattern that cannot be made raises `PanglossSearchError`."""
+    conditions = check_match(cls, match)
+    query, params = build_search_query(
+        cls, conditions, page_number or 1, page_size or 25
+    )
+    result = await tx.run(query, **params)
+    rows = await result.value()
+    found: dict = rows[0] if rows else await empty_page(tx, query, params)
+
+    concrete_ref_types = [t.ReferenceView for t in get_concrete_types(cls)]
+    adapter = TypeAdapter(list[Union[*concrete_ref_types]])  # type: ignore
+    found["results"] = adapter.validate_python(found["results"])
+    return _ListItems(**found)
 
 
 @Database.default.read_transaction

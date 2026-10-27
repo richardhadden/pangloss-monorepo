@@ -328,9 +328,13 @@ def test_limiting_can_be_turned_off(client, settings):
 
 
 def test_guesses_at_many_usernames_do_not_grow_the_record_without_end(monkeypatch):
+    from collections import defaultdict, deque
+
     from pangloss_api import throttle
 
     monkeypatch.setattr(throttle, "MAX_USERNAMES", 3)
+    # (the record is shared by every test of the process: start from an empty one)
+    monkeypatch.setattr(throttle, "FAILURES", defaultdict(deque))
     now = [1000.0]
     monkeypatch.setattr(throttle.time, "monotonic", lambda: now[0])
     for name in ("a", "b", "c"):

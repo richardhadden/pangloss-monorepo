@@ -123,3 +123,8 @@ class PanglossServerOnly(Exception):
 
 class PanglossUnknownTypeError(Exception):
     """A type named in a search is not a model that can be searched"""
+
+
+class PanglossSearchError(Exception):
+    """A structured search that cannot be made: a field that does not exist, an operator that does not
+    fit the field, a value of the wrong type, or something not supported yet"""
