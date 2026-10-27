@@ -15,7 +15,6 @@ from pangloss_models.exceptions import (
     PanglossVersionConflictError,
     PanglossWriteError,
 )
-from pangloss_models.search import Match, check_match, check_order
 from pangloss_models.hooks import WriteEvent, emit_write_event
 from pangloss_models.model_bases.base_models import _ListItems
 from pangloss_models.model_bases.document import (
@@ -37,12 +36,13 @@ from pangloss_models.model_bases.entity import (
     _EntityUpdateDBBase,
 )
 from pangloss_models.model_registry import ModelRegistry
+from pangloss_models.search import Match, check_match, check_order
 from pangloss_models.utils import get_concrete_types
 from pangloss_users import current_request_username
 from pangloss_users.models import AccessTokenRecord, UserInDB
 from pydantic import AnyHttpUrl, TypeAdapter
 
-from pangloss_memgraph.databases.memgraph import users
+from pangloss_memgraph.databases.memgraph import review, users
 from pangloss_memgraph.databases.memgraph.build_autocomplete_query import (
     AUTOCOMPLETE_QUERY,
 )
@@ -50,13 +50,13 @@ from pangloss_memgraph.databases.memgraph.build_create_query import (
     build_head_create_query,
     convert_type_for_writing,
 )
-from pangloss_memgraph.databases.memgraph.build_search_query import build_search_query
 from pangloss_memgraph.databases.memgraph.build_list_query import (
     build_generic_list_query,
 )
 from pangloss_memgraph.databases.memgraph.build_read_query import (
     build_fetch_document_query,
 )
+from pangloss_memgraph.databases.memgraph.build_search_query import build_search_query
 from pangloss_memgraph.databases.memgraph.build_tree import build_tree
 from pangloss_memgraph.databases.memgraph.build_update_query import (
     build_head_update_query,
@@ -658,3 +658,46 @@ async def touch_access_token_in_db(
     tx: Transaction, id: str, when: datetime.datetime
 ) -> None:
     await users.touch_access_token(tx, id, when)
+
+
+# Review (`pangloss-review`)
+
+
+@Database.default.read_transaction
+async def get_review_state_in_db(tx: Transaction, id: UUID) -> dict[str, Any] | None:
+    return await review.get_review_state(tx, id)
+
+
+@Database.default.write_transaction
+async def set_review_status_in_db(
+    tx: Transaction, id: UUID, status: str, published: bool, user: str
+) -> dict[str, Any] | None:
+    return await review.set_review_status(tx, id, status, published, user)
+
+
+@Database.default.write_transaction
+async def add_review_comment_in_db(
+    tx: Transaction, id: UUID, username: str, text: str, target_id: UUID | None
+) -> dict[str, Any] | str | None:
+    return await review.add_review_comment(tx, id, username, text, target_id)
+
+
+@Database.default.read_transaction
+async def list_review_comments_in_db(
+    tx: Transaction, id: UUID, include_resolved: bool
+) -> list[dict[str, Any]]:
+    return await review.list_review_comments(tx, id, include_resolved)
+
+
+@Database.default.write_transaction
+async def resolve_review_comment_in_db(
+    tx: Transaction, id: UUID, comment_id: UUID, user: str
+) -> dict[str, Any] | None:
+    return await review.resolve_review_comment(tx, id, comment_id, user)
+
+
+@Database.default.read_transaction
+async def review_queue_in_db(
+    tx: Transaction, statuses: list[str], type: str | None, page: int, page_size: int
+) -> dict[str, Any]:
+    return await review.review_queue(tx, statuses, type, page, page_size)

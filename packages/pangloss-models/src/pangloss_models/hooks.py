@@ -72,6 +72,24 @@ def emit_write_event(event: WriteEvent) -> None:
             )
 
 
+# Properties for a new head node, which an installed app adds (`pangloss-review` writes `published: false` for
+# a document that is to be reviewed). Each function is given the class (a `Document` or `Entity` subclass) and
+# gives a dict, which may be empty. They are written with the node, in the same transaction as the creation, so
+# there is no moment when the node is there without them. An update does not call them (it keeps the
+# properties the node has: see `KEPT_PROPERTIES` of the Memgraph backend).
+type HeadPropertiesFor = Callable[[type], dict[str, Any]]
+
+new_head_properties: list[HeadPropertiesFor] = []
+
+
+def properties_for_new_head(model: type) -> dict[str, Any]:
+    """What the installed apps want written on a new head node of the class"""
+    properties: dict[str, Any] = {}
+    for function in new_head_properties:
+        properties.update(function(model))
+    return properties
+
+
 # What the database returns, made into what the models read.
 #
 # A database returns its own types (Memgraph's driver, `neo4j.time.DateTime`). The models do

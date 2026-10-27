@@ -325,6 +325,16 @@ class _APIHeadMeta(_BaseObject):
     # 1 when made, and 1 more for each update: an update can say which version it
     # was based on, and is refused if that is no longer the latest
     version: int = 1
+    # False for a document that has not been published (seen only by those who are logged in), and
+    # `review_status` (`unchecked`, `errors_found` or `checked`) if `pangloss-review` keeps one. Read only: an
+    # update neither takes nor changes them
+    published: bool = True
+    review_status: str | None = None
+
+    @field_validator("published", mode="before")
+    @classmethod
+    def no_published_is_true(cls, v):
+        return True if v is None else v
 
     @field_validator("semantic_spaces", mode="before")
     @classmethod

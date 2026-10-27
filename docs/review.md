@@ -1,6 +1,6 @@
 # Review: checking documents before they are published ⏳
 
-**Status: step 1 (the core `published` flag) is built and tested, uncommitted; the package is not started.** The package is `pangloss-review` (`INSTALLED_APPS = ["pangloss_review"]`). The
+**Status: built and tested (uncommitted until asked): the `published` flag, the package, the API routes, the commands, the guide ([guide/review](../guide/review/README.md)).** The package is `pangloss-review` (`INSTALLED_APPS = ["pangloss_review"]`). The
 decisions marked **(decided)** were made by the user; **(open)** ones are still to settle; the rest follow from how
 `deleted`, meta slots and `pangloss-history` already work.
 
@@ -105,5 +105,15 @@ asked. Email or other notices.
    the review state. `KEPT_PROPERTIES` (`published`, `review_status`, `reviewed_by`, `reviewed_at`) in
    `build_update_query.py` are now kept; tested in `test_unpublished_live.py`.
 1. ✅ Core: `published` in the read, list and search builders with `$see_unpublished`, the API dependency, and `test_unpublished_live.py`. (Not filtered, on purpose: autocomplete and entities, `validate_write`, deletion's "what refers to this", which must still count an unpublished document.)
-2. The package: the meta slot, the listener, the status and comment functions (Memgraph), tests.
-3. The API routes, the commands, the guide page, settings (`REVIEW_ALLOW_SELF_REVIEW`).
+2. ✅ The package (`packages/pangloss-review`): `ReviewMeta` (slot `_review_meta`), `service` (`get_state`, `set_status`, `add_comment`, `list_comments`, `resolve_comment`, `queue`), the Memgraph side (`databases/memgraph/review.py`, `*_in_db` in `exposed_functions`), tests in `pangloss-memgraph/tests/test_review_live.py`. Two differences from the plan above: a new document is made unpublished by a **new core hook, `hooks.new_head_properties`**, called by the create query (a listener to `after_write` runs after the commit, so the document would have been visible for a moment); and the hook is installed when `pangloss_review.meta` is imported, which a model that is marked has done, so it works even if the app is not in `INSTALLED_APPS`. A document of a class that became reviewable later has no status and counts as published and checked. Documents loaded by `bulk-load` are not given the properties (they are published).
+3. ✅ (done, with the meta change below) The API routes, the commands, the guide page, settings (`REVIEW_ALLOW_SELF_REVIEW`).
+
+## Reading the state: in the `meta`, and the comments apart **(decided)**
+
+`published` (default true) and `review_status` (`null` unless review keeps one) are in `meta` of a head view, read
+by the same query as the document (`build_read_query`), so a page can show "unchecked" without another request.
+They are read only: `Create` and `Update` have no review fields, the create hook sets the state, and an update keeps
+it (`KEPT_PROPERTIES`). A document of a class that became reviewable later reads `reviewStatus: null`, though
+`GET /api/review/{id}` says `checked`. Comments are not in the view: `GET /api/review/{id}` has them. Lists do not
+carry the state yet (the queue does); add it to the reference view's meta if the interface needs a badge in lists.
+`publish-all` was dropped from the plan: a document with no status counts as published already.

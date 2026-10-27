@@ -71,6 +71,10 @@ Lets Pangloss models be used locally and read and write a remote Pangloss instan
 - `SdkSettings`, login (settings, prompt, tokens kept in memory, or a kept refresh token: `pangloss-sdk login|logout|status`), `pangloss-sdk update` (installs the SDK the server has now, the way it was installed before), `pangloss-sdk sync-stubs` (type stubs for the blocking SDK), the errors the server's database module raises, and `iterate`.
 - The model tests use `databases/api` as a database module because it needs no live connection.
 
+## pangloss-review 🚧
+
+Optional: documents of the models marked `_review_meta = ReviewMeta(reviewable=True)` are written unpublished, and checked by a user (`unchecked`, `errors_found`, `checked` = published), with comments on the document or a part of it. The core part is the `published` property, which hides a document from requests that are not logged in (like `deleted`). Service and storage are built; API routes and commands are not. See [Review](review.md).
+
 ## pangloss-users 🚧
 
 Users and their passwords. See [Users](users.md).

@@ -13,6 +13,7 @@ members = [
     "pangloss-interface",
     "pangloss-memgraph",
     "pangloss-models",
+    "pangloss-review",
     "pangloss-sdk",
     "pangloss-sdk-server",
     "pangloss-users",
@@ -906,6 +907,41 @@ dev = [
     { name = "pytest", specifier = ">=9.0.3" },
     { name = "pytest-xdist", specifier = ">=3.8.0" },
     { name = "python-lsp-server", specifier = ">=1.14.0" },
+]
+
+[[package]]
+name = "pangloss-review"
+version = "0.1.0"
+source = { editable = "packages/pangloss-review" }
+dependencies = [
+    { name = "fastapi" },
+    { name = "pangloss-api" },
+    { name = "pangloss-core" },
+    { name = "pangloss-models" },
+    { name = "pangloss-users" },
+    { name = "typer" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "pangloss-memgraph" },
+    { name = "pytest-asyncio" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "fastapi", specifier = ">=0.115" },
+    { name = "pangloss-api", editable = "packages/pangloss-api" },
+    { name = "pangloss-core", editable = "packages/pangloss-core" },
+    { name = "pangloss-models", editable = "packages/pangloss-models" },
+    { name = "pangloss-users", editable = "packages/pangloss-users" },
+    { name = "typer", specifier = ">=0.12" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "pangloss-memgraph", editable = "packages/pangloss-memgraph" },
+    { name = "pytest-asyncio", specifier = ">=1.4.0" },
 ]
 
 [[package]]

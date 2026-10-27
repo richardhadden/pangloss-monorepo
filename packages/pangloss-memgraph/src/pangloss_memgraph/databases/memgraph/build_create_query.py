@@ -8,6 +8,7 @@ from decimal import Decimal
 from enum import Enum
 from typing import Any
 
+from pangloss_models import hooks
 from pangloss_models.field_definitions import (
     FieldSubclassing,
     RelationOption,
@@ -748,6 +749,10 @@ def build_head_create_query(
     # Transform literal fields into a writeable dict
     node_data_dict = get_node_fields_as_writable_dict(
         instance, is_new=True, is_head_node=True
+    )
+    # what installed apps want on a new head node (such as `published: false`)
+    node_data_dict.update(
+        hooks.properties_for_new_head(instance._owner)
     )
 
     # Add the properties to the query params
