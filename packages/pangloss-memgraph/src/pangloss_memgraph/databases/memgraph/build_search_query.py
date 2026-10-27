@@ -56,6 +56,8 @@ class Compiler:
     def condition(self, c: CheckedCondition, var: str) -> str:
         # (`ne` includes what has no value: "not draft" is what it means)
         prop = f"{var}.`{c.field}`"
+        if c.field == "published":  # (a document with no property is published)
+            prop = f"coalesce({prop}, true)"
         if c.kind == "relation":
             return self.relation(c, var)
         if c.kind == "somewhere":

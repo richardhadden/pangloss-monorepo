@@ -365,3 +365,60 @@ async def test_lists_and_searches_carry_the_state_and_can_be_filtered(
         assert (await client.get("/api/Letter?published=false")).json()["count"] == 0
         anyone = (await client.get("/api/Letter")).json()
         assert [r["label"] for r in anyone["results"]] == ["Right"]
+
+
+@no_type_check
+async def test_structured_search_by_published_and_review_status(
+    clear_database, db_driver
+):
+    from pangloss_models.search import Match
+
+    _, Letter, Memo, _ = models()
+    await Letter.Create(label="Waiting", title="t", notes=[]).save()
+    wrong = await Letter.Create(label="Wrong", title="t", notes=[]).save()
+    right = await Letter.Create(label="Right", title="t", notes=[]).save()
+    await Memo.Create(label="Memo", title="t").save()
+    await service.set_status(wrong.id, ReviewStatus.ERRORS_FOUND, "bob")
+    await service.set_status(right.id, ReviewStatus.CHECKED, "bob")
+
+    async def find(model, **where):
+        found = await model.search(Match(where=where))
+        return sorted(i.label for i in found.results)
+
+    assert await find(Letter, published={"eq": False}) == ["Waiting", "Wrong"]
+    assert await find(Letter, published={"eq": True}) == ["Right"]
+    assert await find(Letter, published={"ne": True}) == ["Waiting", "Wrong"]
+    assert await find(Letter, review_status={"eq": "errors_found"}) == ["Wrong"]
+    assert await find(Letter, review_status={"in": ["unchecked", "checked"]}) == [
+        "Right",
+        "Waiting",
+    ]
+    assert await find(Letter, review_status={"exists": True}) == [
+        "Right",
+        "Waiting",
+        "Wrong",
+    ]
+    # (a document of a class that is not reviewed is published, and has no status)
+    assert await find(Memo, published={"eq": True}) == ["Memo"]
+    assert await find(Memo, review_status={"exists": True}) == []
+    assert await find(
+        Letter,
+        **{
+            "$any_of": [
+                {"review_status": {"eq": "checked"}},
+                {"label": {"eq": "Wrong"}},
+            ]
+        },
+    ) == ["Right", "Wrong"]
+    assert await find(Letter, **{"$not": {"published": {"eq": True}}}) == [
+        "Waiting",
+        "Wrong",
+    ]
+
+    # (not logged in: what is not published is not there, whatever is asked)
+    token = see_unpublished.set(False)
+    try:
+        assert await find(Letter, published={"eq": False}) == []
+        assert await find(Letter) == ["Right"]
+    finally:
+        see_unpublished.reset(token)

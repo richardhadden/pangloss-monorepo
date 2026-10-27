@@ -254,7 +254,7 @@ class CheckedPattern:
     """What a relation has to point at: a node of this class (or a subclass) fitting all of `items`"""
 
     model: type
-    items: "list[Expr]"
+    items: list[Expr]
 
 
 @dataclass(frozen=True)
@@ -269,14 +269,14 @@ class CheckedIncoming:
 class AnyOf:
     """At least one of the branches holds (each branch is a list of expressions that all have to)"""
 
-    branches: "list[list[Expr]]"
+    branches: list[list[Expr]]
 
 
 @dataclass(frozen=True)
 class Not:
     """The expressions do not all hold"""
 
-    items: "list[Expr]"
+    items: list[Expr]
 
 
 type Expr = CheckedCondition | AnyOf | Not
@@ -293,6 +293,14 @@ OPERATORS: dict[str, set[str]] = {
     "spaces": set(),
     "somewhere": set(),
     "incoming": set(),
+}
+
+
+# What a head document has that is not one of its fields, and can be searched: whether it is published (a
+# document with no property is), and the status of its review (`pangloss-review`)
+HEAD_PROPERTIES: dict[str, tuple[Kind, Any]] = {
+    "published": ("simple", bool),
+    "review_status": ("text", str),
 }
 
 
@@ -494,6 +502,14 @@ def check_where(
             name == "label"
         ):  # (every document and entity has one; it is not one of the fields)
             kind, base = "text", str
+        elif (
+            top
+            and name in HEAD_PROPERTIES
+            and name not in fields
+            and issubclass(model, Document)
+        ):
+            # (of a head document: whether it is published, and its review status; see docs/review.md)
+            kind, base = HEAD_PROPERTIES[name]
         else:
             kind, base = kind_and_base(model, name, fields.get(name), field)
         if kind == "relation":

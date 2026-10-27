@@ -526,3 +526,29 @@ def test_what_to_order_by_is_checked():
             check_order(Note, [OrderBy(field=bad)])
     with pytest.raises(ValueError):
         Match(order_by=[{"field": "label"}] * 4)
+
+
+def test_published_and_review_status_are_searched_for_a_head_document():
+    Person, Letter = models()
+    published, status = check(
+        Letter,
+        published={"eq": False},
+        review_status={"in": ["unchecked", "errors_found"]},
+    )
+    assert (published.field, published.kind, published.operator, published.value) == (
+        "published",
+        "simple",
+        "eq",
+        False,
+    )
+    assert (status.kind, status.value) == ("text", ["unchecked", "errors_found"])
+
+    # (not for an entity, and not for what a relation points at: they have no such property)
+    with pytest.raises(PanglossSearchError, match="published"):
+        check_match(
+            Person, Match.model_validate({"where": {"published": {"eq": True}}})
+        )
+    with pytest.raises(PanglossSearchError, match="published_on"):
+        check(Letter, published_on={"eq": 1})
+    with pytest.raises(PanglossSearchError, match="published"):
+        check(Letter, published={"eq": "yes"})

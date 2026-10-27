@@ -35,6 +35,7 @@ they are saved, so installing the package changes nothing until you mark models.
 The state is in the `meta` of a document that is read: `published` and `reviewStatus` (`null` for a model that is
 not reviewed); a list and a search carry them too, in each item's `meta`, and a list can be filtered:
 `GET /api/Letter?published=false&review_status=unchecked` (in Python, `Letter.list(published=False, review_status="unchecked")`).
+A search can use them as well: `{"type": "Letter", "where": {"review_status": {"eq": "unchecked"}}}`.
 What is not published is not listed for a request that is not logged in, whatever it asks. Its comments are a separate request, so that reading a document stays light:
 
 | | |

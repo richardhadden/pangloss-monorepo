@@ -315,3 +315,21 @@ One timeout, `SEARCH_TIMEOUT_SECONDS`, for every search and every user, is what 
 
 - **Embedded fields are searched like a relation**: `{"when": {"type": "JulianExactDate", "where": {"sort_day": {"between": [a, b]}}}}`. The `type` may be left out when the field is typed with one class (the class itself, even if abstract, is allowed: `JulianDate` matches every kind in the family, since the nodes carry their parents' labels). Embedded objects inside embedded objects work the same way. There is no deleted check and no wrappers (an embedded object is part of its document).
 - **`order_by`** (in `Match`, so in the request body and in `Document.search(...)`): up to 3 of `{"field": "label" | "year" | "when.sort_day", "direction": "asc" | "desc"}`. A field is a text, number, decimal or date of the class, or of an embedded object in it (the class the field is typed with must have it; a kind of embedded object that lacks the value comes last). Results with no value come last either way; ties are ordered by label, as before. Compiled with an `OPTIONAL MATCH` per embedded object on the way, so a document without one is not left out.
+
+## Published and reviewed (built with `pangloss-review`)
+
+A search of a **head document** class can use two more fields, as ordinary conditions:
+
+```json
+{"type": "Letter", "where": {"published": {"eq": false}, "review_status": {"in": ["unchecked", "errors_found"]}}}
+```
+
+- `published` (a bool; a document with no property is published) takes `eq`, `ne`, `in`, `exists`.
+- `review_status` (`unchecked`, `errors_found` or `checked`; none for a document of a class that is not reviewed) is
+  text: `eq`, `ne`, `in`, `exists`, `contains`, `starts_with`.
+- They are the head's own properties, so they are allowed only at the top of the pattern (also inside `$all`,
+  `$any_of` and `$not`), not for what a relation points at, and not in a search of entities. A model that has a
+  field of the same name keeps its own meaning for it (but do not call a field `published`: the property is the
+  one that hides a document).
+- The search still hides what a request may not see: for one that is not logged in, `published: {eq: false}`
+  finds nothing. See [Review](review.md).
