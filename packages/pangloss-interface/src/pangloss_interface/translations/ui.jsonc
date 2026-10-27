@@ -1,0 +1,27 @@
+// The fixed text of the interface (the slots on its pages): {"key": {"language": "text"}}.
+// A project changes or adds a language in its own translations/ui.jsonc.
+{
+  "title": { "en": "Pangloss", "de": "Pangloss" },
+  "log_in": { "en": "Log in", "de": "Anmelden" },
+  "log_out": { "en": "Log out", "de": "Abmelden" },
+
+  // The kinds of model (a model's "kind" in the gathered file is one of these, as kind_<snake case>)
+  "kind_document": { "en": "Document", "de": "Dokument" },
+  "kind_document_plural": { "en": "Documents", "de": "Dokumente" },
+  "kind_entity": { "en": "Entity", "de": "Entität" },
+  "kind_entity_plural": { "en": "Entities", "de": "Entitäten" },
+  "kind_embedded": { "en": "Embedded object", "de": "Eingebettetes Objekt" },
+  "kind_embedded_plural": { "en": "Embedded objects", "de": "Eingebettete Objekte" },
+  "kind_reified_relation": { "en": "Relation with fields", "de": "Beziehung mit Feldern" },
+  "kind_reified_relation_plural": { "en": "Relations with fields", "de": "Beziehungen mit Feldern" },
+  "kind_reified_relation_document": { "en": "Relation document", "de": "Beziehungsdokument" },
+  "kind_reified_relation_document_plural": { "en": "Relation documents", "de": "Beziehungsdokumente" },
+  "kind_conjunction": { "en": "Conjunction", "de": "Konjunktion" },
+  "kind_conjunction_plural": { "en": "Conjunctions", "de": "Konjunktionen" },
+  "kind_semantic_space": { "en": "Semantic space", "de": "Semantischer Raum" },
+  "kind_semantic_space_plural": { "en": "Semantic spaces", "de": "Semantische Räume" },
+  "kind_annotated_value": { "en": "Annotated value", "de": "Annotierter Wert" },
+  "kind_annotated_value_plural": { "en": "Annotated values", "de": "Annotierte Werte" },
+  "kind_edge_model": { "en": "Edge properties", "de": "Kanteneigenschaften" },
+  "kind_edge_model_plural": { "en": "Edge properties", "de": "Kanteneigenschaften" }
+}

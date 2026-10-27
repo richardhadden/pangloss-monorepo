@@ -27,7 +27,9 @@ GITIGNORE = "node_modules\ndist\n.env\n*.tsbuildinfo\n"
 # Not copied from the package (they are what npm installs and builds there, or are made
 # for the project)
 EXCLUDED_DIRECTORIES = {"node_modules", "dist"}
-EXCLUDED_FILES = {".env", MODELS_MODULE_PATH}
+# (where `gather` puts the translations, next to the models, for the interface to import)
+TRANSLATIONS_PATH = "interface-app/src/generated/translations.json"
+EXCLUDED_FILES = {".env", MODELS_MODULE_PATH, TRANSLATIONS_PATH}
 
 
 class Project(Protocol):
@@ -128,6 +130,10 @@ def is_source_checkout() -> bool:
     """Whether the package's JavaScript can be run where it is: a checkout of the
     source (editable install), not a copy in `site-packages`"""
     return "site-packages" not in JS_ROOT.parts and "dist-packages" not in JS_ROOT.parts
+
+
+def linked_translations_path(project_root: Path) -> Path:
+    return working_directory(project_root) / "linked" / "translations.json"
 
 
 def prepare_linked(project_root: Path, exported: dict[str, Any]) -> Path:

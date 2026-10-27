@@ -22,8 +22,11 @@ from pangloss_interface.runtime import (
     find_runtime,
     run,
 )
+from pangloss_interface.translations_cli import translations, write_translations
 from pangloss_interface.typescript import models_module
 from pangloss_interface.workspace import (
+    TRANSLATIONS_PATH,
+    linked_translations_path,
     export_project_models,
     is_source_checkout,
     prepare,
@@ -32,6 +35,7 @@ from pangloss_interface.workspace import (
 )
 
 cli = typer.Typer(name="interface", help="The web interface", no_args_is_help=True)
+cli.add_typer(translations)
 
 RuntimeOption = typer.Option(
     None,
@@ -94,13 +98,15 @@ def export_or_exit(project: Any) -> dict[str, Any]:
 def prepare_workspace(ctx: typer.Context) -> Path:
     """Copy the interface into the project, with its models; returns the directory"""
     project = project_of(ctx)
-    prepared = prepare(project.location.root, export_or_exit(project))
+    exported = export_or_exit(project)
+    prepared = prepare(project.location.root, exported)
     for name in prepared.written:
         typer.echo(
             f"  wrote {(prepared.directory / name).relative_to(project.location.root)}"
         )
     for name in prepared.removed:
         typer.echo(f"  removed {name}")
+    write_translations(project, exported, prepared.directory / TRANSLATIONS_PATH)
     return prepared.directory
 
 
@@ -189,7 +195,11 @@ def dev(
         if not is_source_checkout():
             fail("--link needs the source of pangloss-interface (an editable install)")
         project = project_of(ctx)
-        models = prepare_linked(project.location.root, export_or_exit(project))
+        exported = export_or_exit(project)
+        models = prepare_linked(project.location.root, exported)
+        write_translations(
+            project, exported, linked_translations_path(project.location.root)
+        )
         typer.echo(f"Running from {JS_ROOT}\nModels: {models}")
         ensure_installed(found, JS_ROOT)
         directory, environment = APP_PATH, {"PANGLOSS_MODELS_MODULE": str(models)}

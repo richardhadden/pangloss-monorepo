@@ -80,6 +80,7 @@ Each name in `INSTALLED_APPS` is the name of a package. If it has a module `cli.
 | `pangloss memgraph info` | Shows the indexes, constraints and enums in the database |
 | `pangloss memgraph bulk-load FILE --user NAME [--concurrency N] [--validate-only]` | Loads a JSON Lines file of records into an **empty** database, several times faster than writing them as usual, using Memgraph's analytical storage mode. See [Large data](large-data.md#bulk-load-a-file-into-an-empty-database) |
 | `pangloss memgraph bulk-recover` | Puts the database back after a bulk load that was stopped, or that left duplicates (storage mode, unique constraints, text index, lock) |
+| `pangloss interface translations generate \| gather \| check` | Makes, merges and checks the translation files of the models, enums and the interface (`pangloss_interface` in `INSTALLED_APPS`). See [Translations](translations.md) |
 
 An app with no `cli.py` adds nothing. An app whose `cli.py` cannot be imported, has no `cli` Typer, or has a name that is already a command, gives a warning, and the rest of the command line works.
 

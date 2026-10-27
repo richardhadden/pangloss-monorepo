@@ -4,7 +4,7 @@ from types import SimpleNamespace
 import pytest
 from pangloss_interface import cli as interface_cli
 from pangloss_interface import runtime as runtime_module
-from pangloss_interface.workspace import working_directory
+from pangloss_interface.workspace import TRANSLATIONS_PATH, working_directory
 from typer.testing import CliRunner
 
 runner = CliRunner()
@@ -15,11 +15,16 @@ EXPORTED = {
 }
 
 
+SETTINGS = SimpleNamespace(
+    INSTALLED_APPS=[], INTERFACE_LANGUAGES=["en", "de"], DEFAULT_INTERFACE_LANGUAGE="en"
+)
+
+
 @pytest.fixture
 def project(tmp_path):
     return SimpleNamespace(
         location=SimpleNamespace(root=tmp_path),
-        require_settings=lambda: None,
+        require_settings=lambda: SETTINGS,
         settings_error=None,
     )
 
@@ -260,3 +265,30 @@ def test_models_that_cannot_be_initialised_are_explained(
     result = invoke(project, "build")
     assert result.exit_code == 1
     assert "Cannot initialise the models: Person.friend: no such model" in result.output
+
+
+def test_the_translations_are_gathered_when_the_interface_is_prepared(
+    commands, project
+):
+    result = invoke(project, "install")
+    assert result.exit_code == 0, result.output
+
+    gathered = working_directory(project.location.root) / TRANSLATIONS_PATH
+    data = json.loads(gathered.read_text())
+    assert data["languages"] == ["en", "de"]
+    assert data["ui"]["de"]["log_in"] == "Anmelden"
+    assert "wrote translations.json" in result.output
+
+
+def test_translations_that_cannot_be_read_are_a_warning_and_the_interface_goes_on(
+    commands, project
+):
+    folder = project.location.root / "translations"
+    folder.mkdir()
+    (folder / "models.jsonc").write_text("{nope")
+
+    result = invoke(project, "install")
+
+    assert result.exit_code == 0
+    assert "Translations not gathered" in result.output
+    assert not (working_directory(project.location.root) / TRANSLATIONS_PATH).exists()
