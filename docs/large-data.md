@@ -64,6 +64,10 @@ Each change below ran against the full dataset, after a dry run, with `--backup`
 - **The snapshot from `--backup` does not last.** Memgraph keeps three snapshots, taking one every 300 seconds, so the one `--backup` takes is gone in about 15 minutes. A migration whose check takes longer than that has no restore point by the end. `migrate` says so at the end if the database no longer lists the backup it took (`The backup ... is no longer there`). Copy the snapshot from the server, or raise `--storage-snapshot-retention-count` ([Migrations guide](../guide/migrations/04-safety.md)).
 - **Nothing else may write while a migration runs.** The lock refuses other writers (`PanglossReadOnlyError`, "The database is being migrated"), which is right, but a loader running at the time stops with an error. `migrate --fake` also takes the lock.
 
+## Searching
+
+Structured searches ([Structured search](structured-search.md#step-5-measured)) on the same data: every search tried takes under 600 ms with the indexes Pangloss makes, `$mentions` (a reference anywhere in a document) the longest. A label index for the class searched makes a search of a class three times faster, and an index on a property 100 times faster for an equality; edge indexes make no difference. `search_benchmark.py` in `pangloss-demo/` repeats the measurements.
+
 ## Repeating it
 
 ```bash

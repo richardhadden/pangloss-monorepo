@@ -59,11 +59,9 @@ class Compiler:
         if c.kind == "somewhere":
             pattern: CheckedPattern = c.value
             node = self.name("m")
-            tests = self.all_of(pattern.items, node)
             return (
-                # (the id in the pattern, not a test: Memgraph fails a test of a node against another's property)
-                f"EXISTS {{ MATCH ({node}:`{pattern.model.__name__}` {{head_node_id: {var}.id}}) "
-                f"WHERE {tests} }}"
+                f"EXISTS {{ MATCH {self.in_document(var, node, pattern.model.__name__)} "
+                f"WHERE {self.all_of(pattern.items, node)} }}"
             )
         if c.kind == "incoming":
             return self.incoming(c, var)
@@ -97,36 +95,47 @@ class Compiler:
         self.targets += 1
         return f"{base}{self.targets}"
 
+    def in_document(
+        self, head: str, node: str, label: str = "", zero: bool = False
+    ) -> str:
+        """A pattern for the nodes of a document, found by going down from its head node, along the edges
+        of the document (the nodes with its id as their `head_node_id`, not along reverse edges). It is not a
+        lookup of the nodes by `head_node_id`: inside an `EXISTS` Memgraph does not use the index for that,
+        and scans every node for each document (8 seconds for 100 documents of 640,000 nodes; this is
+        about 0.2 seconds for 30,000)."""
+        r, v = self.name("r"), self.name("v")
+        return (
+            f"({head})-[*{'0' if zero else ''}.. ({r}, {v} | {v}.head_node_id = {head}.id "
+            f"AND NOT coalesce({r}.reverse, false))]->({node}{':`' + label + '`' if label else ''})"
+        )
+
     def relation(self, c: CheckedCondition, var: str) -> str:
         """Whether the node has a relation that is as the condition says. A relation to wrappers (a semantic
         space, a conjunction, a reified relation) is also to what is inside them, however deep; and one that
-        has to pass through some is only that."""
-        # (`$mentions` is of the node itself, or of any node that is in its document)
-        starts = ["node", "tree"] if c.field == ANY_IN_DOCUMENT else ["node"]
-        found = []
-        for start in starts:
-            direct = self.reaching(c, var, start, through_wrappers=False)
-            if not c.wrapped or (c.operator == "exists" and not c.through):
-                found.append(direct)
-                continue
-            via = self.reaching(c, var, start, through_wrappers=True)
-            found.append(via if c.through else f"({direct} OR {via})")
-        return found[0] if len(found) == 1 else "(" + " OR ".join(found) + ")"
+        has to pass through some is only that. `$mentions` is of the node or of any node of its document."""
+        if c.field == ANY_IN_DOCUMENT:
+            node = self.name("m")
+            return (
+                f"EXISTS {{ MATCH {self.in_document(var, node, zero=True)} "
+                f"WHERE {self.relation_of(c, node)} }}"
+            )
+        return self.relation_of(c, var)
 
-    def reaching(
-        self, c: CheckedCondition, var: str, start: str, through_wrappers: bool
-    ) -> str:
+    def relation_of(self, c: CheckedCondition, var: str) -> str:
+        direct = self.reaching(c, var, through_wrappers=False)
+        if not c.wrapped or (c.operator == "exists" and not c.through):
+            return direct
+        via = self.reaching(c, var, through_wrappers=True)
+        return via if c.through else f"({direct} OR {via})"
+
+    def reaching(self, c: CheckedCondition, var: str, through_wrappers: bool) -> str:
         e, w = self.name("e"), self.name("w")
         where = ["true"]
-        if start == "tree":
-            # (the node is found by its head node's id in the pattern: see `condition`)
-            edge = f"(:PGIndexableNode {{head_node_id: {var}.id}})-[{e}]->({w})"
-        elif c.field in (ANY_RELATION, ANY_IN_DOCUMENT):
+        if c.field in (ANY_RELATION, ANY_IN_DOCUMENT):
             edge = f"({var})-[{e}]->({w})"
+            where.append(f"NOT coalesce({e}.reverse, false) AND {w}:PGIndexableNode")
         else:
             edge = f"({var})-[{e}:`{c.field}`]->({w})"
-        if c.field in (ANY_RELATION, ANY_IN_DOCUMENT):
-            where.append(f"NOT coalesce({e}.reverse, false) AND {w}:PGIndexableNode")
         if not through_wrappers:
             if (
                 c.wrapped and c.operator != "exists"
@@ -160,28 +169,27 @@ class Compiler:
 
     def incoming(self, c: CheckedCondition, var: str) -> str:
         """Whether a node of the pattern points at this one with one of the relations: directly, or through
-        wrappers (which is what it does if its relation is to one, and what it must if `through` is given)"""
+        wrappers (which is what it does if its relation is to one, and what it must if `through` is given).
+        The patterns start from this node and go back along its edges: written from the referring node,
+        Memgraph scans every node of the class, for each node."""
         incoming: CheckedIncoming = c.value
         pattern = incoming.pattern
         types = "|".join(f"`{name}`" for name in incoming.fields)
 
         def source_tests(s: str) -> str:
-            tests = [self.all_of(pattern.items, s)]
-            if issubclass(
-                pattern.model, Entity
-            ):  # (a deleted entity does not refer to anything)
-                tests.append(f"NOT coalesce({s}.deleted, false)")
-            else:  # (nor does a document of a deleted head document)
-                h = self.name("h")
+            tests = [f"NOT coalesce({s}.deleted, false)", self.all_of(pattern.items, s)]
+            if not issubclass(pattern.model, Entity):
+                # (nor does a document inside a deleted head document: go up to it, along the reverse edges)
+                h, q, v = self.name("h"), self.name("q"), self.name("v")
                 tests.append(
-                    f"NOT coalesce({s}.deleted, false) AND NOT EXISTS {{ MATCH ({h}:HeadNode {{id: {s}.head_node_id}}) WHERE {h}.deleted }}"
+                    f"NOT EXISTS {{ MATCH ({s})-[* 0.. ({q}, {v} | coalesce({q}.reverse, false))]->({h}:HeadNode) WHERE {h}.deleted }}"
                 )
             return " AND ".join(tests)
 
         s, e = self.name("s"), self.name("e")
         label = pattern.model.__name__
         direct = (
-            f"EXISTS {{ MATCH ({s}:`{label}`)-[{e}:{types}]->({var}) "
+            f"EXISTS {{ MATCH ({var})<-[{e}:{types}]-({s}:`{label}`) "
             f"WHERE {source_tests(s)} }}"
         )
         if not c.wrapped:
@@ -195,9 +203,8 @@ class Compiler:
             )
         where.append(source_tests(s))
         via = (
-            f"EXISTS {{ MATCH {p} = ({s}:`{label}`)-[{e}:{types}]->({w})"
-            f"-[* 0.. ({q}, {v} | {wrapper(v)})]->({x})-[{r}]->({var}) "
-            f"WHERE {' AND '.join(where)} }}"
+            f"EXISTS {{ MATCH {p} = ({var})<-[{r}]-({x})<-[* 0.. ({q}, {v} | {wrapper(v)})]-({w})"
+            f"<-[{e}:{types}]-({s}:`{label}`) WHERE {' AND '.join(where)} }}"
         )
         return via if c.through else f"({direct} OR {via})"
 

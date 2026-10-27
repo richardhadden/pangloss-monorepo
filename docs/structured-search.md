@@ -1,6 +1,6 @@
 # Structured search: finding documents and entities by pattern 🚧
 
-A planning document. **Steps 1 to 4 of the plan are built** (see [step 1](#step-1-built), [2](#step-2-built), [3](#step-3-built) and [4](#step-4-built)); measuring (5) and the interface (6) are not. It is a design for one endpoint that finds **documents and entities** by a pattern written as JSON: "a `Letter` whose `sender` is this person and whose `date` is after 1500, and which mentions a `Place` somewhere". The decisions made so far are at the end; the rest is a recommendation.
+A planning document. **Steps 1 to 5 of the plan are done** (see [step 1](#step-1-built), [2](#step-2-built), [3](#step-3-built), [4](#step-4-built) and [step 5](#step-5-measured)); the interface (6) is not. It is a design for one endpoint that finds **documents and entities** by a pattern written as JSON: "a `Letter` whose `sender` is this person and whose `date` is after 1500, and which mentions a `Place` somewhere". The decisions made so far are at the end; the rest is a recommendation.
 
 What exists today: `list` (by class, label text, and `deep_search`, which regex-searches the text index and resolves hits to head documents) and [autocomplete](autocomplete.md) (entities by label). Neither can say "where *this field* has *that value*".
 
@@ -192,9 +192,9 @@ Nested patterns, the combinators, and `exists` on relations.
 - **`$any: condition`**: the same, for a relation of this node only (not the rest of the document); usable at any level (`type` is needed for a pattern, as there is no field to say it). `contains` and `starts_with` are of this node's `label` (the text of the other fields is not indexed).
 - **The edges followed** for `$any` and `$mentions` are all the outgoing relation edges to nodes of the model (not the reverse edges, nor the URL nodes). Only the field the condition names is followed for a named field.
 
-**A Memgraph fault found on the way:** inside an `EXISTS`, a node found only by `WHERE m.head_node_id = n.id` (a test of one node against another's property) stops the query with "Expected to generate all filters". Putting the id in the pattern, `(m:Label {head_node_id: n.id})`, works, and is what the compiler does (and can use the index on `head_node_id`).
+**A Memgraph fault found on the way:** inside an `EXISTS`, a node found only by `WHERE m.head_node_id = n.id` (a test of one node against another's property) stops the query with "Expected to generate all filters". Putting the id in the pattern, `(m:Label {head_node_id: n.id})`, worked, but is not what the compiler does now (see step 5: it scanned every node).
 
-**Speed:** `$somewhere` and `$mentions` look at the nodes of each candidate document. There is an index on `(id, head_node_id)` together; whether the pattern above uses it, or a separate one on `head_node_id` is needed, is to be measured in step 5. `$mentions` on a database of many documents with many nodes each is the first suspect.
+**Speed:** this compilation of `$somewhere` and `$mentions` (and of `$incoming`) was too slow, and was changed in step 5: see [step 5](#step-5-measured).
 
 **Not done:** wrappers by their own fields (`certainty` of a reified relation: a pattern whose `type` is the wrapper); a condition on the *kind* of wrapper that a pattern's own node is (only `through` and `$spaces`); `$somewhere` inside a nested pattern.
 
@@ -217,3 +217,89 @@ Nested patterns, the combinators, and `exists` on relations.
 - **Only an entity is referred to** (a document is not looked up by what contains it); the search must be of an entity or a pattern for one.
 - **Not covered:** a relation in an *embedded* object of the referring document (the edge starts from the embedded node, not the document; the relation is not seen as one of the document's); a chain through several referring nodes ("referred to by a document that is referred to by...") is written by nesting `where` with a relation or `$incoming`.
 - The reverse edge (`reverse: true`) is not used: the edge from the referring node is followed backwards, so the reverse names need not be known.
+
+## Step 5: measured
+
+Measured on 2026-10-27 on the data of [large data](large-data.md) (642,549 nodes, 1,649,526 edges: 100,000 entities, 30,000 factoids with 2 or 3 statements, some wrapped in `Negative`, `Hypothetical` or `Causes`), Memgraph 3.13.1 in Docker on a laptop, one search at a time. The script is `pangloss-demo/search_benchmark.py` (see the end of this section). Times are the shortest of two runs, through the models, for a page of 25 and the count of everything found.
+
+### What was wrong, and what it was
+
+The first measurement, of the compiler of steps 3 and 4, **timed out on every search that used `$mentions`, `$somewhere` or `$incoming`** (at 20 seconds; 90 for the first tries). The plans (`EXPLAIN`) showed why, and it was not a lack of an index:
+
+- Inside an `EXISTS { ... }`, **a node found by `(m {head_node_id: n.id})`, or `WHERE m.head_node_id = n.id`, is found by looking at every node** (`ScanAll`) for each candidate, with or without an index on `head_node_id`. The same pattern outside an `EXISTS` (a `MATCH`, or a `CALL { WITH n ... }`) uses the index (`ScanAllByLabelProperties`): 100 documents took 11 ms there and 8,175 ms inside `EXISTS`. An index on `head_node_id` made no difference to the searches, which is why it is not recommended below.
+- `$incoming` was written from the referring node (`(s:Activity)-[...]->(entity)`), so Memgraph scanned every node, kept the activities, and looked for an edge to the entity, for each entity. The deleted-head check (`(h:HeadNode {id: s.head_node_id})`) was the same fault.
+
+The compiler now never looks a node up by property inside an `EXISTS`: it **walks from the node it already has**.
+
+| Condition | Is compiled as |
+|-----------|----------------|
+| `$somewhere`, `$mentions` | From the document's head node down the edges of the document: `(n)-[* (r, v \| v.head_node_id = n.id AND NOT r.reverse)]->(m:Type)` (not along reverse edges, which would make every path up and down the tree) |
+| `$incoming` | From the entity back along its edges: `(n)<-[:field]-(s:Type)`; a deleted head document is found by going up the reverse edges from the source to its head |
+| Relations (named or `$any`) | As before: from the node, along the edge |
+
+### The result, with no indexes beyond those Pangloss makes
+
+| Search | Time | Found |
+|--------|------|-------|
+| a person by `label`, `contains` or `eq`; a group by `name`; the 100 sources by `author` | 33 to 46 ms | 1 to 100 |
+| every person (60,000), every factoid (30,000), all factoids not of a year | 46 to 70 ms | up to 60,000 |
+| a factoid by `year` (134 found), a range of years (899), an `$any_of` of two years | 38 to 43 ms | |
+| a factoid by its `source` (through a reified relation), by a pattern for it | 90 to 96 ms | 6; 574 |
+| a factoid with an activity by a person (a hub of 20,006 as well as an ordinary one) | 107 to 109 ms | |
+| a factoid with a statement inside a `Negative` (4,112); with any statement through one (5,702) | 81 to 158 ms | |
+| `$mentions` a person, a place, or a person found by a pattern | 440 to 560 ms | 4 to 10,345 |
+| `$somewhere` a transfer (17,912 found), with a condition on it | 190 to 275 ms | |
+| a person by what refers to them: one person, or all who are in an activity | 60 ms; 125 ms | 1; 30,929 |
+| the same, for activities of one year; places that any statement refers to | 85 ms; 90 ms | 278; 19,623 |
+
+The searches that are not tied to an index look at every node of the class: **a search costs about the number of nodes in the database for a root of a class, and about the number of documents for `$mentions` and `$somewhere`**. A hub (one person referred to by 20,006 activities) costs nothing extra to any of them, because a search stops at the first edge that makes it true, and `$mentions` walks the document, not the entity's edges. Not measured: more than one search at once; a hub in a search that has to look at all of its edges (`$incoming` for a class that has none, which took 50 ms for the 20,006).
+
+### Which indexes help
+
+Done by hand on the same data, with the query as the compiler writes it (`MATCH (n:Factoid:HeadNode) WHERE NOT coalesce(n.deleted, false) AND n.year = 800`):
+
+| Index | A search of a class | One property equal to a value | Others |
+|-------|---------------------|-------------------------------|--------|
+| None | `ScanAll`: **33 ms** (every node: 642,549) | 35 ms | |
+| A label index (`CREATE INDEX ON :Factoid`) | `ScanAllByLabel`: **10 to 13 ms**, and the time is that of the class, not of the database | 10 to 12 ms | |
+| A label-and-property index (`CREATE INDEX ON :Factoid(year)`) | not used for a search of the whole class (needs the label index) | **0.3 ms** | the planner uses it by itself |
+| An index of `head_node_id` | | | no difference (see above) |
+| An index for each edge type (`CREATE EDGE INDEX ON :carried_out_by`, twelve of them) | | | **no difference to any search**, including the hub: every search starts from a node it has, or scans a class, and goes along the edges of that node; an edge index would only be used by a search that started from the edges of a type |
+
+Through the whole search (page of 25, the count, and the creation record of each):
+
+| Search | No indexes | Label indexes | Label and property |
+|--------|-----------|---------------|--------------------|
+| factoid by `year` (134 found) | 41 ms | 12 ms | 4 ms |
+| 100 sources by `author` | 35 ms | 3 ms | 4 ms |
+| person by `label` | 37 ms | 10 ms | 32 ms |
+| every factoid | 47 ms | 27 ms | 26 ms |
+
+(The person `label` row: that run had an index on `Person(label)` which the whole-query planner did not use; by hand it did, at 0.3 ms. Not understood, probably the plan cache after the index was made.)
+
+What an index costs to write, bare nodes in one transaction each: 3,975 a second without, 3,230 with a label index and a property index (about 0.06 ms a node). The text index costs 4.5 ms a commit, so these are small beside it.
+
+**Recommendation:** (1) **a label index for each class of document and entity** (the class name of every `Document` and `Entity` model, including abstract parents, which a search of a parent class starts from): cheap, and the cost of a search of a class stops growing with the rest of the database. (2) **A label-and-property index on a field when a project searches by it a lot** (`year`, `author`, an identifier): 100 times faster, and a choice for the project, so a setting of the model rather than of Pangloss. (3) No `head_node_id` or edge indexes. These need a change to the structure that [migrations](migrations.md) keep (`initialise_database.structure()`), which is not made; see the questions below.
+
+### Limits
+
+- **A timeout.** `SEARCH_TIMEOUT_SECONDS` (30 by default; 0 for none) is sent with the transaction and Memgraph stops the query. Found on the way: Memgraph reports it as a *transient* error, and the driver **tries a transient error again** with waits of seconds, so a search that was too big took 15 seconds for a 2-second limit, and twice the limit in the first measurements. The search turns it into `PanglossSearchTimeoutError` itself, which the driver does not try again; the API answers it with a **`504`** (`error: PanglossSearchTimeoutError`) and the SDK raises the same class. Other reads are not limited by this.
+- **Page size** is at most 100; the count is of the whole result, so a search is as costly for page 1 as for the last: the whole result is found, ordered and counted (30,000 documents: 46 ms). A result of millions would be more.
+
+### Repeating it
+
+On a scratch Memgraph (not one to keep: it makes and drops indexes), with the data of `bulk_load.py` ([large data](large-data.md#repeating-it)):
+
+```bash
+cp pangloss-demo/search_benchmark.py /tmp/smoke/ && cd /tmp/smoke
+PYTHONPATH=. python search_benchmark.py --repeat 2 --timeout 40            # all the searches
+PYTHONPATH=. python search_benchmark.py --indexes label property --profile  # with indexes, and the plan of each
+PYTHONPATH=. python search_benchmark.py --explain --only mentions           # a plan, without running it
+PYTHONPATH=. python search_benchmark.py --drop-indexes
+```
+
+### Questions
+
+1. **Label indexes**: should `initialise_database` (and so the migrations' structure) make one for each class of document and entity? They change with the models (a new class is a new index), so the migration that adds a class would add its index. Not done.
+2. **Property indexes**: a way for a model to ask for one (`Meta(indexes=[...])`, or a mark on a field)? Not done.
+3. The timeout is the same for every search and for everyone. A lower one for anonymous users, and a longer one for an export, would be a setting of the user or of the route.

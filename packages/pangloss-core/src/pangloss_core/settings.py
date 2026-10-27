@@ -90,6 +90,10 @@ class BaseSettings[TDatabaseSettings: DatabaseSettings](ClientSettings):
     SLOW_QUERY_MS: int = 500
     SLOW_REQUEST_MS: int = 2000
 
+    # The most a structured search (`/api/search`) may take, in the database; one that takes longer is
+    # stopped and answered with a `504`, and is not tried again. 0 is no limit
+    SEARCH_TIMEOUT_SECONDS: float = 30
+
     # What the server does at start-up if the project has migrations and the database is not
     # what they say, or the models are not what they come to: "error" does not start, "warn"
     # starts and says so, "off" does not look

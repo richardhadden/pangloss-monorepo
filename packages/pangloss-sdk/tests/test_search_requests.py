@@ -71,3 +71,20 @@ def test_the_class_called_on_is_the_type_when_the_pattern_has_none(monkeypatch):
 
     assert sent[0].json["type"] == "Letter"
     assert found.count == 0
+
+
+def test_a_504_that_names_the_error_is_a_search_timeout():
+    from pangloss_models.exceptions import PanglossSearchTimeoutError
+
+    response = SimpleNamespace(
+        status_code=504,
+        is_success=False,
+        json=lambda: {"detail": "too long", "error": "PanglossSearchTimeoutError"},
+    )
+
+    assert isinstance(protocol.error_for(response), PanglossSearchTimeoutError)
+    # (and another server error is still one)
+    other = SimpleNamespace(
+        status_code=502, is_success=False, json=lambda: {}, text="bad gateway"
+    )
+    assert type(protocol.error_for(other)).__name__ == "PanglossServerError"

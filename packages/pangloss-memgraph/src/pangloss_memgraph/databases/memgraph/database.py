@@ -85,6 +85,19 @@ async def timed[T](
         )
 
 
+def timeout_from_setting(name: str, default: float):
+    """Mark a transaction function as one the database stops after the number of seconds that the setting
+    `name` has (`default` if there is none; 0 is no limit). The driver sends it with the transaction, and
+    Memgraph stops the query: otherwise a query that is too big runs until it ends or the server's own
+    limit (ten minutes) is reached."""
+
+    def mark[F: Callable[..., Any]](func: F) -> F:
+        func.timeout_setting = (name, default)  # type: ignore
+        return func
+
+    return mark
+
+
 def logging_queries(
     func: Callable[..., Awaitable[Any]],
 ) -> Callable[..., Awaitable[Any]]:
@@ -158,13 +171,18 @@ class Database:
 
             await self._check_driver()
 
+            work = logging_queries(func)
+            limit = getattr(func, "timeout_setting", None)
+            if limit is not None:
+                seconds = getattr(self.settings, limit[0], limit[1])
+                if seconds:
+                    work = neo4j.unit_of_work(timeout=float(seconds))(work)
+
             async def run() -> T:
                 async with self.driver.session(
                     database=self.settings.DATABASE.DATABASE_NAME
                 ) as session:
-                    return await session.execute_read(
-                        logging_queries(func), *args, **kwargs
-                    )
+                    return await session.execute_read(work, *args, **kwargs)
 
             return await timed(self, "read", func, run)
 

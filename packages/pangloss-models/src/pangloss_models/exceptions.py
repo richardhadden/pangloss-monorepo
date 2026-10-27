@@ -128,3 +128,8 @@ class PanglossUnknownTypeError(Exception):
 class PanglossSearchError(Exception):
     """A structured search that cannot be made: a field that does not exist, an operator that does not
     fit the field, a value of the wrong type, or something not supported yet"""
+
+
+class PanglossSearchTimeoutError(Exception):
+    """A structured search took longer than the time allowed for it (`SEARCH_TIMEOUT_SECONDS`). It is not
+    tried again: a search that is too big for the time is that every time"""

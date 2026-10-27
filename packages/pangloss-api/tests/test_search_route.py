@@ -143,3 +143,22 @@ def test_nested_patterns_and_combinators_reach_the_database_as_they_were_sent(
     where = seen["match"].where
     assert where["sender"].where["label"].eq == "x"
     assert where["$not"]["title"].eq == "y"
+
+
+def test_a_search_that_took_too_long_is_a_504_that_names_the_error(
+    settings, monkeypatch
+):
+    from pangloss_models.exceptions import PanglossSearchTimeoutError
+
+    make_models()
+    client = TestClient(create_app())
+
+    async def search(cls, match, **more):
+        raise PanglossSearchTimeoutError("The search took too long")
+
+    stub(monkeypatch, Document, "search", search)
+
+    response = client.post("/api/search", json={"type": "Letter"})
+
+    assert response.status_code == 504
+    assert response.json()["error"] == "PanglossSearchTimeoutError"

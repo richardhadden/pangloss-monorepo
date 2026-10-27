@@ -58,6 +58,7 @@ ERRORS_BY_NAME: dict[str, type[Exception]] = {
         models_exceptions.PanglossUserNotFoundError,
         models_exceptions.PanglossUserDisabledError,
         models_exceptions.PanglossReadOnlyError,
+        models_exceptions.PanglossSearchTimeoutError,
         models_exceptions.PanglossWriteError,
     )
 }
@@ -96,7 +97,7 @@ def error_for(response: Any) -> Exception:
 
     if status == 401:
         return PanglossAuthenticationError(message)
-    if status >= 500 and status != 503:
+    if status >= 500 and status != 503 and str(body.get("error")) not in ERRORS_BY_NAME:
         return PanglossServerError(message, status)
 
     kind = ERRORS_BY_NAME.get(str(body.get("error")))

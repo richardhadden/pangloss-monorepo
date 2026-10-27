@@ -12,6 +12,7 @@ from pangloss_models.exceptions import (
     PanglossNotFoundError,
     PanglossReadOnlyError,
     PanglossReferenceError,
+    PanglossSearchTimeoutError,
     PanglossUserDisabledError,
     PanglossUserNotFoundError,
     PanglossVersionConflictError,
@@ -43,6 +44,7 @@ STATUS_FOR_ERROR: list[tuple[type[Exception], int]] = [
     (PanglossUserDisabledError, 403),
     (PanglossUserNotFoundError, 403),
     (PanglossReadOnlyError, 503),
+    (PanglossSearchTimeoutError, 504),
     (PanglossWriteError, 400),
 ]
 
@@ -85,6 +87,7 @@ async def error_handler(request: Request, error: Exception) -> JSONResponse:
 def register_error_handlers(app: FastAPI) -> None:
     app.add_exception_handler(PanglossUserError, error_handler)
     app.add_exception_handler(PanglossWriteError, error_handler)
+    app.add_exception_handler(PanglossSearchTimeoutError, error_handler)
 
 
 class ServerErrorResponder:

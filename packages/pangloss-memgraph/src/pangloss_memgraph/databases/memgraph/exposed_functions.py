@@ -2,7 +2,7 @@ import datetime
 from typing import Any, Literal, Union, cast
 from uuid import UUID
 
-from neo4j.exceptions import ClientError
+from neo4j.exceptions import ClientError, TransientError
 from pangloss_models.autocomplete import (
     AutocompleteResults,
     labels_to_match,
@@ -11,6 +11,7 @@ from pangloss_models.autocomplete import (
 from pangloss_models.exceptions import (
     PanglossConflictError,
     PanglossEntityInUseError,
+    PanglossSearchTimeoutError,
     PanglossVersionConflictError,
     PanglossWriteError,
 )
@@ -61,7 +62,11 @@ from pangloss_memgraph.databases.memgraph.build_update_query import (
     build_head_update_query,
     build_replace_head_query,
 )
-from pangloss_memgraph.databases.memgraph.database import Database, Transaction
+from pangloss_memgraph.databases.memgraph.database import (
+    Database,
+    Transaction,
+    timeout_from_setting,
+)
 from pangloss_memgraph.databases.memgraph.delete_node import (
     DeletionResult,
     soft_delete,
@@ -148,6 +153,7 @@ async def list_items(
 
 
 @Database.default.read_transaction
+@timeout_from_setting("SEARCH_TIMEOUT_SECONDS", 30)
 async def search(
     tx: Transaction,
     cls: type[Document | Entity],
@@ -161,9 +167,17 @@ async def search(
     query, params = build_search_query(
         cls, conditions, page_number or 1, page_size or 25
     )
-    result = await tx.run(query, **params)
-    rows = await result.value()
-    found: dict = rows[0] if rows else await empty_page(tx, query, params)
+    try:
+        result = await tx.run(query, **params)
+        rows = await result.value()
+        found: dict = rows[0] if rows else await empty_page(tx, query, params)
+    except TransientError as error:
+        # (the driver would try a transient error again, and the search would take as long again)
+        if "timeout" not in str(error).lower():
+            raise
+        raise PanglossSearchTimeoutError(
+            "The search took longer than the time allowed for it: make it more specific"
+        ) from None
 
     concrete_ref_types = [t.ReferenceView for t in get_concrete_types(cls)]
     adapter = TypeAdapter(list[Union[*concrete_ref_types]])  # type: ignore

@@ -42,6 +42,7 @@ Values can also come from environment variables or a `.env` file (`pydantic-sett
 | `AUTH_COOKIE_SAMESITE`, `AUTH_COOKIE_SECURE` | `"lax"`, `False` | How the session cookies are set. See [REST API](api.md#authentication) |
 | `MIGRATION_CHECK` | `"error"`, `"warn"` or `"off"` (`"error"`) | What the API server does as it starts, if the project has migrations and the database has not had them all, a migration was changed after it was applied, or the models are not what the migrations come to: not start, start and warn, or not look. A project with no migrations is not checked. See [Database migrations](migrations.md) |
 | `LOG_LEVEL`, `LOG_FORMAT` | `"INFO"`, `"text"` | What is logged under `pangloss`, and whether a line is text or JSON. See [Logging](logging.md) |
+| `SEARCH_TIMEOUT_SECONDS` | `float` (`30`) | The most a structured search may take in the database; a longer one is stopped and answered with a `504` (`PanglossSearchTimeoutError`), and not tried again. `0` is no limit. See [Structured search](structured-search.md#step-5-measured) |
 | `SLOW_QUERY_MS`, `SLOW_REQUEST_MS` | `int` (`500`, `2000`) | A database transaction, or a request, that takes longer is logged as a warning. See [Logging](logging.md) |
 | `ZOTERO_API_KEY`, `ZOTERO_LIBRARIES`, `ZOTERO_WATCH`, `ZOTERO_SKIP_TYPES`, `ZOTERO_SYNC_USER`, `ZOTERO_API_URL`, `ZOTERO_STREAM_URL` | `pangloss_zotero` (optional; read from the settings if set). See [Zotero](zotero.md#commands-and-settings) |
 | `ENTITY_BASE_URL` | `AnyHttpUrl` | Reserved for entity URL generation ⏳ |

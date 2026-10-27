@@ -273,3 +273,36 @@ async def test_all_any_of_and_not(clear_database):
     assert await find(
         **{"$not": {"copies_to": {"exists": True}}, "pages": {"exists": True}}
     ) == ["C"]
+
+
+@no_type_check
+async def test_a_search_that_takes_too_long_is_stopped_and_not_tried_again(
+    clear_database, db_driver, monkeypatch
+):
+    import time
+
+    from pangloss_memgraph.databases.memgraph import exposed_functions
+    from pangloss_memgraph.databases.memgraph.database import Database
+    from pangloss_models.exceptions import PanglossSearchTimeoutError
+
+    Person, Poet, Letter = models()
+    with db_driver.session() as session:
+        session.run("UNWIND range(1, 400) AS x CREATE (:Filler {id: x})").consume()
+    # (a query that cannot end in the time: 64 million combinations)
+    slow = (
+        "MATCH (a:Filler), (b:Filler), (c:Filler) WITH count(*) AS c "
+        "RETURN {results: [], count: c, page: 1, page_size: 25} AS response"
+    )
+    monkeypatch.setattr(
+        exposed_functions, "build_search_query", lambda *a, **k: (slow, {})
+    )
+    monkeypatch.setattr(
+        Database.default.settings, "SEARCH_TIMEOUT_SECONDS", 0.5, raising=False
+    )
+
+    started = time.monotonic()
+    with pytest.raises(PanglossSearchTimeoutError, match="more specific"):
+        await Letter.search(where())
+
+    # (the driver tries a transient error again, with waits of seconds: this was not)
+    assert time.monotonic() - started < 3
