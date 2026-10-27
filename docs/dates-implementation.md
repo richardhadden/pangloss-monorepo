@@ -326,3 +326,10 @@ Embedded
   A rule is applied in a calendar; an interval over 1 counts from an anchor day (weeks of seven days from it). The keys never miss
   (tested over eight years in both calendars for eight rules), and cut the candidate days to under 60%.
 - 92 tests in all. Left of phase 1: `edtf.py`.
+- `pangloss_dates.edtf` (built; needs the `edtf` extra): `parse_edtf_date(text, calendar, padding)` and `parse_edtf_interval` give
+  `EdtfResult(bounds, precision, uncertain, approximate)` using `python-edtf` only to parse. Read: years, months, days,
+  `?` `~` `%` (also on a part, read as qualifying the whole date), `15XX`, `150X`, `1500-XX`, sets (span of the members), intervals
+  (start and end, `None` where open or unknown). Not read, with `EdtfUnsupported`: seasons, significant digits, long years, times,
+  unspecified digits with a qualifier, open sets. `1500-02` ends on the 29th in the Julian calendar (the library says the 28th).
+- **Phase 1 is complete: 113 tests.** Next: phase 4 (`models.py`), after the core check (validators on `Embedded` reaching the
+  generated models, required fields on Create) and `Meta(indexes)` on Embedded.
