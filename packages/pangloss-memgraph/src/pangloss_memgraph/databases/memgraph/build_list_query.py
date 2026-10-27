@@ -12,12 +12,17 @@ def build_generic_list_query(
     page_number: int | None = None,
     page_size: int | None = None,
     deep_search: bool = False,
+    published: bool | None = None,
+    review_status: str | None = None,
 ) -> tuple[LiteralString, dict]:
     query, params = _build_list_query(
         object_class, search_terms, page_number, page_size, deep_search
     )
     # (a document that is not published is listed only for those who may see it)
     params["see_unpublished"] = unpublished_visible()
+    # (to list only the documents that are, or are not, published, or in a status of review)
+    params["published"] = published
+    params["review_status"] = review_status
     return query, params
 
 
@@ -90,6 +95,8 @@ def _build_list_query(
                 WITH n, nodeScores, n_head
                 WHERE NOT coalesce(CASE WHEN n:Entity THEN n.deleted ELSE coalesce(n_head, n).deleted END, false)
 AND (n:Entity OR $see_unpublished OR coalesce(coalesce(n_head, n).published, true))
+AND ($published IS NULL OR coalesce(coalesce(n_head, n).published, true) = $published)
+AND ($review_status IS NULL OR coalesce(n_head, n).review_status = $review_status)
                 WITH n, nodeScores
 
                 WITH n, [x IN nodeScores WHERE x.node = n | x.score] AS scoreList
@@ -118,7 +125,9 @@ AND (n:Entity OR $see_unpublished OR coalesce(coalesce(n_head, n).published, tru
                       updated_by: null,
                       updated_when: null,
                       semantic_spaces: n.semantic_spaces,
-                      context_labels: n.context_labels
+                      context_labels: n.context_labels,
+                      published: coalesce(headnode.published, true),
+                      review_status: headnode.review_status
                   }}) AS pagedResults
                   RETURN pagedResults
                 }
@@ -187,6 +196,8 @@ AND (n:Entity OR $see_unpublished OR coalesce(coalesce(n_head, n).published, tru
             WITH t, nodeScores, t_head
             WHERE NOT coalesce(CASE WHEN t:Entity THEN t.deleted ELSE coalesce(t_head, t).deleted END, false)
 AND (t:Entity OR $see_unpublished OR coalesce(coalesce(t_head, t).published, true))
+AND ($published IS NULL OR coalesce(coalesce(t_head, t).published, true) = $published)
+AND ($review_status IS NULL OR coalesce(t_head, t).review_status = $review_status)
             WITH t, nodeScores
             MATCH (t)--(n:Entity)
             WHERE $targetType IN labels(n)
@@ -196,6 +207,8 @@ AND (t:Entity OR $see_unpublished OR coalesce(coalesce(t_head, t).published, tru
             WITH n, nodeScores, n_head
             WHERE NOT coalesce(CASE WHEN n:Entity THEN n.deleted ELSE coalesce(n_head, n).deleted END, false)
 AND (n:Entity OR $see_unpublished OR coalesce(coalesce(n_head, n).published, true))
+AND ($published IS NULL OR coalesce(coalesce(n_head, n).published, true) = $published)
+AND ($review_status IS NULL OR coalesce(n_head, n).review_status = $review_status)
             WITH n, nodeScores
 
             WITH n, [x IN nodeScores WHERE x.node = n | x.score] AS scoreList
@@ -223,7 +236,9 @@ AND (n:Entity OR $see_unpublished OR coalesce(coalesce(n_head, n).published, tru
                   updated_by: null,
                   updated_when: null,
                   semantic_spaces: n.semantic_spaces,
-                  context_labels: n.context_labels
+                  context_labels: n.context_labels,
+                  published: coalesce(headnode.published, true),
+                  review_status: headnode.review_status
               }}) AS pagedResults
               RETURN pagedResults
             }
@@ -262,6 +277,8 @@ AND (n:Entity OR $see_unpublished OR coalesce(coalesce(n_head, n).published, tru
             WITH n, totalScore, n_head
             WHERE NOT coalesce(CASE WHEN n:Entity THEN n.deleted ELSE coalesce(n_head, n).deleted END, false)
 AND (n:Entity OR $see_unpublished OR coalesce(coalesce(n_head, n).published, true))
+AND ($published IS NULL OR coalesce(coalesce(n_head, n).published, true) = $published)
+AND ($review_status IS NULL OR coalesce(n_head, n).review_status = $review_status)
             WITH n, totalScore
             ORDER BY totalScore DESC, id(n)
             WITH collect(n) AS allNodes
@@ -283,7 +300,9 @@ AND (n:Entity OR $see_unpublished OR coalesce(coalesce(n_head, n).published, tru
                     updated_by: null,
                     updated_when: null,
                     semantic_spaces: n.semantic_spaces,
-                    context_labels: n.context_labels
+                    context_labels: n.context_labels,
+                    published: coalesce(headnode.published, true),
+                    review_status: headnode.review_status
                 }}) AS items
             }
             RETURN {
@@ -313,6 +332,8 @@ AND (n:Entity OR $see_unpublished OR coalesce(coalesce(n_head, n).published, tru
             WITH n, counted_head
             WHERE NOT coalesce(CASE WHEN n:Entity THEN n.deleted ELSE coalesce(counted_head, n).deleted END, false)
 AND (n:Entity OR $see_unpublished OR coalesce(coalesce(counted_head, n).published, true))
+AND ($published IS NULL OR coalesce(coalesce(counted_head, n).published, true) = $published)
+AND ($review_status IS NULL OR coalesce(counted_head, n).review_status = $review_status)
 
                         WITH count(n) AS total
 
@@ -321,6 +342,8 @@ AND (n:Entity OR $see_unpublished OR coalesce(coalesce(counted_head, n).publishe
             WITH n, total, listed_head
             WHERE NOT coalesce(CASE WHEN n:Entity THEN n.deleted ELSE coalesce(listed_head, n).deleted END, false)
 AND (n:Entity OR $see_unpublished OR coalesce(coalesce(listed_head, n).published, true))
+AND ($published IS NULL OR coalesce(coalesce(listed_head, n).published, true) = $published)
+AND ($review_status IS NULL OR coalesce(listed_head, n).review_status = $review_status)
 
                         WITH n, total
                         ORDER BY n.id
@@ -341,7 +364,9 @@ AND (n:Entity OR $see_unpublished OR coalesce(coalesce(listed_head, n).published
                             updated_by: null,
                             updated_when: null,
                             semantic_spaces: n.semantic_spaces,
-                            context_labels: n.context_labels
+                            context_labels: n.context_labels,
+                            published: coalesce(headnode.published, true),
+                            review_status: headnode.review_status
                         }}) AS items, collect(n) AS page_nodes, total,
                         toInteger(ceil(toFloat(total) / $page_size)) AS totalPages
 

@@ -109,6 +109,14 @@ class _DocumentReferenceViewAPIMeta(_BaseObject):
     updated_when: datetime.datetime | None = Field(
         default_factory=lambda: datetime.datetime.now(datetime.UTC)
     )
+    # As in the meta of a head view: False if it is not published, and the status if `pangloss-review` keeps one
+    published: bool = True
+    review_status: str | None = None
+
+    @field_validator("published", mode="before")
+    @classmethod
+    def no_published_is_true(cls, v):
+        return True if v is None else v
 
     @field_validator("semantic_spaces", mode="before")
     @classmethod

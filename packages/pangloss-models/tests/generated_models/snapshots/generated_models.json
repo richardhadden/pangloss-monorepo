@@ -27987,6 +27987,7 @@
     "context_labels_to_empty_list",
     "convert_database_created_when_date",
     "convert_database_updated_when_date",
+    "no_published_is_true",
     "semantic_spaces_to_empty_list"
    ],
    "fields": {
@@ -28055,6 +28056,28 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'isHeadNode'"
+    },
+    "published": {
+     "alias": "published",
+     "annotation": "bool",
+     "default": "True",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'published'"
+    },
+    "review_status": {
+     "alias": "reviewStatus",
+     "annotation": "None | str",
+     "default": "None",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'reviewStatus'"
     },
     "semantic_spaces": {
      "alias": "semanticSpaces",

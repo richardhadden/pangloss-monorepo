@@ -124,6 +124,8 @@ async def list_items(
     page_number: int | None = None,
     page_size: int | None = None,
     deep_search: bool = False,
+    published: bool | None = None,
+    review_status: str | None = None,
 ) -> _ListItems[_DocumentReferenceViewBase | _EntityReferenceViewBase]:
     query, params = build_generic_list_query(
         cls,
@@ -131,6 +133,8 @@ async def list_items(
         page_number=page_number,
         page_size=page_size,
         deep_search=deep_search,
+        published=published,
+        review_status=review_status,
     )
 
     concrete_types = get_concrete_types(cls)

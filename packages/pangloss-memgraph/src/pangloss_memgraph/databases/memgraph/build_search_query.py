@@ -292,7 +292,9 @@ def build_search_query(
             updated_by: null,
             updated_when: null,
             semantic_spaces: n.semantic_spaces,
-            context_labels: n.context_labels
+            context_labels: n.context_labels,
+            published: coalesce(n.published, true),
+            review_status: n.review_status
         }}}}) AS items
     }}
     RETURN {{

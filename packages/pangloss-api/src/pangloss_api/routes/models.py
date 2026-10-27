@@ -58,7 +58,15 @@ logged_in = [Depends(get_current_user)]
 
 
 # What else is at `/api/...` or in the root of the app
-RESERVED_NAMES = {"users", "autocomplete", "search", "sdk", "docs", "redoc", "openapi.json"}
+RESERVED_NAMES = {
+    "users",
+    "autocomplete",
+    "search",
+    "sdk",
+    "docs",
+    "redoc",
+    "openapi.json",
+}
 
 
 def check_name_is_free(name: str) -> None:
@@ -233,12 +241,25 @@ def build_router(model: type[Document | Entity]) -> APIRouter:
     async def list_items(
         q: Annotated[str | None, Query(description="Search the labels")] = None,
         deep: Annotated[bool, Query(description="Search more than the labels")] = False,
+        published: Annotated[
+            bool | None,
+            Query(description="Only those that are (or are not) published"),
+        ] = None,
+        review_status: Annotated[
+            str | None,
+            Query(description="Only those with this review status (pangloss-review)"),
+        ] = None,
         page: Annotated[int | None, Query(ge=1)] = None,
         page_size: Annotated[int | None, Query(ge=1, le=MAX_PAGE_SIZE)] = None,
     ):
         return await called(
             model.list(  # type: ignore[call-arg]
-                search_terms=q, page_number=page, page_size=page_size, deep_search=deep
+                search_terms=q,
+                page_number=page,
+                page_size=page_size,
+                deep_search=deep,
+                published=published,
+                review_status=review_status,
             )
         )
 

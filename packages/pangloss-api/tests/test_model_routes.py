@@ -98,7 +98,10 @@ def test_no_models_no_model_routes(settings):
     from fastapi.testclient import TestClient
 
     paths = set(TestClient(create_app()).get("/openapi.json").json()["paths"])
-    assert all(path.startswith(("/api/users", "/api/autocomplete", "/api/search")) for path in paths)
+    assert all(
+        path.startswith(("/api/users", "/api/autocomplete", "/api/search"))
+        for path in paths
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -174,6 +177,8 @@ def test_list_parameters(settings, monkeypatch):
         "page_number": None,
         "page_size": None,
         "deep_search": False,
+        "published": None,
+        "review_status": None,
     }
 
     response = client.get(
@@ -186,8 +191,18 @@ def test_list_parameters(settings, monkeypatch):
         "page_number": 2,
         "page_size": 10,
         "deep_search": True,
+        "published": None,
+        "review_status": None,
     }
     assert response.json()["page"] == 2
+
+    assert (
+        client.get(
+            "/api/Person", params={"published": "false", "review_status": "unchecked"}
+        ).status_code
+        == 200
+    )
+    assert seen[-1]["published"] is False and seen[-1]["review_status"] == "unchecked"
 
     for bad in ({"page": 0}, {"page_size": 0}, {"page_size": 100000}, {"page": "x"}):
         assert client.get("/api/Person", params=bad).status_code == 422

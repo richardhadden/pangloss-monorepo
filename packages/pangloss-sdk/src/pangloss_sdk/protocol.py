@@ -175,6 +175,8 @@ def list_items(
     page_number: int | None = None,
     page_size: int | None = None,
     deep_search: bool = False,
+    published: bool | None = None,
+    review_status: str | None = None,
 ) -> Call:
     params: dict[str, Any] = {}
     if search_terms is not None:
@@ -185,6 +187,10 @@ def list_items(
         params["page_size"] = page_size
     if deep_search:
         params["deep"] = "true"
+    if published is not None:
+        params["published"] = "true" if published else "false"
+    if review_status is not None:
+        params["review_status"] = review_status
     return Call("GET", f"/api/{cls.__name__}", params=params)
 
 

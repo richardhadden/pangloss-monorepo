@@ -263,7 +263,8 @@ def operations_source(model: type, qualified_name: str, mode: Operations) -> str
     lines += [
         "@classmethod",
         f"{define} list(cls, search_terms: str | None = None, page_number: int | None = None, "
-        f"page_size: int | None = None, deep_search: bool = False) "
+        f"page_size: int | None = None, deep_search: bool = False, "
+        f"published: bool | None = None, review_status: str | None = None) "
         f"-> _PgListItems[{qualified_name}.ReferenceView]: ...  # type: ignore",
         "@classmethod",
         f"{define} delete(cls, id: {id_type}) -> None: ...  # type: ignore",

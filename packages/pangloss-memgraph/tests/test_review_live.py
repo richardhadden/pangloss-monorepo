@@ -299,3 +299,69 @@ async def test_the_api(clear_database, db_driver):
         read = (await client.get(f"/api/Letter/{id}")).json()
         assert read["meta"]["reviewStatus"] == "checked"
         assert (await client.get("/api/review/queue", headers=bob)).json()["count"] == 0
+
+
+@no_type_check
+async def test_lists_and_searches_carry_the_state_and_can_be_filtered(
+    clear_database, db_driver
+):
+    from pangloss_api.app import create_app
+    from pangloss_models.search import Match
+    from pangloss_review import api
+
+    from .test_api_models import client_for, logged_in
+
+    _, Letter, *_ = models()
+    await Letter.Create(label="Waiting", title="t", notes=[]).save()
+    wrong = await Letter.Create(label="Wrong", title="t", notes=[]).save()
+    right = await Letter.Create(label="Right", title="t", notes=[]).save()
+    await service.set_status(wrong.id, ReviewStatus.ERRORS_FOUND, "bob")
+    await service.set_status(right.id, ReviewStatus.CHECKED, "bob")
+
+    def states(found):
+        return {
+            i.label: (i.meta.published, i.meta.review_status) for i in found.results
+        }
+
+    everything = await Letter.list()
+    assert states(everything) == {
+        "Waiting": (False, "unchecked"),
+        "Wrong": (False, "errors_found"),
+        "Right": (True, "checked"),
+    }
+    assert states(await Letter.search(Match(where={})))["Right"] == (True, "checked")
+
+    def labels(found):
+        return sorted(i.label for i in found.results)
+
+    assert labels(await Letter.list(published=True)) == ["Right"]
+    assert labels(await Letter.list(published=False)) == ["Waiting", "Wrong"]
+    assert labels(await Letter.list(review_status="errors_found")) == ["Wrong"]
+    assert labels(await Letter.list(published=False, review_status="unchecked")) == [
+        "Waiting"
+    ]
+    # (and in the other kinds of list, which count and page the same way)
+    assert labels(await Letter.list(search_terms="Wr", published=False)) == ["Wrong"]
+    assert (
+        labels(
+            await Letter.list(
+                search_terms="Wr", deep_search=True, review_status="checked"
+            )
+        )
+        == []
+    )
+
+    app = create_app()
+    app.include_router(api.router)
+    async with client_for(app) as client:
+        bob = await logged_in(client, "bob")
+        found = await client.get(
+            "/api/Letter?published=false&review_status=unchecked", headers=bob
+        )
+        assert [r["label"] for r in found.json()["results"]] == ["Waiting"]
+        assert found.json()["results"][0]["meta"]["reviewStatus"] == "unchecked"
+        assert found.json()["count"] == 1
+        # not logged in: what is not published is not there, whatever is asked
+        assert (await client.get("/api/Letter?published=false")).json()["count"] == 0
+        anyone = (await client.get("/api/Letter")).json()
+        assert [r["label"] for r in anyone["results"]] == ["Right"]
