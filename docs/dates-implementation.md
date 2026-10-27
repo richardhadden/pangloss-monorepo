@@ -317,3 +317,12 @@ Embedded
   1400 to 1600 round-trips and agrees with `juliandate`, the leap years, weekdays, `nth_weekday` against a brute force over 1400 to 1600
   in both calendars, and the days that do not exist.
 - Next: `bounds.py` (the four bounds and `sort_day`), `recurrence.py`, `edtf.py`.
+
+- `pangloss_dates.bounds` (built): `Bounds` (the four, checked in order; `sort_day(SortBy)`, `contains`), `SortBy`, `Precision`,
+  `Padding` (the convention: an approximate year is a year either side, a month a month, a day a week),
+  `exact_bounds`, `padded_bounds`, `spanning_bounds` (a range of two dates, or a period), `ongoing_bounds(horizon)`.
+- `pangloss_dates.recurrence` (built): `RecurrenceRule` (weekly / monthly / yearly; weekdays, `nth`, `month`, `month_day`,
+  `interval`, `excluded_days`; an impossible combination is `InvalidRule`), `occurs_on`, `occurrences`, `pattern_keys`, `day_keys`.
+  A rule is applied in a calendar; an interval over 1 counts from an anchor day (weeks of seven days from it). The keys never miss
+  (tested over eight years in both calendars for eight rules), and cut the candidate days to under 60%.
+- 92 tests in all. Left of phase 1: `edtf.py`.
