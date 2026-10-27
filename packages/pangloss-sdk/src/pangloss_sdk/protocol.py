@@ -10,6 +10,7 @@ from typing import Any, Literal, Union
 from uuid import UUID
 
 from pangloss_models import exceptions as models_exceptions
+from pangloss_models.autocomplete import AutocompleteResults
 from pangloss_models.model_bases.base_models import _ListItems
 from pangloss_models.utils import get_concrete_types
 from pydantic import TypeAdapter
@@ -193,6 +194,25 @@ def listed(cls: type, response: Any) -> Any:
     adapter = TypeAdapter(list[Union[*reference_views]])  # type: ignore[valid-type]
     results = adapter.validate_python(data["results"])
     return _ListItems.model_validate({**data, "results": results})
+
+
+def autocomplete(
+    search_terms: str,
+    types: list[type],
+    page_number: int | None = None,
+    page_size: int | None = None,
+) -> Call:
+    params: dict[str, Any] = {"q": search_terms, "type": [t.__name__ for t in types]}
+    if page_number is not None:
+        params["page"] = page_number
+    if page_size is not None:
+        params["page_size"] = page_size
+    return Call("GET", "/api/autocomplete", params=params)
+
+
+def autocompleted(response: Any) -> Any:
+    check(response)
+    return AutocompleteResults.model_validate(response.json())
 
 
 def create(instance: Any, detail: bool = False) -> Call:

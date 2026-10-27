@@ -24,6 +24,7 @@ Choices that block, or shape, other work. Not tasks to start yet; each says what
 
 ## API and security
 
+- [ ] **Autocomplete, later** (details in [docs/autocomplete.md](docs/autocomplete.md), "To do later"): measure the speed on 600,000 nodes (fallback: prefix patterns, two letters minimum); a text index over all text fields, so more than the label is found; the XML answer for the Oxygen editor; the per-field route `/api/{Model}/{field}/autocomplete`; the interface relation field that uses it.
 - [ ] Permissions beyond logged in / admin (per type, per object).
 - [ ] Delete and undelete do not check the version (an `If-Match` could be accepted, as for an update, so a stale page cannot delete what has just been changed).
 - [ ] Revoke open sessions when a password is changed (disabling a user already stops their tokens at once).

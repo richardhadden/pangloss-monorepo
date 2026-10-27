@@ -41,7 +41,7 @@ FAKE_DB_EXPOSED = """
 
     get_document = get_entity = get_entity_for_edit = _unused
     delete_document = delete_entity = _unused
-    undelete_document = undelete_entity = list_items = _unused
+    undelete_document = undelete_entity = list_items = autocomplete = _unused
     create_head_node = update_head_node = _unused
 
     async def create_user_in_db(user):

@@ -183,6 +183,7 @@ models are validated**, on the client as well as the server, if they are in the 
 | `get_document(cls, id)`, `get_entity(cls, id)` | `GET /api/NAME/{id}` (an entity's URL is put in the path as it is) | `cls.HeadView` from the JSON. A 404 returns `None`, for a document and an entity, as the Memgraph functions do |
 | `get_entity_for_edit(cls, id)` | `GET /api/NAME/{id}/edit` | `cls.EditView`; the `ETag` is kept as its version |
 | `list_items(cls, search_terms, page_number, page_size, deep_search)` | `GET /api/NAME?q=&page=&page_size=&deep=` | `_ListItems` of `ReferenceView` |
+| `autocomplete(search_terms, types, page_number, page_size)` | `GET /api/autocomplete?q=&type=&page=&page_size=` | `AutocompleteResults` (see [Autocomplete](autocomplete.md)) |
 | `create_head_node(self, detail)` | `POST /api/NAME`, body `self` (the **`Create`**, by alias, JSON mode), `?detail=` | `ReferenceView`, or `HeadView` with `detail` |
 | `update_head_node(self, detail, expected_version)` | `PUT /api/NAME/{id}`, `If-Match: "<v>"` (or `*` if none is given... see below) | as above |
 | `delete_*`, `undelete_*` | `DELETE /api/NAME/{id}`, `POST .../undelete` | `None` |

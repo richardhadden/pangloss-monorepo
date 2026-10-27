@@ -32,6 +32,7 @@ Each feature in these docs is marked with its status:
 | [Command line](cli.md) | The `pangloss` command, and adding commands from apps |
 | [Meta slots](meta-slots.md) 🚧 | Built in `pangloss_models` (and the protection of fields the API will not change): letting optional packages (the interface) keep their own `_<name>_meta` on a model class |
 | [Translations](translations.md) 🚧 | Translating the interface: the JSONC files per app and project, keeping manual edits when the models change, and the `generate`, `gather` and `check` commands (built; no page uses them yet) |
+| [Autocomplete](autocomplete.md) ✅ | One endpoint that finds existing entities by their label over any set of types, for the interface's relation fields and for other tools; built, with what is left to do later |
 | [Zotero](zotero.md) 🚧 | `pangloss-zotero`: keeping a Zotero library in the database, one way (sync by version, a websocket watcher run as a background task, commands), brought over from the earlier plugin; built, not yet tried on the real Zotero |
 | [Zotero items as sources and subjects](zotero-sources.md) 🚧 | How a Zotero item can be both the source of a factoid and what a factoid is about, as one node: the options, and what was decided and built |
 | [History](history.md) ⏳ | A design for recording every version of a document or entity (best effort, in SQLite), and restoring one, including after the models have changed |

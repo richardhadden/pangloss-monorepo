@@ -8,6 +8,7 @@ what the database module of the server returns, or raises what it raises.
 from typing import Any
 from uuid import UUID
 
+from pangloss_models.autocomplete import AutocompleteResults
 from pangloss_models.model_bases.base_models import _ListItems
 from pangloss_models.model_bases.document import Document
 from pangloss_models.model_bases.entity import Entity
@@ -38,6 +39,17 @@ def list_items(
 ) -> _ListItems:
     call = protocol.list_items(cls, search_terms, page_number, page_size, deep_search)
     return protocol.listed(cls, current_client().send(call))
+
+
+def autocomplete(
+    cls: type[Entity],
+    search_terms: str,
+    types: list[type] | None = None,
+    page_number: int | None = None,
+    page_size: int | None = None,
+) -> AutocompleteResults:
+    call = protocol.autocomplete(search_terms, types or [cls], page_number, page_size)
+    return protocol.autocompleted(current_client().send(call))
 
 
 def create_head_node(self: Any, detail: bool = False) -> Any:

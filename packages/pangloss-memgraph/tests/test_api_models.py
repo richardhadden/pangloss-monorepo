@@ -727,3 +727,47 @@ async def test_an_update_of_a_version_that_is_no_longer_the_latest_is_refused(
         )
         assert stale.status_code == 412
         assert stale.json()["currentVersion"] == 1
+
+
+@no_type_check
+async def test_autocomplete_over_http_with_the_data_in_memgraph(
+    db_driver, clear_database
+):
+    class Agent(Entity):
+        pass
+
+    class Person(Agent):
+        pass
+
+    class Place(Entity):
+        pass
+
+    app = create_app()
+    async with client_for(app) as client:
+        john = await logged_in(client)
+        for kind, label in (
+            ("Person", "John Smith"),
+            ("Place", "Smithfield"),
+            ("Person", "Jane Jones"),
+        ):
+            made = await client.post(
+                f"/api/{kind}", json={"type": kind, "label": label}, headers=john
+            )
+            assert made.status_code == 201, made.text
+
+        found = await client.get(
+            "/api/autocomplete", params={"q": "smi", "type": ["Agent", "Place"]}
+        )
+
+        assert found.status_code == 200, found.text
+        body = found.json()
+        assert body["count"] == 2
+        assert sorted((i["type"], i["label"]) for i in body["results"]) == [
+            ("Person", "John Smith"),
+            ("Place", "Smithfield"),
+        ]
+        assert (
+            await client.get(
+                "/api/autocomplete", params={"q": "smi", "type": ["Agent"]}
+            )
+        ).json()["count"] == 1

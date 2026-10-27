@@ -3,6 +3,11 @@ from typing import Any, Literal, Union, cast
 from uuid import UUID
 
 from neo4j.exceptions import ClientError
+from pangloss_models.autocomplete import (
+    AutocompleteResults,
+    labels_to_match,
+    search_words,
+)
 from pangloss_models.exceptions import (
     PanglossConflictError,
     PanglossEntityInUseError,
@@ -36,6 +41,9 @@ from pangloss_users.models import AccessTokenRecord, UserInDB
 from pydantic import AnyHttpUrl, TypeAdapter
 
 from pangloss_memgraph.databases.memgraph import users
+from pangloss_memgraph.databases.memgraph.build_autocomplete_query import (
+    AUTOCOMPLETE_QUERY,
+)
 from pangloss_memgraph.databases.memgraph.build_create_query import (
     build_head_create_query,
     convert_type_for_writing,
@@ -135,6 +143,41 @@ async def list_items(
     result = _ListItems(**results)
 
     return result
+
+
+@Database.default.read_transaction
+async def autocomplete(
+    tx: Transaction,
+    cls: type[Entity],
+    search_terms: str,
+    types: list[type[Entity]] | None = None,
+    page_number: int | None = None,
+    page_size: int | None = None,
+) -> AutocompleteResults:
+    """The entities of the given types (or of `cls`) whose label has every word of the search
+    terms in it: a label that begins with them first, then by how well the index scores them."""
+    words = search_words(search_terms)
+    page, size = page_number or 1, page_size or 10
+    if not words:
+        return AutocompleteResults(
+            results=[],
+            count=0,
+            page=page,
+            page_size=size,
+            next_page=None,
+            previous_page=page - 1 if page > 1 else None,
+        )
+    params = {
+        "patterns": [f".*{word}.*" for word in words],
+        "labels": labels_to_match(types or [cls]),
+        "start": " ".join(words),
+        "page": page,
+        "page_size": size,
+    }
+    result = await tx.run(AUTOCOMPLETE_QUERY, **params)
+    rows = await result.value()
+    found: dict = rows[0] if rows else await empty_page(tx, AUTOCOMPLETE_QUERY, params)
+    return AutocompleteResults.model_validate(found)
 
 
 async def class_of_node[T: (Document, Entity)](

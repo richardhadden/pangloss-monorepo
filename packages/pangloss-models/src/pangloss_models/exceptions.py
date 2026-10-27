@@ -119,3 +119,7 @@ class PanglossMigrationNotSupported(PanglossMigrationError):
 class PanglossServerOnly(Exception):
     """A function marked `@server_only` was called on a client of the API (the SDK), which
     does not have its body"""
+
+
+class PanglossUnknownTypeError(Exception):
+    """A type named in a search is not a model that can be searched"""
