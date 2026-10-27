@@ -604,6 +604,7 @@
    "kind": "Embedded",
    "meta": {
     "abstract": "False",
+    "indexes": "[]",
     "require_label": "False"
    }
   },

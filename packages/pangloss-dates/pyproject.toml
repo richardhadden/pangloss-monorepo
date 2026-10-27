@@ -8,6 +8,7 @@ authors = [
 ]
 requires-python = ">=3.15"
 dependencies = [
+    "pangloss-core",
     "pangloss-models",
 ]
 
@@ -24,7 +25,9 @@ build-backend = "uv_build"
 
 [dependency-groups]
 # an independent check of the day arithmetic in the tests
-dev = ["juliandate>=1.0.5"]
+dev = ["juliandate>=1.0.5", "pangloss-sdk"]
 
 [tool.uv.sources]
+pangloss-core = { workspace = true }
+pangloss-sdk = { workspace = true }
 pangloss-models = { workspace = true }

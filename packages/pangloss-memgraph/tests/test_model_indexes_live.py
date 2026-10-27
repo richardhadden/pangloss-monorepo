@@ -14,12 +14,13 @@ from pangloss_models import initialise
 from pangloss_models.migrations import changes as c
 from pangloss_models.migrations.files import EMPTY_SNAPSHOT
 from pangloss_models.model_bases.document import Document
+from pangloss_models.model_bases.embedded import Embedded
 from pangloss_models.model_bases.entity import Entity
 from pangloss_models.search import Match, check_match
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
-LABELS = ["IdxLetter", "IdxPerson"]
+LABELS = ["IdxLetter", "IdxPerson", "IdxDate", "IdxPlain"]
 
 
 def models():
@@ -131,5 +132,31 @@ async def test_a_search_of_a_class_starts_at_its_index_and_a_field_asked_for_is_
         assert scans(plan(IdxPerson, {"label": {"eq": "x"}})) == [
             "ScanAllByLabel (n :IdxPerson)"
         ]
+    finally:
+        drop_mine(db_driver)
+
+
+async def test_an_embedded_class_gets_the_indexes_it_asks_for_and_no_label_index(
+    db_driver,
+):
+    class IdxDate(Embedded):
+        _meta = Embedded.Meta(indexes=["sort_day"])
+        sort_day: int | None = None
+
+    class IdxExact(IdxDate):
+        year: int
+
+    class IdxPlain(Embedded):
+        text: str
+
+    class IdxNote(Document):
+        when: IdxDate | IdxPlain
+
+    initialise()
+    try:
+        await initialise_database()
+        assert mine(db_driver) >= {("label+property", "IdxDate", ("sort_day",))}
+        assert not {t for t in mine(db_driver) if t[1] in ("IdxPlain", "IdxExact")}
+        assert ("label", "IdxDate", ()) not in mine(db_driver)
     finally:
         drop_mine(db_driver)

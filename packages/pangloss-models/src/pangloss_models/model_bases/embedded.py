@@ -24,6 +24,11 @@ class EmbeddedMeta(BaseMeta, DeclaredClassMeta):
     _owner_class: type[Embedded] | InheritValue = InheritValue.AS_DEFAULT
     abstract: Annotated[bool, MetaRules.DO_NOT_INHERIT] = False
     require_label: Literal[False] = False
+    # Fields of this class to keep an index of, for searching by them (as on documents and entities; an embedded
+    # class has no label index of its own unless it asks for a field). The nodes of its subclasses are in it too
+    indexes: Annotated[list[str], MetaRules.DO_NOT_INHERIT] = Field(
+        default_factory=list
+    )
     field_definitions: Annotated[ModelFields, MetaRules.DO_NOT_INHERIT] = Field(
         default_factory=ModelFields
     )
@@ -56,6 +61,7 @@ class _EmbeddedViewBase(_ViewBase):
 class Embedded(_DeclaredClass, WithMeta[EmbeddedMeta]):
     __metatype__ = "Embedded"
     _meta: ClassVar[EmbeddedMeta] = EmbeddedMeta()
+    Meta: ClassVar[type[EmbeddedMeta]] = EmbeddedMeta
 
     Create: ClassVar[type[_EmbeddedCreateBase]]
     CreateDB: ClassVar[type[_EmbeddedCreateDBBase]]

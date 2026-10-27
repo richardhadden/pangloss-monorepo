@@ -743,6 +743,7 @@ name = "pangloss-dates"
 version = "0.1.0"
 source = { editable = "packages/pangloss-dates" }
 dependencies = [
+    { name = "pangloss-core" },
     { name = "pangloss-models" },
 ]
 
@@ -754,17 +755,22 @@ edtf = [
 [package.dev-dependencies]
 dev = [
     { name = "juliandate" },
+    { name = "pangloss-sdk" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "edtf", marker = "extra == 'edtf'", specifier = ">=5" },
+    { name = "pangloss-core", editable = "packages/pangloss-core" },
     { name = "pangloss-models", editable = "packages/pangloss-models" },
 ]
 provides-extras = ["edtf"]
 
 [package.metadata.requires-dev]
-dev = [{ name = "juliandate", specifier = ">=1.0.5" }]
+dev = [
+    { name = "juliandate", specifier = ">=1.0.5" },
+    { name = "pangloss-sdk", editable = "packages/pangloss-sdk" },
+]
 
 [[package]]
 name = "pangloss-history"

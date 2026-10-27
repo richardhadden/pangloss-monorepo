@@ -429,3 +429,49 @@ def test_incoming_is_one_pattern_or_a_list_and_has_a_type():
     ).model_dump(by_alias=True, exclude_unset=True, mode="json") == {
         "where": {"$incoming": [{"type": "A", "where": {"x": {"eq": 1}}}]}
     }
+
+
+def test_an_embedded_field_is_searched_by_a_pattern_for_it():
+    from pangloss_models.model_bases.embedded import Embedded
+
+    class When(Embedded):
+        _meta = Embedded.Meta(abstract=True)
+        sort_day: int | None = None
+
+    class Exact(When):
+        year: int
+
+    class Span(When):
+        earliest: Exact
+
+    class Note(Document):
+        when: When
+
+    initialise()
+    # (the type may be left out: the field is typed with one class)
+    checked = check_match(
+        Note, Match(where={"when": {"where": {"sort_day": {"gt": 5}}}})
+    )
+    assert checked[0].operator == "match" and checked[0].value.model is When
+    # a subclass, and its own fields, and an embedded object inside one
+    check_match(
+        Note, Match(where={"when": {"type": "Exact", "where": {"year": {"eq": 1}}}})
+    )
+    check_match(
+        Note,
+        Match(
+            where={
+                "when": {
+                    "type": "Span",
+                    "where": {"earliest": {"where": {"year": {"gte": 1500}}}},
+                }
+            }
+        ),
+    )
+    with pytest.raises(PanglossSearchError, match="no field"):
+        check_match(
+            Note,
+            Match(where={"when": {"type": "Exact", "where": {"month": {"eq": 1}}}}),
+        )
+    with pytest.raises(PanglossSearchError):
+        check_match(Note, Match(where={"when": {"type": "Note"}}))

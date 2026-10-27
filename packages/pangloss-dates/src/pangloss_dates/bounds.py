@@ -38,6 +38,7 @@ class Precision(StrEnum):
     MONTH = "month"
     DAY = "day"
     RANGE = "range"
+    ONGOING = "ongoing"
 
 
 @dataclass(frozen=True)

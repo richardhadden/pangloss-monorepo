@@ -21,18 +21,24 @@ from pangloss_models.field_definitions import (
     LiteralFieldDefinition,
 )
 from pangloss_models.model_bases.document import Document
+from pangloss_models.model_bases.embedded import Embedded
 from pangloss_models.model_bases.entity import Entity
 
 
 def indexed_classes() -> list[type]:
-    """The classes of documents and entities (abstract ones too: a search of a parent class starts at its label)"""
+    """The classes of documents and entities (abstract ones too: a search of a parent class starts at its label),
+    and the embedded classes that ask for an index of a field"""
     from pangloss_models.model_registry import ModelRegistry
 
     return sorted(
         (
             model
             for model in ModelRegistry.all_models().values()
-            if isinstance(model, type) and issubclass(model, (Document, Entity))
+            if isinstance(model, type)
+            and (
+                issubclass(model, (Document, Entity))
+                or (issubclass(model, Embedded) and model._meta.indexes)
+            )
         ),
         key=lambda model: model.__name__,
     )
@@ -46,7 +52,7 @@ def check_indexes(model: type) -> None:
     fields = model._meta.fields  # type: ignore
     for name in names:
         if (
-            name == "label"
+            name == "label" and getattr(model, "__metatype__", None) != "Embedded"
         ):  # (every document and entity has one: it is not one of the fields)
             continue
         definition = fields.get(name)
@@ -65,7 +71,8 @@ def model_indexes() -> list[dict[str, Any]]:
     """The indexes of the registered models: the label of each class, and each field it asks for"""
     entries: list[dict[str, Any]] = []
     for model in indexed_classes():
-        entries.append({"kind": "label", "label": model.__name__, "properties": []})
+        if not issubclass(model, Embedded):
+            entries.append({"kind": "label", "label": model.__name__, "properties": []})
         for name in model._meta.indexes:  # type: ignore
             entries.append(
                 {

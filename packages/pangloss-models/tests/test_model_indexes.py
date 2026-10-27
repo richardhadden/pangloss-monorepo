@@ -139,3 +139,36 @@ def test_an_index_of_a_model_is_made_by_the_app_the_model_is_in():
         app_of_change(c.RemoveIndex(index=entry), new, made_by, apps)
         == "pangloss_memgraph"
     )
+
+
+def test_an_embedded_class_has_indexes_only_if_it_asks():
+    class Date(Embedded):
+        _meta = Embedded.Meta(indexes=["sort_day"])
+        sort_day: int | None = None
+
+    class ExactDate(Date):
+        year: int
+
+    class Plain(Embedded):
+        text: str
+
+    class Note(Document):
+        when: Date | Plain
+
+    initialise()
+    entries = model_indexes()
+    assert prop("Date", "sort_day") in entries
+    assert not [e for e in entries if e["label"] in ("ExactDate", "Plain")]
+    assert label("Note") in entries and label("Date") not in entries
+
+
+def test_an_embedded_class_cannot_index_a_label_or_an_unknown_field():
+    class Bad(Embedded):
+        _meta = Embedded.Meta(indexes=["label"])
+        year: int
+
+    class Note(Document):
+        when: Bad
+
+    with pytest.raises(PanglossMetaError):
+        initialise()

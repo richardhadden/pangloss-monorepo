@@ -134,6 +134,8 @@ class ModelKind:
     """Whether the model has the validator that `id` and `create_new` go together"""
     generic_validators: bool = False
     bound_validators: bool = False
+    declared_validators: bool = False
+    """Whether the `mode="after"` model validators the class declares are copied (the models that are written)"""
 
     # --- what is applied --------------------------------------------------------------------------
     applies_bindings: bool = False
@@ -230,6 +232,7 @@ def bases_for(
 CLIENT_LITERAL = rule({"bound", "fulfil"}, {"bound", "fulfil", "optional"})
 
 CREATE = ModelKind(
+    declared_validators=True,
     attribute="Create",
     bases=bases_for("Create"),
     offers=("Create",),
@@ -256,6 +259,7 @@ CREATE = ModelKind(
 )
 
 UPDATE = ModelKind(
+    declared_validators=True,
     attribute="Update",
     bases=bases_for("Update"),
     offers=("Update", "Create"),
@@ -280,6 +284,7 @@ UPDATE = ModelKind(
 )
 
 CREATE_DB = ModelKind(
+    declared_validators=True,
     attribute="CreateDB",
     bases=bases_for("CreateDB"),
     offers=("CreateDB",),
@@ -308,6 +313,7 @@ CREATE_DB = ModelKind(
 )
 
 UPDATE_DB = ModelKind(
+    declared_validators=True,
     attribute="UpdateDB",
     bases=bases_for("UpdateDB"),
     offers=("UpdateDB", "CreateDB"),

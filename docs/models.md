@@ -134,6 +134,10 @@ class Statement(Document):
     date: Date
 ```
 
+- **A field typed with a base `Embedded` class accepts its subclasses** (each is told apart by `type` in the `Create` and `Update` models; the base class itself is accepted too).
+- **Validators.** A `@model_validator(mode="after")` the class declares is copied to the `Create`, `Update`, `CreateDB` and `UpdateDB` models (not to the views), so a class can fill in what it derives from its other fields, such as the bounds of a date. It is passed the generated model, so it can use the literal fields the class has; the other modes are not copied. Generated models do not carry a field's default: a field the client may leave out must be `X | None = None`.
+- **Indexes.** `Embedded.Meta(indexes=["field"])` asks for a label-and-property index of a field, as on documents and entities (it is not inherited; the nodes of its subclasses carry the label too). An embedded class has no label index unless it asks for a field.
+
 ## Traits
 
 A trait is a mixin that lets a relation target "any of these entities/documents".

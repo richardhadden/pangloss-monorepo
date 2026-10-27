@@ -333,3 +333,35 @@ Embedded
   unspecified digits with a qualifier, open sets. `1500-02` ends on the 29th in the Julian calendar (the library says the 28th).
 - **Phase 1 is complete: 113 tests.** Next: phase 4 (`models.py`), after the core check (validators on `Embedded` reaching the
   generated models, required fields on Create) and `Meta(indexes)` on Embedded.
+
+### Core checks done (2026-10-27)
+
+- A field typed with a base Embedded class accepts its subclasses (tested).
+- Validators on an Embedded did **not** reach the generated models; now `mode="after"` model validators the class declares are copied to
+  `Create`, `Update`, `CreateDB` and `UpdateDB` (`initialise_models/common.py`, `kinds.py` `declared_validators`). The derived bounds are
+  therefore `int | None = None` fields that the validator always fills (a client's values are overwritten).
+- `Embedded.Meta(indexes=[...])` is built: label-and-property indexes for an Embedded class that asks (none otherwise), made by
+  `initialise_database` and migrations like the others. Full suite 2186 passed.
+- Next: `models.py` in `pangloss-dates`.
+
+### Phase 4 built: the models (2026-10-27, not committed)
+
+- `pangloss_dates.models`: `Date` (abstract base: `calendar`, `source_text`, `sort_by`, and the worked-out `precision`, the four bounds, `sort_day`),
+  `ExactDate`, `EDTFDate`, `DateRange` (two `ExactDate`s), `OngoingDate`, `Period` (`start`, `end`, `end_sort_day`; sorts by its start), `Recurrence`
+  (rule fields, `start`, `end`, `end_sort_day`, and `pattern_keys` as a `DBField` that only the database models have). `pangloss_dates.julian`
+  and `pangloss_dates.gregorian` have the thin families (`JulianDate`, `JulianExactDate`, ... : multiple inheritance from the family root and the
+  plain type; the calendar is fixed and the ends of a range, period or recurrence are the family's own).
+- One validator on `Date` (copied to the models that are written) fills everything in, whatever a client sent. Errors (a day that does not
+  exist, an empty range, a rule that says no day, EDTF that is not EDTF, the wrong calendar) are validation errors.
+- Core changes made for it: validators copied (above); `Embedded.Meta(indexes=...)`; a `DBField` list defaults to `[]` in the database models so a
+  validator can fill it; **structured search now reaches into embedded fields**: `{"when": {"type": "JulianExactDate", "where": {"sort_day": {"between": [a, b]}}}}`
+  (the type may be left out when the field is typed with one class; nested embedded objects work the same way).
+- Tested: 15 model tests; a live test writes every kind to Memgraph, reads it back and finds documents by the bounds of their date.
+- **Not done / to know:**
+  - The indexes on `:Date` are not used by a search from a document: the date is reached by an `EXISTS` from the document's node, and an index does
+    not help inside one. They help only a query that starts from the dates; to use them the search would have to start from the date and climb
+    to the document (as `$incoming` does). Not built; measure first.
+  - **Ordering by a date** needs `order_by` on the search (and list) request: not built.
+  - The field-level sort default (`Annotated[ExactDate, SortBy.EARLIEST_FUZZY]`) is not built: an embedded class cannot see the field it is
+    in. The class-level and per-value `sort_by` work. Needs a small core hook if wanted.
+  - "Everything on this day" as a query (the bounds, then `pattern_keys` with `contains_any`, then `occurs_on`) is not written as a helper yet.

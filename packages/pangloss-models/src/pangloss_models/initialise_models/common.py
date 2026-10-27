@@ -65,14 +65,24 @@ def check_create_and_id_present(self):
     return self
 
 
-def get_model_validators(model) -> dict[str, Any]:
-    """The validators a `Create` (or `CreateDB`, `Update`) model has: if the model can be given an
-    id, the id and `create_new` go together"""
+def get_model_validators(model, ids: bool, declared: bool) -> dict[str, Any]:
+    """The validators a generated model has: if the model can be given an id (`ids`), the id and `create_new` go
+    together; and (`declared`) the `mode="after"` model validators the class itself declares, which are copied to
+    the models that are written (`Create`, `Update`, `CreateDB`, `UpdateDB`) so that a class can fill in what it
+    derives from its other fields (the bounds of a date). They are passed the generated model, so they can use
+    only the literal fields the class has; the other modes are not copied."""
     validators = {}
-    if getattr(model._meta, "create_with_id", False):
+    if ids and getattr(model._meta, "create_with_id", False):
         validators["check_create_and_id_present"] = model_validator(mode="after")(
             check_create_and_id_present
         )
+    if declared:
+        for name, decorator in model.__pydantic_decorators__.model_validators.items():
+            # (not those of Pangloss's own base classes, which the generated models have in their own way)
+            if decorator.info.mode == "after" and not decorator.cls_ref.startswith(
+                "pangloss_models."
+            ):
+                validators[name] = model_validator(mode="after")(decorator.func)
 
     return validators
 

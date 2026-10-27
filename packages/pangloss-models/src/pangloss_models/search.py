@@ -28,6 +28,7 @@ from pydantic import (
 
 from pangloss_models.exceptions import PanglossSearchError, PanglossUnknownTypeError
 from pangloss_models.field_definitions import (
+    EmbeddedFieldDefinition,
     ListFieldDefinition,
     LiteralFieldDefinition,
     RelationFieldDefinition,
@@ -39,6 +40,7 @@ from pangloss_models.field_definitions import (
     RelationToSemanticSpace,
 )
 from pangloss_models.model_bases.document import Document
+from pangloss_models.model_bases.embedded import Embedded
 from pangloss_models.model_bases.entity import Entity
 
 # The most that can be asked for in one search
@@ -305,6 +307,20 @@ def without_none(annotation: Any) -> Any:
         if len(rest) == 1:
             return rest[0]
     return annotation
+
+
+def resolve_pattern_type(name: str, roots: list[type]) -> type:
+    """The class a pattern is for: a document or entity, or (for an embedded field) an embedded class"""
+    if roots and all(issubclass(root, Embedded) for root in roots):
+        from pangloss_models.model_registry import ModelRegistry
+
+        model = ModelRegistry.all_models().get(name)
+        if not (isinstance(model, type) and issubclass(model, Embedded)):
+            raise PanglossUnknownTypeError(
+                f"There is no embedded model called '{name}'"
+            )
+        return model
+    return resolve_search_type(name)
 
 
 def kind_of(base: Any) -> Kind | None:
@@ -694,7 +710,7 @@ def check_pattern(
         target = roots[0]
     else:
         try:
-            target = resolve_search_type(condition.type)
+            target = resolve_pattern_type(condition.type, roots)
         except PanglossUnknownTypeError as error:
             raise PanglossSearchError(f"{field}: {error}")
         if options is not None and not any(issubclass(target, o) for o in roots):
@@ -727,6 +743,14 @@ def kind_and_base(
                 f"{field}: a list of {base} cannot be searched yet"
             )
         return "list", base
+    if isinstance(definition, EmbeddedFieldDefinition):
+        # (an embedded object is searched like what a relation points at: a pattern for it, by `type` and `where`)
+        # (and also the class the field is typed with, which is not among its options if it is never used on its own)
+        options = [o.annotated_type for o in definition.type_options]
+        declared = definition.annotated_type
+        if isinstance(declared, type) and issubclass(declared, Embedded):
+            options.insert(0, declared)
+        return "relation", Reach(list(dict.fromkeys(options)), False)
     if isinstance(definition, RelationFieldDefinition):
         found: list[type] = []
         wrapped = [False]

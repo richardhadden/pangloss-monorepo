@@ -322,6 +322,7 @@ class ModelRegistry:
             if hasattr(model, "__metatype__") and model.__metatype__ in [
                 "Document",
                 "Entity",
+                "Embedded",
             ]:
                 check_indexes(model)
 

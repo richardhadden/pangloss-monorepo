@@ -25,6 +25,7 @@ from pydantic.fields import FieldInfo
 from pangloss_models.field_definitions import (
     FieldBinding,
     FieldDefinition,
+    ListFieldDefinition,
     RelationFieldDefinition,
     RelationToDocument,
     RelationToEntity,
@@ -82,7 +83,9 @@ def initialise_model(kind: ModelKind, model: type) -> None:
     made = pydantic_create_model(
         f"{name}{kind.attribute}",
         __base__=base,
-        __validators__=get_model_validators(model) if kind.base_validators else {},
+        __validators__=get_model_validators(
+            model, kind.base_validators, kind.declared_validators
+        ),
         __module__=model.__module__,
         _owner=(ClassVar[model], model),
         __doc__=model._meta.description if model._meta.description else "",  # type: ignore[attr-defined]
@@ -171,6 +174,9 @@ def add_fields(
         )
         if holds(kind.literal, "default", when):
             model.model_fields[name].default = None  # type: ignore[attr-defined]
+        elif definition.db_field and isinstance(definition, ListFieldDefinition):
+            # a list only the database side has is filled in by a validator the class declares, so it may be left out
+            model.model_fields[name].default_factory = list  # type: ignore[attr-defined]
 
     for name, definition in fields.embedded_fields.items():
         if skipped(definition):
@@ -395,7 +401,9 @@ def _build_generic_model(
     bound = pydantic_create_model(
         f"{generic.__name__}[{type_names}]{kind.attribute}",
         __base__=base,
-        __validators__=get_model_validators(generic) if kind.generic_validators else {},
+        __validators__=get_model_validators(
+            generic, kind.generic_validators, kind.declared_validators
+        ),
         __module__=generic.__module__,
         _owner=(ClassVar[generic], generic),
         __config__=ConfigDict(alias_generator=to_camel),
@@ -464,7 +472,9 @@ def build_bound_model(
     bound = pydantic_create_model(
         f"{model.__name__}[bound=({names})]{kind.bound_suffix}",
         __base__=model,
-        __validators__=get_model_validators(owner) if kind.bound_validators else {},
+        __validators__=get_model_validators(
+            owner, kind.bound_validators, kind.declared_validators
+        ),
         __module__=owner.__module__,
         _owner=(ClassVar[owner], owner),
         __config__=ConfigDict(alias_generator=to_camel),
