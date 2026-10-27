@@ -136,19 +136,61 @@ If a project would rather keep the plugin's class apart (it does not want Zotero
 package's concrete `ZoteroObject` is option B: leave `ZOTERO_MODEL` at its default, give `TextObject` an optional
 `zotero: ZoteroObject`, and use a trait if the source relation should accept both. Nothing in C stops that.
 
+## Decided
+
+### Subclasses of the text class
+
+A project may have `Letter(TextObject)`, `Book(TextObject)` and so on. They inherit the Zotero fields and their
+protection, a relation to `TextObject` accepts them, and they can have fields only a person fills in. What Zotero
+knows of the item stays in `zotero_data`, not in typed properties on the subclasses.
+
+- `ZOTERO_MODEL` is a mapping from item type to class, with `"*"` for the rest:
+  `{"letter": "Letter", "book": "Book", "*": "TextObject"}`. A string is the same as `{"*": that}`. Startup checks
+  that each class is a concrete `ZoteroBacked` subclass. A type Zotero adds later is imported as the `"*"` class.
+- **The class is fixed when the node is created** (decided; it is how Pangloss stores nodes). So a node whose
+  item type later changes in Zotero keeps its class and takes the new `item_type`; a node first made from a
+  factoid's payload keeps the class that payload gave it. The sync fills in either and never changes a class.
+  `pangloss zotero check` reports a node whose class is not the one the mapping gives now. Such a node still works
+  (it is a `TextObject`). A way to change one node's class (option D) is not needed for a first version.
+
+### Fields the sync owns are read-only
+
+`ZoteroBacked` lists them in a meta option that accumulates (so every subclass has it), and the **API** refuses a
+create or an update that changes their stored values. The form sends back what it was given, so it still works; the
+exported models carry the flag, so the interface shows them read-only; the SDK goes through the API and is covered.
+The sync writes through Python and is not stopped. Code that writes through Python is trusted. This is a small
+feature of the models and the API, and it is not specific to Zotero.
+
+### Deletion
+
+Deleting in Pangloss never removes anything: the node is flagged, its id and URL stay taken, and it can be
+undeleted. An entity that something refers to is not deleted, only marked. The rules follow from that, and **do not
+depend on the class** (a bare `ZoteroObject` and a `Letter` are treated alike); what matters is whether the item is
+used.
+
+| Event | What happens |
+|-------|--------------|
+| The item is **in Zotero's trash** | Flagged `removed_from_zotero`, nothing else. It can come back, and then the flag is cleared |
+| The item is **deleted for good** in Zotero, and nothing refers to it, and no person has edited it | Deleted (flagged deleted, hidden everywhere) |
+| The same, but something refers to it, **or a person has edited it** (added fields or relations of their own) | Kept, flagged `removed_from_zotero`. The citation stays, so what cites it still reads |
+| An item that was deleted by the sync **appears again** (restored in Zotero, or the key reused) | Undeleted, and its fields written again. (It has to be: the id is still taken, so a new node cannot be made.) |
+| A **user deletes** a Zotero-backed node | Refused by the API, unless `removed_from_zotero` is set. It would only be made again, or undeleted, by the next sync. A user who wants it gone removes the item in Zotero |
+| A user deletes a text object that has **no Zotero fields** | As for any entity |
+
+"Edited by a person" is read from the node's records (the sync is the user `zotero_sync`; any other user's update
+counts). The refusal of a delete is a guard that the API runs for a model; it goes with the read-only option as
+the second thing a model may ask the API for.
+
 ## Open questions
 
 1. **A merge of two entities** (re-point relations, URLs, history; delete the second). Needed for the duplicate
    case; wanted generally. Decide whether to build it before or after the package.
-2. **Fields the sync owns** are on a class the user edits. Options: a convention and a read-only look in the
-   interface; a per-field flag that the write path refuses to change (the API would return an error if a PATCH or
-   update changes them); or keeping them in an `Embedded` the plugin writes. The second is the one that holds, and
-   needs a small feature in the models (a `read_only`-like field option). Decide what to do before the first
-   release.
-3. **Zotero item types.** Should a Zotero `letter` and a `book` both be a `TextObject`, with the type as a field
-   (`item_type`), or can the project map types to classes (`ZOTERO_MODEL = {"letter": "Letter", "*": "TextObject"}`)?
-   The recommendation is one class and the type as a field, since facts are statements; the mapping can be added
-   later (the class is picked when the node is created, so a change is a migration).
+2. **The meta option for read-only fields, and the delete guard** (see "Decided"): their names, whether the option
+   is per field or a list on the class, and what the API answers (an error, or the stored value put back). Check how
+   a list-valued meta option accumulates before relying on it, and that `get` on a base class returns the
+   subclass's own view.
+3. **Existing nodes with the wrong class** (the mapping changed, or the item type did): only reported for now. A
+   way to change one node's class would be a new operation in the write path; wait to see how often it is wanted.
 4. **Should `Factoid.source` point at the text object or at a Zotero item?** With C these are the same, but the
    demo's `Source` entity is already that class: the demo's `Source` becomes the `ZoteroBacked` one, or stays and
    the demo gains a `TextObject`. Decide when the demo is brought along.

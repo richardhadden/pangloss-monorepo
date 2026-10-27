@@ -17,7 +17,7 @@ memory of its documentation and **must be checked against the current docs** bef
 | On start: fetch what changed since that version; write each item with a Cypher `MERGE` on the key | The same sequence, written through the models (below) |
 | A websocket to `wss://stream.zotero.org`; on `topicUpdated`, sync again | Kept. As a loop, not a recursive restart |
 | Authentication that hangs: wait 10 s, then reconnect and catch up | Kept as a timeout and a reconnect with a growing delay |
-| `ZOTERO_API_KEY`, `ZOTERO_GROUP`, `ZOTERO_RUN_IN_DEV` in the settings | `ZOTERO_API_KEY`, `ZOTERO_LIBRARIES` (a list: a group or a user library), and what runs where is decided below |
+| `ZOTERO_API_KEY`, `ZOTERO_GROUP`, `ZOTERO_RUN_IN_DEV` in the settings | `ZOTERO_API_KEY`, `ZOTERO_LIBRARIES` (a list: a group or a user library), and `ZOTERO_WATCH` (on by default, so the watcher runs whenever the server does) |
 | `translations/` of its own | The model texts are made by [the translation framework](translations.md) like any app's; a `ui.jsonc` only if it adds interface text |
 
 Not kept: the raw items written to a local `zotero_items/` folder, the group number written into the code,
@@ -38,12 +38,13 @@ installed by adding `"pangloss_zotero"` to `INSTALLED_APPS`. It uses what an ins
 |------|------|
 | `models.py` | `ZoteroBacked` (abstract), `ZoteroObject` (concrete, the default `ZOTERO_MODEL`), and the record of a library |
 | `cli.py` | `pangloss zotero sync`, `watch`, `status`, `check` |
-| `api.py` | `configure_app(app, settings)`: a startup hook, and a small router (`/api/zotero/status`, and the search of items the interface needs) |
+| `api.py` | `configure_app(app, settings)`: registers the watcher as a background task, and a small router (`/api/zotero/status`, and the search of items the interface needs) |
 | `config.py` | The settings, read from the project's settings as `pangloss-history` does |
 
 **Needs a change to the API's lifespan.** `app.state.startup_hooks` exists (awaited at start, after the migration
-check); nothing runs at shutdown. A background listener needs to be stopped, so add `app.state.shutdown_hooks`
-(awaited in the `finally` of the lifespan). A small, general change.
+check); nothing runs at shutdown, and there is no way to run something for as long as the server does. Add
+**background tasks** to the API: registered by an app, started and supervised by the lifespan, and cancelled before
+the database disconnects (see "Background tasks" below). A small, general change that other packages need too.
 
 **Needs the models to run the same way outside the server.** The sync writes with `Model.Create` and
 `Model.Update`, which need the database module connected. `pangloss zotero sync` must make the connection as the
@@ -53,14 +54,21 @@ server does (the history package's CLI is the precedent).
 
 ```python
 class ZoteroBacked(Entity):          # abstract
+    # where it is from
     zotero_url: str | None           # the id, too: https://www.zotero.org/groups/2556736/items/ABCD1234
     zotero_library: str | None       # "groups/2556736"
     zotero_key: str | None           # "ABCD1234" (unique within a library)
     zotero_version: int | None       # the item's version in Zotero
+    # the fields that (nearly) every item type has, as properties: to list, search and sort by
     item_type: str | None            # "letter", "book" ...
     title: str | None
-    creators: list[ZoteroCreator]    # see below
+    short_title: str | None
+    creators: list[str]              # "Last, First", in Zotero's order (the roles are in zotero_data)
     date: str | None                 # as Zotero has it (text); parsed dates are the dates package's business
+    language: str | None
+    abstract: str | None
+    # the rest
+    zotero_data: str | None          # the item's `data` as JSON text: every field of its type, as Zotero gives it
     citation: str | None             # the formatted citation, HTML removed
     bibliography: str | None         # the formatted entry
     csl_json: str | None             # the item as CSL JSON, kept as text
@@ -71,10 +79,22 @@ class ZoteroBacked(Entity):          # abstract
 - The **label** is the citation (the plain text), so that lists and searches show something a person can read.
 - **The id is the Zotero URL.** `create_with_id` and `accept_url_as_id` are on, so a document can name an item before
   the sync has seen it. The sync looks an item up by that URL and takes a node that is only a stub.
-- `creators` is needed as data (to search by author, to list works by someone). Whether it is an `Embedded` list
-  (not supported: a list of embedded objects is rejected at `initialise()`), a list of strings, or a field in
-  `csl_json` that is only searched is open: the first version keeps them as `creators: list[str]` ("Last, First")
-  and the full list in `csl_json`.
+- **One class for all item types, not one model each.** [Zotero's item types and fields](https://www.zotero.org/support/kb/item_types_and_fields)
+  are about 37 types and 90 fields, and Zotero adds and renames them. A model for each would be a set of generated
+  models, labels and migrations for each, broken by a change that Zotero makes and not you, and it would make the type
+  of a node something that has to change when an item's type does. Instead:
+  - the fields every type shares (title, creators, date, language, abstract, short title, and the type itself) are
+    properties, because lists and searches use them and a map cannot be searched or sorted;
+  - everything else (publisher, volume, DOI, the field a letter has that a book has not) stays in `zotero_data`, as
+    Zotero gives it, so a field Zotero adds needs no migration;
+  - what a text *means* (who sent it, who signed it) is in statements about it, not in its Zotero fields.
+  The interface can show `zotero_data` as a list of labelled fields, using Zotero's own labels for the type.
+- **`zotero_data` is JSON text**, not a map field. A `TypedDict` is stored as a map, but its values may only be
+  literals or lists of literals, and Zotero's `data` has lists of maps (the creators). Whether a plain `dict` field is
+  allowed was not checked: if it is, and the database holds nested maps, it could be a real map; the text costs
+  nothing now and can be changed by a migration.
+- `creators` is `list[str]` for the same reason: a list of embedded objects is rejected at `initialise()`. The roles
+  (author, editor, recipient: the last matters for a letter) are in `zotero_data`.
 - `ZoteroObject(ZoteroBacked)` is concrete, for projects that want only the sync's own class.
 - **A record of each library** (`ZoteroLibrary`: `library` id, `synced_version`, `last_sync`, `last_error`) is a model,
   so that it has a migration and an interface of its own like any entity, instead of a node the migrations cannot
@@ -140,19 +160,66 @@ Events that arrive while a sync runs set a flag: one more sync follows, not one 
 be synced (a wrong key, a withdrawn permission) is logged once, recorded as `last_error`, and not retried every
 second.
 
-**Where it runs** is the real question. The API server may run with several workers, each of which would start a
-listener, and the writes would then race.
+**Where it runs: in the server, as a background task** (below). The watcher is one function, `watch(settings)`,
+which the server runs as a task and `pangloss zotero watch` runs on its own, so a deployment that cannot run it in
+the server (several workers) has the other way without a second implementation.
 
 | Mode | How | For |
 |------|-----|-----|
-| `pangloss zotero watch` | A separate process: sync, then watch | **Production.** One process by construction |
-| Inside the server | A startup hook (and the shutdown hook above) starts the loop as a task | Development, with `ZOTERO_RUN_IN_DEV = True` as before; a single-process server |
+| In the server | A background task (below), started with the server; on by default when `ZOTERO_API_KEY` and `ZOTERO_LIBRARIES` are set | `pangloss run` and `pangloss dev`, and a single-process deployment |
+| `pangloss zotero watch` | The same function, in a process of its own (and `ZOTERO_WATCH = False` in the server) | A deployment with several server workers |
 | One shot | `pangloss zotero sync [--library X] [--full]` | A first import, a cron job, or after a long stop |
 
-If run inside a server with more than one worker, take a lease (a field on `ZoteroLibrary`, with an expiry) so that
-only one worker listens, and document that `watch` is preferred. Not in the first version: the first version
-refuses to start the listener if it can see it is not the only worker (*to check* whether that is detectable;
-otherwise it only documents it).
+## Background tasks
+
+The question: a thread started at startup, an `asyncio` task on the server's event loop, or a separate worker with a
+queue. The same need is in [the dates design](dates.md) (a worker that derives the calendar edges, "a task in
+`pangloss run`, or `pangloss calendar worker`") and in the TODO item for derived nodes written later; so this is
+worth building once, in the API, and not in the Zotero package.
+
+| | A task on the event loop | A thread | A queue and workers (Celery, arq, ...) |
+|---|---|---|---|
+| Fits this code | **Yes.** The database driver (`neo4j` async), the Zotero requests and the websocket are all `async`, and `Model.Create` and `.save()` are coroutines on that loop | The driver's connections belong to one event loop: the thread would need its own loop and its own connection, and `Database.default` is the server's | Needs a broker (Redis) that nothing else here uses |
+| What it costs the server | Nothing while it waits for the network, which is nearly all of its time. A long blocking step would stall requests, so any CPU-bound piece goes to `asyncio.to_thread` | A second loop; shared state to lock | A service to run |
+| Stopping it | `task.cancel()` in the lifespan, which is what the shutdown is for | Cooperative flags; a thread cannot be cancelled | The queue's own |
+| Crash | Caught by a supervisor that logs and restarts it with a delay | Same | The queue's own |
+| Several server processes | Each has one: needs a lease | Same | One by design |
+
+**Recommended: an `asyncio` task, supervised, and nothing more.** There is no job to hand over, only one
+long-running loop per library, so a queue adds a service for no use. A thread has the disadvantages of both. (If
+something CPU-heavy turns up, `asyncio.to_thread` or a process pool handles that piece without changing this.)
+
+**The mechanism, in the API (a small general feature, written first):**
+
+- An installed app's `api.py` registers a background task: `app.state.background_tasks.append(Task(name, run, ...))`,
+  next to `startup_hooks`. `run` is `async def run(settings)` that loops until cancelled.
+- The lifespan, after the migration check and the startup hooks, starts each as an `asyncio` task **inside a
+  supervisor**: if the task raises, log it (with the traceback), wait (a delay that doubles to a limit, back to the
+  start after a run that lasted), and start it again. A task that returns is not restarted. A cancelled task is not
+  restarted.
+- In the `finally` of the lifespan, before the database disconnects, cancel every task and wait for it (with a
+  timeout, and a warning for a task that does not stop). This is why there must be a shutdown step: a task left
+  running would use a closed connection.
+- A task is not started if the migration check failed or while a migration runs (writes are refused then), and
+  starts when it is clear. For `warn` and `off` it starts.
+- `pangloss dev` restarts the server when a file changes; the task is cancelled and started again, and the sync
+  catches up from the stored version, so nothing is lost by a restart.
+- A task is named and reported: `/api/zotero/status` (and, in general, `pangloss status`) can say which are running,
+  when they last did something and the last error.
+
+**More than one server process.** `pangloss run` is one uvicorn process, so there is one task. A production setup
+with `--workers N` or several containers would have N, writing the same items. Two answers, both small:
+
+1. Run the watcher apart (`pangloss zotero watch`, `ZOTERO_WATCH = False` in the server): one process by construction.
+   This is the documented way for that setup.
+2. A **lease**: before it syncs, a task claims the library by setting `lease_holder` and `lease_until` on its
+   `ZoteroLibrary` in one conditional write (compare and set), and renews it as it works; one that cannot claim it
+   waits and tries again. A process that dies lets the lease run out. The same mechanism serves any background task, so
+   it belongs to the general feature if a second task needs it (the calendar worker's batches claim the same way).
+   Not in the first version: a single process is the case that exists now.
+
+A sync that is also running by `pangloss zotero sync` while the server's task runs is safe in the same way: writes
+are of the owned fields with `expected_version`, so the worst case is a retry; the lease makes it a refusal.
 
 ## Commands
 
@@ -170,7 +237,7 @@ otherwise it only documents it).
 | `ZOTERO_API_KEY` | A key with read access to each library (a secret: from the environment, not the settings file) |
 | `ZOTERO_LIBRARIES` | For example `["groups/2556736"]`; a user library is `users/<id>` |
 | `ZOTERO_MODEL` | The class items are written as (default `"ZoteroObject"`) |
-| `ZOTERO_RUN_IN_DEV` | Start the listener inside `pangloss dev` (default `False`) |
+| `ZOTERO_WATCH` | Run the watcher in the server (default `True` if the key and libraries are set; `False` when it runs apart with `pangloss zotero watch`) |
 | `ZOTERO_SKIP_TYPES` | Item types not imported (default `["attachment", "note", "annotation"]`) |
 
 ## Interface
@@ -196,11 +263,14 @@ package's `translations`.
 
 1. **Decide** [the modelling question](zotero-sources.md) and what is wanted of a read-only field and of a merge of
    entities (its open questions 1 and 2).
-2. The shutdown hook in the API; the package skeleton, models and settings; a migration for them.
-3. `sync` once (create and update, versions, deletions), against the fake.
-4. `watch`, and the hooks into the server for development.
-5. `status` and `check`.
-6. Try it on a real library, and on the demo (its `Source` brought onto `ZoteroBacked`).
+2. **Background tasks in the API** (registration, supervisor with restart and delay, cancel on shutdown, not during a
+   migration), with tests of their own: a task that raises is restarted; one that is cancelled stops; shutdown
+   leaves none running.
+3. The package skeleton, models and settings; a migration for them.
+4. `sync` once (create and update, versions, deletions), against the fake.
+5. `watch`, run as the server's task and by its own command.
+6. `status` and `check`.
+7. Try it on a real library, and on the demo (its `Source` brought onto `ZoteroBacked`).
 
 ## Open questions
 
