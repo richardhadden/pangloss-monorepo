@@ -475,3 +475,54 @@ def test_an_embedded_field_is_searched_by_a_pattern_for_it():
         )
     with pytest.raises(PanglossSearchError):
         check_match(Note, Match(where={"when": {"type": "Note"}}))
+
+
+def test_what_to_order_by_is_checked():
+    from pangloss_models.model_bases.embedded import Embedded
+    from pangloss_models.search import OrderBy, check_order
+
+    class When(Embedded):
+        _meta = Embedded.Meta(abstract=True)
+        sort_day: int | None = None
+        note: str = ""
+
+    class Exact(When):
+        year: int
+
+    class Someone(Entity):
+        pass
+
+    class Note(Document):
+        when: When
+        pages: int | None = None
+        tags: list[str]
+        sender: Someone
+
+    initialise()
+    ordered = check_order(
+        Note,
+        [
+            OrderBy(field="when.sort_day", direction="desc"),
+            OrderBy(field="label"),
+            OrderBy(field="pages"),
+        ],
+    )
+    assert [(o.path, o.field, o.descending) for o in ordered] == [
+        (("when",), "sort_day", True),
+        ((), "label", False),
+        ((), "pages", False),
+    ]
+    assert ordered[1].kind == "text"
+    for bad in (
+        "tags",
+        "sender",
+        "nonsense",
+        "when",
+        "when.nonsense",
+        "pages.sort_day",
+        "when.sort_day.x",
+    ):
+        with pytest.raises(PanglossSearchError):
+            check_order(Note, [OrderBy(field=bad)])
+    with pytest.raises(ValueError):
+        Match(order_by=[{"field": "label"}] * 4)

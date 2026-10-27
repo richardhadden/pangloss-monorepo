@@ -365,3 +365,11 @@ Embedded
   - The field-level sort default (`Annotated[ExactDate, SortBy.EARLIEST_FUZZY]`) is not built: an embedded class cannot see the field it is
     in. The class-level and per-value `sort_by` work. Needs a small core hook if wanted.
   - "Everything on this day" as a query (the bounds, then `pattern_keys` with `contains_any`, then `occurs_on`) is not written as a helper yet.
+
+### The rest, built (2026-10-27)
+
+- **`order_by`** on the search (`Match.order_by`, up to 3 keys, a dotted path to a field of an embedded object); `end_sort_day` is now on every date (for a point it equals `sort_day`), so everything can be ordered by its end.
+- **`SortDefault`** (`Annotated[JulianExactDate, SortDefault(SortBy.EARLIEST_FUZZY)]`): core now carries markers (anything in `Annotated` with an `apply_to_embedded(value)` method) from an embedded field to a validator on the models that are written. The date's own `sort_by` wins.
+- **`pangloss_dates.query.on_day`**: the dates that hold a day, and the repeated events that fall on it (bounds, then `pattern_keys` with `contains_any`, then `occurs_on` on each candidate).
+- **Settings** `DATES_*` in `docs/settings.md`; a guide page at `guide/dates/README.md`.
+- Still open: a search that starts from the dates to use the `:Date` indexes; probability maths, relative dates, the calendar package (`dates.md`).

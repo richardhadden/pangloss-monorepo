@@ -407,6 +407,9 @@ def build_embedded_field_definition(
         type_options=set(
             EmbeddedOption(annotated_type=option) for option in field_options
         ),
+        markers=tuple(
+            m for m in field_info.metadata if hasattr(m, "apply_to_embedded")
+        ),
         db_field=is_db_field,
         description=extract_field_description(field_info),
     )

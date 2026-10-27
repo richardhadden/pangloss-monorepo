@@ -171,13 +171,28 @@ class Incoming(BaseModel):
         return None if raw is None else parse_where(raw, 1)
 
 
+MAX_ORDER_BY = 3
+
+
+class OrderBy(BaseModel):
+    """What to order the results by: a field of the class (`label`, `year`), or a field of an embedded object
+    in one, written with dots (`when.sort_day`). Nodes without a value come last, ascending or descending."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    field: str = Field(min_length=1, max_length=200)
+    direction: Literal["asc", "desc"] = "asc"
+
+
 class Match(BaseModel):
-    """A pattern for a node. `type` is the class searched (the one the search is called on, if it is left out)."""
+    """A pattern for a node. `type` is the class searched (the one the search is called on, if it is left out).
+    The results are ordered by `order_by` (by label if it is not given), and then by label."""
 
     model_config = ConfigDict(extra="forbid")
 
     type: str | None = None
     where: dict[str, Any] = Field(default_factory=dict)
+    order_by: list[OrderBy] = Field(default_factory=list, max_length=MAX_ORDER_BY)
 
     @field_validator("where", mode="before")
     @classmethod
@@ -363,6 +378,55 @@ def many(values: list, label: str, where: str) -> list:
             f"{where}: '{label}' has more than {MAX_VALUES} values"
         )
     return values
+
+
+@dataclass(frozen=True)
+class CheckedOrder:
+    path: tuple[str, ...]
+    """The embedded fields to go through, from the node (the names of the edges)"""
+    field: str
+    kind: Kind
+    descending: bool
+
+
+ORDERABLE: set[str] = {"text", "number", "decimal", "temporal"}
+
+
+def check_order(model: type, order_by: list[OrderBy]) -> list[CheckedOrder]:
+    """Whether each field to order by is a field with one value to compare: a text, a number or a date of the
+    class, or of an embedded object in it (the class the field is typed with must have it)"""
+    checked: list[CheckedOrder] = []
+    for order in order_by:
+        *through, leaf = order.field.split(".")
+        current = model
+        for step in through:
+            definition = current._meta.fields.get(step)  # type: ignore
+            declared = getattr(definition, "annotated_type", None)
+            if not isinstance(definition, EmbeddedFieldDefinition) or not (
+                isinstance(declared, type) and issubclass(declared, Embedded)
+            ):
+                raise PanglossSearchError(
+                    f"order_by {order.field}: '{step}' is not an embedded object of {current.__name__}"
+                )
+            current = declared
+        if leaf == "label" and not through:
+            kind: Kind = "text"
+        else:
+            definition = current._meta.fields.get(leaf)  # type: ignore
+            if not isinstance(definition, LiteralFieldDefinition):
+                raise PanglossSearchError(
+                    f"order_by {order.field}: {current.__name__} has no field '{leaf}' with a single value"
+                )
+            found = kind_of(without_none(definition.annotated_type))
+            if found not in ORDERABLE:
+                raise PanglossSearchError(
+                    f"order_by {order.field}: a field of this type cannot be ordered by"
+                )
+            kind = found
+        checked.append(
+            CheckedOrder(tuple(through), leaf, kind, order.direction == "desc")
+        )
+    return checked
 
 
 def check_match(model: type[Document | Entity], match: Match) -> list[Expr]:

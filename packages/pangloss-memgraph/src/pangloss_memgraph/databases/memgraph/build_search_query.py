@@ -7,6 +7,7 @@ from typing import LiteralString, cast
 from pangloss_models.model_bases.document import Document
 from pangloss_models.model_bases.entity import Entity
 from pangloss_models.search import (
+    CheckedOrder,
     ANY_IN_DOCUMENT,
     ANY_RELATION,
     WRAPPER_LABELS,
@@ -224,22 +225,52 @@ def wrapper(var: str) -> str:
     return "(" + " OR ".join(f"{var}:{label}" for label in WRAPPER_LABELS) + ")"
 
 
+def ordering(compiler: Compiler, order: list[CheckedOrder]) -> tuple[str, str, str]:
+    """What the results are ordered by: the `OPTIONAL MATCH` that finds the embedded objects the values are in
+    (a node without one is not left out), the values, and the `ORDER BY` (nodes with no value last, whichever way)"""
+    finding: list[str] = []
+    keys: list[str] = []
+    sorting: list[str] = []
+    for index, key in enumerate(order):
+        var = "n"
+        for step in key.path:
+            nxt = compiler.name("o")
+            finding.append(f"OPTIONAL MATCH ({var})-[:`{step}`]->({nxt})")
+            var = nxt
+        value = f"{var}.`{key.field}`"
+        if key.kind == "text":
+            value = f"toLower({value})"
+        keys.append(f"{value} AS order{index}")
+        sorting.append(
+            f"(order{index} IS NULL), order{index}{' DESC' if key.descending else ''}, "
+        )
+    return (
+        "\n    ".join(finding),
+        "".join(f", {k}" for k in keys),
+        "".join(sorting),
+    )
+
+
 def build_search_query(
     model: type[Document | Entity],
     conditions: list[Expr],
     page_number: int,
     page_size: int,
+    order: list[CheckedOrder] | None = None,
 ) -> tuple[LiteralString, dict]:
     params: dict = {"page": page_number, "page_size": page_size}
-    tests = Compiler(params).all_of(conditions, "n")
+    compiler = Compiler(params)
+    tests = compiler.all_of(conditions, "n")
+    finding, keys, sorting = ordering(compiler, order or [])
 
     kind = "HeadNode" if issubclass(model, Document) else "Entity"
     where = f"NOT coalesce(n.deleted, false) AND {tests}"
     query = f"""
     MATCH (n:`{model.__name__}`:{kind})
     WHERE {where}
-    WITH n
-    ORDER BY toLower(n.label), id(n)
+    {finding}
+    WITH n{keys}
+    ORDER BY {sorting}toLower(n.label), id(n)
     WITH collect(n) AS allNodes
     WITH allNodes, size(allNodes) AS total,
          toInteger(ceil(toFloat(size(allNodes)) / $page_size)) AS totalPages

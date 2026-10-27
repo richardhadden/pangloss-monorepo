@@ -15,7 +15,7 @@ from pangloss_models.exceptions import (
     PanglossVersionConflictError,
     PanglossWriteError,
 )
-from pangloss_models.search import Match, check_match
+from pangloss_models.search import Match, check_match, check_order
 from pangloss_models.hooks import WriteEvent, emit_write_event
 from pangloss_models.model_bases.base_models import _ListItems
 from pangloss_models.model_bases.document import (
@@ -165,7 +165,11 @@ async def search(
     reference views, like `list_items`. A pattern that cannot be made raises `PanglossSearchError`."""
     conditions = check_match(cls, match)
     query, params = build_search_query(
-        cls, conditions, page_number or 1, page_size or 25
+        cls,
+        conditions,
+        page_number or 1,
+        page_size or 25,
+        check_order(cls, match.order_by),
     )
     try:
         result = await tx.run(query, **params)

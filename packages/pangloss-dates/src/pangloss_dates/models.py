@@ -45,7 +45,8 @@ def bounds_of(date) -> Bounds:
 
 class Date(Embedded):
     _meta = Embedded.Meta(
-        abstract=True, indexes=["sort_day", "earliest_fuzzy", "latest_fuzzy"]
+        abstract=True,
+        indexes=["sort_day", "end_sort_day", "earliest_fuzzy", "latest_fuzzy"],
     )
 
     default_calendar: ClassVar[Calendar | None] = None
@@ -64,6 +65,8 @@ class Date(Embedded):
     latest_strict: int | None = None
     latest_fuzzy: int | None = None
     sort_day: int | None = None
+    end_sort_day: int | None = None
+    """For a period or a recurrence the day its end sorts by; for any other date, the same as `sort_day`"""
 
     @model_validator(mode="after")
     def work_out_the_bounds(self):
@@ -91,6 +94,7 @@ class Date(Embedded):
             bounds.latest_fuzzy,
         )
         date.sort_day = bounds.sort_day(date.sort_by or SortBy.MIDPOINT)
+        date.end_sort_day = date.sort_day
 
     @classmethod
     def work_out(cls, date) -> tuple[Bounds, Precision]:
@@ -159,17 +163,12 @@ class OngoingDate(Date):
 class Period(Date):
     """From `start` to `end`: an occupation, a role, a residence. Sorts by when it started"""
 
-    _meta = Embedded.Meta(indexes=["end_sort_day"])
-
     start: ExactDate | DateRange | EDTFDate
     end: ExactDate | DateRange | EDTFDate | OngoingDate
-
-    end_sort_day: int | None = None
 
     @classmethod
     def work_out(cls, date) -> tuple[Bounds, Precision]:
         _check_ends_in_calendar(date, date.start, date.end)
-        date.end_sort_day = bounds_of(date.end).sort_day()
         return (
             spanning_bounds(bounds_of(date.start), bounds_of(date.end)),
             Precision.RANGE,
@@ -180,14 +179,13 @@ class Period(Date):
         super().fill_in(date)
         # a period is ordered by its start, not by the middle of its length
         date.sort_day = bounds_of(date.start).sort_day(date.sort_by or SortBy.MIDPOINT)
+        date.end_sort_day = bounds_of(date.end).sort_day()
 
 
 class Recurrence(Date):
     """Something that happens again and again, within a lifetime (`start` to `end`): "every Sunday", "the third
     Sunday of March", "on the 21st of each month". The days are never stored; `pattern_keys` find the rules that
     could fall on a day (see `pangloss_dates.recurrence`)"""
-
-    _meta = Embedded.Meta(indexes=["end_sort_day"])
 
     frequency: Frequency
     weekdays: list[int]
@@ -206,7 +204,6 @@ class Recurrence(Date):
 
     # worked out
     pattern_keys: Annotated[list[str], DBField]
-    end_sort_day: int | None = None
 
     @classmethod
     def rule_of(cls, date) -> RecurrenceRule:
@@ -229,7 +226,6 @@ class Recurrence(Date):
             "pattern_keys" in type(date).model_fields
         ):  # (not on the models a client writes)
             date.pattern_keys = pattern_keys(rule)
-        date.end_sort_day = bounds_of(date.end).sort_day()
         return (
             spanning_bounds(bounds_of(date.start), bounds_of(date.end)),
             Precision.RANGE,
@@ -239,3 +235,24 @@ class Recurrence(Date):
     def fill_in(cls, date) -> None:
         super().fill_in(date)
         date.sort_day = bounds_of(date.start).sort_day(date.sort_by or SortBy.MIDPOINT)
+        date.end_sort_day = bounds_of(date.end).sort_day()
+
+
+class SortDefault:
+    """The day a field's dates sort by when the date does not say (`sort_by`), instead of the midpoint:
+
+        born: Annotated[ExactDate, SortDefault(SortBy.EARLIEST_FUZZY)]
+
+    "for a birth date, a person sorts by the earliest it could be". The date's own `sort_by` wins."""
+
+    def __init__(self, sort_by: SortBy):
+        self.sort_by = sort_by
+
+    def apply_to_embedded(self, date) -> None:
+        if getattr(date, "sort_by", None) is None and hasattr(date, "sort_day"):
+            date.sort_by = self.sort_by
+            type(date)._owner.fill_in(date)
+            date.sort_by = None  # (what was said is kept as it was)
+
+    def __repr__(self) -> str:
+        return f"SortDefault({self.sort_by.value!r})"

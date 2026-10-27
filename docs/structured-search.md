@@ -310,3 +310,8 @@ Decided 2026-10-27, after the measurements above:
 ### Timeout
 
 One timeout, `SEARCH_TIMEOUT_SECONDS`, for every search and every user, is what is wanted for now. A different one for some users or routes (lower for anonymous users, longer for an export) is not built.
+
+## Embedded objects and ordering (built with `pangloss-dates`)
+
+- **Embedded fields are searched like a relation**: `{"when": {"type": "JulianExactDate", "where": {"sort_day": {"between": [a, b]}}}}`. The `type` may be left out when the field is typed with one class (the class itself, even if abstract, is allowed: `JulianDate` matches every kind in the family, since the nodes carry their parents' labels). Embedded objects inside embedded objects work the same way. There is no deleted check and no wrappers (an embedded object is part of its document).
+- **`order_by`** (in `Match`, so in the request body and in `Document.search(...)`): up to 3 of `{"field": "label" | "year" | "when.sort_day", "direction": "asc" | "desc"}`. A field is a text, number, decimal or date of the class, or of an embedded object in it (the class the field is typed with must have it; a kind of embedded object that lacks the value comes last). Results with no value come last either way; ties are ordered by label, as before. Compiled with an `OPTIONAL MATCH` per embedded object on the way, so a document without one is not left out.

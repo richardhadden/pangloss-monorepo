@@ -27,7 +27,11 @@ async def search(request: SearchRequest):
         model = resolve_search_type(request.type)
         return await called(
             model.search(  # type: ignore
-                Match(type=request.type, where=request.where),
+                Match(
+                    type=request.type,
+                    where=request.where,
+                    order_by=request.order_by,
+                ),
                 page_number=request.page,
                 page_size=request.page_size,
             )

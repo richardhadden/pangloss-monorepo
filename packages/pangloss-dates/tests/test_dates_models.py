@@ -252,3 +252,37 @@ def test_a_range_cannot_mix_calendars(models):
                 "latest": {"type": "ExactDate", "year": 1502, "calendar": "gregorian"},
             },
         )
+
+
+def test_a_field_can_say_what_its_dates_sort_by():
+    import importlib
+    from typing import Annotated
+
+    from pangloss_dates import julian, models
+    from pangloss_dates.bounds import SortBy
+    from pangloss_dates.models import SortDefault
+
+    for module in (models, julian):
+        importlib.reload(module)
+    Default = models.SortDefault
+
+    class Person(Document):
+        born: Annotated[julian.JulianExactDate, Default(SortBy.EARLIEST_FUZZY)]
+        died: julian.JulianExactDate
+
+    initialise()
+    person = Person.Create(
+        label="x",
+        born={"type": "JulianExactDate", "year": 1500},
+        died={"type": "JulianExactDate", "year": 1500},
+    )
+    assert ymd(person.born.sort_day) == (1500, 1, 1)
+    assert ymd(person.died.sort_day) == (1500, 7, 1)
+    # the date's own say wins
+    person = Person.Create(
+        label="x",
+        born={"type": "JulianExactDate", "year": 1500, "sort_by": "latest_strict"},
+        died={"type": "JulianExactDate", "year": 1500},
+    )
+    assert ymd(person.born.sort_day) == (1500, 12, 31)
+    assert SortDefault  # (the class is the one from the module)

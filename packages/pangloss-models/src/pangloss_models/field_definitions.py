@@ -92,6 +92,9 @@ class LiteralTypeVarFieldDefinition(FieldDefinition):
 class EmbeddedFieldDefinition(FieldDefinition):
     annotated_type: type[Embedded]
     type_options: set[EmbeddedOption]
+    markers: tuple[Any, ...] = ()
+    """What the field is annotated with that has an `apply_to_embedded(value)` method (`Annotated[Date, Marker()]`):
+    called, in the models that are written, with the embedded object that was given (after its own validators)"""
 
 
 @dataclass(frozen=True, kw_only=True)

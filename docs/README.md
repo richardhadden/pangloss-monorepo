@@ -38,7 +38,7 @@ Each feature in these docs is marked with its status:
 | [Zotero items as sources and subjects](zotero-sources.md) 🚧 | How a Zotero item can be both the source of a factoid and what a factoid is about, as one node: the options, and what was decided and built |
 | [History](history.md) ⏳ | A design for recording every version of a document or entity (best effort, in SQLite), and restoring one, including after the models have changed |
 | [Dates and the calendar](dates.md) ⏳ | A design for two optional packages: uncertain dates, periods and recurrence with probabilities (`pangloss-dates`), and a calendar of days, observances and a background worker (`pangloss-calendar`) |
-| [Dates: implementation plan](dates-implementation.md) ⏳ | The first step of `pangloss-dates`: `python-edtf` as a parser only (its bounds are Gregorian), our own Julian day arithmetic, the four stored bounds, the Embedded types, and the phases |
+| [Dates: implementation plan](dates-implementation.md) 🚧 | `pangloss-dates`, built: `python-edtf` as a parser only (its bounds are Gregorian), our own Julian day arithmetic, the four stored bounds, the sort day, the Embedded types (exact, EDTF, range, period, recurrence) in Julian and Gregorian families, ordering and "everything on this day". To use it see the [guide](../guide/dates/README.md) |
 | [Database migrations](migrations.md) 🚧 | The design and progress of migrations: how changes to the models are applied to existing data. To use them, see the [user guide](../guide/migrations/README.md) |
 | [Development](development.md) | Setting up, running tests, repository layout |
 | [Status and roadmap](status.md) | What is and is not implemented |

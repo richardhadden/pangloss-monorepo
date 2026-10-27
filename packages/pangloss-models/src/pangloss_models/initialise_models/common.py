@@ -7,6 +7,7 @@ from frozendict import frozendict
 from pydantic import model_validator
 
 from pangloss_models.field_definitions import (
+    EmbeddedFieldDefinition,
     ParameterTypeOptions,
     RelationToDocument,
     RelationToEntity,
@@ -84,7 +85,29 @@ def get_model_validators(model, ids: bool, declared: bool) -> dict[str, Any]:
             ):
                 validators[name] = model_validator(mode="after")(decorator.func)
 
+        markers = {
+            name: definition.markers
+            for name, definition in model._meta.fields.items()
+            if isinstance(definition, EmbeddedFieldDefinition) and definition.markers
+        }
+        if markers:
+            validators["apply_embedded_markers"] = model_validator(mode="after")(
+                _apply_markers(markers)
+            )
+
     return validators
+
+
+def _apply_markers(markers: dict[str, tuple[Any, ...]]):
+    def apply_embedded_markers(self):
+        for name, found in markers.items():
+            value = getattr(self, name, None)
+            if value is not None:
+                for marker in found:
+                    marker.apply_to_embedded(value)
+        return self
+
+    return apply_embedded_markers
 
 
 def recursively_get_generic_naming(

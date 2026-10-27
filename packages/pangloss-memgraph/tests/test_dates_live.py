@@ -4,7 +4,7 @@ import importlib
 from typing import no_type_check
 
 import pytest
-from pangloss_dates.calendar import Calendar, to_jdn
+from pangloss_dates.calendar import Calendar, from_jdn, to_jdn
 from pangloss_memgraph.databases.memgraph.initialise_database import (
     initialise_database,
 )
@@ -102,3 +102,118 @@ async def test_documents_are_found_by_the_bounds_of_their_date(clear_database):
     ]
     assert await find(earliest_strict={"gte": day(1510, 1, 1)}) == ["c", "d"]
     assert await find(latest_fuzzy={"lt": day(1495, 1, 1)}) == ["a"]
+
+
+@no_type_check
+async def test_documents_are_ordered_by_a_field_of_their_date_and_those_without_come_last(
+    clear_database,
+):
+    Factoid = models()
+    await initialise_database()
+    for label, year in [("c", 1520), ("a", 1490), ("b", 1500)]:
+        await Factoid.Create(label=label, when=exact(year, 6, 1)).save()
+    await Factoid.Create(
+        label="d",
+        when={
+            "type": "JulianPeriod",
+            "start": exact(1495),
+            "end": {"type": "JulianOngoingDate"},
+        },
+    ).save()
+
+    async def order(*keys):
+        found = await Factoid.search(
+            Match(order_by=[{"field": f, "direction": d} for f, d in keys])
+        )
+        return [item.label for item in found.results]
+
+    assert await order(("when.sort_day", "asc")) == ["a", "d", "b", "c"]
+    assert await order(("when.sort_day", "desc")) == ["c", "b", "d", "a"]
+    assert await order(("label", "desc")) == ["d", "c", "b", "a"]
+    assert await order() == ["a", "b", "c", "d"]
+    # a key that not every kind of date has puts those without it last, and the next key orders them
+    assert await order(("when.end_sort_day", "desc"), ("label", "desc")) == [
+        "d",
+        "c",
+        "b",
+        "a",
+    ]
+
+
+@no_type_check
+async def test_everything_on_a_day_finds_dates_that_hold_it_and_repeated_events_that_fall_on_it(
+    clear_database,
+):
+    from pangloss_dates.calendar import Weekday, weekday
+    from pangloss_dates.query import on_day
+
+    Factoid = models()
+    await initialise_database()
+    sunday = day(1510, 3, 4)
+    sunday += (Weekday.SUNDAY - weekday(sunday)) % 7
+    y, m, d = from_jdn(sunday, J)
+    await Factoid.Create(label="the year", when=exact(y)).save()
+    await Factoid.Create(label="that day", when=exact(y, m, d)).save()
+    await Factoid.Create(label="another year", when=exact(y + 3)).save()
+    await Factoid.Create(
+        label="mass every sunday",
+        when={
+            "type": "JulianRecurrence",
+            "frequency": "weekly",
+            "weekdays": [0],
+            "excluded_days": [],
+            "start": exact(1505, 3, 2),
+            "end": {"type": "JulianOngoingDate"},
+        },
+    ).save()
+    await Factoid.Create(
+        label="mass every saturday",
+        when={
+            "type": "JulianRecurrence",
+            "frequency": "weekly",
+            "weekdays": [6],
+            "excluded_days": [],
+            "start": exact(1505, 3, 2),
+            "end": {"type": "JulianOngoingDate"},
+        },
+    ).save()
+    await Factoid.Create(
+        label="mass before it began",
+        when={
+            "type": "JulianRecurrence",
+            "frequency": "weekly",
+            "weekdays": [0],
+            "excluded_days": [],
+            "start": exact(1520),
+            "end": {"type": "JulianOngoingDate"},
+        },
+    ).save()
+    await Factoid.Create(
+        label="mass every second sunday",
+        when={
+            "type": "JulianRecurrence",
+            "frequency": "weekly",
+            "weekdays": [0],
+            "interval": 2,
+            "excluded_days": [],
+            "start": exact(1510, 3, 4),
+            "end": {"type": "JulianOngoingDate"},
+        },
+    ).save()
+
+    async def labels(the_day):
+        found = await on_day(Factoid, "when", the_day, J, family="Julian")
+        return [item.label for item in found]
+
+    found = await labels(sunday)
+    assert "the year" in found and "that day" in found and "another year" not in found
+    assert "mass every sunday" in found
+    assert "mass every saturday" not in found
+    assert "mass before it began" not in found
+    assert await labels(sunday + 1) == ["the year"]
+    assert "mass every saturday" in await labels(sunday + 6)
+    # every second sunday, counting from its first week: the weeks alternate
+    both = {
+        "mass every second sunday" in await labels(sunday + 7 * k) for k in range(4)
+    }
+    assert both == {True, False}
