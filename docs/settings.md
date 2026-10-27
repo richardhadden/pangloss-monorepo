@@ -43,6 +43,7 @@ Values can also come from environment variables or a `.env` file (`pydantic-sett
 | `MIGRATION_CHECK` | `"error"`, `"warn"` or `"off"` (`"error"`) | What the API server does as it starts, if the project has migrations and the database has not had them all, a migration was changed after it was applied, or the models are not what the migrations come to: not start, start and warn, or not look. A project with no migrations is not checked. See [Database migrations](migrations.md) |
 | `LOG_LEVEL`, `LOG_FORMAT` | `"INFO"`, `"text"` | What is logged under `pangloss`, and whether a line is text or JSON. See [Logging](logging.md) |
 | `SLOW_QUERY_MS`, `SLOW_REQUEST_MS` | `int` (`500`, `2000`) | A database transaction, or a request, that takes longer is logged as a warning. See [Logging](logging.md) |
+| `ZOTERO_API_KEY`, `ZOTERO_LIBRARIES`, `ZOTERO_WATCH`, `ZOTERO_SKIP_TYPES`, `ZOTERO_SYNC_USER`, `ZOTERO_API_URL`, `ZOTERO_STREAM_URL` | `pangloss_zotero` (optional; read from the settings if set). See [Zotero](zotero.md#commands-and-settings) |
 | `ENTITY_BASE_URL` | `AnyHttpUrl` | Reserved for entity URL generation ⏳ |
 
 ## Database settings

@@ -24,6 +24,7 @@ from pydantic.alias_generators import to_camel
 
 from pangloss_models.hooks import convert_from_database
 from pangloss_models.meta_kit import WithMeta
+from pangloss_models.meta_slots import apply_meta_slots
 from pangloss_models.model_bases.binding import bind_values_to_children
 from pangloss_models.model_bases.context_label import ContextLabel
 from pangloss_models.model_bases.from_database import (
@@ -108,6 +109,7 @@ class _DeclaredClass(_BaseObject):
         if "__metatype__" in own or own.get("_kind_base"):
             return
         cls._initialised = False
+        apply_meta_slots(cls)
         if not issubclass(cls, WithMeta):
             # (a trait: it has a meta of its own, and does not inherit one)
             if (meta_class := getattr(cls, "Meta", None)) is None:

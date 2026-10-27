@@ -44,6 +44,7 @@ from pangloss_models.model_bases.base_models import _ListItems
 from pangloss_models.model_bases.document import Document
 from pangloss_models.model_bases.entity import Entity
 from pangloss_models.model_registry import ModelRegistry
+from pangloss_models.protection import changed_fields, protection_of
 from pangloss_models.utils import get_concrete_types
 from pydantic import AnyHttpUrl, TypeAdapter, ValidationError
 
@@ -180,6 +181,15 @@ def expected_version(if_match: str | None) -> int | None:
     return version
 
 
+def refuse_if_protected(fields: list[str]) -> None:
+    """Refuse a request that changes fields that something other than a person keeps up to date"""
+    if fields:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            detail=f"{', '.join(fields)} cannot be changed here: kept up to date by something else",
+        )
+
+
 def list_response_model(model: type[Document | Entity]) -> Any:
     reference_views = [t.ReferenceView for t in get_concrete_types(model)]  # type: ignore[attr-defined]
     return _ListItems[Union[*reference_views]]  # type: ignore[valid-type]
@@ -197,6 +207,7 @@ def build_router(model: type[Document | Entity]) -> APIRouter:
     create_model = model.Create
     update_model = model.Update
     edit_response = model.EditView if is_entity else head_view  # type: ignore[attr-defined]
+    protection = protection_of(model)
 
     # The entity in a path is its id, or, to get it, one of its URLs (which has slashes
     # in it, so the path continues to the end, or to `/edit` or `/undelete`: those
@@ -239,6 +250,8 @@ def build_router(model: type[Document | Entity]) -> APIRouter:
             bool, Query(description="Return the whole HeadView, not a summary")
         ] = False,
     ):
+        if protection.read_only:
+            refuse_if_protected(changed_fields(model, body, None))
         created = await called(body.save(detail=detail))  # type: ignore[attr-defined]
         response.headers["ETag"] = etag(1)
         return created
@@ -305,6 +318,12 @@ def build_router(model: type[Document | Entity]) -> APIRouter:
                 detail="The id in the body is not the id in the path",
             )
         based_on = expected_version(if_match)
+        if protection.read_only:
+            read = model.get_for_edit if is_entity else model.get  # type: ignore[attr-defined]
+            stored = await called(read(id))
+            if stored is None:
+                raise not_found(model, id)
+            refuse_if_protected(changed_fields(model, body, stored))
         updated = await called(
             body.save(detail=detail, expected_version=based_on)  # type: ignore[attr-defined]
         )
@@ -324,6 +343,14 @@ def build_router(model: type[Document | Entity]) -> APIRouter:
         responses={409: {"description": "An entity that is referred to"}},
     )
     async def delete_item(id: ChangeId):  # type: ignore[valid-type]
+        if protection.delete_only_if:
+            found = await called(model.get(id))  # type: ignore[arg-type]
+            if found is not None and not getattr(found, protection.delete_only_if, False):
+                raise HTTPException(
+                    status.HTTP_403_FORBIDDEN,
+                    detail=f"A {name} is kept in step with something outside Pangloss, so it cannot be "
+                    f"deleted here until '{protection.delete_only_if}' is true",
+                )
         await called(model.delete(id))  # type: ignore[arg-type]
         return Response(status_code=status.HTTP_204_NO_CONTENT)
 

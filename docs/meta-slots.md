@@ -1,7 +1,9 @@
-# Meta slots: extra metas on a model class ⏳
+# Meta slots: extra metas on a model class 🚧
 
-**Status: a design, not built.** Parts of it were tried in throwaway scripts (marked *tried*); the rest
-is untested.
+**Status: built in `pangloss_models` (`meta_slots.py`, 21 tests); no package uses it for the interface yet.**
+The first users are `pangloss-zotero` (`_zotero_meta`, see [Zotero](zotero.md)) and the models' own
+`_protect_meta` ([Protection](#protection-a-slot-of-the-models-own)). What is below is the design; where the build
+differs, it says so ("Built:").
 
 An optional package (the interface, a search package, ...) should be able to keep its own settings for a
 model class **on the class**, next to `_meta`, without `pangloss_models` knowing about it:
@@ -77,6 +79,10 @@ the hierarchy can make its meta a `BaseMeta` of `pydantic_meta_kit` and merge in
 
 ### Calling it
 
+**Built:** there is one hook, not one per kind: `_DeclaredClass.__pydantic_init_subclass__` calls
+`apply_meta_slots(cls)` (all the kinds end up there; the "most do not call `super()`" below was true of an
+earlier version). The rest of this section is the design as first written.
+
 Core calls `apply_meta_slots(cls)` from the one place each kind finishes setting up a class: at the end of
 each `__pydantic_init_subclass__` (or, if the kinds can be made to share a base hook, once). The kinds that
 need it are those a user subclasses to make a model: `Document`, `Entity`, `Conjunction`, `Trait`,
@@ -144,6 +150,38 @@ A type checker does not know `_interface_meta` exists on `Entity`. Two ways, bot
 2. `meta_slots.py` with the registry and `apply_meta_slots`, plus its tests on a stand-in class.
 3. Call it from each kind; run the whole suite.
 4. `pangloss_interface`: `InterfaceMeta`, the registration, the exporter, the stubs.
+
+## What was built
+
+`pangloss_models/meta_slots.py`:
+
+- `register_meta_slot(name, meta_class)`: the name must start with `_`, end with `_meta`, and not be `_meta`; a
+  name used for another class is refused (the same class again is fine). It applies the slot to the models that
+  exist already.
+- `apply_meta_slots(cls)`: on every declared class (traits and generic parametrisations too): the class's own
+  value is checked to be an instance (`PanglossMetaError` at the line that made the class); with none of its own,
+  the nearest parent's is used; with none anywhere, `None`. It is set as a plain class attribute.
+- `declared_slots(cls)`: **which slots the class set in its own body**. A subclass that only inherits is not in
+  it. This is the answer to "a subclass's value replaces its parent's": it does, but a package can ask who *said*
+  it (`pangloss-zotero` takes only a class's own `_zotero_meta` as a claim on a Zotero type).
+- Slots belong to the process: `ModelRegistry._reset()` keeps them.
+- Not built: a warning for an unregistered `_x_meta`; accumulating slots; stubs (`make-stubs`) for slots; the
+  exporter writing a slot into `models.ts`. Instances do not see the slot differently from the class (tested: they
+  read the class attribute).
+
+### Protection: a slot of the models' own
+
+`pangloss_models/protection.py` registers `_protect_meta = Protection(read_only=(...), delete_only_if="...")`.
+It is for fields that something other than a person keeps up to date (the Zotero fields).
+
+- The **API** refuses a create that sets a `read_only` field, an update that changes one (it reads the stored
+  value; leaving a field out counts as changing it), and a delete of a model whose `delete_only_if` field is not
+  true: all `403`, saying which. Code that writes through Python is not stopped (trusted), so the sync can write the
+  fields. The remote SDK goes through the API and is covered.
+- A subclass **adds** to its parents' protection (`protection_of` puts the declared values together: the fields are
+  the union, the nearest `delete_only_if` wins), where a slot would otherwise replace it.
+- Not built: the flag in `export_models()` and the generated TypeScript (so a form could show the fields
+  read-only); it is a change to the exporter, its TypeScript type and the guard test that holds the two together.
 
 ## Open questions
 

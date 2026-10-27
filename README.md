@@ -121,6 +121,7 @@ separate distributable package.
 | [`pangloss-cli`](packages/pangloss-cli) | The `pangloss` command |
 | [`pangloss-sdk`](packages/pangloss-sdk) · [`-sdk-server`](packages/pangloss-sdk-server) | The client of the API, and the builder and server of it |
 | [`pangloss-history`](packages/pangloss-history) | Versions of everything written, and restoring them |
+| [`pangloss-zotero`](packages/pangloss-zotero) | A Zotero library kept in the database, as sources and subjects of factoids |
 | [`pangloss-interface`](packages/pangloss-interface) | The web interface (Solid 2.0) |
 
 ```

@@ -1,7 +1,8 @@
-# Zotero items as sources and as subjects ⏳
+# Zotero items as sources and as subjects 🚧
 
-**Status: a design, not built.** Nothing here exists yet. It is the modelling question that [the Zotero
-package](zotero.md) depends on, and it is written first because it decides what that package's model is.
+**Status: decided and built (option C), tested against a fake Zotero.** It is the modelling question that [the
+Zotero package](zotero.md) depends on. The build differs from the first draft below in four places, marked
+**Built:** and listed in "Decided".
 
 ## The problem
 
@@ -71,7 +72,7 @@ class TextObject(ZoteroBacked):
 
 `ZoteroBacked` is an abstract `Entity` with `zotero_url`, `zotero_key`, the library, the version, `item_type`,
 `citation`, `bibliography`, `csl_json`, and so on; **all optional**, so a `TextObject` made by hand has none of
-them. The sync writes items as the class named by a setting (`ZOTERO_MODEL`, default `"ZoteroObject"`, a concrete
+them. The sync writes items as the class that stands for their type (`_zotero_meta`, below; `ZoteroObject`, a concrete
 class the package ships for projects that want nothing else).
 
 Then:
@@ -103,7 +104,8 @@ already created. Pangloss has no *merge entities* (re-point every incoming relat
 of one to the other, and delete it). Avoiding the case is cheap: the interface lets the user *pick* an imported
 item to link to, instead of asking them to type a URL, and the sync report lists likely duplicates (the same
 title). A general merge is worth building, but it is a feature of its own (it would serve people and places too),
-so it is not a part of this design. See the open questions.
+so it is not a part of this design. **Built:** `POST /api/zotero/link` links a node made by hand to an item (refusing
+an item that is a node already), and `pangloss zotero check` does not yet look for duplicates. See the open questions.
 
 - ➕ One node; no link to maintain; the id is the same URL everywhere; works with batch uploads.
 - ➕ Needs nothing from the model system that does not exist.
@@ -133,7 +135,7 @@ objects" with optional fields, and "the Zotero object has already been created" 
 begin with. The cost is a field-protection question (below) and the unmerged-duplicate case.
 
 If a project would rather keep the plugin's class apart (it does not want Zotero fields on its own classes), the
-package's concrete `ZoteroObject` is option B: leave `ZOTERO_MODEL` at its default, give `TextObject` an optional
+package's concrete `ZoteroObject` is option B: claim no types, give `TextObject` an optional
 `zotero: ZoteroObject`, and use a trait if the source relation should accept both. Nothing in C stops that.
 
 ## Decided
@@ -144,22 +146,38 @@ A project may have `Letter(TextObject)`, `Book(TextObject)` and so on. They inhe
 protection, a relation to `TextObject` accepts them, and they can have fields only a person fills in. What Zotero
 knows of the item stays in `zotero_data`, not in typed properties on the subclasses.
 
-- `ZOTERO_MODEL` is a mapping from item type to class, with `"*"` for the rest:
-  `{"letter": "Letter", "book": "Book", "*": "TextObject"}`. A string is the same as `{"*": that}`. Startup checks
-  that each class is a concrete `ZoteroBacked` subclass. A type Zotero adds later is imported as the `"*"` class.
-- **The class is fixed when the node is created** (decided; it is how Pangloss stores nodes). So a node whose
-  item type later changes in Zotero keeps its class and takes the new `item_type`; a node first made from a
-  factoid's payload keeps the class that payload gave it. The sync fills in either and never changes a class.
-  `pangloss zotero check` reports a node whose class is not the one the mapping gives now. Such a node still works
-  (it is a `TextObject`). A way to change one node's class (option D) is not needed for a first version.
+**Built:** the class for an item type is declared **on the class**, by a meta slot, not in a settings mapping (there
+is no `ZOTERO_MODEL`):
+
+```python
+class Atlas(TextObject):
+    _zotero_meta = ZoteroMeta(item_types=[ZoteroItemType.BOOK])      # an enum of Zotero's types
+```
+
+- **Nothing is guessed.** A type claimed by two classes needs exactly one to say `default=True`; a subclass that only
+  inherits the slot does not claim the types (`declared_slots`); a declaration that says nothing, or on an abstract
+  class, is an error. All raised at start, naming the classes.
+- **A type no class claims** is written as the class with `ZoteroMeta(fallback=True)` (at most one), or else as the
+  package's `ZoteroObject`. Every item is imported. (The first draft here said an unclaimed type would be skipped
+  and reported; importing it as the fallback was preferred.)
+- **Zotero may have the type wrong** (a book entered as a document). The person says what it is on the node
+  (`item_type_override`), and that is what a class is asked about when a node is linked to an item
+  (`accepts`). Linking an `Atlas` to a Zotero letter is refused unless the person says it is a book.
+- **The class is fixed when the node is created** (decided; it is how Pangloss stores nodes). An item whose type later
+  changes in Zotero keeps its class and takes the new `item_type`; a stub made from a factoid's payload keeps the class
+  that payload gave it. The sync fills in either and never changes a class. A way to change one node's class (option D)
+  is not needed for a first version.
+- The `creators` are one text, "Last, First; Last, First" (**Built:** not a list, which Pangloss makes required in every
+  `Create`).
 
 ### Fields the sync owns are read-only
 
-`ZoteroBacked` lists them in a meta option that accumulates (so every subclass has it), and the **API** refuses a
-create or an update that changes their stored values. The form sends back what it was given, so it still works; the
-exported models carry the flag, so the interface shows them read-only; the SDK goes through the API and is covered.
-The sync writes through Python and is not stopped. Code that writes through Python is trusted. This is a small
-feature of the models and the API, and it is not specific to Zotero.
+**Built:** `ZoteroBacked` has `_protect_meta = Protection(read_only=(...), delete_only_if="removed_from_zotero")`, a
+slot of the models (a subclass **adds** to its parents' protection), and the **API** refuses (403) a create that sets
+those fields, an update that changes their stored values (the form sends back what it was given, so it still works),
+and a delete of an item that is not flagged. The sync writes through Python and is not stopped: code that writes
+through Python is trusted. The SDK goes through the API and is covered. **Not built:** the exported models do not
+carry the flag yet, so the interface cannot show the fields read-only. Not specific to Zotero.
 
 ### Deletion
 
@@ -177,18 +195,17 @@ used.
 | A **user deletes** a Zotero-backed node | Refused by the API, unless `removed_from_zotero` is set. It would only be made again, or undeleted, by the next sync. A user who wants it gone removes the item in Zotero |
 | A user deletes a text object that has **no Zotero fields** | As for any entity |
 
-"Edited by a person" is read from the node's records (the sync is the user `zotero_sync`; any other user's update
-counts). The refusal of a delete is a guard that the API runs for a model; it goes with the read-only option as
-the second thing a model may ask the API for.
+"Edited by a person" is read from the node itself: each sync write sets `zotero_synced_entity_version` to the version
+it makes (the sync is the user `zotero_sync`), and any other version means a person edited. The refusal of a delete is
+`delete_only_if` of the protection above.
 
 ## Open questions
 
 1. **A merge of two entities** (re-point relations, URLs, history; delete the second). Needed for the duplicate
    case; wanted generally. Decide whether to build it before or after the package.
-2. **The meta option for read-only fields, and the delete guard** (see "Decided"): their names, whether the option
-   is per field or a list on the class, and what the API answers (an error, or the stored value put back). Check how
-   a list-valued meta option accumulates before relying on it, and that `get` on a base class returns the
-   subclass's own view.
+2. **Reading a subclass through its parent.** Checked, and it fails: `Model.get` on a parent class raises for a node of a
+   subclass (the view's `type` is a `Literal` of the class). The Zotero store asks the most specific class first. The
+   same limit would hold for the API's route of a parent class. Is that to be fixed in the models?
 3. **Existing nodes with the wrong class** (the mapping changed, or the item type did): only reported for now. A
    way to change one node's class would be a new operation in the write path; wait to see how often it is wanted.
 4. **Should `Factoid.source` point at the text object or at a Zotero item?** With C these are the same, but the
@@ -196,5 +213,5 @@ the second thing a model may ask the API for.
    the demo gains a `TextObject`. Decide when the demo is brought along.
 5. **Several libraries** (a personal one and a group). The key is only unique in a library, which is why the id is
    a URL that has the library in it; `zotero_library` is a field of the item. Whether they can share a class is
-   fine; whether a project can have items from two libraries with different classes needs `ZOTERO_MODEL` per
-   library.
+   fine; whether a project can have items from two libraries with different classes needs a table per
+   library (the table is global now).

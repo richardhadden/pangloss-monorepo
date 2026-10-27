@@ -151,7 +151,25 @@ The OpenAPI document (`/openapi.json`, with the interactive `/docs`) describes e
 
 ## Routes from installed apps
 
-An app in `INSTALLED_APPS` that has an `api.py` with a `router` (a FastAPI `APIRouter`) has it included in the API, as an app with a `cli.py` adds commands. An `api.py` can also have `configure_app(app, settings)`, called as the app is made, to add middleware or to add an async function to `app.state.startup_hooks`, which the server calls as it starts (after the migrations are checked). (`pangloss_sdk_server` uses both: see [the SDK](sdk.md).) A model cannot be called `sdk` (it is reserved with `users`). The router gives its own prefix (`pangloss_interface` uses `/api/interface`). An error in the module is not hidden, and a `router` that is not an `APIRouter` is a `TypeError`.
+An app in `INSTALLED_APPS` that has an `api.py` with a `router` (a FastAPI `APIRouter`) has it included in the API, as an app with a `cli.py` adds commands. An `api.py` can also have `configure_app(app, settings)`, called as the app is made, to add middleware to add an async function to `app.state.startup_hooks`, which the server calls as it starts (after the migrations are checked), or to add a `BackgroundTask` to `app.state.background_tasks` (below). (`pangloss_sdk_server` uses both: see [the SDK](sdk.md).) A model cannot be called `sdk` (it is reserved with `users`). The router gives its own prefix (`pangloss_interface` uses `/api/interface`). An error in the module is not hidden, and a `router` that is not an `APIRouter` is a `TypeError`.
+
+## Background tasks
+
+Something an installed app keeps running for as long as the server does (`pangloss_zotero` watches a library) is a
+`BackgroundTask(name, run)` added to `app.state.background_tasks` in `configure_app`, where `run` is `async def
+run(settings)` that loops until it is cancelled. The server runs each as an `asyncio` task on its own event loop, after
+the migrations are checked and the startup hooks have run, and cancels them (waiting 5 s) before the database
+disconnects. A task that raises is logged, with the traceback, and started again after 1 s, doubling to 60 s (back to 1 s
+after a run that lasted a minute); one that returns, or is cancelled, is not started again. `app.state.supervisor.status()`
+gives each task's state, number of restarts and last error. With several server workers each would run its tasks: see
+[Zotero](zotero.md#background-tasks-in-pangloss-api) for how a task is run apart. Built in `pangloss_api/background.py`.
+
+## Fields that are kept up to date by something else
+
+A model with `_protect_meta = Protection(read_only=("title",), delete_only_if="removed")` (see [meta slots](meta-slots.md))
+has those fields protected in the routes: a create that sets one, an update that changes one (leaving it out counts), and a
+delete while `removed` is not true, are refused with `403` and a message saying which. Code that writes through Python,
+such as a sync, is not stopped.
 
 ## Not done yet ⏳
 

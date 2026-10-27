@@ -55,6 +55,10 @@ The FastAPI application (`pangloss_api.app.create_app`). Done: token and session
 
 A Python package that holds the JavaScript of the web interface: `interface-core` (a Solid 2.0 component library) and `interface-app` (a server-rendered Solid 2.0 application), with `pangloss interface` commands that wrap Node or Bun and endpoints under `/api/interface`. See [The interface](interface.md).
 
+## pangloss-zotero 🚧
+
+Optional: `"pangloss_zotero"` in `INSTALLED_APPS`. Keeps a Zotero library in the database, one way (from Zotero), as entities that are both the sources of factoids and what factoids are about; the watcher runs as a background task of the server. `pangloss zotero sync|watch|status|check`. It also gave the other packages three general things: meta slots and protected fields (`pangloss-models`) and background tasks (`pangloss-api`). See [Zotero](zotero.md) and [Zotero items as sources and subjects](zotero-sources.md).
+
 ## pangloss-sdk-server 🚧
 
 Optional: `"pangloss_sdk_server"` in `INSTALLED_APPS`. Builds the SDK of the project: `pangloss sdk build|status|show`. It also serves it: `/api/sdk` (manifest, wheel, sdist; `SDK_ACCESS`) and tells a client whether its SDK is current; `git clone` of it (read-only), and a package index (`/api/sdk/simple/`). See [the SDK](sdk.md).

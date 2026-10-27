@@ -21,6 +21,7 @@ from pangloss_core import settings as core_settings
 from pangloss_core.logs import configure_from_settings
 from pangloss_models.model_registry import ModelRegistry
 
+from pangloss_api.background import Supervisor
 from pangloss_api.errors import ServerErrorResponder, register_error_handlers
 from pangloss_api.request_log import RequestLogger
 from pangloss_api.routes import users
@@ -113,8 +114,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
         # (what installed apps asked to be done when the server starts; see `configure_apps`)
         for hook in app.state.startup_hooks:
             await hook()
+        # (what installed apps keep running as long as the server does: see `background.py`)
+        supervisor = Supervisor(settings, list(app.state.background_tasks))
+        app.state.supervisor = supervisor
+        supervisor.start()
         logger.info("%s is ready", settings.PROJECT_NAME)
-        yield
+        try:
+            yield
+        finally:
+            await supervisor.stop()
     finally:
         await backend.disconnect()
         logger.info("%s stopped", settings.PROJECT_NAME)
@@ -149,8 +157,9 @@ def app_routers(apps: list[str]) -> list[APIRouter]:
 
 def configure_apps(app: FastAPI, settings: core_settings.BaseSettings) -> None:
     """Let each installed app that has a `configure_app(app, settings)` in its `api` module
-    set up the app: add middleware, or add a function to `app.state.startup_hooks` (async,
-    called as the server starts, after the migrations are checked)"""
+    set up the app: add middleware, add a function to `app.state.startup_hooks` (async,
+    called as the server starts, after the migrations are checked), or a `BackgroundTask` to
+    `app.state.background_tasks` (kept running as long as the server does)"""
     for installed_app in settings.INSTALLED_APPS:
         try:
             module = importlib.import_module(f"{installed_app}.api")
@@ -207,6 +216,7 @@ def create_app() -> FastAPI:
 
     app = FastAPI(title=settings.PROJECT_NAME, lifespan=lifespan)
     app.state.startup_hooks = []
+    app.state.background_tasks = []
 
     # (added first, so inside the CORS middleware: a 500 then has the CORS headers)
     app.add_middleware(ServerErrorResponder)

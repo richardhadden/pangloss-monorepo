@@ -62,8 +62,11 @@ include = [
     "packages/pangloss-sdk/src/**",
     "packages/pangloss-memgraph/src/pangloss_memgraph/databases/memgraph/build_*_query.py",
     "packages/pangloss-memgraph/src/pangloss_memgraph/databases/memgraph/exposed_functions.py",
+    "packages/pangloss-zotero/src/pangloss_zotero/store.py",
+    "packages/pangloss-zotero/src/pangloss_zotero/link.py",
 ]
 [tool.ty.overrides.rules]
+invalid-await = "ignore"
 unresolved-attribute = "ignore"
 invalid-argument-type = "ignore"
 invalid-attribute-access = "ignore"
