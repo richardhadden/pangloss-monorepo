@@ -1,0 +1,30 @@
+[project]
+name = "pangloss-dates"
+version = "0.1.0"
+description = "Optional dates for Pangloss: uncertain dates, ranges, periods and repeated events in the Julian or Gregorian calendar"
+readme = "README.md"
+authors = [
+    { name = "Richard Hadden", email = "rwjhadden@gmail.com" }
+]
+requires-python = ">=3.15"
+dependencies = [
+    "pangloss-models",
+]
+
+[project.optional-dependencies]
+# parses EDTF strings (the bounds are still worked out here, in the chosen calendar)
+edtf = ["edtf>=5"]
+
+[project.urls]
+Repository = "https://github.com/richardhadden/pangloss-monorepo"
+
+[build-system]
+requires = ["uv_build>=0.11.8,<0.12.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+# an independent check of the day arithmetic in the tests
+dev = ["juliandate>=1.0.5"]
+
+[tool.uv.sources]
+pangloss-models = { workspace = true }
