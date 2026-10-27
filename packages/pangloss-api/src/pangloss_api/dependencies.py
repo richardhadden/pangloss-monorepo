@@ -4,7 +4,7 @@ from typing import Annotated
 
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
-from pangloss_users import current_request_username, service
+from pangloss_users import current_request_username, see_unpublished, service
 from pangloss_users.models import User
 
 from pangloss_api.tokens import TokenError, decode_token
@@ -88,6 +88,22 @@ async def get_current_admin(
     if not user.admin:
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Not authorised")
     return user
+
+
+async def set_visibility(
+    request: Request, token: Annotated[str | None, Depends(get_access_token)]
+) -> None:
+    """On every request: a user who is logged in may see documents that are not published, one who is not
+    may not (and is not refused for it: reading is open). The token is looked at again by routes that need
+    a user."""
+    seen = False
+    if token:
+        try:
+            await user_for_token(token, request.method)
+            seen = True
+        except HTTPException:
+            pass
+    see_unpublished.set(seen)
 
 
 CurrentUser = Annotated[User, Depends(get_current_user)]

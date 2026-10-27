@@ -3,8 +3,25 @@ from typing import LiteralString
 from pangloss_models.model_bases.document import Document
 from pangloss_models.model_bases.entity import Entity
 
+from pangloss_memgraph.databases.memgraph.visibility import unpublished_visible
+
 
 def build_generic_list_query(
+    object_class: type[Document | Entity],
+    search_terms: str | None = None,
+    page_number: int | None = None,
+    page_size: int | None = None,
+    deep_search: bool = False,
+) -> tuple[LiteralString, dict]:
+    query, params = _build_list_query(
+        object_class, search_terms, page_number, page_size, deep_search
+    )
+    # (a document that is not published is listed only for those who may see it)
+    params["see_unpublished"] = unpublished_visible()
+    return query, params
+
+
+def _build_list_query(
     object_class: type[Document | Entity],
     search_terms: str | None = None,
     page_number: int | None = None,
@@ -72,6 +89,7 @@ def build_generic_list_query(
                 OPTIONAL MATCH (n_head:HeadNode {id: n.head_node_id})
                 WITH n, nodeScores, n_head
                 WHERE NOT coalesce(CASE WHEN n:Entity THEN n.deleted ELSE coalesce(n_head, n).deleted END, false)
+AND (n:Entity OR $see_unpublished OR coalesce(coalesce(n_head, n).published, true))
                 WITH n, nodeScores
 
                 WITH n, [x IN nodeScores WHERE x.node = n | x.score] AS scoreList
@@ -168,6 +186,7 @@ def build_generic_list_query(
             OPTIONAL MATCH (t_head:HeadNode {id: t.head_node_id})
             WITH t, nodeScores, t_head
             WHERE NOT coalesce(CASE WHEN t:Entity THEN t.deleted ELSE coalesce(t_head, t).deleted END, false)
+AND (t:Entity OR $see_unpublished OR coalesce(coalesce(t_head, t).published, true))
             WITH t, nodeScores
             MATCH (t)--(n:Entity)
             WHERE $targetType IN labels(n)
@@ -176,6 +195,7 @@ def build_generic_list_query(
             OPTIONAL MATCH (n_head:HeadNode {id: n.head_node_id})
             WITH n, nodeScores, n_head
             WHERE NOT coalesce(CASE WHEN n:Entity THEN n.deleted ELSE coalesce(n_head, n).deleted END, false)
+AND (n:Entity OR $see_unpublished OR coalesce(coalesce(n_head, n).published, true))
             WITH n, nodeScores
 
             WITH n, [x IN nodeScores WHERE x.node = n | x.score] AS scoreList
@@ -241,6 +261,7 @@ def build_generic_list_query(
             OPTIONAL MATCH (n_head:HeadNode {id: n.head_node_id})
             WITH n, totalScore, n_head
             WHERE NOT coalesce(CASE WHEN n:Entity THEN n.deleted ELSE coalesce(n_head, n).deleted END, false)
+AND (n:Entity OR $see_unpublished OR coalesce(coalesce(n_head, n).published, true))
             WITH n, totalScore
             ORDER BY totalScore DESC, id(n)
             WITH collect(n) AS allNodes
@@ -291,6 +312,7 @@ def build_generic_list_query(
             OPTIONAL MATCH (counted_head:HeadNode {id: n.head_node_id})
             WITH n, counted_head
             WHERE NOT coalesce(CASE WHEN n:Entity THEN n.deleted ELSE coalesce(counted_head, n).deleted END, false)
+AND (n:Entity OR $see_unpublished OR coalesce(coalesce(counted_head, n).published, true))
 
                         WITH count(n) AS total
 
@@ -298,6 +320,7 @@ def build_generic_list_query(
             OPTIONAL MATCH (listed_head:HeadNode {id: n.head_node_id})
             WITH n, total, listed_head
             WHERE NOT coalesce(CASE WHEN n:Entity THEN n.deleted ELSE coalesce(listed_head, n).deleted END, false)
+AND (n:Entity OR $see_unpublished OR coalesce(coalesce(listed_head, n).published, true))
 
                         WITH n, total
                         ORDER BY n.id

@@ -15,13 +15,14 @@ import warnings
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
-from fastapi import APIRouter, FastAPI
+from fastapi import APIRouter, Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pangloss_core import settings as core_settings
 from pangloss_core.logs import configure_from_settings
 from pangloss_models.model_registry import ModelRegistry
 
 from pangloss_api.background import Supervisor
+from pangloss_api.dependencies import set_visibility
 from pangloss_api.errors import ServerErrorResponder, register_error_handlers
 from pangloss_api.request_log import RequestLogger
 from pangloss_api.routes import autocomplete, search, users
@@ -214,7 +215,11 @@ def create_app() -> FastAPI:
     # to the database is made when the server starts)
     prepare_models(settings)
 
-    app = FastAPI(title=settings.PROJECT_NAME, lifespan=lifespan)
+    app = FastAPI(
+        title=settings.PROJECT_NAME,
+        lifespan=lifespan,
+        dependencies=[Depends(set_visibility)],
+    )
     app.state.startup_hooks = []
     app.state.background_tasks = []
 

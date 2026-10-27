@@ -7,13 +7,13 @@ from typing import LiteralString, cast
 from pangloss_models.model_bases.document import Document
 from pangloss_models.model_bases.entity import Entity
 from pangloss_models.search import (
-    CheckedOrder,
     ANY_IN_DOCUMENT,
     ANY_RELATION,
     WRAPPER_LABELS,
     AnyOf,
     CheckedCondition,
     CheckedIncoming,
+    CheckedOrder,
     CheckedPattern,
     Expr,
     Not,
@@ -22,6 +22,7 @@ from pangloss_models.search import (
 from pangloss_memgraph.databases.memgraph.build_create_query import (
     convert_type_for_writing,
 )
+from pangloss_memgraph.databases.memgraph.visibility import unpublished_visible
 
 COMPARISONS = {"eq": "=", "ne": "<>", "gt": ">", "gte": ">=", "lt": "<", "lte": "<="}
 
@@ -183,7 +184,7 @@ class Compiler:
                 # (nor does a document inside a deleted head document: go up to it, along the reverse edges)
                 h, q, v = self.name("h"), self.name("q"), self.name("v")
                 tests.append(
-                    f"NOT EXISTS {{ MATCH ({s})-[* 0.. ({q}, {v} | coalesce({q}.reverse, false))]->({h}:HeadNode) WHERE {h}.deleted }}"
+                    f"NOT EXISTS {{ MATCH ({s})-[* 0.. ({q}, {v} | coalesce({q}.reverse, false))]->({h}:HeadNode) WHERE {h}.deleted OR NOT ($see_unpublished OR coalesce({h}.published, true)) }}"
                 )
             return " AND ".join(tests)
 
@@ -258,13 +259,17 @@ def build_search_query(
     page_size: int,
     order: list[CheckedOrder] | None = None,
 ) -> tuple[LiteralString, dict]:
-    params: dict = {"page": page_number, "page_size": page_size}
+    params: dict = {
+        "page": page_number,
+        "page_size": page_size,
+        "see_unpublished": unpublished_visible(),
+    }
     compiler = Compiler(params)
     tests = compiler.all_of(conditions, "n")
     finding, keys, sorting = ordering(compiler, order or [])
 
     kind = "HeadNode" if issubclass(model, Document) else "Entity"
-    where = f"NOT coalesce(n.deleted, false) AND {tests}"
+    where = f"NOT coalesce(n.deleted, false) AND ($see_unpublished OR coalesce(n.published, true)) AND {tests}"
     query = f"""
     MATCH (n:`{model.__name__}`:{kind})
     WHERE {where}

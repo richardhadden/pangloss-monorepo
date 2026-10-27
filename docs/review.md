@@ -1,6 +1,6 @@
 # Review: checking documents before they are published ⏳
 
-**Status: planned, nothing built.** The package is `pangloss-review` (`INSTALLED_APPS = ["pangloss_review"]`). The
+**Status: step 1 (the core `published` flag) is built and tested, uncommitted; the package is not started.** The package is `pangloss-review` (`INSTALLED_APPS = ["pangloss_review"]`). The
 decisions marked **(decided)** were made by the user; **(open)** ones are still to settle; the rest follow from how
 `deleted`, meta slots and `pangloss-history` already work.
 
@@ -23,9 +23,12 @@ decisions marked **(decided)** were made by the user; **(open)** ones are still 
   existing data and projects without review are untouched, and nothing needs migrating.
 - Read, list, search, autocomplete and "what refers to this" skip a document that is not published, or nested in
   one, exactly as for `deleted`.
-- Unlike `deleted`, some people must see them. So the backend functions get a visibility argument, `unpublished`:
-  `"hide"` (default), `"include"`, or `"only"` (the reviewers' queue), supplied by the API from who is asking and
-  never by the client. Reading by id as the author or a reviewer works with `"include"`.
+- Unlike `deleted`, some people must see them. **(decided)** A user who is logged in sees unpublished documents
+  (in reads, lists and searches); a request that is not logged in does not. The ContextVar
+  `pangloss_users.see_unpublished` says which (default `True`, so scripts, commands and tests see everything);
+  the API sets it on every request (`dependencies.set_visibility`, an app-wide dependency: a valid token is
+  `True`, none or a bad one `False`, and reading is still open). The Memgraph builders pass it as the query
+  parameter `$see_unpublished`. A later `only` mode (the reviewers' queue) is the review package's, not the core's.
 - New documents are written `published = false` **only when the review package is installed and the class is
   reviewable** (a listener on the write event, as history does, sets it in the same transaction); otherwise
   nothing is written, which is "published".
@@ -95,6 +98,6 @@ asked. Email or other notices.
 ## Build order
 
 0. Settle what the update builder does with ids of nested documents (for comments on parts).
-1. Core: `published` in the query builders, with the `unpublished` argument, and tests that nothing changes without it.
+1. ✅ Core: `published` in the read, list and search builders with `$see_unpublished`, the API dependency, and `test_unpublished_live.py`. (Not filtered, on purpose: autocomplete and entities, `validate_write`, deletion's "what refers to this", which must still count an unpublished document.)
 2. The package: the meta slot, the listener, the status and comment functions (Memgraph), tests.
 3. The API routes, the commands, the guide page, settings (`REVIEW_ALLOW_SELF_REVIEW`).

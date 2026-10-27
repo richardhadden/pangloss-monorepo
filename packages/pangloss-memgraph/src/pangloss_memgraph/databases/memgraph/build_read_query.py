@@ -7,6 +7,7 @@ from pangloss_memgraph.databases.memgraph.build_create_query import (
     QueryParams,
     convert_type_for_writing,
 )
+from pangloss_memgraph.databases.memgraph.visibility import unpublished_visible
 
 
 def build_fetch_document_query(
@@ -24,6 +25,7 @@ def build_fetch_document_query(
     query_params = QueryParams()
     query_params[document_id_identifier] = convert_type_for_writing(document_id)
     query_params[document_type_identifier] = document_class.__name__
+    query_params["see_unpublished"] = unpublished_visible()
     query = f"""
     MATCH rp = (root:PGIndexableNode {{id: ${document_id_identifier}}})
     WHERE ${document_type_identifier} in labels(root)
@@ -31,6 +33,7 @@ def build_fetch_document_query(
     WITH root, rp, coalesce(hn, root) AS headnode
     // (a deleted document, or one nested in it, or a deleted entity, is not found)
     WHERE NOT coalesce(CASE WHEN root:Entity THEN root.deleted ELSE headnode.deleted END, false)
+    AND (root:Entity OR $see_unpublished OR coalesce(headnode.published, true))
     MATCH (headnode)<-[:is_creation_of]-(creation:PGCreation)
     MATCH (creation)-[:created_by]->(user:PGUser)
     CALL {{
@@ -131,6 +134,7 @@ def build_fetch_incoming_query(
         "id": str(entity_id),
         "type": entity_class.__name__,
         "chain_labels": list(CHAIN_LABELS),
+        "see_unpublished": unpublished_visible(),
     }
     # (the labels are tested as a list: written as `a:X OR a:Y OR ...`, a longer list made the server
     # return the wrong path for a chain of several nodes)
@@ -149,6 +153,7 @@ def build_fetch_incoming_query(
     WITH first, next, ascent, holder, coalesce(hn, holder) AS headnode
     // (what has been deleted no longer refers to the entity)
     WHERE NOT coalesce(CASE WHEN holder:Entity THEN holder.deleted ELSE headnode.deleted END, false)
+    AND (holder:Entity OR $see_unpublished OR coalesce(headnode.published, true))
     OPTIONAL MATCH (headnode)<-[:is_creation_of]-(creation:PGCreation)-[:created_by]->(creator:PGUser)
     CALL {
         WITH headnode
