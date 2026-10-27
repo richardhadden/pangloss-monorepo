@@ -37,7 +37,7 @@ from typing import Any
 import neo4j
 from pangloss_models.exceptions import PanglossBulkLoadError
 
-from pangloss_memgraph.databases.memgraph.database import Database
+from pangloss_memgraph.databases.memgraph.database import Database, slow_query_ms
 from pangloss_memgraph.databases.memgraph.migration_backend import (
     LOCK_ID,
     _session,
@@ -53,6 +53,10 @@ ANALYTICAL = "IN_MEMORY_ANALYTICAL"
 
 # What an empty database may hold: the record of migrations, and the users (and their tokens), without
 # whom nothing can be written
+# A write is "slow" (a warning) over this during a load, if `SLOW_QUERY_MS` is less: with several
+# writers at once most take longer than the usual 500 ms, and a warning for each says nothing
+QUIET_DURING_LOAD_MS = 10_000
+
 ALLOWED_LABELS = [
     "PGMigration",
     "PGMigrationLock",
@@ -237,6 +241,9 @@ async def bulk_ingest(
         "Bulk load started: %s constraints dropped, analytical mode", len(constraints)
     )
     database.bulk_loading = True
+    database.slow_query_threshold = max(
+        slow_query_ms(database.settings), QUIET_DURING_LOAD_MS
+    )
     try:
         yield
     except BaseException:
@@ -247,4 +254,5 @@ async def bulk_ingest(
         raise
     finally:
         database.bulk_loading = False
+        database.slow_query_threshold = None
         await restore(database)

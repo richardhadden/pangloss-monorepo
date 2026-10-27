@@ -624,13 +624,17 @@ def go_backwards(
     def progress(migration: Migration, what: str) -> None:
         typer.echo(f"  {migration}: {what}")
 
+    taken: list[str] = []
+
     async def run_all():
         await backend.lock()
         try:
             if backup and not fake:
                 if not hasattr(backend, "backup"):
                     raise PanglossMigrationError("This database cannot take a backup")
-                typer.echo(f"Backup: {await backend.backup()}")
+                taken_backup = await backend.backup()
+                taken.append(taken_backup)
+                typer.echo(f"Backup: {taken_backup}")
                 notice = (
                     await backend.backup_notice()
                     if hasattr(backend, "backup_notice")
@@ -660,6 +664,7 @@ def go_backwards(
             report_data_check(project, types=affected)
         else:
             typer.echo("Nothing that exists is affected: no data to read")
+    warn_if_backup_gone(project, backend, taken)
 
 
 def migrate(
@@ -834,13 +839,17 @@ def migrate(
     def progress(migration: Migration, what: str) -> None:
         typer.echo(f"  {migration}: {what}")
 
+    taken: list[str] = []
+
     async def run_all():
         await backend.lock()
         try:
             if backup and not fake:
                 if not hasattr(backend, "backup"):
                     raise PanglossMigrationError("This database cannot take a backup")
-                typer.echo(f"Backup: {await backend.backup()}")
+                taken_backup = await backend.backup()
+                taken.append(taken_backup)
+                typer.echo(f"Backup: {taken_backup}")
                 notice = (
                     await backend.backup_notice()
                     if hasattr(backend, "backup_notice")
@@ -876,6 +885,28 @@ def migrate(
                 typer.echo(
                     "Nothing that exists is affected by these migrations: no data to read"
                 )
+    warn_if_backup_gone(project, backend, taken)
+
+
+def warn_if_backup_gone(
+    project: Project, backend: ModuleType, taken: list[str]
+) -> None:
+    """Say so if the database has already removed the backup this `migrate` took: it keeps only the
+    newest few, and reading the data back after a large migration can take longer than they last"""
+    if not taken or not hasattr(backend, "backups"):
+        return
+    try:
+        kept = {row["path"] for row in run_with_database(project, backend.backups)}
+    except PanglossMigrationError, OSError:
+        return
+    for path in taken:
+        if path not in kept:
+            typer.secho(
+                f"The backup {path} is no longer there: the database keeps only the newest few "
+                "snapshots, and has made others since. Take another (`pangloss migrate --backup` "
+                "does, before it changes anything) if you still need one.",
+                fg="yellow",
+            )
 
 
 def warn_if_models_have_changed(graph: MigrationGraph, snapshot: dict) -> None:

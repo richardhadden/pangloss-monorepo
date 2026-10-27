@@ -564,7 +564,7 @@ async def remove_field(
             tx,
             window,
             select_nodes(ident(change.model), f"{prop} IS NOT NULL", window)
-            + f" REMOVE {prop}",
+            + f" SET {prop} = null",  # (not REMOVE: Memgraph does not count that in a dry run)
         )
     await delete_relation(tx, change.model, field)
     return None
@@ -1075,9 +1075,9 @@ async def alter_edge_model(
         for forward, reverse in pairs:
             await on_edges(
                 f"MATCH (n:{label})-[e:{ident(forward)}]->() WHERE e.{ident(name)} IS NOT NULL "
-                f"{window}REMOVE e.{ident(name)} RETURN count(e) AS done",
+                f"{window}SET e.{ident(name)} = null RETURN count(e) AS done",
                 f"MATCH ()-[e:{ident(reverse)}]->(n:{label}) WHERE e.{ident(name)} IS NOT NULL "
-                f"{window}REMOVE e.{ident(name)} RETURN count(e) AS done",
+                f"{window}SET e.{ident(name)} = null RETURN count(e) AS done",
             )
 
     added = {name: entry for name, entry in new.items() if name not in old}
@@ -1678,7 +1678,7 @@ async def change_wrapper(
         "SET r.type = $new_type" + "".join(", " + assignment for assignment in sets)
     )
     if removes:
-        clauses.append("REMOVE " + ", ".join(removes))
+        clauses.append("SET " + ", ".join(f"{name} = null" for name in removes))
     # (what is changed no longer has the old label, so a next call finds the next)
     window = f"WITH DISTINCT r LIMIT {int(limit)}" if limit else "WITH DISTINCT r"
     rows = await run(
@@ -1751,7 +1751,7 @@ async def literals_to_embedded(
     properties = [f"{ident(f)}: s.{ident(f)}" for f in change.fields] + extra
     tail = ", " + ", ".join(properties) if properties else ""
     removes = (
-        f"REMOVE {', '.join(f's.{ident(f)}' for f in change.fields)}"
+        f"SET {', '.join(f's.{ident(f)} = null' for f in change.fields)}"
         if change.fields
         else ""
     )

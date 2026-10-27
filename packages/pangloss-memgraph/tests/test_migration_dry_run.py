@@ -90,6 +90,53 @@ async def test_a_dry_run_counts_what_a_migration_would_do_and_does_nothing(
 
 
 @no_type_check
+async def test_a_dry_run_counts_the_properties_a_removed_field_takes_away(
+    db_driver, clear_database
+):
+    # (Memgraph reports `REMOVE n.x` with no count at all, so a removal said "no change to the data")
+    def v1():
+        class Person(Entity):
+            name: str
+            nickname: str
+
+        return ns(Person=Person)
+
+    def v2():
+        class Person(Entity):
+            name: str
+
+        return ns(Person=Person)
+
+    old_models, first = declare(v1)
+    initial = migrations_between(MigrationGraph(), first)
+    graph = MigrationGraph.of(initial)
+    await backend.ensure_ready()
+    state = await backend.apply(initial, EMPTY_SNAPSHOT)
+    for name in ("Ann", "Bob", "Cat", "Dan"):
+        await old_models.Person.Create(label=name, name=name, nickname=name).save()
+    _, second = declare(v2)
+    later = migrations_between(graph, second, answer=answering())
+
+    (report,) = await backend.dry_run(later, state)
+    (change,) = report.changes
+    assert change.status == "counted"
+    assert "4 properties set" in change.summary()
+    assert "no change" not in change.summary()
+    # nothing was done
+    assert run(
+        db_driver,
+        "MATCH (p:Person) WHERE p.nickname IS NOT NULL RETURN count(p) AS n",
+    ) == [{"n": 4}]
+
+    # and applied, the property is gone
+    await backend.apply(later, state)
+    assert run(
+        db_driver,
+        "MATCH (p:Person) WHERE p.nickname IS NOT NULL RETURN count(p) AS n",
+    ) == [{"n": 0}]
+
+
+@no_type_check
 async def test_a_dry_run_counts_the_nodes_a_wrapper_makes(db_driver, clear_database):
     def v1():
         class Person(Entity):

@@ -71,7 +71,10 @@ async def timed[T](
         raise
     finally:
         elapsed = (time.monotonic() - started) * 1000
-        slow = elapsed > slow_query_ms(database.settings)
+        threshold = getattr(database, "slow_query_threshold", None)
+        slow = elapsed > (
+            threshold if threshold is not None else slow_query_ms(database.settings)
+        )
         logger.log(
             logging.WARNING if slow else logging.DEBUG,
             "%s transaction %s took %.0f ms%s",
@@ -108,6 +111,9 @@ class Database:
     # True while this process is making a bulk load (`bulk.bulk_ingest`), which holds the migration
     # lock itself: its own writes are let through, everyone else's are refused
     bulk_loading: bool = False
+    # If set, what `SLOW_QUERY_MS` is for this process (a bulk load raises it: with many writers at
+    # once nearly every write is "slow", and a warning for each says nothing)
+    slow_query_threshold: int | None = None
 
     def __init__(self, settings: BaseSettings, instance_identifier: int | None = None):
         if settings is None:

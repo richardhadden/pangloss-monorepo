@@ -268,3 +268,32 @@ async def test_its_own_writes_are_let_through_the_lock_and_only_its_own(database
             await write()
     finally:
         await backend.unlock(database)
+
+
+async def test_writes_are_not_called_slow_during_a_load_unless_they_are_very_slow(
+    database, caplog
+):
+    import asyncio
+    import logging
+
+    from pangloss_memgraph.databases.memgraph.database import timed
+
+    async def takes(milliseconds: int) -> None:
+        async def run() -> None:
+            await asyncio.sleep(milliseconds / 1000)
+
+        await timed(database, "write", takes, run)
+
+    caplog.set_level(logging.DEBUG, logger="pangloss.memgraph.transactions")
+    await takes(700)  # (over the usual 500 ms)
+    assert any("(slow)" in record.message for record in caplog.records)
+
+    caplog.clear()
+    async with bulk_ingest(database=database):
+        await takes(700)
+        assert not any("(slow)" in record.message for record in caplog.records)
+    assert database.slow_query_threshold is None
+
+    caplog.clear()
+    await takes(700)  # (and as usual again after)
+    assert any("(slow)" in record.message for record in caplog.records)

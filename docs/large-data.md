@@ -14,7 +14,7 @@ Every `.save()` is one transaction. Written through the models, one process:
 | 4 | 158 |
 | 16 | 30 |
 
-**Use four or fewer.** With many writers the transactions conflict and are retried, and the throughput falls to a fifth, with Memgraph at several hundred per cent CPU. The whole load at four writers:
+**Use four or fewer.** With 16 writers the throughput falls to a fifth, with Memgraph at several hundred per cent CPU. The whole load at four writers:
 
 | | Time |
 |---|---|
@@ -24,7 +24,29 @@ Every `.save()` is one transaction. Written through the models, one process:
 
 Throughput falls slowly as the database grows. A factoid is written, with its statements, in a single statement.
 
-With 16 writers many `write_head_node` transactions take over 500 ms, and **`SLOW_QUERY_MS` (default 500) fills the log with warnings.** Raise it for the load ([Logging](logging.md)).
+With 16 writers many `write_head_node` transactions take over 500 ms, and **`SLOW_QUERY_MS` (default 500) fills the log with warnings.** Raise it for the load ([Logging](logging.md)); `bulk-load` (below) does that itself.
+
+### Why: the text index is paid for at every commit
+
+It is not the user node, the unique constraints, or transactions conflicting. Raw Cypher against a Memgraph, 800 nodes created one transaction each:
+
+| | 1 writer | 16 writers |
+|---|---|---|
+| A plain node | 1,553 a second | 3,803 |
+| The same, with a unique constraint on its id | 1,498 | 3,834 |
+| The same, in the text index (`label_text`, which every document and entity is in) | 208 | 20 |
+| Writes of the models, 16 writers sharing one user, and 16 writers with 16 users | 174 | 31, and 27 |
+
+The text index costs about 4.5 ms **a commit**, not a node, and it makes writers wait for one another. So writing more in one transaction is the way round it:
+
+| Nodes created in one transaction (text-indexed) | Nodes a second |
+|---|---|
+| 1 | 221 |
+| 10 | 1,167 |
+| 100 | 10,685 |
+| 1,000 | 62,044 |
+
+Pangloss writes a document, with the documents and embedded objects inside it, as one transaction, and one document per `.save()`. A way to write many documents in one transaction (a batch) would be the way to load faster into a database that already has data, where `bulk-load` cannot be used; there is not one yet. (In Memgraph's analytical mode the text index costs nothing, at 1,588 a second against 1,504 for a plain node, which is part of why `bulk-load` is fast.)
 
 ## Migrating
 
@@ -38,8 +60,8 @@ Each change below ran against the full dataset, after a dry run, with `--backup`
 
 - **The change is quick, and the check afterwards is most of the time.** A's change ran in a few seconds (its dry run took one); the other 34 minutes were the check. After a migration that could have made data unreadable, `migrate` reads every record it could have affected, through the models (`--no-check` skips it; `--check-all` reads everything). **The three runs above read one record at a time.** The reading is now 16 at a time by default (`check-data --parallel N` to change it). Measured on the factoids alone, from one at a time to 64: 103, 208 (4), 312 (8), 410 (16), 455 (32) and 466 (64) a second. Over the whole database (208,640 records: factoids, statements and entities), `check-data` took 31 min 28 s one at a time and 18 min 49 s with 16: 1.7 times as fast, because the entities, which are small, gain less. For an unattended run, `--no-check` and then `pangloss check-data` later is the same work, with the choice of when. Each read over 500 ms is a warning (`SLOW_QUERY_MS`), and with 16 at once a lot of them are.
 - **A migration is one transaction**, so it fails whole or not at all. Memgraph held the 330,000 edge operations of C in one without trouble (1.5 GiB of memory for the whole database).
-- **Dry runs are cheap and exact.** `--dry-run` runs the changes in a transaction that is rolled back, and reports what Memgraph counted. It took as long as the real change (so 2 minutes for C), and told the truth, with one exception: **it does not count removals.** Removing `Source.author` from 5,000 nodes reported "no change to the data". Read `[LOSES DATA]` in the plan, not the counts.
-- **The snapshot from `--backup` does not last.** Memgraph keeps three snapshots, taking one every 300 seconds, so the one `--backup` takes is gone in about 15 minutes. A migration whose check takes longer than that has no restore point by the end. Copy the snapshot from the server, or raise `--storage-snapshot-retention-count` ([Migrations guide](../guide/migrations/04-safety.md)).
+- **Dry runs are cheap and exact.** `--dry-run` runs the changes in a transaction that is rolled back, and reports what Memgraph counted. It took as long as the real change (so 2 minutes for C). A removed property was counted as nothing when this was first measured, because Memgraph reports `REMOVE n.x` with no count, so removing `Source.author` from 5,000 nodes said "no change to the data". Properties are now taken away with `SET n.x = null`, which it does count, and a removal is reported as "properties set" (the number it took away).
+- **The snapshot from `--backup` does not last.** Memgraph keeps three snapshots, taking one every 300 seconds, so the one `--backup` takes is gone in about 15 minutes. A migration whose check takes longer than that has no restore point by the end. `migrate` says so at the end if the database no longer lists the backup it took (`The backup ... is no longer there`). Copy the snapshot from the server, or raise `--storage-snapshot-retention-count` ([Migrations guide](../guide/migrations/04-safety.md)).
 - **Nothing else may write while a migration runs.** The lock refuses other writers (`PanglossReadOnlyError`, "The database is being migrated"), which is right, but a loader running at the time stops with an error. `migrate --fake` also takes the lock.
 
 ## Repeating it
@@ -54,7 +76,7 @@ PYTHONPATH=. python bulk_load.py 100000 30000 4      # entities, factoids, write
 
 `bulk_load.py` is in `pangloss-demo/`. It writes with fixed URLs, so it is not for running twice, and **it must not be pointed at a database you want to keep.** Clearing the scratch database between tries: `MATCH (n) WHERE NOT n:PGUser AND NOT n:PGMigration DETACH DELETE n` (without that `WHERE`, the record of the migrations goes with it, and the next `migrate` starts again).
 
-Then change the models, `pangloss makemigrations`, and `pangloss migrate --dry-run`, `migrate --backup`.
+Then change the models, `pangloss makemigrations`, and `pangloss migrate --dry-run`, `migrate --backup`. To try [`bulk-load`](#bulk-load-a-file-into-an-empty-database) instead of the script, make a JSON Lines file of the same data (entities with ids of their own, then the factoids) and clear the database first.
 
 ## Bulk load a file into an empty database
 
@@ -86,6 +108,8 @@ pangloss memgraph bulk-load data.jsonl --user loader [--concurrency 4] [--valida
 3. **Drops the unique constraints**, which Memgraph will not allow in analytical mode (Pangloss has twelve: ids, URLs, users, tokens, the migration record). Their definitions are kept on the lock.
 4. Switches to `IN_MEMORY_ANALYTICAL`, and writes the records.
 5. However that went: switches back to `IN_MEMORY_TRANSACTIONAL`, **makes the constraints again**, makes the text index again, and releases the lock.
+
+During the load the "slow transaction" warnings are raised to 10 seconds (`SLOW_QUERY_MS` is for the usual running), because with several writers most writes are over 500 ms. If `pangloss_history` is installed, it records each record written, as it does any write (250 records gave 250 history entries).
 
 With the constraints gone nothing stops a duplicate id or URL during the load; making them again is the check. If the file had one, the command says which constraint failed, and **the database stays read-only** (the lock is kept) until the duplicate is removed and `pangloss memgraph bulk-recover` is run. `bulk-recover` is also what to run after a load that was killed (the lock has what is needed to put everything back).
 

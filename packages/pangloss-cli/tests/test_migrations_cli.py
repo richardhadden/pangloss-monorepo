@@ -26,7 +26,11 @@ FAKE_MIGRATION_BACKEND = """
     async def backup_notice():
         return "Memgraph keeps 3 snapshots"
 
+    BACKUPS_KEPT = True
+
     async def backups():
+        if not BACKUPS_KEPT:
+            return []  # (the server has made others since, and removed it)
         return [{"path": "/snapshots/1", "creation_time": "2026-10-21T10:00", "size": "62KiB"}]
 
     async def restore(path):
@@ -348,6 +352,25 @@ def test_data_that_would_be_lost_is_asked_about(models_project: Path):
     assert exit_code == 0, output
     assert len(backend().APPLIED) == len(files)
     assert "Backup" not in output and "backup" not in backend().CALLS
+
+
+def test_a_backup_that_the_database_has_removed_by_the_end_is_said_to_be_gone(
+    models_project: Path,
+):
+    # still there at the end: nothing is said
+    exit_code, output = invoke("migrate", "--backup")
+    assert exit_code == 0, output
+    assert "no longer there" not in output
+
+    # (the data check after a large migration can outlast the snapshots the server keeps)
+    set_models(models_project, V2)
+    assert invoke("makemigrations", input="1900\n")[0] == 0
+    backend().BACKUPS_KEPT = False
+    exit_code, output = invoke("migrate", "--backup", "--yes")
+    assert exit_code == 0, output
+    assert "The backup /snapshots/1 is no longer there" in output
+    # ... and not when no backup was taken
+    assert "no longer there" not in invoke("migrate", "--plan")[1]
 
 
 def test_a_backup_is_taken_after_the_lock_and_before_applying(models_project: Path):
