@@ -11,6 +11,7 @@ lazy from pangloss_core import settings as core_settings
 from pangloss_models.exceptions import (
     PanglossImportError,
     PanglossInitialisationError,
+    PanglossModelError,
 )
 lazy from pangloss_models.initialise_models.initialise_create_db_model import (
     add_fields_to_create_db_model,
@@ -92,6 +93,20 @@ def apply_camel_case_aliases(model: type[BaseModel]) -> None:
 
 
 logger = logging.getLogger("pangloss.models.registry")
+
+
+# Properties that the database keeps on the node of a head document or entity (the search, the lists and the
+# review read them): not names for a field
+RESERVED_PROPERTIES = frozenset(
+    {
+        "deleted",
+        "published",
+        "review_status",
+        "reviewed_by",
+        "reviewed_at",
+        "marked_for_deletion",
+    }
+)
 
 
 class ModelRegistry:
@@ -274,6 +289,18 @@ class ModelRegistry:
     # ----------------------------
 
     @classmethod
+    def _check_field_names(cls, model) -> None:
+        """A field cannot be named as a property that the database keeps on the node of a head document or entity
+        for its own use: its value would hide the node (`deleted`, `published`) or be taken for the state of
+        its review"""
+        clash = sorted(RESERVED_PROPERTIES & set(model.model_fields))
+        if clash:
+            raise PanglossModelError(
+                f"{model.__name__} has a field named {', '.join(repr(n) for n in clash)}, which Pangloss keeps on "
+                "every head node for itself (see docs/review.md): call it something else"
+            )
+
+    @classmethod
     def finalise(cls, *, allow_cycles: bool = True, bind_database: bool = True):
         """
         1. Resolve Pydantic types
@@ -325,6 +352,13 @@ class ModelRegistry:
                 "Embedded",
             ]:
                 check_indexes(model)
+
+        for model in cls._model_dict.values():
+            if hasattr(model, "__metatype__") and model.__metatype__ in [
+                "Document",
+                "Entity",
+            ]:
+                cls._check_field_names(model)
 
         # (the incoming relations are worked out from all the models, so start again if this is not the first time)
         for model in cls._model_dict.values():

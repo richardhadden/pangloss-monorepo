@@ -552,3 +552,12 @@ def test_published_and_review_status_are_searched_for_a_head_document():
         check(Letter, published_on={"eq": 1})
     with pytest.raises(PanglossSearchError, match="published"):
         check(Letter, published={"eq": "yes"})
+
+
+@pytest.mark.parametrize("name", ["published", "review_status", "deleted"])
+def test_a_field_cannot_be_named_as_a_property_kept_on_a_head_node(name):
+    from pangloss_models.exceptions import PanglossModelError
+
+    type("Odd", (Document,), {"__annotations__": {name: bool | None}, name: None})
+    with pytest.raises(PanglossModelError, match=name):
+        initialise()
