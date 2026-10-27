@@ -39,6 +39,7 @@ class Precision(StrEnum):
     DAY = "day"
     RANGE = "range"
     ONGOING = "ongoing"
+    UNKNOWN = "unknown"
 
 
 @dataclass(frozen=True)
@@ -157,3 +158,8 @@ def ongoing_bounds(horizon: int) -> Bounds:
     """The end of a period that has not ended: no later than the horizon (a setting), whose day number
     stands for the strict and fuzzy bounds alike"""
     return Bounds(horizon, horizon, horizon, horizon)
+
+
+def unknown_bounds(floor: int, horizon: int) -> Bounds:
+    """A date nothing is known of: anywhere from the floor to the horizon (settings), stated as such"""
+    return Bounds(floor, floor, horizon, horizon)

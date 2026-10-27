@@ -16,6 +16,7 @@ from pangloss_dates.models import (
     OngoingDate,
     Period,
     Recurrence,
+    UnknownDate,
 )
 
 
@@ -41,8 +42,17 @@ class GregorianOngoingDate(GregorianDate, OngoingDate):
     pass
 
 
+class GregorianUnknownDate(GregorianDate, UnknownDate):
+    pass
+
+
 class GregorianPeriod(GregorianDate, Period):
-    start: GregorianExactDate | GregorianDateRange | GregorianEDTFDate
+    start: (
+        GregorianExactDate
+        | GregorianDateRange
+        | GregorianEDTFDate
+        | GregorianUnknownDate
+    )
     end: (
         GregorianExactDate
         | GregorianDateRange
@@ -52,7 +62,12 @@ class GregorianPeriod(GregorianDate, Period):
 
 
 class GregorianRecurrence(GregorianDate, Recurrence):
-    start: GregorianExactDate | GregorianDateRange | GregorianEDTFDate
+    start: (
+        GregorianExactDate
+        | GregorianDateRange
+        | GregorianEDTFDate
+        | GregorianUnknownDate
+    )
     end: (
         GregorianExactDate
         | GregorianDateRange

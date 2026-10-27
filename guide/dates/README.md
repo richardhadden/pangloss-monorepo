@@ -36,8 +36,12 @@ class Person(Entity):
 | `{"type": "JulianExactDate", "year": 1500}` (and `"month"`, `"day"`) | The year, the month or the day, as stated |
 | `{"type": "JulianEDTFDate", "edtf": "1500-03~"}` | EDTF text: `?` uncertain, `~` approximate, `15XX`, `[1500,1502]`. Nobody has to write it |
 | `{"type": "JulianDateRange", "earliest": {...}, "latest": {...}}` | One date that is somewhere between two exact dates (each can be a year, a month or a day) |
-| `{"type": "JulianPeriod", "start": {...}, "end": {...}}` | An office, a residence. The ends are any of the above; the end can be `{"type": "JulianOngoingDate"}` |
+| `{"type": "JulianPeriod", "start": {...}, "end": {...}}` | An office, a residence. The ends are any of the above. If one end is not known, `{"type": "JulianUnknownDate"}` (not both); `{"type": "JulianOngoingDate"}` as the end says it was still going |
 | `{"type": "JulianRecurrence", "frequency": "weekly", "weekdays": [0], "excluded_days": [], "start": {...}, "end": {...}}` | A repeated event: weekdays are 0 for Sunday to 6; `frequency` is `weekly`, `monthly` or `yearly`; with `nth` (the third, or -1 for the last), `month`, `month_day`, `interval` |
+
+### When an end is not known
+
+A period starts one day and ends another, but a source may give only one. Give the end that is known and `JulianUnknownDate` for the other: the period is open from `DATES_EARLIEST_YEAR` (or to `DATES_OPEN_END_YEAR`), so a search for a date it could include still finds it, and it is ordered by the end that is known. Both ends cannot be unknown. Prefer a **reasonable guess** when you can make one: a `JulianDateRange` ("between 1490 and 1500") or EDTF `1495~` says more than "unknown" and is found by the dates it fits. `OngoingDate` is a different statement ("he still held it when this was written") and is kept for projects that need it.
 
 A date also takes `source_text`, what the source said, kept as written.
 
@@ -93,6 +97,7 @@ found = await on_day(Factoid, "when", sunday, Calendar.JULIAN, family="Julian")
 |---|---|---|
 | `DATES_DEFAULT_CALENDAR` | `"gregorian"` | The calendar of a plain `Date` that does not say |
 | `DATES_PADDING_YEARS`, `DATES_PADDING_MONTHS`, `DATES_PADDING_DAYS` | `1`, `1`, `7` | What doubt adds either side |
-| `DATES_OPEN_END_YEAR` | `1600` | A period or order with no end is taken to stop by the end of this year (so it can be found and ordered) |
+| `DATES_OPEN_END_YEAR` | `1600` | A period or order that is ongoing, or whose end is unknown, is taken to stop by the end of this year (so it can be found and ordered) |
+| `DATES_EARLIEST_YEAR` | `1` | A start that is not known is taken to be no earlier than the start of this year. Set it near your sources (`1400`) so an unknown start does not reach back to the first century |
 
 Changing a padding does not change what is stored: a date is worked out again when it is next saved.

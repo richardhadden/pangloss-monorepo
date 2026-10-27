@@ -9,7 +9,8 @@ they are `int | None = None` on the models a client writes (it can leave them ou
     ├── EDTFDate              an EDTF string (needs the `edtf` extra)
     ├── DateRange             earliest and latest, each an ExactDate
     ├── OngoingDate           the end of a period that has not ended
-    ├── Period                start and end, each an ExactDate, DateRange or EDTFDate (the end may be ongoing)
+    ├── UnknownDate           a start or an end that nobody knows (not both ends of a period)
+    ├── Period                start and end, each an ExactDate, DateRange or EDTFDate (or unknown; the end may be ongoing)
     └── Recurrence            a rule (every Sunday, the third Sunday of March...) over a start and an end
 
 `pangloss_dates.julian` and `pangloss_dates.gregorian` have the same families fixed to a calendar (`JulianDate`,
@@ -31,6 +32,7 @@ from pangloss_dates.bounds import (
     ongoing_bounds,
     precision_of,
     spanning_bounds,
+    unknown_bounds,
 )
 from pangloss_dates.calendar import Calendar, Weekday
 from pangloss_dates.recurrence import Frequency, RecurrenceRule, pattern_keys
@@ -160,26 +162,63 @@ class OngoingDate(Date):
         )
 
 
-class Period(Date):
-    """From `start` to `end`: an occupation, a role, a residence. Sorts by when it started"""
-
-    start: ExactDate | DateRange | EDTFDate
-    end: ExactDate | DateRange | EDTFDate | OngoingDate
+class UnknownDate(Date):
+    """The start or the end of a period that nobody knows. It is open from `DATES_EARLIEST_YEAR` to
+    `DATES_OPEN_END_YEAR`, so the period is still found by a date it could include. Say what is known if
+    anything can be: a range with a reasonable guess (`DateRange`, or EDTF `1500~`) says more, and an
+    unknown date only that nothing is. Both ends of a period cannot be unknown."""
 
     @classmethod
     def work_out(cls, date) -> tuple[Bounds, Precision]:
-        _check_ends_in_calendar(date, date.start, date.end)
         return (
-            spanning_bounds(bounds_of(date.start), bounds_of(date.end)),
-            Precision.RANGE,
+            unknown_bounds(
+                config.earliest_day(date.calendar),
+                config.open_end_horizon(date.calendar),
+            ),
+            Precision.UNKNOWN,
         )
+
+
+def _is_unknown(date) -> bool:
+    return date.precision == Precision.UNKNOWN
+
+
+def _span_of_lifetime(date) -> Bounds:
+    """The bounds of something from `start` to `end`, one of which may be unknown (not both)"""
+    _check_ends_in_calendar(date, date.start, date.end)
+    if _is_unknown(date.start) and _is_unknown(date.end):
+        raise ValueError(
+            "the start and the end cannot both be unknown: say what is known of one of them"
+        )
+    return spanning_bounds(bounds_of(date.start), bounds_of(date.end))
+
+
+def _sort_a_lifetime(date) -> None:
+    """A period or a recurrence is ordered by its start (by its end if the start is not known), and has the day
+    its end sorts by (its start if the end is not known)"""
+    sort_by = date.sort_by or SortBy.MIDPOINT
+    start, end = bounds_of(date.start), bounds_of(date.end)
+    if _is_unknown(date.start):
+        date.sort_day = end.sort_day(sort_by)
+    else:
+        date.sort_day = start.sort_day(sort_by)
+    date.end_sort_day = start.sort_day() if _is_unknown(date.end) else end.sort_day()
+
+
+class Period(Date):
+    """From `start` to `end`: an occupation, a role, a residence. Sorts by when it started"""
+
+    start: ExactDate | DateRange | EDTFDate | UnknownDate
+    end: ExactDate | DateRange | EDTFDate | OngoingDate | UnknownDate
+
+    @classmethod
+    def work_out(cls, date) -> tuple[Bounds, Precision]:
+        return _span_of_lifetime(date), Precision.RANGE
 
     @classmethod
     def fill_in(cls, date) -> None:
         super().fill_in(date)
-        # a period is ordered by its start, not by the middle of its length
-        date.sort_day = bounds_of(date.start).sort_day(date.sort_by or SortBy.MIDPOINT)
-        date.end_sort_day = bounds_of(date.end).sort_day()
+        _sort_a_lifetime(date)
 
 
 class Recurrence(Date):
@@ -199,8 +238,8 @@ class Recurrence(Date):
     excluded_days: list[int]
     """Day numbers the rule does not fall on"""
 
-    start: ExactDate | DateRange | EDTFDate
-    end: ExactDate | DateRange | EDTFDate | OngoingDate
+    start: ExactDate | DateRange | EDTFDate | UnknownDate
+    end: ExactDate | DateRange | EDTFDate | OngoingDate | UnknownDate
 
     # worked out
     pattern_keys: Annotated[list[str], DBField]
@@ -219,23 +258,18 @@ class Recurrence(Date):
 
     @classmethod
     def work_out(cls, date) -> tuple[Bounds, Precision]:
-        _check_ends_in_calendar(date, date.start, date.end)
         date.interval = date.interval or 1
         rule = cls.rule_of(date)  # (refuses a rule that says no day)
         if (
             "pattern_keys" in type(date).model_fields
         ):  # (not on the models a client writes)
             date.pattern_keys = pattern_keys(rule)
-        return (
-            spanning_bounds(bounds_of(date.start), bounds_of(date.end)),
-            Precision.RANGE,
-        )
+        return _span_of_lifetime(date), Precision.RANGE
 
     @classmethod
     def fill_in(cls, date) -> None:
         super().fill_in(date)
-        date.sort_day = bounds_of(date.start).sort_day(date.sort_by or SortBy.MIDPOINT)
-        date.end_sort_day = bounds_of(date.end).sort_day()
+        _sort_a_lifetime(date)
 
 
 class SortDefault:

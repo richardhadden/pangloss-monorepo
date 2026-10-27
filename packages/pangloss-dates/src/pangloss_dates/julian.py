@@ -16,6 +16,7 @@ from pangloss_dates.models import (
     OngoingDate,
     Period,
     Recurrence,
+    UnknownDate,
 )
 
 
@@ -41,11 +42,27 @@ class JulianOngoingDate(JulianDate, OngoingDate):
     pass
 
 
+class JulianUnknownDate(JulianDate, UnknownDate):
+    pass
+
+
 class JulianPeriod(JulianDate, Period):
-    start: JulianExactDate | JulianDateRange | JulianEDTFDate
-    end: JulianExactDate | JulianDateRange | JulianEDTFDate | JulianOngoingDate
+    start: JulianExactDate | JulianDateRange | JulianEDTFDate | JulianUnknownDate
+    end: (
+        JulianExactDate
+        | JulianDateRange
+        | JulianEDTFDate
+        | JulianOngoingDate
+        | JulianUnknownDate
+    )
 
 
 class JulianRecurrence(JulianDate, Recurrence):
-    start: JulianExactDate | JulianDateRange | JulianEDTFDate
-    end: JulianExactDate | JulianDateRange | JulianEDTFDate | JulianOngoingDate
+    start: JulianExactDate | JulianDateRange | JulianEDTFDate | JulianUnknownDate
+    end: (
+        JulianExactDate
+        | JulianDateRange
+        | JulianEDTFDate
+        | JulianOngoingDate
+        | JulianUnknownDate
+    )

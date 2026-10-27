@@ -373,3 +373,7 @@ Embedded
 - **`pangloss_dates.query.on_day`**: the dates that hold a day, and the repeated events that fall on it (bounds, then `pattern_keys` with `contains_any`, then `occurs_on` on each candidate).
 - **Settings** `DATES_*` in `docs/settings.md`; a guide page at `guide/dates/README.md`.
 - Still open: a search that starts from the dates to use the `:Date` indexes; probability maths, relative dates, the calendar package (`dates.md`).
+
+### UnknownDate (2026-10-27)
+
+A period or recurrence whose start or end is not known: `UnknownDate` (`JulianUnknownDate`, ...) is allowed as either end (not both: a validation error), separate from `OngoingDate` (kept; end only). It is open from `DATES_EARLIEST_YEAR` (default 1) to `DATES_OPEN_END_YEAR`, `precision` is `unknown`, so searches by a date it could include find it. A period with an unknown start sorts by its end; with an unknown end, `end_sort_day` is its start. The guide says to prefer a range or an approximate date (a reasonable guess) to "unknown".

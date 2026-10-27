@@ -286,3 +286,66 @@ def test_a_field_can_say_what_its_dates_sort_by():
     )
     assert ymd(person.born.sort_day) == (1500, 12, 31)
     assert SortDefault  # (the class is the one from the module)
+
+
+def exact(year, month=None, day=None):
+    return {"type": "JulianExactDate", "year": year, "month": month, "day": day}
+
+
+def lifetime(start, end):
+    return {"type": "JulianPeriod", "start": start, "end": end}
+
+
+UNKNOWN = {"type": "JulianUnknownDate"}
+
+
+def test_a_period_whose_start_is_not_known_is_open_to_the_floor_and_sorts_by_its_end(
+    models,
+):
+    _, JulianEvent, _ = models
+    when = make(JulianEvent, lifetime(UNKNOWN, exact(1510, 3)))
+    assert when.precision == Precision.RANGE
+    assert ymd(when.earliest_strict) == (1, 1, 1)
+    assert ymd(when.latest_strict) == (1510, 3, 31)
+    assert when.sort_day == when.end_sort_day
+    assert ymd(when.sort_day) == (1510, 3, 16)
+
+
+def test_a_period_whose_end_is_not_known_is_open_to_the_horizon_and_ends_where_it_starts(
+    models,
+):
+    _, JulianEvent, _ = models
+    when = make(JulianEvent, lifetime(exact(1503, 6, 1), UNKNOWN))
+    assert ymd(when.earliest_strict) == (1503, 6, 1)
+    assert ymd(when.latest_strict) == (1600, 12, 31)
+    assert when.sort_day == when.end_sort_day == to_jdn(1503, 6, 1, J)
+
+
+def test_both_ends_of_a_period_cannot_be_unknown(models):
+    _, JulianEvent, _ = models
+    with pytest.raises(ValidationError, match="cannot both be unknown"):
+        make(JulianEvent, lifetime(UNKNOWN, UNKNOWN))
+
+
+def test_unknown_is_not_ongoing_and_ongoing_is_still_allowed(models):
+    _, JulianEvent, _ = models
+    ongoing = make(JulianEvent, lifetime(exact(1503), {"type": "JulianOngoingDate"}))
+    unknown = make(JulianEvent, lifetime(exact(1503), UNKNOWN))
+    assert ongoing.end.precision == Precision.ONGOING
+    assert unknown.end.precision == Precision.UNKNOWN
+    with pytest.raises(ValidationError):
+        make(JulianEvent, lifetime({"type": "JulianOngoingDate"}, exact(1503)))
+
+
+def test_a_recurrence_may_start_unknown_but_not_have_no_lifetime(models):
+    _, JulianEvent, _ = models
+    rule = {
+        "type": "JulianRecurrence",
+        "frequency": "weekly",
+        "weekdays": [0],
+        "excluded_days": [],
+    }
+    when = make(JulianEvent, {**rule, "start": UNKNOWN, "end": exact(1520)})
+    assert ymd(when.latest_strict) == (1520, 12, 31)
+    with pytest.raises(ValidationError, match="cannot both be unknown"):
+        make(JulianEvent, {**rule, "start": UNKNOWN, "end": UNKNOWN})

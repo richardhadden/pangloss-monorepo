@@ -55,6 +55,11 @@ async def test_every_kind_is_stored_and_read_back_with_its_bounds(clear_database
             "start": exact(1500, 3, 2),
             "end": {"type": "JulianOngoingDate"},
         },
+        "unknown start": {
+            "type": "JulianPeriod",
+            "start": {"type": "JulianUnknownDate"},
+            "end": exact(1510),
+        },
         "recurrence": {
             "type": "JulianRecurrence",
             "frequency": "weekly",
