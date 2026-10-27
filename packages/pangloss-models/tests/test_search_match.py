@@ -411,3 +411,21 @@ def test_any_relation_of_a_node_takes_the_label_conditions_too():
         ("label", "contains"),
     ]
     assert [c.value for c in got if c.field == "label"] == ["ab"]
+
+
+def test_incoming_is_one_pattern_or_a_list_and_has_a_type():
+    one = Match.model_validate({"where": {"$incoming": {"type": "Letter"}}})
+    many = Match.model_validate(
+        {"where": {"$incoming": [{"type": "A", "field": "x"}, {"type": "B"}]}}
+    )
+
+    assert [i.type for i in one.where["$incoming"]] == ["Letter"]
+    assert [i.field for i in many.where["$incoming"]] == ["x", None]
+    for bad in ({"field": "x"}, {"type": "A", "extra": 1}, {"type": "A", "is": "x"}):
+        with pytest.raises(ValueError):
+            Match.model_validate({"where": {"$incoming": [bad]}})
+    assert Match.model_validate(
+        {"where": {"$incoming": [{"type": "A", "where": {"x": {"eq": 1}}}]}}
+    ).model_dump(by_alias=True, exclude_unset=True, mode="json") == {
+        "where": {"$incoming": [{"type": "A", "where": {"x": {"eq": 1}}}]}
+    }

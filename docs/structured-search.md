@@ -1,6 +1,6 @@
 # Structured search: finding documents and entities by pattern 🚧
 
-A planning document. **Steps 1, 2 and 3 of the plan are built** (see [step 1](#step-1-built), [step 2](#step-2-built) and [step 3](#step-3-built)); the rest is not. It is a design for one endpoint that finds **documents and entities** by a pattern written as JSON: "a `Letter` whose `sender` is this person and whose `date` is after 1500, and which mentions a `Place` somewhere". The decisions made so far are at the end; the rest is a recommendation.
+A planning document. **Steps 1 to 4 of the plan are built** (see [step 1](#step-1-built), [2](#step-2-built), [3](#step-3-built) and [4](#step-4-built)); measuring (5) and the interface (6) are not. It is a design for one endpoint that finds **documents and entities** by a pattern written as JSON: "a `Letter` whose `sender` is this person and whose `date` is after 1500, and which mentions a `Place` somewhere". The decisions made so far are at the end; the rest is a recommendation.
 
 What exists today: `list` (by class, label text, and `deep_search`, which regex-searches the text index and resolves hits to head documents) and [autocomplete](autocomplete.md) (entities by label). Neither can say "where *this field* has *that value*".
 
@@ -197,3 +197,23 @@ Nested patterns, the combinators, and `exists` on relations.
 **Speed:** `$somewhere` and `$mentions` look at the nodes of each candidate document. There is an index on `(id, head_node_id)` together; whether the pattern above uses it, or a separate one on `head_node_id` is needed, is to be measured in step 5. `$mentions` on a database of many documents with many nodes each is the first suspect.
 
 **Not done:** wrappers by their own fields (`certainty` of a reified relation: a pattern whose `type` is the wrapper); a condition on the *kind* of wrapper that a pattern's own node is (only `through` and `$spaces`); `$somewhere` inside a nested pattern.
+
+## Step 4: built
+
+**`$incoming`** finds an *entity* by what refers to it: a list of patterns (or one), each of which has to be met by a node, and different patterns can be met by different nodes.
+
+```json
+{"type": "Person", "where": {"$incoming": [
+  {"type": "Letter", "field": "sender", "where": {"date": {"lt": "1600-01-01"}}}
+]}}
+```
+
+- **`type`** (needed): the class of the node that refers to it, a document (including one that is inside another document: the statements of a factoid) or an entity. It may be a parent class; its subclasses are found.
+- **`field`** (optional): the relation of that class, by its own name (`sender`), not the reverse name. Left out, any relation of the class that can point at the entity (the entity's class or a parent or subclass of it); if the class has none, that is an error. A `field` that cannot point at the entity is refused, saying which fields can.
+- **`where`**: a pattern for the referring node, checked against its class like any other (so `$incoming` can nest, and a relation of the referring node can have a pattern).
+- **`through`**: as for a relation. If a relation of the class passes through wrappers (`Negative[Person]`), a node is found whether it refers directly or through them; with `through`, only through all of those named.
+- Used as `$not: {"$incoming": [...]}`: entities nothing of that kind refers to. In a pattern for what a relation points at, it is a condition of that entity (letters whose sender is in an organisation).
+- **Deleted** documents (and documents inside a deleted head document) and deleted entities refer to nothing.
+- **Only an entity is referred to** (a document is not looked up by what contains it); the search must be of an entity or a pattern for one.
+- **Not covered:** a relation in an *embedded* object of the referring document (the edge starts from the embedded node, not the document; the relation is not seen as one of the document's); a chain through several referring nodes ("referred to by a document that is referred to by...") is written by nesting `where` with a relation or `$incoming`.
+- The reverse edge (`reverse: true`) is not used: the edge from the referring node is followed backwards, so the reverse names need not be known.

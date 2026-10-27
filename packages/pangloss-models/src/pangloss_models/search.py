@@ -82,6 +82,14 @@ def parse_where(raw: Any, depth: int = 0) -> dict[str, Any]:
                 v if isinstance(v, Condition) else Condition.model_validate(v)
                 for v in value
             ]
+        elif key == "$incoming":
+            items = value if isinstance(value, list) else [value]
+            if not items or len(items) > MAX_VALUES:
+                raise ValueError("$incoming needs a pattern, or a list of them")
+            parsed[key] = [
+                v if isinstance(v, Incoming) else Incoming.model_validate(v)
+                for v in items
+            ]
         elif key == "$spaces":
             if (
                 not isinstance(value, list)
@@ -143,6 +151,24 @@ class Condition(BaseModel):
         return "type" in self.model_fields_set or "where" in self.model_fields_set
 
 
+class Incoming(BaseModel):
+    """What refers to an entity: a node of class `type` that fits `where`, with a relation `field` (of that class;
+    any relation that can point at the entity, if left out) that points at the entity, through `through`
+    wrappers if given."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    type: str
+    field: str | None = None
+    through: list[str] | None = None
+    where: dict[str, Any] | None = None
+
+    @field_validator("where", mode="before")
+    @classmethod
+    def _where(cls, raw: Any) -> Any:
+        return None if raw is None else parse_where(raw, 1)
+
+
 class Match(BaseModel):
     """A pattern for a node. `type` is the class searched (the one the search is called on, if it is left out)."""
 
@@ -174,6 +200,7 @@ Kind = Literal[
     "relation",
     "spaces",
     "somewhere",
+    "incoming",
 ]
 
 # The labels of the nodes that stand between a node and what a relation is to: a field typed
@@ -214,6 +241,14 @@ class CheckedPattern:
 
 
 @dataclass(frozen=True)
+class CheckedIncoming:
+    """A node of the pattern's class that points at an entity with one of the fields (of its class)"""
+
+    pattern: CheckedPattern
+    fields: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class AnyOf:
     """At least one of the branches holds (each branch is a list of expressions that all have to)"""
 
@@ -240,6 +275,7 @@ OPERATORS: dict[str, set[str]] = {
     "relation": {"is", "is_any", "exists"},
     "spaces": set(),
     "somewhere": set(),
+    "incoming": set(),
 }
 
 
@@ -358,6 +394,10 @@ def check_where(
             continue
         if name == "$spaces":
             checked.append(check_spaces(model, condition, top, path))
+            continue
+        if name == "$incoming":
+            for each in condition:
+                checked.append(check_incoming(model, each, budget, path))
             continue
         if name == "$somewhere":
             for each in condition:
@@ -523,6 +563,59 @@ def check_anywhere(
     if not checked:
         raise PanglossSearchError(f"{field}: no condition is given")
     return checked
+
+
+def check_incoming(
+    model: type, item: Incoming, budget: list[int], path: str
+) -> CheckedCondition:
+    """`$incoming`: the entity is pointed at by a node of a class (and pattern), by one of its relations"""
+    field = f"{path}$incoming"
+    if not issubclass(model, Entity):
+        raise PanglossSearchError(f"{field}: only an entity is referred to")
+    budget[0] += 1
+    if budget[0] > MAX_PATTERNS:
+        raise PanglossSearchError(
+            f"More than {MAX_PATTERNS} patterns for what a relation points at"
+        )
+    try:
+        source = resolve_search_type(item.type)
+    except PanglossUnknownTypeError as error:
+        raise PanglossSearchError(f"{field}: {error}")
+    # (the relations of the source that can point at this entity, and whether through wrappers)
+    reaching: dict[str, bool] = {}
+    for name, definition in source._meta.fields.relation_fields.items():
+        found: list[type] = []
+        wrapped = [False]
+        try:
+            for option in definition.type_options:
+                leaf_classes(name, option, found, wrapped)
+        except PanglossSearchError:
+            continue
+        if any(issubclass(model, o) or issubclass(o, model) for o in found):
+            reaching[name] = wrapped[0]
+    if item.field is not None:
+        if item.field not in reaching:
+            raise PanglossSearchError(
+                f"{field}: {item.type} has no relation '{item.field}' that can point at a {model.__name__}"
+                + (f" (it has {', '.join(sorted(reaching))})" if reaching else "")
+            )
+        reaching = {item.field: reaching[item.field]}
+    elif not reaching:
+        raise PanglossSearchError(
+            f"{field}: {item.type} has no relation that can point at a {model.__name__}"
+        )
+    through = check_through(field, item.through, any(reaching.values()))
+    pattern = CheckedPattern(
+        source, check_where(source, item.where or {}, budget, f"{field}.")
+    )
+    return CheckedCondition(
+        "$incoming",
+        "incoming",
+        "match",
+        CheckedIncoming(pattern, tuple(sorted(reaching))),
+        any(reaching.values()),
+        through,
+    )
 
 
 def check_spaces(

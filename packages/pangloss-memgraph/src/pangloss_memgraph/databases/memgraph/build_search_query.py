@@ -12,6 +12,7 @@ from pangloss_models.search import (
     WRAPPER_LABELS,
     AnyOf,
     CheckedCondition,
+    CheckedIncoming,
     CheckedPattern,
     Expr,
     Not,
@@ -64,6 +65,8 @@ class Compiler:
                 f"EXISTS {{ MATCH ({node}:`{pattern.model.__name__}` {{head_node_id: {var}.id}}) "
                 f"WHERE {tests} }}"
             )
+        if c.kind == "incoming":
+            return self.incoming(c, var)
         if c.kind == "spaces":
             # (the spaces a node is inside are kept in its `meta`)
             return f"all(s IN {self.param(c.value)} WHERE s IN coalesce({var}.meta.semantic_spaces, []))"
@@ -154,6 +157,49 @@ class Compiler:
         if c.operator == "exists" and not c.value:
             return f"NOT EXISTS {{ {body} }}"
         return f"EXISTS {{ {body} }}"
+
+    def incoming(self, c: CheckedCondition, var: str) -> str:
+        """Whether a node of the pattern points at this one with one of the relations: directly, or through
+        wrappers (which is what it does if its relation is to one, and what it must if `through` is given)"""
+        incoming: CheckedIncoming = c.value
+        pattern = incoming.pattern
+        types = "|".join(f"`{name}`" for name in incoming.fields)
+
+        def source_tests(s: str) -> str:
+            tests = [self.all_of(pattern.items, s)]
+            if issubclass(
+                pattern.model, Entity
+            ):  # (a deleted entity does not refer to anything)
+                tests.append(f"NOT coalesce({s}.deleted, false)")
+            else:  # (nor does a document of a deleted head document)
+                h = self.name("h")
+                tests.append(
+                    f"NOT coalesce({s}.deleted, false) AND NOT EXISTS {{ MATCH ({h}:HeadNode {{id: {s}.head_node_id}}) WHERE {h}.deleted }}"
+                )
+            return " AND ".join(tests)
+
+        s, e = self.name("s"), self.name("e")
+        label = pattern.model.__name__
+        direct = (
+            f"EXISTS {{ MATCH ({s}:`{label}`)-[{e}:{types}]->({var}) "
+            f"WHERE {source_tests(s)} }}"
+        )
+        if not c.wrapped:
+            return direct
+        s, e = self.name("s"), self.name("e")
+        w, x, r, v, p, q = (self.name(n) for n in ("w", "x", "r", "v", "p", "q"))
+        where = [wrapper(w), wrapper(x), f"NOT coalesce({r}.reverse, false)"]
+        if c.through:
+            where.append(
+                f"all(n IN {self.param(list(c.through))} WHERE any(nd IN nodes({p}) WHERE n IN labels(nd)))"
+            )
+        where.append(source_tests(s))
+        via = (
+            f"EXISTS {{ MATCH {p} = ({s}:`{label}`)-[{e}:{types}]->({w})"
+            f"-[* 0.. ({q}, {v} | {wrapper(v)})]->({x})-[{r}]->({var}) "
+            f"WHERE {' AND '.join(where)} }}"
+        )
+        return via if c.through else f"({direct} OR {via})"
 
     def target(self, c: CheckedCondition, t: str) -> str:
         """The test of what a relation points at"""
