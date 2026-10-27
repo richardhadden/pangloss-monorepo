@@ -105,6 +105,9 @@ class Database:
     _instances: dict[int, Database] = {}
     _initialised: bool = False
     default: ClassVar[Database]
+    # True while this process is making a bulk load (`bulk.bulk_ingest`), which holds the migration
+    # lock itself: its own writes are let through, everyone else's are refused
+    bulk_loading: bool = False
 
     def __init__(self, settings: BaseSettings, instance_identifier: int | None = None):
         if settings is None:
@@ -187,7 +190,8 @@ class Database:
             await self._check_driver()
 
             async def not_while_migrating(tx, *a, **k):
-                await refuse_while_migrating(tx)
+                if not self.bulk_loading:
+                    await refuse_while_migrating(tx)
                 return await func(tx, *a, **k)
 
             async def run() -> T:

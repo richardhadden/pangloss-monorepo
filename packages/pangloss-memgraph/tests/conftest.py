@@ -17,6 +17,8 @@ from pydantic import AnyHttpUrl
 from pytest import fixture, mark
 from tenacity import retry, stop_after_delay, wait_fixed
 
+from .helpers import BULK_URI
+
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
 MEMGRAPH_URI = "bolt://localhost:7687"
@@ -168,3 +170,39 @@ async def initialise_settings(
         yield
     finally:
         await db.close()
+
+
+def bulk_reachable() -> None:
+    driver = neo4j.GraphDatabase.driver(BULK_URI, auth=("test", "test"))
+    try:
+        driver.verify_connectivity()
+    finally:
+        driver.close()
+
+
+@pytest.fixture(scope="session")
+def bulk_memgraph():
+    try:
+        bulk_reachable()
+    except Exception:
+        client = docker.from_env()
+        container = client.containers.run(
+            "memgraph/memgraph-mage",
+            detach=True,
+            remove=True,
+            ports={"7687/tcp": 7691},
+            environment={"MEMGRAPH_USER": "test", "MEMGRAPH_PASSWORD": "test"},
+            command=[
+                "--log-level=WARNING",
+                "--also-log-to-stderr=true",
+                "--storage-properties-on-edges=true",
+            ],
+        )
+        try:
+            retry(stop=stop_after_delay(60), wait=wait_fixed(0.5))(bulk_reachable)()
+            yield container
+        finally:
+            container.stop()
+            client.close()
+    else:
+        yield

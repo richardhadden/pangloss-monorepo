@@ -66,6 +66,18 @@ class PanglossReadOnlyError(PanglossWriteError):
     """The database is being migrated: it can be read, and not written to, until that is done"""
 
 
+class PanglossBulkLoadError(Exception):
+    """A bulk load could not be started, or left the database needing attention (the message says what)"""
+
+
+class PanglossBulkRecordError(PanglossBulkLoadError):
+    """A record of a bulk upload is not valid, or could not be written. `line` is its line in the file"""
+
+    def __init__(self, line: int, message: str) -> None:
+        super().__init__(f"line {line}: {message}")
+        self.line = line
+
+
 class PanglossNotDeletableError(PanglossWriteError):
     """Only head documents can be deleted: this is part of another document"""
 

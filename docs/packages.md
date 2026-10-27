@@ -41,7 +41,7 @@ It contains `pangloss_models.meta_kit`, the `WithMeta[...]` / `BaseMeta` machine
 
 A database backend for [Memgraph](https://memgraph.com/) (using the `neo4j` async driver). It supplies the `exposed_functions` module that `ModelRegistry` binds to `Document.get`, `Document.list`, `Entity.list` and `.save()`. See [Memgraph backend](memgraph.md).
 
-`cli.py` adds `pangloss memgraph <command>`; `databases/memgraph/setup.py` is what the core `pangloss setup-database` calls. `indexes.py` and `tooling/__init__.py` are empty placeholders.
+`cli.py` adds `pangloss memgraph <command>` (`info`, `bulk-load`, `bulk-recover`); `databases/memgraph/bulk.py` is the bulk load (`bulk_ingest`: analytical storage mode, for an empty database), and `pangloss_models/bulk_upload.py` reads and writes the file; `databases/memgraph/setup.py` is what the core `pangloss setup-database` calls. `indexes.py` and `tooling/__init__.py` are empty placeholders.
 
 ## pangloss-cli ✅
 

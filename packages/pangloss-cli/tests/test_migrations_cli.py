@@ -210,6 +210,18 @@ def test_a_required_field_asks_for_a_value(models_project: Path):
     assert "'default': 1900" in text
 
 
+def test_a_name_given_to_makemigrations_is_numbered_like_any_other(
+    models_project: Path,
+):
+    assert invoke("makemigrations")[0] == 0
+    set_models(models_project, V2)
+
+    exit_code, output = invoke("makemigrations", "--name", "add_born", input="1900\n")
+    assert exit_code == 0, output
+    assert "fakeapp.0002_add_born" in output
+    assert migration_files(models_project) == ["0001_initial.py", "0002_add_born.py"]
+
+
 def test_an_empty_migration_is_made_to_write_by_hand(models_project: Path):
     assert invoke("makemigrations")[0] == 0
     exit_code, output = invoke("makemigrations", "--empty")

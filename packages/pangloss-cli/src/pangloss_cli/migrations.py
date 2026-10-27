@@ -22,6 +22,7 @@ from pangloss_models.exceptions import (
 from pangloss_models.migrations import PossibleRename, build_snapshot, data_view
 from pangloss_models.migrations import changes as c
 from pangloss_models.migrations.affected import affected_models
+from pangloss_models.migrations.check import CONCURRENCY as CHECK_CONCURRENCY
 from pangloss_models.migrations.check import check_data
 from pangloss_models.migrations.files import (
     EMPTY_SNAPSHOT,
@@ -944,7 +945,7 @@ def report_data_check(
     project: Project,
     types: list[str] | None = None,
     limit: int | None = None,
-    parallel: int = 1,
+    parallel: int = CHECK_CONCURRENCY,
 ) -> None:
     """Read the data with the models, and say what cannot be read (exit 1 if anything)"""
     typer.echo("Reading the data with the models ...")
@@ -973,10 +974,10 @@ def check_data_command(
         None, "--limit", help="At most this many of each model"
     ),
     parallel: int = typer.Option(
-        1,
+        CHECK_CONCURRENCY,
         "--parallel",
         min=1,
-        help="How many to read at once (it was not faster against a local database; try it with a remote one)",
+        help="How many to read at once (16 was about four times faster than one on a large database)",
     ),
 ) -> None:
     """Read all the data with the models as they are, and report what cannot be read

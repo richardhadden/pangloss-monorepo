@@ -15,10 +15,11 @@ from pydantic import ValidationError
 from pangloss_models.model_registry import ModelRegistry
 
 PAGE_SIZE = 100
-# How many nodes are read at once. One: measured against a local Memgraph, reading several at a
-# time was slower (300 nodes: 0.48 s one at a time, 0.76 s four, 0.89 s eight), as the time is in
-# building the models, not waiting for the database. A database a long way off may do better.
-CONCURRENCY = 1
+# How many nodes are read at once. Measured against a local Memgraph with 30,000 factoids (each with
+# 2 or 3 nested statements): 103 factoids a second one at a time, 208 with four, 312 with eight, 410
+# with sixteen, and about 460 with 32 or 64. (On a small database of small documents, concurrency
+# was slower: the time was in building the models. It is not, when the documents are large.)
+CONCURRENCY = 16
 
 
 @dataclass

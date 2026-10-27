@@ -203,12 +203,12 @@ def split(
         taken = [m for m in existing if m.app == app] + [
             m for (a, _), m in migrations.items() if a == app
         ]
-        migration_name = (
+        # (a name given is the slug: the number goes in front of it, as of any other)
+        migration_name = next_name(
+            taken,
             name
             if name and len(layers) == 1
-            else next_name(
-                taken, slug_of(group, initial=graph.leaf(app) is None and layer == 0)
-            )
+            else slug_of(group, initial=graph.leaf(app) is None and layer == 0),
         )
         names_of[(app, layer)] = migration_name
         # (a placeholder, so that the next layer of the app is numbered after it)

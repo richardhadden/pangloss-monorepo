@@ -160,7 +160,7 @@ The data check at the end is your safety net. It reads back the models the migra
 pangloss migrate --check-all     # read everything afterwards
 pangloss migrate --no-check      # read nothing
 pangloss check-data              # read everything, at any time
-pangloss check-data --parallel 4 # several at a time (not faster against a local database; may help with a remote one)
+pangloss check-data --parallel 4 # how many at a time (16 by default)
 ```
 
 ## A checklist for production

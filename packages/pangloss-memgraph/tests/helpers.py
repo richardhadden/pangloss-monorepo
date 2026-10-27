@@ -20,3 +20,7 @@ def count_nodes(db_driver, label: str) -> int:
 def native(value):
     """Convert neo4j temporal types to Python natives"""
     return value.to_native() if hasattr(value, "to_native") else value
+
+
+# The Memgraph of its own that the bulk load tests use (see `conftest.bulk_memgraph`)
+BULK_URI = "bolt://localhost:7691"

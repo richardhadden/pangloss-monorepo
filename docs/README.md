@@ -26,6 +26,7 @@ Each feature in these docs is marked with its status:
 | [Memgraph backend](memgraph.md) | Graph schema, query builders, and the database API |
 | [Settings](settings.md) | `BaseSettings` and database settings |
 | [Logging](logging.md) | What is logged, at what level, and how to set it up |
+| [Large data](large-data.md) | How long loads and migrations take on 600,000 nodes, what to turn up, and what to look out for |
 | [Users](users.md) | User models, passwords and the `service` functions |
 | [REST API](api.md) | Authentication and the user endpoints |
 | [Command line](cli.md) | The `pangloss` command, and adding commands from apps |
