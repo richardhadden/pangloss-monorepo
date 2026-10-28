@@ -229,11 +229,11 @@ The first measurement, of the compiler of steps 3 and 4, **timed out on every se
 - Inside an `EXISTS { ... }`, **a node found by `(m {head_node_id: n.id})`, or `WHERE m.head_node_id = n.id`, is found by looking at every node** (`ScanAll`) for each candidate, with or without an index on `head_node_id`. The same pattern outside an `EXISTS` (a `MATCH`, or a `CALL { WITH n ... }`) uses the index (`ScanAllByLabelProperties`): 100 documents took 11 ms there and 8,175 ms inside `EXISTS`. An index on `head_node_id` made no difference to the searches, which is why it is not recommended below.
 - `$incoming` was written from the referring node (`(s:Activity)-[...]->(entity)`), so Memgraph scanned every node, kept the activities, and looked for an edge to the entity, for each entity. The deleted-head check (`(h:HeadNode {id: s.head_node_id})`) was the same fault.
 
-The compiler now never looks a node up by property inside an `EXISTS`: it **walks from the node it already has**.
+The compiler then never looked a node up by property inside an `EXISTS`: it **walked from the node it already had**. **Memgraph 3.14.0 uses the index there** (measured 2026-10-28: 100 rows, 200,000 nodes, 2,001 ms on 3.13.1 and 20 ms on 3.14.0, if the pattern names the label), so `$somewhere` and `$mentions` now find the nodes of a document by `head_node_id` (index `PGIndexableNode(head_node_id)`, migration `pangloss_memgraph.0003_addindex`): see [the 3.14 result](#after-memgraph-314) below.
 
 | Condition | Is compiled as |
 |-----------|----------------|
-| `$somewhere`, `$mentions` | From the document's head node down the edges of the document: `(n)-[* (r, v \| v.head_node_id = n.id AND NOT r.reverse)]->(m:Type)` (not along reverse edges, which would make every path up and down the tree) |
+| `$somewhere`, `$mentions` | (Memgraph 3.13; now by `head_node_id`, see below.) From the document's head node down the edges of the document: `(n)-[* (r, v \| v.head_node_id = n.id AND NOT r.reverse)]->(m:Type)` (not along reverse edges, which would make every path up and down the tree) |
 | `$incoming` | From the entity back along its edges: `(n)<-[:field]-(s:Type)`; a deleted head document is found by going up the reverse edges from the source to its head |
 | Relations (named or `$any`) | As before: from the node, along the edge |
 
@@ -279,7 +279,7 @@ Through the whole search (page of 25, the count, and the creation record of each
 
 What an index costs to write, bare nodes in one transaction each: 3,975 a second without, 3,230 with a label index and a property index (about 0.06 ms a node). The text index costs 4.5 ms a commit, so these are small beside it.
 
-**Recommendation (done: see "Indexes of the models" below):** (1) **a label index for each class of document and entity** (the class name of every `Document` and `Entity` model, including abstract parents, which a search of a parent class starts from): cheap, and the cost of a search of a class stops growing with the rest of the database. (2) **A label-and-property index on a field when a project searches by it a lot** (`year`, `author`, an identifier): 100 times faster, and a choice for the project, so a setting of the model rather than of Pangloss. (3) No `head_node_id` or edge indexes. These need a change to the structure that [migrations](migrations.md) keep (`initialise_database.structure()`), which is not made; see the questions below.
+**Recommendation (done: see "Indexes of the models" below):** (1) **a label index for each class of document and entity** (the class name of every `Document` and `Entity` model, including abstract parents, which a search of a parent class starts from): cheap, and the cost of a search of a class stops growing with the rest of the database. (2) **A label-and-property index on a field when a project searches by it a lot** (`year`, `author`, an identifier): 100 times faster, and a choice for the project, so a setting of the model rather than of Pangloss. (3) No edge indexes, and (on Memgraph 3.13) no `head_node_id` index; on 3.14 there is one, see [After Memgraph 3.14](#after-memgraph-314). These need a change to the structure that [migrations](migrations.md) keep (`initialise_database.structure()`), which is not made; see the questions below.
 
 ### Limits
 
@@ -333,3 +333,17 @@ A search of a **head document** class can use two more fields, as ordinary condi
   one that hides a document).
 - The search still hides what a request may not see: for one that is not logged in, `published: {eq: false}`
   finds nothing. See [Review](review.md).
+
+### After Memgraph 3.14
+
+On the same 642,550 nodes (the `search_benchmark.py` run, no other change), with the index `PGIndexableNode(head_node_id)` and the nodes of a document found by it (`(m:PGIndexableNode:Transfer {head_node_id: n.id})`) instead of walked to:
+
+| Search | 3.13, walking | 3.14, by `head_node_id` |
+|--------|---------------|-------------------------|
+| `$somewhere` a transfer (17,912 found) | 175 ms | 93 ms |
+| the same with a condition on it | 177 ms | 94 ms |
+| `$somewhere` a transfer given by a busy person | 251 ms | 106 ms |
+| `$mentions` a busy person, an ordinary one, a place | 496 to 499 ms | 400 to 405 ms |
+| `$mentions` a person found by a pattern | 518 ms | 433 ms |
+
+The same documents are found in every case. `$mentions` gains less because most of its time is the test of each of the 287,505 nodes of the 30,000 documents (the plan, `--profile`, shows it in the filters of the relation, not in the scan). A search that **started from the entity** (the nodes that refer to it, then their heads) was 3 to 8 ms on a synthetic dataset, but cannot be had for every condition (a pattern, `$not`, wrappers); it is not built. `search_benchmark.py --profile` printed the times of 3.14's `PROFILE` as text and failed; it now prints them as they are.

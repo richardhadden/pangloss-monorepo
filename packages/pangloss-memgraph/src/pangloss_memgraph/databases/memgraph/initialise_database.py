@@ -38,11 +38,14 @@ UNIQUE_CONSTRAINTS = [
 ]
 
 # (label, properties). Each unique property is indexed, for finding a node; and an id
-# with its head node's id, for finding a node of a particular document; and head
-# nodes, as they are found by id by the queries of updates and reads
+# with its head node's id, for finding a node of a particular document; the head node's
+# id alone, for the nodes of a document (structured search, in an `EXISTS`: Memgraph 3.14
+# uses it there, 3.13 did not); and head nodes, as they are found by id by the queries of
+# updates and reads
 INDEXES = [
     *[(label, (property_name,)) for label, property_name in UNIQUE_CONSTRAINTS],
     ("PGIndexableNode", ("id", "head_node_id")),
+    ("PGIndexableNode", ("head_node_id",)),
     ("HeadNode", ("id",)),
 ]
 

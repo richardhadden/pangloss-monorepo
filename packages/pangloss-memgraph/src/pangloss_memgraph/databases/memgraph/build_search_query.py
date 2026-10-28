@@ -99,18 +99,13 @@ class Compiler:
         self.targets += 1
         return f"{base}{self.targets}"
 
-    def in_document(
-        self, head: str, node: str, label: str = "", zero: bool = False
-    ) -> str:
-        """A pattern for the nodes of a document, found by going down from its head node, along the edges
-        of the document (the nodes with its id as their `head_node_id`, not along reverse edges). It is not a
-        lookup of the nodes by `head_node_id`: inside an `EXISTS` Memgraph does not use the index for that,
-        and scans every node for each document (8 seconds for 100 documents of 640,000 nodes; this is
-        about 0.2 seconds for 30,000)."""
-        r, v = self.name("r"), self.name("v")
+    def in_document(self, head: str, node: str, label: str = "") -> str:
+        """A pattern for the nodes of a document (not its head node), found by their `head_node_id`. Memgraph 3.14
+        uses the index on `PGIndexableNode(head_node_id)` for this inside an `EXISTS`, if the pattern has the
+        label (3.13 scanned every node for each document: it is why this once went down from the head node)."""
         return (
-            f"({head})-[*{'0' if zero else ''}.. ({r}, {v} | {v}.head_node_id = {head}.id "
-            f"AND NOT coalesce({r}.reverse, false))]->({node}{':`' + label + '`' if label else ''})"
+            f"({node}:PGIndexableNode{':`' + label + '`' if label else ''} "
+            f"{{head_node_id: {head}.id}})"
         )
 
     def relation(self, c: CheckedCondition, var: str) -> str:
@@ -120,8 +115,9 @@ class Compiler:
         if c.field == ANY_IN_DOCUMENT:
             node = self.name("m")
             return (
-                f"EXISTS {{ MATCH {self.in_document(var, node, zero=True)} "
-                f"WHERE {self.relation_of(c, node)} }}"
+                f"({self.relation_of(c, var)} OR "
+                f"EXISTS {{ MATCH {self.in_document(var, node)} "
+                f"WHERE {self.relation_of(c, node)} }})"
             )
         return self.relation_of(c, var)
 

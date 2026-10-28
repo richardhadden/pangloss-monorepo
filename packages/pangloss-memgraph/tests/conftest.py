@@ -39,7 +39,7 @@ def assure_memgraph_container():
     except Exception:
         client = docker.from_env()
         container = client.containers.run(
-            "memgraph/memgraph-mage",
+            "memgraph/memgraph-mage:3.14.0",
             detach=True,
             remove=True,
             ports={
@@ -54,6 +54,7 @@ def assure_memgraph_container():
                 "--log-level=WARNING",
                 "--also-log-to-stderr=true",
                 "--storage-properties-on-edges=true",
+                "--experimental-enabled=commit-lock-narrowing",
             ],
             volumes={
                 "/tmp/mg_data": {
@@ -187,7 +188,7 @@ def bulk_memgraph():
     except Exception:
         client = docker.from_env()
         container = client.containers.run(
-            "memgraph/memgraph-mage",
+            "memgraph/memgraph-mage:3.14.0",
             detach=True,
             remove=True,
             ports={"7687/tcp": 7691},

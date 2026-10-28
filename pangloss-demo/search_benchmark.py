@@ -165,7 +165,7 @@ def plan(driver, model, where):
         rows = list(session.run("PROFILE " + query, **params))
     for row in rows:
         print(
-            f"      {row['OPERATOR'][:70]:70} hits {row['ACTUAL HITS']:>9}  {row['RELATIVE TIME']:6.1f}%  {row['ABSOLUTE TIME']}"
+            f"      {row['OPERATOR'][:70]:70} hits {row['ACTUAL HITS']:>9}  {row['RELATIVE TIME']!s:>8}  {row['ABSOLUTE TIME']}"
         )
 
 

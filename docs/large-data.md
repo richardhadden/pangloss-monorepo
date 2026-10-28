@@ -46,6 +46,8 @@ The text index costs about 4.5 ms **a commit**, not a node, and it makes writers
 | 100 | 10,685 |
 | 1,000 | 62,044 |
 
+**Memgraph 3.14's `--experimental-enabled=commit-lock-narrowing` removes the waiting** (measured 2026-10-28, same raw Cypher: 16 writers, one text-indexed node a commit, 22 a second without and 244 with; 16 writers writing 100 nodes a commit, 936 and 12,074; one to four writers unchanged). The load of this page at **16 writers with it** took 989 s (100,000 entities in 583 s, 150 to 220 a second, and 30,000 factoids in 406 s, 74 a second) against 1,283 s at four writers without it, and the 16-writer load without it, which fell to 30 entities a second. The same data (642,550 nodes, 1,649,526 edges). It is experimental, so it is a choice for the project; `docker run ... memgraph/memgraph-mage:3.14.0 --experimental-enabled=commit-lock-narrowing`. Only the load was tried with it, not the API or the migrations.
+
 Pangloss writes a document, with the documents and embedded objects inside it, as one transaction, and one document per `.save()`. A way to write many documents in one transaction (a batch) would be the way to load faster into a database that already has data, where `bulk-load` cannot be used; there is not one yet. (In Memgraph's analytical mode the text index costs nothing, at 1,588 a second against 1,504 for a plain node, which is part of why `bulk-load` is fast.)
 
 ## Migrating
@@ -71,11 +73,17 @@ Structured searches ([Structured search](structured-search.md#step-5-measured)) 
 ## Repeating it
 
 ```bash
-docker run -d --name pangloss-memgraph-smoke -p 7689:7687 memgraph/memgraph-mage
+docker run -d --name pangloss-memgraph-smoke -p 7689:7687 -e MEMGRAPH_USER=test -e MEMGRAPH_PASSWORD=test memgraph/memgraph-mage:3.14.0 --experimental-enabled=commit-lock-narrowing
 cp -R pangloss-demo /tmp/smoke && cd /tmp/smoke      # then set DB_URL to bolt://localhost:7689 in its settings
 pangloss migrate
 pangloss users create --username demo --email demo@example.org --password … --no-admin
 PYTHONPATH=. python bulk_load.py 100000 30000 4      # entities, factoids, writers
+```
+
+If the container is started again (or Docker Desktop restarted), Memgraph warns `vm.max_map_count 262144 is too low`. Not measured, but with this much data it may matter: raise it in Docker Desktop's VM before starting the container (lost when Docker Desktop restarts):
+
+```bash
+docker run --rm --privileged --pid=host alpine nsenter -t 1 -m -u -n -i sysctl -w vm.max_map_count=524288
 ```
 
 `bulk_load.py` is in `pangloss-demo/`. It writes with fixed URLs, so it is not for running twice, and **it must not be pointed at a database you want to keep.** Clearing the scratch database between tries: `MATCH (n) WHERE NOT n:PGUser AND NOT n:PGMigration DETACH DELETE n` (without that `WHERE`, the record of the migrations goes with it, and the next `migrate` starts again).

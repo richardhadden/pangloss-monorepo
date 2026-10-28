@@ -6,7 +6,7 @@
 - **Memgraph**, the graph database Pangloss stores data in. The easiest way is Docker:
 
   ```bash
-  docker run -d --name pangloss-memgraph -p 7687:7687 memgraph/memgraph-mage
+  docker run -d --name pangloss-memgraph -p 7687:7687 memgraph/memgraph-mage:3.14.0
   ```
 
   It listens on `bolt://localhost:7687`. (This image has no password by default. To see that it is up: `docker ps`.)

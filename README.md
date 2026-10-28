@@ -90,7 +90,7 @@ cd pangloss-monorepo
 uv sync --all-packages
 
 # a graph database to talk to
-docker run -d --name pangloss-memgraph -p 7687:7687 memgraph/memgraph-mage
+docker run -d --name pangloss-memgraph -p 7687:7687 memgraph/memgraph-mage:3.14.0
 
 # a project with one app
 mkdir my-project && cd my-project
