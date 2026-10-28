@@ -124,8 +124,8 @@ AND ($review_status IS NULL OR coalesce(n_head, n).review_status = $review_statu
                       created_when: creation.created_when,
                       updated_by: null,
                       updated_when: null,
-                      semantic_spaces: n.semantic_spaces,
-                      context_labels: n.context_labels,
+                      semantic_spaces: coalesce(n.meta.semantic_spaces, []),
+                      context_labels: n.meta.context_labels,
                       published: coalesce(headnode.published, true),
                       review_status: headnode.review_status
                   }}) AS pagedResults
@@ -235,8 +235,8 @@ AND ($review_status IS NULL OR coalesce(n_head, n).review_status = $review_statu
                   created_when: creation.created_when,
                   updated_by: null,
                   updated_when: null,
-                  semantic_spaces: n.semantic_spaces,
-                  context_labels: n.context_labels,
+                  semantic_spaces: coalesce(n.meta.semantic_spaces, []),
+                  context_labels: n.meta.context_labels,
                   published: coalesce(headnode.published, true),
                   review_status: headnode.review_status
               }}) AS pagedResults
@@ -299,8 +299,8 @@ AND ($review_status IS NULL OR coalesce(n_head, n).review_status = $review_statu
                     created_when: creation.created_when,
                     updated_by: null,
                     updated_when: null,
-                    semantic_spaces: n.semantic_spaces,
-                    context_labels: n.context_labels,
+                    semantic_spaces: coalesce(n.meta.semantic_spaces, []),
+                    context_labels: n.meta.context_labels,
                     published: coalesce(headnode.published, true),
                     review_status: headnode.review_status
                 }}) AS items
@@ -363,8 +363,8 @@ AND ($review_status IS NULL OR coalesce(listed_head, n).review_status = $review_
                             created_when: creation.created_when,
                             updated_by: null,
                             updated_when: null,
-                            semantic_spaces: n.semantic_spaces,
-                            context_labels: n.context_labels,
+                            semantic_spaces: coalesce(n.meta.semantic_spaces, []),
+                            context_labels: n.meta.context_labels,
                             published: coalesce(headnode.published, true),
                             review_status: headnode.review_status
                         }}) AS items, collect(n) AS page_nodes, total,

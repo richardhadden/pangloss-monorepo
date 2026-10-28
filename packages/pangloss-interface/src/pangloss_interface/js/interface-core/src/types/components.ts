@@ -128,6 +128,8 @@ export interface ResultButtonProps {
   /** The type of the item (its own, which can be a subtype of the list's) */
   type: string;
   label: string;
+  /** The semantic spaces the item is in, outermost first: each wraps it in a band of its own */
+  spaces?: string[];
 }
 
 export interface NavBarProps {

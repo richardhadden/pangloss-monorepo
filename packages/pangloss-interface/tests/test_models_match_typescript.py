@@ -13,7 +13,7 @@ import pytest
 from pangloss_core import settings as core_settings
 from pangloss_core.settings import ClientSettings
 from pangloss_models import initialise
-from pangloss_models.export import export_models
+from pangloss_interface.meta import COLOURS, export_definitions
 from pangloss_models.model_registry import ModelRegistry
 
 MODELS_TS = (
@@ -69,7 +69,7 @@ def exported():
 
         kitchen_sink.declare()
         initialise()
-        yield export_models()
+        yield export_definitions()
     finally:
         sys.path.remove(str(SUPPORT))
         sys.modules.pop("kitchen_sink", None)
@@ -129,3 +129,8 @@ def test_enums_have_the_keys_of_enum_definition(exported, typescript):
     assert exported["enums"]
     for enum in exported["enums"].values():
         assert set(enum) == types["EnumDefinition"]
+
+
+def test_the_colours_are_the_same_in_python_and_typescript(typescript):
+    source, _ = typescript
+    assert literals_of(source, "Colour") == set(COLOURS)

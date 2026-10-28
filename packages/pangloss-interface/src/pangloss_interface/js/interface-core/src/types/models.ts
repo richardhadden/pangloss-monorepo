@@ -129,6 +129,41 @@ export interface IncomingRelation {
   sources: { model: string; field: string; viaReified: boolean }[];
 }
 
+/** The base colours of Tailwind, except black and white (the same list as `COLOURS` in pangloss_interface.meta) */
+export type Colour =
+  | "slate"
+  | "gray"
+  | "zinc"
+  | "neutral"
+  | "stone"
+  | "mauve"
+  | "olive"
+  | "mist"
+  | "taupe"
+  | "red"
+  | "orange"
+  | "amber"
+  | "yellow"
+  | "lime"
+  | "green"
+  | "emerald"
+  | "teal"
+  | "cyan"
+  | "sky"
+  | "blue"
+  | "indigo"
+  | "violet"
+  | "purple"
+  | "fuchsia"
+  | "pink"
+  | "rose";
+
+/** What the model said about how it is shown: `_interface_meta = InterfaceMeta(...)` */
+export interface InterfaceMeta {
+  /** (without one: blue for entities, green for documents, a colour by depth for a semantic space) */
+  colour: Colour | null;
+}
+
 export interface ModelDefinition {
   name: string;
   kind: ModelKind;
@@ -145,6 +180,8 @@ export interface ModelDefinition {
   useInSemanticSpaceLabel: boolean;
   fields: FieldDefinition[];
   incoming: IncomingRelation[];
+  /** (from the interface's `_interface_meta`; null for a model that sets none, nor its parents) */
+  interfaceMeta: InterfaceMeta | null;
 }
 
 export interface EnumDefinition {

@@ -28,6 +28,7 @@ from enum import Enum
 from typing import Annotated, TypedDict
 
 from annotated_types import Ge, MaxLen, MinLen
+from pangloss_interface import InterfaceMeta
 from pangloss_models.field_definitions import FieldBinding, FieldSubclassing
 from pangloss_models.model_bases.annotated_value import AnnotatedValue
 from pangloss_models.model_bases.configs import RelationConfig
@@ -204,9 +205,13 @@ class Transfer(Statement):
 class Negative[T](SemanticSpace[T]):
     """It is *not* the case that..."""
 
+    _interface_meta = InterfaceMeta(colour="rose")
+
 
 class Hypothetical[T](SemanticSpace[T]):
     """The source says it might have been so..."""
+
+    _interface_meta = InterfaceMeta(colour="yellow")
 
 
 class Causes[TCause, TResult](Conjunction):

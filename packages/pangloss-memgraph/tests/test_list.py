@@ -5,6 +5,7 @@ from pangloss_models import initialise
 from pangloss_models.model_bases.base_models import _ListItems
 from pangloss_models.model_bases.document import Document
 from pangloss_models.model_bases.entity import Entity
+from pangloss_models.model_bases.semantic_space import SemanticSpace
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -81,6 +82,39 @@ async def test_list_basic_and_search(clear_database):
 
     result: _ListItems = await SubFactoid.list("wank off")
     assert result.count == 0
+
+
+@no_type_check
+async def test_a_list_says_which_semantic_spaces_an_item_is_in(clear_database):
+
+    class Negative[T](SemanticSpace[T]):
+        pass
+
+    class Factoid(Document):
+        statements: list[Statement | Negative[Statement]]
+
+    class Statement(Document):
+        pass
+
+    initialise()
+
+    await Factoid.Create(
+        label="A Factoid",
+        statements=[
+            {"type": "Statement", "label": "Plain"},
+            {
+                "type": "Negative",
+                "contents": [{"type": "Statement", "label": "Denied"}],
+            },
+        ],
+    ).save()
+
+    result: _ListItems = await Statement.list()
+    by_label = {r.label: r for r in result.results}
+
+    assert by_label["Plain"].meta.semantic_spaces == []
+    assert by_label["Denied"].meta.semantic_spaces == ["Negative"]
+    assert by_label["Denied"].meta.context_labels[0]["type"] == "Negative"
 
 
 @no_type_check
@@ -236,8 +270,8 @@ WITH total, collect(n{.*, meta: {
     created_when: creation.created_when,
     updated_by: null,
     updated_when: null,
-    semantic_spaces: n.semantic_spaces,
-    context_labels: n.context_labels
+    semantic_spaces: coalesce(n.meta.semantic_spaces, []),
+    context_labels: n.meta.context_labels
 }}) AS results
 
 RETURN {
@@ -323,8 +357,8 @@ WITH total, collect(n{.*, meta: {
     created_when: creation.created_when,
     updated_by: null,
     updated_when: null,
-    semantic_spaces: n.semantic_spaces,
-    context_labels: n.context_labels
+    semantic_spaces: coalesce(n.meta.semantic_spaces, []),
+    context_labels: n.meta.context_labels
 }}) AS results
 
 RETURN {

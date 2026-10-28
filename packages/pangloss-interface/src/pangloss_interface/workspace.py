@@ -101,11 +101,12 @@ def sync_sources(
 def export_project_models(project: Project) -> dict[str, Any]:
     """The definitions of the models of the project's installed apps"""
     from pangloss_models import initialise
-    from pangloss_models.export import export_models
+
+    from pangloss_interface.meta import export_definitions
 
     project.import_models()
     initialise()
-    return export_models()
+    return export_definitions()
 
 
 def prepare(project_root: Path, exported: dict[str, Any]) -> Prepared:

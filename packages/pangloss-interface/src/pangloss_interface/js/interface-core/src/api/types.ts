@@ -13,10 +13,23 @@ export interface Page<T> {
 }
 
 /** A Document or Entity in a list: enough to show and link to it */
+/**
+ * Where an item is, in the semantic spaces of its document: one entry for each space it is
+ * in, outermost first (`Negative`, then `Subjunctive`), and `#rootcontext` for a run of
+ * documents that are not in a space. `contents` are the documents on the path.
+ */
+export interface ContextLabel {
+  type: string;
+  id?: string;
+  contents?: ContextLabel[];
+}
+
 export interface Summary {
   id: string;
   type: string;
   label: string;
+  /** (the list has only these parts of the meta of an item) */
+  meta?: { semanticSpaces?: string[]; contextLabels?: ContextLabel[] | null };
 }
 
 export interface ItemMeta {

@@ -1,6 +1,6 @@
 # Meta slots: extra metas on a model class 🚧
 
-**Status: built in `pangloss_models` (`meta_slots.py`, 21 tests); no package uses it for the interface yet.**
+**Status: built in `pangloss_models` (`meta_slots.py`, 21 tests). `pangloss_interface` uses it: `InterfaceMeta(colour=...)` (see [below](#interfacemeta-built)); `card`, `view` and `edit` are not built.**
 The first users are `pangloss-zotero` (`_zotero_meta`, see [Zotero](zotero.md)) and the models' own
 `_protect_meta` ([Protection](#protection-a-slot-of-the-models-own)). What is below is the design; where the build
 differs, it says so ("Built:").
@@ -182,6 +182,25 @@ It is for fields that something other than a person keeps up to date (the Zotero
   the union, the nearest `delete_only_if` wins), where a slot would otherwise replace it.
 - Not built: the flag in `export_models()` and the generated TypeScript (so a form could show the fields
   read-only); it is a change to the exporter, its TypeScript type and the guard test that holds the two together.
+
+## InterfaceMeta (built)
+
+`pangloss_interface.InterfaceMeta` (`meta.py`, registered when `pangloss_interface` is imported) has one field so far:
+
+- `colour`: one of Tailwind's base colours except black and white (`slate`, `gray`, `zinc`, `neutral`, `stone`, `mauve`,
+  `olive`, `mist`, `taupe`, `red`, `orange`, `amber`, `yellow`, `lime`, `green`, `emerald`, `teal`, `cyan`, `sky`, `blue`,
+  `indigo`, `violet`, `purple`, `fuchsia`, `pink`, `rose`); anything else is a `PanglossMetaError` where the class is made.
+
+```python
+class Negative[T](SemanticSpace[T]):
+    _interface_meta = InterfaceMeta(colour="rose")
+```
+
+A subclass without its own has its parent's. `export_definitions()` (what the interface builds from) adds
+`interfaceMeta: {"colour": ...} | null` to each model in `generated/models.ts`; `test_models_match_typescript.py`
+holds the keys and the list of colours to the TypeScript types. The interface uses the colour for the **type block**
+of a model (results, console), and for the **band** of a semantic space round an item in a list. Without one:
+blue for entities, green for documents, and a colour by depth for a space.
 
 ## Open questions
 

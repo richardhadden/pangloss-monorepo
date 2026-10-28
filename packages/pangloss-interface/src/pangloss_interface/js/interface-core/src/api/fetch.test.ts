@@ -1,4 +1,5 @@
 import { expect, test } from "vitest";
+import { wrappingSpaces } from "./context";
 import { ApiError, createApiClient, queryString } from "./client";
 import {
   autocomplete,
@@ -154,4 +155,17 @@ test("logging out deletes the session", async () => {
   await logOut(client);
   expect(calls[0]!.init.method).toBe("DELETE");
   expect(calls[0]!.url).toBe("http://api.test/api/users/session");
+});
+
+test("an item is wrapped in the spaces of its context labels, outermost first, not in documents", () => {
+  expect(wrappingSpaces(undefined)).toEqual([]);
+  expect(wrappingSpaces(null)).toEqual([]);
+  expect(wrappingSpaces([{ type: "#rootcontext", contents: [{ type: "Order", id: "1" }] }])).toEqual([]);
+  expect(
+    wrappingSpaces([
+      { type: "#rootcontext", contents: [{ type: "Order", id: "1" }] },
+      { type: "Negative", contents: [] },
+      { type: "Subjunctive", contents: [{ type: "Action", id: "2" }] },
+    ]),
+  ).toEqual(["Negative", "Subjunctive"]);
 });

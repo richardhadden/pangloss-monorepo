@@ -20,6 +20,7 @@ const model = (name: string, kind: ModelDefinition["kind"], abstract = false): M
   acceptUrlAsId: false,
   requireLabel: true,
   useInSemanticSpaceLabel: true,
+  interfaceMeta: null,
   fields: [],
   incoming: [],
 });

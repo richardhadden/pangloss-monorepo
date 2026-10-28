@@ -1,4 +1,4 @@
-import { useComponent } from "@pangloss/interface-core";
+import { useComponent, wrappingSpaces } from "@pangloss/interface-core";
 import { useSearchParams } from "@solidjs/router";
 import type { RouteProps } from "@solidjs/router";
 import { createMemo, Errored, For, isPending, Loading } from "solid-js";
@@ -39,7 +39,12 @@ export default function EntityList(props: RouteProps<"/:type">) {
             <For each={items().results}>
               {(item) => (
                 <li>
-                  <ResultButton href={`/${item.type}/${item.id}`} type={item.type} label={item.label} />
+                  <ResultButton
+                    href={`/${item.type}/${item.id}`}
+                    type={item.type}
+                    label={item.label}
+                    spaces={wrappingSpaces(item.meta?.contextLabels)}
+                  />
                 </li>
               )}
             </For>

@@ -367,7 +367,7 @@ async def test_a_disabled_user_cannot_change_things(db_driver, clear_database):
 
 
 @no_type_check
-async def test_routes_are_made_for_concrete_models_only(db_driver, clear_database):
+async def test_an_abstract_model_gets_read_routes_only(db_driver, clear_database):
     class Person(Entity):
         pass
 
@@ -385,7 +385,11 @@ async def test_routes_are_made_for_concrete_models_only(db_driver, clear_databas
     assert "/api/Person" in paths
     assert "/api/Poet/{ref}" in paths
     assert "/api/Statement/{id}/undelete" in paths
-    assert not any("/Base" in path for path in paths)
+    # (an abstract model is read, but nothing is written to it)
+    assert "/api/Base" in paths
+    assert "/api/Base/{id}" in paths
+    assert not any(path.startswith("/api/Base/") and path != "/api/Base/{id}" for path in paths)
+    assert set(app.openapi()["paths"]["/api/Base"]) == {"get"}
 
 
 @no_type_check

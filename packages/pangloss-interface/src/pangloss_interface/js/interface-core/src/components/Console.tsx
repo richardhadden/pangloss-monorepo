@@ -34,7 +34,7 @@ export function Console(props: ConsoleProps) {
           <div class="flex h-full min-w-0 flex-1 items-center justify-between gap-4">
             <div class="flex h-full min-w-0 items-center">
               {/* (the type fills the height of the bar, tinted by its kind) */}
-              <span class={["flex h-full shrink-0 items-center border-r-[0.5px] border-slate-400/70 px-4", kindTint(kind())]}>
+              <span class={["flex h-full shrink-0 items-center border-r-[0.5px] border-slate-400/70 px-4", kindTint(kind(), model()?.interfaceMeta?.colour)]}>
                 <Show when={props.list} fallback={props.type}>
                   {pluralOf(props.type)}
                 </Show>
