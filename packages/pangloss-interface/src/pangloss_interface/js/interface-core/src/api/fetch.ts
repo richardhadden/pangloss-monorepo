@@ -65,12 +65,46 @@ export function searchItems(client: ApiClient, pattern: SearchPattern): Promise<
   });
 }
 
+export interface CurrentUserOptions {
+  /**
+   * If the access cookie has run out (a 401), ask for a new one with the refresh cookie and
+   * try again. Not on the server, which cannot pass the new cookie on to the browser.
+   */
+  refresh?: boolean;
+}
+
 /** Whoever is logged in, or `undefined` if no one is (a 401 is an answer, not a failure) */
-export async function getCurrentUser(client: ApiClient): Promise<User | undefined> {
+export async function getCurrentUser(
+  client: ApiClient,
+  options: CurrentUserOptions = {},
+): Promise<User | undefined> {
+  const read = () => client.get<User>("/users/me");
   try {
-    return await client.get<User>("/users/me");
+    return await read();
   } catch (error) {
+    if (!(error instanceof ApiError) || error.status !== 401) throw error;
+  }
+  if (!options.refresh) return undefined;
+  try {
+    await client.post("/users/session/refresh");
+    return await read();
+  } catch (error) {
+    // (no refresh cookie, or it has run out too: not logged in)
     if (error instanceof ApiError && error.status === 401) return undefined;
     throw error;
   }
+}
+
+/**
+ * Log in: the API puts the session in cookies (HTTP-only, so not readable by the page). A
+ * wrong name or password is an `ApiError` 401 (the same for an unknown or disabled user),
+ * and too many are a 429.
+ */
+export async function logIn(client: ApiClient, username: string, password: string): Promise<void> {
+  await client.postForm("/users/session", { username, password });
+}
+
+/** Log out: the cookies are cleared, and the tokens in them stop working */
+export async function logOut(client: ApiClient): Promise<void> {
+  await client.delete("/users/session");
 }

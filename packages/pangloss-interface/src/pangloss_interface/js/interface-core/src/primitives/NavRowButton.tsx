@@ -1,3 +1,4 @@
+import { Show } from "solid-js";
 import { useNavExpanded } from "../context";
 import type { NavRowButtonProps } from "../types";
 
@@ -11,21 +12,21 @@ export function NavRowButton(props: NavRowButtonProps) {
   const { setNavExpanded } = useNavExpanded();
   const classes = () => [
     "flex min-w-0 cursor-pointer items-center gap-2 overflow-hidden whitespace-nowrap pr-3 text-left text-xs text-slate-700 hover:bg-slate-400/40 active:bg-slate-400/60",
-    props.inRow ? "h-full flex-1" : "py-1.5",
+    { "h-full": props.inRow, "flex-1": props.inRow, "py-1.5": !props.inRow },
   ];
   const style = () => ({ "padding-left": `${0.75 + (props.indent ?? 0) * 0.75}rem` });
-  return props.href !== undefined ? (
-    <a
-      href={props.href}
-      onClick={() => setNavExpanded(false)}
-      style={style()}
-      class={classes()}
+  return (
+    <Show
+      when={props.href !== undefined}
+      fallback={
+        <button type="button" onClick={props.onClick} style={style()} class={classes()}>
+          {props.children}
+        </button>
+      }
     >
-      {props.children}
-    </a>
-  ) : (
-    <button type="button" onClick={props.onClick} style={style()} class={classes()}>
-      {props.children}
-    </button>
+      <a href={props.href} onClick={() => setNavExpanded(false)} style={style()} class={classes()}>
+        {props.children}
+      </a>
+    </Show>
   );
 }

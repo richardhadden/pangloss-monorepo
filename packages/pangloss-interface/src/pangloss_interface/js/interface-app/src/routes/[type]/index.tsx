@@ -38,7 +38,7 @@ export default function EntityList(props: RouteProps<"/:type">) {
       />
       <Errored fallback={(error) => <ErrorMessage error={error()} />}>
         <Loading fallback={<p>Loading…</p>}>
-          <ul class={["flex flex-col gap-2 transition-opacity", pending() && "opacity-50"]}>
+          <ul class={["flex flex-col gap-2 transition-opacity", { "opacity-50": pending() }]}>
             <For each={items().results}>
               {(item) => (
                 <li>

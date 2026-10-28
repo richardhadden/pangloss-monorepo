@@ -169,10 +169,12 @@ as the user. (The API's CORS settings are for other frontends.)
 
 ### Sessions
 
-The existing sessions keep a JWT in a cookie. The interface will not: `api.py` is to give an **opaque
-session token** in an HTTP-only, `SameSite` cookie, looked up (and revocable) on the server; `POST`, `GET`
-and `DELETE /api/interface/session` are stubs (501). To decide: where sessions are stored, and how the
-interface's server acts for a session against the REST API.
+The interface uses **the API's own cookie session** (`POST /api/users/session` puts the access and refresh tokens in HTTP-only
+cookies; `DELETE` ends it; `GET /api/users/me` says who it is: see [api.md](api.md)). Because the browser only talks to the interface's
+origin, which passes `/api` on, the cookies are first-party. A server render passes the request's `Cookie` header on to the API, so the
+page is rendered for the user. See [interface-to-document.md](interface-to-document.md), "Sessions and logging in". (The opaque
+session token that `api.py` was to give, and its stubs at `/api/interface/session`, are not needed.) Still to decide: CSRF protection
+beyond `SameSite`, and what the interface does with a 401 in the middle of a session.
 
 ### Layers of `interface-core`
 

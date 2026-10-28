@@ -1,3 +1,4 @@
+import { Show } from "solid-js";
 import type { ConsoleButtonProps, ConsoleButtonTone } from "../types";
 
 // (whole class names, so that Tailwind finds them)
@@ -17,38 +18,49 @@ const TONES: Record<ConsoleButtonTone, string> = {
 export function ConsoleButton(props: ConsoleButtonProps) {
   const classes = () => [
     "flex h-full shrink-0 items-center justify-center gap-2 border-l-[0.5px] border-slate-400/70 select-none",
-    props.text ? "px-4" : "w-12",
+    { "px-4": props.text, "w-12": !props.text },
     TONES[props.tone ?? "neutral"],
-    props.disabled ? "pointer-events-none opacity-40" : "cursor-pointer",
-    props.pressed && "bg-slate-400/50",
+    {
+      "pointer-events-none": props.disabled,
+      "opacity-40": props.disabled,
+      "cursor-pointer": !props.disabled,
+      "bg-slate-400/50": props.pressed,
+    },
   ];
   const content = () => (
     <>
       {props.children}
-      {props.text && <span>{props.label}</span>}
+      <Show when={props.text}>
+        <span>{props.label}</span>
+      </Show>
     </>
   );
-  return props.href !== undefined ? (
-    <a
-      href={props.disabled ? undefined : props.href}
-      aria-label={props.label}
-      aria-disabled={props.disabled ? "true" : undefined}
-      title={props.label}
-      class={classes()}
+  return (
+    <Show
+      when={props.href !== undefined}
+      fallback={
+        <button
+          type="button"
+          aria-label={props.label}
+          title={props.label}
+          disabled={props.disabled}
+          aria-pressed={props.pressed === undefined ? undefined : props.pressed ? "true" : "false"}
+          onClick={props.onClick}
+          class={classes()}
+        >
+          {content()}
+        </button>
+      }
     >
-      {content()}
-    </a>
-  ) : (
-    <button
-      type="button"
-      aria-label={props.label}
-      title={props.label}
-      disabled={props.disabled}
-      aria-pressed={props.pressed === undefined ? undefined : props.pressed ? "true" : "false"}
-      onClick={props.onClick}
-      class={classes()}
-    >
-      {content()}
-    </button>
+      <a
+        href={props.disabled ? undefined : props.href}
+        aria-label={props.label}
+        aria-disabled={props.disabled ? "true" : undefined}
+        title={props.label}
+        class={classes()}
+      >
+        {content()}
+      </a>
+    </Show>
   );
 }

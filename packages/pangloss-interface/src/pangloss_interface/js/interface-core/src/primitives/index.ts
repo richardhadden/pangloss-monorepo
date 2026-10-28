@@ -6,3 +6,4 @@ export * from "./NavRowButton";
 export * from "./ConsoleButton";
 export * from "./kindTint";
 export * from "./Spinner";
+export * from "./Modal";

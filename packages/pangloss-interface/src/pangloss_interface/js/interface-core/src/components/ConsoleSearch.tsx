@@ -1,4 +1,4 @@
-import { createEffect, createSignal, Errored, Loading, onCleanup, Show } from "solid-js";
+import { createEffect, createSignal, Errored, Loading, onCleanup, Show, untrack } from "solid-js";
 import { ConsoleButton, Spinner } from "../primitives";
 import type { ConsoleSearchProps } from "../types";
 
@@ -14,17 +14,19 @@ const DEBOUNCE_MS = 250;
  * button that appears with it. With `count`, it says how many were found: in red if none.
  */
 export function ConsoleSearch(props: ConsoleSearchProps) {
-  // What is typed, which is ahead of `props.query` until the search is made
-  const [draft, setDraft] = createSignal(props.query ?? "");
+  // What is typed, which is ahead of `props.query` until the search is made (starting from it:
+  // a snapshot, which the effect below keeps up to date when the address changes)
+  const [draft, setDraft] = createSignal(untrack(() => props.query ?? ""));
   // Whether Deep Search is on: ahead of `props.deep` until a deep search is made
-  const [deepOn, setDeepOn] = createSignal(props.deep ?? false);
+  const [deepOn, setDeepOn] = createSignal(untrack(() => props.deep ?? false));
   let timer: ReturnType<typeof setTimeout> | undefined;
   onCleanup(() => clearTimeout(timer));
   // (the address changed otherwise, such as by going back: show it)
   createEffect(
     () => props.query ?? "",
     (query) => {
-      if (query !== draft()) setDraft(query);
+      // (what is typed is read as it is, not followed: only the address changing comes here)
+      if (query !== untrack(draft)) setDraft(query);
     },
   );
   createEffect(
@@ -79,7 +81,7 @@ export function ConsoleSearch(props: ConsoleSearchProps) {
         <Show when={!props.pending} fallback={<Spinner />}>
           <Errored fallback="–">
             <Loading fallback={<Spinner />}>
-              <span title="Found" class={props.count === 0 ? "text-red-800" : undefined}>
+              <span title="Found" class={{ "text-red-800": props.count === 0 }}>
                 {props.count}
               </span>
             </Loading>

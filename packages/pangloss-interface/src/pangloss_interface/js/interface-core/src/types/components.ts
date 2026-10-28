@@ -103,6 +103,25 @@ export interface ConsoleProps extends ConsoleSearchProps {
   children?: JSX.Element;
 }
 
+export interface ModalProps {
+  /** The heading of the dialog, which names it for a screen reader */
+  title: string;
+  /** Called when Escape or the close button is used: the dialog does not close itself */
+  onClose: () => void;
+  /** The name of the close button (`Close` if not given) */
+  closeLabel?: string;
+  children?: JSX.Element;
+}
+
+export interface LoginFormProps {
+  /** Called with what was entered */
+  onSubmit: (username: string, password: string) => void;
+  /** Why the last try failed, if it did */
+  error?: unknown;
+  /** Whether a try is being made */
+  busy?: boolean;
+}
+
 export interface ResultButtonProps {
   /** Where it goes */
   href: string;
@@ -142,6 +161,8 @@ export interface ComponentMap {
   FieldList: Component<FieldListProps>;
   NavBar: Component<NavBarProps>;
   ResultButton: Component<ResultButtonProps>;
+  LoginForm: Component<LoginFormProps>;
+  Modal: Component<ModalProps>;
   ConsoleBar: Component;
   Console: Component<ConsoleProps>;
 }

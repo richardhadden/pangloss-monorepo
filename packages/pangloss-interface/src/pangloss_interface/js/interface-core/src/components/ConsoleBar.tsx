@@ -15,7 +15,13 @@ export function ConsoleBar() {
       aria-hidden={active() ? undefined : "true"}
       class={[
         "fixed top-0 right-20 left-32 z-30 flex h-12 items-center overflow-hidden rounded-b-sm border-[0.5px] border-t-0 border-slate-400/70 bg-slate-200/60 text-xs font-semibold text-slate-700 uppercase backdrop-blur-md transition-[opacity,translate] duration-300",
-        active() ? "translate-y-0 opacity-100" : "pointer-events-none -translate-y-full opacity-0",
+        {
+          "translate-y-0": active(),
+          "opacity-100": active(),
+          "pointer-events-none": !active(),
+          "-translate-y-full": !active(),
+          "opacity-0": !active(),
+        },
       ]}
     >
       <div ref={setMount} class="flex h-full min-w-0 flex-1 items-center" />

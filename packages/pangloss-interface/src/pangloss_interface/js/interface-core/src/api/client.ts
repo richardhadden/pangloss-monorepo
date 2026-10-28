@@ -14,7 +14,10 @@ export type QueryParams = Record<string, string | number | boolean | string[] | 
 export interface ApiClient {
   readonly baseUrl: string;
   get<T>(path: string, query?: QueryParams): Promise<T>;
-  post<T>(path: string, body: unknown): Promise<T>;
+  post<T>(path: string, body?: unknown): Promise<T>;
+  /** A form, as a browser sends one (`application/x-www-form-urlencoded`), which logging in wants */
+  postForm<T>(path: string, fields: Record<string, string>): Promise<T>;
+  delete<T>(path: string): Promise<T>;
 }
 
 /** A response that was not a success: the status, and what the API said was wrong */
@@ -62,6 +65,8 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     if (!response.ok) {
       throw new ApiError(response.status, await detailOf(response));
     }
+    // (an answer with no content, such as a 204)
+    if (response.status === 204) return undefined as T;
     return (await response.json()) as T;
   }
   return {
@@ -71,7 +76,14 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
       request(path, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: body === undefined ? undefined : JSON.stringify(body),
       }),
+    postForm: (path, fields) =>
+      request(path, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams(fields).toString(),
+      }),
+    delete: (path) => request(path, { method: "DELETE" }),
   };
 }

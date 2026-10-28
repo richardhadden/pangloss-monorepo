@@ -2,8 +2,8 @@
  * The default component map, and how to make one with overrides. This is above the
  * components: it is the only place that names all of them, so nothing below imports it.
  */
-import { Console, ConsoleBar, EntityCard, FieldList, NavBar, ResultButton } from "./components";
-import { Button, ErrorMessage } from "./primitives";
+import { Console, ConsoleBar, EntityCard, FieldList, LoginForm, NavBar, ResultButton } from "./components";
+import { Button, ErrorMessage, Modal } from "./primitives";
 import type { ComponentMap } from "./types";
 
 export const defaultComponents: ComponentMap = {
@@ -13,6 +13,8 @@ export const defaultComponents: ComponentMap = {
   FieldList,
   NavBar,
   ResultButton,
+  LoginForm,
+  Modal,
   ConsoleBar,
   Console,
 };

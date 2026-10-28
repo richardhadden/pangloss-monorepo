@@ -29,7 +29,7 @@ export function NavBar(props: NavBarProps) {
       onMouseLeave={() => setNavExpanded(false)}
       class={[
         "fixed inset-y-0 left-0 z-40 flex flex-col font-semibold uppercase overflow-hidden border-r border-slate-400/70 bg-slate-300/60 backdrop-blur-md transition-[width] duration-150",
-        navExpanded() ? "w-72" : "w-12",
+        { "w-72": navExpanded(), "w-12": !navExpanded() },
       ]}
     >
       {/* The way home (with room for it), and the button that expands the bar, on the right */}
@@ -48,7 +48,7 @@ export function NavBar(props: NavBarProps) {
             viewBox="0 0 24 24"
             class={[
               "size-5 select-none fill-none stroke-slate-700 stroke-2 transition-transform duration-150",
-              navExpanded() && "rotate-90",
+              { "rotate-90": navExpanded() },
             ]}
             stroke-linecap="round"
             aria-hidden="true"
@@ -75,7 +75,9 @@ export function NavBar(props: NavBarProps) {
                 <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
               </Show>
             </svg>
-            {props.user ? `Log out ${props.user}` : "Log in"}
+            <Show when={props.user} fallback="Log in">
+              Log out {props.user}
+            </Show>
           </NavRowButton>
         </Show>
         <NavIconCell label={props.user ? `Logged in as ${props.user}` : "Not logged in"}>

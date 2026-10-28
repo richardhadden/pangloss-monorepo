@@ -10,7 +10,7 @@ export function NavRow(props: NavRowProps) {
     <div
       class={[
         "flex h-12 shrink-0 items-center text-slate-700",
-        props.ruled !== false && "border-t border-slate-400/70",
+        { "border-t": props.ruled !== false, "border-slate-400/70": props.ruled !== false },
       ]}
     >
       {props.children}

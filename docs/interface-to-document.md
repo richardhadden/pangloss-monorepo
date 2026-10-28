@@ -40,6 +40,7 @@ delete it here, when it is written up.
 - [ ] **Entities and Documents in the bar** (`NavModelList`, `modelHierarchy` in `schema`): shown only when expanded;
       each type links to `/<Type>`; ordered by the type hierarchy (siblings alphabetical), indented 0.75rem per level;
       abstract types are included (their list page shows their subtypes). A type whose parent is of another kind is top level.
+- [ ] **`STRICT_READ_UNTRACKED`** (Solid 2.0 dev warning): a reactive value read in a component body is read once. For a deliberate snapshot (the starting value of a signal that then follows its own course, as in `ConsoleSearch`) say so with `untrack(() => props.x)`; otherwise read it in JSX, a memo or an effect's compute function. **No ternaries (or `&&`) to choose what is shown in JSX**: use `<Show when={…} fallback={…}>` (a component that returns `props.x ? <a/> : <b/>` reads `props.x` once, and Solid cannot track a choice made that way). Conditional classes use the **object form** (`class={["static classes", { "w-72": open(), "w-12": !open() }]}`), not a ternary or a template string: Solid then toggles only the tokens that change. One class per key. Ternaries stay for plain attribute values (`aria-expanded`, a label prop). The same goes for reading a signal in the *apply* function of `createEffect` (`untrack` it, or read it in the compute function).
 - [ ] **`For` in Solid 2.0**: the item is a plain value, the index the accessor (the reverse of 1.x).
 - [ ] **The console** (`ConsoleBar`, `Console`, `ConsoleMountProvider`): the bar fixed along the top (beside the nav bar,
       the page needs `pt-12`; 3rem high, 5rem in from each side of the page (`left-32`, `right-20`: the nav bar is 3rem), translucent slate-200 with a blur); each page renders `<Console type list? label?>…actions…</Console>` anywhere in its markup,
@@ -69,6 +70,34 @@ delete it here, when it is written up.
 - [ ] **Seeing changes**: `pangloss dev` and `pangloss interface dev --link` in `pangloss-demo`, then
       `http://localhost:3000` (`localhost`, not `127.0.0.1`).
 - [ ] **The demo's copy** in `.pangloss/interface` is overwritten by every command, and stale until rebuilt.
+
+- [ ] **Hard-coded strings**: every fixed text of the interface is listed in [interface-strings.md](interface-strings.md), for the translations. Add to it with each string written.
+
+## Sessions and logging in
+
+- [ ] **The API's cookie session is used as it is** (`POST/DELETE /api/users/session`, `POST /session/refresh`, `GET /users/me`: docs/api.md); the
+      interface needed no routes of its own. The cookies (`pangloss_access` 30 min, `pangloss_refresh` 14 days) are HTTP-only, so the page
+      cannot read them: it asks `/users/me`. They pass through the Vite proxy and a reverse proxy alike, being on the interface's origin.
+- [ ] **`logIn`, `logOut`, `getCurrentUser`** (`interface-core/src/api/fetch.ts`); `getCurrentUser` with `refresh: true` (the browser) asks for a new
+      access cookie on a 401 and tries again; the server does not (it cannot give the browser the cookie). `ApiClient` has `postForm`
+      (logging in is an OAuth2 form, not JSON) and `delete`.
+- [ ] **On the server**, `apiClient()` (`interface-app/src/api.ts`) makes a client for the request being rendered, passing on its `Cookie` header, so the
+      page is rendered for the user. It must be called when the request is made, not at the top of a module. `getRequestEvent()` from `@solidjs/web`.
+- [ ] **State**: `sessionQuery` (a router `query`, key `session`), read in an async memo in `Frame` with `{ deferStream: true }` (the server holds back
+      the first part of the page, so the bar is not sent "not logged in" and then changed); `revalidate(sessionQuery.key)` after logging in or out.
+- [ ] **The log in dialog** (replaces the `/login` page): the nav bar's *Log in* calls `openLogin()` (`useLoginDialog`, from `LoginDialogProvider`; anything can open
+      it); `LoginDialog` (app) shows a `Modal` with the `LoginForm`, over the page it was opened on, and on success `revalidate`s the session and closes.
+- [ ] **`Modal`** (primitive, overridable): a `Portal` on the body; the backdrop (`fixed inset-0 z-50`, dark and blurred) covers the page, so nothing behind it can be
+      clicked; a click on the backdrop does *not* close it (typing is not lost); **Escape** and the close button call `onClose`; Tab goes round inside it; the focus
+      goes in (`autofocus`, or the first control) and back to what had it; the page behind does not scroll. A portal is client-only: show it only after a click.
+- [ ] **`userIsLoggedIn()`** and **`useCurrentUser()`** (`SessionProvider`, given the user by the app): for deciding what to show, such as
+      `<Show when={userIsLoggedIn()}>`. For display only: the API refuses what needs a login anyway. Reading the user may wait, so read it inside a `<Loading>`
+      (the console's *new* button has one). Used so far: the console's *new* button (only for someone logged in).
+- [ ] **Tests of components** run in a DOM: a `*.test.tsx` file starts `// @vitest-environment happy-dom` and renders with `render` from `@solidjs/web` (`vitest.config.ts` gives Solid its browser build). Done for `Modal`, `LoginForm`, the session helper and the console's new button.
+- [ ] **`RequireLogin`** (component): wrap a page (or part of one) that needs a login. No one logged in: none of it is shown, and the log in dialog opens over the page (`openLogin(onCancel)`); logging in shows it; giving up (Escape, the close button: `cancelLogin()`) calls `onCancel`, which goes home (`navigate("/", { replace: true })`, so Back does not return to the page). Logging out while on the page asks again; leaving the page closes the dialog. The server renders none of the page for an anonymous visitor (and the dialog appears after hydration). Reads the user, so it needs a `<Loading>` above (the frame has one). First used by `/:type/new` (a placeholder with only the console; the form is not built), which the console's *new* button links to.
+- [ ] **Not done**: a 401 status for a restricted page rendered on the server (it is a 200 with nothing in it), what a 401 in the middle of a session shows, CSRF (only `SameSite` protects the cookies),
+      `AUTH_COOKIE_SECURE` for HTTPS, a form with `formAction` (the login uses a plain handler), and the old stubs `POST/GET/DELETE /api/interface/session` (501) in
+      `pangloss-interface`'s `api.py`, which this makes unnecessary.
 
 ## Data fetching
 

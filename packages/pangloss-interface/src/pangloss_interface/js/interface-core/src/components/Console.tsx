@@ -1,6 +1,6 @@
 import { Portal } from "@solidjs/web";
-import { onSettled, Show } from "solid-js";
-import { useConsoleMount, useModels } from "../context";
+import { Loading, onSettled, Show } from "solid-js";
+import { useConsoleMount, useModels, userIsLoggedIn } from "../context";
 import { ConsoleButton, kindTint } from "../primitives";
 import { ConsoleSearch } from "./ConsoleSearch";
 import { getModel } from "../schema";
@@ -35,7 +35,9 @@ export function Console(props: ConsoleProps) {
             <div class="flex h-full min-w-0 items-center">
               {/* (the type fills the height of the bar, tinted by its kind) */}
               <span class={["flex h-full shrink-0 items-center border-r-[0.5px] border-slate-400/70 px-4", kindTint(kind())]}>
-                {props.list ? pluralOf(props.type) : props.type}
+                <Show when={props.list} fallback={props.type}>
+                  {pluralOf(props.type)}
+                </Show>
               </span>
               <Show when={props.label}>
                 <span class="truncate px-3 text-sm normal-case">{props.label}</span>
@@ -55,19 +57,22 @@ export function Console(props: ConsoleProps) {
             </Show>
             <div class="flex h-full shrink-0 items-center">
               {props.children}
-              {/* A list can have a new item made, if the type is one that can be */}
-              <Show when={props.list && model() && !model()!.abstract}>
-                <ConsoleButton label={`New ${props.type}`} href={`/${props.type}/new`}>
-                  <svg
-                    viewBox="0 0 24 24"
-                    class="size-5 select-none fill-none stroke-current stroke-2"
-                    stroke-linecap="round"
-                    aria-hidden="true"
-                  >
-                    <path d="M12 5v14M5 12h14" />
-                  </svg>
-                </ConsoleButton>
-              </Show>
+              {/* A list can have a new item made, if the type is one that can be and someone is
+                  logged in (reading who is may wait, so it has a boundary of its own) */}
+              <Loading fallback={null}>
+                <Show when={props.list && model() && !model()!.abstract && userIsLoggedIn()}>
+                  <ConsoleButton label={`New ${props.type}`} href={`/${props.type}/new`}>
+                    <svg
+                      viewBox="0 0 24 24"
+                      class="size-5 select-none fill-none stroke-current stroke-2"
+                      stroke-linecap="round"
+                      aria-hidden="true"
+                    >
+                      <path d="M12 5v14M5 12h14" />
+                    </svg>
+                  </ConsoleButton>
+                </Show>
+              </Loading>
             </div>
           </div>
         </Portal>
