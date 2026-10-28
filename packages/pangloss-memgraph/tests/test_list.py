@@ -202,6 +202,44 @@ async def test_a_deep_search_past_the_end_still_counts_what_was_found(clear_data
     assert past.count == 1
 
 
+@no_type_check
+async def test_a_deep_search_is_ordered_by_the_label_of_what_is_found(clear_database):
+    class Action(Document):
+        carried_out_by: Person
+
+    class Person(Entity):
+        pass
+
+    initialise()
+
+    # (written in an order that is neither the order of the labels nor one that ids would give)
+    people = {
+        label: await Person.Create(label=label).save()
+        for label in ("Zed Smith", "adam Smith", "Mary Smith")
+    }
+    for label in ("Beta Action", "alpha Action", "Gamma Action"):
+        await Action.Create(
+            label=label, carried_out_by=Person.ReferenceSet(id=people["Zed Smith"].id)
+        ).save()
+    for person in people.values():
+        await Action.Create(
+            label="Delta Action", carried_out_by=Person.ReferenceSet(id=person.id)
+        ).save()
+
+    found = await Person.list(search_terms="action smith", deep_search=True)
+    assert [r.label for r in found.results] == ["adam Smith", "Mary Smith", "Zed Smith"]
+
+    found = await Action.list(search_terms="action", deep_search=True)
+    assert [r.label for r in found.results] == [
+        "alpha Action",
+        "Beta Action",
+        "Delta Action",
+        "Delta Action",
+        "Delta Action",
+        "Gamma Action",
+    ]
+
+
 """
 // DOCUMENT QUERY
 // $tokens: list of tokenised search words
@@ -452,3 +490,98 @@ async def test_a_page_of_documents_that_refer_to_entities_is_one_page(
     assert page.count == 5
     assert sorted(r.label for r in page.results) == [f"S{i}" for i in range(5)]
     assert page.next_page is None
+
+
+@no_type_check
+async def test_a_search_with_more_hits_than_the_limit_says_it_was_truncated(
+    clear_database, monkeypatch
+):
+    from pangloss_memgraph.databases.memgraph.database import Database
+
+    class Action(Document):
+        carried_out_by: Person
+
+    class Person(Entity):
+        pass
+
+    initialise()
+    # (a deep search finds an entity by the documents that refer to it)
+    for label in [f"Smith {number}" for number in range(5)] + ["Jones"]:
+        person = await Person.Create(label=label).save()
+        await Action.Create(
+            label="An Action", carried_out_by=Person.ReferenceSet(id=person.id)
+        ).save()
+
+    # (the limit is for each word; with room for all, nothing is left out)
+    for deep in (False, True):
+        found = await Person.list(search_terms="smith", deep_search=deep)
+        assert (found.count, found.truncated) == (5, False)
+
+    monkeypatch.setattr(Database.default.settings, "SEARCH_HIT_LIMIT", 3, raising=False)
+    for deep in (False, True):
+        found = await Person.list(search_terms="smith", deep_search=deep)
+        assert found.truncated is True
+        assert found.count < 5
+
+    # (a word with few hits does not truncate; neither does a list with no search)
+    assert not (await Person.list(search_terms="jones")).truncated
+    assert not (await Person.list()).truncated
+    # (and a search that finds nothing, because of a word with no hits, is not truncated by the other word)
+    assert not (await Person.list(search_terms="nobody", deep_search=True)).truncated
+
+
+@no_type_check
+async def test_a_space_at_the_end_of_a_search_is_not_a_word(clear_database):
+    class Action(Document):
+        carried_out_by: Person
+
+    class Person(Entity):
+        pass
+
+    initialise()
+    for label in ("Smith", "Jones"):
+        person = await Person.Create(label=label).save()
+        await Action.Create(
+            label="An Action", carried_out_by=Person.ReferenceSet(id=person.id)
+        ).save()
+
+    for deep in (False, True):
+        found = await Person.list(search_terms="smith ", deep_search=deep)
+        assert [r.label for r in found.results] == ["Smith"]
+        # (and nothing but spaces is no search)
+        assert (await Person.list(search_terms="  ", deep_search=deep)).count == 2
+
+
+@no_type_check
+async def test_a_list_search_that_takes_too_long_is_stopped(
+    clear_database, db_driver, monkeypatch
+):
+    import time
+
+    import pytest
+    from pangloss_memgraph.databases.memgraph import exposed_functions
+    from pangloss_memgraph.databases.memgraph.database import Database
+    from pangloss_models.exceptions import PanglossSearchTimeoutError
+
+    class Person(Entity):
+        pass
+
+    initialise()
+    with db_driver.session() as session:
+        session.run("UNWIND range(1, 400) AS x CREATE (:Filler {id: x})").consume()
+    # (a query that cannot end in the time: 64 million combinations)
+    slow = (
+        "MATCH (a:Filler), (b:Filler), (c:Filler) WITH count(*) AS c "
+        "RETURN {results: [], count: c, page: 1, page_size: 25} AS response"
+    )
+    monkeypatch.setattr(
+        exposed_functions, "build_generic_list_query", lambda *a, **k: (slow, {})
+    )
+    monkeypatch.setattr(
+        Database.default.settings, "SEARCH_TIMEOUT_SECONDS", 0.5, raising=False
+    )
+
+    started = time.monotonic()
+    with pytest.raises(PanglossSearchTimeoutError, match="more specific"):
+        await Person.list(search_terms="smith", deep_search=True)
+    assert time.monotonic() - started < 3

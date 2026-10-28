@@ -52,7 +52,9 @@ from pangloss_memgraph.databases.memgraph.build_create_query import (
     convert_type_for_writing,
 )
 from pangloss_memgraph.databases.memgraph.build_list_query import (
+    DEFAULT_HIT_LIMIT,
     build_generic_list_query,
+    build_truncation_query,
 )
 from pangloss_memgraph.databases.memgraph.build_read_query import (
     build_fetch_document_query,
@@ -118,6 +120,7 @@ async def empty_page(tx: Transaction, query: str, params: dict) -> dict[str, Any
 
 
 @Database.default.read_transaction
+@timeout_from_setting("SEARCH_TIMEOUT_SECONDS", 30)
 async def list_items(
     tx: Transaction,
     cls: type[Document | Entity],
@@ -128,6 +131,9 @@ async def list_items(
     published: bool | None = None,
     review_status: str | None = None,
 ) -> _ListItems[_DocumentReferenceViewBase | _EntityReferenceViewBase]:
+    hit_limit = getattr(
+        Database.default.settings, "SEARCH_HIT_LIMIT", DEFAULT_HIT_LIMIT
+    )
     query, params = build_generic_list_query(
         cls,
         search_terms=search_terms,
@@ -136,6 +142,7 @@ async def list_items(
         deep_search=deep_search,
         published=published,
         review_status=review_status,
+        hit_limit=hit_limit,
     )
 
     concrete_types = get_concrete_types(cls)
@@ -143,13 +150,28 @@ async def list_items(
 
     type_adapter = TypeAdapter(list[Union[*concrete_ref_types]])  # type: ignore
 
-    result = await tx.run(query, **params)
-    result_values = await result.value()
+    try:
+        result = await tx.run(query, **params)
+        result_values = await result.value()
 
-    # (a list with nothing in it, or a page past the end, gives no row at all)
-    results: dict = (
-        result_values[0] if result_values else await empty_page(tx, query, params)
-    )
+        # (a list with nothing in it, or a page past the end, gives no row at all)
+        results: dict = (
+            result_values[0] if result_values else await empty_page(tx, query, params)
+        )
+
+        # (whether the words had more hits than were looked at: asked apart, so that it is also known of an empty list)
+        results["truncated"] = False
+        if "patterns" in params or "tokens" in params:
+            check, check_params = build_truncation_query(search_terms, hit_limit)
+            checked = await (await tx.run(check, **check_params)).value()
+            results["truncated"] = bool(checked and checked[0])
+    except TransientError as error:
+        # (the driver would try a transient error again, and the search would take as long again)
+        if "timeout" not in str(error).lower():
+            raise
+        raise PanglossSearchTimeoutError(
+            "The search took longer than the time allowed for it: make it more specific"
+        ) from None
 
     results["results"] = type_adapter.validate_python(results["results"])
     result = _ListItems(**results)

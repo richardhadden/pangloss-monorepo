@@ -94,6 +94,10 @@ class BaseSettings[TDatabaseSettings: DatabaseSettings](ClientSettings):
     # stopped and answered with a `504`, and is not tried again. 0 is no limit
     SEARCH_TIMEOUT_SECONDS: float = 30
 
+    # The most hits the text index gives for each word of a search of a list (`?q=`, with or without `deep`):
+    # more than this are not looked at, and the page says `truncated`. (The index gives 1000 unless asked for more)
+    SEARCH_HIT_LIMIT: int = 100_000
+
     # What the server does at start-up if the project has migrations and the database is not
     # what they say, or the models are not what they come to: "error" does not start, "warn"
     # starts and says so, "off" does not look

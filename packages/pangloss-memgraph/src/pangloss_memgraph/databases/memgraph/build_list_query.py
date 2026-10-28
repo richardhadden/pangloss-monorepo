@@ -6,6 +6,168 @@ from pangloss_models.model_bases.entity import Entity
 from pangloss_memgraph.databases.memgraph.visibility import unpublished_visible
 
 
+# The deep search (see docs/deep-search.md). Nothing large is carried from row to row: the hits are reduced to
+# the ids of the documents (the roots) that have every word, and only those are expanded. (It once kept a list of
+# every hit on each row, and took time and memory by the number of rows times the number of hits.)
+#
+# $tokens: one `.*word.*` for each word
+# $limit: the most hits of the text index looked at for each
+# $targetType: the class listed
+# $page (1-indexed), $page_size
+_DEEP_ROOTS = """
+    UNWIND $tokens AS token
+    CALL text_search.regex_search("label_text", token, {limit: $limit}) YIELD node AS matchedNode
+    CALL {
+      WITH matchedNode
+      WITH matchedNode
+      WHERE NOT "Entity" IN labels(matchedNode)
+      RETURN coalesce(matchedNode.head_node_id, matchedNode.id) AS treeRootId
+      UNION
+      WITH matchedNode
+      WHERE "Entity" IN labels(matchedNode)
+      MATCH (matchedNode)--(neighbor:PGIndexableNode)
+      WHERE NOT "Entity" IN labels(neighbor)
+      RETURN coalesce(neighbor.head_node_id, neighbor.id) AS treeRootId
+    }
+    // (a root qualifies if every word is found somewhere in its tree)
+    WITH treeRootId, count(DISTINCT token) AS wordsFound
+    WHERE wordsFound = size($tokens)
+    WITH collect(treeRootId) AS qualifyingRoots
+    UNWIND qualifyingRoots AS rootId
+"""
+
+# (the documents of the class in the trees found; they are ordered by the label of their head node)
+_DEEP_DOCUMENTS = """
+    CALL {
+      WITH rootId, $targetType AS targetType
+      MATCH (n:PGIndexableNode {id: rootId})
+      WHERE targetType IN labels(n)
+      RETURN n
+      UNION
+      WITH rootId, $targetType AS targetType
+      MATCH (n:PGIndexableNode {head_node_id: rootId})
+      WHERE targetType IN labels(n)
+      RETURN n
+    }
+    WITH DISTINCT n
+    // (what has been deleted is not listed: a deleted entity, or a node of a deleted document)
+    OPTIONAL MATCH (n_head:HeadNode {id: n.head_node_id})
+    WITH n, n_head
+    WHERE NOT coalesce(CASE WHEN n:Entity THEN n.deleted ELSE coalesce(n_head, n).deleted END, false)
+AND (n:Entity OR $see_unpublished OR coalesce(coalesce(n_head, n).published, true))
+AND ($published IS NULL OR coalesce(coalesce(n_head, n).published, true) = $published)
+AND ($review_status IS NULL OR coalesce(n_head, n).review_status = $review_status)
+    WITH n, toLower(coalesce(coalesce(n_head, n).label, "")) AS headLabel
+    ORDER BY headLabel, n.id
+"""
+
+# (the entities of the class that the nodes of the trees found refer to; ordered by their labels)
+_DEEP_ENTITIES = """
+    CALL {
+      WITH rootId
+      MATCH (t:PGIndexableNode {id: rootId})
+      RETURN t
+      UNION
+      WITH rootId
+      MATCH (t:PGIndexableNode {head_node_id: rootId})
+      RETURN t
+    }
+    WITH DISTINCT t
+    // (what has been deleted is not listed: a deleted entity, or a node of a deleted document)
+    OPTIONAL MATCH (t_head:HeadNode {id: t.head_node_id})
+    WITH t, t_head
+    WHERE NOT coalesce(CASE WHEN t:Entity THEN t.deleted ELSE coalesce(t_head, t).deleted END, false)
+AND (t:Entity OR $see_unpublished OR coalesce(coalesce(t_head, t).published, true))
+AND ($published IS NULL OR coalesce(coalesce(t_head, t).published, true) = $published)
+AND ($review_status IS NULL OR coalesce(t_head, t).review_status = $review_status)
+    MATCH (t)--(n:Entity)
+    WHERE $targetType IN labels(n)
+    WITH DISTINCT n
+    // (the same for the entity found)
+    OPTIONAL MATCH (n_head:HeadNode {id: n.head_node_id})
+    WITH n, n_head
+    WHERE NOT coalesce(CASE WHEN n:Entity THEN n.deleted ELSE coalesce(n_head, n).deleted END, false)
+AND (n:Entity OR $see_unpublished OR coalesce(coalesce(n_head, n).published, true))
+AND ($published IS NULL OR coalesce(coalesce(n_head, n).published, true) = $published)
+AND ($review_status IS NULL OR coalesce(n_head, n).review_status = $review_status)
+    WITH n, toLower(coalesce(coalesce(n_head, n).label, "")) AS headLabel
+    ORDER BY headLabel, n.id
+"""
+
+# (the page of what is ordered above, and its enrichment, isolated so that it always returns exactly one row)
+_DEEP_PAGE = """
+    WITH collect(n) AS allResults
+    WITH allResults, size(allResults) AS total
+
+    CALL {
+      WITH allResults
+      UNWIND allResults AS n
+      WITH n
+      SKIP ($page - 1) * $page_size
+      LIMIT $page_size
+
+      OPTIONAL MATCH (hn:HeadNode {id: n.head_node_id})
+      WITH n, coalesce(hn, n) AS headnode
+      MATCH (headnode)<-[:is_creation_of]-(creation:PGCreation)
+      MATCH (creation)-[:created_by]->(user:PGUser)
+
+      WITH collect(n{.*, meta: {
+          created_by: user.username,
+          created_when: creation.created_when,
+          updated_by: null,
+          updated_when: null,
+          semantic_spaces: coalesce(n.meta.semantic_spaces, []),
+          context_labels: n.meta.context_labels,
+          head_node_id: n.head_node_id,
+          head_node_type: n.head_node_type,
+          is_head_node: n:HeadNode,
+          published: coalesce(headnode.published, true),
+          review_status: headnode.review_status
+      }}) AS pagedResults
+      RETURN pagedResults
+    }
+
+    RETURN {
+      results: pagedResults,
+      count: total,
+      page: $page,
+      page_size: $page_size,
+      page_count: toInteger(ceil(toFloat(total) / $page_size)),
+      previous_page: CASE WHEN $page > 1 THEN $page - 1 ELSE null END,
+      next_page: CASE WHEN $page < toInteger(ceil(toFloat(total) / $page_size)) THEN $page + 1 ELSE null END
+    } AS response
+"""
+
+
+# What the text index is asked for, of each word, if the settings say nothing (`SEARCH_HIT_LIMIT`). The index
+# gives 1000 if it is not asked: a word with more hits than that had most of its results left out, unseen.
+DEFAULT_HIT_LIMIT = 100_000
+
+# Whether some word of the search has more hits than `$limit` (asked for one more, to know): then the results
+# of the list are not all there are. Apart from the list's own query so that it gives an answer when the list is empty.
+TRUNCATION_QUERY: LiteralString = """
+    UNWIND $patterns AS pattern
+    CALL text_search.regex_search("label_text", pattern, {limit: $limit + 1}) YIELD node
+    WITH pattern, count(node) AS hits
+    RETURN coalesce(max(hits), 0) > $limit AS truncated
+"""
+
+
+def search_patterns(search_terms: str | None) -> list[str]:
+    """A pattern for each word of the search (a space between words, or at the ends, is not a word: `.*.*`
+    would be every node of the index)"""
+    return [f".*{word}.*" for word in (search_terms or "").split()]
+
+
+def build_truncation_query(
+    search_terms: str | None, hit_limit: int = DEFAULT_HIT_LIMIT
+) -> tuple[LiteralString, dict]:
+    return TRUNCATION_QUERY, {
+        "patterns": search_patterns(search_terms),
+        "limit": hit_limit,
+    }
+
+
 def build_generic_list_query(
     object_class: type[Document | Entity],
     search_terms: str | None = None,
@@ -14,9 +176,10 @@ def build_generic_list_query(
     deep_search: bool = False,
     published: bool | None = None,
     review_status: str | None = None,
+    hit_limit: int = DEFAULT_HIT_LIMIT,
 ) -> tuple[LiteralString, dict]:
     query, params = _build_list_query(
-        object_class, search_terms, page_number, page_size, deep_search
+        object_class, search_terms, page_number, page_size, deep_search, hit_limit
     )
     # (a document that is not published is listed only for those who may see it)
     params["see_unpublished"] = unpublished_visible()
@@ -32,247 +195,35 @@ def _build_list_query(
     page_number: int | None = None,
     page_size: int | None = None,
     deep_search: bool = False,
+    hit_limit: int = DEFAULT_HIT_LIMIT,
 ) -> tuple[LiteralString, dict]:
+    patterns = search_patterns(search_terms)
 
-    if search_terms and deep_search:
-        search_term_list = [f".*{t}.*" for t in search_terms.split(" ")]
+    if patterns and deep_search:
         params = {
             "targetType": object_class.__name__,
             "page": page_number or 1,
             "page_size": page_size or 50,
-            "tokens": search_term_list,
+            "tokens": patterns,
+            "limit": hit_limit,
         }
         if object_class.__metatype__ == "Document":
-            return (
-                """
-                // $tokens: list of tokenised search words
-                // $targetType: e.g. "Document"
-                // $page: page number (1-indexed)
-                // $page_size: results per page
-
-                UNWIND $tokens AS token
-                CALL text_search.regex_search("label_text", token) YIELD node AS matchedNode
-                CALL {
-                  WITH matchedNode
-                  WITH matchedNode
-                  WHERE NOT "Entity" IN labels(matchedNode)
-                  RETURN coalesce(matchedNode.head_node_id, matchedNode.id) AS treeRootId
-                  UNION
-                  WITH matchedNode
-                  WHERE "Entity" IN labels(matchedNode)
-                  MATCH (matchedNode)--(neighbor:PGIndexableNode)
-                  WHERE NOT "Entity" IN labels(neighbor)
-                  RETURN coalesce(neighbor.head_node_id, neighbor.id) AS treeRootId
-                }
-                WITH collect({token: token, matchedNode: matchedNode, treeRootId: treeRootId}) AS matches
-
-                UNWIND matches AS m
-                WITH matches, m.treeRootId AS treeRootId, m.token AS token
-                WITH matches, treeRootId, collect(DISTINCT token) AS treeTokens
-                WHERE size(treeTokens) = size($tokens)
-                WITH matches, collect(DISTINCT treeRootId) AS qualifyingRoots
-
-                UNWIND matches AS m
-                WITH qualifyingRoots, m.matchedNode AS scoredNode, m.token AS token
-                WITH qualifyingRoots, scoredNode, size(collect(DISTINCT token)) AS score
-                WITH qualifyingRoots, collect({node: scoredNode, score: score}) AS nodeScores
-
-                UNWIND qualifyingRoots AS rootId
-                CALL {
-                  WITH rootId, $targetType AS targetType
-                  MATCH (n:PGIndexableNode {id: rootId})
-                  WHERE targetType IN labels(n)
-                  RETURN n
-                  UNION
-                  WITH rootId, $targetType AS targetType
-                  MATCH (n:PGIndexableNode {head_node_id: rootId})
-                  WHERE targetType IN labels(n)
-                  RETURN n
-                }
-                WITH DISTINCT n, nodeScores
-                // (what has been deleted is not listed: a deleted entity, or a node of a deleted document)
-                OPTIONAL MATCH (n_head:HeadNode {id: n.head_node_id})
-                WITH n, nodeScores, n_head
-                WHERE NOT coalesce(CASE WHEN n:Entity THEN n.deleted ELSE coalesce(n_head, n).deleted END, false)
-AND (n:Entity OR $see_unpublished OR coalesce(coalesce(n_head, n).published, true))
-AND ($published IS NULL OR coalesce(coalesce(n_head, n).published, true) = $published)
-AND ($review_status IS NULL OR coalesce(n_head, n).review_status = $review_status)
-                WITH n, nodeScores
-
-                WITH n, [x IN nodeScores WHERE x.node = n | x.score] AS scoreList
-                WITH n, CASE WHEN size(scoreList) > 0 THEN scoreList[0] ELSE 0 END AS matchScore
-
-                WITH collect({n: n, matchScore: matchScore}) AS allResults
-                WITH allResults, size(allResults) AS total
-
-                // --- paging + enrichment, isolated so it always returns exactly one row ---
-                CALL {
-                  WITH allResults
-                  UNWIND allResults AS r
-                  WITH r.n AS n, r.matchScore AS matchScore
-                  ORDER BY matchScore DESC, n.id
-                  SKIP ($page - 1) * $page_size
-                  LIMIT $page_size
-
-                  OPTIONAL MATCH (hn:HeadNode {id: n.head_node_id})
-                  WITH n, coalesce(hn, n) AS headnode
-                  MATCH (headnode)<-[:is_creation_of]-(creation:PGCreation)
-                  MATCH (creation)-[:created_by]->(user:PGUser)
-
-                  WITH collect(n{.*, meta: {
-                      created_by: user.username,
-                      created_when: creation.created_when,
-                      updated_by: null,
-                      updated_when: null,
-                      semantic_spaces: coalesce(n.meta.semantic_spaces, []),
-                      context_labels: n.meta.context_labels,
-                      head_node_id: n.head_node_id,
-                      head_node_type: n.head_node_type,
-                      is_head_node: n:HeadNode,
-                      published: coalesce(headnode.published, true),
-                      review_status: headnode.review_status
-                  }}) AS pagedResults
-                  RETURN pagedResults
-                }
-
-                RETURN {
-                  results: pagedResults,
-                  count: total,
-                  page: $page,
-                  page_size: $page_size,
-                  page_count: toInteger(ceil(toFloat(total) / $page_size)),
-                  previous_page: CASE WHEN $page > 1 THEN $page - 1 ELSE null END,
-                  next_page: CASE WHEN $page < toInteger(ceil(toFloat(total) / $page_size)) THEN $page + 1 ELSE null END
-                } AS response
-            """,
-                params,
-            )
-        if object_class.__metatype__ == "Entity":
-            return (
-                """
-
-            // $tokens: list of tokenised search words
-            // $targetType: label to filter Entities by
-            // $page: page number (1-indexed)
-            // $page_size: results per page
-
-            UNWIND $tokens AS token
-            CALL text_search.regex_search("label_text", token) YIELD node AS matchedNode
-            CALL {
-              WITH matchedNode
-              WITH matchedNode
-              WHERE NOT "Entity" IN labels(matchedNode)
-              RETURN coalesce(matchedNode.head_node_id, matchedNode.id) AS treeRootId
-              UNION
-              WITH matchedNode
-              WHERE "Entity" IN labels(matchedNode)
-              MATCH (matchedNode)--(neighbor:PGIndexableNode)
-              WHERE NOT "Entity" IN labels(neighbor)
-              RETURN coalesce(neighbor.head_node_id, neighbor.id) AS treeRootId
-            }
-            WITH collect({token: token, matchedNode: matchedNode, treeRootId: treeRootId}) AS matches
-
-            UNWIND matches AS m
-            WITH matches, m.treeRootId AS treeRootId, m.token AS token
-            WITH matches, treeRootId, collect(DISTINCT token) AS treeTokens
-            WHERE size(treeTokens) = size($tokens)
-            WITH matches, collect(DISTINCT treeRootId) AS qualifyingRoots
-
-            UNWIND matches AS m
-            WITH qualifyingRoots, m.matchedNode AS scoredNode, m.token AS token
-            WITH qualifyingRoots, scoredNode, size(collect(DISTINCT token)) AS score
-            WITH qualifyingRoots, collect({node: scoredNode, score: score}) AS nodeScores
-
-            UNWIND qualifyingRoots AS rootId
-            CALL {
-              WITH rootId
-              MATCH (t:PGIndexableNode {id: rootId})
-              RETURN t
-              UNION
-              WITH rootId
-              MATCH (t:PGIndexableNode {head_node_id: rootId})
-              RETURN t
-            }
-            WITH DISTINCT t, nodeScores
-            // (what has been deleted is not listed: a deleted entity, or a node of a deleted document)
-            OPTIONAL MATCH (t_head:HeadNode {id: t.head_node_id})
-            WITH t, nodeScores, t_head
-            WHERE NOT coalesce(CASE WHEN t:Entity THEN t.deleted ELSE coalesce(t_head, t).deleted END, false)
-AND (t:Entity OR $see_unpublished OR coalesce(coalesce(t_head, t).published, true))
-AND ($published IS NULL OR coalesce(coalesce(t_head, t).published, true) = $published)
-AND ($review_status IS NULL OR coalesce(t_head, t).review_status = $review_status)
-            WITH t, nodeScores
-            MATCH (t)--(n:Entity)
-            WHERE $targetType IN labels(n)
-            WITH DISTINCT n, nodeScores
-            // (what has been deleted is not listed: a deleted entity, or a node of a deleted document)
-            OPTIONAL MATCH (n_head:HeadNode {id: n.head_node_id})
-            WITH n, nodeScores, n_head
-            WHERE NOT coalesce(CASE WHEN n:Entity THEN n.deleted ELSE coalesce(n_head, n).deleted END, false)
-AND (n:Entity OR $see_unpublished OR coalesce(coalesce(n_head, n).published, true))
-AND ($published IS NULL OR coalesce(coalesce(n_head, n).published, true) = $published)
-AND ($review_status IS NULL OR coalesce(n_head, n).review_status = $review_status)
-            WITH n, nodeScores
-
-            WITH n, [x IN nodeScores WHERE x.node = n | x.score] AS scoreList
-            WITH n, CASE WHEN size(scoreList) > 0 THEN scoreList[0] ELSE 0 END AS matchScore
-
-            WITH collect({n: n, matchScore: matchScore}) AS allResults
-            WITH allResults, size(allResults) AS total
-
-            CALL {
-              WITH allResults
-              UNWIND allResults AS r
-              WITH r.n AS n, r.matchScore AS matchScore
-              ORDER BY matchScore DESC, n.id
-              SKIP ($page - 1) * $page_size
-              LIMIT $page_size
-
-              OPTIONAL MATCH (hn:HeadNode {id: n.head_node_id})
-              WITH n, coalesce(hn, n) AS headnode
-              MATCH (headnode)<-[:is_creation_of]-(creation:PGCreation)
-              MATCH (creation)-[:created_by]->(user:PGUser)
-
-              WITH collect(n{.*, meta: {
-                  created_by: user.username,
-                  created_when: creation.created_when,
-                  updated_by: null,
-                  updated_when: null,
-                  semantic_spaces: coalesce(n.meta.semantic_spaces, []),
-                  context_labels: n.meta.context_labels,
-                  head_node_id: n.head_node_id,
-                  head_node_type: n.head_node_type,
-                  is_head_node: n:HeadNode,
-                  published: coalesce(headnode.published, true),
-                  review_status: headnode.review_status
-              }}) AS pagedResults
-              RETURN pagedResults
-            }
-
-            RETURN {
-              results: pagedResults,
-              count: total,
-              page: $page,
-              page_size: $page_size,
-              page_count: toInteger(ceil(toFloat(total) / $page_size)),
-              previous_page: CASE WHEN $page > 1 THEN $page - 1 ELSE null END,
-              next_page: CASE WHEN $page < toInteger(ceil(toFloat(total) / $page_size)) THEN $page + 1 ELSE null END
-            } AS response
-            """,
-                params,
-            )
-    if search_terms:
-        search_string = [f".*{t}.*" for t in search_terms.split(" ")]
+            found = _DEEP_DOCUMENTS
+        else:
+            found = _DEEP_ENTITIES
+        return _DEEP_ROOTS + found + _DEEP_PAGE, params
+    if patterns:
         params = {
             "node_type": object_class.__name__,
             "page_number": page_number or 1,
             "page_size": page_size or 50,
-            "patterns": search_string,
+            "patterns": patterns,
+            "limit": hit_limit,
         }
         return (
             """
             UNWIND $patterns AS pattern
-            CALL text_search.regex_search("label_text", pattern) YIELD node, score
+            CALL text_search.regex_search("label_text", pattern, {limit: $limit}) YIELD node, score
             WITH node AS n, pattern, max(score) AS patternScore
             WITH n, count(*) AS matchedPatterns, sum(patternScore) AS totalScore
             WHERE matchedPatterns = size($patterns)

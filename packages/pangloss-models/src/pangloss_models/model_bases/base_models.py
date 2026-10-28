@@ -364,6 +364,9 @@ class _ListItems[T: _ReferenceViewBase](_BaseObject):
     page_size: int
     next_page: int | None
     previous_page: int | None
+    # True if a word of the search had more hits in the text index than were looked at (`SEARCH_HIT_LIMIT`):
+    # then there are more results than `count`
+    truncated: bool = False
 
 
 class _HeadViewBase(_FromDatabaseBase):
