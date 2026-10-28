@@ -10,6 +10,8 @@ export interface Page<T> {
   pageSize: number;
   nextPage: number | null;
   previousPage: number | null;
+  /** True if a word of the search had more hits than were looked at: there are more results than `count` */
+  truncated?: boolean;
 }
 
 /** A Document or Entity in a list: enough to show and link to it */

@@ -31,6 +31,7 @@ export default function EntityList(props: RouteProps<"/:type">) {
           setSearch({ q: query, deep: deep ? "1" : null }, { replace: true })
         }
         count={items().count}
+        truncated={items().truncated}
         pending={pending()}
       />
       <Errored fallback={(error) => <ErrorMessage error={error()} />}>

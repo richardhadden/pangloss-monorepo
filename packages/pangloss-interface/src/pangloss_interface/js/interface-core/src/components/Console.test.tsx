@@ -42,7 +42,7 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
-function show(user: () => User | undefined, props: { type: string; list?: boolean; label?: string; spaces?: string[] }) {
+function show(user: () => User | undefined, props: { type: string; list?: boolean; label?: string; spaces?: string[]; count?: number; truncated?: boolean }) {
   const container = document.createElement("div");
   document.body.append(container);
   dispose = render(
@@ -106,4 +106,17 @@ test("an item in semantic spaces has a cell for each, outermost first, before it
   const text = document.body.textContent ?? "";
   expect(text.indexOf("Negative")).toBeLessThan(text.indexOf("Hypothetical"));
   expect(text.indexOf("Hypothetical")).toBeLessThan(text.indexOf("Place"));
+});
+
+test("a count that is not all there is has a plus, and says so", async () => {
+  show(() => demo, { type: "Place", list: true, count: 100, truncated: true });
+  await settle();
+  const found = document.body.querySelector('[title^="Found"]');
+  expect(found?.textContent).toBe("100+");
+  expect(found?.getAttribute("title")).toContain("narrow");
+  dispose?.();
+  document.body.innerHTML = "";
+  show(() => demo, { type: "Place", list: true, count: 100 });
+  await settle();
+  expect(document.body.querySelector('[title="Found"]')?.textContent).toBe("100");
 });

@@ -88,6 +88,8 @@ export interface ConsoleSearchProps {
   onSearch?: (search: Search) => void;
   /** How many were found (shown beside the search; its read may wait for the result) */
   count?: number;
+  /** Whether there are more than `count`: a word had more hits than the search looks at (shown as `count+`) */
+  truncated?: boolean;
   /** Whether the result is being fetched again: a spinner is shown in place of the count */
   pending?: boolean;
 }

@@ -53,6 +53,7 @@ These are not shown, but are read aloud, or appear when the pointer rests on the
 | `search` | Search | `ConsoleSearch` (`aria-label` of the input) | the same slot as the placeholder |
 | `found` | Found | `ConsoleSearch` (tooltip of the count) | would better be "{count} found", with the plural forms of the language |
 | `close` | Close | `Modal` (the close button) | `closeLabel` can be given |
+| `found_more` | Found, and more: narrow the search | `ConsoleSearch` (tooltip of the count when the search was cut short: the count has a "+" after it) | the "+" is a sign, not a word |
 | `deep_search` | Deep search | `ConsoleSearch` (toggle) | |
 | `deep_search_run` | Run deep search (Enter) | `ConsoleSearch` (run button) | "Enter" names a key |
 | `new_item` | New {type} | `Console` (the new button) | `{type}` is the name of the model, which has its own translation |

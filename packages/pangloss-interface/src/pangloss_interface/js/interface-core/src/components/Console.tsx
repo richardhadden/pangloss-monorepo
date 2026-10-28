@@ -92,6 +92,7 @@ export function Console(props: ConsoleProps) {
                   onSearch={props.onSearch}
                   deep={props.deep}
                   count={props.count}
+                  truncated={props.truncated}
                   pending={props.pending}
                 />
               </div>

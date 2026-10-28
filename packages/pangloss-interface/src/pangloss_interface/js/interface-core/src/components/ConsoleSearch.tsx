@@ -53,6 +53,12 @@ export function ConsoleSearch(props: ConsoleSearchProps) {
   };
   // Run only changes anything if it is not what is on show already
   const upToDate = () => draft() === (props.query ?? "") && (props.deep ?? false) === deepOn();
+  // (a count that is not all there is says so: the search has to be narrowed)
+  const foundTitle = () => {
+    if (props.truncated) return "Found, and more: narrow the search";
+    return "Found";
+  };
+
   return (
     <div class="flex h-full w-full max-w-xl items-center border-x-[0.5px] border-slate-400/70 bg-white/30 focus-within:bg-white/50">
       <svg
@@ -81,8 +87,9 @@ export function ConsoleSearch(props: ConsoleSearchProps) {
         <Show when={!props.pending} fallback={<Spinner />}>
           <Errored fallback="–">
             <Loading fallback={<Spinner />}>
-              <span title="Found" class={{ "text-red-800": props.count === 0 }}>
+              <span title={foundTitle()} class={{ "text-red-800": props.count === 0 }}>
                 {props.count}
+                <Show when={props.truncated}>+</Show>
               </span>
             </Loading>
           </Errored>
