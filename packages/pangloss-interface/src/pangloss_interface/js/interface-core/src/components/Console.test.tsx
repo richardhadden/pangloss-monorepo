@@ -42,7 +42,7 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
-function show(user: () => User | undefined, props: { type: string; list?: boolean }) {
+function show(user: () => User | undefined, props: { type: string; list?: boolean; label?: string; spaces?: string[] }) {
   const container = document.createElement("div");
   document.body.append(container);
   dispose = render(
@@ -98,4 +98,12 @@ test("an abstract type, or an item, has none even for someone logged in", async 
   show(() => demo, { type: "Place" });
   await settle();
   expect(newLink()).toBeNull();
+});
+
+test("an item in semantic spaces has a cell for each, outermost first, before its type", async () => {
+  show(() => demo, { type: "Place", label: "Rome", spaces: ["Negative", "Hypothetical"] });
+  await settle();
+  const text = document.body.textContent ?? "";
+  expect(text.indexOf("Negative")).toBeLessThan(text.indexOf("Hypothetical"));
+  expect(text.indexOf("Hypothetical")).toBeLessThan(text.indexOf("Place"));
 });

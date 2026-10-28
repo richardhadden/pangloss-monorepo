@@ -4,12 +4,12 @@ import { expect, test } from "vitest";
 import { ModelsProvider } from "../context";
 import { ResultButton } from "./ResultButton";
 
-function show(spaces?: string[]) {
+function show(spaces?: string[], head?: { type: string; id: string }) {
   const host = document.createElement("div");
   render(
     () => (
       <ModelsProvider definitions={{ models: {}, enums: {} }}>
-        <ResultButton href="/Activity/1" type="Activity" label="A coronation" spaces={spaces} />
+        <ResultButton href="/Activity/1" type="Activity" label="A coronation" spaces={spaces} head={head} />
       </ModelsProvider>
     ),
     host,
@@ -51,5 +51,20 @@ test("a space with a colour of its model is that colour, whatever its depth", ()
     ),
     host,
   );
-  expect(host.firstElementChild?.className).toContain("bg-teal-400/25");
+  expect(host.querySelector(".bg-teal-400\\/25")?.textContent).toContain("Negative");
+});
+
+test("an item inside a document has a button to it, at the far left, not in the bands", () => {
+  const host = show(["Negative"], { type: "Factoid", id: "f1" });
+  const first = host.querySelector("a")!;
+  expect(first.getAttribute("href")).toBe("/Factoid/f1");
+  expect(host.querySelectorAll("a")).toHaveLength(2);
+  // (before the bands: the name of the band comes after it)
+  expect(host.textContent).toContain("Negative");
+  expect(first.nextElementSibling?.textContent).toContain("Negative");
+  expect(first.textContent).not.toContain("Negative");
+});
+
+test("an item that is a head node has no such button", () => {
+  expect(show([]).querySelectorAll("a")).toHaveLength(1);
 });

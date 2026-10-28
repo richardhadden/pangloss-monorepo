@@ -53,6 +53,7 @@ These are not shown, but are read aloud, or appear when the pointer rests on the
 | `deep_search` | Deep search | `ConsoleSearch` (toggle) | |
 | `deep_search_run` | Run deep search (Enter) | `ConsoleSearch` (run button) | "Enter" names a key |
 | `new_item` | New {type} | `Console` (the new button) | `{type}` is the name of the model, which has its own translation |
+| `go_to_head` | Go to the {type} | `ResultButton` (the button to the document an item is in: `aria-label` and tooltip) | `{type}` is the name of the model, which has its own translation |
 | `loading` | Loading | `Spinner` (`aria-label`) | the same slot as above, but without the "…" |
 
 ## Not translated by the interface's own file

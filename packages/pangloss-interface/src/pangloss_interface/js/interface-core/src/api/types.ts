@@ -29,7 +29,14 @@ export interface Summary {
   type: string;
   label: string;
   /** (the list has only these parts of the meta of an item) */
-  meta?: { semanticSpaces?: string[]; contextLabels?: ContextLabel[] | null };
+  meta?: {
+    semanticSpaces?: string[];
+    contextLabels?: ContextLabel[] | null;
+    isHeadNode?: boolean;
+    /** (of an item that is inside another document: the document it is in) */
+    headNodeType?: string | null;
+    headNodeId?: string | null;
+  };
 }
 
 export interface ItemMeta {

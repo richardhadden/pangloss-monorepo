@@ -99,6 +99,8 @@ export interface ConsoleProps extends ConsoleSearchProps {
   list?: boolean;
   /** The label of the item, when the page is one */
   label?: string;
+  /** The semantic spaces the item is in, outermost first: a cell for each, left of the type */
+  spaces?: string[];
   /** The actions that can be taken, shown on the right */
   children?: JSX.Element;
 }
@@ -130,6 +132,8 @@ export interface ResultButtonProps {
   label: string;
   /** The semantic spaces the item is in, outermost first: each wraps it in a band of its own */
   spaces?: string[];
+  /** The head node of an item that is inside another document: a button to it on the left */
+  head?: { type: string; id: string };
 }
 
 export interface NavBarProps {

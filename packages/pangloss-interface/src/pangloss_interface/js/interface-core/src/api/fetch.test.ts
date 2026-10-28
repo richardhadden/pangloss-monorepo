@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { wrappingSpaces } from "./context";
+import { headOf, wrappingSpaces } from "./context";
 import { ApiError, createApiClient, queryString } from "./client";
 import {
   autocomplete,
@@ -168,4 +168,14 @@ test("an item is wrapped in the spaces of its context labels, outermost first, n
       { type: "Subjunctive", contents: [{ type: "Action", id: "2" }] },
     ]),
   ).toEqual(["Negative", "Subjunctive"]);
+});
+
+test("only an item inside another has a head node to go to", () => {
+  const item = (meta?: object) => ({ id: "2", type: "Activity", label: "x", meta });
+  expect(headOf(item())).toBeUndefined();
+  expect(headOf(item({ isHeadNode: true, headNodeType: null, headNodeId: null }))).toBeUndefined();
+  expect(headOf(item({ isHeadNode: false, headNodeType: "Factoid", headNodeId: "1" }))).toEqual({
+    type: "Factoid",
+    id: "1",
+  });
 });

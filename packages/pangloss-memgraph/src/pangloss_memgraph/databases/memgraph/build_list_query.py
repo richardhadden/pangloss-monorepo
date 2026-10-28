@@ -126,6 +126,9 @@ AND ($review_status IS NULL OR coalesce(n_head, n).review_status = $review_statu
                       updated_when: null,
                       semantic_spaces: coalesce(n.meta.semantic_spaces, []),
                       context_labels: n.meta.context_labels,
+                      head_node_id: n.head_node_id,
+                      head_node_type: n.head_node_type,
+                      is_head_node: n:HeadNode,
                       published: coalesce(headnode.published, true),
                       review_status: headnode.review_status
                   }}) AS pagedResults
@@ -237,6 +240,9 @@ AND ($review_status IS NULL OR coalesce(n_head, n).review_status = $review_statu
                   updated_when: null,
                   semantic_spaces: coalesce(n.meta.semantic_spaces, []),
                   context_labels: n.meta.context_labels,
+                  head_node_id: n.head_node_id,
+                  head_node_type: n.head_node_type,
+                  is_head_node: n:HeadNode,
                   published: coalesce(headnode.published, true),
                   review_status: headnode.review_status
               }}) AS pagedResults
@@ -301,6 +307,9 @@ AND ($review_status IS NULL OR coalesce(n_head, n).review_status = $review_statu
                     updated_when: null,
                     semantic_spaces: coalesce(n.meta.semantic_spaces, []),
                     context_labels: n.meta.context_labels,
+                    head_node_id: n.head_node_id,
+                    head_node_type: n.head_node_type,
+                    is_head_node: n:HeadNode,
                     published: coalesce(headnode.published, true),
                     review_status: headnode.review_status
                 }}) AS items
@@ -365,6 +374,9 @@ AND ($review_status IS NULL OR coalesce(listed_head, n).review_status = $review_
                             updated_when: null,
                             semantic_spaces: coalesce(n.meta.semantic_spaces, []),
                             context_labels: n.meta.context_labels,
+                            head_node_id: n.head_node_id,
+                            head_node_type: n.head_node_type,
+                            is_head_node: n:HeadNode,
                             published: coalesce(headnode.published, true),
                             review_status: headnode.review_status
                         }}) AS items, collect(n) AS page_nodes, total,

@@ -1,4 +1,5 @@
-import { useComponent } from "@pangloss/interface-core";
+import { useComponent, wrappingSpaces } from "@pangloss/interface-core";
+import type { ContextLabel } from "@pangloss/interface-core";
 import type { RouteProps } from "@solidjs/router";
 import { createMemo, Errored, Loading } from "solid-js";
 import { itemQuery } from "../queries";
@@ -13,7 +14,11 @@ export default function EntityPage(props: RouteProps<"/:type/:id">) {
       <Errored fallback={(error) => <ErrorMessage error={error()} />}>
         <Loading fallback={<p>Loading…</p>}>
           {/* (the type is the item's own, which can be a subtype of the one in the address) */}
-          <Console type={item().type} label={item().label ?? item().id} />
+          <Console
+            type={item().type}
+            label={item().label ?? item().id}
+            spaces={wrappingSpaces(item().meta.contextLabels as ContextLabel[] | null | undefined)}
+          />
           <h1>{item().label ?? item().id}</h1>
         </Loading>
       </Errored>

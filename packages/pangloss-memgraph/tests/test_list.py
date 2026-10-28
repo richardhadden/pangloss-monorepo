@@ -116,6 +116,13 @@ async def test_a_list_says_which_semantic_spaces_an_item_is_in(clear_database):
     assert by_label["Denied"].meta.semantic_spaces == ["Negative"]
     assert by_label["Denied"].meta.context_labels[0]["type"] == "Negative"
 
+    # the document it is in
+    factoid = (await Factoid.list()).results[0]
+    assert by_label["Plain"].meta.is_head_node is False
+    assert by_label["Plain"].meta.head_node_id == factoid.id
+    assert by_label["Plain"].meta.head_node_type == "Factoid"
+    assert factoid.meta.is_head_node is True
+
 
 @no_type_check
 async def test_list_deep_search(clear_database):
@@ -271,7 +278,10 @@ WITH total, collect(n{.*, meta: {
     updated_by: null,
     updated_when: null,
     semantic_spaces: coalesce(n.meta.semantic_spaces, []),
-    context_labels: n.meta.context_labels
+    context_labels: n.meta.context_labels,
+    head_node_id: n.head_node_id,
+    head_node_type: n.head_node_type,
+    is_head_node: n:HeadNode
 }}) AS results
 
 RETURN {
@@ -358,7 +368,10 @@ WITH total, collect(n{.*, meta: {
     updated_by: null,
     updated_when: null,
     semantic_spaces: coalesce(n.meta.semantic_spaces, []),
-    context_labels: n.meta.context_labels
+    context_labels: n.meta.context_labels,
+    head_node_id: n.head_node_id,
+    head_node_type: n.head_node_type,
+    is_head_node: n:HeadNode
 }}) AS results
 
 RETURN {

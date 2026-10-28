@@ -1,4 +1,4 @@
-import { useComponent, wrappingSpaces } from "@pangloss/interface-core";
+import { useComponent, headOf, wrappingSpaces } from "@pangloss/interface-core";
 import { useSearchParams } from "@solidjs/router";
 import type { RouteProps } from "@solidjs/router";
 import { createMemo, Errored, For, isPending, Loading } from "solid-js";
@@ -44,6 +44,7 @@ export default function EntityList(props: RouteProps<"/:type">) {
                     type={item.type}
                     label={item.label}
                     spaces={wrappingSpaces(item.meta?.contextLabels)}
+                    head={headOf(item)}
                   />
                 </li>
               )}

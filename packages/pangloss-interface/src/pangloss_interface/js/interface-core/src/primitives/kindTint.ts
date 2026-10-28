@@ -46,3 +46,20 @@ export function kindTint(kind: string | undefined, colour?: Colour | null): stri
   if (kind === "Document") return "bg-green-400/25 text-green-950";
   return "";
 }
+
+// (for a semantic space that has no colour of its own, by how deep it is)
+const DEPTH_TINTS = [
+  "bg-amber-400/25 text-amber-950",
+  "bg-violet-400/25 text-violet-950",
+  "bg-rose-400/25 text-rose-950",
+  "bg-teal-400/25 text-teal-950",
+];
+
+/**
+ * The tint of a semantic space round an item: the colour its model chose, else one by how
+ * deep it is (`depth` 0 is the outermost). Wherever the spaces of an item are shown, they
+ * use this, so they look alike.
+ */
+export function spaceTint(colour: Colour | null | undefined, depth: number): string {
+  return colourTint(colour) || DEPTH_TINTS[depth % DEPTH_TINTS.length];
+}
