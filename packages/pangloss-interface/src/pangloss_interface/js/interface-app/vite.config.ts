@@ -2,7 +2,6 @@ import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import tailwindcss from "@tailwindcss/vite";
 import solid from "@solidjs/vite-plugin";
-import { fileRoutes } from "filesystem-routing/vite";
 import { defineConfig, searchForWorkspaceRoot } from "vite";
 
 // Where the Pangloss API is, for the dev server to pass `/api` requests on to. (`pangloss
@@ -27,10 +26,8 @@ export default defineConfig({
       // `npm start` runs)
       ssr: true,
       start: { node: true },
-      // (so that the route modules of the file router are compiled)
       extensions: [".jsx", ".tsx"],
     }),
-    fileRoutes({ types: true }),
     tailwindcss(),
   ],
   // interface-core is source, which has to be compiled for the server as well

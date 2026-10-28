@@ -2,10 +2,7 @@ import { useComponent } from "@pangloss/interface-core";
 import { useSearchParams } from "@solidjs/router";
 import type { RouteProps } from "@solidjs/router";
 import { createMemo, Errored, For, isPending, Loading } from "solid-js";
-import { listQuery } from "../../queries";
-
-// A parameter of the address that was given more than once is the first
-const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);
+import { listQuery, searchOf } from "../queries";
 
 // The list of a type of Document or Entity: /Person
 export default function EntityList(props: RouteProps<"/:type">) {
@@ -15,8 +12,8 @@ export default function EntityList(props: RouteProps<"/:type">) {
   // The search is in the address (`?q=rome&deep=1`), so it can be linked to, and the back button
   // goes back through searches. A change of it asks the list again.
   const [search, setSearch] = useSearchParams();
-  const text = () => first(search.q) ?? "";
-  const deep = () => first(search.deep) === "1";
+  const text = () => searchOf(search).q;
+  const deep = () => searchOf(search).deep;
   // (an async memo: what reads `items()` waits for it, inside the `Loading`; the arguments
   // are read before the query is called, so a change of them runs it again)
   const items = createMemo(() => listQuery(props.params.type, text(), deep(), 1));

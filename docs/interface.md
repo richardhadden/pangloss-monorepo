@@ -41,7 +41,6 @@ Packages (`next` / RC versions; they are released in lockstep and must match):
 | `@solidjs/web` | `render`, `hydrate`, `renderToStream`, `HydrationScript`, `httpStatus`, and the `JSX` types (not `solid-js/web`) |
 | `@solidjs/vite-plugin` | the Vite plugin (was `vite-plugin-solid`): `solid({ ssr: true, start: { node: true } })` generates the client and server entries around `src/App.tsx` in the shell `src/Document.tsx` |
 | `@solidjs/router` | `createRouter({ routes })` (config-based), typed `paths`; `@solidjs/router/fs` for file routes |
-| `filesystem-routing` | the Vite plugin for `src/routes` (`[type]/[id].tsx` is `/:type/:id`) |
 | `@solidjs/meta` | `<Title>` and the like |
 
 [Rules from the 2.0 migration](https://v2.solidjs.com/migration/from-solid-1) to keep to in this code:
@@ -164,8 +163,15 @@ API (the Vite dev server does it in development; in production a reverse proxy, 
 interface's server, does). So: no CORS, cookies are first-party, and the server-side render can call the API
 as the user. (The API's CORS settings are for other frontends.)
 
-**Rendering**: streaming SSR (`ssr: true`), hydrated in the browser. Pages are routes of
-`interface-app/src/routes` (file routes); `/:type` is the list of a type and `/:type/:id` one item.
+**Rendering**: streaming SSR (`ssr: true`), hydrated in the browser. The routes are written in code, in
+`interface-app/src/routes.ts` (`defineRoutes` / `defineRoute`, so that `params` are typed from the path); the pages are in
+`interface-app/src/pages`, each `lazy` (a chunk of its own). `/:type` is the list of a type and `/:type/:id` one item.
+
+**Prefetching**: `router.ts` has `preloadLinks: intentPreload()`: a link that is hovered, focused or touched fetches the
+page's code and runs the route's `preload`, which calls the page's queries (`void listQuery(...)`; the page reads the same
+`query` in a memo, so there is one request). The `query` cache keeps the result for a few seconds, so the click that follows
+is instant. A list's `preload` reads the search from the address (`searchOf` in `queries.ts`, shared with the page). A link
+that must not do this has `preload="false"`.
 
 ### Sessions
 

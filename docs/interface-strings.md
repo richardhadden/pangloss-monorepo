@@ -12,10 +12,10 @@ Nothing here is translated yet: the language row of the nav bar changes nothing.
 
 | Slot | English | Where | Notes |
 |------|---------|-------|-------|
-| `title` | Pangloss | `Document.tsx` (`<title>`), `App.tsx` and `routes/index.tsx` (`<Title>`) | exists in `ui.jsonc`; the name of the site, so a project may want it to be its own |
-| `title_not_found` | Not found - Pangloss | `routes/[...404].tsx` (`<Title>`) | contains the site title |
-| `page_not_found` | Page not found | `routes/[...404].tsx` | |
-| `loading` | Loading… | `App.tsx`, `routes/[type]/index.tsx`, `routes/[type]/[id].tsx` | the "…" is part of the text |
+| `title` | Pangloss | `Document.tsx` (`<title>`), `App.tsx` and `pages/Home.tsx` (`<Title>`) | exists in `ui.jsonc`; the name of the site, so a project may want it to be its own |
+| `title_not_found` | Not found - Pangloss | `pages/NotFound.tsx` (`<Title>`) | contains the site title |
+| `page_not_found` | Page not found | `pages/NotFound.tsx` | |
+| `loading` | Loading… | `App.tsx`, `pages/List.tsx`, `pages/Item.tsx` | the "…" is part of the text |
 | `home` | Home | `NavBar` (link in the top row) | |
 | `log_in` | Log in | `NavBar` | exists in `ui.jsonc` |
 | `log_out_user` | Log out {user} | `NavBar` | `log_out` exists, but this puts the user's name after it: a slot with a parameter, as the order of the words differs between languages |
@@ -30,7 +30,7 @@ Nothing here is translated yet: the language row of the nav bar changes nothing.
 | `password` | Password | `LoginForm` (label) | |
 | `log_in` | Log in | `LoginForm` (submit button) | the same slot as the nav bar's |
 | `logging_in` | Logging in… | `LoginForm` (the button while a try is made) | |
-| `home_heading` | Pangloss Yo! | `routes/index.tsx` (`<h1>`) | a placeholder from a commit of the owner's; will go |
+| `home_heading` | Pangloss Yo! | `pages/Home.tsx` (`<h1>`) | a placeholder from a commit of the owner's; will go |
 | *(the plural)* | {Type}s, {Type}es, {Type}ies | `Console` (`pluralOf`) | **not a string to translate: code.** A stand-in that makes an English plural of the type; it goes when the plural names of models come from `models.jsonc` |
 | *(words)* | list of, relation to, relations to, embedded, value, required `*` | `FieldList` (`describe`) | a placeholder component; not on a page now |
 

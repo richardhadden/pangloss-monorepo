@@ -4,5 +4,5 @@
     "types": ["vite/client"],
     "paths": { "@generated/models": ["./src/generated/models.ts"] }
   },
-  "include": ["src", "file-routes.d.ts", "vite.config.ts"]
+  "include": ["src", "vite.config.ts"]
 }

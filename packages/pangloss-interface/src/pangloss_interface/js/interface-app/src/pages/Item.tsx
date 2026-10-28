@@ -1,7 +1,7 @@
 import { useComponent } from "@pangloss/interface-core";
 import type { RouteProps } from "@solidjs/router";
 import { createMemo, Errored, Loading } from "solid-js";
-import { itemQuery } from "../../queries";
+import { itemQuery } from "../queries";
 
 // One Document or Entity: /Person/<id>
 export default function EntityPage(props: RouteProps<"/:type/:id">) {

@@ -24,3 +24,12 @@ export const sessionQuery = query(
   () => getCurrentUser(apiClient(), { refresh: !isServer }),
   "session",
 );
+
+/**
+ * The search in the address of a list (`?q=rome&deep=1`), as the list query takes it. (A
+ * parameter given more than once is the first.) The list page and its preload read it alike.
+ */
+export function searchOf(search: Record<string, string | string[] | undefined>) {
+  const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);
+  return { q: first(search.q) ?? "", deep: first(search.deep) === "1" };
+}
