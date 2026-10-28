@@ -225,3 +225,13 @@ def test_no_stub_is_written_in_an_environment(tmp_path):
         root, root / ".venv" / "lib" / "site-packages" / "lib" / "m.py"
     )
     assert is_in_environment(root, root / "venv2" / "m.py")
+
+
+def test_save_of_a_document_can_say_what_review_status_to_write_and_save_of_an_entity_cannot():
+    from pangloss_models.typestubs import save_methods
+
+    document = "\n".join(save_methods("Letter", "Update", "async", is_document=True))
+    assert "published: bool | None = None, review_status: str | None = None" in document
+    assert "expected_version: int | None = None" in document
+    entity = "\n".join(save_methods("Person", "Create", "async"))
+    assert "published" not in entity and "review_status" not in entity

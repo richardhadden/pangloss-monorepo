@@ -751,9 +751,9 @@ def build_head_create_query(
         instance, is_new=True, is_head_node=True
     )
     # what installed apps want on a new head node (such as `published: false`)
-    node_data_dict.update(
-        hooks.properties_for_new_head(instance._owner)
-    )
+    # (a review status that the document itself says is asked for, over one the call asked for)
+    with hooks.requesting_review_status(getattr(instance, "review_status", None)):
+        node_data_dict.update(hooks.properties_for_new_head(instance._owner))
 
     # Add the properties to the query params
     node_data = PropertyAssignments(query_object.params, node_data_dict)

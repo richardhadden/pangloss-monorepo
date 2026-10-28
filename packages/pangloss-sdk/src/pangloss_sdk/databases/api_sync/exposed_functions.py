@@ -77,15 +77,26 @@ def autocomplete(
     return protocol.autocompleted(current_client().send(call))
 
 
-def create_head_node(self: Any, detail: bool = False) -> Any:
-    response = current_client().send(protocol.create(self, detail))
+def create_head_node(
+    self: Any,
+    detail: bool = False,
+    published: bool | None = None,
+    review_status: str | None = None,
+) -> Any:
+    response = current_client().send(
+        protocol.create(self, detail, published, review_status)
+    )
     return protocol.created(self, response, detail)
 
 
 def update_head_node(
-    self: Any, detail: bool = False, expected_version: int | None = None
+    self: Any,
+    detail: bool = False,
+    expected_version: int | None = None,
+    published: bool | None = None,
+    review_status: str | None = None,
 ) -> Any:
-    call = protocol.update(self, detail, expected_version)
+    call = protocol.update(self, detail, expected_version, published, review_status)
     response = current_client().send(call)
     return protocol.updated(self, response, detail)
 

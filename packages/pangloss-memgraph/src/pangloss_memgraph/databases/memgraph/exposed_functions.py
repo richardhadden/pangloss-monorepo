@@ -3,6 +3,7 @@ from typing import Any, Literal, Union, cast
 from uuid import UUID
 
 from neo4j.exceptions import ClientError, TransientError
+from pangloss_models import hooks
 from pangloss_models.autocomplete import (
     AutocompleteResults,
     labels_to_match,
@@ -472,13 +473,21 @@ async def _get_head_view(cls: type[Document | Entity], id: UUID):
 async def create_head_node(
     instance: _DocumentCreateBase,
     detail: bool = False,
+    published: bool | None = None,
+    review_status: str | None = None,
 ):
     """Create a Document or Entity. Returns its `ReferenceView`, or, if `detail`, its
-    `HeadView`"""
+    `HeadView`.
+
+    With `pangloss-review`, a new document of a reviewed class is `unchecked` (not published) unless
+    `published=True` (it is `checked`) or a `review_status` is given."""
     db_instance: _DocumentCreateDBBase = cast(
         _DocumentCreateDBBase, instance._to_db_model()
     )
-    created_entities = await write_with_retries(write_head_node, db_instance)
+    with hooks.requesting_review_status(
+        hooks.review_status_asked(published, review_status)
+    ):
+        created_entities = await write_with_retries(write_head_node, db_instance)
 
     owner = cast(type[Document | Entity], instance._owner)
     announce("create", owner, db_instance.id, 1, db_instance, created_entities)
@@ -549,9 +558,14 @@ async def update_head_node(
     detail: bool = False,
     expected_version: int | None = None,
     restored_from: int | None = None,
+    published: bool | None = None,
+    review_status: str | None = None,
 ):
     """Replace a Document or Entity (and, for a Document, everything nested in it)
     with the given version.
+
+    With `pangloss-review`, an update leaves the review state as it is unless `published` (`True` is `checked`,
+    `False` is `unchecked`) or `review_status` is given.
 
     `restored_from` is only for what listens to writes (history): that this update puts
     back that earlier version.
@@ -562,9 +576,12 @@ async def update_head_node(
     db_instance = cast(
         _DocumentUpdateDBBase | _EntityUpdateDBBase, instance._to_db_model()
     )
-    existing_head, created_entities = await write_with_retries(
-        replace_head_node, db_instance, expected_version
-    )
+    with hooks.requesting_review_status(
+        hooks.review_status_asked(published, review_status)
+    ):
+        existing_head, created_entities = await write_with_retries(
+            replace_head_node, db_instance, expected_version
+        )
 
     owner = cast(type[Document | Entity], instance._owner)
     announce(

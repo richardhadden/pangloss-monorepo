@@ -1,6 +1,6 @@
 import datetime
 from collections.abc import Awaitable, Callable
-from typing import Annotated, Any, ClassVar, Self
+from typing import Annotated, Any, ClassVar, Literal, Self
 from uuid import UUID
 
 from pydantic import AnyHttpUrl, ConfigDict, Field, field_validator, model_validator
@@ -58,12 +58,27 @@ class DocumentMeta(BaseMeta, DeclaredClassMeta):
         return self.field_definitions.fields
 
 
+# What a document can say of its review status when it is written (see `pangloss-review`): for data that is
+# known to be right, or to have been checked already, such as a load from outside. Optional, and without
+# `pangloss-review` (or for a class it does not review) it is ignored. It is not stored as a field: the review
+# package writes the state (`published`, who, when) on the head node.
+REVIEW_STATUS_DESCRIPTION = (
+    "With pangloss-review: write the document with this review status ('checked' publishes it). "
+    "Without it, a new document is 'unchecked' and an update keeps the state it has."
+)
+
+
 class _DocumentCreateBase(_CreateBase):
+    review_status: Literal["unchecked", "errors_found", "checked"] | None = Field(
+        default=None, description=REVIEW_STATUS_DESCRIPTION
+    )
+
     def save(self: Self) -> None: ...
 
 
 class _DocumentCreateDBBase(_CreateDBBase):
     id: UUID
+    review_status: Literal["unchecked", "errors_found", "checked"] | None = None
     db_labels: set[str] = Field(default_factory=set)
 
     @model_validator(mode="before")
@@ -88,11 +103,15 @@ class _DocumentHeadViewBase(_HeadViewBase):
 
 
 class _DocumentUpdateBase(_UpdateBase):
+    review_status: Literal["unchecked", "errors_found", "checked"] | None = Field(
+        default=None, description=REVIEW_STATUS_DESCRIPTION
+    )
+
     def save(self: Self) -> None: ...
 
 
 class _DocumentUpdateDBBase(_UpdateDBBase):
-    pass
+    review_status: Literal["unchecked", "errors_found", "checked"] | None = None
 
 
 class _DocumentReferenceViewAPIMeta(_BaseObject):

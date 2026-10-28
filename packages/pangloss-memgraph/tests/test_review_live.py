@@ -422,3 +422,274 @@ async def test_structured_search_by_published_and_review_status(
         assert await find(Letter) == ["Right"]
     finally:
         see_unpublished.reset(token)
+
+
+@no_type_check
+async def test_data_that_is_known_to_be_right_can_be_saved_as_published(
+    clear_database, db_driver
+):
+    _, Letter, Memo, _ = models()
+
+    # (create: the default is unchecked; published=True is checked, written with the document)
+    plain = await Letter.Create(label="A", title="t", notes=[]).save()
+    right = await Letter.Create(label="B", title="t", notes=[]).save(published=True)
+    errors = await Letter.Create(label="C", title="t", notes=[]).save(
+        review_status="errors_found"
+    )
+    memo = await Memo.Create(label="M", title="t").save(published=True)  # (ignored)
+    assert (await service.get_state(plain.id)).published is False
+    state = await service.get_state(right.id)
+    assert (state.status, state.published) == (ReviewStatus.CHECKED, True)
+    assert state.reviewed_by == "pangloss_default_user" and state.reviewed_at
+    assert (await service.get_state(errors.id)).status == ReviewStatus.ERRORS_FOUND
+    assert (await Memo.get(id=memo.id)).meta.review_status is None
+    with pytest.raises(ValueError):
+        await Letter.Create(label="D", title="t", notes=[]).save(
+            published=True, review_status="checked"
+        )
+
+    # (published without a login can be read at once)
+    token = see_unpublished.set(False)
+    try:
+        assert [m.label for m in (await Letter.list()).results] == ["B"]
+    finally:
+        see_unpublished.reset(token)
+
+    # update: leaves the state alone, unless asked
+    await Letter.Update(id=right.id, label="B2", title="u", notes=[]).save()
+    assert (await service.get_state(right.id)).published is True
+    await Letter.Update(id=right.id, label="B3", title="u", notes=[]).save(
+        review_status="unchecked"
+    )
+    state = await service.get_state(right.id)
+    assert (state.status, state.published) == (ReviewStatus.UNCHECKED, False)
+    await Letter.Update(id=plain.id, label="A2", title="u", notes=[]).save(
+        published=True
+    )
+    assert (await service.get_state(plain.id)).published is True
+    assert (await Letter.get(id=plain.id)).title == "u"
+
+    # a block can ask as well (for what is not saved with `save(...)`)
+    from pangloss_review.meta import with_status
+
+    with with_status("checked"):
+        inside = await Letter.Create(label="E", title="t", notes=[]).save()
+    assert (await service.get_state(inside.id)).published is True
+
+
+@no_type_check
+async def test_asking_for_a_status_is_refused_when_self_review_is_not_allowed(
+    clear_database, db_driver, monkeypatch
+):
+    from pangloss_core import settings as core_settings
+    from pangloss_review.exceptions import PanglossSelfReviewError
+
+    _, Letter, *_ = models()
+    monkeypatch.setattr(
+        core_settings,
+        "SETTINGS",
+        SimpleNamespace(
+            DATABASE_MODULE=core_settings.SETTINGS.DATABASE_MODULE,
+            REVIEW_ALLOW_SELF_REVIEW=False,
+        ),
+    )
+    with pytest.raises(PanglossSelfReviewError):
+        await Letter.Create(label="A", title="t", notes=[]).save(published=True)
+    assert (await Letter.list()).results == []
+    # (without asking, it is as ever)
+    assert (
+        await service.get_state(
+            (await Letter.Create(label="B", title="t", notes=[]).save()).id
+        )
+    ).published is False
+
+
+@no_type_check
+async def test_the_api_takes_the_status_to_write_as_a_query(clear_database, db_driver):
+    from pangloss_api.app import create_app
+    from pangloss_review import api
+
+    from .test_api_models import client_for, logged_in
+
+    models()
+    app = create_app()
+    app.include_router(api.router)
+    api.configure_app(app, None)
+
+    letter = {"type": "Letter", "label": "L", "title": "t", "notes": []}
+    async with client_for(app) as client:
+        ann = await logged_in(client, "ann")
+
+        made = await client.post(
+            "/api/Letter", headers=ann, params={"review_status": "checked"}, json=letter
+        )
+        assert made.status_code == 201, made.text
+        id = made.json()["id"]
+        # (anyone can read it)
+        meta = (await client.get(f"/api/Letter/{id}")).json()["meta"]
+        assert (meta["published"], meta["reviewStatus"]) == (True, "checked")
+
+        bad = await client.post(
+            "/api/Letter", headers=ann, params={"review_status": "great"}, json=letter
+        )
+        assert bad.status_code == 422
+
+        # (an update with no status keeps it; with one, changes it)
+        update = {**letter, "id": id, "title": "u"}
+        assert (
+            await client.put(
+                f"/api/Letter/{id}", headers={**ann, "If-Match": "*"}, json=update
+            )
+        ).status_code == 200
+        assert (await client.get(f"/api/Letter/{id}")).status_code == 200
+        assert (
+            await client.put(
+                f"/api/Letter/{id}",
+                headers={**ann, "If-Match": "*"},
+                params={"review_status": "errors_found"},
+                json=update,
+            )
+        ).status_code == 200
+        assert (await client.get(f"/api/Letter/{id}")).status_code == 404
+        meta = (await client.get(f"/api/Letter/{id}", headers=ann)).json()["meta"]
+        assert (meta["published"], meta["reviewStatus"]) == (False, "errors_found")
+
+        # (not for anyone who is not logged in)
+        assert (
+            await client.post(
+                "/api/Letter", params={"review_status": "checked"}, json=letter
+            )
+        ).status_code == 401
+
+
+@no_type_check
+async def test_a_document_can_carry_its_own_review_status(clear_database, db_driver):
+    _, Letter, Memo, _ = models()
+
+    # (a load in which some items are checked and some are not)
+    saved = [
+        await Letter.Create(
+            label=f"L{n}", title="t", notes=[], review_status=status
+        ).save()
+        for n, status in enumerate(["checked", None, "errors_found", "checked"])
+    ]
+    states = [await service.get_state(letter.id) for letter in saved]
+    assert [s.status for s in states] == [
+        ReviewStatus.CHECKED,
+        ReviewStatus.UNCHECKED,
+        ReviewStatus.ERRORS_FOUND,
+        ReviewStatus.CHECKED,
+    ]
+    assert [s.published for s in states] == [True, False, False, True]
+    assert states[0].reviewed_by == "pangloss_default_user"
+
+    token = see_unpublished.set(False)
+    try:
+        assert sorted(m.label for m in (await Letter.list()).results) == ["L0", "L3"]
+    finally:
+        see_unpublished.reset(token)
+
+    # (what the document says wins over what the call says; the field is not a field of the document)
+    both = await Letter.Create(
+        label="B", title="t", notes=[], review_status="checked"
+    ).save(review_status="unchecked")
+    assert (await service.get_state(both.id)).published is True
+    assert "review_status" not in (await Letter.get(id=both.id)).model_dump(
+        exclude={"meta"}
+    )
+
+    # (an update: with the field it changes the state, without it leaves it)
+    first = saved[0]
+    await Letter.Update(id=first.id, label="L0b", title="u", notes=[]).save()
+    assert (await service.get_state(first.id)).published is True
+    await Letter.Update(
+        id=first.id, label="L0c", title="u", notes=[], review_status="unchecked"
+    ).save()
+    assert (await service.get_state(first.id)).published is False
+
+    # (a class that is not reviewed ignores it)
+    memo = await Memo.Create(label="M", title="t", review_status="checked").save()
+    assert (await Memo.get(id=memo.id)).meta.review_status is None
+
+    with pytest.raises(ValueError):
+        Letter.Create(label="X", title="t", notes=[], review_status="great")
+
+
+@no_type_check
+async def test_the_api_takes_the_review_status_in_the_body(clear_database, db_driver):
+    from pangloss_api.app import create_app
+    from pangloss_review import api
+
+    from .test_api_models import client_for, logged_in
+
+    models()
+    app = create_app()
+    app.include_router(api.router)
+    api.configure_app(app, None)
+
+    async with client_for(app) as client:
+        ann = await logged_in(client, "ann")
+        body = {"type": "Letter", "label": "L", "title": "t", "notes": []}
+        checked = await client.post(
+            "/api/Letter", headers=ann, json={**body, "reviewStatus": "checked"}
+        )
+        assert checked.status_code == 201, checked.text
+        plain = await client.post("/api/Letter", headers=ann, json=body)
+        bad = await client.post(
+            "/api/Letter", headers=ann, json={**body, "reviewStatus": "great"}
+        )
+        assert bad.status_code == 422
+
+        assert (
+            await client.get(f"/api/Letter/{checked.json()['id']}")
+        ).status_code == 200
+        assert (
+            await client.get(f"/api/Letter/{plain.json()['id']}")
+        ).status_code == 404
+
+
+@no_type_check
+async def test_a_bulk_load_record_can_carry_its_review_status(
+    clear_database, db_driver
+):
+    from pangloss_models.bulk_upload import upload, validate
+
+    _, Letter, *_ = models()
+    records = [
+        (
+            1,
+            {
+                "type": "Letter",
+                "label": "A",
+                "title": "t",
+                "notes": [],
+                "review_status": "checked",
+            },
+        ),
+        (2, {"type": "Letter", "label": "B", "title": "t", "notes": []}),
+        (
+            3,
+            {
+                "type": "Letter",
+                "label": "C",
+                "title": "t",
+                "notes": [],
+                "reviewStatus": "errors_found",
+            },
+        ),
+    ]
+    assert validate(records) == {"Letter": 3}
+    assert await upload(records, concurrency=1) == {"Letter": 3}
+
+    token = see_unpublished.set(False)
+    try:
+        assert [m.label for m in (await Letter.list()).results] == ["A"]
+    finally:
+        see_unpublished.reset(token)
+    queue = await service.queue(
+        [ReviewStatus.UNCHECKED, ReviewStatus.ERRORS_FOUND], None, 1
+    )
+    assert sorted((i.label, i.status) for i in queue.results) == [
+        ("B", ReviewStatus.UNCHECKED),
+        ("C", ReviewStatus.ERRORS_FOUND),
+    ]

@@ -12,13 +12,16 @@ server makes it `unchecked` when it is created, and an update leaves the state a
 """
 
 from typing import Annotated
+from urllib.parse import parse_qs
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, FastAPI, Query, Request, status
 from fastapi.responses import JSONResponse
 from pangloss_api.dependencies import CurrentUser, get_current_user
+from pangloss_models import hooks
 from pydantic import BaseModel, ConfigDict
 from pydantic.alias_generators import to_camel
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 from pangloss_review import service
 from pangloss_review.exceptions import (
@@ -49,8 +52,41 @@ async def review_error_handler(request: Request, error: Exception) -> JSONRespon
     )
 
 
+class RequestedStatus:
+    """`?review_status=checked` (or `unchecked`, `errors_found`) on a create (`POST /api/Letter`) or an update
+    (`PUT /api/Letter/{id}`): the document is written with that status, `checked` published at once, for data that
+    is known to be right when it is loaded. It applies to documents of reviewed classes only (for any other the
+    parameter is ignored). Without it, a new document is `unchecked` and an update leaves the state alone."""
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if (
+            scope["type"] != "http"
+            or scope["method"] not in ("POST", "PUT")
+            or not scope["path"].startswith("/api/")
+            or scope["path"].startswith("/api/review")
+        ):
+            return await self.app(scope, receive, send)
+        asked = parse_qs(scope["query_string"].decode()).get("review_status")
+        if not asked:
+            return await self.app(scope, receive, send)
+        try:
+            status_asked = ReviewStatus(asked[-1])
+        except ValueError:
+            allowed = ", ".join(s.value for s in ReviewStatus)
+            return await JSONResponse(
+                {"detail": f"review_status must be one of {allowed}"},
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            )(scope, receive, send)
+        with hooks.requesting_review_status(status_asked.value):
+            await self.app(scope, receive, send)
+
+
 def configure_app(app: FastAPI, settings) -> None:
     app.add_exception_handler(PanglossReviewError, review_error_handler)
+    app.add_middleware(RequestedStatus)
 
 
 class _Body(BaseModel):

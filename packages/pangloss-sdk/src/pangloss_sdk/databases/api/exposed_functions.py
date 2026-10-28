@@ -77,15 +77,26 @@ async def autocomplete(
     return protocol.autocompleted(await current_async_client().send(call))
 
 
-async def create_head_node(self: Any, detail: bool = False) -> Any:
-    response = await current_async_client().send(protocol.create(self, detail))
+async def create_head_node(
+    self: Any,
+    detail: bool = False,
+    published: bool | None = None,
+    review_status: str | None = None,
+) -> Any:
+    response = await current_async_client().send(
+        protocol.create(self, detail, published, review_status)
+    )
     return protocol.created(self, response, detail)
 
 
 async def update_head_node(
-    self: Any, detail: bool = False, expected_version: int | None = None
+    self: Any,
+    detail: bool = False,
+    expected_version: int | None = None,
+    published: bool | None = None,
+    review_status: str | None = None,
 ) -> Any:
-    call = protocol.update(self, detail, expected_version)
+    call = protocol.update(self, detail, expected_version, published, review_status)
     response = await current_async_client().send(call)
     return protocol.updated(self, response, detail)
 

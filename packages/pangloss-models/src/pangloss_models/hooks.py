@@ -8,10 +8,12 @@ A listener is called at once, in the request that made the write, so it must be 
 the work on a queue). One that raises is logged and ignored: a listener never fails a write.
 """
 
+import contextlib
+import contextvars
 import dataclasses
 import datetime
 import logging
-from collections.abc import Callable
+from collections.abc import Callable, Generator
 from typing import Any, Literal
 from uuid import UUID
 
@@ -88,6 +90,51 @@ def properties_for_new_head(model: type) -> dict[str, Any]:
     for function in new_head_properties:
         properties.update(function(model))
     return properties
+
+
+# The same for an update: properties that this one update puts on the head node, over those it keeps
+# (`pangloss-review` does so when the writer asked for a review status). Usually empty.
+updated_head_properties: list[HeadPropertiesFor] = []
+
+
+def properties_for_updated_head(model: type) -> dict[str, Any]:
+    properties: dict[str, Any] = {}
+    for function in updated_head_properties:
+        properties.update(function(model))
+    return properties
+
+
+# The review status that a write asks for (`save(review_status="checked")`, or `?review_status=` of the API),
+# for data that is known to be right when it is loaded. The core does not know what it means: `pangloss-review`
+# reads it in its functions above, for documents of the classes it reviews. None: nothing asked.
+requested_review_status: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "requested_review_status", default=None
+)
+
+
+def review_status_asked(
+    published: bool | None = None, review_status: str | None = None
+) -> str | None:
+    """`published=True` is `checked` and `published=False` is `unchecked`; `review_status` says it in full.
+    Both may not be given (they could disagree)."""
+    if published is not None and review_status is not None:
+        raise ValueError("Give published or review_status, not both")
+    if published is not None:
+        return "checked" if published else "unchecked"
+    return review_status
+
+
+@contextlib.contextmanager
+def requesting_review_status(status: str | None) -> Generator[None]:
+    """The writes made inside the block ask for this review status (None leaves what is asked outside it)"""
+    if status is None:
+        yield
+        return
+    token = requested_review_status.set(status)
+    try:
+        yield
+    finally:
+        requested_review_status.reset(token)
 
 
 # What the database returns, made into what the models read.

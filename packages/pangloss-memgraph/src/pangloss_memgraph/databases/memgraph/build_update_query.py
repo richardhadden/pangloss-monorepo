@@ -19,6 +19,7 @@ import datetime
 import typing
 import uuid
 
+from pangloss_models import hooks
 from pangloss_models.model_bases.document import _DocumentUpdateDBBase
 from pangloss_models.model_bases.entity import _EntityUpdateDBBase
 from pangloss_models.model_bases.labels import fulfillable_labels
@@ -87,6 +88,10 @@ def build_replace_head_query(
     head_id_identifier = params.add(str(instance.id))
     data = get_node_fields_as_writable_dict(instance, is_new=True, is_head_node=True)
     assignments = PropertyAssignments(params, data)
+    # (what an installed app asks to be put on the head node by this update, over what it keeps)
+    with hooks.requesting_review_status(getattr(instance, "review_status", None)):
+        asked = hooks.properties_for_updated_head(instance._owner)
+    set_asked = f"SET head += ${params.add(asked)}\n        " if asked else ""
     # the classes it fulfils now, by what it holds: their labels are put on, and those of the
     # classes it could fulfil and does not are taken off
     labels = instance._labels
@@ -117,7 +122,7 @@ def build_replace_head_query(
         FOREACH (node IN tree | DETACH DELETE node)
         SET {assignments.set_items("head", replace=True)}
         SET head += kept
-        {relabel}RETURN head.id AS id
+        {set_asked}{relabel}RETURN head.id AS id
         """,
         dict(params),
     )

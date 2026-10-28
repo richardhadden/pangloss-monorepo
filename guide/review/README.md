@@ -53,9 +53,28 @@ From Python, `pangloss_review.service` does the same (`get_state`, `set_status`,
 `resolve_comment`, `queue`). On the command line: `pangloss review queue`, `pangloss review show <id>`,
 `pangloss review set <id> checked --user ann`.
 
+## Loading data that is already right
+
+Data made outside the system, and known to be correct, need not wait to be checked. Say so when you save it:
+
+```python
+await Letter.Create(label="...", title="...").save(published=True)          # checked: published at once
+await Letter.Update(id=id, ...).save(review_status="errors_found")          # or any of the three statuses
+```
+
+- Or in the document itself, for a load in which some items are checked and some are not: `Letter.Create(..., review_status="checked")` (`reviewStatus` in JSON, and a line of a `bulk-load` file can have `"review_status": "checked"`). What the document says wins over what the call says.
+- `published=True` is `review_status="checked"`, `published=False` is `"unchecked"`; give one or the other.
+- It is written with the document, in one request, as `?review_status=checked` on the `POST`/`PUT` of the API; the
+  reviewer shown is the user who saved it.
+- Without it, a new document is `unchecked` and an update leaves the state alone, as before.
+- It works for documents of reviewed classes only; for any other it is ignored (so a mixed load needs no `if`).
+- If `REVIEW_ALLOW_SELF_REVIEW` is false, asking for a status is refused (403): the writer is the author.
+- In a script on the server, `with pangloss_review.meta.with_status("checked"): ...` does the same for what is
+  saved inside the block.
+
 ## Things to know
 
-- A document written before you marked its class (or loaded with `bulk-load`) has no status, and counts as
+- A document written before you marked its class has no status, and counts as
   published and checked.
 - Entities are not reviewed.
 - If a part of a document is removed, comments about it stay, and say what it was called.

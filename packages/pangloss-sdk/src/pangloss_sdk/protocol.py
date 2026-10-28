@@ -10,6 +10,7 @@ from typing import Any, Literal, Union
 from uuid import UUID
 
 from pangloss_models import exceptions as models_exceptions
+from pangloss_models import hooks
 from pangloss_models.autocomplete import AutocompleteResults
 from pangloss_models.model_bases.base_models import _ListItems
 from pangloss_models.utils import get_concrete_types
@@ -237,12 +238,29 @@ def autocompleted(response: Any) -> Any:
     return AutocompleteResults.model_validate(response.json())
 
 
-def create(instance: Any, detail: bool = False) -> Call:
+def write_params(
+    detail: bool, published: bool | None, review_status: str | None
+) -> dict[str, str] | None:
+    """The query of a create or update: `detail`, and the review status asked for (with `pangloss-review`:
+    `published=True` is `checked`, see `hooks.review_status_asked`)"""
+    params = {"detail": "true"} if detail else {}
+    asked = hooks.review_status_asked(published, review_status)
+    if asked is not None:
+        params["review_status"] = asked
+    return params or None
+
+
+def create(
+    instance: Any,
+    detail: bool = False,
+    published: bool | None = None,
+    review_status: str | None = None,
+) -> Call:
     owner = instance._owner
     return Call(
         "POST",
         f"/api/{owner.__name__}",
-        params={"detail": "true"} if detail else None,
+        params=write_params(detail, published, review_status),
         json=instance.model_dump(mode="json", by_alias=True),
         needs_login=True,
     )
@@ -256,7 +274,11 @@ def created(instance: Any, response: Any, detail: bool = False) -> Any:
 
 
 def update(
-    instance: Any, detail: bool = False, expected_version: int | None = None
+    instance: Any,
+    detail: bool = False,
+    expected_version: int | None = None,
+    published: bool | None = None,
+    review_status: str | None = None,
 ) -> Call:
     owner = instance._owner
     # (without a version, whatever the version is: as the database module does)
@@ -264,7 +286,7 @@ def update(
     return Call(
         "PUT",
         item_path(owner, instance.id),
-        params={"detail": "true"} if detail else None,
+        params=write_params(detail, published, review_status),
         json=instance.model_dump(mode="json", by_alias=True),
         headers={"If-Match": if_match},
         needs_login=True,

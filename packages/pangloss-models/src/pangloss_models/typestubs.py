@@ -227,10 +227,15 @@ def has_operations(model: type) -> bool:
     )
 
 
-def save_methods(model_name: str, name: str, mode: Operations) -> list[str]:
+def save_methods(
+    model_name: str, name: str, mode: Operations, is_document: bool = False
+) -> list[str]:
     """`save` of a `Create` or `Update`: the reference view, or with `detail=True` the head view"""
     define = "async def" if mode == "async" else "def"
     more = ", expected_version: int | None = None" if name == "Update" else ""
+    if is_document:
+        # (with `pangloss-review`; without it, they are ignored)
+        more += ", published: bool | None = None, review_status: str | None = None"
     reference, head = f"{model_name}.ReferenceView", f"{model_name}.HeadView"
     return [
         "@_pg_typing.overload  # type: ignore",
@@ -280,6 +285,7 @@ def stub_nested_class(
     cls: type[BaseModel],
     operations: Operations | None = None,
     model_name: str = "",
+    is_document: bool = False,
 ) -> str:
     # (the class overrides the one of the base class of the model, which a type checker
     # takes for a mistake)
@@ -308,7 +314,10 @@ def stub_nested_class(
         ignore = "  # type: ignore" if inherited else ""
         lines.append(f"    {field_name}: {annotation}{default}{ignore}")
     if operations and name in ("Create", "Update"):
-        lines += [f"    {line}" for line in save_methods(model_name, name, operations)]
+        lines += [
+            f"    {line}"
+            for line in save_methods(model_name, name, operations, is_document)
+        ]
     if len(lines) == 1:
         lines.append("    ...")
     return "\n".join(lines)
@@ -322,9 +331,18 @@ def nested_classes_of(
 ) -> str:
     """The source of the nested classes to add to a model (with the `save` of `Create` and
     `Update`, and the model's own `get`, `list` and so on, if `operations` says which kind)"""
+    from pangloss_models.model_bases.document import Document
+
     operations = operations if operations and has_operations(model) else None
     parts = [
-        stub_nested_class(renderer, name, cls, operations, qualified_name)
+        stub_nested_class(
+            renderer,
+            name,
+            cls,
+            operations,
+            qualified_name,
+            issubclass(model, Document),
+        )
         for name, cls in generated_classes(model).items()
         if is_for_users(name)
     ]
