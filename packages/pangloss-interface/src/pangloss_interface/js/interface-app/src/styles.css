@@ -1,0 +1,12 @@
+@import "tailwindcss";
+
+/* Tailwind only looks in the app by itself; the components of the library are beside it */
+@source "../../interface-core/src";
+
+/* Tailwind's reset gives buttons `text-transform: none`; they take it from their surroundings
+   instead, like the rest of the text (chrome text is `uppercase`) */
+@layer base {
+  button {
+    text-transform: inherit;
+  }
+}

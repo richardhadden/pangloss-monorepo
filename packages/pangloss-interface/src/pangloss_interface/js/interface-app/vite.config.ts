@@ -1,5 +1,6 @@
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import tailwindcss from "@tailwindcss/vite";
 import solid from "@solidjs/vite-plugin";
 import { fileRoutes } from "filesystem-routing/vite";
 import { defineConfig, searchForWorkspaceRoot } from "vite";
@@ -30,6 +31,7 @@ export default defineConfig({
       extensions: [".jsx", ".tsx"],
     }),
     fileRoutes({ types: true }),
+    tailwindcss(),
   ],
   // interface-core is source, which has to be compiled for the server as well
   ssr: { noExternal: ["@pangloss/interface-core"] },
