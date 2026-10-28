@@ -13,9 +13,9 @@ const LANGUAGES = [
 /**
  * The navigation bar down the left of every page: fixed, the full height of the screen,
  * with its own content scrolling inside it. Retracted, it is as wide as a square button
- * (`w-10`). It expands while hovered (or when the button is clicked, as on a touch screen);
+ * (`w-12`). It expands while hovered (or when the button is clicked, as on a touch screen);
  * the state is `useNavExpanded`, so anything can close it. Expanded, it lies over the page rather than pushing it, so that
- * opening it never reflows what is being read. The page is to be in an element with `pl-10`
+ * opening it never reflows what is being read. The page is to be in an element with `pl-12`
  * to keep clear of the retracted bar.
  */
 export function NavBar(props: NavBarProps) {
@@ -28,8 +28,8 @@ export function NavBar(props: NavBarProps) {
       onMouseEnter={() => setNavExpanded(true)}
       onMouseLeave={() => setNavExpanded(false)}
       class={[
-        "fixed inset-y-0 left-0 z-40 flex flex-col font-semibold uppercase overflow-hidden border-r border-slate-300 bg-slate-600 transition-[width] duration-150",
-        navExpanded() ? "w-72 shadow-lg" : "w-10",
+        "fixed inset-y-0 left-0 z-40 flex flex-col font-semibold uppercase overflow-hidden border-r border-slate-400/70 bg-slate-300/60 backdrop-blur-md transition-[width] duration-150",
+        navExpanded() ? "w-72" : "w-12",
       ]}
     >
       {/* The way home (with room for it), and the button that expands the bar, on the right */}
@@ -47,7 +47,7 @@ export function NavBar(props: NavBarProps) {
           <svg
             viewBox="0 0 24 24"
             class={[
-              "size-5 select-none fill-none stroke-slate-300 stroke-2 transition-transform duration-150",
+              "size-5 select-none fill-none stroke-slate-700 stroke-2 transition-transform duration-150",
               navExpanded() && "rotate-90",
             ]}
             stroke-linecap="round"
@@ -90,9 +90,9 @@ export function NavBar(props: NavBarProps) {
             <path d="M2 21a8 8 0 0 1 16 0" />
             <Show
               when={props.user}
-              fallback={<path d="M17 8l5 5M22 8l-5 5" class="stroke-red-400" />}
+              fallback={<path d="M17 8l5 5M22 8l-5 5" class="stroke-red-600" />}
             >
-              <path d="M16 11l2 2 4-4" class="stroke-green-400" />
+              <path d="M16 11l2 2 4-4" class="stroke-green-600" />
             </Show>
           </svg>
         </NavIconCell>
@@ -117,7 +117,7 @@ export function NavBar(props: NavBarProps) {
       </NavRow>
       {/* (not rendered while retracted: there is no room for it to be read) */}
       <Show when={navExpanded()}>
-        <div class="min-h-0 flex-1 overflow-y-auto border-t border-slate-500">
+        <div class="min-h-0 flex-1 overflow-y-auto border-t border-slate-400/70">
           <NavModelList />
           {props.children}
         </div>

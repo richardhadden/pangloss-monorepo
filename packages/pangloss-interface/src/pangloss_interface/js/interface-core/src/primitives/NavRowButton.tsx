@@ -10,7 +10,7 @@ import type { NavRowButtonProps } from "../types";
 export function NavRowButton(props: NavRowButtonProps) {
   const { setNavExpanded } = useNavExpanded();
   const classes = () => [
-    "flex min-w-0 cursor-pointer items-center gap-2 overflow-hidden whitespace-nowrap pr-3 text-left text-xs text-slate-300 hover:bg-slate-500 active:bg-slate-700",
+    "flex min-w-0 cursor-pointer items-center gap-2 overflow-hidden whitespace-nowrap pr-3 text-left text-xs text-slate-700 hover:bg-slate-400/40 active:bg-slate-400/60",
     props.inRow ? "h-full flex-1" : "py-1.5",
   ];
   const style = () => ({ "padding-left": `${0.75 + (props.indent ?? 0) * 0.75}rem` });

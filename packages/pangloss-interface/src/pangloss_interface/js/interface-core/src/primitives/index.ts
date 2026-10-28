@@ -3,3 +3,4 @@ export * from "./ErrorMessage";
 export * from "./NavIconCell";
 export * from "./NavRow";
 export * from "./NavRowButton";
+export * from "./ConsoleButton";

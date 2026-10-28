@@ -19,7 +19,7 @@ export function NavModelList() {
     <For each={SECTIONS}>
       {(section) => (
         <section aria-label={section.title}>
-          <h2 class="px-3 pt-3 pb-1 text-xs text-slate-400">{section.title}</h2>
+          <h2 class="px-3 pt-3 pb-1 text-xs text-slate-500">{section.title}</h2>
           <For each={modelHierarchy(models, section.kind)}>
             {(entry) => (
               <NavRowButton href={`/${entry.model.name}`} indent={entry.depth}>

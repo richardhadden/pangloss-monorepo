@@ -51,6 +51,36 @@ export interface NavRowProps {
   children?: JSX.Element;
 }
 
+export type ConsoleButtonTone = "neutral" | "entity" | "document" | "danger";
+
+export interface ConsoleButtonProps {
+  /** What it does: the name for a screen reader, a tooltip, and the text when `text` */
+  label: string;
+  /** Makes it a link, rather than a button */
+  href?: string;
+  onClick?: () => void;
+  /** Colour: `entity` and `document` match the tints of the console; `neutral` if not given */
+  tone?: ConsoleButtonTone;
+  disabled?: boolean;
+  /** Makes it a toggle button: whether it is on */
+  pressed?: boolean;
+  /** Shows the label beside the icon (and so is wider than a square) */
+  text?: boolean;
+  /** The icon */
+  children?: JSX.Element;
+}
+
+export interface ConsoleProps {
+  /** The name of the type of what the page shows */
+  type: string;
+  /** The page is a list of the type (its name is shown in the plural) */
+  list?: boolean;
+  /** The label of the item, when the page is one */
+  label?: string;
+  /** The actions that can be taken, shown on the right */
+  children?: JSX.Element;
+}
+
 export interface NavBarProps {
   /** Where the Home link goes (`/` if not given) */
   homeHref?: string;
@@ -81,6 +111,8 @@ export interface ComponentMap {
   EntityCard: Component<EntityCardProps>;
   FieldList: Component<FieldListProps>;
   NavBar: Component<NavBarProps>;
+  ConsoleBar: Component;
+  Console: Component<ConsoleProps>;
 }
 
 export type ComponentName = keyof ComponentMap;
