@@ -30,8 +30,11 @@ Nothing here is translated yet: the language row of the nav bar changes nothing.
 | `password` | Password | `LoginForm` (label) | |
 | `log_in` | Log in | `LoginForm` (submit button) | the same slot as the nav bar's |
 | `logging_in` | Logging in… | `LoginForm` (the button while a try is made) | |
+| `yes` | Yes | `ItemContents` (a true value) | |
+| `no` | No | `ItemContents` (a false value) | |
 | `home_heading` | Pangloss Yo! | `pages/Home.tsx` (`<h1>`) | a placeholder from a commit of the owner's; will go |
 | *(the plural)* | {Type}s, {Type}es, {Type}ies | `Console` (`pluralOf`) | **not a string to translate: code.** A stand-in that makes an English plural of the type; it goes when the plural names of models come from `models.jsonc` |
+| *(field names)* | activity type, carried out by... | `ItemContents` (the keys) | **not strings of the interface**: the name of the field in Python with `_` as a space. They should come from the models' translations (`models.jsonc`); incoming relations likewise (`participants reverse`) |
 | *(words)* | list of, relation to, relations to, embedded, value, required `*` | `FieldList` (`describe`) | a placeholder component; not on a page now |
 
 ## Labels for a screen reader, and tooltips

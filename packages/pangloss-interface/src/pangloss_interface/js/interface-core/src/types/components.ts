@@ -136,6 +136,21 @@ export interface ResultButtonProps {
   head?: { type: string; id: string };
 }
 
+export interface ReferenceChipProps {
+  /** The type of what is referred to (its own, which can be a subtype of the field's) */
+  type: string;
+  label: string;
+  /** Where it goes (if it is not given, the chip is not a link) */
+  href?: string;
+  /** The properties of the edge to it (`{ level: 3 }`), shown after the label */
+  edgeProperties?: Record<string, unknown>;
+}
+
+export interface ItemContentsProps {
+  /** One Document or Entity as the API sends it: its fields are laid out by its model */
+  item: Record<string, unknown>;
+}
+
 export interface NavBarProps {
   /** Where the Home link goes (`/` if not given) */
   homeHref?: string;
@@ -167,6 +182,8 @@ export interface ComponentMap {
   FieldList: Component<FieldListProps>;
   NavBar: Component<NavBarProps>;
   ResultButton: Component<ResultButtonProps>;
+  ReferenceChip: Component<ReferenceChipProps>;
+  ItemContents: Component<ItemContentsProps>;
   LoginForm: Component<LoginFormProps>;
   Modal: Component<ModalProps>;
   ConsoleBar: Component;
