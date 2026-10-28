@@ -28,8 +28,10 @@ describe.skipIf(!base)("the demo API", () => {
     expect(found.results.map((r) => r.label)).toContain("Rome");
   });
 
-  test("an abstract type has no list: the API has routes only for those that can be made", async () => {
-    await expect(listItems(client, "Statement")).rejects.toMatchObject({ status: 404 });
+  test("an abstract type is listed, with the items of its subtypes", async () => {
+    const statements = await listItems(client, "Statement", { pageSize: 5 });
+    expect(statements.count).toBeGreaterThan(0);
+    expect(statements.results.every((r) => r.type !== "Statement")).toBe(true);
   });
 
   test("autocomplete and search answer pages", async () => {

@@ -97,7 +97,9 @@ A wrong username, password, an unknown user or a disabled user all give the same
 
 ## Routes for the models
 
-For every Document and Entity of the project that is not abstract, `NAME` being the class name (so `Person`, not `person`). Class names are unique, so the kind is not in the path: the server knows which a name is. (A model cannot be called `users`, `docs`, `redoc` or `openapi.json`, whatever the case: those are used by the API, and `initialise` refuses it.)
+For every Document and Entity of the project, `NAME` being the class name (so `Person`, not `person`). Class names are unique, so the kind is not in the path: the server knows which a name is. **An abstract class has only the two routes that read** (`GET /api/NAME` and `GET /api/NAME/{id}`): they list and find the items of its subclasses, each as its own class (`type` says which, and `Content-Location` is its route). Nothing is created, edited, updated or deleted at an abstract class: `POST` is a 405, and the other routes are not there. Use the subclass.
+
+(A model cannot be called `users`, `docs`, `redoc` or `openapi.json`, whatever the case: those are used by the API, and `initialise` refuses it.)
 
 | Endpoint | Login | |
 |----------|-------|--|

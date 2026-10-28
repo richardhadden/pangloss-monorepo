@@ -85,13 +85,79 @@ def test_routes_are_made_for_concrete_documents_and_entities(settings):
         assert f"/api/{name}/{{{item}}}" in paths
         assert f"/api/{name}/{{{item}}}/edit" in paths
         assert f"/api/{name}/{{{item}}}/undelete" in paths
-    assert not any("Base" in path for path in paths)
+    # (an abstract class can only be read: see the test below)
+    assert {path for path in paths if "Base" in path} == {
+        "/api/Base",
+        "/api/Base/{id}",
+    }
 
     # The kind of the model is not in the path
     assert client.get("/api/entities/Person").status_code in (404, 422)
     assert client.get("/api/documents/Statement").status_code in (404, 422)
     # (the users' routes are still there)
     assert "/api/users/me" in paths
+
+
+def test_an_abstract_class_can_be_read_but_not_changed(settings, monkeypatch):
+    from fastapi.testclient import TestClient
+
+    class Agent(Entity):
+        _meta = Entity.Meta(abstract=True)
+
+    class Poet(Agent):
+        pass
+
+    class Guild(Agent):
+        pass
+
+    client = TestClient(create_app())
+    paths = client.get("/openapi.json").json()["paths"]
+    # (an entity is found by an id or a URL, hence the `ref`)
+    assert {
+        (path, method)
+        for path, methods in paths.items()
+        if path.startswith("/api/Agent")
+        for method in methods
+    } == {("/api/Agent", "get"), ("/api/Agent/{ref}", "get")}
+    headers = {"Authorization": "Bearer nothing"}
+    assert client.post("/api/Agent", json={}, headers=headers).status_code == 405
+    assert client.put(f"/api/Agent/{uuid7()}", json={}).status_code in (404, 405)
+    assert client.delete(f"/api/Agent/{uuid7()}").status_code in (404, 405)
+    assert client.get(f"/api/Agent/{uuid7()}/edit").status_code in (404, 422)
+
+    poet_id, guild_id = uuid7(), uuid7()
+
+    async def list_(cls, **kwargs):
+        # (the items of the subclasses, as their own reference views)
+        return {
+            "results": [
+                Poet.ReferenceView(id=poet_id, label="Homer"),
+                Guild.ReferenceView(id=guild_id, label="Weavers"),
+            ],
+            "count": 2,
+            "page": 1,
+            "page_size": 25,
+            "next_page": None,
+            "previous_page": None,
+        }
+
+    async def get(cls, id):
+        return Poet.HeadView(id=poet_id, label="Homer", meta=META)
+
+    stub(monkeypatch, Agent, "list", list_)
+    stub(monkeypatch, Agent, "get", get)
+
+    listed = client.get("/api/Agent")
+    assert listed.status_code == 200
+    assert [(r["type"], r["label"]) for r in listed.json()["results"]] == [
+        ("Poet", "Homer"),
+        ("Guild", "Weavers"),
+    ]
+    found = client.get(f"/api/Agent/{poet_id}")
+    assert found.status_code == 200
+    # (the view of the subclass, which says where the item is)
+    assert found.json()["type"] == "Poet"
+    assert found.headers["Content-Location"] == f"/api/Poet/{poet_id}"
 
 
 def test_no_models_no_model_routes(settings):

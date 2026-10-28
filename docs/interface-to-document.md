@@ -77,7 +77,7 @@ delete it here, when it is written up.
       anonymous (fine for the public lists and items; not for the edit view or `/users/me`).
 - [ ] **Tests**: `api/fetch.test.ts` (a fake `fetch`: URLs, escaping, errors) and `api/fetch.live.test.ts`, which runs against
       a real API only when `PANGLOSS_LIVE_API` is set (`PANGLOSS_LIVE_API=http://127.0.0.1:8000 npm test`).
-- [ ] **Abstract types have no list route** in the API (404), though the nav bar lists them.
+- [ ] **Abstract types** now have the read routes (list, get) in the API, so their nav links work; the list of an abstract type holds the items of its subtypes.
 
 ## When they are connected up
 

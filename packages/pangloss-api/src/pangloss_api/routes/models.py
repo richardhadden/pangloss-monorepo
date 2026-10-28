@@ -1,6 +1,7 @@
 """Routes for the Documents and Entities declared in the project.
 
-For each one that is not abstract, `NAME` being its class name:
+For each one, `NAME` being its class name (an abstract class has only the two that read, and
+they give the items of its subclasses):
 
 | | | |
 |-|-|-|
@@ -79,13 +80,13 @@ def check_name_is_free(name: str) -> None:
 
 
 def routable_models() -> list[type[Document | Entity]]:
-    """The registered Documents and Entities that routes are made for"""
+    """The registered Documents and Entities that routes are made for: all of them, but the
+    abstract ones only have the routes that read"""
     return [
         model
         for model in ModelRegistry.all_models().values()
         if isinstance(model, type)
         and issubclass(model, (Document, Entity))
-        and not getattr(model._meta, "abstract", False)
         and hasattr(model, "HeadView")
     ]
 
@@ -213,10 +214,13 @@ def build_router(model: type[Document | Entity]) -> APIRouter:
 
     head_view = model.HeadView
     reference_view = model.ReferenceView
-    create_model = model.Create
-    update_model = model.Update
-    edit_response = model.EditView if is_entity else head_view  # type: ignore[attr-defined]
-    protection = protection_of(model)
+    # An abstract class has no items of its own, so it can only be read: listed, and found
+    # (as the subclass the item is); everything that changes or edits one is at its subclass
+    writable = not getattr(model._meta, "abstract", False)
+    create_model = model.Create if writable else None
+    update_model = model.Update if writable else None
+    edit_response = (model.EditView if is_entity else head_view) if writable else None  # type: ignore[attr-defined]
+    protection = protection_of(model) if writable else None
     # A read by a class gives a node of a subclass as that subclass: its view is of the subclass
     # (`type` says which), it is edited at the subclass's route, and it cannot be updated as this class
     has_subclasses = bool(get_concrete_types(model, include_abstract=True) - {model})
@@ -263,57 +267,59 @@ def build_router(model: type[Document | Entity]) -> APIRouter:
             )
         )
 
-    @router.post(
-        "",
-        status_code=status.HTTP_201_CREATED,
-        response_model=Union[reference_view, head_view],  # type: ignore[valid-type]
-        dependencies=logged_in,
-        operation_id=f"create_{name}",
-    )
-    async def create_item(
-        body: Annotated[create_model, Body()],  # type: ignore[valid-type]
-        response: Response,
-        detail: Annotated[
-            bool, Query(description="Return the whole HeadView, not a summary")
-        ] = False,
-    ):
-        if protection.read_only:
-            refuse_if_protected(changed_fields(model, body, None))
-        created = await called(body.save(detail=detail))  # type: ignore[attr-defined]
-        response.headers["ETag"] = etag(1)
-        return created
+    if writable:
 
-    @router.get(
-        f"{item}/edit",
-        response_model=edit_response,
-        dependencies=logged_in,
-        operation_id=f"edit_{name}",
-    )
-    async def edit_item(id: ChangeId, response: Response):  # type: ignore[valid-type]
-        """What to edit. Its `ETag` is the version, which an update says it is based
-        on (`If-Match`)."""
-        read = model.get_for_edit if is_entity else model.get  # type: ignore[attr-defined]
-        found = await called(read(id))
-        if found is None:
-            raise not_found(model, id)
-        if found.type != name:
-            # (a subclass: its edit view, and the body of its update, are its own)
-            return RedirectResponse(
-                f"/api/{found.type}/{found.id}/edit",
-                status_code=status.HTTP_308_PERMANENT_REDIRECT,
-            )
-        response.headers["ETag"] = etag(found.meta.version)
-        return found
+        @router.post(
+            "",
+            status_code=status.HTTP_201_CREATED,
+            response_model=Union[reference_view, head_view],  # type: ignore[valid-type]
+            dependencies=logged_in,
+            operation_id=f"create_{name}",
+        )
+        async def create_item(
+            body: Annotated[create_model, Body()],  # type: ignore[valid-type]
+            response: Response,
+            detail: Annotated[
+                bool, Query(description="Return the whole HeadView, not a summary")
+            ] = False,
+        ):
+            if protection.read_only:
+                refuse_if_protected(changed_fields(model, body, None))
+            created = await called(body.save(detail=detail))  # type: ignore[attr-defined]
+            response.headers["ETag"] = etag(1)
+            return created
 
-    @router.post(
-        f"{item}/undelete",
-        status_code=status.HTTP_204_NO_CONTENT,
-        dependencies=logged_in,
-        operation_id=f"undelete_{name}",
-    )
-    async def undelete_item(id: ChangeId):  # type: ignore[valid-type]
-        await called(model.undelete(id))  # type: ignore[attr-defined]
-        return Response(status_code=status.HTTP_204_NO_CONTENT)
+        @router.get(
+            f"{item}/edit",
+            response_model=edit_response,
+            dependencies=logged_in,
+            operation_id=f"edit_{name}",
+        )
+        async def edit_item(id: ChangeId, response: Response):  # type: ignore[valid-type]
+            """What to edit. Its `ETag` is the version, which an update says it is based
+            on (`If-Match`)."""
+            read = model.get_for_edit if is_entity else model.get  # type: ignore[attr-defined]
+            found = await called(read(id))
+            if found is None:
+                raise not_found(model, id)
+            if found.type != name:
+                # (a subclass: its edit view, and the body of its update, are its own)
+                return RedirectResponse(
+                    f"/api/{found.type}/{found.id}/edit",
+                    status_code=status.HTTP_308_PERMANENT_REDIRECT,
+                )
+            response.headers["ETag"] = etag(found.meta.version)
+            return found
+
+        @router.post(
+            f"{item}/undelete",
+            status_code=status.HTTP_204_NO_CONTENT,
+            dependencies=logged_in,
+            operation_id=f"undelete_{name}",
+        )
+        async def undelete_item(id: ChangeId):  # type: ignore[valid-type]
+            await called(model.undelete(id))  # type: ignore[attr-defined]
+            return Response(status_code=status.HTTP_204_NO_CONTENT)
 
     @router.get(item, response_model=get_response, operation_id=f"get_{name}")
     async def get_item(id: ItemId, response: Response):  # type: ignore[valid-type]
@@ -326,78 +332,80 @@ def build_router(model: type[Document | Entity]) -> APIRouter:
             response.headers["Content-Location"] = f"/api/{found.type}/{found.id}"
         return found
 
-    @router.put(
-        item,
-        response_model=Union[reference_view, head_view],  # type: ignore[valid-type]
-        dependencies=logged_in,
-        operation_id=f"update_{name}",
-    )
-    async def update_item(
-        id: ChangeId,  # type: ignore[valid-type]
-        body: Annotated[update_model, Body()],  # type: ignore[valid-type]
-        response: Response,
-        if_match: Annotated[
-            str | None,
-            Header(
-                alias="If-Match",
-                description="The version this update is based on: the ETag of the "
-                'edit view ("3"). `*` updates whatever the version is. 412 if it is '
-                "not the latest.",
-            ),
-        ] = None,
-        detail: Annotated[
-            bool, Query(description="Return the whole HeadView, not a summary")
-        ] = False,
-    ):
-        if body.id != id:  # type: ignore[attr-defined]
-            raise HTTPException(
-                status.HTTP_400_BAD_REQUEST,
-                detail="The id in the body is not the id in the path",
-            )
-        based_on = expected_version(if_match)
-        if protection.read_only or has_subclasses:
-            read = model.get_for_edit if is_entity else model.get  # type: ignore[attr-defined]
-            stored = await called(read(id))
-            if stored is None:
-                raise not_found(model, id)
-            if has_subclasses and stored.type != name:
-                raise HTTPException(
-                    status.HTTP_409_CONFLICT,
-                    detail=f"This is a {stored.type}, not a {name}: update it at "
-                    f"/api/{stored.type}/{id}, with a {stored.type}",
-                )
-            if protection.read_only:
-                refuse_if_protected(changed_fields(model, body, stored))
-        updated = await called(
-            body.save(detail=detail, expected_version=based_on)  # type: ignore[attr-defined]
-        )
-        # The new version, to go on editing from (not known after a forced update,
-        # unless the whole thing is returned)
-        if detail:
-            response.headers["ETag"] = etag(updated.meta.version)
-        elif based_on is not None:
-            response.headers["ETag"] = etag(based_on + 1)
-        return updated
+    if writable:
 
-    @router.delete(
-        item,
-        status_code=status.HTTP_204_NO_CONTENT,
-        dependencies=logged_in,
-        operation_id=f"delete_{name}",
-        responses={409: {"description": "An entity that is referred to"}},
-    )
-    async def delete_item(id: ChangeId):  # type: ignore[valid-type]
-        if protection.delete_only_if:
-            found = await called(model.get(id))  # type: ignore[arg-type]
-            if found is not None and not getattr(
-                found, protection.delete_only_if, False
-            ):
+        @router.put(
+            item,
+            response_model=Union[reference_view, head_view],  # type: ignore[valid-type]
+            dependencies=logged_in,
+            operation_id=f"update_{name}",
+        )
+        async def update_item(
+            id: ChangeId,  # type: ignore[valid-type]
+            body: Annotated[update_model, Body()],  # type: ignore[valid-type]
+            response: Response,
+            if_match: Annotated[
+                str | None,
+                Header(
+                    alias="If-Match",
+                    description="The version this update is based on: the ETag of the "
+                    'edit view ("3"). `*` updates whatever the version is. 412 if it is '
+                    "not the latest.",
+                ),
+            ] = None,
+            detail: Annotated[
+                bool, Query(description="Return the whole HeadView, not a summary")
+            ] = False,
+        ):
+            if body.id != id:  # type: ignore[attr-defined]
                 raise HTTPException(
-                    status.HTTP_403_FORBIDDEN,
-                    detail=f"A {name} is kept in step with something outside Pangloss, so it cannot be "
-                    f"deleted here until '{protection.delete_only_if}' is true",
+                    status.HTTP_400_BAD_REQUEST,
+                    detail="The id in the body is not the id in the path",
                 )
-        await called(model.delete(id))  # type: ignore[arg-type]
-        return Response(status_code=status.HTTP_204_NO_CONTENT)
+            based_on = expected_version(if_match)
+            if protection.read_only or has_subclasses:
+                read = model.get_for_edit if is_entity else model.get  # type: ignore[attr-defined]
+                stored = await called(read(id))
+                if stored is None:
+                    raise not_found(model, id)
+                if has_subclasses and stored.type != name:
+                    raise HTTPException(
+                        status.HTTP_409_CONFLICT,
+                        detail=f"This is a {stored.type}, not a {name}: update it at "
+                        f"/api/{stored.type}/{id}, with a {stored.type}",
+                    )
+                if protection.read_only:
+                    refuse_if_protected(changed_fields(model, body, stored))
+            updated = await called(
+                body.save(detail=detail, expected_version=based_on)  # type: ignore[attr-defined]
+            )
+            # The new version, to go on editing from (not known after a forced update,
+            # unless the whole thing is returned)
+            if detail:
+                response.headers["ETag"] = etag(updated.meta.version)
+            elif based_on is not None:
+                response.headers["ETag"] = etag(based_on + 1)
+            return updated
+
+        @router.delete(
+            item,
+            status_code=status.HTTP_204_NO_CONTENT,
+            dependencies=logged_in,
+            operation_id=f"delete_{name}",
+            responses={409: {"description": "An entity that is referred to"}},
+        )
+        async def delete_item(id: ChangeId):  # type: ignore[valid-type]
+            if protection.delete_only_if:
+                found = await called(model.get(id))  # type: ignore[arg-type]
+                if found is not None and not getattr(
+                    found, protection.delete_only_if, False
+                ):
+                    raise HTTPException(
+                        status.HTTP_403_FORBIDDEN,
+                        detail=f"A {name} is kept in step with something outside Pangloss, so it cannot be "
+                        f"deleted here until '{protection.delete_only_if}' is true",
+                    )
+            await called(model.delete(id))  # type: ignore[arg-type]
+            return Response(status_code=status.HTTP_204_NO_CONTENT)
 
     return router
