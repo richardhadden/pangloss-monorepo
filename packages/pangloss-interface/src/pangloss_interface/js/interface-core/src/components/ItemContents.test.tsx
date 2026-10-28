@@ -109,8 +109,12 @@ test("what is nested is laid out the same way, inside a block with its type at t
   expect(nested).toBeTruthy();
   expect(nested.closest("dd")?.textContent).toContain("Activity");
   expect(nested.textContent).toContain("ceremony");
-  // (and one more inside that: the embedded date)
+  // (and one more inside that: the embedded date, which has no block and no type of its own, only its rows indented)
   expect(host.querySelectorAll("dl").length).toBe(3);
+  const date = host.querySelectorAll("dl")[2];
+  expect(date.parentElement?.className).toContain("pl-4");
+  expect(date.parentElement?.textContent).not.toContain("Date");
+  expect(date.textContent).toContain("0800-12-25");
 });
 
 test("a semantic space is a band round what is in it, in the colour of its model", () => {

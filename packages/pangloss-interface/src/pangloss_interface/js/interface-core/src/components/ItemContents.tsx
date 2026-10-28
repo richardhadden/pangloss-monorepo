@@ -89,8 +89,9 @@ function Value(props: { value: unknown; field?: FieldDefinition; depth: number; 
 
 /**
  * An object in a field. An Entity is a chip. A semantic space is a band, with what is in it
- * inside. Anything else (a Document inside, an embedded object, a reified relation, a
- * conjunction, an annotated value) is a block with its type at the head and its own rows.
+ * inside. An embedded object is only its rows, indented (it is in one place only). Anything else
+ * (a Document inside, a reified relation, a conjunction, an annotated value) is a block with its
+ * type at the head and its own rows.
  */
 function ObjectValue(props: { value: Data; field?: FieldDefinition; depth: number; asChip?: boolean }) {
   const ReferenceChip = useComponent("ReferenceChip");
@@ -103,6 +104,7 @@ function ObjectValue(props: { value: Data; field?: FieldDefinition; depth: numbe
   const label = () => (typeof props.value.label === "string" ? props.value.label : undefined);
   const isChip = () => type() !== undefined && (props.asChip || model()?.kind === "Entity");
   const isSpace = () => model()?.kind === "SemanticSpace";
+  const isEmbedded = () => model()?.kind === "Embedded";
   return (
     <Switch
       fallback={
@@ -133,6 +135,12 @@ function ObjectValue(props: { value: Data; field?: FieldDefinition; depth: numbe
           href={`/${type()}/${props.value.id}`}
           edgeProperties={isObject(props.value.edgeProperties) ? props.value.edgeProperties : undefined}
         />
+      </Match>
+      <Match when={isEmbedded()}>
+        {/* (it is in this one place only: no box, no type, only its fields, indented to show they go together) */}
+        <div class="w-full pl-4">
+          <Fields value={props.value} model={model()} depth={props.depth} />
+        </div>
       </Match>
       <Match when={isSpace()}>
         <div
