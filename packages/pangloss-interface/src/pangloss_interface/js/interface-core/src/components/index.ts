@@ -5,3 +5,4 @@ export * from "./NavModelList";
 export * from "./ConsoleBar";
 export * from "./Console";
 export * from "./ConsoleSearch";
+export * from "./ResultButton";

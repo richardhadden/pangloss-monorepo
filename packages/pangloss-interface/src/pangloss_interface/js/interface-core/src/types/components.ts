@@ -70,7 +70,29 @@ export interface ConsoleButtonProps {
   children?: JSX.Element;
 }
 
-export interface ConsoleProps {
+export interface Search {
+  query: string;
+  deep: boolean;
+}
+
+export interface ConsoleSearchProps {
+  /** What is searched for now */
+  query?: string;
+  /** Whether it is a Deep Search that is shown */
+  deep?: boolean;
+  /**
+   * Called when a search is to be made: a moment after the last key (an ordinary search),
+   * or at once when Enter is pressed. A Deep Search is made only on Enter or the run
+   * button, as it is slow.
+   */
+  onSearch?: (search: Search) => void;
+  /** How many were found (shown beside the search; its read may wait for the result) */
+  count?: number;
+  /** Whether the result is being fetched again: a spinner is shown in place of the count */
+  pending?: boolean;
+}
+
+export interface ConsoleProps extends ConsoleSearchProps {
   /** The name of the type of what the page shows */
   type: string;
   /** The page is a list of the type (its name is shown in the plural) */
@@ -79,6 +101,14 @@ export interface ConsoleProps {
   label?: string;
   /** The actions that can be taken, shown on the right */
   children?: JSX.Element;
+}
+
+export interface ResultButtonProps {
+  /** Where it goes */
+  href: string;
+  /** The type of the item (its own, which can be a subtype of the list's) */
+  type: string;
+  label: string;
 }
 
 export interface NavBarProps {
@@ -111,6 +141,7 @@ export interface ComponentMap {
   EntityCard: Component<EntityCardProps>;
   FieldList: Component<FieldListProps>;
   NavBar: Component<NavBarProps>;
+  ResultButton: Component<ResultButtonProps>;
   ConsoleBar: Component;
   Console: Component<ConsoleProps>;
 }

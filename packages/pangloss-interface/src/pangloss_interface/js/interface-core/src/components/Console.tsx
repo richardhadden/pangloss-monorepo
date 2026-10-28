@@ -1,7 +1,7 @@
 import { Portal } from "@solidjs/web";
 import { onSettled, Show } from "solid-js";
 import { useConsoleMount, useModels } from "../context";
-import { ConsoleButton } from "../primitives";
+import { ConsoleButton, kindTint } from "../primitives";
 import { ConsoleSearch } from "./ConsoleSearch";
 import { getModel } from "../schema";
 import type { ConsoleProps } from "../types";
@@ -11,14 +11,6 @@ function pluralOf(name: string): string {
   if (/(s|x|ch|sh)$/.test(name)) return `${name}es`;
   if (/[^aeiou]y$/.test(name)) return `${name.slice(0, -1)}ies`;
   return `${name}s`;
-}
-
-// The tint behind the type, by what kind of model it is: Entities are blue
-// and Documents green (the theme is to be used across the interface)
-function tintOf(kind: string | undefined): string {
-  if (kind === "Entity") return "bg-sky-400/25 text-sky-950";
-  if (kind === "Document") return "bg-green-400/25 text-green-950";
-  return "";
 }
 
 /**
@@ -42,7 +34,7 @@ export function Console(props: ConsoleProps) {
           <div class="flex h-full min-w-0 flex-1 items-center justify-between gap-4">
             <div class="flex h-full min-w-0 items-center">
               {/* (the type fills the height of the bar, tinted by its kind) */}
-              <span class={["flex h-full shrink-0 items-center border-r-[0.5px] border-slate-400/70 px-4", tintOf(kind())]}>
+              <span class={["flex h-full shrink-0 items-center border-r-[0.5px] border-slate-400/70 px-4", kindTint(kind())]}>
                 {props.list ? pluralOf(props.type) : props.type}
               </span>
               <Show when={props.label}>
@@ -52,7 +44,13 @@ export function Console(props: ConsoleProps) {
             {/* A list has a search, in the middle */}
             <Show when={props.list}>
               <div class="flex h-full min-w-0 flex-1 items-center justify-center">
-                <ConsoleSearch />
+                <ConsoleSearch
+                  query={props.query}
+                  onSearch={props.onSearch}
+                  deep={props.deep}
+                  count={props.count}
+                  pending={props.pending}
+                />
               </div>
             </Show>
             <div class="flex h-full shrink-0 items-center">

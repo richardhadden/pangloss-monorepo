@@ -46,7 +46,7 @@ delete it here, when it is written up.
       and a `Portal` puts it in the bar. Left: the type (plural for a list), the label of an item; right: the `children`.
       Portals are client-only: the console appears after hydration. The bar is hidden (transparent, not clickable, `aria-hidden`) unless a page has a `Console` (each registers with `onSettled`, counted in `ConsoleMountProvider`), and slides in from the top (300ms, with a fade) when one does; the server always renders it hidden. The plural is a stand-in until translations are connected.
 - [ ] **Entities are blue, Documents green**: the theme (tint `bg-sky-400/25`, `text-sky-950`) starts with the type in the console, which fills the height of
-      the bar; `tintOf` in `Console.tsx` picks it by the kind of the model. Documents are green (`bg-green-400/25`, `text-green-950`). To be used across the interface.
+      the bar; `kindTint` picks it by the kind of the model. Documents are green (`bg-green-400/25`, `text-green-950`). To be used across the interface.
 - [ ] **`ConsoleButton`** (primitive, configurable; separate from `NavIconCell` on purpose): the button for the right of the console,
       as high as the bar, with a rule on its left. Props: the icon (children), `label` (screen reader, tooltip, and the text
       with `text`), `tone` (`neutral`, `entity`, `document`, `danger`), `disabled`, `pressed` (a toggle), and `href` (a link) or `onClick`. A square
@@ -54,7 +54,14 @@ delete it here, when it is written up.
       for `/new` does not exist yet (it falls to `/:type/:id`).
 - [ ] **Search in the console** (`ConsoleSearch`): a list's console has a text search in the middle (full height, at most `max-w-xl`,
       centred in what the type and the buttons leave, so not exactly the centre of the page), and at its right a *Deep search* toggle
-      (`ConsoleButton` with `pressed`). Not connected: the text and the toggle are local state.
+      (`ConsoleButton` with `pressed`). It does not search: it shows `query`/`deep` and says what changed (`onQuery`, 250ms after the last key; `onDeep`). The list page keeps them in the address with `useSearchParams` (`?q=rome&deep=1`; an empty `q` or a null `deep` removes the parameter), writing with `replace: true` so a search is not a history entry per key, and its `createMemo` of `listQuery` runs again when they change. The input follows the address if it changes otherwise (back, a link). `count` (how many were found) is shown beside the input, small, and dark red when 0; it is passed as a getter that waits for the result, so `ConsoleSearch` gives it a `Loading` and an `Errored` of its own, or the whole page would wait with it.
+- [ ] **Results of a list** (`ResultButton`, overridable): a full-width light-slate button per item, its own type on the left (only as wide as the type,
+      tinted by kind with `kindTint`) and its label. The list page is `max-w-[100rem]` (1600px), centred, with `px-6 py-6` margins.
+      `kindTint` (primitives) is the one place the Entity blue / Document green theme is defined.
+- [ ] **Deep search is run on request**: it is slow (43 to 48 s on 642k nodes; see `TODO.md`). Typing makes an ordinary search after 250ms, or at once on Enter. Turning *Deep search* on makes none: the run button (play icon, disabled when what is typed is what is shown) and Enter do. `ConsoleSearch` has the toggle's state itself (`deepOn`) and follows `deep` of the address when that changes; `onSearch({ query, deep })` is the one callback.
+- [ ] **Pending**: while a new search is answered, Solid 2.0 keeps the old results on screen. The list page uses `isPending(items)` to dim
+      the list (`opacity-50`) and passes `pending` to the console, which shows a `Spinner` (primitive) in place of the count; the count also
+      has the spinner as its first-load fallback.
 - [ ] **`Frame`** in `App.tsx`: how the bar and the page are put together.
 
 ## Development
