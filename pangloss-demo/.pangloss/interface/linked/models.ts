@@ -159,7 +159,8 @@ export const definitions: ModelDefinitions = {
           "validators": []
         }
       ],
-      "incoming": []
+      "incoming": [],
+      "interfaceMeta": null
     },
     "AtPage": {
       "name": "AtPage",
@@ -209,7 +210,8 @@ export const definitions: ModelDefinitions = {
           "validators": []
         }
       ],
-      "incoming": []
+      "incoming": [],
+      "interfaceMeta": null
     },
     "Causes": {
       "name": "Causes",
@@ -268,7 +270,8 @@ export const definitions: ModelDefinitions = {
           "validators": []
         }
       ],
-      "incoming": []
+      "incoming": [],
+      "interfaceMeta": null
     },
     "Certainty": {
       "name": "Certainty",
@@ -302,7 +305,8 @@ export const definitions: ModelDefinitions = {
           ]
         }
       ],
-      "incoming": []
+      "incoming": [],
+      "interfaceMeta": null
     },
     "Date": {
       "name": "Date",
@@ -347,7 +351,8 @@ export const definitions: ModelDefinitions = {
           "validators": []
         }
       ],
-      "incoming": []
+      "incoming": [],
+      "interfaceMeta": null
     },
     "Factoid": {
       "name": "Factoid",
@@ -514,7 +519,8 @@ export const definitions: ModelDefinitions = {
           "validators": []
         }
       ],
-      "incoming": []
+      "incoming": [],
+      "interfaceMeta": null
     },
     "Group": {
       "name": "Group",
@@ -610,7 +616,8 @@ export const definitions: ModelDefinitions = {
             }
           ]
         }
-      ]
+      ],
+      "interfaceMeta": null
     },
     "Hypothetical": {
       "name": "Hypothetical",
@@ -649,7 +656,10 @@ export const definitions: ModelDefinitions = {
           "validators": []
         }
       ],
-      "incoming": []
+      "incoming": [],
+      "interfaceMeta": {
+        "colour": "yellow"
+      }
     },
     "InRole": {
       "name": "InRole",
@@ -700,7 +710,8 @@ export const definitions: ModelDefinitions = {
           "validators": []
         }
       ],
-      "incoming": []
+      "incoming": [],
+      "interfaceMeta": null
     },
     "Negative": {
       "name": "Negative",
@@ -739,7 +750,10 @@ export const definitions: ModelDefinitions = {
           "validators": []
         }
       ],
-      "incoming": []
+      "incoming": [],
+      "interfaceMeta": {
+        "colour": "rose"
+      }
     },
     "Person": {
       "name": "Person",
@@ -853,7 +867,8 @@ export const definitions: ModelDefinitions = {
             }
           ]
         }
-      ]
+      ],
+      "interfaceMeta": null
     },
     "Place": {
       "name": "Place",
@@ -914,7 +929,8 @@ export const definitions: ModelDefinitions = {
             }
           ]
         }
-      ]
+      ],
+      "interfaceMeta": null
     },
     "Source": {
       "name": "Source",
@@ -983,7 +999,8 @@ export const definitions: ModelDefinitions = {
             }
           ]
         }
-      ]
+      ],
+      "interfaceMeta": null
     },
     "Statement": {
       "name": "Statement",
@@ -1089,7 +1106,8 @@ export const definitions: ModelDefinitions = {
           "validators": []
         }
       ],
-      "incoming": []
+      "incoming": [],
+      "interfaceMeta": null
     },
     "Transfer": {
       "name": "Transfer",
@@ -1244,7 +1262,8 @@ export const definitions: ModelDefinitions = {
           "validators": []
         }
       ],
-      "incoming": []
+      "incoming": [],
+      "interfaceMeta": null
     },
     "WithCertainty": {
       "name": "WithCertainty",
@@ -1285,7 +1304,8 @@ export const definitions: ModelDefinitions = {
           "validators": []
         }
       ],
-      "incoming": []
+      "incoming": [],
+      "interfaceMeta": null
     }
   },
   "enums": {
