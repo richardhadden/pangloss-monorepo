@@ -17,6 +17,7 @@ members = [
     "pangloss-review",
     "pangloss-sdk",
     "pangloss-sdk-server",
+    "pangloss-typology",
     "pangloss-users",
     "pangloss-zotero",
 ]
@@ -1041,6 +1042,27 @@ dev = [
     { name = "pangloss-cli", editable = "packages/pangloss-cli" },
     { name = "pytest", specifier = ">=9.0.3" },
     { name = "pytest-asyncio", specifier = ">=1.4.0" },
+]
+
+[[package]]
+name = "pangloss-typology"
+version = "0.1.0"
+source = { editable = "packages/pangloss-typology" }
+dependencies = [
+    { name = "fastapi" },
+    { name = "pangloss-api" },
+    { name = "pangloss-memgraph" },
+    { name = "pangloss-models" },
+    { name = "typer" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "fastapi", specifier = ">=0.115" },
+    { name = "pangloss-api", editable = "packages/pangloss-api" },
+    { name = "pangloss-memgraph", editable = "packages/pangloss-memgraph" },
+    { name = "pangloss-models", editable = "packages/pangloss-models" },
+    { name = "typer", specifier = ">=0.12" },
 ]
 
 [[package]]

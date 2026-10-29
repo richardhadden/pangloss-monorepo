@@ -1,4 +1,5 @@
 import heapq
+from collections.abc import Callable
 import importlib
 import logging
 from itertools import chain
@@ -148,6 +149,11 @@ class ModelRegistry:
     _model_dict: ClassVar[dict[str, type[_DeclaredClass]]] = {}
 
     _action_classes: ClassVar[list[type[_ActionClass]]] = []
+
+    before_finalise: ClassVar[list[Callable[[], None]]] = []
+    """Functions an optional package adds, called at the start of `finalise` (the settings are loaded and the models
+    are declared, but nothing is initialised): to complete the models it made (`pangloss-typology` adds the label
+    fields of the languages). Not cleared by `_reset`."""
 
     # ----------------------------
     # Registration
@@ -308,6 +314,9 @@ class ModelRegistry:
         3. Attach the database functions (`get`, `save`, ...), which needs the settings to be loaded;
            `bind_database=False` makes the models alone, without them
         """
+
+        for before in cls.before_finalise:
+            before()
 
         # --- Phase 1: Pydantic rebuild ---
         namespace = cls.all_models()

@@ -13,6 +13,7 @@ from pangloss_models.exceptions import (
     PanglossUserDisabledError,
     PanglossUserNotFoundError,
 )
+from pangloss_models.model_bases.labels import has_allowed_label
 from pangloss_users import current_request_username
 
 from pangloss_memgraph.databases.memgraph.build_create_query import (
@@ -97,7 +98,9 @@ async def check_references_exist(tx: Transaction, query_object: QueryObject) -> 
             problems.append(
                 f"{reference.field_name}: '{reference.value}' has been deleted"
             )
-        elif not any(set(reference.allowed_types) & labels for labels in matches):
+        elif not any(
+            has_allowed_label(reference.allowed_types, labels) for labels in matches
+        ):
             problems.append(
                 f"{reference.field_name}: '{reference.value}' is not of an allowed type "
                 f"({', '.join(reference.allowed_types)})"
@@ -165,7 +168,7 @@ def check_inline_entities(
             problems.append(f"{name} is used by something that is not an entity")
         elif found.deleted:
             problems.append(f"{name} has been deleted")
-        elif not set(entity.allowed_types) & found.labels:
+        elif not has_allowed_label(entity.allowed_types, found.labels):
             problems.append(
                 f"{name} is an entity of another type (not "
                 f"{', '.join(entity.allowed_types)})"

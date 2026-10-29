@@ -15,6 +15,8 @@ export interface ApiClient {
   readonly baseUrl: string;
   get<T>(path: string, query?: QueryParams): Promise<T>;
   post<T>(path: string, body?: unknown): Promise<T>;
+  put<T>(path: string, body?: unknown): Promise<T>;
+  patch<T>(path: string, body?: unknown): Promise<T>;
   /** A form, as a browser sends one (`application/x-www-form-urlencoded`), which logging in wants */
   postForm<T>(path: string, fields: Record<string, string>): Promise<T>;
   delete<T>(path: string): Promise<T>;
@@ -75,6 +77,18 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     post: (path, body) =>
       request(path, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: body === undefined ? undefined : JSON.stringify(body),
+      }),
+    put: (path, body) =>
+      request(path, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: body === undefined ? undefined : JSON.stringify(body),
+      }),
+    patch: (path, body) =>
+      request(path, {
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: body === undefined ? undefined : JSON.stringify(body),
       }),

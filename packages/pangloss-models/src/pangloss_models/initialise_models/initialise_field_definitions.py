@@ -286,6 +286,57 @@ def build_relation_options(
     return set(relation_options)
 
 
+def fixed_relation_names(
+    model: type[_DeclaredClass],
+    field_name: str,
+    type_options: Iterable[RelationOption],
+) -> tuple[str, str] | None:
+    """The `(name, reverse name)` that a relation must have, if the classes it goes to say so (`__relation_names__`
+    on the class: the typology entities, whose relations are always `has_type`, except the fields in
+    `__relation_names_except__`: their hierarchy); `None` if none of them do.
+    A relation to some such classes and some not, or to classes that name it differently, is an error, and so is
+    a field with another name"""
+    named = {
+        option.annotated_type: names
+        for option in type_options
+        if (names := getattr(option.annotated_type, "__relation_names__", None))
+        and field_name
+        not in getattr(option.annotated_type, "__relation_names_except__", ())
+    }
+    if not named:
+        return None
+    others = [
+        option.annotated_type
+        for option in type_options
+        if option.annotated_type not in named
+    ]
+    if others:
+        # (a relation to a class that a named class is a subclass of, `Role` and the `RoleType` that is also a `Role`,
+        # is an ordinary relation: the named classes are in it only as subclasses)
+        if all(
+            isclass(other) and any(issubclass(cls, other) for cls in named)
+            for other in others
+        ):
+            return None
+        raise PanglossModelError(
+            f"{model.__name__}.{field_name} goes to classes whose relations are named differently "
+            "(or only some of which have a name fixed): give each its own field"
+        )
+    wanted = set(named.values())
+    if len(wanted) > 1:
+        raise PanglossModelError(
+            f"{model.__name__}.{field_name} goes to classes whose relations are named differently: "
+            "give each its own field"
+        )
+    (names,) = wanted
+    if field_name != names[0]:
+        raise PanglossModelError(
+            f"{model.__name__}.{field_name} goes to a class whose relations must be called '{names[0]}': "
+            f"call the field '{names[0]}'"
+        )
+    return names
+
+
 def build_relatable_field_definition(
     field_name: str,
     field_info: FieldInfo,
@@ -352,6 +403,7 @@ def build_relatable_field_definition(
 
         type_options = build_relation_options(model._depends_on_classes, annotation)
 
+    fixed = fixed_relation_names(model, field_name, type_options)
     return RelationFieldDefinition(
         field_name=field_name,
         field_on_model=model,
@@ -367,6 +419,8 @@ def build_relatable_field_definition(
         reverse_name=(
             relation_config.reverse_name
             if relation_config and relation_config.reverse_name
+            else fixed[1]
+            if fixed
             else f"{field_name}_reverse"
         ),
         wrapper=wrapper,

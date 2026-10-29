@@ -1,0 +1,28 @@
+[project]
+name = "pangloss-typology"
+version = "0.1.0"
+description = "Optional typologies for Pangloss: vocabularies of types in a hierarchy, given to entities with a :has_type relation"
+readme = "README.md"
+authors = [
+    { name = "Richard Hadden", email = "rwjhadden@gmail.com" }
+]
+requires-python = ">=3.15"
+dependencies = [
+    "fastapi>=0.115",
+    "pangloss-api",
+    "pangloss-memgraph",
+    "pangloss-models",
+    "typer>=0.12",
+]
+
+[project.urls]
+Repository = "https://github.com/richardhadden/pangloss-monorepo"
+
+[build-system]
+requires = ["uv_build>=0.11.8,<0.12.0"]
+build-backend = "uv_build"
+
+[tool.uv.sources]
+pangloss-api = { workspace = true }
+pangloss-memgraph = { workspace = true }
+pangloss-models = { workspace = true }
