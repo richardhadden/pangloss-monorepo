@@ -12,10 +12,18 @@ transaction.
 """
 
 import json
+import re
 from typing import Any
 
+from neo4j.exceptions import TransientError
 from pangloss_dates.calendar import Calendar, from_jdn, to_jdn, weekday
-from pangloss_memgraph.databases.memgraph.database import Database, Transaction
+from pangloss_memgraph.databases.memgraph.database import (
+    Database,
+    Transaction,
+    timeout_from_setting,
+)
+from pangloss_memgraph.databases.memgraph.visibility import unpublished_visible
+from pangloss_models.exceptions import PanglossSearchTimeoutError
 
 from pangloss_calendar.days import month_span
 from pangloss_calendar.observances import Observance, falls_on
@@ -346,3 +354,71 @@ async def observance_days(key: str, first: int, last: int) -> list[dict[str, Any
         return [dict(record) async for record in result]
 
     return await read()
+
+
+# Dates found from the dates, not from the documents (the plan's "date-first" query)
+
+IDENTIFIER = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+DATED_BETWEEN = """
+MATCH (d:Date)
+WHERE d.earliest_fuzzy <= $last AND d.latest_fuzzy >= $first
+  AND ($strict = false OR (d.earliest_strict <= $last AND d.latest_strict >= $first))
+  AND ($keys IS NULL OR d.pattern_keys IS NULL OR any(k IN d.pattern_keys WHERE k IN $keys))
+MATCH (n:`{label}`)-[:`{field}`]->(d)
+OPTIONAL MATCH (h:HeadNode {{id: n.head_node_id}})
+WITH n, d, coalesce(h, n) AS head
+WHERE NOT coalesce(head.deleted, false) AND ($see_unpublished OR coalesce(head.published, true))
+OPTIONAL MATCH (d)-[:start]->(s:Date)
+RETURN n.id AS id, n.label AS label, n.type AS type, d.type AS kind,
+       d.earliest_fuzzy AS earliest_fuzzy, d.earliest_strict AS earliest_strict,
+       d.latest_strict AS latest_strict, d.latest_fuzzy AS latest_fuzzy,
+       d.frequency AS frequency, d.weekdays AS weekdays, d.nth AS nth, d.month AS month,
+       d.month_day AS month_day, d.interval AS interval, d.excluded_days AS excluded_days,
+       d.easter_offset AS easter_offset, d.feast AS feast, s.earliest_strict AS anchor
+LIMIT $limit
+"""
+
+
+async def dated_between(
+    label: str,
+    field: str,
+    first: int,
+    last: int,
+    *,
+    strict: bool,
+    keys: list[str] | None,
+    limit: int,
+) -> tuple[list[dict[str, Any]], bool]:
+    """The dates in `field` of the nodes of class `label` that might meet the days `first` to `last`, with the node
+    each is in: by the strict bounds if `strict`, else by the fuzzy ones (a superset). A repeated event is a
+    candidate if its lifetime meets the days and, when `keys` is given, it has one of them (`pattern_keys`). What
+    is deleted, or unpublished for a reader who may not see it, is left out. Returns the rows and whether there
+    were more than `limit`."""
+    if not (IDENTIFIER.match(label) and IDENTIFIER.match(field)):
+        raise ValueError(f"{label}.{field} is not a class and a field")
+    database = _database()
+
+    @database.read_transaction
+    @timeout_from_setting("SEARCH_TIMEOUT_SECONDS", 30)
+    async def read(tx: Transaction) -> list[dict[str, Any]]:
+        result = await tx.run(
+            DATED_BETWEEN.format(label=label, field=field),
+            first=first,
+            last=last,
+            strict=strict,
+            keys=keys,
+            limit=limit + 1,
+            see_unpublished=unpublished_visible(),
+        )
+        return [dict(record) async for record in result]
+
+    try:
+        rows = await read()
+    except TransientError as error:
+        if "timeout" not in str(error).lower():
+            raise
+        raise PanglossSearchTimeoutError(
+            "The calendar took longer than the time allowed for it"
+        ) from error
+    return rows[:limit], len(rows) > limit

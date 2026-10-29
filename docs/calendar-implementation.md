@@ -241,7 +241,7 @@ to seed; **no default**, decided 2026-10-29), `CALENDAR_AUTO_EXTEND` (make days 
    day** (so an approximate day "about 6 March" is `possible` on the 2nd, a range 1 to 3 March is `stated` on the 2nd; in the month view a
    *range* is drawn `possible` on each day, by the rule in `views.py`, which is a different question: whether the event was on that day
    for sure); a month is filled from the **strict** range only; a month reads each date's document (`Model.get`, 8 at a time) to learn its
-   range, up to `MONTH_LIMIT` (2000) a field, and says `truncated` if more: **phase 4 measures this, and the date-first query is the fix**;
+   range, up to `MONTH_LIMIT` a field, and says `truncated` if more (replaced by the date-first query below, after phase 4);
    the days need not be in the graph (the answer is worked out; `CALENDAR_AUTO_EXTEND` makes them as they are asked for); the feasts are
    read from the graph on each request. *Not done:* the year's counts per month (the year gives the months, Easter and the moveable
    feasts); a project without `pangloss_calendar` (`feast` rules are not refused there yet); `pangloss_calendar` through
@@ -258,6 +258,16 @@ to seed; **no default**, decided 2026-10-29), `CALENDAR_AUTO_EXTEND` (make days 
    anything else; it would remove the 0.9 s of searching, and with the dates it finds it can read the bounds in the same query, which also removes
    the 0.3 to 0.5 s of reading documents. Version 2 (edges) is not needed. *Not measured:* the 642k-node scratch database (the cost is in the
    dates' own count, not in the other nodes, but this was not shown), real labels and real distributions, a project with several date fields.
+   *Date-first query built (2026-10-29, uncommitted):* `graph.dated_between(label, field, first, last, strict, keys, limit)` starts from the dates
+   (`MATCH (d:Date)` on the fuzzy bounds, which have the index, then the strict bounds as a filter), goes to the node by the edge named
+   for the field, to its head for `deleted`/`published` (the same `$see_unpublished` as the lists), and returns the bounds and a repeated
+   event's rule in the same query, so no document is read (`service.py` no longer uses `Model.get`, `on_day` or `pages`). A repeated event is
+   a candidate by its lifetime and, for a day, by `pattern_keys` against `day_keys`; the exact rule is then checked in Python. Same
+   answers (380 on days, 297 spanning, 310 on the day) and, on the same 100,000 dates: **month 0.06 to 0.08 s (was 1.1 to 1.5 s); day 0.06 s
+   (was 1.2 s); all 100,000 in one month 0.6 s (was 3.3 s), cut at `MONTH_LIMIT` (now 20,000 a field) with `truncated: true`**; the day
+   report has `truncated` too (it stopped silently at 1000). Under the line, so **version 1 stands and version 2 (edges) is not built.** Not
+   covered: the `review_status` filter of the lists (the calendar shows documents whatever their review status, as long as they are
+   published); a date in an embedded object (only the edge from the node itself is followed).
 5. **Interface** (only when you ask for it): a month page, a day page, "new document on this day" with the date filled in. The
    interface has no way yet for an installed app to add pages (its routes are in `interface-app`): deferred (decision 4 below).
 6. (Gate) Version 2.

@@ -256,3 +256,19 @@ async def test_the_date_fields_are_found_from_the_models_and_can_be_narrowed():
     narrowed = calendar_fields(SimpleNamespace(CALENDAR_FIELDS=["Mass.when"]))
     assert [f.name for f in narrowed] == ["Mass.when"]
     assert calendar_fields(SimpleNamespace(CALENDAR_FIELDS=["Mass.sent"])) == []
+
+
+@no_type_check
+async def test_a_day_or_month_with_more_dates_than_the_limit_says_so(
+    clear_database, clear_calendar, monkeypatch
+):
+    Factoid, Mass = models()
+    await initialise_database()
+    for i in range(5):
+        await Factoid.Create(label=f"f{i}", when=exact(1500, 3, 2)).save()
+    monkeypatch.setattr(service, "MONTH_LIMIT", 3)
+    day = await service.day(parse_day("J1500-03-02"), J)
+    assert day.truncated and len(day.hits) == 3
+    assert (await service.month(J, 1500, 3)).truncated
+    monkeypatch.setattr(service, "MONTH_LIMIT", 5)
+    assert not (await service.day(parse_day("J1500-03-02"), J)).truncated

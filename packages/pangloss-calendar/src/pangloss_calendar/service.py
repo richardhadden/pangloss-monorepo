@@ -6,14 +6,20 @@ nothing unpublished for a reader who may not see it) is that of any search. The 
 `CALENDAR_AUTO_EXTEND` they are made as they are asked for).
 """
 
-import asyncio
+from types import SimpleNamespace
 from typing import Any, Literal
 from uuid import UUID
 
 from pangloss_dates.calendar import Calendar, Weekday
 from pangloss_dates.easter import easter
-from pangloss_dates.query import SINGLE_KINDS, on_day, pages
-from pangloss_dates.recurrence import occurrences
+from pangloss_dates.models import Recurrence
+from pangloss_dates.recurrence import (
+    Frequency,
+    RecurrenceRule,
+    day_keys,
+    occurrences,
+    occurs_on,
+)
 from pydantic import BaseModel
 
 from pangloss_calendar import graph, settings
@@ -35,8 +41,8 @@ from pangloss_calendar.observances import (
 )
 from pangloss_calendar.views import Dated, place
 
-MONTH_LIMIT = 2000
-"""Dates looked at, for each field, to fill a month (more are left out, and the month says `truncated`)"""
+MONTH_LIMIT = 20_000
+"""Dates looked at, for each field, to fill a month or a day (more are left out, and the report says `truncated`)"""
 
 Mark = Literal["stated", "possible"]
 
@@ -97,6 +103,8 @@ class DayReport(BaseModel):
     calendar: Calendar
     observances: list[ObservanceOut]
     hits: list[Hit]
+    truncated: bool = False
+    """More dates were found than are shown (`MONTH_LIMIT`)"""
 
 
 class MonthDayOut(BaseModel):
@@ -163,13 +171,37 @@ async def _ensure(first: int, last: int) -> None:
         await graph.ensure_range(first, last)
 
 
-def _ref(item: Any, field: DateField) -> Ref:
+def _ref(row: dict[str, Any], field: DateField) -> Ref:
     return Ref(
-        id=item.id,
-        label=item.label,
-        type=getattr(item, "type", field.model.__name__),
+        id=row["id"],
+        label=row["label"],
+        type=row["type"] or field.model.__name__,
         field=field.field,
     )
+
+
+def _is_repeated(row: dict[str, Any]) -> bool:
+    return row["kind"].endswith("Recurrence")
+
+
+def _rule(row: dict[str, Any]) -> RecurrenceRule:
+    return Recurrence.rule_of(
+        SimpleNamespace(
+            frequency=Frequency(row["frequency"]),
+            weekdays=row["weekdays"] or [],
+            nth=row["nth"],
+            month=row["month"],
+            month_day=row["month_day"],
+            interval=row["interval"] or 1,
+            excluded_days=row["excluded_days"] or [],
+            easter_offset=row["easter_offset"],
+            feast=row["feast"],
+        )
+    )
+
+
+def _anchor(row: dict[str, Any]) -> int:
+    return row["anchor"] if row["anchor"] is not None else row["earliest_strict"]
 
 
 async def day(
@@ -184,32 +216,29 @@ async def day(
     use = use if use is not None else settings.use()
     loaded = await observances(use)
     on_it = observances_on(loaded, jdn, calendar)
-    keys = feast_keys(loaded, jdn, calendar)
+    extra = feast_keys(loaded, jdn, calendar)
+    keys = day_keys(jdn, calendar, extra)
     hits: dict[tuple[UUID, str], Hit] = {}
+    truncated = False
     for field in fields if fields is not None else calendar_fields():
-        stated = await on_day(
-            field.model,
+        rows, cut = await graph.dated_between(
+            field.model.__name__,
             field.field,
             jdn,
-            calendar,
-            field.family,
-            fuzzy=False,
-            extra_keys=keys,
-        )
-        possible = await on_day(
-            field.model,
-            field.field,
             jdn,
-            calendar,
-            field.family,
-            fuzzy=True,
-            extra_keys=keys,
+            strict=False,
+            keys=keys,
+            limit=MONTH_LIMIT,
         )
-        for item in stated:
-            hits[(item.id, field.name)] = Hit(ref=_ref(item, field), mark="stated")
-        for item in possible:
-            hits.setdefault(
-                (item.id, field.name), Hit(ref=_ref(item, field), mark="possible")
+        truncated = truncated or cut
+        for row in rows:
+            if _is_repeated(row) and not occurs_on(
+                _rule(row), jdn, calendar, _anchor(row), extra
+            ):
+                continue
+            stated = row["earliest_strict"] <= jdn <= row["latest_strict"]
+            hits[(row["id"], field.name)] = Hit(
+                ref=_ref(row, field), mark="stated" if stated else "possible"
             )
     ordered = sorted(
         hits.values(), key=lambda h: (h.ref.label.lower(), str(h.ref.id), h.ref.field)
@@ -219,22 +248,8 @@ async def day(
         calendar=calendar,
         observances=[ObservanceOut.of(o) for o in on_it],
         hits=ordered,
+        truncated=truncated,
     )
-
-
-def _overlap(field: DateField, first: int, last: int) -> list[dict[str, Any]]:
-    """Patterns for the dates of the field whose stated range meets the days `first` to `last`"""
-    meets = {"earliest_strict": {"lte": last}, "latest_strict": {"gte": first}}
-    single = {
-        "$any_of": [
-            {field.field: {"type": f"{field.family}{kind}", "where": meets}}
-            for kind in SINGLE_KINDS
-        ]
-    }
-    repeated = {
-        field.field: {"type": f"{field.family}Recurrence", "where": meets},
-    }
-    return [single, repeated]
 
 
 async def _dated_in(
@@ -247,39 +262,30 @@ async def _dated_in(
 ) -> tuple[list[Dated], bool]:
     """The dates of the field in the days, as ranges: a date by its stated range, a repeated event by each day it
     falls on (and whether more were found than `MONTH_LIMIT`)"""
+    rows, truncated = await graph.dated_between(
+        field.model.__name__,
+        field.field,
+        first,
+        last,
+        strict=True,
+        keys=None,
+        limit=MONTH_LIMIT,
+    )
     found: list[Dated] = []
-    truncated = False
-    semaphore = asyncio.Semaphore(8)
-
-    async def read(item: Any) -> list[Dated]:
-        async with semaphore:
-            document = await field.model.get(item.id)
-        date = getattr(document, field.field, None)
-        if date is None or not hasattr(date, "earliest_strict"):
-            return []
-        ref = _ref(item, field)
-        if hasattr(date, "pattern_keys") or hasattr(type(date), "rule_of"):
-            rule = type(date)._owner.rule_of(date)
-            anchor = date.start.earliest_strict
-            lo, hi = max(first, date.earliest_strict), min(last, date.latest_strict)
+    for row in rows:
+        ref = _ref(row, field)
+        if _is_repeated(row):
             days = occurrences(
-                rule,
-                lo,
-                hi,
+                _rule(row),
+                max(first, row["earliest_strict"]),
+                min(last, row["latest_strict"]),
                 calendar,
-                anchor,
+                _anchor(row),
                 lambda d: feast_keys(loaded, d, calendar, use),
             )
-            return [Dated(ref, d, d) for d in days]
-        return [Dated(ref, date.earliest_strict, date.latest_strict)]
-
-    for where in _overlap(field, first, last):
-        items = []
-        async for item in pages(field.model, where, MONTH_LIMIT):
-            items.append(item)
-        truncated = truncated or len(items) >= MONTH_LIMIT
-        for part in await asyncio.gather(*(read(item) for item in items)):
-            found.extend(part)
+            found.extend(Dated(ref, d, d) for d in days)
+        else:
+            found.append(Dated(ref, row["earliest_strict"], row["latest_strict"]))
     return found, truncated
 
 
