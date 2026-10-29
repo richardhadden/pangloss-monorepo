@@ -12,7 +12,7 @@
   },
   "scripts": {
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "check:layers": "depcruise --config .dependency-cruiser.cjs interface-core/src interface-app/src",
+    "check:layers": "depcruise --config .dependency-cruiser.cjs interface-core/src interface-app/src $(ls -d modules/*/src 2>/dev/null)",
     "test": "npm run test --workspaces --if-present",
     "build": "npm run build --workspace interface-app",
     "dev": "npm run dev --workspace interface-app",

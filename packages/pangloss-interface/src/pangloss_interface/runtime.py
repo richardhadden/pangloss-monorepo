@@ -92,3 +92,16 @@ def run(
         return subprocess.run(list(command), cwd=cwd, env=env, check=False).returncode
     except KeyboardInterrupt:
         return 130
+
+
+def run_captured(
+    command: Sequence[str],
+    cwd: Path,
+    environment: Mapping[str, str] | None = None,
+) -> tuple[int, str]:
+    """Run a command in a directory; the exit code, and what it wrote (stdout, then stderr)"""
+    env = {**os.environ, **(environment or {})}
+    done = subprocess.run(
+        list(command), cwd=cwd, env=env, check=False, capture_output=True, text=True
+    )
+    return done.returncode, done.stdout + (done.stderr if done.returncode else "")

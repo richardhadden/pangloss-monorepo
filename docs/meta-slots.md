@@ -24,6 +24,8 @@ class Student(Person):  # inherits Person's
 
 and read it as `Person._interface_meta` (the object, typed, inherited).
 
+(`InterfaceMeta` is read **field by field** through the parents when the models are exported, `pangloss_interface.meta.resolved_meta`: a subclass that sets only `colour` keeps its parent's `item_page`, and `False` turns a parent's component off. `Person._interface_meta` itself is still the nearest class's object. See [interface modules](interface-modules-implementation.md).)
+
 ## Why this is not just "patch it onto `_DeclaredClass`"
 
 *Tried*, and it does not work from outside:

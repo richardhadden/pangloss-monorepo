@@ -21,6 +21,8 @@ Nothing here is translated yet: the language row of the nav bar changes nothing.
 | `log_out_user` | Log out {user} | `NavBar` | `log_out` exists, but this puts the user's name after it: a slot with a parameter, as the order of the words differs between languages |
 | `section_entities` | Entities | `NavModelList` (heading and `aria-label`) | `ui` already has `kind_entity_plural` ("Entities"): use it |
 | `section_documents` | Documents | `NavModelList` (heading and `aria-label`) | `kind_document_plural` |
+| `section_links` | Links | `schema/nav.ts` (the heading of links that an `InterfaceConfig` gives no section) | |
+| `nav_<app>_<label>` | (the labels of `NavModel` / `NavLink`) | `InterfaceConfig` of an app | the label given is the default-language text of the slot (exported as `labelSlot`); shown as written until the interface reads translations |
 | `search` | Search | `ConsoleSearch` (placeholder) | placeholder is shown in capitals; do not put capitals in the text |
 | `not_available` | – | `ConsoleSearch` (the count when it could not be read) | a dash; probably the same in every language |
 | `open` | Open | `EntityCard` (button) | a placeholder component |

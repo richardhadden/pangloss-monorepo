@@ -1,4 +1,4 @@
-import { useComponent, headOf, wrappingSpaces } from "@pangloss/interface-core";
+import { Customised, useComponent, getModel, useModels, headOf, wrappingSpaces } from "@pangloss/interface-core";
 import { useSearchParams } from "@solidjs/router";
 import type { RouteProps } from "@solidjs/router";
 import { createMemo, Errored, For, isPending, Loading } from "solid-js";
@@ -6,6 +6,28 @@ import { listQuery, searchOf } from "../queries";
 
 // The list of a type of Document or Entity: /Person
 export default function EntityList(props: RouteProps<"/:type">) {
+  // (a model may name a page of an interface module for its list: it replaces this one)
+  const definitions = useModels();
+  const model = () => getModel(definitions, props.params.type);
+  const [search, setSearch] = useSearchParams();
+  return (
+    <Customised
+      slot="listPage"
+      type={props.params.type}
+      skip={model() === undefined}
+      props={{
+        type: props.params.type,
+        model: model()!,
+        search: { query: searchOf(search).q, deep: searchOf(search).deep },
+        onSearch: ({ query, deep }) =>
+          setSearch({ q: query, deep: deep ? "1" : null }, { replace: true }),
+      }}
+      fallback={<DefaultList {...props} />}
+    />
+  );
+}
+
+function DefaultList(props: RouteProps<"/:type">) {
   const Console = useComponent("Console");
   const ErrorMessage = useComponent("ErrorMessage");
   const ResultButton = useComponent("ResultButton");

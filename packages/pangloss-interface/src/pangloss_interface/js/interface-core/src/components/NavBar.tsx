@@ -120,7 +120,7 @@ export function NavBar(props: NavBarProps) {
       {/* (not rendered while retracted: there is no room for it to be read) */}
       <Show when={navExpanded()}>
         <div class="min-h-0 flex-1 overflow-y-auto border-t border-slate-400/70">
-          <NavModelList />
+          <NavModelList loggedIn={props.user !== undefined} />
           {props.children}
         </div>
       </Show>

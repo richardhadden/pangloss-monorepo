@@ -15,6 +15,15 @@ from typing import Any
 
 import typer
 
+from pangloss_interface.modules import (
+    MODULE_DIRECTORY,
+    InterfaceModule,
+    ManifestError,
+    app_directory,
+    discover,
+    problems,
+    read_manifests,
+)
 from pangloss_interface.paths import APP_PATH, JS_ROOT
 from pangloss_interface.runtime import (
     InterfaceRuntimeError,
@@ -22,13 +31,14 @@ from pangloss_interface.runtime import (
     find_runtime,
     run,
 )
+from pangloss_interface.scaffold import module_files
 from pangloss_interface.translations_cli import translations, write_translations
 from pangloss_interface.typescript import models_module
 from pangloss_interface.workspace import (
     TRANSLATIONS_PATH,
-    linked_translations_path,
     export_project_models,
     is_source_checkout,
+    linked_translations_path,
     prepare,
     prepare_linked,
     working_directory,
@@ -95,11 +105,17 @@ def export_or_exit(project: Any) -> dict[str, Any]:
         raise
 
 
+def modules_of(project: Any) -> list[InterfaceModule]:
+    """The interface modules of the project's installed apps"""
+    return discover(project.require_settings().INSTALLED_APPS)
+
+
 def prepare_workspace(ctx: typer.Context) -> Path:
-    """Copy the interface into the project, with its models; returns the directory"""
+    """Copy the interface into the project, with its models and the interface modules of its
+    installed apps; returns the directory"""
     project = project_of(ctx)
     exported = export_or_exit(project)
-    prepared = prepare(project.location.root, exported)
+    prepared = prepare(project.location.root, exported, modules_of(project))
     for name in prepared.written:
         typer.echo(
             f"  wrote {(prepared.directory / name).relative_to(project.location.root)}"
@@ -122,6 +138,18 @@ def ensure_installed(runtime: Runtime, directory: Path) -> None:
 
 def built_server(directory: Path) -> Path:
     return directory / "interface-app" / "dist" / "server" / "node.js"
+
+
+def module_problems(ctx: typer.Context, runtime: Runtime, directory: Path) -> list[str]:
+    """What the models and the modules' manifests say that does not fit (the working directory is prepared)"""
+    project = project_of(ctx)
+    modules = modules_of(project)
+    exported = export_or_exit(project)
+    try:
+        manifests = read_manifests(runtime, directory, modules)
+    except ManifestError as error:
+        return [f"The manifests of the interface modules could not be read: {error}"]
+    return problems(modules, manifests, exported)
 
 
 @cli.command()
@@ -196,13 +224,24 @@ def dev(
             fail("--link needs the source of pangloss-interface (an editable install)")
         project = project_of(ctx)
         exported = export_or_exit(project)
-        models = prepare_linked(project.location.root, exported)
+        linked = prepare_linked(project.location.root, exported, modules_of(project))
+        models = linked.models
         write_translations(
             project, exported, linked_translations_path(project.location.root)
         )
         typer.echo(f"Running from {JS_ROOT}\nModels: {models}")
+        for root in linked.module_roots:
+            typer.echo(f"Module (in place): {root}")
         ensure_installed(found, JS_ROOT)
-        directory, environment = APP_PATH, {"PANGLOSS_MODELS_MODULE": str(models)}
+        directory, environment = (
+            APP_PATH,
+            {
+                "PANGLOSS_MODELS_MODULE": str(models),
+                "PANGLOSS_MODULES_MODULE": str(linked.modules),
+                "PANGLOSS_SOURCES_CSS": str(linked.sources),
+                "PANGLOSS_MODULE_ROOTS": ":".join(str(r) for r in linked.module_roots),
+            },
+        )
     else:
         directory = prepare_workspace(ctx)
         ensure_installed(found, directory)
@@ -254,3 +293,77 @@ def check(ctx: typer.Context, runtime: str | None = RuntimeOption) -> None:
     ensure_installed(found, directory)
     run_or_exit(found.script("typecheck"), directory)
     run_or_exit(found.script("check:layers"), directory)
+    wrong = module_problems(ctx, found, directory)
+    for message in wrong:
+        typer.secho(message, fg="red", err=True)
+    if wrong:
+        raise typer.Exit(1)
+    typer.secho("The interface modules are consistent with the models", fg="green")
+
+
+@cli.command("new-module")
+def new_module(
+    ctx: typer.Context,
+    app: str = typer.Argument(..., help="An installed app (in INSTALLED_APPS)"),
+    force: bool = typer.Option(
+        False, "--force", help="Write the files that are missing, if the module exists"
+    ),
+    example: bool = typer.Option(
+        True, "--example/--no-example", help="Include a card as an example"
+    ),
+) -> None:
+    """Make the interface module of an app: a Solid library for the pages and cards of its models"""
+    project = project_of(ctx)
+    if app not in project.require_settings().INSTALLED_APPS:
+        fail(f"{app} is not one of the INSTALLED_APPS")
+    directory = app_directory(app)
+    if directory is None:
+        fail(f"Cannot find the package of {app}")
+        raise typer.Exit(1)
+    root = directory / MODULE_DIRECTORY
+    if root.exists() and not force:
+        fail(f"{root} exists: use --force to write the files that are missing")
+    for name, text in module_files(app, example).items():
+        path = root / name
+        if path.exists():
+            continue
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text)
+        typer.echo(f"  wrote {path}")
+    typer.echo(
+        "\nNext:\n"
+        f'  1. name a component in a model: InterfaceMeta(view_card="{app}:ExampleCard")\n'
+        "  2. pangloss interface check\n"
+        "  3. pangloss interface dev\n"
+        "A wheel of the app has to include the folder: see the interface modules guide."
+    )
+
+
+@cli.command("modules")
+def list_modules(ctx: typer.Context, runtime: str | None = RuntimeOption) -> None:
+    """List the interface modules of the installed apps, what each provides, and the problems"""
+    project = project_of(ctx)
+    modules = modules_of(project)
+    if not modules:
+        typer.echo("No installed app has an interface module (pangloss interface new-module APP)")
+        return
+    found = runtime_or_exit(runtime)
+    directory = prepare_workspace(ctx)
+    ensure_installed(found, directory)
+    try:
+        manifests = read_manifests(found, directory, modules)
+    except ManifestError as error:
+        fail(f"The manifests could not be read: {error}")
+        raise
+    for module in modules:
+        manifest = manifests[module.app]
+        typer.echo(f"{module.app}  ({module.root})")
+        typer.echo(f"    components: {', '.join(manifest.components) or '-'}")
+        typer.echo(f"    routes:     {', '.join(r['path'] for r in manifest.routes) or '-'}")
+        if manifest.requires:
+            typer.echo(f"    requires:   {', '.join(manifest.requires)}")
+    wrong = problems(modules, manifests, export_or_exit(project))
+    for message in wrong:
+        typer.secho(f"problem: {message}", fg="red", err=True)
+    if wrong:
+        raise typer.Exit(1)

@@ -3,6 +3,7 @@ import { useModels } from "../context";
 import { kindTint } from "../primitives";
 import { getModel } from "../schema";
 import type { ReferenceChipProps } from "../types";
+import { Customised } from "./Customised";
 
 /**
  * A small chip for something that is referred to: its type on the left (tinted by its kind or
@@ -10,6 +11,18 @@ import type { ReferenceChipProps } from "../types";
  * properties of the edge to it, if any, follow as a small pill each (for now).
  */
 export function ReferenceChip(props: ReferenceChipProps) {
+  // (a card of an interface module that the model names is used instead)
+  return (
+    <Customised
+      slot="viewCard"
+      type={props.type}
+      props={{ type: props.type, label: props.label, href: props.href, context: "reference" }}
+      fallback={<DefaultReferenceChip {...props} />}
+    />
+  );
+}
+
+function DefaultReferenceChip(props: ReferenceChipProps) {
   const definitions = useModels();
   const model = () => getModel(definitions, props.type);
   const properties = () => Object.entries(props.edgeProperties ?? {});

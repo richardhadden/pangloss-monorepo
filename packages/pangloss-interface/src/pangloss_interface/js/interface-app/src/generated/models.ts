@@ -7,4 +7,5 @@ export type ModelName = never;
 export const definitions: ModelDefinitions = {
   models: {},
   enums: {},
+  nav: { sections: ["Entities", "Documents"], models: {}, links: [] },
 };

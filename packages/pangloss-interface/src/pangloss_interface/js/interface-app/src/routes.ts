@@ -6,10 +6,25 @@
 import { defineRoute, defineRoutes } from "@solidjs/router";
 import { httpStatus } from "@solidjs/web";
 import { lazy } from "solid-js";
+import { orderModules } from "@pangloss/interface-core";
+import { modules } from "@generated/modules";
 import { itemQuery, listQuery, searchOf } from "./queries";
+
+// The pages of the interface modules of the installed apps: before `/:type`, which would take their addresses for a type
+// (a module that has none adds none)
+const moduleRoutes = orderModules(modules).flatMap((module) =>
+  (module.routes ?? []).map((route) =>
+    defineRoute({
+      path: route.path,
+      component: lazy(module.components[route.component]!),
+      preload: route.preload as never,
+    }),
+  ),
+);
 
 export const routes = defineRoutes([
   defineRoute({ path: "/", component: lazy(() => import("./pages/Home")) }),
+  ...moduleRoutes,
   defineRoute({
     path: "/:type",
     component: lazy(() => import("./pages/List")),

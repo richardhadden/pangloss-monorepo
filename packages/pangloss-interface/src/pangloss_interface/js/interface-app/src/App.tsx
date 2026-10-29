@@ -3,6 +3,7 @@ import {
   ComponentsProvider,
   ConsoleMountProvider,
   ModelsProvider,
+  ModulesProvider,
   logOut,
   useLoginDialog,
   LoginDialogProvider,
@@ -18,6 +19,7 @@ import { apiClient } from "./api";
 import { components } from "./components";
 import { LoginDialog } from "./LoginDialog";
 import { definitions } from "@generated/models";
+import { modules } from "@generated/modules";
 import { sessionQuery } from "./queries";
 import { paths, Router } from "./router";
 
@@ -59,20 +61,22 @@ export default function App() {
     <ComponentsProvider components={components}>
       <ApiProvider client={apiClient()}>
         <ModelsProvider definitions={definitions}>
-          <NavExpandedProvider>
-            <LoginDialogProvider>
-              <ConsoleMountProvider>
-                <Router>
-                  {(props) => (
-                    <>
-                      <Title>Pangloss</Title>
-                      <Frame>{props.children}</Frame>
-                    </>
-                  )}
-                </Router>
-              </ConsoleMountProvider>
-            </LoginDialogProvider>
-          </NavExpandedProvider>
+          <ModulesProvider modules={modules}>
+            <NavExpandedProvider>
+              <LoginDialogProvider>
+                <ConsoleMountProvider>
+                  <Router>
+                    {(props) => (
+                      <>
+                        <Title>Pangloss</Title>
+                        <Frame>{props.children}</Frame>
+                      </>
+                    )}
+                  </Router>
+                </ConsoleMountProvider>
+              </LoginDialogProvider>
+            </NavExpandedProvider>
+          </ModulesProvider>
         </ModelsProvider>
       </ApiProvider>
     </ComponentsProvider>

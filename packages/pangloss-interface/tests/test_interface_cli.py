@@ -192,7 +192,8 @@ def test_dev_link_runs_the_package_source_with_the_projects_models(
     result = invoke(project, "dev", "--link", "--api-url", "http://api:9000")
     assert result.exit_code == 0, result.output
 
-    models = working_directory(project.location.root) / "linked" / "models.ts"
+    linked = working_directory(project.location.root) / "linked"
+    models = linked / "models.ts"
     assert 'export type ModelName = "Person";' in models.read_text()
     assert commands == [
         (
@@ -201,9 +202,13 @@ def test_dev_link_runs_the_package_source_with_the_projects_models(
             {
                 "PANGLOSS_API_URL": "http://api:9000",
                 "PANGLOSS_MODELS_MODULE": str(models),
+                "PANGLOSS_MODULES_MODULE": str(linked / "modules.ts"),
+                "PANGLOSS_SOURCES_CSS": str(linked / "sources.css"),
+                "PANGLOSS_MODULE_ROOTS": "",
             },
         )
     ]
+    assert "= [];" in (linked / "modules.ts").read_text()
     # nothing is copied: the source of the package is what runs
     assert not (working_directory(project.location.root) / "interface-core").exists()
     assert JS_ROOT.is_dir()

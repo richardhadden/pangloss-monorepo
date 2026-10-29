@@ -162,6 +162,47 @@ export type Colour =
 export interface InterfaceMeta {
   /** (without one: blue for entities, green for documents, a colour by depth for a semantic space) */
   colour: Colour | null;
+  /** The component of an interface module for the page of the list of the type (resolved through the parents) */
+  listPage: ComponentReference | null;
+  itemPage: ComponentReference | null;
+  /** A card that shows an item where it is part of something else */
+  viewCard: ComponentReference | null;
+  editCard: ComponentReference | null;
+}
+
+/** `"app:Name"` in Python: a key of `components` in the manifest of the interface module of an app */
+export interface ComponentReference {
+  module: string;
+  name: string;
+}
+
+/** Where an app puts a type in the navigation bar (`NavModel`) */
+export interface NavModelEntry {
+  label: string | null;
+  /** The UI translation slot of the label (the label as written is its default-language text) */
+  labelSlot: string;
+  section: string | null;
+  order: number | null;
+  hidden: boolean;
+}
+
+/** Any other link in the bar (`NavLink`) */
+export interface NavLinkEntry {
+  label: string;
+  labelSlot: string;
+  href: string;
+  section: string | null;
+  order: number | null;
+  external: boolean;
+  requiresLogin: boolean;
+}
+
+/** The apps' `InterfaceConfig`s, merged (the later app wins) */
+export interface NavConfig {
+  /** The titles of the sections of the bar, in order */
+  sections: string[];
+  models: Record<string, NavModelEntry>;
+  links: NavLinkEntry[];
 }
 
 export interface ModelDefinition {
@@ -192,4 +233,6 @@ export interface EnumDefinition {
 export interface ModelDefinitions {
   models: Record<string, ModelDefinition>;
   enums: Record<string, EnumDefinition>;
+  /** (absent: nothing configured) */
+  nav?: NavConfig;
 }

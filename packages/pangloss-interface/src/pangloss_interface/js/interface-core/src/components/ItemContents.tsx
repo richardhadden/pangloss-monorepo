@@ -4,6 +4,7 @@ import { useComponent, useModels } from "../context";
 import { kindTint, spaceTint } from "../primitives";
 import { getModel } from "../schema";
 import type { FieldDefinition, ItemContentsProps, ModelDefinition } from "../types";
+import { Customised } from "./Customised";
 
 type Data = Record<string, unknown>;
 
@@ -106,58 +107,67 @@ function ObjectValue(props: { value: Data; field?: FieldDefinition; depth: numbe
   const isSpace = () => model()?.kind === "SemanticSpace";
   const isEmbedded = () => model()?.kind === "Embedded";
   return (
-    <Switch
+    // (a card that the model names for itself shows an embedded item or a block; a chip is the reference's card)
+    <Customised
+      slot="viewCard"
+      type={type() ?? ""}
+      skip={isChip() || type() === undefined}
+      props={{ type: type() ?? "", label: label() ?? "", item: props.value, context: "embedded" }}
       fallback={
-        <div class="w-full rounded-sm border-[0.5px] border-slate-400/70 bg-slate-100/50">
-          <div class="flex items-stretch border-b-[0.5px] border-slate-400/70">
-            <span
+        <Switch
+          fallback={
+            <div class="w-full rounded-sm border-[0.5px] border-slate-400/70 bg-slate-100/50">
+              <div class="flex items-stretch border-b-[0.5px] border-slate-400/70">
+                <span
+                  class={[
+                    "flex shrink-0 items-center border-r-[0.5px] border-slate-400/70 px-3 py-1 text-xs font-semibold uppercase select-none",
+                    kindTint(model()?.kind, model()?.interfaceMeta?.colour),
+                  ]}
+                >
+                  {type() ?? model()?.name}
+                </span>
+                <Show when={label()}>
+                  <span class="min-w-0 flex-1 truncate px-3 py-1 text-sm">{label()}</span>
+                </Show>
+              </div>
+              <div class="p-3">
+                <Fields value={props.value} model={model()} depth={props.depth} />
+              </div>
+            </div>
+          }
+        >
+          <Match when={isChip()}>
+            <ReferenceChip
+              type={type() ?? ""}
+              label={label() ?? String(props.value.id ?? "")}
+              href={`/${type()}/${props.value.id}`}
+              edgeProperties={isObject(props.value.edgeProperties) ? props.value.edgeProperties : undefined}
+            />
+          </Match>
+          <Match when={isEmbedded()}>
+            {/* (it is in this one place only: no box, no type, only its fields, indented to show they go together) */}
+            <div class="w-full pl-4">
+              <Fields value={props.value} model={model()} depth={props.depth} />
+            </div>
+          </Match>
+          <Match when={isSpace()}>
+            <div
               class={[
-                "flex shrink-0 items-center border-r-[0.5px] border-slate-400/70 px-3 py-1 text-xs font-semibold uppercase select-none",
-                kindTint(model()?.kind, model()?.interfaceMeta?.colour),
+                "flex w-full items-stretch rounded-sm border-[0.5px] border-slate-400/70",
+                spaceTint(model()?.interfaceMeta?.colour, props.depth),
               ]}
             >
-              {type() ?? model()?.name}
-            </span>
-            <Show when={label()}>
-              <span class="min-w-0 flex-1 truncate px-3 py-1 text-sm">{label()}</span>
-            </Show>
-          </div>
-          <div class="p-3">
-            <Fields value={props.value} model={model()} depth={props.depth} />
-          </div>
-        </div>
+              <span class="flex shrink-0 items-center px-3 text-xs font-semibold uppercase select-none">
+                {type()}
+              </span>
+              <div class="flex min-w-0 flex-1 flex-col gap-1 p-1">
+                <Value value={props.value.contents} depth={props.depth + 1} />
+              </div>
+            </div>
+          </Match>
+        </Switch>
       }
-    >
-      <Match when={isChip()}>
-        <ReferenceChip
-          type={type() ?? ""}
-          label={label() ?? String(props.value.id ?? "")}
-          href={`/${type()}/${props.value.id}`}
-          edgeProperties={isObject(props.value.edgeProperties) ? props.value.edgeProperties : undefined}
-        />
-      </Match>
-      <Match when={isEmbedded()}>
-        {/* (it is in this one place only: no box, no type, only its fields, indented to show they go together) */}
-        <div class="w-full pl-4">
-          <Fields value={props.value} model={model()} depth={props.depth} />
-        </div>
-      </Match>
-      <Match when={isSpace()}>
-        <div
-          class={[
-            "flex w-full items-stretch rounded-sm border-[0.5px] border-slate-400/70",
-            spaceTint(model()?.interfaceMeta?.colour, props.depth),
-          ]}
-        >
-          <span class="flex shrink-0 items-center px-3 text-xs font-semibold uppercase select-none">
-            {type()}
-          </span>
-          <div class="flex min-w-0 flex-1 flex-col gap-1 p-1">
-            <Value value={props.value.contents} depth={props.depth + 1} />
-          </div>
-        </div>
-      </Match>
-    </Switch>
+    />
   );
 }
 

@@ -4,6 +4,7 @@ import { useModels } from "../context";
 import { kindTint, spaceTint } from "../primitives";
 import { getModel } from "../schema";
 import type { ResultButtonProps } from "../types";
+import { Customised } from "./Customised";
 
 // The bands of the semantic spaces, by how deep they are (whole class names, so that Tailwind finds them)
 /**
@@ -44,6 +45,24 @@ function Wrapped(props: ParentProps<{ spaces: string[]; depth: number; flushLeft
  * far left, which the bands do not wrap.
  */
 export function ResultButton(props: ResultButtonProps) {
+  // (a model may name a card of an interface module for itself: it is used instead, wherever this is)
+  return (
+    <Customised
+      slot="viewCard"
+      type={props.type}
+      props={{
+        type: props.type,
+        label: props.label,
+        href: props.href,
+        spaces: props.spaces,
+        context: "result",
+      }}
+      fallback={<DefaultResultButton {...props} />}
+    />
+  );
+}
+
+function DefaultResultButton(props: ResultButtonProps) {
   const definitions = useModels();
   const model = () => getModel(definitions, props.type);
   // (what is next to the button to the head node is square on that side)

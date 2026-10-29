@@ -12,6 +12,18 @@ from pangloss_models.model_bases.semantic_space import SemanticSpace
 from pangloss_models.model_registry import ModelRegistry
 
 
+def none(**given):
+    """The exported meta with only what is given set"""
+    return {
+        "colour": None,
+        "listPage": None,
+        "itemPage": None,
+        "viewCard": None,
+        "editCard": None,
+        **given,
+    }
+
+
 @pytest.fixture
 def clear_registry():
     # (models are initialised with a database module that needs no database, as in
@@ -51,7 +63,56 @@ def test_the_colour_of_a_model_is_inherited_and_exported(clear_registry):
 
     initialise()
     models = export_definitions()["models"]
-    assert models["Person"]["interfaceMeta"] == {"colour": "indigo"}
-    assert models["Poet"]["interfaceMeta"] == {"colour": "indigo"}
+    assert models["Person"]["interfaceMeta"] == none(colour="indigo")
+    assert models["Poet"]["interfaceMeta"] == none(colour="indigo")
     assert models["Place"]["interfaceMeta"] is None
-    assert models["Negative"]["interfaceMeta"] == {"colour": "rose"}
+    assert models["Negative"]["interfaceMeta"] == none(colour="rose")
+
+
+def test_a_component_is_named_app_colon_name_or_false():
+    meta = InterfaceMeta(item_page="my_app:ItemPage", view_card=False)
+    assert meta.item_page == "my_app:ItemPage" and meta.view_card is False
+    for wrong in ("ItemPage", "my_app:", ":Page", "a:b:c", "my-app:Page", 3):
+        with pytest.raises(PanglossMetaError):
+            InterfaceMeta(list_page=wrong)  # ty: ignore[invalid-argument-type]
+
+
+@no_type_check
+def test_a_child_inherits_each_field_it_does_not_set_and_false_turns_one_off(
+    clear_registry,
+):
+    class Manuscript(Entity):
+        _interface_meta = InterfaceMeta(
+            colour="amber", item_page="ms:Page", view_card="ms:Card"
+        )
+
+    class Codex(Manuscript):
+        _interface_meta = InterfaceMeta(colour="red")  # (the page and card stay)
+
+    class Scroll(Manuscript):
+        _interface_meta = InterfaceMeta(item_page=False, list_page="ms:Scrolls")
+
+    class Roll(Scroll):
+        pass
+
+    class Plain(Entity):
+        pass
+
+    initialise()
+    models = export_definitions()["models"]
+    page = {"module": "ms", "name": "Page"}
+    card = {"module": "ms", "name": "Card"}
+    assert models["Manuscript"]["interfaceMeta"] == none(
+        colour="amber", itemPage=page, viewCard=card
+    )
+    assert models["Codex"]["interfaceMeta"] == none(
+        colour="red", itemPage=page, viewCard=card
+    )
+    assert models["Scroll"]["interfaceMeta"] == none(
+        colour="amber",
+        itemPage=None,
+        viewCard=card,
+        listPage={"module": "ms", "name": "Scrolls"},
+    )
+    assert models["Roll"]["interfaceMeta"] == models["Scroll"]["interfaceMeta"]
+    assert models["Plain"]["interfaceMeta"] is None

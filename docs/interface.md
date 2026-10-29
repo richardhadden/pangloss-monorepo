@@ -204,6 +204,17 @@ component) is above all of them, so nothing needs it. `npm run check:layers` (de
 `createComponentMap({ Button: MyButton })` (`interface-app/src/components.ts`), so a replacement is used
 everywhere, including inside the library's own components. The library depends on nothing that overrides it.
 
+## Interface modules
+
+An installed app can ship its own pages and cards: a Solid library in `<app>/interface/` (`pangloss interface new-module <app>`)
+whose `src/index.ts` is `defineModule({ name, requires, components, routes })`. A model names a component in its
+`InterfaceMeta` (`list_page`, `item_page`, `view_card`, `edit_card`, as `"app:Name"`), and an app's `interface_config.py`
+(`InterfaceConfig`, `NavModel`, `NavLink`) places links in the navigation bar. `prepare` copies the modules to
+`.pangloss/interface/modules/<app>/`, adds them to the npm workspaces, and writes `generated/modules.ts` (the manifests; the
+components are lazy) and `generated/sources.css` (for Tailwind). `pangloss interface check` type-checks the modules, checks the
+layers (a module may not import the application or another module's files; the library may not import a module) and checks that
+every component a model names is in the module's `components`. Spec and what is built: [interface-modules-implementation.md](interface-modules-implementation.md).
+
 ## Packaging
 
 The JavaScript is in the Python package (`js/`); `node_modules` and `dist` are left out of the wheel and

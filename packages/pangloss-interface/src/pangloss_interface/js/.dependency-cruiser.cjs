@@ -46,6 +46,27 @@ module.exports = {
       from: { path: core },
       to: { path: ["^interface-app", "@pangloss/interface-app"] },
     },
+    {
+      name: "modules-are-not-imported-by-the-library",
+      severity: "error",
+      comment: "interface-core knows nothing of the modules that use it (it asks the registry, through a context)",
+      from: { path: core },
+      to: { path: "^modules/" },
+    },
+    {
+      name: "modules-never-import-the-app",
+      severity: "error",
+      comment: "A module uses interface-core; it does not reach into the application",
+      from: { path: "^modules/" },
+      to: { path: ["^interface-app", "@pangloss/interface-app"] },
+    },
+    {
+      name: "modules-do-not-import-each-other-by-file",
+      severity: "error",
+      comment: "A module uses another through the registry (`requires`), not by importing its files",
+      from: { path: "^modules/([^/]+)/" },
+      to: { path: "^modules/", pathNot: "^modules/$1/" },
+    },
   ],
   options: {
     doNotFollow: { path: "node_modules" },

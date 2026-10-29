@@ -44,7 +44,7 @@ const definitions: ModelDefinitions = {
     ]),
     Date: model("Date", "Embedded", [field("when", "when")]),
     Place: model("Place", "Entity", [], [{ name: "happened_here", key: "happenedHere", sources: [] }]),
-    Negative: model("Negative", "SemanticSpace", [field("contents", "contents", "relation")], [], { colour: "rose" }),
+    Negative: model("Negative", "SemanticSpace", [field("contents", "contents", "relation")], [], { colour: "rose", listPage: null, itemPage: null, viewCard: null, editCard: null }),
   },
   enums: {},
 };

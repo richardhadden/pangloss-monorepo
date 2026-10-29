@@ -71,6 +71,12 @@ def load_layers(
     languages: list[str],
 ) -> Layers:
     layers = Layers(extracted, default, languages)
+    # (the labels of the apps' navigation links are the default-language texts of their slots: the lowest layer)
+    from pangloss_interface.config import load_configs, nav_defaults
+
+    layers.ui.append(
+        {slot: {default: text} for slot, text in nav_defaults(load_configs(apps)).items()}
+    )
     # (the interface's own slots are there whether or not it is one of the INSTALLED_APPS)
     for app in dict.fromkeys(["pangloss_interface", *apps]):
         directory = files.app_directory(app)
