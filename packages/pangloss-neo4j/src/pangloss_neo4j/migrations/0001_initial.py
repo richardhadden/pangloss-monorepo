@@ -1,0 +1,178 @@
+"""0001_initial
+
+Made by `pangloss makemigrations`; the answers a change needs may be filled in here.
+"""
+
+from pangloss_models.migrations.files import changes_from_data
+
+dependencies = []
+schema_hash = "636f0d48f6dc5d4ff0053df46a1a83c09afbf4dd5af74daf3fa0bbcd59745edd"
+
+changes = changes_from_data(
+    [
+        {
+            "change": "AddIndex",
+            "safety": "safe",
+            "index": {
+                "kind": "label+property",
+                "label": "HeadNode",
+                "properties": ["id"],
+            },
+        },
+        {
+            "change": "AddIndex",
+            "safety": "safe",
+            "index": {
+                "kind": "label+property",
+                "label": "PGCreation",
+                "properties": ["id"],
+            },
+        },
+        {
+            "change": "AddIndex",
+            "safety": "safe",
+            "index": {
+                "kind": "label+property",
+                "label": "PGDeletion",
+                "properties": ["id"],
+            },
+        },
+        {
+            "change": "AddIndex",
+            "safety": "safe",
+            "index": {
+                "kind": "label+property",
+                "label": "PGIndexableNode",
+                "properties": ["id", "head_node_id"],
+            },
+        },
+        {
+            "change": "AddIndex",
+            "safety": "safe",
+            "index": {
+                "kind": "label+property",
+                "label": "PGIndexableNode",
+                "properties": ["id"],
+            },
+        },
+        {
+            "change": "AddIndex",
+            "safety": "safe",
+            "index": {
+                "kind": "label+property",
+                "label": "PGUndeletion",
+                "properties": ["id"],
+            },
+        },
+        {
+            "change": "AddIndex",
+            "safety": "safe",
+            "index": {
+                "kind": "label+property",
+                "label": "PGUpdate",
+                "properties": ["id"],
+            },
+        },
+        {
+            "change": "AddIndex",
+            "safety": "safe",
+            "index": {
+                "kind": "label+property",
+                "label": "PGUrl",
+                "properties": ["url"],
+            },
+        },
+        {
+            "change": "AddIndex",
+            "safety": "safe",
+            "index": {
+                "kind": "label+property",
+                "label": "PGUser",
+                "properties": ["email"],
+            },
+        },
+        {
+            "change": "AddIndex",
+            "safety": "safe",
+            "index": {
+                "kind": "label+property",
+                "label": "PGUser",
+                "properties": ["username"],
+            },
+        },
+        {
+            "change": "AddIndex",
+            "safety": "safe",
+            "index": {
+                "kind": "text",
+                "label": "PGIndexableNode",
+                "properties": ["label"],
+                "name": "label_text",
+            },
+        },
+        {
+            "change": "AddConstraint",
+            "safety": "additive",
+            "constraint": {
+                "kind": "unique",
+                "label": "PGCreation",
+                "properties": ["id"],
+            },
+        },
+        {
+            "change": "AddConstraint",
+            "safety": "additive",
+            "constraint": {
+                "kind": "unique",
+                "label": "PGDeletion",
+                "properties": ["id"],
+            },
+        },
+        {
+            "change": "AddConstraint",
+            "safety": "additive",
+            "constraint": {
+                "kind": "unique",
+                "label": "PGIndexableNode",
+                "properties": ["id"],
+            },
+        },
+        {
+            "change": "AddConstraint",
+            "safety": "additive",
+            "constraint": {
+                "kind": "unique",
+                "label": "PGUndeletion",
+                "properties": ["id"],
+            },
+        },
+        {
+            "change": "AddConstraint",
+            "safety": "additive",
+            "constraint": {"kind": "unique", "label": "PGUpdate", "properties": ["id"]},
+        },
+        {
+            "change": "AddConstraint",
+            "safety": "additive",
+            "constraint": {"kind": "unique", "label": "PGUrl", "properties": ["url"]},
+        },
+        {
+            "change": "AddConstraint",
+            "safety": "additive",
+            "constraint": {
+                "kind": "unique",
+                "label": "PGUser",
+                "properties": ["email"],
+            },
+        },
+        {
+            "change": "AddConstraint",
+            "safety": "additive",
+            "constraint": {
+                "kind": "unique",
+                "label": "PGUser",
+                "properties": ["username"],
+            },
+        },
+    ]
+)

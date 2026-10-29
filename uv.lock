@@ -14,6 +14,7 @@ members = [
     "pangloss-interface",
     "pangloss-memgraph",
     "pangloss-models",
+    "pangloss-neo4j",
     "pangloss-review",
     "pangloss-sdk",
     "pangloss-sdk-server",
@@ -970,6 +971,49 @@ dev = [
     { name = "pytest", specifier = ">=9.0.3" },
     { name = "pytest-xdist", specifier = ">=3.8.0" },
     { name = "python-lsp-server", specifier = ">=1.14.0" },
+]
+
+[[package]]
+name = "pangloss-neo4j"
+version = "0.1.0"
+source = { editable = "packages/pangloss-neo4j" }
+dependencies = [
+    { name = "more-itertools" },
+    { name = "neo4j" },
+    { name = "pangloss-models" },
+    { name = "pangloss-users" },
+    { name = "pytest-asyncio" },
+    { name = "typer" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "docker" },
+    { name = "httpx2" },
+    { name = "pangloss-api" },
+    { name = "pangloss-sdk" },
+    { name = "pytest-asyncio" },
+    { name = "tenacity" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "more-itertools", specifier = ">=11.1.0" },
+    { name = "neo4j", specifier = ">=6.2.0" },
+    { name = "pangloss-models", editable = "packages/pangloss-models" },
+    { name = "pangloss-users", editable = "packages/pangloss-users" },
+    { name = "pytest-asyncio", specifier = ">=1.4.0" },
+    { name = "typer", specifier = ">=0.27.3" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "docker", specifier = ">=7.1.0" },
+    { name = "httpx2", specifier = ">=2.15" },
+    { name = "pangloss-api", editable = "packages/pangloss-api" },
+    { name = "pangloss-sdk", editable = "packages/pangloss-sdk" },
+    { name = "pytest-asyncio", specifier = ">=1.4.0" },
+    { name = "tenacity", specifier = ">=9.1.4" },
 ]
 
 [[package]]

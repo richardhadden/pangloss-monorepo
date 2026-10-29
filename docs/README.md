@@ -24,6 +24,7 @@ Each feature in these docs is marked with its status:
 | [Cleaning up initialise_models](initialise-models-cleanup.md) | How the five generated models are now made by one builder, what was fixed, and what is left to decide |
 | [Semantic spaces and context labels](semantic-spaces.md) | How nesting inside `SemanticSpace` wrappers is tracked |
 | [Memgraph backend](memgraph.md) | Graph schema, query builders, and the database API |
+| [Neo4j backend](neo4j-implementation.md) 🚧 | `pangloss-neo4j`: the same layer for Neo4j (checked against a real server: maps cannot be properties, full-text search, DDL, isolation), what differs and why, the tests ported from Memgraph's; the add-on packages are not yet backend-neutral |
 | [Settings](settings.md) | `BaseSettings` and database settings |
 | [Logging](logging.md) | What is logged, at what level, and how to set it up |
 | [Large data](large-data.md) | How long loads and migrations take on 600,000 nodes, what to turn up, and what to look out for |

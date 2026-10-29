@@ -170,3 +170,6 @@ Returns `_ListItems` of `ReferenceView`s of all concrete subtypes of `cls`. Defa
 - `initialise_database` is run by `pangloss setup-database` (see [Command line](cli.md)), or can be called from code.
 - Nothing yet removes deleted nodes for good.
 - `Database.default` is set by the last `Database(...)` constructed, and `exposed_functions` decorates with `Database.default` at import time, so the settings/`Database` must be created before the module is first imported (which `initialise()` does when binding).
+- Search does not fold accents: `zurich` does not find "Zürich" (the text index lower-cases only). Neo4j's does; see [§7 of the Neo4j plan](neo4j-implementation.md#7-after-this) for how to make them agree.
+
+The same layer for Neo4j is `pangloss-neo4j`: see [Neo4j backend](neo4j-implementation.md).
