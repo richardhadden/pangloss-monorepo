@@ -217,6 +217,17 @@ to seed; **no default**, decided 2026-10-29), `CALENDAR_AUTO_EXTEND` (make days 
 2. **The graph**: migration (structure), `graph.py`, `seed`, `load-observances`, `ensure_range`, `FALLS_ON`. *Exit (live Memgraph):* seed
    twice gives the same counts; `ensure_range` outside the seed; a corrected observance file changes the edges and leaves one node;
    uniqueness refuses a second day.
+   *As built (2026-10-29, uncommitted):* `migrations/0001_initial.py` (hand-written: an index and a unique key for each of the four node
+   kinds), `graph.py`, `cli.py` (`seed`, `load-observances`, `status`), `settings.py`; the package now depends on `pangloss-memgraph` and
+   `typer`. 7 live tests (in `pangloss-memgraph/tests/test_calendar_live.py`, which has the database fixtures) and 3 for the refusals.
+   Measured on the test Memgraph: **1400 to 1600 (73,416 days) seeds in 2.8 s**; a second seed writes nothing and takes no time; a
+   missing month is made in 6 ms. Decisions made on the way: `FALLS_ON {calendar, year}` is made only for the calendars asked
+   (`--calendar`, default `CALENDAR_DEFAULT`), so a Julian project gets no Gregorian edges; `load-observances` and `seed` delete and remake
+   the edges of those calendars, so a correction leaves none stale; a month's node exists with its whole `first_jdn`/`last_jdn` even when
+   only some of its days do (the Gregorian months at the edge of a seed). *Found:* a `MATCH (b {jdn: a.jdn + 1})` is not an index
+   lookup in Memgraph (it scanned every day for each pair; 73,000 days did not finish): the pairs are made in Python and
+   `UNWIND`ed. *Not checked:* `makemigrations --check` and `migrate` through the real commands with `pangloss_calendar` in
+   `INSTALLED_APPS` (the migration was applied through `apply_changes`, twice, with the same result); seeding on the 642k-node database.
 3. **Service and API**: day, month, year, easter, observances; `calendar_fields()`; visibility. *Exit:* a live test with documents on
    Julian 2 March 1500 (an `ExactDate`, a `DateRange`, an approximate date, a `Period` that includes it, and a `Recurrence` that falls on
    it) finds each, stated or possible as it should be, and does not find a deleted or unpublished one for a reader who may not see it; the

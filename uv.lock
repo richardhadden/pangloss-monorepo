@@ -708,6 +708,8 @@ version = "0.1.0"
 source = { editable = "packages/pangloss-calendar" }
 dependencies = [
     { name = "pangloss-dates" },
+    { name = "pangloss-memgraph" },
+    { name = "typer" },
 ]
 
 [package.dev-dependencies]
@@ -716,7 +718,11 @@ dev = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "pangloss-dates", editable = "packages/pangloss-dates" }]
+requires-dist = [
+    { name = "pangloss-dates", editable = "packages/pangloss-dates" },
+    { name = "pangloss-memgraph", editable = "packages/pangloss-memgraph" },
+    { name = "typer", specifier = ">=0.12" },
+]
 
 [package.metadata.requires-dev]
 dev = [{ name = "juliandate", specifier = ">=1.0.5" }]
