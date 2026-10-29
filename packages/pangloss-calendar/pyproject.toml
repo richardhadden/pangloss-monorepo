@@ -8,6 +8,8 @@ authors = [
 ]
 requires-python = ">=3.15"
 dependencies = [
+    "fastapi>=0.115",
+    "pangloss-api",
     "pangloss-dates",
     "pangloss-memgraph",
     "typer>=0.12",
@@ -22,6 +24,7 @@ build-backend = "uv_build"
 
 [tool.uv.sources]
 pangloss-dates = { workspace = true }
+pangloss-api = { workspace = true }
 pangloss-memgraph = { workspace = true }
 
 [dependency-groups]

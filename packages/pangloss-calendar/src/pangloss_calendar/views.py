@@ -8,7 +8,7 @@ Dates that do not reach the month are left out.
 """
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Literal
 
 DEFAULT_NARROW_DAYS = 7
 
@@ -29,7 +29,7 @@ class Dated:
 @dataclass(frozen=True)
 class Placement:
     ref: Any
-    mark: str
+    mark: Literal["stated", "possible"]
     """`stated` (a single day) or `possible` (one of the days of a range)"""
 
 
@@ -52,7 +52,7 @@ def place(
         if item.days > narrow_days:
             view.spanning.append(item)
             continue
-        mark = "stated" if item.days == 1 else "possible"
+        mark: Literal["stated", "possible"] = "stated" if item.days == 1 else "possible"
         for day in range(
             max(item.earliest_strict, first), min(item.latest_strict, last) + 1
         ):

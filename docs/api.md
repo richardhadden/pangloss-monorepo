@@ -187,10 +187,11 @@ An installed `pangloss_calendar` adds read-only routes under `/api/calendar` (se
 
 | Route | Gives |
 |---|---|
-| `GET /api/calendar/day/{ref}?calendar=&use=` | the day by both names and its weekday, the feasts on it, and the documents dated on it, each `stated` (its strict bounds hold the day) or `possible` (only its allowance for doubt does), repeated events included; `truncated` if there were more than `MONTH_LIMIT` (20,000) dates in a field |
-| `GET /api/calendar/month/{calendar}/{year}/{month}?use=` | the weeks, the days with their feasts and the dates on them (dates that state a range of `CALENDAR_NARROW_DAYS` days or fewer), and `spanning`: the wider ones; `truncated` if more dates were found than shown |
-| `GET /api/calendar/year/{calendar}/{year}` | the months, Easter, and the feasts that move with it |
-| `GET /api/calendar/easter/{calendar}/{year}` | Easter in that calendar, and the moveable feasts |
-| `GET /api/calendar/observances?use=&q=` | the feasts loaded |
-| `GET /api/calendar/observances/{key}/days?from=&to=` | where a feast falls between two days, as linked in the graph |
+| `GET /api/calendar/day/{ref}?calendar=&use=` | the day by both names and its weekday, the characterisations on it (`origin` `rule` or `manual`; `via` says whether it is attached to the day, its month, its year or a span), and the documents dated on it, each `stated` (its strict bounds hold the day) or `possible` (only its allowance for doubt does), repeated events included; `truncated` if there were more than `MONTH_LIMIT` (20,000) dates in a field |
+| `GET /api/calendar/month/{calendar}/{year}/{month}?use=` | the weeks, the days with their characterisations and the dates on them, `characterised_spans` (those attached to the month, year or a span) (dates that state a range of `CALENDAR_NARROW_DAYS` days or fewer), and `spanning`: the wider ones; `truncated` if more dates were found than shown |
+| `GET /api/calendar/year/{calendar}/{year}` | the months, Easter, and the characterisations that move with it |
+| `GET /api/calendar/easter/{calendar}/{year}` | Easter in that calendar, and the characterisations that move with it |
+| `GET /api/calendar/characterisations?use=&q=` | the characterisations (entities of a subclass of `DateCharacterisation`) |
+| `GET /api/calendar/characterisations/{id}/days?from=&to=` | the days between two days that it is on, by its rule (`origin` `rule`) and by hand (`manual`) |
+| `POST /api/calendar/attach`, `POST /api/calendar/detach` | (logged in) attach a characterisation to `day`; `calendar`, `year` and `month`; `calendar` and `year`; or `first` and `last` (a span); 422 if beyond the span and its margin, 404 if there is no such characterisation; `detach` takes away only what was attached by hand |
 

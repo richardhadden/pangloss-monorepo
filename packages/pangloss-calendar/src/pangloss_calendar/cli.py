@@ -1,28 +1,30 @@
-"""`pangloss calendar <command>`: make the days, load the feasts, and look at how it stands (added to the
+"""`pangloss calendar <command>`: make the days, link the characterisations, and look at how it stands (added to the
 `pangloss` command for an installed app with a `cli.py`)."""
 
 import asyncio
 from collections.abc import Awaitable, Callable
-from pathlib import Path
 from typing import Any
 
 import typer
 from pangloss_dates.calendar import Calendar, from_jdn
 
 from pangloss_calendar import settings as calendar_settings
-from pangloss_calendar.observances import InvalidObservance, parse
 
 cli = typer.Typer(
     name="calendar",
-    help="Days, months, years and feasts",
+    help="Days, months, years and what characterises them",
     no_args_is_help=True,
 )
 
 
 def run_connected[T](ctx: typer.Context, function: Callable[[], Awaitable[T]]) -> T:
-    """Run a coroutine function with the database connected"""
+    """Import and initialise the models, then run a coroutine function with the database connected"""
+    from pangloss_models import initialise
+
     project = ctx.obj
     backend = project.require_database()
+    project.import_models()
+    initialise()
 
     async def main() -> T:
         await backend.connect()
@@ -38,14 +40,17 @@ def settings_of(ctx: typer.Context) -> Any:
     return ctx.obj.require_settings()
 
 
-def calendars_of(names: list[str], settings: Any) -> list[Calendar]:
-    try:
-        return [Calendar(name) for name in names] or [
-            calendar_settings.calendar_default(settings)
-        ]
-    except ValueError as error:
-        typer.secho(f"{error}: use julian or gregorian", fg="red", err=True)
-        raise typer.Exit(2) from error
+def say_link(report) -> str:
+    text = f"{report.edges} edges for {report.characterisations} characterisations"
+    if report.extended:
+        text += f"; {report.extended} days made beyond the span"
+    if report.clipped:
+        text += f"; {report.clipped} rules reach beyond the calendar (only the days within it are linked)"
+    if report.outside:
+        text += (
+            f"; {report.outside} rules are wholly beyond the calendar and have no edges"
+        )
+    return text
 
 
 @cli.command()
@@ -63,8 +68,8 @@ def seed(
         help="The calendar the years are in (default: CALENDAR_DEFAULT)",
     ),
 ) -> None:
-    """Make the days from 1 January of the first year to 31 December of the last, with their months and
-    years in both calendars (again is harmless), and link the observances that are loaded"""
+    """Make the days from 1 January of the first year to 31 December of the last, with their months and years in both
+    calendars (again is harmless), then link the characterisations that have a rule"""
     from pangloss_calendar import graph
 
     settings = settings_of(ctx)
@@ -81,43 +86,48 @@ def seed(
     if first > last:
         typer.secho(f"{first} is after {last}", fg="red", err=True)
         raise typer.Exit(2)
-    (chosen,) = calendars_of([calendar] if calendar else [], settings)
+    try:
+        chosen = (
+            Calendar(calendar)
+            if calendar
+            else calendar_settings.calendar_default(settings)
+        )
+    except ValueError as error:
+        typer.secho(f"{error}: use julian or gregorian", fg="red", err=True)
+        raise typer.Exit(2) from error
 
     async def work():
         made = await graph.seed(first, last, chosen)
-        linked = await graph.link_observances([chosen])
-        return made, linked
+        low, high = calendar_settings.reach_days(settings)
+        span = calendar_settings.span_days(settings)
+        return made, await graph.link_rules(low, high, span)
 
-    made, linked = run_connected(ctx, work)
-    typer.echo(
-        f"{made} days made ({first} to {last}, {chosen.value}); {linked} observance edges"
-    )
+    try:
+        made, report = run_connected(ctx, work)
+    except calendar_settings.NoSpan:
+        made, report = run_connected(ctx, lambda: graph.seed(first, last, chosen)), None
+    typer.echo(f"{made} days made ({first} to {last}, {chosen.value})")
+    if report is not None:
+        typer.echo(say_link(report))
 
 
-@cli.command("load-observances")
-def load_observances(
-    ctx: typer.Context,
-    file: Path = typer.Argument(
-        ..., exists=True, dir_okay=False, help="A TOML file of observances"
-    ),
-    calendar: list[str] = typer.Option(
-        [],
-        "--calendar",
-        help="A calendar to link the feasts in (default: CALENDAR_DEFAULT)",
-    ),
-) -> None:
-    """Make or correct the observances in a file (by key) and link them to the days that exist"""
+@cli.command()
+def link(ctx: typer.Context) -> None:
+    """Make again the edges from days to the characterisations whose rule falls on them (after a characterisation has
+    been made or changed). What was attached by hand is not touched. Rules are linked within the span and the margin
+    beyond it (CALENDAR_EXTEND_MARGIN_YEARS, 10 by default), where days are made if they are missing; anything further
+    out is left alone."""
     from pangloss_calendar import graph
 
     settings = settings_of(ctx)
     try:
-        observances = parse(file.read_text(encoding="utf-8"))
-    except InvalidObservance as error:
-        typer.secho(f"{file}: {error}", fg="red", err=True)
-        raise typer.Exit(1) from error
-    chosen = calendars_of(calendar, settings)
-    edges = run_connected(ctx, lambda: graph.load_observances(observances, chosen))
-    typer.echo(f"{len(observances)} observances loaded; {edges} edges")
+        low, high = calendar_settings.reach_days(settings)
+        span = calendar_settings.span_days(settings)
+    except calendar_settings.NoSpan as error:
+        typer.secho(str(error), fg="red", err=True)
+        raise typer.Exit(2) from error
+    report = run_connected(ctx, lambda: graph.link_rules(low, high, span))
+    typer.echo(say_link(report))
 
 
 @cli.command()
@@ -134,5 +144,5 @@ def status(ctx: typer.Context) -> None:
     typer.echo(
         f"{found['days']} days (Julian {first.year}-{first.month:02d}-{first.day:02d} to "
         f"{last.year}-{last.month:02d}-{last.day:02d}), {found['months']} months, "
-        f"{found['years']} years, {found['observances']} observances"
+        f"{found['years']} years, {found['characterised']} characterisation edges"
     )

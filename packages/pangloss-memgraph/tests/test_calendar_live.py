@@ -4,8 +4,7 @@ import pytest
 from neo4j.exceptions import ClientError, ConstraintError
 from pangloss_calendar import graph
 from pangloss_calendar.days import parse_day
-from pangloss_calendar.observances import parse
-from pangloss_dates.calendar import Calendar, from_jdn, to_jdn
+from pangloss_dates.calendar import Calendar, to_jdn
 from pangloss_memgraph.databases.memgraph.database import Database
 from pangloss_memgraph.databases.memgraph.migrations import apply_changes
 from pangloss_models.migrations.files import EMPTY_SNAPSHOT, load
@@ -16,18 +15,6 @@ pytestmark = pytest.mark.asyncio(loop_scope="session")
 
 J = Calendar.JULIAN
 G = Calendar.GREGORIAN
-
-FEASTS = """
-[[observance]]
-key = "sarum:st-benedict"
-use = "sarum"
-fixed = { month = 3, day = 21 }
-
-[[observance]]
-key = "sarum:pentecost"
-use = "sarum"
-easter_offset = 49
-"""
 
 
 @pytest.fixture
@@ -140,44 +127,6 @@ async def test_a_second_day_with_the_same_number_is_refused(db_driver, clear_cal
     await graph.seed(1500, 1500, J)
     with pytest.raises((ConstraintError, ClientError)):
         run(db_driver, "CREATE (:CalendarDay {jdn: $j})", j=parse_day("J1500-03-02"))
-
-
-async def test_observances_are_linked_to_their_days_and_a_correction_leaves_one_node(
-    db_driver, clear_calendar
-):
-    await structure()
-    await graph.seed(1500, 1501, J)
-    observances = parse(FEASTS)
-    edges = await graph.load_observances(observances, [J])
-    assert edges == 4  # two feasts, two years
-    benedict = run(
-        db_driver,
-        "MATCH (:CalendarObservance {key: 'sarum:st-benedict'})-[f:FALLS_ON]->(d) RETURN f.year AS y, d.julian_month AS m, d.julian_day AS d ORDER BY y",
-    )
-    assert benedict == [{"y": 1500, "m": 3, "d": 21}, {"y": 1501, "m": 3, "d": 21}]
-    # corrected: the 22nd
-    corrected = parse(FEASTS.replace("day = 21", "day = 22"))
-    await graph.load_observances(corrected, [J])
-    assert count(db_driver, "CalendarObservance") == 2
-    after = run(
-        db_driver,
-        "MATCH (:CalendarObservance {key: 'sarum:st-benedict'})-[:FALLS_ON]->(d) RETURN d.julian_day AS d",
-    )
-    assert after == [{"d": 22}, {"d": 22}]
-    back = await graph.read_observances()
-    assert [o.key for o in back] == ["sarum:pentecost", "sarum:st-benedict"]
-    assert back[1].fixed == (3, 22) and back[0].easter_offset == 49
-
-
-async def test_seeding_after_the_feasts_links_them_for_the_new_days(
-    db_driver, clear_calendar
-):
-    await structure()
-    await graph.seed(1500, 1500, J)
-    await graph.load_observances(parse(FEASTS), [J])
-    await graph.seed(1501, 1501, J)
-    assert await graph.link_observances([J]) == 4
-    assert from_jdn(parse_day("J1501-03-21"), J).year == 1501
 
 
 async def test_status_says_what_there_is(db_driver, clear_calendar):

@@ -3,20 +3,22 @@
     (:CalendarDay {jdn, weekday, julian_year, julian_month, julian_day, gregorian_year, ...})-[:NEXT]->(:CalendarDay)
     (:CalendarMonth {calendar, year, month, first_jdn, last_jdn})-[:CONTAINS]->(:CalendarDay), -[:NEXT]->(:CalendarMonth)
     (:CalendarYear {calendar, year})-[:CONTAINS]->(:CalendarMonth)
-    (:CalendarObservance {key, use, names, rank, fixed_month, fixed_day, easter_offset, leap_shift})
-        -[:FALLS_ON {calendar, year}]->(:CalendarDay)
+    (:CalendarSpan {first_jdn, last_jdn})
+    (:CalendarDay | :CalendarMonth | :CalendarYear | :CalendarSpan)-[:CHARACTERISED_BY {origin: 'rule' | 'manual'}]->(:DateCharacterisation)
 
 Everything is `MERGE`, so a second run changes nothing. The structure (indexes and keys) is made by the package's
 migration; the nodes by `seed` and `ensure_range`. Writes are in batches of `BATCH_DAYS` days, each its own
 transaction.
 """
 
-import json
 import re
+from dataclasses import dataclass
 from typing import Any
+from uuid import UUID
 
 from neo4j.exceptions import TransientError
 from pangloss_dates.calendar import Calendar, from_jdn, to_jdn, weekday
+from pangloss_dates.config import default_calendar
 from pangloss_memgraph.databases.memgraph.database import (
     Database,
     Transaction,
@@ -25,8 +27,8 @@ from pangloss_memgraph.databases.memgraph.database import (
 from pangloss_memgraph.databases.memgraph.visibility import unpublished_visible
 from pangloss_models.exceptions import PanglossSearchTimeoutError
 
+from pangloss_calendar.characterisations import Characterisation, days_between, from_row
 from pangloss_calendar.days import month_span
-from pangloss_calendar.observances import Observance, falls_on
 
 BATCH_DAYS = 2000
 
@@ -79,6 +81,8 @@ def month_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
                     "month": month,
                     "first_jdn": first,
                     "last_jdn": last,
+                    "year_first": to_jdn(year, 1, 1, calendar),
+                    "year_last": to_jdn(year, 12, 31, calendar),
                     "next_year": after[0],
                     "next_month": after[1],
                     "previous_year": before[0],
@@ -99,6 +103,7 @@ SET d.weekday = row.weekday,
 MERGE_MONTHS = """
 UNWIND $months AS row
 MERGE (y:CalendarYear {calendar: row.calendar, year: row.year})
+SET y.first_jdn = row.year_first, y.last_jdn = row.year_last
 MERGE (m:CalendarMonth {calendar: row.calendar, year: row.year, month: row.month})
 SET m.first_jdn = row.first_jdn, m.last_jdn = row.last_jdn
 MERGE (y)-[:CONTAINS]->(m)
@@ -162,7 +167,7 @@ async def ensure_range(first: int, last: int) -> int:
     @database.read_transaction
     async def count(tx: Transaction) -> int:
         record = await (await tx.run(COUNT_DAYS, first=first, last=last)).single()
-        return record["days"]
+        return record["days"] if record else 0
 
     @database.write_transaction
     async def write(tx: Transaction, rows: list[dict[str, Any]]) -> None:
@@ -195,8 +200,8 @@ async def status() -> dict[str, Any]:
             WITH count(d) AS days, min(d.jdn) AS first, max(d.jdn) AS last
             OPTIONAL MATCH (m:CalendarMonth) WITH days, first, last, count(m) AS months
             OPTIONAL MATCH (y:CalendarYear) WITH days, first, last, months, count(y) AS years
-            OPTIONAL MATCH (o:CalendarObservance)
-            RETURN days, first, last, months, years, count(o) AS observances
+            OPTIONAL MATCH (:CalendarDay)-[e:CHARACTERISED_BY]->()
+            RETURN days, first, last, months, years, count(e) AS characterised
             """
         )
         return dict(await result.single())
@@ -204,156 +209,248 @@ async def status() -> dict[str, Any]:
     return await read()
 
 
-# Observances
+# Characterisations (entities of a subclass of `DateCharacterisation`) and the edges to what they characterise
 
-MERGE_OBSERVANCES = """
-UNWIND $observances AS row
-MERGE (o:CalendarObservance {key: row.key})
-SET o.use = row.use, o.names = row.names, o.rank = row.rank, o.fixed_month = row.fixed_month,
-    o.fixed_day = row.fixed_day, o.easter_offset = row.easter_offset, o.leap_shift = row.leap_shift
-"""
-
-CLEAR_FALLS_ON = """
-MATCH (:CalendarObservance)-[f:FALLS_ON]->(:CalendarDay)
-WHERE f.calendar IN $calendars
-DELETE f
-"""
-
-LINK_FALLS_ON = """
-UNWIND $falls AS row
-MATCH (o:CalendarObservance {key: row.key})
-MATCH (d:CalendarDay {jdn: row.jdn})
-MERGE (o)-[f:FALLS_ON {calendar: row.calendar, year: row.year}]->(d)
-"""
-
-READ_OBSERVANCES = "MATCH (o:CalendarObservance) RETURN o ORDER BY o.key"
-
-
-def observance_row(observance: Observance) -> dict[str, Any]:
-    return {
-        "key": observance.key,
-        "use": observance.use,
-        "names": json.dumps(observance.name, ensure_ascii=False),
-        "rank": observance.rank,
-        "fixed_month": observance.fixed[0] if observance.fixed else None,
-        "fixed_day": observance.fixed[1] if observance.fixed else None,
-        "easter_offset": observance.easter_offset,
-        "leap_shift": observance.leap_shift,
-    }
-
-
-def observance_of(node: Any) -> Observance:
-    fixed = (
-        (node["fixed_month"], node["fixed_day"])
-        if node.get("fixed_month") is not None
-        else None
-    )
-    return Observance(
-        key=node["key"],
-        use=node["use"],
-        name=json.loads(node.get("names") or "{}"),
-        rank=node.get("rank"),
-        fixed=fixed,
-        easter_offset=node.get("easter_offset"),
-        leap_shift=bool(node.get("leap_shift")),
-    )
-
-
-async def read_observances() -> list[Observance]:
-    database = _database()
-
-    @database.read_transaction
-    async def read(tx: Transaction) -> list[Observance]:
-        result = await tx.run(READ_OBSERVANCES)
-        return [observance_of(record["o"]) async for record in result]
-
-    return await read()
-
-
-def falls_rows(
-    observances: list[Observance], first: int, last: int, calendars: list[Calendar]
-) -> list[dict[str, Any]]:
-    """Where each observance falls in the years that the days `first` to `last` touch (pure)"""
-    rows = []
-    for calendar in calendars:
-        years = range(from_jdn(first, calendar).year, from_jdn(last, calendar).year + 1)
-        for observance in observances:
-            for year in years:
-                jdn = falls_on(observance, year, calendar)
-                if jdn is not None and first <= jdn <= last:
-                    rows.append(
-                        {
-                            "key": observance.key,
-                            "calendar": calendar.value,
-                            "year": year,
-                            "jdn": jdn,
-                        }
-                    )
-    return rows
-
-
-async def link_observances(calendars: list[Calendar]) -> int:
-    """(Re)make the `FALLS_ON` edges of the observances in the graph, for the days that exist and the calendars
-    given. The edges of those calendars are deleted first, so a corrected observance leaves no stale one.
-    Returns the number of edges."""
-    database = _database()
-    observances = await read_observances()
-    state = await status()
-    if not observances or state["first"] is None:
-        return 0
-    rows = falls_rows(observances, state["first"], state["last"], calendars)
-
-    @database.write_transaction
-    async def write(tx: Transaction) -> None:
-        await (
-            await tx.run(CLEAR_FALLS_ON, calendars=[c.value for c in calendars])
-        ).consume()
-        for start in range(0, len(rows), BATCH_DAYS):
-            await (
-                await tx.run(LINK_FALLS_ON, falls=rows[start : start + BATCH_DAYS])
-            ).consume()
-
-    await write()
-    return len(rows)
-
-
-async def load_observances(
-    observances: list[Observance], calendars: list[Calendar]
-) -> int:
-    """Make or correct the observances (by `key`) and link them to the days. Returns the edges made"""
-    database = _database()
-
-    @database.write_transaction
-    async def write(tx: Transaction) -> None:
-        await (
-            await tx.run(
-                MERGE_OBSERVANCES,
-                observances=[observance_row(o) for o in observances],
-            )
-        ).consume()
-
-    await write()
-    return await link_observances(calendars)
-
-
-OBSERVANCE_DAYS = """
-MATCH (:CalendarObservance {key: $key})-[f:FALLS_ON]->(d:CalendarDay)
-WHERE d.jdn >= $first AND d.jdn <= $last
-RETURN f.calendar AS calendar, f.year AS year, d.jdn AS jdn
-ORDER BY d.jdn
+CHARACTERISATIONS = """
+MATCH (n:DateCharacterisation)
+WHERE NOT coalesce(n.deleted, false) AND ($use IS NULL OR n.use = $use)
+OPTIONAL MATCH (n)-[:`when`]->(d:Date)
+OPTIONAL MATCH (d)-[:start]->(s:Date)
+RETURN n.id AS id, n.label AS label, n.type AS type, n.use AS use, n.rank AS rank,
+       d.calendar AS calendar, d.earliest_strict AS earliest_strict, d.latest_strict AS latest_strict,
+       d.frequency AS frequency, d.weekdays AS weekdays, d.nth AS nth, d.month AS month,
+       d.month_day AS month_day, d.interval AS interval, d.excluded_days AS excluded_days,
+       d.easter_offset AS easter_offset, d.feast AS feast, s.earliest_strict AS anchor
+ORDER BY n.label, n.id
 """
 
 
-async def observance_days(key: str, first: int, last: int) -> list[dict[str, Any]]:
-    """The days an observance falls on between two day numbers, as linked (`calendar`, `year`, `jdn`)"""
+async def read_characterisations(use: str | None = None) -> list[Characterisation]:
+    """Every characterisation (not deleted), with its rule if it has one"""
     database = _database()
 
     @database.read_transaction
     async def read(tx: Transaction) -> list[dict[str, Any]]:
-        result = await tx.run(OBSERVANCE_DAYS, key=key, first=first, last=last)
+        result = await tx.run(CHARACTERISATIONS, use=use)
         return [dict(record) async for record in result]
 
+    default = default_calendar()
+    return [from_row(row, default) for row in await read()]
+
+
+MANUAL_BETWEEN = """
+CALL {
+  MATCH (t:CalendarDay)-[:CHARACTERISED_BY {origin: 'manual'}]->(c)
+  WHERE t.jdn >= $first AND t.jdn <= $last
+  RETURN c, t.jdn AS lo, t.jdn AS hi, 'day' AS via
+  UNION
+  MATCH (t:CalendarMonth)-[:CHARACTERISED_BY {origin: 'manual'}]->(c)
+  WHERE t.first_jdn <= $last AND t.last_jdn >= $first
+  RETURN c, t.first_jdn AS lo, t.last_jdn AS hi, 'month' AS via
+  UNION
+  MATCH (t:CalendarYear)-[:CHARACTERISED_BY {origin: 'manual'}]->(c)
+  WHERE t.first_jdn <= $last AND t.last_jdn >= $first
+  RETURN c, t.first_jdn AS lo, t.last_jdn AS hi, 'year' AS via
+  UNION
+  MATCH (t:CalendarSpan)-[:CHARACTERISED_BY {origin: 'manual'}]->(c)
+  WHERE t.first_jdn <= $last AND t.last_jdn >= $first
+  RETURN c, t.first_jdn AS lo, t.last_jdn AS hi, 'span' AS via
+}
+WITH c, lo, hi, via
+WHERE NOT coalesce(c.deleted, false) AND ($use IS NULL OR c.use = $use)
+RETURN c.id AS id, c.label AS label, c.type AS type, c.use AS use, c.rank AS rank, lo, hi, via
+ORDER BY c.label, c.id, lo
+"""
+
+
+async def manual_between(
+    first: int, last: int, use: str | None = None
+) -> list[dict[str, Any]]:
+    """The characterisations attached by hand to a day, month, year or span that meets the days `first` to `last`,
+    with the range of what each is attached to (`lo`, `hi`) and which kind it is (`via`)"""
+    database = _database()
+
+    @database.read_transaction
+    async def read(tx: Transaction) -> list[dict[str, Any]]:
+        result = await tx.run(MANUAL_BETWEEN, first=first, last=last, use=use)
+        return [{**record, "id": UUID(record["id"])} async for record in result]
+
     return await read()
+
+
+@dataclass(frozen=True)
+class Target:
+    """What a characterisation is attached to: `day` (`first`), `month` or `year` (of a `calendar`), or a `span` of days"""
+
+    kind: str
+    first: int | None = None
+    last: int | None = None
+    calendar: Calendar | None = None
+    year: int | None = None
+    month: int | None = None
+
+    def days(self) -> tuple[int, int]:
+        """The first and last day number it covers"""
+        if self.kind in ("day", "span"):
+            assert self.first is not None
+            return self.first, self.last if self.last is not None else self.first
+        assert self.calendar is not None and self.year is not None
+        if self.kind == "month":
+            assert self.month is not None
+            return month_span(self.calendar, self.year, self.month)
+        return to_jdn(self.year, 1, 1, self.calendar), to_jdn(
+            self.year, 12, 31, self.calendar
+        )
+
+
+_MATCH_TARGET = {
+    "day": "MATCH (t:CalendarDay {jdn: $first})",
+    "month": "MATCH (t:CalendarMonth {calendar: $calendar, year: $year, month: $month})",
+    "year": "MATCH (t:CalendarYear {calendar: $calendar, year: $year})",
+    "span": "MERGE (t:CalendarSpan {first_jdn: $first, last_jdn: $last})",
+}
+
+
+def _target_parameters(target: Target) -> dict[str, Any]:
+    first, last = target.days()
+    return {
+        "first": first,
+        "last": last,
+        "calendar": target.calendar.value if target.calendar else None,
+        "year": target.year,
+        "month": target.month,
+    }
+
+
+async def attach(characterisation: UUID, target: Target) -> bool:
+    """Attach the characterisation by hand. The days of a day, month or year are made if they are not there (the
+    caller has said they are within reach). Returns False if there is no such characterisation."""
+    if target.kind != "span":
+        first, last = target.days()
+        await ensure_range(first, last)
+    database = _database()
+
+    @database.write_transaction
+    async def write(tx: Transaction) -> bool:
+        result = await tx.run(
+            f"""
+            MATCH (c:DateCharacterisation {{id: $id}}) WHERE NOT coalesce(c.deleted, false)
+            {_MATCH_TARGET[target.kind]}
+            MERGE (t)-[e:CHARACTERISED_BY {{origin: 'manual'}}]->(c)
+            RETURN count(e) AS made
+            """,
+            id=str(characterisation),
+            **_target_parameters(target),
+        )
+        record = await result.single()
+        return bool(record and record["made"])
+
+    return await write()
+
+
+async def detach(characterisation: UUID, target: Target) -> int:
+    """Take away the hand-made attachment (not the ones made from a rule). Returns how many were removed"""
+    database = _database()
+    match = _MATCH_TARGET[target.kind].replace(
+        "MERGE (t:CalendarSpan", "MATCH (t:CalendarSpan"
+    )
+
+    @database.write_transaction
+    async def write(tx: Transaction) -> int:
+        result = await tx.run(
+            f"""
+            {match}
+            MATCH (t)-[e:CHARACTERISED_BY {{origin: 'manual'}}]->(c:DateCharacterisation {{id: $id}})
+            DELETE e
+            RETURN count(e) AS removed
+            """,
+            id=str(characterisation),
+            **_target_parameters(target),
+        )
+        record = await result.single()
+        return record["removed"] if record else 0
+
+    return await write()
+
+
+CLEAR_RULE_EDGES = (
+    "MATCH (:CalendarDay)-[e:CHARACTERISED_BY {origin: 'rule'}]->() DELETE e"
+)
+
+LINK_RULE_EDGES = """
+UNWIND $pairs AS pair
+MATCH (d:CalendarDay {jdn: pair.jdn})
+MATCH (c:DateCharacterisation {id: pair.id})
+MERGE (d)-[:CHARACTERISED_BY {origin: 'rule'}]->(c)
+"""
+
+
+@dataclass
+class LinkReport:
+    edges: int = 0
+    characterisations: int = 0
+    clipped: int = 0
+    """Rules whose lifetime goes beyond the reach: only the days inside it are linked"""
+    outside: int = 0
+    """Rules whose lifetime is wholly beyond the reach: nothing is linked"""
+    extended: int = 0
+    """Days made outside the span but within the margin"""
+
+
+async def link_rules(first: int, last: int, span: tuple[int, int]) -> LinkReport:
+    """(Re)make the edges from days to the characterisations whose rule falls on them, for the days from `first` to
+    `last` (the reach; days in it outside the `span` are made, which extends the calendar). Hand-made edges are
+    not touched. Days beyond `last` and before `first` are never made."""
+    report = LinkReport()
+    pairs: list[dict[str, Any]] = []
+    counted: set[UUID] = set()
+    for c in await read_characterisations():
+        if not c.has_days:
+            continue
+        counted.add(c.id)
+        if (
+            c.last is not None
+            and c.last < first
+            or c.first is not None
+            and c.first > last
+        ):
+            report.outside += 1
+            continue
+        if (c.first is not None and c.first < first) or (
+            c.last is not None and c.last > last
+        ):
+            report.clipped += 1
+        pairs.extend({"jdn": d, "id": str(c.id)} for d in days_between(c, first, last))
+    if pairs:
+        low, high = min(p["jdn"] for p in pairs), max(p["jdn"] for p in pairs)
+        if low < span[0] or high > span[1]:
+            for lo, hi in (
+                (low, min(high, span[0] - 1)),
+                (max(low, span[1] + 1), high),
+            ):
+                if lo <= hi:
+                    report.extended += await ensure_range(lo, hi)
+    database = _database()
+
+    @database.write_transaction
+    async def write(tx: Transaction) -> None:
+        await (await tx.run(CLEAR_RULE_EDGES)).consume()
+        for start in range(0, len(pairs), BATCH_DAYS):
+            await (
+                await tx.run(LINK_RULE_EDGES, pairs=pairs[start : start + BATCH_DAYS])
+            ).consume()
+
+    await write()
+    report.edges = len({(p["jdn"], p["id"]) for p in pairs})
+    report.characterisations = len(counted)
+    return report
+
+
+CHARACTERISATION_DAYS = """
+MATCH (d:CalendarDay)-[:CHARACTERISED_BY {origin: 'rule'}]->(:DateCharacterisation {id: $id})
+WHERE d.jdn >= $first AND d.jdn <= $last
+RETURN d.jdn AS jdn ORDER BY d.jdn
+"""
 
 
 # Dates found from the dates, not from the documents (the plan's "date-first" query)
@@ -370,7 +467,7 @@ OPTIONAL MATCH (h:HeadNode {{id: n.head_node_id}})
 WITH n, d, coalesce(h, n) AS head
 WHERE NOT coalesce(head.deleted, false) AND ($see_unpublished OR coalesce(head.published, true))
 OPTIONAL MATCH (d)-[:start]->(s:Date)
-RETURN n.id AS id, n.label AS label, n.type AS type, d.type AS kind,
+RETURN n.id AS id, n.label AS label, n.type AS type, d.type AS kind, d.calendar AS calendar,
        d.earliest_fuzzy AS earliest_fuzzy, d.earliest_strict AS earliest_strict,
        d.latest_strict AS latest_strict, d.latest_fuzzy AS latest_fuzzy,
        d.frequency AS frequency, d.weekdays AS weekdays, d.nth AS nth, d.month AS month,

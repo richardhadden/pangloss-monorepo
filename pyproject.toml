@@ -64,6 +64,7 @@ include = [
     "packages/pangloss-memgraph/src/pangloss_memgraph/databases/memgraph/exposed_functions.py",
     "packages/pangloss-zotero/src/pangloss_zotero/store.py",
     "packages/pangloss-zotero/src/pangloss_zotero/link.py",
+    "packages/pangloss-calendar/src/pangloss_calendar/graph.py",
 ]
 [tool.ty.overrides.rules]
 invalid-await = "ignore"

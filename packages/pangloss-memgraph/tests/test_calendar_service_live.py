@@ -10,7 +10,6 @@ from fastapi import FastAPI
 from pangloss_calendar import graph, service
 from pangloss_calendar.api import router
 from pangloss_calendar.days import parse_day
-from pangloss_calendar.observances import parse
 from pangloss_dates.calendar import Calendar, weekday
 from pangloss_dates.easter import easter
 from pangloss_memgraph.databases.memgraph.initialise_database import (
@@ -33,10 +32,15 @@ def exact(year, month=None, day=None):
 
 
 def models():
-    from pangloss_dates import julian, models
+    from pangloss_calendar import models as calendar_models
+    from pangloss_dates import julian
+    from pangloss_dates import models as date_models
 
-    for module in (models, julian):
+    for module in (date_models, julian, calendar_models):
         importlib.reload(module)
+
+    class FeastDay(calendar_models.DateCharacterisation):
+        pass
 
     class Factoid(Document):
         when: julian.JulianDate
@@ -45,20 +49,42 @@ def models():
         when: julian.JulianDate
 
     initialise()
-    return Factoid, Mass
+    return Factoid, Mass, FeastDay
 
 
-FEASTS = """
-[[observance]]
-key = "sarum:second-of-march"
-use = "sarum"
-fixed = { month = 3, day = 2 }
+def yearly(first_year, last_year, **rule):
+    return {
+        "type": "Recurrence",
+        "calendar": "julian",
+        "frequency": "yearly",
+        "weekdays": [],
+        "excluded_days": [],
+        "start": {"type": "ExactDate", "calendar": "julian", "year": first_year},
+        "end": {
+            "type": "ExactDate",
+            "calendar": "julian",
+            "year": last_year,
+            "month": 12,
+            "day": 31,
+        },
+        **rule,
+    }
 
-[[observance]]
-key = "sarum:pentecost"
-use = "sarum"
-easter_offset = 49
-"""
+
+async def make_feasts(FeastDay):
+    return {
+        "march": await FeastDay.Create(
+            label="Second of March",
+            use="sarum",
+            when=yearly(1450, 1530, month=3, month_day=2),
+        ).save(),
+        "pentecost": await FeastDay.Create(
+            label="Pentecost", use="sarum", when=yearly(1450, 1530, easter_offset=49)
+        ).save(),
+        "by hand": await FeastDay.Create(
+            label="Term day", when={"type": "NoRule"}
+        ).save(),
+    }
 
 
 async def make_documents(Factoid):
@@ -91,10 +117,23 @@ def labels(hits, mark=None):
 async def test_a_day_finds_every_kind_of_date_and_the_feast(
     clear_database, clear_calendar
 ):
-    Factoid, Mass = models()
+    Factoid, Mass, FeastDay = models()
     await initialise_database()
     await structure()
     await make_documents(Factoid)
+    await Factoid.Create(
+        label="yearly",
+        when={
+            "type": "JulianRecurrence",
+            "frequency": "yearly",
+            "weekdays": [],
+            "excluded_days": [],
+            "month": 3,
+            "month_day": 2,
+            "start": exact(1450),
+            "end": exact(1530, 12, 31),
+        },
+    ).save()
     await Factoid.Create(
         label="weekly",
         when={
@@ -106,11 +145,19 @@ async def test_a_day_finds_every_kind_of_date_and_the_feast(
             "end": exact(1500, 12, 31),
         },
     ).save()
-    await graph.load_observances(parse(FEASTS), [J])
+    await make_feasts(FeastDay)
     report = await service.day(parse_day("J1500-03-02"), J)
     assert report.day.julian == "J1500-03-02" and report.day.gregorian == "G1500-03-12"
-    assert [o.key for o in report.observances] == ["sarum:second-of-march"]
-    assert labels(report.hits, "stated") == ["exact", "period", "range", "weekly"]
+    assert [(c.characterisation.label, c.origin) for c in report.characterisations] == [
+        ("Second of March", "rule")
+    ]
+    assert labels(report.hits, "stated") == [
+        "exact",
+        "period",
+        "range",
+        "weekly",
+        "yearly",
+    ]
     assert labels(report.hits, "possible") == [
         "about"
     ]  # (a week either side of the 6th allows the 2nd)
@@ -128,7 +175,7 @@ async def test_a_day_finds_every_kind_of_date_and_the_feast(
 
 @no_type_check
 async def test_what_a_reader_may_not_see_is_not_found(clear_database, clear_calendar):
-    Factoid, Mass = models()
+    Factoid, Mass, FeastDay = models()
     await initialise_database()
     made = await make_documents(Factoid)
     run_id = made["exact"].id
@@ -163,7 +210,7 @@ async def test_what_a_reader_may_not_see_is_not_found(clear_database, clear_cale
 async def test_a_month_puts_narrow_dates_on_days_and_wide_ones_apart(
     clear_database, clear_calendar
 ):
-    Factoid, Mass = models()
+    Factoid, Mass, FeastDay = models()
     await initialise_database()
     await make_documents(Factoid)
     report = await service.month(J, 1500, 3)
@@ -186,12 +233,12 @@ async def test_a_month_puts_narrow_dates_on_days_and_wide_ones_apart(
 
 @no_type_check
 async def test_easter_and_the_year(clear_database, clear_calendar):
-    Factoid, Mass = models()
+    Factoid, Mass, FeastDay = models()
     await initialise_database()
-    await graph.load_observances(parse(FEASTS), [J])
+    await make_feasts(FeastDay)
     report = await service.easter_report(J, 1500)
     assert report.easter.jdn == easter(1500, J)
-    assert [m.observance.key for m in report.moveable] == ["sarum:pentecost"]
+    assert [m.characterisation.label for m in report.moveable] == ["Pentecost"]
     assert report.moveable[0].day.jdn == easter(1500, J) + 49
     year = await service.year_report(J, 1500)
     assert [m.month for m in year.months] == list(range(1, 13))
@@ -202,13 +249,29 @@ async def test_easter_and_the_year(clear_database, clear_calendar):
 
 
 @no_type_check
-async def test_the_routes(clear_database, clear_calendar):
-    Factoid, Mass = models()
+async def test_the_routes(clear_database, clear_calendar, monkeypatch):
+    from types import SimpleNamespace
+
+    from pangloss_api.dependencies import get_current_user
+    from pangloss_calendar import settings as calendar_settings
+    from pangloss_dates.calendar import to_jdn
+
+    Factoid, Mass, FeastDay = models()
     await initialise_database()
     await structure()
     await make_documents(Factoid)
+    made = await make_feasts(FeastDay)
     await graph.seed(1500, 1500, J)
-    await graph.load_observances(parse(FEASTS), [J])
+    await graph.link_rules(
+        to_jdn(1495, 1, 1, J),
+        to_jdn(1505, 12, 31, J),
+        (to_jdn(1500, 1, 1, J), to_jdn(1500, 12, 31, J)),
+    )
+    monkeypatch.setattr(
+        calendar_settings,
+        "reach_days",
+        lambda settings=None: (to_jdn(1495, 1, 1, J), to_jdn(1505, 12, 31, J)),
+    )
     app = FastAPI()
     app.include_router(router)
     client = httpx.AsyncClient(
@@ -219,6 +282,9 @@ async def test_the_routes(clear_database, clear_calendar):
     body = got.json()
     assert body["day"]["gregorian"] == "G1500-03-12"
     assert {h["ref"]["label"] for h in body["hits"]} >= {"exact", "range"}
+    assert [c["characterisation"]["label"] for c in body["characterisations"]] == [
+        "Second of March"
+    ]
     assert (await client.get("/api/calendar/day/nonsense")).status_code == 422
     assert (await client.get("/api/calendar/day/J1500-02-30")).status_code == 422
     assert (await client.get("/api/calendar/month/julian/1500/13")).status_code == 422
@@ -231,14 +297,75 @@ async def test_the_routes(clear_database, clear_calendar):
     assert (await client.get("/api/calendar/easter/gregorian/2000")).json()["easter"][
         "gregorian"
     ] == "G2000-04-23"
-    found = (await client.get("/api/calendar/observances?use=sarum&q=pente")).json()
-    assert [o["key"] for o in found] == ["sarum:pentecost"]
+    found = (
+        await client.get("/api/calendar/characterisations?use=sarum&q=pente")
+    ).json()
+    assert [c["label"] for c in found] == ["Pentecost"]
     days = (
         await client.get(
-            "/api/calendar/observances/sarum:second-of-march/days?from=J1500-01-01&to=J1500-12-31"
+            f"/api/calendar/characterisations/{made['march'].id}/days?from=J1500-01-01&to=J1500-12-31"
         )
     ).json()
-    assert [d["day"]["julian"] for d in days] == ["J1500-03-02"]
+    assert [(d["day"]["julian"], d["origin"]) for d in days] == [
+        ("J1500-03-02", "rule")
+    ]
+    assert (
+        await client.get(
+            f"/api/calendar/characterisations/{made['march'].id}/days?from=J1500-01-01"
+        )
+    ).status_code == 422
+
+    # attaching needs a user
+    attach = {"characterisation": str(made["by hand"].id), "day": "J1500-03-05"}
+    assert (await client.post("/api/calendar/attach", json=attach)).status_code in (
+        401,
+        403,
+    )
+    app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(
+        username="someone"
+    )
+    assert (await client.post("/api/calendar/attach", json=attach)).status_code == 201
+    on_day = (await client.get("/api/calendar/day/J1500-03-05")).json()
+    assert [
+        (c["characterisation"]["label"], c["origin"], c["via"])
+        for c in on_day["characterisations"]
+    ] == [("Term day", "manual", "day")]
+    month = {
+        "characterisation": str(made["by hand"].id),
+        "calendar": "julian",
+        "year": 1500,
+        "month": 3,
+    }
+    assert (await client.post("/api/calendar/attach", json=month)).status_code == 201
+    in_month = (await client.get("/api/calendar/month/julian/1500/3")).json()
+    assert [
+        c["characterisation"]["label"] for c in in_month["characterised_spans"]
+    ] == ["Term day"]
+    assert in_month["characterised_spans"][0]["via"] == "month"
+    assert (await client.post("/api/calendar/detach", json=attach)).json() == {
+        "removed": 1
+    }
+    assert (await client.post("/api/calendar/detach", json=month)).json() == {
+        "removed": 1
+    }
+    # beyond the calendar, no such thing, no target
+    far = {"characterisation": str(made["by hand"].id), "day": "J-0383-03-01"}
+    refused = await client.post("/api/calendar/attach", json=far)
+    assert (
+        refused.status_code == 422
+        and "outside the calendar" in refused.json()["detail"]
+    )
+    missing = {
+        "characterisation": "01a18688-4cf0-73dd-9d9c-a1c659bef751",
+        "day": "J1500-03-05",
+    }
+    assert (await client.post("/api/calendar/attach", json=missing)).status_code == 404
+    assert (
+        await client.post(
+            "/api/calendar/attach",
+            json={"characterisation": attach["characterisation"]},
+        )
+    ).status_code == 422
 
 
 @no_type_check
@@ -262,7 +389,7 @@ async def test_the_date_fields_are_found_from_the_models_and_can_be_narrowed():
 async def test_a_day_or_month_with_more_dates_than_the_limit_says_so(
     clear_database, clear_calendar, monkeypatch
 ):
-    Factoid, Mass = models()
+    Factoid, Mass, FeastDay = models()
     await initialise_database()
     for i in range(5):
         await Factoid.Create(label=f"f{i}", when=exact(1500, 3, 2)).save()

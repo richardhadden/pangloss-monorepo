@@ -1,7 +1,7 @@
 """0001_initial
 
-The structure of the calendar graph: an index and a unique key for days, months, years and observances.
-Written by hand (the calendar has no models); the nodes are made by `pangloss calendar seed`.
+The structure of the calendar graph: an index and a unique key for days, months, years and spans.
+Written by hand (the calendar's own nodes are not models); the nodes are made by `pangloss calendar seed`.
 """
 
 from pangloss_models.migrations.files import changes_from_data
@@ -42,8 +42,8 @@ changes = changes_from_data(
             "safety": "safe",
             "index": {
                 "kind": "label+property",
-                "label": "CalendarObservance",
-                "properties": ["key"],
+                "label": "CalendarSpan",
+                "properties": ["first_jdn", "last_jdn"],
             },
         },
         {
@@ -78,8 +78,8 @@ changes = changes_from_data(
             "safety": "additive",
             "constraint": {
                 "kind": "unique",
-                "label": "CalendarObservance",
-                "properties": ["key"],
+                "label": "CalendarSpan",
+                "properties": ["first_jdn", "last_jdn"],
             },
         },
     ]

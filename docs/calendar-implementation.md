@@ -103,28 +103,49 @@ package makes and reads them with its own Cypher, kept in **one module** (`graph
 - Indexed lookups: a day by `jdn`, a month by its key, a range of days by `jdn` between two numbers.
 - Size: 1450 to 1530 is about 29,000 days, 960 months, 80 years (per calendar the months and years are doubled if both are used): small.
 
-## Observances
+## Characterisations (replaces "observances", 2026-10-29)
 
-An observance is **data**, not structure; it is loaded and corrected without a migration.
+*The first version of this plan, and the code up to phase 4, had feasts as `:CalendarObservance` nodes loaded from a TOML file. Decided
+with the owner on 2026-10-29: they are entities instead.*
 
-```yaml
-- key: sarum:st-benedict          # unique; the prefix is the liturgical use
-  use: sarum                      # Sarum, Roman, a diocese, ...
-  name: {en: Benedict, la: Benedicti abbatis}
-  rank: major                     # the project's own scale
-  fixed: {month: 3, day: 21}      # a fixed feast ...
-  # easter_offset: 49             # ... or a moveable one (Pentecost)
-  leap_shift: false
-```
+`pangloss_calendar.models.DateCharacterisation` is an **abstract entity** (so the package has a model after all: abstract, no
+migration of its own). A project subclasses it for what it needs (`FeastDay`, a term day, a market day); a subclass is an ordinary
+entity with the API, history, translations and relations that any has. Its fields: `use`, `rank`, and `when: Recurrence | NoRule`.
+`NoRule` (an Embedded with no fields) is for one attached by hand: *a list of rules, and an optional embedded, are not supported by the
+models, so the choice is made explicit*. A feast with two days in the year (the translation as well) is two entities.
 
-- **Evaluation is pure** (`observances.falls_on(obs, year, calendar) -> jdn`, `observances_on(jdn, use)`), tested without a database.
-  A fixed feast is `to_jdn(year, month, day, calendar)`; a moveable one is `easter(year, calendar) + offset`.
-- **The graph copy** is for listing and for tagging: `pangloss calendar load-observances FILE` does `MERGE` by `key` (so a correction is
-  a second run), and makes `(obs)-[:FALLS_ON {year}]->(day)` for the seeded years, so "the days St Benedict fell on between 1450 and
-  1530" is one traversal, and a document can be related to a feast in a year.
-- **No observance data is shipped** (decided 2026-10-29: users provide it). The loader and the file format are the deliverable, with one
-  worked example (an Easter cycle and a few fixed feasts, to show the fields, in a documentation file and not in the package's data).
-- Names are translations in `models.jsonc`-style slots, not code (see [translations.md](translations.md)).
+- **By rule.** A `Recurrence` (pangloss-dates) is the rule: 21 March, the third Sunday of March, `easter_offset` 49, over a lifetime
+  ("observed 1450 to 1530"), in **its own calendar** (21 March Julian is not 21 March Gregorian). `characterisations.days_between`
+  works a yearly rule out year by year, not day by day (checked against trying every day); `falls_on_day` checks one day. A repeated
+  event of another model can fall on a characterisation with `feast = "<its id>"`.
+- **By hand.** `POST /api/calendar/attach` (logged in) attaches one to a **day**, a **month** or **year** (of a calendar), or a **span** of
+  days (`:CalendarSpan {first_jdn, last_jdn}`, made when needed, in no calendar: a week, Lent, a term). A month or year covers its days
+  without copying: the day view and the month view look at the day's own edges and those of its month, year and any span that
+  contains it. `POST /api/calendar/detach` takes it away.
+- **The edges.** `(:CalendarDay|CalendarMonth|CalendarYear|CalendarSpan)-[:CHARACTERISED_BY {origin: 'rule' | 'manual'}]->(characterisation)`.
+  `origin: 'manual'` edges are never touched by the package except `detach`. `origin: 'rule'` edges are **derived** and made by
+  `pangloss calendar link` (and by `seed`), which deletes and remakes all of them: they are stale after an entity is changed until the
+  next run, because the core has no hook after a write. **The views do not use the rule edges** (they work the rules out), so a stale
+  edge never gives a wrong day or month page; the edges are for graph questions ("every day Benedict fell on").
+- **Not supported yet:** a rule that repeats a *span* (Lent every year): `Recurrence` repeats single days. Leap-day shifts of feasts on
+  24 to 28 February (the `leap_shift` of the first version): not in `Recurrence`; to be a rule field if a source needs it.
+- **No data is shipped** (decided 2026-10-29: users provide it). To load a list, create the entities through the API or the SDK.
+
+### The span, the margin and what is out of reach
+
+`CALENDAR_FIRST_YEAR` and `CALENDAR_LAST_YEAR` (no default) are the span of the calendar. **The reach** is the span with
+`CALENDAR_EXTEND_MARGIN_YEARS` (default 10) either side.
+
+- **Just outside the span (inside the margin): the calendar grows.** `link` and `attach` make the days they need (only the days needed,
+  with their months and years), so a rule that starts in the year before the span, or a day attached 5 years past it, just works and the
+  graph now has those days.
+- **Well outside (beyond the margin): nothing is made.** `link` leaves the days outside the reach unlinked and says so (*`clipped`*: a rule
+  with a lifetime that goes beyond the reach has only the days inside it linked; *`outside`*: a rule wholly beyond it has none); `attach`
+  refuses with 422. So the author of a medieval text who is in the project because he wrote one, with his birth in 384 BC, has no place
+  in the calendar's graph. Dated documents are never linked to the calendar at all in version 1 (the views find them by their dates), so
+  nothing was ever going to put him there: the rule only governs characterisations.
+- The day, month, year and Easter views are worked out, not read from the graph: they answer for any year, in or out of reach. (If a
+  project wants them refused outside the reach too, that is one check in the service: not done, and not asked for.)
 
 ## The queries and the API
 
@@ -138,7 +159,8 @@ around it).
 | `GET /api/calendar/month/{calendar}/{year}/{month}` | the days with their observances and the narrow dates on each (below), and the wide ones apart |
 | `GET /api/calendar/year/{calendar}/{year}` | months, with counts, and the moveable feasts of the year |
 | `GET /api/calendar/easter/{calendar}/{year}` | the day, and the dates that move with it |
-| `GET /api/calendar/observances?use=&q=` and `/{key}/days?from=&to=` | the feasts, and where each falls |
+| `GET /api/calendar/characterisations?use=&q=` and `/{id}/days?from=&to=` | the characterisations (feasts and the like), and where each is, by rule and by hand |
+| `POST /api/calendar/attach`, `POST /api/calendar/detach` (logged in) | attach a characterisation to a day, a month, a year or a span, and take it away |
 
 - **Which fields hold dates** is found from the models: every field typed with a `Date` family class (or a union of them) of every
   Document and Entity class. `calendar_fields()` reads `ModelRegistry` once and caches it. A project can narrow it
@@ -173,13 +195,14 @@ packages/pangloss-calendar/
   pyproject.toml          depends on pangloss-dates, pangloss-api, pangloss-core, pangloss-models, pangloss-memgraph, typer
   src/pangloss_calendar/
     days.py               describe a day in both calendars; a month's days; the next and the last        (pure, on pangloss_dates.calendar)
-    observances.py        the file format, validation, falls_on, observances_on                           (pure)
+    models.py             DateCharacterisation (abstract entity) and NoRule
+    characterisations.py  the days a characterisation's rule falls on                                   (pure)
     views.py              place dates in a month: narrow on days, wide in the spanning lane, stated or possible (pure)
     fields.py             which model fields hold dates (reads the registry)
-    graph.py              all the Cypher: constraints, ensure_range, merge observances, FALLS_ON          (the only module that knows Memgraph)
+    graph.py              all the Cypher: constraints, ensure_range, characterisations, edges, date-first query (the only module that knows Memgraph)
     service.py            day, month, year, easter: put the above together; calls dates.query.on_day
     api.py                router (and configure_app only in version 2)
-    cli.py                pangloss calendar seed | load-observances | status
+    cli.py                pangloss calendar seed | link | status
     settings.py           CALENDAR_*
     migrations/           structure only
   tests/
@@ -195,6 +218,9 @@ to seed; **no default**, decided 2026-10-29), `CALENDAR_AUTO_EXTEND` (make days 
 `CALENDAR_USE` (the liturgical use a view shows), `CALENDAR_NARROW_DAYS` (7), `CALENDAR_FIELDS` (default: all).
 
 ## Phases
+
+*Read the phase notes below as history where they speak of observances, `load-observances`, `FALLS_ON` or the TOML file: those were replaced by characterisations (above) on 2026-10-29.*
+
 
 0. **DONE 2026-10-29** (not committed): **In `pangloss-dates`**: `easter.py`; `easter_offset` and `feast` in the rule, with keys and validation; `extra_keys` on `day_keys` and
    `on_day`; `describe`. *Exit:* Easter agrees with `dateutil.easter` for both methods over 1400 to 1800 (*to check* how it labels
@@ -268,6 +294,19 @@ to seed; **no default**, decided 2026-10-29), `CALENDAR_AUTO_EXTEND` (make days 
    report has `truncated` too (it stopped silently at 1000). Under the line, so **version 1 stands and version 2 (edges) is not built.** Not
    covered: the `review_status` filter of the lists (the calendar shows documents whatever their review status, as long as they are
    published); a date in an embedded object (only the edge from the node itself is followed).
+   *Characterisations built (2026-10-29, uncommitted):* `models.py`, `characterisations.py`, `graph.py` (read, `manual_between`, `attach`/`detach`,
+   `link_rules`, `CalendarSpan`), `service.py`, `api.py` (`/characterisations`, `/attach`, `/detach`, with the day, month, year and
+   Easter reports carrying them), `cli.py` (`seed`, `link`, `status`; `load-observances` and `observances.py` removed), the settings
+   `CALENDAR_EXTEND_MARGIN_YEARS`, and migration 0001 changed (a unique key on `CalendarSpan` instead of `CalendarObservance`: never
+   applied anywhere but the test database). Tests: 35 pure and CLI in `pangloss-calendar`, and 14 live (`test_calendar_live.py`,
+   `test_calendar_characterisations_live.py`, `test_calendar_service_live.py`): the rules linked inside the span and the margin with the
+   days made to fit and a rule wholly outside left alone; relinking after an edit keeping what was attached by hand; day, month, year and span
+   attached and taken away; an attachment beyond the reach refused; the API with login. Found on the way: **a rule's keys were being
+   worked out in the calendar the page is read in**, so a Julian yearly rule read under a Gregorian day name could be missed: the keys
+   are now those of both calendars and the rule is checked in its own (test: a Julian "2 March" read as G1500-03-12). *Not done:* a rule
+   that repeats a span; the leap-day shift; edges that follow a change by themselves (`link` by hand); `review_status` filtering;
+   `pangloss migrate` through the real command with the app installed (the abstract model should need none: *to check* with a
+   project that subclasses it and runs `makemigrations`).
 5. **Interface** (only when you ask for it): a month page, a day page, "new document on this day" with the date filled in. The
    interface has no way yet for an installed app to add pages (its routes are in `interface-app`): deferred (decision 4 below).
 6. (Gate) Version 2.

@@ -11,6 +11,8 @@ is meant to be general: nothing about it belongs in `pangloss-models`, except th
 
 ## Two packages
 
+> **Update 2026-10-29: observances are now entities** (`DateCharacterisation`, subclassed by the project), edged from days, months, years and spans by `CHARACTERISED_BY`, not `:CalendarObservance` nodes loaded from a file: see the [calendar plan](calendar-implementation.md).
+>
 > **Update 2026-10-28:** `pangloss-dates` is built ([dates-implementation.md](dates-implementation.md)), and the plan for `pangloss-calendar` is in [calendar-implementation.md](calendar-implementation.md). It changes this document in one way: version 1 has **no `OCCURS_ON` edges** (day and month views are queries over the dates' indexed bounds); the edges below are a later, measured step.
 
 | | |

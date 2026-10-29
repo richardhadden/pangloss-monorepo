@@ -707,6 +707,8 @@ name = "pangloss-calendar"
 version = "0.1.0"
 source = { editable = "packages/pangloss-calendar" }
 dependencies = [
+    { name = "fastapi" },
+    { name = "pangloss-api" },
     { name = "pangloss-dates" },
     { name = "pangloss-memgraph" },
     { name = "typer" },
@@ -719,6 +721,8 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "fastapi", specifier = ">=0.115" },
+    { name = "pangloss-api", editable = "packages/pangloss-api" },
     { name = "pangloss-dates", editable = "packages/pangloss-dates" },
     { name = "pangloss-memgraph", editable = "packages/pangloss-memgraph" },
     { name = "typer", specifier = ">=0.12" },

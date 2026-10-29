@@ -53,6 +53,13 @@ def family_of(annotation: Any) -> str | None:
     return ""
 
 
+def _is_characterisation(model: type) -> bool:
+    """(Characterisations are shown as what they are, not as documents with a date)"""
+    from pangloss_calendar import models
+
+    return issubclass(model, models.DateCharacterisation)
+
+
 def calendar_fields(settings: Any = None) -> list[DateField]:
     """The date fields to look in (reads the registry each time: it is cheap, and the registry is what it is when asked)"""
     wanted = setting("CALENDAR_FIELDS", None, settings)
@@ -60,7 +67,7 @@ def calendar_fields(settings: Any = None) -> list[DateField]:
     for model in ModelRegistry.all_models().values():
         if not (isinstance(model, type) and issubclass(model, (Document, Entity))):
             continue
-        if model._meta.abstract:
+        if model._meta.abstract or _is_characterisation(model):
             continue
         for name, info in model.model_fields.items():
             family = family_of(info.annotation)
