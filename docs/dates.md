@@ -11,6 +11,8 @@ is meant to be general: nothing about it belongs in `pangloss-models`, except th
 
 ## Two packages
 
+> **Update 2026-10-28:** `pangloss-dates` is built ([dates-implementation.md](dates-implementation.md)), and the plan for `pangloss-calendar` is in [calendar-implementation.md](calendar-implementation.md). It changes this document in one way: version 1 has **no `OCCURS_ON` edges** (day and month views are queries over the dates' indexed bounds); the edges below are a later, measured step.
+
 | | |
 |---|---|
 | **`pangloss-dates`** | The Embedded types (below), the day arithmetic, the probability maths, EDTF import and export, and recurrence rules and their expansion. Needs only `pangloss-models`. Each date stores hard bounds as integers, so **range queries work without the calendar package** |
