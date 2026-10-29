@@ -26,6 +26,10 @@ dev = [
     "ruff>=0.17.2",
     "ty>=0.0.90",
 ]
+# End-to-end tests in a browser (`uv run pytest e2e`; needs `uv run playwright install chromium`)
+e2e = [
+    "pytest-playwright>=0.7",
+]
 
 # Static types: the models are generated at run time (`Person.Create`, `Person.get`, `_meta`, ...), which a
 # type checker cannot see. In the code that makes or uses them, and in tests and the demo, which declare

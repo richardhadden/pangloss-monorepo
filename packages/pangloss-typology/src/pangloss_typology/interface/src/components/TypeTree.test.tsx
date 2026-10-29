@@ -121,13 +121,14 @@ test("dragging a type onto another moves it below that one; onto itself or its o
   expect(api.post).toHaveBeenCalledWith("/typology/RoleType/secretary/move", { to: "bard" });
 });
 
-test("the top level is a place to drop, shown while dragging", async () => {
+test("the top level is a place to drop: its room is kept, so that the rows do not move, and it shows while dragging", async () => {
   const api = client();
   await show(api, { username: "someone" });
-  expect(document.body.textContent).not.toContain("Drop here for the top level");
+  const strip = [...document.body.querySelectorAll("div")].find((div) => div.textContent === "Drop here for the top level")!;
+  expect(strip.classList.contains("invisible")).toBe(true);
   rows()[1].dispatchEvent(new Event("dragstart", { bubbles: true }));
   await settle();
-  const strip = [...document.body.querySelectorAll("div")].find((div) => div.textContent === "Drop here for the top level")!;
+  expect(strip.classList.contains("invisible")).toBe(false);
   const drop = new Event("drop", { bubbles: true, cancelable: true });
   strip.dispatchEvent(drop);
   await settle();

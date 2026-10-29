@@ -126,8 +126,10 @@ export default function TypeTree(props: ListPageProps) {
       </Show>
       <Errored fallback={(error) => <ErrorMessage error={error()} />}>
         <Loading fallback={<p>Loading…</p>}>
-          <Show when={draggable() && dragging() !== undefined}>
+          {/* (always there for someone who can move, hidden until a drag: the rows must not move when it starts) */}
+          <Show when={draggable()}>
             <div
+              aria-hidden={dragging() === undefined ? "true" : "false"}
               onDragOver={(event) => {
                 if (mayDrop(null)) event.preventDefault();
               }}
@@ -136,7 +138,10 @@ export default function TypeTree(props: ListPageProps) {
                 const id = dragging();
                 if (id !== undefined && mayDrop(null)) void move(id, null);
               }}
-              class="mb-2 rounded-sm border border-dashed border-slate-400 px-3 py-2 text-center text-xs text-slate-600"
+              class={[
+                "mb-2 rounded-sm border border-dashed border-slate-400 px-3 py-2 text-center text-xs text-slate-600",
+                { invisible: dragging() === undefined },
+              ]}
             >
               Drop here for the top level
             </div>
