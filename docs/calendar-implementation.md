@@ -122,10 +122,8 @@ An observance is **data**, not structure; it is loaded and corrected without a m
 - **The graph copy** is for listing and for tagging: `pangloss calendar load-observances FILE` does `MERGE` by `key` (so a correction is
   a second run), and makes `(obs)-[:FALLS_ON {year}]->(day)` for the seeded years, so "the days St Benedict fell on between 1450 and
   1530" is one traversal, and a document can be related to a feast in a year.
-- **Shipped data is minimal and certain**: the moveable cycle from Easter (Septuagesima, Ash Wednesday, Palm Sunday, Good Friday, Easter,
-  Ascension, Pentecost, Trinity Sunday, Corpus Christi) and the principal fixed feasts (Christmas, Epiphany, Candlemas, Annunciation,
-  St John Baptist, Assumption, All Saints). **The saints' calendars of a use are not shipped**: they are the project's scholarship; the
-  loader and the file format are the deliverable, with one worked example. *Where the data for 1450 to 1530 comes from is a question below.*
+- **No observance data is shipped** (decided 2026-10-29: users provide it). The loader and the file format are the deliverable, with one
+  worked example (an Easter cycle and a few fixed feasts, to show the fields, in a documentation file and not in the package's data).
 - Names are translations in `models.jsonc`-style slots, not code (see [translations.md](translations.md)).
 
 ## The queries and the API
@@ -193,15 +191,18 @@ or the interface's model export to see), the same as for `dates.md`'s "no model 
 check the app label).
 
 Settings: `CALENDAR_DEFAULT` (default: `DATES_DEFAULT_CALENDAR`), `CALENDAR_FIRST_YEAR` / `CALENDAR_LAST_YEAR` (the span to browse and
-to seed; default `DATES_EARLIEST_YEAR` .. `DATES_OPEN_END_YEAR` would be ten thousand years, so this needs its own, small, default),
+to seed; **no default**, decided 2026-10-29), `CALENDAR_AUTO_EXTEND` (make days outside the span when asked, default off),
 `CALENDAR_USE` (the liturgical use a view shows), `CALENDAR_NARROW_DAYS` (7), `CALENDAR_FIELDS` (default: all).
 
 ## Phases
 
-0. **In `pangloss-dates`**: `easter.py`; `easter_offset` and `feast` in the rule, with keys and validation; `extra_keys` on `day_keys` and
+0. **DONE 2026-10-29** (not committed): **In `pangloss-dates`**: `easter.py`; `easter_offset` and `feast` in the rule, with keys and validation; `extra_keys` on `day_keys` and
    `on_day`; `describe`. *Exit:* Easter agrees with `dateutil.easter` for both methods over 1400 to 1800 (*to check* how it labels
    the Julian result), is always a Sunday in the calendar asked for, and equals the two anchors (2000); the keys never miss (the
-   existing eight-year tests, plus the new fields).
+   existing eight-year tests, plus the new fields). *As built:* `dateutil` is not installed, so Easter is checked against printed
+   tables instead (Western 1818 to 2038; Orthodox 2000 to 2025, and Julian 17 April 2000), plus the Sunday and 22 March to 25 April
+   range for every year 1400 to 1800 in both calendars. `easter_offset` is limited to -80 to 250 so a day stays in the year of its
+   Easter. `occurrences` takes `extra_keys_of(day)`. Not checked: Easter for years before 1400 or beyond 2038 against a table.
 1. **Pure calendar** (`days`, `observances`, `views`): no database, no models. *Exit:* both names of every day 1400 to 1600 agree with
    `pangloss_dates.calendar` and `juliandate`; Julian 29 February 1500; month grids start on the right weekday in both calendars; the file
    format validates and rejects an impossible feast (30 February); the narrow/wide split on edge cases (a range of exactly 7 days).
@@ -215,7 +216,7 @@ to seed; default `DATES_EARLIEST_YEAR` .. `DATES_OPEN_END_YEAR` would be ten tho
 4. **Measure and decide**: a month view over 100,000 dates on the scratch database; write the number here. If under about a second, stop
    at version 1; if not, build the date-first query; only then consider version 2.
 5. **Interface** (only when you ask for it): a month page, a day page, "new document on this day" with the date filled in. The
-   interface has no way yet for an installed app to add pages (its routes are in `interface-app`): *a question below*.
+   interface has no way yet for an installed app to add pages (its routes are in `interface-app`): deferred (decision 4 below).
 6. (Gate) Version 2.
 
 ## Tests, in short
@@ -236,15 +237,22 @@ to seed; default `DATES_EARLIEST_YEAR` .. `DATES_OPEN_END_YEAR` would be ten tho
 - **Two calendars on one day** (a Julian month and a Gregorian one containing it) must never be confused in the API: every month and year
   route carries the calendar in its path, and nothing defaults silently except `CALENDAR_DEFAULT`.
 
-## Decisions I need
+## Decisions (2026-10-29)
 
-1. **Edges later, not now** (the change from `dates.md` above): agreed?
-2. **Observance data**: for which use or uses, for what places, and from which source? (This decides whether a worked example or a real set is the first target, and whether `leap_shift` matters.)
-3. **Easter and `feast` in `pangloss-dates`** (phase 0): agreed that they live in dates and not in the calendar?
-4. **Interface**: how does an installed app add pages? Today it cannot. A plugin point (`interface-app` reads routes from installed packages) is a design of its own; until then, the calendar pages would have to live in `interface-app`.
-5. **Span**: what years should be seeded and browsable by default (1400 to 1600?), and is a Gregorian view wanted at all in the first project?
-6. **Narrow means**: is 7 days right as the line between "on a day" and "spanning"?
-7. **Month view in the first version** computed per request: acceptable until phase 4 says otherwise?
+1. **Edges: later.** Version 1 has none; phase 5 stays a gate.
+2. **Observance data is provided by the users.** The package ships the loader, the file format and one worked example, and no
+   saints' calendar. (The moveable cycle from Easter, if shipped at all, is in the example file, not built in.) So `leap_shift` is
+   a field users may set, and there is no question of which use to ship.
+3. **Easter and `feast` live in `pangloss-dates`** (phase 0 as written).
+4. **Interface: deferred.** The direction, for when it is taken up: the interface's configuration (`InterfaceConfig`) says where a
+   thing is put, by "use" declarations (a **use page**, a **use section**, a **use card**, ...). A use page creates routes as well as
+   placing the page. Phase 5 (the interface) waits for that; the calendar's API does not depend on it.
+5. **The span is a setting.** `CALENDAR_FIRST_YEAR` and `CALENDAR_LAST_YEAR` have no default: `seed` refuses without them, and the
+   browse routes answer a year outside them with a clear error (or make the days, if `CALENDAR_AUTO_EXTEND` is on). Decided to
+   leave the numbers to the project.
+6. **"Narrow" is a setting, `CALENDAR_NARROW_DAYS`, default 7** (see the explanation given with this decision: it only decides whether
+   a date with a range of days is drawn on each of its days or listed apart in the month view).
+7. **Month view computed per request** until phase 4's measurement says otherwise (not objected to).
 
 ## Not verified
 

@@ -16,6 +16,7 @@ This module knows nothing of when the order was in force: that is the bounds of 
   interval and the excluded days).
 """
 
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from enum import StrEnum
 
@@ -27,6 +28,10 @@ from pangloss_dates.calendar import (
     nth_weekday,
     weekday,
 )
+from pangloss_dates.easter import easter
+
+EASTER_OFFSETS = range(-80, 251)
+"""Far enough to keep the day in the year of its Easter (Easter is from 22 March to 25 April)"""
 
 
 class Frequency(StrEnum):
@@ -44,6 +49,9 @@ class RecurrenceRule:
     """- weekly: `weekdays` (every Sunday and Wednesday)
     - monthly: `month_day` (the 21st), or `nth` with one weekday (the third Sunday; -1 is the last)
     - yearly: `month`, and `month_day` or `nth` with one weekday (21 March; the third Sunday of March)
+    - yearly, moving with Easter: `easter_offset` alone, in days (-47 is Shrove Tuesday, 49 is Pentecost)
+    - yearly, on a feast: `feast` alone, a key that the owner of the feasts (`pangloss_calendar`) works out the days of;
+      `occurs_on` is told the feasts of the day in `extra_keys`
 
     `interval` is every 2nd, 3rd... week, month or year. `excluded_days` are day numbers that are left out."""
 
@@ -54,6 +62,8 @@ class RecurrenceRule:
     month_day: int | None = None
     interval: int = 1
     excluded_days: frozenset[int] = field(default_factory=frozenset)
+    easter_offset: int | None = None
+    feast: str | None = None
 
     def __post_init__(self):
         if self.interval < 1:
@@ -66,6 +76,9 @@ class RecurrenceRule:
             raise InvalidRule("nth is 1 to 5, or -1 to -5 from the end of the month")
         if len(set(self.weekdays)) != len(self.weekdays):
             raise InvalidRule("a weekday is given twice")
+        if self.easter_offset is not None or self.feast is not None:
+            self._check_moving()
+            return
         if self.frequency == Frequency.WEEKLY:
             if not self.weekdays:
                 raise InvalidRule("a weekly rule needs at least one weekday")
@@ -89,6 +102,27 @@ class RecurrenceRule:
         if by_weekday and (self.nth is None or len(self.weekdays) != 1):
             raise InvalidRule("the nth weekday of a month needs nth and one weekday")
 
+    def _check_moving(self):
+        if self.easter_offset is not None and self.feast is not None:
+            raise InvalidRule("give easter_offset or feast, not both")
+        if self.frequency != Frequency.YEARLY:
+            raise InvalidRule("a rule on Easter or a feast is yearly")
+        if (
+            self.weekdays
+            or self.nth is not None
+            or self.month is not None
+            or self.month_day is not None
+        ):
+            raise InvalidRule(
+                "a rule on Easter or a feast takes no weekday, nth, month or month_day"
+            )
+        if self.easter_offset is not None and self.easter_offset not in EASTER_OFFSETS:
+            raise InvalidRule(
+                f"easter_offset {self.easter_offset} is not from {EASTER_OFFSETS.start} to {EASTER_OFFSETS.stop - 1}"
+            )
+        if self.feast is not None and not self.feast.strip():
+            raise InvalidRule("a feast needs a key")
+
 
 def _needs_anchor(rule: RecurrenceRule, anchor: int | None) -> int:
     if anchor is None:
@@ -97,12 +131,23 @@ def _needs_anchor(rule: RecurrenceRule, anchor: int | None) -> int:
 
 
 def occurs_on(
-    rule: RecurrenceRule, day: int, calendar: Calendar, anchor: int | None = None
+    rule: RecurrenceRule,
+    day: int,
+    calendar: Calendar,
+    anchor: int | None = None,
+    extra_keys: Iterable[str] = (),
 ) -> bool:
-    """Whether the rule falls on the day (the lifetime of the order is not considered)"""
+    """Whether the rule falls on the day (the lifetime of the order is not considered). `extra_keys` are the keys
+    the caller knows the day to have that cannot be worked out here (`feast:...`)"""
     if day in rule.excluded_days:
         return False
     year, month, day_of_month = from_jdn(day, calendar)
+    if rule.easter_offset is not None or rule.feast is not None:
+        if rule.feast is not None:
+            on_it = f"feast:{rule.feast}" in set(extra_keys)
+        else:
+            on_it = day == easter(year, calendar) + (rule.easter_offset or 0)
+        return on_it and _in_interval(rule, year, calendar, anchor)
     if rule.frequency == Frequency.WEEKLY:
         if weekday(day) not in rule.weekdays:
             return False
@@ -125,20 +170,41 @@ def occurs_on(
     return True
 
 
+def _in_interval(
+    rule: RecurrenceRule, year: int, calendar: Calendar, anchor: int | None
+) -> bool:
+    if rule.interval == 1:
+        return True
+    a_year = from_jdn(_needs_anchor(rule, anchor), calendar).year
+    return (year - a_year) % rule.interval == 0
+
+
 def occurrences(
     rule: RecurrenceRule,
     first: int,
     last: int,
     calendar: Calendar,
     anchor: int | None = None,
+    extra_keys_of: Callable[[int], Iterable[str]] | None = None,
 ) -> list[int]:
     """The days from `first` to `last` (inclusive) on which the rule falls. Goes through every day of the range, so
-    ask for a stretch of years, not centuries"""
-    return [d for d in range(first, last + 1) if occurs_on(rule, d, calendar, anchor)]
+    ask for a stretch of years, not centuries. `extra_keys_of(day)`
+    gives the keys of a day that cannot be worked out here (feasts)"""
+    return [
+        d
+        for d in range(first, last + 1)
+        if occurs_on(
+            rule, d, calendar, anchor, extra_keys_of(d) if extra_keys_of else ()
+        )
+    ]
 
 
 def pattern_keys(rule: RecurrenceRule) -> list[str]:
-    """Keys that a day the rule falls on always has among its `day_keys`"""
+    """Keys that a day the rule falls on always has among its `day_keys` (and, for a feast, its `extra_keys`)"""
+    if rule.easter_offset is not None:
+        return [f"easter:{rule.easter_offset:+d}"]
+    if rule.feast is not None:
+        return [f"feast:{rule.feast}"]
     if rule.frequency == Frequency.WEEKLY:
         return [f"weekday:{w.value}" for w in rule.weekdays]
     if rule.frequency == Frequency.MONTHLY:
@@ -150,8 +216,9 @@ def pattern_keys(rule: RecurrenceRule) -> list[str]:
     return [f"yearnth:{rule.month}:{rule.nth}:{rule.weekdays[0].value}"]
 
 
-def day_keys(day: int, calendar: Calendar) -> list[str]:
-    """Every key a rule could have and fall on this day"""
+def day_keys(day: int, calendar: Calendar, extra_keys: Iterable[str] = ()) -> list[str]:
+    """Every key a rule could have and fall on this day. `extra_keys` are added as they are: the `feast:` keys
+    of the day, which only the owner of the feasts can say"""
     year, month, day_of_month = from_jdn(day, calendar)
     dow = weekday(day).value
     from_start = (day_of_month - 1) // 7 + 1
@@ -164,4 +231,6 @@ def day_keys(day: int, calendar: Calendar) -> list[str]:
         f"yearday:{month}-{day_of_month}",
         f"yearnth:{month}:{from_start}:{dow}",
         f"yearnth:{month}:{from_end}:{dow}",
+        f"easter:{day - easter(year, calendar):+d}",
+        *extra_keys,
     ]

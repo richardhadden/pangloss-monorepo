@@ -199,6 +199,53 @@ def test_a_recurrence_has_its_pattern_keys_and_a_lifetime(models):
     assert ymd(when.earliest_strict) == (1505, 3, 2)
 
 
+def test_a_recurrence_on_easter_or_a_feast_has_its_key(models):
+    _, JulianEvent, _ = models
+    for extra, key in (
+        ({"easter_offset": 49}, "easter:+49"),
+        ({"feast": "sarum:benedict"}, "feast:sarum:benedict"),
+    ):
+        when = make(
+            JulianEvent,
+            {
+                "type": "JulianRecurrence",
+                "frequency": "yearly",
+                "weekdays": [],
+                "excluded_days": [],
+                "start": {
+                    "type": "JulianExactDate",
+                    "year": 1505,
+                    "month": 3,
+                    "day": 2,
+                },
+                "end": {"type": "JulianOngoingDate"},
+                **extra,
+            },
+        )
+        db = JulianEvent.CreateDB.model_validate(
+            JulianEvent.Create(label="x", when=when).model_dump(by_alias=False)
+        )
+        assert db.when.pattern_keys == [key]
+
+
+def test_a_recurrence_with_easter_and_a_month_is_refused(models):
+    _, JulianEvent, _ = models
+    with pytest.raises(ValidationError, match="Easter"):
+        make(
+            JulianEvent,
+            {
+                "type": "JulianRecurrence",
+                "frequency": "yearly",
+                "weekdays": [],
+                "excluded_days": [],
+                "month": 3,
+                "easter_offset": 1,
+                "start": {"type": "JulianExactDate", "year": 1505},
+                "end": {"type": "JulianOngoingDate"},
+            },
+        )
+
+
 def test_a_rule_that_says_no_day_is_refused(models):
     _, JulianEvent, _ = models
     with pytest.raises(ValidationError, match="weekday"):

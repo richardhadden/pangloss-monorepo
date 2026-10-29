@@ -37,7 +37,7 @@ class Person(Entity):
 | `{"type": "JulianEDTFDate", "edtf": "1500-03~"}` | EDTF text: `?` uncertain, `~` approximate, `15XX`, `[1500,1502]`. Nobody has to write it |
 | `{"type": "JulianDateRange", "earliest": {...}, "latest": {...}}` | One date that is somewhere between two exact dates (each can be a year, a month or a day) |
 | `{"type": "JulianPeriod", "start": {...}, "end": {...}}` | An office, a residence. The ends are any of the above. If one end is not known, `{"type": "JulianUnknownDate"}` (not both); `{"type": "JulianOngoingDate"}` as the end says it was still going |
-| `{"type": "JulianRecurrence", "frequency": "weekly", "weekdays": [0], "excluded_days": [], "start": {...}, "end": {...}}` | A repeated event: weekdays are 0 for Sunday to 6; `frequency` is `weekly`, `monthly` or `yearly`; with `nth` (the third, or -1 for the last), `month`, `month_day`, `interval` |
+| `{"type": "JulianRecurrence", "frequency": "weekly", "weekdays": [0], "excluded_days": [], "start": {...}, "end": {...}}` | A repeated event: weekdays are 0 for Sunday to 6; `frequency` is `weekly`, `monthly` or `yearly`; with `nth` (the third, or -1 for the last), `month`, `month_day`, `interval`; yearly only, instead of a month: `easter_offset` (days from Easter, -80 to 250; 49 is Pentecost) or `feast` (a key the calendar package works out) |
 
 ### When an end is not known
 

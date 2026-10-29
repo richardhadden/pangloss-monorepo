@@ -8,6 +8,7 @@ Dates that are not repeated are found by their bounds alone.
     refs = await on_day(Factoid, "when", day, Calendar.JULIAN, family="Julian")
 """
 
+from collections.abc import Iterable
 from typing import Any
 
 from pangloss_models.search import Match
@@ -41,7 +42,12 @@ def dated_where(
 
 
 def recurring_where(
-    field: str, day: int, calendar: Calendar, family: str = "", fuzzy: bool = True
+    field: str,
+    day: int,
+    calendar: Calendar,
+    family: str = "",
+    fuzzy: bool = True,
+    extra_keys: Iterable[str] = (),
 ) -> dict[str, Any]:
     """The pattern for the documents with a repeated event that might fall on the day (to be checked)"""
     return {
@@ -49,7 +55,7 @@ def recurring_where(
             "type": f"{family}Recurrence",
             "where": {
                 **bounds_where(day, fuzzy),
-                "pattern_keys": {"contains_any": day_keys(day, calendar)},
+                "pattern_keys": {"contains_any": day_keys(day, calendar, extra_keys)},
             },
         }
     }
@@ -81,10 +87,13 @@ async def on_day(
     family: str = "",
     fuzzy: bool = True,
     limit: int = 1000,
+    extra_keys: Iterable[str] = (),
 ) -> list:
     """The head documents of `model` with a date in `field` that holds the day (day number), or a repeated
     event in it that falls on it, as references, in the order of their labels. `fuzzy` takes a date to hold the
-    day if it might (the fuzzy bounds); otherwise only if it is stated to (the strict bounds)."""
+    day if it might (the fuzzy bounds); otherwise only if it is stated to (the strict bounds). `extra_keys` are the
+    feasts of the day (`feast:...`), which the calendar works out."""
+    extra_keys = list(extra_keys)
     found = {
         item.id: item
         async for item in pages(model, dated_where(field, day, family, fuzzy), limit)
@@ -92,7 +101,7 @@ async def on_day(
     candidates = [
         item
         async for item in pages(
-            model, recurring_where(field, day, calendar, family, fuzzy), limit
+            model, recurring_where(field, day, calendar, family, fuzzy, extra_keys), limit
         )
     ]
     for item in candidates:
@@ -101,6 +110,6 @@ async def on_day(
         recurrence_class = type(date)._owner
         rule = recurrence_class.rule_of(date)
         anchor = date.start.earliest_strict
-        if occurs_on(rule, day, calendar, anchor):
+        if occurs_on(rule, day, calendar, anchor, extra_keys):
             found[item.id] = item
     return sorted(found.values(), key=lambda item: (item.label.lower(), str(item.id)))

@@ -111,6 +111,21 @@ def convert(
     return from_jdn(to_jdn(year, month, day, from_calendar), to_calendar)
 
 
+class DayNames(NamedTuple):
+    julian: YMD
+    gregorian: YMD
+    weekday: Weekday
+
+
+def describe(jdn: int) -> DayNames:
+    """A day named in both calendars, and its weekday"""
+    return DayNames(
+        from_jdn(jdn, Calendar.JULIAN),
+        from_jdn(jdn, Calendar.GREGORIAN),
+        weekday(jdn),
+    )
+
+
 def weekday(jdn: int) -> Weekday:
     return Weekday((jdn + 1) % 7)
 

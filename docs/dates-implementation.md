@@ -322,7 +322,7 @@ Embedded
   `Padding` (the convention: an approximate year is a year either side, a month a month, a day a week),
   `exact_bounds`, `padded_bounds`, `spanning_bounds` (a range of two dates, or a period), `ongoing_bounds(horizon)`.
 - `pangloss_dates.recurrence` (built): `RecurrenceRule` (weekly / monthly / yearly; weekdays, `nth`, `month`, `month_day`,
-  `interval`, `excluded_days`; an impossible combination is `InvalidRule`), `occurs_on`, `occurrences`, `pattern_keys`, `day_keys`.
+  `interval`, `excluded_days`, and, yearly, `easter_offset` or `feast` in place of a month; an impossible combination is `InvalidRule`), `occurs_on`, `occurrences`, `pattern_keys`, `day_keys`.
   A rule is applied in a calendar; an interval over 1 counts from an anchor day (weeks of seven days from it). The keys never miss
   (tested over eight years in both calendars for eight rules), and cut the candidate days to under 60%.
 - 92 tests in all. Left of phase 1: `edtf.py`.

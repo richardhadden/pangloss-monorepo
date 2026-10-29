@@ -237,6 +237,10 @@ class Recurrence(Date):
     """Every 2nd, 3rd... week, month or year, counting from the start (1 if not said)"""
     excluded_days: list[int]
     """Day numbers the rule does not fall on"""
+    easter_offset: int | None = None
+    """Instead of a month: days from Easter in the year (-47 is Shrove Tuesday); a yearly rule"""
+    feast: str | None = None
+    """Instead of a month: the key of a feast (the calendar works out its days); a yearly rule"""
 
     start: ExactDate | DateRange | EDTFDate | UnknownDate
     end: ExactDate | DateRange | EDTFDate | OngoingDate | UnknownDate
@@ -254,6 +258,8 @@ class Recurrence(Date):
             month_day=date.month_day,
             interval=date.interval or 1,
             excluded_days=frozenset(date.excluded_days),
+            easter_offset=date.easter_offset,
+            feast=date.feast,
         )
 
     @classmethod
