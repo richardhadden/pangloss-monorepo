@@ -316,9 +316,9 @@ to seed; **no default**, decided 2026-10-29), `CALENDAR_AUTO_EXTEND` (make days 
    `pangloss-calendar` ship their migrations** (`pangloss_dates.0001_initial`; `pangloss_calendar.0001_initial` by hand, `0002` for `DateCharacterisation`
    and `NoRule`, both written by `makemigrations`). Tried for real in a throwaway project on the test database: `migrate` applies all of them,
    `makemigrations --check` says no changes, `pangloss calendar seed | link | status` run, and `pangloss run` starts ("the database and the models
-   agree with them"), serves `/api/calendar/...` and answers an attach without a login with 401. *The same is true of every other
-   package with models (zotero, review, history...): none ships migrations yet, so `makemigrations` in a project that installs them writes
-   them into the package; that is outside the calendar and is not changed here.*
+   agree with them"), serves `/api/calendar/...` and answers an attach without a login with 401. *The other packages: only
+   `pangloss-zotero` defines models (`ZoteroBacked`, `ZoteroObject`, `ZoteroLibrary`; review and history add meta slots and listeners, not models), and it now ships `0001_initial`
+   too (written by `makemigrations`, applied by `migrate`, `makemigrations --check` clean, and a server starts).*
 5. **Interface** (only when you ask for it): a month page, a day page, "new document on this day" with the date filled in. The
    interface has no way yet for an installed app to add pages (its routes are in `interface-app`): deferred (decision 4 below).
 6. (Gate) Version 2.
