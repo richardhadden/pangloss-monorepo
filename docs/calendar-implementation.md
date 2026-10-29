@@ -232,8 +232,32 @@ to seed; **no default**, decided 2026-10-29), `CALENDAR_AUTO_EXTEND` (make days 
    Julian 2 March 1500 (an `ExactDate`, a `DateRange`, an approximate date, a `Period` that includes it, and a `Recurrence` that falls on
    it) finds each, stated or possible as it should be, and does not find a deleted or unpublished one for a reader who may not see it; the
    same in a Gregorian project (the same day by the other name).
+   *As built (2026-10-29, uncommitted):* `fields.py` (`calendar_fields`, with `CALENDAR_FIELDS` narrowing; a date inside an embedded object is
+   not searched), `service.py` (pydantic reports: `day`, `month`, `year_report`, `easter_report`, `find_observances`, `days_of_observance`)
+   and `api.py` (the six routes of the table above). 5 live tests in `pangloss-memgraph/tests/test_calendar_service_live.py`, including the
+   exit test (an `ExactDate`, a `DateRange`, an approximate date, a `Period` and a weekly `Recurrence` on Julian 2 March 1500; found
+   `stated` or `possible`; the Gregorian name of the day gives the same answer; an unpublished document is found only by a reader who may
+   see it, a deleted one by none) and the routes through ASGI. Things that are as they are: **`stated` means the strict bounds hold the
+   day** (so an approximate day "about 6 March" is `possible` on the 2nd, a range 1 to 3 March is `stated` on the 2nd; in the month view a
+   *range* is drawn `possible` on each day, by the rule in `views.py`, which is a different question: whether the event was on that day
+   for sure); a month is filled from the **strict** range only; a month reads each date's document (`Model.get`, 8 at a time) to learn its
+   range, up to `MONTH_LIMIT` (2000) a field, and says `truncated` if more: **phase 4 measures this, and the date-first query is the fix**;
+   the days need not be in the graph (the answer is worked out; `CALENDAR_AUTO_EXTEND` makes them as they are asked for); the feasts are
+   read from the graph on each request. *Not done:* the year's counts per month (the year gives the months, Easter and the moveable
+   feasts); a project without `pangloss_calendar` (`feast` rules are not refused there yet); `pangloss_calendar` through
+   `INSTALLED_APPS` in a running server.
 4. **Measure and decide**: a month view over 100,000 dates on the scratch database; write the number here. If under about a second, stop
    at version 1; if not, build the date-first query; only then consider version 2.
+   *Measured (2026-10-29, test Memgraph on :7687, 100,000 documents each with one Julian date, written straight as Cypher in the shape the models
+   write; 70% one day, 15% a month, 10% a range of 2 or 3 days, 5% a year; spread over 1490 to 1510):* a month of about 700 dates
+   (380 on days, about 290 spanning) takes **1.1 to 1.5 s**; a day with 310 hits **1.2 s**. Of a month, **about 0.9 s is the two searches** (a
+   single-date search and a recurrence search over the field; the `EXISTS` inside `Model.search` that dates-implementation.md predicted does not use
+   the `:Date` indexes) and **0.3 to 0.5 s is reading the 614 documents** (`Model.get`, 8 at a time). Worst case, all 100,000 in one month: **3.3 s** for the
+   month (cut at `MONTH_LIMIT`, `truncated: true`), 2.8 s for the day. **The day silently stops at 1000 hits** (`on_day`'s `limit`), with no
+   flag: to fix whichever way phase 4 goes. *Decision rule of this plan:* over about a second, so build the date-first query (below) before
+   anything else; it would remove the 0.9 s of searching, and with the dates it finds it can read the bounds in the same query, which also removes
+   the 0.3 to 0.5 s of reading documents. Version 2 (edges) is not needed. *Not measured:* the 642k-node scratch database (the cost is in the
+   dates' own count, not in the other nodes, but this was not shown), real labels and real distributions, a project with several date fields.
 5. **Interface** (only when you ask for it): a month page, a day page, "new document on this day" with the date filled in. The
    interface has no way yet for an installed app to add pages (its routes are in `interface-app`): deferred (decision 4 below).
 6. (Gate) Version 2.

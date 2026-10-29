@@ -326,3 +326,23 @@ async def load_observances(
 
     await write()
     return await link_observances(calendars)
+
+
+OBSERVANCE_DAYS = """
+MATCH (:CalendarObservance {key: $key})-[f:FALLS_ON]->(d:CalendarDay)
+WHERE d.jdn >= $first AND d.jdn <= $last
+RETURN f.calendar AS calendar, f.year AS year, d.jdn AS jdn
+ORDER BY d.jdn
+"""
+
+
+async def observance_days(key: str, first: int, last: int) -> list[dict[str, Any]]:
+    """The days an observance falls on between two day numbers, as linked (`calendar`, `year`, `jdn`)"""
+    database = _database()
+
+    @database.read_transaction
+    async def read(tx: Transaction) -> list[dict[str, Any]]:
+        result = await tx.run(OBSERVANCE_DAYS, key=key, first=first, last=last)
+        return [dict(record) async for record in result]
+
+    return await read()

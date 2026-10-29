@@ -180,3 +180,17 @@ such as a sync, is not stopped.
 - Limiting login attempts.
 - A route to list the types.
 - Per-type or per-object permissions.
+
+## The calendar (`pangloss_calendar`)
+
+An installed `pangloss_calendar` adds read-only routes under `/api/calendar` (see [the calendar plan](calendar-implementation.md)). A day is `J1500-03-02` (Julian), `G1500-03-12` (Gregorian) or a day number; a bad one is a 422. The visibility of any search applies: a reader who may not see unpublished documents does not find them.
+
+| Route | Gives |
+|---|---|
+| `GET /api/calendar/day/{ref}?calendar=&use=` | the day by both names and its weekday, the feasts on it, and the documents dated on it, each `stated` (its strict bounds hold the day) or `possible` (only its allowance for doubt does), repeated events included |
+| `GET /api/calendar/month/{calendar}/{year}/{month}?use=` | the weeks, the days with their feasts and the dates on them (dates that state a range of `CALENDAR_NARROW_DAYS` days or fewer), and `spanning`: the wider ones; `truncated` if more dates were found than shown |
+| `GET /api/calendar/year/{calendar}/{year}` | the months, Easter, and the feasts that move with it |
+| `GET /api/calendar/easter/{calendar}/{year}` | Easter in that calendar, and the moveable feasts |
+| `GET /api/calendar/observances?use=&q=` | the feasts loaded |
+| `GET /api/calendar/observances/{key}/days?from=&to=` | where a feast falls between two days, as linked in the graph |
+
