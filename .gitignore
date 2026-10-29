@@ -24,3 +24,6 @@ packages/pydantic-meta-kit/
 # coverage data
 .coverage
 .coverage.*
+
+# Playwright traces and screenshots of failed e2e tests
+test-results/

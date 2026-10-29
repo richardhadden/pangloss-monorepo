@@ -26,6 +26,6 @@ uv run pytest --dist=loadgroup -n auto $args
 status=$?
 
 if [ "$e2e" = yes ]; then
-    uv run pytest e2e || status=$?
+    uv run pytest e2e --tracing retain-on-failure --screenshot only-on-failure || status=$?
 fi
 exit $status
