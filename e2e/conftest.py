@@ -9,6 +9,8 @@ beside the interface, as whatever is in front of a deployed interface does.
 """
 
 import http.client
+import http.cookiejar
+import json
 import os
 import signal
 import socket
@@ -18,11 +20,13 @@ import textwrap
 import threading
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from collections.abc import Iterator
 from dataclasses import dataclass
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from types import SimpleNamespace
 
 import neo4j
 import pytest
@@ -34,6 +38,7 @@ USERNAME, PASSWORD = "e2e", "e2e-password"
 
 MODELS = textwrap.dedent(
     """
+    from pangloss_models.model_bases.document import Document
     from pangloss_models.model_bases.entity import Entity
     from pangloss_typology import Typed, Typology, TypologyMeta
 
@@ -44,11 +49,54 @@ MODELS = textwrap.dedent(
 
     class RoleTypology(Typology):
         _typology_meta = TypologyMeta(name="RoleType", also=Role)
+
+
+    class Person(Entity):
+        has_role: list[Role]
+
+
+    class Statement(Document):
+        text: str
+        about: Person
     """
 )
 TYPES = (
     '[{"label": "Clerk", "children": [{"label": "Secretary"}]}, {"label": "Advisor"}]'
 )
+
+
+class Client:
+    """The API as a user with a session (cookies), for what a test sets up or checks"""
+
+    def __init__(self, base: str):
+        self.base = base
+        self.opener = urllib.request.build_opener(
+            urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar())
+        )
+
+    def send(self, method: str, path: str, body=None, form=None) -> tuple[int, object]:
+        data, headers = None, {}
+        if body is not None:
+            data, headers = (
+                json.dumps(body).encode(),
+                {"Content-Type": "application/json"},
+            )
+        if form is not None:
+            data = urllib.parse.urlencode(form).encode()
+            headers = {"Content-Type": "application/x-www-form-urlencoded"}
+        request = urllib.request.Request(self.base + path, data, headers, method=method)
+        try:
+            with self.opener.open(request) as response:
+                text = response.read()
+                return response.status, (json.loads(text) if text else None)
+        except urllib.error.HTTPError as error:
+            text = error.read()
+            return error.code, (json.loads(text) if text else None)
+
+    def ok(self, method: str, path: str, body=None):
+        status, result = self.send(method, path, body)
+        assert status < 300, (method, path, status, result)
+        return result
 
 
 @dataclass
@@ -63,12 +111,33 @@ class Stack:
 
     def tree(self) -> list[dict]:
         """The hierarchy of `RoleType` as the API gives it"""
-        import json
-
         with urllib.request.urlopen(
             f"{self.api}/api/typology/RoleType/tree"
         ) as response:
             return json.load(response)
+
+    def admin(self) -> Client:
+        """A client logged in as the user of the project"""
+        client = Client(self.api)
+        status, result = client.send(
+            "POST",
+            "/api/users/session",
+            form={"username": USERNAME, "password": PASSWORD},
+        )
+        assert status == 200, result
+        return client
+
+    def type_id(self, label: str) -> str:
+        def walk(nodes):
+            for node in nodes:
+                if node["label"] == label:
+                    return node["id"]
+                if found := walk(node["children"]):
+                    return found
+
+        found = walk(self.tree())
+        assert found, label
+        return found
 
 
 def environment(**more: str) -> dict[str, str]:
@@ -270,16 +339,66 @@ def base_url(stack: Stack) -> str:
     return stack.url
 
 
-@pytest.fixture
-def types(stack: Stack) -> Stack:
-    """The `RoleType` hierarchy as loaded (Clerk > Secretary, Advisor), whatever an earlier test did to it"""
+def forget(*labels: str) -> None:
     driver = neo4j.GraphDatabase.driver(MEMGRAPH_URI, auth=MEMGRAPH_AUTH)
     try:
-        driver.execute_query("MATCH (t:RoleType) DETACH DELETE t", database_="memgraph")
+        for label in labels:
+            driver.execute_query(
+                f"MATCH (n:{label}) DETACH DELETE n", database_="memgraph"
+            )
     finally:
         driver.close()
+
+
+@pytest.fixture
+def types(stack: Stack) -> Stack:
+    """The `RoleType` hierarchy as loaded (Clerk > Secretary, Advisor), and nothing else, whatever an earlier test did"""
+    forget("Statement", "Person", "Role", "RoleType")
     stack.run("typology", "load", "RoleType", "types.json", "--user", USERNAME)
     return stack
+
+
+@pytest.fixture
+def data(types: Stack) -> SimpleNamespace:
+    """The types, and some people and roles: Maximilian (his secretary: a Role of the type Secretary), Marie (her advisor)
+    and Charles (no role)"""
+    api = types.admin()
+
+    def made(kind: str, label: str, **fields) -> str:
+        return api.ok("POST", f"/api/{kind}", {"label": label, **fields})["id"]
+
+    def typed(label: str, type_label: str) -> str:
+        return made(
+            "Role",
+            label,
+            has_type=[{"type": "RoleType", "id": types.type_id(type_label)}],
+        )
+
+    secretary = typed("Maximilian's secretary", "Secretary")
+    advisor = typed("Marie's advisor", "Advisor")
+    marie = made(
+        "Person", "Marie of Burgundy", has_role=[{"type": "Role", "id": advisor}]
+    )
+    statement = made(
+        "Statement",
+        "Court at Ghent",
+        text="Marie held court at Ghent",
+        about={"type": "Person", "id": marie},
+    )
+    ids = SimpleNamespace(
+        statement=statement,
+        api=api,
+        type_id=types.type_id,
+        tree=types.tree,
+        secretary_role=secretary,
+        advisor_role=advisor,
+        maximilian=made(
+            "Person", "Maximilian", has_role=[{"type": "Role", "id": secretary}]
+        ),
+        marie=marie,
+        charles=made("Person", "Charles the Bold", has_role=[]),
+    )
+    return ids
 
 
 @pytest.fixture

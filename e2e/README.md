@@ -16,10 +16,13 @@ new project in a temporary directory with the commands a user runs (`new-project
 `interface build`, …), starts `pangloss run` and `pangloss interface serve`, and puts a small proxy in front so that `/api` is
 beside the interface, as it is when deployed.
 
+What is covered, and what is not yet, is in [COVERAGE.md](COVERAGE.md): **update it with every test or feature you add**.
+`uv run python e2e/cleanup.py` lists servers an interrupted run left behind (`--kill` stops them).
+
 Keep these few: what only a browser shows (drag and drop, the built chunks, hydration). Logic belongs in the Vitest tests
 of the interface and the API tests.
 
-Notes for writing them:
+Notes for writing them (more in COVERAGE.md):
 - The page is server-rendered and then hydrated: wait for `window._$HY.done` before something needs a handler (a drag).
 - Drag with `page.mouse` in steps; `drag_to` moves in one step, which the browser does not take for a drag.
-- Log in with `POST /api/users/session` (the `logged_in` fixture); the nav's login button is only there when it is expanded.
+- Log in with `POST /api/users/session` (the `logged_in` fixture) when a test is not about the login; `test_login.py` drives the dialog.
