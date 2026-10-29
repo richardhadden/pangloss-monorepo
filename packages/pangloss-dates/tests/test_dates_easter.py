@@ -150,3 +150,52 @@ def test_easter_agrees_with_dateutil_over_1400_to_1800():
         assert tuple(from_jdn(easter(year, J), J)) == (year, julian.month, julian.day)
         western = dateutil_easter.easter(year, dateutil_easter.EASTER_WESTERN)
         assert tuple(from_jdn(easter(year, G), G)) == (year, western.month, western.day)
+
+
+def test_a_feast_on_24_february_is_a_day_later_in_a_leap_year_only_with_leap_shift():
+    from pangloss_dates.calendar import is_leap_year
+
+    matthias = RecurrenceRule(Frequency.YEARLY, month=2, month_day=24, leap_shift=True)
+    plain = RecurrenceRule(Frequency.YEARLY, month=2, month_day=24)
+    for calendar in (J, G):
+        for year in range(1496, 1505):
+            leap = is_leap_year(year, calendar)
+            moved = to_jdn(year, 2, 25 if leap else 24, calendar)
+            assert occurs_on(matthias, moved, calendar)
+            assert not occurs_on(matthias, moved + (-1 if leap else 1), calendar)
+            assert occurs_on(plain, to_jdn(year, 2, 24, calendar), calendar)
+            # the keys never miss
+            assert any(
+                key in day_keys(moved, calendar) for key in pattern_keys(matthias)
+            )
+    assert pattern_keys(matthias) == ["yearday:2-24", "yearday:2-25"]
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {
+            "frequency": Frequency.YEARLY,
+            "month": 3,
+            "month_day": 24,
+            "leap_shift": True,
+        },
+        {
+            "frequency": Frequency.YEARLY,
+            "month": 2,
+            "month_day": 23,
+            "leap_shift": True,
+        },
+        {
+            "frequency": Frequency.YEARLY,
+            "month": 2,
+            "month_day": 29,
+            "leap_shift": True,
+        },
+        {"frequency": Frequency.YEARLY, "easter_offset": 3, "leap_shift": True},
+        {"frequency": Frequency.MONTHLY, "month_day": 24, "leap_shift": True},
+    ],
+)
+def test_leap_shift_is_only_for_a_yearly_day_from_24_to_28_february(kwargs):
+    with pytest.raises(InvalidRule):
+        RecurrenceRule(**kwargs)

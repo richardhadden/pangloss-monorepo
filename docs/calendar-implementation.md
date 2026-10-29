@@ -127,8 +127,7 @@ models, so the choice is made explicit*. A feast with two days in the year (the 
   `pangloss calendar link` (and by `seed`), which deletes and remakes all of them: they are stale after an entity is changed until the
   next run, because the core has no hook after a write. **The views do not use the rule edges** (they work the rules out), so a stale
   edge never gives a wrong day or month page; the edges are for graph questions ("every day Benedict fell on").
-- **Not supported yet:** a rule that repeats a *span* (Lent every year): `Recurrence` repeats single days. Leap-day shifts of feasts on
-  24 to 28 February (the `leap_shift` of the first version): not in `Recurrence`; to be a rule field if a source needs it.
+- **Not supported yet:** a rule that repeats a *span* (Lent every year): `Recurrence` repeats single days. (Leap-day shifts of feasts on 24 to 28 February are supported: `leap_shift` on the rule, in `pangloss-dates`.)
 - **No data is shipped** (decided 2026-10-29: users provide it). To load a list, create the entities through the API or the SDK.
 
 ### The span, the margin and what is out of reach
@@ -307,6 +306,19 @@ to seed; **no default**, decided 2026-10-29), `CALENDAR_AUTO_EXTEND` (make days 
    that repeats a span; the leap-day shift; edges that follow a change by themselves (`link` by hand); `review_status` filtering;
    `pangloss migrate` through the real command with the app installed (the abstract model should need none: *to check* with a
    project that subclasses it and runs `makemigrations`).
+   *Finishing (2026-10-29, uncommitted):* (1) **`leap_shift`** is a field of `RecurrenceRule` and `Recurrence` (yearly, fixed day 24 to 28 February; a day later in a
+   leap year; its `pattern_keys` has both days; tested against trying every day, and refused elsewhere). (2) **A rule on a `feast`** is refused unless
+   `pangloss_calendar` is installed, and its value must be the id of a characterisation. (3) **The year report counts** the dates that meet each month.
+   (4) **Migrations, found by running `makemigrations` in a project that subclasses `DateCharacterisation`:** without work, the planner would
+   *drop* the calendar's indexes and keys (it knew only the database package's structure) and would write the models' migrations *into the
+   installed packages*, and a server would refuse to start (`MIGRATION_CHECK`). So: an installed app may have a `structure` module with `INDEXES` and
+   `CONSTRAINTS` (`pangloss_memgraph.initialise_database.installed_app_structure`, read into the snapshot), and **`pangloss-dates` and
+   `pangloss-calendar` ship their migrations** (`pangloss_dates.0001_initial`; `pangloss_calendar.0001_initial` by hand, `0002` for `DateCharacterisation`
+   and `NoRule`, both written by `makemigrations`). Tried for real in a throwaway project on the test database: `migrate` applies all of them,
+   `makemigrations --check` says no changes, `pangloss calendar seed | link | status` run, and `pangloss run` starts ("the database and the models
+   agree with them"), serves `/api/calendar/...` and answers an attach without a login with 401. *The same is true of every other
+   package with models (zotero, review, history...): none ships migrations yet, so `makemigrations` in a project that installs them writes
+   them into the package; that is outside the calendar and is not changed here.*
 5. **Interface** (only when you ask for it): a month page, a day page, "new document on this day" with the date filled in. The
    interface has no way yet for an installed app to add pages (its routes are in `interface-app`): deferred (decision 4 below).
 6. (Gate) Version 2.

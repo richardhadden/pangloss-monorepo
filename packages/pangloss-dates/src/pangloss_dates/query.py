@@ -101,7 +101,9 @@ async def on_day(
     candidates = [
         item
         async for item in pages(
-            model, recurring_where(field, day, calendar, family, fuzzy, extra_keys), limit
+            model,
+            recurring_where(field, day, calendar, family, fuzzy, extra_keys),
+            limit,
         )
     ]
     for item in candidates:

@@ -109,3 +109,17 @@ def test_the_days_that_move_with_easter_are_in_order_and_only_those():
         ("Pentecost", easter(1500, J) + 49),
     ]
     assert weekday(found[1][1]) == Weekday.SUNDAY
+
+
+def test_days_between_applies_the_leap_shift():
+    from pangloss_dates.calendar import is_leap_year
+
+    matthias = make(
+        RecurrenceRule(Frequency.YEARLY, month=2, month_day=24, leap_shift=True)
+    )
+    first, last = to_jdn(1496, 1, 1, J), to_jdn(1504, 12, 31, J)
+    days = days_between(matthias, first, last)
+    assert days == occurrences(matthias.rule, first, last, J, first)
+    assert [from_jdn(d, J).day for d in days] == [
+        25 if is_leap_year(y, J) else 24 for y in range(1496, 1505)
+    ]

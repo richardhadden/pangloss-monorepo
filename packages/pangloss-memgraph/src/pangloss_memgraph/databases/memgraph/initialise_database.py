@@ -9,6 +9,7 @@ string or a number, like any other property.)
 """
 
 import dataclasses
+import importlib
 from typing import Any
 
 import neo4j
@@ -58,6 +59,30 @@ TEXT_INDEX = (TEXT_INDEX_NAME, "PGIndexableNode", "label")
 STRUCTURE_APP = "pangloss_memgraph"
 
 
+def installed_app_structure() -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """The indexes and constraints that installed apps ask for, for nodes that are not models (the calendar's days):
+    an app with a `structure` module has `INDEXES` and `CONSTRAINTS`, lists of entries as in the snapshot
+    (`{"kind": "label+property", "label": "CalendarDay", "properties": ["jdn"]}`). The app's own migrations make them."""
+    from pangloss_core import settings as core_settings
+
+    settings = core_settings.__dict__.get("SETTINGS")
+    indexes: list[dict[str, Any]] = []
+    constraints: list[dict[str, Any]] = []
+    for app in getattr(settings, "INSTALLED_APPS", []):
+        try:
+            module = importlib.import_module(f"{app}.structure")
+        except ModuleNotFoundError as error:
+            if error.name in (app, f"{app}.structure"):
+                continue
+            raise
+        for source, found in (
+            (getattr(module, "INDEXES", []), indexes),
+            (getattr(module, "CONSTRAINTS", []), constraints),
+        ):
+            found += [{**entry, "app": app} for entry in source]
+    return indexes, constraints
+
+
 def structure() -> dict[str, list[dict[str, Any]]]:
     """The indexes and constraints a database needs, as the snapshot of the models has them (so
     that migrations make them, and a change to this list is a migration)"""
@@ -75,6 +100,9 @@ def structure() -> dict[str, list[dict[str, Any]]]:
     ]
     for entry in [*indexes, *constraints]:
         entry["app"] = STRUCTURE_APP
+    extra_indexes, extra_constraints = installed_app_structure()
+    indexes += extra_indexes
+    constraints += extra_constraints
     # The indexes of the models (a label index for each class, and the fields they ask for): the app
     # of the model makes them, which the planner works out from the model (no `app` here)
     indexes += model_indexes()

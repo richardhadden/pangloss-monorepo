@@ -220,7 +220,7 @@ RETURN n.id AS id, n.label AS label, n.type AS type, n.use AS use, n.rank AS ran
        d.calendar AS calendar, d.earliest_strict AS earliest_strict, d.latest_strict AS latest_strict,
        d.frequency AS frequency, d.weekdays AS weekdays, d.nth AS nth, d.month AS month,
        d.month_day AS month_day, d.interval AS interval, d.excluded_days AS excluded_days,
-       d.easter_offset AS easter_offset, d.feast AS feast, s.earliest_strict AS anchor
+       d.easter_offset AS easter_offset, d.feast AS feast, d.leap_shift AS leap_shift, s.earliest_strict AS anchor
 ORDER BY n.label, n.id
 """
 

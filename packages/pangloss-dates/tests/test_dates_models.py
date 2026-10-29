@@ -203,7 +203,10 @@ def test_a_recurrence_on_easter_or_a_feast_has_its_key(models):
     _, JulianEvent, _ = models
     for extra, key in (
         ({"easter_offset": 49}, "easter:+49"),
-        ({"feast": "sarum:benedict"}, "feast:sarum:benedict"),
+        (
+            {"feast": "01a18688-4cf0-73dd-9d9c-a1c659bef751"},
+            "feast:01a18688-4cf0-73dd-9d9c-a1c659bef751",
+        ),
     ):
         when = make(
             JulianEvent,
@@ -396,3 +399,37 @@ def test_a_recurrence_may_start_unknown_but_not_have_no_lifetime(models):
     assert ymd(when.latest_strict) == (1520, 12, 31)
     with pytest.raises(ValidationError, match="cannot both be unknown"):
         make(JulianEvent, {**rule, "start": UNKNOWN, "end": UNKNOWN})
+
+
+def test_a_rule_on_a_feast_needs_the_calendar_package_and_the_id_of_a_characterisation(
+    models, monkeypatch
+):
+    import importlib.util
+
+    _, JulianEvent, _ = models
+
+    def feast(value):
+        return make(
+            JulianEvent,
+            {
+                "type": "JulianRecurrence",
+                "frequency": "yearly",
+                "weekdays": [],
+                "excluded_days": [],
+                "feast": value,
+                "start": {"type": "JulianExactDate", "year": 1505},
+                "end": {"type": "JulianOngoingDate"},
+            },
+        )
+
+    assert feast("01a18688-4cf0-73dd-9d9c-a1c659bef751").feast
+    with pytest.raises(ValidationError, match="id of a characterisation"):
+        feast("sarum:st-benedict")
+    real = importlib.util.find_spec
+    monkeypatch.setattr(
+        importlib.util,
+        "find_spec",
+        lambda name, *a: None if name == "pangloss_calendar" else real(name, *a),
+    )
+    with pytest.raises(ValidationError, match="needs pangloss-calendar"):
+        feast("01a18688-4cf0-73dd-9d9c-a1c659bef751")

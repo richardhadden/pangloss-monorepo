@@ -159,12 +159,16 @@ class YearMonth(BaseModel):
     month: int
     first: DayOut
     last: DayOut
+    count: int = 0
+    """How many dates state a range that meets the month (a repeated event once for each month it falls in)"""
 
 
 class YearReport(BaseModel):
     calendar: Calendar
     year: int
     months: list[YearMonth]
+    truncated: bool = False
+    """More dates were found than are counted (`MONTH_LIMIT`)"""
     easter: DayOut
     moveable: list[MoveableOut]
 
@@ -423,21 +427,40 @@ async def easter_report(
 
 
 async def year_report(
-    calendar: Calendar, year: int, use: str | None = None
+    calendar: Calendar,
+    year: int,
+    use: str | None = None,
+    fields: list[DateField] | None = None,
 ) -> YearReport:
+    """The months of a year with how many dates meet each, Easter, and the characterisations that move with it"""
     use = use if use is not None else settings.use()
-    months = []
-    for number in range(1, 13):
-        first, last = month_span(calendar, year, number)
-        months.append(
-            YearMonth(month=number, first=DayOut.of(first), last=DayOut.of(last))
+    chars = await graph.read_characterisations(use)
+    spans = [month_span(calendar, year, number) for number in range(1, 13)]
+    seen: list[set[tuple[UUID, str]]] = [set() for _ in spans]
+    truncated = False
+    for field in fields if fields is not None else calendar_fields():
+        dated, cut = await _dated_in(field, spans[0][0], spans[-1][1], calendar, chars)
+        truncated = truncated or cut
+        for item in dated:
+            for index, (first, last) in enumerate(spans):
+                if item.earliest_strict <= last and item.latest_strict >= first:
+                    seen[index].add((item.ref.id, item.ref.field))
+    months = [
+        YearMonth(
+            month=number,
+            first=DayOut.of(first),
+            last=DayOut.of(last),
+            count=len(seen[number - 1]),
         )
+        for number, (first, last) in enumerate(spans, start=1)
+    ]
     return YearReport(
         calendar=calendar,
         year=year,
         months=months,
+        truncated=truncated,
         easter=DayOut.of(easter(year, calendar)),
-        moveable=_moveable(await graph.read_characterisations(use), year, calendar),
+        moveable=_moveable(chars, year, calendar),
     )
 
 

@@ -221,6 +221,24 @@ class Period(Date):
         _sort_a_lifetime(date)
 
 
+def _check_feast(feast: str) -> None:
+    """A rule on a feast is answered by `pangloss_calendar` (the feast is the id of a characterisation): without it, it
+    could never be, so it is refused"""
+    from importlib.util import find_spec
+    from uuid import UUID
+
+    if find_spec("pangloss_calendar") is None:
+        raise ValueError(
+            "a rule on a feast needs pangloss-calendar (which works out the days of a feast); it is not installed"
+        )
+    try:
+        UUID(feast)
+    except ValueError as error:
+        raise ValueError(
+            f"feast is the id of a characterisation of pangloss-calendar, not {feast!r}"
+        ) from error
+
+
 class Recurrence(Date):
     """Something that happens again and again, within a lifetime (`start` to `end`): "every Sunday", "the third
     Sunday of March", "on the 21st of each month". The days are never stored; `pattern_keys` find the rules that
@@ -237,6 +255,8 @@ class Recurrence(Date):
     """Every 2nd, 3rd... week, month or year, counting from the start (1 if not said)"""
     excluded_days: list[int]
     """Day numbers the rule does not fall on"""
+    leap_shift: bool | None = None
+    """(False if not said) A yearly rule on 24 to 28 February: a day later in a leap year (the old Roman leap day repeated the 24th)"""
     easter_offset: int | None = None
     """Instead of a month: days from Easter in the year (-47 is Shrove Tuesday); a yearly rule"""
     feast: str | None = None
@@ -259,12 +279,15 @@ class Recurrence(Date):
             interval=date.interval or 1,
             excluded_days=frozenset(date.excluded_days),
             easter_offset=date.easter_offset,
+            leap_shift=bool(date.leap_shift),
             feast=date.feast,
         )
 
     @classmethod
     def work_out(cls, date) -> tuple[Bounds, Precision]:
         date.interval = date.interval or 1
+        if date.feast is not None:
+            _check_feast(date.feast)
         rule = cls.rule_of(date)  # (refuses a rule that says no day)
         if (
             "pattern_keys" in type(date).model_fields

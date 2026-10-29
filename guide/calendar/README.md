@@ -19,7 +19,7 @@ are in [docs/calendar-implementation.md](../../docs/calendar-implementation.md).
    | `CALENDAR_FIELDS` | `["Letter.sent", ...]`: look only in these date fields (default: every date field of every Document and Entity) |
    | `CALENDAR_AUTO_EXTEND` | Make the days of the graph that are asked for and are not there (default off; the answers do not need them) |
 
-3. `pangloss migrate` (the keys and indexes), then `pangloss calendar seed` (days, with their months and years in both calendars,
+3. `pangloss migrate` (the keys and indexes of the calendar, and the migrations that `pangloss_dates` and `pangloss_calendar` bring for their models; `pangloss makemigrations` then writes only your own), then `pangloss calendar seed` (days, with their months and years in both calendars,
    and the edges from rules). Running it again is harmless.
 
 ## Feasts and other characterisations
@@ -65,7 +65,7 @@ many rules); one wholly outside, and an attachment outside, are left out (the at
 documents with dates is linked (they are found by their dates), so an author in the project because he wrote a text, born in 384 BC,
 is not on the calendar's graph.
 
-Not yet: a rule that repeats a span (Lent every year) and the leap-day shift of a feast on 24 to 28 February.
+A feast on 24 to 28 February may say `"leap_shift": true`: it falls a day later in a leap year (the old Roman leap day was made by repeating the 24th). Not yet: a rule that repeats a span (Lent every year).
 
 ## Reading it
 

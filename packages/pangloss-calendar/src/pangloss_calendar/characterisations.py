@@ -14,6 +14,7 @@ from pangloss_dates.calendar import (
     Calendar,
     InvalidDate,
     from_jdn,
+    is_leap_year,
     nth_weekday,
     to_jdn,
 )
@@ -75,6 +76,7 @@ def from_row(row: dict[str, Any], default: Calendar) -> Characterisation:
                 excluded_days=row["excluded_days"] or [],
                 easter_offset=row["easter_offset"],
                 feast=row["feast"],
+                leap_shift=bool(row.get("leap_shift")),
             )
         )
     return Characterisation(
@@ -132,7 +134,8 @@ def _yearly_day(rule: RecurrenceRule, year: int, calendar: Calendar) -> int | No
     assert rule.month is not None
     if rule.month_day is not None:
         try:
-            return to_jdn(year, rule.month, rule.month_day, calendar)
+            shift = 1 if rule.leap_shift and is_leap_year(year, calendar) else 0
+            return to_jdn(year, rule.month, rule.month_day, calendar) + shift
         except InvalidDate:  # (29 February, or the 31st of a short month)
             return None
     return nth_weekday(year, rule.month, rule.weekdays[0], rule.nth or 1, calendar)

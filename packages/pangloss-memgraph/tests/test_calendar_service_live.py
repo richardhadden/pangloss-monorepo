@@ -240,8 +240,12 @@ async def test_easter_and_the_year(clear_database, clear_calendar):
     assert report.easter.jdn == easter(1500, J)
     assert [m.characterisation.label for m in report.moveable] == ["Pentecost"]
     assert report.moveable[0].day.jdn == easter(1500, J) + 49
+    await make_documents(Factoid)
     year = await service.year_report(J, 1500)
     assert [m.month for m in year.months] == list(range(1, 13))
+    # the exact day, the range and the 20th are in March; the period covers the year; the year 1490 is not in it
+    counts = [m.count for m in year.months]
+    assert counts[2] == 5 and counts[0] == counts[11] == 1 and not year.truncated
     assert (
         year.months[1].last.jdn - year.months[1].first.jdn == 28
     )  # (Julian 1500 is a leap year)

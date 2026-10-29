@@ -24,6 +24,7 @@ from pangloss_dates.calendar import (
     Calendar,
     Weekday,
     from_jdn,
+    is_leap_year,
     month_length,
     nth_weekday,
     weekday,
@@ -49,6 +50,8 @@ class RecurrenceRule:
     """- weekly: `weekdays` (every Sunday and Wednesday)
     - monthly: `month_day` (the 21st), or `nth` with one weekday (the third Sunday; -1 is the last)
     - yearly: `month`, and `month_day` or `nth` with one weekday (21 March; the third Sunday of March)
+    - yearly, `leap_shift`: a fixed day from 24 to 28 February that falls a day later in a leap year (in the old Roman reckoning
+      the leap day was made by repeating 24 February, so St Matthias is 24 February, and 25 in a leap year)
     - yearly, moving with Easter: `easter_offset` alone, in days (-47 is Shrove Tuesday, 49 is Pentecost)
     - yearly, on a feast: `feast` alone, a key that the owner of the feasts (`pangloss_calendar`) works out the days of;
       `occurs_on` is told the feasts of the day in `extra_keys`
@@ -64,6 +67,7 @@ class RecurrenceRule:
     excluded_days: frozenset[int] = field(default_factory=frozenset)
     easter_offset: int | None = None
     feast: str | None = None
+    leap_shift: bool = False
 
     def __post_init__(self):
         if self.interval < 1:
@@ -76,6 +80,17 @@ class RecurrenceRule:
             raise InvalidRule("nth is 1 to 5, or -1 to -5 from the end of the month")
         if len(set(self.weekdays)) != len(self.weekdays):
             raise InvalidRule("a weekday is given twice")
+        if self.leap_shift and not (
+            self.frequency == Frequency.YEARLY
+            and self.month == 2
+            and self.month_day is not None
+            and 24 <= self.month_day <= 28
+            and self.easter_offset is None
+            and self.feast is None
+        ):
+            raise InvalidRule(
+                "leap_shift is for a yearly rule on a day from 24 to 28 February"
+            )
         if self.easter_offset is not None or self.feast is not None:
             self._check_moving()
             return
@@ -158,7 +173,8 @@ def occurs_on(
     if rule.frequency == Frequency.YEARLY and month != rule.month:
         return False
     if rule.month_day is not None:
-        if day_of_month != rule.month_day:
+        shifted = rule.leap_shift and is_leap_year(year, calendar)
+        if day_of_month != rule.month_day + (1 if shifted else 0):
             return False
     elif nth_weekday(year, month, rule.weekdays[0], rule.nth or 1, calendar) != day:
         return False
@@ -212,7 +228,10 @@ def pattern_keys(rule: RecurrenceRule) -> list[str]:
             return [f"monthday:{rule.month_day}"]
         return [f"nth:{rule.nth}:{rule.weekdays[0].value}"]
     if rule.month_day is not None:
-        return [f"yearday:{rule.month}-{rule.month_day}"]
+        keys = [f"yearday:{rule.month}-{rule.month_day}"]
+        if rule.leap_shift:
+            keys.append(f"yearday:{rule.month}-{rule.month_day + 1}")
+        return keys
     return [f"yearnth:{rule.month}:{rule.nth}:{rule.weekdays[0].value}"]
 
 
