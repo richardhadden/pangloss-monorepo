@@ -206,6 +206,14 @@ to seed; **no default**, decided 2026-10-29), `CALENDAR_AUTO_EXTEND` (make days 
 1. **Pure calendar** (`days`, `observances`, `views`): no database, no models. *Exit:* both names of every day 1400 to 1600 agree with
    `pangloss_dates.calendar` and `juliandate`; Julian 29 February 1500; month grids start on the right weekday in both calendars; the file
    format validates and rejects an impossible feast (30 February); the narrow/wide split on edge cases (a range of exactly 7 days).
+   *As built (2026-10-29, uncommitted):* `packages/pangloss-calendar` exists with `days.py`, `observances.py`, `views.py` and 44 tests; it
+   depends on `pangloss-dates` only (the other dependencies are added when they are used). Three changes from the plan: (1) the observance
+   file is **TOML** (`[[observance]]` tables, read with the standard library's `tomllib`) and not YAML, which would need a dependency;
+   (2) `leap_shift` applies only to fixed feasts on **24 to 28 February** (only those move when the leap day is made by repeating the 24th;
+   the plan wrongly said "on or after the 24th"), and is refused elsewhere; (3) a narrow date is placed by its **strict** range, `stated`
+   if one day and `possible` if a range of days, and a wide one goes in the spanning list. Days are written `J1500-03-02`, `G1500-03-12`
+   or a JDN. Easter was also checked against `dateutil` for 1400 to 1800 (both methods agree; a test, skipped if `dateutil` is absent). Not done: the liturgical rule for the leap day is
+   unchecked against a source.
 2. **The graph**: migration (structure), `graph.py`, `seed`, `load-observances`, `ensure_range`, `FALLS_ON`. *Exit (live Memgraph):* seed
    twice gives the same counts; `ensure_range` outside the seed; a corrected observance file changes the edges and leaves one node;
    uniqueness refuses a second day.

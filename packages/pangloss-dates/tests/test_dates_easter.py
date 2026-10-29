@@ -139,3 +139,14 @@ def test_a_rule_on_a_feast_is_answered_with_the_keys_of_the_day():
 def test_a_rule_that_says_two_things_or_none_is_refused(kwargs):
     with pytest.raises(InvalidRule):
         RecurrenceRule(**kwargs)
+
+
+def test_easter_agrees_with_dateutil_over_1400_to_1800():
+    dateutil_easter = pytest.importorskip("dateutil.easter")
+    for year in range(1400, 1801):
+        julian = dateutil_easter.easter(
+            year, dateutil_easter.EASTER_JULIAN
+        )  # (Julian date, as a plain date)
+        assert tuple(from_jdn(easter(year, J), J)) == (year, julian.month, julian.day)
+        western = dateutil_easter.easter(year, dateutil_easter.EASTER_WESTERN)
+        assert tuple(from_jdn(easter(year, G), G)) == (year, western.month, western.day)

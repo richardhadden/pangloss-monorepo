@@ -6,6 +6,7 @@ requires-python = ">=3.15"
 members = [
     "pangloss",
     "pangloss-api",
+    "pangloss-calendar",
     "pangloss-cli",
     "pangloss-core",
     "pangloss-dates",
@@ -700,6 +701,25 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [{ name = "httpx2", specifier = ">=2.15" }]
+
+[[package]]
+name = "pangloss-calendar"
+version = "0.1.0"
+source = { editable = "packages/pangloss-calendar" }
+dependencies = [
+    { name = "pangloss-dates" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "juliandate" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "pangloss-dates", editable = "packages/pangloss-dates" }]
+
+[package.metadata.requires-dev]
+dev = [{ name = "juliandate", specifier = ">=1.0.5" }]
 
 [[package]]
 name = "pangloss-cli"
