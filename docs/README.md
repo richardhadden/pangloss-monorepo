@@ -25,6 +25,7 @@ Each feature in these docs is marked with its status:
 | [Semantic spaces and context labels](semantic-spaces.md) | How nesting inside `SemanticSpace` wrappers is tracked |
 | [Memgraph backend](memgraph.md) | Graph schema, query builders, and the database API |
 | [Neo4j backend](neo4j-implementation.md) 🚧 | `pangloss-neo4j`: the same layer for Neo4j (checked against a real server: maps cannot be properties, full-text search, DDL, isolation), what differs and why, the tests ported from Memgraph's; the add-on packages are not yet backend-neutral |
+| [Backend-neutral add-ons](backend-neutral-addons.md) 🚧 | What typology and calendar (and zotero's tests) need to run on any backend: a loader in `pangloss-core`, timeout translation, a lock primitive, shared test fixtures |
 | [Settings](settings.md) | `BaseSettings` and database settings |
 | [Logging](logging.md) | What is logged, at what level, and how to set it up |
 | [Large data](large-data.md) | How long loads and migrations take on 600,000 nodes, what to turn up, and what to look out for |
