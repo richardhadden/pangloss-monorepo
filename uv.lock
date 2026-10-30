@@ -743,27 +743,35 @@ source = { editable = "packages/pangloss-calendar" }
 dependencies = [
     { name = "fastapi" },
     { name = "pangloss-api" },
+    { name = "pangloss-core" },
     { name = "pangloss-dates" },
-    { name = "pangloss-memgraph" },
     { name = "typer" },
 ]
 
 [package.dev-dependencies]
 dev = [
     { name = "juliandate" },
+    { name = "pangloss-memgraph" },
+    { name = "pangloss-neo4j" },
+    { name = "pytest-asyncio" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "fastapi", specifier = ">=0.115" },
     { name = "pangloss-api", editable = "packages/pangloss-api" },
+    { name = "pangloss-core", editable = "packages/pangloss-core" },
     { name = "pangloss-dates", editable = "packages/pangloss-dates" },
-    { name = "pangloss-memgraph", editable = "packages/pangloss-memgraph" },
     { name = "typer", specifier = ">=0.12" },
 ]
 
 [package.metadata.requires-dev]
-dev = [{ name = "juliandate", specifier = ">=1.0.5" }]
+dev = [
+    { name = "juliandate", specifier = ">=1.0.5" },
+    { name = "pangloss-memgraph", editable = "packages/pangloss-memgraph" },
+    { name = "pangloss-neo4j", editable = "packages/pangloss-neo4j" },
+    { name = "pytest-asyncio", specifier = ">=1.4.0" },
+]
 
 [[package]]
 name = "pangloss-cli"
@@ -1127,18 +1135,32 @@ source = { editable = "packages/pangloss-typology" }
 dependencies = [
     { name = "fastapi" },
     { name = "pangloss-api" },
-    { name = "pangloss-memgraph" },
+    { name = "pangloss-core" },
     { name = "pangloss-models" },
     { name = "typer" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "pangloss-memgraph" },
+    { name = "pangloss-neo4j" },
+    { name = "pytest-asyncio" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "fastapi", specifier = ">=0.115" },
     { name = "pangloss-api", editable = "packages/pangloss-api" },
-    { name = "pangloss-memgraph", editable = "packages/pangloss-memgraph" },
+    { name = "pangloss-core", editable = "packages/pangloss-core" },
     { name = "pangloss-models", editable = "packages/pangloss-models" },
     { name = "typer", specifier = ">=0.12" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "pangloss-memgraph", editable = "packages/pangloss-memgraph" },
+    { name = "pangloss-neo4j", editable = "packages/pangloss-neo4j" },
+    { name = "pytest-asyncio", specifier = ">=1.4.0" },
 ]
 
 [[package]]

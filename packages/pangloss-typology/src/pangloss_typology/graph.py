@@ -12,8 +12,8 @@ import base64
 import json
 from typing import Any
 
-from pangloss_memgraph.databases.memgraph.database import Database, Transaction
-from pangloss_memgraph.databases.memgraph.visibility import unpublished_visible
+from pangloss_core import backend
+from pangloss_core.backend import Transaction
 
 from pangloss_typology.tree import Row, Rows
 
@@ -33,8 +33,12 @@ class Refused(ValueError):
     """The change would leave the vocabulary invalid: the message says why"""
 
 
-def _database() -> Database:
-    return Database.default
+def _database():
+    return backend.current().Database.default
+
+
+def unpublished_visible() -> bool:
+    return backend.current().unpublished_visible()
 
 
 def row_of(record: Any) -> Row:

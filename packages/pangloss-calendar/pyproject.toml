@@ -10,8 +10,8 @@ requires-python = ">=3.15"
 dependencies = [
     "fastapi>=0.115",
     "pangloss-api",
+    "pangloss-core",
     "pangloss-dates",
-    "pangloss-memgraph",
     "typer>=0.12",
 ]
 
@@ -25,7 +25,14 @@ build-backend = "uv_build"
 [tool.uv.sources]
 pangloss-dates = { workspace = true }
 pangloss-api = { workspace = true }
+pangloss-core = { workspace = true }
 pangloss-memgraph = { workspace = true }
+pangloss-neo4j = { workspace = true }
 
 [dependency-groups]
-dev = ["juliandate>=1.0.5"]
+dev = [
+    "juliandate>=1.0.5",
+    "pangloss-memgraph",
+    "pangloss-neo4j",
+    "pytest-asyncio>=1.4.0",
+]

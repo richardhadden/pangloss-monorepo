@@ -83,10 +83,10 @@ def load(
     entries = read_entries(file)
 
     async def work():
-        from pangloss_memgraph.cli import user_exists
+        from pangloss_core import backend
         from pangloss_users import current_request_username
 
-        if not await user_exists(user):
+        if not await backend.current().user_exists(user):
             raise service.Refused(
                 f"There is no user called {user!r}: `pangloss users create` makes one"
             )

@@ -7,9 +7,12 @@ fails when Memgraph gains a function that Neo4j has not, or one is changed on on
 
 import ast
 import importlib.util
+import inspect
+import typing
 from pathlib import Path
 
 import pytest
+from pangloss_core import backend as core_backend
 
 MODULES = ["exposed_functions", "setup", "migration_backend", "users", "review"]
 
@@ -71,3 +74,27 @@ def test_what_neo4j_leaves_out_is_said_and_is_really_not_there(module):
     neo4j = public_functions(source_of("pangloss_neo4j", module))
     for name in NOT_IN_NEO4J.get(module, {}):
         assert name not in neo4j, f"{module}.{name} is there: take it off the list"
+
+
+# --- what the add-on packages take from a backend (pangloss_core.backend) ---------------------------------
+
+BACKENDS = ("pangloss_memgraph.databases.memgraph", "pangloss_neo4j.databases.neo4j")
+BACKEND_NAMES = typing.get_type_hints(core_backend.Backend).keys()
+
+
+@pytest.mark.parametrize("module", BACKENDS)
+def test_a_backend_gives_every_name_of_the_backend_interface(module):
+    found = core_backend.current(module)
+    missing = [name for name in BACKEND_NAMES if not hasattr(found, name)]
+    assert not missing, f"{module}.backend lacks {missing}"
+
+
+@pytest.mark.parametrize(
+    "name", [n for n in BACKEND_NAMES if n not in ("Database", "Transaction")]
+)
+def test_the_functions_of_the_backend_interface_have_the_same_signature_on_both(name):
+    signatures = {
+        module: str(inspect.signature(getattr(core_backend.current(module), name)))
+        for module in BACKENDS
+    }
+    assert len(set(signatures.values())) == 1, signatures

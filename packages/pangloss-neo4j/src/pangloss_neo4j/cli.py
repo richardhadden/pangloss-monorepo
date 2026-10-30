@@ -19,6 +19,7 @@ from pangloss_models.exceptions import (
 )
 from pangloss_users import current_request_username
 
+from pangloss_neo4j.databases.neo4j.backend import user_exists
 from pangloss_neo4j.databases.neo4j.bulk import bulk_ingest, restore
 from pangloss_neo4j.databases.neo4j.database import Database
 from pangloss_neo4j.databases.neo4j.schema import list_constraints, list_indexes
@@ -74,18 +75,6 @@ def info() -> None:
 def fail(message: str) -> typer.Exit:
     typer.secho(message, fg="red", err=True)
     return typer.Exit(1)
-
-
-async def user_exists(username: str) -> bool:
-    database = Database.default
-    async with database.driver.session(
-        database=database.settings.DATABASE.DATABASE_NAME
-    ) as session:
-        result = await session.run(
-            "MATCH (u:PGUser {username: $username}) RETURN u LIMIT 1",
-            username=username,
-        )
-        return await result.single() is not None
 
 
 @cli.command("bulk-load")

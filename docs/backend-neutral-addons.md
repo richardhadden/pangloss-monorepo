@@ -54,7 +54,7 @@ Dependencies: an add-on does not require a backend at install time; `pangloss-me
 
 ## 5. Progress
 
-- [ ] 1. Loader
+- [x] 1. Loader: `pangloss_core.backend`, a `backend.py` in each backend, typology and calendar on it, their dependency on `pangloss-memgraph` moved to a dev group, a contract test (2026-10-30)
 - [ ] 2. Timeout translation
 - [ ] 3. `lock`
 - [ ] 4. Imports and fixtures

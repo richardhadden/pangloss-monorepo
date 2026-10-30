@@ -1,4 +1,4 @@
-"""The calendar graph: all the Cypher of the package, and the only module that knows Memgraph.
+"""The calendar graph: all the Cypher of the package, and the only module that reaches the database (through `pangloss_core.backend`, so any backend).
 
     (:CalendarDay {jdn, weekday, julian_year, julian_month, julian_day, gregorian_year, ...})-[:NEXT]->(:CalendarDay)
     (:CalendarMonth {calendar, year, month, first_jdn, last_jdn})-[:CONTAINS]->(:CalendarDay), -[:NEXT]->(:CalendarMonth)
@@ -16,16 +16,10 @@ from dataclasses import dataclass
 from typing import Any
 from uuid import UUID
 
-from neo4j.exceptions import TransientError
+from pangloss_core import backend
+from pangloss_core.backend import Transaction
 from pangloss_dates.calendar import Calendar, from_jdn, to_jdn, weekday
 from pangloss_dates.config import default_calendar
-from pangloss_memgraph.databases.memgraph.database import (
-    Database,
-    Transaction,
-    timeout_from_setting,
-)
-from pangloss_memgraph.databases.memgraph.visibility import unpublished_visible
-from pangloss_models.exceptions import PanglossSearchTimeoutError
 
 from pangloss_calendar.characterisations import Characterisation, days_between, from_row
 from pangloss_calendar.days import month_span
@@ -35,8 +29,12 @@ BATCH_DAYS = 2000
 CALENDARS = (Calendar.JULIAN, Calendar.GREGORIAN)
 
 
-def _database() -> Database:
-    return Database.default
+def _database():
+    return backend.current().Database.default
+
+
+def unpublished_visible() -> bool:
+    return backend.current().unpublished_visible()
 
 
 def _next_month(year: int, month: int) -> tuple[int, int]:
@@ -497,7 +495,7 @@ async def dated_between(
     database = _database()
 
     @database.read_transaction
-    @timeout_from_setting("SEARCH_TIMEOUT_SECONDS", 30)
+    @backend.current().timeout_from_setting("SEARCH_TIMEOUT_SECONDS", 30)
     async def read(tx: Transaction) -> list[dict[str, Any]]:
         result = await tx.run(
             DATED_BETWEEN.format(label=label, field=field),
@@ -510,12 +508,5 @@ async def dated_between(
         )
         return [dict(record) async for record in result]
 
-    try:
-        rows = await read()
-    except TransientError as error:
-        if "timeout" not in str(error).lower():
-            raise
-        raise PanglossSearchTimeoutError(
-            "The calendar took longer than the time allowed for it"
-        ) from error
+    rows = await read()
     return rows[:limit], len(rows) > limit
