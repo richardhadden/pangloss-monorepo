@@ -166,6 +166,10 @@ Loading these through the models (four at a time, history recording on): entitie
 - **Typology is twice as fast on Neo4j** (the tree, a type's path, a patch): these are walks up and down a hierarchy; I did not look at why Memgraph is slower there.
 - **Pangloss and not the database costs the same on both:** a login is 25 ms (the password hash), a list of a small class is 27-28 ms for both, a restore is 33 ms for both, and the history reads (SQLite) are within 1 ms.
 
+### After profiling
+
+The figures above are from before the Memgraph fixes of [backend-profiling.md](backend-profiling.md): the year searches (93 ms, 14 times Neo4j's) are now 4-8 ms, the typology reads are 2-3 times faster (the tree 62 to 23 ms), and 150 searches at once go from 29 to 434 a second. The rest is unchanged within the noise.
+
 ### Caveats for this run
 
 - The calendar's days have no documents with dates: `Event.Create(when={"type": "JulianExactDate", ...})` is refused outside the live tests' set-up, and I did not find out why. A day report is therefore the characterisations and no hits.

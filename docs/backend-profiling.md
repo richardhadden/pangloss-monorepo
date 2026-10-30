@@ -1,6 +1,6 @@
 # Profiling the backends
 
-✅ Measured 2026-10-30, on the data of [backend-comparison.md](backend-comparison.md) (20,000 entities, 6,000 factoids, 300 memos, 600 types, a calendar of 80 years: about 118,000 nodes on Memgraph). **What is in it was measured; what was not is said to be a guess.**
+✅ Measured and, for Memgraph, fixed 2026-10-30 (see **After the fixes** below), on the data of [backend-comparison.md](backend-comparison.md) (20,000 entities, 6,000 factoids, 300 memos, 600 types, a calendar of 80 years: about 118,000 nodes on Memgraph). **What is in it was measured; what was not is said to be a guess.**
 
 ## Method
 
@@ -30,9 +30,11 @@ It is one of about 10 statements of a create (8-14 for each write), and about 35
 
 Every list and search fetches who made each node of the page with `OPTIONAL MATCH (creation:PGCreation)-[:is_creation_of]->(n)`. For `year = 800` Memgraph planned it as `ScanAll (creation)` and then a filter (not even by label), once for each of the 26 results: **2,951,025 rows scanned, 657,525 filtered, 86 ms** for a page of 26. The same shape for `year between` was planned from `n` (`Expand (n)<-[is_creation_of]-(creation)`: 2.2 ms), so which plan is made varies with the query. Written from `n` (`OPTIONAL MATCH (n)<-[:is_creation_of]-(creation:PGCreation)`), a scratch copy of the same shape went from 24.3 ms to **1.4 ms**, and without the label on `creation` to 1.2 ms. The search by year was 14 times slower than on Neo4j for this reason alone ([backend-comparison.md](backend-comparison.md)). The index on `Factoid(year)` **was** used (`ScanAllByLabelProperties`): my earlier guess in that document that it was missing was wrong.
 
-### 3. The typology reads scan every type for every type
+### 3. The typology reads scan every type for every type: a plan kept from when the vocabulary was small
 
-`OPTIONAL MATCH (t)-[:is_subtype_of]->(p:RoleType) WHERE ...` on 600 types read `ScanAllByLabel (p)` for each `t` and then filtered: **360,600 rows, 29 ms of 53** for the tree, the path, a type with its entities, and a patch (all about twice as slow as on Neo4j, which does 7,735 hits). In a scratch Memgraph with the same tree **this did not happen** (the plan was `Expand` from `t` and took under 1 ms on the server), and four rewrites made no difference, so I do not know what makes the real plan different (its statistics? the labels the real nodes have?). It is the same kind of mistake as 2. The fix is not found.
+`OPTIONAL MATCH (t)-[:is_subtype_of]->(p:RoleType) WHERE ...` on 600 types read `ScanAllByLabel (p)` for each `t` and then filtered: **360,600 rows, 29 ms of 53** for the tree, the path, a type with its entities, and a patch (all about twice as slow as on Neo4j, which does 7,735 hits). A copy of the same tree, built first and queried after, did not do it, and that was the clue: **Memgraph keeps the plan of a query by its text**, and the plan is made the first time the text is run, with the statistics of that moment. Run with 2 types, then 600 made quickly, the same text kept the bad plan **70 seconds later** (360,600 rows, 48 ms), and a variant that did not depend on the order of the join (`CASE WHEN p:RoleType AND ... THEN p.id END` after an `OPTIONAL MATCH (t)-[:is_subtype_of]->(p)`, or a pattern comprehension) stayed at 1,200 rows and 15 ms (all of it the 600 rows crossing the wire). The vocabulary is read when the first type is made, so the plan is made at that moment.
+
+This is probably not particular to the typology: any query whose plan has a choice of where to start, first run on a small database, can keep a plan that is wrong at size. The creation lookup (2) looks like the same thing (its plan was good in a test on an almost empty database and bad on 6,000 factoids). I did not look for the others, or for the setting of the plan cache (`--query-plan-cache-ttl` in the Memgraph flags?) that might bound it.
 
 ### 4. Other
 
@@ -63,14 +65,31 @@ Getting a Person takes 15.9 ms in the database on Neo4j and 5.7 on Memgraph for 
 - **What Pangloss costs is the same on both and small:** 5-6 ms per request outside the database; a login is 25 ms (the password hash) and 0.3-0.7 ms of database.
 - **The history reads** (SQLite) are 1-3 ms of database; **the calendar's** are 1-5 ms.
 
-## What to do (ranked by what it would buy)
+## After the fixes (Memgraph, 2026-10-30, commit `ac3036d`)
 
-1. Memgraph: **`CREATE INDEX ON :PGMigrationLock`** (and `:PGUser`, `:PGAccessToken`; a migration of the package, as for the lock constraint). Measured: 12 ms to 0.3 ms per write at 600,000 nodes.
-2. Memgraph: write the creation lookup from the node (`(n)<-[:is_creation_of]-(creation:PGCreation)`), in `build_list_query` and `build_search_query`, and try the same for the `is_subtype_of` lookup. Measured: 24 ms to 1.4 ms in a scratch copy of the first; not yet in the code; the typology one is not reproduced.
-3. Neo4j: index `Entity(id)` or match writes by the concrete label; look at the `EXISTS { ... }` of `$mentions` (468,000 hits).
+Done for Memgraph: (1) label indexes on `PGMigrationLock`, `PGUser`, `PGAccessToken` and `HeadNode` (`LABEL_INDEXES` in `initialise_database.py`; the shipped migration `0005_addindex_addindex_addindex`); (2) the creation lookup of a search from the node (`build_search_query.py`); (3) the typology's parent chosen with a `CASE` after the match (`pangloss_typology/graph.py`, for both backends). The same 75 requests, the same data and containers as in [backend-comparison.md](backend-comparison.md); medians in ms:
+
+| Request | before | after | Neo4j |
+|---|---|---|---|
+| search: Factoid year = 800 | 92.8 | **8.2** | 6.6 |
+| search: Factoid year between | 95.7 | **4.4** | 6.9 |
+| typology: GET tree | 61.5 | **22.8** | 30.2 |
+| typology: a type with its entities | 111.6 | **41.7** | 55.4 |
+| typology: a type's path | 55.4 | **25.2** | 27.4 |
+| typology: PATCH a type | 124.3 | **65.0** | 71.9 |
+| 150 year searches at once, per second | 29 | **434** | 360 |
+| 200 typology reads at once, per second | 32 | **60** | 45 |
+
+What did not change, at this size: the writes (a Person 17.1 to 15.7 ms, a Factoid 21.7 to 23.2). The lock check is 3.6 ms of them at 118,000 nodes, and the index takes it to 0.3, but the other statements of a write are what is left: **the effect of the index on a write is measured only by itself (12 ms to 0.3 ms at 600,000 nodes), not yet through the API at that size.** Everything else is within the run-to-run difference (a request of a few ms varies by 2 times between runs here: `GET a Person` was 5.5, 9.1 and 10.5 ms in three runs).
+
+The tests: 2,439 in the main run, 594 for Neo4j and the add-ons on Neo4j all pass. Two tests of Memgraph's plans were changed for the new indexes (a search of an unindexed class starts at the head nodes' label index; the helper that looks for an index knows label indexes); a test keeps the text of the creation lookup (a plan in a test cannot show the problem, as it depends on the statistics when the query is first planned).
+
+## What is left (ranked)
+
+1. **Look for other plans kept from a small database** (Memgraph): the cache of plans by text is the cause of 3, and probably 2; a setting or a restart of the plan after the loads would be a general remedy. Not done.
+2. Neo4j: index `Entity(id)` or match writes by the concrete label; look at the `EXISTS { ... }` of `$mentions` (468,000 hits, the slowest request of all).
+3. Memgraph: the calendar's `MATCH (t:CalendarDay)-[:CHARACTERISED_BY {origin: 'manual'}]` scans all `CalendarDay` (36,007 rows; 0.4 ms each here); a label index in the calendar's `structure.py` (a migration of the calendar, and for both backends).
 4. Both: page a list without collecting and sorting the whole class (a `SKIP`/`LIMIT` on an indexed order, or a label index on a lower-cased label): the list is the request the interface makes most.
-
-None of these is changed here; each would be re-measured with `compare_api.py` before and after.
 
 ## Not done
 
