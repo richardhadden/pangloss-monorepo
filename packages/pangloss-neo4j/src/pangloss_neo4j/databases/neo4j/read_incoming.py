@@ -72,6 +72,17 @@ def unlinked(value: dict) -> dict:
     return {k: v for k, v in value.items() if k != "meta"}
 
 
+def held_value(target: dict) -> dict:
+    """What a wrapper holds, with the properties of the edge to it (a `ViaEdge`) as `edge_properties`"""
+    value = unlinked(target["node"])
+    edge_properties = {
+        k: v for k, v in target.get("properties", {}).items() if k != "reverse"
+    }
+    if edge_properties:
+        value["edge_properties"] = edge_properties
+    return value
+
+
 def wrapper_view(
     chain: list[dict], index: int, edge_types: list[str], held: dict[str, list[dict]]
 ) -> dict:
@@ -93,7 +104,7 @@ def wrapper_view(
         if index > 0 and any("Entity" not in t["labels"] for t in targets):
             # (only an entity can be shown for a part that is not on the way down to this one)
             raise UnrepresentableChain(node["type"], name)
-        values = [unlinked(t["node"]) for t in targets]
+        values = [held_value(t) for t in targets]
         node[name] = values if definition.wrapper else (values[0] if values else None)
     return node
 

@@ -75,6 +75,21 @@
         },
         "incoming": {}
       },
+      "Alternative": {
+        "name": "Alternative",
+        "plural": "Alternative",
+        "help": "",
+        "description": "One of several things, not known which: any number of statements or entities.\n`Alternative[ViaEdge[Person, Probability]]` gives each person how likely it is the one meant",
+        "kind": "Conjunction",
+        "fields": {
+          "alternatives": {
+            "name": "Alternatives",
+            "plural": "Alternatives",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
       "AtPage": {
         "name": "At page",
         "plural": "At page",
@@ -134,17 +149,292 @@
         "name": "Date",
         "plural": "Date",
         "help": "",
-        "description": "A date, with how exactly it is known. Part of whatever has it.",
+        "description": "",
         "kind": "Embedded",
         "fields": {
-          "when": {
-            "name": "When",
-            "plural": "When",
+          "calendar": {
+            "name": "Calendar",
+            "plural": "Calendar",
+            "help": ""
+          },
+          "source_text": {
+            "name": "Source text",
+            "plural": "Source text",
+            "help": ""
+          },
+          "sort_by": {
+            "name": "Sort by",
+            "plural": "Sort by",
             "help": ""
           },
           "precision": {
             "name": "Precision",
             "plural": "Precision",
+            "help": ""
+          },
+          "earliest_fuzzy": {
+            "name": "Earliest fuzzy",
+            "plural": "Earliest fuzzy",
+            "help": ""
+          },
+          "earliest_strict": {
+            "name": "Earliest strict",
+            "plural": "Earliest strict",
+            "help": ""
+          },
+          "latest_strict": {
+            "name": "Latest strict",
+            "plural": "Latest strict",
+            "help": ""
+          },
+          "latest_fuzzy": {
+            "name": "Latest fuzzy",
+            "plural": "Latest fuzzy",
+            "help": ""
+          },
+          "sort_day": {
+            "name": "Sort day",
+            "plural": "Sort day",
+            "help": ""
+          },
+          "end_sort_day": {
+            "name": "End sort day",
+            "plural": "End sort day",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "DateCharacterisation": {
+        "name": "Date characterisation",
+        "plural": "Date characterisation",
+        "help": "",
+        "description": "",
+        "kind": "Entity",
+        "fields": {
+          "use": {
+            "name": "Use",
+            "plural": "Use",
+            "help": ""
+          },
+          "rank": {
+            "name": "Rank",
+            "plural": "Rank",
+            "help": ""
+          },
+          "when": {
+            "name": "When",
+            "plural": "When",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "DateRange": {
+        "name": "Date range",
+        "plural": "Date range",
+        "help": "",
+        "description": "One date whose day is not known: somewhere from `earliest` to `latest`",
+        "kind": "Embedded",
+        "fields": {
+          "calendar": {
+            "name": "Calendar",
+            "plural": "Calendar",
+            "help": ""
+          },
+          "source_text": {
+            "name": "Source text",
+            "plural": "Source text",
+            "help": ""
+          },
+          "sort_by": {
+            "name": "Sort by",
+            "plural": "Sort by",
+            "help": ""
+          },
+          "precision": {
+            "name": "Precision",
+            "plural": "Precision",
+            "help": ""
+          },
+          "earliest_fuzzy": {
+            "name": "Earliest fuzzy",
+            "plural": "Earliest fuzzy",
+            "help": ""
+          },
+          "earliest_strict": {
+            "name": "Earliest strict",
+            "plural": "Earliest strict",
+            "help": ""
+          },
+          "latest_strict": {
+            "name": "Latest strict",
+            "plural": "Latest strict",
+            "help": ""
+          },
+          "latest_fuzzy": {
+            "name": "Latest fuzzy",
+            "plural": "Latest fuzzy",
+            "help": ""
+          },
+          "sort_day": {
+            "name": "Sort day",
+            "plural": "Sort day",
+            "help": ""
+          },
+          "end_sort_day": {
+            "name": "End sort day",
+            "plural": "End sort day",
+            "help": ""
+          },
+          "earliest": {
+            "name": "Earliest",
+            "plural": "Earliest",
+            "help": ""
+          },
+          "latest": {
+            "name": "Latest",
+            "plural": "Latest",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "EDTFDate": {
+        "name": "EDTF date",
+        "plural": "EDTF date",
+        "help": "",
+        "description": "",
+        "kind": "Embedded",
+        "fields": {
+          "calendar": {
+            "name": "Calendar",
+            "plural": "Calendar",
+            "help": ""
+          },
+          "source_text": {
+            "name": "Source text",
+            "plural": "Source text",
+            "help": ""
+          },
+          "sort_by": {
+            "name": "Sort by",
+            "plural": "Sort by",
+            "help": ""
+          },
+          "precision": {
+            "name": "Precision",
+            "plural": "Precision",
+            "help": ""
+          },
+          "earliest_fuzzy": {
+            "name": "Earliest fuzzy",
+            "plural": "Earliest fuzzy",
+            "help": ""
+          },
+          "earliest_strict": {
+            "name": "Earliest strict",
+            "plural": "Earliest strict",
+            "help": ""
+          },
+          "latest_strict": {
+            "name": "Latest strict",
+            "plural": "Latest strict",
+            "help": ""
+          },
+          "latest_fuzzy": {
+            "name": "Latest fuzzy",
+            "plural": "Latest fuzzy",
+            "help": ""
+          },
+          "sort_day": {
+            "name": "Sort day",
+            "plural": "Sort day",
+            "help": ""
+          },
+          "end_sort_day": {
+            "name": "End sort day",
+            "plural": "End sort day",
+            "help": ""
+          },
+          "edtf": {
+            "name": "Edtf",
+            "plural": "Edtf",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "ExactDate": {
+        "name": "Exact date",
+        "plural": "Exact date",
+        "help": "",
+        "description": "",
+        "kind": "Embedded",
+        "fields": {
+          "calendar": {
+            "name": "Calendar",
+            "plural": "Calendar",
+            "help": ""
+          },
+          "source_text": {
+            "name": "Source text",
+            "plural": "Source text",
+            "help": ""
+          },
+          "sort_by": {
+            "name": "Sort by",
+            "plural": "Sort by",
+            "help": ""
+          },
+          "precision": {
+            "name": "Precision",
+            "plural": "Precision",
+            "help": ""
+          },
+          "earliest_fuzzy": {
+            "name": "Earliest fuzzy",
+            "plural": "Earliest fuzzy",
+            "help": ""
+          },
+          "earliest_strict": {
+            "name": "Earliest strict",
+            "plural": "Earliest strict",
+            "help": ""
+          },
+          "latest_strict": {
+            "name": "Latest strict",
+            "plural": "Latest strict",
+            "help": ""
+          },
+          "latest_fuzzy": {
+            "name": "Latest fuzzy",
+            "plural": "Latest fuzzy",
+            "help": ""
+          },
+          "sort_day": {
+            "name": "Sort day",
+            "plural": "Sort day",
+            "help": ""
+          },
+          "end_sort_day": {
+            "name": "End sort day",
+            "plural": "End sort day",
+            "help": ""
+          },
+          "year": {
+            "name": "Year",
+            "plural": "Year",
+            "help": ""
+          },
+          "month": {
+            "name": "Month",
+            "plural": "Month",
+            "help": ""
+          },
+          "day": {
+            "name": "Day",
+            "plural": "Day",
             "help": ""
           }
         },
@@ -204,6 +494,11 @@
             "plural": "Involves reverse",
             "help": ""
           },
+          "ordered": {
+            "name": "Ordered",
+            "plural": "Ordered",
+            "help": ""
+          },
           "participants_reverse": {
             "name": "Participants reverse",
             "plural": "Participants reverse",
@@ -226,6 +521,26 @@
           "contents": {
             "name": "Contents",
             "plural": "Contents",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "Identification": {
+        "name": "Identification",
+        "plural": "Identification",
+        "help": "",
+        "description": "A name in the source that has been identified: the source says \"Smith\", and\nthis says which people that could be. The target is one `Alternative`.",
+        "kind": "ReifiedRelation",
+        "fields": {
+          "target": {
+            "name": "Target",
+            "plural": "Target",
+            "help": ""
+          },
+          "identified_by": {
+            "name": "Identified by",
+            "plural": "Identified by",
             "help": ""
           }
         },
@@ -266,6 +581,231 @@
         },
         "incoming": {}
       },
+      "NegativeSubjunctive": {
+        "name": "Negative subjunctive",
+        "plural": "Negative subjunctive",
+        "help": "",
+        "description": "It was wished that this should *not* happen (and it did not necessarily not)",
+        "kind": "SemanticSpace",
+        "fields": {
+          "contents": {
+            "name": "Contents",
+            "plural": "Contents",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "NoRule": {
+        "name": "No rule",
+        "plural": "No rule",
+        "help": "",
+        "description": "A characterisation that has no rule: it is attached to days, months, years or spans by hand",
+        "kind": "Embedded",
+        "fields": {},
+        "incoming": {}
+      },
+      "OccupationType": {
+        "name": "Occupation type",
+        "plural": "Occupation type",
+        "help": "",
+        "description": "A type of OccupationTypology",
+        "kind": "Entity",
+        "fields": {
+          "description": {
+            "name": "Description",
+            "plural": "Description",
+            "help": ""
+          },
+          "is_subtype_of": {
+            "name": "Is subtype of",
+            "plural": "Is subtype of",
+            "help": ""
+          }
+        },
+        "incoming": {
+          "is_supertype_of": {
+            "name": "Is supertype of",
+            "plural": "Is supertype of",
+            "help": ""
+          },
+          "type_of": {
+            "name": "Type of",
+            "plural": "Type of",
+            "help": ""
+          }
+        }
+      },
+      "OngoingDate": {
+        "name": "Ongoing date",
+        "plural": "Ongoing date",
+        "help": "",
+        "description": "The end of a period that has not ended (it is taken to stop by the end of `DATES_OPEN_END_YEAR`)",
+        "kind": "Embedded",
+        "fields": {
+          "calendar": {
+            "name": "Calendar",
+            "plural": "Calendar",
+            "help": ""
+          },
+          "source_text": {
+            "name": "Source text",
+            "plural": "Source text",
+            "help": ""
+          },
+          "sort_by": {
+            "name": "Sort by",
+            "plural": "Sort by",
+            "help": ""
+          },
+          "precision": {
+            "name": "Precision",
+            "plural": "Precision",
+            "help": ""
+          },
+          "earliest_fuzzy": {
+            "name": "Earliest fuzzy",
+            "plural": "Earliest fuzzy",
+            "help": ""
+          },
+          "earliest_strict": {
+            "name": "Earliest strict",
+            "plural": "Earliest strict",
+            "help": ""
+          },
+          "latest_strict": {
+            "name": "Latest strict",
+            "plural": "Latest strict",
+            "help": ""
+          },
+          "latest_fuzzy": {
+            "name": "Latest fuzzy",
+            "plural": "Latest fuzzy",
+            "help": ""
+          },
+          "sort_day": {
+            "name": "Sort day",
+            "plural": "Sort day",
+            "help": ""
+          },
+          "end_sort_day": {
+            "name": "End sort day",
+            "plural": "End sort day",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "Order": {
+        "name": "Order",
+        "plural": "Order",
+        "help": "",
+        "description": "Someone ordered something to be done: *something else*, which is a statement of\nits own, said in a subjunctive space, because it was wished, and not necessarily done",
+        "kind": "Document",
+        "fields": {
+          "text": {
+            "name": "Text",
+            "plural": "Text",
+            "help": ""
+          },
+          "date": {
+            "name": "Date",
+            "plural": "Date",
+            "help": ""
+          },
+          "year": {
+            "name": "Year",
+            "plural": "Year",
+            "help": ""
+          },
+          "places": {
+            "name": "Places",
+            "plural": "Places",
+            "help": ""
+          },
+          "ordered_by": {
+            "name": "Ordered by",
+            "plural": "Ordered by",
+            "help": ""
+          },
+          "thing_ordered": {
+            "name": "Thing ordered",
+            "plural": "Thing ordered",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "Period": {
+        "name": "Period",
+        "plural": "Period",
+        "help": "",
+        "description": "From `start` to `end`: an occupation, a role, a residence. Sorts by when it started",
+        "kind": "Embedded",
+        "fields": {
+          "calendar": {
+            "name": "Calendar",
+            "plural": "Calendar",
+            "help": ""
+          },
+          "source_text": {
+            "name": "Source text",
+            "plural": "Source text",
+            "help": ""
+          },
+          "sort_by": {
+            "name": "Sort by",
+            "plural": "Sort by",
+            "help": ""
+          },
+          "precision": {
+            "name": "Precision",
+            "plural": "Precision",
+            "help": ""
+          },
+          "earliest_fuzzy": {
+            "name": "Earliest fuzzy",
+            "plural": "Earliest fuzzy",
+            "help": ""
+          },
+          "earliest_strict": {
+            "name": "Earliest strict",
+            "plural": "Earliest strict",
+            "help": ""
+          },
+          "latest_strict": {
+            "name": "Latest strict",
+            "plural": "Latest strict",
+            "help": ""
+          },
+          "latest_fuzzy": {
+            "name": "Latest fuzzy",
+            "plural": "Latest fuzzy",
+            "help": ""
+          },
+          "sort_day": {
+            "name": "Sort day",
+            "plural": "Sort day",
+            "help": ""
+          },
+          "end_sort_day": {
+            "name": "End sort day",
+            "plural": "End sort day",
+            "help": ""
+          },
+          "start": {
+            "name": "Start",
+            "plural": "Start",
+            "help": ""
+          },
+          "end": {
+            "name": "End",
+            "plural": "End",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
       "Person": {
         "name": "Person",
         "plural": "Person",
@@ -287,6 +827,11 @@
             "name": "Aliases",
             "plural": "Aliases",
             "help": ""
+          },
+          "has_type": {
+            "name": "Has type",
+            "plural": "Has type",
+            "help": ""
           }
         },
         "incoming": {
@@ -303,6 +848,11 @@
           "involves_reverse": {
             "name": "Involves reverse",
             "plural": "Involves reverse",
+            "help": ""
+          },
+          "ordered": {
+            "name": "Ordered",
+            "plural": "Ordered",
             "help": ""
           },
           "participants_reverse": {
@@ -337,6 +887,161 @@
             "help": ""
           }
         }
+      },
+      "PositiveSubjunctive": {
+        "name": "Positive subjunctive",
+        "plural": "Positive subjunctive",
+        "help": "",
+        "description": "It was wished that this should happen (it did not necessarily)",
+        "kind": "SemanticSpace",
+        "fields": {
+          "contents": {
+            "name": "Contents",
+            "plural": "Contents",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "Probability": {
+        "name": "Probability",
+        "plural": "Probability",
+        "help": "",
+        "description": "How likely it is that this is the one meant, out of the alternatives (1 to 100, in per cent)",
+        "kind": "EdgeModel",
+        "fields": {
+          "percent": {
+            "name": "Percent",
+            "plural": "Percent",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "Recurrence": {
+        "name": "Recurrence",
+        "plural": "Recurrence",
+        "help": "",
+        "description": "Something that happens again and again, within a lifetime (`start` to `end`): \"every Sunday\", \"the third\nSunday of March\", \"on the 21st of each month\". The days are never stored; `pattern_keys` find the rules that\ncould fall on a day (see `pangloss_dates.recurrence`)",
+        "kind": "Embedded",
+        "fields": {
+          "calendar": {
+            "name": "Calendar",
+            "plural": "Calendar",
+            "help": ""
+          },
+          "source_text": {
+            "name": "Source text",
+            "plural": "Source text",
+            "help": ""
+          },
+          "sort_by": {
+            "name": "Sort by",
+            "plural": "Sort by",
+            "help": ""
+          },
+          "precision": {
+            "name": "Precision",
+            "plural": "Precision",
+            "help": ""
+          },
+          "earliest_fuzzy": {
+            "name": "Earliest fuzzy",
+            "plural": "Earliest fuzzy",
+            "help": ""
+          },
+          "earliest_strict": {
+            "name": "Earliest strict",
+            "plural": "Earliest strict",
+            "help": ""
+          },
+          "latest_strict": {
+            "name": "Latest strict",
+            "plural": "Latest strict",
+            "help": ""
+          },
+          "latest_fuzzy": {
+            "name": "Latest fuzzy",
+            "plural": "Latest fuzzy",
+            "help": ""
+          },
+          "sort_day": {
+            "name": "Sort day",
+            "plural": "Sort day",
+            "help": ""
+          },
+          "end_sort_day": {
+            "name": "End sort day",
+            "plural": "End sort day",
+            "help": ""
+          },
+          "frequency": {
+            "name": "Frequency",
+            "plural": "Frequency",
+            "help": ""
+          },
+          "weekdays": {
+            "name": "Weekdays",
+            "plural": "Weekdays",
+            "help": ""
+          },
+          "nth": {
+            "name": "Nth",
+            "plural": "Nth",
+            "help": ""
+          },
+          "month": {
+            "name": "Month",
+            "plural": "Month",
+            "help": ""
+          },
+          "month_day": {
+            "name": "Month day",
+            "plural": "Month day",
+            "help": ""
+          },
+          "interval": {
+            "name": "Interval",
+            "plural": "Interval",
+            "help": ""
+          },
+          "excluded_days": {
+            "name": "Excluded days",
+            "plural": "Excluded days",
+            "help": ""
+          },
+          "leap_shift": {
+            "name": "Leap shift",
+            "plural": "Leap shift",
+            "help": ""
+          },
+          "easter_offset": {
+            "name": "Easter offset",
+            "plural": "Easter offset",
+            "help": ""
+          },
+          "feast": {
+            "name": "Feast",
+            "plural": "Feast",
+            "help": ""
+          },
+          "start": {
+            "name": "Start",
+            "plural": "Start",
+            "help": ""
+          },
+          "end": {
+            "name": "End",
+            "plural": "End",
+            "help": ""
+          },
+          "pattern_keys": {
+            "name": "Pattern keys",
+            "plural": "Pattern keys",
+            "help": ""
+          }
+        },
+        "incoming": {}
       },
       "Source": {
         "name": "Source",
@@ -454,6 +1159,66 @@
         },
         "incoming": {}
       },
+      "UnknownDate": {
+        "name": "Unknown date",
+        "plural": "Unknown date",
+        "help": "",
+        "description": "The start or the end of a period that nobody knows. It is open from `DATES_EARLIEST_YEAR` to\n`DATES_OPEN_END_YEAR`, so the period is still found by a date it could include. Say what is known if\nanything can be: a range with a reasonable guess (`DateRange`, or EDTF `1500~`) says more, and an\nunknown date only that nothing is. Both ends of a period cannot be unknown.",
+        "kind": "Embedded",
+        "fields": {
+          "calendar": {
+            "name": "Calendar",
+            "plural": "Calendar",
+            "help": ""
+          },
+          "source_text": {
+            "name": "Source text",
+            "plural": "Source text",
+            "help": ""
+          },
+          "sort_by": {
+            "name": "Sort by",
+            "plural": "Sort by",
+            "help": ""
+          },
+          "precision": {
+            "name": "Precision",
+            "plural": "Precision",
+            "help": ""
+          },
+          "earliest_fuzzy": {
+            "name": "Earliest fuzzy",
+            "plural": "Earliest fuzzy",
+            "help": ""
+          },
+          "earliest_strict": {
+            "name": "Earliest strict",
+            "plural": "Earliest strict",
+            "help": ""
+          },
+          "latest_strict": {
+            "name": "Latest strict",
+            "plural": "Latest strict",
+            "help": ""
+          },
+          "latest_fuzzy": {
+            "name": "Latest fuzzy",
+            "plural": "Latest fuzzy",
+            "help": ""
+          },
+          "sort_day": {
+            "name": "Sort day",
+            "plural": "Sort day",
+            "help": ""
+          },
+          "end_sort_day": {
+            "name": "End sort day",
+            "plural": "End sort day",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
       "WithCertainty": {
         "name": "With certainty",
         "plural": "With certainty",
@@ -501,20 +1266,57 @@
           }
         }
       },
+      "Calendar": {
+        "name": "Calendar",
+        "plural": "Calendar",
+        "help": "",
+        "description": "",
+        "members": {
+          "GREGORIAN": {
+            "name": "Gregorian"
+          },
+          "JULIAN": {
+            "name": "Julian"
+          }
+        }
+      },
+      "Frequency": {
+        "name": "Frequency",
+        "plural": "Frequency",
+        "help": "",
+        "description": "",
+        "members": {
+          "MONTHLY": {
+            "name": "Monthly"
+          },
+          "WEEKLY": {
+            "name": "Weekly"
+          },
+          "YEARLY": {
+            "name": "Yearly"
+          }
+        }
+      },
       "Precision": {
         "name": "Precision",
         "plural": "Precision",
         "help": "",
-        "description": "How exactly a date is known",
+        "description": "",
         "members": {
           "DAY": {
             "name": "Day"
           },
-          "DECADE": {
-            "name": "Decade"
-          },
           "MONTH": {
             "name": "Month"
+          },
+          "ONGOING": {
+            "name": "Ongoing"
+          },
+          "RANGE": {
+            "name": "Range"
+          },
+          "UNKNOWN": {
+            "name": "Unknown"
           },
           "YEAR": {
             "name": "Year"
@@ -538,6 +1340,32 @@
           },
           "WITNESS": {
             "name": "Witness"
+          }
+        }
+      },
+      "SortBy": {
+        "name": "Sort by",
+        "plural": "Sort by",
+        "help": "",
+        "description": "Which day a date is ordered by",
+        "members": {
+          "EARLIEST_FUZZY": {
+            "name": "Earliest fuzzy"
+          },
+          "EARLIEST_STRICT": {
+            "name": "Earliest strict"
+          },
+          "LATEST_FUZZY": {
+            "name": "Latest fuzzy"
+          },
+          "LATEST_STRICT": {
+            "name": "Latest strict"
+          },
+          "MIDPOINT": {
+            "name": "Midpoint"
+          },
+          "MIDPOINT_FUZZY": {
+            "name": "Midpoint fuzzy"
           }
         }
       }

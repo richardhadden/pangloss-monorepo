@@ -81,17 +81,42 @@ def test_build_installs_if_needed_and_builds_in_the_app(commands, project):
     ]
     assert commands[1][1] == directory / "interface-app"
 
-    # (not again, once installed)
+    # (not again, once installed: npm makes node_modules)
     (directory / "node_modules").mkdir()
+    interface_cli.install_packages(interface_cli.find_runtime(None), directory)
     commands.clear()
     assert invoke(project, "build").exit_code == 0
     assert [c[0] for c in commands] == [["/bin/npm", "run", "build"]]
+
+
+def test_packages_are_installed_again_when_the_ones_asked_for_have_changed(
+    commands, project
+):
+    assert invoke(project, "install").exit_code == 0
+    directory = working_directory(project.location.root)
+    (directory / "node_modules").mkdir()
+    interface_cli.install_packages(interface_cli.find_runtime(None), directory)
+    assert interface_cli.up_to_date(directory)
+
+    # (the package asks for another: the copy is written again, and node_modules is left over)
+    app = directory / "interface-app" / "package.json"
+    package = json.loads(app.read_text())
+    package["devDependencies"]["a-new-package"] = "^1.0.0"
+    app.write_text(json.dumps(package))
+    assert not interface_cli.up_to_date(directory)
+
+    commands.clear()
+    interface_cli.ensure_installed(interface_cli.find_runtime(None), directory)
+    assert [c[0] for c in commands] == [["/bin/npm", "install"]]
+    assert interface_cli.up_to_date(directory)
 
 
 def test_the_models_are_exported_before_it_is_built(commands, project, monkeypatch):
     seen = []
 
     def run_checking(command, cwd, environment=None):
+        if command[-1] != "build":
+            return 0  # (the install)
         models = cwd / "src" / "generated" / "models.ts"
         seen.append(models.is_file() and "Person" in models.read_text())
         return 0
@@ -104,9 +129,9 @@ def test_the_models_are_exported_before_it_is_built(commands, project, monkeypat
     assert seen == [True]
 
 
-def test_dev_passes_on_the_api_url(commands, project):
+def test_dev_passes_on_the_api_url(commands, project, monkeypatch):
     directory = working_directory(project.location.root)
-    (directory / "node_modules").mkdir(parents=True)
+    monkeypatch.setattr(interface_cli, "up_to_date", lambda directory: True)
     result = invoke(project, "dev", "--api-url", "http://api:9000", "--port", "3001")
     assert result.exit_code == 0, result.output
     assert commands == [

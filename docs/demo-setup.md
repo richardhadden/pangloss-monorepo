@@ -3,7 +3,7 @@
 `pangloss-demo/` (in the root of the repository, not one of the packages) is a project made with the
 installer, with one app, `demo_app`, which has a small model of **factoids**: what a source says,
 at a page of it, as a list of statements about people, groups and places. `populate.py` puts some data in it
-(a few factoids about the year 800).
+(four factoids, about the years 799 to 802).
 
 This is every command a person runs to make it, in order. (Python names cannot have hyphens, so the
 directory is `pangloss-demo`, the project `pangloss_demo`, and the app `demo_app`.)
@@ -75,6 +75,8 @@ After that, when `demo_app/models.py` changes: `pangloss makemigrations` (it ask
 ## 4. Put data in it
 
 ```bash
+pangloss migrate                       # (answer y if it asks: the database is empty of demo data)
+pangloss calendar seed                 # the days of 730 to 830 (a minute or two)
 python populate.py                     # run in pangloss-demo/; refuses to run twice
 ```
 
@@ -98,7 +100,16 @@ curl http://127.0.0.1:8000/api/Factoid
 curl http://127.0.0.1:8000/api/Person/https://example.org/demo/person/charlemagne   # an entity, by its URL
 ```
 
-## 6. The web interface (optional)
+## 6. The packages installed
+
+`INSTALLED_APPS` has every package but `pangloss-zotero` (and `pangloss-neo4j`, the other database: the demo
+runs on Memgraph): `pangloss_users`, `pangloss_api`, `pangloss_dates` and `pangloss_calendar` (Julian, 730 to 830),
+`pangloss_typology` (`OccupationTypology`), `pangloss_review` (`Factoid` is reviewable), `pangloss_history`,
+`pangloss_sdk_server` and `pangloss_interface`. Dates use the calendar-neutral `Date` of `pangloss_dates.models`, in the Julian calendar by
+the setting `DATES_DEFAULT_CALENDAR`: the Julian family classes (`JulianDate`) are models of `pangloss_dates`, and a project that
+used them would have `makemigrations` write their migration into the package.
+
+## 7. The web interface (optional)
 
 `pangloss-interface` is installed by adding it to `INSTALLED_APPS` (an edit, in `pangloss_demo/settings.py`):
 
@@ -139,9 +150,12 @@ own `.gitignore` leaves out `node_modules` and `dist`).
 | | |
 |---|---|
 | Entities | `Person` and `Group` (both an `Agent`), `Place`, `Source`: with URLs as ids, and created from the payload of the factoid that mentions them (by their URL, if they do not exist yet; they are still separate entities) |
-| Documents | `Factoid` contains `Statement`s (abstract), which are `Activity` or `Transfer` |
+| Documents | `Factoid` contains `Statement`s (abstract), which are `Activity`, `Transfer` or `Order` |
 | Relations | `AtPage[Source]` and `InRole[Agent]` (reified: a relation with fields), `ViaEdge[Agent, Certainty]` (fields on the edge), a field narrowed by a subclass (`carried_out_by` narrows `involves`) |
-| Wrappers | `Negative` and `Hypothetical` (semantic spaces), `Causes` (a conjunction) |
+| Wrappers | `Negative`, `Hypothetical`, `PositiveSubjunctive` and `NegativeSubjunctive` (semantic spaces), `Causes` and `Alternative` (conjunctions) |
+| Orders | `Order` is a `Statement` whose `thing_ordered` is any other statement, in a `PositiveSubjunctive` or `NegativeSubjunctive` space: wished to happen (or not to), not necessarily done |
+| Identifications | `Identification[Alternative[ViaEdge[Person, Probability]]]` where a statement points to a person (`Order.ordered_by`, `Transfer.given_by` and `given_to`): the source says "Wido" (`identified_by`), and the one `Alternative` holds the men it could be, each with a `Probability` (percent) |
+| Dates, types, review | `Date` (Julian by setting) for `Statement.date` and `Person.born`; `OccupationTypology` for `Person.has_type`; `Factoid` is reviewable |
 | Values | an embedded `Date`, an annotated `WithCertainty[str]`, enums, a `TypedDict`, `Decimal`, lists, validators |
 | Binding | `Factoid.year` is given to the statements that have none |
 

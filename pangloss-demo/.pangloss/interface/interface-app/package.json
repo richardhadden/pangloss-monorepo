@@ -13,14 +13,15 @@
   "dependencies": {
     "@pangloss/interface-core": "*",
     "@solidjs/meta": "^1.0.0-next.2",
-    "@solidjs/router": "^2.0.0-next.40",
-    "@solidjs/web": "^2.0.0-rc.15",
-    "solid-js": "^2.0.0-rc.15"
+    "@solidjs/router": "^2.0.0-next.43",
+    "@solidjs/web": "^2.0.0-rc.19",
+    "solid-js": "^2.0.0-rc.19"
   },
   "devDependencies": {
-    "@solidjs/vite-plugin": "^3.0.0-next.50",
+    "@solidjs/vite-plugin": "^3.0.0-next.52",
+    "@tailwindcss/vite": "^4.3.3",
     "@types/node": "^26.2.0",
-    "filesystem-routing": "0.4.0",
+    "tailwindcss": "^4.3.3",
     "typescript": "^5.9.2",
     "vite": "^8.3.4"
   }

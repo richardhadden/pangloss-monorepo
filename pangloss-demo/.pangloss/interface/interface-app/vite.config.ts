@@ -1,7 +1,7 @@
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import tailwindcss from "@tailwindcss/vite";
 import solid from "@solidjs/vite-plugin";
-import { fileRoutes } from "filesystem-routing/vite";
 import { defineConfig, searchForWorkspaceRoot } from "vite";
 
 // Where the Pangloss API is, for the dev server to pass `/api` requests on to. (`pangloss
@@ -16,8 +16,25 @@ const modelsModule =
   process.env.PANGLOSS_MODELS_MODULE ??
   fileURLToPath(new URL("./src/generated/models.ts", import.meta.url));
 
+// The same for the interface modules of the installed apps: `modules.ts` (their manifests) and `sources.css` (where Tailwind
+// looks for their classes). `pangloss interface dev --link` points them at the apps' own folders.
+const modulesModule =
+  process.env.PANGLOSS_MODULES_MODULE ??
+  fileURLToPath(new URL("./src/generated/modules.ts", import.meta.url));
+const sourcesCss =
+  process.env.PANGLOSS_SOURCES_CSS ??
+  fileURLToPath(new URL("./src/generated/sources.css", import.meta.url));
+
 export default defineConfig({
-  resolve: { alias: { "@generated/models": modelsModule } },
+  resolve: {
+    alias: {
+      "@generated/models": modelsModule,
+      "@generated/modules": modulesModule,
+      "@generated/sources.css": sourcesCss,
+    },
+    // (an interface module has its own node_modules at times: one copy of each of these, or reactivity breaks)
+    dedupe: ["solid-js", "@solidjs/web", "@solidjs/router", "@pangloss/interface-core"],
+  },
   plugins: [
     solid({
       // Streaming server-side rendering. The plugin makes the entries around
@@ -26,17 +43,24 @@ export default defineConfig({
       // `npm start` runs)
       ssr: true,
       start: { node: true },
-      // (so that the route modules of the file router are compiled)
       extensions: [".jsx", ".tsx"],
     }),
-    fileRoutes({ types: true }),
+    tailwindcss(),
   ],
   // interface-core is source, which has to be compiled for the server as well
   ssr: { noExternal: ["@pangloss/interface-core"] },
   server: {
     port: 3000,
     // (the models may be outside of the workspace, in the project)
-    fs: { allow: [searchForWorkspaceRoot(process.cwd()), dirname(modelsModule)] },
+    fs: {
+      allow: [
+        searchForWorkspaceRoot(process.cwd()),
+        dirname(modelsModule),
+        dirname(modulesModule),
+        // (the modules of apps that are checked out, run where they are)
+        ...(process.env.PANGLOSS_MODULE_ROOTS?.split(":").filter(Boolean) ?? []),
+      ],
+    },
     proxy: {
       "/api": { target: apiUrl, changeOrigin: false },
     },

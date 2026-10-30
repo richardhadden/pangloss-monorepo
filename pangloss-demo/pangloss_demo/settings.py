@@ -20,6 +20,12 @@ class Settings(BaseSettings[MemgraphDatabaseSettings]):
     # `pangloss new-app <name>`, which adds them here)
     INSTALLED_APPS: list[str] = [
         "pangloss_memgraph",
+        "pangloss_users",
+        "pangloss_api",
+        "pangloss_dates",
+        "pangloss_calendar",
+        "pangloss_typology",
+        "pangloss_review",
         "demo_app",
         "pangloss_interface",
         "pangloss_history",
@@ -35,6 +41,13 @@ class Settings(BaseSettings[MemgraphDatabaseSettings]):
         DB_PASSWORD="test",
         DATABASE_NAME="memgraph",
     )
+
+    # The sources are medieval: Julian dates, and a start that is not known is not earlier than 700
+    DATES_DEFAULT_CALENDAR: str = "julian"
+    DATES_EARLIEST_YEAR: int = 700
+    CALENDAR_DEFAULT: str = "julian"
+    CALENDAR_FIRST_YEAR: int = 730
+    CALENDAR_LAST_YEAR: int = 830
 
     INTERFACE_LANGUAGES: list[str] = ["en"]
     ENTITY_BASE_URL: AnyHttpUrl = AnyHttpUrl("http://localhost:8000/entity/")

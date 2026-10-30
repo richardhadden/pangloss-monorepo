@@ -175,3 +175,18 @@ def test_a_class_without_subclasses_is_updated_without_the_extra_read(
 
     assert response.status_code == 200, response.text
     assert reads == []
+
+
+def test_an_abstract_entity_with_no_subclass_has_no_routes_and_does_not_stop_the_app(
+    settings,
+):
+    class Template(Entity):
+        _meta = Entity.Meta(abstract=True)
+
+    class Other(Entity):
+        pass
+
+    client = TestClient(create_app())
+
+    assert client.get("/api/Template").status_code == 404
+    assert client.get("/api/Other").status_code != 404

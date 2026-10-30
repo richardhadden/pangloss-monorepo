@@ -3,161 +3,172 @@
 # mypy: ignore-errors
 import datetime
 import decimal
-import typing
-import uuid
-from decimal import Decimal
-from enum import Enum
-from typing import Annotated, TypedDict
-
+import pangloss_dates.models
 import pangloss_models.model_bases.base_models
 import pangloss_models.model_bases.conjunction
 import pangloss_models.model_bases.document
-import pangloss_models.model_bases.embedded
 import pangloss_models.model_bases.entity
 import pangloss_models.model_bases.reified_relation
 import pangloss_models.model_bases.semantic_space
 import pydantic.networks
-from annotated_types import Ge, MaxLen, MinLen
+import typing
+import uuid
+
+import datetime
+from decimal import Decimal
+from enum import Enum
+from typing import Annotated, TypedDict
+from annotated_types import Ge, Le, MaxLen, MinLen
+from pangloss_dates.bounds import SortBy
+from pangloss_dates.models import Date, SortDefault
+from pangloss_interface import InterfaceMeta
 from pangloss_models.field_definitions import FieldBinding, FieldSubclassing
 from pangloss_models.model_bases.annotated_value import AnnotatedValue
 from pangloss_models.model_bases.configs import RelationConfig
 from pangloss_models.model_bases.conjunction import Conjunction
 from pangloss_models.model_bases.document import Document
 from pangloss_models.model_bases.edge_model import EdgeModel
-from pangloss_models.model_bases.embedded import Embedded
 from pangloss_models.model_bases.entity import Entity
 from pangloss_models.model_bases.helpers import ViaEdge
 from pangloss_models.model_bases.reified_relation import ReifiedRelation
 from pangloss_models.model_bases.semantic_space import SemanticSpace
 from pangloss_models.model_bases.trait import Trait
-
-class Precision(Enum):
-    DAY = "day"
-    MONTH = "month"
-    YEAR = "year"
-    DECADE = "decade"
+from pangloss_review.meta import ReviewMeta
+from pangloss_typology import Typed, Typology, TypologyMeta
 
 class Role(Enum):
-    LEADER = "leader"
-    WITNESS = "witness"
-    PARTICIPANT = "participant"
-    MESSENGER = "messenger"
+    LEADER = 'leader'
+    WITNESS = 'witness'
+    PARTICIPANT = 'participant'
+    MESSENGER = 'messenger'
 
 class ActivityType(Enum):
-    MEETING = "meeting"
-    JOURNEY = "journey"
-    BATTLE = "battle"
-    CEREMONY = "ceremony"
-    CORRESPONDENCE = "correspondence"
+    MEETING = 'meeting'
+    JOURNEY = 'journey'
+    BATTLE = 'battle'
+    CEREMONY = 'ceremony'
+    CORRESPONDENCE = 'correspondence'
 
 class Coordinates(TypedDict):
     latitude: float
     longitude: float
 
-class Date(Embedded):
-    when: datetime.date
-    precision: Precision
-    class Create(pangloss_models.model_bases.embedded._EmbeddedCreateBase):  # type: ignore
-        type: typing.Literal["Date"] = ...
-        when: datetime.date
-        precision: Precision
-
-    class Update(pangloss_models.model_bases.embedded._EmbeddedUpdateBase):  # type: ignore
-        type: typing.Literal["Date"] = ...
-        when: datetime.date
-        precision: Precision
-
-    class View(pangloss_models.model_bases.embedded._EmbeddedViewBase):  # type: ignore
-        type: typing.Literal["Date"] = ...
-        when: datetime.date
-        precision: Precision
-
 class Certainty(EdgeModel):
     level: Annotated[int, Ge(1)]
+
+class Probability(EdgeModel):
+    percent: Annotated[int, Ge(1), Le(100)]
 
 class WithCertainty[T](AnnotatedValue[T]):
     certainty: int
 
 class AtPage[T](ReifiedRelation[T]):
     page: str
-    class Create(
-        pangloss_models.model_bases.reified_relation._ReifiedRelationCreateBase
-    ):  # type: ignore
-        type: typing.Literal["AtPage"] = ...
+    class Create(pangloss_models.model_bases.reified_relation._ReifiedRelationCreateBase):  # type: ignore
+        type: typing.Literal['AtPage'] = ...
         page: str
 
-    class Update(
-        pangloss_models.model_bases.reified_relation._ReifiedRelationUpdateBase
-    ):  # type: ignore
-        type: typing.Literal["AtPage"] = ...
+    class Update(pangloss_models.model_bases.reified_relation._ReifiedRelationUpdateBase):  # type: ignore
+        type: typing.Literal['AtPage'] = ...
         page: str
 
     class View(pangloss_models.model_bases.reified_relation._ReifiedRelationViewBase):  # type: ignore
-        type: typing.Literal["AtPage"] = ...
+        type: typing.Literal['AtPage'] = ...
         page: str
 
 class InRole[T](ReifiedRelation[T]):
     role: Role
-    class Create(
-        pangloss_models.model_bases.reified_relation._ReifiedRelationCreateBase
-    ):  # type: ignore
-        type: typing.Literal["InRole"] = ...
+    class Create(pangloss_models.model_bases.reified_relation._ReifiedRelationCreateBase):  # type: ignore
+        type: typing.Literal['InRole'] = ...
         role: Role
 
-    class Update(
-        pangloss_models.model_bases.reified_relation._ReifiedRelationUpdateBase
-    ):  # type: ignore
-        type: typing.Literal["InRole"] = ...
+    class Update(pangloss_models.model_bases.reified_relation._ReifiedRelationUpdateBase):  # type: ignore
+        type: typing.Literal['InRole'] = ...
         role: Role
 
     class View(pangloss_models.model_bases.reified_relation._ReifiedRelationViewBase):  # type: ignore
-        type: typing.Literal["InRole"] = ...
+        type: typing.Literal['InRole'] = ...
         role: Role
 
-class Agent(Trait): ...
+class Alternative[T](Conjunction):
+    alternatives: list[T]
+    class Create(pangloss_models.model_bases.conjunction._ConjunctionCreateBase):  # type: ignore
+        type: typing.Literal['Alternative'] = ...
+
+    class Update(pangloss_models.model_bases.conjunction._ConjunctionUpdateBase):  # type: ignore
+        type: typing.Literal['Alternative'] = ...
+
+    class View(pangloss_models.model_bases.conjunction._ConjunctionViewBase):  # type: ignore
+        type: typing.Literal['Alternative'] = ...
+
+class Identification[T](ReifiedRelation[T]):
+    identified_by: str
+    target: Annotated[list[T], MinLen(1), MaxLen(1)]
+    class Create(pangloss_models.model_bases.reified_relation._ReifiedRelationCreateBase):  # type: ignore
+        type: typing.Literal['Identification'] = ...
+        identified_by: str
+
+    class Update(pangloss_models.model_bases.reified_relation._ReifiedRelationUpdateBase):  # type: ignore
+        type: typing.Literal['Identification'] = ...
+        identified_by: str
+
+    class View(pangloss_models.model_bases.reified_relation._ReifiedRelationViewBase):  # type: ignore
+        type: typing.Literal['Identification'] = ...
+        identified_by: str
+
+class Agent(Trait):
+    ...
+
+class OccupationTypology(Typology):
+    _typology_meta = ...
 
 class Person(Entity, Agent):
     _meta = ...
     known_as: WithCertainty[str]
-    born: Date
+    born: Annotated[Date, SortDefault(SortBy.EARLIEST_FUZZY)]
     aliases: list[str]
+    has_type: list[Typed[OccupationTypology]]
     class ReferenceSet(pangloss_models.model_bases.entity._EntityReferenceSetBase):  # type: ignore
         id: pydantic.networks.AnyHttpUrl | uuid.UUID  # type: ignore
-        type: typing.Literal["Person"] = ...
+        type: typing.Literal['Person'] = ...
         label: str | None = ...
 
     class ReferenceView(pangloss_models.model_bases.entity._EntityReferenceViewBase):  # type: ignore
-        type: typing.Literal["Person"] = ...
+        type: typing.Literal['Person'] = ...
 
     class Create(pangloss_models.model_bases.entity._EntityCreateBase):  # type: ignore
-        type: typing.Literal["Person"] = ...
+        type: typing.Literal['Person'] = ...
         id: pydantic.networks.AnyHttpUrl | uuid.UUID | None = ...
         create_new: typing.Literal[True] | None = ...
         label: str
         aliases: list[str]
-        born: Date.Create
+        born: pangloss_dates.models.DateRange.Create | pangloss_dates.models.EDTFDate.Create | pangloss_dates.models.ExactDate.Create | pangloss_dates.models.OngoingDate.Create | pangloss_dates.models.Period.Create | pangloss_dates.models.Recurrence.Create | pangloss_dates.models.UnknownDate.Create
+        has_type: list[OccupationType.ReferenceSet]
         known_as: WithCertainty[str]
 
     class Update(pangloss_models.model_bases.entity._EntityUpdateBase):  # type: ignore
-        type: typing.Literal["Person"] = ...
+        type: typing.Literal['Person'] = ...
         label: str
         aliases: list[str]
-        born: Date.Create | Date.Update
+        born: pangloss_dates.models.DateRange.Create | pangloss_dates.models.DateRange.Update | pangloss_dates.models.EDTFDate.Create | pangloss_dates.models.EDTFDate.Update | pangloss_dates.models.ExactDate.Create | pangloss_dates.models.ExactDate.Update | pangloss_dates.models.OngoingDate.Create | pangloss_dates.models.OngoingDate.Update | pangloss_dates.models.Period.Create | pangloss_dates.models.Period.Update | pangloss_dates.models.Recurrence.Create | pangloss_dates.models.Recurrence.Update | pangloss_dates.models.UnknownDate.Create | pangloss_dates.models.UnknownDate.Update
+        has_type: list[OccupationType.ReferenceSet]
         known_as: WithCertainty[str]
 
     class View(pangloss_models.model_bases.entity._EntityViewBase):  # type: ignore
-        type: typing.Literal["Person"] = ...
+        type: typing.Literal['Person'] = ...
         label: str
         aliases: list[str]
-        born: Date.View
+        born: pangloss_dates.models.DateRange.View | pangloss_dates.models.EDTFDate.View | pangloss_dates.models.ExactDate.View | pangloss_dates.models.OngoingDate.View | pangloss_dates.models.Period.View | pangloss_dates.models.Recurrence.View | pangloss_dates.models.UnknownDate.View
+        has_type: list[OccupationType.ReferenceView] = ...
         known_as: WithCertainty[str]
 
     class HeadView(pangloss_models.model_bases.entity._EntityHeadViewBase, Person.View):  # type: ignore
         involves_reverse: list[Statement.ReferenceView] = ...
         carried_out: list[Activity.ReferenceView] = ...
         participants_reverse: typing.Any = ...
-        gave: list[Transfer.ReferenceView] = ...
-        received: list[Transfer.ReferenceView] = ...
+        gave: typing.Any = ...
+        received: typing.Any = ...
+        ordered: typing.Any = ...
 
     class EditView(pangloss_models.model_bases.entity._EntityEditViewBase, Person.View):  # type: ignore
         ...
@@ -166,24 +177,24 @@ class Group(Entity, Agent):
     name: Annotated[str, MinLen(2), MaxLen(100)]
     class ReferenceSet(pangloss_models.model_bases.entity._EntityReferenceSetBase):  # type: ignore
         id: pydantic.networks.AnyHttpUrl | uuid.UUID  # type: ignore
-        type: typing.Literal["Group"] = ...
+        type: typing.Literal['Group'] = ...
         label: str | None = ...
 
     class ReferenceView(pangloss_models.model_bases.entity._EntityReferenceViewBase):  # type: ignore
-        type: typing.Literal["Group"] = ...
+        type: typing.Literal['Group'] = ...
 
     class Create(pangloss_models.model_bases.entity._EntityCreateBase):  # type: ignore
-        type: typing.Literal["Group"] = ...
+        type: typing.Literal['Group'] = ...
         label: str
         name: str
 
     class Update(pangloss_models.model_bases.entity._EntityUpdateBase):  # type: ignore
-        type: typing.Literal["Group"] = ...
+        type: typing.Literal['Group'] = ...
         label: str
         name: str
 
     class View(pangloss_models.model_bases.entity._EntityViewBase):  # type: ignore
-        type: typing.Literal["Group"] = ...
+        type: typing.Literal['Group'] = ...
         label: str
         name: str
 
@@ -193,6 +204,7 @@ class Group(Entity, Agent):
         participants_reverse: typing.Any = ...
         gave: list[Transfer.ReferenceView] = ...
         received: list[Transfer.ReferenceView] = ...
+        ordered: list[Order.ReferenceView] = ...
 
     class EditView(pangloss_models.model_bases.entity._EntityEditViewBase, Group.View):  # type: ignore
         ...
@@ -201,31 +213,29 @@ class Place(Entity):
     coordinates: Coordinates | None = None
     class ReferenceSet(pangloss_models.model_bases.entity._EntityReferenceSetBase):  # type: ignore
         id: pydantic.networks.AnyHttpUrl | uuid.UUID  # type: ignore
-        type: typing.Literal["Place"] = ...
+        type: typing.Literal['Place'] = ...
         label: str | None = ...
 
     class ReferenceView(pangloss_models.model_bases.entity._EntityReferenceViewBase):  # type: ignore
-        type: typing.Literal["Place"] = ...
+        type: typing.Literal['Place'] = ...
 
     class Create(pangloss_models.model_bases.entity._EntityCreateBase):  # type: ignore
-        type: typing.Literal["Place"] = ...
+        type: typing.Literal['Place'] = ...
         label: str
         coordinates: Coordinates | None = ...
 
     class Update(pangloss_models.model_bases.entity._EntityUpdateBase):  # type: ignore
-        type: typing.Literal["Place"] = ...
+        type: typing.Literal['Place'] = ...
         label: str
         coordinates: Coordinates | None = ...
 
     class View(pangloss_models.model_bases.entity._EntityViewBase):  # type: ignore
-        type: typing.Literal["Place"] = ...
+        type: typing.Literal['Place'] = ...
         label: str
         coordinates: Coordinates | None = ...
 
     class HeadView(pangloss_models.model_bases.entity._EntityHeadViewBase, Place.View):  # type: ignore
-        places_reverse: list[
-            Activity.ReferenceView | Statement.ReferenceView | Transfer.ReferenceView
-        ] = ...
+        places_reverse: list[Activity.ReferenceView | Order.ReferenceView | Statement.ReferenceView | Transfer.ReferenceView] = ...
 
     class EditView(pangloss_models.model_bases.entity._EntityEditViewBase, Place.View):  # type: ignore
         ...
@@ -237,14 +247,14 @@ class Source(Entity):
     edition_price: Decimal | None = None
     class ReferenceSet(pangloss_models.model_bases.entity._EntityReferenceSetBase):  # type: ignore
         id: pydantic.networks.AnyHttpUrl | uuid.UUID  # type: ignore
-        type: typing.Literal["Source"] = ...
+        type: typing.Literal['Source'] = ...
         label: str | None = ...
 
     class ReferenceView(pangloss_models.model_bases.entity._EntityReferenceViewBase):  # type: ignore
-        type: typing.Literal["Source"] = ...
+        type: typing.Literal['Source'] = ...
 
     class Create(pangloss_models.model_bases.entity._EntityCreateBase):  # type: ignore
-        type: typing.Literal["Source"] = ...
+        type: typing.Literal['Source'] = ...
         id: pydantic.networks.AnyHttpUrl | uuid.UUID | None = ...
         create_new: typing.Literal[True] | None = ...
         label: str
@@ -253,14 +263,14 @@ class Source(Entity):
         edition_price: decimal.Decimal | None = ...
 
     class Update(pangloss_models.model_bases.entity._EntityUpdateBase):  # type: ignore
-        type: typing.Literal["Source"] = ...
+        type: typing.Literal['Source'] = ...
         label: str
         author: str | None = ...
         written: datetime.date | None = ...
         edition_price: decimal.Decimal | None = ...
 
     class View(pangloss_models.model_bases.entity._EntityViewBase):  # type: ignore
-        type: typing.Literal["Source"] = ...
+        type: typing.Literal['Source'] = ...
         label: str
         author: str | None = ...
         written: datetime.date | None = ...
@@ -279,232 +289,253 @@ class Statement(Document):
     year: int
     involves: list[Agent]
     places: list[Place]
-    class ReferenceView(
-        pangloss_models.model_bases.document._DocumentReferenceViewBase
-    ):  # type: ignore
-        type: typing.Literal["Statement"] = ...
+    class ReferenceView(pangloss_models.model_bases.document._DocumentReferenceViewBase):  # type: ignore
+        type: typing.Literal['Statement'] = ...
 
     class Create(pangloss_models.model_bases.document._DocumentCreateBase):  # type: ignore
-        type: typing.Literal["Statement"] = ...
+        type: typing.Literal['Statement'] = ...
         label: str
         text: str
         year: int
-        date: Date.Create
+        date: pangloss_dates.models.Date.Create
         involves: list[Group.ReferenceSet | Person.Create | Person.ReferenceSet]
         places: list[Place.ReferenceSet]
 
     class Update(pangloss_models.model_bases.document._DocumentUpdateBase):  # type: ignore
-        type: typing.Literal["Statement"] = ...
+        type: typing.Literal['Statement'] = ...
         label: str
         text: str
         year: int
-        date: Date.Create | Date.Update
+        date: pangloss_dates.models.Date.Update | pangloss_dates.models.DateRange.Create | pangloss_dates.models.EDTFDate.Create | pangloss_dates.models.ExactDate.Create | pangloss_dates.models.OngoingDate.Create | pangloss_dates.models.Period.Create | pangloss_dates.models.Recurrence.Create | pangloss_dates.models.UnknownDate.Create
         involves: list[Group.ReferenceSet | Person.Create | Person.ReferenceSet]
         places: list[Place.ReferenceSet]
 
     class View(pangloss_models.model_bases.document._DocumentViewBase):  # type: ignore
-        type: typing.Literal["Statement"] = ...
+        type: typing.Literal['Statement'] = ...
         label: str
         text: str
         year: int
-        date: Date.View
+        date: pangloss_dates.models.Date.View
         involves: list[Group.ReferenceView | Person.ReferenceView] = ...
         places: list[Place.ReferenceView] = ...
 
-    class HeadView(
-        pangloss_models.model_bases.document._DocumentHeadViewBase, Statement.View
-    ):  # type: ignore
+    class HeadView(pangloss_models.model_bases.document._DocumentHeadViewBase, Statement.View):  # type: ignore
         ...
 
 class Activity(Statement):
     activity_type: ActivityType
-    carried_out_by: Annotated[
-        ViaEdge[Agent, Certainty],
-        RelationConfig(
-            reverse_name="carried_out",
-            subclasses_parent_fields=[
-                FieldSubclassing("involves", field_on_model=Statement)
-            ],
-        ),
-    ]
+    carried_out_by: Annotated[ViaEdge[Agent, Certainty], RelationConfig(reverse_name='carried_out', subclasses_parent_fields=[FieldSubclassing('involves', field_on_model=Statement)])]
     participants: list[InRole[Agent]]
-    class ReferenceView(
-        pangloss_models.model_bases.document._DocumentReferenceViewBase
-    ):  # type: ignore
-        type: typing.Literal["Activity"] = ...
+    class ReferenceView(pangloss_models.model_bases.document._DocumentReferenceViewBase):  # type: ignore
+        type: typing.Literal['Activity'] = ...
 
     class Create(pangloss_models.model_bases.document._DocumentCreateBase):  # type: ignore
-        type: typing.Literal["Activity"] = ...
+        type: typing.Literal['Activity'] = ...
         label: str
         text: str
         year: int
         activity_type: ActivityType
-        date: Date.Create
+        date: pangloss_dates.models.DateRange.Create | pangloss_dates.models.EDTFDate.Create | pangloss_dates.models.ExactDate.Create | pangloss_dates.models.OngoingDate.Create | pangloss_dates.models.Period.Create | pangloss_dates.models.Recurrence.Create | pangloss_dates.models.UnknownDate.Create
         places: list[Place.ReferenceSet]
         carried_out_by: typing.Any
         participants: typing.Any
 
     class Update(pangloss_models.model_bases.document._DocumentUpdateBase):  # type: ignore
-        type: typing.Literal["Activity"] = ...
+        type: typing.Literal['Activity'] = ...
         label: str
         text: str
         year: int
         activity_type: ActivityType
-        date: Date.Create | Date.Update
+        date: pangloss_dates.models.DateRange.Create | pangloss_dates.models.DateRange.Update | pangloss_dates.models.EDTFDate.Create | pangloss_dates.models.EDTFDate.Update | pangloss_dates.models.ExactDate.Create | pangloss_dates.models.ExactDate.Update | pangloss_dates.models.OngoingDate.Create | pangloss_dates.models.OngoingDate.Update | pangloss_dates.models.Period.Create | pangloss_dates.models.Period.Update | pangloss_dates.models.Recurrence.Create | pangloss_dates.models.Recurrence.Update | pangloss_dates.models.UnknownDate.Create | pangloss_dates.models.UnknownDate.Update
         places: list[Place.ReferenceSet]
         carried_out_by: typing.Any
         participants: typing.Any
 
     class View(pangloss_models.model_bases.document._DocumentViewBase):  # type: ignore
-        type: typing.Literal["Activity"] = ...
+        type: typing.Literal['Activity'] = ...
         label: str
         text: str
         year: int
         activity_type: ActivityType
-        date: Date.View
+        date: pangloss_dates.models.DateRange.View | pangloss_dates.models.EDTFDate.View | pangloss_dates.models.ExactDate.View | pangloss_dates.models.OngoingDate.View | pangloss_dates.models.Period.View | pangloss_dates.models.Recurrence.View | pangloss_dates.models.UnknownDate.View
         places: list[Place.ReferenceView] = ...
         carried_out_by: typing.Any
         participants: typing.Any = ...
 
-    class HeadView(
-        pangloss_models.model_bases.document._DocumentHeadViewBase, Activity.View
-    ):  # type: ignore
+    class HeadView(pangloss_models.model_bases.document._DocumentHeadViewBase, Activity.View):  # type: ignore
         ...
 
 class Transfer(Statement):
     item: str
     quantity: Decimal
-    given_by: Annotated[
-        Agent,
-        RelationConfig(
-            reverse_name="gave",
-            subclasses_parent_fields=[
-                FieldSubclassing("involves", field_on_model=Statement)
-            ],
-        ),
-    ]
-    given_to: Annotated[Agent, RelationConfig(reverse_name="received")]
-    class ReferenceView(
-        pangloss_models.model_bases.document._DocumentReferenceViewBase
-    ):  # type: ignore
-        type: typing.Literal["Transfer"] = ...
+    given_by: Annotated[Agent | Identification[Alternative[ViaEdge[Person, Probability]]], RelationConfig(reverse_name='gave', subclasses_parent_fields=[FieldSubclassing('involves', field_on_model=Statement)])]
+    given_to: Annotated[Agent | Identification[Alternative[ViaEdge[Person, Probability]]], RelationConfig(reverse_name='received')]
+    class ReferenceView(pangloss_models.model_bases.document._DocumentReferenceViewBase):  # type: ignore
+        type: typing.Literal['Transfer'] = ...
 
     class Create(pangloss_models.model_bases.document._DocumentCreateBase):  # type: ignore
-        type: typing.Literal["Transfer"] = ...
+        type: typing.Literal['Transfer'] = ...
         label: str
         text: str
         year: int
         item: str
         quantity: decimal.Decimal
-        date: Date.Create
+        date: pangloss_dates.models.DateRange.Create | pangloss_dates.models.EDTFDate.Create | pangloss_dates.models.ExactDate.Create | pangloss_dates.models.OngoingDate.Create | pangloss_dates.models.Period.Create | pangloss_dates.models.Recurrence.Create | pangloss_dates.models.UnknownDate.Create
         places: list[Place.ReferenceSet]
-        given_by: Group.ReferenceSet | Person.Create | Person.ReferenceSet
-        given_to: Group.ReferenceSet | Person.Create | Person.ReferenceSet
+        given_by: typing.Any
+        given_to: typing.Any
 
     class Update(pangloss_models.model_bases.document._DocumentUpdateBase):  # type: ignore
-        type: typing.Literal["Transfer"] = ...
+        type: typing.Literal['Transfer'] = ...
         label: str
         text: str
         year: int
         item: str
         quantity: decimal.Decimal
-        date: Date.Create | Date.Update
+        date: pangloss_dates.models.DateRange.Create | pangloss_dates.models.DateRange.Update | pangloss_dates.models.EDTFDate.Create | pangloss_dates.models.EDTFDate.Update | pangloss_dates.models.ExactDate.Create | pangloss_dates.models.ExactDate.Update | pangloss_dates.models.OngoingDate.Create | pangloss_dates.models.OngoingDate.Update | pangloss_dates.models.Period.Create | pangloss_dates.models.Period.Update | pangloss_dates.models.Recurrence.Create | pangloss_dates.models.Recurrence.Update | pangloss_dates.models.UnknownDate.Create | pangloss_dates.models.UnknownDate.Update
         places: list[Place.ReferenceSet]
-        given_by: Group.ReferenceSet | Person.Create | Person.ReferenceSet
-        given_to: Group.ReferenceSet | Person.Create | Person.ReferenceSet
+        given_by: typing.Any
+        given_to: typing.Any
 
     class View(pangloss_models.model_bases.document._DocumentViewBase):  # type: ignore
-        type: typing.Literal["Transfer"] = ...
+        type: typing.Literal['Transfer'] = ...
         label: str
         text: str
         year: int
         item: str
         quantity: decimal.Decimal
-        date: Date.View
+        date: pangloss_dates.models.DateRange.View | pangloss_dates.models.EDTFDate.View | pangloss_dates.models.ExactDate.View | pangloss_dates.models.OngoingDate.View | pangloss_dates.models.Period.View | pangloss_dates.models.Recurrence.View | pangloss_dates.models.UnknownDate.View
         places: list[Place.ReferenceView] = ...
-        given_by: Group.ReferenceView | Person.ReferenceView
-        given_to: Group.ReferenceView | Person.ReferenceView
+        given_by: typing.Any
+        given_to: typing.Any
 
-    class HeadView(
-        pangloss_models.model_bases.document._DocumentHeadViewBase, Transfer.View
-    ):  # type: ignore
+    class HeadView(pangloss_models.model_bases.document._DocumentHeadViewBase, Transfer.View):  # type: ignore
         ...
 
-class Negative[T](SemanticSpace[T]):
+class Order(Statement):
+    ordered_by: Annotated[Agent | Identification[Alternative[ViaEdge[Person, Probability]]], RelationConfig(reverse_name='ordered', subclasses_parent_fields=[FieldSubclassing('involves', field_on_model=Statement)])]
+    thing_ordered: PositiveSubjunctive[Statement] | NegativeSubjunctive[Statement]
+    class ReferenceView(pangloss_models.model_bases.document._DocumentReferenceViewBase):  # type: ignore
+        type: typing.Literal['Order'] = ...
+
+    class Create(pangloss_models.model_bases.document._DocumentCreateBase):  # type: ignore
+        type: typing.Literal['Order'] = ...
+        label: str
+        text: str
+        year: int
+        date: pangloss_dates.models.DateRange.Create | pangloss_dates.models.EDTFDate.Create | pangloss_dates.models.ExactDate.Create | pangloss_dates.models.OngoingDate.Create | pangloss_dates.models.Period.Create | pangloss_dates.models.Recurrence.Create | pangloss_dates.models.UnknownDate.Create
+        places: list[Place.ReferenceSet]
+        ordered_by: typing.Any
+        thing_ordered: typing.Any
+
+    class Update(pangloss_models.model_bases.document._DocumentUpdateBase):  # type: ignore
+        type: typing.Literal['Order'] = ...
+        label: str
+        text: str
+        year: int
+        date: pangloss_dates.models.DateRange.Create | pangloss_dates.models.DateRange.Update | pangloss_dates.models.EDTFDate.Create | pangloss_dates.models.EDTFDate.Update | pangloss_dates.models.ExactDate.Create | pangloss_dates.models.ExactDate.Update | pangloss_dates.models.OngoingDate.Create | pangloss_dates.models.OngoingDate.Update | pangloss_dates.models.Period.Create | pangloss_dates.models.Period.Update | pangloss_dates.models.Recurrence.Create | pangloss_dates.models.Recurrence.Update | pangloss_dates.models.UnknownDate.Create | pangloss_dates.models.UnknownDate.Update
+        places: list[Place.ReferenceSet]
+        ordered_by: typing.Any
+        thing_ordered: typing.Any
+
+    class View(pangloss_models.model_bases.document._DocumentViewBase):  # type: ignore
+        type: typing.Literal['Order'] = ...
+        label: str
+        text: str
+        year: int
+        date: pangloss_dates.models.DateRange.View | pangloss_dates.models.EDTFDate.View | pangloss_dates.models.ExactDate.View | pangloss_dates.models.OngoingDate.View | pangloss_dates.models.Period.View | pangloss_dates.models.Recurrence.View | pangloss_dates.models.UnknownDate.View
+        places: list[Place.ReferenceView] = ...
+        ordered_by: typing.Any
+        thing_ordered: typing.Any
+
+    class HeadView(pangloss_models.model_bases.document._DocumentHeadViewBase, Order.View):  # type: ignore
+        ...
+
+class PositiveSubjunctive[T](SemanticSpace[T]):
+    _interface_meta = ...
     class Create(pangloss_models.model_bases.semantic_space._SemanticSpaceCreateBase):  # type: ignore
-        type: typing.Literal["Negative"] = ...
+        type: typing.Literal['PositiveSubjunctive'] = ...
 
     class Update(pangloss_models.model_bases.semantic_space._SemanticSpaceUpdateBase):  # type: ignore
-        type: typing.Literal["Negative"] = ...
+        type: typing.Literal['PositiveSubjunctive'] = ...
 
     class View(pangloss_models.model_bases.semantic_space._SemanticSpaceViewBase):  # type: ignore
-        type: typing.Literal["Negative"] = ...
+        type: typing.Literal['PositiveSubjunctive'] = ...
+
+class NegativeSubjunctive[T](SemanticSpace[T]):
+    _interface_meta = ...
+    class Create(pangloss_models.model_bases.semantic_space._SemanticSpaceCreateBase):  # type: ignore
+        type: typing.Literal['NegativeSubjunctive'] = ...
+
+    class Update(pangloss_models.model_bases.semantic_space._SemanticSpaceUpdateBase):  # type: ignore
+        type: typing.Literal['NegativeSubjunctive'] = ...
+
+    class View(pangloss_models.model_bases.semantic_space._SemanticSpaceViewBase):  # type: ignore
+        type: typing.Literal['NegativeSubjunctive'] = ...
+
+class Negative[T](SemanticSpace[T]):
+    _interface_meta = ...
+    class Create(pangloss_models.model_bases.semantic_space._SemanticSpaceCreateBase):  # type: ignore
+        type: typing.Literal['Negative'] = ...
+
+    class Update(pangloss_models.model_bases.semantic_space._SemanticSpaceUpdateBase):  # type: ignore
+        type: typing.Literal['Negative'] = ...
+
+    class View(pangloss_models.model_bases.semantic_space._SemanticSpaceViewBase):  # type: ignore
+        type: typing.Literal['Negative'] = ...
 
 class Hypothetical[T](SemanticSpace[T]):
+    _interface_meta = ...
     class Create(pangloss_models.model_bases.semantic_space._SemanticSpaceCreateBase):  # type: ignore
-        type: typing.Literal["Hypothetical"] = ...
+        type: typing.Literal['Hypothetical'] = ...
 
     class Update(pangloss_models.model_bases.semantic_space._SemanticSpaceUpdateBase):  # type: ignore
-        type: typing.Literal["Hypothetical"] = ...
+        type: typing.Literal['Hypothetical'] = ...
 
     class View(pangloss_models.model_bases.semantic_space._SemanticSpaceViewBase):  # type: ignore
-        type: typing.Literal["Hypothetical"] = ...
+        type: typing.Literal['Hypothetical'] = ...
 
 class Causes[TCause, TResult](Conjunction):
     cause: TCause
     result: TResult
     class Create(pangloss_models.model_bases.conjunction._ConjunctionCreateBase):  # type: ignore
-        type: typing.Literal["Causes"] = ...
+        type: typing.Literal['Causes'] = ...
 
     class Update(pangloss_models.model_bases.conjunction._ConjunctionUpdateBase):  # type: ignore
-        type: typing.Literal["Causes"] = ...
+        type: typing.Literal['Causes'] = ...
 
     class View(pangloss_models.model_bases.conjunction._ConjunctionViewBase):  # type: ignore
-        type: typing.Literal["Causes"] = ...
+        type: typing.Literal['Causes'] = ...
 
 class Factoid(Document):
+    _meta = ...
+    _review_meta = ...
     year: int
     source: AtPage[Source]
-    statements: Annotated[
-        list[
-            Statement
-            | Negative[Statement]
-            | Hypothetical[Statement]
-            | Causes[Statement, Statement]
-        ],
-        RelationConfig(
-            bind_to_child_field=[
-                FieldBinding(bound_field="year", child_fields=["year"])
-            ]
-        ),
-    ]
-    class ReferenceView(
-        pangloss_models.model_bases.document._DocumentReferenceViewBase
-    ):  # type: ignore
-        type: typing.Literal["Factoid"] = ...
+    statements: Annotated[list[Statement | Negative[Statement] | Hypothetical[Statement] | Causes[Statement, Statement]], RelationConfig(bind_to_child_field=[FieldBinding(bound_field='year', child_fields=['year'])])]
+    class ReferenceView(pangloss_models.model_bases.document._DocumentReferenceViewBase):  # type: ignore
+        type: typing.Literal['Factoid'] = ...
 
     class Create(pangloss_models.model_bases.document._DocumentCreateBase):  # type: ignore
-        type: typing.Literal["Factoid"] = ...
+        type: typing.Literal['Factoid'] = ...
         label: str
         year: int
         source: typing.Any
         statements: typing.Any
 
     class Update(pangloss_models.model_bases.document._DocumentUpdateBase):  # type: ignore
-        type: typing.Literal["Factoid"] = ...
+        type: typing.Literal['Factoid'] = ...
         label: str
         year: int
         source: typing.Any
         statements: typing.Any
 
     class View(pangloss_models.model_bases.document._DocumentViewBase):  # type: ignore
-        type: typing.Literal["Factoid"] = ...
+        type: typing.Literal['Factoid'] = ...
         label: str
         year: int
         source: typing.Any
         statements: typing.Any = ...
 
-    class HeadView(
-        pangloss_models.model_bases.document._DocumentHeadViewBase, Factoid.View
-    ):  # type: ignore
+    class HeadView(pangloss_models.model_bases.document._DocumentHeadViewBase, Factoid.View):  # type: ignore
         ...

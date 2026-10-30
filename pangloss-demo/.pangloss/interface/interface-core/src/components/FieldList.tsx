@@ -36,7 +36,8 @@ export function FieldList(props: FieldListProps) {
           <For each={definition().fields}>
             {(field) => (
               <li>
-                <strong>{field.name}</strong> ({describe(field)}){field.required ? " *" : ""}
+                <strong>{field.name}</strong> ({describe(field)})
+                <Show when={field.required}> *</Show>
               </li>
             )}
           </For>

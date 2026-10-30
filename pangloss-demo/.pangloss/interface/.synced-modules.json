@@ -1,0 +1,15 @@
+[
+  "modules/pangloss_typology/README.md",
+  "modules/pangloss_typology/package.json",
+  "modules/pangloss_typology/src/api.ts",
+  "modules/pangloss_typology/src/components/TypeCard.tsx",
+  "modules/pangloss_typology/src/components/TypeItem.test.tsx",
+  "modules/pangloss_typology/src/components/TypeItem.tsx",
+  "modules/pangloss_typology/src/components/TypeTree.test.tsx",
+  "modules/pangloss_typology/src/components/TypeTree.tsx",
+  "modules/pangloss_typology/src/index.ts",
+  "modules/pangloss_typology/src/tree.test.ts",
+  "modules/pangloss_typology/src/tree.ts",
+  "modules/pangloss_typology/tsconfig.json",
+  "modules/pangloss_typology/vitest.config.ts"
+]

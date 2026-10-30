@@ -27,6 +27,9 @@ lazy from pangloss_models.initialise_models.initialise_edit_view_model import (
     can_have_edit_view_model,
     initialise_edit_view_model,
 )
+lazy from pangloss_models.initialise_models.check_relation_targets import (
+    check_relation_targets,
+)
 lazy from pangloss_models.initialise_models.initialise_field_definitions import (
     initialise_field_definitions,
 )
@@ -351,6 +354,8 @@ class ModelRegistry:
         # declaration order
         for model in cls._model_dict.values():
             initialise_field_definitions(model)
+
+        check_relation_targets(list(cls._model_dict.values()))
 
         from pangloss_models.indexes import check_indexes
 

@@ -14,10 +14,14 @@ small, and between them use most of what Pangloss has:
 | Narrowing a field of the parent class | `Activity.carried_out_by` narrows `Statement.involves` |
 | A reified relation (a relation with fields) | `AtPage[Source]`, `InRole[Agent]` |
 | Properties on an edge | `ViaEdge[Agent, Certainty]` |
-| An embedded object | `Date` |
+| Dates (in the Julian calendar by setting, with doubt and ranges) | `Statement.date`, `Person.born` (`pangloss-dates`) |
+| A vocabulary of types in a hierarchy | `OccupationTypology` (`pangloss-typology`) |
+| Review before publishing | `Factoid` (`pangloss-review`) |
 | An annotated value (a value with fields of its own) | `WithCertainty[str]` |
-| Semantic spaces (a context for statements) | `Negative`, `Hypothetical` |
-| A conjunction (a join of several things) | `Causes` |
+| Semantic spaces (a context for statements) | `Negative`, `Hypothetical`, `PositiveSubjunctive`, `NegativeSubjunctive` |
+| A statement that holds another statement | `Order.thing_ordered` |
+| A conjunction (a join of several things) | `Causes`, `Alternative` (any number) |
+| A reified relation to a conjunction, with edge properties on its members | `Identification[Alternative[ViaEdge[Person, Probability]]]` |
 | Binding a value of the parent into its children | `Factoid.year` into `Statement.year` |
 | Literals: enums, dates, decimals, a TypedDict, lists, validators | throughout |
 """
@@ -27,7 +31,9 @@ from decimal import Decimal
 from enum import Enum
 from typing import Annotated, TypedDict
 
-from annotated_types import Ge, MaxLen, MinLen
+from annotated_types import Ge, Le, MaxLen, MinLen
+from pangloss_dates.bounds import SortBy
+from pangloss_dates.models import Date, SortDefault
 from pangloss_interface import InterfaceMeta
 from pangloss_models.field_definitions import FieldBinding, FieldSubclassing
 from pangloss_models.model_bases.annotated_value import AnnotatedValue
@@ -35,25 +41,17 @@ from pangloss_models.model_bases.configs import RelationConfig
 from pangloss_models.model_bases.conjunction import Conjunction
 from pangloss_models.model_bases.document import Document
 from pangloss_models.model_bases.edge_model import EdgeModel
-from pangloss_models.model_bases.embedded import Embedded
 from pangloss_models.model_bases.entity import Entity
 from pangloss_models.model_bases.helpers import ViaEdge
 from pangloss_models.model_bases.reified_relation import ReifiedRelation
 from pangloss_models.model_bases.semantic_space import SemanticSpace
 from pangloss_models.model_bases.trait import Trait
+from pangloss_review.meta import ReviewMeta
+from pangloss_typology import Typed, Typology, TypologyMeta
 
 # ---------------------------------------------------------------------------
 # Literals, and the small models that carry them
 # ---------------------------------------------------------------------------
-
-
-class Precision(Enum):
-    """How exactly a date is known"""
-
-    DAY = "day"
-    MONTH = "month"
-    YEAR = "year"
-    DECADE = "decade"
 
 
 class Role(Enum):
@@ -76,17 +74,16 @@ class Coordinates(TypedDict):
     longitude: float
 
 
-class Date(Embedded):
-    """A date, with how exactly it is known. Part of whatever has it."""
-
-    when: datetime.date
-    precision: Precision
-
-
 class Certainty(EdgeModel):
     """How sure the source is of a relation: a property of the relation itself"""
 
     level: Annotated[int, Ge(1)]
+
+
+class Probability(EdgeModel):
+    """How likely it is that this is the one meant, out of the alternatives (1 to 100, in per cent)"""
+
+    percent: Annotated[int, Ge(1), Le(100)]
 
 
 class WithCertainty[T](AnnotatedValue[T]):
@@ -107,6 +104,21 @@ class InRole[T](ReifiedRelation[T]):
     role: Role
 
 
+class Alternative[T](Conjunction):
+    """One of several things, not known which: any number of statements or entities.
+    `Alternative[ViaEdge[Person, Probability]]` gives each person how likely it is the one meant"""
+
+    alternatives: list[T]
+
+
+class Identification[T](ReifiedRelation[T]):
+    """A name in the source that has been identified: the source says "Smith", and
+    this says which people that could be. The target is one `Alternative`."""
+
+    identified_by: str
+    target: Annotated[list[T], MinLen(1), MaxLen(1)]
+
+
 # ---------------------------------------------------------------------------
 # Entities: the things that documents refer to
 # ---------------------------------------------------------------------------
@@ -114,6 +126,12 @@ class InRole[T](ReifiedRelation[T]):
 
 class Agent(Trait):
     """Anyone who can act: a person or a group"""
+
+
+class OccupationTypology(Typology):
+    """What a person did: a hierarchy (a secretary is a court official is an official)"""
+
+    _typology_meta = TypologyMeta(name="OccupationType")
 
 
 class Person(Entity, Agent):
@@ -124,8 +142,9 @@ class Person(Entity, Agent):
     _meta = Entity.Meta(create_with_id=True, create_inline=True)
 
     known_as: WithCertainty[str]
-    born: Date
+    born: Annotated[Date, SortDefault(SortBy.EARLIEST_FUZZY)]
     aliases: list[str]
+    has_type: list[Typed[OccupationTypology]]
 
 
 class Group(Entity, Agent):
@@ -191,7 +210,7 @@ class Transfer(Statement):
     item: str
     quantity: Decimal
     given_by: Annotated[
-        Agent,
+        Agent | Identification[Alternative[ViaEdge[Person, Probability]]],
         RelationConfig(
             reverse_name="gave",
             subclasses_parent_fields=[
@@ -199,7 +218,38 @@ class Transfer(Statement):
             ],
         ),
     ]
-    given_to: Annotated[Agent, RelationConfig(reverse_name="received")]
+    given_to: Annotated[
+        Agent | Identification[Alternative[ViaEdge[Person, Probability]]],
+        RelationConfig(reverse_name="received"),
+    ]
+
+
+class Order(Statement):
+    """Someone ordered something to be done: *something else*, which is a statement of
+    its own, said in a subjunctive space, because it was wished, and not necessarily done"""
+
+    ordered_by: Annotated[
+        Agent | Identification[Alternative[ViaEdge[Person, Probability]]],
+        RelationConfig(
+            reverse_name="ordered",
+            subclasses_parent_fields=[
+                FieldSubclassing("involves", field_on_model=Statement)
+            ],
+        ),
+    ]
+    thing_ordered: PositiveSubjunctive[Statement] | NegativeSubjunctive[Statement]
+
+
+class PositiveSubjunctive[T](SemanticSpace[T]):
+    """It was wished that this should happen (it did not necessarily)"""
+
+    _interface_meta = InterfaceMeta(colour="green")
+
+
+class NegativeSubjunctive[T](SemanticSpace[T]):
+    """It was wished that this should *not* happen (and it did not necessarily not)"""
+
+    _interface_meta = InterfaceMeta(colour="orange")
 
 
 class Negative[T](SemanticSpace[T]):
@@ -226,6 +276,8 @@ class Factoid(Document):
 
     # Factoids are searched by year, so it has an index (and the label of every class has one already)
     _meta = Document.Meta(indexes=["year"])
+    # (checked by another user before it is published)
+    _review_meta = ReviewMeta(reviewable=True)
 
     year: int
     source: AtPage[Source]

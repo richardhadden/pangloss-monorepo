@@ -9,6 +9,7 @@ command that needs it copies the JavaScript of the package there, and writes the
 definitions of the project's models as a TypeScript module that the interface imports.
 """
 
+import hashlib
 import json
 from pathlib import Path
 from typing import Any
@@ -130,10 +131,74 @@ def installed(directory: Path) -> bool:
     return (directory / "node_modules").is_dir()
 
 
-def ensure_installed(runtime: Runtime, directory: Path) -> None:
+# (kept in node_modules: what the `package.json` files said when the packages were last installed)
+INSTALLED_MARK = Path("node_modules") / ".pangloss-installed"
+
+
+def package_files(directory: Path) -> list[Path]:
+    """The `package.json` of the working directory, the app, the core and the modules: the packages
+    the interface asks for"""
+    files = [
+        directory / "package.json",
+        directory / "interface-app" / "package.json",
+        directory / "interface-core" / "package.json",
+        *sorted((directory / "modules").glob("*/package.json")),
+    ]
+    return [file for file in files if file.is_file()]
+
+
+def package_hash(directory: Path) -> str:
+    """A hash of those files. (The copy is rewritten by every command, so their times say nothing.)"""
+    digest = hashlib.sha256()
+    for file in package_files(directory):
+        digest.update(str(file.relative_to(directory)).encode())
+        digest.update(file.read_bytes())
+    return digest.hexdigest()
+
+
+def missing_packages(directory: Path) -> list[str]:
+    """The packages that the `package.json` files ask for and `node_modules` does not have"""
+    missing = []
+    for file in package_files(directory):
+        asked = json.loads(file.read_text())
+        for name in {
+            **asked.get("dependencies", {}),
+            **asked.get("devDependencies", {}),
+        }:
+            # (npm puts a package in the top node_modules, or, if versions clash, in the one that needs it)
+            if not any(
+                (root / "node_modules" / name).exists()
+                for root in (directory, file.parent)
+            ):
+                missing.append(name)
+    return sorted(set(missing))
+
+
+def up_to_date(directory: Path) -> bool:
+    """The packages are installed, for the `package.json` files as they are now. (Where the mark of the last
+    install is not there, because it was installed before the mark was kept: whether all are there.)"""
     if not installed(directory):
-        typer.echo("Installing the packages of the interface")
-        run_or_exit(runtime.install(), directory)
+        return False
+    mark = directory / INSTALLED_MARK
+    if mark.is_file():
+        return mark.read_text() == package_hash(directory)
+    return not missing_packages(directory)
+
+
+def install_packages(runtime: Runtime, directory: Path) -> None:
+    run_or_exit(runtime.install(), directory)
+    if (directory / "node_modules").is_dir():
+        (directory / INSTALLED_MARK).write_text(package_hash(directory))
+
+
+def ensure_installed(runtime: Runtime, directory: Path) -> None:
+    if not up_to_date(directory):
+        typer.echo(
+            "Installing the packages of the interface"
+            if not installed(directory)
+            else "The packages the interface asks for have changed: installing them"
+        )
+        install_packages(runtime, directory)
 
 
 def built_server(directory: Path) -> Path:
@@ -198,7 +263,7 @@ def install(ctx: typer.Context, runtime: str | None = RuntimeOption) -> None:
     """Prepare the interface in the project, and install its packages"""
     found = runtime_or_exit(runtime)
     directory = prepare_workspace(ctx)
-    run_or_exit(found.install(), directory)
+    install_packages(found, directory)
 
 
 @cli.command()
@@ -345,7 +410,9 @@ def list_modules(ctx: typer.Context, runtime: str | None = RuntimeOption) -> Non
     project = project_of(ctx)
     modules = modules_of(project)
     if not modules:
-        typer.echo("No installed app has an interface module (pangloss interface new-module APP)")
+        typer.echo(
+            "No installed app has an interface module (pangloss interface new-module APP)"
+        )
         return
     found = runtime_or_exit(runtime)
     directory = prepare_workspace(ctx)
@@ -359,7 +426,9 @@ def list_modules(ctx: typer.Context, runtime: str | None = RuntimeOption) -> Non
         manifest = manifests[module.app]
         typer.echo(f"{module.app}  ({module.root})")
         typer.echo(f"    components: {', '.join(manifest.components) or '-'}")
-        typer.echo(f"    routes:     {', '.join(r['path'] for r in manifest.routes) or '-'}")
+        typer.echo(
+            f"    routes:     {', '.join(r['path'] for r in manifest.routes) or '-'}"
+        )
         if manifest.requires:
             typer.echo(f"    requires:   {', '.join(manifest.requires)}")
     wrong = problems(modules, manifests, export_or_exit(project))

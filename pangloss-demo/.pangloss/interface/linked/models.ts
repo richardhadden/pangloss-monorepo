@@ -2,7 +2,7 @@
 // It is made again each time the interface is built.
 import type { ModelDefinitions } from "@pangloss/interface-core";
 
-export type ModelName = "Activity" | "AtPage" | "Causes" | "Certainty" | "Date" | "Factoid" | "Group" | "Hypothetical" | "InRole" | "Negative" | "Person" | "Place" | "Source" | "Statement" | "Transfer" | "WithCertainty";
+export type ModelName = "Activity" | "Alternative" | "AtPage" | "Causes" | "Certainty" | "Date" | "DateCharacterisation" | "DateRange" | "EDTFDate" | "ExactDate" | "Factoid" | "Group" | "Hypothetical" | "Identification" | "InRole" | "Negative" | "NegativeSubjunctive" | "NoRule" | "OccupationType" | "OngoingDate" | "Order" | "Period" | "Person" | "Place" | "PositiveSubjunctive" | "Probability" | "Recurrence" | "Source" | "Statement" | "Transfer" | "UnknownDate" | "WithCertainty";
 
 export const definitions: ModelDefinitions = {
   "models": {
@@ -49,7 +49,13 @@ export const definitions: ModelDefinitions = {
           "kind": "embedded",
           "model": "Date",
           "types": [
-            "Date"
+            "DateRange",
+            "EDTFDate",
+            "ExactDate",
+            "OngoingDate",
+            "Period",
+            "Recurrence",
+            "UnknownDate"
           ]
         },
         {
@@ -154,6 +160,46 @@ export const definitions: ModelDefinitions = {
                   ]
                 }
               }
+            }
+          ],
+          "validators": []
+        }
+      ],
+      "incoming": [],
+      "interfaceMeta": null
+    },
+    "Alternative": {
+      "name": "Alternative",
+      "kind": "Conjunction",
+      "abstract": false,
+      "description": "One of several things, not known which: any number of statements or entities.\n`Alternative[ViaEdge[Person, Probability]]` gives each person how likely it is the one meant",
+      "parent": null,
+      "concreteTypes": [
+        "Alternative"
+      ],
+      "typeParameters": [
+        "T"
+      ],
+      "createWithId": false,
+      "acceptUrlAsId": false,
+      "requireLabel": false,
+      "useInSemanticSpaceLabel": true,
+      "fields": [
+        {
+          "name": "alternatives",
+          "key": "alternatives",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "relation",
+          "many": true,
+          "reverseName": "alternatives_reverse",
+          "options": [
+            {
+              "kind": "typeVar",
+              "name": "T",
+              "edgeModel": null
             }
           ],
           "validators": []
@@ -311,11 +357,17 @@ export const definitions: ModelDefinitions = {
     "Date": {
       "name": "Date",
       "kind": "Embedded",
-      "abstract": false,
-      "description": "A date, with how exactly it is known. Part of whatever has it.",
+      "abstract": true,
+      "description": null,
       "parent": null,
       "concreteTypes": [
-        "Date"
+        "DateRange",
+        "EDTFDate",
+        "ExactDate",
+        "OngoingDate",
+        "Period",
+        "Recurrence",
+        "UnknownDate"
       ],
       "typeParameters": [],
       "createWithId": false,
@@ -324,15 +376,43 @@ export const definitions: ModelDefinitions = {
       "useInSemanticSpaceLabel": true,
       "fields": [
         {
-          "name": "when",
-          "key": "when",
+          "name": "calendar",
+          "key": "calendar",
           "description": null,
           "dbField": false,
-          "required": true,
-          "nullable": false,
+          "required": false,
+          "nullable": true,
           "kind": "literal",
           "type": {
-            "type": "date"
+            "type": "enum",
+            "enum": "Calendar"
+          },
+          "validators": []
+        },
+        {
+          "name": "source_text",
+          "key": "sourceText",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": []
+        },
+        {
+          "name": "sort_by",
+          "key": "sortBy",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "enum",
+            "enum": "SortBy"
           },
           "validators": []
         },
@@ -341,12 +421,681 @@ export const definitions: ModelDefinitions = {
           "key": "precision",
           "description": null,
           "dbField": false,
-          "required": true,
-          "nullable": false,
+          "required": false,
+          "nullable": true,
           "kind": "literal",
           "type": {
             "type": "enum",
             "enum": "Precision"
+          },
+          "validators": []
+        },
+        {
+          "name": "earliest_fuzzy",
+          "key": "earliestFuzzy",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": []
+        },
+        {
+          "name": "earliest_strict",
+          "key": "earliestStrict",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": []
+        },
+        {
+          "name": "latest_strict",
+          "key": "latestStrict",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": []
+        },
+        {
+          "name": "latest_fuzzy",
+          "key": "latestFuzzy",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": []
+        },
+        {
+          "name": "sort_day",
+          "key": "sortDay",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": []
+        },
+        {
+          "name": "end_sort_day",
+          "key": "endSortDay",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": []
+        }
+      ],
+      "incoming": [],
+      "interfaceMeta": null
+    },
+    "DateCharacterisation": {
+      "name": "DateCharacterisation",
+      "kind": "Entity",
+      "abstract": true,
+      "description": null,
+      "parent": null,
+      "concreteTypes": [],
+      "typeParameters": [],
+      "createWithId": false,
+      "acceptUrlAsId": true,
+      "requireLabel": true,
+      "useInSemanticSpaceLabel": true,
+      "fields": [
+        {
+          "name": "use",
+          "key": "use",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": []
+        },
+        {
+          "name": "rank",
+          "key": "rank",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": []
+        },
+        {
+          "name": "when",
+          "key": "when",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "embedded",
+          "model": null,
+          "types": [
+            "NoRule",
+            "Recurrence"
+          ]
+        }
+      ],
+      "incoming": [],
+      "interfaceMeta": null
+    },
+    "DateRange": {
+      "name": "DateRange",
+      "kind": "Embedded",
+      "abstract": false,
+      "description": "One date whose day is not known: somewhere from `earliest` to `latest`",
+      "parent": "Date",
+      "concreteTypes": [
+        "DateRange"
+      ],
+      "typeParameters": [],
+      "createWithId": false,
+      "acceptUrlAsId": false,
+      "requireLabel": false,
+      "useInSemanticSpaceLabel": true,
+      "fields": [
+        {
+          "name": "calendar",
+          "key": "calendar",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "enum",
+            "enum": "Calendar"
+          },
+          "validators": []
+        },
+        {
+          "name": "source_text",
+          "key": "sourceText",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": []
+        },
+        {
+          "name": "sort_by",
+          "key": "sortBy",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "enum",
+            "enum": "SortBy"
+          },
+          "validators": []
+        },
+        {
+          "name": "precision",
+          "key": "precision",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "enum",
+            "enum": "Precision"
+          },
+          "validators": []
+        },
+        {
+          "name": "earliest_fuzzy",
+          "key": "earliestFuzzy",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": []
+        },
+        {
+          "name": "earliest_strict",
+          "key": "earliestStrict",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": []
+        },
+        {
+          "name": "latest_strict",
+          "key": "latestStrict",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": []
+        },
+        {
+          "name": "latest_fuzzy",
+          "key": "latestFuzzy",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": []
+        },
+        {
+          "name": "sort_day",
+          "key": "sortDay",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": []
+        },
+        {
+          "name": "end_sort_day",
+          "key": "endSortDay",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": []
+        },
+        {
+          "name": "earliest",
+          "key": "earliest",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "embedded",
+          "model": "ExactDate",
+          "types": [
+            "ExactDate"
+          ]
+        },
+        {
+          "name": "latest",
+          "key": "latest",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "embedded",
+          "model": "ExactDate",
+          "types": [
+            "ExactDate"
+          ]
+        }
+      ],
+      "incoming": [],
+      "interfaceMeta": null
+    },
+    "EDTFDate": {
+      "name": "EDTFDate",
+      "kind": "Embedded",
+      "abstract": false,
+      "description": null,
+      "parent": "Date",
+      "concreteTypes": [
+        "EDTFDate"
+      ],
+      "typeParameters": [],
+      "createWithId": false,
+      "acceptUrlAsId": false,
+      "requireLabel": false,
+      "useInSemanticSpaceLabel": true,
+      "fields": [
+        {
+          "name": "calendar",
+          "key": "calendar",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "enum",
+            "enum": "Calendar"
+          },
+          "validators": []
+        },
+        {
+          "name": "source_text",
+          "key": "sourceText",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": []
+        },
+        {
+          "name": "sort_by",
+          "key": "sortBy",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "enum",
+            "enum": "SortBy"
+          },
+          "validators": []
+        },
+        {
+          "name": "precision",
+          "key": "precision",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "enum",
+            "enum": "Precision"
+          },
+          "validators": []
+        },
+        {
+          "name": "earliest_fuzzy",
+          "key": "earliestFuzzy",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": []
+        },
+        {
+          "name": "earliest_strict",
+          "key": "earliestStrict",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": []
+        },
+        {
+          "name": "latest_strict",
+          "key": "latestStrict",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": []
+        },
+        {
+          "name": "latest_fuzzy",
+          "key": "latestFuzzy",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": []
+        },
+        {
+          "name": "sort_day",
+          "key": "sortDay",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": []
+        },
+        {
+          "name": "end_sort_day",
+          "key": "endSortDay",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": []
+        },
+        {
+          "name": "edtf",
+          "key": "edtf",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": []
+        }
+      ],
+      "incoming": [],
+      "interfaceMeta": null
+    },
+    "ExactDate": {
+      "name": "ExactDate",
+      "kind": "Embedded",
+      "abstract": false,
+      "description": null,
+      "parent": "Date",
+      "concreteTypes": [
+        "ExactDate"
+      ],
+      "typeParameters": [],
+      "createWithId": false,
+      "acceptUrlAsId": false,
+      "requireLabel": false,
+      "useInSemanticSpaceLabel": true,
+      "fields": [
+        {
+          "name": "calendar",
+          "key": "calendar",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "enum",
+            "enum": "Calendar"
+          },
+          "validators": []
+        },
+        {
+          "name": "source_text",
+          "key": "sourceText",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": []
+        },
+        {
+          "name": "sort_by",
+          "key": "sortBy",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "enum",
+            "enum": "SortBy"
+          },
+          "validators": []
+        },
+        {
+          "name": "precision",
+          "key": "precision",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "enum",
+            "enum": "Precision"
+          },
+          "validators": []
+        },
+        {
+          "name": "earliest_fuzzy",
+          "key": "earliestFuzzy",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": []
+        },
+        {
+          "name": "earliest_strict",
+          "key": "earliestStrict",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": []
+        },
+        {
+          "name": "latest_strict",
+          "key": "latestStrict",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": []
+        },
+        {
+          "name": "latest_fuzzy",
+          "key": "latestFuzzy",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": []
+        },
+        {
+          "name": "sort_day",
+          "key": "sortDay",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": []
+        },
+        {
+          "name": "end_sort_day",
+          "key": "endSortDay",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": []
+        },
+        {
+          "name": "year",
+          "key": "year",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": []
+        },
+        {
+          "name": "month",
+          "key": "month",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": []
+        },
+        {
+          "name": "day",
+          "key": "day",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
           },
           "validators": []
         }
@@ -439,6 +1188,11 @@ export const definitions: ModelDefinitions = {
                     },
                     {
                       "kind": "document",
+                      "type": "Order",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
                       "type": "Transfer",
                       "edgeModel": null
                     }
@@ -454,6 +1208,11 @@ export const definitions: ModelDefinitions = {
                     },
                     {
                       "kind": "document",
+                      "type": "Order",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
                       "type": "Transfer",
                       "edgeModel": null
                     }
@@ -464,6 +1223,11 @@ export const definitions: ModelDefinitions = {
             {
               "kind": "document",
               "type": "Activity",
+              "edgeModel": null
+            },
+            {
+              "kind": "document",
+              "type": "Order",
               "edgeModel": null
             },
             {
@@ -486,6 +1250,11 @@ export const definitions: ModelDefinitions = {
                     },
                     {
                       "kind": "document",
+                      "type": "Order",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
                       "type": "Transfer",
                       "edgeModel": null
                     }
@@ -504,6 +1273,11 @@ export const definitions: ModelDefinitions = {
                     {
                       "kind": "document",
                       "type": "Activity",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Order",
                       "edgeModel": null
                     },
                     {
@@ -595,6 +1369,17 @@ export const definitions: ModelDefinitions = {
           ]
         },
         {
+          "name": "ordered",
+          "key": "ordered",
+          "sources": [
+            {
+              "model": "Order",
+              "field": "ordered_by",
+              "viaReified": false
+            }
+          ]
+        },
+        {
           "name": "participants_reverse",
           "key": "participantsReverse",
           "sources": [
@@ -658,8 +1443,72 @@ export const definitions: ModelDefinitions = {
       ],
       "incoming": [],
       "interfaceMeta": {
-        "colour": "yellow"
+        "colour": "yellow",
+        "listPage": null,
+        "itemPage": null,
+        "viewCard": null,
+        "editCard": null
       }
+    },
+    "Identification": {
+      "name": "Identification",
+      "kind": "ReifiedRelation",
+      "abstract": false,
+      "description": "A name in the source that has been identified: the source says \"Smith\", and\nthis says which people that could be. The target is one `Alternative`.",
+      "parent": null,
+      "concreteTypes": [],
+      "typeParameters": [
+        "T"
+      ],
+      "createWithId": false,
+      "acceptUrlAsId": false,
+      "requireLabel": false,
+      "useInSemanticSpaceLabel": true,
+      "fields": [
+        {
+          "name": "target",
+          "key": "target",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "relation",
+          "many": true,
+          "reverseName": "target_reverse",
+          "options": [
+            {
+              "kind": "typeVar",
+              "name": "T",
+              "edgeModel": null
+            }
+          ],
+          "validators": [
+            {
+              "name": "MinLen",
+              "min_length": 1
+            },
+            {
+              "name": "MaxLen",
+              "max_length": 1
+            }
+          ]
+        },
+        {
+          "name": "identified_by",
+          "key": "identifiedBy",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": []
+        }
+      ],
+      "incoming": [],
+      "interfaceMeta": null
     },
     "InRole": {
       "name": "InRole",
@@ -752,8 +1601,716 @@ export const definitions: ModelDefinitions = {
       ],
       "incoming": [],
       "interfaceMeta": {
-        "colour": "rose"
+        "colour": "rose",
+        "listPage": null,
+        "itemPage": null,
+        "viewCard": null,
+        "editCard": null
       }
+    },
+    "NegativeSubjunctive": {
+      "name": "NegativeSubjunctive",
+      "kind": "SemanticSpace",
+      "abstract": false,
+      "description": "It was wished that this should *not* happen (and it did not necessarily not)",
+      "parent": null,
+      "concreteTypes": [
+        "NegativeSubjunctive"
+      ],
+      "typeParameters": [
+        "T"
+      ],
+      "createWithId": false,
+      "acceptUrlAsId": false,
+      "requireLabel": false,
+      "useInSemanticSpaceLabel": true,
+      "fields": [
+        {
+          "name": "contents",
+          "key": "contents",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "relation",
+          "many": true,
+          "reverseName": "contents_reverse",
+          "options": [
+            {
+              "kind": "typeVar",
+              "name": "T",
+              "edgeModel": null
+            }
+          ],
+          "validators": []
+        }
+      ],
+      "incoming": [],
+      "interfaceMeta": {
+        "colour": "orange",
+        "listPage": null,
+        "itemPage": null,
+        "viewCard": null,
+        "editCard": null
+      }
+    },
+    "NoRule": {
+      "name": "NoRule",
+      "kind": "Embedded",
+      "abstract": false,
+      "description": "A characterisation that has no rule: it is attached to days, months, years or spans by hand",
+      "parent": null,
+      "concreteTypes": [
+        "NoRule"
+      ],
+      "typeParameters": [],
+      "createWithId": false,
+      "acceptUrlAsId": false,
+      "requireLabel": false,
+      "useInSemanticSpaceLabel": true,
+      "fields": [],
+      "incoming": [],
+      "interfaceMeta": null
+    },
+    "OccupationType": {
+      "name": "OccupationType",
+      "kind": "Entity",
+      "abstract": false,
+      "description": "A type of OccupationTypology",
+      "parent": null,
+      "concreteTypes": [
+        "OccupationType"
+      ],
+      "typeParameters": [],
+      "createWithId": false,
+      "acceptUrlAsId": true,
+      "requireLabel": true,
+      "useInSemanticSpaceLabel": true,
+      "fields": [
+        {
+          "name": "description",
+          "key": "description",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": []
+        },
+        {
+          "name": "is_subtype_of",
+          "key": "isSubtypeOf",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": false,
+          "kind": "relation",
+          "many": true,
+          "reverseName": "is_supertype_of",
+          "options": [
+            {
+              "kind": "entity",
+              "type": "OccupationType",
+              "edgeModel": null
+            }
+          ],
+          "validators": [
+            {
+              "name": "MaxLen",
+              "max_length": 1
+            }
+          ]
+        }
+      ],
+      "incoming": [
+        {
+          "name": "is_supertype_of",
+          "key": "isSupertypeOf",
+          "sources": [
+            {
+              "model": "OccupationType",
+              "field": "is_subtype_of",
+              "viaReified": false
+            }
+          ]
+        },
+        {
+          "name": "type_of",
+          "key": "typeOf",
+          "sources": [
+            {
+              "model": "Person",
+              "field": "has_type",
+              "viaReified": false
+            }
+          ]
+        }
+      ],
+      "interfaceMeta": {
+        "colour": null,
+        "listPage": {
+          "module": "pangloss_typology",
+          "name": "TypeTree"
+        },
+        "itemPage": {
+          "module": "pangloss_typology",
+          "name": "TypeItem"
+        },
+        "viewCard": {
+          "module": "pangloss_typology",
+          "name": "TypeCard"
+        },
+        "editCard": null
+      }
+    },
+    "OngoingDate": {
+      "name": "OngoingDate",
+      "kind": "Embedded",
+      "abstract": false,
+      "description": "The end of a period that has not ended (it is taken to stop by the end of `DATES_OPEN_END_YEAR`)",
+      "parent": "Date",
+      "concreteTypes": [
+        "OngoingDate"
+      ],
+      "typeParameters": [],
+      "createWithId": false,
+      "acceptUrlAsId": false,
+      "requireLabel": false,
+      "useInSemanticSpaceLabel": true,
+      "fields": [
+        {
+          "name": "calendar",
+          "key": "calendar",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "enum",
+            "enum": "Calendar"
+          },
+          "validators": []
+        },
+        {
+          "name": "source_text",
+          "key": "sourceText",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": []
+        },
+        {
+          "name": "sort_by",
+          "key": "sortBy",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "enum",
+            "enum": "SortBy"
+          },
+          "validators": []
+        },
+        {
+          "name": "precision",
+          "key": "precision",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "enum",
+            "enum": "Precision"
+          },
+          "validators": []
+        },
+        {
+          "name": "earliest_fuzzy",
+          "key": "earliestFuzzy",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": []
+        },
+        {
+          "name": "earliest_strict",
+          "key": "earliestStrict",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": []
+        },
+        {
+          "name": "latest_strict",
+          "key": "latestStrict",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": []
+        },
+        {
+          "name": "latest_fuzzy",
+          "key": "latestFuzzy",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": []
+        },
+        {
+          "name": "sort_day",
+          "key": "sortDay",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": []
+        },
+        {
+          "name": "end_sort_day",
+          "key": "endSortDay",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": []
+        }
+      ],
+      "incoming": [],
+      "interfaceMeta": null
+    },
+    "Order": {
+      "name": "Order",
+      "kind": "Document",
+      "abstract": false,
+      "description": "Someone ordered something to be done: *something else*, which is a statement of\nits own, said in a subjunctive space, because it was wished, and not necessarily done",
+      "parent": "Statement",
+      "concreteTypes": [
+        "Order"
+      ],
+      "typeParameters": [],
+      "createWithId": false,
+      "acceptUrlAsId": false,
+      "requireLabel": true,
+      "useInSemanticSpaceLabel": true,
+      "fields": [
+        {
+          "name": "text",
+          "key": "text",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [
+            {
+              "name": "MinLen",
+              "min_length": 5
+            }
+          ]
+        },
+        {
+          "name": "date",
+          "key": "date",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "embedded",
+          "model": "Date",
+          "types": [
+            "DateRange",
+            "EDTFDate",
+            "ExactDate",
+            "OngoingDate",
+            "Period",
+            "Recurrence",
+            "UnknownDate"
+          ]
+        },
+        {
+          "name": "year",
+          "key": "year",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": []
+        },
+        {
+          "name": "places",
+          "key": "places",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "relation",
+          "many": true,
+          "reverseName": "places_reverse",
+          "options": [
+            {
+              "kind": "entity",
+              "type": "Place",
+              "edgeModel": null
+            }
+          ],
+          "validators": []
+        },
+        {
+          "name": "ordered_by",
+          "key": "orderedBy",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "relation",
+          "many": false,
+          "reverseName": "ordered",
+          "options": [
+            {
+              "kind": "entity",
+              "type": "Group",
+              "edgeModel": null
+            },
+            {
+              "kind": "entity",
+              "type": "Person",
+              "edgeModel": null
+            },
+            {
+              "kind": "reifiedRelation",
+              "type": "Identification",
+              "edgeModel": null,
+              "params": {
+                "T": {
+                  "typeVar": "T",
+                  "options": [
+                    {
+                      "kind": "conjunction",
+                      "type": "Alternative",
+                      "edgeModel": null,
+                      "params": {
+                        "T": {
+                          "typeVar": "T",
+                          "options": [
+                            {
+                              "kind": "entity",
+                              "type": "Person",
+                              "edgeModel": "Probability"
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          ],
+          "validators": []
+        },
+        {
+          "name": "thing_ordered",
+          "key": "thingOrdered",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "relation",
+          "many": false,
+          "reverseName": "thing_ordered_reverse",
+          "options": [
+            {
+              "kind": "semanticSpace",
+              "type": "NegativeSubjunctive",
+              "edgeModel": null,
+              "params": {
+                "T": {
+                  "typeVar": "T",
+                  "options": [
+                    {
+                      "kind": "document",
+                      "type": "Activity",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Order",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Transfer",
+                      "edgeModel": null
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "kind": "semanticSpace",
+              "type": "PositiveSubjunctive",
+              "edgeModel": null,
+              "params": {
+                "T": {
+                  "typeVar": "T",
+                  "options": [
+                    {
+                      "kind": "document",
+                      "type": "Activity",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Order",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Transfer",
+                      "edgeModel": null
+                    }
+                  ]
+                }
+              }
+            }
+          ],
+          "validators": []
+        }
+      ],
+      "incoming": [],
+      "interfaceMeta": null
+    },
+    "Period": {
+      "name": "Period",
+      "kind": "Embedded",
+      "abstract": false,
+      "description": "From `start` to `end`: an occupation, a role, a residence. Sorts by when it started",
+      "parent": "Date",
+      "concreteTypes": [
+        "Period"
+      ],
+      "typeParameters": [],
+      "createWithId": false,
+      "acceptUrlAsId": false,
+      "requireLabel": false,
+      "useInSemanticSpaceLabel": true,
+      "fields": [
+        {
+          "name": "calendar",
+          "key": "calendar",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "enum",
+            "enum": "Calendar"
+          },
+          "validators": []
+        },
+        {
+          "name": "source_text",
+          "key": "sourceText",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": []
+        },
+        {
+          "name": "sort_by",
+          "key": "sortBy",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "enum",
+            "enum": "SortBy"
+          },
+          "validators": []
+        },
+        {
+          "name": "precision",
+          "key": "precision",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "enum",
+            "enum": "Precision"
+          },
+          "validators": []
+        },
+        {
+          "name": "earliest_fuzzy",
+          "key": "earliestFuzzy",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": []
+        },
+        {
+          "name": "earliest_strict",
+          "key": "earliestStrict",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": []
+        },
+        {
+          "name": "latest_strict",
+          "key": "latestStrict",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": []
+        },
+        {
+          "name": "latest_fuzzy",
+          "key": "latestFuzzy",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": []
+        },
+        {
+          "name": "sort_day",
+          "key": "sortDay",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": []
+        },
+        {
+          "name": "end_sort_day",
+          "key": "endSortDay",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": []
+        },
+        {
+          "name": "start",
+          "key": "start",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "embedded",
+          "model": null,
+          "types": [
+            "DateRange",
+            "EDTFDate",
+            "ExactDate",
+            "UnknownDate"
+          ]
+        },
+        {
+          "name": "end",
+          "key": "end",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "embedded",
+          "model": null,
+          "types": [
+            "DateRange",
+            "EDTFDate",
+            "ExactDate",
+            "OngoingDate",
+            "UnknownDate"
+          ]
+        }
+      ],
+      "incoming": [],
+      "interfaceMeta": null
     },
     "Person": {
       "name": "Person",
@@ -793,7 +2350,13 @@ export const definitions: ModelDefinitions = {
           "kind": "embedded",
           "model": "Date",
           "types": [
-            "Date"
+            "DateRange",
+            "EDTFDate",
+            "ExactDate",
+            "OngoingDate",
+            "Period",
+            "Recurrence",
+            "UnknownDate"
           ]
         },
         {
@@ -809,6 +2372,25 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "itemValidators": []
+        },
+        {
+          "name": "has_type",
+          "key": "hasType",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "relation",
+          "many": true,
+          "reverseName": "type_of",
+          "options": [
+            {
+              "kind": "entity",
+              "type": "OccupationType",
+              "edgeModel": null
+            }
+          ],
+          "validators": []
         }
       ],
       "incoming": [
@@ -830,6 +2412,11 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Transfer",
               "field": "given_by",
+              "viaReified": true
+            },
+            {
+              "model": "Transfer",
+              "field": "given_by",
               "viaReified": false
             }
           ]
@@ -841,6 +2428,22 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Statement",
               "field": "involves",
+              "viaReified": false
+            }
+          ]
+        },
+        {
+          "name": "ordered",
+          "key": "ordered",
+          "sources": [
+            {
+              "model": "Order",
+              "field": "ordered_by",
+              "viaReified": true
+            },
+            {
+              "model": "Order",
+              "field": "ordered_by",
               "viaReified": false
             }
           ]
@@ -860,6 +2463,11 @@ export const definitions: ModelDefinitions = {
           "name": "received",
           "key": "received",
           "sources": [
+            {
+              "model": "Transfer",
+              "field": "given_to",
+              "viaReified": true
+            },
             {
               "model": "Transfer",
               "field": "given_to",
@@ -918,6 +2526,11 @@ export const definitions: ModelDefinitions = {
               "viaReified": false
             },
             {
+              "model": "Order",
+              "field": "places",
+              "viaReified": false
+            },
+            {
               "model": "Statement",
               "field": "places",
               "viaReified": false
@@ -930,6 +2543,423 @@ export const definitions: ModelDefinitions = {
           ]
         }
       ],
+      "interfaceMeta": null
+    },
+    "PositiveSubjunctive": {
+      "name": "PositiveSubjunctive",
+      "kind": "SemanticSpace",
+      "abstract": false,
+      "description": "It was wished that this should happen (it did not necessarily)",
+      "parent": null,
+      "concreteTypes": [
+        "PositiveSubjunctive"
+      ],
+      "typeParameters": [
+        "T"
+      ],
+      "createWithId": false,
+      "acceptUrlAsId": false,
+      "requireLabel": false,
+      "useInSemanticSpaceLabel": true,
+      "fields": [
+        {
+          "name": "contents",
+          "key": "contents",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "relation",
+          "many": true,
+          "reverseName": "contents_reverse",
+          "options": [
+            {
+              "kind": "typeVar",
+              "name": "T",
+              "edgeModel": null
+            }
+          ],
+          "validators": []
+        }
+      ],
+      "incoming": [],
+      "interfaceMeta": {
+        "colour": "green",
+        "listPage": null,
+        "itemPage": null,
+        "viewCard": null,
+        "editCard": null
+      }
+    },
+    "Probability": {
+      "name": "Probability",
+      "kind": "EdgeModel",
+      "abstract": false,
+      "description": "How likely it is that this is the one meant, out of the alternatives (1 to 100, in per cent)",
+      "parent": null,
+      "concreteTypes": [],
+      "typeParameters": [],
+      "createWithId": false,
+      "acceptUrlAsId": false,
+      "requireLabel": true,
+      "useInSemanticSpaceLabel": true,
+      "fields": [
+        {
+          "name": "percent",
+          "key": "percent",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": [
+            {
+              "name": "Ge",
+              "ge": 1
+            },
+            {
+              "name": "Le",
+              "le": 100
+            }
+          ]
+        }
+      ],
+      "incoming": [],
+      "interfaceMeta": null
+    },
+    "Recurrence": {
+      "name": "Recurrence",
+      "kind": "Embedded",
+      "abstract": false,
+      "description": "Something that happens again and again, within a lifetime (`start` to `end`): \"every Sunday\", \"the third\nSunday of March\", \"on the 21st of each month\". The days are never stored; `pattern_keys` find the rules that\ncould fall on a day (see `pangloss_dates.recurrence`)",
+      "parent": "Date",
+      "concreteTypes": [
+        "Recurrence"
+      ],
+      "typeParameters": [],
+      "createWithId": false,
+      "acceptUrlAsId": false,
+      "requireLabel": false,
+      "useInSemanticSpaceLabel": true,
+      "fields": [
+        {
+          "name": "calendar",
+          "key": "calendar",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "enum",
+            "enum": "Calendar"
+          },
+          "validators": []
+        },
+        {
+          "name": "source_text",
+          "key": "sourceText",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": []
+        },
+        {
+          "name": "sort_by",
+          "key": "sortBy",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "enum",
+            "enum": "SortBy"
+          },
+          "validators": []
+        },
+        {
+          "name": "precision",
+          "key": "precision",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "enum",
+            "enum": "Precision"
+          },
+          "validators": []
+        },
+        {
+          "name": "earliest_fuzzy",
+          "key": "earliestFuzzy",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": []
+        },
+        {
+          "name": "earliest_strict",
+          "key": "earliestStrict",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": []
+        },
+        {
+          "name": "latest_strict",
+          "key": "latestStrict",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": []
+        },
+        {
+          "name": "latest_fuzzy",
+          "key": "latestFuzzy",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": []
+        },
+        {
+          "name": "sort_day",
+          "key": "sortDay",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": []
+        },
+        {
+          "name": "end_sort_day",
+          "key": "endSortDay",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": []
+        },
+        {
+          "name": "frequency",
+          "key": "frequency",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "literal",
+          "type": {
+            "type": "enum",
+            "enum": "Frequency"
+          },
+          "validators": []
+        },
+        {
+          "name": "weekdays",
+          "key": "weekdays",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "list",
+          "item": {
+            "type": "int"
+          },
+          "validators": [],
+          "itemValidators": []
+        },
+        {
+          "name": "nth",
+          "key": "nth",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": []
+        },
+        {
+          "name": "month",
+          "key": "month",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": []
+        },
+        {
+          "name": "month_day",
+          "key": "monthDay",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": []
+        },
+        {
+          "name": "interval",
+          "key": "interval",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": []
+        },
+        {
+          "name": "excluded_days",
+          "key": "excludedDays",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "list",
+          "item": {
+            "type": "int"
+          },
+          "validators": [],
+          "itemValidators": []
+        },
+        {
+          "name": "leap_shift",
+          "key": "leapShift",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "bool"
+          },
+          "validators": []
+        },
+        {
+          "name": "easter_offset",
+          "key": "easterOffset",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": []
+        },
+        {
+          "name": "feast",
+          "key": "feast",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": []
+        },
+        {
+          "name": "start",
+          "key": "start",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "embedded",
+          "model": null,
+          "types": [
+            "DateRange",
+            "EDTFDate",
+            "ExactDate",
+            "UnknownDate"
+          ]
+        },
+        {
+          "name": "end",
+          "key": "end",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "embedded",
+          "model": null,
+          "types": [
+            "DateRange",
+            "EDTFDate",
+            "ExactDate",
+            "OngoingDate",
+            "UnknownDate"
+          ]
+        },
+        {
+          "name": "pattern_keys",
+          "key": "patternKeys",
+          "description": null,
+          "dbField": true,
+          "required": true,
+          "nullable": false,
+          "kind": "list",
+          "item": {
+            "type": "str"
+          },
+          "validators": [],
+          "itemValidators": []
+        }
+      ],
+      "incoming": [],
       "interfaceMeta": null
     },
     "Source": {
@@ -1010,6 +3040,7 @@ export const definitions: ModelDefinitions = {
       "parent": null,
       "concreteTypes": [
         "Activity",
+        "Order",
         "Transfer"
       ],
       "typeParameters": [],
@@ -1046,7 +3077,13 @@ export const definitions: ModelDefinitions = {
           "kind": "embedded",
           "model": "Date",
           "types": [
-            "Date"
+            "DateRange",
+            "EDTFDate",
+            "ExactDate",
+            "OngoingDate",
+            "Period",
+            "Recurrence",
+            "UnknownDate"
           ]
         },
         {
@@ -1152,7 +3189,13 @@ export const definitions: ModelDefinitions = {
           "kind": "embedded",
           "model": "Date",
           "types": [
-            "Date"
+            "DateRange",
+            "EDTFDate",
+            "ExactDate",
+            "OngoingDate",
+            "Period",
+            "Recurrence",
+            "UnknownDate"
           ]
         },
         {
@@ -1233,6 +3276,35 @@ export const definitions: ModelDefinitions = {
               "kind": "entity",
               "type": "Person",
               "edgeModel": null
+            },
+            {
+              "kind": "reifiedRelation",
+              "type": "Identification",
+              "edgeModel": null,
+              "params": {
+                "T": {
+                  "typeVar": "T",
+                  "options": [
+                    {
+                      "kind": "conjunction",
+                      "type": "Alternative",
+                      "edgeModel": null,
+                      "params": {
+                        "T": {
+                          "typeVar": "T",
+                          "options": [
+                            {
+                              "kind": "entity",
+                              "type": "Person",
+                              "edgeModel": "Probability"
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
             }
           ],
           "validators": []
@@ -1257,8 +3329,189 @@ export const definitions: ModelDefinitions = {
               "kind": "entity",
               "type": "Person",
               "edgeModel": null
+            },
+            {
+              "kind": "reifiedRelation",
+              "type": "Identification",
+              "edgeModel": null,
+              "params": {
+                "T": {
+                  "typeVar": "T",
+                  "options": [
+                    {
+                      "kind": "conjunction",
+                      "type": "Alternative",
+                      "edgeModel": null,
+                      "params": {
+                        "T": {
+                          "typeVar": "T",
+                          "options": [
+                            {
+                              "kind": "entity",
+                              "type": "Person",
+                              "edgeModel": "Probability"
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
             }
           ],
+          "validators": []
+        }
+      ],
+      "incoming": [],
+      "interfaceMeta": null
+    },
+    "UnknownDate": {
+      "name": "UnknownDate",
+      "kind": "Embedded",
+      "abstract": false,
+      "description": "The start or the end of a period that nobody knows. It is open from `DATES_EARLIEST_YEAR` to\n`DATES_OPEN_END_YEAR`, so the period is still found by a date it could include. Say what is known if\nanything can be: a range with a reasonable guess (`DateRange`, or EDTF `1500~`) says more, and an\nunknown date only that nothing is. Both ends of a period cannot be unknown.",
+      "parent": "Date",
+      "concreteTypes": [
+        "UnknownDate"
+      ],
+      "typeParameters": [],
+      "createWithId": false,
+      "acceptUrlAsId": false,
+      "requireLabel": false,
+      "useInSemanticSpaceLabel": true,
+      "fields": [
+        {
+          "name": "calendar",
+          "key": "calendar",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "enum",
+            "enum": "Calendar"
+          },
+          "validators": []
+        },
+        {
+          "name": "source_text",
+          "key": "sourceText",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": []
+        },
+        {
+          "name": "sort_by",
+          "key": "sortBy",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "enum",
+            "enum": "SortBy"
+          },
+          "validators": []
+        },
+        {
+          "name": "precision",
+          "key": "precision",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "enum",
+            "enum": "Precision"
+          },
+          "validators": []
+        },
+        {
+          "name": "earliest_fuzzy",
+          "key": "earliestFuzzy",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": []
+        },
+        {
+          "name": "earliest_strict",
+          "key": "earliestStrict",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": []
+        },
+        {
+          "name": "latest_strict",
+          "key": "latestStrict",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": []
+        },
+        {
+          "name": "latest_fuzzy",
+          "key": "latestFuzzy",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": []
+        },
+        {
+          "name": "sort_day",
+          "key": "sortDay",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": []
+        },
+        {
+          "name": "end_sort_day",
+          "key": "endSortDay",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
           "validators": []
         }
       ],
@@ -1334,24 +3587,62 @@ export const definitions: ModelDefinitions = {
         }
       ]
     },
+    "Calendar": {
+      "name": "Calendar",
+      "members": [
+        {
+          "name": "JULIAN",
+          "value": "julian"
+        },
+        {
+          "name": "GREGORIAN",
+          "value": "gregorian"
+        }
+      ]
+    },
+    "Frequency": {
+      "name": "Frequency",
+      "members": [
+        {
+          "name": "WEEKLY",
+          "value": "weekly"
+        },
+        {
+          "name": "MONTHLY",
+          "value": "monthly"
+        },
+        {
+          "name": "YEARLY",
+          "value": "yearly"
+        }
+      ]
+    },
     "Precision": {
       "name": "Precision",
       "members": [
         {
-          "name": "DAY",
-          "value": "day"
+          "name": "YEAR",
+          "value": "year"
         },
         {
           "name": "MONTH",
           "value": "month"
         },
         {
-          "name": "YEAR",
-          "value": "year"
+          "name": "DAY",
+          "value": "day"
         },
         {
-          "name": "DECADE",
-          "value": "decade"
+          "name": "RANGE",
+          "value": "range"
+        },
+        {
+          "name": "ONGOING",
+          "value": "ongoing"
+        },
+        {
+          "name": "UNKNOWN",
+          "value": "unknown"
         }
       ]
     },
@@ -1375,6 +3666,43 @@ export const definitions: ModelDefinitions = {
           "value": "messenger"
         }
       ]
+    },
+    "SortBy": {
+      "name": "SortBy",
+      "members": [
+        {
+          "name": "MIDPOINT",
+          "value": "midpoint"
+        },
+        {
+          "name": "EARLIEST_STRICT",
+          "value": "earliest_strict"
+        },
+        {
+          "name": "LATEST_STRICT",
+          "value": "latest_strict"
+        },
+        {
+          "name": "EARLIEST_FUZZY",
+          "value": "earliest_fuzzy"
+        },
+        {
+          "name": "LATEST_FUZZY",
+          "value": "latest_fuzzy"
+        },
+        {
+          "name": "MIDPOINT_FUZZY",
+          "value": "midpoint_fuzzy"
+        }
+      ]
     }
+  },
+  "nav": {
+    "sections": [
+      "Entities",
+      "Documents"
+    ],
+    "models": {},
+    "links": []
   }
 };

@@ -2,7 +2,8 @@
   "extends": "../tsconfig.base.json",
   "compilerOptions": {
     "types": ["vite/client"],
-    "paths": { "@generated/models": ["./src/generated/models.ts"] }
+    "paths": { "@generated/models": ["./src/generated/models.ts"],
+      "@generated/modules": ["./src/generated/modules.ts"] }
   },
-  "include": ["src", "file-routes.d.ts", "vite.config.ts"]
+  "include": ["src", "vite.config.ts"]
 }

@@ -11,8 +11,10 @@ from pangloss_models.field_definitions import FieldSubclassing
 from pangloss_models.model_bases.configs import RelationConfig
 from pangloss_models.model_bases.conjunction import Conjunction
 from pangloss_models.model_bases.document import Document
+from pangloss_models.model_bases.edge_model import EdgeModel
 from pangloss_models.model_bases.embedded import Embedded
 from pangloss_models.model_bases.entity import Entity
+from pangloss_models.model_bases.helpers import ViaEdge
 from pangloss_models.model_bases.reified_relation import (
     ReifiedRelation,
     ReifiedRelationDocument,
@@ -567,6 +569,65 @@ async def test_incoming_relation_through_a_reified_relation(clear_database):
     read_other = await Person.get(id=other.id)
     assert len(read_other.involves_person_reverse) == 1
     assert [s.id for s in read_other.concerns_person_reverse] == [statement.id]
+
+
+@no_type_check
+async def test_incoming_relation_keeps_the_edge_properties_of_a_held_target(
+    clear_database,
+):
+    class Person(Entity):
+        pass
+
+    class Probability(EdgeModel):
+        percent: int
+
+    class Alternative[T](Conjunction):
+        alternatives: list[T]
+
+    class Identification[T](ReifiedRelation[T]):
+        identified_by: str
+
+    class Statement(Document):
+        text: str
+        involves: Identification[Alternative[ViaEdge[Person, Probability]]]
+
+    initialise()
+
+    john = await Person.Create(label="John Smith").save()
+    bob = await Person.Create(label="Bob Smith").save()
+    await Statement.Create(
+        label="A Statement",
+        text="some text",
+        involves={
+            "type": "Identification",
+            "identified_by": "Smith",
+            "target": [
+                {
+                    "type": "Alternative",
+                    "alternatives": [
+                        {
+                            "type": "Person",
+                            "id": john.id,
+                            "edge_properties": {"percent": 70},
+                        },
+                        {
+                            "type": "Person",
+                            "id": bob.id,
+                            "edge_properties": {"percent": 30},
+                        },
+                    ],
+                }
+            ],
+        },
+    ).save()
+
+    read = await Person.get(id=john.id)
+
+    alternatives = read.involves_reverse[0].involves.target[0].alternatives
+    assert {a.label: a.edge_properties.percent for a in alternatives} == {
+        "John Smith": 70,
+        "Bob Smith": 30,
+    }
 
 
 @no_type_check

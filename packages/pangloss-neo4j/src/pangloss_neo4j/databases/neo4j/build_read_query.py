@@ -200,6 +200,6 @@ def build_fetch_held_query(node_ids: list[str]) -> tuple[str, dict]:
     OPTIONAL MATCH (node)-[held]->(target)
     WHERE NOT coalesce(held.reverse, false)
     RETURN node_id AS id,
-           collect(CASE WHEN held IS NULL THEN null ELSE {edge: type(held), node: target{.*}, labels: labels(target)} END) AS held
+           collect(CASE WHEN held IS NULL THEN null ELSE {edge: type(held), node: target{.*}, labels: labels(target), properties: properties(held)} END) AS held
     """
     return query, {"node_ids": node_ids}

@@ -25,8 +25,15 @@ def url(kind: str, name: str) -> AnyHttpUrl:
     return AnyHttpUrl(f"{BASE}/{kind}/{name}")
 
 
-def date(year: int, month: int = 1, day: int = 1, precision: str = "day") -> dict:
-    return {"when": datetime.date(year, month, day), "precision": precision}
+def date(year: int, month: int | None = None, day: int | None = None) -> dict:
+    """A date (Julian: that is the setting), as exact as it is given: `date(800)` is the year, `date(800, 12, 25)` the day"""
+    given = {"year": year, "month": month, "day": day}
+    return {"type": "ExactDate", **{k: v for k, v in given.items() if v}}
+
+
+def edtf(text: str) -> dict:
+    """A date written in EDTF: `1500-03~` is about March 1500"""
+    return {"type": "EDTFDate", "edtf": text}
 
 
 def ref(entity, type: str | None = None) -> dict:
@@ -50,22 +57,50 @@ async def already_populated() -> bool:
 
 
 async def populate() -> None:
+    # --- The vocabulary of occupations -----------------------------------------------
+    ruler = await models.OccupationTypology.create("Ruler")
+    king = await models.OccupationTypology.create("King", supertype=ruler.id)
+    cleric = await models.OccupationTypology.create("Cleric")
+    pope = await models.OccupationTypology.create("Pope", supertype=cleric.id)
+    scholar = await models.OccupationTypology.create("Scholar")
+    count = await models.OccupationTypology.create("Count", supertype=ruler.id)
+
+    def typed(*types) -> list[dict]:
+        return [{"type": "OccupationType", "id": t.id} for t in types]
+
     # --- Entities ----------------------------------------------------------
     charlemagne = await models.Person.Create(
         id=url("person", "charlemagne"),
         create_new=True,
         label="Charlemagne",
         known_as={"value": "Karolus Magnus", "certainty": 5},
-        born=date(748, precision="year"),
+        born=date(748),
         aliases=["Charles the Great", "Carolus"],
+        has_type=typed(king),
     ).save()
     leo = await models.Person.Create(
         id=url("person", "leo-iii"),
         create_new=True,
         label="Pope Leo III",
         known_as={"value": "Leo", "certainty": 5},
-        born=date(750, precision="decade"),
+        born=edtf("075X"),
         aliases=[],
+        has_type=typed(pope),
+    ).save()
+    # (two men the sources call "Wido": see the last factoid)
+    wido_of_spoleto = await models.Person.Create(
+        label="Wido of Spoleto",
+        known_as={"value": "Wido", "certainty": 4},
+        born=edtf("0770~"),
+        aliases=[],
+        has_type=typed(count),
+    ).save()
+    wido_of_brittany = await models.Person.Create(
+        label="Wido, prefect of the Breton March",
+        known_as={"value": "Wido", "certainty": 4},
+        born=edtf("0750~"),
+        aliases=[],
+        has_type=typed(count),
     ).save()
     frankish_army = await models.Group.Create(
         label="The Frankish army", name="Franks"
@@ -127,7 +162,7 @@ async def populate() -> None:
                     "type": "Transfer",
                     "label": "Charlemagne's gifts",
                     "text": "Charlemagne gave silver to the church of St Peter",
-                    "date": date(800, 12, 26, precision="month"),
+                    "date": date(800, 12),
                     "item": "silver, in talents",
                     "quantity": "2.5",
                     "given_by": ref(charlemagne),
@@ -142,7 +177,7 @@ async def populate() -> None:
                         "type": "Activity",
                         "label": "A coronation at Paderborn",
                         "text": "It was said the crown might have been given at Paderborn",
-                        "date": date(799, 7, 1, precision="month"),
+                        "date": date(799, 7),
                         "activity_type": "meeting",
                         "carried_out_by": via(leo, certainty=1),
                         "participants": [in_role(charlemagne, "leader")],
@@ -219,7 +254,7 @@ async def populate() -> None:
                 "type": "Transfer",
                 "label": "Alcuin's letter",
                 "text": "Alcuin sent the king a letter about the dangers to the church",
-                "date": date(799, 6, 1, precision="month"),
+                "date": date(799, 6),
                 "year": 799,  # (the factoid's year is not used where there is one)
                 "item": "letter",
                 "quantity": "1",
@@ -229,8 +264,9 @@ async def populate() -> None:
                     "create_new": True,
                     "label": "Alcuin of York",
                     "known_as": {"value": "Flaccus", "certainty": 3},
-                    "born": date(735, precision="decade"),
+                    "born": edtf("0735~"),
                     "aliases": ["Albinus"],
+                    "has_type": typed(scholar, cleric),
                 },
                 "given_to": ref(charlemagne),
                 "places": [],
@@ -238,8 +274,86 @@ async def populate() -> None:
         ],
     ).save()
 
-    print("Wrote 3 factoids:")
-    for factoid in (coronation, einhard_life, letter):
+    # --- Orders, and a name that could be one of two men ------------------------------
+    # An order holds another statement, said in a subjunctive space: it was wished (or
+    # wished not), and not necessarily done. In the Transfer, the source says only
+    # "Wido": `Identification` records that, and the `Alternative` it is identified with
+    # holds both men, each with how likely it is that he is the one meant.
+    def identified(name: str, alternatives: list[tuple]) -> dict:
+        return {
+            "type": "Identification",
+            "identified_by": name,
+            "target": [
+                {
+                    "type": "Alternative",
+                    "alternatives": [
+                        {**ref(person), "edge_properties": {"percent": percent}}
+                        for person, percent in alternatives
+                    ],
+                }
+            ],
+        }
+
+    orders = await models.Factoid.Create(
+        label="Charlemagne orders gifts, and forbids a trade",
+        year=802,
+        source={"type": "AtPage", "page": "s.a. 802", "target": [ref(annales)]},
+        statements=[
+            {
+                "type": "Order",
+                "label": "Charlemagne orders a gift to Wido",
+                "text": "The emperor ordered that silver be given to Wido",
+                "date": date(802, 3),
+                "ordered_by": ref(charlemagne),
+                "places": [ref(paderborn)],
+                "thing_ordered": {
+                    "type": "PositiveSubjunctive",
+                    "contents": [
+                        {
+                            "type": "Transfer",
+                            "label": "Silver for Wido",
+                            "text": "Silver was to be given to Wido for his service",
+                            "date": date(802, 3),
+                            "item": "silver, in talents",
+                            "quantity": "1",
+                            "given_by": ref(charlemagne),
+                            "given_to": identified(
+                                "Wido", [(wido_of_spoleto, 70), (wido_of_brittany, 30)]
+                            ),
+                            "places": [],
+                        }
+                    ],
+                },
+            },
+            {
+                "type": "Order",
+                "label": "Charlemagne forbids the sale of arms",
+                "text": "He commanded that no arms be sold beyond the border",
+                "date": date(802, 10),
+                "ordered_by": identified("the lord", [(charlemagne, 90), (leo, 10)]),
+                "places": [],
+                "thing_ordered": {
+                    "type": "NegativeSubjunctive",
+                    "contents": [
+                        {
+                            "type": "Transfer",
+                            "label": "Arms sold abroad",
+                            "text": "Arms were sold to the Saxons across the border",
+                            "date": date(802, 10),
+                            "item": "swords",
+                            "quantity": "40",
+                            "given_by": ref(frankish_army),
+                            "given_to": ref(roman_church),
+                            "places": [],
+                        }
+                    ],
+                },
+            },
+        ],
+    ).save()
+
+    print("Wrote 4 factoids:")
+    for factoid in (coronation, einhard_life, letter, orders):
         print(f"  {factoid.id}  {factoid.label}")
 
 

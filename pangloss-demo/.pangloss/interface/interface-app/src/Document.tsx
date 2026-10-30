@@ -1,5 +1,6 @@
 import { HydrationScript } from "@solidjs/web";
 import type { ParentProps } from "solid-js";
+import "./styles.css";
 
 // The HTML shell: it renders the whole document, and no client code of its own
 export default function Document(props: ParentProps) {

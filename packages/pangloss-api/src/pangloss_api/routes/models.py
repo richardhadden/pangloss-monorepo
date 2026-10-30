@@ -81,13 +81,15 @@ def check_name_is_free(name: str) -> None:
 
 def routable_models() -> list[type[Document | Entity]]:
     """The registered Documents and Entities that routes are made for: all of them, but the
-    abstract ones only have the routes that read"""
+    abstract ones only have the routes that read, and one that nothing is a kind of (such as
+    `DateCharacterisation`, until the project subclasses it) has none"""
     return [
         model
         for model in ModelRegistry.all_models().values()
         if isinstance(model, type)
         and issubclass(model, (Document, Entity))
         and hasattr(model, "HeadView")
+        and (not model._meta.abstract or get_concrete_types(model))  # type: ignore[attr-defined]
     ]
 
 
