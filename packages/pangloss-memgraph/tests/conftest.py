@@ -3,6 +3,7 @@ from collections.abc import Generator
 
 import docker
 import neo4j
+import pangloss_core.settings as core_settings
 import pytest
 import pytest_asyncio
 from pangloss_core.settings import BaseSettings
@@ -163,14 +164,28 @@ async def initialise_settings(
         ENTITY_BASE_URL: AnyHttpUrl = AnyHttpUrl("http://test.com/")
 
     settings = Settings()
-    db = Database(settings=settings)
-    await db._initialise_driver()
+    # (one `Database` for the process: the live tests of the add-on packages use it too: see `pangloss_testing`)
+    existing = getattr(Database, "default", None)
+    if existing is not None and hasattr(existing, "driver"):
+        db = existing
+        made = False
+    else:
+        db = Database(settings=settings)
+        await db._initialise_driver()
+        made = True
     await initialise_database(db)
 
     try:
-        yield
+        yield settings
     finally:
-        await db.close()
+        if made:
+            await db.close()
+
+
+@pytest.fixture(scope="module", autouse=True)
+def use_test_settings(initialise_settings):
+    """(The settings are global: the tests of another package that ran before made their own)"""
+    core_settings.SETTINGS = initialise_settings
 
 
 def bulk_reachable() -> None:

@@ -76,18 +76,26 @@ async def test_the_edges_are_has_type_and_is_subtype_of(clear_database, db_drive
     Post, RoleTypology = vocabulary()
     official, secretary, *_ = await build(RoleTypology)
     await made(Post, "Maximilian's secretary", secretary.id)
-    edges = {
-        (r["a"], r["edge"], r["b"], r["reverse"])
+    # (a node has several labels, which Neo4j does not keep in any order: a label is looked for among them)
+    edges = [
+        (set(r["a"]), r["edge"], set(r["b"]), r["reverse"])
         for r in run(
             db_driver,
-            "MATCH (a)-[r]->(b) RETURN labels(a)[0] AS a, type(r) AS edge, labels(b)[0] AS b, "
+            "MATCH (a)-[r]->(b) RETURN labels(a) AS a, type(r) AS edge, labels(b) AS b, "
             "coalesce(r.reverse, false) AS reverse",
         )
-    }
-    assert ("RoleType", "is_subtype_of", "RoleType", False) in edges
-    assert ("RoleType", "is_supertype_of", "RoleType", True) in edges
-    assert ("Post", "has_type", "RoleType", False) in edges
-    assert ("RoleType", "type_of", "Post", True) in edges
+    ]
+
+    def has_edge(a: str, edge: str, b: str, reverse: bool) -> bool:
+        return any(
+            (a in labels_a, e, b in labels_b, r) == (True, edge, True, reverse)
+            for labels_a, e, labels_b, r in edges
+        )
+
+    assert has_edge("RoleType", "is_subtype_of", "RoleType", False)
+    assert has_edge("RoleType", "is_supertype_of", "RoleType", True)
+    assert has_edge("Post", "has_type", "RoleType", False)
+    assert has_edge("RoleType", "type_of", "Post", True)
 
 
 @no_type_check

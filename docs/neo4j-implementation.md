@@ -127,11 +127,10 @@ The suite uses its own container (`neo4j:latest`, port 7693, user `neo4j`, an ep
 
 Not part of this task, recorded so that it is not forgotten:
 
-- The add-on packages (`pangloss-typology`, `pangloss-calendar`, `pangloss-zotero`) import `pangloss_memgraph` for the `Database` and write their own Cypher. To run on Neo4j they find the backend through `DATABASE_MODULE` instead, and their Cypher is ported and tested the same way.
+- ~~The add-on packages~~ run on either backend now: [Backend-neutral add-ons](backend-neutral-addons.md).
 - The demo project and `pangloss new-project` offer a backend.
 - Enterprise features (property existence constraints as a safety net, online backup).
 - A version matrix (5.26 LTS and later) in CI.
-- **A backend-neutral layer for the Cypher in other packages (noted 2026-10-29).** Typology, calendar, zotero (and any later add-on) hold hard-coded Cypher, much of it Memgraph's (`text_search`, `*BFS`, map properties). Rather than port each package's strings, put the pieces that differ behind the backend: a small interface the backend provides (text search clause, bounded traversal, reading and writing `meta` and annotated values, `elementId`), which the add-ons call instead of writing the dialect. Decide the interface from what the three packages actually use; port one add-on (typology, the smallest) first to test it. Today's `test_contract.py` checks only the functions `pangloss_models`, `pangloss_api` and the others call, not the add-ons' queries.
 - **Accent-insensitive search on Memgraph too (noted 2026-10-29).** On Memgraph `zurich` does *not* find "Zürich" (its text index lower-cases but does not fold; this was not known before the Neo4j work), while Neo4j's folding index finds it. The two backends therefore answer the same search differently. Options: (a) fold on both sides on Memgraph, by writing a folded copy of the label (`label_folded`, indexed in the text index) and folding the search words in Python with the same function as `pangloss_neo4j.databases.neo4j.schema.fold`; (b) accept the difference and document it. (a) needs a migration to fill `label_folded` for existing data, and the folding function moved somewhere both backends import (`pangloss_models`), and would make the backends agree. Also decide whether exact-accent search needs a setting.
 
 ## 8. Decisions and open questions

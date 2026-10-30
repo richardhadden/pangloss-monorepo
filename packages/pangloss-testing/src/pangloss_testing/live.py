@@ -9,6 +9,7 @@ import typing
 from collections.abc import Generator
 
 import neo4j
+import pangloss_core.settings as core_settings
 import pydantic
 import pytest
 import pytest_asyncio
@@ -33,6 +34,7 @@ __all__ = [
     "mark_database_tests",
     "reset_model_registry",
     "run",
+    "use_live_settings",
     "settings_extras",
 ]
 
@@ -170,13 +172,30 @@ async def initialise_settings(
         **settings_extras,
     )
     settings = Settings()
-    database = backend.module("database").Database(settings=settings)
-    await database._initialise_driver()
+    # One `Database` for the process: the models bind to `Database.default` the first time they are used, and another
+    # conftest (the backend package's own) that makes a second would have the tests and the models on different ones
+    database_class = backend.module("database").Database
+    existing = getattr(database_class, "default", None)
+    if existing is not None and hasattr(existing, "driver"):
+        database = existing
+        made = False
+    else:
+        database = database_class(settings=settings)
+        await database._initialise_driver()
+        made = True
     await backend.module("initialise_database").initialise_database(database)
     try:
         yield settings
     finally:
-        await database.close()
+        if made:
+            await database.close()
+
+
+@pytest.fixture(scope="module", autouse=True)
+def use_live_settings(initialise_settings):
+    """The settings of the test session are those of these tests while a module of them runs (the settings are global, and
+    the tests of another package that ran before made their own)"""
+    core_settings.SETTINGS = initialise_settings
 
 
 def mark_database_tests(item) -> None:

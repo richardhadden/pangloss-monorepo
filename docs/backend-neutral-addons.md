@@ -1,6 +1,6 @@
-# Backend-neutral add-on packages 🚧
+# Backend-neutral add-on packages ✅
 
-Status: plan written 2026-10-30; steps are checked off as they are built (§5).
+Status: built 2026-10-30 (§5). Typology, calendar, dates and zotero run on Memgraph and Neo4j.
 
 The add-on packages should run on any backend (`pangloss-memgraph`, `pangloss-neo4j`, a later one) chosen by `DATABASE_MODULE`,
 without naming one. This is what it takes.
@@ -52,10 +52,16 @@ Dependencies: an add-on does not require a backend at install time; `pangloss-me
 4. Replace the imports in typology and calendar; the shared fixtures; move their live tests (and zotero's) onto them.
 5. Fix what fails on the second backend.
 
-## 5. Progress
+## 5. As built
 
-- [x] 1. Loader: `pangloss_core.backend`, a `backend.py` in each backend, typology and calendar on it, their dependency on `pangloss-memgraph` moved to a dev group, a contract test (2026-10-30)
-- [x] 2. Timeout translation: a read that declares `timeout_from_setting` raises `PanglossSearchTimeoutError` from inside the transaction in both backends (`translating_timeouts`; inside, so that Memgraph's driver does not retry it for 10 s); `is_timeout` lives in each `database.py`. The handlers in `exposed_functions` are now redundant and left alone
-- [x] 3. `lock(tx, key)` and `ensure_lock(key)` in both backends (`:PGLock {key}`, unique, shipped migration `0004`); typology's hierarchy lock is on them. `ensure_lock` must be awaited before the transaction opens: on Memgraph a transaction that creates the node is refused at its commit when two do at once (not retried), and a transaction does not see a node committed after it began; so the node cannot be made inside `lock` (the plan said `lock(tx, key)` alone)
-- [x] 4. (part) `pangloss-testing` (fixtures chosen by `PANGLOSS_TEST_BACKEND`); live tests moved to `tests/live/` of typology, calendar, dates and zotero, green on Memgraph; `run_tests.sh` runs them on Neo4j too
-- [ ] 5. Second backend green
+1. **Loader.** `pangloss_core.backend`: `current()` imports `{DATABASE_MODULE}.backend` and gives `Database`, `Transaction`, `timeout_from_setting`, `unpublished_visible`, `user_exists`, `lock`, `ensure_lock` (the `Backend` protocol; the `Transaction` protocol for annotations). Each backend has a `backend.py`. Typology and calendar use it; their dependency on `pangloss-memgraph` moved to dev groups. `tests/test_contract.py` of `pangloss-neo4j` checks both backends give every name, with the same signatures.
+2. **Timeouts.** A read that declares `timeout_from_setting` raises `PanglossSearchTimeoutError` (`translating_timeouts` in each `database.py`). The translation is *inside* the transaction function: outside it, Memgraph's driver retries a timeout for about 10 s first. The handlers that `list_items` and `search` had in `exposed_functions` are now redundant (harmless; to remove).
+3. **Locks.** `lock(tx, key)` and `ensure_lock(key)`: a `:PGLock {key}` node, unique (constraint in `initialise_database` and shipped migration `0004` of both backends). `ensure_lock` must be awaited *before* the transaction is opened: on Memgraph a transaction that creates the node is refused at its commit when two do at once (and the driver does not retry that), and a transaction does not see a node committed after it began. So the plan's `lock(tx, key)` alone was not enough. Typology's hierarchy lock uses them (this also removed its `id(l)`).
+4. **Tests.** New package `pangloss-testing` (`pangloss_testing.live`: `db_driver`, `clear_database`, `ensure_user`, `initialise_settings`, `run`, ...; `PANGLOSS_TEST_BACKEND` = `memgraph` (default) or `neo4j`; the Docker container for either). A package's `tests/live/conftest.py` does `from pangloss_testing.live import *`. The live tests moved to `tests/live/` of typology, calendar, dates (`test_dates_live.py`) and zotero (`test_zotero_live_store.py`). `run_tests.sh` runs them on Memgraph in the main run and on Neo4j after the Neo4j package's own tests (one process each). All the fixtures share one `Database` per process (the backend packages' conftest too), and a module fixture restores each suite's global settings: without that, two conftests that each make a `Database` in one xdist worker leave the tests and the models on different ones.
+5. **What the second backend showed.** One failure in 46 tests: a typology test took `labels(a)[0]` (Neo4j keeps no order of labels); it looks for a label among them. The `DELETE e RETURN count(e)`, `properties(t)` and `TransactionTimedOut` risks of §1 did not bite.
+
+## 6. Not done
+
+- Remove the redundant timeout handlers in the two `exposed_functions`.
+- `pangloss-review` and `pangloss-users` have `pangloss-memgraph` only as a dev dependency, as before; they were not changed.
+- The CLI of `pangloss-cli` and the docs still say `pangloss_memgraph` in the new-project scaffold (it is the default backend; a choice of backend for `new-project` is open).
