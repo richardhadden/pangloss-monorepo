@@ -1,6 +1,6 @@
-# History: tracking changes and restoring earlier versions ⏳
+# History: tracking changes and restoring earlier versions ✅
 
-**Status: a design, not built.** Nothing here exists yet. Numbers marked *measured* come from a throwaway
+**Status: built (phases 0 to 4; see the "As built" sections and [the guide](../guide/history/README.md)).** The sections down to "Phases" are the design as first written, and "What exists now" describes the code before it was built. Not built: the interface's form for a draft, upgrading across wrap/unwrap, annotated-value and embedded changes, enum values inside annotated values and edge properties, and a purge command with an erasure policy. Not yet run against a long-lived project. Numbers marked *measured* come from a throwaway
 benchmark on a laptop (2026-10-21); *to check* marks a fact about the existing code that the design depends on and
 that has not been verified.
 

@@ -177,9 +177,10 @@ such as a sync, is not stopped.
 
 ## Not done yet ⏳
 
-- Limiting login attempts.
-- A route to list the types.
+- A route to list the types (the interface reads them from the exported models).
 - Per-type or per-object permissions.
+- CSRF tokens for cookie sessions (only `SameSite` protects them).
+- Delete and undelete do not check the version (no `If-Match`).
 
 ## The calendar (`pangloss_calendar`)
 

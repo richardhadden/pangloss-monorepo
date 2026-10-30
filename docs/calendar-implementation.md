@@ -1,6 +1,6 @@
-# Calendar: an implementation plan for `pangloss-calendar` ⏳
+# Calendar: an implementation plan for `pangloss-calendar` 🚧
 
-**Status: a plan, nothing built (2026-10-28).** It narrows the calendar half of [dates.md](dates.md) to what can be built now that
+**Status: built except the interface (2026-10-29/30); to use it see the [guide](../guide/calendar/README.md). The plan below is as written: the numbered sections that say "Not done" are the places to compare with the code, and `API: The calendar` in [api.md](api.md) is the route reference.** Original status line: a plan, nothing built (2026-10-28). It narrows the calendar half of [dates.md](dates.md) to what can be built now that
 `pangloss-dates` exists ([dates-implementation.md](dates-implementation.md): day numbers, four bounds, `sort_day`, periods,
 recurrence with `pattern_keys`, `on_day`, both calendars, 113+ tests). *To check* marks a fact about code or a source not yet
 verified. The decisions I need from you are at the end.

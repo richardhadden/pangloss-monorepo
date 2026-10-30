@@ -6,3 +6,5 @@ library of components it is made from, and the commands and endpoints it needs. 
 
 Add `"pangloss_interface"` to `INSTALLED_APPS`: it adds `pangloss interface <command>`
 and its endpoints under `/api/interface`.
+
+Guide: [guide/interface](../../guide/interface/README.md).

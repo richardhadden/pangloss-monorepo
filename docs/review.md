@@ -1,6 +1,6 @@
-# Review: checking documents before they are published ⏳
+# Review: checking documents before they are published ✅
 
-**Status: built and tested (uncommitted until asked): the `published` flag, the package, the API routes, the commands, the guide ([guide/review](../guide/review/README.md)).** The package is `pangloss-review` (`INSTALLED_APPS = ["pangloss_review"]`). The
+**Status: built and tested: the `published` flag, the package, the API routes, the commands, the guide ([guide/review](../guide/review/README.md)). Not built: a review page in the interface, and notices by email.** The package is `pangloss-review` (`INSTALLED_APPS = ["pangloss_review"]`). The
 decisions marked **(decided)** were made by the user; **(open)** ones are still to settle; the rest follow from how
 `deleted`, meta slots and `pangloss-history` already work.
 

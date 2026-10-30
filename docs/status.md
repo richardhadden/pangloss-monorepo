@@ -1,6 +1,6 @@
 # Status and roadmap
 
-A snapshot of what works and what does not, as of this writing.
+A snapshot of what works and what does not (updated 2026-10-30). Each package's own page has the detail; [the guides](../guide/README.md) show how to use what works.
 
 ## Works (with tests)
 
@@ -18,7 +18,7 @@ A snapshot of what works and what does not, as of this writing.
 - Deleting head documents and unreferenced entities, as a flag (`deleted`) with a `PGDeletion` record, hidden from reads, lists and searches; an entity that is referred to is marked for deletion (`meta.marked_for_deletion`) instead.
 - Undeleting head documents and entities (`Document.undelete`, `Entity.undelete`): the flag is removed and a `PGUndeletion` record added, keeping the `PGDeletion` history; `PanglossNotDeletedError` if the node was not deleted.
 - Recording the creating user and time on head nodes.
-- The interface (`pangloss-interface`): **scaffolding only**: a Solid 2.0 application with SSR and file routing, a component library (`interface-core`) with enforced layers, `pangloss interface` commands and stub endpoints. See [The interface](interface.md).
+- The interface (`pangloss-interface`): **reading is built, writing is not** (but for the typology tree): a Solid 2.0 application with SSR, a component library (`interface-core`), home, navigation, list pages with search and deep search, item pages, a login dialog, interface modules, `pangloss interface` commands; 46 Playwright tests (`e2e/`). Forms to create or edit an item, a pager, autocomplete fields and translations on screen are not built. See [The interface](interface.md).
 - The `pangloss` command line (`pangloss-cli`): `make-stubs` (type stubs for the classes made for the models, for completion in an editor), `new-project` and `new-app` (made from templates; `new-app` adds the app to `INSTALLED_APPS`), `run` and `dev` (the API server; `dev` restarts on changes), `setup-database`, `users ...`, and commands added by installed apps' `cli.py` (`pangloss memgraph info`, `bulk-load`, `bulk-recover`). See [Command line](cli.md).
 - The REST API (`pangloss-api`): login by token or cookie session, CORS for frontends, a version check on updates (`If-Match` / `ETag`), endpoints to manage users, and CRUD routes for every Document and Entity (list, get, create, edit, update, delete, undelete; reading is open, changing needs a login). See [REST API](api.md).
 - Users (`pangloss-users`, stored by the Memgraph backend as `PGUser` nodes): create, find, list, update, change password (Argon2id), make admin, disable; `authenticate` checks a password. A disabled user cannot write. See [Users](users.md).
@@ -32,12 +32,20 @@ A snapshot of what works and what does not, as of this writing.
 - ✅ Autocomplete: `GET /api/autocomplete` finds entities by label over any set of entity types (types reduced to the smallest set; paged, with a total), as `Entity.autocomplete` and over the SDK; no page of the interface uses it yet. See [Autocomplete](autocomplete.md).
 - 🚧 Structured search: `POST /api/search`, `Document.search` / `Entity.search` (also over the SDK): fields with values (text, numbers, `Decimal`, dates, enums, booleans), lists, and entity relations by id; paged, with a total. Nested patterns for relations (any depth), `$all`, `$any_of`, `$not`, `exists`, `$any`, `$somewhere`, `$mentions`, `$spaces` and relations through semantic spaces, conjunctions and reified relations and `$incoming` (an entity by what refers to it) are built, and measured on 640,000 nodes (every search under a second, with no extra indexes; a search that takes over `SEARCH_TIMEOUT_SECONDS` is a `504`); every class of document and entity has a label index, and `Meta(indexes=[...])` asks for field indexes (migrations make them). See [Structured search](structured-search.md).
 - 🚧 Zotero (`pangloss-zotero`): a library kept in the database, one way, as entities that are sources and subjects; the class of an item chosen by `_zotero_meta`; fields the API will not let a person change; a watcher run as a background task of the server; tested against a fake Zotero and the test database, **not yet run against the real Zotero**. See [Zotero](zotero.md). Built with it: meta slots (`pangloss_models.meta_slots`), protected fields (`Protection`), and background tasks in the API.
-- History (`pangloss-history`): every version of every Document and Entity, upgraded through the migrations since, and restored as a draft. See [History](history.md).
+- History (`pangloss-history`): every version of every Document and Entity, upgraded through the migrations since, and restored as a draft. Best effort; not yet run against a long-lived project. See [History](history.md).
+- Review (`pangloss-review`): reviewed documents are unpublished until checked; comments; API routes and commands. See [Review](review.md).
+- Dates (`pangloss-dates`): exact, EDTF, range, ongoing, period and recurrence types in the Julian and Gregorian calendars, ordering, `on_day`. See [Dates](dates-implementation.md).
+- Calendar (`pangloss-calendar`): days, months, years and spans, characterisations (feasts) by rule or by hand, the date-first query, Easter; no interface yet. See [Calendar](calendar-implementation.md).
+- Typology (`pangloss-typology`): a vocabulary of types in a hierarchy, moving and merging safely, a type that is also a concrete entity, a tree and type pages in the interface. Not built: the tree picker, the `$under` operator. See [Typology](typology-implementation.md).
+- Neo4j (`pangloss-neo4j`): the database layer for Neo4j, the Memgraph tests ported; typology, calendar, dates and zotero run on either backend (`pangloss-testing`). Compared and profiled: [comparison](backend-comparison.md), [profiling](backend-profiling.md). See [Neo4j backend](neo4j-implementation.md) and [Backend-neutral add-ons](backend-neutral-addons.md).
+- The SDK is complete to phase 7, with `@server_only`, type-checked stubs for both flavours, and `pangloss-sdk update`; [the guide](../guide/sdk/README.md) explains using it.
 - The demo project, `pangloss-demo/` (a factoid model with a script that populates it), and its setup: [The demo project](demo-setup.md). Making it fixed two faults in the model layer: an inline entity declared after what refers to it, and field binding into a `list[...]` relation.
 
 ## Not implemented
 
 - ⏳ **`ENTITY_BASE_URL`** is not used by anything.
+- ⏳ **Accent-insensitive search on Memgraph** (Neo4j's index folds accents; Memgraph's does not).
+- ⏳ **Interface forms**: creating and editing an item in the interface.
 - 🚧 **Database migrations**: `pangloss makemigrations`, `migrate` and `showmigrations` work (renames are asked, not guessed; the answers a change needs are asked and kept in the migration file), for literals, enums, relations, edge properties, wrapping a relation in a reified relation or a semantic space, one wrapper for another, literals becoming an embedded object, and models, applied to Memgraph with a record of what has been applied and a lock. The API does not start with migrations pending or the models changed since (`MIGRATION_CHECK`). `migrate --dry-run` says what each change would do, `check-data` reads everything with the models (`migrate` reads the models the migrations could have affected after applying), and `migrate --batch-size` makes the large changes in batches that a run that stops goes on from. Changes can be written by hand (`RunCypher`, `RunPython`, `makemigrations --empty`). `migrate --backup` takes a Memgraph snapshot first. `migrate <app> <target>` goes back to an earlier migration where its changes can be undone (in batches, and a failed one too); `backups` and `restore`; `cleanmigrations`. `squashmigrations` replaces a run of migrations by one. Indexes and constraints are migrations too (the library's own, `pangloss_memgraph.migrations`); models of apps that need each other are made in two steps. See [Database migrations](migrations.md#12-progress).
 - ⏳ **Permissions** beyond admin / not admin (and personal access tokens' `read` / `write` scope).
 - ⏳ **Removing deleted nodes for good**. An entity marked for deletion is not deleted automatically when the last reference to it goes.
@@ -45,7 +53,7 @@ A snapshot of what works and what does not, as of this writing.
 - ⏳ **Optional relations** (`Person | None`), **optional embedded objects**, **lists of embedded objects or annotated values** and **plain `dict` fields** (use a `TypedDict`) are not supported by the model layer; each raises an error at `initialise()`.
 - ⏳ **The `"subtract"` type wrapper** (opposite of `Fulfil`), from `todo.md`.
 - ⏳ **`Relation[Subject, Object]`**: placeholder class only.
-- ⏳ **Other database backends.** The backend interface is simply the `exposed_functions` module (`get_document`, `create_head_node`, `list_items`), so another backend implements those and is selected by `DATABASE_MODULE`.
+- ⏳ **A third database backend** (an RDF/Oxigraph backend was assessed: [feasibility](rdf-oxigraph-feasibility.md)). A backend is the `exposed_functions`, `setup`, `migration_backend`, `users` and `review` modules; Memgraph and Neo4j exist ([Neo4j](neo4j-implementation.md#3-the-contract-a-backend-must-meet)).
 
 ## Open design questions
 

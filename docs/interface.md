@@ -1,7 +1,7 @@
 # The interface (`pangloss-interface`)
 
-The web interface of Pangloss. **Status: scaffolding only.** The structure, the tooling, the build in the
-project and the export of the models are in place; the pages and components are placeholders.
+The web interface of Pangloss. **Status: reading is built; writing is not, except the typology tree.** The structure, the tooling, the build in the
+project and the export of the models are in place, and so are: the home page and navigation bar, a list page for every model (search, deep search, counts), an item page (fields, references, reverse relations, nested documents laid out, semantic-space bands, model colours), the login dialog (cookie session), pages that need a login, server rendering with prefetching, and **interface modules** (`pangloss interface new-module`; the typology's tree and type pages are built as one). **Not built:** forms to create or edit an ordinary item, a pager, an autocomplete relation field, translations shown on screen, the language switch, a review page. The checked list is [`e2e/COVERAGE.md`](../e2e/COVERAGE.md); how to use it is the [guide](../guide/interface/README.md). The page you are reading is the architecture, and some of its text (the "placeholder" pages, the decisions) is older than the code.
 
 It is a Python package (so that it installs and is configured like the other parts) that holds a
 JavaScript workspace:

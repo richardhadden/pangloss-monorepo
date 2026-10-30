@@ -1,8 +1,8 @@
-# Dates and the calendar: uncertain dates, periods, recurrence ⏳
+# Dates and the calendar: uncertain dates, periods, recurrence 🚧
 
-**Status: a design, not built, and deliberately later: to be implemented once the rest of Pangloss works (decided 2026-10-21).** Two optional packages, `pangloss-dates` and `pangloss-calendar`, for the dates of
+**Status: the original design (2026-10-21). Both packages have since been built in a narrower form, and the plans for what was built are [dates-implementation.md](dates-implementation.md) and [calendar-implementation.md](calendar-implementation.md); to use them see the guides ([dates](../guide/dates/README.md), [calendar](../guide/calendar/README.md)).** Where this page and those disagree, they are right. Not built from this design: **the probability mass over days** (a date is its four bounds, not a distribution), **relative dates**, the `OCCURS_ON` edges and the background worker that would write them (the date-first query replaced them), and the "pending derivation" mechanism. Two optional packages, `pangloss-dates` and `pangloss-calendar`, for the dates of
 historical data: dates that are approximate, fuzzy, relative, or only a range; periods with uncertain ends; and
-events that repeat. Nothing here is in the code yet. *To check* marks a fact about existing code or a library that
+events that repeat. *To check* marks a fact about existing code or a library that
 the design depends on and that has not been verified.
 
 The motivating project works on 1450 to 1530 and keeps its dates in a **normalised Julian calendar**, but the design

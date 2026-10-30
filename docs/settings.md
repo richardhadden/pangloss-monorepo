@@ -35,8 +35,8 @@ Values can also come from environment variables or a `.env` file (`pydantic-sett
 | `INSTALLED_APPS` | `list[str]` | Packages whose `cli.py` adds commands to `pangloss`, and whose `models` are imported by `pangloss setup-database`. See [Command line](cli.md) |
 | `DATABASE_MODULE` | `str` | Dotted path of the backend package; `initialise()` imports `<it>.exposed_functions` |
 | `DATABASE` | `DatabaseSettings` subclass | Backend connection details |
-| `INTERFACE_LANGUAGES` | `list[str]` | Reserved for i18n ⏳ |
-| `DEFAULT_INTERFACE_LANGUAGE` | `str` (`"en"`) | Reserved for i18n ⏳ |
+| `INTERFACE_LANGUAGES` | `list[str]` | The languages besides the default that the translation files (`pangloss interface translations`) and typology labels (`label_<code>`) are made for. No page of the interface shows them yet |
+| `DEFAULT_INTERFACE_LANGUAGE` | `str` (`"en"`) | The default language of those texts |
 | `AUTHJWT_SECRET_KEY` | `str` | Signs the API's tokens (use 32 characters or more) |
 | `AUTH_ACCESS_TOKEN_EXPIRE_MINUTES`, `AUTH_REFRESH_TOKEN_EXPIRE_DAYS` | `int` (`30`, `14`) | How long tokens last |
 | `AUTH_COOKIE_SAMESITE`, `AUTH_COOKIE_SECURE` | `"lax"`, `False` | How the session cookies are set. See [REST API](api.md#authentication) |
@@ -49,7 +49,7 @@ Values can also come from environment variables or a `.env` file (`pydantic-sett
 | `REVIEW_ALLOW_SELF_REVIEW` | `True` | `pangloss_review` (optional): whether a user may check a document they created or last edited. See [Review](../guide/review/README.md) |
 | `SLOW_QUERY_MS`, `SLOW_REQUEST_MS` | `int` (`500`, `2000`) | A database transaction, or a request, that takes longer is logged as a warning. See [Logging](logging.md) |
 | `ZOTERO_API_KEY`, `ZOTERO_LIBRARIES`, `ZOTERO_WATCH`, `ZOTERO_SKIP_TYPES`, `ZOTERO_SYNC_USER`, `ZOTERO_API_URL`, `ZOTERO_STREAM_URL` | `pangloss_zotero` (optional; read from the settings if set). See [Zotero](zotero.md#commands-and-settings) |
-| `ENTITY_BASE_URL` | `AnyHttpUrl` | Reserved for entity URL generation ⏳ |
+| `ENTITY_BASE_URL` | `AnyHttpUrl` | Reserved for entity URL generation ⏳ (nothing reads it) |
 
 ## Database settings
 

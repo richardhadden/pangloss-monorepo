@@ -1,24 +1,26 @@
 # Packages
 
-This is a [uv workspace](https://docs.astral.sh/uv/concepts/projects/workspaces/); each directory under `packages/` is a separate distributable package. Python 3.15 or newer is required (the models use `lazy from ... import`, PEP 810).
+This is a [uv workspace](https://docs.astral.sh/uv/concepts/projects/workspaces/); each directory under `packages/` is a separate distributable package (`pydantic-meta-kit` is a clone of another repository, outside the workspace). Python 3.15 or newer is required (the models use `lazy from ... import`, PEP 810).
 
 ```
-pangloss-memgraph ──► pangloss-models ──► pangloss-core
+pangloss-memgraph / pangloss-neo4j ──► pangloss-models ──► pangloss-core
         └──► pangloss-users ──► pangloss-core
 
 pangloss-sdk ──► pangloss-models, pangloss-core
+pangloss-sdk-server ──► pangloss-models, pangloss-core, pangloss-sdk   (builds the SDK; serves it from the API)
 
 pangloss-cli ──► pangloss-core, pangloss-models, pangloss-users
 pangloss-api ──► pangloss-core, pangloss-models, pangloss-users
+
+optional apps (INSTALLED_APPS):  pangloss-history, -review, -typology, -calendar, -dates, -zotero, -interface, -sdk-server
+test support:                    pangloss-testing (live-database fixtures for either backend)
 ```
 
-Arrows show declared dependencies. (`pangloss-models` uses `pangloss-sdk` only in its tests, as a database module that needs no connection: a dev dependency.) A client of the API needs only the SDK's side of this: it needs no `neo4j`, FastAPI or Memgraph package.
+Arrows show declared dependencies. [The guides](../guide/packages.md) say which guide explains which package. (`pangloss-models` uses `pangloss-sdk` only in its tests, as a database module that needs no connection: a dev dependency.) A client of the API needs only the SDK's side of this: it needs no `neo4j`, FastAPI or Memgraph package.
 
 ## pangloss-core ✅ / 🚧
 
 Settings shared by every module: `DatabaseSettings`, `ClientSettings` (only `INSTALLED_APPS` and `DATABASE_MODULE`, which is all the models read; what a client of the API uses) and the generic `BaseSettings[TDatabaseSettings]` (the server's, which extends it). Constructing a `BaseSettings` stores it in the module global `pangloss_core.settings.SETTINGS`. See [Settings](settings.md).
-
-The package `__init__` only contains a placeholder `hello()`.
 
 ## pangloss-models ✅ (the main package)
 
@@ -41,39 +43,38 @@ It contains `pangloss_models.meta_kit`, the `WithMeta[...]` / `BaseMeta` machine
 
 A database backend for [Memgraph](https://memgraph.com/) (using the `neo4j` async driver). It supplies the `exposed_functions` module that `ModelRegistry` binds to `Document.get`, `Document.list`, `Entity.list` and `.save()`. See [Memgraph backend](memgraph.md).
 
-`cli.py` adds `pangloss memgraph <command>` (`info`, `bulk-load`, `bulk-recover`); `databases/memgraph/bulk.py` is the bulk load (`bulk_ingest`: analytical storage mode, for an empty database), and `pangloss_models/bulk_upload.py` reads and writes the file; `databases/memgraph/setup.py` is what the core `pangloss setup-database` calls. `indexes.py` and `tooling/__init__.py` are empty placeholders.
-
+`cli.py` adds `pangloss memgraph <command>` (`info`, `bulk-load`, `bulk-recover`); `databases/memgraph/bulk.py` is the bulk load (`bulk_ingest`: analytical storage mode, for an empty database), and `pangloss_models/bulk_upload.py` reads and writes the file; `databases/memgraph/setup.py` is what the core `pangloss setup-database` calls. 
 ## pangloss-cli ✅
 
 The `pangloss` command (`pangloss_cli.main`), built with [Typer](https://typer.tiangolo.com/). It finds the project's settings, adds the commands of installed apps, and has the core commands `new-project`, `new-app`, `run`, `dev`, `setup-database` and `users ...`. The templates for new projects and apps are in `pangloss_cli/templates`. It knows nothing about a particular database: it uses the `setup` module of `DATABASE_MODULE`. See [Command line](cli.md).
 
 ## pangloss-api 🚧
 
-The FastAPI application (`pangloss_api.app.create_app`). Done: token and session login (JWT with PyJWT), the user endpoints, and CRUD routes for every Document and Entity. Not done: routes from installed apps, and finer permissions. See [REST API](api.md).
+The FastAPI application (`pangloss_api.app.create_app`). Done: token and session login (JWT with PyJWT), revocation, personal access tokens, the limit on wrong passwords, the user endpoints, CRUD routes for every Document and Entity, search and autocomplete, background tasks, and the routes and middleware of installed apps (`api.py` with `router` and `configure_app`). Not done: finer permissions. See [REST API](api.md).
 
-## pangloss-interface 🚧 (scaffolding)
+## pangloss-interface 🚧
 
-A Python package that holds the JavaScript of the web interface: `interface-core` (a Solid 2.0 component library) and `interface-app` (a server-rendered Solid 2.0 application), with `pangloss interface` commands that wrap Node or Bun and endpoints under `/api/interface`. See [The interface](interface.md).
+A Python package that holds the JavaScript of the web interface: `interface-core` (a Solid 2.0 component library) and `interface-app` (a server-rendered Solid 2.0 application), with `pangloss interface` commands that wrap Node or Bun, endpoints under `/api/interface`, `InterfaceMeta` and `InterfaceConfig`, interface modules and the translation commands. Reading is built; forms are not. See [The interface](interface.md).
 
 ## pangloss-zotero 🚧
 
 Optional: `"pangloss_zotero"` in `INSTALLED_APPS`. Keeps a Zotero library in the database, one way (from Zotero), as entities that are both the sources of factoids and what factoids are about; the watcher runs as a background task of the server. `pangloss zotero sync|watch|status|check`. It also gave the other packages three general things: meta slots and protected fields (`pangloss-models`) and background tasks (`pangloss-api`). See [Zotero](zotero.md) and [Zotero items as sources and subjects](zotero-sources.md).
 
-## pangloss-sdk-server 🚧
+## pangloss-sdk-server ✅
 
 Optional: `"pangloss_sdk_server"` in `INSTALLED_APPS`. Builds the SDK of the project: `pangloss sdk build|status|show`. It also serves it: `/api/sdk` (manifest, wheel, sdist; `SDK_ACCESS`) and tells a client whether its SDK is current; `git clone` of it (read-only), and a package index (`/api/sdk/simple/`). See [the SDK](sdk.md).
 
-## pangloss-sdk 🚧
+## pangloss-sdk ✅
 
-Lets Pangloss models be used locally and read and write a remote Pangloss instance through its API ("API as database"). The client and the generated per-project SDK are built (see [the SDK](sdk.md)); `sdk-demo/` in the repository shows it used from outside a project.
+Lets Pangloss models be used locally and read and write a remote Pangloss instance through its API ("API as database"). Built (see [the SDK](sdk.md) and [the guide](../guide/sdk/README.md)); `sdk-demo/` in the repository shows it used from outside a project.
 
 - `databases/api` (async) and `databases/api_sync` (blocking) are database modules whose functions are requests: set `DATABASE_MODULE` to one, or call `pangloss_sdk.connect(url, apps=[...])`.
 - `SdkSettings`, login (settings, prompt, tokens kept in memory, or a kept refresh token: `pangloss-sdk login|logout|status`), `pangloss-sdk update` (installs the SDK the server has now, the way it was installed before), `pangloss-sdk sync-stubs` (type stubs for the blocking SDK), the errors the server's database module raises, and `iterate`.
 - The model tests use `databases/api` as a database module because it needs no live connection.
 
-## pangloss-review 🚧
+## pangloss-review ✅
 
-Optional: documents of the models marked `_review_meta = ReviewMeta(reviewable=True)` are written unpublished, and checked by a user (`unchecked`, `errors_found`, `checked` = published), with comments on the document or a part of it. The core part is the `published` property, which hides a document from requests that are not logged in (like `deleted`). Service and storage are built; API routes and commands are not. See [Review](review.md).
+Optional: documents of the models marked `_review_meta = ReviewMeta(reviewable=True)` are written unpublished, and checked by a user (`unchecked`, `errors_found`, `checked` = published), with comments on the document or a part of it. The core part is the `published` property, which hides a document from requests that are not logged in (like `deleted`). Service, storage, API routes (`/api/review`) and commands are built; a review page in the interface is not. See [Review](review.md) and the [guide](../guide/review/README.md).
 
 ## pangloss-users 🚧
 
@@ -84,4 +85,24 @@ Users and their passwords. See [Users](users.md).
 - `passwords.py`: Argon2id hashing and checking.
 - `service.py`: `create_user`, `get_user`, `get_user_by_email`, `list_users`, `authenticate`, `update_user`, `set_password`, `change_password`, `set_admin` and `set_disabled`. They call the database backend's `exposed_functions`.
 
-Tokens, sessions and the user routes are in [`pangloss-api`](#pangloss-api-🚧), not here; permissions are not written yet ⏳.
+Tokens, sessions and the user routes are in [`pangloss-api`](#pangloss-api-🚧), not here; permissions are not written yet ⏳. Personal access tokens (`create_access_token`, ...) are here too.
+
+## pangloss-neo4j 🚧
+
+The database layer for Neo4j: the same functions as `pangloss-memgraph`, ported from its tests. `DATABASE_MODULE = "pangloss_neo4j.databases.neo4j"`. See [Neo4j backend](neo4j-implementation.md).
+
+## pangloss-history ✅
+
+Optional: every version of every Document and Entity, in SQLite, best effort; `pangloss history`; diffs and restore, upgraded through the migrations. See [History](history.md).
+
+## pangloss-dates ✅ and pangloss-calendar 🚧
+
+Optional: uncertain dates, periods and recurrence in the Julian and Gregorian calendars (`pangloss-dates`), and days, months, years, feasts and Easter (`pangloss-calendar`; no interface). See [Dates](dates-implementation.md) and [Calendar](calendar-implementation.md).
+
+## pangloss-typology 🚧
+
+Optional: a vocabulary of types in a hierarchy. See [Typology](typology-implementation.md).
+
+## pangloss-testing
+
+Fixtures for the tests of add-on packages that need a live database, on Memgraph or Neo4j. See [Backend-neutral add-ons](backend-neutral-addons.md).

@@ -1,7 +1,6 @@
-# SDK: using a project's models against its API ⏳
+# SDK: using a project's models against its API ✅
 
-**Status: built (phases 0 to 6; see the end).** What follows begins as the design, and each phase has an "As built" section. (The first line of the design said: nothing here exists yet except the stub `pangloss-sdk` package (settings, and an
-`exposed_functions` module of placeholders). Statements about the existing code were checked on 2026-10-23.
+**Status: built (phases 0 to 7) and used from outside a project by [`sdk-demo/`](../sdk-demo/README.md). To use it, read the [guide](../guide/sdk/README.md).** This page is the design and the record of how it was built: the first sections are the design as it was written (so "what exists now" below describes the code *before* phase 0), and each phase has an "As built" section, which says where it differs. Where the two disagree, the "As built" sections are right. The generated `connect()` is an ordinary function, **not awaited** (the design's examples show `await`). Not built, and not planned: `status()` on the generated module (`check()` is the same), a test that installs from the network, and a check of the stubs without `ty`.
 
 The aim: someone who works with a Pangloss project's data (a script, a notebook, an analysis, a data import) gets
 **the project's own model classes**, with type stubs, from the running server, and uses them as the server does:

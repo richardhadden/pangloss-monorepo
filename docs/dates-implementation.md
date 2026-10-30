@@ -1,6 +1,6 @@
-# Dates: the implementation plan for `pangloss-dates` ⏳
+# Dates: the implementation plan for `pangloss-dates` ✅
 
-**Status: a plan, nothing built (2026-10-27).** This narrows [dates.md](dates.md) to what is built first: the date
+**Status: built (2026-10-27 and later; "The rest, built" and "UnknownDate" at the end say what was added after the first plan). To use it, see the [guide](../guide/dates/README.md). The plan below is as written, so "not built" in the body may since have been built.** Still open: a search that starts from the dates to use their indexes, the probability maths and relative dates ([dates.md](dates.md)). Original status line: a plan, nothing built (2026-10-27). This narrows [dates.md](dates.md) to what is built first: the date
 types with four stored bounds, a Julian day number, and EDTF as an input option. The probability maths, recurrence,
 and the calendar package stay in `dates.md` for later. *To check* marks a fact about code not yet verified.
 

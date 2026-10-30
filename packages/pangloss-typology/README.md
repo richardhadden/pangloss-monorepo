@@ -14,3 +14,5 @@ class Role(Entity):
 class RoleTypology(Typology):
     _typology_meta = TypologyMeta(name="RoleType")
 ```
+
+Guide: [guide/typology](../../guide/typology/README.md).

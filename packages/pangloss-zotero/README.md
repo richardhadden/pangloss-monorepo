@@ -20,3 +20,5 @@ class Atlas(TextObject):
 Settings (on the project's settings class): `ZOTERO_API_KEY`, `ZOTERO_LIBRARIES` (`["groups/2556736"]`),
 `ZOTERO_WATCH` (default `True`), `ZOTERO_SKIP_TYPES`, `ZOTERO_SYNC_USER`.
 Commands: `pangloss zotero sync | watch | status | check`.
+
+Guide: [guide/zotero](../../guide/zotero/README.md).

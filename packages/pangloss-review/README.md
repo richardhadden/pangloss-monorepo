@@ -17,3 +17,5 @@ of it. The design is in [docs/review.md](../../docs/review.md).
 
 Settings (optional): `REVIEW_ALLOW_SELF_REVIEW` (default `True`; when false, a user cannot check a document they
 created or last edited).
+
+Guide: [guide/review](../../guide/review/README.md).
