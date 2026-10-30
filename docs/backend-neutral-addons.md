@@ -55,7 +55,7 @@ Dependencies: an add-on does not require a backend at install time; `pangloss-me
 ## 5. Progress
 
 - [x] 1. Loader: `pangloss_core.backend`, a `backend.py` in each backend, typology and calendar on it, their dependency on `pangloss-memgraph` moved to a dev group, a contract test (2026-10-30)
-- [ ] 2. Timeout translation
+- [x] 2. Timeout translation: a read that declares `timeout_from_setting` raises `PanglossSearchTimeoutError` from inside the transaction in both backends (`translating_timeouts`; inside, so that Memgraph's driver does not retry it for 10 s); `is_timeout` lives in each `database.py`. The handlers in `exposed_functions` are now redundant and left alone
 - [ ] 3. `lock`
 - [ ] 4. Imports and fixtures
 - [ ] 5. Second backend green

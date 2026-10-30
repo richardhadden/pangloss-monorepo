@@ -1,3 +1,4 @@
+import functools
 import logging
 import time
 from collections.abc import Awaitable, Callable
@@ -5,7 +6,10 @@ from typing import Any, ClassVar, Concatenate
 
 import neo4j
 from pangloss_core.settings import BaseSettings
-from pangloss_models.exceptions import PanglossReadOnlyError
+from pangloss_models.exceptions import (
+    PanglossReadOnlyError,
+    PanglossSearchTimeoutError,
+)
 
 from pangloss_neo4j.databases.neo4j.properties import decode
 from pangloss_neo4j.databases.neo4j.settings import Neo4jDatabaseSettings
@@ -173,6 +177,35 @@ def logging_queries(
     return logged
 
 
+
+def is_timeout(error: Exception) -> bool:
+    """Whether the database stopped the transaction because it ran too long (Neo4j reports it as a client error with a
+    `TransactionTimedOut` code)"""
+    return "timedout" in (getattr(error, "code", "") or "").lower() or (
+        "timeout" in str(error).lower() or "timed out" in str(error).lower()
+    )
+
+
+
+def translating_timeouts(work):
+    """A read that declared a time it may take, and was stopped at it, raises `PanglossSearchTimeoutError`: so that the
+    caller never sees the driver's error, and, as it is raised in the transaction, the driver does not try it again (it
+    would try a timeout again, and the search would take as long again)"""
+
+    @functools.wraps(work)
+    async def translated(tx, *args, **kwargs):
+        try:
+            return await work(tx, *args, **kwargs)
+        except neo4j.exceptions.Neo4jError as error:
+            if not is_timeout(error):
+                raise
+            raise PanglossSearchTimeoutError(
+                "The search took longer than the time allowed for it: make it more specific"
+            ) from None
+
+    return translated
+
+
 class Database:
     settings: BaseSettings[Neo4jDatabaseSettings]
     driver: neo4j.AsyncDriver
@@ -237,6 +270,7 @@ class Database:
             work = logging_queries(func)
             limit = getattr(func, "timeout_setting", None)
             if limit is not None:
+                work = translating_timeouts(work)
                 seconds = getattr(self.settings, limit[0], limit[1])
                 if seconds:
                     work = neo4j.unit_of_work(timeout=float(seconds))(work)

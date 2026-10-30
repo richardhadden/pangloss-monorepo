@@ -68,6 +68,7 @@ from pangloss_neo4j.databases.neo4j.build_update_query import (
 from pangloss_neo4j.databases.neo4j.database import (
     Database,
     Transaction,
+    is_timeout,
     timeout_from_setting,
 )
 from pangloss_neo4j.databases.neo4j.delete_node import (
@@ -118,13 +119,6 @@ async def empty_page(tx: Transaction, query: str, params: dict) -> dict[str, Any
         "previous_page": page - 1 if page > 1 else None,
         "next_page": page + 1 if page < page_count else None,
     }
-
-
-def is_timeout(error: Exception) -> bool:
-    """Whether the database stopped the transaction because it ran too long"""
-    return "timedout" in (getattr(error, "code", "") or "").lower() or (
-        "timeout" in str(error).lower() or "timed out" in str(error).lower()
-    )
 
 
 @Database.default.read_transaction

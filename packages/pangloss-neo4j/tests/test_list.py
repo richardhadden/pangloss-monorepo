@@ -586,3 +586,37 @@ async def test_a_list_search_that_takes_too_long_is_stopped(
     with pytest.raises(PanglossSearchTimeoutError, match="more specific"):
         await Person.list(search_terms="smith", deep_search=True)
     assert time.monotonic() - started < 3
+
+
+@no_type_check
+async def test_a_read_of_another_package_that_takes_too_long_raises_the_search_timeout(
+    clear_database, db_driver, monkeypatch
+):
+    """The backend translates the timeout, so a package that writes its own query (typology, calendar) catches no driver error"""
+    import time
+
+    from pangloss_neo4j.databases.neo4j.database import (
+        Database,
+        Transaction,
+        timeout_from_setting,
+    )
+    from pangloss_models.exceptions import PanglossSearchTimeoutError
+
+    with db_driver.session() as session:
+        session.run("UNWIND range(1, 400) AS x CREATE (:Filler {id: x})").consume()
+    monkeypatch.setattr(
+        Database.default.settings, "SEARCH_TIMEOUT_SECONDS", 0.5, raising=False
+    )
+
+    @Database.default.read_transaction
+    @timeout_from_setting("SEARCH_TIMEOUT_SECONDS", 30)
+    async def slow(tx: Transaction):
+        result = await tx.run(
+            "MATCH (a:Filler), (b:Filler), (c:Filler) WHERE (a.id * b.id + c.id) % 7 = 3 RETURN count(*) AS c"
+        )
+        return await result.single()
+
+    started = time.monotonic()
+    with pytest.raises(PanglossSearchTimeoutError):
+        await slow()
+    assert time.monotonic() - started < 3
