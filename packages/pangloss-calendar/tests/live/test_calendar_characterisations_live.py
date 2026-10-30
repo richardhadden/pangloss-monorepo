@@ -1,23 +1,18 @@
-# ruff: noqa: F811
-"""Characterisations (feasts and the like) in Memgraph: edges from a rule, attached by hand, and what is out of reach"""
+"""Characterisations (feasts and the like) on a real database: edges from a rule, attached by hand, and what is out of reach"""
 
 import importlib
 from typing import no_type_check
 
 import pytest
+from calendar_live_support import count, structure
 from pangloss_calendar import graph, service
 from pangloss_calendar import settings as calendar_settings
 from pangloss_calendar.days import parse_day
 from pangloss_dates.calendar import Calendar, to_jdn
 from pangloss_dates.easter import easter
-from pangloss_memgraph.databases.memgraph.initialise_database import (
-    initialise_database,
-)
 from pangloss_models import initialise
 from pangloss_models.model_bases.document import Document
-
-from .helpers import run
-from .test_calendar_live import clear_calendar, count, structure  # noqa: F401
+from pangloss_testing.live import initialise_database, run
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 

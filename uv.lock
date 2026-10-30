@@ -18,6 +18,7 @@ members = [
     "pangloss-review",
     "pangloss-sdk",
     "pangloss-sdk-server",
+    "pangloss-testing",
     "pangloss-typology",
     "pangloss-users",
     "pangloss-zotero",
@@ -753,6 +754,7 @@ dev = [
     { name = "juliandate" },
     { name = "pangloss-memgraph" },
     { name = "pangloss-neo4j" },
+    { name = "pangloss-testing" },
     { name = "pytest-asyncio" },
 ]
 
@@ -770,6 +772,7 @@ dev = [
     { name = "juliandate", specifier = ">=1.0.5" },
     { name = "pangloss-memgraph", editable = "packages/pangloss-memgraph" },
     { name = "pangloss-neo4j", editable = "packages/pangloss-neo4j" },
+    { name = "pangloss-testing", editable = "packages/pangloss-testing" },
     { name = "pytest-asyncio", specifier = ">=1.4.0" },
 ]
 
@@ -828,7 +831,10 @@ edtf = [
 [package.dev-dependencies]
 dev = [
     { name = "juliandate" },
+    { name = "pangloss-memgraph" },
+    { name = "pangloss-neo4j" },
     { name = "pangloss-sdk" },
+    { name = "pangloss-testing" },
 ]
 
 [package.metadata]
@@ -842,7 +848,10 @@ provides-extras = ["edtf"]
 [package.metadata.requires-dev]
 dev = [
     { name = "juliandate", specifier = ">=1.0.5" },
+    { name = "pangloss-memgraph", editable = "packages/pangloss-memgraph" },
+    { name = "pangloss-neo4j", editable = "packages/pangloss-neo4j" },
     { name = "pangloss-sdk", editable = "packages/pangloss-sdk" },
+    { name = "pangloss-testing", editable = "packages/pangloss-testing" },
 ]
 
 [[package]]
@@ -1129,6 +1138,33 @@ dev = [
 ]
 
 [[package]]
+name = "pangloss-testing"
+version = "0.1.0"
+source = { editable = "packages/pangloss-testing" }
+dependencies = [
+    { name = "docker" },
+    { name = "neo4j" },
+    { name = "pangloss-core" },
+    { name = "pangloss-models" },
+    { name = "pangloss-users" },
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "tenacity" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "docker", specifier = ">=7.1.0" },
+    { name = "neo4j", specifier = ">=6.2.0" },
+    { name = "pangloss-core", editable = "packages/pangloss-core" },
+    { name = "pangloss-models", editable = "packages/pangloss-models" },
+    { name = "pangloss-users", editable = "packages/pangloss-users" },
+    { name = "pytest", specifier = ">=8" },
+    { name = "pytest-asyncio", specifier = ">=1.4.0" },
+    { name = "tenacity", specifier = ">=9.1.4" },
+]
+
+[[package]]
 name = "pangloss-typology"
 version = "0.1.0"
 source = { editable = "packages/pangloss-typology" }
@@ -1144,6 +1180,7 @@ dependencies = [
 dev = [
     { name = "pangloss-memgraph" },
     { name = "pangloss-neo4j" },
+    { name = "pangloss-testing" },
     { name = "pytest-asyncio" },
 ]
 
@@ -1160,6 +1197,7 @@ requires-dist = [
 dev = [
     { name = "pangloss-memgraph", editable = "packages/pangloss-memgraph" },
     { name = "pangloss-neo4j", editable = "packages/pangloss-neo4j" },
+    { name = "pangloss-testing", editable = "packages/pangloss-testing" },
     { name = "pytest-asyncio", specifier = ">=1.4.0" },
 ]
 
@@ -1198,6 +1236,8 @@ dependencies = [
 [package.dev-dependencies]
 dev = [
     { name = "pangloss-memgraph" },
+    { name = "pangloss-neo4j" },
+    { name = "pangloss-testing" },
     { name = "pytest-asyncio" },
 ]
 
@@ -1216,6 +1256,8 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "pangloss-memgraph", editable = "packages/pangloss-memgraph" },
+    { name = "pangloss-neo4j", editable = "packages/pangloss-neo4j" },
+    { name = "pangloss-testing", editable = "packages/pangloss-testing" },
     { name = "pytest-asyncio", specifier = ">=1.4.0" },
 ]
 

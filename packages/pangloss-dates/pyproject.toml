@@ -25,9 +25,18 @@ build-backend = "uv_build"
 
 [dependency-groups]
 # an independent check of the day arithmetic in the tests
-dev = ["juliandate>=1.0.5", "pangloss-sdk"]
+dev = [
+    "juliandate>=1.0.5",
+    "pangloss-memgraph",
+    "pangloss-neo4j",
+    "pangloss-sdk",
+    "pangloss-testing",
+]
 
 [tool.uv.sources]
+pangloss-memgraph = { workspace = true }
+pangloss-neo4j = { workspace = true }
+pangloss-testing = { workspace = true }
 pangloss-core = { workspace = true }
 pangloss-sdk = { workspace = true }
 pangloss-models = { workspace = true }

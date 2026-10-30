@@ -18,11 +18,11 @@ def initialise_database():
 
     class Settings(BaseSettings):
         PROJECT_NAME: str = "Test"
-        BACKEND_CORS_ORIGINS: list[typing.Any] = []  # noqa: RUF012
-        INSTALLED_APPS: list[str] = []  # noqa: RUF012
+        BACKEND_CORS_ORIGINS: list[typing.Any] = []
+        INSTALLED_APPS: list[str] = []
         DATABASE_MODULE: str = "pangloss_sdk.databases.api"
         DATABASE: DatabaseSettings = DatabaseSettings()
-        INTERFACE_LANGUAGES: list[str] = []  # noqa: RUF012
+        INTERFACE_LANGUAGES: list[str] = []
         DEFAULT_INTERFACE_LANGUAGE: str = "en"
         AUTHJWT_SECRET_KEY: str = "asdf"
         ENTITY_BASE_URL: AnyHttpUrl = AnyHttpUrl("http://test.com/")

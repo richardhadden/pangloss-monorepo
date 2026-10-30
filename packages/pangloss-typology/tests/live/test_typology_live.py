@@ -1,5 +1,5 @@
-# ruff: noqa: F811, RUF059
-"""Typologies in Memgraph: the hierarchy, the entities that have a type, and a type that is also another class"""
+# ruff: noqa: RUF059
+"""Typologies on a real database: the hierarchy, the entities that have a type, and a type that is also another class"""
 
 import asyncio
 from typing import no_type_check
@@ -7,10 +7,9 @@ from typing import no_type_check
 import pytest
 from pangloss_models import initialise
 from pangloss_models.model_bases.entity import Entity
+from pangloss_testing.live import run
 from pangloss_typology import Typed, Typology, TypologyMeta, service
 from pangloss_typology.service import NotFound, Refused
-
-from .helpers import run
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -134,7 +133,6 @@ async def test_the_entities_are_paged_by_label_and_can_be_limited_to_a_class(
         has_type: list[Typed[RoleTypology]]
 
     # (a second class that has the type: the models are made again with it)
-    from pangloss_models.model_registry import ModelRegistry
 
     initialise()
     t = await RoleTypology.create("Secretary")

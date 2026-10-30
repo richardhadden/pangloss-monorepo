@@ -4,6 +4,8 @@
 #   1. the unit and integration tests of the packages (in parallel), with the Memgraph in Docker;
 #   2. the tests of `pangloss-neo4j`, against a Neo4j in Docker. (Its own run: it has its own database and its own
 #      process-wide settings, so it cannot share a process with the Memgraph tests; it is serial, as they all use one database);
+#      Then the live tests of the add-on packages (typology, calendar, dates, zotero), which the first run made on Memgraph,
+#      again on Neo4j (`PANGLOSS_TEST_BACKEND=neo4j`, one process for each package: see `pangloss-testing`);
 #   3. the end-to-end tests in a browser (e2e/, one process: they share the test Memgraph, which the first run wipes).
 #
 #   ./run_tests.sh                run everything
@@ -39,6 +41,9 @@ status=$?
 
 if [ "$neo4j" = yes ]; then
     uv run pytest packages/pangloss-neo4j || status=$?
+    for package in typology calendar dates zotero; do
+        PANGLOSS_TEST_BACKEND=neo4j uv run pytest "packages/pangloss-$package/tests/live" || status=$?
+    done
 fi
 
 if [ "$e2e" = yes ]; then

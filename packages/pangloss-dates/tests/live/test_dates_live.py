@@ -1,16 +1,14 @@
-"""The date types stored in Memgraph: written, read back, found by range and ordered"""
+"""The date types stored on a real database: written, read back, found by range and ordered"""
 
 import importlib
 from typing import no_type_check
 
 import pytest
 from pangloss_dates.calendar import Calendar, from_jdn, to_jdn
-from pangloss_memgraph.databases.memgraph.initialise_database import (
-    initialise_database,
-)
 from pangloss_models import initialise
 from pangloss_models.model_bases.document import Document
 from pangloss_models.search import Match
+from pangloss_testing.live import initialise_database
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 

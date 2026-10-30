@@ -2,12 +2,10 @@
 
 The tests here are those of `pangloss-memgraph` run against Neo4j (see `docs/neo4j-implementation.md`). What differs, and why:
 
-## Left out, to be ported with the add-on packages
+## Not here, because they are the add-on packages' tests
 
-`test_typology_live.py`, `test_calendar_live.py`, `test_calendar_characterisations_live.py`, `test_calendar_service_live.py`:
-they run `pangloss-typology` and `pangloss-calendar` against the database, and those packages import `pangloss_memgraph`
-directly (and write Cypher of their own). They are the same tests with the backend swapped once the add-ons find the backend
-through `DATABASE_MODULE` (plan, section 7).
+The live tests of typology, calendar, dates and zotero are in `tests/live/` of those packages, and run on either backend
+(`PANGLOSS_TEST_BACKEND`; see `pangloss-testing` and `docs/backend-neutral-addons.md`).
 
 ## Replaced, because Memgraph's feature has no Neo4j counterpart
 

@@ -1,43 +1,17 @@
-"""The calendar graph in Memgraph: structure by migration, days by seed, feasts by load"""
+"""The calendar graph on a real database: structure by migration, days by seed, feasts by load"""
 
 import pytest
+from calendar_live_support import count, structure
 from neo4j.exceptions import ClientError, ConstraintError
 from pangloss_calendar import graph
 from pangloss_calendar.days import parse_day
 from pangloss_dates.calendar import Calendar, to_jdn
-from pangloss_memgraph.databases.memgraph.database import Database
-from pangloss_memgraph.databases.memgraph.migrations import apply_changes
-from pangloss_models.migrations.files import EMPTY_SNAPSHOT, load
-
-from .helpers import run
+from pangloss_testing.live import run
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
 J = Calendar.JULIAN
 G = Calendar.GREGORIAN
-
-
-@pytest.fixture
-def clear_calendar(db_driver):
-    run(
-        db_driver,
-        "MATCH (n) WHERE any(l IN labels(n) WHERE l STARTS WITH 'Calendar') DETACH DELETE n",
-    )
-    yield
-    run(
-        db_driver,
-        "MATCH (n) WHERE any(l IN labels(n) WHERE l STARTS WITH 'Calendar') DETACH DELETE n",
-    )
-
-
-async def structure():
-    """The migration of the package, applied (a second time it changes nothing)"""
-    migration = load("pangloss_calendar", "0001_initial")
-    await apply_changes(Database.default, EMPTY_SNAPSHOT, list(migration.changes))
-
-
-def count(db_driver, label):
-    return run(db_driver, f"MATCH (n:{label}) RETURN count(n) AS c")[0]["c"]
 
 
 async def test_seeding_twice_makes_the_same_graph(db_driver, clear_calendar):

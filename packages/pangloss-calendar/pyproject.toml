@@ -23,6 +23,7 @@ requires = ["uv_build>=0.11.8,<0.12.0"]
 build-backend = "uv_build"
 
 [tool.uv.sources]
+pangloss-testing = { workspace = true }
 pangloss-dates = { workspace = true }
 pangloss-api = { workspace = true }
 pangloss-core = { workspace = true }
@@ -31,6 +32,7 @@ pangloss-neo4j = { workspace = true }
 
 [dependency-groups]
 dev = [
+    "pangloss-testing",
     "juliandate>=1.0.5",
     "pangloss-memgraph",
     "pangloss-neo4j",

@@ -1,4 +1,3 @@
-# ruff: noqa: F811, RUF059
 """The calendar's day, month, year and Easter against documents with dates (the exit test of phase 3)"""
 
 import importlib
@@ -6,20 +5,17 @@ from typing import no_type_check
 
 import httpx2 as httpx
 import pytest
+from calendar_live_support import structure
 from fastapi import FastAPI
 from pangloss_calendar import graph, service
 from pangloss_calendar.api import router
 from pangloss_calendar.days import parse_day
 from pangloss_dates.calendar import Calendar, weekday
 from pangloss_dates.easter import easter
-from pangloss_memgraph.databases.memgraph.initialise_database import (
-    initialise_database,
-)
 from pangloss_models import initialise
 from pangloss_models.model_bases.document import Document
+from pangloss_testing.live import initialise_database
 from pangloss_users import see_unpublished
-
-from .test_calendar_live import clear_calendar, structure  # noqa: F401
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -179,15 +175,14 @@ async def test_what_a_reader_may_not_see_is_not_found(clear_database, clear_cale
     await initialise_database()
     made = await make_documents(Factoid)
     run_id = made["exact"].id
-    from .conftest import MEMGRAPH_DATABASE  # noqa: F401
 
     token = see_unpublished.set(False)
     try:
         assert "exact" in labels((await service.day(parse_day("J1500-03-02"), J)).hits)
         # unpublished
-        from pangloss_memgraph.databases.memgraph.database import Database
+        from pangloss_core import backend
 
-        async with Database.default.driver.session() as session:
+        async with backend.current().Database.default.driver.session() as session:
             await session.run(
                 "MATCH (n:HeadNode {id: $id}) SET n.published = false", id=str(run_id)
             )
