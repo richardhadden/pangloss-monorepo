@@ -161,16 +161,16 @@ Loading these through the models (four at a time, history recording on): entitie
 
 ### What the API shows
 
-- **Memgraph wins the reads that the interface does most:** a record, a record for edit, autocomplete, a 404, anything that walks edges from a known node (a factoid's source, an activity by a person, what mentions a person). It is 3-5 times faster for a single record through the API (the same ratio as in-process, so it is the database, not the web layer, which costs 3-4 ms on both).
+- **Memgraph wins the reads that the interface does most:** a record, a record for edit, autocomplete, a 404, anything that walks edges from a known node (a factoid's source, an activity by a person, what mentions a person). It is 3-5 times faster for a single record through the API (about the same ratio as in-process).
 - **Neo4j wins writes, and anything that filters a literal on many nodes with a plan that suits it:** the year searches are 14 times faster (93 against 6.6 ms), and 12 times at eight at once. I did not find out why Memgraph is slow there (6,000 factoids is not many to scan: it is the first thing to look at, with `search_benchmark.py --profile`, and whether the demo's index on `Factoid(year)` was in place: this run did not apply the demo's migrations).
-- **Typology is twice as fast on Neo4j** (the tree, a type's path, a patch): these are walks up and down a hierarchy, which are quantified path patterns in Neo4j and a breadth-first expansion in Memgraph.
-- **Pangloss and not the database costs the same on both:** a login is 25 ms (the password hash), a list is 27-28 ms for both on a small class (a page of 50 is built by the models), a restore is 33 ms for both, and the history reads (SQLite) are within 1 ms.
+- **Typology is twice as fast on Neo4j** (the tree, a type's path, a patch): these are walks up and down a hierarchy; I did not look at why Memgraph is slower there.
+- **Pangloss and not the database costs the same on both:** a login is 25 ms (the password hash), a list of a small class is 27-28 ms for both, a restore is 33 ms for both, and the history reads (SQLite) are within 1 ms.
 
 ### Caveats for this run
 
 - The calendar's days have no documents with dates: `Event.Create(when={"type": "JulianExactDate", ...})` is refused outside the live tests' set-up, and I did not find out why. A day report is therefore the characterisations and no hits.
 - The indexes were made after the models were initialised (the earlier in-process comparison made them **before**, so it had none of the per-class label indexes: its search figures are lower than they would be on both). The demo's migrations (its `Factoid(year)` index) were not applied: `MIGRATION_CHECK` was off.
-- One run each; Neo4j has outliers (its p95 is up to 20 times the median for a read of one record: 121 ms for a Person), and the figures under 20% apart are noise.
+- One run each; Neo4j has outliers (its p95 is 5 times the median for a read of a Person: 121 ms against 23.5; Memgraph's worst is 2.5 times), and the figures under 20% apart are noise.
 - `compare_backends.py` (in-process, the models) and `compare_api.py` (HTTP) are two scripts that share no code.
 
 ## Caveats (of the in-process comparison above)
