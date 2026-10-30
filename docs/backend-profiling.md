@@ -84,10 +84,22 @@ What did not change, at this size: the writes (a Person 17.1 to 15.7 ms, a Facto
 
 The tests: 2,439 in the main run, 594 for Neo4j and the add-ons on Neo4j all pass. Two tests of Memgraph's plans were changed for the new indexes (a search of an unindexed class starts at the head nodes' label index; the helper that looks for an index knows label indexes); a test keeps the text of the creation lookup (a plan in a test cannot show the problem, as it depends on the statistics when the query is first planned).
 
+## After the fixes (Neo4j, 2026-10-30)
+
+Done for Neo4j: (1) the three statements of a write that matched `(:Entity {id: $id})` now match `(:PGIndexableNode:Entity {id: $id})`, which the unique index on `PGIndexableNode(id)` serves (`validate_write.py`); (2) `$mentions` of a node of the document, with an `is` or `is_any`, is written from the ids back along the edges to the nodes of the document (`mentioned_in_document` in `build_search_query.py`), not from each document down through every node of it. The same data and containers; the 594 tests pass.
+
+| Request | before | after |
+|---|---|---|
+| PUT entity (rename), ms | 30.0 | **21.3** (largest statement 40,013 hits to 154) |
+| search: Factoid mentions person, ms | 254.2 | **136.2** |
+| search: Factoid mentions place, ms | 275.6 | **133.3** |
+
+**`$mentions` is not solved**: its db hits went *up* (to about 1.2 million) though the time halved. The person searched for is mentioned by 66,000 edges; the index seek of the id is done again for each of the 6,000 factoids, and each walks the edges of the target. Finding the ids' incoming nodes once (a `WITH` before the `MATCH`, or a `CALL`) and joining the factoids to them is the next step; not done. Single runs, and a request of this size varies between runs.
+
 ## What is left (ranked)
 
 1. **Look for other plans kept from a small database** (Memgraph): the cache of plans by text is the cause of 3, and probably 2; a setting or a restart of the plan after the loads would be a general remedy. Not done.
-2. Neo4j: index `Entity(id)` or match writes by the concrete label; look at the `EXISTS { ... }` of `$mentions` (468,000 hits, the slowest request of all).
+2. Neo4j: `$mentions` still reads about 1.2 million hits (see above); find the ids' neighbours once, not for each factoid. (The `Entity(id)` scan is fixed.)
 3. Memgraph: the calendar's `MATCH (t:CalendarDay)-[:CHARACTERISED_BY {origin: 'manual'}]` scans all `CalendarDay` (36,007 rows; 0.4 ms each here); a label index in the calendar's `structure.py` (a migration of the calendar, and for both backends).
 4. Both: page a list without collecting and sorting the whole class (a `SKIP`/`LIMIT` on an indexed order, or a label index on a lower-cased label): the list is the request the interface makes most.
 

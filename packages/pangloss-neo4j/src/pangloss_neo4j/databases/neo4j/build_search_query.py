@@ -114,6 +114,8 @@ class Compiler:
         space, a conjunction, a reified relation) is also to what is inside them, however deep; and one that
         has to pass through some is only that. `$mentions` is of the node or of any node of its document."""
         if c.field == ANY_IN_DOCUMENT:
+            if c.operator in ("is", "is_any"):
+                return f"({self.relation_of(c, var)} OR {self.mentioned_in_document(c, var)})"
             node = self.name("m")
             return (
                 f"({self.relation_of(c, var)} OR "
@@ -121,6 +123,41 @@ class Compiler:
                 f"WHERE {self.relation_of(c, node)} }})"
             )
         return self.relation_of(c, var)
+
+    def mentioned_in_document(self, c: CheckedCondition, var: str) -> str:
+        """Whether a node of the document (not its head node) has a relation to one of the ids. Written from the ids, which
+        an index finds, back along the edges to the nodes of the document: from each document, down to every node of it and
+        all their edges, it read 468,509 hits for 6,000 factoids."""
+        wanted = self.param(c.value if c.operator == "is_any" else [c.value])
+        m, t, e = self.name("m"), self.name("t"), self.name("e")
+        head = f"({m}:PGIndexableNode {{head_node_id: {var}.id}})"
+        where = [f"{t}.id IN {wanted}", f"NOT coalesce({e}.reverse, false)"]
+        if not c.through:
+            direct = list(where)
+            if c.wrapped:
+                direct.append(f"NOT {wrapper(t)}")
+            found = f"EXISTS {{ MATCH ({t}:PGIndexableNode)<-[{e}]-{head} WHERE {' AND '.join(direct)} }}"
+            if not c.wrapped:
+                return found
+        else:
+            found = "false"
+        w, x, r, p, q = (self.name(n) for n in ("w", "x", "r", "p", "q"))
+        via = [
+            *where,
+            wrapper(w),
+            wrapper(x),
+            f"NOT coalesce({r}.reverse, false)",
+        ]
+        if c.through:
+            via.append(
+                f"all(s IN {self.param(list(c.through))} WHERE any(nd IN nodes({p}) WHERE s IN labels(nd)))"
+            )
+        body = (
+            f"MATCH {p} = ({t}:PGIndexableNode)<-[{r}]-({x}) {through(q, backwards=True)} ({w})<-[{e}]-{head} "
+            f"WHERE {' AND '.join(via)}"
+        )
+        through_wrappers = f"EXISTS {{ {body} }}"
+        return through_wrappers if found == "false" else f"({found} OR {through_wrappers})"
 
     def relation_of(self, c: CheckedCondition, var: str) -> str:
         direct = self.reaching(c, var, through_wrappers=False)

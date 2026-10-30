@@ -258,7 +258,7 @@ async def replace_urls(tx: Transaction, entity_id: uuid.UUID, urls: list[str]) -
         """
         UNWIND $urls AS url
         MATCH (node:PGUrl {url: url})
-        WHERE NOT (:Entity {id: $id})-[:has_url]->(node)
+        WHERE NOT (:PGIndexableNode:Entity {id: $id})-[:has_url]->(node)
         RETURN node.url AS url
         """,
         urls=urls,
@@ -270,7 +270,7 @@ async def replace_urls(tx: Transaction, entity_id: uuid.UUID, urls: list[str]) -
 
     await tx.run(
         """
-        MATCH (:Entity {id: $id})-[:has_url]->(node:PGUrl)
+        MATCH (:PGIndexableNode:Entity {id: $id})-[:has_url]->(node:PGUrl)
         WHERE NOT node.url IN $urls
         DETACH DELETE node
         """,
@@ -279,7 +279,7 @@ async def replace_urls(tx: Transaction, entity_id: uuid.UUID, urls: list[str]) -
     )
     await tx.run(
         """
-        MATCH (entity:Entity {id: $id})
+        MATCH (entity:PGIndexableNode:Entity {id: $id})
         UNWIND $urls AS url
         MERGE (node:PGUrl {url: url})
         MERGE (entity)-[:has_url]->(node)
