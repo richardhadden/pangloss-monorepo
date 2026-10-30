@@ -43,7 +43,7 @@ Every list and search fetches who made each node of the page with `OPTIONAL MATC
 
 ### 1. A write looks up the entity by scanning every entity
 
-`MATCH (entity:Entity {id: $id}) UNWIND $urls AS url MERGE (node:PGUrl ...)` (the URLs of an entity) plans as `NodeByLabelScan entity:Entity` and a filter on `id`: **20,007 db hits for a PUT of a Person and for a restore**, though the entity is one node. Neo4j has an index on each concrete label's `id`, but not on `Entity.id`. A rename took 27 ms (the same as Memgraph's at this size); this grows with the number of entities. Match it with its own label, or index `Entity(id)`.
+`MATCH (entity:Entity {id: $id}) UNWIND $urls AS url MERGE (node:PGUrl ...)` (the URLs of an entity) plans as `NodeByLabelScan entity:Entity` and a filter on `id`: **20,007 db hits for a PUT of a Person and for a restore**, though the entity is one node. There is no index that this match can use (I did not check which indexes exist on `id`). A rename took 27 ms (the same as Memgraph's at this size); this grows with the number of entities. Match it with its own label, or index `Entity(id)`.
 
 ### 2. `$mentions` is an `EXISTS` over every edge of every factoid
 
@@ -55,7 +55,7 @@ Every list and search fetches who made each node of the page with `OPTIONAL MATC
 
 ### 4. A record is 5 statements
 
-Getting a Person takes 15.9 ms in the database on Neo4j and 5.7 on Memgraph for the **same five statements** (the read of the node walks its edges: `Projection` 108 hits for 4 rows). Autocomplete `Pers` takes 28 ms (`Filter` of 12,000 nodes: 36,000 hits) against Memgraph's 4 ms: Neo4j's full-text index finds the nodes, and every one of them is then filtered.
+Getting a Person takes 15.9 ms in the database on Neo4j and 5.7 on Memgraph for the **same five statements** (the plan shows 108 db hits for 4 rows in `Projection`; I did not look into why it takes 3 times as long). Autocomplete `Pers` takes 28 ms (`Filter` of 12,000 nodes: 36,000 hits) against Memgraph's 4 ms: Neo4j's full-text index finds the nodes, and every one of them is then filtered.
 
 ## Both
 
