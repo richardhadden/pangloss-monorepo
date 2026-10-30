@@ -7,7 +7,7 @@ import textwrap
 from pangloss_models.migrations.files import graph_of
 
 SHIPPED = {
-    "pangloss_memgraph": ["0001_initial", "0002", "0003"],
+    "pangloss_memgraph": ["0001_initial", "0002", "0003", "0004"],
     "pangloss_dates": ["0001_initial"],
     "pangloss_calendar": ["0001_initial", "0002"],
     "pangloss_zotero": ["0001_initial"],

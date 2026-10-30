@@ -56,6 +56,6 @@ Dependencies: an add-on does not require a backend at install time; `pangloss-me
 
 - [x] 1. Loader: `pangloss_core.backend`, a `backend.py` in each backend, typology and calendar on it, their dependency on `pangloss-memgraph` moved to a dev group, a contract test (2026-10-30)
 - [x] 2. Timeout translation: a read that declares `timeout_from_setting` raises `PanglossSearchTimeoutError` from inside the transaction in both backends (`translating_timeouts`; inside, so that Memgraph's driver does not retry it for 10 s); `is_timeout` lives in each `database.py`. The handlers in `exposed_functions` are now redundant and left alone
-- [ ] 3. `lock`
+- [x] 3. `lock(tx, key)` and `ensure_lock(key)` in both backends (`:PGLock {key}`, unique, shipped migration `0004`); typology's hierarchy lock is on them. `ensure_lock` must be awaited before the transaction opens: on Memgraph a transaction that creates the node is refused at its commit when two do at once (not retried), and a transaction does not see a node committed after it began; so the node cannot be made inside `lock` (the plan said `lock(tx, key)` alone)
 - [ ] 4. Imports and fixtures
 - [ ] 5. Second backend green

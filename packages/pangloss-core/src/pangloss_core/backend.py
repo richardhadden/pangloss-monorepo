@@ -41,6 +41,13 @@ class Backend(Protocol):
     unpublished_visible: Callable[[], bool]
     """Whether the request in progress may see what is not published"""
 
+    ensure_lock: Callable[[str], Awaitable[None]]
+    """`await ensure_lock(key)` before the transaction that locks the key is opened: makes the lock's node"""
+
+    lock: Callable[[Any, str], Awaitable[None]]
+    """`await lock(tx, key)`: until the transaction ends, any other transaction that locks the same key waits for it (or runs
+    again), and then sees what it did. For a check that must not be raced"""
+
     user_exists: Callable[[str], Awaitable[bool]]
     """Whether there is a user of that name"""
 

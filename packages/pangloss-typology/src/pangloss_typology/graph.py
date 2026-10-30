@@ -176,41 +176,20 @@ async def entity_counts(
 # --- changing the hierarchy ------------------------------------------------------------------------------
 
 
-LOCK = "TypologyLock"
+def lock_key(label: str) -> str:
+    return f"typology:{label}"
 
 
 async def lock_hierarchy(tx: Transaction, label: str) -> None:
-    """Make this transaction conflict with any other that changes the same hierarchy, so that one waits for the other (the
-    database retries it, and its checks then see what the first did). Without it two moves that are each fine alone can
-    together make a loop: edges added by different transactions do not conflict. The lock is a node of its own for the
-    typology (made if it is not there; if two are made at once they all lock the one made first)."""
-    await tx.run(f"MERGE (:{LOCK} {{name: $name}})", name=label)
-    await tx.run(
-        f"""
-        MATCH (l:{LOCK} {{name: $name}})
-        WITH l ORDER BY id(l) LIMIT 1
-        SET l.writes = coalesce(l.writes, 0) + 1
-        """,
-        name=label,
-    )
+    """Make this transaction conflict with any other that changes the same hierarchy, so that one waits for the other and its
+    checks then see what the first did. Without it two moves that are each fine alone can together make a loop: edges added
+    by different transactions do not conflict. (`pangloss_core.backend`'s `lock`; the lock is made before the transaction by
+    `ensure_lock`)"""
+    await backend.current().lock(tx, lock_key(label))
 
 
 async def ensure_lock(label: str) -> None:
-    """The lock node, made before a transaction needs it (a transaction that makes it can then not be retried over it)"""
-    database = _database()
-
-    @database.write_transaction
-    async def write(tx: Transaction) -> None:
-        await tx.run(
-            f"""
-            OPTIONAL MATCH (l:{LOCK} {{name: $name}})
-            WITH l WHERE l IS NULL
-            CREATE (:{LOCK} {{name: $name, writes: 0}})
-            """,
-            name=label,
-        )
-
-    await write()
+    await backend.current().ensure_lock(lock_key(label))
 
 
 async def move(label: str, id: str, to: str | None) -> None:
