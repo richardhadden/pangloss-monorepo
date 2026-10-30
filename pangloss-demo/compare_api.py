@@ -15,6 +15,7 @@ import asyncio
 import datetime
 import importlib
 import json
+import re
 import logging
 import random
 import statistics
@@ -53,6 +54,7 @@ parser.add_argument("--cpus", default="4")
 parser.add_argument("--memory", default="6g")
 parser.add_argument("--neo4j-heap", default="2g")
 parser.add_argument("--neo4j-pagecache", default="1g")
+parser.add_argument("--profile", action="store_true", help="instead of timing: the queries of each request, with their PROFILE, and the time of each by itself")
 parser.add_argument("--out")
 args = parser.parse_args()
 
@@ -270,11 +272,120 @@ class Case:
 @dataclass
 class Report:
     rows: dict[str, dict] = field(default_factory=dict)
+    profiles: dict[str, dict] = field(default_factory=dict)
+
+
+# ---------------------------------------------------------------------------
+# Profiling: the Cypher of a request, as the driver was given it
+# ---------------------------------------------------------------------------
+
+CAPTURED: list[tuple[str, dict]] | None = None
+PROFILE_DRIVER: typing.Any = None
+WRITES = re.compile(r"\b(CREATE|MERGE|SET|DELETE|REMOVE|DROP)\b", re.IGNORECASE)
+
+
+def capture_queries() -> None:
+    """Record the statements that transactions are given while `CAPTURED` is a list"""
+    original = neo4j_driver.AsyncManagedTransaction.run
+
+    async def run(self, query, parameters=None, **kwargs):
+        if CAPTURED is not None:
+            CAPTURED.append((str(query), {**(parameters or {}), **kwargs}))
+        return await original(self, query, parameters, **kwargs)
+
+    neo4j_driver.AsyncManagedTransaction.run = run  # type: ignore[method-assign]
+
+
+def flatten(plan: dict, depth: int = 0) -> list[dict]:
+    """Neo4j's profile tree as a list of operators in order (the driver gives the keys in camelCase)"""
+    pick = lambda *names: next((plan[n] for n in names if plan.get(n) is not None), None)  # noqa: E731
+    arguments = plan.get("args") or plan.get("arguments") or {}
+    time_ns = arguments.get("Time") or arguments.get("time")
+    rows = [{"op": pick("operatorType", "operator_type") or "?", "depth": depth, "db_hits": pick("dbHits", "db_hits") or 0,
+             "rows": pick("rows") or 0, "time_ms": time_ns and time_ns / 1e6,
+             "detail": str(arguments.get("Details", ""))[:100]}]  # fmt: skip
+    for child in plan.get("children", []):
+        rows += flatten(child, depth + 1)
+    return rows
+
+
+def profile_one(query: str, params: dict) -> dict:
+    """PROFILE a statement in a transaction that is rolled back, and time it by itself (a read; five times)"""
+    write = bool(WRITES.search(query))
+    result: dict = {"query": " ".join(query.split())[:700], "write": write}
+    with PROFILE_DRIVER.session(database=CONFIG["database"]) as session:
+        try:
+            if args.backend == "memgraph" and write:
+                raise RuntimeError("(not profiled: Memgraph profiles only outside a transaction, and that would write)")
+            # (Memgraph cannot profile inside a transaction; a read is the same either way)
+            transaction = None if args.backend == "memgraph" else session.begin_transaction()
+            profiled = (transaction or session).run("PROFILE " + query, params)
+            if args.backend == "memgraph":
+                rows = [dict(r) for r in profiled]
+                result["operators"] = [
+                    {"op": str(r["OPERATOR"]).strip()[:90], "rows": r["ACTUAL HITS"], "time_ms": float(str(r["ABSOLUTE TIME"]).split()[0]) if r["ABSOLUTE TIME"] else None}
+                    for r in rows
+                ]  # fmt: skip
+            else:
+                summary = profiled.consume()
+                result["operators"] = flatten(summary.profile) if summary.profile else []
+                result["db_hits"] = sum(o["db_hits"] for o in result["operators"])
+            if transaction:
+                transaction.rollback()
+        except Exception as error:  # noqa: BLE001
+            result["profile_error"] = f"{type(error).__name__}: {error}"[:160]
+    if not write:
+        samples = []
+        with PROFILE_DRIVER.session(database=CONFIG["database"]) as session:
+            try:
+                for _ in range(5):
+                    start = time.perf_counter()
+                    found = list(session.run(query, params))
+                    samples.append(milliseconds(start))
+                result["db_ms"] = round(statistics.median(samples), 1)
+                result["rows_returned"] = len(found)
+            except Exception as error:  # noqa: BLE001
+                result["time_error"] = f"{type(error).__name__}: {error}"[:160]
+    return result
+
+
+async def profile_case(client: httpx.AsyncClient, case: Case) -> dict:
+    global CAPTURED
+    times = []
+    status = None
+    for i in range(-1, 5):
+        request = case.make()
+        if hasattr(request, "__await__"):
+            request = await request
+        method, url = request.pop("method"), request.pop("url")
+        if i == 2:  # (one request whose statements are kept)
+            CAPTURED = []
+        start = time.perf_counter()
+        response = await client.request(method, url, **request)
+        took = milliseconds(start)
+        status = response.status_code
+        if i == 2:
+            captured, CAPTURED = CAPTURED or [], None
+        if status not in case.expect:
+            return {"error": f"{status} {response.text[:100]}"}
+        if i >= 0:
+            times.append(took)
+    queries = [profile_one(q, p) for q, p in captured]
+    return {
+        "api_ms": round(statistics.median(times), 1),
+        "queries": queries,
+        "db_ms": round(sum(q.get("db_ms", 0) for q in queries), 1),
+    }
 
 
 async def run_cases(client: httpx.AsyncClient, cases: list[Case], report: Report) -> None:
     for case in cases:
         key = f"{case.group}: {case.name}"
+        if args.profile:
+            report.profiles[key] = await profile_case(client, case)
+            p = report.profiles[key]
+            print(f"  {key}: api {p.get('api_ms')} ms, {len(p.get('queries', []))} queries, {p.get('db_ms')} ms in the database {p.get('error', '')}", flush=True)
+            continue
         samples: list[float] = []
         status = None
         failure = None
@@ -343,6 +454,10 @@ async def main() -> dict:
             migration = load("pangloss_calendar", "0001_initial")
             await apply_changes(database, EMPTY_SNAPSHOT, list(migration.changes))
         driver = neo4j_driver.GraphDatabase.driver(uri(), auth=CONFIG["auth"])
+        global PROFILE_DRIVER
+        PROFILE_DRIVER = driver
+        if args.profile:
+            capture_queries()
 
         await users.create_user("bench", "bench@example.com", PASSWORD, admin=True)
         await users.create_user("reviewer", "reviewer@example.com", PASSWORD, admin=True)
@@ -559,6 +674,8 @@ async def main() -> dict:
                 await run_cases(client, review_cases, report)
 
             # ------------------------------------------------------ concurrency
+            if args.profile:
+                return {**info, "profiles": report.profiles}
             print("concurrent (8 at once)", flush=True)
             concurrent: dict[str, dict] = {}
 

@@ -30,6 +30,7 @@ Each feature in these docs is marked with its status:
 | [Logging](logging.md) | What is logged, at what level, and how to set it up |
 | [Large data](large-data.md) | How long loads and migrations take on 600,000 nodes, what to turn up, and what to look out for |
 | [Memgraph and Neo4j compared](backend-comparison.md) ✅ | The same workload (the demo models) timed on both, at 8,500 and at 600,000 nodes: loading, reads, writes, search; where each is faster, and the caveats |
+| [Profiling the backends](backend-profiling.md) ✅ | The Cypher of each request profiled on both: a write scans the whole Memgraph for its lock (12 ms at 600,000 nodes, 0.3 with an index), the creation lookup scanning 3 million rows, Neo4j scanning every entity; what to fix, ranked |
 | [Users](users.md) | User models, passwords and the `service` functions |
 | [REST API](api.md) | Authentication and the user endpoints |
 | [Command line](cli.md) | The `pangloss` command, and adding commands from apps |
