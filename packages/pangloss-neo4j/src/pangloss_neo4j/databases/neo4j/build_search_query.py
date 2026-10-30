@@ -35,6 +35,9 @@ class Compiler:
     def __init__(self, params: dict):
         self.params = params
         self.targets = 0
+        self.preludes: list[str] = []
+        """Subqueries that go before the `MATCH` of the pattern, each giving one list for the tests to look in: what is found
+        once for the whole search, not again for each node it is tested of"""
 
     def param(self, value) -> str:
         name = f"p{len(self.params)}"
@@ -115,7 +118,7 @@ class Compiler:
         has to pass through some is only that. `$mentions` is of the node or of any node of its document."""
         if c.field == ANY_IN_DOCUMENT:
             if c.operator in ("is", "is_any"):
-                return f"({self.relation_of(c, var)} OR {self.mentioned_in_document(c, var)})"
+                return self.mentioned_in_document(c, var)
             node = self.name("m")
             return (
                 f"({self.relation_of(c, var)} OR "
@@ -125,39 +128,43 @@ class Compiler:
         return self.relation_of(c, var)
 
     def mentioned_in_document(self, c: CheckedCondition, var: str) -> str:
-        """Whether a node of the document (not its head node) has a relation to one of the ids. Written from the ids, which
-        an index finds, back along the edges to the nodes of the document: from each document, down to every node of it and
-        all their edges, it read 468,509 hits for 6,000 factoids."""
+        """Whether the head node or a node of its document has a relation to one of the ids. The documents that have one
+        are found once, from the ids (which an index finds) back along the edges to the nodes of the documents, in a subquery
+        before the `MATCH`, and the test is whether the document's id is among them. (Tested from each document, the same
+        edges of the ids were read again for each: 1.2 million hits for 6,000 factoids.)"""
         wanted = self.param(c.value if c.operator == "is_any" else [c.value])
         m, t, e = self.name("m"), self.name("t"), self.name("e")
-        head = f"({m}:PGIndexableNode {{head_node_id: {var}.id}})"
         where = [f"{t}.id IN {wanted}", f"NOT coalesce({e}.reverse, false)"]
+        branches: list[str] = []
         if not c.through:
             direct = list(where)
             if c.wrapped:
                 direct.append(f"NOT {wrapper(t)}")
-            found = f"EXISTS {{ MATCH ({t}:PGIndexableNode)<-[{e}]-{head} WHERE {' AND '.join(direct)} }}"
-            if not c.wrapped:
-                return found
-        else:
-            found = "false"
-        w, x, r, p, q = (self.name(n) for n in ("w", "x", "r", "p", "q"))
-        via = [
-            *where,
-            wrapper(w),
-            wrapper(x),
-            f"NOT coalesce({r}.reverse, false)",
-        ]
-        if c.through:
-            via.append(
-                f"all(s IN {self.param(list(c.through))} WHERE any(nd IN nodes({p}) WHERE s IN labels(nd)))"
+            branches.append(
+                f"MATCH ({t}:PGIndexableNode)<-[{e}]-({m}:PGIndexableNode) WHERE {' AND '.join(direct)} "
+                f"RETURN coalesce({m}.head_node_id, {m}.id) AS head_id"
             )
-        body = (
-            f"MATCH {p} = ({t}:PGIndexableNode)<-[{r}]-({x}) {through(q, backwards=True)} ({w})<-[{e}]-{head} "
-            f"WHERE {' AND '.join(via)}"
+        if c.wrapped or c.through:
+            w, x, r, p, q = (self.name(n) for n in ("w", "x", "r", "p", "q"))
+            via = [
+                *where,
+                wrapper(w),
+                wrapper(x),
+                f"NOT coalesce({r}.reverse, false)",
+            ]
+            if c.through:
+                via.append(
+                    f"all(s IN {self.param(list(c.through))} WHERE any(nd IN nodes({p}) WHERE s IN labels(nd)))"
+                )
+            branches.append(
+                f"MATCH {p} = ({t}:PGIndexableNode)<-[{r}]-({x}) {through(q, backwards=True)} ({w})<-[{e}]-({m}:PGIndexableNode) "
+                f"WHERE {' AND '.join(via)} RETURN coalesce({m}.head_node_id, {m}.id) AS head_id"
+            )
+        heads = self.name("heads")
+        self.preludes.append(
+            f"CALL {{ CALL {{ {' UNION '.join(branches)} }} RETURN collect(DISTINCT head_id) AS {heads} }}"
         )
-        through_wrappers = f"EXISTS {{ {body} }}"
-        return through_wrappers if found == "false" else f"({found} OR {through_wrappers})"
+        return f"{var}.id IN {heads}"
 
     def relation_of(self, c: CheckedCondition, var: str) -> str:
         direct = self.reaching(c, var, through_wrappers=False)
@@ -166,7 +173,53 @@ class Compiler:
         via = self.reaching(c, var, through_wrappers=True)
         return via if c.through else f"({direct} OR {via})"
 
+    def related_to_ids(
+        self, c: CheckedCondition, var: str, through_wrappers: bool
+    ) -> str:
+        """Whether the node has the relation `c.field` to one of the ids (`is`, `is_any`). The nodes that have it are found
+        once, from the ids (an index finds them) back along the edges, in a subquery before the `MATCH`, and the test is whether
+        the node's id is among them. (Tested from each node, the id was looked up again for each: 6,000 times for 6,000
+        factoids.)"""
+        wanted = self.param(c.value if c.operator == "is_any" else [c.value])
+        e, t, y = self.name("e"), self.name("t"), self.name("y")
+        field = f"`{c.field}`"
+        if not through_wrappers:
+            where = [f"{t}.id IN {wanted}"]
+            if c.wrapped:  # (a wrapper is not what the relation is to: what is in it is)
+                where.append(f"NOT {wrapper(t)}")
+            body = (
+                f"MATCH ({t}:PGIndexableNode)<-[{e}:{field}]-({y}) WHERE {' AND '.join(where)} "
+                f"RETURN {y}.id AS related_id"
+            )
+        else:
+            # (a path of wrappers from the first, and then one edge to what is in the last: walked from the end)
+            w, x, r, p, q = (self.name(n) for n in ("w", "x", "r", "p", "q"))
+            where = [
+                f"{t}.id IN {wanted}",
+                wrapper(w),
+                wrapper(x),
+                f"NOT coalesce({r}.reverse, false)",
+            ]
+            if c.through:
+                where.append(
+                    f"all(s IN {self.param(list(c.through))} WHERE any(nd IN nodes({p}) WHERE s IN labels(nd)))"
+                )
+            body = (
+                f"MATCH {p} = ({t}:PGIndexableNode)<-[{r}]-({x}) {through(q, backwards=True)} ({w})<-[{e}:{field}]-({y}) "
+                f"WHERE {' AND '.join(where)} RETURN {y}.id AS related_id"
+            )
+        related = self.name("related")
+        self.preludes.append(
+            f"CALL {{ CALL {{ {body} }} RETURN collect(DISTINCT related_id) AS {related} }}"
+        )
+        return f"{var}.id IN {related}"
+
     def reaching(self, c: CheckedCondition, var: str, through_wrappers: bool) -> str:
+        if c.operator in ("is", "is_any") and c.field not in (
+            ANY_RELATION,
+            ANY_IN_DOCUMENT,
+        ):
+            return self.related_to_ids(c, var, through_wrappers)
         e, w = self.name("e"), self.name("w")
         where = ["true"]
         if c.field in (ANY_RELATION, ANY_IN_DOCUMENT):
@@ -217,10 +270,11 @@ class Compiler:
         def source_tests(s: str) -> str:
             tests = [f"NOT coalesce({s}.deleted, false)", self.all_of(pattern.items, s)]
             if not issubclass(pattern.model, Entity):
-                # (nor does a document inside a deleted head document: go up to it, along the reverse edges)
-                h, q = self.name("h"), self.name("q")
+                # (nor does a document inside a deleted head document: its head node is looked up by the id it records. Going
+                # up to it along the reverse edges read 222,000 hits for 6,500 activities)
+                h = self.name("h")
                 tests.append(
-                    f"NOT EXISTS {{ MATCH ({s}) {hops(q, f'coalesce({q}_edge.reverse, false)', minimum=0)} ({h}:HeadNode) WHERE {h}.deleted OR NOT ($see_unpublished OR coalesce({h}.published, true)) }}"
+                    f"NOT EXISTS {{ MATCH ({h}:HeadNode {{id: coalesce({s}.head_node_id, {s}.id)}}) WHERE {h}.deleted OR NOT ($see_unpublished OR coalesce({h}.published, true)) }}"
                 )
             return " AND ".join(tests)
 
@@ -311,7 +365,9 @@ def build_search_query(
 
     kind = "HeadNode" if issubclass(model, Document) else "Entity"
     where = f"NOT coalesce(n.deleted, false) AND ($see_unpublished OR coalesce(n.published, true)) AND {tests}"
+    prelude = "\n    ".join(compiler.preludes)
     query = f"""
+    {prelude}
     MATCH (n:`{model.__name__}`:{kind})
     WHERE {where}
     {finding}

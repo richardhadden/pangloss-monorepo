@@ -261,6 +261,18 @@ async def test_somewhere_finds_a_document_anywhere_inside_and_mentions_a_referen
     ]
     # (in a Negative inside a Negative that is not there: nothing)
     assert await mentions(**{"is": str(kate.id), "through": ["Causes"]}) == []
+    # (two of them in one search, each looking in a list of its own: the documents that have either)
+    either = Factoid.search(
+        where(
+            **{
+                "$any_of": [
+                    {"$mentions": {"is": str(john.id)}},
+                    {"$mentions": {"is": str(kate.id), "through": ["Negative"]}},
+                ]
+            }
+        )
+    )
+    assert labels(await either) == ["deep", "plain"]
 
 
 @no_type_check

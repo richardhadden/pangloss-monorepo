@@ -57,6 +57,8 @@ This is probably not particular to the typology: any query whose plan has a choi
 
 ### 4. A record is 5 statements
 
+> **Correction (second round):** most of this is not the database. The Factoid read is 1 ms on the server; the rest is a 14 ms stall of responses over a few KB through Docker Desktop's port forward (see [the artefact below](#a-measurement-artefact-responses-over-a-few-kb-take-14-ms-more-through-docker-desktop)).
+
 Getting a Person takes 15.9 ms in the database on Neo4j and 5.7 on Memgraph for the **same five statements** (the plan shows 108 db hits for 4 rows in `Projection`; I did not look into why it takes 3 times as long). Autocomplete `Pers` takes 28 ms (`Filter` of 12,000 nodes: 36,000 hits) against Memgraph's 4 ms: Neo4j's full-text index finds the nodes, and every one of them is then filtered.
 
 ## Both
@@ -94,14 +96,50 @@ Done for Neo4j: (1) the three statements of a write that matched `(:Entity {id: 
 | search: Factoid mentions person, ms | 254.2 | **136.2** |
 | search: Factoid mentions place, ms | 275.6 | **133.3** |
 
-**`$mentions` is not solved**: its db hits went *up* (to about 1.2 million) though the time halved. The person searched for is mentioned by 66,000 edges; the index seek of the id is done again for each of the 6,000 factoids, and each walks the edges of the target. Finding the ids' incoming nodes once (a `WITH` before the `MATCH`, or a `CALL`) and joining the factoids to them is the next step; not done. Single runs, and a request of this size varies between runs.
+**(Solved in the second round below.) `$mentions` was not solved by this**: its db hits went *up* (to about 1.2 million) though the time halved. The person searched for is mentioned by 66,000 edges; the index seek of the id is done again for each of the 6,000 factoids, and each walks the edges of the target. Finding the ids' incoming nodes once (a `WITH` before the `MATCH`, or a `CALL`) and joining the factoids to them is the next step; not done. Single runs, and a request of this size varies between runs.
+
+## After the fixes (Neo4j, second round, 2026-10-30)
+
+Measured on the same data and container, with a tool that reads the **server's own time** (`result_available_after + result_consumed_after` of the driver's summary), for the reason in the next section. Medians, ms:
+
+| Request | before | after | what changed |
+|---|---|---|---|
+| search: Factoid mentions person | 138 (1.48 M hits) | **1.6** (446 hits) | `$mentions` (`is`/`is_any`): the documents that have the relation are found once, from the ids, in a `CALL` before the `MATCH`; the test is `n.id IN list` |
+| search: Factoid source is | 23 | **under 1** | the same for any named relation to an id (`related_to_ids`) |
+| search: Factoid activity by person | 28 | **21** | the same (the rest is the walk through each factoid's statements) |
+| search: Person incoming activity | 44 | **30** | the "is it in a deleted or unpublished document" test looks up the head node by the `head_node_id` the node records (an index seek), not up the reverse edges to a head node (222,000 hits for 6,500 activities) |
+| list: Person page 1 | 18 | **10** | the class is scanned once (ids and count together), the page's ids are found among the sorted ids, and only those nodes are read; an entity class does no head-node lookup (there is none) |
+| list: Statement (abstract) | 61 | **38** | the same |
+| list: Factoid | 11 | **8.5** | the same |
+
+The lists give the same pages as before (page 1 and page 100 of five classes compared), and the 594 tests of the package pass (a test of `$any_of` of two `$mentions` was added: each makes a list of its own).
+
+**Not done, and why:**
+
+- **Autocomplete `Pers` (28 ms).** Tried: one aggregation instead of two, and sorting only a page's worth (`ORDER BY ... SKIP ... LIMIT`) of the 12,000 hits. The first gains 8 %; the second takes 15 ms for page 1 but **runs out of memory at a skip of about 1,500** (`MemoryPoolOutOfMemoryError`; page 150 of the autocomplete) and is slower at page 20, so it was not kept. The time is the sort of 12,000 hits. A cap on the hits (as the list has, `SEARCH_HIT_LIMIT`) would change `count`.
+- **The list's `ORDER BY ... SKIP ... LIMIT` after a `collect`** has the same fault in Neo4j (a skip of 2,450 of 12,000 ids ran out of memory), so the list sorts the ids and slices the list.
+- **The review queue** (`SubtractionNodeByLabelsScan`, 108,000 hits) takes 6.5 ms for 6,300 documents; an index on `HeadNode(review_status)` would need a migration for a small gain.
+- **`source pattern`** (19 ms): the pattern's tests are expressions of the pattern's node and may contain further relations; computing the matching targets once would need the preludes to nest. Not attempted.
+- **Neo4j's `EXPLAIN` estimates** were not looked at.
+
+## A measurement artefact: responses over a few KB take 14 ms more through Docker Desktop
+
+A response of more than a few KB takes about **14 ms longer** from the host to a container through Docker Desktop's port forward, whatever the query: a `RETURN $s` of 16,000 characters took 14.7 ms from the host and **0.2 ms** from a container on the same network (`docker run --network container:NAME`); 4,000 characters took 0.4 ms from the host. In the list query, a map holding `created_when` made the response cross the limit and the request went from 10 to 27 ms with the same plan and the same database hits; padding a fast query's result with 1,500 characters did the same. The database's own time for that read was 1 ms.
+
+What this changes in the earlier sections: **the client-side times of any request with a response of more than a few KB include it** (a page of 50, a whole document). So:
+
+- "A record is 5 statements ... 15.9 ms against 5.7" ([Findings: Neo4j, 4](#4-a-record-is-5-statements)) is mostly this: the Factoid read is **1 ms** on the server and 15.5 ms through the port forward. It is not known whether Memgraph's Bolt server escapes it (its numbers were lower), and nothing here was measured on Linux, where the forward does not exist.
+- The Neo4j-against-Memgraph comparisons in [backend-comparison.md](backend-comparison.md) for the large responses (lists, documents) should be read with it in mind. A re-run of the comparison on a Linux host, or from a container, is the check.
+- Use the summary's server time (as above) or run the client in the container's network when timing a request that returns a lot.
 
 ## What is left (ranked)
 
 1. **Look for other plans kept from a small database** (Memgraph): the cache of plans by text is the cause of 3, and probably 2; a setting or a restart of the plan after the loads would be a general remedy. Not done.
-2. Neo4j: `$mentions` still reads about 1.2 million hits (see above); find the ids' neighbours once, not for each factoid. (The `Entity(id)` scan is fixed.)
+2. **Re-run [backend-comparison.md](backend-comparison.md) without the port-forward artefact** (see above), before drawing conclusions about Neo4j's reads of large responses.
 3. Memgraph: the calendar's `MATCH (t:CalendarDay)-[:CHARACTERISED_BY {origin: 'manual'}]` scans all `CalendarDay` (36,007 rows; 0.4 ms each here); a label index in the calendar's `structure.py` (a migration of the calendar, and for both backends).
-4. Both: page a list without collecting and sorting the whole class (a `SKIP`/`LIMIT` on an indexed order, or a label index on a lower-cased label): the list is the request the interface makes most.
+4. Neo4j: the same `IN`-a-list form for a relation to a *pattern* (`source pattern`), and for `$incoming` (30 ms: each of 12,000 persons expands its incoming edges).
+5. Both: the list still counts and sorts the whole class for a page (10 ms for 12,000; it grows with the class). A page without it needs an index on a lower-cased label, or an order by `id`.
+6. Memgraph: the list and `$mentions` forms were not changed; whether the same ideas help there is not measured.
 
 ## Not done
 

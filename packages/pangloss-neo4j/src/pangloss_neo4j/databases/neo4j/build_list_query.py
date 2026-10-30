@@ -280,32 +280,40 @@ AND ($review_status IS NULL OR coalesce(n_head, n).review_status = $review_statu
             "page_number": page_number or 1,
             "page_size": page_size or 50,
         }
+        # (An entity has no head node: its tests are of itself, and the lookup of a head node that is never there is left out.
+        # The class is scanned once, for the ids and their number; the ids of the page are found among them, and only those
+        # nodes are read. (The ids are sorted whole and sliced: with `SKIP`/`LIMIT` after the `ORDER BY` Neo4j plans a `Top` of
+        # the skip and the limit together, which ran out of memory for a skip of about 2,500 ids)
+        if object_class.__metatype__ == "Entity":
+            looking, head = "", "n"
+        else:
+            looking = "OPTIONAL MATCH (listed_head:HeadNode {id: n.head_node_id})"
+            head = "coalesce(listed_head, n)"
+        visible = f"""WHERE NOT coalesce(CASE WHEN n:Entity THEN n.deleted ELSE {head}.deleted END, false)
+            AND (n:Entity OR $see_unpublished OR coalesce({head}.published, true))
+            AND ($published IS NULL OR coalesce({head}.published, true) = $published)
+            AND ($review_status IS NULL OR {head}.review_status = $review_status)"""
         return (
-            """
+            f"""
             MATCH (n:$($node_type))
             // (what has been deleted is not listed: a deleted entity, or a node of a deleted document)
-            OPTIONAL MATCH (counted_head:HeadNode {id: n.head_node_id})
-            WITH n, counted_head
-            WHERE NOT coalesce(CASE WHEN n:Entity THEN n.deleted ELSE coalesce(counted_head, n).deleted END, false)
-AND (n:Entity OR $see_unpublished OR coalesce(coalesce(counted_head, n).published, true))
-AND ($published IS NULL OR coalesce(coalesce(counted_head, n).published, true) = $published)
-AND ($review_status IS NULL OR coalesce(counted_head, n).review_status = $review_status)
-
-                        WITH count(n) AS total
-
-                        MATCH (n:$($node_type))
-            OPTIONAL MATCH (listed_head:HeadNode {id: n.head_node_id})
-            WITH n, total, listed_head
-            WHERE NOT coalesce(CASE WHEN n:Entity THEN n.deleted ELSE coalesce(listed_head, n).deleted END, false)
-AND (n:Entity OR $see_unpublished OR coalesce(coalesce(listed_head, n).published, true))
-AND ($published IS NULL OR coalesce(coalesce(listed_head, n).published, true) = $published)
-AND ($review_status IS NULL OR coalesce(listed_head, n).review_status = $review_status)
-
-                        WITH n, total
-                        ORDER BY n.id
-                        SKIP ($page_number - 1) * $page_size
-                        LIMIT $page_size
-
+            {looking}
+            WITH n{"" if not looking else ", listed_head"}
+            {visible}
+            WITH count(n) AS total, collect(n.id) AS ids
+            CALL (ids) {{
+              UNWIND ids AS listed_id
+              WITH listed_id
+              ORDER BY listed_id
+              WITH collect(listed_id) AS sorted_ids
+              RETURN sorted_ids[($page_number - 1) * $page_size .. $page_number * $page_size] AS page_ids
+            }}
+            UNWIND page_ids AS page_id
+            MATCH (n:PGIndexableNode {{id: page_id}})
+            WITH n, total
+            ORDER BY n.id
+            """
+            + """
                         OPTIONAL MATCH (hn:HeadNode:PGIndexableNode {id: n.head_node_id})
                         WITH n, total, coalesce(hn, n) AS headnode
                         MATCH (headnode)<-[:is_creation_of]-(creation:PGCreation)
