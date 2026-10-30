@@ -120,10 +120,19 @@ async def test_a_search_of_a_class_starts_at_its_index_and_a_field_asked_for_is_
             if "Scan" in line and ("(n)" in line or "(n :" in line)
         ]
 
+    # (a database with head nodes of other classes, as a real one has: the scan of a class is then smaller than that of `HeadNode`)
+    with db_driver.session() as session:
+        session.run(
+            "UNWIND range(1, 20) AS i CREATE (:IdxOther:HeadNode {id: 'idx-other-' + toString(i)})"
+        ).consume()
+        session.run("CREATE (:IdxLetter:HeadNode {id: 'idx-letter'})").consume()
     try:
-        assert scans(plan(IdxLetter, {"year": {"eq": 800}})) == [
-            "ScanAll (n)"  # (nothing yet)
-        ]
+        assert (
+            scans(plan(IdxLetter, {"year": {"eq": 800}}))
+            == [
+                "ScanAllByLabel (n :HeadNode)"  # (nothing of the model's yet: the label index of the head nodes, which the package makes)
+            ]
+        )
         await initialise_database()
         assert scans(plan(IdxLetter, {"year": {"eq": 800}})) == [
             "ScanAllByLabelProperties (n :IdxLetter {year})"
@@ -133,6 +142,10 @@ async def test_a_search_of_a_class_starts_at_its_index_and_a_field_asked_for_is_
             "ScanAllByLabel (n :IdxPerson)"
         ]
     finally:
+        with db_driver.session() as session:
+            session.run(
+                "MATCH (n) WHERE n:IdxOther OR n:IdxLetter DETACH DELETE n"
+            ).consume()
         drop_mine(db_driver)
 
 
@@ -160,3 +173,19 @@ async def test_an_embedded_class_gets_the_indexes_it_asks_for_and_no_label_index
         assert ("label", "IdxDate", ()) not in mine(db_driver)
     finally:
         drop_mine(db_driver)
+
+
+@no_type_check
+async def test_a_search_finds_the_creation_of_each_result_from_the_result():
+    """The creation of each node of the page is looked up from the node. Written the other way round
+    (`(creation:PGCreation)-[:is_creation_of]->(n)`) Memgraph planned, for `year = 800` on 6,000 factoids, a scan of every
+    node of the database for each result: 2,951,025 rows for a page of 26, 86 ms instead of 2. Which plan it makes depends on
+    the statistics when the query is first planned (a plan is kept by its text), so a plan in a test cannot show it: the
+    text, which leaves the planner no other end to start at, is what is kept."""
+    IdxPerson, IdxLetter = models()
+    query, _ = build_search_query(
+        IdxLetter, check_match(IdxLetter, Match(where={"year": {"eq": 800}})), 1, 25
+    )
+    flat = " ".join(query.split())
+    assert "OPTIONAL MATCH (n)<-[:is_creation_of]-(creation:PGCreation)" in flat
+    assert "(creation:PGCreation)-[:is_creation_of]->(n)" not in flat

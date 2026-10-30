@@ -282,7 +282,7 @@ def build_search_query(
     CALL {{
         WITH pageNodes
         UNWIND pageNodes AS n
-        OPTIONAL MATCH (creation:PGCreation)-[:is_creation_of]->(n)
+        OPTIONAL MATCH (n)<-[:is_creation_of]-(creation:PGCreation)
         OPTIONAL MATCH (creation)-[:created_by]->(user:PGUser)
         RETURN collect(n{{.*, meta: {{
             created_by: user.username,

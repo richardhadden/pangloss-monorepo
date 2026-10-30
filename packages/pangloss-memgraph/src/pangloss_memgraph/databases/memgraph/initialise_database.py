@@ -51,6 +51,12 @@ INDEXES = [
     ("HeadNode", ("id",)),
 ]
 
+# Labels that are scanned whole by a query with no property to find them by: `MATCH (l:PGMigrationLock)` is the first
+# thing every write does, the users and a user's tokens are listed, and the review queue starts from `HeadNode`. Without a
+# label index Memgraph reads every node of the database for each (12 ms for the lock at 600,000 nodes; 0.3 ms with one).
+# (A label+property index does not serve a scan by label alone.)
+LABEL_INDEXES = ["PGMigrationLock", "PGUser", "PGAccessToken", "HeadNode"]
+
 TEXT_INDEX = (TEXT_INDEX_NAME, "PGIndexableNode", "label")
 
 
@@ -90,6 +96,9 @@ def structure() -> dict[str, list[dict[str, Any]]]:
     indexes: list[dict[str, Any]] = [
         {"kind": "label+property", "label": label, "properties": list(properties)}
         for label, properties in INDEXES
+    ]
+    indexes += [
+        {"kind": "label", "label": label, "properties": []} for label in LABEL_INDEXES
     ]
     name, label, property_name = TEXT_INDEX
     indexes.append(
@@ -196,6 +205,14 @@ async def initialise_database(database: Database | None = None) -> DatabaseSetup
         if not existed:
             await run(f"CREATE INDEX ON :{label}({', '.join(properties)})")
         record(description, existed)
+
+    # Labels that are scanned whole
+    for label in LABEL_INDEXES:
+        entry = {"kind": "label", "label": label, "properties": []}
+        existed = index_exists(existing_indexes, entry)
+        if not existed:
+            await run(create_index_statement(entry))
+        record(f"index :{label}", existed)
 
     # The indexes of the models
     for entry in model_indexes():

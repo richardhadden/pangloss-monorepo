@@ -31,6 +31,10 @@ def has_index(db_driver, entry) -> bool:
         return any(
             r["index type"] == f"label_text (name: {entry['name']})" for r in rows
         )
+    if entry["kind"] == "label":
+        return any(
+            r["index type"] == "label" and r["label"] == entry["label"] for r in rows
+        )
     return any(
         r["index type"] == "label+property"
         and r["label"] == entry["label"]

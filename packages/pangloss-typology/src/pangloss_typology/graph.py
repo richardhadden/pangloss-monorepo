@@ -52,7 +52,11 @@ def row_of(record: Any) -> Row:
 
 
 async def types(label: str) -> Rows:
-    """All the types a reader may see, by id"""
+    """All the types a reader may see, by id.
+
+    (The parent is chosen after the match, not by a pattern with a test on `p`: Memgraph keeps the plan of a query by its text,
+    and with that pattern the plan made while the vocabulary was small scanned every type for each type, 360,600 rows for 600
+    types, however many there were later.)"""
     database = _database()
 
     @database.read_transaction
@@ -60,8 +64,9 @@ async def types(label: str) -> Rows:
         result = await tx.run(
             f"""
             MATCH (t:{label}) WHERE {seen("t")}
-            OPTIONAL MATCH (t)-[:{SUBTYPE}]->(p:{label}) WHERE {seen("p")}
-            RETURN properties(t) AS props, p.id AS parent
+            OPTIONAL MATCH (t)-[:{SUBTYPE}]->(p)
+            RETURN properties(t) AS props,
+                   CASE WHEN p:{label} AND {seen("p")} THEN p.id END AS parent
             """,
             see_unpublished=unpublished_visible(),
         )

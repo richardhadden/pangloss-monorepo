@@ -55,6 +55,7 @@ parser.add_argument("--memory", default="6g")
 parser.add_argument("--neo4j-heap", default="2g")
 parser.add_argument("--neo4j-pagecache", default="1g")
 parser.add_argument("--profile", action="store_true", help="instead of timing: the queries of each request, with their PROFILE, and the time of each by itself")
+parser.add_argument("--keep", action="store_true", help="leave the container running at the end (for trying queries by hand)")
 parser.add_argument("--out")
 args = parser.parse_args()
 
@@ -715,7 +716,8 @@ if __name__ == "__main__":
     try:
         output = asyncio.run(main())
     finally:
-        stop_container()
+        if not args.keep:
+            stop_container()
     text = json.dumps(output)
     print("RESULT " + text)
     if args.out:
