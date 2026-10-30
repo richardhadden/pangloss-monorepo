@@ -170,7 +170,7 @@ Loading these through the models (four at a time, history recording on): entitie
 
 - The calendar's days have no documents with dates: `Event.Create(when={"type": "JulianExactDate", ...})` is refused outside the live tests' set-up, and I did not find out why. A day report is therefore the characterisations and no hits.
 - The indexes were made after the models were initialised (the earlier in-process comparison made them **before**, so it had none of the per-class label indexes: its search figures are lower than they would be on both). The demo's migrations (its `Factoid(year)` index) were not applied: `MIGRATION_CHECK` was off.
-- One run each; Neo4j has outliers (its p95 is 5 times the median for a read of a Person: 121 ms against 23.5; Memgraph's worst is 2.5 times), and the figures under 20% apart are noise.
+- One run each; both have outliers on single reads (the worst p95 is 5.7 times the median for Memgraph, a whole Factoid, and 5.2 times for Neo4j, a Person: 121 ms against 23.5), and the figures under 20% apart are noise.
 - `compare_backends.py` (in-process, the models) and `compare_api.py` (HTTP) are two scripts that share no code.
 
 ## Caveats (of the in-process comparison above)
