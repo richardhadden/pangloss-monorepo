@@ -35,9 +35,9 @@ class Compiler:
     def __init__(self, params: dict):
         self.params = params
         self.targets = 0
-        self.preludes: list[str] = []
-        """Subqueries that go before the `MATCH` of the pattern, each giving one list for the tests to look in: what is found
-        once for the whole search, not again for each node it is tested of"""
+        self.preludes: list[tuple[str, str]] = []
+        """Subqueries that go before the `MATCH` of the pattern, each as (its text, the name of the one list it gives for the
+        tests to look in): what is found once for the whole search, not again for each node it is tested of"""
 
     def param(self, value) -> str:
         name = f"p{len(self.params)}"
@@ -162,7 +162,10 @@ class Compiler:
             )
         heads = self.name("heads")
         self.preludes.append(
-            f"CALL {{ CALL {{ {' UNION '.join(branches)} }} RETURN collect(DISTINCT head_id) AS {heads} }}"
+            (
+                f"CALL {{ CALL {{ {' UNION '.join(branches)} }} RETURN collect(DISTINCT head_id) AS {heads} }}",
+                heads,
+            )
         )
         return f"{var}.id IN {heads}"
 
@@ -173,53 +176,61 @@ class Compiler:
         via = self.reaching(c, var, through_wrappers=True)
         return via if c.through else f"({direct} OR {via})"
 
-    def related_to_ids(
+    def related_to_targets(
         self, c: CheckedCondition, var: str, through_wrappers: bool
     ) -> str:
-        """Whether the node has the relation `c.field` to one of the ids (`is`, `is_any`). The nodes that have it are found
-        once, from the ids (an index finds them) back along the edges, in a subquery before the `MATCH`, and the test is whether
-        the node's id is among them. (Tested from each node, the id was looked up again for each: 6,000 times for 6,000
+        """Whether the node has the relation `c.field` to what the condition says: one of the ids (`is`, `is_any`), or a node
+        that fits a pattern (`match`). The nodes that have it are found once, from the targets (an index finds the ids; a
+        pattern is a scan of its class, once) back along the edges, in a subquery before the `MATCH`, and the test is whether
+        the node's id is among them. (Tested from each node, the target was looked up again for each: 6,000 times for 6,000
         factoids.)"""
-        wanted = self.param(c.value if c.operator == "is_any" else [c.value])
         e, t, y = self.name("e"), self.name("t"), self.name("y")
         field = f"`{c.field}`"
+        before = len(self.preludes)
+        if c.operator == "match":
+            pattern: CheckedPattern = c.value
+            # (with `PGIndexableNode`, so that a test of the id, if the pattern has one, is an index seek)
+            label = f"PGIndexableNode:`{pattern.model.__name__}`"
+            found = self.target(c, t)
+        else:
+            label = "PGIndexableNode"
+            wanted = self.param(c.value if c.operator == "is_any" else [c.value])
+            found = f"{t}.id IN {wanted}"
+        # (what the pattern's own tests need is made first, inside this subquery: they are not seen from outside it)
+        needed = self.preludes[before:]
+        del self.preludes[before:]
         if not through_wrappers:
-            where = [f"{t}.id IN {wanted}"]
+            where = [found]
             if c.wrapped:  # (a wrapper is not what the relation is to: what is in it is)
                 where.append(f"NOT {wrapper(t)}")
-            body = (
-                f"MATCH ({t}:PGIndexableNode)<-[{e}:{field}]-({y}) WHERE {' AND '.join(where)} "
-                f"RETURN {y}.id AS related_id"
-            )
+            body = f"MATCH ({t}:{label})<-[{e}:{field}]-({y}) WHERE {' AND '.join(where)}"
         else:
             # (a path of wrappers from the first, and then one edge to what is in the last: walked from the end)
             w, x, r, p, q = (self.name(n) for n in ("w", "x", "r", "p", "q"))
-            where = [
-                f"{t}.id IN {wanted}",
-                wrapper(w),
-                wrapper(x),
-                f"NOT coalesce({r}.reverse, false)",
-            ]
+            where = [found, wrapper(w), wrapper(x), f"NOT coalesce({r}.reverse, false)"]
             if c.through:
                 where.append(
                     f"all(s IN {self.param(list(c.through))} WHERE any(nd IN nodes({p}) WHERE s IN labels(nd)))"
                 )
             body = (
-                f"MATCH {p} = ({t}:PGIndexableNode)<-[{r}]-({x}) {through(q, backwards=True)} ({w})<-[{e}:{field}]-({y}) "
-                f"WHERE {' AND '.join(where)} RETURN {y}.id AS related_id"
+                f"MATCH {p} = ({t}:{label})<-[{r}]-({x}) {through(q, backwards=True)} ({w})<-[{e}:{field}]-({y}) "
+                f"WHERE {' AND '.join(where)}"
             )
         related = self.name("related")
         self.preludes.append(
-            f"CALL {{ CALL {{ {body} }} RETURN collect(DISTINCT related_id) AS {related} }}"
+            (
+                f"CALL {{ {' '.join(text for text, _ in needed)} {body} RETURN collect(DISTINCT {y}.id) AS {related} }}",
+                related,
+            )
         )
         return f"{var}.id IN {related}"
 
     def reaching(self, c: CheckedCondition, var: str, through_wrappers: bool) -> str:
-        if c.operator in ("is", "is_any") and c.field not in (
+        if c.operator in ("is", "is_any", "match") and c.field not in (
             ANY_RELATION,
             ANY_IN_DOCUMENT,
         ):
-            return self.related_to_ids(c, var, through_wrappers)
+            return self.related_to_targets(c, var, through_wrappers)
         e, w = self.name("e"), self.name("w")
         where = ["true"]
         if c.field in (ANY_RELATION, ANY_IN_DOCUMENT):
@@ -365,7 +376,7 @@ def build_search_query(
 
     kind = "HeadNode" if issubclass(model, Document) else "Entity"
     where = f"NOT coalesce(n.deleted, false) AND ($see_unpublished OR coalesce(n.published, true)) AND {tests}"
-    prelude = "\n    ".join(compiler.preludes)
+    prelude = "\n    ".join(text for text, _ in compiler.preludes)
     query = f"""
     {prelude}
     MATCH (n:`{model.__name__}`:{kind})

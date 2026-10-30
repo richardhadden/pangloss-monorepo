@@ -106,7 +106,8 @@ Measured on the same data and container, with a tool that reads the **server's o
 |---|---|---|---|
 | search: Factoid mentions person | 138 (1.48 M hits) | **1.6** (446 hits) | `$mentions` (`is`/`is_any`): the documents that have the relation are found once, from the ids, in a `CALL` before the `MATCH`; the test is `n.id IN list` |
 | search: Factoid source is | 23 | **under 1** | the same for any named relation to an id (`related_to_ids`) |
-| search: Factoid activity by person | 28 | **21** | the same (the rest is the walk through each factoid's statements) |
+| search: Factoid source pattern | 19 | **1** | a relation to a *pattern* (`match`): the targets that fit it are found once (with `PGIndexableNode` on the label, so that a test of an id inside it is an index seek), and the nodes that point at them from there |
+| search: Factoid activity by person | 28 | **0** | the same, with the pattern's own `is` made first, in the same subquery |
 | search: Person incoming activity | 44 | **30** | the "is it in a deleted or unpublished document" test looks up the head node by the `head_node_id` the node records (an index seek), not up the reverse edges to a head node (222,000 hits for 6,500 activities) |
 | list: Person page 1 | 18 | **10** | the class is scanned once (ids and count together), the page's ids are found among the sorted ids, and only those nodes are read; an entity class does no head-node lookup (there is none) |
 | list: Statement (abstract) | 61 | **38** | the same |
@@ -119,7 +120,7 @@ The lists give the same pages as before (page 1 and page 100 of five classes com
 - **Autocomplete `Pers` (28 ms).** Tried: one aggregation instead of two, and sorting only a page's worth (`ORDER BY ... SKIP ... LIMIT`) of the 12,000 hits. The first gains 8 %; the second takes 15 ms for page 1 but **runs out of memory at a skip of about 1,500** (`MemoryPoolOutOfMemoryError`; page 150 of the autocomplete) and is slower at page 20, so it was not kept. The time is the sort of 12,000 hits. A cap on the hits (as the list has, `SEARCH_HIT_LIMIT`) would change `count`.
 - **The list's `ORDER BY ... SKIP ... LIMIT` after a `collect`** has the same fault in Neo4j (a skip of 2,450 of 12,000 ids ran out of memory), so the list sorts the ids and slices the list.
 - **The review queue** (`SubtractionNodeByLabelsScan`, 108,000 hits) takes 6.5 ms for 6,300 documents; an index on `HeadNode(review_status)` would need a migration for a small gain.
-- **`source pattern`** (19 ms): the pattern's tests are expressions of the pattern's node and may contain further relations; computing the matching targets once would need the preludes to nest. Not attempted.
+- **`$incoming` as a set** (tried, not kept): finding the targets of all valid referring nodes once (11,500 activities, each with its head-node check) took 33 ms by itself, against 27 for the committed form (each person expands its own incoming edges), and 28 against 12 ms with a `label` filter. Database hits fell from 412,000 to 171,000, but time did not follow: the set is built from every activity, where the per-person form is cheap when few match. Reverted.
 - **Neo4j's `EXPLAIN` estimates** were not looked at.
 
 ## A measurement artefact: responses over a few KB take 14 ms more through Docker Desktop
@@ -137,7 +138,7 @@ What this changes in the earlier sections: **the client-side times of any reques
 1. **Look for other plans kept from a small database** (Memgraph): the cache of plans by text is the cause of 3, and probably 2; a setting or a restart of the plan after the loads would be a general remedy. Not done.
 2. **Re-run [backend-comparison.md](backend-comparison.md) without the port-forward artefact** (see above), before drawing conclusions about Neo4j's reads of large responses.
 3. Memgraph: the calendar's `MATCH (t:CalendarDay)-[:CHARACTERISED_BY {origin: 'manual'}]` scans all `CalendarDay` (36,007 rows; 0.4 ms each here); a label index in the calendar's `structure.py` (a migration of the calendar, and for both backends).
-4. Neo4j: the same `IN`-a-list form for a relation to a *pattern* (`source pattern`), and for `$incoming` (30 ms: each of 12,000 persons expands its incoming edges).
+4. Neo4j: `$incoming` (27 ms: each of 12,000 persons expands its incoming edges; the set form was slower, see above).
 5. Both: the list still counts and sorts the whole class for a page (10 ms for 12,000; it grows with the class). A page without it needs an index on a lower-cased label, or an order by `id`.
 6. Memgraph: the list and `$mentions` forms were not changed; whether the same ideas help there is not measured.
 

@@ -392,3 +392,36 @@ async def test_documents_nested_as_deep_as_they_go_are_found_by_nesting_or_from_
         pattern = {"sections": {"type": "Section", "where": pattern}}
     found = await Book.search(where(parts={"type": "Section", "where": pattern}))
     assert labels(found) == ["deep"]
+
+
+@no_type_check
+async def test_a_relation_to_a_pattern_whose_own_test_is_a_relation(clear_database):
+    """The targets of the pattern are found once, with the relation inside it made in the same subquery (and the same through
+    a semantic space, which is the other branch)"""
+    Person, Statement, Factoid, john, jane, kate, factoid = await make(clear_database)
+    await factoid("about John", statement("a", john))
+    await factoid("about Jane", statement("b", jane))
+    await factoid("about both", statement("c", john), statement("d", jane))
+    await factoid("negated John", {"type": "Negative", "contents": [statement("e", john)]})
+    await factoid("none")
+
+    def about(person, **more):
+        return {
+            "statements": {
+                "type": "Statement",
+                "where": {"about": {"is": str(person.id), **more}},
+            }
+        }
+
+    async def found(where):
+        return labels(await Factoid.search(Match(where=where)))
+
+    assert await found(about(john)) == ["about John", "about both", "negated John"]
+    assert await found(about(jane)) == ["about Jane", "about both"]
+    assert await found(about(kate)) == []
+    assert await found({"$any_of": [about(john), about(jane)]}) == [
+        "about Jane",
+        "about John",
+        "about both",
+        "negated John",
+    ]
