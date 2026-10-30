@@ -87,7 +87,7 @@ loaded = await Statement.get(statement.id)        # a Statement.HeadView
 ## Quick start
 
 You need **Python 3.15** (the models use lazy imports, PEP 810), [uv](https://docs.astral.sh/uv/) and a running
-[Memgraph](https://memgraph.com/) (Docker is easiest).
+[Memgraph](https://memgraph.com/) (Docker is easiest). [Neo4j](guide/backends/README.md#neo4j) works too.
 
 ```bash
 git clone https://github.com/richardhadden/pangloss-monorepo
@@ -110,6 +110,24 @@ pangloss dev                     # the API on http://127.0.0.1:8000, reloading a
 
 The [getting started guide](guide/getting-started/README.md) goes through this step by step, and
 [`pangloss-demo/`](docs/demo-setup.md) is a finished project (factoids about people, groups and places) you can run.
+
+## Using your data from a script
+
+The server builds a package of your models (`pangloss sdk build`, or as it starts, with `pangloss_sdk_server` in
+`INSTALLED_APPS`). A script installs it, with only the light client library and no database driver, and writes the code it would
+write on the server:
+
+```python
+import pangloss_my_project_sdk as sdk
+
+sdk.connect("https://pangloss.example.org")      # PANGLOSS_TOKEN or a kept login supplies the credentials
+from my_app.models import Person
+
+ada = await Person.Create(label="Ada").save()    # a request to the API
+found = await Person.list(search_terms="ada")
+```
+
+See [the SDK guide](guide/sdk/README.md) and the worked example in [`sdk-demo/`](sdk-demo).
 
 ## Repository layout
 
@@ -152,7 +170,8 @@ uv run ty check                   # types
 uvx ruff check . && uvx ruff format .
 ```
 
-The Memgraph tests need Docker, or a Memgraph on `bolt://localhost:7687` (user and password `test`); the fixtures start a
+The interface has Playwright tests in [`e2e/`](e2e). The add-on packages' live tests run on Memgraph and Neo4j
+(`PANGLOSS_TEST_BACKEND`). The Memgraph tests need Docker, or a Memgraph on `bolt://localhost:7687` (user and password `test`); the fixtures start a
 container if there is none. **The tests empty that database**, so don't point them at one you care about.
 See [Development](docs/development.md) for the test layout, coverage and conventions.
 
