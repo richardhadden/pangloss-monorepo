@@ -12,40 +12,35 @@ pytestmark = pytest.mark.asyncio(loop_scope="session")
 WRITERS = 6
 
 
-async def add_one(database: Database, key: str, name: str) -> None:
+async def add_one(database: Database, key: str) -> None:
+    """Counts the items and adds one more, saying how many it saw. The writes are to different nodes, so nothing but
+    the lock makes two of these conflict: without it they all see the same count. (Shown 2026-10-31: with the `lock`
+    line taken out, this test fails.)"""
     await ensure_lock(key)
 
     @database.write_transaction
     async def write(tx: Transaction) -> None:
         await lock(tx, key)
-        seen = await (
-            await tx.run("MATCH (c:Counter {name: $name}) RETURN c.n AS n", name=name)
-        ).single()
+        seen = await (await tx.run("MATCH (i:Item) RETURN count(i) AS n")).single()
         await asyncio.sleep(
             0.05
-        )  # (long enough for the others to read the same number, if nothing stopped them)
-        await tx.run(
-            "MATCH (c:Counter {name: $name}) SET c.n = $n", name=name, n=seen["n"] + 1
-        )
+        )  # (long enough for the others to count the same, if nothing stopped them)
+        await tx.run("CREATE (:Item {seen: $n})", n=seen["n"])
 
     await write()
 
 
-async def test_transactions_that_lock_one_key_do_not_lose_each_others_changes(
+async def test_transactions_that_lock_one_key_run_one_after_the_other(
     db_driver, clear_database
 ):
     database = Database.default
-    db_driver.execute_query(
-        "CREATE (:Counter {name: 'a', n: 0})",
-        database=database.settings.DATABASE.DATABASE_NAME,
-    )
-    await asyncio.gather(*[add_one(database, "counter", "a") for _ in range(WRITERS)])
+    await asyncio.gather(*[add_one(database, "items") for _ in range(WRITERS)])
 
     rows, _, _ = db_driver.execute_query(
-        "MATCH (c:Counter {name: 'a'}) RETURN c.n AS n",
+        "MATCH (i:Item) RETURN i.seen AS seen ORDER BY seen",
         database=database.settings.DATABASE.DATABASE_NAME,
     )
-    assert rows[0]["n"] == WRITERS
+    assert [row["seen"] for row in rows] == list(range(WRITERS))
 
 
 async def test_one_lock_node_is_made_for_a_key_however_many_ask_at_once(

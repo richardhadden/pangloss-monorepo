@@ -1,5 +1,6 @@
 from typing import LiteralString
 
+from pangloss_models.autocomplete import search_words
 from pangloss_models.model_bases.document import Document
 from pangloss_models.model_bases.entity import Entity
 
@@ -154,9 +155,10 @@ TRUNCATION_QUERY: LiteralString = """
 
 
 def search_patterns(search_terms: str | None) -> list[str]:
-    """A pattern for each word of the search (a space between words, or at the ends, is not a word: `.*.*`
-    would be every node of the index)"""
-    return [f".*{word}.*" for word in (search_terms or "").split()]
+    """A pattern for each word of the search. The words are cut as the index cuts a label (`search_words`), so
+    no regular-expression character (`(`, `.`, `[`) gets into a pattern; nothing to search for is no pattern
+    (`.*.*` would be every node of the index)"""
+    return [f".*{word}.*" for word in search_words(search_terms or "")]
 
 
 def build_truncation_query(

@@ -40,7 +40,7 @@ from pangloss_models.exceptions import PanglossBulkLoadError
 from pangloss_memgraph.databases.memgraph.database import Database, slow_query_ms
 from pangloss_memgraph.databases.memgraph.migration_backend import (
     LOCK_ID,
-    _session,
+    open_session,
     lock,
     rebuild_text_indexes,
     unlock,
@@ -51,12 +51,12 @@ logger = logging.getLogger("pangloss.memgraph.bulk")
 TRANSACTIONAL = "IN_MEMORY_TRANSACTIONAL"
 ANALYTICAL = "IN_MEMORY_ANALYTICAL"
 
-# What an empty database may hold: the record of migrations, and the users (and their tokens), without
-# whom nothing can be written
 # A write is "slow" (a warning) over this during a load, if `SLOW_QUERY_MS` is less: with several
 # writers at once most take longer than the usual 500 ms, and a warning for each says nothing
 QUIET_DURING_LOAD_MS = 10_000
 
+# What an empty database may hold: the record of migrations, and the users (and their tokens), without
+# whom nothing can be written
 ALLOWED_LABELS = [
     "PGMigration",
     "PGMigrationLock",
@@ -74,7 +74,7 @@ async def prepared(database: Database) -> None:
 async def statements(database: Database, statement: str) -> list[dict[str, Any]]:
     """A statement run on its own (not in a transaction: Memgraph does not allow the ones here in
     one)"""
-    async with _session(database) as session:
+    async with open_session(database) as session:
         result = await session.run(statement)  # ty: ignore[invalid-argument-type]
         return await result.data()
 
@@ -106,7 +106,7 @@ async def set_storage_mode(database: Database, mode: str) -> None:
 
 async def something_in(database: Database) -> str | None:
     """The labels of one node that an empty database would not have, if there is one"""
-    async with _session(database) as session:
+    async with open_session(database) as session:
         result = await session.run(
             "MATCH (n) WHERE none(l IN labels(n) WHERE l IN $allowed) "
             "RETURN labels(n) AS labels LIMIT 1",
@@ -131,7 +131,7 @@ async def constraints_now(database: Database) -> list[dict[str, Any]]:
 
 async def held(database: Database) -> list[dict[str, Any]] | None:
     """The constraints a bulk load took away (kept on the lock), or None if there is no such lock"""
-    async with _session(database) as session:
+    async with open_session(database) as session:
         result = await session.run(
             "MATCH (l:PGMigrationLock {id: $id}) RETURN l.bulk_constraints AS constraints",
             id=LOCK_ID,
@@ -219,7 +219,7 @@ async def bulk_ingest(
     saved = False
     try:
         # (kept on the lock before anything is dropped, so that a load that is killed can be put back)
-        async with _session(database) as session:
+        async with open_session(database) as session:
             result = await session.run(
                 "MATCH (l:PGMigrationLock {id: $id}) SET l.bulk_constraints = $constraints",
                 id=LOCK_ID,

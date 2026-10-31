@@ -32,7 +32,7 @@ from pangloss_models.exceptions import PanglossBulkLoadError
 from pangloss_neo4j.databases.neo4j.database import Database, slow_query_ms
 from pangloss_neo4j.databases.neo4j.migration_backend import (
     LOCK_ID,
-    _session,
+    open_session,
     lock,
     unlock,
 )
@@ -63,7 +63,7 @@ async def prepared(database: Database) -> None:
 
 async def something_in(database: Database) -> str | None:
     """The labels of one node that an empty database would not have, if there is one"""
-    async with _session(database) as session:
+    async with open_session(database) as session:
         result = await session.run(
             "MATCH (n) WHERE none(l IN labels(n) WHERE l IN $allowed) "
             "RETURN labels(n) AS labels LIMIT 1",
@@ -75,7 +75,7 @@ async def something_in(database: Database) -> str | None:
 
 async def held(database: Database) -> str | None:
     """Who a bulk load that holds the lock is by (the lock's `acquired_by`), or None if no bulk load does"""
-    async with _session(database) as session:
+    async with open_session(database) as session:
         result = await session.run(
             "MATCH (l:PGMigrationLock {id: $id}) RETURN l.acquired_by AS who",
             id=LOCK_ID,

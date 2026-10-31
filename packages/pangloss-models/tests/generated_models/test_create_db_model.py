@@ -1720,10 +1720,11 @@ def test_create_db_with_multiple_type_bug():
 
 @no_type_check
 def test_recursive_type():
-    """This test is for debugging a problem; for Subjunctive[Action | Order] to work, Subjunctive must be declared before Order.
-    Could be fixable at some point to allow truly arbitrary ordering, but for now a note that SemanticSpace classes
-    should be declared before self-referencing models should suffice.
-    """
+    """Semantic spaces declared before and after a model that refers to itself inside one (`SemanticSpace[Action |
+    Order]`), and another model that holds it in a semantic space: the models are made, whatever the order.
+
+    (A bare `SemanticSpace[...]` field takes only the type `SemanticSpace`, and its model has no `contents`: found
+    2026-10-31 when this test was given assertions; not looked into.)"""
 
     class Negative[T](SemanticSpace[T]):
         pass
@@ -1742,6 +1743,27 @@ def test_recursive_type():
         thing_ordered: SemanticSpace[Action | Order]
 
     initialise()
+
+    for model in (Factoid, Order, Action):
+        assert model.Create and model.CreateDB and model.View
+    factoid = Factoid.Create(
+        label="A Factoid",
+        statements=[
+            {
+                "type": "Negative",
+                "contents": [
+                    {
+                        "type": "Order",
+                        "label": "An Order",
+                        "thing_ordered": {"type": "SemanticSpace"},
+                    }
+                ],
+            }
+        ],
+    )
+    negative = factoid.statements[0]
+    assert negative.type == "Negative"
+    assert negative.contents[0].type == "Order"
 
 
 @no_type_check

@@ -98,26 +98,27 @@ def db_driver(
         driver.close()
 
 
-@fixture(scope="function")
-def clear_database(db_driver):
-    yield
+def make_user(db_driver) -> None:
     db_driver.execute_query(
-        "MATCH (n) DETACH DELETE n",
+        "MERGE (user:PGUser {username: $username})",
+        parameters_={"username": current_request_username.get()},
         database=NEO4J_DATABASE,
     )
+
+
+@fixture(scope="function")
+def clear_database(db_driver):
+    """An empty database (but for the user of the tests) before the test, and after it. (Before as well: a run that was
+    stopped, or tests that do not clear, leave things behind)"""
+    db_driver.execute_query("MATCH (n) DETACH DELETE n", database=NEO4J_DATABASE)
+    make_user(db_driver)
+    yield
+    db_driver.execute_query("MATCH (n) DETACH DELETE n", database=NEO4J_DATABASE)
 
 
 @fixture(scope="function", autouse=True)
 def ensure_user(db_driver):
-    username = current_request_username.get()
-
-    db_driver.execute_query(
-        """
-        MERGE (user:PGUser {username: $username})
-        """,
-        parameters_={"username": username},
-        database=NEO4J_DATABASE,
-    )
+    make_user(db_driver)
     yield
 
 
@@ -149,7 +150,7 @@ async def initialise_settings(
             DATABASE_NAME=NEO4J_DATABASE,
         )
         INTERFACE_LANGUAGES: list[str] = []
-        DEFAULT_INTERFACE_LANGUAGES: str = "en"
+        DEFAULT_INTERFACE_LANGUAGE: str = "en"
         AUTHJWT_SECRET_KEY: str = "a secret for the tests, of a decent length"
         ENTITY_BASE_URL: AnyHttpUrl = AnyHttpUrl("http://test.com/")
 

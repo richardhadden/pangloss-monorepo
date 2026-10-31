@@ -69,11 +69,15 @@ class MemberShape:
         return sum(
             1
             for keys, nullable in self.required
-            if not any(key in given and (nullable or given[key] is not None) for key in keys)
+            if not any(
+                key in given and (nullable or given[key] is not None) for key in keys
+            )
         )
 
     def recognised(self, given: Mapping[str, Any]) -> int:
-        return sum(1 for key, value in given.items() if key in self.known and value is not None)
+        return sum(
+            1 for key, value in given.items() if key in self.known and value is not None
+        )
 
 
 class TaggedUnion:

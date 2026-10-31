@@ -1,6 +1,7 @@
 """The server does not start with migrations pending, or models that are not what they say"""
 
 import importlib
+import warnings
 import sys
 
 import pytest
@@ -113,7 +114,9 @@ def test_the_check_can_warn_or_be_turned_off(project):
     write_migrations()
     with pytest.warns(UserWarning, match="have not been applied"):
         start("warn")
-    start("off")
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        start("off")
 
 
 def test_a_write_during_a_migration_is_answered_with_unavailable_and_when_to_try_again():

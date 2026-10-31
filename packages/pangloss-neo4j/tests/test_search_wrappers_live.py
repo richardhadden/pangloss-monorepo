@@ -402,7 +402,9 @@ async def test_a_relation_to_a_pattern_whose_own_test_is_a_relation(clear_databa
     await factoid("about John", statement("a", john))
     await factoid("about Jane", statement("b", jane))
     await factoid("about both", statement("c", john), statement("d", jane))
-    await factoid("negated John", {"type": "Negative", "contents": [statement("e", john)]})
+    await factoid(
+        "negated John", {"type": "Negative", "contents": [statement("e", john)]}
+    )
     await factoid("none")
 
     def about(person, **more):

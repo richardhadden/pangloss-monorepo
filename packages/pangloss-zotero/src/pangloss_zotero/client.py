@@ -7,7 +7,7 @@ deleted since a version. Zotero asks that a client sends its key and API version
 import asyncio
 import logging
 from collections.abc import Awaitable, Callable
-from typing import Any, Self
+from typing import Any
 
 import httpx2 as httpx
 

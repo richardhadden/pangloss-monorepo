@@ -177,14 +177,12 @@ def logging_queries(
     return logged
 
 
-
 def is_timeout(error: Exception) -> bool:
     """Whether the database stopped the transaction because it ran too long (Neo4j reports it as a client error with a
     `TransactionTimedOut` code)"""
     return "timedout" in (getattr(error, "code", "") or "").lower() or (
         "timeout" in str(error).lower() or "timed out" in str(error).lower()
     )
-
 
 
 def translating_timeouts(work):

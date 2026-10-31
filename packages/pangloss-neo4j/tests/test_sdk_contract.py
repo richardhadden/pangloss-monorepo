@@ -26,6 +26,8 @@ from pangloss_models.model_bases.document import Document
 from pangloss_models.model_bases.entity import Entity
 from pangloss_models.model_registry import ModelRegistry
 from pangloss_sdk import client as sdk_client
+from pangloss_sdk.exceptions import PanglossSdkError
+from pangloss_sdk.update import UpdateError
 from pangloss_sdk.databases.api import exposed_functions as sdk
 from pangloss_sdk.settings import SdkSettings
 from pangloss_users import service
@@ -37,7 +39,7 @@ sys.path.insert(
 import kitchen_sink
 import sample_data
 
-from .test_edit_cycle import differences, with_real_ids, without
+from .test_edit_cycle import ROUND_TRIP_FAILURES, differences, with_real_ids, without
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -158,7 +160,7 @@ async def test_every_kind_of_model_through_the_api_reads_as_it_does_directly(
                 assert not changed, (
                     f"changed by saving what was read, unchanged: {changed[:4]}"
                 )
-            except Exception as error:
+            except (*ROUND_TRIP_FAILURES, PanglossSdkError, UpdateError) as error:
                 failures.append(
                     f"{label} while {step}: {type(error).__name__}: "
                     f"{str(error).replace(chr(10), ' ')[:260]}"

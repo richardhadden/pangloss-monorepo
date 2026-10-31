@@ -137,7 +137,9 @@ async def test_rules_are_linked_within_the_span_and_the_margin_and_the_calendar_
         )[0]["c"]
         == 0
     )
-    assert (await graph.status())["first"] == parse_day("J1490-03-21")  # (only as far as a day is needed)
+    assert (await graph.status())["first"] == parse_day(
+        "J1490-03-21"
+    )  # (only as far as a day is needed)
 
 
 @no_type_check

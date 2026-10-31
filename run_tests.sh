@@ -1,5 +1,5 @@
 #! /bin/sh
-# Everything, in three runs:
+# Everything, in three runs (after `ruff`: the formatting, and pyflakes):
 #
 #   1. the unit and integration tests of the packages (in parallel), with the Memgraph in Docker;
 #   2. the tests of `pangloss-neo4j`, against a Neo4j in Docker. (Its own run: it has its own database and its own
@@ -51,6 +51,8 @@ run() {
 }
 
 if [ -z "$args" ]; then
+    # (formatting, and pyflakes: unused names, undefined names, names defined twice)
+    run "ruff (format, pyflakes)" sh -c 'uv run ruff format --check packages && uv run ruff check --select F packages'
     # (everything: the Neo4j package has a run of its own)
     run "packages (Memgraph)" uv run pytest --dist=loadgroup -n auto --ignore=packages/pangloss-neo4j
 else

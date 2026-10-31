@@ -83,7 +83,7 @@ async def test_document_write_with_user_contextvar(db_driver, clear_database):
 
 
 @no_type_check
-async def test_document_write_with_different_types():
+async def test_document_write_with_different_types(clear_database):
     class Statement(Document):
         name: str
         age: int
@@ -198,6 +198,8 @@ async def test_write_existing_related_entity(db_driver, clear_database):
         "MATCH (st:Statement)-[r:concerns_person]->(p:Person) RETURN st, r, p"
     )
 
+    assert len(records) == 1
+
     data = records[0].data()
     assert data
 
@@ -237,6 +239,8 @@ async def test_write_with_relation_to_new_entity(db_driver, clear_database):
     records, summary, keys = db_driver.execute_query(
         "MATCH (st:Statement)-[r:concerns_person]->(p:Person) RETURN st, r, p"
     )
+
+    assert len(records) == 1
 
     data = records[0].data()
     assert data
@@ -279,6 +283,8 @@ async def test_we_can_match_id_with_wrong_type_as_long_as_its_allowed(
         "MATCH (st:Statement)-[r:concerns_person]->(p:Person) RETURN st, r, p"
     )
 
+    assert len(records) == 1
+
     data = records[0].data()
     assert data
 
@@ -314,7 +320,6 @@ async def test_write_subclassed_edges(db_driver, clear_database):
     assert p_created.id
 
     ac = Action.Create(
-        # type of concerned person is deliberately wrong!
         label="An Action",
         carried_out_by={"type": "Person", "id": p_created.id},
     )
@@ -329,38 +334,10 @@ async def test_write_subclassed_edges(db_driver, clear_database):
         RETURN st, r, p
 
         """)
+    assert len(records) == 1
     data = records[0].data()
     assert data["p"]
     assert data["st"]
-
-
-@no_type_check
-async def test_write_edge_properties(db_driver, clear_database):
-    class SomeEdge(EdgeModel):
-        number: int
-
-    class Person(Entity):
-        pass
-
-    class Statement(Document):
-        concerns_person: ViaEdge[Person, SomeEdge]
-
-    initialise()
-
-    p_to_create = Person.Create(label="John Smith")
-    p_created = await p_to_create.save()
-    assert p_created.id
-
-    st = Statement.Create(
-        label="A Statement",
-        concerns_person={
-            "type": "Person",
-            "id": p_created.id,
-            "edge_properties": {"number": 1},
-        },
-    )
-
-    await st.save()
 
 
 @no_type_check
@@ -408,6 +385,8 @@ async def test_write_nested_statements(db_driver, clear_database):
 
         """)
 
+    assert len(records) == 1
+
     data = records[0].data()
 
     assert data["order"]
@@ -417,7 +396,7 @@ async def test_write_nested_statements(db_driver, clear_database):
 
 
 @no_type_check
-async def test_massive_write(clear_database):
+async def test_massive_write(db_driver, clear_database):
     class Action(Document):
         action_carried_out_by: list[Person]
 
@@ -438,6 +417,17 @@ async def test_massive_write(clear_database):
     )
 
     await action.save()
+
+    rows = run(
+        db_driver,
+        """
+        MATCH (a:Action)-[f:action_carried_out_by]->(p:Person)
+        MATCH (a)<-[r:action_carried_out_by_reverse]-(p)
+        RETURN count(f) AS forward, count(r) AS reverse, count(DISTINCT p.id) AS people
+        """,
+    )
+    assert rows == [{"forward": 200, "reverse": 200, "people": 200}]
+    assert count_nodes(db_driver, "Person") == 200
 
 
 @no_type_check
@@ -2999,3 +2989,30 @@ async def test_a_write_of_the_same_shape_is_the_same_query_text(
         second.params
     )  # (what differs is in the parameters)
     assert all(name.startswith("x") and name[1:].isdigit() for name in first.params)
+
+
+async def test_a_write_that_keeps_breaking_a_uniqueness_constraint_is_a_conflict():
+    """`write_with_retries`: a write that loses the race every time is tried `WRITE_ATTEMPTS` times, then is a conflict;
+    any other error is raised at once"""
+    from neo4j.exceptions import ClientError
+    from pangloss_models.exceptions import PanglossConflictError
+    from pangloss_neo4j.databases.neo4j import exposed_functions
+
+    attempts = []
+
+    async def loses(*args):
+        attempts.append(args)
+        raise ClientError("Unable to commit due to unique constraint violation")
+
+    with pytest.raises(PanglossConflictError):
+        await exposed_functions.write_with_retries(loses, "x")
+    assert len(attempts) == exposed_functions.WRITE_ATTEMPTS
+
+    async def fails(*args):
+        attempts.append(args)
+        raise ClientError("Something else")
+
+    attempts.clear()
+    with pytest.raises(ClientError, match="Something else"):
+        await exposed_functions.write_with_retries(fails, "x")
+    assert len(attempts) == 1

@@ -108,6 +108,32 @@ The fixes are small, each has a test that fails today, and they should not be ca
 
 **Done when** the review's findings 1–4 and 8–11 are closed in both backends.
 
+**As built (2026-10-31).** All of the table, in both backends. Each new test was seen to fail first:
+
+- the JSON redaction case;
+- the settings case;
+- the punctuation search, which raised a `ClientError` on Memgraph;
+- `test_lock`, run with `lock` taken out: `[0, 1, 1, 1, 1, 1]` on Memgraph and `[0, 0, 0, 0, 0, 0]` on Neo4j.
+
+Also:
+
+- the bulk helper `_session` is now the public `open_session`;
+- `id_condition` is gone, and `return_identifier` starts as `None`;
+- `test_edit_cycle` and `test_sdk_contract` collect only `AssertionError`, `ValidationError`, `Neo4jError` and the
+  Pangloss errors;
+- `test_recursive_type` and the `"off"` migration check have assertions;
+- `run_tests.sh` starts with `ruff format --check` and `ruff check --select F`;
+- the coverage gate is documented as `pangloss_models` only.
+
+Left as they are:
+
+- `ensure_user` is still autouse;
+- the 65 bugbear (`B`) findings are not in the check;
+- the review's finding 7 (visibility, creation join, the inline `user` variable) waits for phases 4 and 7.
+
+Found on the way: a bare `SemanticSpace[...]` field accepts only `"type": "SemanticSpace"` and has no `contents`.
+This is noted in `test_recursive_type` and not looked into.
+
 ### Phase 1: explicit database binding (3 days)
 
 As proposed in the review discussion: decorators look up the database at call time; `connect(settings)` and

@@ -12,8 +12,11 @@ import pathlib
 import sys
 
 import pytest
+from neo4j.exceptions import Neo4jError
+from pangloss_models import exceptions as pangloss_exceptions
 from pangloss_models import initialise
 from pangloss_models.model_registry import ModelRegistry
+from pydantic import ValidationError
 
 sys.path.insert(
     0, str(pathlib.Path(__file__).parents[2] / "pangloss-models/tests/support")
@@ -23,6 +26,19 @@ import kitchen_sink
 import sample_data
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
+
+# What a model that does not go round is reported as (with the others, to see them all at once). Anything else, an
+# `AttributeError` or a `TypeError`, is a fault of the test, and is raised
+ROUND_TRIP_FAILURES: tuple[type[Exception], ...] = (
+    AssertionError,
+    ValidationError,
+    Neo4jError,
+    *(
+        value
+        for value in vars(pangloss_exceptions).values()
+        if isinstance(value, type) and issubclass(value, Exception)
+    ),
+)
 
 
 def with_real_ids(value, ids: dict):
@@ -152,7 +168,7 @@ async def test_every_kind_of_model_is_written_read_edited_and_saved_again(
                 assert not changed, (
                     f"changed by saving what was read, unchanged: {changed[:4]}"
                 )
-            except Exception as error:
+            except ROUND_TRIP_FAILURES as error:
                 failures.append(
                     f"{label} while {step}: {type(error).__name__}: {str(error).replace(chr(10), ' ')[:260]}"
                 )

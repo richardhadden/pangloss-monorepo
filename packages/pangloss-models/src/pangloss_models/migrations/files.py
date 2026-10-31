@@ -142,9 +142,7 @@ def render(migration: Migration, summary: str | None = None) -> str:
         '"""',
         "",
     ]
-    lines.append(
-        "from pangloss_models.migrations.files import changes_from_data"
-    )
+    lines.append("from pangloss_models.migrations.files import changes_from_data")
     lines.append("")
     lines.append(
         f"dependencies = {_pformat([list(d) for d in migration.dependencies])}"

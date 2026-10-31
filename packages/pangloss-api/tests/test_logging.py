@@ -3,7 +3,6 @@ import logging
 
 import pytest
 from conftest import PASSWORD
-from pangloss_core import logs
 from test_api_users import bearer, login, make_user
 
 SECRET = "sentinel-secret-value-1234"

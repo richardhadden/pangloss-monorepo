@@ -81,7 +81,7 @@ def app(tmp_path_factory):
     ModelRegistry._reset()
     sys.path.insert(0, str(root))
     try:
-        import i18napp.models
+        import i18napp.models  # noqa: F401  (the models are declared as it is imported)
 
         initialise()
         yield SimpleNamespace(root=root, exported=export_models(), package=package)

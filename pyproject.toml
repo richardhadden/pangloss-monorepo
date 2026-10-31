@@ -109,7 +109,9 @@ unresolved-attribute = "ignore"
 invalid-assignment = "ignore"
 unsupported-operator = "ignore"
 
-# Line coverage: `uv run coverage run -m pytest packages && uv run coverage report`
+# Line coverage: `uv run coverage run -m pytest packages && uv run coverage report`. The gate (`fail_under`) is for
+# `pangloss_models` only. `--source` on the command line does not override `source_pkgs`: to measure another package,
+# give a file of its own with `--rcfile` (`[run] source_pkgs = pangloss_memgraph, pangloss_core`)
 [tool.coverage.run]
 source_pkgs = ["pangloss_models"]
 branch = false

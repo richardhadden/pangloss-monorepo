@@ -107,21 +107,27 @@ def db_driver(
         driver.close()
 
 
+def make_user(db_driver, backend: BackendUnderTest) -> None:
+    db_driver.execute_query(
+        "MERGE (user:PGUser {username: $username})",
+        parameters_={"username": current_request_username.get()},
+        database_=backend.database,
+    )
+
+
 @pytest.fixture
 def clear_database(db_driver, backend_under_test: BackendUnderTest):
+    """An empty database (but for the user of the tests) before the test, and after it"""
+    clear = "MATCH (n) DETACH DELETE n"
+    db_driver.execute_query(clear, database_=backend_under_test.database)
+    make_user(db_driver, backend_under_test)
     yield
-    db_driver.execute_query(
-        "MATCH (n) DETACH DELETE n", database_=backend_under_test.database
-    )
+    db_driver.execute_query(clear, database_=backend_under_test.database)
 
 
 @pytest.fixture(autouse=True)
 def ensure_user(db_driver, backend_under_test: BackendUnderTest):
-    db_driver.execute_query(
-        "MERGE (user:PGUser {username: $username})",
-        parameters_={"username": current_request_username.get()},
-        database_=backend_under_test.database,
-    )
+    make_user(db_driver, backend_under_test)
     yield
 
 
@@ -166,7 +172,7 @@ async def initialise_settings(
             ),
         ),
         INTERFACE_LANGUAGES=(list[str], []),
-        DEFAULT_INTERFACE_LANGUAGES=(str, "en"),
+        DEFAULT_INTERFACE_LANGUAGE=(str, "en"),
         AUTHJWT_SECRET_KEY=(str, "a secret for the tests, of a decent length"),
         ENTITY_BASE_URL=(AnyHttpUrl, AnyHttpUrl("http://test.com/")),
         **settings_extras,
@@ -218,7 +224,9 @@ def run(db_driver, cypher: str, **params) -> list[dict]:
 
 async def initialise_database(*args: typing.Any, **kwargs: typing.Any) -> None:
     """The backend's `initialise_database` (indexes and constraints), on the `Database` in use"""
-    await under_test().module("initialise_database").initialise_database(*args, **kwargs)
+    await (
+        under_test().module("initialise_database").initialise_database(*args, **kwargs)
+    )
 
 
 async def apply_changes(*args: typing.Any, **kwargs: typing.Any) -> None:

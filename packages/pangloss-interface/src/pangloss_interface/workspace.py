@@ -33,7 +33,13 @@ TRANSLATIONS_PATH = "interface-app/src/generated/translations.json"
 MODULES_PATH = "interface-app/src/generated/modules.ts"
 SOURCES_PATH = "interface-app/src/generated/sources.css"
 MODULES_MANIFEST = ".synced-modules.json"
-EXCLUDED_FILES = {".env", MODELS_MODULE_PATH, TRANSLATIONS_PATH, MODULES_PATH, SOURCES_PATH}
+EXCLUDED_FILES = {
+    ".env",
+    MODELS_MODULE_PATH,
+    TRANSLATIONS_PATH,
+    MODULES_PATH,
+    SOURCES_PATH,
+}
 
 
 class Project(Protocol):
@@ -278,7 +284,7 @@ def prepare_linked(
         ).encode(),
     )
     sources_path = linked_sources_path(project_root)
-    sources = "".join(f'@source {json.dumps(str(m.root))};\n' for m in modules)
+    sources = "".join(f"@source {json.dumps(str(m.root))};\n" for m in modules)
     write_if_changed(
         sources_path, (sources or "/* (no interface modules) */\n").encode()
     )

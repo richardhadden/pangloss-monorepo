@@ -79,16 +79,27 @@ def test_json_lines_are_parseable(stream):
     assert "ValueError: boom" in second["exception"]
 
 
-def test_a_secret_in_an_exception_is_redacted_in_json_and_text(stream):
-    for format in ("json", "text"):
-        stream.truncate(0)
-        stream.seek(0)
-        logs.configure_logging("INFO", format, stream)
-        try:
-            raise ValueError(f"bad token {JWT}")
-        except ValueError:
-            logging.getLogger("pangloss.test").exception("failed")
-        assert JWT not in stream.getvalue()
+@pytest.mark.parametrize("format", ["json", "text"])
+@pytest.mark.parametrize(
+    "secret, leaked",
+    [
+        (f"bad token {JWT}", JWT),
+        # (a JSON body: `json.dumps` escapes the quotes, so it must be redacted before that)
+        ('body {"password": "hunter2"}', "hunter2"),
+        ("body {'password': 'hunter2'}", "hunter2"),
+    ],
+)
+def test_a_secret_in_a_message_or_an_exception_is_redacted(
+    stream, format, secret, leaked
+):
+    logs.configure_logging("INFO", format, stream)
+    logger = logging.getLogger("pangloss.test")
+    logger.warning(secret)
+    try:
+        raise ValueError(secret)
+    except ValueError:
+        logger.exception("failed")
+    assert leaked not in stream.getvalue()
 
 
 def test_the_level_is_applied_and_calling_again_replaces_the_handler(stream):
@@ -108,3 +119,9 @@ def test_configure_from_settings(stream):
 
     logs.configure_from_settings(Settings())
     assert logging.getLogger("pangloss").level == logging.DEBUG
+    handler = next(
+        h
+        for h in logging.getLogger("pangloss").handlers
+        if getattr(h, logs.HANDLER_MARKER, False)
+    )
+    assert isinstance(handler.formatter, logs.JsonFormatter)

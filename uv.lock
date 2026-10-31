@@ -921,7 +921,6 @@ dependencies = [
     { name = "neo4j" },
     { name = "pangloss-models" },
     { name = "pangloss-users" },
-    { name = "pytest-asyncio" },
     { name = "typer" },
 ]
 
@@ -941,7 +940,6 @@ requires-dist = [
     { name = "neo4j", specifier = ">=6.2.0" },
     { name = "pangloss-models", editable = "packages/pangloss-models" },
     { name = "pangloss-users", editable = "packages/pangloss-users" },
-    { name = "pytest-asyncio", specifier = ">=1.4.0" },
     { name = "typer", specifier = ">=0.27.3" },
 ]
 
@@ -999,7 +997,6 @@ dependencies = [
     { name = "neo4j" },
     { name = "pangloss-models" },
     { name = "pangloss-users" },
-    { name = "pytest-asyncio" },
     { name = "typer" },
 ]
 
@@ -1019,7 +1016,6 @@ requires-dist = [
     { name = "neo4j", specifier = ">=6.2.0" },
     { name = "pangloss-models", editable = "packages/pangloss-models" },
     { name = "pangloss-users", editable = "packages/pangloss-users" },
-    { name = "pytest-asyncio", specifier = ">=1.4.0" },
     { name = "typer", specifier = ">=0.27.3" },
 ]
 

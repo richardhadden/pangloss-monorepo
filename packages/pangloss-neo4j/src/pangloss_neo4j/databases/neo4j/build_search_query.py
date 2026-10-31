@@ -201,9 +201,13 @@ class Compiler:
         del self.preludes[before:]
         if not through_wrappers:
             where = [found]
-            if c.wrapped:  # (a wrapper is not what the relation is to: what is in it is)
+            if (
+                c.wrapped
+            ):  # (a wrapper is not what the relation is to: what is in it is)
                 where.append(f"NOT {wrapper(t)}")
-            body = f"MATCH ({t}:{label})<-[{e}:{field}]-({y}) WHERE {' AND '.join(where)}"
+            body = (
+                f"MATCH ({t}:{label})<-[{e}:{field}]-({y}) WHERE {' AND '.join(where)}"
+            )
         else:
             # (a path of wrappers from the first, and then one edge to what is in the last: walked from the end)
             w, x, r, p, q = (self.name(n) for n in ("w", "x", "r", "p", "q"))

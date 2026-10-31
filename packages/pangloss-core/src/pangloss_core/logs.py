@@ -92,13 +92,14 @@ class JsonFormatter(logging.Formatter):
             ).isoformat(timespec="milliseconds"),
             "level": record.levelname,
             "logger": record.name,
-            "message": record.getMessage(),
+            "message": redact(record.getMessage()),
         }
         if rid := getattr(record, "request_id", None):
             entry["request_id"] = rid
         if record.exc_info:
-            entry["exception"] = self.formatException(record.exc_info)
-        return redact(json.dumps(entry, default=str))
+            entry["exception"] = redact(self.formatException(record.exc_info))
+        # (redacted before `json.dumps`, which escapes the quotes the patterns look for)
+        return json.dumps(entry, default=str)
 
 
 class StderrHandler(logging.StreamHandler):

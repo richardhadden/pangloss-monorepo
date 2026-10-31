@@ -345,7 +345,12 @@ async def test_documents_nested_as_deep_as_they_go_are_found_by_nesting_or_from_
 
     def section(depth, heading):
         if depth == 0:
-            return {"type": "Section", "label": heading, "heading": heading, "sections": []}
+            return {
+                "type": "Section",
+                "label": heading,
+                "heading": heading,
+                "sections": [],
+            }
         return {
             "type": "Section",
             "label": f"level {depth}",
@@ -360,7 +365,11 @@ async def test_documents_nested_as_deep_as_they_go_are_found_by_nesting_or_from_
     # from anywhere, whatever the depth
     found = await Book.search(
         where(
-            **{"$somewhere": [{"type": "Section", "where": {"heading": {"eq": "the bottom"}}}]}
+            **{
+                "$somewhere": [
+                    {"type": "Section", "where": {"heading": {"eq": "the bottom"}}}
+                ]
+            }
         )
     )
     assert labels(found) == ["deep", "shallow"]

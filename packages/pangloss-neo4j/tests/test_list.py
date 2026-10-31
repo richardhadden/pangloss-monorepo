@@ -553,6 +553,35 @@ async def test_a_space_at_the_end_of_a_search_is_not_a_word(clear_database):
 
 
 @no_type_check
+@pytest.mark.parametrize("deep", [False, True])
+async def test_punctuation_in_a_search_is_not_read_as_a_pattern(clear_database, deep):
+    class Action(Document):
+        carried_out_by: Person
+
+    class Person(Entity):
+        pass
+
+    initialise()
+    for label in ("Tony Blair", "C++ Programmer"):
+        person = await Person.Create(label=label).save()
+        await Action.Create(
+            label="An Action", carried_out_by=Person.ReferenceSet(id=person.id)
+        ).save()
+
+    async def labels(search: str) -> list[str]:
+        found = await Person.list(search_terms=search, deep_search=deep)
+        return sorted(r.label for r in found.results)
+
+    # (no error, and no word: as if nothing was searched for)
+    assert await labels("(") == ["C++ Programmer", "Tony Blair"]
+    assert await labels("[a") == ["C++ Programmer", "Tony Blair"]
+    # (`.` is not "any character")
+    assert await labels("blair.") == ["Tony Blair"]
+    assert await labels("C++ prog") == ["C++ Programmer"]
+    assert await labels("(tony)") == ["Tony Blair"]
+
+
+@no_type_check
 async def test_a_list_search_that_takes_too_long_is_stopped(
     clear_database, db_driver, monkeypatch
 ):

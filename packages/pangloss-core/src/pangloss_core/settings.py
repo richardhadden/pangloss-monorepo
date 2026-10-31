@@ -50,11 +50,11 @@ class ClientSettings(PydanticBaseSettings):
 
     def __init__(self, *args, **kwargs):
         # When initialising settings, copy it to this global var for access
-        # within pangloss_core
+        # within pangloss_core (once it is valid: a failed one leaves the one before)
         global SETTINGS
 
-        SETTINGS = typing.cast("BaseSettings", self)
         super().__init__(*args, **kwargs)
+        SETTINGS = typing.cast("BaseSettings", self)
 
 
 class BaseSettings[TDatabaseSettings: DatabaseSettings](ClientSettings):

@@ -2,7 +2,7 @@ import datetime
 from typing import Any, Literal, Union, cast
 from uuid import UUID
 
-from neo4j.exceptions import ClientError, ConstraintError, TransientError
+from neo4j.exceptions import ClientError, ConstraintError
 from pangloss_models import hooks
 from pangloss_models.autocomplete import (
     AutocompleteResults,
@@ -12,7 +12,6 @@ from pangloss_models.autocomplete import (
 from pangloss_models.exceptions import (
     PanglossConflictError,
     PanglossEntityInUseError,
-    PanglossSearchTimeoutError,
     PanglossVersionConflictError,
     PanglossWriteError,
 )
@@ -68,7 +67,6 @@ from pangloss_neo4j.databases.neo4j.build_update_query import (
 from pangloss_neo4j.databases.neo4j.database import (
     Database,
     Transaction,
-    is_timeout,
     timeout_from_setting,
 )
 from pangloss_neo4j.databases.neo4j.delete_node import (
@@ -152,29 +150,20 @@ async def list_items(
 
     type_adapter = TypeAdapter(list[Union[*concrete_ref_types]])  # type: ignore
 
-    try:
-        result = await tx.run(query, **params)
-        result_values = await result.value()
+    result = await tx.run(query, **params)
+    result_values = await result.value()
 
-        # (a list with nothing in it, or a page past the end, gives no row at all)
-        results: dict = (
-            result_values[0] if result_values else await empty_page(tx, query, params)
-        )
+    # (a list with nothing in it, or a page past the end, gives no row at all)
+    results: dict = (
+        result_values[0] if result_values else await empty_page(tx, query, params)
+    )
 
-        # (whether the words had more hits than were looked at: asked apart, so that it is also known of an empty list)
-        results["truncated"] = False
-        if "patterns" in params or "tokens" in params:
-            check, check_params = build_truncation_query(search_terms, hit_limit)
-            checked = await (await tx.run(check, **check_params)).value()
-            results["truncated"] = bool(checked and checked[0])
-    except (TransientError, ClientError) as error:
-        # (Memgraph reports a transaction that was stopped as a transient error, which the driver would try again, and the
-        # search would take as long again; Neo4j as a client error with a `TransactionTimedOut` code)
-        if not is_timeout(error):
-            raise
-        raise PanglossSearchTimeoutError(
-            "The search took longer than the time allowed for it: make it more specific"
-        ) from None
+    # (whether the words had more hits than were looked at: asked apart, so that it is also known of an empty list)
+    results["truncated"] = False
+    if "patterns" in params or "tokens" in params:
+        check, check_params = build_truncation_query(search_terms, hit_limit)
+        checked = await (await tx.run(check, **check_params)).value()
+        results["truncated"] = bool(checked and checked[0])
 
     # (the facets are collected as a list of `{type, nodes}`: Neo4j has no `collect(key, value)` for a map)
     if isinstance(results.get("facets"), list):
@@ -204,18 +193,9 @@ async def search(
         page_size or 25,
         check_order(cls, match.order_by),
     )
-    try:
-        result = await tx.run(query, **params)
-        rows = await result.value()
-        found: dict = rows[0] if rows else await empty_page(tx, query, params)
-    except (TransientError, ClientError) as error:
-        # (Memgraph reports a transaction that was stopped as a transient error, which the driver would try again, and the
-        # search would take as long again; Neo4j as a client error with a `TransactionTimedOut` code)
-        if not is_timeout(error):
-            raise
-        raise PanglossSearchTimeoutError(
-            "The search took longer than the time allowed for it: make it more specific"
-        ) from None
+    result = await tx.run(query, **params)
+    rows = await result.value()
+    found: dict = rows[0] if rows else await empty_page(tx, query, params)
 
     concrete_ref_types = [t.ReferenceView for t in get_concrete_types(cls)]
     adapter = TypeAdapter(list[Union[*concrete_ref_types]])  # type: ignore

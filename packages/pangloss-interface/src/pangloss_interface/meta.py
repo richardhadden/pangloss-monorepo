@@ -148,7 +148,9 @@ def export_definitions() -> dict[str, Any]:
     classes = {
         model.__name__: model
         for model in ModelRegistry._models
-        if not (getattr(model, "__pydantic_generic_metadata__", None) or {}).get("origin")
+        if not (getattr(model, "__pydantic_generic_metadata__", None) or {}).get(
+            "origin"
+        )
     }
     from pangloss_core import settings as core_settings
 

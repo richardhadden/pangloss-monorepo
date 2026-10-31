@@ -83,7 +83,7 @@ async def ensure_ready(database: Database | None = None) -> None:
         await run_statement(database.driver, name, CONSTRAINTS[1])
 
 
-def _session(database: Database) -> neo4j.AsyncSession:
+def open_session(database: Database) -> neo4j.AsyncSession:
     return database.driver.session(database=database.settings.DATABASE.DATABASE_NAME)
 
 
@@ -93,7 +93,7 @@ async def has_data(database: Database | None = None) -> bool:
     database = database or Database.default
     if not hasattr(database, "driver"):
         await database._initialise_driver()
-    async with _session(database) as session:
+    async with open_session(database) as session:
         result = await session.run(
             "MATCH (n) WHERE NOT n:PGMigration AND NOT n:PGMigrationLock RETURN n LIMIT 1"
         )
@@ -106,7 +106,7 @@ async def applied(
     database = database or Database.default
     if not hasattr(database, "driver"):
         await database._initialise_driver()
-    async with _session(database) as session:
+    async with open_session(database) as session:
         result = await session.run(
             "MATCH (m:PGMigration) RETURN properties(m) AS record"
         )
@@ -123,7 +123,7 @@ async def backup(database: Database | None = None) -> str:
     database = database or Database.default
     if not hasattr(database, "driver"):
         await database._initialise_driver()
-    async with _session(
+    async with open_session(
         database
     ) as session:  # (an auto-commit session: not in a transaction)
         try:
@@ -143,7 +143,7 @@ async def backups(database: Database | None = None) -> list[dict[str, Any]]:
     database = database or Database.default
     if not hasattr(database, "driver"):
         await database._initialise_driver()
-    async with _session(database) as session:
+    async with open_session(database) as session:
         result = await session.run("SHOW SNAPSHOTS")
         rows = await result.data()
     return sorted(rows, key=lambda row: row["creation_time"], reverse=True)
@@ -155,7 +155,7 @@ async def backup_notice(database: Database | None = None) -> str | None:
     database = database or Database.default
     if not hasattr(database, "driver"):
         await database._initialise_driver()
-    async with _session(database) as session:
+    async with open_session(database) as session:
         result = await session.run("SHOW CONFIG")
         config = {row["name"]: row["current_value"] for row in await result.data()}
     try:
@@ -182,7 +182,7 @@ async def restore(path: str, database: Database | None = None) -> None:
         raise PanglossMigrationError(
             f"{path} is not a snapshot the server has (`pangloss backups` lists them)"
         )
-    async with _session(database) as session:
+    async with open_session(database) as session:
         try:
             result = await session.run(f'RECOVER SNAPSHOT "{path}" FORCE')  # ty: ignore[invalid-argument-type]
             await result.consume()
@@ -213,7 +213,7 @@ async def lock(who: str | None = None, database: Database | None = None) -> None
     database = database or Database.default
     if not hasattr(database, "driver"):
         await database._initialise_driver()
-    async with _session(database) as session:
+    async with open_session(database) as session:
         try:
             result = await session.run(
                 "CREATE (:PGMigrationLock {id: $id, acquired_when: $when, acquired_by: $who})",
@@ -241,7 +241,7 @@ async def unlock(database: Database | None = None) -> None:
     database = database or Database.default
     if not hasattr(database, "driver"):
         await database._initialise_driver()
-    async with _session(database) as session:
+    async with open_session(database) as session:
         result = await session.run(
             "MATCH (l:PGMigrationLock {id: $id}) DELETE l", id=LOCK_ID
         )
@@ -257,7 +257,7 @@ async def record(
     duration: float | None = None,
     error: str | None = None,
 ) -> None:
-    async with _session(database) as session:
+    async with open_session(database) as session:
         result = await session.run(
             """
             MERGE (m:PGMigration {app: $app, name: $name})
@@ -286,7 +286,7 @@ DEFAULT_BATCH_SIZE = 5000
 
 async def stored_progress(database: Database, migration: Migration) -> Progress:
     """How far an earlier run of the migration got (nothing, if it was not stopped part way)"""
-    async with _session(database) as session:
+    async with open_session(database) as session:
         result = await session.run(
             "MATCH (m:PGMigration {app: $app, name: $name}) RETURN m.status AS status, m.cursor AS cursor",
             app=migration.app,
@@ -310,7 +310,7 @@ def progress_saver(database: Database, migration: Migration):
             result = await tx.run(query, **parameters)
             await result.consume()
             return
-        async with _session(database) as session:
+        async with open_session(database) as session:
             result = await session.run(query, **parameters)  # ty: ignore[invalid-argument-type]
             await result.consume()
 
@@ -411,7 +411,7 @@ async def apply(
             migration.name,
             time.monotonic() - started,
         )
-        async with _session(database) as session:  # (nothing is left to go on from)
+        async with open_session(database) as session:  # (nothing is left to go on from)
             result = await session.run(
                 "MATCH (m:PGMigration {app: $app, name: $name}) SET m.cursor = null",
                 app=migration.app,
@@ -463,7 +463,7 @@ async def unapply(
                 )
             else:
                 state = await apply_changes(database, state, list(migration.changes))
-        async with _session(database) as session:
+        async with open_session(database) as session:
             result = await session.run(
                 "UNWIND $keys AS key MATCH (m:PGMigration {app: key[0], name: key[1]}) DELETE m",
                 keys=[list(migration.key), *(list(r) for r in migration.replaces)],

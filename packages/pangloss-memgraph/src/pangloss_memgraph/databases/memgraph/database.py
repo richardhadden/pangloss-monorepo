@@ -118,11 +118,12 @@ def logging_queries(
     return logged
 
 
-
 def is_timeout(error: Exception) -> bool:
     """Whether the database stopped the transaction because it ran too long (Memgraph reports it as a transient error, which the driver would try again, and the search would take as long again)"""
-    return isinstance(error, neo4j.exceptions.TransientError) and "timeout" in str(error).lower()
-
+    return (
+        isinstance(error, neo4j.exceptions.TransientError)
+        and "timeout" in str(error).lower()
+    )
 
 
 def translating_timeouts(work):

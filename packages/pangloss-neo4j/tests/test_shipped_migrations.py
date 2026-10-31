@@ -38,7 +38,7 @@ CHECK = textwrap.dedent(
             DB_URL="bolt://localhost:1", DB_USERNAME="x", DB_PASSWORD="x", DATABASE_NAME="x"
         )
         INTERFACE_LANGUAGES: list[str] = []
-        DEFAULT_INTERFACE_LANGUAGES: str = "en"
+        DEFAULT_INTERFACE_LANGUAGE: str = "en"
         AUTHJWT_SECRET_KEY: str = "a secret for the tests, of a decent length"
         ENTITY_BASE_URL: str = "http://test.com/"
 

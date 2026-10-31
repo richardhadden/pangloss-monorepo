@@ -1940,17 +1940,12 @@ async def add_index(database: Database, change: c.AddIndex, state: dict) -> None
 
 async def remove_index(database: Database, change: c.RemoveIndex, state: dict) -> None:
     entry = change.index
-    label, properties = (
-        ident(entry["label"]),
-        ", ".join(ident(p) for p in entry["properties"]),
-    )
     rows = await run_statement(
         database.driver, database.settings.DATABASE.DATABASE_NAME, "SHOW INDEX INFO"
     )
     if entry.get("kind") == "text":
-        if any(
-            row["index type"] == f"label_text (name: {entry['name']})" for row in rows
-        ):
+        name = ident(entry["name"]).strip("`")
+        if any(row["index type"] == f"label_text (name: {name})" for row in rows):
             await ddl(database, f"DROP TEXT INDEX {ident(entry['name'])}")
         return
     if index_exists(rows, entry):

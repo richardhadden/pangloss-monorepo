@@ -22,7 +22,7 @@ pytestmark = pytest.mark.skipif(
 
 
 @pytest.fixture
-def server(make_app):
+def server(make_app):  # noqa: F811
     """The app, serving on a free port, until the test ends"""
 
     def start(**options):

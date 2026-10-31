@@ -136,18 +136,20 @@ def test_the_colours_are_the_same_in_python_and_typescript(typescript):
     assert literals_of(source, "Colour") == set(COLOURS)
 
 
-def test_the_interface_meta_and_the_nav_have_the_keys_of_their_types(exported, typescript):
+def test_the_interface_meta_and_the_nav_have_the_keys_of_their_types(
+    exported, typescript
+):
     _, types = typescript
     assert set(exported) == types["ModelDefinitions"]
-    metas = [m["interfaceMeta"] for m in exported["models"].values() if m["interfaceMeta"]]
+    metas = [
+        m["interfaceMeta"] for m in exported["models"].values() if m["interfaceMeta"]
+    ]
     for meta in metas:
         assert set(meta) == types["InterfaceMeta"]
     assert set(exported["nav"]) == types["NavConfig"]
     # (the entries are made from the dataclasses of config.py)
     from pangloss_interface.config import InterfaceConfig, NavLink, NavModel, merge
 
-    nav = merge(
-        [("a", InterfaceConfig(nav=[NavModel("X"), NavLink("L", "/l")]))]
-    )
+    nav = merge([("a", InterfaceConfig(nav=[NavModel("X"), NavLink("L", "/l")]))])
     assert set(nav["models"]["X"]) == types["NavModelEntry"]
     assert set(nav["links"][0]) == types["NavLinkEntry"]

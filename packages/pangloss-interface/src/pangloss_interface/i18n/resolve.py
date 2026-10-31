@@ -75,7 +75,10 @@ def load_layers(
     from pangloss_interface.config import load_configs, nav_defaults
 
     layers.ui.append(
-        {slot: {default: text} for slot, text in nav_defaults(load_configs(apps)).items()}
+        {
+            slot: {default: text}
+            for slot, text in nav_defaults(load_configs(apps)).items()
+        }
     )
     # (the interface's own slots are there whether or not it is one of the INSTALLED_APPS)
     for app in dict.fromkeys(["pangloss_interface", *apps]):

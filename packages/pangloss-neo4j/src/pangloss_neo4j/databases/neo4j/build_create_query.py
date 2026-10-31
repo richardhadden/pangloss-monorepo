@@ -1,7 +1,5 @@
-import base64
 import dataclasses
 import datetime
-import lzma
 import typing
 import uuid
 from decimal import Decimal
@@ -35,19 +33,9 @@ from pangloss_models.model_bases.reified_relation import (
 )
 from pangloss_models.model_bases.semantic_space import _SemanticSpaceCreateDBBase
 from pangloss_users import current_request_username
-from pydantic import AnyUrl, BaseModel
+from pydantic import AnyUrl
 
 from pangloss_neo4j.databases.neo4j.properties import flatten
-
-
-def compress(instance: BaseModel):
-
-    stored_string = base64.b64encode(
-        lzma.compress(
-            instance.model_dump_json().encode("utf-8"), preset=9 | lzma.PRESET_EXTREME
-        )
-    ).decode("utf-8")
-    return stored_string
 
 
 type _AllCreateDBModels = (
@@ -65,11 +53,6 @@ type _AllCreateDBModels = (
 
 class Identifier(str):
     """A name in a query, for a variable or a parameter. Made by `QueryParams.new_identifier`."""
-
-
-class QuerySubstring(str):
-    def __new__(cls, query_string: str):
-        return super().__new__(cls, query_string)
 
 
 class QueryParams(dict[Identifier, dict[str, typing.Any] | typing.Any]):
@@ -161,7 +144,7 @@ class QueryObject:
     merge_query_strings: list[str]
     set_query_strings: list[str]
     params: QueryParams
-    return_identifier: Identifier
+    return_identifier: Identifier | None
     head_id: uuid.UUID
     head_type: str | None
     # What the query refers to and writes, so that it can be checked before it
@@ -193,6 +176,7 @@ class QueryObject:
         self.merge_query_strings = []
         self.set_query_strings = []
         self.params = QueryParams()
+        self.return_identifier = None
         self.head_type = head_type
         self.head_id = head_id
         self.references = []
@@ -215,7 +199,7 @@ class QueryObject:
 
     def to_query_string(self) -> typing.LiteralString:
         if not self.return_identifier:
-            raise Exception("CreateQuery.to_query_string called on non-top-level node")
+            raise ValueError("CreateQuery.to_query_string called on non-top-level node")
         return typing.cast(
             typing.LiteralString,
             f"""
@@ -700,21 +684,18 @@ def build_relation_to_existing_query(
 
         # An entity can be referred to by a URL, as well as by its id
         if isinstance(instance.id, AnyUrl):
-            id_condition = "true"
             match_node = (
                 f"(:PGUrl {{url: ${id_identifier}}})"
                 f"<-[:has_url]-({instance_identifier}:PGIndexableNode)"
             )
         else:
-            id_condition = "true"
             match_node = (
                 f"({instance_identifier}:PGIndexableNode {{id: ${id_identifier}}})"
             )
 
         query_object.match_query_strings.append(
             f"""MATCH {match_node}
-                WHERE {id_condition}
-                AND ANY(label IN labels({instance_identifier}) WHERE label IN ${allowed_types_identifier})
+                WHERE ANY(label IN labels({instance_identifier}) WHERE label IN ${allowed_types_identifier})
             """
         )
 
@@ -767,7 +748,6 @@ def build_head_create_query(
         {
             "id": str(uuid.uuid7()),
             "created_when": datetime.datetime.now(datetime.UTC),
-            # "data": compressed_data,
         }
     )
 
