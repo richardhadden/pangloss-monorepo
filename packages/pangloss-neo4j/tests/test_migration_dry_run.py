@@ -12,12 +12,12 @@ from pangloss_models.model_bases.document import Document
 from pangloss_models.model_bases.entity import Entity
 from pangloss_models.model_bases.reified_relation import ReifiedRelation
 from pangloss_neo4j.databases.neo4j import migration_backend as backend
-from pangloss_neo4j.databases.neo4j.database import Database
 from pangloss_neo4j.databases.neo4j.migrations import dry_run
 
 from .helpers import run
 from .migration_support import declare
 from .schema_helpers import indexes
+from pangloss_neo4j.databases.neo4j.database import current
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -260,7 +260,7 @@ async def test_changes_to_indexes_are_listed_and_not_tried_but_those_to_enums_ar
         c.AlterEnumMemberValue(enum="DryRunShade", member="A", old="a", new="alpha"),
     ]
 
-    reports, _ = await dry_run(Database.default, state, changes)
+    reports, _ = await dry_run(current(), state, changes)
     assert [r.status for r in reports] == ["ddl", "counted"]
     assert "not tried" in reports[0].summary()
     assert reports[1].counts.get("properties_set") == 1

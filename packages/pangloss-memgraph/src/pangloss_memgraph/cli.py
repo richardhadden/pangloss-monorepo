@@ -22,7 +22,7 @@ from pangloss_users import current_request_username
 
 from pangloss_memgraph.databases.memgraph.backend import user_exists
 from pangloss_memgraph.databases.memgraph.bulk import bulk_ingest, restore
-from pangloss_memgraph.databases.memgraph.database import Database
+from pangloss_memgraph.databases.memgraph.database import current
 from pangloss_memgraph.databases.memgraph.initialise_database import run_statement
 from pangloss_memgraph.databases.memgraph.setup import connect, disconnect
 
@@ -45,7 +45,7 @@ def run_connected[T](function: Callable[[], Awaitable[T]]) -> T:
 
 
 async def show(statement: str) -> list[dict[str, Any]]:
-    database = Database.default
+    database = current()
     return await run_statement(
         database.driver, database.settings.DATABASE.DATABASE_NAME, statement
     )

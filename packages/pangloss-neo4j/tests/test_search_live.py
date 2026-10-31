@@ -11,6 +11,7 @@ from pangloss_models.exceptions import PanglossSearchError
 from pangloss_models.model_bases.document import Document
 from pangloss_models.model_bases.entity import Entity
 from pangloss_models.search import Match
+from pangloss_neo4j.databases.neo4j.database import current
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -283,7 +284,6 @@ async def test_a_search_that_takes_too_long_is_stopped_and_not_tried_again(
 
     from pangloss_models.exceptions import PanglossSearchTimeoutError
     from pangloss_neo4j.databases.neo4j import exposed_functions
-    from pangloss_neo4j.databases.neo4j.database import Database
 
     Person, Poet, Letter = models()
     with db_driver.session() as session:
@@ -298,7 +298,7 @@ async def test_a_search_that_takes_too_long_is_stopped_and_not_tried_again(
         exposed_functions, "build_search_query", lambda *a, **k: (slow, {})
     )
     monkeypatch.setattr(
-        Database.default.settings, "SEARCH_TIMEOUT_SECONDS", 0.5, raising=False
+        current().settings, "SEARCH_TIMEOUT_SECONDS", 0.5, raising=False
     )
 
     started = time.monotonic()

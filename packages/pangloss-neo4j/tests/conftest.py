@@ -3,11 +3,12 @@ from collections.abc import Callable, Generator
 
 import docker
 import neo4j
+import pangloss_core.settings as core_settings
 import pytest
 import pytest_asyncio
 from pangloss_core.settings import BaseSettings
 from pangloss_models.model_registry import ModelRegistry
-from pangloss_neo4j.databases.neo4j.database import Database
+from pangloss_neo4j.databases.neo4j.database import Database, install
 from pangloss_neo4j.databases.neo4j.initialise_database import (
     initialise_database,
 )
@@ -142,7 +143,7 @@ async def initialise_settings(
         PROJECT_NAME: str = "Test"
         BACKEND_CORS_ORIGINS: list[typing.Any] = []
         INSTALLED_APPS: list[str] = []
-        DATABASE_MODULE: str = "pangloss_neo4j.databases.neo4j"
+        STORAGE: str | None = "pangloss_neo4j:storage"
         DATABASE: Neo4jDatabaseSettings = Neo4jDatabaseSettings(
             DB_URL=NEO4J_URI,
             DB_USERNAME=NEO4J_AUTH[0],
@@ -155,14 +156,21 @@ async def initialise_settings(
         ENTITY_BASE_URL: AnyHttpUrl = AnyHttpUrl("http://test.com/")
 
     settings = Settings()
-    db = Database(settings=settings)
-    await db._initialise_driver()
-    await initialise_database(db)
-
+    database = install(Database(settings=settings))
+    await initialise_database(database)
     try:
-        yield
+        yield settings, database
     finally:
-        await db.close()
+        await database.close()
+
+
+@pytest.fixture(scope="module", autouse=True)
+def use_test_settings(initialise_settings):
+    """The settings and the database of these tests are the process's while a module of them runs (both are the
+    process's, and the tests of another package that ran before in the same process made their own)"""
+    settings, database = initialise_settings
+    core_settings.configure(settings)
+    install(database)
 
 
 def bulk_reachable() -> None:

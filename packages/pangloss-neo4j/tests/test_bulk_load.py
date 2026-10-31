@@ -24,6 +24,7 @@ from pangloss_neo4j.databases.neo4j.schema import list_constraints, run_statemen
 
 from .conftest import NEO4J_DATABASE
 from .helpers import BULK_URI
+from pangloss_neo4j.databases.neo4j.database import current
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -35,14 +36,17 @@ async def statements(database: Database, statement: str):
 @pytest_asyncio.fixture(loop_scope="session")
 async def database(bulk_neo4j):
     """A database of its own with nothing but a user and what Pangloss makes"""
-    shared = Database.default
-    database = object.__new__(Database)
-    database.settings = shared.settings.model_copy(
-        update={
-            "DATABASE": shared.settings.DATABASE.model_copy(update={"DB_URL": BULK_URI})
-        }
+    shared = current()
+    database = Database(
+        settings=shared.settings.model_copy(
+            update={
+                "DATABASE": shared.settings.DATABASE.model_copy(
+                    update={"DB_URL": BULK_URI}
+                )
+            }
+        )
     )
-    await database._initialise_driver()
+    await database.ensure_driver()
     await statements(database, "MATCH (n) DETACH DELETE n")
     await backend.ensure_ready(database)
     await initialise_database(database)

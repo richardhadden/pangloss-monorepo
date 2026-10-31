@@ -8,8 +8,8 @@ from pangloss_core.settings import ClientSettings
 from pydantic import AnyHttpUrl, SecretStr
 from pydantic_settings import SettingsConfigDict
 
-ASYNC_DATABASE_MODULE = "pangloss_sdk.databases.api"
-SYNC_DATABASE_MODULE = "pangloss_sdk.databases.api_sync"
+ASYNC_STORAGE = "pangloss_sdk.storage:api"
+SYNC_STORAGE = "pangloss_sdk.storage:api_sync"
 
 
 class SdkSettings(ClientSettings):
@@ -33,7 +33,7 @@ class SdkSettings(ClientSettings):
     READ_RETRIES: int = 2
 
     INSTALLED_APPS: list[str] = []
-    DATABASE_MODULE: str = ASYNC_DATABASE_MODULE
+    STORAGE: str | None = ASYNC_STORAGE
 
     model_config = SettingsConfigDict(
         case_sensitive=True, env_file=".env", env_prefix="PANGLOSS_", extra="ignore"

@@ -4,11 +4,11 @@ import pytest
 from pangloss_models.exceptions import PanglossMigrationError
 from pangloss_models.migrations import changes as c
 from pangloss_models.migrations.files import EMPTY_SNAPSHOT
-from pangloss_neo4j.databases.neo4j.database import Database
 from pangloss_neo4j.databases.neo4j.initialise_database import structure
 from pangloss_neo4j.databases.neo4j.migrations import apply_changes
 
 from .schema_helpers import has_constraint, has_index
+from pangloss_neo4j.databases.neo4j.database import current
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -28,21 +28,21 @@ async def test_indexes_are_made_and_dropped_and_repeating_is_harmless(
     state = EMPTY_SNAPSHOT
     try:
         add = [c.AddIndex(index=INDEX), c.AddIndex(index=TEXT)]
-        state = await apply_changes(Database.default, state, add)
+        state = await apply_changes(current(), state, add)
         assert has_index(db_driver, INDEX) and has_index(db_driver, TEXT)
         assert state["indexes"] == [INDEX, TEXT]
 
-        await apply_changes(Database.default, EMPTY_SNAPSHOT, add)  # (already there)
+        await apply_changes(current(), EMPTY_SNAPSHOT, add)  # (already there)
         assert has_index(db_driver, INDEX)
 
         drop = [c.RemoveIndex(index=INDEX), c.RemoveIndex(index=TEXT)]
-        state = await apply_changes(Database.default, state, drop)
+        state = await apply_changes(current(), state, drop)
         assert not has_index(db_driver, INDEX) and not has_index(db_driver, TEXT)
         assert state["indexes"] == []
-        await apply_changes(Database.default, state, drop)  # (already gone)
+        await apply_changes(current(), state, drop)  # (already gone)
     finally:
         await apply_changes(
-            Database.default,
+            current(),
             EMPTY_SNAPSHOT,
             [c.RemoveIndex(index=INDEX), c.RemoveIndex(index=TEXT)],
         )
@@ -51,11 +51,11 @@ async def test_indexes_are_made_and_dropped_and_repeating_is_harmless(
 async def test_constraints_are_made_and_dropped(db_driver, clear_database):
     try:
         await apply_changes(
-            Database.default, EMPTY_SNAPSHOT, [c.AddConstraint(constraint=UNIQUE)]
+            current(), EMPTY_SNAPSHOT, [c.AddConstraint(constraint=UNIQUE)]
         )
         assert has_constraint(db_driver, UNIQUE)
         await apply_changes(
-            Database.default, EMPTY_SNAPSHOT, [c.AddConstraint(constraint=UNIQUE)]
+            current(), EMPTY_SNAPSHOT, [c.AddConstraint(constraint=UNIQUE)]
         )
 
         with db_driver.session() as session:
@@ -64,12 +64,12 @@ async def test_constraints_are_made_and_dropped(db_driver, clear_database):
                 session.run("CREATE (:MigScratch {a: 1})").consume()
 
         await apply_changes(
-            Database.default, EMPTY_SNAPSHOT, [c.RemoveConstraint(constraint=UNIQUE)]
+            current(), EMPTY_SNAPSHOT, [c.RemoveConstraint(constraint=UNIQUE)]
         )
         assert not has_constraint(db_driver, UNIQUE)
     finally:
         await apply_changes(
-            Database.default, EMPTY_SNAPSHOT, [c.RemoveConstraint(constraint=UNIQUE)]
+            current(), EMPTY_SNAPSHOT, [c.RemoveConstraint(constraint=UNIQUE)]
         )
 
 
@@ -78,7 +78,7 @@ async def test_a_constraint_that_the_data_breaks_says_so(db_driver, clear_databa
         session.run("CREATE (:MigScratch {a: 1}), (:MigScratch {a: 1})").consume()
     with pytest.raises(PanglossMigrationError, match="may break it"):
         await apply_changes(
-            Database.default, EMPTY_SNAPSHOT, [c.AddConstraint(constraint=UNIQUE)]
+            current(), EMPTY_SNAPSHOT, [c.AddConstraint(constraint=UNIQUE)]
         )
     assert not has_constraint(db_driver, UNIQUE)
 
@@ -92,7 +92,7 @@ async def test_what_the_database_needs_is_what_the_changes_make(
         c.AddConstraint(constraint=e) for e in needed["constraints"]
     ]
     await apply_changes(
-        Database.default, EMPTY_SNAPSHOT, changes
+        current(), EMPTY_SNAPSHOT, changes
     )  # (nothing to make: no error)
     assert all(has_index(db_driver, e) for e in needed["indexes"])
     assert all(has_constraint(db_driver, e) for e in needed["constraints"])

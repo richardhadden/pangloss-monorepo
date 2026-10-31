@@ -6,11 +6,11 @@ from types import SimpleNamespace
 from pangloss_models import initialise
 from pangloss_models.migrations import build_snapshot, diff
 from pangloss_models.model_registry import ModelRegistry
-from pangloss_neo4j.databases.neo4j.database import Database
 from pangloss_neo4j.databases.neo4j.migrations import (
     apply_changes,
     apply_changes_in_batches,
 )
+from pangloss_neo4j.databases.neo4j.database import current
 
 
 def declare(version) -> tuple[SimpleNamespace, dict]:
@@ -32,9 +32,9 @@ async def migrate(
     assert result.is_final, [q.question() for q in result.questions]
     changes = answer(result.changes) if answer else result.changes
     if batch_size:
-        await apply_changes_in_batches(Database.default, old, changes, batch_size)
+        await apply_changes_in_batches(current(), old, changes, batch_size)
     else:
-        await apply_changes(Database.default, old, changes)
+        await apply_changes(current(), old, changes)
     return changes
 
 

@@ -2,7 +2,7 @@
 
 **Status: built 2026-10-29 (see [As built](#9-as-built)); the 572 tests of the package, ported from Memgraph's, pass against Neo4j 2026.10.1 Community. The add-on packages (typology, calendar, zotero) are not yet backend-neutral ([§7](#7-after-this)).**
 
-`pangloss-neo4j` is the same database layer as [`pangloss-memgraph`](memgraph.md) for Neo4j, so that a project is not tied to one vendor: `DATABASE_MODULE = "pangloss_neo4j.databases.neo4j"` and `"pangloss_neo4j"` in `INSTALLED_APPS` instead of the Memgraph pair. The models, the API, the interface and the SDK are not touched: they speak to a backend only through its `exposed_functions`, `setup`, `migration_backend`, `users` and `review` modules (the *contract*, [§3](#3-the-contract-a-backend-must-meet)).
+`pangloss-neo4j` is the same database layer as [`pangloss-memgraph`](memgraph.md) for Neo4j, so that a project is not tied to one vendor: `STORAGE = "pangloss_neo4j:storage"` and `"pangloss_neo4j"` in `INSTALLED_APPS` instead of the Memgraph pair. The models, the API, the interface and the SDK are not touched: they speak to a backend only through its `exposed_functions`, `setup`, `migration_backend`, `users` and `review` modules (the *contract*, [§3](#3-the-contract-a-backend-must-meet)).
 
 It is a **port**, with the Memgraph package as the template and its test suite as the specification: what Memgraph's tests ask of a backend, the Neo4j package's must meet too ([§6](#6-tests)).
 
@@ -59,7 +59,7 @@ Copied from `pangloss_memgraph`, renamed, and changed only where the table above
 
 ## 3. The contract a backend must meet
 
-What the rest of Pangloss imports from the module named by `DATABASE_MODULE` (found by reading the callers, [list in the tests](#6-tests)):
+What the rest of Pangloss imports from the parts of the storage backend (`STORAGE`; `DATABASE_MODULE` before 2026-10-31) (found by reading the callers, [list in the tests](#6-tests)):
 
 - `exposed_functions`: `create`, `read`, `update`, `delete`, `list`, `search`, `autocomplete`, `incoming`, `tree`, `bulk` and the rest the API and SDK call (the same names and signatures as Memgraph's, so the contract test calls both);
 - `setup`: `create_database`, `connect`, `disconnect`, `setup_database`;
@@ -142,7 +142,7 @@ Not part of this task, recorded so that it is not forgotten:
 
 ## 9. As built
 
-**Package** `packages/pangloss-neo4j` (`DATABASE_MODULE = "pangloss_neo4j.databases.neo4j"`, `"pangloss_neo4j"` in `INSTALLED_APPS`, `pangloss neo4j ...`): the modules of [§2](#2-what-is-reused-and-what-changes), with the names Memgraph's have, plus `properties.py` (flattening), `schema.py` (names, listing, DDL and the search patterns) and `traversal.py` (quantified path patterns). Verified with 572 tests (about 130 s, against 573 in 100 s for Memgraph's), the list in `packages/pangloss-neo4j/tests/NOT_PORTED.md` being what is not the same. `run_tests.sh` runs them as a run of their own (`--no-neo4j` skips it). A project made in a temporary directory with the real `pangloss` command (`makemigrations`, `migrate`, `users create`, `neo4j bulk-load`, `check-data`) works against Neo4j (`test_bulk_load_cli.py`).
+**Package** `packages/pangloss-neo4j` (`STORAGE = "pangloss_neo4j:storage"`, `"pangloss_neo4j"` in `INSTALLED_APPS`, `pangloss neo4j ...`): the modules of [§2](#2-what-is-reused-and-what-changes), with the names Memgraph's have, plus `properties.py` (flattening), `schema.py` (names, listing, DDL and the search patterns) and `traversal.py` (quantified path patterns). Verified with 572 tests (about 130 s, against 573 in 100 s for Memgraph's), the list in `packages/pangloss-neo4j/tests/NOT_PORTED.md` being what is not the same. `run_tests.sh` runs them as a run of their own (`--no-neo4j` skips it). A project made in a temporary directory with the real `pangloss` command (`makemigrations`, `migrate`, `users create`, `neo4j bulk-load`, `check-data`) works against Neo4j (`test_bulk_load_cli.py`).
 
 **What the tests found that the checks of [§1](#1-what-was-checked-and-what-it-showed) had not**
 

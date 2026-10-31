@@ -428,11 +428,11 @@ async def main() -> dict:
         PROJECT_NAME=(str, "Compare"),
         BACKEND_CORS_ORIGINS=(list[typing.Any], []),
         INSTALLED_APPS=(list[str], apps),
-        DATABASE_MODULE=(str, CONFIG["module"]),
+        STORAGE=(str, CONFIG["module"].split(".")[0] + ":storage"),
         DATABASE=(settings_type, settings_type(DB_URL=uri(), DB_USERNAME=CONFIG["auth"][0],
                                                DB_PASSWORD=CONFIG["auth"][1], DATABASE_NAME=CONFIG["database"])),
         INTERFACE_LANGUAGES=(list[str], ["en"]),
-        DEFAULT_INTERFACE_LANGUAGES=(str, "en"),
+        DEFAULT_INTERFACE_LANGUAGE=(str, "en"),
         AUTHJWT_SECRET_KEY=(str, "a secret for the comparison, of a decent length"),
         ENTITY_BASE_URL=(AnyHttpUrl, AnyHttpUrl("http://compare.test/entity/")),
         MIGRATION_CHECK=(str, "off"),
@@ -449,7 +449,7 @@ async def main() -> dict:
     info: dict = {"backend": args.backend, "part": args.part, "load": {}, "scale": vars(args)}
 
     async with app.router.lifespan_context(app):
-        database = importlib.import_module(f"{CONFIG['module']}.database").Database.default
+        database = importlib.import_module(f"{CONFIG['module']}.database").current()
         await importlib.import_module(f"{CONFIG['module']}.initialise_database").initialise_database(database)
         if args.part == "extras":
             migration = load("pangloss_calendar", "0001_initial")

@@ -33,7 +33,7 @@ CHECK = textwrap.dedent(
         PROJECT_NAME: str = "Shipped"
         BACKEND_CORS_ORIGINS: list = []
         INSTALLED_APPS: list[str] = sys.argv[1:]
-        DATABASE_MODULE: str = "pangloss_neo4j.databases.neo4j"
+        STORAGE: str | None = "pangloss_neo4j:storage"
         DATABASE: Neo4jDatabaseSettings = Neo4jDatabaseSettings(
             DB_URL="bolt://localhost:1", DB_USERNAME="x", DB_PASSWORD="x", DATABASE_NAME="x"
         )

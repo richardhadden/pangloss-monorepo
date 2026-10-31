@@ -13,12 +13,12 @@ from pangloss_models.search import Match, check_match
 
 from .schema_helpers import drop_indexes_of, indexes
 from pangloss_neo4j.databases.neo4j.build_search_query import build_search_query
-from pangloss_neo4j.databases.neo4j.database import Database
 from pangloss_neo4j.databases.neo4j.initialise_database import (
     initialise_database,
     structure,
 )
 from pangloss_neo4j.databases.neo4j.migrations import apply_changes
+from pangloss_neo4j.databases.neo4j.database import current
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -75,7 +75,7 @@ async def test_they_are_in_the_structure_that_migrations_make_and_unmake(db_driv
     assert len(entries) == 3 and all("app" not in e for e in entries)
     try:
         await apply_changes(
-            Database.default,
+            current(),
             EMPTY_SNAPSHOT,
             [c.AddIndex(index=e) for e in entries] * 2,  # (twice: harmless)
         )
@@ -83,7 +83,7 @@ async def test_they_are_in_the_structure_that_migrations_make_and_unmake(db_driv
         assert len(mine(db_driver)) == 1
 
         await apply_changes(
-            Database.default,
+            current(),
             EMPTY_SNAPSHOT,
             [c.RemoveIndex(index=e) for e in entries] * 2,
         )

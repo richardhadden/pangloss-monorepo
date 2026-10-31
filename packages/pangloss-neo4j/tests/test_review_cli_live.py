@@ -9,12 +9,12 @@ from types import SimpleNamespace
 from typing import no_type_check
 
 import pytest
-from pangloss_neo4j.databases.neo4j.database import Database
 from pangloss_review.cli import cli
 from pangloss_review.status import ReviewStatus
 from typer.testing import CliRunner
 
 from .test_review_live import make_user, models
+from pangloss_neo4j.databases.neo4j.database import current
 
 
 @pytest.fixture
@@ -22,12 +22,15 @@ def own_driver():
     """A backend like the real one, but with a new driver for each event loop"""
     from pangloss_neo4j.databases.neo4j import setup
 
-    database = Database.default
+    database = current()
     shared = database.driver
 
     async def connect():
-        await database._initialise_driver()
-        await database.driver.verify_connectivity()
+        database.driver = (
+            None  # (the shared one belongs to the other loop: not closed here)
+        )
+        driver = await database.ensure_driver()
+        await driver.verify_connectivity()
 
     backend = SimpleNamespace(connect=connect, disconnect=setup.disconnect)
     yield backend

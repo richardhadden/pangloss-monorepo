@@ -1,8 +1,10 @@
+import contextlib
+import contextvars
 import functools
 import logging
 import time
-from collections.abc import Awaitable, Callable
-from typing import Any, ClassVar, Concatenate
+from collections.abc import Awaitable, Callable, Iterator
+from typing import Any, Concatenate
 
 import neo4j
 from pangloss_core.settings import BaseSettings
@@ -146,25 +148,24 @@ def translating_timeouts(work):
 
 
 class Database:
+    """A database: its settings, and a driver, made when it is first needed (`ensure_driver`).
+
+    The process has one database in use (`install`; `current()` gives it), and a task can use another for a while
+    (`using`). The transactions of `read_transaction` and `write_transaction` run on the one in use when they are
+    called, not when they are declared. A `Database`'s own `read_transaction` and `write_transaction` run on it."""
+
     settings: BaseSettings[MemgraphDatabaseSettings]
-    driver: neo4j.AsyncDriver
+    driver: neo4j.AsyncDriver | None
 
-    _instances: dict[int, Database] = {}
-    _initialised: bool = False
-    default: ClassVar[Database]
-    # True while this process is making a bulk load (`bulk.bulk_ingest`), which holds the migration
-    # lock itself: its own writes are let through, everyone else's are refused
-    bulk_loading: bool = False
-    # If set, what `SLOW_QUERY_MS` is for this process (a bulk load raises it: with many writers at
-    # once nearly every write is "slow", and a warning for each says nothing)
-    slow_query_threshold: int | None = None
-
-    def __init__(self, settings: BaseSettings, instance_identifier: int | None = None):
-        if settings is None:
-            return
-
+    def __init__(self, settings: BaseSettings):
         self.settings = settings
-        self.__class__.default = self
+        self.driver = None
+        # True while this process is making a bulk load (`bulk.bulk_ingest`), which holds the migration
+        # lock itself: its own writes are let through, everyone else's are refused
+        self.bulk_loading = False
+        # If set, what `SLOW_QUERY_MS` is for this database (a bulk load raises it: with many writers at
+        # once nearly every write is "slow", and a warning for each says nothing)
+        self.slow_query_threshold: int | None = None
 
     async def _initialise_driver(self):
         assert isinstance(self.settings.DATABASE, MemgraphDatabaseSettings)
@@ -178,111 +179,167 @@ class Database:
             max_transaction_retry_time=10.0,
         )
 
-    async def _check_driver(self):
-        if self.driver._closed:
+    async def ensure_driver(self) -> neo4j.AsyncDriver:
+        """The driver, made if there is none yet (or it was closed)"""
+        if self.driver is None or getattr(self.driver, "_closed", False):
             await self._initialise_driver()
+        assert self.driver is not None
+        return self.driver
+
+    async def run_read[T](
+        self,
+        func: Callable[..., Awaitable[T]],
+        *args: Any,
+        **kwargs: Any,
+    ) -> T:
+        """Run `func(tx, *args, **kwargs)` in a read transaction"""
+        driver = await self.ensure_driver()
+
+        work = logging_queries(func)
+        limit = getattr(func, "timeout_setting", None)
+        if limit is not None:
+            work = translating_timeouts(work)
+            seconds = getattr(self.settings, limit[0], limit[1])
+            if seconds:
+                work = neo4j.unit_of_work(timeout=float(seconds))(work)
+
+        async def run() -> T:
+            async with driver.session(
+                database=self.settings.DATABASE.DATABASE_NAME
+            ) as session:
+                return await session.execute_read(work, *args, **kwargs)
+
+        return await timed(self, "read", func, run)
+
+    async def run_write[T](
+        self,
+        func: Callable[..., Awaitable[T]],
+        *args: Any,
+        **kwargs: Any,
+    ) -> T:
+        """Run `func(tx, *args, **kwargs)` in a write transaction. If it raises, the transaction is rolled back
+        and the exception propagates. While `pangloss migrate` is running (it holds a lock in the database)
+        nothing is written: this raises `PanglossReadOnlyError`, from inside the transaction, before `func`."""
+        driver = await self.ensure_driver()
+
+        async def not_while_migrating(tx, *a, **k):
+            if not self.bulk_loading:
+                await refuse_while_migrating(tx)
+            return await func(tx, *a, **k)
+
+        async def run() -> T:
+            async with driver.session(
+                database=self.settings.DATABASE.DATABASE_NAME
+            ) as session:
+                return await session.execute_write(
+                    logging_queries(not_while_migrating), *args, **kwargs
+                )
+
+        return await timed(self, "write", func, run)
 
     def read_transaction[T, **P](
         self,
         func: Callable[Concatenate[neo4j.AsyncManagedTransaction, P], Awaitable[T]],
     ) -> Callable[P, Awaitable[T]]:
-        """Decorator to run a database read transaction
+        """Decorator: the function, given a transaction as its first argument, runs in a read transaction of
+        this database"""
 
-        Wraps an asynchronous function taking a pangloss.neo4j.database.Transaction
-        object as its first argument.
-
-        ```
-        @read_transaction
-        def get_a_thing(tx: Transaction):
-            await tx.run(<QUERY>, <PARAMS>)
-        ```
-        """
-
+        @functools.wraps(func)
         async def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
+            return await self.run_read(func, *args, **kwargs)
 
-            await self._check_driver()
-
-            work = logging_queries(func)
-            limit = getattr(func, "timeout_setting", None)
-            if limit is not None:
-                work = translating_timeouts(work)
-                seconds = getattr(self.settings, limit[0], limit[1])
-                if seconds:
-                    work = neo4j.unit_of_work(timeout=float(seconds))(work)
-
-            async def run() -> T:
-                async with self.driver.session(
-                    database=self.settings.DATABASE.DATABASE_NAME
-                ) as session:
-                    return await session.execute_read(work, *args, **kwargs)
-
-            return await timed(self, "read", func, run)
-
-        return wrapper
+        return wrapper  # ty: ignore[invalid-return-type]
 
     def write_transaction[T, **P](
         self,
         func: Callable[Concatenate[neo4j.AsyncManagedTransaction, P], Awaitable[T]],
     ) -> Callable[P, Awaitable[T]]:
-        """Decorator to run a database write transaction
+        """Decorator: the function, given a transaction as its first argument, runs in a write transaction of
+        this database (see `run_write`)"""
 
-        Wraps an asynchronous function taking a pangloss.neo4j.database.Transaction
-        object as its first argument. If the function raises, the transaction is
-        rolled back and the exception propagates. While `pangloss migrate` is running
-        (it holds a lock in the database) nothing is written: this raises
-        `PanglossReadOnlyError`, from inside the transaction, before the function.
+        @functools.wraps(func)
+        async def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
+            return await self.run_write(func, *args, **kwargs)
 
-        ```
-        @write_transaction
-        def save_a_thing(tx: Transaction):
-            await tx.run(<QUERY>, <PARAMS>)
-        ```
-        """
-
-        async def wrapper(
-            *args: P.args,
-            **kwargs: P.kwargs,
-        ) -> T:
-            await self._check_driver()
-
-            async def not_while_migrating(tx, *a, **k):
-                if not self.bulk_loading:
-                    await refuse_while_migrating(tx)
-                return await func(tx, *a, **k)
-
-            async def run() -> T:
-                async with self.driver.session(
-                    database=self.settings.DATABASE.DATABASE_NAME
-                ) as session:
-                    return await session.execute_write(
-                        logging_queries(not_while_migrating), *args, **kwargs
-                    )
-
-            return await timed(self, "write", func, run)
-
-        return wrapper
-
-    def with_database[ReturnType, **Params](
-        self, func: Callable[[Database], Awaitable[ReturnType]]
-    ) -> Callable[Params, Awaitable[ReturnType]]:
-        """Decorator to allow access to the database instance inside a function,
-        taking a `database` argument as its first argument"""
-
-        async def wrapper(*args, **kwargs) -> ReturnType:
-            this: Database = self.__class__._instances[id(self)]
-            result = await func(this, *args, **kwargs)
-            return result
-
-        return wrapper
-
-    @staticmethod
-    def initialise_default_database(settings: BaseSettings) -> Database:
-
-        database = Database(settings=settings)
-        return database
+        return wrapper  # ty: ignore[invalid-return-type]
 
     async def close(self):
-        await self.driver.close()
+        if self.driver is not None:
+            await self.driver.close()
+            self.driver = None
+
+
+# The database the process uses (`install`), and the one a task uses for a while instead (`using`)
+_installed: Database | None = None
+_in_use: contextvars.ContextVar[Database | None] = contextvars.ContextVar(
+    "pangloss_memgraph_database", default=None
+)
+
+
+def install(database: Database) -> Database:
+    """Make `database` the one the process uses. (The one before is not closed.)"""
+    global _installed
+    _installed = database
+    return database
+
+
+def installed() -> Database | None:
+    """The database the process uses, if there is one"""
+    return _installed
+
+
+def current() -> Database:
+    """The database in use: the task's (`using`), or else the process's (`install`)"""
+    database = _in_use.get() or _installed
+    if database is None:
+        raise RuntimeError(
+            "There is no database: the server and the command line make one from the settings "
+            "(`setup.create_database(settings)`); elsewhere, `install(Database(settings))`"
+        )
+    return database
+
+
+@contextlib.contextmanager
+def using(database: Database) -> Iterator[Database]:
+    """Within the block (and the tasks started in it), use `database` rather than the process's"""
+    token = _in_use.set(database)
+    try:
+        yield database
+    finally:
+        _in_use.reset(token)
+
+
+def read_transaction[T, **P](
+    func: Callable[Concatenate[neo4j.AsyncManagedTransaction, P], Awaitable[T]],
+) -> Callable[P, Awaitable[T]]:
+    """Decorator: the function, given a transaction as its first argument, runs in a read transaction of the
+    database in use when it is called
+
+    ```
+    @read_transaction
+    async def get_a_thing(tx: Transaction):
+        await tx.run(<QUERY>, <PARAMS>)
+    ```
+    """
+
+    @functools.wraps(func)
+    async def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
+        return await current().run_read(func, *args, **kwargs)
+
+    return wrapper  # ty: ignore[invalid-return-type]
+
+
+def write_transaction[T, **P](
+    func: Callable[Concatenate[neo4j.AsyncManagedTransaction, P], Awaitable[T]],
+) -> Callable[P, Awaitable[T]]:
+    """Decorator: the function, given a transaction as its first argument, runs in a write transaction of the
+    database in use when it is called (see `Database.run_write`)"""
+
+    @functools.wraps(func)
+    async def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
+        return await current().run_write(func, *args, **kwargs)
+
+    return wrapper  # ty: ignore[invalid-return-type]
 
 
 async def refuse_while_migrating(tx: neo4j.AsyncManagedTransaction) -> None:

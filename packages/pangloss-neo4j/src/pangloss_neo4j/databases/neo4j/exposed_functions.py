@@ -65,9 +65,13 @@ from pangloss_neo4j.databases.neo4j.build_update_query import (
     build_replace_head_query,
 )
 from pangloss_neo4j.databases.neo4j.database import (
-    Database,
     Transaction,
     timeout_from_setting,
+)
+from pangloss_neo4j.databases.neo4j.database import (
+    current,
+    read_transaction,
+    write_transaction,
 )
 from pangloss_neo4j.databases.neo4j.delete_node import (
     DeletionResult,
@@ -119,7 +123,7 @@ async def empty_page(tx: Transaction, query: str, params: dict) -> dict[str, Any
     }
 
 
-@Database.default.read_transaction
+@read_transaction
 @timeout_from_setting("SEARCH_TIMEOUT_SECONDS", 30)
 async def list_items(
     tx: Transaction,
@@ -131,9 +135,7 @@ async def list_items(
     published: bool | None = None,
     review_status: str | None = None,
 ) -> _ListItems[_DocumentReferenceViewBase | _EntityReferenceViewBase]:
-    hit_limit = getattr(
-        Database.default.settings, "SEARCH_HIT_LIMIT", DEFAULT_HIT_LIMIT
-    )
+    hit_limit = getattr(current().settings, "SEARCH_HIT_LIMIT", DEFAULT_HIT_LIMIT)
     query, params = build_generic_list_query(
         cls,
         search_terms=search_terms,
@@ -174,7 +176,7 @@ async def list_items(
     return result
 
 
-@Database.default.read_transaction
+@read_transaction
 @timeout_from_setting("SEARCH_TIMEOUT_SECONDS", 30)
 async def search(
     tx: Transaction,
@@ -203,7 +205,7 @@ async def search(
     return _ListItems(**found)
 
 
-@Database.default.read_transaction
+@read_transaction
 async def autocomplete(
     tx: Transaction,
     cls: type[Entity],
@@ -261,7 +263,7 @@ async def class_of_node[T: (Document, Entity)](
     return cls
 
 
-@Database.default.read_transaction
+@read_transaction
 async def get_document(
     tx: Transaction, cls: type[Document], id: UUID | AnyHttpUrl
 ) -> _DocumentHeadViewBase | None:
@@ -308,7 +310,7 @@ async def read_entity(
     return data, cls
 
 
-@Database.default.read_transaction
+@read_transaction
 async def get_entity(
     tx: Transaction, cls: type[Entity], id: UUID | AnyHttpUrl
 ) -> _EntityHeadViewBase | None:
@@ -322,7 +324,7 @@ async def get_entity(
     return made_as.HeadView(**data)
 
 
-@Database.default.read_transaction
+@read_transaction
 async def get_entity_for_edit(
     tx: Transaction, cls: type[Entity], id: UUID | AnyHttpUrl
 ) -> _EntityEditViewBase | None:
@@ -342,7 +344,7 @@ async def run_write_query(tx: Transaction, query: str, params: dict) -> list:
     return await response.value()
 
 
-@Database.default.write_transaction
+@write_transaction
 async def soft_delete_node(
     tx: Transaction, cls: type[Document | Entity], id: UUID | AnyHttpUrl
 ) -> DeletionResult:
@@ -400,7 +402,7 @@ async def delete_entity(cls: type[Entity], id: UUID | AnyHttpUrl) -> None:
         )
 
 
-@Database.default.write_transaction
+@write_transaction
 async def undelete_node(
     tx: Transaction, cls: type[Document | Entity], id: UUID | AnyHttpUrl
 ) -> tuple[UUID, int]:
@@ -421,7 +423,7 @@ async def undelete_entity(cls: type[Entity], id: UUID | AnyHttpUrl) -> None:
     announce("undelete", cls, node_id, version)
 
 
-@Database.default.write_transaction
+@write_transaction
 async def write_head_node(
     tx: Transaction,
     db_instance: _DocumentCreateDBBase,
@@ -530,7 +532,7 @@ async def lock_node(tx: Transaction, id: UUID) -> None:
     await result.consume()
 
 
-@Database.default.write_transaction
+@write_transaction
 async def replace_head_node(
     tx: Transaction,
     db_instance: _DocumentUpdateDBBase | _EntityUpdateDBBase,
@@ -645,70 +647,70 @@ async def update_head_node(
 # ---------------------------------------------------------------------------
 
 
-@Database.default.write_transaction
+@write_transaction
 async def create_user_in_db(tx: Transaction, user: UserInDB) -> None:
     await users.create_user(tx, user)
 
 
-@Database.default.read_transaction
+@read_transaction
 async def get_user_in_db(tx: Transaction, username: str) -> UserInDB | None:
     return await users.get_user(tx, username)
 
 
-@Database.default.read_transaction
+@read_transaction
 async def get_user_in_db_by_email(tx: Transaction, email: str) -> UserInDB | None:
     return await users.get_user_by_email(tx, email)
 
 
-@Database.default.read_transaction
+@read_transaction
 async def list_users_in_db(tx: Transaction) -> list[UserInDB]:
     return await users.list_users(tx)
 
 
-@Database.default.write_transaction
+@write_transaction
 async def update_user_in_db(
     tx: Transaction, username: str, changes: dict[str, Any]
 ) -> UserInDB:
     return await users.update_user(tx, username, changes)
 
 
-@Database.default.write_transaction
+@write_transaction
 async def revoke_session_in_db(
     tx: Transaction, jti: str, expires: datetime.datetime
 ) -> None:
     await users.revoke_session(tx, jti, expires)
 
 
-@Database.default.read_transaction
+@read_transaction
 async def is_session_revoked_in_db(tx: Transaction, jti: str) -> bool:
     return await users.is_session_revoked(tx, jti)
 
 
-@Database.default.write_transaction
+@write_transaction
 async def create_access_token_in_db(tx: Transaction, record: AccessTokenRecord) -> None:
     await users.create_access_token(tx, record)
 
 
-@Database.default.read_transaction
+@read_transaction
 async def get_access_token_in_db_by_hash(
     tx: Transaction, token_hash: str
 ) -> AccessTokenRecord | None:
     return await users.get_access_token_by_hash(tx, token_hash)
 
 
-@Database.default.read_transaction
+@read_transaction
 async def list_access_tokens_in_db(
     tx: Transaction, username: str
 ) -> list[AccessTokenRecord]:
     return await users.list_access_tokens(tx, username)
 
 
-@Database.default.write_transaction
+@write_transaction
 async def delete_access_token_in_db(tx: Transaction, username: str, id: str) -> bool:
     return await users.delete_access_token(tx, username, id)
 
 
-@Database.default.write_transaction
+@write_transaction
 async def touch_access_token_in_db(
     tx: Transaction, id: str, when: datetime.datetime
 ) -> None:
@@ -718,40 +720,40 @@ async def touch_access_token_in_db(
 # Review (`pangloss-review`)
 
 
-@Database.default.read_transaction
+@read_transaction
 async def get_review_state_in_db(tx: Transaction, id: UUID) -> dict[str, Any] | None:
     return await review.get_review_state(tx, id)
 
 
-@Database.default.write_transaction
+@write_transaction
 async def set_review_status_in_db(
     tx: Transaction, id: UUID, status: str, published: bool, user: str
 ) -> dict[str, Any] | None:
     return await review.set_review_status(tx, id, status, published, user)
 
 
-@Database.default.write_transaction
+@write_transaction
 async def add_review_comment_in_db(
     tx: Transaction, id: UUID, username: str, text: str, target_id: UUID | None
 ) -> dict[str, Any] | str | None:
     return await review.add_review_comment(tx, id, username, text, target_id)
 
 
-@Database.default.read_transaction
+@read_transaction
 async def list_review_comments_in_db(
     tx: Transaction, id: UUID, include_resolved: bool
 ) -> list[dict[str, Any]]:
     return await review.list_review_comments(tx, id, include_resolved)
 
 
-@Database.default.write_transaction
+@write_transaction
 async def resolve_review_comment_in_db(
     tx: Transaction, id: UUID, comment_id: UUID, user: str
 ) -> dict[str, Any] | None:
     return await review.resolve_review_comment(tx, id, comment_id, user)
 
 
-@Database.default.read_transaction
+@read_transaction
 async def review_queue_in_db(
     tx: Transaction, statuses: list[str], type: str | None, page: int, page_size: int
 ) -> dict[str, Any]:

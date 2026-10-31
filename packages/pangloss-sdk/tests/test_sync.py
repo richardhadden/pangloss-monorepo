@@ -13,7 +13,7 @@ from sdk_support import FakeServer, head_json, reference_json, sync_client
 
 def make_sync_models():
     ModelRegistry._reset()
-    ClientSettings(INSTALLED_APPS=[], DATABASE_MODULE="pangloss_sdk.databases.api_sync")
+    ClientSettings(INSTALLED_APPS=[], STORAGE="pangloss_sdk.storage:api_sync")
 
     class Person(Entity):
         pass
@@ -87,7 +87,7 @@ def page_of(*labels, next_page=None):
 
 def make_sync_document():
     ModelRegistry._reset()
-    ClientSettings(INSTALLED_APPS=[], DATABASE_MODULE="pangloss_sdk.databases.api_sync")
+    ClientSettings(INSTALLED_APPS=[], STORAGE="pangloss_sdk.storage:api_sync")
     from pangloss_models.model_bases.document import Document
 
     class Note(Document):

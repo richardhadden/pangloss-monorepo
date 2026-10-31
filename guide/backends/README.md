@@ -1,17 +1,20 @@
 # Choosing and running a database
 
-Pangloss stores a project in a graph database through a **database module**: `DATABASE_MODULE` in the settings names a
-Python module with the functions the models call (`get_document`, `create_head_node`, `list_items`, `search` ...). There
-are three.
+Pangloss stores a project in a graph database through a **storage backend**: `STORAGE` in the settings names it. A
+backend says what it can do (its capabilities: snapshots, a fast bulk load, accent folding, Cypher for the add-ons), and
+has the functions the models call (`get_document`, `create_head_node`, `list_items`, `search` ...). There are three.
 
-| `DATABASE_MODULE` | Package | |
+| `STORAGE` | Package | |
 |---|---|---|
-| `pangloss_memgraph.databases.memgraph` | `pangloss-memgraph` | The first and best-tested backend. Memgraph, with online snapshots for `migrate --backup` |
-| `pangloss_neo4j.databases.neo4j` | `pangloss-neo4j` | The same layer for Neo4j (tested against 2026.10 Community) |
-| `pangloss_sdk.databases.api` / `api_sync` | `pangloss-sdk` | Not a database: requests to another Pangloss server ([the SDK](../sdk/README.md)) |
+| `pangloss_memgraph:storage` | `pangloss-memgraph` | The first and best-tested backend. Memgraph, with online snapshots for `migrate --backup` |
+| `pangloss_neo4j:storage` | `pangloss-neo4j` | The same layer for Neo4j (tested against 2026.10 Community) |
+| `pangloss_sdk.storage:api` / `api_sync` | `pangloss-sdk` | Not a database: requests to another Pangloss server ([the SDK](../sdk/README.md)) |
+
+(Before 2026-10-31 the setting was `DATABASE_MODULE`, a module path such as `pangloss_memgraph.databases.memgraph`. It is
+still read, with a warning: change it to `STORAGE`.)
 
 The models, the REST API, the interface, the SDK and the add-on packages (history, review, typology, calendar, dates,
-zotero) do not care which of the first two is used. Add the package to `INSTALLED_APPS` as well as naming the module,
+zotero) do not care which of the first two is used. Add the package to `INSTALLED_APPS` as well as naming the backend,
 because it adds its own commands.
 
 ## Memgraph
@@ -23,7 +26,7 @@ from pangloss_memgraph.databases.memgraph.settings import MemgraphDatabaseSettin
 
 class Settings(BaseSettings[MemgraphDatabaseSettings]):
     INSTALLED_APPS: list[str] = ["pangloss_memgraph", "my_app"]
-    DATABASE_MODULE: str = "pangloss_memgraph.databases.memgraph"
+    STORAGE: str = "pangloss_memgraph:storage"
     DATABASE: MemgraphDatabaseSettings = MemgraphDatabaseSettings(
         DB_URL="bolt://localhost:7687", DB_USERNAME="…", DB_PASSWORD="…", DATABASE_NAME="memgraph",
     )
@@ -43,7 +46,7 @@ from pangloss_neo4j.databases.neo4j.settings import Neo4jDatabaseSettings
 
 class Settings(BaseSettings[Neo4jDatabaseSettings]):
     INSTALLED_APPS: list[str] = ["pangloss_neo4j", "my_app"]
-    DATABASE_MODULE: str = "pangloss_neo4j.databases.neo4j"
+    STORAGE: str = "pangloss_neo4j:storage"
     DATABASE: Neo4jDatabaseSettings = Neo4jDatabaseSettings(
         DB_URL="bolt://localhost:7687", DB_USERNAME="neo4j", DB_PASSWORD="…", DATABASE_NAME="neo4j",
     )

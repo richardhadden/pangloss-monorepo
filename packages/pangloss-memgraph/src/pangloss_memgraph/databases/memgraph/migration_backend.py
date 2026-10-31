@@ -1,6 +1,6 @@
 """What `pangloss migrate` needs of a database backend.
 
-A backend package (`DATABASE_MODULE`) supplies a `migration_backend` module with these:
+A backend (its `Storage`, named by `STORAGE`) has a `migration_backend` module with these:
 
 - `structure() -> {"indexes": [...], "constraints": [...]}`: the structure the database needs besides
   the models, for the snapshot: the migrations make it (`AddIndex`, `AddConstraint`...);
@@ -40,6 +40,7 @@ from pangloss_models.migrations.state import apply_change as apply_to_snapshot
 from pangloss_users import current_request_username
 
 from pangloss_memgraph.databases.memgraph.database import Database
+from pangloss_memgraph.databases.memgraph.database import current
 from pangloss_memgraph.databases.memgraph.initialise_database import run_statement
 from pangloss_memgraph.databases.memgraph.initialise_database import (
     structure as initialise_structure,
@@ -67,9 +68,8 @@ def structure() -> dict[str, Any]:
 
 
 async def ensure_ready(database: Database | None = None) -> None:
-    database = database or Database.default
-    if not hasattr(database, "driver"):
-        await database._initialise_driver()
+    database = database or current()
+    await database.ensure_driver()
     name = database.settings.DATABASE.DATABASE_NAME
     existing = await run_statement(database.driver, name, "SHOW CONSTRAINT INFO")
     have = {
@@ -90,9 +90,8 @@ def open_session(database: Database) -> neo4j.AsyncSession:
 async def has_data(database: Database | None = None) -> bool:
     """Whether the database holds anything besides the record of migrations (so that `migrate` can
     say that a database made before migrations needs `--fake`)"""
-    database = database or Database.default
-    if not hasattr(database, "driver"):
-        await database._initialise_driver()
+    database = database or current()
+    await database.ensure_driver()
     async with open_session(database) as session:
         result = await session.run(
             "MATCH (n) WHERE NOT n:PGMigration AND NOT n:PGMigrationLock RETURN n LIMIT 1"
@@ -103,9 +102,8 @@ async def has_data(database: Database | None = None) -> bool:
 async def applied(
     database: Database | None = None,
 ) -> dict[tuple[str, str], dict[str, Any]]:
-    database = database or Database.default
-    if not hasattr(database, "driver"):
-        await database._initialise_driver()
+    database = database or current()
+    await database.ensure_driver()
     async with open_session(database) as session:
         result = await session.run(
             "MATCH (m:PGMigration) RETURN properties(m) AS record"
@@ -120,9 +118,8 @@ async def backup(database: Database | None = None) -> str:
     The snapshot is of the whole of Memgraph and is written on the server, not here. Memgraph
     keeps only the newest few (`--storage-snapshot-retention-count`, 3 by default), so a later
     snapshot can remove it; copy it away if it has to be kept."""
-    database = database or Database.default
-    if not hasattr(database, "driver"):
-        await database._initialise_driver()
+    database = database or current()
+    await database.ensure_driver()
     async with open_session(
         database
     ) as session:  # (an auto-commit session: not in a transaction)
@@ -140,9 +137,8 @@ async def backup(database: Database | None = None) -> str:
 
 async def backups(database: Database | None = None) -> list[dict[str, Any]]:
     """The snapshots the server has (`SHOW SNAPSHOTS`): `path`, `creation_time` and `size`, newest first"""
-    database = database or Database.default
-    if not hasattr(database, "driver"):
-        await database._initialise_driver()
+    database = database or current()
+    await database.ensure_driver()
     async with open_session(database) as session:
         result = await session.run("SHOW SNAPSHOTS")
         rows = await result.data()
@@ -152,9 +148,8 @@ async def backups(database: Database | None = None) -> list[dict[str, Any]]:
 async def backup_notice(database: Database | None = None) -> str | None:
     """How long a snapshot lasts, if the server makes its own and keeps only a few: each new one
     pushes the oldest out, so a backup is gone after that many have been made after it"""
-    database = database or Database.default
-    if not hasattr(database, "driver"):
-        await database._initialise_driver()
+    database = database or current()
+    await database.ensure_driver()
     async with open_session(database) as session:
         result = await session.run("SHOW CONFIG")
         config = {row["name"]: row["current_value"] for row in await result.data()}
@@ -176,7 +171,7 @@ async def restore(path: str, database: Database | None = None) -> None:
     """Put the database back to a snapshot (`RECOVER SNAPSHOT ... FORCE`): everything in it is
     replaced by what the snapshot has, the record of migrations with it. Only a snapshot the server
     lists can be used."""
-    database = database or Database.default
+    database = database or current()
     known = {row["path"] for row in await backups(database)}
     if path not in known:
         raise PanglossMigrationError(
@@ -210,9 +205,8 @@ async def rebuild_text_indexes(database: Database) -> None:
 
 
 async def lock(who: str | None = None, database: Database | None = None) -> None:
-    database = database or Database.default
-    if not hasattr(database, "driver"):
-        await database._initialise_driver()
+    database = database or current()
+    await database.ensure_driver()
     async with open_session(database) as session:
         try:
             result = await session.run(
@@ -238,9 +232,8 @@ async def lock(who: str | None = None, database: Database | None = None) -> None
 
 
 async def unlock(database: Database | None = None) -> None:
-    database = database or Database.default
-    if not hasattr(database, "driver"):
-        await database._initialise_driver()
+    database = database or current()
+    await database.ensure_driver()
     async with open_session(database) as session:
         result = await session.run(
             "MATCH (l:PGMigrationLock {id: $id}) DELETE l", id=LOCK_ID
@@ -332,9 +325,8 @@ async def apply(
     `atomic = False`: then it is made in batches of that many nodes (`DEFAULT_BATCH_SIZE`), each its
     own transaction, with how far it has got kept in the record. One that stopped part way goes on
     from there the next time."""
-    database = database or Database.default
-    if not hasattr(database, "driver"):
-        await database._initialise_driver()
+    database = database or current()
+    await database.ensure_driver()
 
     def say(migration: Migration, what: str) -> None:
         if progress:
@@ -439,9 +431,8 @@ async def unapply(
     In batches (`batch_size`, or the migration's `batch_size` or `atomic = False`) it is not one
     transaction: one that stops part way has undone part, and is run again from the start, which is
     harmless as what is undone is not there to undo again."""
-    database = database or Database.default
-    if not hasattr(database, "driver"):
-        await database._initialise_driver()
+    database = database or current()
+    await database.ensure_driver()
     for migration in migrations:
         logger.info(
             "Undoing %s.%s%s", migration.app, migration.name, " (fake)" if fake else ""
@@ -481,7 +472,7 @@ async def dry_run(
     """What each change of the migrations would do to the data, changing nothing. Each migration
     is tried after the ones before it have been (as the snapshot says, not as the data is: a change
     that depends on an earlier one's effect on the data is counted against the data as it is)."""
-    database = database or Database.default
+    database = database or current()
     reports: list[MigrationReport] = []
     for migration in migrations:
         change_reports, state = await try_changes(

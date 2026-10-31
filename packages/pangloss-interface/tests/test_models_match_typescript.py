@@ -61,7 +61,7 @@ def exported():
     # (models are initialised with a database module that needs no database, as the tests of
     # `pangloss-models` do; the global settings are put back after)
     saved = core_settings.__dict__.get("SETTINGS")
-    ClientSettings(INSTALLED_APPS=[], DATABASE_MODULE="pangloss_sdk.databases.api")
+    ClientSettings(INSTALLED_APPS=[], STORAGE="pangloss_sdk.storage:api")
     ModelRegistry._reset()
     sys.path.insert(0, str(SUPPORT))
     try:

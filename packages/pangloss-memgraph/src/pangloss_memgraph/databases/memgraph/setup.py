@@ -1,9 +1,9 @@
 """What the `pangloss` command line needs of a database backend.
 
-A backend package (`DATABASE_MODULE`) supplies a `setup` module with these functions:
+A backend (its `Storage`, named by `STORAGE`) has a `setup` module with these functions:
 
-- `create_database(settings)`: make the default database object, if there is not one.
-  Not async, and it does not connect: `exposed_functions` needs it to exist when it is imported.
+- `create_database(settings)`: make the process's database object, if there is not one.
+  Not async, and it does not connect.
 - `async connect()` / `async disconnect()`: open and close the connection. The
   command line does this inside the event loop that runs a command.
 - `async setup_database()`: make what the backend needs in the database (for Memgraph,
@@ -16,7 +16,12 @@ from urllib.parse import urlparse
 
 from pangloss_core.settings import BaseSettings
 
-from pangloss_memgraph.databases.memgraph.database import Database
+from pangloss_memgraph.databases.memgraph.database import (
+    Database,
+    current,
+    install,
+    installed,
+)
 from pangloss_memgraph.databases.memgraph.initialise_database import (
     initialise_database,
 )
@@ -25,18 +30,16 @@ from pangloss_memgraph.databases.memgraph.initialise_database import (
 logger = logging.getLogger("pangloss.memgraph.setup")
 
 
-def create_database(settings: BaseSettings) -> None:
-    """Make the default database object, if there is not one already (there is one
-    default per process, and it holds the connection)"""
-    if "default" not in Database.__dict__:
-        Database(settings=settings)
+def create_database(settings: BaseSettings) -> Database:
+    """Make the process's database (`database.install`) from the settings, if it has none
+    already. It does not connect: `connect` does"""
+    return installed() or install(Database(settings=settings))
 
 
 async def connect() -> None:
-    database = Database.default
-    if not hasattr(database, "driver") or database.driver._closed:
-        await database._initialise_driver()
-    await database.driver.verify_connectivity()
+    database = current()
+    driver = await database.ensure_driver()
+    await driver.verify_connectivity()
     # (the address and the database name: not the credentials)
     address = urlparse(database.settings.DATABASE.DB_URL)
     logger.info(
@@ -48,9 +51,9 @@ async def connect() -> None:
 
 
 async def disconnect() -> None:
-    database = Database.default
-    if hasattr(database, "driver") and not database.driver._closed:
-        await database.driver.close()
+    database = current()
+    if database.driver is not None:
+        await database.close()
         logger.info("Disconnected from Memgraph")
 
 

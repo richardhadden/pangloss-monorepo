@@ -30,6 +30,7 @@ from pangloss_models.exceptions import (
 )
 
 from .helpers import BULK_URI
+from pangloss_memgraph.databases.memgraph.database import current
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -37,14 +38,17 @@ pytestmark = pytest.mark.asyncio(loop_scope="session")
 @pytest_asyncio.fixture(loop_scope="session")
 async def database(bulk_memgraph):
     """A database of its own, in the usual mode, with nothing but a user and what Pangloss makes"""
-    shared = Database.default
-    database = object.__new__(Database)
-    database.settings = shared.settings.model_copy(
-        update={
-            "DATABASE": shared.settings.DATABASE.model_copy(update={"DB_URL": BULK_URI})
-        }
+    shared = current()
+    database = Database(
+        settings=shared.settings.model_copy(
+            update={
+                "DATABASE": shared.settings.DATABASE.model_copy(
+                    update={"DB_URL": BULK_URI}
+                )
+            }
+        )
     )
-    await database._initialise_driver()
+    await database.ensure_driver()
     if await storage_mode(database) != TRANSACTIONAL:
         await statements(database, f"STORAGE MODE {TRANSACTIONAL}")
     await statements(database, "MATCH (n) DETACH DELETE n")

@@ -2,7 +2,7 @@ import json
 import re
 import typing
 
-from pydantic import AnyHttpUrl, field_validator
+from pydantic import AnyHttpUrl, field_validator, model_validator
 from pydantic_settings import BaseSettings as PydanticBaseSettings
 from pydantic_settings import NoDecode, SettingsConfigDict
 
@@ -39,22 +39,36 @@ class DatabaseSettings(PydanticBaseSettings):
 
 
 class ClientSettings(PydanticBaseSettings):
-    """What the models need of the settings: which apps declare them, and which database
-    module `save`, `get` and so on are bound to. A client of the API (the SDK) has no
-    more than this; the server's `BaseSettings` adds the rest."""
+    """What the models need of the settings: which apps declare them, and which storage
+    backend `save`, `get` and so on are bound to. A client of the API (the SDK) has no
+    more than this; the server's `BaseSettings` adds the rest.
+
+    Making settings makes them the project's (`SETTINGS`), once they are valid: `configure`
+    does the same for settings that were made before."""
 
     INSTALLED_APPS: list[str]
-    DATABASE_MODULE: str
+    # The storage backend, as `module:attribute`: "pangloss_memgraph:storage" (see `pangloss_core.storage`)
+    STORAGE: str | None = None
+    # (what came before `STORAGE`: the module path of the backend. Still read, with a warning)
+    DATABASE_MODULE: str | None = None
 
     model_config = SettingsConfigDict(case_sensitive=True, env_file=".env")
 
     def __init__(self, *args, **kwargs):
-        # When initialising settings, copy it to this global var for access
-        # within pangloss_core (once it is valid: a failed one leaves the one before)
-        global SETTINGS
-
         super().__init__(*args, **kwargs)
-        SETTINGS = typing.cast("BaseSettings", self)
+        configure(self)
+
+    @model_validator(mode="after")
+    def storage_is_named(self) -> typing.Self:
+        if not self.STORAGE and not self.DATABASE_MODULE:
+            raise ValueError(
+                "STORAGE is required: the storage backend, like 'pangloss_memgraph:storage'"
+            )
+        if not self.STORAGE and self.DATABASE_MODULE:
+            from pangloss_core.storage import warn_database_module
+
+            warn_database_module(self.DATABASE_MODULE)
+        return self
 
 
 class BaseSettings[TDatabaseSettings: DatabaseSettings](ClientSettings):
@@ -112,3 +126,19 @@ class BaseSettings[TDatabaseSettings: DatabaseSettings](ClientSettings):
 # (a client has only the `ClientSettings` part: the server code that uses the rest runs
 # only where there is a `BaseSettings`)
 SETTINGS: BaseSettings
+
+
+def configure(settings: ClientSettings) -> None:
+    """Make these the project's settings"""
+    global SETTINGS
+    SETTINGS = typing.cast("BaseSettings", settings)
+
+
+def get_settings() -> BaseSettings:
+    """The project's settings: an error that says so if there are none yet"""
+    settings = globals().get("SETTINGS")
+    if settings is None:
+        raise RuntimeError(
+            "There are no settings yet: import the project's settings module (which makes them) first"
+        )
+    return settings

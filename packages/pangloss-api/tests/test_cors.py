@@ -208,7 +208,7 @@ def test_the_setting_can_be_given_as_a_comma_separated_environment_variable(
         # (BACKEND_CORS_ORIGINS is not declared again, so it is read as it is in the base)
         PROJECT_NAME: str = "Test"
         INSTALLED_APPS: list[str] = []
-        DATABASE_MODULE: str = "fake_api_db"
+        STORAGE: str | None = "fake_api_db:storage"
         DATABASE: DatabaseSettings = DatabaseSettings()
         AUTHJWT_SECRET_KEY: str = "a secret for the tests, of a decent length"
         ENTITY_BASE_URL: AnyHttpUrl = AnyHttpUrl("http://test.com/")

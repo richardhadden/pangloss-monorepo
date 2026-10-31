@@ -19,7 +19,7 @@ def clean_state():
 @pytest.fixture(autouse=True)
 def client_settings():
     """Settings for the models; `connect()` makes its own"""
-    ClientSettings(INSTALLED_APPS=[], DATABASE_MODULE="pangloss_sdk.databases.api")
+    ClientSettings(INSTALLED_APPS=[], STORAGE="pangloss_sdk.storage:api")
 
 
 @pytest.fixture

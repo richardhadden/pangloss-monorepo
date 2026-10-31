@@ -10,7 +10,7 @@ survey of the other packages' Cypher found ([§2](#2-cypher-outside-the-backends
 |---|---|---|---|
 | 1 | Is a non-Cypher (RDF) backend a goal? | Not now; it will be considered later | The typed `Storage` port is **deferred** ([§5](#5-deferred-the-storage-port)). The phases keep the seams it needs: a neutral write plan, a neutral read shape, no driver exceptions escaping the kit, and a conformance suite that goes through the models, not Cypher. |
 | 2 | Package name | `pangloss-cypher` | |
-| 3 | Replace `DATABASE_MODULE` with a `STORAGE` factory, and keep an alias for how long? | Deferred with the port | `DATABASE_MODULE` stays as it is. The question returns only if the port is built ([§5](#5-deferred-the-storage-port)). |
+| 3 | Replace `DATABASE_MODULE` with a `STORAGE` factory, and keep an alias for how long? | Yes, now (answered again 2026-10-31, when the plan was approved) | Done in phase 1: `STORAGE = "pangloss_memgraph:storage"` names a typed `pangloss_core.storage.Storage` (name, capabilities, parts). `DATABASE_MODULE` is still read, with a `DeprecationWarning`. The full port of [§5](#5-deferred-the-storage-port) is still deferred: the parts it names are the modules of today. |
 | 4 | Fold accents on both backends? | Yes | Phase 5: Memgraph gets a folded label, and `zurich` finds "Zürich" on both backends. |
 
 ## 2. Cypher outside the backends
@@ -147,6 +147,37 @@ As proposed in the review discussion: decorators look up the database at call ti
   - `import pangloss_memgraph.databases.memgraph.exposed_functions` works with no database;
   - the conftests no longer need to reuse `Database.default` or re-set the settings per module;
   - a test that connects a second database inside `using()` reads from it.
+
+**As built (2026-10-31).**
+
+- **The database.** Each backend's `database.py` has:
+  - `Database(settings)`, with no side effects, and `ensure_driver()`;
+  - `install(database)`, `current()` and `using(database)`;
+  - module-level `read_transaction` and `write_transaction`, which find the database when they are called;
+  - `Database.run_read` and `run_write`, which the instance decorators use too.
+
+  `Database.default`, `_instances`, `with_database`, `initialise_default_database`, `_check_driver`, and the 17
+  `hasattr(database, "driver")` checks are gone. `setup.create_database(settings)` installs a database if there is
+  none.
+- **The add-on API.** `backend.current()` gives the add-on API, and `.database()` the database in use.
+- **`STORAGE`** (decision 3, brought forward):
+  - `pangloss_core.storage` has `Storage` (name, package, `capabilities`, and the parts `operations`, `setup`,
+    `migration_backend` and `cypher`), `Capabilities`, and `storage_of(settings)`;
+  - `pangloss_memgraph:storage`, `pangloss_neo4j:storage`, and `pangloss_sdk.storage:api` and `:api_sync`;
+  - the models, users, review, the API, the CLI and the add-ons find the backend through it;
+  - the project template, the demo and every test use `STORAGE`.
+
+  `Capabilities` is defined, but the CLI and the API do not ask it yet: that is still phase 3.
+- **Settings.** `configure(settings)` and `get_settings()`.
+
+Done-when checks:
+
+- **Import with no database:** met, and tested in `test_database_binding.py` (a subprocess).
+- **The conftests:** they make and install their own `Database`. They still re-set the settings and the database per
+  module, because other packages' tests in the same xdist worker make their own, and both are process-wide by
+  design.
+- **`using()`:** met. `test_another_database_is_used_within_using` writes to and lists from the bulk-load server
+  inside `using()`, and from the main one outside it, on both backends.
 
 ### Phase 2: `pangloss-cypher`, and the identical files moved into it (1–2 days)
 

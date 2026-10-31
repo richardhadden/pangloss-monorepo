@@ -1,6 +1,6 @@
 """What `pangloss migrate` needs of a database backend.
 
-A backend package (`DATABASE_MODULE`) supplies a `migration_backend` module with these:
+A backend (its `Storage`, named by `STORAGE`) has a `migration_backend` module with these:
 
 - `structure() -> {"indexes": [...], "constraints": [...]}`: the structure the database needs besides
   the models, for the snapshot: the migrations make it (`AddIndex`, `AddConstraint`...);
@@ -38,6 +38,7 @@ from pangloss_models.migrations.state import apply_change as apply_to_snapshot
 from pangloss_users import current_request_username
 
 from pangloss_neo4j.databases.neo4j.database import Database
+from pangloss_neo4j.databases.neo4j.database import current
 from pangloss_neo4j.databases.neo4j.initialise_database import (
     structure as initialise_structure,
 )
@@ -70,9 +71,8 @@ def structure() -> dict[str, Any]:
 
 
 async def ensure_ready(database: Database | None = None) -> None:
-    database = database or Database.default
-    if not hasattr(database, "driver"):
-        await database._initialise_driver()
+    database = database or current()
+    await database.ensure_driver()
     name = database.settings.DATABASE.DATABASE_NAME
     existing = await list_constraints(database.driver, name)
     for entry in CONSTRAINTS:
@@ -89,9 +89,8 @@ def open_session(database: Database) -> neo4j.AsyncSession:
 async def has_data(database: Database | None = None) -> bool:
     """Whether the database holds anything besides the record of migrations (so that `migrate` can
     say that a database made before migrations needs `--fake`)"""
-    database = database or Database.default
-    if not hasattr(database, "driver"):
-        await database._initialise_driver()
+    database = database or current()
+    await database.ensure_driver()
     async with open_session(database) as session:
         result = await session.run(
             "MATCH (n) WHERE NOT n:PGMigration AND NOT n:PGMigrationLock RETURN n LIMIT 1"
@@ -102,9 +101,8 @@ async def has_data(database: Database | None = None) -> bool:
 async def applied(
     database: Database | None = None,
 ) -> dict[tuple[str, str], dict[str, Any]]:
-    database = database or Database.default
-    if not hasattr(database, "driver"):
-        await database._initialise_driver()
+    database = database or current()
+    await database.ensure_driver()
     async with open_session(database) as session:
         result = await session.run(
             "MATCH (m:PGMigration) RETURN properties(m) AS record"
@@ -114,9 +112,8 @@ async def applied(
 
 
 async def lock(who: str | None = None, database: Database | None = None) -> None:
-    database = database or Database.default
-    if not hasattr(database, "driver"):
-        await database._initialise_driver()
+    database = database or current()
+    await database.ensure_driver()
     async with open_session(database) as session:
         try:
             result = await session.run(
@@ -142,9 +139,8 @@ async def lock(who: str | None = None, database: Database | None = None) -> None
 
 
 async def unlock(database: Database | None = None) -> None:
-    database = database or Database.default
-    if not hasattr(database, "driver"):
-        await database._initialise_driver()
+    database = database or current()
+    await database.ensure_driver()
     async with open_session(database) as session:
         result = await session.run(
             "MATCH (l:PGMigrationLock {id: $id}) DELETE l", id=LOCK_ID
@@ -236,9 +232,8 @@ async def apply(
     `atomic = False`: then it is made in batches of that many nodes (`DEFAULT_BATCH_SIZE`), each its
     own transaction, with how far it has got kept in the record. One that stopped part way goes on
     from there the next time."""
-    database = database or Database.default
-    if not hasattr(database, "driver"):
-        await database._initialise_driver()
+    database = database or current()
+    await database.ensure_driver()
 
     def say(migration: Migration, what: str) -> None:
         if progress:
@@ -343,9 +338,8 @@ async def unapply(
     In batches (`batch_size`, or the migration's `batch_size` or `atomic = False`) it is not one
     transaction: one that stops part way has undone part, and is run again from the start, which is
     harmless as what is undone is not there to undo again."""
-    database = database or Database.default
-    if not hasattr(database, "driver"):
-        await database._initialise_driver()
+    database = database or current()
+    await database.ensure_driver()
     for migration in migrations:
         logger.info(
             "Undoing %s.%s%s", migration.app, migration.name, " (fake)" if fake else ""
@@ -385,7 +379,7 @@ async def dry_run(
     """What each change of the migrations would do to the data, changing nothing. Each migration
     is tried after the ones before it have been (as the snapshot says, not as the data is: a change
     that depends on an earlier one's effect on the data is counted against the data as it is)."""
-    database = database or Database.default
+    database = database or current()
     reports: list[MigrationReport] = []
     for migration in migrations:
         change_reports, state = await try_changes(

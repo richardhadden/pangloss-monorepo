@@ -1,13 +1,12 @@
 import heapq
 from collections.abc import Callable
-import importlib
 import logging
 from itertools import chain
 from typing import ClassVar, get_args, get_origin
 
 from pydantic import BaseModel
 from pydantic.alias_generators import to_camel
-lazy from pangloss_core import settings as core_settings
+lazy from pangloss_core.storage import storage_of
 
 from pangloss_models.exceptions import (
     PanglossImportError,
@@ -447,20 +446,20 @@ class ModelRegistry:
 
     @classmethod
     def _bind_database_functions(cls):
-        """Attach the database module's `exposed_functions` to the model base classes.
+        """Attach the storage backend's operations (`exposed_functions`) to the model base classes.
 
         The functions are assigned directly: sync and async functions both work as
         methods, so no wrapping is needed. They must take the class (or instance,
         for `save`) as their first argument."""
 
         # (read when used: the settings are set when a project makes them)
-        database = core_settings.SETTINGS.DATABASE_MODULE
-
+        storage = storage_of()
         try:
-            exposed_functions = importlib.import_module(f"{database}.exposed_functions")
+            exposed_functions = storage.operations
         except ImportError:
             raise PanglossImportError(
-                f"Failed to find database functions in given module '{database}'"
+                f"Failed to find the functions of the storage backend '{storage.name}' "
+                f"(in '{storage.package}')"
             )
 
         Document.get = classmethod(exposed_functions.get_document)  # type: ignore

@@ -1,14 +1,16 @@
 """`pangloss neo4j info`, and the `setup` module the `pangloss` command uses, against Neo4j.
 
-Each test gives the command a `Database` of its own: the command connects and disconnects the
-default, which the other tests share."""
+Each test gives the command a `Database` of its own, installed for the test: the command connects and disconnects
+the process's database, which the other tests share."""
 
 import asyncio
 
 from pangloss_neo4j import cli as neo4j_cli
+from pangloss_neo4j.databases.neo4j import database as database_module
 from pangloss_neo4j.databases.neo4j import setup
 from pangloss_neo4j.databases.neo4j.database import Database
 from typer.testing import CliRunner
+from pangloss_neo4j.databases.neo4j.database import current
 
 runner = CliRunner()
 
@@ -23,17 +25,14 @@ def invoke(*args: str):
 
 
 def own_database(monkeypatch, **database_settings) -> Database:
-    shared = Database.default
+    shared = current()
     settings = shared.settings.model_copy(
         update={
             "DATABASE": shared.settings.DATABASE.model_copy(update=database_settings)
         }
     )
-    database = object.__new__(
-        Database
-    )  # (the constructor would make it the default for good)
-    database.settings = settings
-    monkeypatch.setattr(Database, "default", database)
+    database = Database(settings=settings)
+    monkeypatch.setattr(database_module, "_installed", database)
     return database
 
 
@@ -48,7 +47,7 @@ def test_info_shows_the_indexes_and_constraints(monkeypatch):
     assert "label+property: :PGAccessToken(token_hash)" in result.output
     assert "unique: :PGUser(username)" in result.output
     # (and it closed its connection)
-    assert database.driver._closed
+    assert database.driver is None
 
 
 def test_info_says_when_the_database_cannot_be_read(monkeypatch):
@@ -75,13 +74,13 @@ def test_setup_connects_sets_up_and_disconnects(monkeypatch):
     # (the session's set-up made everything already: it is safe to repeat)
     assert lines and all(line.startswith("already present: ") for line in lines)
     assert any("PGRevokedSession(jti)" in line for line in lines)
-    assert database.driver._closed
+    assert database.driver is None
 
     # (connecting again opens a new driver; disconnecting twice is harmless. A driver belongs to
     # the event loop it was made in, as in a command, which runs in one)
     async def again():
         await setup.connect()
-        assert not database.driver._closed
+        assert database.driver is not None
         await setup.disconnect()
         await setup.disconnect()
 
@@ -91,11 +90,8 @@ def test_setup_connects_sets_up_and_disconnects(monkeypatch):
 def test_create_database_makes_the_default_only_if_there_is_none(monkeypatch):
     database = own_database(monkeypatch)
     setup.create_database(database.settings)
-    assert Database.default is database
+    assert current() is database
 
-    monkeypatch.delattr(Database, "default")
+    monkeypatch.setattr(database_module, "_installed", None)
     setup.create_database(database.settings)
-    assert (
-        Database.default is not database
-        and Database.default.settings is database.settings
-    )
+    assert current() is not database and current().settings is database.settings

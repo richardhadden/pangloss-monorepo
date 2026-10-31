@@ -11,7 +11,7 @@ to the API. The user needs no database credentials, no access to Memgraph, and n
 
 - Models are declared in Python (`demo_app/models.py`). `initialise()` generates `Create`, `Update`, `View`,
   `HeadView`, `EditView` and the rest, then **binds** `get`, `list`, `save`, `delete`, ... to the functions of the
-  module named by `SETTINGS.DATABASE_MODULE` (`<module>.exposed_functions`). Sync and async both work
+  storage backend named by `SETTINGS.STORAGE` (its `exposed_functions`; `DATABASE_MODULE` before 2026-10-31). Sync and async both work
   ([generated models](generated-models.md#the-initialisation-pipeline)). This is the seam the SDK uses.
 - `pangloss-sdk` has `ApiAsDatabaseSettings`, a `setup` module of no-ops, and an `exposed_functions` of stubs
   (`get_document` returns an invented object). The model tests use it as a database that needs no connection.
@@ -104,8 +104,8 @@ p2 = await Person.Create(label="Ada", ...).save() # POST /api/Person       (logi
 page = await Person.list(search_terms="ada")      # GET /api/Person?q=ada
 ```
 
-`connect()` imports the manifest's apps, runs `initialise()` with a client settings object (`DATABASE_MODULE =
-"pangloss_sdk.databases.api"`), checks the SDK against the server (below), and returns. `PANGLOSS_URL` in the
+`connect()` imports the manifest's apps, runs `initialise()` with a client settings object (`STORAGE =
+"pangloss_sdk.storage:api"`), checks the SDK against the server (below), and returns. `PANGLOSS_URL` in the
 environment can stand for the argument. A synchronous flavour is chosen in `connect(..., sync=True)` (below).
 
 ## What is in the generated SDK
@@ -214,7 +214,7 @@ Points that need deciding or care:
 - **Async by default, sync on request.** The server functions are async; the models bind whatever is given. So
   `pangloss_sdk.databases.api` is async (`httpx.AsyncClient`) and `pangloss_sdk.databases.api_sync` has the same
   functions, blocking (`httpx.Client`), for scripts and notebooks that do not want an event loop. Which one is bound
-  is the `DATABASE_MODULE` that `connect(sync=...)` puts in the settings. One mode per process: the bindings are on
+  is the `STORAGE` that `connect(sync=...)` puts in the settings (`pangloss_sdk.storage:api` or `:api_sync`). One mode per process: the bindings are on
   the classes.
 - **Users acting for others.** The server records the logged-in user. The SDK has no way to say "as another user".
 - **One client per process**, with a connection pool, closed at exit (and by `await demo_sdk.disconnect()`).

@@ -118,7 +118,7 @@ Settings are always loaded with the project's directory as the current directory
 
 ## What a database backend supplies
 
-The core commands do not know about any database. The backend named by `DATABASE_MODULE` has a `setup` module with:
+The core commands do not know about any database. The storage backend named by `STORAGE` has a `setup` module with:
 
 | Function | |
 |----------|--|

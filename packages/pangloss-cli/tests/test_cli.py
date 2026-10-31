@@ -102,7 +102,7 @@ def test_database_without_a_setup_module(project: Path):
     )
     result = invoke("setup-database", argv=["--settings", "myproject.settings_plain"])
     assert result.exit_code == 1
-    assert "Cannot load the database 'plainapp'" in result.output
+    assert "Cannot load the storage backend 'plainapp:storage'" in result.output
 
 
 def test_setup_database_calls_the_backend(project: Path):

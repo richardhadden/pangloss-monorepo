@@ -1,6 +1,6 @@
 """Creating, finding and changing users, and checking their passwords.
 
-The users are kept by the database backend (`DATABASE_MODULE`), which supplies, in its
+The users are kept by the storage backend (`STORAGE`), which supplies, in its
 `exposed_functions`:
 
 - `create_user_in_db(user: UserInDB) -> None`, raising `PanglossUserExistsError` if
@@ -16,13 +16,12 @@ Everything returned from here is a `User`, which has no password or hash.
 
 import datetime
 import hashlib
-import importlib
 import secrets
 import uuid
 from types import ModuleType
 from typing import Any
 
-from pangloss_core import settings as core_settings
+from pangloss_core.storage import storage_of
 from pydantic import ValidationError
 
 from pangloss_users.exceptions import (
@@ -46,8 +45,7 @@ from pangloss_users.passwords import (
 
 
 def _backend() -> ModuleType:
-    database = core_settings.SETTINGS.DATABASE_MODULE
-    return importlib.import_module(f"{database}.exposed_functions")
+    return storage_of().operations
 
 
 def _public(user: UserInDB) -> User:

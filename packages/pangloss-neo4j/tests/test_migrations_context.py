@@ -11,13 +11,13 @@ import pytest
 from pangloss_models.model_bases.document import Document
 from pangloss_models.model_bases.entity import Entity
 from pangloss_models.model_bases.semantic_space import SemanticSpace
-from pangloss_neo4j.databases.neo4j.database import Database
 from pangloss_neo4j.databases.neo4j.migrations.operations import (
     recompute_contexts,
 )
 
 from .helpers import run
 from .migration_support import declare
+from pangloss_neo4j.databases.neo4j.database import current
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -108,7 +108,7 @@ async def test_working_contexts_out_again_changes_nothing_for_what_the_models_wr
     assert any("#rootcontext" in row[3] for row in before)
     assert any(row[2] == () for row in before)
 
-    database = Database.default
+    database = current()
     async with database.driver.session(
         database=database.settings.DATABASE.DATABASE_NAME
     ) as session:

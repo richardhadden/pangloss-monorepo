@@ -1,15 +1,14 @@
 """Review: what can be done with the state and the comments of a document.
 
-The state is kept by the database backend (`DATABASE_MODULE`), which supplies, in its `exposed_functions`:
+The state is kept by the storage backend (`STORAGE`), which supplies, in its `exposed_functions`:
 `get_review_state_in_db`, `set_review_status_in_db`, `add_review_comment_in_db`, `list_review_comments_in_db`,
 `resolve_review_comment_in_db` and `review_queue_in_db`. What is decided here is who may do what.
 """
 
-import importlib
 from types import ModuleType
 from uuid import UUID
 
-from pangloss_core import settings as core_settings
+from pangloss_core.storage import storage_of
 from pangloss_models.model_registry import ModelRegistry
 
 from pangloss_review import config
@@ -31,8 +30,7 @@ from pangloss_review.status import (
 
 
 def _backend() -> ModuleType:
-    database = core_settings.SETTINGS.DATABASE_MODULE
-    return importlib.import_module(f"{database}.exposed_functions")
+    return storage_of().operations
 
 
 def _reviewable(state: dict | None, id: UUID) -> ReviewState:

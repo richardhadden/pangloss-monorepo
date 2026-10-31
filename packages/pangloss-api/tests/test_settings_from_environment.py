@@ -38,7 +38,7 @@ def test_the_module_the_variable_names_is_imported(no_settings, monkeypatch, tmp
             PROJECT_NAME: str = "From the environment"
             BACKEND_CORS_ORIGINS: list = []
             INSTALLED_APPS: list[str] = []
-            DATABASE_MODULE: str = "fake_api_db"
+            STORAGE: str | None = "fake_api_db:storage"
             DATABASE: DatabaseSettings = DatabaseSettings()
             AUTHJWT_SECRET_KEY: str = "a secret for the tests, of a decent length"
             ENTITY_BASE_URL: AnyHttpUrl = AnyHttpUrl("http://test.com/")

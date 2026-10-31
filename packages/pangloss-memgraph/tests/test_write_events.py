@@ -13,6 +13,7 @@ from pangloss_models.exceptions import (
 from pangloss_models.hooks import WriteEvent, after_write
 from pangloss_models.model_bases.document import Document
 from pangloss_models.model_bases.entity import Entity
+from pangloss_memgraph.databases.memgraph.database import current
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -197,14 +198,12 @@ async def test_a_slow_transaction_is_a_warning_and_queries_are_not_logged_unless
 ):
     import logging
 
-    from pangloss_memgraph.databases.memgraph.database import Database
-
     class Statement(Document):
         text: str
 
     initialise()
     caplog.set_level(logging.INFO, logger="pangloss")
-    Database.default.settings.SLOW_QUERY_MS = -1
+    current().settings.SLOW_QUERY_MS = -1
 
     await Statement.Create(label="S", text="x").save()
 

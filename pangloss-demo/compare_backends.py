@@ -211,18 +211,17 @@ async def main() -> dict:
         PROJECT_NAME=(str, "Compare"),
         BACKEND_CORS_ORIGINS=(list[typing.Any], []),
         INSTALLED_APPS=(list[str], []),
-        DATABASE_MODULE=(str, CONFIG["module"]),
+        STORAGE=(str, CONFIG["module"].split(".")[0] + ":storage"),
         DATABASE=(settings_type, settings_type(DB_URL=uri, DB_USERNAME=CONFIG["auth"][0],
                                                DB_PASSWORD=CONFIG["auth"][1], DATABASE_NAME=CONFIG["database"])),
         INTERFACE_LANGUAGES=(list[str], []),
-        DEFAULT_INTERFACE_LANGUAGES=(str, "en"),
+        DEFAULT_INTERFACE_LANGUAGE=(str, "en"),
         AUTHJWT_SECRET_KEY=(str, "a secret for the comparison, of a decent length"),
         ENTITY_BASE_URL=(AnyHttpUrl, AnyHttpUrl("http://compare.test/")),
     )  # fmt: skip
     settings = Settings()
     core_settings.SETTINGS = settings
-    database = backend_module("database").Database(settings=settings)
-    await database._initialise_driver()
+    database = backend_module("database").install(backend_module("database").Database(settings=settings))
     await backend_module("initialise_database").initialise_database(database)
     initialise()
     current_request_username.set("compare")

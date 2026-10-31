@@ -17,6 +17,7 @@ from pangloss_neo4j.databases.neo4j.schema import (
 
 from .conftest import NEO4J_DATABASE
 from .helpers import run
+from pangloss_neo4j.databases.neo4j.database import current
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -31,9 +32,8 @@ async def constraints(database):
 
 @pytest.fixture
 def database():
-    from pangloss_neo4j.databases.neo4j.database import Database
 
-    return Database.default
+    return current()
 
 
 # ---------------------------------------------------------------------------

@@ -9,6 +9,7 @@ from typing import Any
 @dataclasses.dataclass(frozen=True)
 class BackendUnderTest:
     name: str
+    storage: str
     database_module: str
     settings_class: str
     uri: str
@@ -35,6 +36,7 @@ class BackendUnderTest:
 BACKENDS = {
     "memgraph": BackendUnderTest(
         name="memgraph",
+        storage="pangloss_memgraph:storage",
         database_module="pangloss_memgraph.databases.memgraph",
         settings_class="MemgraphDatabaseSettings",
         uri="bolt://localhost:7687",
@@ -53,6 +55,7 @@ BACKENDS = {
     ),
     "neo4j": BackendUnderTest(
         name="neo4j",
+        storage="pangloss_neo4j:storage",
         database_module="pangloss_neo4j.databases.neo4j",
         settings_class="Neo4jDatabaseSettings",
         uri="bolt://localhost:7693",

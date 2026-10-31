@@ -6,6 +6,7 @@ from pangloss_models.model_bases.base_models import _ListItems
 from pangloss_models.model_bases.document import Document
 from pangloss_models.model_bases.entity import Entity
 from pangloss_models.model_bases.semantic_space import SemanticSpace
+from pangloss_memgraph.databases.memgraph.database import current
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -496,7 +497,6 @@ async def test_a_page_of_documents_that_refer_to_entities_is_one_page(
 async def test_a_search_with_more_hits_than_the_limit_says_it_was_truncated(
     clear_database, monkeypatch
 ):
-    from pangloss_memgraph.databases.memgraph.database import Database
 
     class Action(Document):
         carried_out_by: Person
@@ -517,7 +517,7 @@ async def test_a_search_with_more_hits_than_the_limit_says_it_was_truncated(
         found = await Person.list(search_terms="smith", deep_search=deep)
         assert (found.count, found.truncated) == (5, False)
 
-    monkeypatch.setattr(Database.default.settings, "SEARCH_HIT_LIMIT", 3, raising=False)
+    monkeypatch.setattr(current().settings, "SEARCH_HIT_LIMIT", 3, raising=False)
     for deep in (False, True):
         found = await Person.list(search_terms="smith", deep_search=deep)
         assert found.truncated is True
@@ -589,7 +589,6 @@ async def test_a_list_search_that_takes_too_long_is_stopped(
 
     import pytest
     from pangloss_memgraph.databases.memgraph import exposed_functions
-    from pangloss_memgraph.databases.memgraph.database import Database
     from pangloss_models.exceptions import PanglossSearchTimeoutError
 
     class Person(Entity):
@@ -607,7 +606,7 @@ async def test_a_list_search_that_takes_too_long_is_stopped(
         exposed_functions, "build_generic_list_query", lambda *a, **k: (slow, {})
     )
     monkeypatch.setattr(
-        Database.default.settings, "SEARCH_TIMEOUT_SECONDS", 0.5, raising=False
+        current().settings, "SEARCH_TIMEOUT_SECONDS", 0.5, raising=False
     )
 
     started = time.monotonic()
@@ -624,7 +623,6 @@ async def test_a_read_of_another_package_that_takes_too_long_raises_the_search_t
     import time
 
     from pangloss_memgraph.databases.memgraph.database import (
-        Database,
         Transaction,
         timeout_from_setting,
     )
@@ -633,10 +631,10 @@ async def test_a_read_of_another_package_that_takes_too_long_raises_the_search_t
     with db_driver.session() as session:
         session.run("UNWIND range(1, 400) AS x CREATE (:Filler {id: x})").consume()
     monkeypatch.setattr(
-        Database.default.settings, "SEARCH_TIMEOUT_SECONDS", 0.5, raising=False
+        current().settings, "SEARCH_TIMEOUT_SECONDS", 0.5, raising=False
     )
 
-    @Database.default.read_transaction
+    @current().read_transaction
     @timeout_from_setting("SEARCH_TIMEOUT_SECONDS", 30)
     async def slow(tx: Transaction):
         result = await tx.run(

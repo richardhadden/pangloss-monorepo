@@ -15,7 +15,15 @@ from pangloss_core import settings as core_settings
 def project(tmp_path, monkeypatch):
     """A project in a temporary directory, with a fake database, an app with
     commands and models, an app that cannot be imported, and an app with no cli"""
-    write(tmp_path, "fakedb/__init__.py", "")
+    write(
+        tmp_path,
+        "fakedb/__init__.py",
+        """
+        from pangloss_core.storage import Storage
+
+        storage = Storage(name="fakedb", package="fakedb")
+        """,
+    )
     write(tmp_path, "fakedb/setup.py", FAKE_DB_SETUP)
     write(tmp_path, "fakedb/exposed_functions.py", FAKE_DB_EXPOSED)
 

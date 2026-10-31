@@ -20,7 +20,7 @@ def initialise_database():
         PROJECT_NAME: str = "Test"
         BACKEND_CORS_ORIGINS: list[typing.Any] = []
         INSTALLED_APPS: list[str] = []
-        DATABASE_MODULE: str = "pangloss_sdk.databases.api"
+        STORAGE: str | None = "pangloss_sdk.storage:api"
         DATABASE: DatabaseSettings = DatabaseSettings()
         INTERFACE_LANGUAGES: list[str] = []
         DEFAULT_INTERFACE_LANGUAGE: str = "en"

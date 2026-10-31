@@ -16,7 +16,7 @@ uv sync            # installs all workspace packages into .venv
 ./run_tests.sh     # uv run pytest --dist=loadgroup -n auto
 ```
 
-- `pangloss-models/tests`: model-initialisation tests. They need no database: the fixtures use `pangloss_sdk.databases.api` as `DATABASE_MODULE`.
+- `pangloss-models/tests`: model-initialisation tests. They need no database: the fixtures use the SDK's `pangloss_sdk.storage:api` as `STORAGE`.
 - `pangloss-memgraph/tests`: integration tests. They need Docker or a Memgraph instance on `bolt://localhost:7687` (user/password `test`/`test`). If none is found, the fixture starts a `memgraph/memgraph-mage:3.14.0` container (with `--experimental-enabled=commit-lock-narrowing`), runs `initialise_database` (indexes, constraints, the `label_text` text index) and creates a `PGUser` for the default username, and clears the data after tests that request `clear_database`. Tests run in the `db` xdist group so that they run serially.
   - `test_create.py`: writing; `test_update.py`: updating; `test_read.py`, `test_read_entity.py` and `test_list.py`: reading and listing; `test_initialise_database.py`: setting up the database. Shared helpers are in `helpers.py`.
 - `pangloss-api/tests`: the user endpoints and tokens, with users kept in memory by a fake backend; `pangloss-memgraph/tests/test_api.py` runs them against Memgraph.

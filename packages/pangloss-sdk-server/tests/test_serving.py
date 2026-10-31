@@ -35,7 +35,7 @@ def settings_class(root):
         PROJECT_NAME: str = "shop"
         BACKEND_CORS_ORIGINS: list = []
         INSTALLED_APPS: list[str] = ["shop", "pangloss_sdk_server"]
-        DATABASE_MODULE: str = "fake_api_db"
+        STORAGE: str | None = "fake_api_db:storage"
         DATABASE: DatabaseSettings = DatabaseSettings()
         AUTHJWT_SECRET_KEY: str = "a secret for the tests, of a decent length"
         ENTITY_BASE_URL: AnyHttpUrl = AnyHttpUrl("http://test.com/")

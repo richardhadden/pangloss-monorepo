@@ -32,7 +32,7 @@ class Settings(BaseSettings[MemgraphDatabaseSettings]):
         "pangloss_sdk_server",
     ]
 
-    DATABASE_MODULE: str = "pangloss_memgraph.databases.memgraph"
+    STORAGE: str | None = "pangloss_memgraph:storage"
     DATABASE: MemgraphDatabaseSettings = MemgraphDatabaseSettings(
         # (the Memgraph container for the demo: `pangloss-memgraph-demo`; port 7687 is
         # the one the tests of the packages use, and clear)

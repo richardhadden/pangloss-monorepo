@@ -49,7 +49,7 @@ def test_models_initialise_and_validate_without_neo4j():
         from pangloss_models.model_bases.entity import Entity
 
         ClientSettings(
-            INSTALLED_APPS=[], DATABASE_MODULE="pangloss_sdk.databases.api"
+            INSTALLED_APPS=[], STORAGE="pangloss_sdk.storage:api"
         )
 
         class Person(Entity):

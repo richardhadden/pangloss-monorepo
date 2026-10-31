@@ -22,7 +22,7 @@ class Settings(BaseSettings[MemgraphDatabaseSettings]):
         "pangloss_memgraph",
     ]
 
-    DATABASE_MODULE: str = "pangloss_memgraph.databases.memgraph"
+    STORAGE: str | None = "pangloss_memgraph:storage"
     DATABASE: MemgraphDatabaseSettings = MemgraphDatabaseSettings(
         DB_URL="bolt://localhost:7687",
         DB_USERNAME="memgraph",

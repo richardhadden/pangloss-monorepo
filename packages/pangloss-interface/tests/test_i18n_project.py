@@ -75,9 +75,7 @@ def app(tmp_path_factory):
     (package / "models.py").write_text(textwrap.dedent(MODELS))
 
     saved = core_settings.__dict__.get("SETTINGS")
-    ClientSettings(
-        INSTALLED_APPS=["i18napp"], DATABASE_MODULE="pangloss_sdk.databases.api"
-    )
+    ClientSettings(INSTALLED_APPS=["i18napp"], STORAGE="pangloss_sdk.storage:api")
     ModelRegistry._reset()
     sys.path.insert(0, str(root))
     try:

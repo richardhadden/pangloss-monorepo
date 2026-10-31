@@ -1,10 +1,10 @@
 """The migrations that library packages ship, applied to Memgraph: the indexes and keys they describe are made"""
 
 import pytest
-from pangloss_memgraph.databases.memgraph.database import Database
 from pangloss_memgraph.databases.memgraph.migrations import apply_changes
 from pangloss_models.migrations import changes as c
 from pangloss_models.migrations.files import EMPTY_SNAPSHOT, graph_of
+from pangloss_memgraph.databases.memgraph.database import current
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -54,13 +54,13 @@ async def test_the_migrations_of_a_package_make_what_they_describe(db_driver, ap
 
     # (taken away first, so that what is found was made by the migrations)
     state = await apply_changes(
-        Database.default,
+        current(),
         EMPTY_SNAPSHOT,
         [c.AddIndex(index=i) for i in indexes]
         + [c.AddConstraint(constraint=k) for k in keys],
     )
     await apply_changes(
-        Database.default,
+        current(),
         state,
         [c.RemoveConstraint(constraint=k) for k in keys]
         + [c.RemoveIndex(index=i) for i in indexes],
@@ -69,10 +69,10 @@ async def test_the_migrations_of_a_package_make_what_they_describe(db_driver, ap
 
     state = EMPTY_SNAPSHOT
     for migration in migrations:
-        state = await apply_changes(Database.default, state, list(migration.changes))
+        state = await apply_changes(current(), state, list(migration.changes))
     assert all(has_index(db_driver, i) for i in indexes)
     assert all(has_constraint(db_driver, k) for k in keys)
 
     for migration in migrations:  # (again: nothing to do, and no error)
-        state = await apply_changes(Database.default, state, list(migration.changes))
+        state = await apply_changes(current(), state, list(migration.changes))
     assert all(has_index(db_driver, i) for i in indexes)

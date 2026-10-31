@@ -30,7 +30,7 @@ def clear_registry():
     # (models are initialised with a database module that needs no database, as in
     # test_models_match_typescript)
     saved = core_settings.__dict__.get("SETTINGS")
-    ClientSettings(INSTALLED_APPS=[], DATABASE_MODULE="pangloss_sdk.databases.api")
+    ClientSettings(INSTALLED_APPS=[], STORAGE="pangloss_sdk.storage:api")
     ModelRegistry._reset()
     yield
     ModelRegistry._reset()

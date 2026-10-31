@@ -177,7 +177,7 @@ async def test_a_user_can_be_stopped_from_checking_their_own_work(
         core_settings,
         "SETTINGS",
         SimpleNamespace(
-            DATABASE_MODULE=core_settings.SETTINGS.DATABASE_MODULE,
+            STORAGE=core_settings.SETTINGS.STORAGE,
             REVIEW_ALLOW_SELF_REVIEW=False,
         ),
     )
@@ -489,7 +489,7 @@ async def test_asking_for_a_status_is_refused_when_self_review_is_not_allowed(
         core_settings,
         "SETTINGS",
         SimpleNamespace(
-            DATABASE_MODULE=core_settings.SETTINGS.DATABASE_MODULE,
+            STORAGE=core_settings.SETTINGS.STORAGE,
             REVIEW_ALLOW_SELF_REVIEW=False,
         ),
     )

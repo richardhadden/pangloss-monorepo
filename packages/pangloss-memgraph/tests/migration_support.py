@@ -3,7 +3,6 @@ the first, migrated, and read with the second"""
 
 from types import SimpleNamespace
 
-from pangloss_memgraph.databases.memgraph.database import Database
 from pangloss_memgraph.databases.memgraph.migrations import (
     apply_changes,
     apply_changes_in_batches,
@@ -11,6 +10,7 @@ from pangloss_memgraph.databases.memgraph.migrations import (
 from pangloss_models import initialise
 from pangloss_models.migrations import build_snapshot, diff
 from pangloss_models.model_registry import ModelRegistry
+from pangloss_memgraph.databases.memgraph.database import current
 
 
 def declare(version) -> tuple[SimpleNamespace, dict]:
@@ -32,9 +32,9 @@ async def migrate(
     assert result.is_final, [q.question() for q in result.questions]
     changes = answer(result.changes) if answer else result.changes
     if batch_size:
-        await apply_changes_in_batches(Database.default, old, changes, batch_size)
+        await apply_changes_in_batches(current(), old, changes, batch_size)
     else:
-        await apply_changes(Database.default, old, changes)
+        await apply_changes(current(), old, changes)
     return changes
 
 

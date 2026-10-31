@@ -17,6 +17,7 @@ import neo4j
 from pangloss_models.indexes import model_indexes
 
 from pangloss_memgraph.databases.memgraph.database import Database
+from pangloss_memgraph.databases.memgraph.database import current
 
 TEXT_INDEX_NAME = "label_text"
 
@@ -178,9 +179,8 @@ async def initialise_database(database: Database | None = None) -> DatabaseSetup
 
     Uses the default `Database`, unless given one.
     """
-    database = database or Database.default
-    if not hasattr(database, "driver"):
-        await database._initialise_driver()
+    database = database or current()
+    await database.ensure_driver()
     driver = database.driver
     database_name = database.settings.DATABASE.DATABASE_NAME
 

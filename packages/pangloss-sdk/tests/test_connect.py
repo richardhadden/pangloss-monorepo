@@ -21,7 +21,7 @@ async def test_connect_initialises_the_models_of_the_apps_with_the_api_bound(an_
 
     assert person.label == "Ada"
     assert isinstance(core_settings.SETTINGS, pangloss_sdk.SdkSettings)
-    assert core_settings.SETTINGS.DATABASE_MODULE == "pangloss_sdk.databases.api"
+    assert core_settings.SETTINGS.STORAGE == "pangloss_sdk.storage:api"
     await pangloss_sdk.disconnect()
 
 

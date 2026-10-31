@@ -182,7 +182,7 @@ async def test_what_a_reader_may_not_see_is_not_found(clear_database, clear_cale
         # unpublished
         from pangloss_core import backend
 
-        async with backend.current().Database.default.driver.session() as session:
+        async with backend.current().database().driver.session() as session:
             await session.run(
                 "MATCH (n:HeadNode {id: $id}) SET n.published = false", id=str(run_id)
             )

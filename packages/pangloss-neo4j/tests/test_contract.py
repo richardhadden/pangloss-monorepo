@@ -1,9 +1,9 @@
 """What the rest of Pangloss calls on a backend is there, with the signatures that Memgraph's has.
 
 The two backends are meant to be interchangeable: `pangloss_users`, `pangloss_review`, `pangloss_api`, `pangloss_cli` and
-`pangloss_models` call functions of the module that `DATABASE_MODULE` names, found by name. This compares the *source* of
-the two (by `ast`: Memgraph's `exposed_functions` cannot be imported without a Memgraph `Database` of its own), so that it
-fails when Memgraph gains a function that Neo4j has not, or one is changed on one side only."""
+`pangloss_models` call functions of the parts of the backend that `STORAGE` names, found by name. This compares the
+*source* of the two (by `ast`), so that it fails when Memgraph gains a function that Neo4j has not, or one is changed on
+one side only."""
 
 import ast
 import importlib.util
@@ -78,7 +78,7 @@ def test_what_neo4j_leaves_out_is_said_and_is_really_not_there(module):
 
 # --- what the add-on packages take from a backend (pangloss_core.backend) ---------------------------------
 
-BACKENDS = ("pangloss_memgraph.databases.memgraph", "pangloss_neo4j.databases.neo4j")
+BACKENDS = ("pangloss_memgraph:storage", "pangloss_neo4j:storage")
 BACKEND_NAMES = typing.get_type_hints(core_backend.Backend).keys()
 
 
@@ -86,11 +86,12 @@ BACKEND_NAMES = typing.get_type_hints(core_backend.Backend).keys()
 def test_a_backend_gives_every_name_of_the_backend_interface(module):
     found = core_backend.current(module)
     missing = [name for name in BACKEND_NAMES if not hasattr(found, name)]
-    assert not missing, f"{module}.backend lacks {missing}"
+    assert not missing, f"the backend of {module} lacks {missing}"
 
 
 @pytest.mark.parametrize(
-    "name", [n for n in BACKEND_NAMES if n not in ("Database", "Transaction")]
+    "name",
+    [n for n in BACKEND_NAMES if n not in ("Database", "Transaction", "database")],
 )
 def test_the_functions_of_the_backend_interface_have_the_same_signature_on_both(name):
     signatures = {

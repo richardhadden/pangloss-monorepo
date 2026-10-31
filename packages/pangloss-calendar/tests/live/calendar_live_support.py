@@ -9,7 +9,7 @@ async def structure():
     """The migration of the package, applied (a second time it changes nothing)"""
     migration = load("pangloss_calendar", "0001_initial")
     await apply_changes(
-        backend.current().Database.default, EMPTY_SNAPSHOT, list(migration.changes)
+        backend.current().database(), EMPTY_SNAPSHOT, list(migration.changes)
     )
 
 

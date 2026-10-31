@@ -5,7 +5,7 @@ already imported, or the one named by the environment variable `PANGLOSS_SETTING
 (which is how `pangloss run` and `pangloss dev` pass it to the server). Building the
 app imports the models of the installed apps and initialises them, as its routes are
 made from them; starting the server (the lifespan) connects to the database through the
-`setup` module of `DATABASE_MODULE`.
+`setup` of the storage backend (`STORAGE`).
 """
 
 import importlib
@@ -19,6 +19,7 @@ from fastapi import APIRouter, Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pangloss_core import settings as core_settings
 from pangloss_core.logs import configure_from_settings
+from pangloss_core.storage import storage_of
 from pangloss_models.model_registry import ModelRegistry
 
 from pangloss_api.background import Supervisor
@@ -54,8 +55,7 @@ def ensure_settings() -> core_settings.BaseSettings:
 def prepare_models(settings: core_settings.BaseSettings) -> None:
     """Make the database object, import the models of the installed apps and
     initialise them (which binds the database's functions to them)"""
-    backend = importlib.import_module(f"{settings.DATABASE_MODULE}.setup")
-    backend.create_database(settings)
+    storage_of(settings).setup.create_database(settings)
 
     for installed_app in settings.INSTALLED_APPS:
         try:
@@ -80,7 +80,7 @@ async def check_migrations(settings: core_settings.BaseSettings) -> None:
 
     if settings.MIGRATION_CHECK == "off":
         return
-    migrations = migration_backend_of(settings.DATABASE_MODULE)
+    migrations = migration_backend_of(storage_of(settings))
     if migrations is None:
         return
     found = await migration_problems(settings.INSTALLED_APPS, migrations)
@@ -101,11 +101,12 @@ async def check_migrations(settings: core_settings.BaseSettings) -> None:
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     settings = ensure_settings()
-    backend = importlib.import_module(f"{settings.DATABASE_MODULE}.setup")
+    storage = storage_of(settings)
+    backend = storage.setup
     logger.info(
         "Starting %s: %s, %s models, apps %s",
         settings.PROJECT_NAME,
-        settings.DATABASE_MODULE,
+        storage.name,
         len(ModelRegistry.all_models()),
         ", ".join(settings.INSTALLED_APPS) or "(none)",
     )

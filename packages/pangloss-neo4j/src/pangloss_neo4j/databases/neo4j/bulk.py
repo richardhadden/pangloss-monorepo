@@ -30,6 +30,7 @@ from contextlib import asynccontextmanager
 from pangloss_models.exceptions import PanglossBulkLoadError
 
 from pangloss_neo4j.databases.neo4j.database import Database, slow_query_ms
+from pangloss_neo4j.databases.neo4j.database import current
 from pangloss_neo4j.databases.neo4j.migration_backend import (
     LOCK_ID,
     open_session,
@@ -57,8 +58,7 @@ BULK_LOCK_PREFIX = "bulk load"
 
 
 async def prepared(database: Database) -> None:
-    if not hasattr(database, "driver"):
-        await database._initialise_driver()
+    await database.ensure_driver()
 
 
 async def something_in(database: Database) -> str | None:
@@ -89,7 +89,7 @@ async def held(database: Database) -> str | None:
 async def restore(database: Database | None = None) -> None:
     """Finish a bulk load that did not end: release its lock. Safe to run again. Raises `PanglossBulkLoadError` if the lock
     is not a bulk load's (a migration's lock is `pangloss migrate --unlock`)"""
-    database = database or Database.default
+    database = database or current()
     await prepared(database)
     if await held(database) is None:
         raise PanglossBulkLoadError(
@@ -105,7 +105,7 @@ async def bulk_ingest(
 ) -> AsyncGenerator[None]:
     """Write to an empty database (see the module). Raises `PanglossBulkLoadError` if the database is not empty, and
     `PanglossMigrationError` if a migration (or a bulk load) holds the lock."""
-    database = database or Database.default
+    database = database or current()
     await prepared(database)
 
     found = await something_in(database)

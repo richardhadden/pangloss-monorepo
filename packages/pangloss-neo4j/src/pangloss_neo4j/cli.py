@@ -21,7 +21,7 @@ from pangloss_users import current_request_username
 
 from pangloss_neo4j.databases.neo4j.backend import user_exists
 from pangloss_neo4j.databases.neo4j.bulk import bulk_ingest, restore
-from pangloss_neo4j.databases.neo4j.database import Database
+from pangloss_neo4j.databases.neo4j.database import current
 from pangloss_neo4j.databases.neo4j.schema import list_constraints, list_indexes
 from pangloss_neo4j.databases.neo4j.setup import connect, disconnect
 
@@ -46,7 +46,7 @@ def info() -> None:
     """Show the indexes and constraints in the database"""
 
     async def collect():
-        database = Database.default
+        database = current()
         name = database.settings.DATABASE.DATABASE_NAME
         return {
             "indexes": await list_indexes(database.driver, name),

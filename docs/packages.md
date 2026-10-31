@@ -20,7 +20,7 @@ Arrows show declared dependencies. [The guides](../guide/packages.md) say which 
 
 ## pangloss-core ✅ / 🚧
 
-Settings shared by every module: `DatabaseSettings`, `ClientSettings` (only `INSTALLED_APPS` and `DATABASE_MODULE`, which is all the models read; what a client of the API uses) and the generic `BaseSettings[TDatabaseSettings]` (the server's, which extends it). Constructing a `BaseSettings` stores it in the module global `pangloss_core.settings.SETTINGS`. See [Settings](settings.md).
+Settings shared by every module: `DatabaseSettings`, `ClientSettings` (only `INSTALLED_APPS` and `STORAGE`, which is all the models read; what a client of the API uses) and the generic `BaseSettings[TDatabaseSettings]` (the server's, which extends it). Constructing a `BaseSettings` stores it in the module global `pangloss_core.settings.SETTINGS`. See [Settings](settings.md).
 
 ## pangloss-models ✅ (the main package)
 
@@ -46,7 +46,7 @@ A database backend for [Memgraph](https://memgraph.com/) (using the `neo4j` asyn
 `cli.py` adds `pangloss memgraph <command>` (`info`, `bulk-load`, `bulk-recover`); `databases/memgraph/bulk.py` is the bulk load (`bulk_ingest`: analytical storage mode, for an empty database), and `pangloss_models/bulk_upload.py` reads and writes the file; `databases/memgraph/setup.py` is what the core `pangloss setup-database` calls. 
 ## pangloss-cli ✅
 
-The `pangloss` command (`pangloss_cli.main`), built with [Typer](https://typer.tiangolo.com/). It finds the project's settings, adds the commands of installed apps, and has the core commands `new-project`, `new-app`, `run`, `dev`, `setup-database` and `users ...`. The templates for new projects and apps are in `pangloss_cli/templates`. It knows nothing about a particular database: it uses the `setup` module of `DATABASE_MODULE`. See [Command line](cli.md).
+The `pangloss` command (`pangloss_cli.main`), built with [Typer](https://typer.tiangolo.com/). It finds the project's settings, adds the commands of installed apps, and has the core commands `new-project`, `new-app`, `run`, `dev`, `setup-database` and `users ...`. The templates for new projects and apps are in `pangloss_cli/templates`. It knows nothing about a particular database: it uses the `setup` module of the storage backend (`STORAGE`). See [Command line](cli.md).
 
 ## pangloss-api 🚧
 
@@ -68,7 +68,7 @@ Optional: `"pangloss_sdk_server"` in `INSTALLED_APPS`. Builds the SDK of the pro
 
 Lets Pangloss models be used locally and read and write a remote Pangloss instance through its API ("API as database"). Built (see [the SDK](sdk.md) and [the guide](../guide/sdk/README.md)); `sdk-demo/` in the repository shows it used from outside a project.
 
-- `databases/api` (async) and `databases/api_sync` (blocking) are database modules whose functions are requests: set `DATABASE_MODULE` to one, or call `pangloss_sdk.connect(url, apps=[...])`.
+- `databases/api` (async) and `databases/api_sync` (blocking) are database modules whose functions are requests: set `STORAGE` to `pangloss_sdk.storage:api` or `:api_sync`, or call `pangloss_sdk.connect(url, apps=[...])`.
 - `SdkSettings`, login (settings, prompt, tokens kept in memory, or a kept refresh token: `pangloss-sdk login|logout|status`), `pangloss-sdk update` (installs the SDK the server has now, the way it was installed before), `pangloss-sdk sync-stubs` (type stubs for the blocking SDK), the errors the server's database module raises, and `iterate`.
 - The model tests use `databases/api` as a database module because it needs no live connection.
 
@@ -89,7 +89,7 @@ Tokens, sessions and the user routes are in [`pangloss-api`](#pangloss-api-🚧)
 
 ## pangloss-neo4j 🚧
 
-The database layer for Neo4j: the same functions as `pangloss-memgraph`, ported from its tests. `DATABASE_MODULE = "pangloss_neo4j.databases.neo4j"`. See [Neo4j backend](neo4j-implementation.md).
+The database layer for Neo4j: the same functions as `pangloss-memgraph`, ported from its tests. `STORAGE = "pangloss_neo4j:storage"`. See [Neo4j backend](neo4j-implementation.md).
 
 ## pangloss-history ✅
 

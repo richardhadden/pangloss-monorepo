@@ -49,7 +49,7 @@ All are `async`.
 
 ## What a backend supplies
 
-`service` calls these in the `exposed_functions` of `DATABASE_MODULE`: `create_user_in_db(user)`, `get_user_in_db(username)`, `get_user_in_db_by_email(email)`, `list_users_in_db()` and `update_user_in_db(username, changes)`. The Memgraph versions are in `pangloss_memgraph/databases/memgraph/users.py`; `initialise_database` adds unique constraints on `PGUser.username` and `PGUser.email`.
+`service` calls these in the `exposed_functions` of the storage backend (`STORAGE`): `create_user_in_db(user)`, `get_user_in_db(username)`, `get_user_in_db_by_email(email)`, `list_users_in_db()` and `update_user_in_db(username, changes)`. The Memgraph versions are in `pangloss_memgraph/databases/memgraph/users.py`; `initialise_database` adds unique constraints on `PGUser.username` and `PGUser.email`.
 
 ## Writes by a user
 

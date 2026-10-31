@@ -1,7 +1,7 @@
 """The model functions as requests to a Pangloss API (async).
 
 These are what `Model.get`, `Model.list`, `Create(...).save()` and the rest are bound to
-when `DATABASE_MODULE` is `pangloss_sdk.databases.api`. Each is one request, and returns
+when `STORAGE` is `pangloss_sdk.storage:api`. Each is one request, and returns
 what the database module of the server returns, or raises what it raises.
 """
 

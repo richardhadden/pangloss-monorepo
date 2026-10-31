@@ -31,6 +31,7 @@ __all__ = [
     "initialise_database",
     "initialise_settings",
     "installed_apps",
+    "live_database",
     "mark_database_tests",
     "reset_model_registry",
     "run",
@@ -143,15 +144,15 @@ def settings_extras() -> dict[str, tuple[typing.Any, typing.Any]]:
     return {}
 
 
-@pytest_asyncio.fixture(scope="session", loop_scope="session", autouse=True)
-async def initialise_settings(
+@pytest.fixture(scope="session", autouse=True)
+def initialise_settings(
     backend_under_test: BackendUnderTest,
     event_loop_policy,
     db_driver,
     installed_apps,
     settings_extras,
 ):
-    """Settings for the backend under test, its `Database`, and its indexes and constraints"""
+    """Settings for the backend under test"""
     backend = backend_under_test
     settings_type = backend.settings_type
 
@@ -161,7 +162,7 @@ async def initialise_settings(
         PROJECT_NAME=(str, "Test"),
         BACKEND_CORS_ORIGINS=(list[typing.Any], []),
         INSTALLED_APPS=(list[str], installed_apps),
-        DATABASE_MODULE=(str, backend.database_module),
+        STORAGE=(str | None, backend.storage),
         DATABASE=(
             settings_type,
             settings_type(
@@ -177,31 +178,32 @@ async def initialise_settings(
         ENTITY_BASE_URL=(AnyHttpUrl, AnyHttpUrl("http://test.com/")),
         **settings_extras,
     )
-    settings = Settings()
-    # One `Database` for the process: the models bind to `Database.default` the first time they are used, and another
-    # conftest (the backend package's own) that makes a second would have the tests and the models on different ones
-    database_class = backend.module("database").Database
-    existing = getattr(database_class, "default", None)
-    if existing is not None and hasattr(existing, "driver"):
-        database = existing
-        made = False
-    else:
-        database = database_class(settings=settings)
-        await database._initialise_driver()
-        made = True
-    await backend.module("initialise_database").initialise_database(database)
+    return Settings()
+
+
+@pytest_asyncio.fixture(scope="session", loop_scope="session", autouse=True)
+async def live_database(backend_under_test: BackendUnderTest, initialise_settings):
+    """The `Database` of these tests, with its indexes and constraints"""
+    database_module = backend_under_test.module("database")
+    database = database_module.Database(settings=initialise_settings)
+    with database_module.using(database):
+        await backend_under_test.module("initialise_database").initialise_database(
+            database
+        )
     try:
-        yield settings
+        yield database
     finally:
-        if made:
-            await database.close()
+        await database.close()
 
 
 @pytest.fixture(scope="module", autouse=True)
-def use_live_settings(initialise_settings):
-    """The settings of the test session are those of these tests while a module of them runs (the settings are global, and
-    the tests of another package that ran before made their own)"""
-    core_settings.SETTINGS = initialise_settings
+def use_live_settings(
+    initialise_settings, live_database, backend_under_test: BackendUnderTest
+):
+    """The settings and the database of these tests are the process's while a module of them runs (both are the
+    process's, and the tests of another package that ran before in the same process made their own)"""
+    core_settings.configure(initialise_settings)
+    backend_under_test.module("database").install(live_database)
 
 
 def mark_database_tests(item) -> None:

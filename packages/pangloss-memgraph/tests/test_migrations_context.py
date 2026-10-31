@@ -8,7 +8,6 @@ from types import SimpleNamespace as ns
 from typing import no_type_check
 
 import pytest
-from pangloss_memgraph.databases.memgraph.database import Database
 from pangloss_memgraph.databases.memgraph.migrations.operations import (
     recompute_contexts,
 )
@@ -18,6 +17,7 @@ from pangloss_models.model_bases.semantic_space import SemanticSpace
 
 from .helpers import run
 from .migration_support import declare
+from pangloss_memgraph.databases.memgraph.database import current
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -108,7 +108,7 @@ async def test_working_contexts_out_again_changes_nothing_for_what_the_models_wr
     assert any("#rootcontext" in row[3] for row in before)
     assert any(row[2] == () for row in before)
 
-    database = Database.default
+    database = current()
     async with database.driver.session(
         database=database.settings.DATABASE.DATABASE_NAME
     ) as session:

@@ -15,7 +15,7 @@ class Settings(BaseSettings[DatabaseSettings]):
     PROJECT_NAME: str = "Test"
     BACKEND_CORS_ORIGINS: list = []
     INSTALLED_APPS: list[str] = []
-    DATABASE_MODULE: str = "fake_api_db"
+    STORAGE: str | None = "fake_api_db:storage"
     DATABASE: DatabaseSettings = DatabaseSettings()
     INTERFACE_LANGUAGES: list[str] = []
     AUTHJWT_SECRET_KEY: str = "a secret for the tests, of a decent length"

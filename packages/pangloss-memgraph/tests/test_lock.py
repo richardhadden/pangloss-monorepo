@@ -6,6 +6,7 @@ import asyncio
 import pytest
 from pangloss_memgraph.databases.memgraph.backend import Transaction, ensure_lock, lock
 from pangloss_memgraph.databases.memgraph.database import Database
+from pangloss_memgraph.databases.memgraph.database import current
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -33,7 +34,7 @@ async def add_one(database: Database, key: str) -> None:
 async def test_transactions_that_lock_one_key_run_one_after_the_other(
     db_driver, clear_database
 ):
-    database = Database.default
+    database = current()
     await asyncio.gather(*[add_one(database, "items") for _ in range(WRITERS)])
 
     rows, _, _ = db_driver.execute_query(
@@ -46,7 +47,7 @@ async def test_transactions_that_lock_one_key_run_one_after_the_other(
 async def test_one_lock_node_is_made_for_a_key_however_many_ask_at_once(
     db_driver, clear_database
 ):
-    database = Database.default
+    database = current()
     await asyncio.gather(*[add_one_lock(database, "once") for _ in range(WRITERS)])
 
     rows, _, _ = db_driver.execute_query(

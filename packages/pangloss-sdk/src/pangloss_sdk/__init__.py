@@ -28,8 +28,8 @@ from pangloss_sdk.exceptions import (
 )
 from pangloss_sdk.iterate import iterate, iterate_sync
 from pangloss_sdk.settings import (
-    ASYNC_DATABASE_MODULE,
-    SYNC_DATABASE_MODULE,
+    ASYNC_STORAGE,
+    SYNC_STORAGE,
     SdkSettings,
 )
 from pangloss_sdk.status import check, check_sync
@@ -87,7 +87,7 @@ def connect(
             settings[key.upper()] = settings.pop(key)
     configured = SdkSettings(  # type: ignore[call-arg]
         INSTALLED_APPS=app_list,
-        DATABASE_MODULE=SYNC_DATABASE_MODULE if sync else ASYNC_DATABASE_MODULE,
+        STORAGE=SYNC_STORAGE if sync else ASYNC_STORAGE,
         **settings,
     )
     _client.install(
@@ -108,7 +108,7 @@ def connect_offline(apps: Iterable[str]) -> None:
     from pangloss_models import initialise
 
     app_list = list(apps)
-    ClientSettings(INSTALLED_APPS=app_list, DATABASE_MODULE=ASYNC_DATABASE_MODULE)
+    ClientSettings(INSTALLED_APPS=app_list, STORAGE=ASYNC_STORAGE)
     for app in app_list:
         importlib.import_module(f"{app}.models")
     initialise()

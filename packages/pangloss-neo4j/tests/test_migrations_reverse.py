@@ -8,12 +8,12 @@ from pangloss_models.migrations import PossibleRename, data_view
 from pangloss_models.migrations.reverse import reverse_changes
 from pangloss_models.model_bases.document import Document
 from pangloss_models.model_bases.entity import Entity
-from pangloss_neo4j.databases.neo4j.database import Database
 from pangloss_neo4j.databases.neo4j.migrations import apply_changes
 
 from .helpers import run
 from .migration_support import declare, migrate, with_answers
 from .test_migrations_relations import person_models, person_payload, signature
+from pangloss_neo4j.databases.neo4j.database import current
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -21,7 +21,7 @@ pytestmark = pytest.mark.asyncio(loop_scope="session")
 async def go_back(old: dict, new: dict, forward: list):
     """Undo the changes that took the models from `old` to `new`, on the database"""
     reversal = reverse_changes(forward, data_view(old))
-    await apply_changes(Database.default, new, reversal.changes)
+    await apply_changes(current(), new, reversal.changes)
     return reversal
 
 

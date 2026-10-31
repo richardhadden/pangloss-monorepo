@@ -1,6 +1,6 @@
 # Settings
 
-Defined in `pangloss_core.settings`. Create **one** `BaseSettings` subclass for your project and instantiate it before calling `initialise()`: construction stores the instance in `pangloss_core.settings.SETTINGS`, which the rest of Pangloss reads.
+Defined in `pangloss_core.settings`. Create **one** `BaseSettings` subclass for your project and instantiate it before calling `initialise()`: construction stores the instance in `pangloss_core.settings.SETTINGS` (once it is valid: a construction that fails leaves the settings before), which the rest of Pangloss reads.
 
 ```python
 from pangloss_core.settings import BaseSettings
@@ -11,7 +11,7 @@ class Settings(BaseSettings[MemgraphDatabaseSettings]):
     PROJECT_NAME: str = "My project"
     BACKEND_CORS_ORIGINS: list = []
     INSTALLED_APPS: list[str] = []
-    DATABASE_MODULE: str = "pangloss_memgraph.databases.memgraph"
+    STORAGE: str = "pangloss_memgraph:storage"
     DATABASE: MemgraphDatabaseSettings = MemgraphDatabaseSettings(
         DB_URL="bolt://localhost:7687",
         DB_USERNAME="...",
@@ -33,7 +33,8 @@ Values can also come from environment variables or a `.env` file (`pydantic-sett
 | `PROJECT_NAME` | `str` | Informational |
 | `BACKEND_CORS_ORIGINS` | `list` | The origins of the frontends that may use the API from a browser, such as `http://localhost:5173`. Accepts a comma-separated string. See [REST API](api.md#cors-using-the-api-from-a-frontend) |
 | `INSTALLED_APPS` | `list[str]` | Packages whose `cli.py` adds commands to `pangloss`, and whose `models` are imported by `pangloss setup-database`. See [Command line](cli.md) |
-| `DATABASE_MODULE` | `str` | Dotted path of the backend package; `initialise()` imports `<it>.exposed_functions` |
+| `STORAGE` | `str` | The storage backend, as `module:attribute`: `"pangloss_memgraph:storage"`, `"pangloss_neo4j:storage"`, or the SDK's `"pangloss_sdk.storage:api"`. It names a `pangloss_core.storage.Storage`, which says what the backend can do (`capabilities`) and where its parts are; `initialise()` binds the models to its `operations`. See [Command line](cli.md#what-a-database-backend-supplies) |
+| `DATABASE_MODULE` | `str` | **Replaced by `STORAGE`** (2026-10-31). Still read, with a `DeprecationWarning`: the dotted path of the backend package, taken as that backend |
 | `DATABASE` | `DatabaseSettings` subclass | Backend connection details |
 | `INTERFACE_LANGUAGES` | `list[str]` | The languages besides the default that the translation files (`pangloss interface translations`) and typology labels (`label_<code>`) are made for. No page of the interface shows them yet |
 | `DEFAULT_INTERFACE_LANGUAGE` | `str` (`"en"`) | The default language of those texts |
@@ -60,4 +61,4 @@ Values can also come from environment variables or a `.env` file (`pydantic-sett
 | `LOGIN_MAX_FAILURES`, `LOGIN_FAILURE_WINDOW_SECONDS` | `BaseSettings` | Default 10 and 300: wrong passwords for a username before it is refused (`429`) for the rest of the window. 0 turns it off. Per server process. See [the API](api.md) |
 | `SdkSettings` (a `ClientSettings`) | pangloss-sdk | `URL`; optional `USERNAME`, `PASSWORD`, `TOKEN`, `TIMEOUT`, `MAX_CONNECTIONS`, `VERIFY_TLS`, `READ_RETRIES`. Environment prefix `PANGLOSS_`. See [the SDK](sdk.md) |
 
-For the Memgraph backend you also need to construct `Database(settings)` before `initialise()` so that `Database.default` exists; see the test fixture `initialise_settings` in `packages/pangloss-memgraph/tests/conftest.py` for a complete example.
+The server and the command line make the database from the settings themselves (`setup.create_database(settings)`). A script that uses the models without them makes it and installs it for the process: `install(Database(settings))`, from the backend's `database` module (`pangloss_memgraph.databases.memgraph.database`). The functions of the models use the database that is installed when they are called; `using(database)` uses another for a while. `configure(settings)` makes settings that were made before the project's again, and `get_settings()` gives them, or a clear error if there are none.

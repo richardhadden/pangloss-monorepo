@@ -7,7 +7,7 @@ import pangloss_core.settings as core_settings
 import pytest
 import pytest_asyncio
 from pangloss_core.settings import BaseSettings
-from pangloss_memgraph.databases.memgraph.database import Database
+from pangloss_memgraph.databases.memgraph.database import Database, install
 from pangloss_memgraph.databases.memgraph.initialise_database import (
     initialise_database,
 )
@@ -146,7 +146,7 @@ async def initialise_settings(
         PROJECT_NAME: str = "Test"
         BACKEND_CORS_ORIGINS: list[typing.Any] = []
         INSTALLED_APPS: list[str] = []
-        DATABASE_MODULE: str = "pangloss_memgraph.databases.memgraph"
+        STORAGE: str | None = "pangloss_memgraph:storage"
         DATABASE: MemgraphDatabaseSettings = MemgraphDatabaseSettings(
             DB_URL=MEMGRAPH_URI,
             DB_USERNAME="test",
@@ -159,28 +159,21 @@ async def initialise_settings(
         ENTITY_BASE_URL: AnyHttpUrl = AnyHttpUrl("http://test.com/")
 
     settings = Settings()
-    # (one `Database` for the process: the live tests of the add-on packages use it too: see `pangloss_testing`)
-    existing = getattr(Database, "default", None)
-    if existing is not None and hasattr(existing, "driver"):
-        db = existing
-        made = False
-    else:
-        db = Database(settings=settings)
-        await db._initialise_driver()
-        made = True
-    await initialise_database(db)
-
+    database = install(Database(settings=settings))
+    await initialise_database(database)
     try:
-        yield settings
+        yield settings, database
     finally:
-        if made:
-            await db.close()
+        await database.close()
 
 
 @pytest.fixture(scope="module", autouse=True)
 def use_test_settings(initialise_settings):
-    """(The settings are global: the tests of another package that ran before made their own)"""
-    core_settings.SETTINGS = initialise_settings
+    """The settings and the database of these tests are the process's while a module of them runs (both are the
+    process's, and the tests of another package that ran before in the same process made their own)"""
+    settings, database = initialise_settings
+    core_settings.configure(settings)
+    install(database)
 
 
 def bulk_reachable() -> None:

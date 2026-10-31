@@ -25,7 +25,7 @@ MODELS = """
 @pytest.fixture(autouse=True)
 def clean_registry():
     ModelRegistry._reset()
-    ClientSettings(INSTALLED_APPS=[], DATABASE_MODULE="pangloss_sdk.databases.api")
+    ClientSettings(INSTALLED_APPS=[], STORAGE="pangloss_sdk.storage:api")
     yield
     ModelRegistry._reset()
     for name in [n for n in sys.modules if n == "shop" or n.startswith("shop.")]:

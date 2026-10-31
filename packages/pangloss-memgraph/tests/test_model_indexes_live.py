@@ -4,7 +4,6 @@ from typing import no_type_check
 
 import pytest
 from pangloss_memgraph.databases.memgraph.build_search_query import build_search_query
-from pangloss_memgraph.databases.memgraph.database import Database
 from pangloss_memgraph.databases.memgraph.initialise_database import (
     initialise_database,
     structure,
@@ -17,6 +16,7 @@ from pangloss_models.model_bases.document import Document
 from pangloss_models.model_bases.embedded import Embedded
 from pangloss_models.model_bases.entity import Entity
 from pangloss_models.search import Match, check_match
+from pangloss_memgraph.databases.memgraph.database import current
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -83,14 +83,14 @@ async def test_they_are_in_the_structure_that_migrations_make_and_unmake(db_driv
     assert len(entries) == 3 and all("app" not in e for e in entries)
     try:
         await apply_changes(
-            Database.default,
+            current(),
             EMPTY_SNAPSHOT,
             [c.AddIndex(index=e) for e in entries] * 2,  # (twice: harmless)
         )
         assert len(mine(db_driver)) == 3
 
         await apply_changes(
-            Database.default,
+            current(),
             EMPTY_SNAPSHOT,
             [c.RemoveIndex(index=e) for e in entries] * 2,
         )

@@ -34,7 +34,7 @@ class Refused(ValueError):
 
 
 def _database():
-    return backend.current().Database.default
+    return backend.current().database()
 
 
 def unpublished_visible() -> bool:

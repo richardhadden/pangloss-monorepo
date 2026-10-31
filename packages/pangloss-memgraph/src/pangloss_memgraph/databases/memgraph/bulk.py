@@ -38,6 +38,7 @@ import neo4j
 from pangloss_models.exceptions import PanglossBulkLoadError
 
 from pangloss_memgraph.databases.memgraph.database import Database, slow_query_ms
+from pangloss_memgraph.databases.memgraph.database import current
 from pangloss_memgraph.databases.memgraph.migration_backend import (
     LOCK_ID,
     open_session,
@@ -67,8 +68,7 @@ ALLOWED_LABELS = [
 
 
 async def prepared(database: Database) -> None:
-    if not hasattr(database, "driver"):
-        await database._initialise_driver()
+    await database.ensure_driver()
 
 
 async def statements(database: Database, statement: str) -> list[dict[str, Any]]:
@@ -81,7 +81,7 @@ async def statements(database: Database, statement: str) -> list[dict[str, Any]]
 
 async def storage_mode(database: Database | None = None) -> str:
     """The mode Memgraph is in now. (`SHOW STORAGE INFO` alone says only the mode it *started* in)"""
-    database = database or Database.default
+    database = database or current()
     await prepared(database)
     for row in await statements(database, "SHOW STORAGE INFO ON CURRENT DATABASE"):
         if row["storage info"] == "storage_mode":
@@ -146,7 +146,7 @@ async def restore(database: Database | None = None) -> None:
     """Put the database back after a bulk load: transactional mode, the constraints, the text index,
     and the lock released. Safe to run again. Raises `PanglossBulkLoadError`, with the lock kept, if a
     constraint cannot be made (the data has a duplicate)."""
-    database = database or Database.default
+    database = database or current()
     await prepared(database)
     taken = await held(database)
     if taken is None:
@@ -190,7 +190,7 @@ async def bulk_ingest(
     """Write to an empty database in Memgraph's analytical mode (see the module). Raises
     `PanglossBulkLoadError` if the database is not empty, or not in the usual mode, and
     `PanglossMigrationError` if a migration (or a bulk load) holds the lock."""
-    database = database or Database.default
+    database = database or current()
     await prepared(database)
 
     mode = await storage_mode(database)

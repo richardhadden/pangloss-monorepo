@@ -7,7 +7,6 @@ the database has not had, and records them.
 """
 
 import copy
-import importlib
 from collections.abc import Callable
 from pathlib import Path
 from types import ModuleType
@@ -49,6 +48,7 @@ from pangloss_models.migrations.questions import (
     with_answer,
 )
 from pangloss_models.migrations.reverse import reverse_changes
+from pangloss_core.storage import storage_of
 from pangloss_models.migrations.startup import migration_backend_of, structure_of
 
 from pangloss_cli.project import Project, fail
@@ -64,7 +64,7 @@ SAFETY_MARKS = {
 
 
 def optional_migration_backend(project: Project) -> ModuleType | None:
-    return migration_backend_of(project.require_settings().DATABASE_MODULE)
+    return migration_backend_of(storage_of(project.require_settings()))
 
 
 def load_models(project: Project) -> dict:
@@ -93,12 +93,12 @@ def load_graph(apps: list[str], applied: dict | None = None) -> MigrationGraph:
 
 
 def migration_backend(project: Project) -> ModuleType:
-    settings = project.require_settings()
-    try:
-        return importlib.import_module(f"{settings.DATABASE_MODULE}.migration_backend")
-    except ModuleNotFoundError:
-        fail(f"The database '{settings.DATABASE_MODULE}' does not support migrations")
-        raise
+    storage = storage_of(project.require_settings())
+    backend = storage.migration_backend
+    if backend is None:
+        fail(f"The storage backend '{storage.name}' does not support migrations")
+        raise AssertionError  # (fail raises)
+    return backend
 
 
 def describe(migration: Migration) -> list[str]:

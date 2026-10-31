@@ -1,6 +1,6 @@
 # Memgraph backend
 
-Package: `pangloss-memgraph` (module `pangloss_memgraph.databases.memgraph`). Select it with `DATABASE_MODULE = "pangloss_memgraph.databases.memgraph"` and a `MemgraphDatabaseSettings`.
+Package: `pangloss-memgraph` (module `pangloss_memgraph.databases.memgraph`). Select it with `STORAGE = "pangloss_memgraph:storage"` and a `MemgraphDatabaseSettings`.
 
 Requirements: a Memgraph server with text search (the `text_search` module), started with `--storage-properties-on-edges=true`. (MAGE's `map` functions are used by migrations to change a value inside a stored map.)
 
@@ -169,7 +169,7 @@ Returns `_ListItems` of `ReferenceView`s of all concrete subtypes of `cls`. Defa
 - A list with nothing in it, or a page past the end, has no rows in the query: `list_items` then gives an empty page, with the real count (worked out by running the query for the first page).
 - `initialise_database` is run by `pangloss setup-database` (see [Command line](cli.md)), or can be called from code.
 - Nothing yet removes deleted nodes for good.
-- `Database.default` is set by the last `Database(...)` constructed, and `exposed_functions` decorates with `Database.default` at import time, so the settings/`Database` must be created before the module is first imported (which `initialise()` does when binding).
+- The process has one database in use: `install(database)` sets it (the server and the command line do, through `setup.create_database(settings)`), `current()` gives it, and `using(database)` uses another for a while. The transactions of `exposed_functions` find it when they are called, so the module can be imported before there is a database. `Database(settings)` itself has no side effects; its driver is made on first use (`ensure_driver()`).
 - Search does not fold accents: `zurich` does not find "Zürich" (the text index lower-cases only). Neo4j's does; see [§7 of the Neo4j plan](neo4j-implementation.md#7-after-this) for how to make them agree.
 
 The same layer for Neo4j is `pangloss-neo4j`: see [Neo4j backend](neo4j-implementation.md).

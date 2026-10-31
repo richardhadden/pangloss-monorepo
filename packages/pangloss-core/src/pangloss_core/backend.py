@@ -1,12 +1,12 @@
 """The database backend, for the packages that need to reach the graph and must not name one.
 
-A backend (`settings.DATABASE_MODULE`, such as `pangloss_memgraph.databases.memgraph`) has a module `backend` that gives the
-names of `Backend`. An add-on package (typology, calendar) uses them through `current()`:
+A backend that runs Cypher (its `Storage` has the capability `cypher`; see `pangloss_core.storage`) has a module `backend`
+that gives the names of `Backend`. An add-on package (typology, calendar) uses them through `current()`:
 
 ```python
 from pangloss_core import backend
 
-backend.current().Database.default
+backend.current().database()  # the database in use
 ```
 
 and annotates a transaction as `backend.Transaction`. (`pangloss-users` and `pangloss-review` use the backend's
@@ -14,11 +14,8 @@ and annotates a transaction as `backend.Transaction`. (`pangloss-users` and `pan
 See `docs/backend-neutral-addons.md`.
 """
 
-import importlib
 from collections.abc import Awaitable, Callable
 from typing import Any, Protocol
-
-from pangloss_core import settings
 
 
 class Transaction(Protocol):
@@ -32,7 +29,10 @@ class Backend(Protocol):
     """The names that every backend's `backend` module gives"""
 
     Database: Any
-    """The class: `Database.default` is the one in use; it has `read_transaction` and `write_transaction` decorators"""
+    """The class"""
+
+    database: Callable[[], Any]
+    """`database()`: the database in use (a `Database`), which has `read_transaction` and `write_transaction` decorators"""
 
     timeout_from_setting: Callable[..., Any]
     """`@timeout_from_setting("SEARCH_TIMEOUT_SECONDS", 30)` under a transaction decorator: the time a read may take. A read
@@ -52,10 +52,8 @@ class Backend(Protocol):
     """Whether there is a user of that name"""
 
 
-def module_name(database_module: str | None = None) -> str:
-    return f"{database_module or settings.SETTINGS.DATABASE_MODULE}.backend"
+def current(storage: str | None = None) -> Backend:
+    """The backend of the project (its settings' `STORAGE`), or of the storage named (`pangloss_neo4j:storage`)"""
+    from pangloss_core.storage import load, storage_of
 
-
-def current(database_module: str | None = None) -> Backend:
-    """The backend of the project (`DATABASE_MODULE`), or of the module named"""
-    return importlib.import_module(module_name(database_module))  # ty: ignore[invalid-return-type]
+    return (load(storage) if storage else storage_of()).cypher

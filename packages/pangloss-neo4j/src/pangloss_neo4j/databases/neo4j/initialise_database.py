@@ -15,6 +15,7 @@ from typing import Any
 from pangloss_models.indexes import model_indexes
 
 from pangloss_neo4j.databases.neo4j.database import Database
+from pangloss_neo4j.databases.neo4j.database import current
 from pangloss_neo4j.databases.neo4j.schema import (
     TEXT_INDEX_NAME,
     await_indexes,
@@ -153,9 +154,8 @@ async def initialise_database(database: Database | None = None) -> DatabaseSetup
 
     The constraints are made first (an index made before one fails it). Uses the default `Database`, unless given one.
     """
-    database = database or Database.default
-    if not hasattr(database, "driver"):
-        await database._initialise_driver()
+    database = database or current()
+    await database.ensure_driver()
     driver = database.driver
     database_name = database.settings.DATABASE.DATABASE_NAME
 

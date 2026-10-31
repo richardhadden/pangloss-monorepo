@@ -5,13 +5,16 @@ import neo4j
 from pangloss_neo4j.databases.neo4j.database import (
     Database,
     Transaction,
+    current,
     timeout_from_setting,
+    write_transaction,
 )
 from pangloss_neo4j.databases.neo4j.visibility import unpublished_visible
 
 __all__ = [
     "Database",
     "Transaction",
+    "database",
     "ensure_lock",
     "lock",
     "timeout_from_setting",
@@ -20,12 +23,16 @@ __all__ = [
 ]
 
 
+# The database in use (`database().read_transaction`, `database().driver`, ...)
+database = current
+
+
 async def ensure_lock(key: str) -> None:
     """Make the lock node of the key, in a transaction of its own, before the transaction that locks it is opened. (A
     transaction that makes the node cannot be retried over it: if two make it at once the second is refused at its commit,
     which the driver does not try again; and a transaction does not see a node made after it began.) Harmless if it is there"""
 
-    @Database.default.write_transaction
+    @write_transaction
     async def make(tx: Transaction) -> None:
         await (await tx.run("MERGE (:PGLock {key: $key})", key=key)).consume()
 
@@ -53,9 +60,10 @@ async def lock(tx: Transaction, key: str) -> None:
 
 
 async def user_exists(username: str) -> bool:
-    database = Database.default
-    async with database.driver.session(
-        database=database.settings.DATABASE.DATABASE_NAME
+    in_use = current()
+    driver = await in_use.ensure_driver()
+    async with driver.session(
+        database=in_use.settings.DATABASE.DATABASE_NAME
     ) as session:
         result = await session.run(
             "MATCH (u:PGUser {username: $username}) RETURN u LIMIT 1",

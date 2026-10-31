@@ -2,7 +2,7 @@
 
 Status: built 2026-10-30 (§5). Typology, calendar, dates and zotero run on Memgraph and Neo4j.
 
-The add-on packages should run on any backend (`pangloss-memgraph`, `pangloss-neo4j`, a later one) chosen by `DATABASE_MODULE`,
+The add-on packages should run on any backend (`pangloss-memgraph`, `pangloss-neo4j`, a later one) chosen by `STORAGE`,
 without naming one. This is what it takes.
 
 ## 1. What was found
@@ -11,7 +11,7 @@ without naming one. This is what it takes.
 |---|---|---|
 | `pangloss-history` | No | Records go to SQLite; no graph access. |
 | `pangloss-zotero` | Tests only | The source goes through the models. `tests/conftest.py` builds a Memgraph connection by hand; `pyproject.toml` lists `pangloss-memgraph` as a dependency. |
-| `pangloss-review`, `pangloss-users` | No | They call `{DATABASE_MODULE}.exposed_functions`: the pattern to copy. |
+| `pangloss-review`, `pangloss-users` | No | They call the storage backend's `operations` (`exposed_functions`): the pattern to copy. |
 | `pangloss-typology` | Yes | `graph.py` holds all its Cypher; it imports `Database`, `Transaction`, `unpublished_visible`; the CLI imports `user_exists`. |
 | `pangloss-calendar` | Yes | `graph.py` holds all its Cypher; it imports `Database`, `Transaction`, `timeout_from_setting`, `unpublished_visible`, and catches the driver's `TransientError` to tell a timeout. |
 

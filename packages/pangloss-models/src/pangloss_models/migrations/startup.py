@@ -7,7 +7,7 @@ or lost after it was applied, and models that have changed since the migrations 
 project with no migrations makes no promise, and is not checked.
 """
 
-import importlib
+from pangloss_core.storage import Storage
 from types import ModuleType
 from typing import Any
 
@@ -16,14 +16,9 @@ from pangloss_models.migrations.history import pending, problems
 from pangloss_models.migrations.snapshot import build_snapshot, data_view
 
 
-def migration_backend_of(database_module: str) -> ModuleType | None:
-    """The `migration_backend` of a database package, if it has one"""
-    try:
-        return importlib.import_module(f"{database_module}.migration_backend")
-    except ModuleNotFoundError as error:
-        if error.name == f"{database_module}.migration_backend":
-            return None
-        raise
+def migration_backend_of(storage: Storage) -> ModuleType | None:
+    """The `migration_backend` of a storage backend, if it has one"""
+    return storage.migration_backend
 
 
 def structure_of(backend: ModuleType | None) -> dict[str, Any] | None:

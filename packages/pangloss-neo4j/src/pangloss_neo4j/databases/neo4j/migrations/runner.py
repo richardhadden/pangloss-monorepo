@@ -36,8 +36,7 @@ async def apply_changes(
 
     A change is applied once its predecessors have been: a failure leaves the changes
     before it (in a transaction, or made on their own) done."""
-    if not hasattr(database, "driver"):
-        await database._initialise_driver()
+    await database.ensure_driver()
     database_name = database.settings.DATABASE.DATABASE_NAME
 
     group: list[tuple[c.Change, dict[str, Any]]] = []
@@ -75,8 +74,7 @@ async def dry_run(
     is not. A change that would fail for real says so: a value that is needed and was not given, data
     that does not convert. After a failure the rest are not tried (the transaction cannot go on).
     Returns the reports, and the snapshot after the changes."""
-    if not hasattr(database, "driver"):
-        await database._initialise_driver()
+    await database.ensure_driver()
     reports: list[ChangeReport] = []
     failed = False
     async with database.driver.session(
@@ -147,8 +145,7 @@ async def apply_changes_in_batches(
     be wrapped once they are; the others are made at once, in a transaction of their own. A check
     that must pass before anything is changed (that all values convert) is made once, before the
     first batch. Returns the snapshot after the changes."""
-    if not hasattr(database, "driver"):
-        await database._initialise_driver()
+    await database.ensure_driver()
     database_name = database.settings.DATABASE.DATABASE_NAME
     start = start or Progress()
 
