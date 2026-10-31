@@ -9,7 +9,7 @@ from pangloss_neo4j.databases.neo4j.database import (
     timeout_from_setting,
     write_transaction,
 )
-from pangloss_neo4j.databases.neo4j.visibility import unpublished_visible
+from pangloss_cypher.visibility import unpublished_visible
 
 __all__ = [
     "Database",

@@ -1,4 +1,4 @@
-"""What the Neo4j driver returns that the models do not know: its date and time types.
+"""What the driver (Memgraph's or Neo4j's) returns that the models do not know: its date and time types.
 
 Registered with the models (`pangloss_models.hooks.from_database`) when this package is
 imported, which is when the database module is bound.

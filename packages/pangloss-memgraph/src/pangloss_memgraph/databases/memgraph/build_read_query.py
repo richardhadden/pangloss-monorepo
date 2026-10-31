@@ -7,7 +7,7 @@ from pangloss_memgraph.databases.memgraph.build_create_query import (
     QueryParams,
     convert_type_for_writing,
 )
-from pangloss_memgraph.databases.memgraph.visibility import unpublished_visible
+from pangloss_cypher.visibility import unpublished_visible
 
 
 def build_fetch_document_query(

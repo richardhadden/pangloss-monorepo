@@ -36,6 +36,7 @@ from pangloss_users import current_request_username
 from pydantic import AnyUrl
 
 from pangloss_neo4j.databases.neo4j.properties import flatten
+from pangloss_cypher.values import native_datetime
 
 
 type _AllCreateDBModels = (
@@ -255,11 +256,6 @@ class PropertyAssignments:
         """What to put after `SET` to give `variable` the properties: replacing
         its properties (`=`), or adding to them (`+=`)"""
         return f"{variable} {'=' if replace else '+='} ${self.identifier}"
-
-
-def native_datetime(value: typing.Any) -> typing.Any:
-    """Convert a neo4j DateTime to a Python datetime"""
-    return value.to_native() if hasattr(value, "to_native") else value
 
 
 def default_reverse_name(field_name: str) -> str:

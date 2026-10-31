@@ -42,7 +42,7 @@ from pangloss_users import current_request_username
 from pangloss_users.models import AccessTokenRecord, UserInDB
 from pydantic import AnyHttpUrl, TypeAdapter
 
-from pangloss_memgraph.databases.memgraph import review, users
+from pangloss_cypher import review, users
 from pangloss_memgraph.databases.memgraph.build_autocomplete_query import (
     AUTOCOMPLETE_QUERY,
 )
@@ -59,7 +59,7 @@ from pangloss_memgraph.databases.memgraph.build_read_query import (
     build_fetch_document_query,
 )
 from pangloss_memgraph.databases.memgraph.build_search_query import build_search_query
-from pangloss_memgraph.databases.memgraph.build_tree import build_tree
+from pangloss_cypher.build_tree import build_tree
 from pangloss_memgraph.databases.memgraph.build_update_query import (
     build_head_update_query,
     build_replace_head_query,
@@ -73,12 +73,12 @@ from pangloss_memgraph.databases.memgraph.database import (
     read_transaction,
     write_transaction,
 )
-from pangloss_memgraph.databases.memgraph.delete_node import (
+from pangloss_cypher.delete_node import (
     DeletionResult,
     soft_delete,
     undelete,
 )
-from pangloss_memgraph.databases.memgraph.lookup import resolve_id
+from pangloss_cypher.lookup import resolve_id
 from pangloss_memgraph.databases.memgraph.read_incoming import (
     fetch_incoming_relations,
 )

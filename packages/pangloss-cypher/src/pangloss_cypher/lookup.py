@@ -4,7 +4,7 @@ from uuid import UUID
 
 from pydantic import AnyHttpUrl, AnyUrl
 
-from pangloss_memgraph.databases.memgraph.database import Transaction
+from pangloss_cypher.transaction import Transaction
 
 
 async def resolve_id(tx: Transaction, id: UUID | AnyHttpUrl) -> UUID | None:

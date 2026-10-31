@@ -189,6 +189,25 @@ Done-when checks:
   in the kit, so that nothing gets copied back.
 - **Done when** both backends' tests pass using the moved modules, and the duplicated files are deleted.
 
+**As built (2026-10-31).**
+
+- **Moved** to `packages/pangloss-cypher`, unchanged: `delete_node`, `review`, `users`, `lookup`, `build_tree`,
+  `from_database` and `visibility`. Both backends import them from `pangloss_cypher`.
+- **Moved with them**, because they are identical and the moved files need them:
+  - `Transaction` (`transaction.py`);
+  - `VERSION_OF_HEAD` (`heads.py`);
+  - `check_user_exists` (`checks.py`);
+  - `native_datetime` (`values.py`).
+
+  The backends' modules import these back, so their old names still work.
+- **Not moved: `read_incoming`.** It calls `build_fetch_incoming_query`, which differs between the backends, so it waits
+  for the dialect (phase 7).
+- **Tests:**
+  - `test_build_tree` is now one copy, in `pangloss-cypher/tests`;
+  - `test_no_copies.py` fails if a backend has a module with a kit module's name, or its text (seen to fail with a
+    renamed copy of `lookup.py`);
+  - the Neo4j contract test no longer compares `users` and `review`, which exist once.
+
 ### Phase 3: the `Dialect`, transactions, and the write path (1 week)
 
 - `pangloss_cypher/dialect.py`: the `Dialect` protocol. **Only** the methods the diffs require at this point:

@@ -14,8 +14,8 @@ from pangloss_models.exceptions import (
 )
 
 from pangloss_memgraph.databases.memgraph.settings import MemgraphDatabaseSettings
+from pangloss_cypher.transaction import Transaction as Transaction
 
-Transaction = neo4j.AsyncManagedTransaction
 
 logger = logging.getLogger("pangloss.memgraph.transactions")
 queries = logging.getLogger("pangloss.memgraph.queries")

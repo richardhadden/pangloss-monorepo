@@ -9,6 +9,7 @@ members = [
     "pangloss-calendar",
     "pangloss-cli",
     "pangloss-core",
+    "pangloss-cypher",
     "pangloss-dates",
     "pangloss-history",
     "pangloss-interface",
@@ -815,6 +816,25 @@ dependencies = [
 requires-dist = [{ name = "pydantic-settings", specifier = ">=2.14.1" }]
 
 [[package]]
+name = "pangloss-cypher"
+version = "0.1.0"
+source = { editable = "packages/pangloss-cypher" }
+dependencies = [
+    { name = "neo4j" },
+    { name = "pangloss-core" },
+    { name = "pangloss-models" },
+    { name = "pangloss-users" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "neo4j", specifier = ">=6.2.0" },
+    { name = "pangloss-core", editable = "packages/pangloss-core" },
+    { name = "pangloss-models", editable = "packages/pangloss-models" },
+    { name = "pangloss-users", editable = "packages/pangloss-users" },
+]
+
+[[package]]
 name = "pangloss-dates"
 version = "0.1.0"
 source = { editable = "packages/pangloss-dates" }
@@ -919,6 +939,7 @@ source = { editable = "packages/pangloss-memgraph" }
 dependencies = [
     { name = "more-itertools" },
     { name = "neo4j" },
+    { name = "pangloss-cypher" },
     { name = "pangloss-models" },
     { name = "pangloss-users" },
     { name = "typer" },
@@ -938,6 +959,7 @@ dev = [
 requires-dist = [
     { name = "more-itertools", specifier = ">=11.1.0" },
     { name = "neo4j", specifier = ">=6.2.0" },
+    { name = "pangloss-cypher", editable = "packages/pangloss-cypher" },
     { name = "pangloss-models", editable = "packages/pangloss-models" },
     { name = "pangloss-users", editable = "packages/pangloss-users" },
     { name = "typer", specifier = ">=0.27.3" },
@@ -995,6 +1017,7 @@ source = { editable = "packages/pangloss-neo4j" }
 dependencies = [
     { name = "more-itertools" },
     { name = "neo4j" },
+    { name = "pangloss-cypher" },
     { name = "pangloss-models" },
     { name = "pangloss-users" },
     { name = "typer" },
@@ -1014,6 +1037,7 @@ dev = [
 requires-dist = [
     { name = "more-itertools", specifier = ">=11.1.0" },
     { name = "neo4j", specifier = ">=6.2.0" },
+    { name = "pangloss-cypher", editable = "packages/pangloss-cypher" },
     { name = "pangloss-models", editable = "packages/pangloss-models" },
     { name = "pangloss-users", editable = "packages/pangloss-users" },
     { name = "typer", specifier = ">=0.27.3" },

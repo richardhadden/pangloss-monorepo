@@ -1,7 +1,7 @@
 """The functions that turn what the database returns into the input of a view (`build_tree`)"""
 
 import pytest
-from pangloss_memgraph.databases.memgraph.build_tree import build_tree
+from pangloss_cypher.build_tree import build_tree
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 

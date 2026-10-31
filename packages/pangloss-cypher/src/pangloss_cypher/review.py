@@ -8,8 +8,8 @@ import datetime
 from typing import Any
 from uuid import UUID, uuid7
 
-from pangloss_neo4j.databases.neo4j.build_create_query import native_datetime
-from pangloss_neo4j.databases.neo4j.database import Transaction
+from pangloss_cypher.values import native_datetime
+from pangloss_cypher.transaction import Transaction
 
 # (a document written before review was used is published: no status, and not `published: false`)
 STATE_QUERY = """

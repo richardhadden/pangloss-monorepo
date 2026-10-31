@@ -6,7 +6,7 @@ from pangloss_models.model_bases.entity import Entity
 from pangloss_neo4j.databases.neo4j.schema import (
     search_patterns as schema_search_patterns,
 )
-from pangloss_neo4j.databases.neo4j.visibility import unpublished_visible
+from pangloss_cypher.visibility import unpublished_visible
 
 # The deep search (see docs/deep-search.md). Nothing large is carried from row to row: the hits are reduced to
 # the ids of the documents (the roots) that have every word, and only those are expanded. (It once kept a list of

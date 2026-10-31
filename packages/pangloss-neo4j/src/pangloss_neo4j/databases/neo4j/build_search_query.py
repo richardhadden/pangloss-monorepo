@@ -23,7 +23,7 @@ from pangloss_neo4j.databases.neo4j.build_create_query import (
     convert_type_for_writing,
 )
 from pangloss_neo4j.databases.neo4j.traversal import hops
-from pangloss_neo4j.databases.neo4j.visibility import unpublished_visible
+from pangloss_cypher.visibility import unpublished_visible
 
 COMPARISONS = {"eq": "=", "ne": "<>", "gt": ">", "gte": ">=", "lt": "<", "lte": "<="}
 

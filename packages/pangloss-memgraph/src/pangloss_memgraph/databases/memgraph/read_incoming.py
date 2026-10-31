@@ -28,7 +28,7 @@ from pangloss_memgraph.databases.memgraph.build_read_query import (
     build_fetch_held_query,
     build_fetch_incoming_query,
 )
-from pangloss_memgraph.databases.memgraph.database import Transaction
+from pangloss_cypher.transaction import Transaction
 
 logger = logging.getLogger("pangloss.memgraph.read")
 

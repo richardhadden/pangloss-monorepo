@@ -28,7 +28,7 @@ from pangloss_neo4j.databases.neo4j.build_read_query import (
     build_fetch_held_query,
     build_fetch_incoming_query,
 )
-from pangloss_neo4j.databases.neo4j.database import Transaction
+from pangloss_cypher.transaction import Transaction
 
 logger = logging.getLogger("pangloss.neo4j.read")
 

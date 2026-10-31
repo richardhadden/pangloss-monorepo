@@ -42,7 +42,7 @@ from pangloss_users import current_request_username
 from pangloss_users.models import AccessTokenRecord, UserInDB
 from pydantic import AnyHttpUrl, TypeAdapter
 
-from pangloss_neo4j.databases.neo4j import review, users
+from pangloss_cypher import review, users
 from pangloss_neo4j.databases.neo4j.build_autocomplete_query import (
     AUTOCOMPLETE_QUERY,
 )
@@ -59,7 +59,7 @@ from pangloss_neo4j.databases.neo4j.build_read_query import (
     build_fetch_document_query,
 )
 from pangloss_neo4j.databases.neo4j.build_search_query import build_search_query
-from pangloss_neo4j.databases.neo4j.build_tree import build_tree
+from pangloss_cypher.build_tree import build_tree
 from pangloss_neo4j.databases.neo4j.build_update_query import (
     build_head_update_query,
     build_replace_head_query,
@@ -73,12 +73,12 @@ from pangloss_neo4j.databases.neo4j.database import (
     read_transaction,
     write_transaction,
 )
-from pangloss_neo4j.databases.neo4j.delete_node import (
+from pangloss_cypher.delete_node import (
     DeletionResult,
     soft_delete,
     undelete,
 )
-from pangloss_neo4j.databases.neo4j.lookup import resolve_id
+from pangloss_cypher.lookup import resolve_id
 from pangloss_neo4j.databases.neo4j.read_incoming import (
     fetch_incoming_relations,
 )

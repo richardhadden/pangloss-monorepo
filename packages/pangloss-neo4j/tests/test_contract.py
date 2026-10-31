@@ -14,7 +14,8 @@ from pathlib import Path
 import pytest
 from pangloss_core import backend as core_backend
 
-MODULES = ["exposed_functions", "setup", "migration_backend", "users", "review"]
+# (`users` and `review` are one module, in `pangloss-cypher`, shared by both)
+MODULES = ["exposed_functions", "setup", "migration_backend"]
 
 # Memgraph's, that Neo4j does not have, and why (each is optional in the contract, or specific to Memgraph)
 NOT_IN_NEO4J = {

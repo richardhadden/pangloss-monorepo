@@ -34,6 +34,7 @@ from pangloss_memgraph.databases.memgraph.build_create_query import (
     build_attached_nodes,
     get_node_fields_as_writable_dict,
 )
+from pangloss_cypher.heads import VERSION_OF_HEAD
 
 # Walks forward edges from the head node, without entering entities
 # (The URLs of an entity are not part of what it owns)
@@ -45,10 +46,6 @@ TREE_TRAVERSAL = "[*BFS (edge, node | NOT node:Entity AND NOT node:PGUrl AND NOT
 # would publish it
 KEPT_PROPERTIES = ("published", "review_status", "reviewed_by", "reviewed_at")
 _KEPT = "{" + ", ".join(f"{name}: head.{name}" for name in KEPT_PROPERTIES) + "}"
-
-
-# The version of a head node: 1, and 1 more for each update of it
-VERSION_OF_HEAD = "size([(head)<-[:is_update_of]-(update:PGUpdate) | update]) + 1"
 
 
 def build_head_query(head_id: uuid.UUID) -> tuple[str, dict[str, typing.Any]]:

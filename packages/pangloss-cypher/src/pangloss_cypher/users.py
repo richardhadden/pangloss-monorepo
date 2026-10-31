@@ -16,7 +16,7 @@ from pangloss_users.exceptions import (
 )
 from pangloss_users.models import AccessTokenRecord, UserInDB
 
-from pangloss_neo4j.databases.neo4j.database import Transaction
+from pangloss_cypher.transaction import Transaction
 
 # What `update_user` can change
 UPDATABLE_PROPERTIES = frozenset(

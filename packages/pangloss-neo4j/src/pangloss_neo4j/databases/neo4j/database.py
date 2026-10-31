@@ -15,8 +15,8 @@ from pangloss_models.exceptions import (
 
 from pangloss_neo4j.databases.neo4j.properties import decode
 from pangloss_neo4j.databases.neo4j.settings import Neo4jDatabaseSettings
+from pangloss_cypher.transaction import Transaction as Transaction
 
-Transaction = neo4j.AsyncManagedTransaction
 
 logger = logging.getLogger("pangloss.neo4j.transactions")
 queries = logging.getLogger("pangloss.neo4j.queries")

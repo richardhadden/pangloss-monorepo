@@ -4,7 +4,7 @@ from pangloss_models.autocomplete import search_words
 from pangloss_models.model_bases.document import Document
 from pangloss_models.model_bases.entity import Entity
 
-from pangloss_memgraph.databases.memgraph.visibility import unpublished_visible
+from pangloss_cypher.visibility import unpublished_visible
 
 
 # The deep search (see docs/deep-search.md). Nothing large is carried from row to row: the hits are reduced to

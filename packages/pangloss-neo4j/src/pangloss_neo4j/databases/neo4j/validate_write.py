@@ -10,11 +10,8 @@ from pangloss_models.exceptions import (
     PanglossConflictError,
     PanglossNotFoundError,
     PanglossReferenceError,
-    PanglossUserDisabledError,
-    PanglossUserNotFoundError,
 )
 from pangloss_models.model_bases.labels import has_allowed_label
-from pangloss_users import current_request_username
 
 from pangloss_neo4j.databases.neo4j.build_create_query import (
     ExistingEntity,
@@ -26,7 +23,8 @@ from pangloss_neo4j.databases.neo4j.build_update_query import (
     build_head_query,
     build_tree_meta_query,
 )
-from pangloss_neo4j.databases.neo4j.database import Transaction
+from pangloss_cypher.transaction import Transaction
+from pangloss_cypher.checks import check_user_exists as check_user_exists
 
 
 @dataclasses.dataclass
@@ -34,22 +32,6 @@ class ExistingHead:
     created_by: str | None
     created_when: typing.Any
     version: int = 1
-
-
-async def check_user_exists(tx: Transaction) -> None:
-    username = current_request_username.get()
-    result = await tx.run(
-        """
-        MATCH (user:PGUser {username: $username})
-        RETURN coalesce(user.disabled, false) AS disabled
-        """,
-        username=username,
-    )
-    found = await result.value()
-    if not found:
-        raise PanglossUserNotFoundError(f"There is no user '{username}'")
-    if found[0]:
-        raise PanglossUserDisabledError(f"The user '{username}' is disabled")
 
 
 async def check_references_exist(tx: Transaction, query_object: QueryObject) -> None:

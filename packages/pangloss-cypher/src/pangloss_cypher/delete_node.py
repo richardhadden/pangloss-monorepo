@@ -31,10 +31,10 @@ from pangloss_models.model_bases.entity import Entity
 from pangloss_users import current_request_username
 from pydantic import AnyHttpUrl
 
-from pangloss_memgraph.databases.memgraph.build_update_query import VERSION_OF_HEAD
-from pangloss_memgraph.databases.memgraph.database import Transaction
-from pangloss_memgraph.databases.memgraph.lookup import resolve_id
-from pangloss_memgraph.databases.memgraph.validate_write import check_user_exists
+from pangloss_cypher.heads import VERSION_OF_HEAD
+from pangloss_cypher.transaction import Transaction
+from pangloss_cypher.lookup import resolve_id
+from pangloss_cypher.checks import check_user_exists
 
 # How many of the things that refer to an entity are reported
 MAX_REFERENCES_REPORTED = 10
