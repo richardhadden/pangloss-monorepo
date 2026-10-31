@@ -177,6 +177,11 @@ def build_relation_options(
             (ReifiedRelation, ReifiedRelationDocument, SemanticSpace, Conjunction),
         )
     ):
+        if origin is SemanticSpace:
+            raise PanglossModelError(
+                f"{annotation.__name__}: a field must be of a subclass of SemanticSpace "
+                "(`class Negative[T](SemanticSpace[T]): ...`, then `Negative[...]`), not of SemanticSpace itself"
+            )
         type_args = annotation.__pydantic_generic_metadata__["args"]
         parameters = origin.__pydantic_generic_metadata__["parameters"]
         params_type_args = zip(parameters, type_args)

@@ -131,8 +131,9 @@ Left as they are:
 - the 65 bugbear (`B`) findings are not in the check;
 - the review's finding 7 (visibility, creation join, the inline `user` variable) waits for phases 4 and 7.
 
-Found on the way: a bare `SemanticSpace[...]` field accepts only `"type": "SemanticSpace"` and has no `contents`.
-This is noted in `test_recursive_type` and not looked into.
+Found on the way: a bare `SemanticSpace[...]` field was accepted, though it should not be (a semantic space is a
+subclass). Fixed 2026-11-01: `initialise()` refuses it with a `PanglossModelError`.
+`test_recursive_type` now uses `Subjunctive[...]`.
 
 ### Phase 1: explicit database binding (3 days)
 

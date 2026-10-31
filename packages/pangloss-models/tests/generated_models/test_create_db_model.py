@@ -6,7 +6,7 @@ from uuid import UUID, uuid7
 import pytest
 from annotated_types import Gt, MinLen
 from pangloss_models import initialise
-from pangloss_models.exceptions import PanglossMetaError
+from pangloss_models.exceptions import PanglossMetaError, PanglossModelError
 from pangloss_models.field_definitions import (
     FieldSubclassing,
     ListFieldDefinition,
@@ -1720,11 +1720,8 @@ def test_create_db_with_multiple_type_bug():
 
 @no_type_check
 def test_recursive_type():
-    """Semantic spaces declared before and after a model that refers to itself inside one (`SemanticSpace[Action |
-    Order]`), and another model that holds it in a semantic space: the models are made, whatever the order.
-
-    (A bare `SemanticSpace[...]` field takes only the type `SemanticSpace`, and its model has no `contents`: found
-    2026-10-31 when this test was given assertions; not looked into.)"""
+    """A model that refers to itself inside a semantic space (`Subjunctive[Action | Order]`), with the semantic spaces
+    declared before it, and another model that holds it in a semantic space: the models are made."""
 
     class Negative[T](SemanticSpace[T]):
         pass
@@ -1740,30 +1737,50 @@ def test_recursive_type():
         pass
 
     class Order(Document):
-        thing_ordered: SemanticSpace[Action | Order]
+        thing_ordered: Subjunctive[Action | Order]
 
     initialise()
 
-    for model in (Factoid, Order, Action):
-        assert model.Create and model.CreateDB and model.View
+    order = Order.Create(
+        label="An Order",
+        thing_ordered={
+            "type": "Subjunctive",
+            "contents": [
+                {
+                    "type": "Order",
+                    "label": "An Order within",
+                    "thing_ordered": {
+                        "type": "Subjunctive",
+                        "contents": [{"type": "Action", "label": "An Action"}],
+                    },
+                }
+            ],
+        },
+    )
+    inner = order.thing_ordered.contents[0]
+    assert order.thing_ordered.type == "Subjunctive"
+    assert inner.type == "Order"
+    assert inner.thing_ordered.contents[0].type == "Action"
+
     factoid = Factoid.Create(
         label="A Factoid",
-        statements=[
-            {
-                "type": "Negative",
-                "contents": [
-                    {
-                        "type": "Order",
-                        "label": "An Order",
-                        "thing_ordered": {"type": "SemanticSpace"},
-                    }
-                ],
-            }
-        ],
+        statements=[{"type": "Negative", "contents": [order.model_dump()]}],
     )
-    negative = factoid.statements[0]
-    assert negative.type == "Negative"
-    assert negative.contents[0].type == "Order"
+    assert factoid.statements[0].contents[0].type == "Order"
+
+
+@no_type_check
+def test_semantic_space_itself_cannot_be_a_field_type():
+    """`SemanticSpace` is a base to subclass (`class Negative[T](SemanticSpace[T])`), not a semantic space"""
+
+    class Action(Document):
+        pass
+
+    class Order(Document):
+        thing_ordered: SemanticSpace[Action]
+
+    with pytest.raises(PanglossModelError, match="subclass of SemanticSpace"):
+        initialise()
 
 
 @no_type_check
