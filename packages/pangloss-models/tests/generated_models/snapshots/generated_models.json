@@ -1866,7 +1866,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'carriedOutBy'"
     },
@@ -2004,7 +2006,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'carriedOutBy'"
     },
@@ -2394,7 +2398,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'carriedOutBy'"
     },
@@ -2405,7 +2411,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'date'"
     },
@@ -2433,7 +2441,7 @@
     },
     "lived": {
      "alias": null,
-     "annotation": "list[Annotated[LivedIn[Place]Update > LivedIn[Place]Create; Field()]]",
+     "annotation": "list[Annotated[LivedIn[Place]Update > LivedIn[Place]Create; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -2444,7 +2452,7 @@
     },
     "participants": {
      "alias": null,
-     "annotation": "list[Annotated[InRole[Group, Person]Update > InRole[Group, Person]Create; Field()]]",
+     "annotation": "list[Annotated[InRole[Group, Person]Update > InRole[Group, Person]Create; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -2501,7 +2509,7 @@
     },
     "witnesses": {
      "alias": null,
-     "annotation": "list[Annotated[InRole[Group, Person]UpdateViaWeight > InRole[Group, Person]CreateViaWeight; Field()]]",
+     "annotation": "list[Annotated[InRole[Group, Person]UpdateViaWeight > InRole[Group, Person]CreateViaWeight; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -2543,7 +2551,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'carriedOutBy'"
     },
@@ -2565,7 +2575,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'date'"
     },
@@ -2593,7 +2605,7 @@
     },
     "lived": {
      "alias": null,
-     "annotation": "list[Annotated[LivedIn[Place]UpdateDB > LivedIn[Place]CreateDB; Field()]]",
+     "annotation": "list[Annotated[LivedIn[Place]UpdateDB > LivedIn[Place]CreateDB; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -2604,7 +2616,7 @@
     },
     "participants": {
      "alias": null,
-     "annotation": "list[Annotated[InRole[Group, Person]UpdateDB > InRole[Group, Person]CreateDB; Field()]]",
+     "annotation": "list[Annotated[InRole[Group, Person]UpdateDB > InRole[Group, Person]CreateDB; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -2672,7 +2684,7 @@
     },
     "witnesses": {
      "alias": null,
-     "annotation": "list[Annotated[InRole[Group, Person]UpdateDBViaWeight > InRole[Group, Person]CreateDBViaWeight; Field()]]",
+     "annotation": "list[Annotated[InRole[Group, Person]UpdateDBViaWeight > InRole[Group, Person]CreateDBViaWeight; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -2862,7 +2874,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'carriedOutBy'"
     },
@@ -3000,7 +3014,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'carriedOutBy'"
     },
@@ -3011,7 +3027,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": false,
      "validation_alias": "'date'"
     },
@@ -3039,7 +3057,7 @@
     },
     "lived": {
      "alias": null,
-     "annotation": "list[Annotated[LivedIn[Place]Update > LivedIn[Place]Create[bound=year->date only Activity converted; year->year]Create; Field()]]",
+     "annotation": "list[Annotated[LivedIn[Place]Update > LivedIn[Place]Create[bound=year->date only Activity converted; year->year]Create; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -3050,7 +3068,7 @@
     },
     "participants": {
      "alias": null,
-     "annotation": "list[Annotated[InRole[Group, Person]Update > InRole[Group, Person]Create[bound=year->date only Activity converted; year->year]Create; Field()]]",
+     "annotation": "list[Annotated[InRole[Group, Person]Update > InRole[Group, Person]Create[bound=year->date only Activity converted; year->year]Create; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -3107,7 +3125,7 @@
     },
     "witnesses": {
      "alias": null,
-     "annotation": "list[Annotated[InRole[Group, Person]UpdateViaWeight > InRole[Group, Person]Create[bound=year->date only Activity converted; year->year]CreateViaWeight; Field()]]",
+     "annotation": "list[Annotated[InRole[Group, Person]UpdateViaWeight > InRole[Group, Person]Create[bound=year->date only Activity converted; year->year]CreateViaWeight; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -3599,7 +3617,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'holder'"
     },
@@ -3713,7 +3733,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'holder'"
     },
@@ -3989,7 +4011,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'holder'"
     },
@@ -4055,7 +4079,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'started'"
     },
@@ -4103,7 +4129,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'holder'"
     },
@@ -4180,7 +4208,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'started'"
     },
@@ -4597,7 +4627,7 @@
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[SourceReferenceSet > SourceCreate; Field()]]",
+     "annotation": "list[Annotated[SourceReferenceSet > SourceCreate; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -4645,7 +4675,7 @@
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[SourceReferenceSet > SourceCreate; Field()]]",
+     "annotation": "list[Annotated[SourceReferenceSet > SourceCreate; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -4726,7 +4756,7 @@
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[SourceCreateDB > SourceReferenceSet; Field()]]",
+     "annotation": "list[Annotated[SourceCreateDB > SourceReferenceSet; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -4807,7 +4837,7 @@
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[SourceCreateDB > SourceReferenceSet; Field()]]",
+     "annotation": "list[Annotated[SourceCreateDB > SourceReferenceSet; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -4866,7 +4896,7 @@
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[SourceReferenceSet > SourceCreate; Field()]]",
+     "annotation": "list[Annotated[SourceReferenceSet > SourceCreate; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -4947,7 +4977,7 @@
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[SourceCreateDB > SourceReferenceSet; Field()]]",
+     "annotation": "list[Annotated[SourceCreateDB > SourceReferenceSet; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -5113,7 +5143,7 @@
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[SourceReferenceSet > SourceCreate; Field()]]",
+     "annotation": "list[Annotated[SourceReferenceSet > SourceCreate; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -5194,7 +5224,7 @@
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[SourceCreateDB > SourceReferenceSet; Field()]]",
+     "annotation": "list[Annotated[SourceCreateDB > SourceReferenceSet; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -5253,7 +5283,7 @@
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[SourceReferenceSet > SourceCreate; Field()]]",
+     "annotation": "list[Annotated[SourceReferenceSet > SourceCreate; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -5334,7 +5364,7 @@
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[SourceCreateDB > SourceReferenceSet; Field()]]",
+     "annotation": "list[Annotated[SourceCreateDB > SourceReferenceSet; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -5563,7 +5593,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'dated'"
     },
@@ -5585,7 +5617,9 @@
      "default_factory": null,
      "description": "The note made when it was attested",
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'note'"
     },
@@ -5633,7 +5667,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'dated'"
     },
@@ -5655,7 +5691,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'note'"
     },
@@ -5778,7 +5816,7 @@
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[PersonReferenceSet > PersonCreate; Field()]]",
+     "annotation": "list[Annotated[PersonReferenceSet > PersonCreate; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -5837,7 +5875,7 @@
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[PersonReferenceSet > PersonCreate; Field()]]",
+     "annotation": "list[Annotated[PersonReferenceSet > PersonCreate; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -5929,7 +5967,7 @@
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[PersonCreateDB > PersonReferenceSet; Field()]]",
+     "annotation": "list[Annotated[PersonCreateDB > PersonReferenceSet; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -6021,7 +6059,7 @@
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[PersonCreateDB > PersonReferenceSet; Field()]]",
+     "annotation": "list[Annotated[PersonCreateDB > PersonReferenceSet; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -6063,7 +6101,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'dated'"
     },
@@ -6085,13 +6125,15 @@
      "default_factory": null,
      "description": "The note made when it was attested",
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'note'"
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[PersonReferenceSet > PersonCreate; Field()]]",
+     "annotation": "list[Annotated[PersonReferenceSet > PersonCreate; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -6144,7 +6186,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'dated'"
     },
@@ -6166,7 +6210,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'note'"
     },
@@ -6183,7 +6229,7 @@
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[PersonCreateDB > PersonReferenceSet; Field()]]",
+     "annotation": "list[Annotated[PersonCreateDB > PersonReferenceSet; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -6382,7 +6428,7 @@
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[PersonReferenceSet > PersonCreate; Field()]]",
+     "annotation": "list[Annotated[PersonReferenceSet > PersonCreate; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -6474,7 +6520,7 @@
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[PersonCreateDB > PersonReferenceSet; Field()]]",
+     "annotation": "list[Annotated[PersonCreateDB > PersonReferenceSet; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -6516,7 +6562,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'dated'"
     },
@@ -6538,13 +6586,15 @@
      "default_factory": null,
      "description": "The note made when it was attested",
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'note'"
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[PersonReferenceSet > PersonCreate; Field()]]",
+     "annotation": "list[Annotated[PersonReferenceSet > PersonCreate; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -6597,7 +6647,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'dated'"
     },
@@ -6619,7 +6671,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'note'"
     },
@@ -6636,7 +6690,7 @@
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[PersonCreateDB > PersonReferenceSet; Field()]]",
+     "annotation": "list[Annotated[PersonCreateDB > PersonReferenceSet; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -6964,7 +7018,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'cause'"
     },
@@ -6997,7 +7053,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'result'"
     },
@@ -7045,7 +7103,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'cause'"
     },
@@ -7078,7 +7138,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'result'"
     },
@@ -7126,7 +7188,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'cause'"
     },
@@ -7137,7 +7201,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'result'"
     },
@@ -7174,7 +7240,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'cause'"
     },
@@ -7185,7 +7253,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'result'"
     },
@@ -7222,7 +7292,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'cause'"
     },
@@ -7244,7 +7316,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'result'"
     },
@@ -7281,7 +7355,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'cause'"
     },
@@ -7314,7 +7390,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'result'"
     },
@@ -7431,7 +7509,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'result'"
     },
@@ -7479,7 +7559,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'result'"
     },
@@ -7549,7 +7631,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'result'"
     },
@@ -7630,7 +7714,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'result'"
     },
@@ -7700,7 +7786,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'result'"
     },
@@ -7770,7 +7858,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'result'"
     },
@@ -8007,7 +8097,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'result'"
     },
@@ -8077,7 +8169,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'result'"
     },
@@ -8147,7 +8241,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'result'"
     },
@@ -8217,7 +8313,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'result'"
     },
@@ -8323,7 +8421,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'cause'"
     },
@@ -8334,7 +8434,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'result'"
     },
@@ -8371,7 +8473,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'cause'"
     },
@@ -8404,7 +8508,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'result'"
     },
@@ -8452,7 +8558,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'cause'"
     },
@@ -8474,7 +8582,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'result'"
     },
@@ -8511,7 +8621,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'cause'"
     },
@@ -8544,7 +8656,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'result'"
     },
@@ -9360,7 +9474,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'attested'"
     },
@@ -9382,7 +9498,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'joined'"
     },
@@ -9404,7 +9522,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'perhaps'"
     },
@@ -9452,7 +9572,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'attested'"
     },
@@ -9485,7 +9607,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'joined'"
     },
@@ -9507,7 +9631,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'perhaps'"
     },
@@ -9952,7 +10078,7 @@
    "fields": {
     "involved": {
      "alias": null,
-     "annotation": "list[Annotated[GroupReferenceSet | PersonReferenceSet > PersonCreate; Field()]]",
+     "annotation": "list[Annotated[GroupReferenceSet | PersonReferenceSet > PersonCreate; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -10007,7 +10133,7 @@
     },
     "statements": {
      "alias": null,
-     "annotation": "list[Annotated[ActivityCreate[bound=year->date only Activity converted; year->year]Create | Causes[Activity, Activity, Transfer, Transfer]Create[bound=year->date only Activity converted; year->year]Create | Hypothetical[Activity, Transfer]Create[bound=year->date only Activity converted; year->year]Create | Negative[Activity, Transfer]Create[bound=year->date only Activity converted; year->year]Create | TransferCreate[bound=year->date only Activity converted; year->year]Create; Field()]]",
+     "annotation": "list[Annotated[ActivityCreate[bound=year->date only Activity converted; year->year]Create | Causes[Activity, Activity, Transfer, Transfer]Create[bound=year->date only Activity converted; year->year]Create | Hypothetical[Activity, Transfer]Create[bound=year->date only Activity converted; year->year]Create | Negative[Activity, Transfer]Create[bound=year->date only Activity converted; year->year]Create | TransferCreate[bound=year->date only Activity converted; year->year]Create; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -10088,7 +10214,7 @@
     },
     "involved": {
      "alias": null,
-     "annotation": "list[Annotated[GroupReferenceSet | PersonCreateDB > PersonReferenceSet; Field()]]",
+     "annotation": "list[Annotated[GroupReferenceSet | PersonCreateDB > PersonReferenceSet; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -10154,7 +10280,7 @@
     },
     "statements": {
      "alias": null,
-     "annotation": "list[Annotated[ActivityCreateDB | Causes[Activity, Activity, Transfer, Transfer]CreateDB | Hypothetical[Activity, Transfer]CreateDB | Negative[Activity, Transfer]CreateDB | TransferCreateDB; Field()]]",
+     "annotation": "list[Annotated[ActivityCreateDB | Causes[Activity, Activity, Transfer, Transfer]CreateDB | Hypothetical[Activity, Transfer]CreateDB | Negative[Activity, Transfer]CreateDB | TransferCreateDB; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -10386,7 +10512,7 @@
     },
     "involved": {
      "alias": null,
-     "annotation": "list[Annotated[GroupReferenceSet | PersonReferenceSet > PersonCreate; Field()]]",
+     "annotation": "list[Annotated[GroupReferenceSet | PersonReferenceSet > PersonCreate; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -10408,7 +10534,7 @@
     },
     "notes": {
      "alias": null,
-     "annotation": "list[Annotated[NoteUpdate[bound=year->body] > NoteCreate[bound=year->body]Create; Field()]]",
+     "annotation": "list[Annotated[NoteUpdate[bound=year->body] > NoteCreate[bound=year->body]Create; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": "Notes on the factoid",
@@ -10435,13 +10561,15 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'source'"
     },
     "statements": {
      "alias": null,
-     "annotation": "list[Annotated[ActivityUpdate[bound=year->date only Activity converted; year->year] > ActivityCreate[bound=year->date only Activity converted; year->year]Create | Causes[Activity, Activity, Transfer, Transfer]Update > Causes[Activity, Activity, Transfer, Transfer]Create[bound=year->date only Activity converted; year->year]Create | Hypothetical[Activity, Transfer]Update > Hypothetical[Activity, Transfer]Create[bound=year->date only Activity converted; year->year]Create | Negative[Activity, Transfer]Update > Negative[Activity, Transfer]Create[bound=year->date only Activity converted; year->year]Create | TransferUpdate[bound=year->date only Activity converted; year->year] > TransferCreate[bound=year->date only Activity converted; year->year]Create; Field()]]",
+     "annotation": "list[Annotated[ActivityUpdate[bound=year->date only Activity converted; year->year] > ActivityCreate[bound=year->date only Activity converted; year->year]Create | Causes[Activity, Activity, Transfer, Transfer]Update > Causes[Activity, Activity, Transfer, Transfer]Create[bound=year->date only Activity converted; year->year]Create | Hypothetical[Activity, Transfer]Update > Hypothetical[Activity, Transfer]Create[bound=year->date only Activity converted; year->year]Create | Negative[Activity, Transfer]Update > Negative[Activity, Transfer]Create[bound=year->date only Activity converted; year->year]Create | TransferUpdate[bound=year->date only Activity converted; year->year] > TransferCreate[bound=year->date only Activity converted; year->year]Create; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -10511,7 +10639,7 @@
     },
     "involved": {
      "alias": null,
-     "annotation": "list[Annotated[GroupReferenceSet | PersonCreateDB > PersonReferenceSet; Field()]]",
+     "annotation": "list[Annotated[GroupReferenceSet | PersonCreateDB > PersonReferenceSet; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -10533,7 +10661,7 @@
     },
     "notes": {
      "alias": null,
-     "annotation": "list[Annotated[NoteUpdateDB > NoteCreateDB; Field()]]",
+     "annotation": "list[Annotated[NoteUpdateDB > NoteCreateDB; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -10571,13 +10699,15 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'source'"
     },
     "statements": {
      "alias": null,
-     "annotation": "list[Annotated[ActivityUpdateDB > ActivityCreateDB | Causes[Activity, Activity, Transfer, Transfer]UpdateDB > Causes[Activity, Activity, Transfer, Transfer]CreateDB | Hypothetical[Activity, Transfer]UpdateDB > Hypothetical[Activity, Transfer]CreateDB | Negative[Activity, Transfer]UpdateDB > Negative[Activity, Transfer]CreateDB | TransferUpdateDB > TransferCreateDB; Field()]]",
+     "annotation": "list[Annotated[ActivityUpdateDB > ActivityCreateDB | Causes[Activity, Activity, Transfer, Transfer]UpdateDB > Causes[Activity, Activity, Transfer, Transfer]CreateDB | Hypothetical[Activity, Transfer]UpdateDB > Hypothetical[Activity, Transfer]CreateDB | Negative[Activity, Transfer]UpdateDB > Negative[Activity, Transfer]CreateDB | TransferUpdateDB > TransferCreateDB; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -10803,7 +10933,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'grantedBy'"
     },
@@ -10917,7 +11049,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'grantedBy'"
     },
@@ -11193,7 +11327,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'grantedBy'"
     },
@@ -11259,7 +11395,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": false,
      "validation_alias": "'started'"
     },
@@ -11307,7 +11445,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'grantedBy'"
     },
@@ -11384,7 +11524,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": false,
      "validation_alias": "'started'"
     },
@@ -12580,7 +12722,7 @@
    "fields": {
     "contents": {
      "alias": null,
-     "annotation": "list[Annotated[ActivityCreateDB | TransferCreateDB; Field()]]",
+     "annotation": "list[Annotated[ActivityCreateDB | TransferCreateDB; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -12650,7 +12792,7 @@
    "fields": {
     "contents": {
      "alias": null,
-     "annotation": "list[Annotated[ActivityCreateDB | TransferCreateDB; Field()]]",
+     "annotation": "list[Annotated[ActivityCreateDB | TransferCreateDB; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -12720,7 +12862,7 @@
    "fields": {
     "contents": {
      "alias": null,
-     "annotation": "list[Annotated[ActivityCreate[bound=year->date only Activity converted; year->year]Create | TransferCreate[bound=year->date only Activity converted; year->year]Create; Field()]]",
+     "annotation": "list[Annotated[ActivityCreate[bound=year->date only Activity converted; year->year]Create | TransferCreate[bound=year->date only Activity converted; year->year]Create; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -12757,7 +12899,7 @@
    "fields": {
     "contents": {
      "alias": null,
-     "annotation": "list[Annotated[ActivityCreate[bound=year->date only Activity converted; year->year]Create | TransferCreate[bound=year->date only Activity converted; year->year]Create; Field()]]",
+     "annotation": "list[Annotated[ActivityCreate[bound=year->date only Activity converted; year->year]Create | TransferCreate[bound=year->date only Activity converted; year->year]Create; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -12794,7 +12936,7 @@
    "fields": {
     "contents": {
      "alias": null,
-     "annotation": "list[Annotated[ActivityCreate[bound=year->date only Activity converted; year->year]Create > ActivityUpdate[bound=year->date only Activity converted; year->year] | TransferCreate[bound=year->date only Activity converted; year->year]Create > TransferUpdate[bound=year->date only Activity converted; year->year]; Field()]]",
+     "annotation": "list[Annotated[ActivityCreate[bound=year->date only Activity converted; year->year]Create > ActivityUpdate[bound=year->date only Activity converted; year->year] | TransferCreate[bound=year->date only Activity converted; year->year]Create > TransferUpdate[bound=year->date only Activity converted; year->year]; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -12842,7 +12984,7 @@
    "fields": {
     "contents": {
      "alias": null,
-     "annotation": "list[Annotated[ActivityUpdateDB > ActivityCreateDB | TransferUpdateDB > TransferCreateDB; Field()]]",
+     "annotation": "list[Annotated[ActivityUpdateDB > ActivityCreateDB | TransferUpdateDB > TransferCreateDB; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -13173,7 +13315,7 @@
    "fields": {
     "contents": {
      "alias": null,
-     "annotation": "list[Annotated[InRole[Group, Person]Update > InRole[Group, Person]Create; Field()]]",
+     "annotation": "list[Annotated[InRole[Group, Person]Update > InRole[Group, Person]Create; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -13221,7 +13363,7 @@
    "fields": {
     "contents": {
      "alias": null,
-     "annotation": "list[Annotated[InRole[Group, Person]UpdateDB > InRole[Group, Person]CreateDB; Field()]]",
+     "annotation": "list[Annotated[InRole[Group, Person]UpdateDB > InRole[Group, Person]CreateDB; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -13543,7 +13685,7 @@
    "fields": {
     "contents": {
      "alias": null,
-     "annotation": "list[Annotated[InRole[Group, Person]Update > InRole[Group, Person]Create; Field()]]",
+     "annotation": "list[Annotated[InRole[Group, Person]Update > InRole[Group, Person]Create; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -13591,7 +13733,7 @@
    "fields": {
     "contents": {
      "alias": null,
-     "annotation": "list[Annotated[InRole[Group, Person]UpdateDB > InRole[Group, Person]CreateDB; Field()]]",
+     "annotation": "list[Annotated[InRole[Group, Person]UpdateDB > InRole[Group, Person]CreateDB; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -13708,7 +13850,7 @@
    "fields": {
     "contents": {
      "alias": null,
-     "annotation": "list[Annotated[ActivityCreate | TransferCreate; Field()]]",
+     "annotation": "list[Annotated[ActivityCreate | TransferCreate; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -13745,7 +13887,7 @@
    "fields": {
     "contents": {
      "alias": null,
-     "annotation": "list[Annotated[ActivityCreateDB | TransferCreateDB; Field()]]",
+     "annotation": "list[Annotated[ActivityCreateDB | TransferCreateDB; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -13815,7 +13957,7 @@
    "fields": {
     "contents": {
      "alias": null,
-     "annotation": "list[Annotated[ActivityUpdate > ActivityCreate | TransferUpdate > TransferCreate; Field()]]",
+     "annotation": "list[Annotated[ActivityUpdate > ActivityCreate | TransferUpdate > TransferCreate; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -13863,7 +14005,7 @@
    "fields": {
     "contents": {
      "alias": null,
-     "annotation": "list[Annotated[ActivityUpdateDB > ActivityCreateDB | TransferUpdateDB > TransferCreateDB; Field()]]",
+     "annotation": "list[Annotated[ActivityUpdateDB > ActivityCreateDB | TransferUpdateDB > TransferCreateDB; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -14263,7 +14405,7 @@
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[GroupReferenceSet | PersonReferenceSet > PersonCreate; Field()]]",
+     "annotation": "list[Annotated[GroupReferenceSet | PersonReferenceSet > PersonCreate; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -14311,7 +14453,7 @@
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[GroupReferenceSet | PersonReferenceSet > PersonCreate; Field()]]",
+     "annotation": "list[Annotated[GroupReferenceSet | PersonReferenceSet > PersonCreate; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -14359,7 +14501,7 @@
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[GroupReferenceSet | PersonReferenceSet > PersonCreate; Field()]]",
+     "annotation": "list[Annotated[GroupReferenceSet | PersonReferenceSet > PersonCreate; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -14407,7 +14549,7 @@
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[GroupReferenceSet | PersonReferenceSet > PersonCreate; Field()]]",
+     "annotation": "list[Annotated[GroupReferenceSet | PersonReferenceSet > PersonCreate; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -14455,7 +14597,7 @@
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[GroupReferenceSet | PersonReferenceSet > PersonCreate; Field()]]",
+     "annotation": "list[Annotated[GroupReferenceSet | PersonReferenceSet > PersonCreate; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -14503,7 +14645,7 @@
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[GroupReferenceSet | PersonReferenceSet > PersonCreate; Field()]]",
+     "annotation": "list[Annotated[GroupReferenceSet | PersonReferenceSet > PersonCreate; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -14551,7 +14693,7 @@
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[GroupReferenceSet | PersonReferenceSet > PersonCreate; Field()]]",
+     "annotation": "list[Annotated[GroupReferenceSet | PersonReferenceSet > PersonCreate; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -14632,7 +14774,7 @@
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[GroupReferenceSet | PersonCreateDB > PersonReferenceSet; Field()]]",
+     "annotation": "list[Annotated[GroupReferenceSet | PersonCreateDB > PersonReferenceSet; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -14713,7 +14855,7 @@
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[GroupReferenceSet | PersonCreateDB > PersonReferenceSet; Field()]]",
+     "annotation": "list[Annotated[GroupReferenceSet | PersonCreateDB > PersonReferenceSet; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -14794,7 +14936,7 @@
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[GroupReferenceSet | PersonCreateDB > PersonReferenceSet; Field()]]",
+     "annotation": "list[Annotated[GroupReferenceSet | PersonCreateDB > PersonReferenceSet; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -14875,7 +15017,7 @@
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[GroupReferenceSet | PersonCreateDB > PersonReferenceSet; Field()]]",
+     "annotation": "list[Annotated[GroupReferenceSet | PersonCreateDB > PersonReferenceSet; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -14956,7 +15098,7 @@
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[GroupReferenceSet | PersonCreateDB > PersonReferenceSet; Field()]]",
+     "annotation": "list[Annotated[GroupReferenceSet | PersonCreateDB > PersonReferenceSet; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -15037,7 +15179,7 @@
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[GroupReferenceSet | PersonCreateDB > PersonReferenceSet; Field()]]",
+     "annotation": "list[Annotated[GroupReferenceSet | PersonCreateDB > PersonReferenceSet; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -15118,7 +15260,7 @@
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[GroupReferenceSet | PersonCreateDB > PersonReferenceSet; Field()]]",
+     "annotation": "list[Annotated[GroupReferenceSet | PersonCreateDB > PersonReferenceSet; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -15210,7 +15352,7 @@
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[GroupReferenceSet | PersonCreateDB > PersonReferenceSet; Field()]]",
+     "annotation": "list[Annotated[GroupReferenceSet | PersonCreateDB > PersonReferenceSet; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -15302,7 +15444,7 @@
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[GroupReferenceSet | PersonCreateDB > PersonReferenceSet; Field()]]",
+     "annotation": "list[Annotated[GroupReferenceSet | PersonCreateDB > PersonReferenceSet; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -15361,7 +15503,7 @@
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[GroupReferenceSet | PersonReferenceSet > PersonCreate; Field()]]",
+     "annotation": "list[Annotated[GroupReferenceSet | PersonReferenceSet > PersonCreate; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -15420,7 +15562,7 @@
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[GroupReferenceSet | PersonReferenceSet > PersonCreate; Field()]]",
+     "annotation": "list[Annotated[GroupReferenceSet | PersonReferenceSet > PersonCreate; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -15468,7 +15610,7 @@
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[GroupReferenceSet | PersonReferenceSet > PersonCreate; Field()]]",
+     "annotation": "list[Annotated[GroupReferenceSet | PersonReferenceSet > PersonCreate; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -15516,7 +15658,7 @@
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[GroupReferenceSet | PersonReferenceSet > PersonCreate; Field()]]",
+     "annotation": "list[Annotated[GroupReferenceSet | PersonReferenceSet > PersonCreate; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -15575,7 +15717,7 @@
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[GroupReferenceSet | PersonReferenceSet > PersonCreate; Field()]]",
+     "annotation": "list[Annotated[GroupReferenceSet | PersonReferenceSet > PersonCreate; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -15634,7 +15776,7 @@
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[GroupReferenceSet | PersonReferenceSet > PersonCreate; Field()]]",
+     "annotation": "list[Annotated[GroupReferenceSet | PersonReferenceSet > PersonCreate; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -15693,7 +15835,7 @@
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[GroupReferenceSet | PersonReferenceSet > PersonCreate; Field()]]",
+     "annotation": "list[Annotated[GroupReferenceSet | PersonReferenceSet > PersonCreate; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -15752,7 +15894,7 @@
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[GroupReferenceSet | PersonReferenceSet > PersonCreate; Field()]]",
+     "annotation": "list[Annotated[GroupReferenceSet | PersonReferenceSet > PersonCreate; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -15833,7 +15975,7 @@
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[GroupReferenceSet | PersonCreateDB > PersonReferenceSet; Field()]]",
+     "annotation": "list[Annotated[GroupReferenceSet | PersonCreateDB > PersonReferenceSet; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -15912,7 +16054,7 @@
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[GroupReferenceSet | PersonCreateDB > PersonReferenceSet; Field()]]",
+     "annotation": "list[Annotated[GroupReferenceSet | PersonCreateDB > PersonReferenceSet; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -15991,7 +16133,7 @@
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[GroupReferenceSet | PersonCreateDB > PersonReferenceSet; Field()]]",
+     "annotation": "list[Annotated[GroupReferenceSet | PersonCreateDB > PersonReferenceSet; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -16081,7 +16223,7 @@
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[GroupReferenceSet | PersonCreateDB > PersonReferenceSet; Field()]]",
+     "annotation": "list[Annotated[GroupReferenceSet | PersonCreateDB > PersonReferenceSet; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -16149,7 +16291,7 @@
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[GroupReferenceSet | PersonReferenceSet > PersonCreate; Field()]]",
+     "annotation": "list[Annotated[GroupReferenceSet | PersonReferenceSet > PersonCreate; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -16219,7 +16361,7 @@
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[GroupReferenceSet | PersonReferenceSet > PersonCreate; Field()]]",
+     "annotation": "list[Annotated[GroupReferenceSet | PersonReferenceSet > PersonCreate; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -17031,7 +17173,7 @@
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[GroupReferenceSet | PersonReferenceSet > PersonCreate; Field()]]",
+     "annotation": "list[Annotated[GroupReferenceSet | PersonReferenceSet > PersonCreate; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -17112,7 +17254,7 @@
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[GroupReferenceSet | PersonCreateDB > PersonReferenceSet; Field()]]",
+     "annotation": "list[Annotated[GroupReferenceSet | PersonCreateDB > PersonReferenceSet; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -17171,7 +17313,7 @@
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[GroupReferenceSet | PersonReferenceSet > PersonCreate; Field()]]",
+     "annotation": "list[Annotated[GroupReferenceSet | PersonReferenceSet > PersonCreate; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -17252,7 +17394,7 @@
     },
     "target": {
      "alias": null,
-     "annotation": "list[Annotated[GroupReferenceSet | PersonCreateDB > PersonReferenceSet; Field()]]",
+     "annotation": "list[Annotated[GroupReferenceSet | PersonCreateDB > PersonReferenceSet; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -19438,7 +19580,7 @@
    "fields": {
     "contents": {
      "alias": null,
-     "annotation": "list[Annotated[ActivityCreateDB | TransferCreateDB; Field()]]",
+     "annotation": "list[Annotated[ActivityCreateDB | TransferCreateDB; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -19508,7 +19650,7 @@
    "fields": {
     "contents": {
      "alias": null,
-     "annotation": "list[Annotated[ActivityCreateDB | TransferCreateDB; Field()]]",
+     "annotation": "list[Annotated[ActivityCreateDB | TransferCreateDB; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -19578,7 +19720,7 @@
    "fields": {
     "contents": {
      "alias": null,
-     "annotation": "list[Annotated[ActivityCreate[bound=year->date only Activity converted; year->year]Create | TransferCreate[bound=year->date only Activity converted; year->year]Create; Field()]]",
+     "annotation": "list[Annotated[ActivityCreate[bound=year->date only Activity converted; year->year]Create | TransferCreate[bound=year->date only Activity converted; year->year]Create; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -19615,7 +19757,7 @@
    "fields": {
     "contents": {
      "alias": null,
-     "annotation": "list[Annotated[ActivityCreate[bound=year->date only Activity converted; year->year]Create | TransferCreate[bound=year->date only Activity converted; year->year]Create; Field()]]",
+     "annotation": "list[Annotated[ActivityCreate[bound=year->date only Activity converted; year->year]Create | TransferCreate[bound=year->date only Activity converted; year->year]Create; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -19652,7 +19794,7 @@
    "fields": {
     "contents": {
      "alias": null,
-     "annotation": "list[Annotated[ActivityCreate[bound=year->date only Activity converted; year->year]Create > ActivityUpdate[bound=year->date only Activity converted; year->year] | TransferCreate[bound=year->date only Activity converted; year->year]Create > TransferUpdate[bound=year->date only Activity converted; year->year]; Field()]]",
+     "annotation": "list[Annotated[ActivityCreate[bound=year->date only Activity converted; year->year]Create > ActivityUpdate[bound=year->date only Activity converted; year->year] | TransferCreate[bound=year->date only Activity converted; year->year]Create > TransferUpdate[bound=year->date only Activity converted; year->year]; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -19700,7 +19842,7 @@
    "fields": {
     "contents": {
      "alias": null,
-     "annotation": "list[Annotated[ActivityUpdateDB > ActivityCreateDB | TransferUpdateDB > TransferCreateDB; Field()]]",
+     "annotation": "list[Annotated[ActivityUpdateDB > ActivityCreateDB | TransferUpdateDB > TransferCreateDB; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -19817,7 +19959,7 @@
    "fields": {
     "contents": {
      "alias": null,
-     "annotation": "list[Annotated[ActivityCreate | TransferCreate; Field()]]",
+     "annotation": "list[Annotated[ActivityCreate | TransferCreate; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -19854,7 +19996,7 @@
    "fields": {
     "contents": {
      "alias": null,
-     "annotation": "list[Annotated[ActivityCreateDB | TransferCreateDB; Field()]]",
+     "annotation": "list[Annotated[ActivityCreateDB | TransferCreateDB; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -19924,7 +20066,7 @@
    "fields": {
     "contents": {
      "alias": null,
-     "annotation": "list[Annotated[ActivityUpdate > ActivityCreate | TransferUpdate > TransferCreate; Field()]]",
+     "annotation": "list[Annotated[ActivityUpdate > ActivityCreate | TransferUpdate > TransferCreate; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -19972,7 +20114,7 @@
    "fields": {
     "contents": {
      "alias": null,
-     "annotation": "list[Annotated[ActivityUpdateDB > ActivityCreateDB | TransferUpdateDB > TransferCreateDB; Field()]]",
+     "annotation": "list[Annotated[ActivityUpdateDB > ActivityCreateDB | TransferUpdateDB > TransferCreateDB; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -20094,7 +20236,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'about'"
     },
@@ -20153,7 +20297,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'about'"
     },
@@ -20385,7 +20531,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'about'"
     },
@@ -20455,7 +20603,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'about'"
     },
@@ -20616,7 +20766,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'about'"
     },
@@ -20675,7 +20827,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'about'"
     },
@@ -22223,7 +22377,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'born'"
     },
@@ -22337,7 +22493,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'born'"
     },
@@ -25974,7 +26132,7 @@
     },
     "involves": {
      "alias": null,
-     "annotation": "list[Annotated[GroupReferenceSet | PersonReferenceSet > PersonCreate; Field()]]",
+     "annotation": "list[Annotated[GroupReferenceSet | PersonReferenceSet > PersonCreate; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -26112,7 +26270,7 @@
     },
     "involves": {
      "alias": null,
-     "annotation": "list[Annotated[GroupReferenceSet | PersonCreateDB > PersonReferenceSet; Field()]]",
+     "annotation": "list[Annotated[GroupReferenceSet | PersonCreateDB > PersonReferenceSet; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -26397,7 +26555,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'date'"
     },
@@ -26414,7 +26574,7 @@
     },
     "involves": {
      "alias": null,
-     "annotation": "list[Annotated[GroupReferenceSet | PersonReferenceSet > PersonCreate; Field()]]",
+     "annotation": "list[Annotated[GroupReferenceSet | PersonReferenceSet > PersonCreate; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -26524,7 +26684,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'date'"
     },
@@ -26541,7 +26703,7 @@
     },
     "involves": {
      "alias": null,
-     "annotation": "list[Annotated[GroupReferenceSet | PersonCreateDB > PersonReferenceSet; Field()]]",
+     "annotation": "list[Annotated[GroupReferenceSet | PersonCreateDB > PersonReferenceSet; TaggedUnion]]",
      "default": null,
      "default_factory": null,
      "description": null,
@@ -26777,7 +26939,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'givenBy'"
     },
@@ -26788,7 +26952,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'givenTo'"
     },
@@ -26937,7 +27103,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'givenBy'"
     },
@@ -26948,7 +27116,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'givenTo'"
     },
@@ -27294,7 +27464,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'date'"
     },
@@ -27305,7 +27477,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'givenBy'"
     },
@@ -27316,7 +27490,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'givenTo'"
     },
@@ -27454,7 +27630,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'date'"
     },
@@ -27465,7 +27643,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'givenBy'"
     },
@@ -27476,7 +27656,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'givenTo'"
     },
@@ -27773,7 +27955,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'givenBy'"
     },
@@ -27784,7 +27968,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'givenTo'"
     },
@@ -27900,7 +28086,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'date'"
     },
@@ -27911,7 +28099,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'givenBy'"
     },
@@ -27922,7 +28112,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "TaggedUnion"
+     ],
      "required": true,
      "validation_alias": "'givenTo'"
     },

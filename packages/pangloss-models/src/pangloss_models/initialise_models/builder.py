@@ -44,6 +44,10 @@ from pangloss_models.initialise_models.kinds import (
     ModelKind,
     Site,
 )
+from pangloss_models.initialise_models.tagged_union import (
+    TaggedUnion,
+    choose_by_tag,
+)
 from pangloss_models.model_bases.model_tools import set_field
 from pangloss_models.utils import (
     annotation_is_optional,
@@ -188,11 +192,14 @@ def add_fields(
         set_field(
             model,
             name,
-            FieldInfo(
-                annotation=annotation,
-                validation_alias=to_camel(name),
-                discriminator="type" if kind.discriminated else None,
-                **describe(definition),
+            choose_by_tag(
+                kind,
+                FieldInfo(
+                    annotation=annotation,
+                    validation_alias=to_camel(name),
+                    discriminator="type" if kind.discriminated else None,
+                    **describe(definition),
+                ),
             ),
         )
         if holds(kind.embedded, "default", when):
@@ -220,14 +227,17 @@ def add_fields(
         set_field(
             model,
             name,
-            FieldInfo(
-                annotation=annotation,
-                validation_alias=to_camel(name),
-                discriminator="type"
-                if kind.discriminated and not definition.wrapper
-                else None,
-                **describe(definition),
-                **map_validators_to_kwargs(definition.validators),
+            choose_by_tag(
+                kind,
+                FieldInfo(
+                    annotation=annotation,
+                    validation_alias=to_camel(name),
+                    discriminator="type"
+                    if kind.discriminated and not definition.wrapper
+                    else None,
+                    **describe(definition),
+                    **map_validators_to_kwargs(definition.validators),
+                ),
             ),
         )
         if holds(kind.relation, "default", when):
@@ -252,13 +262,12 @@ def add_fields(
 
 def embedded_annotation(kind: ModelKind, definition: Any) -> Any:
     """What may be given for an embedded object: its model (and, in `Update`, a new one)"""
-    return Union[
-        *[
-            getattr(option.annotated_type, name)
-            for option in definition.type_options
-            for name in kind.offers
-        ]
-    ]  # type: ignore[valid-type]
+    types = [
+        getattr(option.annotated_type, name)
+        for option in definition.type_options
+        for name in kind.offers
+    ]
+    return Union[*types]  # type: ignore[valid-type]
 
 
 # --- relations -------------------------------------------------------------------------------------
@@ -364,9 +373,18 @@ def wrap_in_union(
 ) -> Any:
     union = Union[*types]  # type: ignore[valid-type]
     if definition.wrapper:
-        discriminator = Field(discriminator="type") if kind.discriminated else Field()
-        return definition.wrapper[Annotated[union, discriminator]]  # type: ignore[index]
+        return definition.wrapper[Annotated[union, union_choice(kind, types)]]  # type: ignore[index]
     return union
+
+
+def union_choice(kind: ModelKind, types: list[type]) -> Any:
+    """What makes the choice of a member of a union: its `type` if the kind is discriminated, else the
+    tagged union (see `tagged_union.py`)"""
+    if kind.discriminated:
+        return Field(discriminator="type")
+    if len(types) > 1:
+        return TaggedUnion(types)
+    return Field()
 
 
 # --- generics --------------------------------------------------------------------------------------
@@ -440,14 +458,17 @@ def _build_generic_model(
         set_field(
             bound,
             name,
-            FieldInfo(
-                annotation=wrap_in_union(kind, definition, types),
-                validation_alias=to_camel(name),
-                metadata=definition.validators,  # type: ignore[arg-type]
-                discriminator="type"
-                if kind.discriminated and not definition.wrapper
-                else None,
-                description=definition.description if kind.descriptions else None,
+            choose_by_tag(
+                kind,
+                FieldInfo(
+                    annotation=wrap_in_union(kind, definition, types),
+                    validation_alias=to_camel(name),
+                    metadata=definition.validators,  # type: ignore[arg-type]
+                    discriminator="type"
+                    if kind.discriminated and not definition.wrapper
+                    else None,
+                    description=definition.description if kind.descriptions else None,
+                ),
             ),
         )
         bound.model_rebuild(force=True)
