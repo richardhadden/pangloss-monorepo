@@ -23,8 +23,12 @@ def normalised(path: Path, name: str) -> str:
     return "\n".join(line.rstrip() for line in text.splitlines() if line.strip())
 
 
+# (what the kit declares and each backend gives its own of)
+PER_BACKEND = {"__init__.py", "dialect.py"}
+
+
 def kit_modules() -> list[Path]:
-    return sorted(p for p in KIT.glob("*.py") if p.name != "__init__.py")
+    return sorted(p for p in KIT.glob("*.py") if p.name not in PER_BACKEND)
 
 
 @pytest.mark.parametrize("backend", BACKENDS)

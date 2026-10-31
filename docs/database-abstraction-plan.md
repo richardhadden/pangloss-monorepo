@@ -232,6 +232,40 @@ Done-when checks:
   - no `neo4j.exceptions` name appears in the kit outside `dialect.py` implementations and `transactions.py`;
   - `exposed_functions.py` in each backend is a thin re-export.
 
+**As built (2026-10-31).**
+
+- **`pangloss_cypher/dialect.py`, the `Dialect` protocol.** Its methods:
+  - `driver_options` and `wrap_transaction` (Neo4j's decodes);
+  - `is_timeout` and `is_unique_violation`;
+  - `retry_on_check_conflict` and `before_replace` (Neo4j's takes the node lock);
+  - `encode_properties` (Neo4j flattens);
+  - `has_meta` and `meta_of`;
+  - `entity_labels`;
+  - `tree_below`.
+
+  `MemgraphDialect` and `Neo4jDialect` are in each backend's `dialect.py`. The rendered query text is the same as
+  before on each backend; I compared the fragments.
+- **`pangloss_cypher/transactions.py`, the one transaction layer.** It has `Database`, `install`, `current`, `using`,
+  `read_transaction`, `write_transaction`, `dialect()`, the logging, the timing, the timeouts and the migration
+  refusal. The loggers keep each backend's name: `pangloss.<dialect>.transactions`.
+  - A backend's `database.py` is now a subclass that names its dialect, plus re-exports.
+  - `test_connection_log` is one copy, in the kit.
+- **Moved into the kit:**
+  - `build_create_query`, `validate_write` and `build_update_query`;
+  - `write_functions.py`: the write half of `exposed_functions` (create, update, replace, delete, undelete, `announce`,
+    `write_with_retries`) and the user and review wrappers.
+
+  The backends' `exposed_functions` import these from the kit and keep only the reads, about 330 lines each (it was
+  730). So the done-when "a thin re-export" is met for the writes; the reads wait for phase 7.
+- **Driver exceptions.** None are named in the kit outside `transactions.py`. The kit catches unique violations
+  through `dialect().is_unique_violation`. On both backends that is a `ConstraintError`, or a `ClientError` saying
+  "unique constraint". This is slightly wider than before: Memgraph's write retry used to look only at the
+  `ClientError` text.
+- **`Capabilities`.** The CLI's `backups`, `restore` and `migrate --backup` ask `capabilities.snapshots`, not `hasattr`.
+  `test_a_backend_without_snapshots_says_so` covers a backend without them.
+- **Tests:** `./run_tests.sh` passes in full: Memgraph 2,479, Neo4j 584, the add-ons' live tests on Neo4j, and 57
+  browser tests.
+
 ### Phase 4: one visibility rule, and storage-format helpers for add-ons (3–4 days)
 
 - `pangloss_cypher/fragments.py`:

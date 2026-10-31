@@ -19,7 +19,7 @@ from pangloss_models.search import (
     Not,
 )
 
-from pangloss_neo4j.databases.neo4j.build_create_query import (
+from pangloss_cypher.build_create_query import (
     convert_type_for_writing,
 )
 from pangloss_neo4j.databases.neo4j.traversal import hops

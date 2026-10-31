@@ -9,7 +9,6 @@ a `username`) are read with the other properties unset.
 import datetime
 from typing import Any
 
-from neo4j.exceptions import ConstraintError
 from pangloss_users.exceptions import (
     PanglossUserDoesNotExistError,
     PanglossUserExistsError,
@@ -17,6 +16,7 @@ from pangloss_users.exceptions import (
 from pangloss_users.models import AccessTokenRecord, UserInDB
 
 from pangloss_cypher.transaction import Transaction
+from pangloss_cypher.transactions import dialect
 
 # What `update_user` can change
 UPDATABLE_PROPERTIES = frozenset(
@@ -59,7 +59,9 @@ async def create_user(tx: Transaction, user: UserInDB) -> None:
             user=user.model_dump(exclude_none=True),
         )
         await result.consume()
-    except ConstraintError as error:
+    except Exception as error:
+        if not dialect().is_unique_violation(error):
+            raise
         raise PanglossUserExistsError(
             "That username or email is already in use"
         ) from error

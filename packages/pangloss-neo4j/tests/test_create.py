@@ -2959,7 +2959,7 @@ async def test_a_write_of_the_same_shape_is_the_same_query_text(
     random planned every write afresh; they are counted, so the text depends only on the shape"""
     import uuid
 
-    from pangloss_neo4j.databases.neo4j.build_create_query import (
+    from pangloss_cypher.build_create_query import (
         build_head_create_query,
     )
 

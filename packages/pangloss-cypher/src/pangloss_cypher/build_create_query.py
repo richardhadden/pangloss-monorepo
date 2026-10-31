@@ -34,6 +34,7 @@ from pangloss_models.model_bases.reified_relation import (
 from pangloss_models.model_bases.semantic_space import _SemanticSpaceCreateDBBase
 from pangloss_users import current_request_username
 from pydantic import AnyUrl
+from pangloss_cypher.transactions import dialect
 from pangloss_cypher.values import native_datetime
 
 
@@ -247,7 +248,8 @@ class PropertyAssignments:
     """The properties to set on a node or edge, from a single parameter"""
 
     def __init__(self, params: QueryParams, properties: dict[str, typing.Any]):
-        self.identifier = params.add(properties)
+        # (as the backend writes them: Neo4j cannot store a map as a property, and flattens `meta` and annotated values)
+        self.identifier = params.add(dialect().encode_properties(properties))
 
     def set_items(self, variable: str, replace: bool = False) -> str:
         """What to put after `SET` to give `variable` the properties: replacing

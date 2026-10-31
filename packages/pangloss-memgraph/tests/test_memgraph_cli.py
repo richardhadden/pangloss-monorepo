@@ -5,12 +5,11 @@ the process's database, which the other tests share."""
 
 import asyncio
 
+from pangloss_cypher import transactions as database_module
 from pangloss_memgraph import cli as memgraph_cli
-from pangloss_memgraph.databases.memgraph import database as database_module
 from pangloss_memgraph.databases.memgraph import setup
-from pangloss_memgraph.databases.memgraph.database import Database
+from pangloss_memgraph.databases.memgraph.database import Database, current
 from typer.testing import CliRunner
-from pangloss_memgraph.databases.memgraph.database import current
 
 runner = CliRunner()
 

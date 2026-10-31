@@ -1024,3 +1024,22 @@ def test_a_backup_says_how_long_it_lasts_and_backups_can_be_listed_and_restored(
     assert backend().RESTORED == ["/snapshots/1"]
     exit_code, output = invoke("restore", "/nowhere", "--yes")
     assert exit_code != 0 and "not a snapshot" in output
+
+
+def test_a_backend_without_snapshots_says_so(models_project: Path, monkeypatch):
+    """(what the backend can do is what its capabilities say, not which functions it happens to have)"""
+    from pangloss_core import storage
+
+    monkeypatch.setitem(
+        storage._loaded,
+        "fakedb:storage",
+        storage.Storage(name="fakedb", package="fakedb"),
+    )
+    assert invoke("makemigrations")[0] == 0
+    exit_code, output = invoke("backups")
+    assert exit_code != 0 and "does not list backups" in output
+    exit_code, output = invoke("restore", "/snapshots/1", "--yes")
+    assert exit_code != 0 and "cannot restore a backup" in output
+    exit_code, output = invoke("migrate", "--backup")
+    assert exit_code != 0 and "cannot take a backup" in output
+    assert "backup" not in backend().CALLS

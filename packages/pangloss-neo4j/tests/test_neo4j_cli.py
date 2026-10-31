@@ -5,12 +5,11 @@ the process's database, which the other tests share."""
 
 import asyncio
 
+from pangloss_cypher import transactions as database_module
 from pangloss_neo4j import cli as neo4j_cli
-from pangloss_neo4j.databases.neo4j import database as database_module
 from pangloss_neo4j.databases.neo4j import setup
-from pangloss_neo4j.databases.neo4j.database import Database
+from pangloss_neo4j.databases.neo4j.database import Database, current
 from typer.testing import CliRunner
-from pangloss_neo4j.databases.neo4j.database import current
 
 runner = CliRunner()
 

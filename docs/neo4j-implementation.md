@@ -2,7 +2,7 @@
 
 **Status: built 2026-10-29 (see [As built](#9-as-built)); the 572 tests of the package, ported from Memgraph's, pass against Neo4j 2026.10.1 Community. The add-on packages (typology, calendar, zotero) are not yet backend-neutral ([§7](#7-after-this)).**
 
-`pangloss-neo4j` is the same database layer as [`pangloss-memgraph`](memgraph.md) for Neo4j, so that a project is not tied to one vendor: `STORAGE = "pangloss_neo4j:storage"` and `"pangloss_neo4j"` in `INSTALLED_APPS` instead of the Memgraph pair. The models, the API, the interface and the SDK are not touched: they speak to a backend only through its `exposed_functions`, `setup`, `migration_backend`, `users` and `review` modules (the *contract*, [§3](#3-the-contract-a-backend-must-meet)).
+`pangloss-neo4j` is the same database layer as [`pangloss-memgraph`](memgraph.md) for Neo4j, so that a project is not tied to one vendor (since 2026-10-31 the code the two share is in `pangloss-cypher`, with a `Neo4jDialect` for where they differ: see [the plan](database-abstraction-plan.md)): `STORAGE = "pangloss_neo4j:storage"` and `"pangloss_neo4j"` in `INSTALLED_APPS` instead of the Memgraph pair. The models, the API, the interface and the SDK are not touched: they speak to a backend only through its `exposed_functions`, `setup`, `migration_backend`, `users` and `review` modules (the *contract*, [§3](#3-the-contract-a-backend-must-meet)).
 
 It is a **port**, with the Memgraph package as the template and its test suite as the specification: what Memgraph's tests ask of a backend, the Neo4j package's must meet too ([§6](#6-tests)).
 

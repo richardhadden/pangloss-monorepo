@@ -92,6 +92,11 @@ def load_graph(apps: list[str], applied: dict | None = None) -> MigrationGraph:
         raise
 
 
+def can_snapshot(project: Project) -> bool:
+    """Whether the storage backend takes snapshots (`migrate --backup`, `backups`, `restore`): its capabilities say"""
+    return storage_of(project.require_settings()).capabilities.snapshots
+
+
 def migration_backend(project: Project) -> ModuleType:
     storage = storage_of(project.require_settings())
     backend = storage.migration_backend
@@ -383,7 +388,7 @@ def backups(ctx: typer.Context) -> None:
     """List the snapshots the server has (what `migrate --backup` takes), newest first"""
     project: Project = ctx.obj
     backend = migration_backend(project)
-    if not hasattr(backend, "backups"):
+    if not can_snapshot(project):
         fail("This database does not list backups")
     for row in run_with_database(project, backend.backups):
         typer.echo(f"{row['creation_time']}  {row['size']:>10}  {row['path']}")
@@ -399,7 +404,7 @@ def restore(
     migrate` after, with the code that goes with it)."""
     project: Project = ctx.obj
     backend = migration_backend(project)
-    if not hasattr(backend, "restore"):
+    if not can_snapshot(project):
         fail("This database cannot restore a backup")
     if not yes:
         typer.confirm(f"Replace everything in the database with {path}?", abort=True)
@@ -630,7 +635,7 @@ def go_backwards(
         await backend.lock()
         try:
             if backup and not fake:
-                if not hasattr(backend, "backup"):
+                if not can_snapshot(project):
                     raise PanglossMigrationError("This database cannot take a backup")
                 taken_backup = await backend.backup()
                 taken.append(taken_backup)
@@ -845,7 +850,7 @@ def migrate(
         await backend.lock()
         try:
             if backup and not fake:
-                if not hasattr(backend, "backup"):
+                if not can_snapshot(project):
                     raise PanglossMigrationError("This database cannot take a backup")
                 taken_backup = await backend.backup()
                 taken.append(taken_backup)
@@ -893,7 +898,7 @@ def warn_if_backup_gone(
 ) -> None:
     """Say so if the database has already removed the backup this `migrate` took: it keeps only the
     newest few, and reading the data back after a large migration can take longer than they last"""
-    if not taken or not hasattr(backend, "backups"):
+    if not taken or not can_snapshot(project):
         return
     try:
         kept = {row["path"] for row in run_with_database(project, backend.backups)}

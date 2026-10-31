@@ -1,6 +1,6 @@
 # Memgraph backend
 
-Package: `pangloss-memgraph` (module `pangloss_memgraph.databases.memgraph`). Select it with `STORAGE = "pangloss_memgraph:storage"` and a `MemgraphDatabaseSettings`.
+Package: `pangloss-memgraph` (module `pangloss_memgraph.databases.memgraph`). Select it with `STORAGE = "pangloss_memgraph:storage"` and a `MemgraphDatabaseSettings`. Since 2026-10-31 the code that Memgraph and Neo4j share (the transactions, the write path, delete, users, review) is in `pangloss-cypher`; this package keeps its `MemgraphDialect` (`dialect.py`), its reads, DDL, bulk load, snapshots and migrations. See [the plan](database-abstraction-plan.md).
 
 Requirements: a Memgraph server with text search (the `text_search` module), started with `--storage-properties-on-edges=true`. (MAGE's `map` functions are used by migrations to change a value inside a stored map.)
 

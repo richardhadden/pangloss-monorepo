@@ -2,8 +2,7 @@ import logging
 
 import neo4j
 import pytest
-from pangloss_neo4j.databases.neo4j import database as database_module
-from pangloss_neo4j.databases.neo4j.database import (
+from pangloss_cypher.transactions import (
     MAX_LOGGED_QUERY,
     LoggedTransaction,
     timed,
@@ -24,8 +23,13 @@ class FakeSettings:
     SLOW_QUERY_MS = 500
 
 
+class FakeDialect:
+    name = "somedb"
+
+
 class FakeDatabase:
     settings = FakeSettings()
+    dialect = FakeDialect()
 
 
 @pytest.mark.asyncio
@@ -104,4 +108,5 @@ async def test_a_transaction_is_timed_and_a_slow_one_is_a_warning(caplog):
         FakeSettings.SLOW_QUERY_MS = 500
     assert caplog.records[-1].levelname == "WARNING"
     assert "(slow)" in caplog.records[-1].getMessage()
-    assert database_module.logger.name == "pangloss.neo4j.transactions"
+    # (under the name of the backend)
+    assert caplog.records[-1].name == "pangloss.somedb.transactions"

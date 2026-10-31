@@ -25,7 +25,7 @@ from pangloss_models.model_bases.entity import _EntityUpdateDBBase
 from pangloss_models.model_bases.labels import fulfillable_labels
 from pangloss_users import current_request_username
 
-from pangloss_neo4j.databases.neo4j.build_create_query import (
+from pangloss_cypher.build_create_query import (
     ExistingEntity,
     InlineEntityKey,
     PropertyAssignments,
@@ -34,13 +34,11 @@ from pangloss_neo4j.databases.neo4j.build_create_query import (
     build_attached_nodes,
     get_node_fields_as_writable_dict,
 )
-from pangloss_neo4j.databases.neo4j.properties import meta_map
-from pangloss_neo4j.databases.neo4j.traversal import below
 from pangloss_cypher.heads import VERSION_OF_HEAD
+from pangloss_cypher.transactions import dialect
 
 # Walks forward edges from the head node, without entering entities
 # (The URLs of an entity are not part of what it owns)
-TREE_TRAVERSAL = below("tree")
 
 
 # Properties of a head node that are not part of what is written, and so are kept by an update: whether it is
@@ -69,11 +67,12 @@ def build_head_query(head_id: uuid.UUID) -> tuple[str, dict[str, typing.Any]]:
 
 def build_tree_meta_query(head_id: uuid.UUID) -> tuple[str, dict[str, typing.Any]]:
     """Get `meta` of every node below a head node, to keep its creation info"""
+    cypher = dialect()
     return (
         f"""
-        MATCH (head:HeadNode {{id: $head_id}}) {TREE_TRAVERSAL} (node)
-        WHERE node.`meta.created_by` IS NOT NULL
-        RETURN node.id AS id, {meta_map("node")} AS meta
+        MATCH {cypher.tree_below("(head:HeadNode {id: $head_id})", "(node)")}
+        WHERE {cypher.has_meta("node")}
+        RETURN node.id AS id, {cypher.meta_of("node")} AS meta
         """,
         {"head_id": str(head_id)},
     )
@@ -108,7 +107,7 @@ def build_replace_head_query(
     return (
         f"""
         MATCH (head:HeadNode {{id: ${head_id_identifier}}})
-        OPTIONAL MATCH (head) {TREE_TRAVERSAL} (node)
+        OPTIONAL MATCH {dialect().tree_below("(head)", "(node)")}
         WITH head, collect(DISTINCT node) AS tree
         OPTIONAL MATCH (head)-[owned_out]->()
         WHERE NOT coalesce(owned_out.reverse, false) AND type(owned_out) <> 'has_url'

@@ -19,9 +19,11 @@ def project(tmp_path, monkeypatch):
         tmp_path,
         "fakedb/__init__.py",
         """
-        from pangloss_core.storage import Storage
+        from pangloss_core.storage import Capabilities, Storage
 
-        storage = Storage(name="fakedb", package="fakedb")
+        storage = Storage(
+            name="fakedb", package="fakedb", capabilities=Capabilities(snapshots=True)
+        )
         """,
     )
     write(tmp_path, "fakedb/setup.py", FAKE_DB_SETUP)

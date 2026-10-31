@@ -13,17 +13,18 @@ from pangloss_models.exceptions import (
 )
 from pangloss_models.model_bases.labels import has_allowed_label
 
-from pangloss_neo4j.databases.neo4j.build_create_query import (
+from pangloss_cypher.build_create_query import (
     ExistingEntity,
     InlineEntity,
     InlineEntityKey,
     QueryObject,
 )
-from pangloss_neo4j.databases.neo4j.build_update_query import (
+from pangloss_cypher.build_update_query import (
     build_head_query,
     build_tree_meta_query,
 )
 from pangloss_cypher.transaction import Transaction
+from pangloss_cypher.transactions import dialect
 from pangloss_cypher.checks import check_user_exists as check_user_exists
 
 
@@ -236,11 +237,12 @@ async def replace_urls(tx: Transaction, entity_id: uuid.UUID, urls: list[str]) -
     deleted one) is a conflict."""
     urls = sorted(set(urls))
     id = str(entity_id)
+    entity = dialect().entity_labels()
     result = await tx.run(
-        """
+        f"""
         UNWIND $urls AS url
-        MATCH (node:PGUrl {url: url})
-        WHERE NOT (:PGIndexableNode:Entity {id: $id})-[:has_url]->(node)
+        MATCH (node:PGUrl {{url: url}})
+        WHERE NOT ({entity} {{id: $id}})-[:has_url]->(node)
         RETURN node.url AS url
         """,
         urls=urls,
@@ -251,8 +253,8 @@ async def replace_urls(tx: Transaction, entity_id: uuid.UUID, urls: list[str]) -
         raise PanglossConflictError(f"URLs {in_use} are already in use")
 
     await tx.run(
-        """
-        MATCH (:PGIndexableNode:Entity {id: $id})-[:has_url]->(node:PGUrl)
+        f"""
+        MATCH ({entity} {{id: $id}})-[:has_url]->(node:PGUrl)
         WHERE NOT node.url IN $urls
         DETACH DELETE node
         """,
@@ -260,10 +262,10 @@ async def replace_urls(tx: Transaction, entity_id: uuid.UUID, urls: list[str]) -
         id=id,
     )
     await tx.run(
-        """
-        MATCH (entity:PGIndexableNode:Entity {id: $id})
+        f"""
+        MATCH (entity{entity} {{id: $id}})
         UNWIND $urls AS url
-        MERGE (node:PGUrl {url: url})
+        MERGE (node:PGUrl {{url: url}})
         MERGE (entity)-[:has_url]->(node)
         """,
         urls=urls,
