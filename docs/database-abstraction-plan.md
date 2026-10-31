@@ -1,0 +1,333 @@
+# Database abstraction: implementation plan
+
+**Status: plan (2026-10-31). Nothing here is built.** It turns [database-abstraction.md](database-abstraction.md)
+into ordered work, includes the fixes from [code-review-2026-10-31.md](code-review-2026-10-31.md), and adds what a
+survey of the other packages' Cypher found ([§2](#2-cypher-outside-the-backends)).
+
+## 1. Decisions
+
+| # | Question | Answer | Effect on the plan |
+|---|---|---|---|
+| 1 | Is a non-Cypher (RDF) backend a goal? | Not now; it will be considered later | The typed `Storage` port is **deferred** ([§5](#5-deferred-the-storage-port)). The phases keep the seams it needs: a neutral write plan, a neutral read shape, no driver exceptions escaping the kit, and a conformance suite that goes through the models, not Cypher. |
+| 2 | Package name | `pangloss-cypher` | |
+| 3 | Replace `DATABASE_MODULE` with a `STORAGE` factory, and keep an alias for how long? | Deferred with the port | `DATABASE_MODULE` stays as it is. The question returns only if the port is built ([§5](#5-deferred-the-storage-port)). |
+| 4 | Fold accents on both backends? | Yes | Phase 5: Memgraph gets a folded label, and `zurich` finds "Zürich" on both backends. |
+
+## 2. Cypher outside the backends
+
+I searched every package except the two backends for Cypher:
+
+| Package | Cypher | Kind |
+|---|---|---|
+| `pangloss-api`, `-cli`, `-dates`, `-history`, `-interface`, `-review`, `-sdk`, `-sdk-server`, `-users`, `-zotero` | none in `src/` | They go through the models, or through the backend's `exposed_functions` (users, review). Zotero's live `conftest` clears the database with raw Cypher. |
+| `pangloss-models` | `RunCypher` (`migrations/changes.py:712`): Cypher written **by hand in a project's migration files** | user-written; it runs on whatever backend is installed |
+| `pangloss-testing` | `live.py`: clearing and inspecting the test database | test support |
+| `pangloss-calendar` | `graph.py`, 512 lines | see below |
+| `pangloss-typology` | `graph.py`, 414 lines | see below |
+
+The calendar and typology queries fall into three groups. Each needs something different:
+
+**A. The add-on's own graph.** This is data no model owns: calendar `CalendarDay`/`CalendarMonth`/`CalendarYear`/
+`CalendarSpan` with `NEXT`, `CONTAINS` and `CHARACTERISED_BY` (`MERGE_DAYS`, `LINK_RULE_EDGES`, `attach`, `detach`, …),
+and the `PGLock` nodes. It is standard Cypher and already runs on both backends. **No change needed**, except that the
+add-on should declare that it needs a Cypher backend.
+
+**B. Reading model data through the storage format.** These queries know how the kit stores models:
+
+- labels per class;
+- field names as edge types (`` -[:`when`]-> ``, `-[:start]->`);
+- embedded `Date` objects as nodes;
+- `head_node_id` and `HeadNode`;
+- `reverse: true` on reverse edges;
+- the visibility rules.
+
+They are typology's `types`, `entities_of`, `entity_counts` and `uses`, and calendar's `CHARACTERISATIONS` and
+`DATED_BETWEEN`. Each has **its own copy of the visibility rule**: typology's `SEEN` (`graph.py:25`), calendar's
+`DATED_BETWEEN` (`graph.py:464-466`) and `CHARACTERISATIONS` (`:214`, deleted only). Two more copies, besides the
+kit's. They must use the kit's `visible()` and storage-format helpers (phase 4).
+
+**C. Writing model data around the model write path.** Typology's `move` and `merge` (`graph.py:200-262`, `322-414`)
+delete and create `is_subtype_of`/`is_supertype_of` and `has_type`/`type_of` edges directly. These are relations of
+the models (`Typed[...]` fields, and a type's supertype). Because the writes bypass `save()`, I expect, from reading the
+code but not from running it:
+
+- no `PGUpdate` is recorded, so the version of the type, or of the entity or document that has the type, does not change;
+- no write event fires, so `pangloss-history` records nothing, and restoring an earlier version of a document puts back
+  a `has_type` to a type that `merge` has since deleted;
+- `expected_version` checks do not see the change, so an editor holding an older read can save over the move or merge
+  without a conflict;
+- `MERGE (e)-[:has_type]->(b)` creates the edge with no properties, so if a `Typed` relation ever carries edge
+  properties, `merge` drops them.
+
+This is a correctness issue as well as an abstraction one. Phase 8 fixes it.
+
+**`RunCypher`** is the same problem one level up: a project's migration file contains Cypher for one backend's storage
+format. On Neo4j, `meta` and annotated values are flattened, so a hand-written `SET n.meta.x = …` that works on
+Memgraph fails or does something different on Neo4j. On a future RDF backend it cannot run at all. Phase 10 addresses
+it.
+
+## 3. Rules for every phase
+
+- **Both backends at once.** Until phase 3 is done, a fix lands in `pangloss-memgraph` and `pangloss-neo4j` in the same
+  commit.
+- **`./run_tests.sh` passes at the end of every phase**, on Memgraph and on Neo4j, and the add-ons' live tests run on
+  both.
+- **Moving code changes no behaviour.** A phase that moves code does not also change what it does. Behaviour changes
+  are their own commits, each with a test that failed before it.
+- **Measure the phases that change query text** (4, 5, 7, 10) on the large-data scratch database (:7689, see
+  `docs/large-data.md`), before and after, for list, deep list, search, read, and the typology tree. Record the numbers
+  in the phase's "as built" note. The plan cache keys on query text, and the shapes were tuned per planner.
+- **Docs follow:** `docs/memgraph.md`, `docs/neo4j-implementation.md`, `docs/backend-neutral-addons.md` and this plan
+  get an "as built" line per phase.
+
+## 4. Phases
+
+Sizes are estimates for focused work.
+
+```
+0 review fixes ─┬─ 1 binding ─── 2 move identical ─── 3 dialect + write path ─┬─ 4 visibility & format helpers ─┬─ 5 folding
+                │                                                             │                                 ├─ 7 read/list/search in kit
+                │                                                             ├─ 6 WritePlan ─── 8 typology writes
+                └─ (9 conformance suite: starts after 2, runs alongside 3–8) ─┴─ 10 migrations & RunCypher
+```
+
+### Phase 0: the review's fixes, in both backends (2–3 days)
+
+The fixes are small, each has a test that fails today, and they should not be carried into the move.
+
+| Fix | Where | Test first |
+|---|---|---|
+| JSON log redaction before `json.dumps` | `pangloss-core/logs.py:88-101` | `{"password": "hunter2"}` (double quotes) in the json case of `test_logs.py` |
+| `SETTINGS` assigned after validation | `pangloss-core/settings.py:51-57` | failed construction leaves the previous `SETTINGS` |
+| List search words: Memgraph uses `search_words` (Neo4j already escapes) | `build_list_query.py:156` | `(`, `.`, `[a`, `C++`, plain and deep, in `test_list.py` of both |
+| `test_lock`: disjoint writes, so it fails without the lock | `test_lock.py` of both | run once with `lock` removed: must fail |
+| Remove the redundant timeout handlers | `exposed_functions.py` of both (lines 168-174, 205-211 in memgraph) | coverage shows them unreachable; existing timeout tests still pass |
+| Fixtures: clear on setup too; drop the `/tmp/mg_data` volume; fix the `DEFAULT_INTERFACE_LANGUAGES` typo | memgraph `conftest.py`, `pangloss-testing/live.py` | — |
+| Deletions: `test_experiment.py`, `test_write_edge_properties`, `compress`, `QuerySubstring`, empty `indexes.py` and `tooling/`; `pytest-asyncio` out of runtime deps | both backends | — |
+| Assertions for `test_massive_write`; a concurrent-create test for `write_with_retries` | `test_create.py`, new | the retry test must reach `exposed_functions.py:481-483` |
+
+**Done when** the review's findings 1–4 and 8–11 are closed in both backends.
+
+### Phase 1: explicit database binding (3 days)
+
+As proposed in the review discussion: decorators look up the database at call time; `connect(settings)` and
+`using(db)` replace the `Database.default` class attribute; `ensure_driver()` replaces the 17 `hasattr(database,
+"driver")` checks; `bulk_loading` moves from the class to the context; settings get `configure()` and `get_settings()`.
+
+- **Files:** `database.py` and `exposed_functions.py` of both backends; `pangloss_core/backend.py` (`current()` gives
+  the connected database: `backend.current().database()`); `pangloss_core/settings.py`; the API lifespan;
+  `pangloss_cli/users.py` (`run_with_database`); `pangloss_testing/live.py`; the typology and calendar `_database()`.
+- **Done when:**
+  - `import pangloss_memgraph.databases.memgraph.exposed_functions` works with no database;
+  - the conftests no longer need to reuse `Database.default` or re-set the settings per module;
+  - a test that connects a second database inside `using()` reads from it.
+
+### Phase 2: `pangloss-cypher`, and the identical files moved into it (1–2 days)
+
+- Create `packages/pangloss-cypher` (depends on `pangloss-models`, `pangloss-users`, `neo4j`).
+- Move these files **unchanged**: `delete_node`, `read_incoming`, `review`, `users`, `lookup`, `build_tree`,
+  `from_database`, `visibility` (about 1,040 lines, no differences between the backends today). Both backends import
+  them from `pangloss_cypher`.
+- Add a CI check (a test in `pangloss-cypher`) that fails if the backends contain a module whose text matches a module
+  in the kit, so that nothing gets copied back.
+- **Done when** both backends' tests pass using the moved modules, and the duplicated files are deleted.
+
+### Phase 3: the `Dialect`, transactions, and the write path (1 week)
+
+- `pangloss_cypher/dialect.py`: the `Dialect` protocol. **Only** the methods the diffs require at this point:
+  - `tree_below`;
+  - `encode_properties` / `decode` / `meta_expr`;
+  - `entity_by_id`;
+  - `is_timeout` / `is_unique_violation`;
+  - `before_replace` (Neo4j takes the node lock) and `retry_on_check_conflict`.
+
+  `MemgraphDialect` and `Neo4jDialect` live in their backends.
+- `pangloss_cypher/transactions.py`: one `read_transaction`/`write_transaction` implementation, with logging, timeout
+  translation through `dialect.is_timeout`, and migration refusal. Neo4j's `DecodingTransaction` becomes the generic
+  `dialect.decode` wrapper. Each backend keeps only how it makes its driver.
+- Move `build_create_query` (5 lines differ), `validate_write` (6), `build_update_query` (12) and the write half of
+  `exposed_functions` (`create_head_node`, `update_head_node`, `write_with_retries`, delete/undelete) into the kit,
+  through the dialect.
+- `Capabilities` (snapshots, fast bulk load, accent folding, deep search, cypher) as a frozen dataclass on each
+  backend's `backend` module. The CLI and the API ask it instead of using `hasattr(migration_backend, "backup")`. This
+  is cheap now, and it is the first piece of the deferred port.
+- **Done when:**
+  - both backends' write tests pass;
+  - no `neo4j.exceptions` name appears in the kit outside `dialect.py` implementations and `transactions.py`;
+  - `exposed_functions.py` in each backend is a thin re-export.
+
+### Phase 4: one visibility rule, and storage-format helpers for add-ons (3–4 days)
+
+- `pangloss_cypher/fragments.py`:
+  - `visible(node, head)` (deleted, published, `$see_unpublished`, `$published`, `$review_status`);
+  - `head_of(node, as_)`: the `OPTIONAL MATCH (h:HeadNode {id: n.head_node_id})` / `coalesce(h, n)` idiom;
+  - `field_edge(field)`: a backticked, checked edge type;
+  - `label(name)`: a checked label.
+- Use them in the kit's list, read, search and autocomplete. This replaces the 8 copies in `build_list_query.py` and
+  the ones in `build_read_query.py` and `build_search_query.py`.
+- **Add-ons:** typology's `SEEN`, and calendar's `DATED_BETWEEN` and `CHARACTERISATIONS`, use `visible()` and
+  `head_of()` from `backend.current()` (the `Backend` protocol in `pangloss_core.backend` gains `fragments`).
+  `CHARACTERISATIONS` gets the published rule it lacks, if characterisations can be documents. Today it filters
+  `deleted` only.
+- Typology and calendar declare `requires = {"cypher"}`. Start-up checks it against `Capabilities` and gives a clear
+  error.
+- **Done when:**
+  - `grep -n "coalesce(.*deleted" packages/*/src` finds the rule only in `fragments.py`;
+  - the add-ons' live tests pass on both backends;
+  - the measurements show no slower query (each fragment produces the same text as the code it replaces, so the plans
+    should not change).
+
+### Phase 5: accent folding on both backends (4–5 days)
+
+Neo4j folds already (`standard-folding` analyzer, and `schema.fold` on the words searched for). For Memgraph:
+
+1. **Move `fold`** from `pangloss_neo4j/.../schema.py:207-217` to `pangloss_models.text` (with `FOLDED`). Both
+   backends and `pangloss_models.autocomplete.search_words` use it, so the words searched for are folded the same
+   way everywhere.
+2. **A folded label on Memgraph:** every node written with a `label` also gets `label_folded = fold(label)`.
+   - It is written in one place: the kit's property encoding, as `MemgraphDialect.encode_properties` adding it (Neo4j's
+     analyzer folds, so it adds nothing).
+   - Through that, it covers creates, updates, inline entities and the bulk loader.
+3. **The text index moves** to `label_folded` (`label_text` on `PGIndexableNode(label_folded)`), in
+   `initialise_database` and the `structure()` that migrations snapshot.
+4. **A shipped migration**, `pangloss_memgraph/migrations/0006_…`, which:
+   - backfills `label_folded` in batches (the runner's window batching);
+   - drops and remakes the text index.
+
+   Neo4j gets an empty `0005` only if the snapshots need to stay aligned.
+5. **Searches fold the words:** list, deep list, the truncation query, and autocomplete (`search_words` folds).
+   Autocomplete's "label begins with" ordering compares against `label_folded`.
+6. **Labels written outside the kit:**
+   - migration operations that set `label` (renames, `RunCypher`): phase 10 routes them through the dialect;
+   - until then, add `pangloss memgraph refold`, which re-runs the backfill, and mention it in the migration docs;
+   - typology writes labels through `Type.Create`/`Update`, so it is covered by step 2.
+7. **Conformance test:** `zurich`, `ZURICH` and `Zürich` all find "Zürich", and `strasse` finds "Straße", on both
+   backends (list, deep list, autocomplete). Also update the "accent folding" capability and the open question in
+   `neo4j-implementation.md`.
+
+- **Measure:** index size and write time (a second text-indexed property costs about the same as the first; the text
+  index costs about 4.5 ms per commit, see the memory note on text-index write cost). Check that the index is on
+  `label_folded` **instead of** `label`, not as well as it.
+- **Done when** the conformance test passes on both backends and a migrated copy of the demo database finds "Zürich"
+  with `zurich`.
+
+### Phase 6: separate the write plan from the Cypher (1 week)
+
+- `pangloss_cypher/write_plan.py`: `WritePlan` (nodes with labels and encoded-free properties; edge pairs with
+  names and properties; references to check; URLs; inline entities). It is produced from a `CreateDB`/`UpdateDB`
+  instance with no database and no Cypher. **Design it as if SPARQL will render it** (decision 1): no Cypher variable
+  names, and no `reverse: true` in it (the renderer adds the reverse edges).
+- `render_write.py`: `WritePlan` → Cypher through the dialect. The validators read the plan.
+- Unit tests of the planner in `pangloss-cypher/tests`, with no database: the shapes now covered only by live tests in
+  `test_create.py` (nesting, semantic spaces, `Fulfils` labels, subclassed edges, inline entities, edge properties).
+- Keep the query text the same for a document of the same shape. `test_a_write_of_the_same_shape_is_the_same_query_text`
+  must pass unchanged.
+- **Done when** `build_create_query.py` is gone and the planner has its own unit tests.
+
+### Phase 7: read, list, search and autocomplete in the kit (1 week)
+
+- Move `build_read_query`, `build_list_query`, `build_search_query` and `build_autocomplete_query` into the kit, using
+  the phase 4 fragments and these dialect methods: `label_param`, `text_search`, `search_patterns`, `tie_break`,
+  `facets_from`.
+- The **override hatch**: each kit query has a name (`"list.plain"`, `"list.deep.entities"`, `"read.document"`, …), and
+  `dialect.query(name, default)` may replace it whole (same parameters, same columns). Use it only where the
+  measurements show that one shared text is slow on one backend.
+- The read path returns a `GraphFragment` (root, labels, edges, meta) to `build_tree`. This is the neutral read shape
+  the deferred port would use.
+- Settle the creation-record join: `OPTIONAL MATCH` in every list branch (review finding 7), with a test of a head that
+  has no `PGCreation`.
+- **Done when** `exposed_functions.py` in each backend is gone or a few lines long, and the measurements show no
+  regression.
+
+### Phase 8: typology writes through the model layer (4–5 days)
+
+The bypass in [§2 C](#2-cypher-outside-the-backends). Two operations, in the kit (shared by both backends, and later
+part of the port):
+
+- **`move`**: a type's supertype is its own `is_subtype_of` field. Do it as an update of the type
+  (`Type.Update(..., is_subtype_of=…).save(expected_version=…)`), inside the hierarchy lock. The loop check stays in the
+  same transaction. This needs the write path to accept a pre-write hook that runs inside the transaction (for the lock
+  and the loop check). Phase 3's `before_replace` is the place.
+- **`merge` (relink)**: "everything that has A as `has_type` now has B" may touch thousands of heads. Calling `save()`
+  for each is too slow. Add a kit operation, `relink(field, from_id, to_id)`, which in one transaction (or batches, like
+  the migration runner):
+  - rewires the edge pairs;
+  - **keeps edge properties**;
+  - records one `PGUpdate` per affected head (an entity, or the head of a document whose nested node had the edge);
+  - after commit, emits one write event per head, so that history records the change.
+- Calendar does not write model data (group A only), so it needs nothing here.
+- **Tests (both backends):**
+  - after `move` and after `merge`, the versions of the affected heads go up by one;
+  - `pangloss-history` has a record for each;
+  - an edit from the old version gets `PanglossVersionConflictError`;
+  - a `has_type` with edge properties keeps them through `merge`.
+- **Decision before starting:** should `merge` bump the version of every document that refers to the merged type? It
+  is what keeps history and conflict checks correct, but it means a merge on a large vocabulary is a large write.
+  *Recommendation: yes, batched, with the count reported by the command.*
+
+### Phase 9: one conformance suite (2 weeks, alongside 3–8)
+
+- `pangloss_testing/conformance/`: test modules written against **the models** (`Person.Create(...).save()`, `.get`,
+  `.list`, `.search`, delete, review, users, migrations through the CLI functions). Because they use the model API and
+  not the kit, they are already the tests a future non-Cypher backend would run (decision 1).
+- `Inspect` (`count(kind)`, `labels_of(id)`, `edges(from, name, to)`, `raw(query)`) for the checks that look underneath.
+  The kit supplies the Cypher implementation, through `dialect.decode`. A test that needs `raw` is marked
+  `@requires("cypher")` or with its backend.
+- Move the tests file by file, starting with the largest overlaps (`test_create`, `test_update`, `test_read`,
+  `test_read_entity`, `test_list`, `test_delete`, `test_inline_entities`). As each file moves, delete it from **both**
+  backends. Each backend's `tests/` keeps only what `NOT_PORTED.md` lists: DDL, bulk modes, snapshots, query plans, and
+  the dialect's unit tests.
+- The add-ons' live tests replace their raw clear/inspect Cypher with `Inspect` and the shared `clear_database`.
+- The suite's rules (from the review):
+  - clear the database on setup and teardown;
+  - no blanket `except Exception`;
+  - every concurrency test is shown once to fail with its mechanism removed, and the note goes in the test's
+    docstring.
+- **Done when** each backend's own test folder is under about 3,000 lines, and the suite runs on both backends from one
+  copy.
+
+### Phase 10: migration operations and `RunCypher` (1 week)
+
+- Move `migrations/operations.py`, `runner.py` and `conversion.py` into the kit, through the dialect (for `meta`, maps,
+  labels and `id()`). Each backend keeps only its DDL operations (`add_index`, `remove_index`, constraints) and its
+  snapshots.
+- Operations that set `label` keep `label_folded` right, through `encode_properties`. Then `pangloss memgraph refold`
+  can be deprecated.
+- **`RunCypher` names its dialect:** `RunCypher(query=…, dialect="memgraph")`. `makemigrations` fills it in from the
+  installed backend. `migrate` refuses a `RunCypher` for another dialect with a clear message ("this migration was
+  written for Memgraph; give a Neo4j version with `RunCypher(..., dialect="neo4j")` next to it"). A change may hold
+  one query per dialect. Existing files without `dialect` are taken as written for the backend that applied them, and
+  `pangloss migrate` warns about them once. On a backend without the `cypher` capability (the RDF future),
+  `RunCypher` is refused and `RunPython` is the way.
+- **Done when** a project's migrations apply the same on both backends, and a foreign-dialect `RunCypher` is refused
+  with that message.
+
+## 5. Deferred: the `Storage` port
+
+Not in this plan (decision 1). What the phases above leave for it:
+
+- a neutral write plan (6) and read shape (7);
+- a conformance suite that goes through the models (9);
+- `Capabilities` (3), and `cypher` declared by the add-ons (4);
+- a relink operation that already sits at operation level (8);
+- no driver exceptions above the kit (3).
+
+When it is wanted: define `Storage` in `pangloss_models.storage` as in
+[database-abstraction.md §4](database-abstraction.md#4-layer-1-the-storage-port), make `CypherStorage` implement it,
+and answer decision 3 then. That decision is whether `DATABASE_MODULE` stays, or becomes an alias of a `STORAGE =
+"pangloss_memgraph:MemgraphStorage"` setting with a deprecation warning, which would mean every project's settings file
+needs a one-line edit.
+
+## 6. Total
+
+About 8 to 10 weeks with phase 9 running alongside, against 4 to 6 in the abstraction doc. The difference is the
+review fixes (0), folding (5), the typology writes (8) and `RunCypher` (10), which that estimate did not include.
+
+**Stopping points**, each worth having on its own:
+
+| After phase | What you have |
+|---|---|
+| 2 | Fixes made once for the shared files |
+| 4 | One visibility rule everywhere, add-ons included |
+| 5 | The same search results on both backends |
+| 8 | Typology changes that are versioned and recorded in history |

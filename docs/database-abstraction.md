@@ -361,6 +361,19 @@ else.
 
 ## 10. Decisions for you
 
+**Answered 2026-10-31** (see [database-abstraction-plan.md §1](database-abstraction-plan.md#1-decisions)):
+
+1. RDF is not an immediate goal, but will be considered, so the port is deferred and its seams are kept.
+2. `pangloss-cypher`.
+3. Deferred with the port.
+4. Yes, fold on both backends.
+
+The plan also covers what this doc missed: typology writes model relations around the model write path, and the
+add-ons hold two more copies of the visibility rule. See
+[database-abstraction-plan.md §2](database-abstraction-plan.md#2-cypher-outside-the-backends).
+
+The original questions:
+
 1. **Is a non-Cypher backend (RDF) a real goal?** If yes, do step 5 (the port) early and design `WritePlan` with
    SPARQL in mind. If no, steps 1 to 4 and 6 are enough, and the port can stay as an informal module contract.
    *Recommendation: do steps 1 to 3 regardless; decide on the port after.*
