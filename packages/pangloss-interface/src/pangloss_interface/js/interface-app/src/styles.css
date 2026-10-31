@@ -13,3 +13,12 @@
     text-transform: inherit;
   }
 }
+
+/* While the texts of another language are being fetched the words fade out, and fade in again
+   (with the new ones) when they are here: the page sets `data-translating` on <html> meanwhile */
+body {
+  transition: opacity 200ms ease;
+}
+html[data-translating] body {
+  opacity: 0.35;
+}

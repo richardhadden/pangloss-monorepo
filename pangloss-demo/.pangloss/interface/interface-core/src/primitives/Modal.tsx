@@ -1,5 +1,6 @@
 import { Portal } from "@solidjs/web";
 import { createUniqueId, onSettled } from "solid-js";
+import { useTranslations } from "../context";
 import type { ModalProps } from "../types";
 
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])';
@@ -12,6 +13,7 @@ const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), selec
  * so the server renders nothing for it: show it only on a click.
  */
 export function Modal(props: ModalProps) {
+  const { t } = useTranslations();
   const titleId = createUniqueId();
   let panel: HTMLDivElement | undefined;
   const opener = typeof document === "undefined" ? null : (document.activeElement as HTMLElement | null);
@@ -66,8 +68,8 @@ export function Modal(props: ModalProps) {
             </h2>
             <button
               type="button"
-              aria-label={props.closeLabel ?? "Close"}
-              title={props.closeLabel ?? "Close"}
+              aria-label={props.closeLabel ?? t("close", "Close")}
+              title={props.closeLabel ?? t("close", "Close")}
               onClick={() => props.onClose()}
               class="flex h-full w-12 shrink-0 cursor-pointer items-center justify-center select-none hover:bg-slate-400/40 active:bg-slate-400/60"
             >

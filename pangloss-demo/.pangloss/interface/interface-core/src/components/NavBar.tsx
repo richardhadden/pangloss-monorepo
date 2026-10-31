@@ -1,30 +1,40 @@
 import { For, Show } from "solid-js";
-import { useNavExpanded } from "../context";
+import { useNavExpanded, useTranslations } from "../context";
 import { NavIconCell, NavRow, NavRowButton } from "../primitives";
 import { NavModelList } from "./NavModelList";
 import type { NavBarProps } from "../types";
 
-// (emoji for now) English is shown with the UK flag, German with the Austrian one
-const LANGUAGES = [
-  { code: "en", name: "English", flag: "🇬🇧" },
-  { code: "de", name: "Deutsch", flag: "🇦🇹" },
-];
+// (emoji for now) a language has a flag only where it is chosen here; the others show their code. English is shown
+// with the UK flag, German with the Austrian one
+const FLAGS: Record<string, string> = { en: "🇬🇧", de: "🇦🇹" };
+
+/** A language is named in itself ("Deutsch"), not in the language of the page */
+function languageName(code: string): string {
+  try {
+    const name = new Intl.DisplayNames([code], { type: "language" }).of(code);
+    return name ? name.charAt(0).toLocaleUpperCase(code) + name.slice(1) : code;
+  } catch {
+    return code;
+  }
+}
 
 /**
  * The navigation bar down the left of every page: fixed, the full height of the screen,
  * with its own content scrolling inside it. Retracted, it is as wide as a square button
  * (`w-12`). It expands while hovered (or when the button is clicked, as on a touch screen);
  * the state is `useNavExpanded`, so anything can close it. Expanded, it lies over the page rather than pushing it, so that
- * opening it never reflows what is being read. The page is to be in an element with `pl-12`
+ * opening it never reflows what is being read. While it is open the button is a pin: clicking
+ * it pins the bar open, and the page moves across (`pl-72` rather than `pl-12`, from
+ * `navPinned`) so that they do not overlap. The page is to be in an element with `pl-12`
  * to keep clear of the retracted bar.
  */
 export function NavBar(props: NavBarProps) {
-  const { navExpanded, setNavExpanded } = useNavExpanded();
-  const selected = () =>
-    LANGUAGES.find((language) => language.code === props.language) ?? LANGUAGES[0]!;
+  const { navExpanded, setNavExpanded, navPinned, setNavPinned } = useNavExpanded();
+  const { t, language, languages, setLanguage } = useTranslations();
+  const flag = (code: string) => FLAGS[code] ?? code.toUpperCase();
   return (
     <nav
-      aria-label="Main"
+      aria-label={t("nav_main", "Main")}
       onMouseEnter={() => setNavExpanded(true)}
       onMouseLeave={() => setNavExpanded(false)}
       class={[
@@ -36,25 +46,47 @@ export function NavBar(props: NavBarProps) {
       <NavRow ruled={false}>
         <Show when={navExpanded()}>
           <NavRowButton inRow href={props.homeHref ?? "/"}>
-            Home
+            {t("home", "Home")}
           </NavRowButton>
         </Show>
         <NavIconCell
-          label={navExpanded() ? "Retract the navigation bar" : "Expand the navigation bar"}
+          label={
+            navPinned()
+              ? t("nav_unpin", "Unpin the navigation bar")
+              : navExpanded()
+                ? t("nav_pin", "Pin the navigation bar open")
+                : t("nav_expand", "Expand the navigation bar")
+          }
           expanded={navExpanded()}
-          onClick={() => setNavExpanded(!navExpanded())}
+          onClick={() => (navExpanded() ? setNavPinned(!navPinned()) : setNavExpanded(true))}
         >
-          <svg
-            viewBox="0 0 24 24"
-            class={[
-              "size-5 select-none fill-none stroke-slate-700 stroke-2 transition-transform duration-150",
-              { "rotate-90": navExpanded() },
-            ]}
-            stroke-linecap="round"
-            aria-hidden="true"
+          <Show
+            when={navExpanded()}
+            fallback={
+              <svg
+                viewBox="0 0 24 24"
+                class="size-5 select-none fill-none stroke-slate-700 stroke-2"
+                stroke-linecap="round"
+                aria-hidden="true"
+              >
+                <path d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            }
           >
-            <path d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
+            {/* A pin: upright and filled while pinned, tilted and outlined while not */}
+            <svg
+              viewBox="0 0 24 24"
+              class={[
+                "size-5 select-none stroke-slate-700 stroke-2 transition-transform duration-150",
+                { "fill-slate-700 rotate-0": navPinned(), "fill-none rotate-45": !navPinned() },
+              ]}
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M12 17v5M9 3h6l-1 7 3 3v2H7v-2l3-3z" />
+            </svg>
+          </Show>
         </NavIconCell>
       </NavRow>
       {/* Who is logged in: the icon always, and (with room for it) the button to change that */}
@@ -75,12 +107,16 @@ export function NavBar(props: NavBarProps) {
                 <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
               </Show>
             </svg>
-            <Show when={props.user} fallback="Log in">
-              Log out {props.user}
+            <Show when={props.user} fallback={t("log_in", "Log in")}>
+              {t("log_out_user", "Log out {user}", { user: props.user ?? "" })}
             </Show>
           </NavRowButton>
         </Show>
-        <NavIconCell label={props.user ? `Logged in as ${props.user}` : "Not logged in"}>
+        <NavIconCell label={
+            props.user
+              ? t("status_logged_in_as", "Logged in as {user}", { user: props.user })
+              : t("status_not_logged_in", "Not logged in")
+          }>
           <svg
             viewBox="0 0 24 24"
             class="size-5 select-none fill-none stroke-current stroke-2"
@@ -103,18 +139,28 @@ export function NavBar(props: NavBarProps) {
       <NavRow>
         <Show when={navExpanded()}>
           <div class="flex h-full min-w-0 flex-1">
-            <For each={LANGUAGES.filter((language) => language.code !== selected().code)}>
-              {(language) => (
-                <NavRowButton inRow onClick={() => props.onLanguage?.(language.code)}>
-                  <span aria-hidden="true">{language.flag}</span>
-                  {language.name}
+            <For each={languages().filter((code) => code !== language())}>
+              {(code) => (
+                <NavRowButton
+                  inRow
+                  onClick={() => {
+                    void setLanguage(code);
+                    props.onLanguage?.(code);
+                  }}
+                >
+                  <span aria-hidden="true">{flag(code)}</span>
+                  {languageName(code)}
                 </NavRowButton>
               )}
             </For>
           </div>
         </Show>
-        <NavIconCell label={`Language: ${selected().name}`}>
-          <span class="select-none text-xl">{selected().flag}</span>
+        <NavIconCell
+          label={t("language_current", "Language: {language}", {
+            language: languageName(language()),
+          })}
+        >
+          <span class="select-none text-xl">{flag(language())}</span>
         </NavIconCell>
       </NavRow>
       {/* (not rendered while retracted: there is no room for it to be read) */}

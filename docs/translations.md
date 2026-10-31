@@ -1,11 +1,21 @@
 # Translations for the interface 🚧
 
-**Status: the files and commands are built and tested; no page reads the result yet.**
-`pangloss interface translations generate | gather | check` work (`pangloss-interface`, `i18n/`). `gather`
-is also run whenever the interface is prepared (`install`, `build`, `dev`, `serve`), and writes
-`interface-app/src/generated/translations.json` next to the generated models, but no page imports it, and
-the `title`, `log_in` and `log_out` slots are not on any page (the interface itself was left alone, as
-asked). The API is not multilingual (see the last section).
+**Status: built, and the nav bar, the console and the login form are connected.**
+`pangloss interface translations generate | gather | check` make the files, and `gather` (run whenever the interface is
+prepared) writes `interface-app/src/generated/translations.json` with every language. The interface reads it
+**on the server only**: `loadTranslations(language?)` in `interface-app/src/translations.ts` is a `"use server"` function
+(the Vite plugin's `serverFunctions: true`), so the browser has only the texts of the languages chosen. The default
+language is read when the page is rendered and comes with it; another is fetched the first time it is chosen in
+the nav bar (one call to `/_server`), and kept. While it loads the page sets `data-translating` on `<html>` and
+`styles.css` fades the body out and back in with the new words. The choice is kept in `localStorage`
+(`pangloss.language`) and followed at the next load (the server renders the default language first, so there is a
+change after a reload). `<html lang>` follows the language. The pages not yet connected are listed in
+[interface-strings.md](interface-strings.md). The API is not multilingual (see the last section).
+
+**In components:** `const { t, modelName, fieldName, incomingName, enumName, memberName, language, setLanguage } = useTranslations()`
+(`interface-core/src/context/translations.tsx`). `t("new_item", "New {type}", { type })` takes the slot and the English
+to use when there is none; with no `TranslationsProvider` above (a component on its own, a test) the English is what shows.
+`modelName(type, true)` is the plural. A missing text falls back to the default language, then to the name in the code.
 
 The interface shows the names of models and fields, and some fixed text of its own (the title, "Log in").
 Both need translating. The API stays in one language (see [The API and languages](#the-api-and-languages)).

@@ -6,7 +6,7 @@ a read of the source; **keep it up to date as strings are added** (and see [tran
 `ui.jsonc` slots, `title`, `log_in` and `log_out`, are where these are meant to go: slots are `snake_case`, with a text
 per language).
 
-Nothing here is translated yet: the language row of the nav bar changes nothing. "Slot" is a suggested name.
+Connected to `ui.jsonc` (with `useTranslations().t`, see [translations.md](translations.md)): the nav bar, `NavModelList` (section titles, model names), `Console` and `ConsoleSearch` (`search`, `found`, `found_more`, `deep_search`, `deep_search_run`, `new_item`) and `LoginForm`. Still English in the code: `LoginDialog`, the pages (`Loading…`, not found), `Modal`, `Spinner`, `ItemContents` (yes/no, and the field names, which should use `fieldName`), `EntityCard`, `FieldList`, `ResultButton`. "Slot" is a suggested name.
 
 ## Visible text
 

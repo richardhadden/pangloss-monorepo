@@ -26,6 +26,16 @@ translations = typer.Typer(
 )
 
 
+# What the interface gets when the translations cannot be gathered
+NO_TRANSLATIONS = {
+    "default": "en",
+    "languages": ["en"],
+    "ui": {"en": {}},
+    "models": {"en": {}},
+    "enums": {"en": {}},
+}
+
+
 def gathered_text(project: Any, exported: dict[str, Any]) -> str:
     """The gathered translations of the project, as the JSON the interface loads"""
     settings = project.require_settings()
@@ -44,6 +54,9 @@ def write_translations(project: Any, exported: dict[str, Any], target: Path) -> 
     except files.TranslationFileError as error:
         typer.secho(f"Translations not gathered: {error}", fg="yellow", err=True)
         text = None
+        if not target.is_file():
+            # (the interface imports the file, so there has to be one: English only, with nothing in it)
+            text = json.dumps(NO_TRANSLATIONS, indent=2) + "\n"
     if text is not None:
         target.parent.mkdir(parents=True, exist_ok=True)
         if not target.is_file() or target.read_text(encoding="utf-8") != text:

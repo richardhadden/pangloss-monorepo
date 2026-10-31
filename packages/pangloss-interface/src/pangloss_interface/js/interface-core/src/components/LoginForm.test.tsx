@@ -1,4 +1,5 @@
 // @vitest-environment happy-dom
+import { ApiError } from "../api";
 import { render } from "@solidjs/web";
 import { createSignal } from "solid-js";
 import { afterEach, expect, test, vi } from "vitest";
@@ -59,4 +60,18 @@ test("an error and a busy state show and go", async () => {
   await settle();
   expect(document.body.querySelector('[role="alert"]')).toBeNull();
   expect(button().disabled).toBe(false);
+});
+
+test("a wrong username or password is explained in words, with no status number", async () => {
+  const [error, setError] = createSignal<unknown>();
+  show(() => <LoginForm onSubmit={() => {}} error={error()} />);
+  setError(new ApiError(401, "Incorrect username or password"));
+  await settle();
+  const text = document.body.querySelector('[role="alert"]')?.textContent ?? "";
+  expect(text).toBe("That username and password do not match. Check them and try again.");
+  expect(text).not.toContain("401");
+  // (another failure is the error message's: also with no number)
+  setError(new ApiError(422, "Username is required"));
+  await settle();
+  expect(document.body.querySelector('[role="alert"]')?.textContent).toBe("Username is required");
 });

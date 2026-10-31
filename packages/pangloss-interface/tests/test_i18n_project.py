@@ -379,13 +379,15 @@ def test_gather_has_every_language_complete_with_the_fallbacks(clean, extracted)
     assert gathered["ui"]["de"]["log_in"] == "Anmelden"
     assert gathered["models"]["en"]["Person"]["kind"] == "Entity"
     assert gathered["ui"]["de"]["kind_entity"] == "Entität"
-    assert {
-        k: v for k, v in gathered["ui"]["en"].items() if not k.startswith("kind_")
-    } == {
-        "title": "Pangloss",
-        "log_in": "Log in",
-        "log_out": "Log out",
-    }
+    english = gathered["ui"]["en"]
+    assert (english["title"], english["log_in"], english["log_out"]) == (
+        "Pangloss",
+        "Log in",
+        "Log out",
+    )
+    # (the words of the pages, which the interface reads with `t`)
+    assert english["new_item"] == "New {type}"
+    assert gathered["ui"]["de"]["new_item"] == "{type} anlegen"
 
 
 def test_the_projects_overrides_win_over_the_app(clean, extracted):

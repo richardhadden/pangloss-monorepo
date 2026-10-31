@@ -16,6 +16,7 @@ def none(**given):
     """The exported meta with only what is given set"""
     return {
         "colour": None,
+        "navSection": None,
         "listPage": None,
         "itemPage": None,
         "viewCard": None,
@@ -116,3 +117,26 @@ def test_a_child_inherits_each_field_it_does_not_set_and_false_turns_one_off(
     )
     assert models["Roll"]["interfaceMeta"] == models["Scroll"]["interfaceMeta"]
     assert models["Plain"]["interfaceMeta"] is None
+
+
+@no_type_check
+def test_the_nav_section_of_a_model_is_inherited_and_exported(clear_registry):
+    class Vocabulary(Entity):
+        _interface_meta = InterfaceMeta(nav_section="Vocabularies")
+
+    class Colours(Vocabulary):
+        pass
+
+    class Place(Entity):
+        pass
+
+    initialise()
+    models = export_definitions()["models"]
+    assert models["Vocabulary"]["interfaceMeta"] == none(navSection="Vocabularies")
+    assert models["Colours"]["interfaceMeta"] == none(navSection="Vocabularies")
+    assert models["Place"]["interfaceMeta"] is None
+
+
+def test_a_nav_section_cannot_be_empty():
+    with pytest.raises(PanglossMetaError, match="nav_section"):
+        InterfaceMeta(nav_section="  ")

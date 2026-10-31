@@ -2,12 +2,29 @@
 import { render } from "@solidjs/web";
 import { afterEach, expect, test } from "vitest";
 import { ComponentsProvider, ModelsProvider } from "../context";
-import type { ComponentMap, FieldDefinition, ModelDefinition, ModelDefinitions } from "../types";
+import type {
+  ComponentMap,
+  FieldDefinition,
+  ModelDefinition,
+  ModelDefinitions,
+} from "../types";
 import { ItemContents } from "./ItemContents";
 import { ReferenceChip } from "./ReferenceChip";
 
-const field = (name: string, key: string, kind: FieldDefinition["kind"] = "literal") =>
-  ({ name, key, kind, description: null, dbField: true, required: false, nullable: false }) as FieldDefinition;
+const field = (
+  name: string,
+  key: string,
+  kind: FieldDefinition["kind"] = "literal",
+) =>
+  ({
+    name,
+    key,
+    kind,
+    description: null,
+    dbField: true,
+    required: false,
+    nullable: false,
+  }) as FieldDefinition;
 
 const model = (
   name: string,
@@ -34,7 +51,10 @@ const model = (
 
 const definitions: ModelDefinitions = {
   models: {
-    Factoid: model("Factoid", "Document", [field("year", "year"), field("statements", "statements", "relation")]),
+    Factoid: model("Factoid", "Document", [
+      field("year", "year"),
+      field("statements", "statements", "relation"),
+    ]),
     Activity: model("Activity", "Document", [
       field("activity_type", "activityType"),
       field("places", "places", "relation"),
@@ -43,8 +63,25 @@ const definitions: ModelDefinitions = {
       field("note", "note"),
     ]),
     Date: model("Date", "Embedded", [field("when", "when")]),
-    Place: model("Place", "Entity", [], [{ name: "happened_here", key: "happenedHere", sources: [] }]),
-    Negative: model("Negative", "SemanticSpace", [field("contents", "contents", "relation")], [], { colour: "rose", listPage: null, itemPage: null, viewCard: null, editCard: null }),
+    Place: model(
+      "Place",
+      "Entity",
+      [],
+      [{ name: "happened_here", key: "happenedHere", sources: [] }],
+    ),
+    Negative: model(
+      "Negative",
+      "SemanticSpace",
+      [field("contents", "contents", "relation")],
+      [],
+      {
+        colour: "rose",
+        listPage: null,
+        itemPage: null,
+        viewCard: null,
+        editCard: null,
+      },
+    ),
   },
   enums: {},
 };
@@ -85,14 +122,23 @@ const activity = {
 
 test("the keys are on the left, in the order of the model, the contents on the right", () => {
   const host = show({ id: "f1", type: "Factoid", year: 800, statements: [] });
-  expect([...host.querySelectorAll("dt")].map((dt) => dt.textContent)).toEqual(["year"]);
+  expect([...host.querySelectorAll("dt")].map((dt) => dt.textContent)).toEqual([
+    "year",
+  ]);
   expect(host.querySelector("dd")?.textContent).toBe("800");
 });
 
 test("a field with nothing in it is left out; a yes or a no is said", () => {
   const host = show(activity);
-  const keys = [...host.querySelectorAll("dl")[0].children].filter((e) => e.tagName === "DT");
-  expect(keys.map((dt) => dt.textContent)).toEqual(["activity type", "places", "done", "date"]);
+  const keys = [...host.querySelectorAll("dl")[0].children].filter(
+    (e) => e.tagName === "DT",
+  );
+  expect(keys.map((dt) => dt.textContent)).toEqual([
+    "activity type",
+    "places",
+    "done",
+    "date",
+  ]);
   expect(host.textContent).toContain("Yes");
 });
 
@@ -104,7 +150,12 @@ test("an entity is a chip: its type on the left, its label on the right, a link"
 });
 
 test("what is nested is laid out the same way, inside a block with its type at the head", () => {
-  const host = show({ id: "f1", type: "Factoid", year: 800, statements: [activity] });
+  const host = show({
+    id: "f1",
+    type: "Factoid",
+    year: 800,
+    statements: [activity],
+  });
   const nested = host.querySelectorAll("dl")[1];
   expect(nested).toBeTruthy();
   expect(nested.closest("dd")?.textContent).toContain("Activity");
@@ -129,7 +180,45 @@ test("a semantic space is a band round what is in it, in the colour of its model
 });
 
 test("what refers to an item from elsewhere follows, as chips", () => {
-  const host = show({ ...place, happenedHere: [{ id: "a1", type: "Activity", label: "A crowning" }] });
+  const host = show({
+    ...place,
+    happenedHere: [{ id: "a1", type: "Activity", label: "A crowning" }],
+  });
   expect(host.querySelector("dt")?.textContent).toBe("happened here");
   expect(host.querySelector('a[href="/Activity/a1"]')).toBeTruthy();
+});
+
+test("a chip for what refers to an item from inside semantic spaces is wrapped in a band for each", () => {
+  const host = show({
+    ...place,
+    happenedHere: [
+      {
+        id: "a1",
+        type: "Activity",
+        label: "A crowning",
+        meta: {
+          contextLabels: [
+            { type: "Negative", contents: [] },
+            { type: "Hypothetical", contents: [] },
+          ],
+        },
+      },
+      {
+        id: "a2",
+        type: "Activity",
+        label: "A feast",
+        meta: { contextLabels: [] },
+      },
+    ],
+  });
+  const chip = (id: string) => host.querySelector(`a[href="/Activity/${id}"]`)!;
+  const bands = (id: string) =>
+    [...host.querySelectorAll("span.uppercase")]
+      .filter(
+        (band) =>
+          band.parentElement?.contains(chip(id)) && !chip(id).contains(band),
+      )
+      .map((band) => band.textContent);
+  expect(bands("a1")).toEqual(["Negative", "Hypothetical"]);
+  expect(bands("a2")).toEqual([]);
 });

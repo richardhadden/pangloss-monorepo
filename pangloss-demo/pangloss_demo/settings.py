@@ -49,7 +49,7 @@ class Settings(BaseSettings[MemgraphDatabaseSettings]):
     CALENDAR_FIRST_YEAR: int = 730
     CALENDAR_LAST_YEAR: int = 830
 
-    INTERFACE_LANGUAGES: list[str] = ["en"]
+    INTERFACE_LANGUAGES: list[str] = ["en", "de"]
     ENTITY_BASE_URL: AnyHttpUrl = AnyHttpUrl("http://localhost:8000/entity/")
 
     # (no default: it is read from the environment or `.env`)

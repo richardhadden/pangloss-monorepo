@@ -1,0 +1,1304 @@
+// Translations of the models. Edit the texts (not the keys); `pangloss interface translations generate`
+// keeps what you write and adds what the models add. An empty text is not translated yet; an empty
+// "plural" is the same as the singular. What is under "_obsolete" is for names that have gone.
+{
+  "models": {
+    "Activity": {
+      "en": {
+        "name": "Activity",
+        "plural": "Activities",
+        "description": "An agent did something, with others in different roles",
+        "help": "",
+        "fields": {
+          "activity_type": {
+            "name": "Activity type",
+            "plural": "",
+            "help": ""
+          },
+          "carried_out_by": {
+            "name": "Carried out by",
+            "plural": "",
+            "help": ""
+          },
+          "participants": {
+            "name": "Participants",
+            "plural": "",
+            "help": ""
+          }
+        }
+      },
+      "de": {
+        // en: Activity
+        "name": "Aktivität",
+        // en: Activities
+        // NEEDS REVIEW: the en text has changed since this was translated
+        "plural": "Aktivitäten",
+        // en: An agent did something, with others in different roles
+        "description": "Ein Akteur tat etwas, zusammen mit anderen in verschiedenen Rollen",
+        "help": "",
+        "fields": {
+          "activity_type": {
+            // en: Activity type
+            "name": "Aktivitätstyp",
+            "plural": "Aktivitätstypen",
+            "help": ""
+          },
+          "carried_out_by": {
+            // en: Carried out by
+            "name": "Ausgeführt von",
+            "plural": "",
+            "help": ""
+          },
+          "participants": {
+            // en: Participants
+            "name": "Teilnehmer",
+            "plural": "",
+            "help": ""
+          }
+        }
+      }
+    },
+    "Alternative": {
+      "en": {
+        "name": "Alternative",
+        "plural": "Alternatives",
+        "description": "One of several things, not known which: any number of statements or entities.\n`Alternative[ViaEdge[Person, Probability]]` gives each person how likely it is the one meant",
+        "help": "",
+        "fields": {
+          "alternatives": {
+            "name": "Alternatives",
+            "plural": "",
+            "help": ""
+          }
+        }
+      },
+      "de": {
+        // en: Alternative
+        "name": "Alternative",
+        // en: Alternatives
+        // NEEDS REVIEW: the en text has changed since this was translated
+        "plural": "Alternativen",
+        // en: One of several things, not known which: any number of statements or entities.
+        //     `Alternative[ViaEdge[Person, Probability]]` gives each person how likely it is the one meant
+        "description": "Eines von mehreren Dingen, unbekannt welches: beliebig viele Aussagen oder Entitäten. `Alternative[ViaEdge[Person, Probability]]` gibt jeder Person an, wie wahrscheinlich sie die gemeinte ist",
+        "help": "",
+        "fields": {
+          "alternatives": {
+            // en: Alternatives
+            "name": "Alternativen",
+            "plural": "",
+            "help": ""
+          }
+        }
+      }
+    },
+    "AtPage": {
+      "en": {
+        "name": "At page",
+        "plural": "At pages",
+        "description": "A relation to something *at a page* of it",
+        "help": "",
+        "fields": {
+          "target": {
+            "name": "Target",
+            "plural": "",
+            "help": ""
+          },
+          "page": {
+            "name": "Page",
+            "plural": "",
+            "help": ""
+          }
+        }
+      },
+      "de": {
+        // en: At page
+        "name": "Auf Seite",
+        // en: At pages
+        "plural": "",
+        // en: A relation to something *at a page* of it
+        "description": "Eine Beziehung zu etwas *auf einer Seite* davon",
+        "help": "",
+        "fields": {
+          "target": {
+            // en: Target
+            "name": "Ziel",
+            "plural": "",
+            "help": ""
+          },
+          "page": {
+            // en: Page
+            "name": "Seite",
+            "plural": "",
+            "help": ""
+          }
+        }
+      }
+    },
+    "Causes": {
+      "en": {
+        "name": "Causes",
+        "plural": "Causes",
+        "description": "One thing led to another",
+        "help": "",
+        "fields": {
+          "cause": {
+            "name": "Cause",
+            "plural": "",
+            "help": ""
+          },
+          "result": {
+            "name": "Result",
+            "plural": "",
+            "help": ""
+          }
+        }
+      },
+      "de": {
+        // en: Causes
+        "name": "Verursacht",
+        // en: Causes
+        "plural": "",
+        // en: One thing led to another
+        "description": "Eines führte zum anderen",
+        "help": "",
+        "fields": {
+          "cause": {
+            // en: Cause
+            "name": "Ursache",
+            "plural": "",
+            "help": ""
+          },
+          "result": {
+            // en: Result
+            "name": "Ergebnis",
+            "plural": "",
+            "help": ""
+          }
+        }
+      }
+    },
+    "Certainty": {
+      "en": {
+        "name": "Certainty",
+        "plural": "Certainties",
+        "description": "How sure the source is of a relation: a property of the relation itself",
+        "help": "",
+        "fields": {
+          "level": {
+            "name": "Level",
+            "plural": "",
+            "help": ""
+          }
+        }
+      },
+      "de": {
+        // en: Certainty
+        "name": "Gewissheit",
+        // en: Certainties
+        // NEEDS REVIEW: the en text has changed since this was translated
+        "plural": "Gewissheiten",
+        // en: How sure the source is of a relation: a property of the relation itself
+        "description": "Wie sicher sich die Quelle einer Beziehung ist: eine Eigenschaft der Beziehung selbst",
+        "help": "",
+        "fields": {
+          "level": {
+            // en: Level
+            "name": "Stufe",
+            "plural": "",
+            "help": ""
+          }
+        }
+      }
+    },
+    "Factoid": {
+      "en": {
+        "name": "Factoid",
+        "plural": "Factoids",
+        "description": "What a source says, at a page: a set of statements",
+        "help": "",
+        "fields": {
+          "year": {
+            "name": "Year",
+            "plural": "",
+            "help": ""
+          },
+          "source": {
+            "name": "Source",
+            "plural": "",
+            "help": ""
+          },
+          "statements": {
+            "name": "Statements",
+            "plural": "",
+            "help": ""
+          }
+        }
+      },
+      "de": {
+        // en: Factoid
+        "name": "Faktoid",
+        // en: Factoids
+        // NEEDS REVIEW: the en text has changed since this was translated
+        "plural": "Faktoide",
+        // en: What a source says, at a page: a set of statements
+        "description": "Was eine Quelle auf einer Seite sagt: eine Menge von Aussagen",
+        "help": "",
+        "fields": {
+          "year": {
+            // en: Year
+            "name": "Jahr",
+            "plural": "",
+            "help": ""
+          },
+          "source": {
+            // en: Source
+            "name": "Quelle",
+            "plural": "Quellen",
+            "help": ""
+          },
+          "statements": {
+            // en: Statements
+            "name": "Aussagen",
+            "plural": "",
+            "help": ""
+          }
+        }
+      }
+    },
+    "Group": {
+      "en": {
+        "name": "Group",
+        "plural": "Groups",
+        "description": "A family, an order, an army...",
+        "help": "",
+        "fields": {
+          "name": {
+            "name": "Name",
+            "plural": "",
+            "help": ""
+          }
+        },
+        "incoming": {
+          "carried_out": {
+            "name": "Carried out",
+            "plural": "",
+            "help": ""
+          },
+          "gave": {
+            "name": "Gave",
+            "plural": "",
+            "help": ""
+          },
+          "involves_reverse": {
+            "name": "Involved in",
+            "plural": "",
+            "help": ""
+          },
+          "ordered": {
+            "name": "Ordered",
+            "plural": "",
+            "help": ""
+          },
+          "participants_reverse": {
+            "name": "Participated in",
+            "plural": "",
+            "help": ""
+          },
+          "received": {
+            "name": "Received",
+            "plural": "",
+            "help": ""
+          }
+        }
+      },
+      "de": {
+        // en: Group
+        "name": "Gruppe",
+        // en: Groups
+        // NEEDS REVIEW: the en text has changed since this was translated
+        "plural": "Gruppen",
+        // en: A family, an order, an army...
+        "description": "Eine Familie, ein Orden, ein Heer ...",
+        "help": "",
+        "fields": {
+          "name": {
+            // en: Name
+            "name": "Name",
+            "plural": "",
+            "help": ""
+          }
+        },
+        "incoming": {
+          "carried_out": {
+            // en: Carried out
+            "name": "Ausgeführt",
+            "plural": "",
+            "help": ""
+          },
+          "gave": {
+            // en: Gave
+            "name": "Gab",
+            "plural": "",
+            "help": ""
+          },
+          "involves_reverse": {
+            // en: Involved in
+            // NEEDS REVIEW: the en text has changed since this was translated
+            "name": "Einbezogen in",
+            "plural": "",
+            "help": ""
+          },
+          "ordered": {
+            // en: Ordered
+            "name": "Befohlen",
+            "plural": "",
+            "help": ""
+          },
+          "participants_reverse": {
+            // en: Participated in
+            // NEEDS REVIEW: the en text has changed since this was translated
+            "name": "Nahm teil an",
+            "plural": "",
+            "help": ""
+          },
+          "received": {
+            // en: Received
+            "name": "Erhielt",
+            "plural": "",
+            "help": ""
+          }
+        }
+      }
+    },
+    "Hypothetical": {
+      "en": {
+        "name": "Hypothetical",
+        "plural": "Hypotheticals",
+        "description": "The source says it might have been so...",
+        "help": "",
+        "fields": {
+          "contents": {
+            "name": "Contents",
+            "plural": "",
+            "help": ""
+          }
+        }
+      },
+      "de": {
+        // en: Hypothetical
+        "name": "Hypothetisch",
+        // en: Hypotheticals
+        // NEEDS REVIEW: the en text has changed since this was translated
+        "plural": "Hypothetische",
+        // en: The source says it might have been so...
+        "description": "Die Quelle sagt, es könnte so gewesen sein ...",
+        "help": "",
+        "fields": {
+          "contents": {
+            // en: Contents
+            "name": "Inhalt",
+            "plural": "",
+            "help": ""
+          }
+        }
+      }
+    },
+    "Identification": {
+      "en": {
+        "name": "Identification",
+        "plural": "Identifications",
+        "description": "A name in the source that has been identified: the source says \"Smith\", and\nthis says which people that could be. The target is one `Alternative`.",
+        "help": "",
+        "fields": {
+          "target": {
+            "name": "Target",
+            "plural": "",
+            "help": ""
+          },
+          "identified_by": {
+            "name": "Identified by",
+            "plural": "",
+            "help": ""
+          }
+        }
+      },
+      "de": {
+        // en: Identification
+        "name": "Identifikation",
+        // en: Identifications
+        // NEEDS REVIEW: the en text has changed since this was translated
+        "plural": "Identifikationen",
+        // en: A name in the source that has been identified: the source says "Smith", and
+        //     this says which people that could be. The target is one `Alternative`.
+        "description": "Ein Name in der Quelle, der identifiziert wurde: Die Quelle sagt „Smith“, und dies besagt, welche Personen gemeint sein könnten. Das Ziel ist eine einzelne `Alternative`.",
+        "help": "",
+        "fields": {
+          "target": {
+            // en: Target
+            "name": "Ziel",
+            "plural": "",
+            "help": ""
+          },
+          "identified_by": {
+            // en: Identified by
+            "name": "Identifiziert als",
+            "plural": "",
+            "help": ""
+          }
+        }
+      }
+    },
+    "InRole": {
+      "en": {
+        "name": "In role",
+        "plural": "In roles",
+        "description": "A relation to something *in a role*",
+        "help": "",
+        "fields": {
+          "target": {
+            "name": "Target",
+            "plural": "",
+            "help": ""
+          },
+          "role": {
+            "name": "Role",
+            "plural": "",
+            "help": ""
+          }
+        }
+      },
+      "de": {
+        // en: In role
+        "name": "In Rolle",
+        // en: In roles
+        "plural": "",
+        // en: A relation to something *in a role*
+        "description": "Eine Beziehung zu etwas *in einer Rolle*",
+        "help": "",
+        "fields": {
+          "target": {
+            // en: Target
+            "name": "Ziel",
+            "plural": "",
+            "help": ""
+          },
+          "role": {
+            // en: Role
+            "name": "Rolle",
+            "plural": "Rollen",
+            "help": ""
+          }
+        }
+      }
+    },
+    "Negative": {
+      "en": {
+        "name": "Negative",
+        "plural": "Negatives",
+        "description": "It is *not* the case that...",
+        "help": "",
+        "fields": {
+          "contents": {
+            "name": "Contents",
+            "plural": "Rollen",
+            "help": ""
+          }
+        }
+      },
+      "de": {
+        // en: Negative
+        "name": "Negativ",
+        // en: Negatives
+        "plural": "",
+        // en: It is *not* the case that...
+        "description": "Es ist *nicht* der Fall, dass ...",
+        "help": "",
+        "fields": {
+          "contents": {
+            // en: Contents
+            "name": "Inhalt",
+            // en: Rollen
+            "plural": "",
+            "help": ""
+          }
+        }
+      }
+    },
+    "NegativeSubjunctive": {
+      "en": {
+        "name": "Negative subjunctive",
+        "plural": "Negative subjunctives",
+        "description": "It was wished that this should *not* happen (and it did not necessarily not)",
+        "help": "",
+        "fields": {
+          "contents": {
+            "name": "Contents",
+            "plural": "",
+            "help": ""
+          }
+        }
+      },
+      "de": {
+        // en: Negative subjunctive
+        "name": "Negativer Konjunktiv",
+        // en: Negative subjunctives
+        "plural": "",
+        // en: It was wished that this should *not* happen (and it did not necessarily not)
+        "description": "Es wurde gewünscht, dass dies *nicht* geschehen solle (und es ist nicht notwendigerweise unterblieben)",
+        "help": "",
+        "fields": {
+          "contents": {
+            // en: Contents
+            "name": "Inhalt",
+            "plural": "",
+            "help": ""
+          }
+        }
+      }
+    },
+    "OccupationType": {
+      "en": {
+        "name": "Occupation type",
+        "plural": "Occupation types",
+        "description": "A type of OccupationTypology",
+        "help": "",
+        "fields": {
+          "description": {
+            "name": "Description",
+            "plural": "",
+            "help": ""
+          },
+          "is_subtype_of": {
+            "name": "Is subtype of",
+            "plural": "",
+            "help": ""
+          },
+          "label_de": {
+            "name": "Label (German)",
+            "plural": "",
+            "help": ""
+          }
+        },
+        "incoming": {
+          "is_supertype_of": {
+            "name": "Is supertype of",
+            "plural": "",
+            "help": ""
+          },
+          "type_of": {
+            "name": "Type of",
+            "plural": "",
+            "help": ""
+          }
+        }
+      },
+      "de": {
+        // en: Occupation type
+        "name": "Berufstyp",
+        // en: Occupation types
+        // NEEDS REVIEW: the en text has changed since this was translated
+        "plural": "Berufstypen",
+        // en: A type of OccupationTypology
+        "description": "Ein Typ von OccupationTypology",
+        "help": "",
+        "fields": {
+          "description": {
+            // en: Description
+            "name": "Beschreibung",
+            "plural": "",
+            "help": ""
+          },
+          "is_subtype_of": {
+            // en: Is subtype of
+            "name": "Ist Untertyp von",
+            "plural": "",
+            "help": ""
+          },
+          "label_de": {
+            // en: Label (German)
+            // NEEDS REVIEW: the en text has changed since this was translated
+            "name": "Bezeichnung (Deutsch)",
+            "plural": "",
+            "help": ""
+          }
+        },
+        "incoming": {
+          "is_supertype_of": {
+            // en: Is supertype of
+            "name": "Ist Obertyp von",
+            "plural": "",
+            "help": ""
+          },
+          "type_of": {
+            // en: Type of
+            "name": "Art von",
+            "plural": "",
+            "help": ""
+          }
+        }
+      }
+    },
+    "Order": {
+      "en": {
+        "name": "Order",
+        "plural": "Orders",
+        "description": "Someone ordered something to be done: *something else*, which is a statement of\nits own, said in a subjunctive space, because it was wished, and not necessarily done",
+        "help": "",
+        "fields": {
+          "ordered_by": {
+            "name": "Ordered by",
+            "plural": "",
+            "help": ""
+          },
+          "thing_ordered": {
+            "name": "Thing ordered",
+            "plural": "",
+            "help": ""
+          }
+        }
+      },
+      "de": {
+        // en: Order
+        "name": "Befehl",
+        // en: Orders
+        // NEEDS REVIEW: the en text has changed since this was translated
+        "plural": "Befehle",
+        // en: Someone ordered something to be done: *something else*, which is a statement of
+        //     its own, said in a subjunctive space, because it was wished, and not necessarily done
+        "description": "Jemand befahl, etwas zu tun: *etwas anderes*, das eine eigene Aussage ist, gesagt in einem Konjunktiv-Raum, weil es gewünscht und nicht notwendigerweise ausgeführt wurde",
+        "help": "",
+        "fields": {
+          "ordered_by": {
+            // en: Ordered by
+            "name": "Befohlen von",
+            "plural": "",
+            "help": ""
+          },
+          "thing_ordered": {
+            // en: Thing ordered
+            "name": "Befohlene Sache",
+            "plural": "",
+            "help": ""
+          }
+        }
+      }
+    },
+    "Person": {
+      "en": {
+        "name": "Person",
+        "plural": "People",
+        "description": "A person",
+        "help": "",
+        "fields": {
+          "known_as": {
+            "name": "Known as",
+            "plural": "",
+            "help": ""
+          },
+          "born": {
+            "name": "Born",
+            "plural": "",
+            "help": ""
+          },
+          "aliases": {
+            "name": "Aliases",
+            "plural": "",
+            "help": ""
+          },
+          "has_type": {
+            "name": "Has type",
+            "plural": "",
+            "help": ""
+          }
+        },
+        "incoming": {
+          "carried_out": {
+            "name": "Carried out",
+            "plural": "",
+            "help": ""
+          },
+          "gave": {
+            "name": "Gave",
+            "plural": "",
+            "help": ""
+          },
+          "involves_reverse": {
+            "name": "Involved in",
+            "plural": "",
+            "help": ""
+          },
+          "ordered": {
+            "name": "Ordered",
+            "plural": "",
+            "help": ""
+          },
+          "participants_reverse": {
+            "name": "Participated in",
+            "plural": "",
+            "help": ""
+          },
+          "received": {
+            "name": "Received",
+            "plural": "",
+            "help": ""
+          }
+        }
+      },
+      "de": {
+        // en: Person
+        "name": "Person",
+        // en: People
+        // NEEDS REVIEW: the en text has changed since this was translated
+        "plural": "Personen",
+        // en: A person
+        "description": "Eine Person",
+        "help": "",
+        "fields": {
+          "known_as": {
+            // en: Known as
+            "name": "Bekannt als",
+            "plural": "",
+            "help": ""
+          },
+          "born": {
+            // en: Born
+            "name": "Geboren",
+            "plural": "",
+            "help": ""
+          },
+          "aliases": {
+            // en: Aliases
+            "name": "Alias-Namen",
+            "plural": "",
+            "help": ""
+          },
+          "has_type": {
+            // en: Has type
+            "name": "Hat Typ",
+            "plural": "",
+            "help": ""
+          }
+        },
+        "incoming": {
+          "carried_out": {
+            // en: Carried out
+            "name": "Ausgeführt",
+            "plural": "",
+            "help": ""
+          },
+          "gave": {
+            // en: Gave
+            "name": "Gab",
+            "plural": "",
+            "help": ""
+          },
+          "involves_reverse": {
+            // en: Involved in
+            // NEEDS REVIEW: the en text has changed since this was translated
+            "name": "Einbezogen in",
+            "plural": "",
+            "help": ""
+          },
+          "ordered": {
+            // en: Ordered
+            "name": "Befohlen",
+            "plural": "",
+            "help": ""
+          },
+          "participants_reverse": {
+            // en: Participated in
+            // NEEDS REVIEW: the en text has changed since this was translated
+            "name": "Nahm teil an",
+            "plural": "",
+            "help": ""
+          },
+          "received": {
+            // en: Received
+            "name": "Erhielt",
+            "plural": "",
+            "help": ""
+          }
+        }
+      }
+    },
+    "Place": {
+      "en": {
+        "name": "Place",
+        "plural": "Places",
+        "description": "",
+        "help": "",
+        "fields": {
+          "coordinates": {
+            "name": "Coordinates",
+            "plural": "",
+            "help": ""
+          }
+        },
+        "incoming": {
+          "places_reverse": {
+            "name": "Place of",
+            "plural": "",
+            "help": ""
+          }
+        }
+      },
+      "de": {
+        // en: Place
+        "name": "Ort",
+        // en: Places
+        // NEEDS REVIEW: the en text has changed since this was translated
+        "plural": "Orte",
+        "description": "",
+        "help": "",
+        "fields": {
+          "coordinates": {
+            // en: Coordinates
+            "name": "Koordinaten",
+            "plural": "",
+            "help": ""
+          }
+        },
+        "incoming": {
+          "places_reverse": {
+            // en: Place of
+            // NEEDS REVIEW: the en text has changed since this was translated
+            "name": "Schauplatz von",
+            "plural": "",
+            "help": ""
+          }
+        }
+      }
+    },
+    "PositiveSubjunctive": {
+      "en": {
+        "name": "Positive subjunctive",
+        "plural": "Positive subjunctives",
+        "description": "It was wished that this should happen (it did not necessarily)",
+        "help": "",
+        "fields": {
+          "contents": {
+            "name": "Contents",
+            "plural": "",
+            "help": ""
+          }
+        }
+      },
+      "de": {
+        // en: Positive subjunctive
+        "name": "Positiver Konjunktiv",
+        // en: Positive subjunctives
+        "plural": "",
+        // en: It was wished that this should happen (it did not necessarily)
+        "description": "Es wurde gewünscht, dass dies geschehen solle (es geschah nicht notwendigerweise)",
+        "help": "",
+        "fields": {
+          "contents": {
+            // en: Contents
+            "name": "Inhalt",
+            "plural": "",
+            "help": ""
+          }
+        }
+      }
+    },
+    "Probability": {
+      "en": {
+        "name": "Probability",
+        "plural": "Probabilities",
+        "description": "How likely it is that this is the one meant, out of the alternatives (1 to 100, in per cent)",
+        "help": "",
+        "fields": {
+          "percent": {
+            "name": "Percent",
+            "plural": "",
+            "help": ""
+          }
+        }
+      },
+      "de": {
+        // en: Probability
+        "name": "Wahrscheinlichkeit",
+        // en: Probabilities
+        // NEEDS REVIEW: the en text has changed since this was translated
+        "plural": "Wahrscheinlichkeiten",
+        // en: How likely it is that this is the one meant, out of the alternatives (1 to 100, in per cent)
+        "description": "Wie wahrscheinlich es ist, dass dies die gemeinte Person unter den Alternativen ist (1 bis 100, in Prozent)",
+        "help": "",
+        "fields": {
+          "percent": {
+            // en: Percent
+            "name": "Prozent",
+            "plural": "",
+            "help": ""
+          }
+        }
+      }
+    },
+    "Source": {
+      "en": {
+        "name": "Source",
+        "plural": "Sources",
+        "description": "A text that makes claims: a chronicle, a letter, a charter",
+        "help": "",
+        "fields": {
+          "author": {
+            "name": "Author",
+            "plural": "",
+            "help": ""
+          },
+          "written": {
+            "name": "Written",
+            "plural": "",
+            "help": ""
+          },
+          "edition_price": {
+            "name": "Edition price",
+            "plural": "",
+            "help": ""
+          }
+        },
+        "incoming": {
+          "source_reverse": {
+            "name": "Source of",
+            "plural": "",
+            "help": ""
+          }
+        }
+      },
+      "de": {
+        // en: Source
+        "name": "Quelle",
+        // en: Sources
+        // NEEDS REVIEW: the en text has changed since this was translated
+        "plural": "Quellen",
+        // en: A text that makes claims: a chronicle, a letter, a charter
+        "description": "Ein Text, der Behauptungen aufstellt: eine Chronik, ein Brief, eine Urkunde",
+        "help": "",
+        "fields": {
+          "author": {
+            // en: Author
+            "name": "Autor",
+            "plural": "",
+            "help": ""
+          },
+          "written": {
+            // en: Written
+            "name": "Geschrieben",
+            "plural": "",
+            "help": ""
+          },
+          "edition_price": {
+            // en: Edition price
+            "name": "Editionspreis",
+            "plural": "",
+            "help": ""
+          }
+        },
+        "incoming": {
+          "source_reverse": {
+            // en: Source of
+            // NEEDS REVIEW: the en text has changed since this was translated
+            "name": "Quelle von",
+            "plural": "",
+            "help": ""
+          }
+        }
+      }
+    },
+    "Statement": {
+      "en": {
+        "name": "Statement",
+        "plural": "Statements",
+        "description": "Something that happened between agents and in places (abstract: a kind of\nstatement is one of the classes below)",
+        "help": "",
+        "fields": {
+          "text": {
+            "name": "Text",
+            "plural": "",
+            "help": ""
+          },
+          "date": {
+            "name": "Date",
+            "plural": "",
+            "help": ""
+          },
+          "year": {
+            "name": "Year",
+            "plural": "",
+            "help": ""
+          },
+          "involves": {
+            "name": "Involves",
+            "plural": "",
+            "help": ""
+          },
+          "places": {
+            "name": "Places",
+            "plural": "",
+            "help": ""
+          }
+        }
+      },
+      "de": {
+        // en: Statement
+        "name": "Aussage",
+        // en: Statements
+        // NEEDS REVIEW: the en text has changed since this was translated
+        "plural": "Aussagen",
+        // en: Something that happened between agents and in places (abstract: a kind of
+        //     statement is one of the classes below)
+        "description": "Etwas, das zwischen Akteuren und an Orten geschah (abstrakt: eine Art von Aussage ist eine der folgenden Klassen)",
+        "help": "",
+        "fields": {
+          "text": {
+            // en: Text
+            "name": "Text",
+            "plural": "",
+            "help": ""
+          },
+          "date": {
+            // en: Date
+            "name": "Datum",
+            "plural": "",
+            "help": ""
+          },
+          "year": {
+            // en: Year
+            "name": "Jahr",
+            "plural": "",
+            "help": ""
+          },
+          "involves": {
+            // en: Involves
+            "name": "Betrifft",
+            "plural": "",
+            "help": ""
+          },
+          "places": {
+            // en: Places
+            "name": "Orte",
+            "plural": "",
+            "help": ""
+          }
+        }
+      }
+    },
+    "Transfer": {
+      "en": {
+        "name": "Transfer",
+        "plural": "Transfers",
+        "description": "Something passed from one agent to another",
+        "help": "",
+        "fields": {
+          "item": {
+            "name": "Item",
+            "plural": "",
+            "help": ""
+          },
+          "quantity": {
+            "name": "Quantity",
+            "plural": "",
+            "help": ""
+          },
+          "given_by": {
+            "name": "Given by",
+            "plural": "",
+            "help": ""
+          },
+          "given_to": {
+            "name": "Given to",
+            "plural": "",
+            "help": ""
+          }
+        }
+      },
+      "de": {
+        // en: Transfer
+        "name": "Übertragung",
+        // en: Transfers
+        // NEEDS REVIEW: the en text has changed since this was translated
+        "plural": "Übertragungen",
+        // en: Something passed from one agent to another
+        "description": "Etwas ging von einem Akteur auf einen anderen über",
+        "help": "",
+        "fields": {
+          "item": {
+            // en: Item
+            "name": "Eintrag",
+            "plural": "",
+            "help": ""
+          },
+          "quantity": {
+            // en: Quantity
+            "name": "Menge",
+            "plural": "",
+            "help": ""
+          },
+          "given_by": {
+            // en: Given by
+            "name": "Gegeben von",
+            "plural": "",
+            "help": ""
+          },
+          "given_to": {
+            // en: Given to
+            "name": "Gegeben an",
+            "plural": "",
+            "help": ""
+          }
+        }
+      }
+    },
+    "WithCertainty": {
+      "en": {
+        "name": "With certainty",
+        "plural": "With certainties",
+        "description": "A value, with how certain it is (1 to 5)",
+        "help": "",
+        "fields": {
+          "value": {
+            "name": "Value",
+            "plural": "",
+            "help": ""
+          },
+          "certainty": {
+            "name": "Certainty",
+            "plural": "",
+            "help": ""
+          }
+        }
+      },
+      "de": {
+        // en: With certainty
+        "name": "Mit Gewissheit",
+        // en: With certainties
+        "plural": "",
+        // en: A value, with how certain it is (1 to 5)
+        "description": "Ein Wert, mit seiner Gewissheit (1 bis 5)",
+        "help": "",
+        "fields": {
+          "value": {
+            // en: Value
+            "name": "Wert",
+            "plural": "",
+            "help": ""
+          },
+          "certainty": {
+            // en: Certainty
+            "name": "Gewissheit",
+            "plural": "Gewissheiten",
+            "help": ""
+          }
+        }
+      }
+    }
+  },
+  "enums": {
+    "ActivityType": {
+      "en": {
+        "name": "Activity type",
+        "plural": "Activity types",
+        "description": "",
+        "help": "",
+        "members": {
+          "MEETING": {
+            "name": "Meeting"
+          },
+          "JOURNEY": {
+            "name": "Journey"
+          },
+          "BATTLE": {
+            "name": "Battle"
+          },
+          "CEREMONY": {
+            "name": "Ceremony"
+          },
+          "CORRESPONDENCE": {
+            "name": "Correspondence"
+          }
+        }
+      },
+      "de": {
+        // en: Activity type
+        "name": "Aktivitätstyp",
+        // en: Activity types
+        // NEEDS REVIEW: the en text has changed since this was translated
+        "plural": "Aktivitätstypen",
+        "description": "",
+        "help": "",
+        "members": {
+          "MEETING": {
+            // en: Meeting
+            "name": "Treffen"
+          },
+          "JOURNEY": {
+            // en: Journey
+            "name": "Reise"
+          },
+          "BATTLE": {
+            // en: Battle
+            "name": "Schlacht"
+          },
+          "CEREMONY": {
+            // en: Ceremony
+            "name": "Zeremonie"
+          },
+          "CORRESPONDENCE": {
+            // en: Correspondence
+            "name": "Korrespondenz"
+          }
+        }
+      }
+    },
+    "Role": {
+      "en": {
+        "name": "Role",
+        "plural": "Roles",
+        "description": "",
+        "help": "",
+        "members": {
+          "LEADER": {
+            "name": "Leader"
+          },
+          "WITNESS": {
+            "name": "Witness"
+          },
+          "PARTICIPANT": {
+            "name": "Participant"
+          },
+          "MESSENGER": {
+            "name": "Messenger"
+          }
+        }
+      },
+      "de": {
+        // en: Role
+        "name": "Rolle",
+        // en: Roles
+        // NEEDS REVIEW: the en text has changed since this was translated
+        "plural": "Rollen",
+        "description": "",
+        "help": "",
+        "members": {
+          "LEADER": {
+            // en: Leader
+            "name": "Anführer"
+          },
+          "WITNESS": {
+            // en: Witness
+            "name": "Zeuge"
+          },
+          "PARTICIPANT": {
+            // en: Participant
+            "name": "Teilnehmer"
+          },
+          "MESSENGER": {
+            // en: Messenger
+            "name": "Bote"
+          }
+        }
+      }
+    }
+  }
+}

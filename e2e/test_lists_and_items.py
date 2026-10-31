@@ -89,12 +89,12 @@ def test_an_item_shows_its_fields_and_what_it_refers_to(page: Page, data):
     page.get_by_role("link", name="Maximilian").click()
     page.wait_for_url(f"**/Person/{data.maximilian}")
     expect(page.get_by_role("heading", name="Maximilian")).to_be_visible()
-    expect(page.get_by_text("has role", exact=True)).to_be_visible()
+    expect(page.get_by_text("Has role", exact=True)).to_be_visible()
     page.get_by_role("link", name="Maximilian's secretary").click()
     page.wait_for_url(f"**/Role/{data.secretary_role}")
     expect(page.get_by_role("heading", name="Maximilian's secretary")).to_be_visible()
     # (a field that is a type, and what refers to this role from the other side)
-    expect(page.get_by_text("has type", exact=True)).to_be_visible()
+    expect(page.get_by_text("Has type", exact=True)).to_be_visible()
     expect(page.get_by_role("link", name=re.compile(r"\bSecretary$"))).to_be_visible()
     expect(page.get_by_role("link", name=re.compile(r"\bMaximilian$"))).to_be_visible()
 
@@ -112,4 +112,4 @@ def test_a_type_in_a_field_leads_to_the_page_of_the_type(page: Page, data):
 def test_an_item_with_nothing_to_show_has_no_empty_rows(page: Page, data):
     page.goto(f"/Person/{data.charles}")
     expect(page.get_by_role("heading", name="Charles the Bold")).to_be_visible()
-    expect(page.get_by_text("has role", exact=True)).to_have_count(0)
+    expect(page.get_by_text("Has role", exact=True)).to_have_count(0)

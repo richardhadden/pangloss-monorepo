@@ -162,6 +162,8 @@ export type Colour =
 export interface InterfaceMeta {
   /** (without one: blue for entities, green for documents, a colour by depth for a semantic space) */
   colour: Colour | null;
+  /** The section of the navigation bar the type is listed under, if not Entities or Documents (resolved through the parents) */
+  navSection?: string | null;
   /** The component of an interface module for the page of the list of the type (resolved through the parents) */
   listPage: ComponentReference | null;
   itemPage: ComponentReference | null;

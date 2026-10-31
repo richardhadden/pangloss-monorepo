@@ -14,7 +14,12 @@ about her "held court at Ghent") and Charles the Bold (no role); `types` has onl
 | --- | --- | --- |
 | Home: the models of the project are listed, each a link | ✅ | `test_navigation.py` (the page is a placeholder: unstyled, "Pangloss Yo!") |
 | Navigation bar: opens when the mouse is over it, closes when it leaves | ✅ | `test_the_navigation_bar_opens_and_closes` |
-| Navigation bar: the button toggles, so a click while hovering **closes** it | ✅ (as it is now) | `test_clicking_the_button_of_the_bar_…`: a finding, see below |
+| Navigation bar: while open its button is a pin; a click pins it open (stays when the mouse leaves or a link is followed), another unpins | ✅ | `test_clicking_the_button_of_the_bar_…`, `test_a_pinned_bar_…`, `test_unpinning_…` |
+| Navigation bar: pinned, the page and the console move across (console still centred) | ✅ | `test_the_page_and_the_console_move_across_for_a_pinned_bar` |
+| Language: another language is fetched (server function) only when chosen, once; the words change; `<html lang>` follows | ✅ | `test_another_language_is_fetched_only_when_it_is_chosen` |
+| Language: the choice is kept in `localStorage` over a reload | ✅ | `test_the_language_chosen_is_kept_over_a_reload` |
+| Language: the fade while it loads | ⬜ | (CSS on `html[data-translating]`; checked by hand) |
+| Navigation bar: the pin is kept in `localStorage` over a reload | ✅ | `test_the_pin_is_remembered` |
 | Navigation bar: sections and links to the lists of the models | ✅ | `test_the_navigation_bar_links_to_the_lists` |
 | Navigation bar on a touch device (no hover) | ⬜ | |
 | Console bar names the type (plural on a list) and the item | ✅ | `test_the_console_names_the_type_of_the_page` |
@@ -70,7 +75,6 @@ about her "held court at Ghent") and Charles the Bold (no role); `types` has onl
 
 ## Findings of this suite (for the interface, not yet changed)
 
-- The navigation bar opens on `mouseenter` and its button toggles: a mouse user who clicks the button to open it closes it again.
 - The home page is unstyled.
 - A page is not complete without JavaScript (the streamed parts need a script to be put in place).
 - The language flags in the bar do nothing.

@@ -6,6 +6,7 @@ export * from "./ConsoleBar";
 export * from "./Console";
 export * from "./ConsoleSearch";
 export * from "./ResultButton";
+export * from "./SpaceBands";
 export * from "./LoginForm";
 export * from "./RequireLogin";
 export * from "./ReferenceChip";

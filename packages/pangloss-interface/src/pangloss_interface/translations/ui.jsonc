@@ -5,6 +5,64 @@
   "log_in": { "en": "Log in", "de": "Anmelden" },
   "log_out": { "en": "Log out", "de": "Abmelden" },
 
+  // The navigation bar
+  "home": { "en": "Home", "de": "Startseite" },
+  "log_out_user": { "en": "Log out {user}", "de": "{user} abmelden" },
+  "nav_main": { "en": "Main", "de": "Hauptnavigation" },
+  "nav_expand": { "en": "Expand the navigation bar", "de": "Navigationsleiste ausklappen" },
+  "nav_pin": { "en": "Pin the navigation bar open", "de": "Navigationsleiste angeheftet offen halten" },
+  "nav_unpin": { "en": "Unpin the navigation bar", "de": "Navigationsleiste lösen" },
+  "status_logged_in_as": { "en": "Logged in as {user}", "de": "Angemeldet als {user}" },
+  "status_not_logged_in": { "en": "Not logged in", "de": "Nicht angemeldet" },
+  "language_current": { "en": "Language: {language}", "de": "Sprache: {language}" },
+  "nav_section_typologies": { "en": "Typologies", "de": "Typologien" },
+  "section_links": { "en": "Links", "de": "Links" },
+
+  // The console
+  "search": { "en": "Search", "de": "Suchen" },
+  "found": { "en": "Found", "de": "Gefunden" },
+  "found_more": { "en": "Found, and more: narrow the search", "de": "Gefunden, und mehr: Suche eingrenzen" },
+  "deep_search": { "en": "Deep search", "de": "Tiefensuche" },
+  "deep_search_run": { "en": "Run deep search (Enter)", "de": "Tiefensuche starten (Eingabe)" },
+  "new_item": { "en": "New {type}", "de": "{type} anlegen" },
+
+  "abstract_no_types": {
+    "en": "{type} is an abstract type, and no type of it exists in this project: there is nothing to list.",
+    "de": "{type} ist ein abstrakter Typ, und es gibt in diesem Projekt keinen Typ davon: Es gibt nichts aufzulisten."
+  },
+
+  "close": { "en": "Close", "de": "Schließen" },
+
+  "page_not_found": { "en": "Page not found", "de": "Seite nicht gefunden" },
+  "title_not_found": { "en": "Not found - Pangloss", "de": "Nicht gefunden - Pangloss" },
+  "item_not_found": {
+    "en": "There is nothing here. It may not exist, or you may need to log in to see it.",
+    "de": "Hier ist nichts. Es existiert vielleicht nicht, oder Sie müssen sich anmelden, um es zu sehen."
+  },
+
+  // What an error says (the API's own explanations are English: the API is not multilingual)
+  "error_unauthorised": { "en": "You need to log in to do this.", "de": "Dafür müssen Sie sich anmelden." },
+  "error_forbidden": { "en": "You are not allowed to do this.", "de": "Sie dürfen das nicht tun." },
+  "error_server": {
+    "en": "Something went wrong on the server. Please try again in a moment.",
+    "de": "Auf dem Server ist etwas schiefgegangen. Bitte versuchen Sie es gleich noch einmal."
+  },
+
+  // Values and links in the results
+  "yes": { "en": "Yes", "de": "Ja" },
+  "no": { "en": "No", "de": "Nein" },
+  "go_to_head": { "en": "Go to the {type}", "de": "Zum Objekt: {type}" },
+  "type_marker": { "en": "type", "de": "Typ" },
+
+  // The login form
+  "username": { "en": "Username", "de": "Benutzername" },
+  "password": { "en": "Password", "de": "Passwort" },
+  "login_failed": {
+    "en": "That username and password do not match. Check them and try again.",
+    "de": "Benutzername und Passwort passen nicht zusammen. Bitte prüfen Sie Ihre Eingaben und versuchen Sie es erneut."
+  },
+  "logging_in": { "en": "Logging in…", "de": "Anmeldung läuft …" },
+
   // The kinds of model (a model's "kind" in the gathered file is one of these, as kind_<snake case>)
   "kind_document": { "en": "Document", "de": "Dokument" },
   "kind_document_plural": { "en": "Documents", "de": "Dokumente" },

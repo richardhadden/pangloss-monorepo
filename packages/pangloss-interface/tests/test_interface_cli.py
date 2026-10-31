@@ -228,6 +228,7 @@ def test_dev_link_runs_the_package_source_with_the_projects_models(
                 "PANGLOSS_API_URL": "http://api:9000",
                 "PANGLOSS_MODELS_MODULE": str(models),
                 "PANGLOSS_MODULES_MODULE": str(linked / "modules.ts"),
+                "PANGLOSS_TRANSLATIONS_MODULE": str(linked / "translations.json"),
                 "PANGLOSS_SOURCES_CSS": str(linked / "sources.css"),
                 "PANGLOSS_MODULE_ROOTS": "",
             },
@@ -321,4 +322,6 @@ def test_translations_that_cannot_be_read_are_a_warning_and_the_interface_goes_o
 
     assert result.exit_code == 0
     assert "Translations not gathered" in result.output
-    assert not (working_directory(project.location.root) / TRANSLATIONS_PATH).exists()
+    # (the interface imports the file, so there is one, with English only and nothing in it)
+    written = working_directory(project.location.root) / TRANSLATIONS_PATH
+    assert json.loads(written.read_text())["languages"] == ["en"]

@@ -355,6 +355,141 @@ async def populate() -> None:
     print("Wrote 4 factoids:")
     for factoid in (coronation, einhard_life, letter, orders):
         print(f"  {factoid.id}  {factoid.label}")
+    await add_order_chain()
+
+
+def by_id(kind: str, name: str, type: str) -> dict:
+    """A reference to a demo entity that was made with a fixed address"""
+    return {"type": type, "id": url(kind, name)}
+
+
+async def order_chain_missing() -> bool:
+    return await models.Person.get(id=url("person", "wido-the-deputy")) is None
+
+
+async def person_for_chain(name: str, **fields) -> dict:
+    """A reference to a demo person made with a fixed address: made now if there is none yet, in the same write as the
+    factoid (a person can be created inline), so that a write that fails leaves nothing behind"""
+    address = url("person", name)
+    if await models.Person.get(id=address) is not None:
+        return {"type": "Person", "id": address}
+    return {
+        "type": "Person",
+        "id": address,
+        "create_new": True,
+        "aliases": [],
+        "has_type": [],
+        **fields,
+    }
+
+
+async def add_order_chain() -> None:
+    """One factoid with a chain of orders passed from man to man: the king orders a count, who orders a messenger, who
+    orders his man, that silver be taken to the pope. Each order holds the next in a PositiveSubjunctive space, so they
+    nest (to any depth), and only the last is something that was done, if at all. The count is not known for sure (Gerold
+    or Eric), as in the last factoid. Safe to run on a database that already has the rest of the demo: it adds only this."""
+    gerold = await person_for_chain(
+        "gerold-of-bavaria",
+        label="Gerold of Bavaria",
+        known_as={"value": "Geroldus", "certainty": 4},
+        born=edtf("0740~"),
+    )
+    eric = await person_for_chain(
+        "eric-of-friuli",
+        label="Eric of Friuli",
+        known_as={"value": "Heiricus", "certainty": 4},
+        born=edtf("075X"),
+    )
+    ansgar = await person_for_chain(
+        "ansgar-the-messenger",
+        label="Ansgar the messenger",
+        known_as={"value": "Ansgar", "certainty": 2},
+        born=edtf("077X"),
+    )
+    wido = await person_for_chain(
+        "wido-the-deputy",
+        label="Wido the deputy",
+        known_as={"value": "Wido", "certainty": 2},
+        born=edtf("078X"),
+    )
+    charlemagne = by_id("person", "charlemagne", "Person")
+    leo = by_id("person", "leo-iii", "Person")
+    annales = by_id("source", "annales-regni-francorum", "Source")
+
+    def reference(person: dict) -> dict:
+        return {"type": "Person", "id": person["id"]}
+
+    the_count = {
+        "type": "Identification",
+        "identified_by": "the count",
+        "target": [
+            {
+                "type": "Alternative",
+                "alternatives": [
+                    {**person, "edge_properties": {"percent": percent}}
+                    for person, percent in ((gerold, 60), (eric, 40))
+                ],
+            }
+        ],
+    }
+    chain = await models.Factoid.Create(
+        label="Silver for the pope, by four hands",
+        year=803,
+        source={"type": "AtPage", "page": "s.a. 803", "target": [annales]},
+        statements=[
+            {
+                "type": "Order",
+                "label": "Charlemagne orders the count to see that silver reaches the pope",
+                "text": "The emperor ordered the count to have silver sent to the pope",
+                "date": date(803, 1),
+                "ordered_by": charlemagne,
+                "places": [],
+                "thing_ordered": {
+                    "type": "PositiveSubjunctive",
+                    "contents": [
+                        {
+                            "type": "Order",
+                            "label": "The count orders Ansgar to see the silver carried to Rome",
+                            "text": "The count told his messenger to have the silver carried to Rome",
+                            "date": date(803, 2),
+                            "ordered_by": the_count,
+                            "places": [],
+                            "thing_ordered": {
+                                "type": "PositiveSubjunctive",
+                                "contents": [
+                                    {
+                                        "type": "Order",
+                                        "label": "Ansgar orders Wido to take the silver to Rome",
+                                        "text": "Ansgar sent his deputy to take the silver to Rome",
+                                        "date": date(803, 3),
+                                        "ordered_by": ansgar,
+                                        "places": [],
+                                        "thing_ordered": {
+                                            "type": "PositiveSubjunctive",
+                                            "contents": [
+                                                {
+                                                    "type": "Transfer",
+                                                    "label": "Silver for the pope",
+                                                    "text": "Wido was to bring the silver to Pope Leo",
+                                                    "date": date(803, 4),
+                                                    "item": "silver, in talents",
+                                                    "quantity": "2",
+                                                    "given_by": wido,
+                                                    "given_to": leo,
+                                                    "places": [],
+                                                }
+                                            ],
+                                        },
+                                    }
+                                ],
+                            },
+                        }
+                    ],
+                },
+            }
+        ],
+    ).save()
+    print(f"Wrote the chain of orders:\n  {chain.id}  {chain.label}")
 
 
 async def main() -> None:
@@ -370,9 +505,16 @@ async def main() -> None:
 
     await backend.connect()
     try:
-        if await already_populated():
-            sys.exit("The database already has the demo data: nothing was written")
-        await populate()
+        if "--chain" in sys.argv:
+            # (only the chain of orders, whatever else is there)
+            await add_order_chain()
+        elif await already_populated():
+            # (the rest is there: only what was added to the demo since is written)
+            if not await order_chain_missing():
+                sys.exit("The database already has the demo data: nothing was written")
+            await add_order_chain()
+        else:
+            await populate()
     finally:
         await backend.disconnect()
 

@@ -6,3 +6,4 @@ export * from "./console";
 export * from "./session";
 export * from "./login";
 export * from "./modules";
+export * from "./translations";

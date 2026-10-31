@@ -261,7 +261,7 @@ def values_for_also(
 
 def interface_meta() -> dict[str, Any]:
     """The pages of the interface module of this package (`pangloss_typology/interface/`) for the entity, if the interface
-    is installed: the list as a tree, the item page with the hierarchy, and a card that marks a type. They are used when
+    is installed: the list as a tree, the item page with the hierarchy, and a card that marks a type; and the section of the navigation bar the types are listed under. They are used when
     `pangloss_typology` is in `INSTALLED_APPS`, which is where its module is found"""
     try:
         from pangloss_interface import InterfaceMeta
@@ -269,6 +269,7 @@ def interface_meta() -> dict[str, Any]:
         return {}
     return {
         "_interface_meta": InterfaceMeta(
+            nav_section="Typologies",
             list_page="pangloss_typology:TypeTree",
             item_page="pangloss_typology:TypeItem",
             view_card="pangloss_typology:TypeCard",

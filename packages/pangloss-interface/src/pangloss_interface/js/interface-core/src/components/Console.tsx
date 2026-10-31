@@ -1,13 +1,13 @@
 import { Portal } from "@solidjs/web";
 import { Loading, onSettled, Show } from "solid-js";
 import type { ParentProps } from "solid-js";
-import { useConsoleMount, useModels, userIsLoggedIn } from "../context";
+import { useConsoleMount, useModels, useTranslations, userIsLoggedIn } from "../context";
 import { ConsoleButton, kindTint, spaceTint } from "../primitives";
 import { ConsoleSearch } from "./ConsoleSearch";
 import { getModel } from "../schema";
 import type { ConsoleProps } from "../types";
 
-// (a stand-in until the translations are connected: they will have the plural of each name)
+// (what the name of a model is when the translations have no plural for it: an English stand-in)
 function pluralOf(name: string): string {
   if (/(s|x|ch|sh)$/.test(name)) return `${name}es`;
   if (/[^aeiou]y$/.test(name)) return `${name.slice(0, -1)}ies`;
@@ -20,6 +20,7 @@ function pluralOf(name: string): string {
  */
 function Wrapped(props: ParentProps<{ spaces: string[]; depth: number }>) {
   const definitions = useModels();
+  const { modelName } = useTranslations();
   const tint = () =>
     spaceTint(getModel(definitions, props.spaces[0] ?? "")?.interfaceMeta?.colour, props.depth);
   return (
@@ -32,7 +33,7 @@ function Wrapped(props: ParentProps<{ spaces: string[]; depth: number }>) {
         ]}
       >
         <span class="flex items-center px-3 text-xs font-semibold uppercase select-none">
-          {props.spaces[0]}
+          {modelName(props.spaces[0] ?? "")}
         </span>
         <div class="flex items-stretch py-1 pr-1">
           <Wrapped spaces={props.spaces.slice(1)} depth={props.depth + 1}>
@@ -54,7 +55,13 @@ function Wrapped(props: ParentProps<{ spaces: string[]; depth: number }>) {
 export function Console(props: ConsoleProps) {
   const { mount, register } = useConsoleMount();
   const definitions = useModels();
+  const { t, modelName } = useTranslations();
   const model = () => getModel(definitions, props.type);
+  // (a model with no plural of its own in the translations gets the English stand-in, but only in English)
+  const plural = () => {
+    const named = modelName(props.type, true);
+    return named !== props.type ? named : pluralOf(modelName(props.type));
+  };
   const kind = () => model()?.kind;
   const wrapped = () => (props.spaces ?? []).length > 0;
   // (tells the bar there is something to show, for as long as the page has this)
@@ -75,8 +82,8 @@ export function Console(props: ConsoleProps) {
                     kindTint(kind(), model()?.interfaceMeta?.colour),
                   ]}
                 >
-                  <Show when={props.list} fallback={props.type}>
-                    {pluralOf(props.type)}
+                  <Show when={props.list} fallback={modelName(props.type)}>
+                    {plural()}
                   </Show>
                 </span>
               </Wrapped>
@@ -103,7 +110,7 @@ export function Console(props: ConsoleProps) {
                   logged in (reading who is may wait, so it has a boundary of its own) */}
               <Loading fallback={null}>
                 <Show when={props.list && model() && !model()!.abstract && userIsLoggedIn()}>
-                  <ConsoleButton label={`New ${props.type}`} href={`/${props.type}/new`}>
+                  <ConsoleButton label={t("new_item", "New {type}", { type: modelName(props.type) })} href={`/${props.type}/new`}>
                     <svg
                       viewBox="0 0 24 24"
                       class="size-5 select-none fill-none stroke-current stroke-2"

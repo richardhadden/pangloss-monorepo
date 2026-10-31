@@ -51,7 +51,7 @@ def expand_nav(page: Page) -> None:
     hydrated(page)
     page.locator("nav[aria-label='Main']").hover()
     expect(
-        page.get_by_role("button", name="Retract the navigation bar")
+        page.get_by_role("button", name="Pin the navigation bar open")
     ).to_be_visible()
 
 

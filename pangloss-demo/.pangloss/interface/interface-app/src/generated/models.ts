@@ -1444,6 +1444,7 @@ export const definitions: ModelDefinitions = {
       "incoming": [],
       "interfaceMeta": {
         "colour": "yellow",
+        "navSection": null,
         "listPage": null,
         "itemPage": null,
         "viewCard": null,
@@ -1602,6 +1603,7 @@ export const definitions: ModelDefinitions = {
       "incoming": [],
       "interfaceMeta": {
         "colour": "rose",
+        "navSection": null,
         "listPage": null,
         "itemPage": null,
         "viewCard": null,
@@ -1648,6 +1650,7 @@ export const definitions: ModelDefinitions = {
       "incoming": [],
       "interfaceMeta": {
         "colour": "orange",
+        "navSection": null,
         "listPage": null,
         "itemPage": null,
         "viewCard": null,
@@ -1723,6 +1726,19 @@ export const definitions: ModelDefinitions = {
               "max_length": 1
             }
           ]
+        },
+        {
+          "name": "label_de",
+          "key": "labelDe",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": []
         }
       ],
       "incoming": [
@@ -1751,6 +1767,7 @@ export const definitions: ModelDefinitions = {
       ],
       "interfaceMeta": {
         "colour": null,
+        "navSection": "Typologies",
         "listPage": {
           "module": "pangloss_typology",
           "name": "TypeTree"
@@ -2585,6 +2602,7 @@ export const definitions: ModelDefinitions = {
       "incoming": [],
       "interfaceMeta": {
         "colour": "green",
+        "navSection": null,
         "listPage": null,
         "itemPage": null,
         "viewCard": null,

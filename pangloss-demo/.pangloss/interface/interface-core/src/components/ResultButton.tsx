@@ -1,41 +1,11 @@
 import { Show } from "solid-js";
 import type { ParentProps } from "solid-js";
-import { useModels } from "../context";
-import { kindTint, spaceTint } from "../primitives";
+import { useModels, useTranslations } from "../context";
+import { kindTint } from "../primitives";
 import { getModel } from "../schema";
 import type { ResultButtonProps } from "../types";
 import { Customised } from "./Customised";
-
-// The bands of the semantic spaces, by how deep they are (whole class names, so that Tailwind finds them)
-/**
- * What is in the semantic spaces `spaces` (outermost first): each is a band round the next,
- * with the name of the space at its left, so the names stand side by side from the outside in.
- */
-function Wrapped(props: ParentProps<{ spaces: string[]; depth: number; flushLeft?: boolean }>) {
-  const definitions = useModels();
-  const tint = () =>
-    spaceTint(getModel(definitions, props.spaces[0] ?? "")?.interfaceMeta?.colour, props.depth);
-  return (
-    <Show when={props.spaces.length > 0} fallback={props.children}>
-      <div
-        class={[
-          "flex items-stretch border-[0.5px] border-slate-400/70",
-          { "rounded-sm": !props.flushLeft, "rounded-r-sm": props.flushLeft },
-          tint(),
-        ]}
-      >
-        <span class="flex shrink-0 items-center px-3 text-xs font-semibold uppercase select-none">
-          {props.spaces[0]}
-        </span>
-        <div class="min-w-0 flex-1 p-1">
-          <Wrapped spaces={props.spaces.slice(1)} depth={props.depth + 1}>
-            {props.children}
-          </Wrapped>
-        </div>
-      </div>
-    </Show>
-  );
-}
+import { SpaceBands } from "./SpaceBands";
 
 /**
  * A result of a list: a button as wide as what holds it, with the type of the item on the
@@ -64,6 +34,7 @@ export function ResultButton(props: ResultButtonProps) {
 
 function DefaultResultButton(props: ResultButtonProps) {
   const definitions = useModels();
+  const { t, modelName } = useTranslations();
   const model = () => getModel(definitions, props.type);
   // (what is next to the button to the head node is square on that side)
   const flushLeft = () => props.head !== undefined;
@@ -75,8 +46,12 @@ function DefaultResultButton(props: ResultButtonProps) {
         {(head) => (
           <a
             href={`/${head().type}/${head().id}`}
-            aria-label={`Go to the ${head().type}`}
-            title={`Go to the ${head().type}`}
+            aria-label={t("go_to_head", "Go to the {type}", {
+              type: modelName(head().type),
+            })}
+            title={t("go_to_head", "Go to the {type}", {
+              type: modelName(head().type),
+            })}
             class="flex w-10 shrink-0 items-center justify-center rounded-l-sm border-[0.5px] border-r-0 border-slate-400/70 bg-slate-100/70 text-slate-500 select-none hover:bg-slate-200/70 active:bg-slate-300/70"
           >
             {/* (layers: the context the item is in) */}
@@ -98,7 +73,7 @@ function DefaultResultButton(props: ResultButtonProps) {
         )}
       </Show>
       <div class="min-w-0 flex-1">
-        <Wrapped spaces={props.spaces ?? []} depth={0} flushLeft={flushLeft()}>
+        <SpaceBands spaces={props.spaces ?? []} depth={0} flushLeft={flushLeft()}>
           <a
             href={props.href}
             class={[
@@ -112,12 +87,14 @@ function DefaultResultButton(props: ResultButtonProps) {
                 kindTint(model()?.kind, model()?.interfaceMeta?.colour),
               ]}
             >
-              <span class="min-w-0 truncate">{props.type}</span>
+              <span class="min-w-0 truncate">{modelName(props.type)}</span>
             </span>
             {/* (a block, not a flex container, so that what does not fit ends in "…"; the line breaks of a label are spaces here) */}
-            <span class="min-w-0 flex-1 self-center truncate px-4 py-3 text-sm">{props.label}</span>
+            <span class="min-w-0 flex-1 self-center truncate px-4 py-3 text-sm">
+              {props.label}
+            </span>
           </a>
-        </Wrapped>
+        </SpaceBands>
       </div>
     </div>
   );

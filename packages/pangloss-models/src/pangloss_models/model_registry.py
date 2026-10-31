@@ -72,7 +72,7 @@ lazy from pangloss_models.model_bases.entity import (
     _EntityCreateBase,
     _EntityUpdateBase,
 )
-lazy from pangloss_models.model_bases.model_tools import inherit_fields
+lazy from pangloss_models.model_bases.model_tools import forget_schema, inherit_fields
 
 
 def apply_camel_case_aliases(model: type[BaseModel]) -> None:
@@ -431,12 +431,13 @@ class ModelRegistry:
         for action_class in cls._action_classes:
             apply_camel_case_aliases(action_class)
 
-        # Rebuild all the models' action classes as referenced models
-        # might not be up to date in referencing classes internal
-        # pydantic validator models —— two passes seem to be required!
-        for action_class in reversed(cls._action_classes):
-            action_class.model_rebuild(force=True)
-
+        # A model embeds the schema of the models it refers to as they were when it was last rebuilt, so
+        # models that refer to each other (an `Order` that orders a `Statement`, which may be an `Order`)
+        # kept the half-made schema of the one that came first, and could be nested only so deep. Forget all
+        # the schemas, then make them again: pydantic then meets the cycle while it makes a schema, and
+        # makes it recursive, so there is no limit to the depth.
+        for action_class in cls._action_classes:
+            forget_schema(action_class)
         for action_class in cls._action_classes:
             action_class.model_rebuild(force=True)
 

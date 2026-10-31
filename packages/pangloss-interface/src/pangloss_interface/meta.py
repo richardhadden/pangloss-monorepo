@@ -64,6 +64,10 @@ class InterfaceMeta:
     # semantic space. Without one: blue for entities, green for documents, and for a semantic
     # space a colour by how deep it is.
     colour: Colour | None = None
+    # The section of the navigation bar the type is listed under, instead of Entities or Documents (a
+    # subclass has its parent's). An app's `NavModel` for the type, in its `InterfaceConfig`, still wins.
+    # The title is translated by the slot `nav_section_<title in snake case>` in `ui.jsonc`
+    nav_section: str | None = None
     # A component of an interface module, for the whole page of the list of the type
     list_page: Slot = None
     # ... for the whole page of one item
@@ -79,6 +83,10 @@ class InterfaceMeta:
             raise PanglossMetaError(
                 f"InterfaceMeta(colour={self.colour!r}): the colour must be one of Tailwind's base colours "
                 f"(not black or white): {', '.join(COLOURS)}"
+            )
+        if self.nav_section is not None and not self.nav_section.strip():
+            raise PanglossMetaError(
+                "InterfaceMeta(nav_section=...): the title of a section cannot be empty"
             )
         for slot in SLOTS:
             value = getattr(self, slot)
@@ -112,7 +120,10 @@ def resolved_meta(model: type) -> dict[str, Any] | None:
     if not metas:
         return None
     resolved: dict[str, Any] = {
-        "colour": next((m.colour for m in metas if m.colour is not None), None)
+        "colour": next((m.colour for m in metas if m.colour is not None), None),
+        "navSection": next(
+            (m.nav_section for m in metas if m.nav_section is not None), None
+        ),
     }
     for slot in SLOTS:
         value = next((v for m in metas if (v := getattr(m, slot)) is not None), None)

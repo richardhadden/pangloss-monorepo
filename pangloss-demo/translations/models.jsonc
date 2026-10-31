@@ -1,0 +1,326 @@
+// The project's own translations, for models of installed packages (pangloss_dates, pangloss_calendar) that the
+// apps' files do not hold. Same shape as an app's models.jsonc; `generate` never changes this file.
+{
+  "models": {
+    "Date": {
+      "en": {
+        "name": "Date",
+        "plural": "Dates"
+      },
+      "de": {
+        "name": "Datum",
+        "fields": {
+          "calendar": {
+            "name": "Kalender"
+          },
+          "source_text": {
+            "name": "Quellentext"
+          },
+          "sort_by": {
+            "name": "Sortieren nach"
+          },
+          "precision": {
+            "name": "Genauigkeit"
+          },
+          "earliest_fuzzy": {
+            "name": "Frühestens (unscharf)"
+          },
+          "earliest_strict": {
+            "name": "Frühestens (streng)"
+          },
+          "latest_strict": {
+            "name": "Spätestens (streng)"
+          },
+          "latest_fuzzy": {
+            "name": "Spätestens (unscharf)"
+          },
+          "sort_day": {
+            "name": "Sortiertag"
+          },
+          "end_sort_day": {
+            "name": "Sortiertag (Ende)"
+          }
+        }
+      }
+    },
+    "DateCharacterisation": {
+      "en": {
+        "name": "Date characterisation",
+        "plural": "Date characterisations"
+      },
+      "de": {
+        "name": "Datumscharakterisierung",
+        "fields": {
+          "use": {
+            "name": "Verwendung"
+          },
+          "rank": {
+            "name": "Rang"
+          },
+          "when": {
+            "name": "Wann"
+          }
+        }
+      }
+    },
+    "DateRange": {
+      "en": {
+        "name": "Date range",
+        "plural": "Date ranges"
+      },
+      "de": {
+        "name": "Datumsbereich",
+        "description": "Ein Datum, dessen Tag nicht bekannt ist: irgendwo von `earliest` bis `latest`",
+        "fields": {
+          "earliest": {
+            "name": "Frühestens"
+          },
+          "latest": {
+            "name": "Spätestens"
+          }
+        }
+      }
+    },
+    "EDTFDate": {
+      "en": {
+        "name": "EDTF date",
+        "plural": "EDTF dates",
+        "fields": {
+          "edtf": {
+            "name": "EDTF"
+          }
+        }
+      },
+      "de": {
+        "name": "EDTF-Datum",
+        "fields": {
+          "edtf": {
+            "name": "EDTF"
+          }
+        }
+      }
+    },
+    "ExactDate": {
+      "en": {
+        "name": "Exact date",
+        "plural": "Exact dates"
+      },
+      "de": {
+        "name": "Genaues Datum",
+        "fields": {
+          "year": {
+            "name": "Jahr"
+          },
+          "month": {
+            "name": "Monat"
+          },
+          "day": {
+            "name": "Tag"
+          }
+        }
+      }
+    },
+    "NoRule": {
+      "en": {
+        "name": "No rule",
+        "plural": "No rules"
+      },
+      "de": {
+        "name": "Keine Regel",
+        "description": "Eine Charakterisierung ohne Regel: Sie wird von Hand an Tage, Monate, Jahre oder Zeitspannen angehängt"
+      }
+    },
+    "OngoingDate": {
+      "en": {
+        "name": "Ongoing date",
+        "plural": "Ongoing dates"
+      },
+      "de": {
+        "name": "Laufendes Datum",
+        "description": "Das Ende eines Zeitraums, der noch nicht zu Ende ist (er gilt als beendet bis zum Ende von `DATES_OPEN_END_YEAR`)"
+      }
+    },
+    "Period": {
+      "en": {
+        "name": "Period",
+        "plural": "Periods"
+      },
+      "de": {
+        "name": "Zeitraum",
+        "description": "Von `start` bis `end`: eine Tätigkeit, eine Rolle, ein Wohnsitz. Sortiert nach dem Beginn",
+        "fields": {
+          "start": {
+            "name": "Beginn"
+          },
+          "end": {
+            "name": "Ende"
+          }
+        }
+      }
+    },
+    "Recurrence": {
+      "en": {
+        "name": "Recurrence",
+        "plural": "Recurrences",
+        "fields": {
+          "easter_offset": {
+            "name": "Offset from Easter"
+          }
+        }
+      },
+      "de": {
+        "name": "Wiederkehr",
+        "description": "Etwas, das innerhalb einer Lebenszeit (`start` bis `end`) immer wieder geschieht: „jeden Sonntag“, „der dritte\nSonntag im März“, „am 21. jedes Monats“. Die Tage werden nie gespeichert; `pattern_keys` finden die Regeln,\ndie auf einen Tag fallen könnten (siehe `pangloss_dates.recurrence`)",
+        "fields": {
+          "frequency": {
+            "name": "Häufigkeit"
+          },
+          "weekdays": {
+            "name": "Wochentage"
+          },
+          "nth": {
+            "name": "N-ter"
+          },
+          "month": {
+            "name": "Monat"
+          },
+          "month_day": {
+            "name": "Monatstag"
+          },
+          "interval": {
+            "name": "Intervall"
+          },
+          "excluded_days": {
+            "name": "Ausgenommene Tage"
+          },
+          "leap_shift": {
+            "name": "Schaltverschiebung"
+          },
+          "easter_offset": {
+            "name": "Abstand zu Ostern"
+          },
+          "feast": {
+            "name": "Fest"
+          },
+          "start": {
+            "name": "Beginn"
+          },
+          "end": {
+            "name": "Ende"
+          },
+          "pattern_keys": {
+            "name": "Musterschlüssel"
+          }
+        }
+      }
+    },
+    "UnknownDate": {
+      "en": {
+        "name": "Unknown date",
+        "plural": "Unknown dates"
+      },
+      "de": {
+        "name": "Unbekanntes Datum",
+        "description": "Der Beginn oder das Ende eines Zeitraums, den niemand kennt. Er ist offen von `DATES_EARLIEST_YEAR` bis\n`DATES_OPEN_END_YEAR`, sodass der Zeitraum dennoch über ein Datum gefunden wird, das er enthalten könnte. Sagen Sie, was bekannt ist,\nwenn irgendetwas bekannt ist: ein Bereich mit einer vernünftigen Schätzung (`DateRange` oder EDTF `1500~`) sagt mehr, ein\nunbekanntes Datum nur, dass nichts bekannt ist. Beide Enden eines Zeitraums können nicht unbekannt sein."
+      }
+    }
+  },
+  "enums": {
+    "Calendar": {
+      "en": {
+        "name": "Calendar",
+        "plural": "Calendars"
+      },
+      "de": {
+        "name": "Kalender",
+        "members": {
+          "JULIAN": {
+            "name": "Julianisch"
+          },
+          "GREGORIAN": {
+            "name": "Gregorianisch"
+          }
+        }
+      }
+    },
+    "Frequency": {
+      "en": {
+        "name": "Frequency",
+        "plural": "Frequencies"
+      },
+      "de": {
+        "name": "Häufigkeit",
+        "members": {
+          "WEEKLY": {
+            "name": "Wöchentlich"
+          },
+          "MONTHLY": {
+            "name": "Monatlich"
+          },
+          "YEARLY": {
+            "name": "Jährlich"
+          }
+        }
+      }
+    },
+    "Precision": {
+      "en": {
+        "name": "Precision",
+        "plural": "Precisions"
+      },
+      "de": {
+        "name": "Genauigkeit",
+        "members": {
+          "YEAR": {
+            "name": "Jahr"
+          },
+          "MONTH": {
+            "name": "Monat"
+          },
+          "DAY": {
+            "name": "Tag"
+          },
+          "RANGE": {
+            "name": "Bereich"
+          },
+          "ONGOING": {
+            "name": "Laufend"
+          },
+          "UNKNOWN": {
+            "name": "Unbekannt"
+          }
+        }
+      }
+    },
+    "SortBy": {
+      "en": {
+        "name": "Sort by",
+        "plural": "Sort criteria"
+      },
+      "de": {
+        "name": "Sortieren nach",
+        "description": "Nach welchem Tag ein Datum geordnet wird",
+        "members": {
+          "MIDPOINT": {
+            "name": "Mittelpunkt"
+          },
+          "EARLIEST_STRICT": {
+            "name": "Frühestens (streng)"
+          },
+          "LATEST_STRICT": {
+            "name": "Spätestens (streng)"
+          },
+          "EARLIEST_FUZZY": {
+            "name": "Frühestens (unscharf)"
+          },
+          "LATEST_FUZZY": {
+            "name": "Spätestens (unscharf)"
+          },
+          "MIDPOINT_FUZZY": {
+            "name": "Mittelpunkt (unscharf)"
+          }
+        }
+      }
+    }
+  }
+}

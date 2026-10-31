@@ -3,7 +3,7 @@
 // so two components asking for the same thing share one request, and `revalidate` can
 // ask again. The arguments have to be plain values, as they make the key.
 import { getCurrentUser, getItem, listItems } from "@pangloss/interface-core";
-import { query } from "@solidjs/router";
+import { query, revalidate } from "@solidjs/router";
 import { isServer } from "@solidjs/web";
 import { apiClient } from "./api";
 
@@ -16,7 +16,7 @@ export const listQuery = query(
 export const itemQuery = query((type: string, id: string) => getItem(apiClient(), type, id), "item");
 
 /**
- * Who is logged in, or undefined. `revalidate(sessionQuery.key)` after logging in or out.
+ * Who is logged in, or undefined. `revalidateAll()` after logging in or out.
  * The browser also refreshes an access cookie that has run out; the server cannot, as it
  * cannot give the browser the new cookie.
  */
@@ -24,6 +24,15 @@ export const sessionQuery = query(
   () => getCurrentUser(apiClient(), { refresh: !isServer }),
   "session",
 );
+
+/**
+ * Asks again for everything on show, after logging in or out: what a person may see depends on
+ * who they are (a list of documents that are not published yet is empty until someone logs in), and
+ * the queries of the interface modules are read again as well.
+ */
+export function revalidateAll() {
+  return revalidate();
+}
 
 /**
  * The search in the address of a list (`?q=rome&deep=1`), as the list query takes it. (A

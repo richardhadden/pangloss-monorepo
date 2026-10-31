@@ -1,7 +1,7 @@
-import { Customised, useComponent, getModel, useModels, headOf, wrappingSpaces } from "@pangloss/interface-core";
+import { Customised, useComponent, getModel, useModels, useTranslations, headOf, wrappingSpaces } from "@pangloss/interface-core";
 import { useSearchParams } from "@solidjs/router";
 import type { RouteProps } from "@solidjs/router";
-import { createMemo, Errored, For, isPending, Loading } from "solid-js";
+import { createMemo, Errored, For, isPending, Loading, Show } from "solid-js";
 import { listQuery, searchOf } from "../queries";
 
 // The list of a type of Document or Entity: /Person
@@ -27,7 +27,38 @@ export default function EntityList(props: RouteProps<"/:type">) {
   );
 }
 
+// (an abstract type that no concrete type is below has nothing to list, and the API has no list for it)
 function DefaultList(props: RouteProps<"/:type">) {
+  const definitions = useModels();
+  const listable = () => {
+    const model = getModel(definitions, props.params.type);
+    return model === undefined || model.concreteTypes.length > 0;
+  };
+  return (
+    <Show when={listable()} fallback={<NothingToList type={props.params.type} />}>
+      <ListOfItems {...props} />
+    </Show>
+  );
+}
+
+function NothingToList(props: { type: string }) {
+  const Console = useComponent("Console");
+  const { t, modelName } = useTranslations();
+  return (
+    <main class="mx-auto w-full max-w-[100rem] px-6 py-6">
+      <Console type={props.type} list />
+      <p>
+        {t(
+          "abstract_no_types",
+          "{type} is an abstract type, and no type of it exists in this project: there is nothing to list.",
+          { type: modelName(props.type) },
+        )}
+      </p>
+    </main>
+  );
+}
+
+function ListOfItems(props: RouteProps<"/:type">) {
   const Console = useComponent("Console");
   const ErrorMessage = useComponent("ErrorMessage");
   const ResultButton = useComponent("ResultButton");

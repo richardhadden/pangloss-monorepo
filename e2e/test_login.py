@@ -34,7 +34,11 @@ def test_a_wrong_password_is_explained_and_the_dialog_stays(page: Page, types):
     dialog.get_by_label("Username").fill(USERNAME)
     dialog.get_by_label("Password").fill("not the password")
     dialog.get_by_role("button", name="Log in").click()
-    expect(dialog.get_by_role("alert")).to_be_visible()
+    alert = dialog.get_by_role("alert")
+    expect(alert).to_have_text(
+        "That username and password do not match. Check them and try again."
+    )
+    expect(alert).not_to_contain_text("401")
     expect(page.get_by_role("img", name="Not logged in")).to_be_visible()
     # (and the right one then works)
     dialog.get_by_label("Password").fill(PASSWORD)
@@ -94,3 +98,52 @@ def test_a_new_button_is_for_someone_logged_in(page: Page, data):
     )
     page.reload()
     expect(page.get_by_role("link", name="New Person")).to_be_visible()
+
+
+def log_in_through_the_dialog(page: Page) -> None:
+    expand_nav(page)
+    page.get_by_role("button", name="Log in").click()
+    dialog = page.get_by_role("dialog", name="Log in")
+    dialog.get_by_label("Username").fill(USERNAME)
+    dialog.get_by_label("Password").fill(PASSWORD)
+    dialog.get_by_role("button", name="Log in").click()
+    expect(dialog).to_have_count(0)
+
+
+def test_a_list_is_asked_for_again_after_logging_in_and_out(page: Page, data):
+    # (what a person may see depends on who they are: a list of documents not yet published is empty until they log in, and
+    # it has to fill without a reload. Here the list is the same either way; that it is asked for again is what is seen)
+    lists: list[str] = []
+    page.on(
+        "request",
+        lambda request: lists.append(request.url)
+        if "/api/Person" in request.url and "/api/Person/" not in request.url
+        else None,
+    )
+    page.goto("/Person")
+    hydrated(page)
+    expect(page.get_by_role("link", name="Maximilian")).to_be_visible()
+    before = len(lists)
+    log_in_through_the_dialog(page)
+    expect(page.get_by_role("link", name="New Person")).to_be_visible()
+    page.wait_for_function("true")
+    assert len(lists) > before
+    before = len(lists)
+    expand_nav(page)
+    page.get_by_role("button", name=f"Log out {USERNAME}").click()
+    expect(page.get_by_role("link", name="New Person")).to_have_count(0)
+    assert len(lists) > before
+
+
+def test_a_wrong_password_is_explained_in_german_too(page: Page, types):
+    page.goto("/")
+    expand_nav(page)
+    page.get_by_role("button", name="Deutsch").click()
+    expect(page.locator("html")).to_have_attribute("lang", "de")
+    page.locator("nav").hover()
+    page.get_by_role("button", name="Anmelden").click()
+    dialog = page.get_by_role("dialog", name="Anmelden")
+    dialog.get_by_label("Benutzername").fill(USERNAME)
+    dialog.get_by_label("Passwort").fill("not the password")
+    dialog.get_by_role("button", name="Anmelden").click()
+    expect(dialog.get_by_role("alert")).to_contain_text("passen nicht zusammen")

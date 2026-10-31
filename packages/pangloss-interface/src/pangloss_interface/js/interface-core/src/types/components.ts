@@ -146,6 +146,8 @@ export interface ReferenceChipProps {
   href?: string;
   /** The properties of the edge to it (`{ level: 3 }`), shown after the label */
   edgeProperties?: Record<string, unknown>;
+  /** The semantic spaces what is referred to is in, outermost first: the chip is wrapped in a band for each */
+  spaces?: string[];
 }
 
 export interface ItemContentsProps {

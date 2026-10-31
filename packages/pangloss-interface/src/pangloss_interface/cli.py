@@ -303,6 +303,9 @@ def dev(
             {
                 "PANGLOSS_MODELS_MODULE": str(models),
                 "PANGLOSS_MODULES_MODULE": str(linked.modules),
+                "PANGLOSS_TRANSLATIONS_MODULE": str(
+                    linked_translations_path(project.location.root)
+                ),
                 "PANGLOSS_SOURCES_CSS": str(linked.sources),
                 "PANGLOSS_MODULE_ROOTS": ":".join(str(r) for r in linked.module_roots),
             },

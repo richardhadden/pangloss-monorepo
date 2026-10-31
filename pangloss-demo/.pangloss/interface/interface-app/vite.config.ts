@@ -21,6 +21,9 @@ const modelsModule =
 const modulesModule =
   process.env.PANGLOSS_MODULES_MODULE ??
   fileURLToPath(new URL("./src/generated/modules.ts", import.meta.url));
+const translationsModule =
+  process.env.PANGLOSS_TRANSLATIONS_MODULE ??
+  fileURLToPath(new URL("./src/generated/translations.json", import.meta.url));
 const sourcesCss =
   process.env.PANGLOSS_SOURCES_CSS ??
   fileURLToPath(new URL("./src/generated/sources.css", import.meta.url));
@@ -30,6 +33,7 @@ export default defineConfig({
     alias: {
       "@generated/models": modelsModule,
       "@generated/modules": modulesModule,
+      "@generated/translations": translationsModule,
       "@generated/sources.css": sourcesCss,
     },
     // (an interface module has its own node_modules at times: one copy of each of these, or reactivity breaks)
@@ -43,6 +47,8 @@ export default defineConfig({
       // `npm start` runs)
       ssr: true,
       start: { node: true },
+      // "use server" functions: the translations of a language are fetched with one (src/translations.ts)
+      serverFunctions: true,
       extensions: [".jsx", ".tsx"],
     }),
     tailwindcss(),
@@ -57,6 +63,7 @@ export default defineConfig({
         searchForWorkspaceRoot(process.cwd()),
         dirname(modelsModule),
         dirname(modulesModule),
+        dirname(translationsModule),
         // (the modules of apps that are checked out, run where they are)
         ...(process.env.PANGLOSS_MODULE_ROOTS?.split(":").filter(Boolean) ?? []),
       ],

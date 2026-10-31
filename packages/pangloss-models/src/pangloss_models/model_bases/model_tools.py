@@ -14,6 +14,19 @@ def set_field(model: type, name: str, field: FieldInfo) -> None:
     model.model_fields[name] = field
 
 
+def forget_schema(model: type[BaseModel]) -> None:
+    """Drop the schema that pydantic made for a model, so that a model that refers to it makes the schema
+    afresh from the fields, instead of embedding the one that was made when the fields were not all there"""
+    for attribute in (
+        "__pydantic_core_schema__",
+        "__pydantic_validator__",
+        "__pydantic_serializer__",
+    ):
+        if attribute in model.__dict__:
+            delattr(model, attribute)
+    model.__pydantic_complete__ = False
+
+
 def inherit_fields(model: type[BaseModel], base: type[BaseModel]) -> None:
     """Give `model` the fields of `base` that it lacks.
 

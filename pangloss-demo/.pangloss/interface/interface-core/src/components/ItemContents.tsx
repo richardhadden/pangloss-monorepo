@@ -1,9 +1,15 @@
 import { For, Match, Show, Switch } from "solid-js";
 import type { ParentProps } from "solid-js";
-import { useComponent, useModels } from "../context";
+import { useComponent, useModels, useTranslations } from "../context";
 import { kindTint, spaceTint } from "../primitives";
+import { wrappingSpaces } from "../api";
+import type { ContextLabel } from "../api";
 import { getModel } from "../schema";
-import type { FieldDefinition, ItemContentsProps, ModelDefinition } from "../types";
+import type {
+  FieldDefinition,
+  ItemContentsProps,
+  ModelDefinition,
+} from "../types";
 import { Customised } from "./Customised";
 
 type Data = Record<string, unknown>;
@@ -18,14 +24,13 @@ const isEmpty = (value: unknown) =>
   value === "" ||
   (Array.isArray(value) && value.length === 0);
 
-/** The name of a field to read: `activity_type` as "activity type" (the case is the style's) */
-const humanise = (name: string) => name.replace(/_/g, " ");
-
 /** A key on the left, its contents on the right */
 function Row(props: ParentProps<{ name: string }>) {
   return (
     <>
-      <dt class="pt-1 text-xs font-semibold text-slate-500 uppercase">{props.name}</dt>
+      <dt class="pt-1 text-xs font-semibold text-slate-500 uppercase">
+        {props.name}
+      </dt>
       <dd class="flex min-w-0 flex-col items-start gap-1">{props.children}</dd>
     </>
   );
@@ -37,14 +42,23 @@ function Row(props: ParentProps<{ name: string }>) {
  * nothing in them are left out. What refers to the object from elsewhere (`incoming`) follows,
  * as chips.
  */
-function Fields(props: { value: Data; model: ModelDefinition | undefined; depth: number }) {
+function Fields(props: {
+  value: Data;
+  model: ModelDefinition | undefined;
+  depth: number;
+}) {
+  const { fieldName, incomingName } = useTranslations();
   return (
     <dl class="grid grid-cols-[10rem_minmax(0,1fr)] gap-x-4 gap-y-2">
       <For each={props.model?.fields ?? []}>
         {(field) => (
           <Show when={!isEmpty(props.value[field.key])}>
-            <Row name={humanise(field.name)}>
-              <Value value={props.value[field.key]} field={field} depth={props.depth} />
+            <Row name={fieldName(props.model!.name, field.name)}>
+              <Value
+                value={props.value[field.key]}
+                field={field}
+                depth={props.depth}
+              />
             </Row>
           </Show>
         )}
@@ -52,8 +66,12 @@ function Fields(props: { value: Data; model: ModelDefinition | undefined; depth:
       <For each={props.model?.incoming ?? []}>
         {(incoming) => (
           <Show when={!isEmpty(props.value[incoming.key])}>
-            <Row name={humanise(incoming.name)}>
-              <Value value={props.value[incoming.key]} depth={props.depth} asChip />
+            <Row name={incomingName(props.model!.name, incoming.name)}>
+              <Value
+                value={props.value[incoming.key]}
+                depth={props.depth}
+                asChip
+              />
             </Row>
           </Show>
         )}
@@ -63,14 +81,31 @@ function Fields(props: { value: Data; model: ModelDefinition | undefined; depth:
 }
 
 /** A text, a number, a yes or no, a list, or an object */
-function Value(props: { value: unknown; field?: FieldDefinition; depth: number; asChip?: boolean }) {
+function Value(props: {
+  value: unknown;
+  field?: FieldDefinition;
+  depth: number;
+  asChip?: boolean;
+}) {
+  const { t } = useTranslations();
   return (
     <Switch
-      fallback={<span class="text-sm break-words whitespace-pre-wrap">{String(props.value)}</span>}
+      fallback={
+        <span class="text-sm break-words whitespace-pre-wrap">
+          {String(props.value)}
+        </span>
+      }
     >
       <Match when={Array.isArray(props.value)}>
         <For each={props.value as unknown[]}>
-          {(item) => <Value value={item} field={props.field} depth={props.depth} asChip={props.asChip} />}
+          {(item) => (
+            <Value
+              value={item}
+              field={props.field}
+              depth={props.depth}
+              asChip={props.asChip}
+            />
+          )}
         </For>
       </Match>
       <Match when={isObject(props.value)}>
@@ -82,7 +117,9 @@ function Value(props: { value: unknown; field?: FieldDefinition; depth: number; 
         />
       </Match>
       <Match when={typeof props.value === "boolean"}>
-        <span class="text-sm">{props.value ? "Yes" : "No"}</span>
+        <span class="text-sm">
+          {props.value ? t("yes", "Yes") : t("no", "No")}
+        </span>
       </Match>
     </Switch>
   );
@@ -94,16 +131,32 @@ function Value(props: { value: unknown; field?: FieldDefinition; depth: number; 
  * (a Document inside, a reified relation, a conjunction, an annotated value) is a block with its
  * type at the head and its own rows.
  */
-function ObjectValue(props: { value: Data; field?: FieldDefinition; depth: number; asChip?: boolean }) {
+function ObjectValue(props: {
+  value: Data;
+  field?: FieldDefinition;
+  depth: number;
+  asChip?: boolean;
+}) {
   const ReferenceChip = useComponent("ReferenceChip");
   const definitions = useModels();
-  const type = () => (typeof props.value.type === "string" ? props.value.type : undefined);
+  const { modelName } = useTranslations();
+  const type = () =>
+    typeof props.value.type === "string" ? props.value.type : undefined;
   // (an annotated value has no type of its own in the JSON: the field says which it is)
   const model = () =>
     getModel(definitions, type() ?? "") ??
-    (props.field?.kind === "annotatedValue" ? getModel(definitions, props.field.model) : undefined);
-  const label = () => (typeof props.value.label === "string" ? props.value.label : undefined);
-  const isChip = () => type() !== undefined && (props.asChip || model()?.kind === "Entity");
+    (props.field?.kind === "annotatedValue"
+      ? getModel(definitions, props.field.model)
+      : undefined);
+  const label = () =>
+    typeof props.value.label === "string" ? props.value.label : undefined;
+  // (what is referred to can be inside semantic spaces: the API says so in its `meta`)
+  const contextLabels = () =>
+    isObject(props.value.meta)
+      ? (props.value.meta.contextLabels as ContextLabel[] | undefined)
+      : undefined;
+  const isChip = () =>
+    type() !== undefined && (props.asChip || model()?.kind === "Entity");
   const isSpace = () => model()?.kind === "SemanticSpace";
   const isEmbedded = () => model()?.kind === "Embedded";
   return (
@@ -112,7 +165,12 @@ function ObjectValue(props: { value: Data; field?: FieldDefinition; depth: numbe
       slot="viewCard"
       type={type() ?? ""}
       skip={isChip() || type() === undefined}
-      props={{ type: type() ?? "", label: label() ?? "", item: props.value, context: "embedded" }}
+      props={{
+        type: type() ?? "",
+        label: label() ?? "",
+        item: props.value,
+        context: "embedded",
+      }}
       fallback={
         <Switch
           fallback={
@@ -124,14 +182,20 @@ function ObjectValue(props: { value: Data; field?: FieldDefinition; depth: numbe
                     kindTint(model()?.kind, model()?.interfaceMeta?.colour),
                   ]}
                 >
-                  {type() ?? model()?.name}
+                  {modelName(type() ?? model()?.name ?? "")}
                 </span>
                 <Show when={label()}>
-                  <span class="min-w-0 flex-1 truncate px-3 py-1 text-sm">{label()}</span>
+                  <span class="min-w-0 flex-1 truncate px-3 py-1 text-sm">
+                    {label()}
+                  </span>
                 </Show>
               </div>
               <div class="p-3">
-                <Fields value={props.value} model={model()} depth={props.depth} />
+                <Fields
+                  value={props.value}
+                  model={model()}
+                  depth={props.depth}
+                />
               </div>
             </div>
           }
@@ -141,7 +205,12 @@ function ObjectValue(props: { value: Data; field?: FieldDefinition; depth: numbe
               type={type() ?? ""}
               label={label() ?? String(props.value.id ?? "")}
               href={`/${type()}/${props.value.id}`}
-              edgeProperties={isObject(props.value.edgeProperties) ? props.value.edgeProperties : undefined}
+              spaces={wrappingSpaces(contextLabels())}
+              edgeProperties={
+                isObject(props.value.edgeProperties)
+                  ? props.value.edgeProperties
+                  : undefined
+              }
             />
           </Match>
           <Match when={isEmbedded()}>
@@ -158,7 +227,7 @@ function ObjectValue(props: { value: Data; field?: FieldDefinition; depth: numbe
               ]}
             >
               <span class="flex shrink-0 items-center px-3 text-xs font-semibold uppercase select-none">
-                {type()}
+                {modelName(type() ?? "")}
               </span>
               <div class="flex min-w-0 flex-1 flex-col gap-1 p-1">
                 <Value value={props.value.contents} depth={props.depth + 1} />
@@ -178,6 +247,9 @@ function ObjectValue(props: { value: Data; field?: FieldDefinition; depth: numbe
 export function ItemContents(props: ItemContentsProps) {
   const definitions = useModels();
   const model = () =>
-    getModel(definitions, typeof props.item.type === "string" ? props.item.type : "");
+    getModel(
+      definitions,
+      typeof props.item.type === "string" ? props.item.type : "",
+    );
   return <Fields value={props.item} model={model()} depth={0} />;
 }
