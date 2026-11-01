@@ -29,6 +29,15 @@ def stored(db_driver, username) -> dict:
     ]
 
 
+async def test_the_backend_says_whether_a_user_exists(clear_database):
+    from pangloss_core import backend
+
+    await make_user()
+    user_exists = backend.current().user_exists
+    assert await user_exists("john") is True
+    assert await user_exists("nobody") is False
+
+
 async def test_create_and_get_a_user(db_driver, clear_database):
     user = await make_user(full_name="John Smith")
     assert user.username == "john"

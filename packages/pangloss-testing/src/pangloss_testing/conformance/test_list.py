@@ -650,6 +650,30 @@ async def test_a_read_of_another_package_that_takes_too_long_raises_the_search_t
 
 
 @no_type_check
+async def test_a_timed_read_that_fails_otherwise_raises_the_drivers_error(
+    clear_database,
+):
+    """Only a timeout is made a `PanglossSearchTimeoutError`: any other error of the database reaches the caller as it
+    was"""
+    import neo4j
+    from pangloss_models.exceptions import PanglossSearchTimeoutError
+    from pangloss_testing.under_test.database import (
+        Transaction,
+        timeout_from_setting,
+    )
+
+    @current().read_transaction
+    @timeout_from_setting("SEARCH_TIMEOUT_SECONDS", 30)
+    async def broken(tx: Transaction):
+        result = await tx.run("MATCH (n RETURN n")
+        return await result.single()
+
+    with pytest.raises(neo4j.exceptions.Neo4jError) as raised:
+        await broken()
+    assert not isinstance(raised.value, PanglossSearchTimeoutError)
+
+
+@no_type_check
 async def test_what_has_no_record_of_its_creation_is_listed_all_the_same(
     clear_database, db_driver
 ):
