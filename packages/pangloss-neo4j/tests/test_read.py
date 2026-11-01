@@ -825,7 +825,7 @@ async def test_the_read_query_is_the_same_text_for_every_document():
     import uuid
 
     from pangloss_models.model_bases.entity import Entity
-    from pangloss_neo4j.databases.neo4j.build_read_query import (
+    from pangloss_cypher.read_query import (
         build_fetch_document_query,
     )
 

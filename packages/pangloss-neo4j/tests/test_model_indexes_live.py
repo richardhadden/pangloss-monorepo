@@ -12,7 +12,7 @@ from pangloss_models.model_bases.entity import Entity
 from pangloss_models.search import Match, check_match
 
 from .schema_helpers import drop_indexes_of, indexes
-from pangloss_neo4j.databases.neo4j.build_search_query import build_search_query
+from pangloss_cypher.search_query import build_search_query
 from pangloss_neo4j.databases.neo4j.initialise_database import (
     initialise_database,
     structure,

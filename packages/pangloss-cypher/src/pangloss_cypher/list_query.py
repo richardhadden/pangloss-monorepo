@@ -1,31 +1,39 @@
-from typing import LiteralString
+"""The query of a list of a class: all of it, a page at a time, or what the text index finds of it (see
+docs/deep-search.md), for the backend in use: its dialect gives the call of the text index, the patterns, the `meta`, and
+may give its own text for a part (`Dialect.query`)"""
+
+from typing import LiteralString, cast
 
 from pangloss_models.model_bases.document import Document
 from pangloss_models.model_bases.entity import Entity
 
-from pangloss_neo4j.databases.neo4j.schema import (
-    search_patterns as schema_search_patterns,
-)
 from pangloss_cypher import fragments
+from pangloss_cypher.dialect import Dialect
+from pangloss_cypher.transactions import dialect
 from pangloss_cypher.visibility import unpublished_visible
+
 
 # (the head nodes of what is listed: see `pangloss_cypher.fragments`)
 N_HEAD = fragments.head_of("n", "n_head")
 T_HEAD = fragments.head_of("t", "t_head")
+COUNTED_HEAD = fragments.head_of("n", "counted_head")
 LISTED_HEAD = fragments.head_of("n", "listed_head")
 
 # The deep search (see docs/deep-search.md). Nothing large is carried from row to row: the hits are reduced to
 # the ids of the documents (the roots) that have every word, and only those are expanded. (It once kept a list of
 # every hit on each row, and took time and memory by the number of rows times the number of hits.)
 #
-# $tokens: one `.*word.*` for each word
+# $tokens: a pattern for each word (`Dialect.search_patterns`)
 # $limit: the most hits of the text index looked at for each
 # $targetType: the class listed
 # $page (1-indexed), $page_size
-_DEEP_ROOTS = """
+
+
+def _deep_roots(d: Dialect) -> str:
+    return f"""
     UNWIND $tokens AS token
-    CALL db.index.fulltext.queryNodes("label_text", token, {limit: $limit}) YIELD node AS matchedNode
-    CALL (matchedNode) {
+    CALL {d.text_search("label_text", "token", "{limit: $limit}")} YIELD node AS matchedNode
+    CALL (matchedNode) {{
       WITH matchedNode
       WHERE NOT "Entity" IN labels(matchedNode)
       RETURN coalesce(matchedNode.head_node_id, matchedNode.id) AS treeRootId
@@ -35,13 +43,14 @@ _DEEP_ROOTS = """
       MATCH (matchedNode)--(neighbor:PGIndexableNode)
       WHERE NOT "Entity" IN labels(neighbor)
       RETURN coalesce(neighbor.head_node_id, neighbor.id) AS treeRootId
-    }
+    }}
     // (a root qualifies if every word is found somewhere in its tree)
     WITH treeRootId, count(DISTINCT token) AS wordsFound
     WHERE wordsFound = size($tokens)
     WITH collect(treeRootId) AS qualifyingRoots
     UNWIND qualifyingRoots AS rootId
 """
+
 
 # (the documents of the class in the trees found; they are ordered by the label of their head node)
 _DEEP_DOCUMENTS = f"""
@@ -88,40 +97,42 @@ _DEEP_ENTITIES = f"""
     ORDER BY headLabel, n.id
 """
 
+
 # (the page of what is ordered above, and its enrichment, isolated so that it always returns exactly one row)
-_DEEP_PAGE = """
+def _deep_page(d: Dialect) -> str:
+    return f"""
     WITH collect(n) AS allResults
     WITH allResults, size(allResults) AS total
 
-    CALL {
+    CALL {{
       WITH allResults
       UNWIND allResults AS n
       WITH n
       SKIP ($page - 1) * $page_size
       LIMIT $page_size
 
-      OPTIONAL MATCH (hn:HeadNode {id: n.head_node_id})
+      OPTIONAL MATCH (hn:HeadNode {{id: n.head_node_id}})
       WITH n, coalesce(hn, n) AS headnode
       MATCH (headnode)<-[:is_creation_of]-(creation:PGCreation)
       MATCH (creation)-[:created_by]->(user:PGUser)
 
-      WITH collect(n{.*, meta: {
+      WITH collect(n{{.*, meta: {{
           created_by: user.username,
           created_when: creation.created_when,
           updated_by: null,
           updated_when: null,
-          semantic_spaces: coalesce(n.`meta.semantic_spaces`, []),
-          context_labels: n.`meta.context_labels#json`,
+          semantic_spaces: coalesce({d.meta_property("n", "semantic_spaces")}, []),
+          context_labels: {d.meta_property("n", "context_labels")},
           head_node_id: n.head_node_id,
           head_node_type: n.head_node_type,
           is_head_node: n:HeadNode,
           published: coalesce(headnode.published, true),
           review_status: headnode.review_status
-      }}) AS pagedResults
+      }}}}) AS pagedResults
       RETURN pagedResults
-    }
+    }}
 
-    RETURN {
+    RETURN {{
       results: pagedResults,
       count: total,
       page: $page,
@@ -129,7 +140,7 @@ _DEEP_PAGE = """
       page_count: toInteger(ceil(toFloat(total) / $page_size)),
       previous_page: CASE WHEN $page > 1 THEN $page - 1 ELSE null END,
       next_page: CASE WHEN $page < toInteger(ceil(toFloat(total) / $page_size)) THEN $page + 1 ELSE null END
-    } AS response
+    }} AS response
 """
 
 
@@ -137,25 +148,30 @@ _DEEP_PAGE = """
 # gives 1000 if it is not asked: a word with more hits than that had most of its results left out, unseen.
 DEFAULT_HIT_LIMIT = 100_000
 
+
 # Whether some word of the search has more hits than `$limit` (asked for one more, to know): then the results
 # of the list are not all there are. Apart from the list's own query so that it gives an answer when the list is empty.
-TRUNCATION_QUERY: LiteralString = """
+def truncation_query(d: Dialect) -> LiteralString:
+    return cast(
+        LiteralString,
+        f"""
     UNWIND $patterns AS pattern
-    CALL db.index.fulltext.queryNodes("label_text", pattern, {limit: $limit + 1}) YIELD node
+    CALL {d.text_search("label_text", "pattern", "{limit: $limit + 1}")} YIELD node
     WITH pattern, count(node) AS hits
     RETURN coalesce(max(hits), 0) > $limit AS truncated
-"""
+""",
+    )
 
 
-# (a pattern for each word of the search: `*word*`, folded as the index folds, with what Lucene reads as syntax left out;
-# see `schema.search_patterns`)
-search_patterns = schema_search_patterns
+def search_patterns(search_terms: str | None) -> list[str]:
+    """A pattern for each word of the search, for the text index of the backend in use (`Dialect.search_patterns`)"""
+    return dialect().search_patterns(search_terms)
 
 
 def build_truncation_query(
     search_terms: str | None, hit_limit: int = DEFAULT_HIT_LIMIT
 ) -> tuple[LiteralString, dict]:
-    return TRUNCATION_QUERY, {
+    return truncation_query(dialect()), {
         "patterns": search_patterns(search_terms),
         "limit": hit_limit,
     }
@@ -190,7 +206,8 @@ def _build_list_query(
     deep_search: bool = False,
     hit_limit: int = DEFAULT_HIT_LIMIT,
 ) -> tuple[LiteralString, dict]:
-    patterns = search_patterns(search_terms)
+    d = dialect()
+    patterns = d.search_patterns(search_terms)
 
     if patterns and deep_search:
         params = {
@@ -204,7 +221,7 @@ def _build_list_query(
             found = _DEEP_DOCUMENTS
         else:
             found = _DEEP_ENTITIES
-        return _DEEP_ROOTS + found + _DEEP_PAGE, params
+        return cast(LiteralString, _deep_roots(d) + found + _deep_page(d)), params
     if patterns:
         params = {
             "node_type": object_class.__name__,
@@ -216,7 +233,7 @@ def _build_list_query(
         return (
             f"""
             UNWIND $patterns AS pattern
-            CALL db.index.fulltext.queryNodes("label_text", pattern, {{limit: $limit}}) YIELD node, score
+            CALL {d.text_search("label_text", "pattern", "{limit: $limit}")} YIELD node, score
             WITH node AS n, pattern, max(score) AS patternScore
             WITH n, count(*) AS matchedPatterns, sum(patternScore) AS totalScore
             WHERE matchedPatterns = size($patterns)
@@ -227,7 +244,7 @@ def _build_list_query(
             WITH n, totalScore, n_head
             WHERE {fragments.visible("n", N_HEAD, filters=True)}
             WITH n, totalScore
-            ORDER BY totalScore DESC, elementId(n)
+            ORDER BY totalScore DESC, {d.tie_break("n")}
             WITH collect(n) AS allNodes
             WITH allNodes,
                  size(allNodes) AS total,
@@ -246,8 +263,8 @@ def _build_list_query(
                     created_when: creation.created_when,
                     updated_by: null,
                     updated_when: null,
-                    semantic_spaces: coalesce(n.`meta.semantic_spaces`, []),
-                    context_labels: n.`meta.context_labels#json`,
+                    semantic_spaces: coalesce({d.meta_property("n", "semantic_spaces")}, []),
+                    context_labels: {d.meta_property("n", "context_labels")},
                     head_node_id: n.head_node_id,
                     head_node_type: n.head_node_type,
                     is_head_node: n:HeadNode,
@@ -274,39 +291,37 @@ def _build_list_query(
             "page_number": page_number or 1,
             "page_size": page_size or 50,
         }
-        # (An entity has no head node: its tests are of itself, and the lookup of a head node that is never there is left out.
-        # The class is scanned once, for the ids and their number; the ids of the page are found among them, and only those
-        # nodes are read. (The ids are sorted whole and sliced: with `SKIP`/`LIMIT` after the `ORDER BY` Neo4j plans a `Top` of
-        # the skip and the limit together, which ran out of memory for a skip of about 2,500 ids)
-        head: str | fragments.HeadOf
-        if object_class.__metatype__ == "Entity":
-            looking, head = "", "n"
-        else:
-            head = LISTED_HEAD
-            looking = head.match
-        visible = f"WHERE {fragments.visible('n', head, filters=True)}"
-        return (
-            f"""
-            MATCH (n:$($node_type))
+        page = d.query("list.plain.page", _plain_page(), object_class=object_class)
+        return cast(LiteralString, page + _plain_items(d)), params
+
+
+def _plain_page() -> str:
+    """The nodes of the page of a plain list, ordered by id, as `n`, with the number of them all (`total`)"""
+    return f"""
+            MATCH (n:$node_type)
             // (what has been deleted is not listed: a deleted entity, or a node of a deleted document)
-            {looking}
-            WITH n{"" if not looking else ", listed_head"}
-            {visible}
-            WITH count(n) AS total, collect(n.id) AS ids
-            CALL (ids) {{
-              UNWIND ids AS listed_id
-              WITH listed_id
-              ORDER BY listed_id
-              WITH collect(listed_id) AS sorted_ids
-              RETURN sorted_ids[($page_number - 1) * $page_size .. $page_number * $page_size] AS page_ids
-            }}
-            UNWIND page_ids AS page_id
-            MATCH (n:PGIndexableNode {{id: page_id}})
-            WITH n, total
-            ORDER BY n.id
-            """
-            + """
-                        OPTIONAL MATCH (hn:HeadNode:PGIndexableNode {id: n.head_node_id})
+            {COUNTED_HEAD.match}
+            WITH n, counted_head
+            WHERE {fragments.visible("n", COUNTED_HEAD, filters=True)}
+
+                        WITH count(n) AS total
+
+                        MATCH (n:$node_type)
+            {LISTED_HEAD.match}
+            WITH n, total, listed_head
+            WHERE {fragments.visible("n", LISTED_HEAD, filters=True)}
+
+                        WITH n, total
+                        ORDER BY n.id
+                        SKIP ($page_number - 1) * $page_size
+                        LIMIT $page_size
+"""
+
+
+def _plain_items(d: Dialect) -> str:
+    """The page of a plain list as one row: its items, the facets of what they refer to, and the counts"""
+    return f"""
+                        OPTIONAL MATCH (hn:HeadNode:PGIndexableNode {{id: n.head_node_id}})
                         WITH n, total, coalesce(hn, n) AS headnode
                         MATCH (headnode)<-[:is_creation_of]-(creation:PGCreation)
                         MATCH (creation)-[:created_by]->(user:PGUser)
@@ -314,32 +329,32 @@ def _build_list_query(
                         // The page, as one row: the facets are of the entities the whole page refers
                         // to (computed for each node they were one row each, and a page of
                         // documents that refer to entities came back as many rows)
-                        WITH collect(n{.*, meta: {
+                        WITH collect(n{{.*, meta: {{
                             created_by: user.username,
                             created_when: creation.created_when,
                             updated_by: null,
                             updated_when: null,
-                            semantic_spaces: coalesce(n.`meta.semantic_spaces`, []),
-                            context_labels: n.`meta.context_labels#json`,
+                            semantic_spaces: coalesce({d.meta_property("n", "semantic_spaces")}, []),
+                            context_labels: {d.meta_property("n", "context_labels")},
                             head_node_id: n.head_node_id,
                             head_node_type: n.head_node_type,
                             is_head_node: n:HeadNode,
                             published: coalesce(headnode.published, true),
                             review_status: headnode.review_status
-                        }}) AS items, collect(n) AS page_nodes, total,
+                        }}}}) AS items, collect(n) AS page_nodes, total,
                         toInteger(ceil(toFloat(total) / $page_size)) AS totalPages
 
-                        CALL {
+                        CALL {{
                           WITH page_nodes
                           UNWIND page_nodes AS m
                           OPTIONAL MATCH (m)-->(entities:Entity)
                           WITH entities
                           WHERE entities IS NOT NULL
-                          WITH entities.type AS type, collect(DISTINCT entities{.id, .type, .label}) AS nodes
-                          RETURN collect({type: type, nodes: nodes}) AS facets
-                        }
+                          WITH entities.type AS type, collect(DISTINCT entities{{.id, .type, .label}}) AS nodes
+                          RETURN {d.facets_from("type", "nodes")} AS facets
+                        }}
 
-                        RETURN {
+                        RETURN {{
                           results: items,
                           count: total,
                           page: $page_number,
@@ -348,7 +363,5 @@ def _build_list_query(
                           previous_page: CASE WHEN $page_number > 1 THEN $page_number - 1 ELSE null END,
                           next_page: CASE WHEN $page_number < totalPages THEN $page_number + 1 ELSE null END,
                           facets: facets
-                        } AS result
-        """,
-            params,
-        )
+                        }} AS result
+        """

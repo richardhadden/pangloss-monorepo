@@ -15,8 +15,8 @@ decisions marked **(decided)** were made by the user; **(open)** ones are still 
 ## `published`: the core part
 
 `deleted` is not a model field. It is a property of the head node that the Cypher builders test
-(`NOT coalesce(n.deleted, false)`, with a nested document taking its head's): `build_read_query`,
-`build_list_query` (five places), `build_search_query` (three), `build_autocomplete_query`, `validate_write`,
+(`NOT coalesce(n.deleted, false)`, with a nested document taking its head's): `read_query`,
+`list_query` (five places), `search_query` (three), `autocomplete_query` (all in `pangloss-cypher` since 2026-11-01, and the rule itself in `fragments`), `validate_write`,
 `build_update_query`. `published` is the same kind of thing, so it goes in the same places:
 
 - Stored on the head node as `published`. **No property means published** (`coalesce(head.published, true)`), so

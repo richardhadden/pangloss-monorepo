@@ -476,6 +476,73 @@ Neo4j folds already (`standard-folding` analyzer, and `schema.fold` on the words
 - **Done when** `exposed_functions.py` in each backend is gone or a few lines long, and the measurements show no
   regression.
 
+**As built (2026-11-01):**
+
+- **In the kit.** `pangloss_cypher.read_query` (the read of a document or entity, what refers to an entity, what wrappers
+  hold), `list_query`, `search_query` (`Compiler`, `build_search_query`), `autocomplete_query`, `read_incoming`, and
+  `read_functions` (`list_items`, `search`, `autocomplete`, `get_document`, `get_entity`, `get_entity_for_edit`).
+  `operations` gathers these and the writes. **Each backend's `exposed_functions.py` is now three lines**, a re-export
+  of `pangloss_cypher.operations`. The ten `build_*_query.py` and `read_incoming.py` files of the backends are gone.
+- **The dialect's new parts.** Besides the plan's `text_search`, `search_patterns`, `tie_break` and `facets_from` (with
+  `read_facets`, which makes Neo4j's list of `{type, nodes}` a map), it needed:
+  - `autocomplete_start` and `folded_label`;
+  - `meta_property` (`n.meta.x` on Memgraph, `` n.`meta.x` `` on Neo4j);
+  - the walks `down_tree`, `up_reverse` and `through_wrappers` (BFS and lambda filters on Memgraph, quantified path
+    patterns on Neo4j);
+  - `search_compiler`;
+  - `query(name, default, **context)`, the override hatch.
+
+  `label_param` was not needed: the only `$label` that differed is in the part Neo4j replaces.
+- **Where the backends keep their own text.**
+  - **`list.plain.page`** (`pangloss_neo4j/.../queries.py`): Neo4j sorts the ids and slices them, because `SKIP` after
+    `ORDER BY` made it plan a `Top` that ran out of memory. It is the only use of `query()`.
+  - **`Neo4jCompiler`** (`pangloss_neo4j/.../search.py`): it finds what is related to given ids, or to a pattern, once,
+    in a subquery before the `MATCH`, where Memgraph tests it from each node in an `EXISTS`. It also looks up the head
+    node of a document by its id, rather than walking up to it.
+- **One text where Neo4j's form works on Memgraph.** Memgraph 3.14 takes `CALL (x) { ... }` (with `UNION` inside), so
+  the deep list uses it on both. The read query collects in two steps on both (`collect(rp) AS root_paths`, then the
+  sum), as Neo4j needs.
+- **Checked by snapshot.** A script recorded 63 queries from each backend's old builders, with the demo's models and
+  their parameters. The cases were:
+  - lists of four classes: plain, text search, deep, with punctuation, with and without filters;
+  - the truncation check;
+  - read, read of an entity, incoming, held;
+  - autocomplete;
+  - 24 structured searches.
+
+  The results:
+  - **Neo4j:** all 63 are exactly the same.
+  - **Memgraph:** 39 are exactly the same and 13 search queries differ only in variable names. The changed text is:
+    - the walks' lambda variables (`(e, n | …)` is now `(tree_edge, tree_to | …)`);
+    - the deep list's scoped subqueries (`$targetType` is now used directly rather than through `WITH … AS
+      targetType`);
+    - the read query's two extra `WITH` steps.
+
+  The parameters are the same in all of them.
+- **Measured** on the scratch database (:7689, 642,551 nodes), best of three through the models, in ms. "Before" is
+  phase 6; "moved" is this commit. (The scratch data were loaded under older demo models, so a read fails validation
+  after its queries have run; the times are of the queries.)
+
+  | | Before | Moved |
+  |---|---|---|
+  | list Person, page 1 / page 200 | 45 / 42 | 46 / 44 |
+  | list Factoid, page 1 / page 100 | 26 / 25 | 25 / 25 |
+  | list, text search: Person "person 42" / Factoid "factoid 123" | 164 / 70 | 151 / 71 |
+  | deep list: Factoid "person 4242" / Person "factoid 12345" | 529 / 78 | 516 / 80 |
+  | read Factoid / Person / busy Person with what refers to it | 2 / 3 / 14 | 2 / 3 / 13 |
+  | autocomplete "person 42" / "pla" | 5 / 4 | 5 / 4 |
+  | search: year / source is / activity by / `$mentions` / through `Negative` / `$incoming` | 2 / 32 / 49 / 333 / 37 / 10 | 2 / 33 / 50 / 332 / 37 / 9 |
+
+  There is no regression. The changes are within the run-to-run variation, which is about 10%. Neo4j's text did not
+  change, so it was not measured again.
+- **The read shape.** `build_tree.GraphFragment` (root, labels, edges, meta) is what `get_document` and `read_entity`
+  build the tree from (`GraphFragment.from_record(record).tree()`).
+- **Tests.**
+  - A new contract test checks that both dialects have every part of the `Dialect` protocol with its signature, and
+    that a dialect's search compiler is the kit's or a subclass of it.
+  - The timeout tests patch `pangloss_cypher.read_functions`.
+  - `test_read` and `test_model_indexes_live` import from the kit.
+
 ### Phase 8: typology writes through the model layer (4–5 days)
 
 The bypass in [§2 C](#2-cypher-outside-the-backends). Two operations, in the kit (shared by both backends, and later

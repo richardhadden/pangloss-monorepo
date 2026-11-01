@@ -5,7 +5,6 @@ import datetime
 from typing import Any, Literal, cast
 from uuid import UUID
 
-from pangloss_core.storage import storage_of
 from pangloss_models import hooks
 from pangloss_models.exceptions import (
     PanglossConflictError,
@@ -34,6 +33,7 @@ from pydantic import AnyHttpUrl
 from pangloss_cypher import review, users
 from pangloss_cypher.build_update_query import build_replace_head_query
 from pangloss_cypher.delete_node import DeletionResult, soft_delete, undelete
+from pangloss_cypher.read_functions import get_document, get_entity
 from pangloss_cypher.render_write import render
 from pangloss_cypher.transactions import (
     Transaction,
@@ -215,11 +215,9 @@ async def write_with_retries(write, *args):
 
 
 async def _get_head_view(cls: type[Document | Entity], id: UUID):
-    # (the reads are the backend's own, for now: see `docs/database-abstraction-plan.md`, phase 7)
-    operations = storage_of().operations
     if cls.__metatype__ == "Entity":
-        return await operations.get_entity(cast(type[Entity], cls), id)
-    return await operations.get_document(cast(type[Document], cls), id)
+        return await get_entity(cast(type[Entity], cls), id)
+    return await get_document(cast(type[Document], cls), id)
 
 
 async def create_head_node(

@@ -282,7 +282,7 @@ async def test_a_search_that_takes_too_long_is_stopped_and_not_tried_again(
 ):
     import time
 
-    from pangloss_memgraph.databases.memgraph import exposed_functions
+    from pangloss_cypher import read_functions
     from pangloss_models.exceptions import PanglossSearchTimeoutError
 
     Person, Poet, Letter = models()
@@ -294,7 +294,7 @@ async def test_a_search_that_takes_too_long_is_stopped_and_not_tried_again(
         "RETURN {results: [], count: c, page: 1, page_size: 25} AS response"
     )
     monkeypatch.setattr(
-        exposed_functions, "build_search_query", lambda *a, **k: (slow, {})
+        read_functions, "build_search_query", lambda *a, **k: (slow, {})
     )
     monkeypatch.setattr(
         current().settings, "SEARCH_TIMEOUT_SECONDS", 0.5, raising=False

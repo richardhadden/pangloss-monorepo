@@ -23,14 +23,19 @@ from pangloss_models.field_definitions import RelationFieldDefinition, RelationT
 from pangloss_models.model_bases.entity import Entity
 from pangloss_models.model_registry import ModelRegistry
 
-from pangloss_neo4j.databases.neo4j.build_read_query import (
+from pangloss_cypher.read_query import (
     WRAPPER_LABELS,
     build_fetch_held_query,
     build_fetch_incoming_query,
 )
 from pangloss_cypher.transaction import Transaction
+from pangloss_cypher.transactions import dialect
 
-logger = logging.getLogger("pangloss.neo4j.read")
+
+def logger() -> logging.Logger:
+    """(`pangloss.memgraph.read`, `pangloss.neo4j.read`: by the backend in use)"""
+    return logging.getLogger(f"pangloss.{dialect().name}.read")
+
 
 # (the labels of the generic wrappers: what a relation to an entity can pass through)
 WRAPPERS = set(WRAPPER_LABELS)
@@ -209,7 +214,7 @@ async def fetch_incoming_relations(
             try:
                 relation = wrapper_view(chain, reified_run, edge_types, held)
             except UnrepresentableChain as error:
-                logger.warning(
+                logger().warning(
                     "A relation to %s %s from %s %s is not shown: %s",
                     entity_class.__name__,
                     entity_id,

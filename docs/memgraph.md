@@ -1,6 +1,6 @@
 # Memgraph backend
 
-Package: `pangloss-memgraph` (module `pangloss_memgraph.databases.memgraph`). Select it with `STORAGE = "pangloss_memgraph:storage"` and a `MemgraphDatabaseSettings`. Since 2026-10-31 the code that Memgraph and Neo4j share (the transactions, the write path, delete, users, review) is in `pangloss-cypher`; this package keeps its `MemgraphDialect` (`dialect.py`), its reads, DDL, bulk load, snapshots and migrations. See [the plan](database-abstraction-plan.md).
+Package: `pangloss-memgraph` (module `pangloss_memgraph.databases.memgraph`). Select it with `STORAGE = "pangloss_memgraph:storage"` and a `MemgraphDatabaseSettings`. Since 2026-10-31 the code that Memgraph and Neo4j share (the transactions, the write path, delete, users, review, and since 2026-11-01 the reads: list, search, autocomplete and read) is in `pangloss-cypher`; this package keeps its `MemgraphDialect` (`dialect.py`), DDL, bulk load, snapshots and migrations. See [the plan](database-abstraction-plan.md).
 
 Requirements: a Memgraph server with text search (the `text_search` module), started with `--storage-properties-on-edges=true`. (MAGE's `map` functions are used by migrations to change a value inside a stored map.)
 
@@ -9,16 +9,15 @@ Requirements: a Memgraph server with text search (the `text_search` module), sta
 | Module | Role |
 |--------|------|
 | `database.py` | `Database` class: holds settings and a `neo4j.AsyncDriver`; provides `read_transaction` and `write_transaction` decorators |
-| `exposed_functions.py` | The functions bound to the models: `list_items`, `get_document`, `create_head_node`, `update_head_node` (plus the internal `write_head_node` and `replace_head_node`) |
+| `exposed_functions.py` | The functions bound to the models (`Storage.operations`): `pangloss_cypher.operations`, re-exported. The reads are in `pangloss_cypher.read_functions` (`list_items`, `search`, `autocomplete`, `get_document`, `get_entity`), the writes in `write_functions` |
 | `write_plan.py`, `render_write.py` (in `pangloss-cypher`, since 2026-11-01) | A `CreateDB` (or `UpdateDB`) instance becomes a `WritePlan` (`plan_create`, `plan_update`: nodes, relations, references, inline entities, URLs; no database, no Cypher), and the plan one Cypher statement (`render`). It replaced `build_create_query.py` |
 | `build_update_query.py` | The queries for an update: find the head node, collect `meta` of its tree, replace the head node and delete its tree, and write the new version (`build_head_update_query`) |
-| `read_incoming.py` | Reads the relations *to* an entity, for `get_entity` |
+| `read_incoming.py` (in `pangloss-cypher`) | Reads the relations *to* an entity, for `get_entity` |
 | `delete_node.py` | Deleting (flagging) a head document or an entity, or marking an entity that is referred to |
 | `lookup.py` | `resolve_id`: the id of a node, given its id or a URL |
 | `build_tree.py` | Makes the nodes and edges returned by the read query into a nested dict |
 | `validate_write.py` | Checks made inside a write transaction before anything is written (user, references, ids, the document being updated) |
-| `build_read_query.py` | `build_fetch_document_query` |
-| `build_list_query.py` | `build_generic_list_query`: pagination, text search, and deep search |
+| `read_query.py`, `list_query.py`, `search_query.py`, `autocomplete_query.py` (in `pangloss-cypher`, since 2026-11-01; were `build_*_query.py` here) | The read of a document or entity (`build_fetch_document_query`), the list (`build_generic_list_query`: pagination, text search, deep search), the structured search (`Compiler`, `build_search_query`) and autocomplete. Where Memgraph differs, `MemgraphDialect` says: `text_search.regex_search`, regular-expression patterns, `label_folded`, `id(n)`, `collect(type, nodes)`, BFS walks |
 | `settings.py` | `MemgraphDatabaseSettings` |
 | `migrations/` | Applying the changes that `pangloss_models.migrations` finds, to the data and to the enums: see [Database migrations](migrations.md#12-progress) |
 | `indexes.py` | Empty. ⏳ Index creation is currently done in the test fixtures |

@@ -1,5 +1,6 @@
 """Neo4j's answers where the Cypher backends differ (`pangloss_cypher.dialect.Dialect`)"""
 
+import re
 from typing import Any
 from uuid import UUID
 
@@ -7,8 +8,18 @@ import neo4j
 from neo4j.exceptions import ConstraintError
 
 from pangloss_cypher.transaction import Transaction
-from pangloss_neo4j.databases.neo4j.properties import decode, flatten, meta_map
-from pangloss_neo4j.databases.neo4j.traversal import below
+from pangloss_neo4j.databases.neo4j.properties import (
+    ALWAYS_JSON,
+    decode,
+    flatten,
+    json_name,
+    meta_map,
+    prop,
+)
+from pangloss_neo4j.databases.neo4j.queries import QUERIES
+from pangloss_neo4j.databases.neo4j.schema import search_patterns
+from pangloss_neo4j.databases.neo4j.search import Neo4jCompiler, through
+from pangloss_neo4j.databases.neo4j.traversal import below, up
 
 
 class DecodedResult:
@@ -133,4 +144,52 @@ class Neo4jDialect:
         return ":PGIndexableNode:Entity"
 
     def tree_below(self, start: str, end: str) -> str:
-        return f"{start} {below('tree')} {end}"
+        return f"{start}{self.down_tree('tree')}{end}"
+
+    # --- reading ----------------------------------------------------------------------------------------------------
+
+    def text_search(self, index: str, query: str, options: str | None = None) -> str:
+        return f'db.index.fulltext.queryNodes("{index}", {query}{", " + options if options else ""})'
+
+    def search_patterns(self, search_terms: str | None) -> list[str]:
+        return search_patterns(search_terms)
+
+    def autocomplete_start(self, search_terms: str) -> str:
+        # (as typed, in lower case: the label it is compared with is not folded, as Neo4j's index folds only its own copy)
+        return " ".join(re.findall(r"\w+", search_terms.lower()))
+
+    def folded_label(self, node: str) -> str:
+        return f"toLower({node}.label)"
+
+    def tie_break(self, node: str) -> str:
+        return f"elementId({node})"
+
+    def facets_from(self, type: str, nodes: str) -> str:
+        # (Neo4j has no `collect(key, value)` for a map)
+        return f"collect({{type: {type}, nodes: {nodes}}})"
+
+    def read_facets(self, facets: Any) -> dict[str, Any]:
+        if isinstance(facets, list):
+            return {f["type"]: f["nodes"] for f in facets}
+        return facets
+
+    def meta_property(self, node: str, key: str) -> str:
+        name = f"meta.{key}"
+        return prop(node, json_name(name) if name in ALWAYS_JSON else name)
+
+    def down_tree(self, name: str) -> str:
+        return f" {below(name)} "
+
+    def up_reverse(
+        self, name: str, *, minimum: int = 1, maximum: int | None = None
+    ) -> str:
+        return f" {up(name, minimum=minimum, maximum=maximum)} "
+
+    def through_wrappers(self, name: str, *, backwards: bool = False) -> str:
+        return f" {through(name, backwards)} "
+
+    search_compiler = Neo4jCompiler
+
+    def query(self, name: str, default: str, **context: Any) -> str:
+        own = QUERIES.get(name)
+        return own(**context) if own else default

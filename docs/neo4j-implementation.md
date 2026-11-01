@@ -47,9 +47,9 @@ Copied from `pangloss_memgraph`, renamed, and changed only where the table above
 | `from_database.py` | also rebuilds the flattened properties |
 | `initialise_database.py` | Neo4j DDL; constraints before indexes; the full-text index; `awaitIndexes` |
 | `render_write.py` (was `build_create_query.py`), `build_update_query.py` | node and edge properties go through `properties.flatten` (the dialect's `encode_properties`) |
-| `build_read_query.py`, `build_list_query.py`, `build_search_query.py`, `build_autocomplete_query.py`, `read_incoming.py`, `build_tree.py`, `delete_node.py` | `$($label)`, the full-text call, `meta` read from its flat properties, facets, tie-breaks |
+| `build_read_query.py`, `build_list_query.py`, `build_search_query.py`, `build_autocomplete_query.py`, `read_incoming.py`, `build_tree.py`, `delete_node.py` | `$($label)`, the full-text call, `meta` read from its flat properties, facets, tie-breaks. **Since 2026-11-01 these are the kit's** (`pangloss_cypher.read_query`, `list_query`, `search_query`, `autocomplete_query`, `read_incoming`): `Neo4jDialect` gives the full-text call, the patterns, the flat `meta`, `elementId`, the facets as a list of maps and the quantified path patterns; `search.py` has `Neo4jCompiler` (what is related to ids is found once, before the `MATCH`), and `queries.py` the paging of a plain list (`list.plain.page`) |
 | `validate_write.py`, `lookup.py`, `visibility.py`, `users.py`, `review.py` | the same Cypher, checked for map properties (users and review keep tokens, sessions, state) |
-| `exposed_functions.py`, `setup.py` | the same functions |
+| `exposed_functions.py`, `setup.py` | the same functions (`exposed_functions` is `pangloss_cypher.operations`, re-exported, since 2026-11-01) |
 | `migration_backend.py`, `migrations/` (`operations.py`, `runner.py`, `conversion.py`) | DDL operations in Neo4j form; the 70-odd data operations (rename a model, change a cardinality, wrap a relation in a semantic space ...) keep their Cypher except where they touch `meta`, a map, `$label` or `id()` |
 | `bulk.py` | see [§4.4](#44-bulk-loading) |
 | `cli.py` (`pangloss neo4j ...`) | `info`, `indexes`, `bulk-load` as in Memgraph, without the analytical storage mode |

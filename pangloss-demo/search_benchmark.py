@@ -18,7 +18,7 @@ from typing import Any
 import neo4j
 from demo_app import models
 from pangloss_cli.project import load_project
-from pangloss_memgraph.databases.memgraph.build_search_query import build_search_query
+from pangloss_cypher.search_query import build_search_query
 from pangloss_models import initialise
 from pangloss_models.search import Match, check_match
 from pangloss_users import current_request_username
@@ -27,8 +27,12 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--repeat", type=int, default=3)
 parser.add_argument("--only", nargs="*", default=[])
 parser.add_argument("--profile", action="store_true")
-parser.add_argument("--explain", action="store_true", help="print the plan without running")
-parser.add_argument("--timeout", type=int, default=120, help="seconds (a Memgraph setting)")
+parser.add_argument(
+    "--explain", action="store_true", help="print the plan without running"
+)
+parser.add_argument(
+    "--timeout", type=int, default=120, help="seconds (a Memgraph setting)"
+)
 parser.add_argument("--indexes", nargs="*", default=[])
 parser.add_argument("--drop-indexes", action="store_true")
 args = parser.parse_args()
@@ -108,16 +112,31 @@ def sample_ids(driver):
     ordinary = run_cypher(
         driver, "MATCH (p:Person {label: 'Person 4242'}) RETURN p.id AS id"
     )[0]
-    place = run_cypher(driver, "MATCH (p:Place {label: 'Place 777'}) RETURN p.id AS id")[0]
-    source = run_cypher(driver, "MATCH (p:Source {label: 'Source 77'}) RETURN p.id AS id")[0]
+    place = run_cypher(
+        driver, "MATCH (p:Place {label: 'Place 777'}) RETURN p.id AS id"
+    )[0]
+    source = run_cypher(
+        driver, "MATCH (p:Source {label: 'Source 77'}) RETURN p.id AS id"
+    )[0]
     print(f"a busy person is referred to by {busy['c']} activities")
-    label = run_cypher(driver, "MATCH (p:Person {id: $id}) RETURN p.label AS label", id=busy["id"])[0]
+    label = run_cypher(
+        driver, "MATCH (p:Person {id: $id}) RETURN p.label AS label", id=busy["id"]
+    )[0]
     return busy["id"], ordinary["id"], place["id"], source["id"], label["label"]
 
 
 def searches(busy, ordinary, place, source, busy_label):
-    P, F, E, G, S, A = models.Person, models.Factoid, models.Place, models.Group, models.Source, models.Activity
-    activity_of = lambda who: {"statements": {"type": "Activity", "where": {"carried_out_by": {"is": who}}}}  # noqa: E731
+    P, F, E, G, S, A = (
+        models.Person,
+        models.Factoid,
+        models.Place,
+        models.Group,
+        models.Source,
+        models.Activity,
+    )
+    activity_of = lambda who: {
+        "statements": {"type": "Activity", "where": {"carried_out_by": {"is": who}}}
+    }  # noqa: E731
     return {
         # entities by a literal
         "person label contains": (P, {"label": {"contains": "person 4242"}}),

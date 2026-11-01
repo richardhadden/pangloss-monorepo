@@ -113,3 +113,37 @@ def test_both_backends_give_the_one_set_of_fragments():
     assert all(
         core_backend.current(module).fragments is fragments for module in BACKENDS
     )
+
+
+# --- the dialects (pangloss_cypher.dialect) -------------------------------------------------------------------------
+
+
+def dialect_parts() -> list[str]:
+    from pangloss_cypher.dialect import Dialect
+
+    names = {name for name in vars(Dialect) if not name.startswith("_")}
+    return sorted(names | set(Dialect.__annotations__))
+
+
+@pytest.mark.parametrize("name", dialect_parts())
+def test_both_dialects_have_every_part_of_the_dialect_with_its_signature(name):
+    from pangloss_cypher.dialect import Dialect
+    from pangloss_memgraph.databases.memgraph.dialect import MemgraphDialect
+    from pangloss_neo4j.databases.neo4j.dialect import Neo4jDialect
+
+    for dialect in (MemgraphDialect, Neo4jDialect):
+        assert hasattr(dialect, name), f"{dialect.__name__} has no {name}"
+        wanted = getattr(Dialect, name, None)
+        if callable(wanted) and not isinstance(wanted, type):
+            assert inspect.signature(getattr(dialect, name)) == inspect.signature(
+                wanted
+            ), f"{dialect.__name__}.{name}"
+
+
+def test_the_search_compiler_of_a_dialect_is_the_kits_or_a_subclass_of_it():
+    from pangloss_cypher.search_query import Compiler
+    from pangloss_memgraph.databases.memgraph.dialect import MemgraphDialect
+    from pangloss_neo4j.databases.neo4j.dialect import Neo4jDialect
+
+    assert MemgraphDialect.search_compiler is Compiler
+    assert issubclass(Neo4jDialect.search_compiler, Compiler)

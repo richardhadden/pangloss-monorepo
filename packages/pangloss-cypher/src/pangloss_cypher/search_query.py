@@ -1,6 +1,9 @@
 """The query for a structured search (see docs/structured-search.md): the checked conditions of a pattern,
 made into one Cypher query. Only names the models have (the class and its fields, which are checked first)
-are put in the text; every value is a parameter."""
+are put in the text; every value is a parameter.
+
+The backend's dialect gives the paths through wrappers and the `meta` of a node, and may give a subclass of `Compiler` that
+finds some of what is tested in another way, for its planner (`Dialect.search_compiler`)."""
 
 from typing import LiteralString, cast
 
@@ -19,9 +22,9 @@ from pangloss_models.search import (
     Not,
 )
 
-from pangloss_cypher.values import convert_type_for_writing
-from pangloss_neo4j.databases.neo4j.traversal import hops
 from pangloss_cypher import fragments
+from pangloss_cypher.transactions import dialect
+from pangloss_cypher.values import convert_type_for_writing
 from pangloss_cypher.visibility import unpublished_visible
 
 COMPARISONS = {"eq": "=", "ne": "<>", "gt": ">", "gte": ">=", "lt": "<", "lte": "<="}
@@ -31,12 +34,16 @@ class Compiler:
     """Makes the expressions of a pattern into one Cypher test of a node (a variable). Each value is a
     parameter; each relation is an `EXISTS` subquery, so that it can be negated and or-ed."""
 
+    # How the creation record of a node of the page is found
+    CREATION = "(n)<-[:is_creation_of]-(creation:PGCreation)"
+
     def __init__(self, params: dict):
         self.params = params
         self.targets = 0
         self.preludes: list[tuple[str, str]] = []
         """Subqueries that go before the `MATCH` of the pattern, each as (its text, the name of the one list it gives for the
-        tests to look in): what is found once for the whole search, not again for each node it is tested of"""
+        tests to look in): what is found once for the whole search, not again for each node it is tested of. (None, here:
+        a subclass may make them)"""
 
     def param(self, value) -> str:
         name = f"p{len(self.params)}"
@@ -74,7 +81,7 @@ class Compiler:
             return self.incoming(c, var)
         if c.kind == "spaces":
             # (the spaces a node is inside are kept in its `meta`)
-            return f"all(s IN {self.param(c.value)} WHERE s IN coalesce({var}.`meta.semantic_spaces`, []))"
+            return f"all(s IN {self.param(c.value)} WHERE s IN coalesce({dialect().meta_property(var, 'semantic_spaces')}, []))"
         if c.operator == "exists":
             return f"{prop} IS {'NOT ' if c.value else ''}NULL"
         if c.kind == "list":
@@ -103,7 +110,7 @@ class Compiler:
         return f"{base}{self.targets}"
 
     def in_document(self, head: str, node: str, label: str = "") -> str:
-        """A pattern for the nodes of a document (not its head node), found by their `head_node_id`. Neo4j 3.14
+        """A pattern for the nodes of a document (not its head node), found by their `head_node_id`. Memgraph 3.14
         uses the index on `PGIndexableNode(head_node_id)` for this inside an `EXISTS`, if the pattern has the
         label (3.13 scanned every node for each document: it is why this once went down from the head node)."""
         return (
@@ -116,8 +123,6 @@ class Compiler:
         space, a conjunction, a reified relation) is also to what is inside them, however deep; and one that
         has to pass through some is only that. `$mentions` is of the node or of any node of its document."""
         if c.field == ANY_IN_DOCUMENT:
-            if c.operator in ("is", "is_any"):
-                return self.mentioned_in_document(c, var)
             node = self.name("m")
             return (
                 f"({self.relation_of(c, var)} OR "
@@ -126,48 +131,6 @@ class Compiler:
             )
         return self.relation_of(c, var)
 
-    def mentioned_in_document(self, c: CheckedCondition, var: str) -> str:
-        """Whether the head node or a node of its document has a relation to one of the ids. The documents that have one
-        are found once, from the ids (which an index finds) back along the edges to the nodes of the documents, in a subquery
-        before the `MATCH`, and the test is whether the document's id is among them. (Tested from each document, the same
-        edges of the ids were read again for each: 1.2 million hits for 6,000 factoids.)"""
-        wanted = self.param(c.value if c.operator == "is_any" else [c.value])
-        m, t, e = self.name("m"), self.name("t"), self.name("e")
-        where = [f"{t}.id IN {wanted}", f"NOT coalesce({e}.reverse, false)"]
-        branches: list[str] = []
-        if not c.through:
-            direct = list(where)
-            if c.wrapped:
-                direct.append(f"NOT {wrapper(t)}")
-            branches.append(
-                f"MATCH ({t}:PGIndexableNode)<-[{e}]-({m}:PGIndexableNode) WHERE {' AND '.join(direct)} "
-                f"RETURN coalesce({m}.head_node_id, {m}.id) AS head_id"
-            )
-        if c.wrapped or c.through:
-            w, x, r, p, q = (self.name(n) for n in ("w", "x", "r", "p", "q"))
-            via = [
-                *where,
-                wrapper(w),
-                wrapper(x),
-                f"NOT coalesce({r}.reverse, false)",
-            ]
-            if c.through:
-                via.append(
-                    f"all(s IN {self.param(list(c.through))} WHERE any(nd IN nodes({p}) WHERE s IN labels(nd)))"
-                )
-            branches.append(
-                f"MATCH {p} = ({t}:PGIndexableNode)<-[{r}]-({x}) {through(q, backwards=True)} ({w})<-[{e}]-({m}:PGIndexableNode) "
-                f"WHERE {' AND '.join(via)} RETURN coalesce({m}.head_node_id, {m}.id) AS head_id"
-            )
-        heads = self.name("heads")
-        self.preludes.append(
-            (
-                f"CALL {{ CALL {{ {' UNION '.join(branches)} }} RETURN collect(DISTINCT head_id) AS {heads} }}",
-                heads,
-            )
-        )
-        return f"{var}.id IN {heads}"
-
     def relation_of(self, c: CheckedCondition, var: str) -> str:
         direct = self.reaching(c, var, through_wrappers=False)
         if not c.wrapped or (c.operator == "exists" and not c.through):
@@ -175,65 +138,7 @@ class Compiler:
         via = self.reaching(c, var, through_wrappers=True)
         return via if c.through else f"({direct} OR {via})"
 
-    def related_to_targets(
-        self, c: CheckedCondition, var: str, through_wrappers: bool
-    ) -> str:
-        """Whether the node has the relation `c.field` to what the condition says: one of the ids (`is`, `is_any`), or a node
-        that fits a pattern (`match`). The nodes that have it are found once, from the targets (an index finds the ids; a
-        pattern is a scan of its class, once) back along the edges, in a subquery before the `MATCH`, and the test is whether
-        the node's id is among them. (Tested from each node, the target was looked up again for each: 6,000 times for 6,000
-        factoids.)"""
-        e, t, y = self.name("e"), self.name("t"), self.name("y")
-        field = f"`{c.field}`"
-        before = len(self.preludes)
-        if c.operator == "match":
-            pattern: CheckedPattern = c.value
-            # (with `PGIndexableNode`, so that a test of the id, if the pattern has one, is an index seek)
-            label = f"PGIndexableNode:`{pattern.model.__name__}`"
-            found = self.target(c, t)
-        else:
-            label = "PGIndexableNode"
-            wanted = self.param(c.value if c.operator == "is_any" else [c.value])
-            found = f"{t}.id IN {wanted}"
-        # (what the pattern's own tests need is made first, inside this subquery: they are not seen from outside it)
-        needed = self.preludes[before:]
-        del self.preludes[before:]
-        if not through_wrappers:
-            where = [found]
-            if (
-                c.wrapped
-            ):  # (a wrapper is not what the relation is to: what is in it is)
-                where.append(f"NOT {wrapper(t)}")
-            body = (
-                f"MATCH ({t}:{label})<-[{e}:{field}]-({y}) WHERE {' AND '.join(where)}"
-            )
-        else:
-            # (a path of wrappers from the first, and then one edge to what is in the last: walked from the end)
-            w, x, r, p, q = (self.name(n) for n in ("w", "x", "r", "p", "q"))
-            where = [found, wrapper(w), wrapper(x), f"NOT coalesce({r}.reverse, false)"]
-            if c.through:
-                where.append(
-                    f"all(s IN {self.param(list(c.through))} WHERE any(nd IN nodes({p}) WHERE s IN labels(nd)))"
-                )
-            body = (
-                f"MATCH {p} = ({t}:{label})<-[{r}]-({x}) {through(q, backwards=True)} ({w})<-[{e}:{field}]-({y}) "
-                f"WHERE {' AND '.join(where)}"
-            )
-        related = self.name("related")
-        self.preludes.append(
-            (
-                f"CALL {{ {' '.join(text for text, _ in needed)} {body} RETURN collect(DISTINCT {y}.id) AS {related} }}",
-                related,
-            )
-        )
-        return f"{var}.id IN {related}"
-
     def reaching(self, c: CheckedCondition, var: str, through_wrappers: bool) -> str:
-        if c.operator in ("is", "is_any", "match") and c.field not in (
-            ANY_RELATION,
-            ANY_IN_DOCUMENT,
-        ):
-            return self.related_to_targets(c, var, through_wrappers)
         e, w = self.name("e"), self.name("w")
         where = ["true"]
         if c.field in (ANY_RELATION, ANY_IN_DOCUMENT):
@@ -265,7 +170,7 @@ class Compiler:
         if c.operator != "exists":
             where.append(self.target(c, t))
         body = (
-            f"MATCH {p} = {edge} {through(self.name('q'))} ({x})-[{r}]->({t}) "
+            f"MATCH {p} = {edge}{dialect().through_wrappers(self.name('q'))}({x})-[{r}]->({t}) "
             f"WHERE {' AND '.join(where)}"
         )
         if c.operator == "exists" and not c.value:
@@ -276,7 +181,7 @@ class Compiler:
         """Whether a node of the pattern points at this one with one of the relations: directly, or through
         wrappers (which is what it does if its relation is to one, and what it must if `through` is given).
         The patterns start from this node and go back along its edges: written from the referring node,
-        Neo4j scans every node of the class, for each node."""
+        Memgraph scans every node of the class, for each node."""
         incoming: CheckedIncoming = c.value
         pattern = incoming.pattern
         types = "|".join(f"`{name}`" for name in incoming.fields)
@@ -284,12 +189,8 @@ class Compiler:
         def source_tests(s: str) -> str:
             tests = [fragments.not_deleted(s), self.all_of(pattern.items, s)]
             if not issubclass(pattern.model, Entity):
-                # (nor does a document inside a deleted head document: its head node is looked up by the id it records. Going
-                # up to it along the reverse edges read 222,000 hits for 6,500 activities)
-                h = self.name("h")
-                tests.append(
-                    f"NOT EXISTS {{ MATCH ({h}:HeadNode {{id: coalesce({s}.head_node_id, {s}.id)}}) WHERE {fragments.hidden(h)} }}"
-                )
+                # (nor does a document inside a deleted head document)
+                tests.append(self.not_in_hidden_document(s))
             return " AND ".join(tests)
 
         s, e = self.name("s"), self.name("e")
@@ -309,10 +210,18 @@ class Compiler:
             )
         where.append(source_tests(s))
         via = (
-            f"EXISTS {{ MATCH {p} = ({var})<-[{r}]-({x}) {through(q, backwards=True)} ({w})"
+            f"EXISTS {{ MATCH {p} = ({var})<-[{r}]-({x}){dialect().through_wrappers(q, backwards=True)}({w})"
             f"<-[{e}:{types}]-({s}:`{label}`) WHERE {' AND '.join(where)} }}"
         )
         return via if c.through else f"({direct} OR {via})"
+
+    def not_in_hidden_document(self, s: str) -> str:
+        """Whether the node is not in a head document that is hidden: going up to it, along the reverse edges"""
+        h, q = self.name("h"), self.name("q")
+        return (
+            f"NOT EXISTS {{ MATCH ({s}){dialect().up_reverse(q, minimum=0)}({h}:HeadNode) "
+            f"WHERE {fragments.hidden(h)} }}"
+        )
 
     def target(self, c: CheckedCondition, t: str) -> str:
         """The test of what a relation points at"""
@@ -324,11 +233,6 @@ class Compiler:
             return f"{t}:`{pattern.model.__name__}` AND {tests}"
         wanted = c.value if c.operator == "is_any" else [c.value]
         return f"{t}.id IN {self.param(wanted)}"
-
-
-def through(name: str, backwards: bool = False) -> str:
-    """Any number of wrappers (a semantic space, a conjunction, a reified relation), the path continuing only through them"""
-    return hops(name, wrapper(f"{name}_to"), minimum=0, backwards=backwards)
 
 
 def wrapper(var: str) -> str:
@@ -373,7 +277,7 @@ def build_search_query(
         "page_size": page_size,
         "see_unpublished": unpublished_visible(),
     }
-    compiler = Compiler(params)
+    compiler: Compiler = dialect().search_compiler(params)
     tests = compiler.all_of(conditions, "n")
     finding, keys, sorting = ordering(compiler, order or [])
 
@@ -386,7 +290,7 @@ def build_search_query(
     WHERE {where}
     {finding}
     WITH n{keys}
-    ORDER BY {sorting}toLower(n.label), elementId(n)
+    ORDER BY {sorting}toLower(n.label), {dialect().tie_break("n")}
     WITH collect(n) AS allNodes
     WITH allNodes, size(allNodes) AS total,
          toInteger(ceil(toFloat(size(allNodes)) / $page_size)) AS totalPages
@@ -395,7 +299,7 @@ def build_search_query(
     CALL {{
         WITH pageNodes
         UNWIND pageNodes AS n
-        OPTIONAL MATCH (creation:PGCreation)-[:is_creation_of]->(n)
+        OPTIONAL MATCH {compiler.CREATION}
         OPTIONAL MATCH (creation)-[:created_by]->(user:PGUser)
         RETURN collect(n{{.*, meta: {{
             created_by: user.username,

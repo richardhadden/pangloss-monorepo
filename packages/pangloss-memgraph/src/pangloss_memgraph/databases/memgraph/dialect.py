@@ -3,16 +3,14 @@
 from typing import Any
 
 import neo4j
+from pangloss_models.autocomplete import search_words
 from pangloss_models.text import fold
 
+from pangloss_cypher.search_query import Compiler, wrapper
 from pangloss_cypher.transaction import Transaction
 
-# Down the tree of a document: forward edges (a relation is stored as a forward edge and a reverse one marked
-# `reverse: true`, which is not followed), not into an entity or the URL of one
 # The property of a node that the text index is on: its label, folded (`pangloss_models.text.fold`)
 FOLDED_LABEL = "label_folded"
-
-TREE_TRAVERSAL = "[*BFS (edge, node | NOT node:Entity AND NOT node:PGUrl AND NOT coalesce(edge.reverse, false))]"
 
 
 def with_folded_label(properties: dict[str, Any]) -> dict[str, Any]:
@@ -70,4 +68,60 @@ class MemgraphDialect:
         return ":Entity"
 
     def tree_below(self, start: str, end: str) -> str:
-        return f"{start}-{TREE_TRAVERSAL}->{end}"
+        return f"{start}{self.down_tree('tree')}{end}"
+
+    # --- reading ----------------------------------------------------------------------------------------------------
+
+    def text_search(self, index: str, query: str, options: str | None = None) -> str:
+        return f'text_search.regex_search("{index}", {query}{", " + options if options else ""})'
+
+    def search_patterns(self, search_terms: str | None) -> list[str]:
+        """A regular expression for each word of the search. The words are cut as the index cuts a label (`search_words`),
+        so no regular-expression character (`(`, `.`, `[`) gets into a pattern; nothing to search for is no pattern
+        (`.*.*` would be every node of the index)"""
+        return [f".*{word}.*" for word in search_words(search_terms or "")]
+
+    def autocomplete_start(self, search_terms: str) -> str:
+        return " ".join(search_words(search_terms))
+
+    def folded_label(self, node: str) -> str:
+        return f"{node}.{FOLDED_LABEL}"
+
+    def tie_break(self, node: str) -> str:
+        return f"id({node})"
+
+    def facets_from(self, type: str, nodes: str) -> str:
+        return f"collect({type}, {nodes})"
+
+    def read_facets(self, facets: Any) -> dict[str, Any]:
+        return facets
+
+    def meta_property(self, node: str, key: str) -> str:
+        return f"{node}.meta.{key}"
+
+    def down_tree(self, name: str) -> str:
+        # (forward edges: a relation is stored as a forward edge and a reverse one marked `reverse: true`, which is not
+        # followed)
+        edge, to = f"{name}_edge", f"{name}_to"
+        return f"-[*BFS ({edge}, {to} | NOT {to}:Entity AND NOT {to}:PGUrl AND NOT coalesce({edge}.reverse, false))]->"
+
+    def up_reverse(
+        self, name: str, *, minimum: int = 1, maximum: int | None = None
+    ) -> str:
+        # (breadth first, which finds the nearest; from no step at all, depth first)
+        edge, to = f"{name}_edge", f"{name}_to"
+        if minimum == 0:
+            walk = f"* 0..{'' if maximum is None else maximum}"
+        else:
+            walk = f"*BFS{'' if maximum is None else f' ..{maximum}'}"
+        return f"-[{walk} ({edge}, {to} | coalesce({edge}.reverse, false))]->"
+
+    def through_wrappers(self, name: str, *, backwards: bool = False) -> str:
+        edge, to = f"{name}_edge", f"{name}_to"
+        walk = f"[* 0.. ({edge}, {to} | {wrapper(to)})]"
+        return f"<-{walk}-" if backwards else f"-{walk}->"
+
+    search_compiler = Compiler
+
+    def query(self, name: str, default: str, **context: Any) -> str:
+        return default

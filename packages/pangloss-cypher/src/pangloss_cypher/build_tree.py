@@ -10,8 +10,12 @@ the forward edges of the tree:
 
 `build_tree` makes these into nested dicts, as the `View` models of Pangloss expect.
 (Entities are not expanded: they are references.)
+
+What a read gives is a `GraphFragment`: the root, its labels, the edges and the `meta`. Nothing of it is Cypher: it is
+what a backend of another kind would give as well.
 """
 
+import dataclasses
 import typing
 
 # Properties of an edge that are not those of an `EdgeModel`
@@ -48,3 +52,30 @@ def build_tree(
         return node
 
     return build(root, root_labels)
+
+
+@dataclasses.dataclass(frozen=True)
+class GraphFragment:
+    """What a read of a document or an entity gives: the root node's properties and labels, the forward edges of the
+    tree below it (as `build_tree` takes them), and its `meta`"""
+
+    root: dict[str, typing.Any]
+    labels: list[str]
+    edges: list[dict[str, typing.Any]]
+    meta: dict[str, typing.Any]
+
+    @classmethod
+    def from_record(cls, record: dict[str, typing.Any]) -> "GraphFragment":
+        """From a row of the read query (`read_query.build_fetch_document_query`)"""
+        return cls(
+            root=record["root"],
+            labels=record["root_labels"],
+            edges=record["edges"],
+            meta=record["meta"],
+        )
+
+    def tree(self) -> dict[str, typing.Any]:
+        """The document, as the `View` models take it"""
+        tree = build_tree(self.root, self.labels, self.edges)
+        tree["meta"] = self.meta
+        return tree

@@ -3,19 +3,22 @@
 from typing import LiteralString, cast
 
 from pangloss_cypher import fragments
+from pangloss_cypher.dialect import Dialect
 
-# $patterns: one `.*word.*` for each word typed (lower case: the index cuts labels into lower-case words)
+
+# $patterns: a pattern for each word typed (`Dialect.search_patterns`)
 # $labels: any of these labels finds the node (the types asked for, with none that a parent already finds)
-# $start: what was typed (folded), to put the labels that begin with it (folded) first
+# $start: what was typed (`Dialect.autocomplete_start`), to put the labels that begin with it first
 # $page (1-indexed), $page_size
 #
 # (What is collected is a map of the properties, not the node: nodes found by the text index, collected
 # after the ordering, came back as the same node several times.)
-AUTOCOMPLETE_QUERY = cast(
-    LiteralString,
-    f"""
+def autocomplete_query(d: Dialect) -> LiteralString:
+    return cast(
+        LiteralString,
+        f"""
     UNWIND $patterns AS pattern
-    CALL text_search.regex_search("label_text", pattern) YIELD node, score
+    CALL {d.text_search("label_text", "pattern")} YIELD node, score
     WITH node AS n, pattern, max(score) AS patternScore
     WITH n, count(*) AS matchedPatterns, sum(patternScore) AS totalScore
     WHERE matchedPatterns = size($patterns)
@@ -23,8 +26,8 @@ AUTOCOMPLETE_QUERY = cast(
       AND any(label IN $labels WHERE label IN labels(n))
       AND {fragments.not_deleted("n")}
     WITH n, totalScore,
-         CASE WHEN n.label_folded STARTS WITH $start THEN 0 ELSE 1 END AS rank
-    ORDER BY rank, totalScore DESC, toLower(n.label), id(n)
+         CASE WHEN {d.folded_label("n")} STARTS WITH $start THEN 0 ELSE 1 END AS rank
+    ORDER BY rank, totalScore DESC, toLower(n.label), {d.tie_break("n")}
     WITH collect({{id: n.id, type: n.type, label: n.label}}) AS allNodes
     WITH allNodes, size(allNodes) AS total,
          toInteger(ceil(toFloat(size(allNodes)) / $page_size)) AS totalPages
@@ -40,4 +43,4 @@ AUTOCOMPLETE_QUERY = cast(
         next_page: CASE WHEN $page < totalPages THEN $page + 1 ELSE null END
     }} AS response
 """,
-)
+    )

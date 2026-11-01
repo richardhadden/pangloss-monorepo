@@ -588,7 +588,7 @@ async def test_a_list_search_that_takes_too_long_is_stopped(
     import time
 
     import pytest
-    from pangloss_memgraph.databases.memgraph import exposed_functions
+    from pangloss_cypher import read_functions
     from pangloss_models.exceptions import PanglossSearchTimeoutError
 
     class Person(Entity):
@@ -603,7 +603,7 @@ async def test_a_list_search_that_takes_too_long_is_stopped(
         "RETURN {results: [], count: c, page: 1, page_size: 25} AS response"
     )
     monkeypatch.setattr(
-        exposed_functions, "build_generic_list_query", lambda *a, **k: (slow, {})
+        read_functions, "build_generic_list_query", lambda *a, **k: (slow, {})
     )
     monkeypatch.setattr(
         current().settings, "SEARCH_TIMEOUT_SECONDS", 0.5, raising=False

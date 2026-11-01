@@ -824,7 +824,7 @@ async def test_the_read_query_is_the_same_text_for_every_document():
     each call it planned the query afresh each time, which was most of what a read took"""
     import uuid
 
-    from pangloss_memgraph.databases.memgraph.build_read_query import (
+    from pangloss_cypher.read_query import (
         build_fetch_document_query,
     )
     from pangloss_models.model_bases.entity import Entity

@@ -101,7 +101,7 @@ Semantic spaces, conjunctions and reified relations sit between a field and its 
 | Layer | Module | Role |
 |-------|--------|------|
 | Models | `pangloss_models/search/` | The `Match` model (`type`, `where`, `$` keys); `check_match(model, match)`, which walks the pattern against `_meta.fields` and `incoming_fields` and raises a `PanglossSearchError` naming the field and what is wrong; reuses `resolve_entity_types` and `smallest_types` from autocomplete |
-| Memgraph | `build_search_query.py`, `exposed_functions.search` | Compile a checked `Match` to Cypher and run it (`read_transaction`), returning the same page shape as `list` |
+| Memgraph (since 2026-11-01 the kit's, for both backends) | `pangloss_cypher/search_query.py`, `read_functions.search` | Compile a checked `Match` to Cypher and run it (`read_transaction`), returning the same page shape as `list` |
 | API | `routes/search.py` | `POST /api/search`, validation errors as 422, the limits below |
 | SDK | `protocol.search`, both flavours | One request; bound as `Document.search(match)` / `Entity.search(match)` (the class gives the root `type`) |
 | Interface | later | The create form in "pinned" mode: each field with an operator; serialises to this JSON |

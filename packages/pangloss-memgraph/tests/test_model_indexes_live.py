@@ -3,7 +3,7 @@
 from typing import no_type_check
 
 import pytest
-from pangloss_memgraph.databases.memgraph.build_search_query import build_search_query
+from pangloss_cypher.search_query import build_search_query
 from pangloss_memgraph.databases.memgraph.initialise_database import (
     initialise_database,
     structure,
