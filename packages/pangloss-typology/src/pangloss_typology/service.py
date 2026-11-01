@@ -10,6 +10,8 @@ from dataclasses import dataclass
 from typing import Any
 from uuid import UUID
 
+from pangloss_core.storage import storage_of
+from pangloss_models.exceptions import PanglossVersionConflictError
 from pangloss_models.model_registry import ModelRegistry
 from pydantic import BaseModel
 
@@ -17,8 +19,11 @@ from pangloss_typology import graph, tree
 from pangloss_typology.graph import Refused
 from pangloss_typology.tree import Row, Rows
 from pangloss_typology.typology import (
+    HAS_TYPE,
     IS_CONCRETE,
     IS_SUBTYPE_OF,
+    IS_SUPERTYPE_OF,
+    TYPE_OF,
     Typology,
     language_field,
     languages_of,
@@ -29,6 +34,9 @@ __all__ = ["NotFound", "Refused"]
 
 LIMIT = 50
 MAX_LIMIT = 500
+
+# How many times a move is tried, if the type is changed by someone else between its read and its update
+MOVE_ATTEMPTS = 3
 
 
 class NotFound(LookupError):
@@ -155,12 +163,41 @@ async def move(
     rows, row = await row_of(typology, id)
     if to is not None:
         await row_of(typology, to)
-    if tree.would_loop(rows, row.id, str(to) if to is not None else None):
+    target = str(to) if to is not None else None
+    if tree.would_loop(rows, row.id, target):
         raise Refused(
             "A type cannot be moved below itself or below one of its own subtypes"
         )
-    await graph.move(label_of(typology), row.id, str(to) if to is not None else None)
+    await move_type(typology, row.id, target)
     return await get(typology, id)
+
+
+async def move_type(typology: type[Typology], id: str, to: str | None) -> None:
+    """The move, as an update of the type (its `is_subtype_of`): a new version of it, which history records. The
+    hierarchy's lock is taken, and the move checked again, inside the update's transaction (`graph.check_move`). If
+    someone changes the type between the read and the update, it is read again"""
+    name = label_of(typology)
+    await graph.ensure_lock(name)
+
+    async def checked(tx) -> None:
+        await graph.check_move(tx, name, id, to)
+
+    for attempt in range(1, MOVE_ATTEMPTS + 1):
+        edit = await typology.Type.get_for_edit(UUID(id))  # ty: ignore[unresolved-attribute]
+        if edit is None:
+            raise NotFound(f"There is no {name} {id}")
+        data = {
+            **edit.model_dump(by_alias=False),
+            IS_SUBTYPE_OF: [] if to is None else [{"type": name, "id": to}],
+        }
+        try:
+            await typology.Type.Update(**data).save(  # ty: ignore[unresolved-attribute]
+                expected_version=edit.meta.version, before_write=checked
+            )
+            return
+        except PanglossVersionConflictError:
+            if attempt == MOVE_ATTEMPTS:
+                raise
 
 
 async def update(
@@ -227,17 +264,62 @@ async def delete(typology: type[Typology], id: UUID | str) -> None:
     await typology.Type.delete(UUID(row.id))  # ty: ignore[unresolved-attribute]
 
 
+@dataclass
+class Merged:
+    """What a merge did"""
+
+    type: TypeOut
+    """The type merged into"""
+    subtypes: int
+    """The subtypes that were given to it"""
+    relinked: int
+    """The heads (entities, documents) that had the type and now have the other: each has a new version"""
+
+
 async def merge(
     typology: type[Typology], from_: UUID | str, into: UUID | str
 ) -> TypeOut:
     """Everything that has the first type has the second, its subtypes become the second's, and the first is deleted"""
+    return (await merge_counted(typology, from_, into)).type
+
+
+async def merge_counted(
+    typology: type[Typology], from_: UUID | str, into: UUID | str
+) -> Merged:
+    """`merge`, saying how much it changed. Each type, entity and document that changes is written as an update (a new
+    version, which history records, and an edit from the version before is refused): the subtypes and what had the type
+    are relinked (`relink`, in batches), and a move is an update of the type moved"""
     if str(from_) == str(into):
         raise Refused("A type cannot be merged into itself")
-    await row_of(typology, from_)
-    await row_of(typology, into)
-    await graph.merge(label_of(typology), str(from_), str(into))
-    await typology.Type.delete(UUID(str(from_)))  # ty: ignore[unresolved-attribute]
-    return await get(typology, into)
+    rows, source = await row_of(typology, from_)
+    _, target = await row_of(typology, into)
+    name = label_of(typology)
+    operations = storage_of().operations
+    # (if `into` is below the other, it first takes the other's place, so that there is no loop)
+    if target.id in {r.id for r in tree.descendants(rows, source.id)}:
+        await move_type(typology, target.id, source.parent)
+
+    await graph.ensure_lock(name)
+
+    async def checked(tx) -> None:
+        await graph.check_merge(tx, name, source.id, target.id)
+
+    subtypes = await operations.relink(
+        IS_SUBTYPE_OF,
+        IS_SUPERTYPE_OF,
+        source.id,
+        target.id,
+        keep=[target.id],
+        before=checked,
+    )
+    relinked = await operations.relink(HAS_TYPE, TYPE_OF, source.id, target.id)
+    # (it leaves the hierarchy before it is deleted)
+    if source.parent is not None:
+        await move_type(typology, source.id, None)
+    await typology.Type.delete(UUID(source.id))  # ty: ignore[unresolved-attribute]
+    return Merged(
+        type=await get(typology, target.id), subtypes=subtypes, relinked=relinked
+    )
 
 
 # --- reading -----------------------------------------------------------------------------------------

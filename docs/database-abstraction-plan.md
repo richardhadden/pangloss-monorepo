@@ -579,6 +579,50 @@ part of the port):
   is what keeps history and conflict checks correct, but it means a merge on a large vocabulary is a large write.
   *Recommendation: yes, batched, with the count reported by the command.*
 
+**As built (2026-11-01):**
+
+- **The decision.** The plan asked first whether `merge` should bump the version of every document that refers to the
+  merged type. It went ahead with the recommendation, without a new answer: yes, batched, with the count reported.
+  This is easy to change, in `relink`, if the answer is no.
+- **`move`** (`pangloss_typology.service.move_type`) is `Type.Update(..., is_subtype_of=[to]).save(expected_version=…,
+  before_write=…)`. The update path has a new hook, `before_write(tx)` (`write_functions.BeforeWrite`). It runs first
+  in `replace_head_node`'s transaction, before the backend's own `before_replace` and the version read. Typology
+  passes `graph.check_move`, which takes the hierarchy lock and checks the type, the target and the loop again. If
+  the type is changed between its read and the update, the move reads it again, up to three times.
+- **`relink(field, reverse, from_id, to_id, *, keep=(), before=None, batch_size=1000)`** (`pangloss_cypher.relink`, in
+  `operations`). In each batch's transaction it:
+  - checks the user;
+  - runs `before`;
+  - finds up to 1,000 nodes with the relation, and their heads (`coalesce(head_node_id, id)`);
+  - takes each head's `before_replace` lock (Neo4j);
+  - creates the new edge pair with `properties(old)`, unless the node already has the relation to the target;
+  - deletes the old pairs;
+  - records a `PGUpdate` for each head.
+
+  After each commit it sends one write event per head. Its payload is what the head is now, read and made into an
+  `Update`, and it is read only if something listens. It gives the number of heads. A batch that finds edges but
+  deletes none raises an error rather than looping.
+- **`merge`** (`service.merge_counted`; `merge` gives the `TypeOut` as before):
+  - if the target is below the source, it first moves the target into the source's place (an update);
+  - it relinks the subtypes, under the lock, with `graph.check_merge` refusing if the target is below the source;
+  - it relinks `has_type`;
+  - it moves the source to the root (an update), then deletes it.
+- **`graph.py`** no longer writes the hierarchy. `move` and `merge` are gone; `check_move`, `check_merge` and
+  `is_below` are what is left.
+- **Tests**, in typology's live tests, which run on both backends (Memgraph in the package run, and Neo4j with
+  `PANGLOSS_TEST_BACKEND=neo4j`, 22 passed):
+  - `test_a_move_is_an_update_of_the_type`: the version goes up by one, there is one write event with a payload, and
+    an edit from the old version gets `PanglossVersionConflictError`;
+  - `test_a_merge_writes_a_new_version_of_each_head_it_changes`: a typed entity, a letter whose nested statement has
+    the type, and a subtype each go up one version and get an event; the counts are (1 subtype, 2 heads); an old edit
+    is refused;
+  - `test_a_merge_keeps_the_properties_of_the_edges`: `ViaEdge[Typed[...], Certainty]`. The properties are on both
+    edges after the merge.
+
+  All three failed before the change. The third was a real bug: the old `MERGE` dropped the edge's properties, and
+  the entity could no longer be read (`edgeProperties` field required). The events stand in for `pangloss-history`'s
+  records, since history is a listener of exactly these.
+
 ### Phase 9: one conformance suite (2 weeks, alongside 3–8)
 
 - `pangloss_testing/conformance/`: test modules written against **the models** (`Person.Create(...).save()`, `.get`,

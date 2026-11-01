@@ -5,7 +5,9 @@
     (entity)-[:has_type]->(:RoleType)  and  (:RoleType)-[:type_of {reverse: true}]->(entity)
 
 A relation is two edges (see `docs/relations.md`). Types are entities: they are made and changed through the entity,
-except the hierarchy and the switch (`is_concrete`), which only this module writes.
+the hierarchy too (a move is an update of the type, a merge the kit's `relink`: `service`), except the switch
+(`is_concrete`), which only this module writes. What is here of the hierarchy is the checks, made under its lock inside
+those writes.
 """
 
 import base64
@@ -201,68 +203,50 @@ async def ensure_lock(label: str) -> None:
     await backend.current().ensure_lock(lock_key(label))
 
 
-async def move(label: str, id: str, to: str | None) -> None:
-    """Make `to` the supertype of `id` (a root, for `None`), in one transaction. Refused if `id` or `to` is not there, or
-    `to` is the type or below it (a loop). The check is made again here, where it cannot be raced"""
-    database = _database()
-
-    await ensure_lock(label)
-
-    @database.write_transaction
-    async def write(tx: Transaction) -> None:
-        await lock_hierarchy(tx, label)
-        found = await (
-            await tx.run(
-                f"MATCH (n:{label} {{id: $id}}) WHERE {not_deleted('n')} RETURN n.id AS id",
-                id=id,
-            )
-        ).single()
-        if not found:
-            raise Refused(f"There is no such type: {id}")
-        if to is not None:
-            target = await (
-                await tx.run(
-                    f"MATCH (p:{label} {{id: $to}}) WHERE {not_deleted('p')} RETURN p.id AS id",
-                    to=to,
-                )
-            ).single()
-            if not target:
-                raise Refused(f"There is no such type to move it to: {to}")
-            looped = await (
-                await tx.run(
-                    f"""
-                    MATCH (n:{label} {{id: $id}})<-[:{SUBTYPE}*0..]-(d:{label} {{id: $to}})
-                    RETURN count(d) AS found
-                    """,
-                    id=id,
-                    to=to,
-                )
-            ).single()
-            if looped and looped["found"]:
-                raise Refused(
-                    "A type cannot be moved below itself or below one of its own subtypes"
-                )
+async def check_move(tx: Transaction, label: str, id: str, to: str | None) -> None:
+    """In the transaction of the update that moves `id` below `to` (a root, for `None`): take the hierarchy's lock, and
+    refuse if `id` or `to` is not there, or `to` is the type or below it (a loop). The check is made again here, where it
+    cannot be raced"""
+    await lock_hierarchy(tx, label)
+    found = await (
         await tx.run(
-            f"""
-            MATCH (n:{label} {{id: $id}})
-            OPTIONAL MATCH (n)-[up:{SUBTYPE}]->(p:{label})
-            OPTIONAL MATCH (p)-[down:{SUPERTYPE}]->(n)
-            DELETE up, down
-            """,
+            f"MATCH (n:{label} {{id: $id}}) WHERE {not_deleted('n')} RETURN n.id AS id",
             id=id,
         )
-        if to is not None:
-            await tx.run(
-                f"""
-                MATCH (n:{label} {{id: $id}}), (p:{label} {{id: $to}})
-                CREATE (n)-[:{SUBTYPE}]->(p)
-                CREATE (n)<-[:{SUPERTYPE} {{reverse: true}}]-(p)
-                """,
-                id=id,
-                to=to,
-            )
+    ).single()
+    if not found:
+        raise Refused(f"There is no such type: {id}")
+    if to is None:
+        return
+    target = await (
+        await tx.run(
+            f"MATCH (p:{label} {{id: $to}}) WHERE {not_deleted('p')} RETURN p.id AS id",
+            to=to,
+        )
+    ).single()
+    if not target:
+        raise Refused(f"There is no such type to move it to: {to}")
+    if await is_below(tx, label, to, id, at_least=0):
+        raise Refused(
+            "A type cannot be moved below itself or below one of its own subtypes"
+        )
 
-    await write()
+
+async def is_below(
+    tx: Transaction, label: str, id: str, above: str, at_least: int = 1
+) -> bool:
+    """Whether the type `id` is below `above` (or, with `at_least=0`, is it)"""
+    found = await (
+        await tx.run(
+            f"""
+            MATCH (a:{label} {{id: $above}})<-[:{SUBTYPE}*{at_least}..]-(d:{label} {{id: $id}})
+            RETURN count(d) AS found
+            """,
+            id=id,
+            above=above,
+        )
+    ).single()
+    return bool(found and found["found"])
 
 
 async def uses(label: str, id: str) -> list[dict[str, Any]]:
@@ -323,96 +307,9 @@ async def set_concrete(
     await write()
 
 
-async def merge(label: str, source: str, into: str) -> None:
-    """Everything that has `source` has `into`, `source`'s subtypes become `into`'s, and `source` is marked deleted.
-    If `into` is below `source`, it first takes `source`'s place (so there is no loop)"""
-    database = _database()
-
-    await ensure_lock(label)
-
-    @database.write_transaction
-    async def write(tx: Transaction) -> None:
-        await lock_hierarchy(tx, label)
-        both = await (
-            await tx.run(
-                f"""
-                MATCH (a:{label} {{id: $a}}), (b:{label} {{id: $b}})
-                WHERE {not_deleted("a")} AND {not_deleted("b")}
-                OPTIONAL MATCH (a)-[:{SUBTYPE}]->(parent:{label})
-                RETURN a.id AS a, parent.id AS parent
-                """,
-                a=source,
-                b=into,
-            )
-        ).single()
-        if not both:
-            raise Refused("Both types must exist")
-        below = await (
-            await tx.run(
-                f"""
-                MATCH (a:{label} {{id: $a}})<-[:{SUBTYPE}*1..]-(b:{label} {{id: $b}})
-                RETURN count(b) AS found
-                """,
-                a=source,
-                b=into,
-            )
-        ).single()
-        if below and below["found"]:
-            await tx.run(
-                f"""
-                MATCH (b:{label} {{id: $b}})
-                OPTIONAL MATCH (b)-[up:{SUBTYPE}]->(p:{label})
-                OPTIONAL MATCH (p)-[down:{SUPERTYPE}]->(b)
-                DELETE up, down
-                """,
-                b=into,
-            )
-            if both["parent"]:
-                await tx.run(
-                    f"""
-                    MATCH (b:{label} {{id: $b}}), (p:{label} {{id: $p}})
-                    CREATE (b)-[:{SUBTYPE}]->(p)
-                    CREATE (b)<-[:{SUPERTYPE} {{reverse: true}}]-(p)
-                    """,
-                    b=into,
-                    p=both["parent"],
-                )
-        # the subtypes of source (other than `into`) move to `into`
-        await tx.run(
-            f"""
-            MATCH (a:{label} {{id: $a}})<-[up:{SUBTYPE}]-(c:{label}), (b:{label} {{id: $b}})
-            WHERE c.id <> $b
-            OPTIONAL MATCH (a)-[down:{SUPERTYPE}]->(c)
-            DELETE up, down
-            WITH c, b
-            CREATE (c)-[:{SUBTYPE}]->(b)
-            CREATE (c)<-[:{SUPERTYPE} {{reverse: true}}]-(b)
-            """,
-            a=source,
-            b=into,
-        )
-        # what had `source` has `into`
-        await tx.run(
-            f"""
-            MATCH (a:{label} {{id: $a}})<-[old:{HAS_TYPE}]-(e), (b:{label} {{id: $b}})
-            OPTIONAL MATCH (a)-[oldr:{TYPE_OF}]->(e)
-            DELETE old, oldr
-            WITH e, b
-            MERGE (e)-[:{HAS_TYPE}]->(b)
-            MERGE (e)<-[:{TYPE_OF} {{reverse: true}}]-(b)
-            """,
-            a=source,
-            b=into,
-        )
-        # (source's own supertype edges go with it)
-        await tx.run(
-            f"""
-            MATCH (a:{label} {{id: $a}})
-            OPTIONAL MATCH (a)-[up:{SUBTYPE}]->(p:{label})
-            OPTIONAL MATCH (p)-[down:{SUPERTYPE}]->(a)
-            DELETE up, down
-            """,
-            a=source,
-        )
-
-    await write()
+async def check_merge(tx: Transaction, label: str, source: str, into: str) -> None:
+    """In each transaction of a merge that gives `source`'s subtypes to `into`: take the hierarchy's lock, and refuse if
+    `into` is (again) below `source`, which would make a loop"""
+    await lock_hierarchy(tx, label)
+    if await is_below(tx, label, into, source):
+        raise Refused("The type merged into is below the other: move it first")

@@ -100,11 +100,13 @@ await RoleTypology.merge(from_=a_id, into=b_id)                      # repoint H
 await RoleTypology.delete(id)                                        # refuses if it has subtypes or is in use
 ```
 
-`move` is the one operation that is not an ordinary entity update, because it must keep the hierarchy valid:
+`move` is an ordinary entity update of the type (its `is_subtype_of`), with one thing more, because it must keep the hierarchy valid:
 
-- **No cycles**: `to` may not be the type itself or one of its descendants (one query, run in the same transaction as the write).
+- **No cycles**: `to` may not be the type itself or one of its descendants. Checked first from the tree, and again inside the update's transaction, under the hierarchy's lock (`graph.check_move`, given to the update as `before_write`).
 - Moving replaces the one `IS_SUBTYPE_OF` edge.
-- It is one transaction, so a failed move changes nothing.
+- It is one transaction, so a failed move changes nothing. As an update, it makes a new version of the type (which `pangloss-history` records), and an edit made from the version before is refused. (Since 2026-11-01; before, `move` wrote the edges itself, and no version changed.)
+
+`merge` writes through the model layer too (since 2026-11-01). The subtypes and everything that has the type (entities, and the documents whose nodes have it) are relinked by the kit's `relink` (`pangloss_cypher.relink`): in batches of 1,000 heads a transaction, each head that changes gets a new version and a write event, and the properties of a `has_type` edge are kept. A move in a merge is an update. `service.merge_counted` says how many subtypes and heads it changed. A merge of a type used by many documents is therefore a large write.
 
 Using a type from a model needs nothing more than the field: `Role.Create(label="Maximilian's secretary", role_type=<reference to the RoleType>)`. Any type at any level may be used (decided).
 
@@ -207,7 +209,7 @@ packages/pangloss-typology/
   pyproject.toml            # depends on pangloss-models; interface optional
   src/pangloss_typology/
     typology.py             # Typology, TypologyMeta, the checks, the class generation
-    graph.py                # the queries (tree, path, move, merge)
+    graph.py                # the queries (tree, entities, uses) and the checks of a move and a merge
     service.py              # the SDK functions
     api.py  cli.py          # router and `pangloss typology ...`
     interface/              # the Solid module (§7), built only with the interface

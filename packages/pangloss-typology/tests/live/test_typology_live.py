@@ -563,3 +563,143 @@ async def test_racing_moves_never_make_a_loop(clear_database, db_driver):
         run(db_driver, "MATCH (n:RoleType) DETACH DELETE n")
     assert loops == 0
     assert refusals > 0
+
+
+# --- moves and merges are writes of the model: new versions, write events, conflicts ------------------------------
+
+
+@pytest.fixture
+def write_events():
+    """The write events while the test runs (what `pangloss-history` records)"""
+    from pangloss_models import hooks
+
+    events = []
+    hooks.after_write.append(events.append)
+    yield events
+    hooks.after_write.remove(events.append)
+
+
+@no_type_check
+async def test_a_move_is_an_update_of_the_type(clear_database, write_events):
+    from pangloss_models.exceptions import PanglossVersionConflictError
+
+    _, RoleTypology = vocabulary()
+    official, secretary, private, chancellor, bard = await build(RoleTypology)
+    before = await RoleTypology.Type.get_for_edit(secretary.id)
+    write_events.clear()
+
+    await RoleTypology.move(secretary.id, to=bard.id)
+
+    after = await RoleTypology.Type.get_for_edit(secretary.id)
+    assert after.meta.version == before.meta.version + 1
+    [event] = write_events
+    assert (event.op, event.id, event.version) == (
+        "update",
+        secretary.id,
+        after.meta.version,
+    )
+    assert event.payload is not None
+    # (an edit made from the version before the move does not undo it)
+    with pytest.raises(PanglossVersionConflictError):
+        await RoleTypology.Type.Update(
+            **{**before.model_dump(by_alias=False), "label": "Scribe"}
+        ).save(expected_version=before.meta.version)
+    assert (await service.get(RoleTypology, secretary.id)).supertype == bard.id
+
+
+@no_type_check
+async def test_a_merge_writes_a_new_version_of_each_head_it_changes(
+    clear_database, write_events
+):
+    from pangloss_models.exceptions import PanglossVersionConflictError
+    from pangloss_models.model_bases.document import Document
+
+    class Post(Entity):
+        has_type: list[Typed[RoleTypology]]
+
+    class Letter(Document):
+        statements: list[Statement]
+
+    class Statement(Document):
+        has_type: list[Typed[RoleTypology]]
+
+    class RoleTypology(Typology):
+        _typology_meta = TypologyMeta(name="RoleType", languages=["de"])
+
+    initialise()
+    official, secretary, private, chancellor, bard = await build(RoleTypology)
+    clerk = await RoleTypology.create("Clerk", supertype=official.id)
+    under_clerk = await RoleTypology.create("Under-clerk", supertype=clerk.id)
+    post = await made(Post, "Clerk of works", clerk.id)
+    letter = await Letter.Create(
+        label="A letter",
+        statements=[
+            {
+                "type": "Statement",
+                "label": "He was a clerk",
+                "has_type": [{"type": "RoleType", "id": str(clerk.id)}],
+            }
+        ],
+    ).save()
+    post_before = await Post.get_for_edit(post)
+    letter_version = (await Letter.get(letter.id)).meta.version
+    under_version = (await RoleTypology.Type.get_for_edit(under_clerk.id)).meta.version
+    write_events.clear()
+
+    merged = await service.merge_counted(RoleTypology, clerk.id, secretary.id)
+    assert (merged.subtypes, merged.relinked) == (1, 2)
+
+    assert (await Post.get_for_edit(post)).meta.version == post_before.meta.version + 1
+    assert (await Letter.get(letter.id)).meta.version == letter_version + 1
+    assert (
+        await RoleTypology.Type.get_for_edit(under_clerk.id)
+    ).meta.version == under_version + 1
+    assert (await service.get(RoleTypology, under_clerk.id)).supertype == secretary.id
+    updated = {e.id for e in write_events if e.op == "update"}
+    assert {post, letter.id, under_clerk.id} <= updated
+    assert all(e.payload is not None for e in write_events if e.id in {post, letter.id})
+    # (the letter's statement has the other type now)
+    [statement] = (await Letter.get(letter.id)).statements
+    assert [t.id for t in statement.has_type] == [secretary.id]
+    with pytest.raises(PanglossVersionConflictError):
+        await Post.Update(**post_before.model_dump(by_alias=False)).save(
+            expected_version=post_before.meta.version
+        )
+
+
+@no_type_check
+async def test_a_merge_keeps_the_properties_of_the_edges(clear_database, db_driver):
+    from pangloss_models.model_bases.edge_model import EdgeModel
+    from pangloss_models.model_bases.helpers import ViaEdge
+
+    class Certainty(EdgeModel):
+        level: int
+
+    class Post(Entity):
+        has_type: list[ViaEdge[Typed[RoleTypology], Certainty]]
+
+    class RoleTypology(Typology):
+        _typology_meta = TypologyMeta(name="RoleType", languages=["de"])
+
+    initialise()
+    clerk = await RoleTypology.create("Clerk")
+    secretary = await RoleTypology.create("Secretary")
+    post = await Post.Create(
+        label="Clerk of works",
+        has_type=[
+            {"type": "RoleType", "id": str(clerk.id), "edge_properties": {"level": 2}}
+        ],
+    ).save()
+
+    await RoleTypology.merge(clerk.id, into=secretary.id)
+
+    [typed] = (await Post.get_for_edit(post.id)).has_type
+    assert typed.id == secretary.id
+    assert typed.edge_properties.level == 2
+    # (the reverse edge has them too, and is still marked)
+    reverse = run(
+        db_driver,
+        "MATCH (:RoleType {id: $id})-[r:type_of]->(:Post) RETURN properties(r) AS p",
+        id=str(secretary.id),
+    )
+    assert [row["p"] for row in reverse] == [{"level": 2, "reverse": True}]

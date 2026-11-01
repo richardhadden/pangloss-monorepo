@@ -14,6 +14,7 @@ from pangloss_cypher.read_functions import (
     get_entity as get_entity,
     get_entity_for_edit as get_entity_for_edit,
 )
+from pangloss_cypher.relink import relink as relink
 from pangloss_cypher.write_functions import (
     run_write_query as run_write_query,
     soft_delete_node as soft_delete_node,
@@ -51,6 +52,7 @@ from pangloss_cypher.write_functions import (
 )
 
 __all__ = [
+    "relink",
     "empty_page",
     "list_items",
     "search",

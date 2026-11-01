@@ -2,6 +2,7 @@
 every Cypher backend. A backend's `exposed_functions` gives these, with its reads."""
 
 import datetime
+from collections.abc import Awaitable, Callable
 from typing import Any, Literal, cast
 from uuid import UUID
 
@@ -60,6 +61,11 @@ from pangloss_cypher.write_plan import (
     plan_create,
     plan_update,
 )
+
+
+# A function run inside the transaction of an update, before anything is read or written (to take a lock, and check what
+# the lock keeps true: a typology's move). It may raise to stop the update
+type BeforeWrite = Callable[[Transaction], Awaitable[None]]
 
 
 async def run_write_query(tx: Transaction, query: str, params: dict) -> list:
@@ -254,6 +260,7 @@ async def replace_head_node(
     tx: Transaction,
     db_instance: _DocumentUpdateDBBase | _EntityUpdateDBBase,
     expected_version: int | None = None,
+    before_write: BeforeWrite | None = None,
 ) -> tuple[ExistingHead, tuple[Any, ...]]:
     """Replace everything below a head node, and its properties, with the new
     version. All checks are made before anything is deleted, and if anything
@@ -262,9 +269,13 @@ async def replace_head_node(
     If `expected_version` is given, the update is only made if that is the version
     of the head node now. (Two updates at once are safe: both read the version, but
     both write to the head node, so the second is made to run again by the
-    database, and then finds the new version.)"""
+    database, and then finds the new version.)
+
+    `before_write` is run first, in the transaction."""
 
     await check_user_exists(tx)
+    if before_write is not None:
+        await before_write(tx)
     await dialect().before_replace(tx, db_instance.id)
     existing_head = await get_existing_head(tx, db_instance.id, db_instance.type)
     if expected_version is not None and existing_head.version != expected_version:
@@ -305,6 +316,7 @@ async def update_head_node(
     restored_from: int | None = None,
     published: bool | None = None,
     review_status: str | None = None,
+    before_write: BeforeWrite | None = None,
 ):
     """Replace a Document or Entity (and, for a Document, everything nested in it)
     with the given version.
@@ -317,7 +329,9 @@ async def update_head_node(
 
     `expected_version` is the `meta.version` that the new version was made from:
     if someone has updated it since, `PanglossVersionConflictError` is raised and
-    nothing is written. Without it, the update is made whatever the version."""
+    nothing is written. Without it, the update is made whatever the version.
+
+    `before_write` is run inside the transaction, before anything is read (see `BeforeWrite`)."""
     db_instance = cast(
         _DocumentUpdateDBBase | _EntityUpdateDBBase, instance._to_db_model()
     )
@@ -325,7 +339,7 @@ async def update_head_node(
         hooks.review_status_asked(published, review_status)
     ):
         existing_head, created_entities = await write_with_retries(
-            replace_head_node, db_instance, expected_version
+            replace_head_node, db_instance, expected_version, before_write
         )
 
     owner = cast(type[Document | Entity], instance._owner)
