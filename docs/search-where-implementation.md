@@ -107,6 +107,7 @@ it does now (see the decisions).
 3. **One table of kinds.** Split `kind_and_base` into a function that says the kind and base of a field definition
    (or that it cannot be searched) without raising, used by both `check_where` and the generation, so that the two
    cannot differ about a field.
+   **Built:** `field_kind(definition)` gives the kind and base, or the reason as a string; `kind_and_base` raises it.
 4. **Generate `Model.Where`** in `ModelRegistry.finalise`, as `Create` is: first a class for each model with its
    literal fields, then the relation, embedded and `$` fields (they refer to each other's classes: `Person.Where`
    to `Letter.Where` through `incoming_`), then `model_rebuild`. With `defer_build=True`, so that a class's schema is

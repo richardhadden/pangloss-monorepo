@@ -585,3 +585,22 @@ def test_a_field_cannot_be_named_as_a_property_kept_on_a_head_node(name):
     type("Odd", (Document,), {"__annotations__": {name: bool | None}, name: None})
     with pytest.raises(PanglossModelError, match=name):
         initialise()
+
+
+def test_field_kind_says_how_each_field_is_searched_or_why_it_cannot_be():
+    from pangloss_models.search import Reach, field_kind
+
+    Person, Letter = models()
+    fields = Letter._meta.fields
+
+    assert field_kind(fields["title"]) == ("text", str)
+    assert field_kind(fields["pages"]) == ("number", int)
+    assert field_kind(fields["sent"]) == ("temporal", datetime.date)
+    assert field_kind(fields["status"]) == ("simple", Status)
+    assert field_kind(fields["tags"]) == ("list", str)
+    kind, reach = field_kind(fields["sender"])
+    assert kind == "relation" and isinstance(reach, Reach) and Person in reach.options
+    # (a reason, not an error: the `Where` classes leave the field out)
+    assert field_kind(fields["notes"]) == (
+        f"a field of type {Notes} cannot be searched yet"
+    )

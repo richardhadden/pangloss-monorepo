@@ -826,20 +826,26 @@ def kind_and_base(
 ) -> tuple[Kind, Any]:
     if definition is None:
         raise PanglossSearchError(f"{field}: {model.__name__} has no field '{name}'")
+    found = field_kind(definition)
+    if isinstance(found, str):
+        raise PanglossSearchError(f"{field}: {found}")
+    return found
+
+
+def field_kind(definition: Any) -> tuple[Kind, Any] | str:
+    """How a field is searched: its kind, and its base (the type of a literal, or of the items of a list; for a
+    relation or an embedded field, the `Reach`), or why it cannot be searched. (The one place this is said: the
+    checking of a pattern and the `Where` classes both take it from here.)"""
     if isinstance(definition, LiteralFieldDefinition):
         base = without_none(definition.annotated_type)
         kind = kind_of(base)
         if kind is None:
-            raise PanglossSearchError(
-                f"{field}: a field of type {base} cannot be searched yet"
-            )
+            return f"a field of type {base} cannot be searched yet"
         return kind, base
     if isinstance(definition, ListFieldDefinition):
         base = without_none(definition.inner_type)
         if kind_of(base) is None:
-            raise PanglossSearchError(
-                f"{field}: a list of {base} cannot be searched yet"
-            )
+            return f"a list of {base} cannot be searched yet"
         return "list", base
     if isinstance(definition, EmbeddedFieldDefinition):
         # (an embedded object is searched like what a relation points at: a pattern for it, by `type` and `where`)
@@ -852,12 +858,15 @@ def kind_and_base(
     if isinstance(definition, RelationFieldDefinition):
         found: list[type] = []
         wrapped = [False]
-        for option in definition.type_options:
-            leaf_classes(field, option, found, wrapped)
+        try:
+            for option in definition.type_options:
+                leaf_classes("", option, found, wrapped)
+        except PanglossSearchError:
+            found = []
         if not found:
-            raise PanglossSearchError(f"{field}: this relation cannot be searched yet")
+            return "this relation cannot be searched yet"
         return "relation", Reach(list(dict.fromkeys(found)), wrapped[0])
-    raise PanglossSearchError(f"{field}: this kind of field cannot be searched yet")
+    return "this kind of field cannot be searched yet"
 
 
 def leaf_classes(
