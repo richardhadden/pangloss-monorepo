@@ -33,23 +33,16 @@ for arg in "$@"; do
     esac
 done
 
-# Each run's output goes to the screen as it happens, and a copy is kept: at the end, the result line of every run
-# (and the tests that failed) is printed together, since the runs are far apart in the output.
-summary_dir=$(mktemp -d)
-trap 'rm -rf "$summary_dir"' EXIT
-runs=0
+# Each run's output goes to the screen as it happens, and nothing more: the script fails if any run failed.
 status=0
 
-# run LABEL COMMAND...: runs the command, keeping its output and its exit status for the summary
+# run LABEL COMMAND...: runs the command, keeping its exit status if it failed
 run() {
     label=$1
     shift
-    runs=$((runs + 1))
-    log="$summary_dir/$runs.log"
-    printf '%s' "$label" > "$summary_dir/$runs.label"
-    { "$@"; echo $? > "$summary_dir/$runs.status"; } 2>&1 | tee "$log"
-    code=$(cat "$summary_dir/$runs.status")
-    [ "$code" -eq 0 ] || status=$code
+    echo
+    echo "=== $label"
+    "$@" || status=$?
 }
 
 if [ -z "$args" ]; then
@@ -73,21 +66,4 @@ if [ "$e2e" = yes ]; then
     run "e2e (browser)" uv run pytest e2e --tracing retain-on-failure --screenshot only-on-failure
 fi
 
-echo
-echo "================================ Summary of all runs ================================"
-i=1
-while [ "$i" -le "$runs" ]; do
-    code=$(cat "$summary_dir/$i.status")
-    if [ "$code" -eq 0 ]; then mark="ok    "; else mark="FAILED"; fi
-    # (pytest's last line: "=== 12 passed, 1 skipped in 3.2s ===", with the "=" taken off)
-    result=$(grep -E '(passed|failed|error|no tests ran|skipped|deselected)' "$summary_dir/$i.log" | tail -n 1 | sed 's/^[= ]*//; s/[= ]*$//')
-    printf '%s  %-45s %s\n' "$mark" "$(cat "$summary_dir/$i.label")" "${result:-exit code $code}"
-    i=$((i + 1))
-done
-failures=$(grep -hE '^(FAILED|ERROR) ' "$summary_dir"/*.log | sort -u)
-if [ -n "$failures" ]; then
-    echo
-    echo "Failed tests:"
-    echo "$failures" | sed 's/^/  /'
-fi
 exit $status

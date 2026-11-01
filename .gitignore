@@ -27,3 +27,5 @@ packages/pydantic-meta-kit/
 
 # Playwright traces and screenshots of failed e2e tests
 test-results/
+
+.ruff_cache/
