@@ -10,6 +10,7 @@ import pangloss_models.model_bases.document
 import pangloss_models.model_bases.entity
 import pangloss_models.model_bases.reified_relation
 import pangloss_models.model_bases.semantic_space
+import pangloss_models.search
 import pangloss_models.search_where
 import pydantic.networks
 import typing
@@ -182,6 +183,9 @@ class Person(Entity, Agent):
         aliases: pangloss_models.search_where.Items[str] | None = ...
         has_type: typing.Any = ...
 
+    class Order(pangloss_models.search.OrderBy):  # type: ignore
+        field: typing.Literal['label', 'born.source_text', 'born.earliest_fuzzy', 'born.earliest_strict', 'born.latest_strict', 'born.latest_fuzzy', 'born.sort_day', 'born.end_sort_day']  # type: ignore
+
 class Group(Entity, Agent):
     name: Annotated[str, MinLen(2), MaxLen(100)]
     class ReferenceSet(pangloss_models.model_bases.entity._EntityReferenceSetBase):  # type: ignore
@@ -224,6 +228,9 @@ class Group(Entity, Agent):
         not_: Group.Where | None = ...  # type: ignore
         name: pangloss_models.search_where.Text | None = ...
 
+    class Order(pangloss_models.search.OrderBy):  # type: ignore
+        field: typing.Literal['label', 'name']  # type: ignore
+
 class Place(Entity):
     coordinates: Coordinates | None = None
     class ReferenceSet(pangloss_models.model_bases.entity._EntityReferenceSetBase):  # type: ignore
@@ -259,6 +266,9 @@ class Place(Entity):
         all_: list[Place.Where] | None = ...  # type: ignore
         any_of_: list[Place.Where] | None = ...  # type: ignore
         not_: Place.Where | None = ...  # type: ignore
+
+    class Order(pangloss_models.search.OrderBy):  # type: ignore
+        field: typing.Literal['label']  # type: ignore
 
 class Source(Entity):
     _meta = ...
@@ -310,6 +320,9 @@ class Source(Entity):
         written: pangloss_models.search_where.Compare[datetime.date] | None = ...
         edition_price: pangloss_models.search_where.Compare[decimal.Decimal] | None = ...
 
+    class Order(pangloss_models.search.OrderBy):  # type: ignore
+        field: typing.Literal['label', 'author', 'written', 'edition_price']  # type: ignore
+
 class Statement(Document):
     _meta = ...
     text: Annotated[str, MinLen(5)]
@@ -359,6 +372,9 @@ class Statement(Document):
         year: pangloss_models.search_where.Compare[int] | None = ...
         involves: Group.Where | Person.Where | pangloss_models.search_where.Rel | None = ...
         places: Place.Where | pangloss_models.search_where.Rel | None = ...
+
+    class Order(pangloss_models.search.OrderBy):  # type: ignore
+        field: typing.Literal['label', 'text', 'date.source_text', 'date.earliest_fuzzy', 'date.earliest_strict', 'date.latest_strict', 'date.latest_fuzzy', 'date.sort_day', 'date.end_sort_day', 'year']  # type: ignore
 
 class Activity(Statement):
     activity_type: ActivityType
@@ -414,6 +430,9 @@ class Activity(Statement):
         activity_type: pangloss_models.search_where.Choice[ActivityType] | None = ...
         carried_out_by: Group.Where | Person.Where | pangloss_models.search_where.Rel | None = ...
         participants: Group.Where | Person.Where | pangloss_models.search_where.Rel | None = ...
+
+    class Order(pangloss_models.search.OrderBy):  # type: ignore
+        field: typing.Literal['label', 'text', 'date.source_text', 'date.earliest_fuzzy', 'date.earliest_strict', 'date.latest_strict', 'date.latest_fuzzy', 'date.sort_day', 'date.end_sort_day', 'year']  # type: ignore
 
 class Transfer(Statement):
     item: str
@@ -475,6 +494,9 @@ class Transfer(Statement):
         given_by: Group.Where | Person.Where | pangloss_models.search_where.Rel | None = ...
         given_to: Group.Where | Person.Where | pangloss_models.search_where.Rel | None = ...
 
+    class Order(pangloss_models.search.OrderBy):  # type: ignore
+        field: typing.Literal['label', 'text', 'date.source_text', 'date.earliest_fuzzy', 'date.earliest_strict', 'date.latest_strict', 'date.latest_fuzzy', 'date.sort_day', 'date.end_sort_day', 'year', 'item', 'quantity']  # type: ignore
+
 class Order(Statement):
     ordered_by: Annotated[Agent | Identification[Alternative[ViaEdge[Person, Probability]]], RelationConfig(reverse_name='ordered', subclasses_parent_fields=[FieldSubclassing('involves', field_on_model=Statement)])]
     thing_ordered: PositiveSubjunctive[Statement] | NegativeSubjunctive[Statement]
@@ -524,6 +546,9 @@ class Order(Statement):
         places: Place.Where | pangloss_models.search_where.Rel | None = ...
         ordered_by: Group.Where | Person.Where | pangloss_models.search_where.Rel | None = ...
         thing_ordered: Activity.Where | Order.Where | Transfer.Where | pangloss_models.search_where.Rel | None = ...
+
+    class Order(pangloss_models.search.OrderBy):  # type: ignore
+        field: typing.Literal['label', 'text', 'date.source_text', 'date.earliest_fuzzy', 'date.earliest_strict', 'date.latest_strict', 'date.latest_fuzzy', 'date.sort_day', 'date.end_sort_day', 'year']  # type: ignore
 
 class PositiveSubjunctive[T](SemanticSpace[T]):
     _interface_meta = ...
@@ -621,3 +646,6 @@ class Factoid(Document):
         year: pangloss_models.search_where.Compare[int] | None = ...
         source: Source.Where | pangloss_models.search_where.Rel | None = ...
         statements: Activity.Where | Order.Where | Transfer.Where | pangloss_models.search_where.Rel | None = ...
+
+    class Order(pangloss_models.search.OrderBy):  # type: ignore
+        field: typing.Literal['label', 'year']  # type: ignore

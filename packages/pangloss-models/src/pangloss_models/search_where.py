@@ -21,7 +21,7 @@ from decimal import Decimal
 import operator
 from collections.abc import Iterable
 from functools import reduce
-from typing import Annotated, Any, ClassVar, Self
+from typing import Annotated, Any, ClassVar, Literal, Self, cast
 from uuid import UUID
 
 from pydantic import (
@@ -37,7 +37,13 @@ from pydantic.fields import FieldInfo
 
 from pangloss_models.exceptions import PanglossModelError
 from pangloss_models.model_bases.model_tools import forget_schema, set_field
-from pangloss_models.search import Reach, SearchKey, field_kind
+from pangloss_models.search import (
+    OrderBy,
+    Reach,
+    SearchKey,
+    field_kind,
+    orderable_fields,
+)
 
 
 def aliased(name: str, alias: str) -> Any:
@@ -398,11 +404,28 @@ def initialise_where_models(models: Iterable[Any]) -> None:
         )
         set_field(where, "not_", combinator("not_", SearchKey.NOT, where))
 
+    # (what a search of each can be ordered by: `Letter.Order(field="title")`)
+    for model in made:
+        if where_base(model) is not EmbeddedWhere:
+            model.Order = create_model(
+                f"{model.__name__}Order",
+                __base__=OrderBy,
+                __module__=model.__module__,
+                __doc__=f"What a search of {model.__name__} is ordered by",
+                field=(literal_of(orderable_fields(model)), ...),
+            )
+
     # (as for the other models made: forget the schemas made while the fields were not all there)
     for where in made.values():
         forget_schema(where)
     for where in made.values():
         where.model_rebuild(force=True)
+
+
+def literal_of(values: list[str]) -> Any:
+    return cast(Any, Literal)[
+        tuple(values)
+    ]  # (made at runtime, from the fields of a model)
 
 
 def list_of(item: Any) -> Any:

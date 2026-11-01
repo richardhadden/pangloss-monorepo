@@ -179,6 +179,7 @@ it does now (see the decisions).
    `initialise` makes `Letter.Order`, an `OrderBy` whose `field` is a `Literal` of them, so `Letter.Order(field=
    "nonsense")` is refused; the stub's `search` takes `order_by: list[Letter.Order | Literal[...]]`. A test checks
    that `check_order` takes each of `orderable_fields`, for every kitchen-sink model.
+   **Built.** `ty` refuses a name in `order_by` that is not one of them; the demo's stub is made again.
 10. **TypeScript types for patterns.** The interface's `export_definitions` (not `export_models`: not in the
     snapshots) gets `searchPatterns`: for each model with a `Where`, its kind and, for each field, its operators
     (`text`, `compare`, `choice`, `items`, `relation`), the type of its values, and for a relation the classes it can

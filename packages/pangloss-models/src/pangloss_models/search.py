@@ -452,6 +452,30 @@ class CheckedOrder:
 ORDERABLE: set[str] = {"text", "number", "decimal", "temporal"}
 
 
+# How deep into embedded objects `orderable_fields` looks (`check_order` takes any depth)
+ORDER_DEPTH = 3
+
+
+def orderable_fields(model: Any, depth: int = ORDER_DEPTH) -> list[str]:
+    """What a search of the class can be ordered by, as `check_order` takes it: `label`, the fields of one text,
+    number or date, and those of the embedded objects in it, written with dots (`when.sort_day`)"""
+    from pangloss_models.model_bases.document import Document as _Document
+    from pangloss_models.model_bases.entity import Entity as _Entity
+
+    names = ["label"] if issubclass(model, (_Document, _Entity)) else []
+    for name, definition in model._meta.fields.items():
+        if isinstance(definition, LiteralFieldDefinition):
+            if kind_of(without_none(definition.annotated_type)) in ORDERABLE:
+                names.append(name)
+        elif isinstance(definition, EmbeddedFieldDefinition) and depth > 1:
+            declared = definition.annotated_type
+            if isinstance(declared, type) and issubclass(declared, Embedded):
+                names += [
+                    f"{name}.{inner}" for inner in orderable_fields(declared, depth - 1)
+                ]
+    return list(dict.fromkeys(names))
+
+
 def check_order(model: type, order_by: list[OrderBy]) -> list[CheckedOrder]:
     """Whether each field to order by is a field with one value to compare: a text, a number or a date of the
     class, or of an embedded object in it (the class the field is typed with must have it)"""

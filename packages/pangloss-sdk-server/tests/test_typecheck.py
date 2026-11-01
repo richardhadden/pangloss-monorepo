@@ -107,7 +107,7 @@ def test_without_ty_auto_says_so_required_fails_and_off_does_not_look(
 
 
 @needs_ty
-def test_a_search_pattern_with_a_wrong_field_or_operator_does_not_type_check(package):
+def test_a_search_with_a_wrong_field_operator_or_order_does_not_type_check(package):
     """The `Where` of each model is in the stubs, with the operators of each field"""
     built, directory, _ = package
     usage = directory / "usage.py"
@@ -118,6 +118,8 @@ def test_a_search_pattern_with_a_wrong_field_or_operator_does_not_type_check(pac
         "Statement.search(Statement.Where(nonsense=Text(eq='a')))\n"
         "Statement.search(Statement.Where(text=Compare(gt=1)))\n"
         "Statement.search(Person.Where())\n"
+        "Statement.search(order_by=['text', Statement.Order(field='label', direction='desc')])\n"
+        "Statement.search(order_by=['about'])\n"
     )
     sync = directory / "shop_sdk" / SYNC_STUBS
 
@@ -135,4 +137,4 @@ def test_a_search_pattern_with_a_wrong_field_or_operator_does_not_type_check(pac
             if "usage.py:" in line
         }
     )
-    assert lines == ["4", "5", "6"], problems
+    assert lines == ["4", "5", "6", "8"], problems

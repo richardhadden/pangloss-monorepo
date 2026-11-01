@@ -128,7 +128,9 @@ statement inside `Negative[...]`.
 ### Order and visibility
 
 `order_by`: up to three of `{"field": "label" | "year" | "when.sort_day", "direction": "asc" | "desc"}`, including fields of
-embedded objects (a date's `sort_day`). Ties are ordered by label. A request that is not logged in finds no deleted and no
+embedded objects (a date's `sort_day`). In Python, `search(..., order_by=["year", Factoid.Order(field="when.sort_day",
+direction="desc")])`: `Factoid.Order` takes only what a `Factoid` can be ordered by, and so does a name, to a type
+checker with the stubs. Ties are ordered by label. A request that is not logged in finds no deleted and no
 unpublished document, whatever it asks; `published` and `review_status` are conditions too, with
 [`pangloss-review`](../review/README.md).
 

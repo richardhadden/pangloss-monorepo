@@ -274,3 +274,34 @@ def test_or_and_and_not_are_the_combinators():
     check_match(Letter, Match(where=a | ~b))
     with pytest.raises(TypeError, match="can only be combined with another"):
         a | Person.Where()
+
+
+def test_check_order_takes_each_of_orderable_fields_and_order_is_typed_with_them():
+    from pangloss_models.search import OrderBy, check_order, orderable_fields
+
+    ModelRegistry._reset()
+    kitchen_sink.declare()
+    initialise()
+    checked = 0
+    for model in ModelRegistry._models:
+        if not can_have_where(model) or issubclass(model, Embedded):
+            continue
+        names = orderable_fields(model)
+        assert names[0] == "label"
+        assert typing.get_args(model.Order.model_fields["field"].annotation) == tuple(
+            names
+        )
+        check_order(model, [OrderBy(field=name) for name in names])
+        checked += len(names)
+    # (the dates of the embedded `Date` are among them)
+    assert "born.when" in orderable_fields(ModelRegistry.all_models()["Person"])
+    assert checked > 20
+
+
+def test_order_refuses_a_field_that_cannot_be_ordered_by():
+    Person, Poet, Place, Letter, When, *_ = models()
+
+    assert Letter.Order(field="when.year", direction="desc").field == "when.year"
+    for name in ("tags", "sender", "nonsense", "when"):
+        with pytest.raises(ValidationError):
+            Letter.Order(field=name)

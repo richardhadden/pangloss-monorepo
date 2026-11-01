@@ -252,7 +252,7 @@ def test_a_model_with_operations_has_search_in_its_stub_taking_its_where_or_a_ma
         assert (
             f"{define} search(cls, pattern: Ship.Where | _PgMatch | None = None, "
             "page_number: int | None = None, page_size: int | None = None, *, "
-            "order_by: _pg_builtins.list[_PgOrderBy | str] | None = None) "
+            "order_by: _pg_builtins.list[Ship.Order | _pg_typing.Literal['label']] | None = None) "
             "-> _PgListItems[Ship.ReferenceView]"
         ) in source
 
