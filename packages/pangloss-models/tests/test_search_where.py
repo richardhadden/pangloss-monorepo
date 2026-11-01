@@ -14,7 +14,6 @@ from pangloss_models.search_where import (
     AnyRel,
     Choice,
     Compare,
-    DocumentWhere,
     EntityWhere,
     IncomingFrom,
     Items,
@@ -95,21 +94,7 @@ def models():
         copies_to: list[Person]
 
     initialise()
-
-    # (written by hand here: `initialise` makes them, in the next step)
-    class PersonWhere(EntityWhere):
-        model = Person
-        born: Compare[int] | None = None
-
-    class LetterWhere(DocumentWhere):
-        model = Letter
-        title: Text | None = None
-        sender: Rel | PersonWhere | None = None
-        copies_to: Rel | PersonWhere | None = None
-
-    LetterWhere.model_rebuild()
-    PersonWhere.model_rebuild()
-    return Person, Letter, PersonWhere, LetterWhere
+    return Person, Letter, Person.Where, Letter.Where
 
 
 def test_a_where_is_the_where_of_the_json_and_a_where_of_another_node_is_its_pattern():
@@ -137,7 +122,7 @@ def test_a_where_is_the_where_of_the_json_and_a_where_of_another_node_is_its_pat
         "$mentions": {"is": SMITH},
     }
     # (a pattern with nothing in its `where` is only its type)
-    assert PersonWhere().pattern() == {"type": "Person"}
+    assert PersonWhere().to_pattern() == {"type": "Person"}
 
 
 def test_somewhere_and_incoming_are_patterns_of_other_nodes():
@@ -161,7 +146,7 @@ def test_somewhere_and_incoming_are_patterns_of_other_nodes():
 
 def test_a_where_that_is_not_of_a_model_cannot_be_a_pattern():
     with pytest.raises(TypeError, match="is not the Where of a model"):
-        Where().pattern()
+        Where().to_pattern()
 
 
 def test_check_match_takes_a_where_and_the_classes_in_a_dict_as_it_takes_the_json():

@@ -18,6 +18,9 @@ name of the parameter.
 
 import datetime
 from decimal import Decimal
+import operator
+from collections.abc import Iterable
+from functools import reduce
 from typing import Annotated, Any, ClassVar
 from uuid import UUID
 
@@ -28,9 +31,13 @@ from pydantic import (
     ConfigDict,
     Field,
     StrictBool,
+    create_model,
 )
+from pydantic.fields import FieldInfo
 
-from pangloss_models.search import SearchKey
+from pangloss_models.exceptions import PanglossModelError
+from pangloss_models.model_bases.model_tools import forget_schema, set_field
+from pangloss_models.search import Reach, SearchKey, field_kind
 
 
 def aliased(name: str, alias: str) -> Any:
@@ -149,7 +156,7 @@ class Rel(Written):
         if "match" in written:
             del written["match"]
             if self.match is not None:
-                written.update(self.match.pattern())
+                written.update(self.match.to_pattern())
         return written
 
 
@@ -169,9 +176,9 @@ class AnyRel(Rel):
 class Where(Written):
     """The base of the `Where` of each model (`Letter.Where`), which `initialise` makes with a field for each
     field of the model that can be searched. A pattern for the node, written as the `where` of the JSON;
-    as what a relation points at (or one of `$somewhere`, `$incoming`) it is also its `type` (`pattern()`)."""
+    as what a relation points at (or one of `$somewhere`, `$incoming`) it is also its `type` (`to_pattern()`)."""
 
-    model: ClassVar[type | None] = None
+    _model: ClassVar[type | None] = None
 
     # (combinators: patterns for the same node)
     all_: "list[Where] | None" = aliased("all_", SearchKey.ALL)
@@ -190,13 +197,13 @@ class Where(Written):
             dict(sorted(given.items(), key=lambda kv: kv[0].startswith("$")))
         )
 
-    def pattern(self) -> dict[str, Any]:
+    def to_pattern(self) -> dict[str, Any]:
         """The pattern of a node this is for: its `type` and its `where`"""
-        if self.model is None:
+        if self._model is None:
             raise TypeError(
                 f"{type(self).__name__} is not the Where of a model (use Letter.Where and the like)"
             )
-        written: dict[str, Any] = {"type": self.model.__name__}
+        written: dict[str, Any] = {"type": self._model.__name__}
         where = self.to_json()
         if where:
             written["where"] = where
@@ -217,7 +224,7 @@ def where_json(where: dict[str, Any]) -> dict[str, Any]:
 
 def as_pattern(value: Any) -> Any:
     if isinstance(value, Where):
-        return value.pattern()
+        return value.to_pattern()
     if isinstance(value, list):
         return [as_pattern(item) for item in value]
     return plain(value)
@@ -247,7 +254,7 @@ class IncomingFrom(Written):
     through: list[Named] | None = None
 
     def to_json(self) -> Any:
-        written = self.where.pattern()
+        written = self.where.to_pattern()
         if self.field is not None:
             written["field"] = self.field
         if self.through is not None:
@@ -267,6 +274,121 @@ class EntityWhere(Where):
 
 class EmbeddedWhere(Where):
     """The base of the `Where` of an embedded model"""
+
+
+# ---------------------------------------------------------------------------
+# The `Where` of each model
+# ---------------------------------------------------------------------------
+
+WHERE_KINDS = ("Document", "Entity", "Embedded")
+
+
+def where_base(model: type) -> type[Where]:
+    from pangloss_models.model_bases.document import Document
+    from pangloss_models.model_bases.entity import Entity
+
+    if issubclass(model, Document):
+        return DocumentWhere
+    if issubclass(model, Entity):
+        return EntityWhere
+    return EmbeddedWhere
+
+
+def can_have_where(model: Any) -> bool:
+    from pangloss_models.utils import model_is_trait
+
+    return (
+        getattr(model, "__metatype__", None) in WHERE_KINDS
+        and not model_is_trait(model)
+        # (`Negative[Person]` and the like: the model is `Negative`)
+        and not (getattr(model, "__pydantic_generic_metadata__", None) or {}).get(
+            "origin"
+        )
+        and hasattr(getattr(model, "_meta", None), "fields")
+    )
+
+
+def operators_for(kind: str, base: Any, made: dict[type, type[Where]]) -> Any:
+    """The annotation of a field of a `Where` (without `None`)"""
+    if kind == "text":
+        return Text
+    if kind in ("number", "decimal", "temporal"):
+        return Compare[base]
+    if kind == "simple":
+        return Choice[base]
+    if kind == "list":
+        return Items[base]
+    # (a relation, or an embedded field: what it points at, each with its own `Where`)
+    reach: Reach = base
+    targets = [made[option] for option in reach.options if option in made]
+    return reduce(operator.or_, [Rel, *(targets or [Where])])
+
+
+def initialise_where_models(models: Iterable[Any]) -> None:
+    """Give each document, entity and embedded model its `Where`, with a field for each of its fields that can be
+    searched (`field_kind`). The classes refer to each other (what a relation points at), so all are made before
+    any is given its fields."""
+    made: dict[Any, Any] = {}
+    for model in models:
+        if not can_have_where(model):
+            continue
+        where = create_model(
+            f"{model.__name__}Where",
+            __base__=where_base(model),
+            __module__=model.__module__,
+            __doc__=f"A search pattern for a {model.__name__} (see `pangloss_models.search_where`)",
+        )
+        where._model = model
+        model.Where = where
+        made[model] = where
+
+    for model, where in made.items():
+        # (the fields of the base classes, and the methods of a pattern)
+        reserved = set(where.model_fields) | {"to_json", "to_pattern"}
+        for name, definition in model._meta.fields.items():
+            found = field_kind(definition)
+            # (`label` is searched as text whether it is declared or not: the base class has it)
+            if isinstance(found, str) or name == "label":
+                continue
+            if name in reserved:
+                raise PanglossModelError(
+                    f"{model.__name__} has a field named '{name}', which is a name of its search pattern "
+                    f"({where.__name__}): call it something else"
+                )
+            kind, base = found
+            set_field(
+                where,
+                name,
+                FieldInfo(
+                    annotation=operators_for(kind, base, made) | None, default=None
+                ),
+            )
+        # (the combinators are patterns of the same class)
+        set_field(where, "all_", combinator("all_", SearchKey.ALL, list_of(where)))
+        set_field(
+            where, "any_of_", combinator("any_of_", SearchKey.ANY_OF, list_of(where))
+        )
+        set_field(where, "not_", combinator("not_", SearchKey.NOT, where))
+
+    # (as for the other models made: forget the schemas made while the fields were not all there)
+    for where in made.values():
+        forget_schema(where)
+    for where in made.values():
+        where.model_rebuild(force=True)
+
+
+def list_of(item: Any) -> Any:
+    return list[item]  # (made at runtime: the item is a class made at runtime)
+
+
+def combinator(name: str, alias: str, annotation: Any) -> FieldInfo:
+    alias = str(alias)
+    return FieldInfo(
+        annotation=annotation | None,
+        default=None,
+        validation_alias=AliasChoices(alias, name),
+        serialization_alias=alias,
+    )
 
 
 Rel.model_rebuild()

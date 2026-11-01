@@ -52,6 +52,7 @@ lazy from pangloss_models.initialise_models.initialise_update_model import (
     can_have_update_model,
     initialise_update_model,
 )
+lazy from pangloss_models.search_where import initialise_where_models
 lazy from pangloss_models.initialise_models.initialise_view_model import (
     add_fields_to_view_model,
     can_have_view_model,
@@ -437,6 +438,9 @@ class ModelRegistry:
         # created with)
         for action_class in cls._action_classes:
             apply_camel_case_aliases(action_class)
+
+        # The search patterns of the models (`Person.Where`; see docs/search-where-implementation.md)
+        initialise_where_models(cls._model_dict.values())
 
         # A model embeds the schema of the models it refers to as they were when it was last rebuilt, so
         # models that refer to each other (an `Order` that orders a `Statement`, which may be an `Order`)

@@ -118,6 +118,11 @@ it does now (see the decisions).
    - the examples in `structured-search.md`, and the patterns of `test_search_match.py`, written as `Where`, dump to
      the same dict and `check_match` gives the same result;
    - cycles (an `Order` of a `Statement` that may be an `Order`) nest without limit.
+   **Built** (`initialise_where_models` in `search_where.py`, called at the end of `finalise`). Measured: 13 ms more
+   for the 18 classes of the demo (1.22 s to 1.23 s), so no `defer_build`. A model's own `label` field is left to
+   the base class's (it is searched as text either way); a field named as a field of the base class or `to_json`
+   or `to_pattern` is a `PanglossModelError`. The patterns cannot nest without limit after all: `check_match`
+   allows 50 patterns in a search.
 5. **`search` takes a `Where`.** `search(cls, pattern: Match | Where | None = None, *, order_by=None,
    page_number=None, page_size=None)` in the Cypher backend (`read_functions.search`), the SDK's `api` and
    `api_sync`, and anything else that binds `search`. A `Where` of another class than the one searched is an error
