@@ -183,12 +183,19 @@ def bulk_recover() -> None:
 
 @cli.command()
 def refold() -> None:
-    """Write the folded label (`label_folded`, which the text index is on) of every node from its label
+    """(Deprecated) Write the folded label (`label_folded`, which the text index is on) of every node from its label
 
-    What the models write has it already. Run this after a change that set labels without them: a migration's
-    `RunCypher`, or a query of your own. Searches find "Zürich" for `zurich` by it.
+    What the models write has it already, and so does a migration, after a change by hand (`RunCypher`, `RunPython`)
+    as well. Only a query of your own, run outside both, leaves labels without it. Searches find "Zürich" for `zurich`
+    by it.
     """
     from pangloss_memgraph.databases.memgraph.folding import refold as refold_labels
 
+    typer.secho(
+        "`pangloss memgraph refold` is deprecated: migrations keep the folded labels up to date. "
+        "It is only needed after a query of your own that set labels",
+        fg="yellow",
+        err=True,
+    )
     done = run_connected(refold_labels)
     typer.secho(f"Folded the labels of {done} nodes", fg="green")

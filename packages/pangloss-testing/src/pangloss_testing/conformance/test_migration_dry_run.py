@@ -12,7 +12,7 @@ from pangloss_models.model_bases.document import Document
 from pangloss_models.model_bases.entity import Entity
 from pangloss_models.model_bases.reified_relation import ReifiedRelation
 from pangloss_testing.under_test import migration_backend as backend
-from pangloss_testing.under_test.migrations import dry_run
+from pangloss_cypher.migrations import dry_run
 
 from .helpers import run
 from .migration_support import declare

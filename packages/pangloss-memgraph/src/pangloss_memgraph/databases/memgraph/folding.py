@@ -1,8 +1,9 @@
 """The folded labels that Memgraph's text index is on (`label_folded`: see `pangloss_models.text`).
 
-Everything written through the models gets one (`MemgraphDialect.encode_properties`). What was written before, or by a
-query that sets `label` itself (a migration's `RunCypher`), is brought up to date by `refold` (`pangloss memgraph
-refold`), or, in a migration, by `refold_in_migration`."""
+Everything written through the models gets one (`MemgraphDialect.encode_properties`); a migration writes it again where
+a change set labels in Cypher (`MemgraphMigrations.rederive`), a change by hand (`RunCypher`) too. What was written
+before there was one, or by a query of your own outside a migration, is brought up to date by `refold` (`pangloss
+memgraph refold`, deprecated), or, in a migration, by `refold_in_migration`."""
 
 from typing import Any
 

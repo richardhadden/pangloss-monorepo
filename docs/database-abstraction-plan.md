@@ -1,6 +1,7 @@
 # Database abstraction: implementation plan
 
-**Status: plan (2026-10-31). Nothing here is built.** It turns [database-abstraction.md](database-abstraction.md)
+**Status: built (phases 0–10, 2026-10-31 to 2026-11-01, on the branch `refactor-db-layer`); each phase has an "As
+built" note.** It turns [database-abstraction.md](database-abstraction.md)
 into ordered work, includes the fixes from [code-review-2026-10-31.md](code-review-2026-10-31.md), and adds what a
 survey of the other packages' Cypher found ([§2](#2-cypher-outside-the-backends)).
 
@@ -704,6 +705,79 @@ part of the port):
   `RunCypher` is refused and `RunPython` is the way.
 - **Done when** a project's migrations apply the same on both backends, and a foreign-dialect `RunCypher` is refused
   with that message.
+
+**As built (2026-11-01):**
+
+- **The operations are the kit's.** `pangloss_cypher.migrations` holds `operations.py`, `runner.py` and
+  `conversion.py`, from Memgraph's copy. The two backends' copies differed in about 30 places. Those places now ask
+  the backend's `MigrationDialect` (`Dialect.migrations`, in `databases/<backend>/migration_dialect.py`):
+  - **how `meta` is stored:** `meta_mentions`, `inserted_node_meta`, `new_meta_properties` and `meta_properties`
+    (the contexts are read through the dialect's own `has_meta`, `meta_of` and `wrap_transaction`);
+  - **maps:** `set_map`, `map_value` and `unwrap_map`, for annotated values;
+  - **enums:** `enum_test` and `enum_rewrite`. Memgraph uses `map.set_key` inside a `TypedDict`; Neo4j sets one flat
+    property for each part, and still refuses an enum inside a list of `TypedDict`s;
+  - **the walk to what a node owns:** `owned`. `id(e)` became the dialect's `tie_break`;
+  - **the DDL:** `add_index`, `remove_index`, `add_constraint` and `remove_constraint`, each the backend's own.
+
+  The backends' `migrations/` packages re-export the kit, so `migration_backend` and the shipped migrations did not
+  change. The runner runs under `using(database)`, so the operations find the dialect of the database they were
+  given. The conformance suite imports `pangloss_cypher.migrations` directly. The contract test checks both
+  backends' migration dialects against the protocol.
+- **Query text on Memgraph is unchanged** apart from three things:
+  - the variable names of the owned walk (`owned_edge`, `owned_to` for `e2`, `n2`);
+  - `CASE WHEN n.meta IS NOT NULL THEN n.meta END` in the read of the contexts;
+  - `SET n += {meta: …}` for `SET n.meta = …`.
+
+  None of these is a read of the models, so nothing was measured on :7689. On Neo4j the texts are the ones it had.
+- **Labels written in Cypher are folded.** After a change that may set `label`, the kit calls
+  `MigrationDialect.rederive` (`operations.labels_written`). Those changes are:
+  - a field called `label` that is added, removed, renamed, made required, converted, wrapped or unwrapped;
+  - literals moved to or from an embedded object, if `label` is among them;
+  - a `RunCypher` or `RunPython`, for the models in its `affects`, or for every node if it has none.
+
+  This happens inside `apply_change`, and in a transaction of its own after the batches of a batched change.
+  - **On Memgraph** it reads the label and `label_folded` of those nodes, and writes `label_folded` by `id(n)`,
+    10,000 at a time, only where it differs (a write of a text-indexed property is what costs).
+  - **On Neo4j** it does nothing: its full-text index folds the label itself.
+  - **`pangloss memgraph refold`** is deprecated. It says so when run, and is still there for labels set by a
+    query of your own outside the migrations.
+
+  I did this inside the kit's operations, not through `encode_properties` as the plan said. The operations write
+  their values in Cypher expressions, not from Python, so there is no dict of properties to encode.
+- **`RunCypher(dialect=…)`.**
+  - **In the file.** `RunCypher` has `dialect: str | None`. When `dialect` is not given it is left out of
+    `to_dict`, so a file written before has the same checksum. Undoing a `RunCypher` keeps its dialect.
+  - **The check.** `changes.check_dialects(changes, dialect)` is run by the kit's runner before anything is done,
+    in `apply_changes`, `apply_changes_in_batches` and `dry_run`. Of `RunCypher`s with a dialect that are next to each
+    other, there must be one for the backend in use. That one runs, and the others are skipped. Otherwise the run is
+    refused with: "this migration was written for Memgraph; give a Neo4j version with `RunCypher(...,
+    dialect="neo4j")` next to it".
+  - **Without a `dialect`.** A `RunCypher` without one is run as written for the backend in use, with a warning
+    (`pangloss.cypher.migrations`), once per query in a process.
+  - **A backend without Cypher.** With `dialect=None`, which stands for a backend without the `cypher` capability,
+    every `RunCypher` is refused: "write it as a `RunPython`".
+  - **The hint.** `makemigrations --empty` writes the installed backend's name into the hint's `RunCypher`
+    (`files.empty_hint`). It leaves the name out for a backend that runs no Cypher.
+- **Tests.**
+  - **Conformance, on both backends:**
+    - a `RunCypher` for the other backend is refused, by all three ways of applying, and nothing is done;
+    - of two versions next to each other, the one for this backend runs, in either order;
+    - one without a dialect runs, and warns once;
+    - a label set by a `RunCypher` or a `RunPython`, applied at once or in batches, is found by `zurich` and no
+      longer by its old words.
+
+    With `rederive` taken out, the four label tests fail on Memgraph.
+  - **Unit tests:**
+    - the checksum without `dialect`;
+    - `check_dialects` and its message;
+    - the refusal without Cypher;
+    - undoing a query;
+    - the hint;
+    - `cypher_dialect` in the command line.
+  - **`./run_tests.sh` passes:** Memgraph packages 2,542; conformance on Neo4j 492; `pangloss-neo4j` 162; typology 22,
+    calendar 16, dates 4 and zotero 7 on Neo4j; 57 browser tests.
+- **Size.** The kit's migrations are 2,753 lines. Each backend keeps a migration dialect of about 270 lines, where it
+  had about 2,750 lines of migration code.
 
 ## 5. Deferred: the `Storage` port
 

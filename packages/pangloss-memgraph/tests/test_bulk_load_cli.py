@@ -321,6 +321,7 @@ def test_refold_writes_the_folded_labels_of_labels_written_without_them(project,
 
     assert done.returncode == 0, done.stderr
     assert "Folded the labels of 1 nodes" in done.stdout
+    assert "deprecated" in done.stderr
     [row] = query(
         "MATCH (n:PGIndexableNode {id: 'refold-1'}) RETURN n.label_folded AS folded"
     )

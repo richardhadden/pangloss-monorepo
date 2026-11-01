@@ -1,5 +1,6 @@
 """Memgraph's answers where the Cypher backends differ (`pangloss_cypher.dialect.Dialect`)"""
 
+import functools
 from typing import Any
 
 import neo4j
@@ -122,6 +123,15 @@ class MemgraphDialect:
         return f"<-{walk}-" if backwards else f"-{walk}->"
 
     search_compiler = Compiler
+
+    @functools.cached_property
+    def migrations(self) -> Any:
+        """(`migration_dialect`, which needs the modules that need this one: made when first asked for)"""
+        from pangloss_memgraph.databases.memgraph.migration_dialect import (
+            MemgraphMigrations,
+        )
+
+        return MemgraphMigrations()
 
     def query(self, name: str, default: str, **context: Any) -> str:
         return default

@@ -240,6 +240,8 @@ def test_an_empty_migration_is_made_to_write_by_hand(models_project: Path):
     assert migration_files(models_project) == ["0001_initial.py", "0002_by_hand.py"]
     path = models_project / "fakeapp/migrations/0002_by_hand.py"
     assert "RunCypher" in path.read_text()  # (the hint)
+    # (a query is for the backend installed: this one runs no Cypher, so none is named)
+    assert "dialect=" not in path.read_text()
 
     # the models have not changed, so there is nothing else to make, and it can be applied
     assert "No changes" in invoke("makemigrations")[1]
@@ -1043,3 +1045,19 @@ def test_a_backend_without_snapshots_says_so(models_project: Path, monkeypatch):
     exit_code, output = invoke("migrate", "--backup")
     assert exit_code != 0 and "cannot take a backup" in output
     assert "backup" not in backend().CALLS
+
+
+def test_a_query_by_hand_is_for_the_backend_installed(monkeypatch):
+    from pangloss_cli import migrations
+    from pangloss_core.storage import Capabilities, Storage
+
+    def storage(name: str, cypher: bool):
+        return lambda settings: Storage(
+            name=name, package=name, capabilities=Capabilities(cypher=cypher)
+        )
+
+    project = type("P", (), {"require_settings": lambda self: None})()
+    monkeypatch.setattr(migrations, "storage_of", storage("neo4j", True))
+    assert migrations.cypher_dialect(project) == "neo4j"
+    monkeypatch.setattr(migrations, "storage_of", storage("rdf", False))
+    assert migrations.cypher_dialect(project) is None

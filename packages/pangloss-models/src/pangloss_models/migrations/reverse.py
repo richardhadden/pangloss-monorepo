@@ -375,6 +375,7 @@ def _run_cypher(change: c.RunCypher, before):
     return [
         c.RunCypher(
             query=change.reverse_query,
+            dialect=change.dialect,
             parameters=change.reverse_parameters or {},
             lossy=change.lossy,
             affects=change.affects,

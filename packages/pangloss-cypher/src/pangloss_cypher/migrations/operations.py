@@ -1,4 +1,4 @@
-"""What each change does to a Neo4j database.
+"""What each change does to a database of a Cypher backend.
 
 `apply_change(tx, change, state)` makes a change to the data, in the transaction `tx`.
 `state` is the snapshot of the models *before* the change (see
@@ -9,9 +9,10 @@ Changes are written for a model and a field, and select by label (`MATCH (n:Stat
 that one change is made wherever the model is used: subclasses carry the label of their
 parents, and a nested model is found without knowing what it is nested in.
 
-Indexes and constraints are changed outside of a transaction (`run_ddl`), as Neo4j requires;
-enums are stored as the values of their members, so changing one is a change to data like any other.
-See `docs/migrations.md` 5.6.
+Indexes and constraints are changed outside of a transaction (`run_ddl`), as the databases require,
+by the backend (`MigrationDialect`); so is what depends on how a backend stores a map (`meta`, an
+annotated value, a `TypedDict`). Enums are stored as the values of their members, so changing one is a
+change to data like any other. See `docs/migrations.md` 5.6.
 """
 
 import copy
@@ -34,28 +35,11 @@ from pangloss_models.migrations import changes as c
 from pangloss_models.migrations.state import rename_field
 from pangloss_models.migrations.state import rename_model as state_after_rename
 
-from pangloss_neo4j.databases.neo4j.database import Database, Transaction
-from pangloss_neo4j.databases.neo4j.migrations.conversion import (
-    convert_expression,
-)
-from pangloss_neo4j.databases.neo4j.properties import decode, flat_meta, meta_map
-from pangloss_neo4j.databases.neo4j.schema import (
-    await_indexes,
-    create_constraint_statement,
-    create_index_statement,
-    has_constraint,
-    has_index,
-    list_constraints,
-    list_indexes,
-    run_statement,
-)
-from pangloss_neo4j.databases.neo4j.schema import ident as ident_name
-from pangloss_neo4j.databases.neo4j.traversal import hops
+from pangloss_cypher.dialect import MigrationDialect
+from pangloss_cypher.migrations.conversion import convert_expression
+from pangloss_cypher.transactions import Database, Transaction, dialect
 
 IDENTIFIER = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
-
-# What a node owns, below it: forward edges, not into an entity (for deleting what a relation owned)
-OWNED = hops("owned", "NOT owned_to:Entity AND NOT coalesce(owned_edge.reverse, false)")
 
 DIRECT_KINDS = {"document", "entity"}
 SCALAR_PROPERTY_KINDS = {"literal", "list", "annotatedValue", "typeVar"}
@@ -64,6 +48,11 @@ SCALAR_PROPERTY_KINDS = {"literal", "list", "annotatedValue", "typeVar"}
 # ---------------------------------------------------------------------------
 # Looking things up, and writing Cypher
 # ---------------------------------------------------------------------------
+
+
+def migration_dialect() -> MigrationDialect:
+    """Where the backend in use differs (`Dialect.migrations`)"""
+    return dialect().migrations
 
 
 def ident(name: str) -> str:
@@ -270,11 +259,8 @@ async def rename_model(
         if limit
         else "WITH DISTINCT coalesce(n.head_node_id, n.id) AS head "
     )
-    mentions = """
-        MATCH (n) WHERE n.`meta.created_by` IS NOT NULL AND (
-            $old IN coalesce(n.`meta.semantic_spaces`, [])
-            OR $old IN coalesce(n.`meta.context_label_types`, [])
-            OR coalesce(n.`meta.context_labels#json`, '') CONTAINS ('"type":"' + $old + '"'))
+    mentions = f"""
+        MATCH (n) WHERE {migration_dialect().meta_mentions("n", "$old")}
     """
     heads = await run(tx, f"{mentions}{head_window}RETURN head", old=change.old)
     if heads:
@@ -454,7 +440,7 @@ async def delete_relation(
             f"""
             MATCH (n:{label})-[e]->(t)
             WHERE type(e) IN $forward AND NOT t:Entity AND NOT coalesce(e.reverse, false)
-            OPTIONAL MATCH (t) {OWNED} (d)
+            OPTIONAL MATCH (t){migration_dialect().owned("owned")}(d)
             WITH collect(DISTINCT t) + collect(DISTINCT d) AS owned
             UNWIND [x IN owned WHERE x IS NOT NULL] AS o
             DETACH DELETE o
@@ -491,7 +477,7 @@ async def delete_relation_batch(
             MATCH (n:{label})-[e]->(t)
             WHERE type(e) IN $forward AND NOT t:Entity AND NOT coalesce(e.reverse, false)
             WITH t LIMIT {int(limit)}
-            OPTIONAL MATCH (t) {OWNED} (d)
+            OPTIONAL MATCH (t){migration_dialect().owned("owned")}(d)
             WITH collect(DISTINCT t) AS tops, collect(DISTINCT d) AS below
             WITH size(tops) AS handled, tops + [x IN below WHERE x IS NOT NULL] AS owned
             UNWIND owned AS o
@@ -579,7 +565,7 @@ async def remove_field(
             tx,
             window,
             select_nodes(ident(change.model), f"{prop} IS NOT NULL", window)
-            + f" SET {prop} = null",  # (not REMOVE: Neo4j does not count that in a dry run)
+            + f" SET {prop} = null",  # (not REMOVE: Memgraph does not count that in a dry run)
         )
     await delete_relation(tx, change.model, field)
     return None
@@ -804,18 +790,22 @@ async def literal_to_annotated(
         )
     prop = f"n.{ident(change.name)}"
     params: dict[str, Any] = {}
-    # (an annotated value is stored flat, a property for each part of it: `name.value`, `name.certainty`)
-    parts = [f"n.{ident_name(change.name + '.value')} = {prop}"]
+    parts = {"value": prop}
     for name, value in defaults.items():
-        parts.append(
-            f"n.{ident_name(change.name + '.' + name)} = "
-            f"{literal_expression(value, field_descriptor(extras[name]), params, 'extra_' + name, state['enums'])}"
+        ident(name)
+        parts[name] = literal_expression(
+            value,
+            field_descriptor(extras[name]),
+            params,
+            "extra_" + name,
+            state["enums"],
         )
     return await run_on_nodes(
         tx,
         window,
         select_nodes(ident(change.model), f"{prop} IS NOT NULL", window)
-        + f" SET {', '.join(parts)} REMOVE {prop}",
+        + " "
+        + migration_dialect().set_map("n", change.name, parts),
         **params,
     )
 
@@ -826,20 +816,17 @@ async def annotated_to_literal(
     state: dict,
     window: Window | None = None,
 ) -> list[str] | None:
-    prop = f"n.{ident(change.name)}"
-    value = f"n.{ident_name(change.name + '.value')}"
+    ident(change.name)
     field = field_of(state, change.model, change.name)
     annotated = state["models"].get(field.get("model"), {"fields": []})
-    parts = [value] + [
-        f"n.{ident_name(change.name + '.' + f['name'])}"
-        for f in annotated["fields"]
-        if f["name"] != "value"
-    ]
+    keys = ["value"] + [f["name"] for f in annotated["fields"] if f["name"] != "value"]
+    value = migration_dialect().map_value("n", change.name, "value")
     return await run_on_nodes(
         tx,
         window,
         select_nodes(ident(change.model), f"{value} IS NOT NULL", window)
-        + f" SET {prop} = {value} REMOVE {', '.join(parts)}",
+        + " "
+        + migration_dialect().unwrap_map("n", change.name, "value", keys),
     )
 
 
@@ -886,7 +873,7 @@ async def alter_cardinality(
         tx,
         f"""
         MATCH (n:{label})-[e]->(t) WHERE type(e) = $forward AND NOT coalesce(e.reverse, false)
-        WITH n, e, t ORDER BY elementId(e)
+        WITH n, e, t ORDER BY {dialect().tie_break("e")}
         WITH n, collect({{e: e, t: t}}) AS edges WHERE size(edges) > 1
         {window}UNWIND edges[1..] AS extra
         WITH n, extra.e AS e, extra.t AS t
@@ -1139,50 +1126,6 @@ async def alter_edge_model(
 # ---------------------------------------------------------------------------
 
 
-# The `meta` of a node that is made beside another, `s`, for what `s` holds (a node a migration
-# inserts, such as a reified relation): written as the models would write it. Its times and
-# creator are those of `s` (or, for a head node, which has no `meta`, of its creation); it is in
-# the semantic spaces `s` is in; and the context is that of `s`, with `s` in it if `s` is a
-# document nested in another (and so a part of the context of what it holds).
-INSERTED_NODE_META = """
-    OPTIONAL MATCH (s)<-[:is_creation_of]-(creation:PGCreation)-[:created_by]->(creator:PGUser)
-    WITH *, s.`meta.created_by` IS NOT NULL AS has_meta
-    WITH *, CASE WHEN has_meta THEN coalesce(s.`meta.context_labels#json`, '[]') ELSE '[]' END AS base_labels
-    WITH *, {
-        created_by: coalesce(s.`meta.created_by`, creator.username),
-        created_when: coalesce(s.`meta.created_when`, creation.created_when),
-        updated_by: coalesce(s.`meta.updated_by`, creator.username),
-        updated_when: coalesce(s.`meta.updated_when`, creation.created_when),
-        semantic_spaces: coalesce(s.`meta.semantic_spaces`, []),
-        context_labels: CASE
-            WHEN NOT has_meta THEN '[]'
-            WHEN base_labels <> '[]' THEN base_labels
-            WHEN coalesce($labels_in_context[s.type], true)
-                THEN '[{"type":"#rootcontext","contents":[{"type":"' + s.type + '","id":"' + s.id + '"}]}]'
-            ELSE '[]' END,
-        context_label_types: CASE
-            WHEN NOT has_meta THEN []
-            WHEN base_labels <> '[]' THEN coalesce(s.`meta.context_label_types`, [])
-            WHEN coalesce($labels_in_context[s.type], true) THEN ['#rootcontext']
-            ELSE [] END} AS new_meta
-"""
-
-# (the `meta` of the new node, as the flat properties it is stored in: the list of context labels is JSON text)
-META_FROM_NEW = (
-    "`meta.created_by`: new_meta.created_by, `meta.created_when`: new_meta.created_when, "
-    "`meta.updated_by`: new_meta.updated_by, `meta.updated_when`: new_meta.updated_when, "
-    "`meta.semantic_spaces`: new_meta.semantic_spaces, `meta.context_labels#json`: new_meta.context_labels, "
-    "`meta.context_label_types`: new_meta.context_label_types"
-)
-
-# (what a node made for a wrapper's contents has: who and when, and no spaces and no context)
-META_WITHOUT_CONTEXT = (
-    "`meta.created_by`: new_meta.created_by, `meta.created_when`: new_meta.created_when, "
-    "`meta.updated_by`: new_meta.updated_by, `meta.updated_when`: new_meta.updated_when, "
-    "`meta.semantic_spaces`: []"
-)
-
-
 def labels_in_context(state: dict) -> dict[str, bool]:
     """Whether a nested document of each model is a part of the context of what it holds"""
     return {
@@ -1297,13 +1240,13 @@ async def wrap_reified(
         WITH collect({{s: s, p: p}}) AS pairs
         UNWIND range(0, size(pairs) - 1) AS i
         WITH pairs[i].s AS s, pairs[i].p AS p, $ids[i] AS new_id
-        {INSERTED_NODE_META}
+        {migration_dialect().inserted_node_meta}
         CREATE (r{wrapper_labels} {{
             id: new_id,
             type: $wrapper,
             head_node_id: coalesce(s.head_node_id, s.id),
             head_node_type: coalesce(s.head_node_type, s.type),
-            {META_FROM_NEW}{", " + assignments if assignments else ""}
+            {migration_dialect().new_meta_properties(context=True)}{", " + assignments if assignments else ""}
         }})
         {" ".join(new_edges)}
         CREATE (r)-[:target]->(p)
@@ -1476,25 +1419,24 @@ async def recompute_contexts(tx: Transaction, head_ids: list[str], state: dict) 
     in_context = labels_in_context(state)
     for head_id in dict.fromkeys(head_ids):
         rows = await run(
-            tx,
-            """
+            # (decoded, as the reads of the models are: the `meta` as a map)
+            dialect().wrap_transaction(tx),
+            f"""
             MATCH (n) WHERE n.id = $id OR n.head_node_id = $id
             RETURN n.id AS id, labels(n) AS labels, n.type AS type,
-                   CASE WHEN n.`meta.created_by` IS NULL THEN null ELSE """
-            + meta_map("n")
-            + """ END AS meta
+                   CASE WHEN {dialect().has_meta("n")} THEN {dialect().meta_of("n")} END AS meta
             """,
             id=head_id,
         )
-        nodes = {row["id"]: decode(row) for row in rows}
+        nodes = {row["id"]: row for row in rows}
         edges = await run(
             tx,
             """
             MATCH (a)-[e]->(b)
             WHERE (a.id = $id OR a.head_node_id = $id) AND b.head_node_id = $id
               AND NOT coalesce(e.reverse, false)
-            RETURN a.id AS source, b.id AS target, type(e) AS type ORDER BY elementId(e)
-            """,
+            RETURN a.id AS source, b.id AS target, type(e) AS type ORDER BY """
+            + dialect().tie_break("e"),
             id=head_id,
         )
         children: dict[str, dict[str, list[str]]] = {}
@@ -1525,13 +1467,8 @@ async def recompute_contexts(tx: Transaction, head_ids: list[str], state: dict) 
             updates.append(
                 {
                     "id": node_id,
-                    # (what is no longer there is set to null, which removes the property)
-                    "meta": flat_meta(
-                        {
-                            **meta,
-                            "semantic_spaces": spaces,
-                            "context_labels": labels,
-                        }
+                    "meta": migration_dialect().meta_properties(
+                        {**meta, "semantic_spaces": spaces, "context_labels": labels}
                     ),
                 }
             )
@@ -1587,13 +1524,13 @@ async def wrap_in_semantic_space(
         WITH collect({{s: s, p: p}}) AS pairs
         UNWIND range(0, size(pairs) - 1) AS i
         WITH pairs[i].s AS s, pairs[i].p AS p, $ids[i] AS new_id
-        {INSERTED_NODE_META}
+        {migration_dialect().inserted_node_meta}
         CREATE (r{labels} {{
             id: new_id,
             type: $wrapper,
             head_node_id: coalesce(s.head_node_id, s.id),
             head_node_type: coalesce(s.head_node_type, s.type),
-            {META_WITHOUT_CONTEXT}
+            {migration_dialect().new_meta_properties(context=False)}
         }})
         {" ".join(new_edges)}
         CREATE (r)-[:{ident(contents_forward)}]->(p)
@@ -1821,13 +1758,13 @@ async def literals_to_embedded(
         WITH collect(s) AS owners
         UNWIND range(0, size(owners) - 1) AS i
         WITH owners[i] AS s, $ids[i] AS new_id
-        {INSERTED_NODE_META}
+        {migration_dialect().inserted_node_meta}
         CREATE (e{labels} {{
             id: new_id,
             type: $embedded_type,
             head_node_id: coalesce(s.head_node_id, s.id),
             head_node_type: coalesce(s.head_node_type, s.type),
-            {META_WITHOUT_CONTEXT}{tail}
+            {migration_dialect().new_meta_properties(context=False)}{tail}
         }})
         CREATE (s)-[:{ident(forward)}]->(e)
         CREATE (e)-[:{ident(reverse)} {{reverse: true}}]->(s)
@@ -1876,7 +1813,7 @@ async def embedded_to_literals(
             tx,
             f"""
             MATCH (e) WHERE e.id IN $ids
-            OPTIONAL MATCH (e) {OWNED} (d)
+            OPTIONAL MATCH (e){migration_dialect().owned("owned")}(d)
             WITH collect(DISTINCT e) + collect(DISTINCT d) AS owned
             UNWIND [x IN owned WHERE x IS NOT NULL] AS o
             DETACH DELETE o
@@ -1946,71 +1883,28 @@ async def recompute_fulfils(
 
 
 # ---------------------------------------------------------------------------
-# Indexes and constraints (outside of a transaction)
+# Indexes and constraints (outside of a transaction): the backend's (`MigrationDialect`)
 # ---------------------------------------------------------------------------
 
 
-async def ddl(database: Database, statement: str) -> None:
-    await run_statement(
-        database.driver, database.settings.DATABASE.DATABASE_NAME, statement
-    )
-
-
-async def indexes_and_constraints(database: Database):
-    name = database.settings.DATABASE.DATABASE_NAME
-    return (
-        await list_indexes(database.driver, name),
-        await list_constraints(database.driver, name),
-    )
-
-
 async def add_index(database: Database, change: c.AddIndex, state: dict) -> None:
-    """Make an index. (There is none to make for a label, which every database has an index of, nor for what a uniqueness
-    constraint has made its own index of already.)"""
-    entry = change.index
-    existing, _ = await indexes_and_constraints(database)
-    if has_index(existing, entry) is not None:
-        return
-    statement = create_index_statement(entry)
-    if statement is not None:
-        await ddl(database, statement)
-        await await_indexes(database.driver, database.settings.DATABASE.DATABASE_NAME)
+    await database.dialect.migrations.add_index(database, change, state)
 
 
 async def remove_index(database: Database, change: c.RemoveIndex, state: dict) -> None:
-    """Drop an index. (One that a constraint made goes with the constraint, and cannot be dropped alone.)"""
-    existing, _ = await indexes_and_constraints(database)
-    found = has_index(existing, change.index)
-    if found is not None and not found.owned:
-        await ddl(database, f"DROP INDEX {ident_name(found.name)} IF EXISTS")
+    await database.dialect.migrations.remove_index(database, change, state)
 
 
 async def add_constraint(
     database: Database, change: c.AddConstraint, state: dict
 ) -> None:
-    """Make a uniqueness constraint. (It makes an index of its own: an index of the same properties made before it, as the
-    migrations do, is dropped first, or Neo4j refuses the constraint.)"""
-    existing_indexes, existing = await indexes_and_constraints(database)
-    if has_constraint(existing, change.constraint) is not None:
-        return
-    same = has_index(existing_indexes, {**change.constraint, "kind": "label+property"})
-    try:
-        if same is not None and not same.owned:
-            await ddl(database, f"DROP INDEX {ident_name(same.name)} IF EXISTS")
-        await ddl(database, create_constraint_statement(change.constraint))
-    except neo4j.exceptions.Neo4jError as error:
-        raise PanglossMigrationError(
-            f"Cannot make {change.describe()}: {error.message} (the data may break it already)"
-        ) from error
+    await database.dialect.migrations.add_constraint(database, change, state)
 
 
 async def remove_constraint(
     database: Database, change: c.RemoveConstraint, state: dict
 ) -> None:
-    _, existing = await indexes_and_constraints(database)
-    found = has_constraint(existing, change.constraint)
-    if found is not None:
-        await ddl(database, f"DROP CONSTRAINT {ident_name(found.name)} IF EXISTS")
+    await database.dialect.migrations.remove_constraint(database, change, state)
 
 
 # --- the values of an enum -----------------------------------------------------------------------
@@ -2020,78 +1914,16 @@ async def remove_constraint(
 # off a member, is a change to all of those.
 
 
-def holds_enum(
-    var: str, path: str, descriptor: dict, enum: str, keys: str, depth: int = 0
-) -> str | None:
-    """A Cypher condition that is true when the property `path` of `var` (of the type `descriptor`) has in it a value of
-    `enum` that is one of the `$keys` (their text); None if the type has no such enum. A `TypedDict` is stored flat, a
-    property for each of its fields (`size.shade`): the conditions are of those properties."""
-    ref = f"{var}.{ident_name(path)}"
+def has_enum(descriptor: dict, enum: str) -> bool:
+    """Whether a value of the type `descriptor` can have a value of `enum` in it"""
     kind = descriptor.get("type")
     if kind == "enum":
-        return f"toString({ref}) IN ${keys}" if descriptor["enum"] == enum else None
+        return descriptor["enum"] == enum
     if kind == "list":
-        item = descriptor["item"]
-        if item.get("type") == "typedDict":
-            refuse_enum_in_json(item, enum, path)
-            return None
-        inner = holds_enum(f"x{depth}", "", item, enum, keys, depth + 1)
-        if inner is None:
-            return None
-        return (
-            f"any(x{depth} IN {ref} WHERE {inner.replace(f'x{depth}.``', f'x{depth}')})"
-        )
+        return has_enum(descriptor["item"], enum)
     if kind == "typedDict":
-        parts = [
-            holds_enum(var, f"{path}.{name}", field, enum, keys, depth + 1)
-            for name, field in descriptor["fields"].items()
-        ]
-        parts = [p for p in parts if p]
-        return "(" + " OR ".join(parts) + ")" if parts else None
-    return None
-
-
-def refuse_enum_in_json(descriptor: dict, enum: str, path: str) -> None:
-    """A list of `TypedDict`s is stored as JSON text, which Cypher cannot change a part of"""
-    if any(
-        holds_enum("v", "f", field, enum, "k") is not None
-        for field in descriptor["fields"].values()
-    ):
-        raise PanglossMigrationNotSupported(
-            f"{path} is a list of TypedDicts with a value of {enum} in them, which Neo4j keeps as JSON text: "
-            "changing the values of an enum inside it is not supported by this backend"
-        )
-
-
-def rewrite_enum(
-    var: str, path: str, descriptor: dict, enum: str, values: str, depth: int = 0
-) -> list[tuple[str, str]] | None:
-    """The properties to set, for the property `path` of `var` with the values of `enum` that are keys of the map `$values`
-    (by their text) changed to what it says: pairs of the name of a flat property and the expression for its new value;
-    None if the type has no such enum. (`SET p = null` of what is not there is no change.)"""
-    ref = f"{var}.{ident_name(path)}"
-    kind = descriptor.get("type")
-    if kind == "enum":
-        if descriptor["enum"] != enum:
-            return None
-        return [(path, f"coalesce(${values}[toString({ref})], {ref})")]
-    if kind == "list":
-        item = descriptor["item"]
-        if item.get("type") == "typedDict":
-            refuse_enum_in_json(item, enum, path)
-            return None
-        if item.get("type") == "enum" and item["enum"] == enum:
-            x = f"x{depth}"
-            return [(path, f"[{x} IN {ref} | coalesce(${values}[toString({x})], {x})]")]
-        return None
-    if kind == "typedDict":
-        changed: list[tuple[str, str]] = []
-        for name, field in descriptor["fields"].items():
-            found = rewrite_enum(var, f"{path}.{name}", field, enum, values, depth + 1)
-            if found:
-                changed += found
-        return changed or None
-    return None
+        return any(has_enum(field, enum) for field in descriptor["fields"].values())
+    return False
 
 
 def enum_holders(state: dict, enum: str) -> list[dict]:
@@ -2130,7 +1962,7 @@ def enum_holders(state: dict, enum: str) -> list[dict]:
             continue
         parents = set(model.get("labels", [])) - {name}
         for prop, descriptor in descriptors(model):
-            if holds_enum("v", prop, descriptor, enum, "k") is None:
+            if not has_enum(descriptor, enum):
                 continue
             inherited = any(
                 parent in models and (prop, descriptor) in descriptors(models[parent])
@@ -2150,7 +1982,7 @@ def enum_holders(state: dict, enum: str) -> list[dict]:
                 for prop, descriptor in descriptors(
                     models.get(edge_model, {"fields": []})
                 ):
-                    if holds_enum("v", prop, descriptor, enum, "k") is None:
+                    if not has_enum(descriptor, enum):
                         continue
                     pairs = edge_pairs(entry)
                     holders.append(
@@ -2181,38 +2013,36 @@ async def rewrite_enum_values(
     keys = list(mapping)
     holders = enum_holders(state, enum)
     queries: list[tuple[str, str, str]] = []  # (where, count query, change query)
+    formats = migration_dialect()
     for holder in holders:
         label, prop, descriptor = (
             ident(holder["label"]),
             ident(holder["property"]),
             holder["type"],
         )
-        raw = holder["property"]
         if "edges" not in holder:
-            test = holds_enum("n", raw, descriptor, enum, "keys")
-            sets = ", ".join(
-                f"n.{ident_name(name)} = {expression}"
-                for name, expression in rewrite_enum(
-                    "n", raw, descriptor, enum, "values"
+            test = formats.enum_test("n", holder["property"], descriptor, enum, "keys")
+            new = ", ".join(
+                f"{target} = {expression}"
+                for target, expression in formats.enum_rewrite(
+                    "n", holder["property"], descriptor, enum, "values"
                 )
-                or []
             )
             where = f"{holder['label']}.{holder['property']}"
             queries.append(
                 (
                     where,
                     f"MATCH (n:{label}) WHERE {test} RETURN count(n) AS count",
-                    f"MATCH (n:{label}) WHERE {test} {window.format(v='n')}SET {sets} RETURN count(n) AS done",
+                    f"MATCH (n:{label}) WHERE {test} {window.format(v='n')}SET {new} RETURN count(n) AS done",
                 )
             )
         else:
-            test = holds_enum("e", raw, descriptor, enum, "keys")
-            sets = ", ".join(
-                f"e.{ident_name(name)} = {expression}"
-                for name, expression in rewrite_enum(
-                    "e", raw, descriptor, enum, "values"
+            test = formats.enum_test("e", holder["property"], descriptor, enum, "keys")
+            new = ", ".join(
+                f"{target} = {expression}"
+                for target, expression in formats.enum_rewrite(
+                    "e", holder["property"], descriptor, enum, "values"
                 )
-                or []
             )
             forward = [pair[0] for pair in holder["edges"]]
             reverse = [pair[1] for pair in holder["edges"]]
@@ -2221,14 +2051,14 @@ async def rewrite_enum_values(
                 (
                     where,
                     f"MATCH (n:{label})-[e]->() WHERE type(e) IN {forward!r} AND {test} RETURN count(e) AS count",
-                    f"MATCH (n:{label})-[e]->() WHERE type(e) IN {forward!r} AND {test} {window.format(v='e')}SET {sets} RETURN count(e) AS done",
+                    f"MATCH (n:{label})-[e]->() WHERE type(e) IN {forward!r} AND {test} {window.format(v='e')}SET {new} RETURN count(e) AS done",
                 )
             )
             queries.append(
                 (
                     where,
                     f"MATCH ()-[e]->(n:{label}) WHERE type(e) IN {reverse!r} AND {test} RETURN count(e) AS count",
-                    f"MATCH ()-[e]->(n:{label}) WHERE type(e) IN {reverse!r} AND {test} {window.format(v='e')}SET {sets} RETURN count(e) AS done",
+                    f"MATCH ()-[e]->(n:{label}) WHERE type(e) IN {reverse!r} AND {test} {window.format(v='e')}SET {new} RETURN count(e) AS done",
                 )
             )
     if refuse is not None:
@@ -2299,6 +2129,9 @@ async def nothing(tx: Any, change: c.Change, state: dict) -> None:
 
 
 async def run_cypher(tx: Transaction, change: c.RunCypher, state: dict) -> None:
+    """Run the query, unless it is for another backend (its version for this one is next to it: `check_dialects`)"""
+    if change.dialect is not None and change.dialect != dialect().name:
+        return
     await run_with(tx, change.query, change.parameters)
 
 
@@ -2458,13 +2291,51 @@ def is_ddl(change: c.Change) -> bool:
 
 
 async def apply_change(tx: Transaction, change: c.Change, state: dict) -> None:
-    """Make a change to the data, in a transaction. `state` is the snapshot before the change."""
+    """Make a change to the data, in a transaction, and what the backend derives from what it changed
+    (`rederive`). `state` is the snapshot before the change."""
     handler = DATA_HANDLERS.get(type(change))
     if handler is None:
         raise PanglossMigrationNotSupported(
             f"{type(change).__name__} cannot be applied"
         )
     await handler(tx, change, state)
+    await rederive(tx, change)
+
+
+# --- what a backend derives from the properties the models write -----------------------------
+
+
+def labels_written(change: c.Change) -> list[str] | None:
+    """The labels of the nodes whose `label` a change may set, for a backend that keeps something derived from it
+    (Memgraph's `label_folded`, which its text index is on): `[]` for none, None for any node (a query or a function
+    written by hand, that does not say what it `affects`)"""
+    if isinstance(change, (c.RunCypher, c.RunPython)):
+        return list(change.affects) if change.affects is not None else None
+    if isinstance(change, (c.LiteralsToEmbedded, c.EmbeddedToLiterals)):
+        return [change.model, change.embedded_model] if "label" in change.fields else []
+    if isinstance(change, c.RenameField):
+        return [change.model] if "label" in (change.old, change.new) else []
+    if isinstance(
+        change,
+        (
+            c.AddField,
+            c.RemoveField,
+            c.AlterNullability,
+            c.AlterLiteralType,
+            c.LiteralToAnnotatedValue,
+            c.AnnotatedValueToLiteral,
+        ),
+    ):
+        return [change.model] if change.name == "label" else []
+    return []
+
+
+async def rederive(tx: Transaction, change: c.Change) -> None:
+    """Write again what the backend derives from a `label` that the change may have set (`labels_written`), for
+    the nodes where it is out of date"""
+    labels = labels_written(change)
+    if labels is None or labels:
+        await migration_dialect().rederive(tx, labels)
 
 
 async def run_ddl(database: Database, change: c.Change, state: dict) -> None:

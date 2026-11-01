@@ -133,7 +133,9 @@ def next_name(existing: Iterable[Migration], slug: str) -> str:
     return f"{number:04d}_{slug}"
 
 
-def render(migration: Migration, summary: str | None = None) -> str:
+def render(
+    migration: Migration, summary: str | None = None, dialect: str | None = None
+) -> str:
     """The source of a migration file"""
     lines = [
         f'"""{summary or migration.name}',
@@ -157,30 +159,45 @@ def render(migration: Migration, summary: str | None = None) -> str:
     lines.append("")
     data = [change.to_dict() for change in migration.changes]
     if not data:
-        lines += EMPTY_HINT
+        lines += empty_hint(dialect)
     lines.append(f"changes = changes_from_data({_pformat(data)})")
     lines.append("")
     return "\n".join(lines)
 
 
-EMPTY_HINT = [
-    "# Changes written by hand go here (import them from pangloss_models.migrations.changes):",
-    "# queries, or functions of this app, and, when a change of",
-    "# the models was refused (`[NEEDS CODE]`), its data moved first and the models after it:",
-    "#",
-    "#     RunCypher(query='MATCH (n:Person) SET n.born = $year', parameters={'year': 1900}),",
-    "#     RunPython(function='myapp.migrations.helpers:move_names'),   # def f(tx, state)",
-    "#     StateOnly(changes=(AlterLiteralType(model='Event', name='when', old={'type': 'datetime'}, new={'type': 'str'}),)),",
-    "",
-]
+def empty_hint(dialect: str | None = None) -> list[str]:
+    """What an empty migration says about writing changes by hand. A query is for one backend: `dialect`, the one
+    installed, is filled in"""
+    on = f", dialect={dialect!r}" if dialect else ""
+    return [
+        "# Changes written by hand go here (import them from pangloss_models.migrations.changes):",
+        "# queries, or functions of this app, and, when a change of",
+        "# the models was refused (`[NEEDS CODE]`), its data moved first and the models after it:",
+        "#",
+        f"#     RunCypher(query='MATCH (n:Person) SET n.born = $year'{on}, parameters={{'year': 1900}}),",
+        "#     RunPython(function='myapp.migrations.helpers:move_names'),   # def f(tx, state)",
+        "#     StateOnly(changes=(AlterLiteralType(model='Event', name='when', old={'type': 'datetime'}, new={'type': 'str'}),)),",
+        "#",
+        "# A query is written for one backend (`dialect`): for another, put its own version next to it.",
+        "",
+    ]
+
+
+EMPTY_HINT = empty_hint()
 
 
 def _pformat(value: Any) -> str:
     return pprint.pformat(value, width=100, sort_dicts=False)
 
 
-def write(migration: Migration, directory: Path, summary: str | None = None) -> Path:
-    """Write a migration to the `migrations` directory of its app (made if it is not there)"""
+def write(
+    migration: Migration,
+    directory: Path,
+    summary: str | None = None,
+    dialect: str | None = None,
+) -> Path:
+    """Write a migration to the `migrations` directory of its app (made if it is not there). `dialect`: the backend
+    installed, which an empty migration's hint fills in"""
     directory.mkdir(parents=True, exist_ok=True)
     init = directory / "__init__.py"
     if not init.exists():
@@ -188,7 +205,7 @@ def write(migration: Migration, directory: Path, summary: str | None = None) -> 
     path = directory / f"{migration.name}.py"
     if path.exists():
         raise PanglossMigrationError(f"{path} exists already")
-    path.write_text(render(migration, summary))
+    path.write_text(render(migration, summary, dialect))
     importlib.invalidate_caches()
     return path
 

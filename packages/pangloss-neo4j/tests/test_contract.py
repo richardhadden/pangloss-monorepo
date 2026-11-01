@@ -147,3 +147,28 @@ def test_the_search_compiler_of_a_dialect_is_the_kits_or_a_subclass_of_it():
 
     assert MemgraphDialect.search_compiler is Compiler
     assert issubclass(Neo4jDialect.search_compiler, Compiler)
+
+
+def migration_dialect_parts() -> list[str]:
+    from pangloss_cypher.dialect import MigrationDialect
+
+    names = {name for name in vars(MigrationDialect) if not name.startswith("_")}
+    return sorted(names | set(MigrationDialect.__annotations__))
+
+
+@pytest.mark.parametrize("name", migration_dialect_parts())
+def test_both_dialects_have_every_part_of_the_migration_dialect_with_its_signature(
+    name,
+):
+    from pangloss_cypher.dialect import MigrationDialect
+    from pangloss_memgraph.databases.memgraph.dialect import MemgraphDialect
+    from pangloss_neo4j.databases.neo4j.dialect import Neo4jDialect
+
+    for dialect in (MemgraphDialect(), Neo4jDialect()):
+        part = dialect.migrations
+        assert hasattr(part, name), f"{type(part).__name__} has no {name}"
+        wanted = getattr(MigrationDialect, name, None)
+        if callable(wanted) and not isinstance(wanted, type):
+            assert inspect.signature(getattr(type(part), name)) == inspect.signature(
+                wanted
+            ), f"{type(part).__name__}.{name}"

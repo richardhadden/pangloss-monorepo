@@ -6,7 +6,93 @@ database in use."""
 
 from typing import Any, Protocol
 
+from pangloss_models.migrations import changes as c
+
 from pangloss_cypher.transaction import Transaction
+
+
+class MigrationDialect(Protocol):
+    """Where the backends differ in a migration (`pangloss_cypher.migrations`): how a map is stored (a `meta`, an
+    annotated value, a `TypedDict`), what a backend derives from what the models write, a walk, and the changes to the
+    database itself (indexes and constraints). `Dialect.migrations`"""
+
+    def owned(self, name: str) -> str:
+        """A path between two node patterns, from a node down to what it owns: forward edges, not into an entity. (The
+        variables in it start with `name`)"""
+        ...
+
+    def meta_mentions(self, node: str, model: str) -> str:
+        """A condition: the `meta` of the node has the name of a model (`model`, an expression) in its semantic spaces
+        or its context labels"""
+        ...
+
+    inserted_node_meta: str
+    """The clauses that make `new_meta`, for a node a migration makes beside the node `s`, for what `s` holds: its
+    times and creator are those of `s` (or, for a head node, which has no `meta`, of its creation); it is in the
+    semantic spaces `s` is in; and its context is that of `s`, with `s` in it if `s` is a document nested in another.
+    The query gives `$labels_in_context`"""
+
+    def new_meta_properties(self, *, context: bool) -> str:
+        """The entries of a map of properties (`CREATE (r {...})`) that give the new node `new_meta` (with
+        `context=False`, the times and creator only, no semantic spaces and no context)"""
+        ...
+
+    def meta_properties(self, meta: dict[str, Any]) -> dict[str, Any]:
+        """The properties that make a node's `meta` this (by `SET n += ...`), what it does not have taken away"""
+        ...
+
+    def set_map(self, node: str, name: str, entries: dict[str, str]) -> str:
+        """A `SET` clause (or more) that makes the property `name` of the node a map of `entries` (name: expression),
+        in place of what it was"""
+        ...
+
+    def map_value(self, node: str, name: str, key: str) -> str:
+        """An expression: the value at `key` of the map that is the property `name` of the node"""
+        ...
+
+    def unwrap_map(self, node: str, name: str, key: str, keys: list[str]) -> str:
+        """A `SET` clause (or more) that makes the property `name`, a map with `keys`, the value it has at `key`"""
+        ...
+
+    def enum_test(
+        self, node: str, name: str, descriptor: dict[str, Any], enum: str, keys: str
+    ) -> str:
+        """A condition: the property `name` of the node (or edge), of the type `descriptor`, has in it a value of `enum`
+        that is one of the parameter `keys` (their text). The type is one that can have one (`has_enum`)"""
+        ...
+
+    def enum_rewrite(
+        self, node: str, name: str, descriptor: dict[str, Any], enum: str, values: str
+    ) -> list[tuple[str, str]]:
+        """What to set, for the values of `enum` in the property `name` of the node (or edge) that are keys of the map
+        that is the parameter `values` (by their text) to be what it says: pairs of what is set (`n.name`) and its new
+        value"""
+        ...
+
+    async def rederive(self, tx: Transaction, labels: list[str] | None) -> None:
+        """Write again what the backend derives from a node's `label` (Memgraph's `label_folded`), where it is not what
+        the label gives, for the nodes with one of `labels` (with None, every node): after a migration changed labels
+        in Cypher"""
+        ...
+
+    async def add_index(self, database: Any, change: c.AddIndex, state: dict) -> None:
+        """Make the index (`AddIndex`), if it is not there: outside a transaction"""
+        ...
+
+    async def remove_index(
+        self, database: Any, change: c.RemoveIndex, state: dict
+    ) -> None: ...
+
+    async def add_constraint(
+        self, database: Any, change: c.AddConstraint, state: dict
+    ) -> None:
+        """Make the uniqueness constraint (`AddConstraint`), if it is not there; a `PanglossMigrationError` if the data
+        breaks it"""
+        ...
+
+    async def remove_constraint(
+        self, database: Any, change: c.RemoveConstraint, state: dict
+    ) -> None: ...
 
 
 class Dialect(Protocol):
@@ -124,6 +210,9 @@ class Dialect(Protocol):
     search_compiler: type
     """The class that makes a structured search into Cypher: `pangloss_cypher.search_query.Compiler`, or a subclass that
     finds some of what is tested in another way, for its planner"""
+
+    migrations: MigrationDialect
+    """Where the backends differ in a migration"""
 
     def query(self, name: str, default: str, **context: Any) -> str:
         """The text of the query (or part of one) called `name` (`"list.plain.page"`): `default`, the kit's, unless the

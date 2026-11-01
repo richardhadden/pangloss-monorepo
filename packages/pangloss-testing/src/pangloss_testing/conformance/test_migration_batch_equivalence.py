@@ -94,7 +94,7 @@ Case = Callable[[int | None], Awaitable[None]]
 async def both_ways(db_driver, case: Case) -> dict:
     """Run the case whole, then in batches, from an empty database each time: the graphs are the same
     (and the batches were several: it is not that it fell back to doing it whole)"""
-    from pangloss_testing.under_test.migrations import runner
+    from pangloss_cypher.migrations import runner
 
     calls = []
     original = runner.apply_edges

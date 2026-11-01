@@ -190,7 +190,7 @@ phase 3: the structured migration operations live in `pangloss_memgraph.database
 their Cypher), so the document-upgrade functions either live in `pangloss-history` and depend on that, or the
 operation *data* (not the Cypher) is split out of the memgraph package first. (*Resolved when phase 3 was built:* the
 changes are plain data in `pangloss_models.migrations.changes`, with the snapshot replay in `...migrations.state`;
-only the Cypher is in `pangloss_memgraph`. `pangloss-history` depends on `pangloss-models` alone.) That is a phase 3 decision and
+only the Cypher is in `pangloss_memgraph`, now `pangloss_cypher.migrations`. `pangloss-history` depends on `pangloss-models` alone.) That is a phase 3 decision and
 does not affect phases 1 and 2.
 
 Settings: `HISTORY_DB_PATH` (default `.pangloss/history.sqlite3`), `HISTORY_QUEUE_SIZE`, `HISTORY_BATCH_SIZE`,

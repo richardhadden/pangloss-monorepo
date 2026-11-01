@@ -5,8 +5,11 @@ Each is a small immutable record of one thing that changed, with how safe it is
 change does to the data is the business of the operations that are made from them later.
 """
 
+from collections.abc import Iterable
 from dataclasses import asdict, dataclass, field
 from typing import Any, ClassVar, Literal
+
+from pangloss_models.exceptions import PanglossMigrationError
 
 Safety = Literal["safe", "additive", "transforming", "lossy", "manual"]
 
@@ -713,9 +716,17 @@ class RunCypher(Change):
     """A query written by hand, run in the transaction of the migration. It does not change what
     the models are (that is the other changes, or `StateOnly`), only the data.
 
+    It is written for one backend's Cypher, which `dialect` names (`"memgraph"`, `"neo4j"`): the
+    backends store some things differently (a `meta`, an annotated value), so a query for one may do
+    something else on the other. A migration is refused by a backend it was not written for, unless a
+    `RunCypher` for that backend is next to it (`check_dialects`): of those next to each other, the
+    one for the backend in use runs. Without a `dialect` (a file written before there was one), it is
+    taken as written for the backend that applies it.
+
     DDL (enums, indexes) cannot be run: Memgraph refuses it in a transaction."""
 
     query: str
+    dialect: str | None = None
     parameters: dict[str, Any] = field(default_factory=dict)
     # Whether it loses data (asked about before it is applied)
     lossy: bool = False
@@ -730,8 +741,61 @@ class RunCypher(Change):
     def safety(self) -> Safety:  # ty: ignore[invalid-property-type-override]
         return "lossy" if self.lossy else "transforming"
 
+    def to_dict(self) -> dict[str, Any]:
+        data = super().to_dict()
+        if data["dialect"] is None:
+            del data[
+                "dialect"
+            ]  # (so that the checksum of a file written before it is the same)
+        return data
+
     def describe(self) -> str:
-        return f"Run a query: {self.note or ' '.join(self.query.split())[:70]}"
+        on = (
+            f" ({DIALECT_NAMES.get(self.dialect, self.dialect)})"
+            if self.dialect
+            else ""
+        )
+        return f"Run a query{on}: {self.note or ' '.join(self.query.split())[:70]}"
+
+
+# How a dialect is named in a message
+DIALECT_NAMES = {"memgraph": "Memgraph", "neo4j": "Neo4j"}
+
+
+def check_dialects(changes: Iterable[Change], dialect: str | None) -> list[RunCypher]:
+    """Refuse the changes if a `RunCypher` among them was written for another dialect than `dialect` and has no
+    `RunCypher` for `dialect` next to it (in the run of `RunCypher`s with a dialect that it is in). Gives the ones
+    without a dialect, which are taken as written for this one. A backend that does not run Cypher (`dialect` None)
+    refuses every `RunCypher`."""
+    if dialect is None:
+        for change in changes:
+            if isinstance(change, RunCypher):
+                raise PanglossMigrationError(
+                    f"{change.describe()}: this backend does not run Cypher: write it as a `RunPython`"
+                )
+        return []
+    unnamed: list[RunCypher] = []
+    run: list[RunCypher] = []
+
+    def end_of_run() -> None:
+        if run and not any(change.dialect == dialect for change in run):
+            written = DIALECT_NAMES.get(run[0].dialect or "", run[0].dialect)
+            here = DIALECT_NAMES.get(dialect, dialect)
+            raise PanglossMigrationError(
+                f"{run[0].describe()}: this migration was written for {written}; give a {here} version with "
+                f'`RunCypher(..., dialect="{dialect}")` next to it'
+            )
+        run.clear()
+
+    for change in changes:
+        if isinstance(change, RunCypher) and change.dialect is not None:
+            run.append(change)
+            continue
+        end_of_run()
+        if isinstance(change, RunCypher):
+            unnamed.append(change)
+    end_of_run()
+    return unnamed
 
 
 @dataclass(frozen=True, kw_only=True)

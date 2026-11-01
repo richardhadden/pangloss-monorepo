@@ -1,5 +1,6 @@
 """Neo4j's answers where the Cypher backends differ (`pangloss_cypher.dialect.Dialect`)"""
 
+import functools
 import re
 from typing import Any
 from uuid import UUID
@@ -189,6 +190,13 @@ class Neo4jDialect:
         return f" {through(name, backwards)} "
 
     search_compiler = Neo4jCompiler
+
+    @functools.cached_property
+    def migrations(self) -> Any:
+        """(`migration_dialect`: made when first asked for)"""
+        from pangloss_neo4j.databases.neo4j.migration_dialect import Neo4jMigrations
+
+        return Neo4jMigrations()
 
     def query(self, name: str, default: str, **context: Any) -> str:
         own = QUERIES.get(name)

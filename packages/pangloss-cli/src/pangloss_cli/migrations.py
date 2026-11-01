@@ -97,6 +97,12 @@ def can_snapshot(project: Project) -> bool:
     return storage_of(project.require_settings()).capabilities.snapshots
 
 
+def cypher_dialect(project: Project) -> str | None:
+    """The Cypher a query written by hand is for: the backend's, if it runs Cypher (its name)"""
+    storage = storage_of(project.require_settings())
+    return storage.name if storage.capabilities.cypher else None
+
+
 def migration_backend(project: Project) -> ModuleType:
     storage = storage_of(project.require_settings())
     backend = storage.migration_backend
@@ -210,7 +216,7 @@ def make_empty(
     if dry_run:
         typer.echo("(nothing was written)")
         return
-    path = write(migration, migrations_directory(app))
+    path = write(migration, migrations_directory(app), dialect=cypher_dialect(project))
     typer.secho(f"Wrote {path}", fg="green")
 
 

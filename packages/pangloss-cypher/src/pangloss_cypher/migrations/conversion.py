@@ -1,7 +1,7 @@
 """Cypher to turn a stored value into another type, for a change of the type of a field.
 
 Each gives an expression of the value (`ref`) that is `null` when it cannot be converted, so
-that what does not convert can be found; except `date`, which Memgraph reports as an error.
+that what does not convert can be found; except `date`, which the database reports as an error.
 Decimals are stored as strings; enums as the values of their members.
 """
 
