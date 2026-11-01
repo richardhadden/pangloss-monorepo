@@ -1,6 +1,6 @@
-# Typed search patterns: `Model.Where` 🚧
+# Typed search patterns: `Model.Where` ✅
 
-A plan (2026-11-01) for writing a structured search (see [Structured search](structured-search.md)) with a pydantic
+A plan (2026-11-01), built 2026-11-02 (each step says what was built, and where it differs), for writing a structured search (see [Structured search](structured-search.md)) with a pydantic
 class generated for each model, so that the SDK, an editor and a type checker know which fields a pattern can have,
 which operators each takes, and what type its values are:
 
@@ -148,6 +148,10 @@ it does now (see the decisions).
 7. **Docs, and the uses.** `structured-search.md` (a section on `Where`, the dict form kept as the JSON),
    `sdk.md`, `generated-models.md` (the list of generated classes), the guide/tutorial where it searches, and
    `pangloss-dates/query.py` and the tests where a `Where` reads better.
+   **Built:** the guide (`guide/search`, and the SDK's `03-scripts.md`), `structured-search.md`, `sdk.md` and
+   `generated-models.md`. Two lines of the search guide that did not say what the code does were put right on the
+   way (`$incoming` is `{"type", "field", "where"}`, not `{"field", "from"}`; `$any` with `contains` is of the label).
+   `pangloss-dates/query.py` is left with dicts: its field names are arguments, which a dict says more simply.
 
 ## Decisions (answered 2026-11-01: as recommended)
 

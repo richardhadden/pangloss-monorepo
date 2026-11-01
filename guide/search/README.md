@@ -7,7 +7,7 @@ Three ways to find things, from simplest to most precise. All work on the server
 |---|---|
 | `Model.list(search_terms=…)` | A page of everything of a type, by words in the label |
 | `Entity.autocomplete(text, types=…)` | The entity someone is typing the name of |
-| `Model.search(Match(…))` | "Letters from Smith to anyone in Venice before 1600": a pattern |
+| `Model.search(Letter.Where(…))` | "Letters from Smith to anyone in Venice before 1600": a pattern |
 
 ## Lists
 
@@ -59,6 +59,42 @@ page = await Letter.search(Match(where={
 
 Over HTTP it is `POST /api/search` with `{"type": "Letter", "where": {...}, "page": 1, "page_size": 25}`.
 
+### Written as Python: `Letter.Where`
+
+Each document, entity and embedded model has a `Where` with a field for each of its fields that can be searched, so an
+editor completes them and a type checker (with the stubs: `pangloss make-stubs`, or the SDK's) says when a field is not
+there or the operator is not one it takes. It is the same search: it is made into the JSON above.
+
+```python
+import datetime
+from pangloss_models.search_where import Compare, Rel, Text
+
+page = await Letter.search(
+    Letter.Where(
+        sender=Rel(is_=smith),                                    # an entity, or its id
+        date=Compare(lt=datetime.date(1600, 1, 1)),
+        title=Text(contains="plague"),
+        addressee=Person.Where(label=Text(contains="venice")),   # a nested pattern: its class is the type
+    ),
+    page_size=25,
+    order_by=["title"],
+)
+```
+
+| Field is | Written |
+|---|---|
+| text, `label` | `Text(eq=…, in_=[…], contains=…, starts_with=…, exists=…)` |
+| number, date, datetime, `Decimal` | `Compare(gt=…, lte=…, between=(a, b), …)` |
+| `bool`, enum | `Choice(eq=…, in_=[…])` |
+| list of literals | `Items(contains=…, contains_any=[…])` |
+| relation, embedded object | `Rel(is_=…, is_any=[…], exists=…, through=[Negative], match=Person.Where(…))`, or the `Where` alone |
+
+The `$` keys are fields with a trailing underscore: `any_of_=[Letter.Where(…), …]`, `all_`, `not_`, `any_` and
+`mentions_` (`AnyRel(is_=…)`), `somewhere_=[Place.Where(…)]`, `spaces_=[Negative]`, and on an entity
+`incoming_=[Letter.Where(…)]` (or `IncomingFrom(where=Letter.Where(…), field="sender")`). In a dict the keys can
+be written as `SearchKey.ANY_OF` and the like (`pangloss_models.search`). A `Match` and the dicts still work, and
+the two can be mixed.
+
 ### Conditions
 
 | Field is | Conditions |
@@ -78,11 +114,11 @@ Several keys in one `where` must all hold. Combine with `$all`, `$any_of` (lists
 
 | Key | Means |
 |---|---|
-| `$any` | Some field of this node: `{"$any": {"is": id}}` is any relation field pointing at `id`; `{"$any": {"contains": "plague"}}` any text field |
+| `$any` | Some relation of this node: `{"$any": {"is": id}}` is any relation field pointing at `id`; `{"$any": {"contains": "plague"}}` is of the label (there is no text index over the other fields yet) |
 | `$somewhere` | These patterns each occur **anywhere in the document** below this node |
 | `$mentions` | The short form of the commonest `$somewhere`: an entity (by id) is mentioned anywhere in the document |
 | `$spaces` | The node is inside these semantic spaces (`["Negative"]`) |
-| `$incoming` | An entity or document by what refers to it: `[{"field": "sender", "from": {"type": "Letter", "where": {…}}}]` |
+| `$incoming` | An entity by what refers to it: `[{"type": "Letter", "field": "sender", "where": {…}}]` (`field` can be left out: any relation that can point at it) |
 
 Relation conditions see **through** semantic spaces, conjunctions and reified relations, so `has_statement` matches a
 statement inside `Negative[...]`.

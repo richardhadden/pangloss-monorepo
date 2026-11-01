@@ -46,6 +46,10 @@ The common shape is a pattern of nodes and edges, each node with a type and cond
 }
 ```
 
+In Python a pattern can also be written with the `Where` that each model has (`Letter.Where(title=Text(contains=
+"plague"), sender=Rel(is_=smith))`; see [Typed search patterns](search-where-implementation.md) and the
+[guide](../guide/search/README.md)). It is made into this JSON, and checked by the same `check_match`.
+
 ### Conditions on a field
 
 | Field is | Condition | Meaning |

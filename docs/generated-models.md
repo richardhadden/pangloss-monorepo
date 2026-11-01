@@ -13,6 +13,7 @@ For each declared class, `initialise()` creates a set of Pydantic models and att
 | `EditView` | Entity | A `HeadView` without the incoming relations: `id`, `meta`, the node's own values and its outgoing relations. For editing: incoming relations are written in the documents that hold them. Read with `Entity.get_for_edit`, and can be changed and sent back as an `Update` | ✅ |
 | `ReferenceSet` | Entity | `{type, id}` pointer used in `Create`/`Update` to refer to an existing entity (label is dropped if supplied) | ✅ |
 | `ReferenceView` | Document, Entity, ReifiedRelationDocument | `{type, id, label, ...}` summary; used in lists and nested reads | ✅ |
+| `Where` | Document, Entity, Embedded | A structured search pattern (`pangloss_models.search_where`): a field for each field that can be searched, typed by its operators (`Text`, `Compare[T]`, `Choice[T]`, `Items[T]`, `Rel` or the `Where` of what a relation points at). Not an `_ActionClass`: no camelCase aliases, as the fields of a search are the Python names. See [Typed search patterns](search-where-implementation.md) | ✅ |
 
 Optional literal fields (`X | None`) default to `None` in all of these models, so they can be left out when creating and are `None` when absent from the database.
 
@@ -38,8 +39,9 @@ Optional literal fields (`X | None`) default to `None` in all of these models, s
 4. **Incoming relations** are worked out for Documents, Entities and ReifiedRelationDocuments.
 5. **`ReferenceSet` / `ReferenceView`** models are created.
 6. **`Create` + `CreateDB`**, then **`Update` + `UpdateDB`**, then **`View`**, then **`HeadView`** (and, for Entities, **`EditView`**). Each is first created empty and its fields are added afterwards, so models can refer to each other.
-7. **Rebuild the action classes** twice so that models see the final versions of the models they reference.
-8. **Bind the database.** `SETTINGS.STORAGE` names the storage backend (`pangloss_core.storage`). `ModelRegistry._bind_database_functions` (run after the models are built) takes its `operations` (the backend's `exposed_functions` module) and assigns the functions directly; sync and async both work:
+7. **`Where`** for each Document, Entity and Embedded model (`initialise_where_models`), all made before any is given its fields.
+8. **Rebuild the action classes** twice so that models see the final versions of the models they reference.
+9. **Bind the database.** `SETTINGS.STORAGE` names the storage backend (`pangloss_core.storage`). `ModelRegistry._bind_database_functions` (run after the models are built) takes its `operations` (the backend's `exposed_functions` module) and assigns the functions directly; sync and async both work:
 
    | Bound to | From `exposed_functions` |
    |----------|--------------------------|

@@ -121,13 +121,18 @@ for person in pangloss_sdk.iterate_sync(Person.list, page_size=100):   # sync=Tr
 ([Searching](../search/README.md)):
 
 ```python
-from pangloss_models.search import Match
+from demo_app.models import Activity
+from pangloss_models.search_where import Rel
 
 found = await Factoid.search(
-    Match(where={"statements": {"type": "Activity", "where": {"carried_out_by": {"is": str(charlemagne.id)}}}}),
+    Factoid.Where(statements=Activity.Where(carried_out_by=Rel(is_=charlemagne))),
     page_size=25,
 )
 ```
+
+`Factoid.Where` has a field for each field of `Factoid` that can be searched, so the editor completes them and the
+SDK's stubs let a type checker catch a wrong one. The same pattern as JSON, a `Match`, also works:
+`Match(where={"statements": {"type": "Activity", "where": {"carried_out_by": {"is": str(charlemagne.id)}}}})`.
 
 `Entity.autocomplete("smi", types=[Person, Place])` finds entities by label as someone types.
 
