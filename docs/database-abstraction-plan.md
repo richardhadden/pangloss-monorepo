@@ -535,6 +535,16 @@ Neo4j folds already (`standard-folding` analyzer, and `schema.fold` on the words
 
   There is no regression. The changes are within the run-to-run variation, which is about 10%. Neo4j's text did not
   change, so it was not measured again.
+- **The creation-record join (review finding 7), in its own commit.** Every list branch now joins `PGCreation` and its
+  user with `OPTIONAL MATCH`. Before, the plain and deep lists used `MATCH`: a head with no `PGCreation` was counted,
+  but left off its page (and when every item lacked one, the page and the count were empty). The text-search list,
+  which already used `OPTIONAL MATCH`, failed instead: a document's reference view refused `created_when: null`.
+  `_DocumentReferenceViewAPIMeta.created_when` may now be `None`; its default is unchanged.
+
+  A new test, `test_what_has_no_record_of_its_creation_is_listed_all_the_same`, is the same in both backends. It
+  deletes the `PGCreation` of an entity and a document, then lists each plainly, by text and deep. It failed before
+  the change. The timings with it were the same as above, within the variation (deep Factoid 532 ms, list Person 47
+  ms, text search 149 ms).
 - **The read shape.** `build_tree.GraphFragment` (root, labels, edges, meta) is what `get_document` and `read_entity`
   build the tree from (`GraphFragment.from_record(record).tree()`).
 - **Tests.**

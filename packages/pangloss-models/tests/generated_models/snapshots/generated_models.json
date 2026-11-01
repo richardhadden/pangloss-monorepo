@@ -28625,7 +28625,7 @@
     },
     "created_when": {
      "alias": "createdWhen",
-     "annotation": "datetime",
+     "annotation": "None | datetime",
      "default": null,
      "default_factory": "<lambda>",
      "description": null,

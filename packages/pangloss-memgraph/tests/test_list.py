@@ -646,3 +646,42 @@ async def test_a_read_of_another_package_that_takes_too_long_raises_the_search_t
     with pytest.raises(PanglossSearchTimeoutError):
         await slow()
     assert time.monotonic() - started < 3
+
+
+@no_type_check
+async def test_what_has_no_record_of_its_creation_is_listed_all_the_same(
+    clear_database, db_driver
+):
+    """A head node without a `PGCreation` (bulk data, a migration that stopped part of the way) is on its page of every kind
+    of list, as it is in the count, with no creator. (The plain and the deep lists once left it off the page, and counted
+    it)"""
+
+    class Letter(Document):
+        sent_to: Person
+
+    class Person(Entity):
+        pass
+
+    initialise()
+
+    person = await Person.Create(label="Ann Smith").save()
+    await Letter.Create(
+        label="A letter to Ann", sent_to=Person.ReferenceSet(id=person.id)
+    ).save()
+    with db_driver.session() as session:
+        session.run(
+            "MATCH (c:PGCreation)-[:is_creation_of]->(:HeadNode) DETACH DELETE c"
+        ).consume()
+
+    for listed in (
+        await Person.list(),
+        await Letter.list(),
+        await Person.list("ann"),
+        await Letter.list("ann"),
+        await Person.list("letter", deep_search=True),
+        await Letter.list("ann", deep_search=True),
+    ):
+        assert listed.count == 1
+        [item] = listed.results
+        if isinstance(item, Letter.ReferenceView):  # (an entity's has no `meta`)
+            assert item.meta.created_by is None

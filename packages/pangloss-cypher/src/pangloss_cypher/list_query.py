@@ -113,8 +113,9 @@ def _deep_page(d: Dialect) -> str:
 
       OPTIONAL MATCH (hn:HeadNode {{id: n.head_node_id}})
       WITH n, coalesce(hn, n) AS headnode
-      MATCH (headnode)<-[:is_creation_of]-(creation:PGCreation)
-      MATCH (creation)-[:created_by]->(user:PGUser)
+      // (a head without a record of its creation is listed all the same, with no creator)
+      OPTIONAL MATCH (headnode)<-[:is_creation_of]-(creation:PGCreation)
+      OPTIONAL MATCH (creation)-[:created_by]->(user:PGUser)
 
       WITH collect(n{{.*, meta: {{
           created_by: user.username,
@@ -323,8 +324,9 @@ def _plain_items(d: Dialect) -> str:
     return f"""
                         OPTIONAL MATCH (hn:HeadNode:PGIndexableNode {{id: n.head_node_id}})
                         WITH n, total, coalesce(hn, n) AS headnode
-                        MATCH (headnode)<-[:is_creation_of]-(creation:PGCreation)
-                        MATCH (creation)-[:created_by]->(user:PGUser)
+                        // (a head without a record of its creation is listed all the same, with no creator)
+                        OPTIONAL MATCH (headnode)<-[:is_creation_of]-(creation:PGCreation)
+                        OPTIONAL MATCH (creation)-[:created_by]->(user:PGUser)
 
                         // The page, as one row: the facets are of the entities the whole page refers
                         // to (computed for each node they were one row each, and a page of

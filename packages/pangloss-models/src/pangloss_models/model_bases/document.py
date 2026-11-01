@@ -121,7 +121,8 @@ class _DocumentReferenceViewAPIMeta(_BaseObject):
     semantic_spaces: list[str] | None = Field(default_factory=list)
     context_labels: list[ContextLabel] | None = None
     created_by: str | None = None
-    created_when: datetime.datetime = Field(
+    # (None for a head that has no record of its creation: bulk data, or a migration that stopped part of the way)
+    created_when: datetime.datetime | None = Field(
         default_factory=lambda: datetime.datetime.now(datetime.UTC)
     )
     updated_by: str | None = None
