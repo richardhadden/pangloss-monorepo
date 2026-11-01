@@ -1,6 +1,7 @@
 """The definitions of the models as a TypeScript module, which the interface imports to
 know what to show (see `pangloss_models.export`, and `interface-core/src/types/models.ts`
-for the types)."""
+for the types). It also has the types of the search patterns of the models (`LetterWhere`; see
+`pangloss_models.search_where` and docs/search-where-implementation.md)."""
 
 import json
 from typing import Any
@@ -13,6 +14,31 @@ HEADER = (
 # Where the interface imports it from, in the interface-app workspace
 MODELS_MODULE_PATH = "interface-app/src/generated/models.ts"
 
+# What the module imports from interface-core
+CORE_TYPES = (
+    "AnyRelationCondition",
+    "ChoiceCondition",
+    "CompareCondition",
+    "ItemsCondition",
+    "ModelDefinitions",
+    "NodePattern",
+    "RelationCondition",
+    "SearchOrder",
+    "SearchPattern",
+    "TextCondition",
+)
+
+# The TypeScript of the values of a condition (dates are ISO strings; a `Decimal` is a number or its text)
+SCALARS = {
+    "str": "string",
+    "int": "number",
+    "float": "number",
+    "decimal": "number | string",
+    "bool": "boolean",
+    "date": "string",
+    "datetime": "string",
+}
+
 
 def models_module(exported: dict[str, Any]) -> str:
     """The source of `generated/models.ts` for the output of `export_models()`"""
@@ -22,7 +48,86 @@ def models_module(exported: dict[str, Any]) -> str:
     definitions = json.dumps(exported, indent=2, ensure_ascii=False)
     return (
         f"{HEADER}"
-        'import type { ModelDefinitions } from "@pangloss/interface-core";\n\n'
+        f'import type {{ {", ".join(CORE_TYPES)} }} from "@pangloss/interface-core";\n\n'
         f"export type ModelName = {model_name};\n\n"
         f"export const definitions: ModelDefinitions = {definitions};\n"
+        f"{search_types(exported.get('searchPatterns') or {}, exported.get('enums') or {})}"
+    )
+
+
+def search_types(patterns: dict[str, Any], enums: dict[str, Any]) -> str:
+    """The types of the search patterns: for each model `XWhere` (a type alias, not an interface, so that it fits
+    `SearchPattern.where`) and `XPattern`; `Wheres` and `OrderFields` by the name of the model; and
+    `SearchOf<"X">`, a `SearchPattern` typed by its model"""
+
+    def value(entry: dict[str, Any]) -> str:
+        found = entry.get("value") or {}
+        if found.get("type") == "enum":
+            members = (enums.get(found.get("enum")) or {}).get("members") or []
+            return " | ".join(json.dumps(m["value"]) for m in members) or "never"
+        return SCALARS.get(found.get("type"), "unknown")
+
+    def condition(entry: dict[str, Any]) -> str:
+        operators = entry["operators"]
+        if operators == "text":
+            return "TextCondition"
+        if operators == "compare":
+            return f"CompareCondition<{value(entry)}>"
+        if operators == "choice":
+            return f"ChoiceCondition<{value(entry)}>"
+        if operators == "items":
+            return f"ItemsCondition<{value(entry)}>"
+        targets = [t for t in entry.get("targets", []) if t in patterns]
+        if not targets:
+            return "RelationCondition | (RelationCondition & NodePattern)"
+        each = " | ".join(f"{t}Pattern" for t in targets)
+        return f"RelationCondition | (RelationCondition & ({each}))"
+
+    parts: list[str] = []
+    for name, pattern in sorted(patterns.items()):
+        where = f"{name}Where"
+        lines = [f"export type {where} = {{"]
+        for field, entry in pattern["fields"].items():
+            lines.append(f"  {field}?: {condition(entry)};")
+        lines += [
+            f"  $all?: {where}[];",
+            f"  $any_of?: {where}[];",
+            f"  $not?: {where};",
+            "  $any?: AnyRelationCondition;",
+        ]
+        if pattern["kind"] != "embedded":
+            lines.append("  label?: TextCondition;")
+        if pattern["kind"] == "document":
+            lines += [
+                "  published?: ChoiceCondition<boolean>;",
+                "  review_status?: TextCondition;",
+                "  $mentions?: AnyRelationCondition;",
+                "  $somewhere?: NodePattern[];",
+                "  $spaces?: string[];",
+            ]
+        if pattern["kind"] == "entity":
+            lines.append("  $incoming?: NodePattern | NodePattern[];")
+        lines.append("};")
+        parts.append("\n".join(lines))
+        parts.append(
+            f"export type {name}Pattern = {{ type: {json.dumps(name)}; where?: {where} }};"
+        )
+
+    searched = {n: p for n, p in sorted(patterns.items()) if p["kind"] != "embedded"}
+    wheres = "".join(f"  {n}: {n}Where;\n" for n in searched)
+    orders = "".join(
+        f"  {n}: {' | '.join(json.dumps(f) for f in p['orderBy']) or 'never'};\n"
+        for n, p in searched.items()
+    )
+    return (
+        "\n// The search patterns of the models\n\n"
+        + "".join(part + "\n\n" for part in parts)
+        + f"export interface Wheres {{\n{wheres}}}\n\n"
+        + f"export interface OrderFields {{\n{orders}}}\n\n"
+        + "/** A search of one model, typed by it: `searchItems(client, search)` takes it */\n"
+        + 'export type SearchOf<N extends keyof Wheres> = Omit<SearchPattern, "type" | "where" | "orderBy"> & {\n'
+        + "  type: N;\n"
+        + "  where?: Wheres[N];\n"
+        + "  orderBy?: SearchOrder<OrderFields[N]>[];\n"
+        + "};\n"
     )

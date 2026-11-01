@@ -162,3 +162,25 @@ def test_the_search_keys_are_the_same_in_python_and_typescript():
     match = re.search(r"export type SearchKey =(.*?);\n", source, re.DOTALL)
     assert match
     assert set(re.findall(r'"(\$\w+)"', match.group(1))) == {k.value for k in SearchKey}
+
+
+def test_the_conditions_of_a_search_have_the_operators_of_their_kind_in_typescript():
+    from pangloss_models.search import OPERATORS
+
+    # (without the parameters of the generic ones, `CompareCondition<T>`)
+    source = (MODELS_TS.parent.parent / "api/types.ts").read_text()
+    found = interfaces(re.sub(r"(export interface \w+)<[^>]*>", r"\1", source))
+    assert found["TextCondition"] == OPERATORS["text"]
+    assert found["CompareCondition"] == OPERATORS["number"] == OPERATORS["temporal"]
+    assert found["ChoiceCondition"] == OPERATORS["simple"]
+    assert found["ItemsCondition"] == OPERATORS["list"]
+    assert found["RelationCondition"] == OPERATORS["relation"] | {"through"}
+
+
+def test_the_search_patterns_have_the_keys_of_their_types(exported, typescript):
+    _, types = typescript
+    assert exported["searchPatterns"]
+    for pattern in exported["searchPatterns"].values():
+        assert set(pattern) == types["SearchPatternDefinition"]
+        for field in pattern["fields"].values():
+            assert set(field) <= types["SearchFieldDefinition"]

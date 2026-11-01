@@ -187,3 +187,9 @@ it does now (see the decisions).
     `SearchPattern.where`), `LetterPattern` (`{type: "Letter", where?: LetterWhere}`) and `Wheres` (name to type);
     `interface-core` has the condition types (`TextCondition`, `CompareCondition<T>`, ...). A test generates
     `models.ts` for the kitchen sink and runs `tsc` on it with a file that uses it, rightly and wrongly.
+    **Built.** `SearchOf<"Letter">` (in the generated module) is a `SearchPattern` typed by the model, with
+    `orderBy` typed by `OrderFields`; `SearchPattern` has `orderBy` now, and `searchItems` sends it as `order_by`
+    (it was not sent before). The wrong uses of the test are `@ts-expect-error` lines, so `tsc` fails if one of
+    them is not an error. `test_models_match_typescript.py` checks the condition types against `OPERATORS`. The
+    package's empty `generated/models.ts` has the (empty) types too; the demo's copy of the interface
+    (`pangloss-demo/.pangloss/interface`) has them when it is next built.

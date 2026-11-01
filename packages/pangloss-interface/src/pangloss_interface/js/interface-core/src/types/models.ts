@@ -232,9 +232,26 @@ export interface EnumDefinition {
   members: { name: string; value: string | number | boolean | null }[];
 }
 
+/** A field of a search pattern (`export_search_patterns`): the operators it takes, the type of its values, and
+ * for a relation the classes it can point at */
+export interface SearchFieldDefinition {
+  operators: "text" | "compare" | "choice" | "items" | "relation";
+  value?: FieldType;
+  targets?: string[];
+}
+
+/** The search pattern of a model: its fields, and what a search of it can be ordered by */
+export interface SearchPatternDefinition {
+  kind: "document" | "entity" | "embedded";
+  fields: Record<string, SearchFieldDefinition>;
+  orderBy: string[];
+}
+
 export interface ModelDefinitions {
   models: Record<string, ModelDefinition>;
   enums: Record<string, EnumDefinition>;
+  /** (absent: made before there were search patterns) */
+  searchPatterns?: Record<string, SearchPatternDefinition>;
   /** (absent: nothing configured) */
   nav?: NavConfig;
 }

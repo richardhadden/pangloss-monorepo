@@ -447,3 +447,75 @@ AnyRel.model_rebuild()
 Where.model_rebuild()
 DocumentWhere.model_rebuild()
 EntityWhere.model_rebuild()
+
+
+# ---------------------------------------------------------------------------
+# The patterns as data, for the interface's TypeScript
+# ---------------------------------------------------------------------------
+
+OPERATORS_OF_KIND = {
+    "text": "text",
+    "number": "compare",
+    "decimal": "compare",
+    "temporal": "compare",
+    "simple": "choice",
+    "list": "items",
+    "relation": "relation",
+}
+
+
+def value_type(base: Any) -> dict[str, Any]:
+    """The type of the values of a condition, as `export_models` writes types (`{"type": "date"}`,
+    `{"type": "enum", "enum": "Status"}`)"""
+    import enum
+
+    if isinstance(base, type) and issubclass(base, enum.Enum):
+        return {"type": "enum", "enum": base.__name__}
+    names = {
+        str: "str",
+        int: "int",
+        float: "float",
+        bool: "bool",
+        Decimal: "decimal",
+        datetime.datetime: "datetime",
+        datetime.date: "date",
+    }
+    if base in names:
+        return {"type": names[base]}
+    return {"type": "unknown", "repr": repr(base)}
+
+
+def export_search_patterns(models: Iterable[Any]) -> dict[str, Any]:
+    """For each model with a `Where`: its kind (`document`, `entity`, `embedded`), the fields of its `Where` (the
+    operators each takes, the type of its values, and for a relation the classes it can point at), and what a
+    search of it can be ordered by. (What the interface makes its TypeScript types of patterns from.)"""
+    patterns: dict[str, Any] = {}
+    for model in sorted(models, key=lambda m: m.__name__):
+        where = vars(model).get("Where")
+        if where is None:
+            continue
+        base = where_base(model)
+        fields: dict[str, Any] = {}
+        for name, definition in model._meta.fields.items():
+            if name not in where.model_fields or name == "label":
+                continue
+            found = field_kind(definition)
+            if isinstance(found, str):
+                continue
+            kind, of = found
+            entry: dict[str, Any] = {"operators": OPERATORS_OF_KIND[kind]}
+            if kind == "relation":
+                entry["targets"] = sorted(
+                    option.__name__ for option in of.options if can_have_where(option)
+                )
+            else:
+                entry["value"] = value_type(of)
+            fields[name] = entry
+        patterns[model.__name__] = {
+            "kind": {DocumentWhere: "document", EntityWhere: "entity"}.get(
+                base, "embedded"
+            ),
+            "fields": fields,
+            "orderBy": orderable_fields(model) if base is not EmbeddedWhere else [],
+        }
+    return patterns

@@ -60,6 +60,7 @@ export function searchItems(client: ApiClient, pattern: SearchPattern): Promise<
   return client.post("/search", {
     type: pattern.type,
     where: pattern.where,
+    order_by: pattern.orderBy,
     page: pattern.page,
     page_size: pattern.pageSize,
   });

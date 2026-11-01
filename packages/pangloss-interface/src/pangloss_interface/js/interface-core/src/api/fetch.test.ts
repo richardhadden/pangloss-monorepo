@@ -86,11 +86,17 @@ test("autocomplete repeats the types", async () => {
 
 test("a search is posted as JSON", async () => {
   const { client, calls } = clientAnswering(() => json({ results: [] }));
-  await searchItems(client, { type: "Factoid", where: { label: "x" }, pageSize: 10 });
+  await searchItems(client, {
+    type: "Factoid",
+    where: { label: { contains: "x" } },
+    orderBy: [{ field: "year", direction: "desc" }],
+    pageSize: 10,
+  });
   expect(calls[0]!.init.method).toBe("POST");
   expect(JSON.parse(String(calls[0]!.init.body))).toEqual({
     type: "Factoid",
-    where: { label: "x" },
+    where: { label: { contains: "x" } },
+    order_by: [{ field: "year", direction: "desc" }],
     page_size: 10,
   });
 });

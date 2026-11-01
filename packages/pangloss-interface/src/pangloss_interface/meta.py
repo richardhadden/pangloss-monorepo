@@ -140,7 +140,8 @@ def _camel(name: str) -> str:
 
 def export_definitions() -> dict[str, Any]:
     """`export_models()`, with the `interfaceMeta` of each model: `{"colour": ..., "listPage": {"module",
-    "name"} or None, ...}`, resolved through the parents, or None for a model with none"""
+    "name"} or None, ...}`, resolved through the parents, or None for a model with none; the `nav`; and the
+    `searchPatterns` (`export_search_patterns`)"""
     from pangloss_models.export import export_models
     from pangloss_models.model_registry import ModelRegistry
 
@@ -158,6 +159,10 @@ def export_definitions() -> dict[str, Any]:
 
     apps = getattr(core_settings.__dict__.get("SETTINGS"), "INSTALLED_APPS", [])
     exported["nav"] = export_nav(apps, exported["models"])
+    # (the search patterns of the models: the interface's types of them, `LetterWhere`)
+    from pangloss_models.search_where import export_search_patterns
+
+    exported["searchPatterns"] = export_search_patterns(classes.values())
     for name, definition in exported["models"].items():
         cls = classes.get(name)
         definition["interfaceMeta"] = None if cls is None else resolved_meta(cls)
