@@ -35,9 +35,9 @@ from pangloss_models.exceptions import PanglossMigrationError
 from pangloss_models.migrations.files import Migration
 from pangloss_models.migrations.reports import MigrationReport
 from pangloss_models.migrations.state import apply_change as apply_to_snapshot
+from pangloss_cypher.transactions import Database
 from pangloss_users import current_request_username
 
-from pangloss_neo4j.databases.neo4j.database import Database
 from pangloss_neo4j.databases.neo4j.database import current
 from pangloss_neo4j.databases.neo4j.initialise_database import (
     structure as initialise_structure,
@@ -72,17 +72,17 @@ def structure() -> dict[str, Any]:
 
 async def ensure_ready(database: Database | None = None) -> None:
     database = database or current()
-    await database.ensure_driver()
+    driver = await database.ensure_driver()
     name = database.settings.DATABASE.DATABASE_NAME
-    existing = await list_constraints(database.driver, name)
+    existing = await list_constraints(driver, name)
     for entry in CONSTRAINTS:
         if has_constraint(existing, entry) is None:
-            await run_statement(
-                database.driver, name, create_constraint_statement(entry)
-            )
+            await run_statement(driver, name, create_constraint_statement(entry))
 
 
 def open_session(database: Database) -> neo4j.AsyncSession:
+    """(once the driver is made: `ensure_driver`)"""
+    assert database.driver is not None
     return database.driver.session(database=database.settings.DATABASE.DATABASE_NAME)
 
 

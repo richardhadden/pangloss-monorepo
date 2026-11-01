@@ -59,7 +59,7 @@ parser.add_argument("--keep", action="store_true", help="leave the container run
 parser.add_argument("--out")
 args = parser.parse_args()
 
-CONFIG = {
+CONFIG: dict[str, typing.Any] = {
     "memgraph": dict(
         module="pangloss_memgraph.databases.memgraph",
         app="pangloss_memgraph",

@@ -143,7 +143,7 @@ class Person(Entity, Agent):
         label: str
         aliases: list[str]
         born: pangloss_dates.models.DateRange.Create | pangloss_dates.models.EDTFDate.Create | pangloss_dates.models.ExactDate.Create | pangloss_dates.models.OngoingDate.Create | pangloss_dates.models.Period.Create | pangloss_dates.models.Recurrence.Create | pangloss_dates.models.UnknownDate.Create
-        has_type: list[OccupationType.ReferenceSet]
+        has_type: typing.Any
         known_as: WithCertainty[str]
 
     class Update(pangloss_models.model_bases.entity._EntityUpdateBase):  # type: ignore
@@ -151,7 +151,7 @@ class Person(Entity, Agent):
         label: str
         aliases: list[str]
         born: pangloss_dates.models.DateRange.Create | pangloss_dates.models.DateRange.Update | pangloss_dates.models.EDTFDate.Create | pangloss_dates.models.EDTFDate.Update | pangloss_dates.models.ExactDate.Create | pangloss_dates.models.ExactDate.Update | pangloss_dates.models.OngoingDate.Create | pangloss_dates.models.OngoingDate.Update | pangloss_dates.models.Period.Create | pangloss_dates.models.Period.Update | pangloss_dates.models.Recurrence.Create | pangloss_dates.models.Recurrence.Update | pangloss_dates.models.UnknownDate.Create | pangloss_dates.models.UnknownDate.Update
-        has_type: list[OccupationType.ReferenceSet]
+        has_type: typing.Any
         known_as: WithCertainty[str]
 
     class View(pangloss_models.model_bases.entity._EntityViewBase):  # type: ignore
@@ -159,7 +159,7 @@ class Person(Entity, Agent):
         label: str
         aliases: list[str]
         born: pangloss_dates.models.DateRange.View | pangloss_dates.models.EDTFDate.View | pangloss_dates.models.ExactDate.View | pangloss_dates.models.OngoingDate.View | pangloss_dates.models.Period.View | pangloss_dates.models.Recurrence.View | pangloss_dates.models.UnknownDate.View
-        has_type: list[OccupationType.ReferenceView] = ...
+        has_type: typing.Any = ...
         known_as: WithCertainty[str]
 
     class HeadView(pangloss_models.model_bases.entity._EntityHeadViewBase, Person.View):  # type: ignore

@@ -232,7 +232,9 @@ def _build_list_query(
             "limit": hit_limit,
         }
         return (
-            f"""
+            cast(
+                LiteralString,
+                f"""
             UNWIND $patterns AS pattern
             CALL {d.text_search("label_text", "pattern", "{limit: $limit}")} YIELD node, score
             WITH node AS n, pattern, max(score) AS patternScore
@@ -283,6 +285,7 @@ def _build_list_query(
                 next_page: CASE WHEN $page_number < totalPages THEN $page_number + 1 ELSE null END
             }} AS result;
         """,
+            ),
             params,
         )
 

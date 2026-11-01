@@ -32,8 +32,9 @@ class DecodedResult:
         self._result = result
 
     def _record(self, record: neo4j.Record | None) -> neo4j.Record | None:
-        if record is None:
-            return None
+        return None if record is None else self._decoded(record)
+
+    def _decoded(self, record: neo4j.Record) -> neo4j.Record:
         return neo4j.Record(
             zip(record.keys(), (decode(v) for v in record.values()), strict=True)
         )
@@ -45,7 +46,7 @@ class DecodedResult:
         return self._record(await self._result.peek())
 
     async def fetch(self, n: int) -> list[neo4j.Record]:
-        return [self._record(r) for r in await self._result.fetch(n)]  # type: ignore[misc]
+        return [self._decoded(r) for r in await self._result.fetch(n)]
 
     async def data(self, *keys: Any) -> list[dict[str, Any]]:
         return [decode(row) for row in await self._result.data(*keys)]
@@ -61,7 +62,7 @@ class DecodedResult:
 
     async def _records(self):
         async for record in self._result:
-            yield self._record(record)
+            yield self._decoded(record)
 
     def __getattr__(self, name: str) -> Any:
         return getattr(self._result, name)

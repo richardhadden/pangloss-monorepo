@@ -137,6 +137,42 @@ def test_models_in_another_module_of_the_project_have_a_stub_too(project: Path):
     )
 
 
+def test_a_model_made_by_another_class_is_any_where_it_is_used_and_a_generic_is_named(
+    project: Path,
+):
+    # (as a typology makes its entity: `Kinds.Type` is the model, and there is no `Kind` in the module; a
+    # parametrised generic, `Noted[str]`, is not in the module by its name either, but can be named)
+    write(
+        project,
+        "fakeapp/models.py",
+        """
+        from pangloss_models.model_bases.annotated_value import AnnotatedValue
+        from pangloss_models.model_bases.entity import Entity
+
+
+        class Noted[T](AnnotatedValue[T]):
+            note: str
+
+
+        class Kinds:
+            Type = type(Entity)("Kind", (Entity,), {"__module__": __name__})
+
+
+        class Person(Entity):
+            kind: list[Kinds.Type]
+            nickname: Noted[str]
+        """,
+    )
+
+    exit_code, output = make_stubs()
+    assert exit_code == 0, output
+    person = nested(ast.parse((project / "fakeapp/models.pyi").read_text()), "Person")
+    create = ast.unparse(person["Create"])
+    assert "kind: typing.Any" in create
+    assert "Kind." not in create
+    assert "nickname: Noted[str]" in create
+
+
 def test_no_models(project: Path):
     exit_code, output = make_stubs()
     assert exit_code == 0, output

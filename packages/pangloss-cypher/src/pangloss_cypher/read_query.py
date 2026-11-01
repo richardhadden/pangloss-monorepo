@@ -7,7 +7,7 @@ from pangloss_models.model_bases.document import Document
 from pangloss_models.model_bases.entity import Entity
 
 from pangloss_cypher import fragments
-from pangloss_cypher.params import QueryParams
+from pangloss_cypher.params import Identifier, QueryParams
 from pangloss_cypher.transactions import dialect
 from pangloss_cypher.values import convert_type_for_writing
 from pangloss_cypher.visibility import unpublished_visible
@@ -27,12 +27,12 @@ def build_fetch_document_query(
     # (the names of the parameters are fixed, so that the text of the query is the same each
     # time and the database finds its plan again: with a name made for each call it planned it
     # afresh each time, which took most of the time a read took)
-    document_id_identifier = "document_id"
-    document_type_identifier = "document_type"
+    document_id_identifier = Identifier("document_id")
+    document_type_identifier = Identifier("document_type")
     query_params = QueryParams()
     query_params[document_id_identifier] = convert_type_for_writing(document_id)
     query_params[document_type_identifier] = document_class.__name__
-    query_params["see_unpublished"] = unpublished_visible()
+    query_params[Identifier("see_unpublished")] = unpublished_visible()
     d = dialect()
     query = f"""
     MATCH rp = (root:PGIndexableNode {{id: ${document_id_identifier}}})

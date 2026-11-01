@@ -183,12 +183,11 @@ class MemgraphMigrations:
         )
         changed: dict[int, str | None] = {}
         for match in matches:
-            result = await tx.run(
-                f"""
+            query = f"""
                 {match} WHERE n.label IS NOT NULL OR n.{FOLDED_LABEL} IS NOT NULL
                 RETURN id(n) AS node, n.label AS label, n.{FOLDED_LABEL} AS folded
                 """
-            )
+            result = await tx.run(query)  # ty: ignore[invalid-argument-type]
             async for row in result:
                 label = row["label"]
                 folded = fold(label) if isinstance(label, str) else None

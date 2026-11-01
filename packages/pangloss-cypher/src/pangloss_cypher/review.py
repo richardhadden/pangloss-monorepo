@@ -41,7 +41,7 @@ def state_from(record: Any) -> dict[str, Any]:
 
 
 async def get_review_state(tx: Transaction, id: UUID) -> dict[str, Any] | None:
-    result = await tx.run(STATE_QUERY, id=str(id))
+    result = await tx.run(STATE_QUERY, id=str(id))  # ty: ignore[invalid-argument-type]
     record = await result.single()
     return state_from(record) if record else None
 
@@ -58,7 +58,7 @@ async def set_review_status(
         SET head.review_status = $status, head.published = $published,
             head.reviewed_by = $user, head.reviewed_at = $at
         RETURN head.id AS id
-        """,
+        """,  # ty: ignore[invalid-argument-type]
         id=str(id),
         status=status,
         published=published,
@@ -95,7 +95,7 @@ async def add_review_comment(
         WHERE NOT head:Entity AND {fragments.not_deleted("head")}
         OPTIONAL MATCH (part:PGIndexableNode {{id: $target_id, head_node_id: $id}})
         RETURN head.id AS id, part.label AS part_label, part IS NOT NULL AS part_found
-        """,
+        """,  # ty: ignore[invalid-argument-type]
         id=str(id),
         target_id=str(target_id) if target_id else None,
     )
@@ -191,7 +191,7 @@ async def review_queue(
             open_comments: size([(head)<-[:comment_on]-(c:PGReviewComment) WHERE NOT coalesce(c.resolved, false) | c])
         }}) AS items
         RETURN size(items) AS count, items[($page - 1) * $page_size .. $page * $page_size] AS results
-        """,
+        """,  # ty: ignore[invalid-argument-type]
         statuses=statuses,
         type=type,
         page=page,

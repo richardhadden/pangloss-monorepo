@@ -158,6 +158,7 @@ def test_the_entity_is_given_the_pages_of_the_interface_module():
 
     initialise(bind_database=False)
     meta = resolved_meta(RoleTypology.Type)
+    assert meta is not None
     assert meta["listPage"] == {"module": "pangloss_typology", "name": "TypeTree"}
     assert meta["itemPage"] == {"module": "pangloss_typology", "name": "TypeItem"}
     assert meta["viewCard"] == {"module": "pangloss_typology", "name": "TypeCard"}
@@ -177,5 +178,6 @@ def test_a_type_that_is_also_a_class_keeps_what_that_class_sets_apart_from_the_p
 
     initialise(bind_database=False)
     meta = resolved_meta(RoleTypology.Type)
+    assert meta is not None
     assert meta["colour"] == "amber"
     assert meta["viewCard"] == {"module": "pangloss_typology", "name": "TypeCard"}

@@ -14,9 +14,9 @@ from typing import Any
 
 import neo4j
 
+from pangloss_cypher.transactions import Database
 from pangloss_models.indexes import model_indexes
 
-from pangloss_memgraph.databases.memgraph.database import Database
 from pangloss_memgraph.databases.memgraph.database import current
 from pangloss_memgraph.databases.memgraph.folding import refold
 
@@ -183,8 +183,7 @@ async def initialise_database(database: Database | None = None) -> DatabaseSetup
     Uses the default `Database`, unless given one.
     """
     database = database or current()
-    await database.ensure_driver()
-    driver = database.driver
+    driver = await database.ensure_driver()
     database_name = database.settings.DATABASE.DATABASE_NAME
 
     async def run(statement: str) -> list[dict[str, Any]]:

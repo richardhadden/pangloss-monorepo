@@ -66,7 +66,7 @@ async def apply_changes(
     A change is applied once its predecessors have been: a failure leaves the changes
     before it (in a transaction, or made on their own) done."""
     check_written_for(database, changes)
-    await database.ensure_driver()
+    driver = await database.ensure_driver()
     database_name = database.settings.DATABASE.DATABASE_NAME
 
     group: list[tuple[c.Change, dict[str, Any]]] = []
@@ -81,7 +81,7 @@ async def apply_changes(
             for change, before in batch:
                 await apply_change(tx, change, before)
 
-        async with database.driver.session(database=database_name) as session:
+        async with driver.session(database=database_name) as session:
             await session.execute_write(work)
 
     with using(database):
@@ -113,10 +113,10 @@ async def dry_run(
 async def _dry_run(
     database: Database, state: dict[str, Any], changes: list[c.Change]
 ) -> tuple[list[ChangeReport], dict[str, Any]]:
-    await database.ensure_driver()
+    driver = await database.ensure_driver()
     reports: list[ChangeReport] = []
     failed = False
-    async with database.driver.session(
+    async with driver.session(
         database=database.settings.DATABASE.DATABASE_NAME
     ) as session:
         tx = await session.begin_transaction()
@@ -197,12 +197,12 @@ async def _apply_in_batches(
     start: Progress | None,
     save: SaveProgress | None,
 ) -> dict[str, Any]:
-    await database.ensure_driver()
+    driver = await database.ensure_driver()
     database_name = database.settings.DATABASE.DATABASE_NAME
     start = start or Progress()
 
     async def in_transaction(work: Callable[[Transaction], Awaitable[Any]]) -> Any:
-        async with database.driver.session(database=database_name) as session:
+        async with driver.session(database=database_name) as session:
             return await session.execute_write(work)
 
     for index, change in enumerate(changes):

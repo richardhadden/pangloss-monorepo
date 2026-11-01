@@ -14,6 +14,7 @@ package no longer has is removed.
 import json
 import shutil
 from dataclasses import dataclass
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any, Protocol
 
@@ -129,8 +130,11 @@ def export_project_models(project: Project) -> dict[str, Any]:
 class ModuleSource(Protocol):
     """An interface module: `pangloss_interface.modules.InterfaceModule`"""
 
-    app: str
-    root: Path
+    @property
+    def app(self) -> str: ...
+
+    @property
+    def root(self) -> Path: ...
 
 
 def module_files(root: Path) -> list[str]:
@@ -169,7 +173,7 @@ def sources_css(has_modules: bool) -> str:
 
 
 def sync_modules(
-    destination: Path, modules: list[ModuleSource]
+    destination: Path, modules: Sequence[ModuleSource]
 ) -> tuple[list[str], list[str]]:
     """Copy the interface modules into `modules/<app>/`; the files written, and those removed
     (of a module that has lost them, or that is no longer installed)"""
@@ -197,7 +201,7 @@ def sync_modules(
 def prepare(
     project_root: Path,
     exported: dict[str, Any],
-    modules: list[ModuleSource] | None = None,
+    modules: Sequence[ModuleSource] | None = None,
 ) -> Prepared:
     """Make the working directory ready: the package's JavaScript, the models, and the
     interface modules of the installed apps"""
@@ -261,7 +265,7 @@ def linked_sources_path(project_root: Path) -> Path:
 def prepare_linked(
     project_root: Path,
     exported: dict[str, Any],
-    modules: list[ModuleSource] | None = None,
+    modules: Sequence[ModuleSource] | None = None,
 ) -> Linked:
     """Write only the project's models and the list of its interface modules, for the interface to
     be run from the package's own source. The modules are used **where they are** (an app that

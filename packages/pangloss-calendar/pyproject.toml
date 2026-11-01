@@ -12,6 +12,7 @@ dependencies = [
     "pangloss-api",
     "pangloss-core",
     "pangloss-dates",
+    "pangloss-models",
     "typer>=0.12",
 ]
 
@@ -29,6 +30,7 @@ pangloss-api = { workspace = true }
 pangloss-core = { workspace = true }
 pangloss-memgraph = { workspace = true }
 pangloss-neo4j = { workspace = true }
+pangloss-models = { workspace = true }
 
 [dependency-groups]
 dev = [

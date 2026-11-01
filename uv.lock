@@ -747,6 +747,7 @@ dependencies = [
     { name = "pangloss-api" },
     { name = "pangloss-core" },
     { name = "pangloss-dates" },
+    { name = "pangloss-models" },
     { name = "typer" },
 ]
 
@@ -765,6 +766,7 @@ requires-dist = [
     { name = "pangloss-api", editable = "packages/pangloss-api" },
     { name = "pangloss-core", editable = "packages/pangloss-core" },
     { name = "pangloss-dates", editable = "packages/pangloss-dates" },
+    { name = "pangloss-models", editable = "packages/pangloss-models" },
     { name = "typer", specifier = ">=0.12" },
 ]
 

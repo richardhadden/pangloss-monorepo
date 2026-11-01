@@ -128,14 +128,17 @@ def test_the_page_and_the_console_move_across_for_a_pinned_bar(page: Page, data)
     hydrated(page)
     console = page.get_by_role("banner", name="Console")
     expect(console).to_be_visible()
+    assert page.viewport_size is not None
     width = page.viewport_size["width"]
     before = console.bounding_box()
+    assert before is not None
     assert before["x"] < 288  # (it is under where the pinned bar will be)
     pin_nav(page)
     page.mouse.move(width - 20, 400)
     bar = page.locator("nav[aria-label='Main']").bounding_box()
     expect(console).to_have_js_property("offsetLeft", 320)
     after = console.bounding_box()
+    assert bar is not None and after is not None
     assert after["x"] >= bar["x"] + bar["width"]
     # (the padding of the page is transitioned: wait for it)
     page.wait_for_function(

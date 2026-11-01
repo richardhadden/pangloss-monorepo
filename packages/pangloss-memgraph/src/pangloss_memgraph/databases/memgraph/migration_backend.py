@@ -37,9 +37,9 @@ from pangloss_models.exceptions import PanglossMigrationError
 from pangloss_models.migrations.files import Migration
 from pangloss_models.migrations.reports import MigrationReport
 from pangloss_models.migrations.state import apply_change as apply_to_snapshot
+from pangloss_cypher.transactions import Database
 from pangloss_users import current_request_username
 
-from pangloss_memgraph.databases.memgraph.database import Database
 from pangloss_memgraph.databases.memgraph.database import current
 from pangloss_memgraph.databases.memgraph.initialise_database import run_statement
 from pangloss_memgraph.databases.memgraph.initialise_database import (
@@ -69,21 +69,23 @@ def structure() -> dict[str, Any]:
 
 async def ensure_ready(database: Database | None = None) -> None:
     database = database or current()
-    await database.ensure_driver()
+    driver = await database.ensure_driver()
     name = database.settings.DATABASE.DATABASE_NAME
-    existing = await run_statement(database.driver, name, "SHOW CONSTRAINT INFO")
+    existing = await run_statement(driver, name, "SHOW CONSTRAINT INFO")
     have = {
         (row["label"], tuple(row["properties"]))
         for row in existing
         if row["constraint type"] == "unique"
     }
     if ("PGMigration", ("app", "name")) not in have:
-        await run_statement(database.driver, name, CONSTRAINTS[0])
+        await run_statement(driver, name, CONSTRAINTS[0])
     if ("PGMigrationLock", ("id",)) not in have:
-        await run_statement(database.driver, name, CONSTRAINTS[1])
+        await run_statement(driver, name, CONSTRAINTS[1])
 
 
 def open_session(database: Database) -> neo4j.AsyncSession:
+    """(once the driver is made: `ensure_driver`)"""
+    assert database.driver is not None
     return database.driver.session(database=database.settings.DATABASE.DATABASE_NAME)
 
 
@@ -191,16 +193,17 @@ async def restore(path: str, database: Database | None = None) -> None:
 async def rebuild_text_indexes(database: Database) -> None:
     """Make the text indexes again. A recovered snapshot has them, but their files (which are kept
     beside the snapshot, not in it) are not there, so every write of a node they cover would fail."""
+    driver = await database.ensure_driver()
     name = database.settings.DATABASE.DATABASE_NAME
-    rows = await run_statement(database.driver, name, "SHOW INDEX INFO")
+    rows = await run_statement(driver, name, "SHOW INDEX INFO")
     for row in rows:
         match = re.match(r"label_text \(name: (\w+)\)", row["index type"])
         if not match:
             continue
         index, label, prop = match.group(1), row["label"], row["property"][0]
-        await run_statement(database.driver, name, f"DROP TEXT INDEX {index}")
+        await run_statement(driver, name, f"DROP TEXT INDEX {index}")
         await run_statement(
-            database.driver, name, f"CREATE TEXT INDEX {index} ON :{label}({prop})"
+            driver, name, f"CREATE TEXT INDEX {index} ON :{label}({prop})"
         )
 
 

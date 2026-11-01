@@ -27,9 +27,10 @@ import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
+from pangloss_cypher.transactions import Database
 from pangloss_models.exceptions import PanglossBulkLoadError
 
-from pangloss_neo4j.databases.neo4j.database import Database, slow_query_ms
+from pangloss_neo4j.databases.neo4j.database import slow_query_ms
 from pangloss_neo4j.databases.neo4j.database import current
 from pangloss_neo4j.databases.neo4j.migration_backend import (
     LOCK_ID,

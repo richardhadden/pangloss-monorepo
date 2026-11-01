@@ -44,7 +44,7 @@ def run_connected[T](ctx: typer.Context, function: Callable[[], Awaitable[T]]) -
 @cli.command()
 def queue(
     ctx: typer.Context,
-    status: list[ReviewStatus] = typer.Option(  # noqa: B008
+    status: list[ReviewStatus] = typer.Option(
         [], "--status", "-s", help="unchecked (the default), errors_found or checked"
     ),
     type: str | None = typer.Option(None, "--type", "-t", help="Only this class"),

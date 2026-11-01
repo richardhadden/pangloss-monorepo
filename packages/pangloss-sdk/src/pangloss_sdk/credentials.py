@@ -35,8 +35,8 @@ def keyring_module() -> Any | None:
     if os.environ.get("PANGLOSS_NO_KEYRING"):
         return None
     try:
-        import keyring  # ty: ignore[unresolved-import]
-        from keyring.backends import fail  # ty: ignore[unresolved-import]
+        import keyring
+        from keyring.backends import fail
     except ImportError:
         return None
     return None if isinstance(keyring.get_keyring(), fail.Keyring) else keyring

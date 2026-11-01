@@ -258,7 +258,7 @@ async def replace_urls(tx: Transaction, entity_id: uuid.UUID, urls: list[str]) -
         MATCH (node:PGUrl {{url: url}})
         WHERE NOT ({entity} {{id: $id}})-[:has_url]->(node)
         RETURN node.url AS url
-        """,
+        """,  # ty: ignore[invalid-argument-type]
         urls=urls,
         id=id,
     )
@@ -271,7 +271,7 @@ async def replace_urls(tx: Transaction, entity_id: uuid.UUID, urls: list[str]) -
         MATCH ({entity} {{id: $id}})-[:has_url]->(node:PGUrl)
         WHERE NOT node.url IN $urls
         DETACH DELETE node
-        """,
+        """,  # ty: ignore[invalid-argument-type]
         urls=urls,
         id=id,
     )
@@ -281,7 +281,7 @@ async def replace_urls(tx: Transaction, entity_id: uuid.UUID, urls: list[str]) -
         UNWIND $urls AS url
         MERGE (node:PGUrl {{url: url}})
         MERGE (entity)-[:has_url]->(node)
-        """,
+        """,  # ty: ignore[invalid-argument-type]
         urls=urls,
         id=id,
     )

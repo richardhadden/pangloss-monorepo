@@ -147,7 +147,7 @@ async def create(
     if supertype is not None:
         await row_of(typology, supertype)  # (it must be there)
         values[IS_SUBTYPE_OF] = [{"type": name, "id": str(supertype)}]
-    made = await typology.Type.Create(**values).save()  # ty: ignore[unresolved-attribute]
+    made = await typology.Type.Create(**values).save()
     return await get(typology, made.id)
 
 
@@ -183,7 +183,7 @@ async def move_type(typology: type[Typology], id: str, to: str | None) -> None:
         await graph.check_move(tx, name, id, to)
 
     for attempt in range(1, MOVE_ATTEMPTS + 1):
-        edit = await typology.Type.get_for_edit(UUID(id))  # ty: ignore[unresolved-attribute]
+        edit = await typology.Type.get_for_edit(UUID(id))
         if edit is None:
             raise NotFound(f"There is no {name} {id}")
         data = {
@@ -191,7 +191,7 @@ async def move_type(typology: type[Typology], id: str, to: str | None) -> None:
             IS_SUBTYPE_OF: [] if to is None else [{"type": name, "id": to}],
         }
         try:
-            await typology.Type.Update(**data).save(  # ty: ignore[unresolved-attribute]
+            await typology.Type.Update(**data).save(
                 expected_version=edit.meta.version, before_write=checked
             )
             return
@@ -224,11 +224,11 @@ async def update(
         if field not in typology.Type.model_fields:
             raise Refused(f"A {name} has no label in the language {code!r}")
         changes[field] = text
-    edit = await typology.Type.get_for_edit(UUID(str(id)))  # ty: ignore[unresolved-attribute]
+    edit = await typology.Type.get_for_edit(UUID(str(id)))
     if edit is None:
         raise NotFound(f"There is no {name} {id}")
     data = {**edit.model_dump(by_alias=False), **changes}
-    await typology.Type.Update(**data).save(expected_version=edit.meta.version)  # ty: ignore[unresolved-attribute]
+    await typology.Type.Update(**data).save(expected_version=edit.meta.version)
     return await get(typology, id)
 
 
@@ -261,7 +261,7 @@ async def delete(typology: type[Typology], id: UUID | str) -> None:
             + (" and more" if len(users) > 5 else "")
             + ": merge it into another type, or change those first"
         )
-    await typology.Type.delete(UUID(row.id))  # ty: ignore[unresolved-attribute]
+    await typology.Type.delete(UUID(row.id))
 
 
 @dataclass
@@ -316,7 +316,7 @@ async def merge_counted(
     # (it leaves the hierarchy before it is deleted)
     if source.parent is not None:
         await move_type(typology, source.id, None)
-    await typology.Type.delete(UUID(source.id))  # ty: ignore[unresolved-attribute]
+    await typology.Type.delete(UUID(source.id))
     return Merged(
         type=await get(typology, target.id), subtypes=subtypes, relinked=relinked
     )

@@ -343,7 +343,7 @@ def forget(*labels: str) -> None:
     driver = neo4j.GraphDatabase.driver(MEMGRAPH_URI, auth=MEMGRAPH_AUTH)
     try:
         for label in labels:
-            driver.execute_query(
+            driver.execute_query(  # ty: ignore[no-matching-overload]
                 f"MATCH (n:{label}) DETACH DELETE n", database_="memgraph"
             )
     finally:

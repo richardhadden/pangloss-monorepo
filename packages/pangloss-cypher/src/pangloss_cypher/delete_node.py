@@ -126,7 +126,7 @@ async def soft_delete(
         raise PanglossNotFoundError(f"There is no {cls.__name__} with id {id}")
     node_id = str(resolved_id)
 
-    result = await tx.run(FIND_QUERY, id=node_id, type=cls.__name__)
+    result = await tx.run(FIND_QUERY, id=node_id, type=cls.__name__)  # ty: ignore[invalid-argument-type]
     found = await result.data()
     # (a document nested in a deleted document is gone with it)
     if not found or found[0]["deleted"] or (not is_entity and found[0]["head_deleted"]):
@@ -139,7 +139,7 @@ async def soft_delete(
         )
 
     if is_entity:
-        result = await tx.run(REFERENCES_QUERY, id=node_id)
+        result = await tx.run(REFERENCES_QUERY, id=node_id)  # ty: ignore[invalid-argument-type]
         references = await result.data()
         if references:
             await tx.run(
@@ -195,7 +195,7 @@ async def undelete(
         raise PanglossNotFoundError(f"There is no {cls.__name__} with id {id}")
     node_id = str(resolved_id)
 
-    result = await tx.run(FIND_QUERY, id=node_id, type=cls.__name__)
+    result = await tx.run(FIND_QUERY, id=node_id, type=cls.__name__)  # ty: ignore[invalid-argument-type]
     found = await result.data()
     if not found:
         raise PanglossNotFoundError(f"There is no {cls.__name__} with id {id}")

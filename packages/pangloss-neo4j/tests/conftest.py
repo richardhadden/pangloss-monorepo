@@ -7,6 +7,7 @@ import typing
 from collections.abc import Callable, Generator
 
 import docker
+import docker.errors
 import neo4j
 import pangloss_core.settings as core_settings
 import pytest

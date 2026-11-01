@@ -42,6 +42,8 @@ e2e = [
 [[tool.ty.overrides]]
 include = [
     "packages/*/tests/**",
+    "e2e/**",
+    "packages/pangloss-testing/src/pangloss_testing/conformance/**",
     "pangloss-demo/**",
     "sdk-demo/**",
 ]
@@ -57,6 +59,7 @@ invalid-method-override = "ignore"
 invalid-attribute-override = "ignore"
 invalid-assignment = "ignore"
 unused-type-ignore-comment = "ignore"
+unused-ignore-comment = "ignore"
 truthiness-test-of-callable = "ignore"
 unsupported-base = "ignore"
 unresolved-import = "ignore"  # (the test modules import each other by name)
@@ -69,11 +72,15 @@ include = [
     "packages/pangloss-models/src/pangloss_models/migrations/check.py",
     "packages/pangloss-api/src/pangloss_api/routes/models.py",
     "packages/pangloss-sdk/src/**",
-    "packages/pangloss-memgraph/src/pangloss_memgraph/databases/memgraph/build_*_query.py",
+    "packages/pangloss-cypher/src/pangloss_cypher/build_*_query.py",
+    "packages/pangloss-cypher/src/pangloss_cypher/write_plan.py",
+    "packages/pangloss-cypher/src/pangloss_cypher/write_functions.py",
     "packages/pangloss-memgraph/src/pangloss_memgraph/databases/memgraph/exposed_functions.py",
     "packages/pangloss-zotero/src/pangloss_zotero/store.py",
     "packages/pangloss-zotero/src/pangloss_zotero/link.py",
     "packages/pangloss-calendar/src/pangloss_calendar/graph.py",
+    "packages/pangloss-typology/src/pangloss_typology/typology.py",
+    "packages/pangloss-typology/src/pangloss_typology/service.py",
 ]
 [tool.ty.overrides.rules]
 invalid-await = "ignore"
@@ -92,6 +99,7 @@ missing-argument = "ignore"
 empty-body = "ignore"
 pydantic-discarded-extra-argument = "ignore"
 unused-type-ignore-comment = "ignore"
+unused-ignore-comment = "ignore"
 
 # the date families override the type of a field with the member of the family that has the calendar
 [[tool.ty.overrides]]

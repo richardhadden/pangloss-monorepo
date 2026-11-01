@@ -15,6 +15,7 @@ import logging
 from urllib.parse import urlparse
 
 from pangloss_core.settings import BaseSettings
+from pangloss_cypher import transactions
 
 from pangloss_neo4j.databases.neo4j.database import (
     Database,
@@ -29,7 +30,7 @@ from pangloss_neo4j.databases.neo4j.initialise_database import (
 logger = logging.getLogger("pangloss.neo4j.setup")
 
 
-def create_database(settings: BaseSettings) -> Database:
+def create_database(settings: BaseSettings) -> transactions.Database:
     """Make the process's database (`database.install`) from the settings, if it has none
     already. It does not connect: `connect` does"""
     return installed() or install(Database(settings=settings))

@@ -1,5 +1,5 @@
 #! /bin/sh
-# Everything, in three runs (after `ruff`: the formatting, pyflakes and bugbear):
+# Everything, in three runs (after `ruff`: the formatting, pyflakes and bugbear; and `ty`, the static types):
 #
 #   1. the unit and integration tests of the packages (in parallel), with the Memgraph in Docker, the conformance suite
 #      (`pangloss_testing/conformance/`, the tests every backend passes) among them;
@@ -48,6 +48,8 @@ run() {
 if [ -z "$args" ]; then
     # (formatting, and pyflakes: unused names, undefined names, names defined twice)
     run "ruff (format, pyflakes, bugbear)" sh -c 'uv run ruff format --check packages && uv run ruff check --select F,B packages'
+    # (the static types, of the whole repository: what is relaxed, and where, is in `pyproject.toml`, `[tool.ty]`)
+    run "ty" uv run ty check
     # (everything: the Neo4j package has a run of its own)
     run "packages (Memgraph)" uv run pytest --dist=loadgroup -n auto --ignore=packages/pangloss-neo4j
 else

@@ -12,9 +12,9 @@ import dataclasses
 import importlib
 from typing import Any
 
+from pangloss_cypher.transactions import Database
 from pangloss_models.indexes import model_indexes
 
-from pangloss_neo4j.databases.neo4j.database import Database
 from pangloss_neo4j.databases.neo4j.database import current
 from pangloss_neo4j.databases.neo4j.schema import (
     TEXT_INDEX_NAME,
@@ -155,8 +155,7 @@ async def initialise_database(database: Database | None = None) -> DatabaseSetup
     The constraints are made first (an index made before one fails it). Uses the default `Database`, unless given one.
     """
     database = database or current()
-    await database.ensure_driver()
-    driver = database.driver
+    driver = await database.ensure_driver()
     database_name = database.settings.DATABASE.DATABASE_NAME
 
     async def run(statement: str) -> list[dict[str, Any]]:

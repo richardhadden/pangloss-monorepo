@@ -41,7 +41,7 @@ parser.add_argument("--neo4j-pagecache", default="1g")
 parser.add_argument("--out")
 args = parser.parse_args()
 
-CONFIG = {
+CONFIG: dict[str, typing.Any] = {
     "memgraph": dict(
         module="pangloss_memgraph.databases.memgraph",
         settings="MemgraphDatabaseSettings",
@@ -133,7 +133,7 @@ async def timed(label: str, make, repeat: int, results: dict) -> None:
     print(f"  {label}: {results['serial'][label]}", flush=True)
 
 
-async def concurrently(jobs, concurrency: int) -> float:
+async def concurrently(jobs, concurrency: int) -> tuple[float, list]:
     """Run the coroutine factories `concurrency` at a time; the seconds taken"""
     semaphore = asyncio.Semaphore(concurrency)
     results = [None] * len(jobs)

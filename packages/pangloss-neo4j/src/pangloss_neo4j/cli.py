@@ -47,10 +47,11 @@ def info() -> None:
 
     async def collect():
         database = current()
+        driver = await database.ensure_driver()
         name = database.settings.DATABASE.DATABASE_NAME
         return {
-            "indexes": await list_indexes(database.driver, name),
-            "constraints": await list_constraints(database.driver, name),
+            "indexes": await list_indexes(driver, name),
+            "constraints": await list_constraints(driver, name),
         }
 
     try:

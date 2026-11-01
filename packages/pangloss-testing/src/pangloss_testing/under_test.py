@@ -40,8 +40,11 @@ class _Aliases(importlib.abc.MetaPathFinder):
         real = importlib.import_module(
             f"{_backend.database_module}.{name.removeprefix(prefix)}"
         )
+        # (typeshed's `LoaderProtocol` still asks for `load_module`, which `importlib.abc.Loader` no longer has)
         return importlib.util.spec_from_loader(
-            name, _Existing(real), is_package=hasattr(real, "__path__")
+            name,
+            _Existing(real),  # ty: ignore[invalid-argument-type]
+            is_package=hasattr(real, "__path__"),
         )
 
 

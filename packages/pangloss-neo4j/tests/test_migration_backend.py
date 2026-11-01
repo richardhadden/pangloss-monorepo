@@ -192,7 +192,7 @@ async def test_only_one_migrate_at_a_time(db_driver, clear_database):
     ]
 
 
-def test_this_backend_has_no_snapshots_and_the_commands_say_so():
+async def test_this_backend_has_no_snapshots_and_the_commands_say_so():  # (async: the module is marked)
     """Memgraph takes and restores snapshots; Neo4j Community has no online snapshot (`neo4j-admin database dump` is offline).
     The functions are optional in the contract, and `pangloss migrate --backup`, `backups` and `restore` check for them
     (`hasattr`) and say that this database cannot."""

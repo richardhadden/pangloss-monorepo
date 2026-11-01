@@ -54,7 +54,7 @@ async def empty_page(tx: Transaction, query: str, params: dict) -> dict[str, Any
 
     total = 0
     if page > 1:
-        result = await tx.run(query, **{**params, page_key: 1})
+        result = await tx.run(query, **{**params, page_key: 1})  # ty: ignore[invalid-argument-type]
         first_page = await result.value()
         if first_page:
             total = first_page[0]["count"]
@@ -183,7 +183,7 @@ async def autocomplete(
         "page_size": size,
     }
     query = autocomplete_query(d)
-    result = await tx.run(query, **params)
+    result = await tx.run(query, **params)  # ty: ignore[invalid-argument-type]
     rows = await result.value()
     found: dict = rows[0] if rows else await empty_page(tx, query, params)
     return AutocompleteResults.model_validate(found)
@@ -218,9 +218,9 @@ async def get_document(
     """A head document. Of a class that has subclasses, this gives the view of the subclass the document
     is (its `type` says which)"""
     cls = await class_of_node(tx, cls, cast(UUID, id))
-    query_string, query_params = build_fetch_document_query(cls, id)
+    query_string, query_params = build_fetch_document_query(cls, cast(UUID, id))
 
-    result = await tx.run(query_string, **query_params)
+    result = await tx.run(query_string, **query_params)  # ty: ignore[invalid-argument-type]
     records = await result.data()
     if records:
         return cls.HeadView(**tree_of(records[0]))
@@ -244,7 +244,7 @@ async def read_entity(
 
     query_string, query_params = build_fetch_document_query(cls, resolved_id)
 
-    result = await tx.run(query_string, **query_params)
+    result = await tx.run(query_string, **query_params)  # ty: ignore[invalid-argument-type]
     records = await result.data()
     if not records:
         return None

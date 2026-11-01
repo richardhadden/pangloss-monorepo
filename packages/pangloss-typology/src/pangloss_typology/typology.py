@@ -282,7 +282,7 @@ def make_entity(typology: type[Typology], meta: TypologyMeta) -> type[Entity]:
     annotations: dict[str, Any] = {
         "description": "str | None",
         IS_SUBTYPE_OF: Annotated[
-            list[meta.name],  # ty: ignore[invalid-type-form]
+            list[meta.name],
             RelationConfig(reverse_name=IS_SUPERTYPE_OF, validators=[MaxLen(1)]),
         ],
     }

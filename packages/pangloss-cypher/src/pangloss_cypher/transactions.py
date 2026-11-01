@@ -7,7 +7,7 @@ import contextvars
 import functools
 import logging
 import time
-from collections.abc import Awaitable, Callable, Iterator
+from collections.abc import Awaitable, Callable, Generator
 from typing import Any, Concatenate
 
 import neo4j
@@ -257,7 +257,7 @@ class Database:
         async def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
             return await self.run_read(func, *args, **kwargs)
 
-        return wrapper  # ty: ignore[invalid-return-type]
+        return wrapper
 
     def write_transaction[T, **P](
         self,
@@ -270,7 +270,7 @@ class Database:
         async def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
             return await self.run_write(func, *args, **kwargs)
 
-        return wrapper  # ty: ignore[invalid-return-type]
+        return wrapper
 
     async def close(self):
         if self.driver is not None:
@@ -309,7 +309,7 @@ def current() -> Database:
 
 
 @contextlib.contextmanager
-def using(database: Database) -> Iterator[Database]:
+def using(database: Database) -> Generator[Database]:
     """Within the block (and the tasks started in it), use `database` rather than the process's"""
     token = _in_use.set(database)
     try:
@@ -335,7 +335,7 @@ def read_transaction[T, **P](
     async def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
         return await current().run_read(func, *args, **kwargs)
 
-    return wrapper  # ty: ignore[invalid-return-type]
+    return wrapper
 
 
 def write_transaction[T, **P](
@@ -348,7 +348,7 @@ def write_transaction[T, **P](
     async def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
         return await current().run_write(func, *args, **kwargs)
 
-    return wrapper  # ty: ignore[invalid-return-type]
+    return wrapper
 
 
 async def refuse_while_migrating(tx: neo4j.AsyncManagedTransaction) -> None:

@@ -47,7 +47,9 @@ def run_connected[T](function: Callable[[], Awaitable[T]]) -> T:
 async def show(statement: str) -> list[dict[str, Any]]:
     database = current()
     return await run_statement(
-        database.driver, database.settings.DATABASE.DATABASE_NAME, statement
+        await database.ensure_driver(),
+        database.settings.DATABASE.DATABASE_NAME,
+        statement,
     )
 
 

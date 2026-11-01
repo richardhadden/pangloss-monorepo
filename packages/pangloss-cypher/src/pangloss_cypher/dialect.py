@@ -207,9 +207,11 @@ class Dialect(Protocol):
         variables in it start with `name`)"""
         ...
 
-    search_compiler: type
-    """The class that makes a structured search into Cypher: `pangloss_cypher.search_query.Compiler`, or a subclass that
-    finds some of what is tested in another way, for its planner"""
+    @property
+    def search_compiler(self) -> type:
+        """The class that makes a structured search into Cypher: `pangloss_cypher.search_query.Compiler`, or a subclass that
+        finds some of what is tested in another way, for its planner"""
+        ...
 
     migrations: MigrationDialect
     """Where the backends differ in a migration"""

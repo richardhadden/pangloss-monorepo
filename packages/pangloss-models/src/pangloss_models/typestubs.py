@@ -191,6 +191,12 @@ def registered_class_names() -> dict[type, tuple[str, str]]:
     for model in ModelRegistry._models:
         if "<locals>" in model.__qualname__:
             continue
+        # (a model made by another class is not in its module by its name: a typology's entity, which is
+        # `OccupationTypology.Type`, not `OccupationType`. The stub cannot name it, so it is written as `Any`.
+        # A generic's parametrisation, `WithCertainty[str]`, is found as its origin)
+        origin = model.__pydantic_generic_metadata__.get("origin") or model
+        if not importable(model.__module__, model.__qualname__.split("[")[0], origin):
+            continue
         names[model] = (model.__module__, model.__qualname__)
         for name, cls in generated_classes(model).items():
             names[cls] = (model.__module__, f"{model.__qualname__}.{name}")

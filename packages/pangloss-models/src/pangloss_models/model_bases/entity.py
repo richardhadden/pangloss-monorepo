@@ -138,7 +138,7 @@ class Entity(_DeclaredClass, WithMeta[EntityMeta]):
     UpdateDB: ClassVar[type[_EntityUpdateDBBase]]
 
     View: ClassVar[type[_EntityViewBase]]
-    HeadView: ClassVar[type[_HeadViewBase]]
+    HeadView: ClassVar[type[_EntityHeadViewBase]]
     EditView: ClassVar[type[_EntityEditViewBase]]
 
     get: ClassVar[

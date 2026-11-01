@@ -6,6 +6,7 @@ class that is a subclass of another one asked for finds nothing more.
 """
 
 import re
+from collections.abc import Sequence
 from uuid import UUID
 
 from pydantic import AnyHttpUrl
@@ -63,7 +64,7 @@ def resolve_entity_types(names: list[str]) -> list[type]:
     return found
 
 
-def smallest_types(types: list[type]) -> list[type]:
+def smallest_types(types: Sequence[type]) -> list[type]:
     """The types that find everything the given ones do: those that are not a subclass (or an
     application of the trait) of another one in the list"""
     result = []
@@ -83,6 +84,6 @@ def search_words(text: str) -> list[str]:
     return re.findall(r"\w+", fold(text))
 
 
-def labels_to_match(types: list[type]) -> list[str]:
+def labels_to_match(types: Sequence[type]) -> list[str]:
     """The node labels, any of which finds the entities of these types"""
     return [model.__name__ for model in smallest_types(types)]

@@ -123,7 +123,7 @@ async def relink_batch(
         WITH DISTINCT e
         LIMIT $batch_size
         RETURN e.id AS id, coalesce(e.head_node_id, e.id) AS head
-        """,
+        """,  # ty: ignore[invalid-argument-type]
         from_id=from_id,
         keep=keep,
         batch_size=batch_size,
@@ -151,7 +151,7 @@ async def relink_batch(
             SET new = properties(old)
             CREATE (e)<-[new_reverse:{backward}]-(b)
             SET new_reverse = properties(old), new_reverse.reverse = true
-            """,
+            """,  # ty: ignore[invalid-argument-type]
             ids=ids,
             from_id=from_id,
             to_id=to_id,
@@ -170,7 +170,7 @@ async def relink_batch(
             UNWIND gone AS edge
             DELETE edge
             RETURN count(*) AS deleted
-            """,
+            """,  # ty: ignore[invalid-argument-type]
             ids=ids,
             from_id=from_id,
         )
