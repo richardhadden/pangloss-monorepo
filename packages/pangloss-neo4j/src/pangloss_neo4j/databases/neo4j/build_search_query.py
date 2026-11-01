@@ -23,6 +23,7 @@ from pangloss_cypher.build_create_query import (
     convert_type_for_writing,
 )
 from pangloss_neo4j.databases.neo4j.traversal import hops
+from pangloss_cypher import fragments
 from pangloss_cypher.visibility import unpublished_visible
 
 COMPARISONS = {"eq": "=", "ne": "<>", "gt": ">", "gte": ">=", "lt": "<", "lte": "<="}
@@ -283,13 +284,13 @@ class Compiler:
         types = "|".join(f"`{name}`" for name in incoming.fields)
 
         def source_tests(s: str) -> str:
-            tests = [f"NOT coalesce({s}.deleted, false)", self.all_of(pattern.items, s)]
+            tests = [fragments.not_deleted(s), self.all_of(pattern.items, s)]
             if not issubclass(pattern.model, Entity):
                 # (nor does a document inside a deleted head document: its head node is looked up by the id it records. Going
                 # up to it along the reverse edges read 222,000 hits for 6,500 activities)
                 h = self.name("h")
                 tests.append(
-                    f"NOT EXISTS {{ MATCH ({h}:HeadNode {{id: coalesce({s}.head_node_id, {s}.id)}}) WHERE {h}.deleted OR NOT ($see_unpublished OR coalesce({h}.published, true)) }}"
+                    f"NOT EXISTS {{ MATCH ({h}:HeadNode {{id: coalesce({s}.head_node_id, {s}.id)}}) WHERE {fragments.hidden(h)} }}"
                 )
             return " AND ".join(tests)
 
@@ -321,7 +322,7 @@ class Compiler:
             pattern: CheckedPattern = c.value
             tests = self.all_of(pattern.items, t)
             if issubclass(pattern.model, Entity):  # (a deleted entity is not found)
-                tests = f"NOT coalesce({t}.deleted, false) AND {tests}"
+                tests = f"{fragments.not_deleted(t)} AND {tests}"
             return f"{t}:`{pattern.model.__name__}` AND {tests}"
         wanted = c.value if c.operator == "is_any" else [c.value]
         return f"{t}.id IN {self.param(wanted)}"
@@ -379,7 +380,7 @@ def build_search_query(
     finding, keys, sorting = ordering(compiler, order or [])
 
     kind = "HeadNode" if issubclass(model, Document) else "Entity"
-    where = f"NOT coalesce(n.deleted, false) AND ($see_unpublished OR coalesce(n.published, true)) AND {tests}"
+    where = f"{fragments.visible('n')} AND {tests}"
     prelude = "\n    ".join(text for text, _ in compiler.preludes)
     query = f"""
     {prelude}

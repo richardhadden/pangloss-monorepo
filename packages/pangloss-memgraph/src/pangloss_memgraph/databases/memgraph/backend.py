@@ -9,6 +9,7 @@ from pangloss_memgraph.databases.memgraph.database import (
     timeout_from_setting,
     write_transaction,
 )
+from pangloss_cypher import fragments
 from pangloss_cypher.visibility import unpublished_visible
 
 __all__ = [
@@ -16,6 +17,7 @@ __all__ = [
     "Transaction",
     "database",
     "ensure_lock",
+    "fragments",
     "lock",
     "timeout_from_setting",
     "unpublished_visible",

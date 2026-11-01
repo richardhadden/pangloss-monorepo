@@ -92,7 +92,11 @@ def test_a_backend_gives_every_name_of_the_backend_interface(module):
 
 @pytest.mark.parametrize(
     "name",
-    [n for n in BACKEND_NAMES if n not in ("Database", "Transaction", "database")],
+    [
+        n
+        for n in BACKEND_NAMES
+        if n not in ("Database", "Transaction", "database", "fragments")
+    ],
 )
 def test_the_functions_of_the_backend_interface_have_the_same_signature_on_both(name):
     signatures = {
@@ -100,3 +104,12 @@ def test_the_functions_of_the_backend_interface_have_the_same_signature_on_both(
         for module in BACKENDS
     }
     assert len(set(signatures.values())) == 1, signatures
+
+
+def test_both_backends_give_the_one_set_of_fragments():
+    """(the rule of what a reader sees is the kit's, on every Cypher backend)"""
+    from pangloss_cypher import fragments
+
+    assert all(
+        core_backend.current(module).fragments is fragments for module in BACKENDS
+    )

@@ -288,6 +288,46 @@ Done-when checks:
   - the measurements show no slower query (each fragment produces the same text as the code it replaces, so the plans
     should not change).
 
+**As built (2026-11-01):**
+
+- **`pangloss_cypher/fragments.py`.** It has:
+  - `visible(node)` for a head node;
+  - `visible(node, head, filters=...)` for any node, where `head` is its head node. Only `deleted` counts for an
+    entity. `filters` adds `$published` and `$review_status`;
+  - `hidden(head)`, its negation, for the search's `NOT EXISTS`;
+  - `deleted`, `not_deleted` and `published`;
+  - `head_of(node, as_)`, a `HeadOf` with `.match`, which writes itself as `coalesce(as_, node)`;
+  - `label` and `field_edge`, which backtick a name and refuse anything that is not an identifier.
+- **The kit and the backends use them.** That covers list (the 8 copies, and Neo4j's own `visible` in the plain list),
+  read and search on both backends; autocomplete; and the kit's `delete_node`, `review` and `build_update_query`.
+  - A script built the list, read and autocomplete queries for a document and an entity class, with and without
+    search and deep search, before and after the change. Apart from whitespace, the text is the same.
+  - The search changes were word-for-word: the same strings, now from the fragments.
+- **Add-ons.**
+  - Typology's `seen()` and `not_deleted()` and calendar's queries take the fragments from `backend.current().fragments`.
+    The `Backend` protocol and both backends' `backend.py` now provide `fragments`.
+  - Calendar's `CHARACTERISATIONS`, `MANUAL_BETWEEN` and `DATED_BETWEEN` became functions that build the query when
+    called, because the backend is not known at import time.
+  - `DATED_BETWEEN` checks its class and field with `label` and `field_edge`, replacing its own `IDENTIFIER` regex.
+  - The query text is the same, except typology's `SEEN`, whose two conditions are now in the usual order (same
+    meaning).
+  - `CHARACTERISATIONS` keeps only the `deleted` test: characterisations are entities, and an entity is always
+    published.
+- **`requires`.**
+  - Typology and calendar declare `requires = {"cypher"}`.
+  - `pangloss_core.storage.check_requirements(settings)` checks each installed app's `requires` against the backend's
+    `Capabilities`. A name that is not a capability is an error too.
+  - The API (`prepare_models`) and the CLI (`load_database`) call it at start-up.
+- **Tests.**
+  - `pangloss-cypher/tests/test_fragments.py`. Its last test is the done-when grep: no line in `packages/*/src` outside
+    `fragments.py` matches `coalesce(.*deleted`. It failed before this phase.
+  - `pangloss-core/tests/test_storage.py` covers `check_requirements`.
+  - `./run_tests.sh` passes: Memgraph 2,497, Neo4j 585 (the contract test now leaves `fragments`, a module, out of the
+    signatures, and checks both backends give the kit's), typology 19, calendar 16, dates 4, zotero 7 on Neo4j, and 57
+    browser tests.
+- **Not measured on :7689.** The list, read, search and autocomplete text is unchanged apart from whitespace, so the
+  plans cannot change. The scratch database was not running, so I did not run the large-data timings.
+
 ### Phase 5: accent folding on both backends (4–5 days)
 
 Neo4j folds already (`standard-folding` analyzer, and `schema.fold` on the words searched for). For Memgraph:

@@ -59,6 +59,15 @@ Dependencies: an add-on does not require a backend at install time; `pangloss-me
 3. **Locks.** `lock(tx, key)` and `ensure_lock(key)`: a `:PGLock {key}` node, unique (constraint in `initialise_database` and shipped migration `0004` of both backends). `ensure_lock` must be awaited *before* the transaction is opened: on Memgraph a transaction that creates the node is refused at its commit when two do at once (and the driver does not retry that), and a transaction does not see a node committed after it began. So the plan's `lock(tx, key)` alone was not enough. Typology's hierarchy lock uses them (this also removed its `id(l)`).
 4. **Tests.** New package `pangloss-testing` (`pangloss_testing.live`: `db_driver`, `clear_database`, `ensure_user`, `initialise_settings`, `run`, ...; `PANGLOSS_TEST_BACKEND` = `memgraph` (default) or `neo4j`; the Docker container for either). A package's `tests/live/conftest.py` does `from pangloss_testing.live import *`. The live tests moved to `tests/live/` of typology, calendar, dates (`test_dates_live.py`) and zotero (`test_zotero_live_store.py`). `run_tests.sh` runs them on Memgraph in the main run and on Neo4j after the Neo4j package's own tests (one process each). All the fixtures share one `Database` per process (the backend packages' conftest too), and a module fixture restores each suite's global settings: without that, two conftests that each make a `Database` in one xdist worker leave the tests and the models on different ones.
 5. **What the second backend showed.** One failure in 46 tests: a typology test took `labels(a)[0]` (Neo4j keeps no order of labels); it looks for a label among them. The `DELETE e RETURN count(e)`, `properties(t)` and `TransactionTimedOut` risks of §1 did not bite.
+6. **Model data through the fragments (2026-11-01, [plan](database-abstraction-plan.md) phase 4).**
+   - An add-on that reads model data does not write its own rule of what a reader sees. It uses
+     `backend.current().fragments` (`pangloss_cypher.fragments`):
+     - `visible(node)`, where the query gives `$see_unpublished`;
+     - `not_deleted(node)`;
+     - `head_of(node, as_)`;
+     - `label(name)` and `field_edge(field)`, which check the name.
+   - An add-on that runs its own Cypher says so in its package with `requires = {"cypher"}`. The API and the CLI check
+     it at start-up against the backend's `Capabilities` (`pangloss_core.storage.check_requirements`).
 
 ## 6. Not done
 

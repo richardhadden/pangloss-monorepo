@@ -7,7 +7,12 @@ from pangloss_cypher.build_create_query import (
     QueryParams,
     convert_type_for_writing,
 )
+from pangloss_cypher import fragments
 from pangloss_cypher.visibility import unpublished_visible
+
+# (the head node of what is read, and of what refers to an entity: see `pangloss_cypher.fragments`)
+ROOT_HEAD = fragments.head_of("root", "hn")
+HOLDER_HEAD = fragments.head_of("holder", "hn")
 
 
 def build_fetch_document_query(
@@ -29,11 +34,10 @@ def build_fetch_document_query(
     query = f"""
     MATCH rp = (root:PGIndexableNode {{id: ${document_id_identifier}}})
     WHERE ${document_type_identifier} in labels(root)
-    OPTIONAL MATCH (hn:HeadNode {{id: root.head_node_id}})
-    WITH root, rp, coalesce(hn, root) AS headnode
+    {ROOT_HEAD.match}
+    WITH root, rp, {ROOT_HEAD} AS headnode
     // (a deleted document, or one nested in it, or a deleted entity, is not found)
-    WHERE NOT coalesce(CASE WHEN root:Entity THEN root.deleted ELSE headnode.deleted END, false)
-    AND (root:Entity OR $see_unpublished OR coalesce(headnode.published, true))
+    WHERE {fragments.visible("root", "headnode")}
     MATCH (headnode)<-[:is_creation_of]-(creation:PGCreation)
     MATCH (creation)-[:created_by]->(user:PGUser)
     CALL {{
@@ -140,8 +144,8 @@ def build_fetch_incoming_query(
     }
     # (the labels are tested as a list: written as `a:X OR a:Y OR ...`, a longer list made the server
     # return the wrong path for a chain of several nodes)
-    query = """
-    MATCH (entity:PGIndexableNode {id: $id})
+    query = f"""
+    MATCH (entity:PGIndexableNode {{id: $id}})
     WHERE $type IN labels(entity)
     MATCH (entity)-[first]->(next)
     WHERE coalesce(first.reverse, false)
@@ -151,34 +155,33 @@ def build_fetch_incoming_query(
               WHERE ANY(label IN labels(chain_node) WHERE label IN $chain_labels))
       AND NONE(label IN labels(top) WHERE label IN $chain_labels)
     WITH first, next, ascent, coalesce(top, next) AS holder
-    OPTIONAL MATCH (hn:HeadNode {id: holder.head_node_id})
-    WITH first, next, ascent, holder, coalesce(hn, holder) AS headnode
+    {HOLDER_HEAD.match}
+    WITH first, next, ascent, holder, {HOLDER_HEAD} AS headnode
     // (what has been deleted no longer refers to the entity)
-    WHERE NOT coalesce(CASE WHEN holder:Entity THEN holder.deleted ELSE headnode.deleted END, false)
-    AND (holder:Entity OR $see_unpublished OR coalesce(headnode.published, true))
+    WHERE {fragments.visible("holder", "headnode")}
     OPTIONAL MATCH (headnode)<-[:is_creation_of]-(creation:PGCreation)-[:created_by]->(creator:PGUser)
-    CALL {
+    CALL {{
         WITH headnode
         OPTIONAL MATCH (headnode)<-[:is_update_of]-(update:PGUpdate)-[:updated_by]->(update_user:PGUser)
         RETURN update.updated_when AS updated_when, update_user.username AS updated_by
         ORDER BY update.updated_when DESC
         LIMIT 1
-    }
+    }}
     RETURN
         type(first) AS first_edge_type,
         CASE WHEN ascent IS NULL
-            THEN [next{.*, _labels: labels(next)}]
-            ELSE [chain_node IN nodes(ascent) | chain_node{.*, _labels: labels(chain_node)}]
+            THEN [next{{.*, _labels: labels(next)}}]
+            ELSE [chain_node IN nodes(ascent) | chain_node{{.*, _labels: labels(chain_node)}}]
         END AS chain,
         CASE WHEN ascent IS NULL THEN [] ELSE [edge IN relationships(ascent) | type(edge)] END AS chain_edge_types,
-        {
+        {{
             created_by: creator.username,
             created_when: creation.created_when,
             updated_by: updated_by,
             updated_when: updated_when,
             head_node_type: headnode.type,
             head_node_id: headnode.id
-        } AS creation_meta
+        }} AS creation_meta
     """
     return query, params
 

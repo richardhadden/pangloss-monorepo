@@ -10,19 +10,20 @@ from uuid import UUID, uuid7
 
 from pangloss_cypher.values import native_datetime
 from pangloss_cypher.transaction import Transaction
+from pangloss_cypher import fragments
 
 # (a document written before review was used is published: no status, and not `published: false`)
-STATE_QUERY = """
-MATCH (head:HeadNode:PGIndexableNode {id: $id})
-WHERE NOT head:Entity AND NOT coalesce(head.deleted, false)
+STATE_QUERY = f"""
+MATCH (head:HeadNode:PGIndexableNode {{id: $id}})
+WHERE NOT head:Entity AND {fragments.not_deleted("head")}
 OPTIONAL MATCH (head)<-[:is_creation_of]-(:PGCreation)-[:created_by]->(creator:PGUser)
-CALL {
+CALL {{
     WITH head
     OPTIONAL MATCH (head)<-[:is_update_of]-(update:PGUpdate)-[:updated_by]->(editor:PGUser)
     RETURN editor.username AS last_edited_by
     ORDER BY update.updated_when DESC
     LIMIT 1
-}
+}}
 RETURN head.id AS id, head.type AS type, head.label AS label,
        coalesce(head.review_status, CASE WHEN coalesce(head.published, true) THEN 'checked' ELSE 'unchecked' END) AS status,
        coalesce(head.published, true) AS published,
@@ -51,9 +52,9 @@ async def set_review_status(
     """Set the status, and with it whether the document is published. Gives the state, or None if there is no
     such document"""
     result = await tx.run(
-        """
-        MATCH (head:HeadNode:PGIndexableNode {id: $id})
-        WHERE NOT head:Entity AND NOT coalesce(head.deleted, false)
+        f"""
+        MATCH (head:HeadNode:PGIndexableNode {{id: $id}})
+        WHERE NOT head:Entity AND {fragments.not_deleted("head")}
         SET head.review_status = $status, head.published = $published,
             head.reviewed_by = $user, head.reviewed_at = $at
         RETURN head.id AS id
@@ -89,10 +90,10 @@ async def add_review_comment(
     """Add a comment. Gives it; None if there is no such document; or "target" if `target_id` is not a node
     of the document (what it is called is kept with the comment)"""
     result = await tx.run(
-        """
-        MATCH (head:HeadNode:PGIndexableNode {id: $id})
-        WHERE NOT head:Entity AND NOT coalesce(head.deleted, false)
-        OPTIONAL MATCH (part:PGIndexableNode {id: $target_id, head_node_id: $id})
+        f"""
+        MATCH (head:HeadNode:PGIndexableNode {{id: $id}})
+        WHERE NOT head:Entity AND {fragments.not_deleted("head")}
+        OPTIONAL MATCH (part:PGIndexableNode {{id: $target_id, head_node_id: $id}})
         RETURN head.id AS id, part.label AS part_label, part IS NOT NULL AS part_found
         """,
         id=str(id),
@@ -168,27 +169,27 @@ async def review_queue(
     """Documents in the given statuses (those with a review status: not documents of classes not reviewed), the
     oldest change first"""
     result = await tx.run(
-        """
+        f"""
         MATCH (head:HeadNode:PGIndexableNode)
-        WHERE NOT head:Entity AND NOT coalesce(head.deleted, false)
+        WHERE NOT head:Entity AND {fragments.not_deleted("head")}
           AND head.review_status IN $statuses
           AND ($type IS NULL OR $type IN labels(head))
         OPTIONAL MATCH (head)<-[:is_creation_of]-(creation:PGCreation)-[:created_by]->(creator:PGUser)
-        CALL {
+        CALL {{
             WITH head
             OPTIONAL MATCH (head)<-[:is_update_of]-(update:PGUpdate)
             RETURN update.updated_when AS updated_when
             ORDER BY update.updated_when DESC
             LIMIT 1
-        }
+        }}
         WITH head, creator, creation, coalesce(updated_when, creation.created_when) AS changed_when
         ORDER BY changed_when, head.id
-        WITH collect({
+        WITH collect({{
             id: head.id, type: head.type, label: head.label, status: head.review_status,
             created_by: creator.username, changed_when: changed_when,
             reviewed_by: head.reviewed_by,
             open_comments: size([(head)<-[:comment_on]-(c:PGReviewComment) WHERE NOT coalesce(c.resolved, false) | c])
-        }) AS items
+        }}) AS items
         RETURN size(items) AS count, items[($page - 1) * $page_size .. $page * $page_size] AS results
         """,
         statuses=statuses,

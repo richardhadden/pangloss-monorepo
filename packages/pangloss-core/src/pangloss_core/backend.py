@@ -51,6 +51,11 @@ class Backend(Protocol):
     user_exists: Callable[[str], Awaitable[bool]]
     """Whether there is a user of that name"""
 
+    fragments: Any
+    """Pieces of Cypher that know how models are stored (`pangloss_cypher.fragments`): `visible(node)`, the one rule of
+    what a reader sees (the query gives `$see_unpublished`), `not_deleted(node)`, `head_of(node, as_)`, and the checked
+    names `label(name)` and `field_edge(field)`. A query that reads model data uses them, not a copy of the rule"""
+
 
 def current(storage: str | None = None) -> Backend:
     """The backend of the project (its settings' `STORAGE`), or of the storage named (`pangloss_neo4j:storage`)"""

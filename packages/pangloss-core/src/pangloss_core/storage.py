@@ -152,6 +152,43 @@ def storage_of(settings: Any = None) -> Storage:
     )
 
 
+def check_requirements(settings: Any = None) -> None:
+    """Whether the backend can do what the installed apps need. An app says what in its package, by the names of the
+    `Capabilities` (`requires = {"cypher"}`); an app that says nothing needs nothing"""
+    if settings is None:
+        from pangloss_core.settings import get_settings
+
+        settings = get_settings()
+    storage = storage_of(settings)
+    names = {field.name for field in dataclasses.fields(Capabilities)}
+    problems = []
+    for app in getattr(settings, "INSTALLED_APPS", []):
+        try:
+            module = importlib.import_module(app)
+        except ModuleNotFoundError as error:
+            if error.name == app:
+                continue  # (not this check's to report)
+            raise
+        required = set(getattr(module, "requires", ()))
+        unknown = sorted(required - names)
+        if unknown:
+            problems.append(
+                f"{app} requires {', '.join(unknown)}, which is not a capability of a storage backend "
+                f"(those are {', '.join(sorted(names))})"
+            )
+        missing = sorted(
+            name for name in required & names if not getattr(storage.capabilities, name)
+        )
+        if missing:
+            problems.append(
+                f"{app} needs a storage backend with {', '.join(missing)}, which {storage.name!r} does not have"
+            )
+    if problems:
+        raise PanglossStorageError(
+            "The storage backend cannot run the installed apps: " + "; ".join(problems)
+        )
+
+
 def warn_database_module(database_module: str) -> None:
     warnings.warn(
         f"DATABASE_MODULE is replaced by STORAGE: instead of DATABASE_MODULE = {database_module!r}, give STORAGE "

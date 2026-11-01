@@ -6,7 +6,13 @@ from pangloss_models.model_bases.entity import Entity
 from pangloss_neo4j.databases.neo4j.schema import (
     search_patterns as schema_search_patterns,
 )
+from pangloss_cypher import fragments
 from pangloss_cypher.visibility import unpublished_visible
+
+# (the head nodes of what is listed: see `pangloss_cypher.fragments`)
+N_HEAD = fragments.head_of("n", "n_head")
+T_HEAD = fragments.head_of("t", "t_head")
+LISTED_HEAD = fragments.head_of("n", "listed_head")
 
 # The deep search (see docs/deep-search.md). Nothing large is carried from row to row: the hits are reduced to
 # the ids of the documents (the roots) that have every word, and only those are expanded. (It once kept a list of
@@ -38,55 +44,46 @@ _DEEP_ROOTS = """
 """
 
 # (the documents of the class in the trees found; they are ordered by the label of their head node)
-_DEEP_DOCUMENTS = """
-    CALL (rootId) {
-      MATCH (n:PGIndexableNode {id: rootId})
+_DEEP_DOCUMENTS = f"""
+    CALL (rootId) {{
+      MATCH (n:PGIndexableNode {{id: rootId}})
       WHERE $targetType IN labels(n)
       RETURN n
       UNION
-      MATCH (n:PGIndexableNode {head_node_id: rootId})
+      MATCH (n:PGIndexableNode {{head_node_id: rootId}})
       WHERE $targetType IN labels(n)
       RETURN n
-    }
+    }}
     WITH DISTINCT n
     // (what has been deleted is not listed: a deleted entity, or a node of a deleted document)
-    OPTIONAL MATCH (n_head:HeadNode {id: n.head_node_id})
+    {N_HEAD.match}
     WITH n, n_head
-    WHERE NOT coalesce(CASE WHEN n:Entity THEN n.deleted ELSE coalesce(n_head, n).deleted END, false)
-AND (n:Entity OR $see_unpublished OR coalesce(coalesce(n_head, n).published, true))
-AND ($published IS NULL OR coalesce(coalesce(n_head, n).published, true) = $published)
-AND ($review_status IS NULL OR coalesce(n_head, n).review_status = $review_status)
+    WHERE {fragments.visible("n", N_HEAD, filters=True)}
     WITH n, toLower(coalesce(coalesce(n_head, n).label, "")) AS headLabel
     ORDER BY headLabel, n.id
 """
 
 # (the entities of the class that the nodes of the trees found refer to; ordered by their labels)
-_DEEP_ENTITIES = """
-    CALL (rootId) {
-      MATCH (t:PGIndexableNode {id: rootId})
+_DEEP_ENTITIES = f"""
+    CALL (rootId) {{
+      MATCH (t:PGIndexableNode {{id: rootId}})
       RETURN t
       UNION
-      MATCH (t:PGIndexableNode {head_node_id: rootId})
+      MATCH (t:PGIndexableNode {{head_node_id: rootId}})
       RETURN t
-    }
+    }}
     WITH DISTINCT t
     // (what has been deleted is not listed: a deleted entity, or a node of a deleted document)
-    OPTIONAL MATCH (t_head:HeadNode {id: t.head_node_id})
+    {T_HEAD.match}
     WITH t, t_head
-    WHERE NOT coalesce(CASE WHEN t:Entity THEN t.deleted ELSE coalesce(t_head, t).deleted END, false)
-AND (t:Entity OR $see_unpublished OR coalesce(coalesce(t_head, t).published, true))
-AND ($published IS NULL OR coalesce(coalesce(t_head, t).published, true) = $published)
-AND ($review_status IS NULL OR coalesce(t_head, t).review_status = $review_status)
+    WHERE {fragments.visible("t", T_HEAD, filters=True)}
     MATCH (t)--(n:Entity)
     WHERE $targetType IN labels(n)
     WITH DISTINCT n
     // (the same for the entity found)
-    OPTIONAL MATCH (n_head:HeadNode {id: n.head_node_id})
+    {N_HEAD.match}
     WITH n, n_head
-    WHERE NOT coalesce(CASE WHEN n:Entity THEN n.deleted ELSE coalesce(n_head, n).deleted END, false)
-AND (n:Entity OR $see_unpublished OR coalesce(coalesce(n_head, n).published, true))
-AND ($published IS NULL OR coalesce(coalesce(n_head, n).published, true) = $published)
-AND ($review_status IS NULL OR coalesce(n_head, n).review_status = $review_status)
+    WHERE {fragments.visible("n", N_HEAD, filters=True)}
     WITH n, toLower(coalesce(coalesce(n_head, n).label, "")) AS headLabel
     ORDER BY headLabel, n.id
 """
@@ -217,21 +214,18 @@ def _build_list_query(
             "limit": hit_limit,
         }
         return (
-            """
+            f"""
             UNWIND $patterns AS pattern
-            CALL db.index.fulltext.queryNodes("label_text", pattern, {limit: $limit}) YIELD node, score
+            CALL db.index.fulltext.queryNodes("label_text", pattern, {{limit: $limit}}) YIELD node, score
             WITH node AS n, pattern, max(score) AS patternScore
             WITH n, count(*) AS matchedPatterns, sum(patternScore) AS totalScore
             WHERE matchedPatterns = size($patterns)
               AND $node_type IN labels(n)
             WITH n, totalScore
             // (what has been deleted is not listed: a deleted entity, or a node of a deleted document)
-            OPTIONAL MATCH (n_head:HeadNode {id: n.head_node_id})
+            {N_HEAD.match}
             WITH n, totalScore, n_head
-            WHERE NOT coalesce(CASE WHEN n:Entity THEN n.deleted ELSE coalesce(n_head, n).deleted END, false)
-AND (n:Entity OR $see_unpublished OR coalesce(coalesce(n_head, n).published, true))
-AND ($published IS NULL OR coalesce(coalesce(n_head, n).published, true) = $published)
-AND ($review_status IS NULL OR coalesce(n_head, n).review_status = $review_status)
+            WHERE {fragments.visible("n", N_HEAD, filters=True)}
             WITH n, totalScore
             ORDER BY totalScore DESC, elementId(n)
             WITH collect(n) AS allNodes
@@ -240,14 +234,14 @@ AND ($review_status IS NULL OR coalesce(n_head, n).review_status = $review_statu
                  toInteger(ceil(toFloat(size(allNodes)) / $page_size)) AS totalPages
             WITH allNodes[($page_number - 1) * $page_size .. $page_number * $page_size] AS pageNodes,
                  total, totalPages
-            CALL {
+            CALL {{
                 WITH pageNodes
                 UNWIND pageNodes AS n
-                OPTIONAL MATCH (hn:HeadNode {id: n.head_node_id})
+                OPTIONAL MATCH (hn:HeadNode {{id: n.head_node_id}})
                 WITH n, coalesce(hn, n) AS headnode
                 OPTIONAL MATCH (headnode)<-[:is_creation_of]-(creation:PGCreation)
                 OPTIONAL MATCH (creation)-[:created_by]->(user:PGUser)
-                RETURN collect(n{.*, meta: {
+                RETURN collect(n{{.*, meta: {{
                     created_by: user.username,
                     created_when: creation.created_when,
                     updated_by: null,
@@ -259,9 +253,9 @@ AND ($review_status IS NULL OR coalesce(n_head, n).review_status = $review_statu
                     is_head_node: n:HeadNode,
                     published: coalesce(headnode.published, true),
                     review_status: headnode.review_status
-                }}) AS items
-            }
-            RETURN {
+                }}}}) AS items
+            }}
+            RETURN {{
                 results: items,
                 count: total,
                 page: $page_number,
@@ -269,7 +263,7 @@ AND ($review_status IS NULL OR coalesce(n_head, n).review_status = $review_statu
                 page_count: totalPages,
                 previous_page: CASE WHEN $page_number > 1 THEN $page_number - 1 ELSE null END,
                 next_page: CASE WHEN $page_number < totalPages THEN $page_number + 1 ELSE null END
-            } AS result;
+            }} AS result;
         """,
             params,
         )
@@ -284,15 +278,13 @@ AND ($review_status IS NULL OR coalesce(n_head, n).review_status = $review_statu
         # The class is scanned once, for the ids and their number; the ids of the page are found among them, and only those
         # nodes are read. (The ids are sorted whole and sliced: with `SKIP`/`LIMIT` after the `ORDER BY` Neo4j plans a `Top` of
         # the skip and the limit together, which ran out of memory for a skip of about 2,500 ids)
+        head: str | fragments.HeadOf
         if object_class.__metatype__ == "Entity":
             looking, head = "", "n"
         else:
-            looking = "OPTIONAL MATCH (listed_head:HeadNode {id: n.head_node_id})"
-            head = "coalesce(listed_head, n)"
-        visible = f"""WHERE NOT coalesce(CASE WHEN n:Entity THEN n.deleted ELSE {head}.deleted END, false)
-            AND (n:Entity OR $see_unpublished OR coalesce({head}.published, true))
-            AND ($published IS NULL OR coalesce({head}.published, true) = $published)
-            AND ($review_status IS NULL OR {head}.review_status = $review_status)"""
+            head = LISTED_HEAD
+            looking = head.match
+        visible = f"WHERE {fragments.visible('n', head, filters=True)}"
         return (
             f"""
             MATCH (n:$($node_type))

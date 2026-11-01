@@ -35,6 +35,7 @@ from pangloss_cypher.heads import VERSION_OF_HEAD
 from pangloss_cypher.transaction import Transaction
 from pangloss_cypher.lookup import resolve_id
 from pangloss_cypher.checks import check_user_exists
+from pangloss_cypher import fragments
 
 # How many of the things that refer to an entity are reported
 MAX_REFERENCES_REPORTED = 10
@@ -52,25 +53,25 @@ class DeletionResult:
     reference_count: int = 0
 
 
-FIND_QUERY = """
-    MATCH (node:PGIndexableNode {id: $id})
+FIND_QUERY = f"""
+    MATCH (node:PGIndexableNode {{id: $id}})
     WHERE $type IN labels(node)
-    OPTIONAL MATCH (head:HeadNode {id: node.head_node_id})
+    OPTIONAL MATCH (head:HeadNode {{id: node.head_node_id}})
     RETURN node:HeadNode AS is_head_node,
-           coalesce(node.deleted, false) AS deleted,
-           coalesce(head.deleted, false) AS head_deleted
+           {fragments.deleted("node")} AS deleted,
+           {fragments.deleted("head")} AS head_deleted
 """
 
 # What refers to an entity: the reverse edges leading out of it go to the nodes that
 # hold each relation (possibly inside a document), whose head documents or entities
 # count, unless they have been deleted
-REFERENCES_QUERY = """
-    MATCH (entity:PGIndexableNode {id: $id})-[reverse_edge]->(referrer)
+REFERENCES_QUERY = f"""
+    MATCH (entity:PGIndexableNode {{id: $id}})-[reverse_edge]->(referrer)
     WHERE coalesce(reverse_edge.reverse, false)
-    OPTIONAL MATCH (head:HeadNode {id: referrer.head_node_id})
+    OPTIONAL MATCH (head:HeadNode {{id: referrer.head_node_id}})
     WITH entity,
          CASE WHEN referrer:Entity THEN referrer ELSE coalesce(head, referrer) END AS holder
-    WHERE NOT coalesce(holder.deleted, false) AND holder <> entity
+    WHERE {fragments.not_deleted("holder")} AND holder <> entity
     RETURN DISTINCT holder.id AS id, holder.type AS type, holder.label AS label
     ORDER BY id
 """

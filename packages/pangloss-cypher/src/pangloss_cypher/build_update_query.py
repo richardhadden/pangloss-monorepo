@@ -36,6 +36,7 @@ from pangloss_cypher.build_create_query import (
 )
 from pangloss_cypher.heads import VERSION_OF_HEAD
 from pangloss_cypher.transactions import dialect
+from pangloss_cypher import fragments
 
 # Walks forward edges from the head node, without entering entities
 # (The URLs of an entity are not part of what it owns)
@@ -58,7 +59,7 @@ def build_head_query(head_id: uuid.UUID) -> tuple[str, dict[str, typing.Any]]:
         RETURN labels(head) AS labels,
                creation.created_when AS created_when,
                user.username AS created_by,
-               coalesce(head.deleted, false) AS deleted,
+               {fragments.deleted("head")} AS deleted,
                {VERSION_OF_HEAD} AS version
         """,
         {"head_id": str(head_id)},

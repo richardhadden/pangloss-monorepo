@@ -22,11 +22,15 @@ SUPERTYPE = "is_supertype_of"
 HAS_TYPE = "has_type"
 TYPE_OF = "type_of"
 
-SEEN = """NOT coalesce({n}.deleted, false) AND (coalesce({n}.published, true) OR $see_unpublished)"""
-
 
 def seen(name: str) -> str:
-    return SEEN.format(n=name)
+    """A condition: the reader sees the node (the backend's rule: `pangloss_cypher.fragments.visible`). The query must
+    give `$see_unpublished`"""
+    return backend.current().fragments.visible(name)
+
+
+def not_deleted(name: str) -> str:
+    return backend.current().fragments.not_deleted(name)
 
 
 class Refused(ValueError):
@@ -209,7 +213,7 @@ async def move(label: str, id: str, to: str | None) -> None:
         await lock_hierarchy(tx, label)
         found = await (
             await tx.run(
-                f"MATCH (n:{label} {{id: $id}}) WHERE NOT coalesce(n.deleted, false) RETURN n.id AS id",
+                f"MATCH (n:{label} {{id: $id}}) WHERE {not_deleted('n')} RETURN n.id AS id",
                 id=id,
             )
         ).single()
@@ -218,7 +222,7 @@ async def move(label: str, id: str, to: str | None) -> None:
         if to is not None:
             target = await (
                 await tx.run(
-                    f"MATCH (p:{label} {{id: $to}}) WHERE NOT coalesce(p.deleted, false) RETURN p.id AS id",
+                    f"MATCH (p:{label} {{id: $to}}) WHERE {not_deleted('p')} RETURN p.id AS id",
                     to=to,
                 )
             ).single()
@@ -310,7 +314,7 @@ async def set_concrete(
             else f"REMOVE n{labels}, n.is_concrete"
         )
         result = await tx.run(
-            f"MATCH (n:{label} {{id: $id}}) WHERE NOT coalesce(n.deleted, false) {verb} RETURN n.id AS id",
+            f"MATCH (n:{label} {{id: $id}}) WHERE {not_deleted('n')} {verb} RETURN n.id AS id",
             id=id,
         )
         if not await result.single():
@@ -333,7 +337,7 @@ async def merge(label: str, source: str, into: str) -> None:
             await tx.run(
                 f"""
                 MATCH (a:{label} {{id: $a}}), (b:{label} {{id: $b}})
-                WHERE NOT coalesce(a.deleted, false) AND NOT coalesce(b.deleted, false)
+                WHERE {not_deleted("a")} AND {not_deleted("b")}
                 OPTIONAL MATCH (a)-[:{SUBTYPE}]->(parent:{label})
                 RETURN a.id AS a, parent.id AS parent
                 """,

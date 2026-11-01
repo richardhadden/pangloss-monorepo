@@ -25,7 +25,7 @@ import typer
 from pangloss_core import settings as core_settings
 from pangloss_core.logs import configure_logging
 from pangloss_core.settings import BaseSettings
-from pangloss_core.storage import storage_of
+from pangloss_core.storage import check_requirements, storage_of
 
 SETTINGS_ENVIRONMENT_VARIABLE = "PANGLOSS_SETTINGS"
 SETTINGS_OPTION = "--settings"
@@ -171,7 +171,9 @@ def load_settings(location: SettingsLocation) -> BaseSettings:
 
 
 def load_database(settings: BaseSettings) -> ModuleType:
-    """The `setup` module of the storage backend, having made its database object"""
+    """The `setup` module of the storage backend, having made its database object (if it can do what the installed apps
+    need)"""
+    check_requirements(settings)
     backend = storage_of(settings).setup
     backend.create_database(settings)
     return backend

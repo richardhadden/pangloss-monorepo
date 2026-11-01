@@ -11,7 +11,6 @@ migration; the nodes by `seed` and `ensure_range`. Writes are in batches of `BAT
 transaction.
 """
 
-import re
 from dataclasses import dataclass
 from typing import Any
 from uuid import UUID
@@ -27,6 +26,11 @@ from pangloss_calendar.days import month_span
 BATCH_DAYS = 2000
 
 CALENDARS = (Calendar.JULIAN, Calendar.GREGORIAN)
+
+
+def _fragments():
+    """The backend's pieces of Cypher for model data: what a reader sees, head nodes, checked names (`pangloss_cypher.fragments`)"""
+    return backend.current().fragments
 
 
 def _database():
@@ -209,9 +213,12 @@ async def status() -> dict[str, Any]:
 
 # Characterisations (entities of a subclass of `DateCharacterisation`) and the edges to what they characterise
 
-CHARACTERISATIONS = """
+
+# (characterisations are entities: whether they are seen is whether they are deleted)
+def characterisations_query() -> str:
+    return f"""
 MATCH (n:DateCharacterisation)
-WHERE NOT coalesce(n.deleted, false) AND ($use IS NULL OR n.use = $use)
+WHERE {_fragments().not_deleted("n")} AND ($use IS NULL OR n.use = $use)
 OPTIONAL MATCH (n)-[:`when`]->(d:Date)
 OPTIONAL MATCH (d)-[:start]->(s:Date)
 RETURN n.id AS id, n.label AS label, n.type AS type, n.use AS use, n.rank AS rank,
@@ -229,33 +236,34 @@ async def read_characterisations(use: str | None = None) -> list[Characterisatio
 
     @database.read_transaction
     async def read(tx: Transaction) -> list[dict[str, Any]]:
-        result = await tx.run(CHARACTERISATIONS, use=use)
+        result = await tx.run(characterisations_query(), use=use)
         return [dict(record) async for record in result]
 
     default = default_calendar()
     return [from_row(row, default) for row in await read()]
 
 
-MANUAL_BETWEEN = """
-CALL {
-  MATCH (t:CalendarDay)-[:CHARACTERISED_BY {origin: 'manual'}]->(c)
+def manual_between_query() -> str:
+    return f"""
+CALL {{
+  MATCH (t:CalendarDay)-[:CHARACTERISED_BY {{origin: 'manual'}}]->(c)
   WHERE t.jdn >= $first AND t.jdn <= $last
   RETURN c, t.jdn AS lo, t.jdn AS hi, 'day' AS via
   UNION
-  MATCH (t:CalendarMonth)-[:CHARACTERISED_BY {origin: 'manual'}]->(c)
+  MATCH (t:CalendarMonth)-[:CHARACTERISED_BY {{origin: 'manual'}}]->(c)
   WHERE t.first_jdn <= $last AND t.last_jdn >= $first
   RETURN c, t.first_jdn AS lo, t.last_jdn AS hi, 'month' AS via
   UNION
-  MATCH (t:CalendarYear)-[:CHARACTERISED_BY {origin: 'manual'}]->(c)
+  MATCH (t:CalendarYear)-[:CHARACTERISED_BY {{origin: 'manual'}}]->(c)
   WHERE t.first_jdn <= $last AND t.last_jdn >= $first
   RETURN c, t.first_jdn AS lo, t.last_jdn AS hi, 'year' AS via
   UNION
-  MATCH (t:CalendarSpan)-[:CHARACTERISED_BY {origin: 'manual'}]->(c)
+  MATCH (t:CalendarSpan)-[:CHARACTERISED_BY {{origin: 'manual'}}]->(c)
   WHERE t.first_jdn <= $last AND t.last_jdn >= $first
   RETURN c, t.first_jdn AS lo, t.last_jdn AS hi, 'span' AS via
-}
+}}
 WITH c, lo, hi, via
-WHERE NOT coalesce(c.deleted, false) AND ($use IS NULL OR c.use = $use)
+WHERE {_fragments().not_deleted("c")} AND ($use IS NULL OR c.use = $use)
 RETURN c.id AS id, c.label AS label, c.type AS type, c.use AS use, c.rank AS rank, lo, hi, via
 ORDER BY c.label, c.id, lo
 """
@@ -270,7 +278,7 @@ async def manual_between(
 
     @database.read_transaction
     async def read(tx: Transaction) -> list[dict[str, Any]]:
-        result = await tx.run(MANUAL_BETWEEN, first=first, last=last, use=use)
+        result = await tx.run(manual_between_query(), first=first, last=last, use=use)
         return [{**record, "id": UUID(record["id"])} async for record in result]
 
     return await read()
@@ -332,7 +340,7 @@ async def attach(characterisation: UUID, target: Target) -> bool:
     async def write(tx: Transaction) -> bool:
         result = await tx.run(
             f"""
-            MATCH (c:DateCharacterisation {{id: $id}}) WHERE NOT coalesce(c.deleted, false)
+            MATCH (c:DateCharacterisation {{id: $id}}) WHERE {_fragments().not_deleted("c")}
             {_MATCH_TARGET[target.kind]}
             MERGE (t)-[e:CHARACTERISED_BY {{origin: 'manual'}}]->(c)
             RETURN count(e) AS made
@@ -453,17 +461,20 @@ RETURN d.jdn AS jdn ORDER BY d.jdn
 
 # Dates found from the dates, not from the documents (the plan's "date-first" query)
 
-IDENTIFIER = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
-DATED_BETWEEN = """
+def dated_between_query(label: str, field: str) -> str:
+    """(`label` and `field` are checked to be names, as they are put in the query)"""
+    fragments = _fragments()
+    head = fragments.head_of("n", "h")
+    return f"""
 MATCH (d:Date)
 WHERE d.earliest_fuzzy <= $last AND d.latest_fuzzy >= $first
   AND ($strict = false OR (d.earliest_strict <= $last AND d.latest_strict >= $first))
   AND ($keys IS NULL OR d.pattern_keys IS NULL OR any(k IN d.pattern_keys WHERE k IN $keys))
-MATCH (n:`{label}`)-[:`{field}`]->(d)
-OPTIONAL MATCH (h:HeadNode {{id: n.head_node_id}})
-WITH n, d, coalesce(h, n) AS head
-WHERE NOT coalesce(head.deleted, false) AND ($see_unpublished OR coalesce(head.published, true))
+MATCH (n:{fragments.label(label)})-[:{fragments.field_edge(field)}]->(d)
+{head.match}
+WITH n, d, {head} AS head
+WHERE {fragments.visible("head")}
 OPTIONAL MATCH (d)-[:start]->(s:Date)
 RETURN n.id AS id, n.label AS label, n.type AS type, d.type AS kind, d.calendar AS calendar,
        d.earliest_fuzzy AS earliest_fuzzy, d.earliest_strict AS earliest_strict,
@@ -490,15 +501,14 @@ async def dated_between(
     candidate if its lifetime meets the days and, when `keys` is given, it has one of them (`pattern_keys`). What
     is deleted, or unpublished for a reader who may not see it, is left out. Returns the rows and whether there
     were more than `limit`."""
-    if not (IDENTIFIER.match(label) and IDENTIFIER.match(field)):
-        raise ValueError(f"{label}.{field} is not a class and a field")
+    query = dated_between_query(label, field)
     database = _database()
 
     @database.read_transaction
     @backend.current().timeout_from_setting("SEARCH_TIMEOUT_SECONDS", 30)
     async def read(tx: Transaction) -> list[dict[str, Any]]:
         result = await tx.run(
-            DATED_BETWEEN.format(label=label, field=field),
+            query,
             first=first,
             last=last,
             strict=strict,
