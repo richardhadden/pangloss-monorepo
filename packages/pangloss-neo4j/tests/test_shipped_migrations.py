@@ -59,7 +59,7 @@ def test_each_library_package_ships_its_migrations():
     for app, prefixes in SHIPPED.items():
         names = [m.name for m in graph.order() if m.app == app]
         assert len(names) == len(prefixes), (app, names)
-        for name, prefix in zip(sorted(names), prefixes):
+        for name, prefix in zip(sorted(names), prefixes, strict=True):
             assert name.startswith(prefix)
 
 

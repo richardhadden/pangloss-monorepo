@@ -147,6 +147,7 @@ class Sampler:
                     ]
                 ),
                 generic["args"],
+                strict=True,
             )
         )
         payload: dict[str, Any] = {}

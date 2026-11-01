@@ -222,7 +222,13 @@ async def _apply_in_batches(
             after = start.after if index == start.change else ""
             while True:
 
-                async def window_work(tx: Transaction, after: str = after) -> list[str]:
+                async def window_work(
+                    tx: Transaction,
+                    after: str = after,
+                    change: c.Change = change,
+                    before: dict = before,
+                    index: int = index,
+                ) -> list[str]:
                     ids = await apply_window(tx, change, before, Window(after, size))
                     if save:
                         await save(tx, Progress(index, max(ids) if ids else after))  # type: ignore[arg-type]
@@ -237,7 +243,12 @@ async def _apply_in_batches(
         elif kind == "wrap":
             while True:
 
-                async def wrap_work(tx: Transaction) -> int:
+                async def wrap_work(
+                    tx: Transaction,
+                    change: c.Change = change,
+                    before: dict = before,
+                    index: int = index,
+                ) -> int:
                     wrapped = await wrap_reified(tx, change, before, limit=size)  # ty: ignore[invalid-argument-type]
                     if save:
                         await save(tx, Progress(index))
@@ -248,7 +259,12 @@ async def _apply_in_batches(
         elif kind == "edges":
             while True:
 
-                async def edges_work(tx: Transaction) -> int:
+                async def edges_work(
+                    tx: Transaction,
+                    change: c.Change = change,
+                    before: dict = before,
+                    index: int = index,
+                ) -> int:
                     renamed = await apply_edges(tx, change, before, size)  # type: ignore[arg-type]
                     if save:
                         await save(tx, Progress(index))
@@ -258,14 +274,16 @@ async def _apply_in_batches(
                     break
         else:
 
-            async def whole_work(tx: Transaction) -> None:
+            async def whole_work(
+                tx: Transaction, change: c.Change = change, before: dict = before
+            ) -> None:
                 await apply_change(tx, change, before)
 
             await in_transaction(whole_work)
         if kind is not None and labels_written(change) != []:
             # (what the backend derives from what the batches changed: `apply_change` does it for a change made at once)
 
-            async def rederive_work(tx: Transaction) -> None:
+            async def rederive_work(tx: Transaction, change: c.Change = change) -> None:
                 await rederive(tx, change)
 
             await in_transaction(rederive_work)

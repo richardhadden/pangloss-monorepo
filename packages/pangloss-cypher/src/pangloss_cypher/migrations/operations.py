@@ -1038,15 +1038,9 @@ async def alter_parent_fields(
         await delete_relation(tx, change.model, field, only_pairs=removed_pairs)
     elif removed_pairs:
         for removed_forward, removed_reverse in removed_pairs:
-            for query, name in (
-                (
-                    f"MATCH (n:{label})-[e:{ident(removed_forward)}]->() WITH e LIMIT {int(limit)} DELETE e RETURN count(e) AS done",  # ty: ignore[invalid-argument-type]
-                    removed_forward,
-                ),
-                (
-                    f"MATCH ()-[e:{ident(removed_reverse)}]->(n:{label}) WITH e LIMIT {int(limit)} DELETE e RETURN count(e) AS done",  # ty: ignore[invalid-argument-type]
-                    removed_reverse,
-                ),
+            for query in (
+                f"MATCH (n:{label})-[e:{ident(removed_forward)}]->() WITH e LIMIT {int(limit)} DELETE e RETURN count(e) AS done",  # ty: ignore[invalid-argument-type]
+                f"MATCH ()-[e:{ident(removed_reverse)}]->(n:{label}) WITH e LIMIT {int(limit)} DELETE e RETURN count(e) AS done",  # ty: ignore[invalid-argument-type]
             ):
                 rows = await run(tx, query)
                 done = max(done, rows[0]["done"] if rows else 0)

@@ -84,7 +84,7 @@ def lost(given, kept, path="") -> list[str]:
     elif isinstance(given, list):
         if not isinstance(kept, list) or len(kept) < len(given):
             return [f"{path}: list of {len(given)} kept as a shorter one"]
-        for index, (g, k) in enumerate(zip(given, kept)):
+        for index, (g, k) in enumerate(zip(given, kept, strict=False)):
             missing.extend(lost(g, k, f"{path}[{index}]"))
     return missing
 
@@ -102,7 +102,7 @@ def differences(a, b, path="") -> list[str]:
     if isinstance(a, list) and isinstance(b, list) and len(a) == len(b):
         return [
             d
-            for i, (x, y) in enumerate(zip(a, b))
+            for i, (x, y) in enumerate(zip(a, b, strict=True))
             for d in differences(x, y, f"{path}[{i}]")
         ]
     return [] if a == b else [f"{path}: {str(a)[:40]} -> {str(b)[:40]}"]

@@ -184,7 +184,7 @@ def build_relation_options(
             )
         type_args = annotation.__pydantic_generic_metadata__["args"]
         parameters = origin.__pydantic_generic_metadata__["parameters"]
-        params_type_args = zip(parameters, type_args)
+        params_type_args = zip(parameters, type_args, strict=True)
 
         for t in type_args:
             if (

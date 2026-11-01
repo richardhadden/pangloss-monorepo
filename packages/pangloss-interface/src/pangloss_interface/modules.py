@@ -312,7 +312,9 @@ def read_manifests(
     if code != 0:
         raise ManifestError(output.strip()[-2000:] or "reading the manifests failed")
     data = json.loads(output.strip().splitlines()[-1])
-    return {m.app: Manifest.from_data(item) for m, item in zip(modules, data)}
+    return {
+        m.app: Manifest.from_data(item) for m, item in zip(modules, data, strict=True)
+    }
 
 
 class ManifestError(Exception):

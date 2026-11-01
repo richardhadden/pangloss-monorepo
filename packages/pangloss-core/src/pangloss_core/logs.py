@@ -40,7 +40,7 @@ SECRET_PATTERNS = [
     re.compile(r"\bpgl_[\w-]{8,}"),
     re.compile(r"(?i)\b(bearer|basic)\s+[\w.~+/=-]{8,}"),
     re.compile(
-        r"(?i)\b(password|passwd|secret|token|authorization)(['\"]?\s*[:=]\s*)['\"]?[^\s,'\"}&]+"
+        r"(?i)\b(password|passwd|secret|token|authorization)(['\"]?\s*[:=]\s*['\"]?)[^\s,'\"}&]+"
     ),
 ]
 

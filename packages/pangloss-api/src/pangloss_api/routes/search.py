@@ -37,4 +37,6 @@ async def search(request: SearchRequest):
             )
         )
     except (PanglossUnknownTypeError, PanglossSearchError) as error:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(error))
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT, str(error)
+        ) from error

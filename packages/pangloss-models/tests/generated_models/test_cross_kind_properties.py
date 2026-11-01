@@ -141,7 +141,7 @@ def lost(given, kept, path="") -> list[str]:
     elif isinstance(given, list):
         if not isinstance(kept, list) or len(kept) < len(given):
             return [f"{path}: list of {len(given)} kept as {kept!r}"[:120]]
-        for index, (g, k) in enumerate(zip(given, kept)):
+        for index, (g, k) in enumerate(zip(given, kept, strict=False)):
             missing.extend(lost(g, k, f"{path}[{index}]"))
     return missing
 

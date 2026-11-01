@@ -37,6 +37,18 @@ def test_secrets_are_redacted(text):
     assert logs.REDACTED in redacted
 
 
+@pytest.mark.parametrize(
+    "text,expected",
+    [
+        ('{"password": "hunter2"}', '{"password": "[redacted]"}'),
+        ("{'password': 'hunter2'}", "{'password': '[redacted]'}"),
+        ("password=hunter2&x=1", "password=[redacted]&x=1"),
+    ],
+)
+def test_a_redacted_value_keeps_its_quotes(text, expected):
+    assert logs.redact(text) == expected
+
+
 def test_ordinary_text_is_not_changed():
     text = "Login: 'john' from 127.0.0.1 (token); write create Person 1234 v1"
     assert logs.redact(text) == text

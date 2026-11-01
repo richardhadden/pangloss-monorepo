@@ -156,7 +156,9 @@ def load_settings(location: SettingsLocation) -> BaseSettings:
         importlib.import_module(location.module)
     except ModuleNotFoundError as error:
         if error.name and location.module.startswith(error.name):
-            raise ImportError(f"There is no settings module '{location.module}'")
+            raise ImportError(
+                f"There is no settings module '{location.module}'"
+            ) from error
         raise
     finally:
         os.chdir(previous_directory)

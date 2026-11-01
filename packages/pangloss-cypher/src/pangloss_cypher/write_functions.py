@@ -170,6 +170,8 @@ async def write_head_node(
     result = await run_write_query(
         tx, query_object.to_query_string(), query_object.params
     )
+    # (not reached by any test: the user and what the plan refers to were checked above, in this
+    # transaction, so every MATCH of the query finds its node. A guard, if one ever does not)
     if not result:
         raise PanglossWriteError("Nothing was written")
     return plan.created_entities(existing)
@@ -292,6 +294,7 @@ async def replace_head_node(
 
     replace_query, replace_params = build_replace_head_query(db_instance)
 
+    # (a guard, as in `write_head_node`: the head was read above, in this transaction)
     if not await run_write_query(tx, replace_query, replace_params):
         raise PanglossWriteError("Nothing was updated")
 
@@ -301,6 +304,7 @@ async def replace_head_node(
         await replace_urls(tx, db_instance.id, [str(url) for url in urls])
 
     query_object = render(plan, existing)
+    # (a guard, as in `write_head_node`)
     if not await run_write_query(
         tx, query_object.to_query_string(), query_object.params
     ):

@@ -226,7 +226,7 @@ def bases_for(
         SemanticSpace,
         Embedded,
     )
-    return tuple(zip(declared, pairs))
+    return tuple(zip(declared, pairs, strict=True))
 
 
 CLIENT_LITERAL = rule({"bound", "fulfil"}, {"bound", "fulfil", "optional"})

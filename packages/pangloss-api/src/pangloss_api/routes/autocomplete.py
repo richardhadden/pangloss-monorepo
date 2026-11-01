@@ -37,7 +37,9 @@ async def autocomplete(
     try:
         types = resolve_entity_types(type)
     except PanglossUnknownTypeError as error:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(error))
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT, str(error)
+        ) from error
     return await called(
         Entity.autocomplete(  # type: ignore
             search_terms=q, types=types, page_number=page, page_size=page_size

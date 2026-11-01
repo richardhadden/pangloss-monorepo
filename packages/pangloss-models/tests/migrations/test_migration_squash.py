@@ -1,6 +1,7 @@
 """Squashing: one migration for a run of them"""
 
 import importlib
+import itertools
 import sys
 from typing import no_type_check
 
@@ -58,7 +59,7 @@ def versions():
 def run_of_migrations(app="sq", dependencies=None) -> list[Migration]:
     snapshots = [EMPTY_SNAPSHOT, *versions()]
     migrations = []
-    for number, (old, new) in enumerate(zip(snapshots, snapshots[1:]), start=1):
+    for number, (old, new) in enumerate(itertools.pairwise(snapshots), start=1):
         migrations.append(
             Migration(
                 app=app,

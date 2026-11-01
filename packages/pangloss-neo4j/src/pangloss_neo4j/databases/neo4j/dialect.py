@@ -34,7 +34,9 @@ class DecodedResult:
     def _record(self, record: neo4j.Record | None) -> neo4j.Record | None:
         if record is None:
             return None
-        return neo4j.Record(zip(record.keys(), (decode(v) for v in record.values())))
+        return neo4j.Record(
+            zip(record.keys(), (decode(v) for v in record.values()), strict=True)
+        )
 
     async def single(self, strict: bool = False) -> neo4j.Record | None:
         return self._record(await self._result.single(strict=strict))  # type: ignore[arg-type]

@@ -133,7 +133,7 @@ class TaggedUnion:
             # (Pydantic made something else of it: leave it as it is)
             return schema
         return core_schema.tagged_union_schema(
-            choices=dict(zip(self.tags, choices)),  # type: ignore[arg-type]
+            choices=dict(zip(self.tags, choices, strict=True)),  # type: ignore[arg-type]
             discriminator=self.choose,
         )
 

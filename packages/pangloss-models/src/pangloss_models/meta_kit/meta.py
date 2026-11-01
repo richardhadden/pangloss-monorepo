@@ -330,11 +330,11 @@ class WithMeta[T: BaseMeta](BaseModel):
             if not has_own_meta:
                 try:
                     setattr(cls, key, meta_class())
-                except ValidationError:
+                except ValidationError as error:
                     raise PydanticMetaKitException(
                         f"<{cls.__name__}>: a {key} field with instance of type {meta_class.__name__} must "
                         "be declared somewhere in the model hierarchy, or have all-default arguments"
-                    )
+                    ) from error
         else:
             # Merge with the parent's meta; with no own meta this resets non-heritable fields
             setattr(cls, key, parent_meta & own_meta)

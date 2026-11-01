@@ -264,7 +264,7 @@ def build_package(
     distribution, module = names_for(project, settings)
 
     files: dict[str, bytes] = {}
-    for name, path in closure.modules.items():
+    for path in closure.modules.values():
         files[path.resolve().relative_to(root).as_posix()] = shipped(path)
 
     names = registered_class_names()
@@ -287,7 +287,7 @@ def build_package(
 
     # (a checker takes a package from the first place it is found whole: so the directory of the
     # blocking stubs has every module of the models, the others as they are)
-    for name, path in closure.modules.items():
+    for path in closure.modules.values():
         relative = path.resolve().relative_to(root).as_posix()
         if (
             f"{module}/{SYNC_STUBS}/{Path(relative).with_suffix('.pyi').as_posix()}"

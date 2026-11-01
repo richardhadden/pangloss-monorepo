@@ -268,8 +268,7 @@ class ModelRegistry:
         indegree = {n: 0 for n in graph}
 
         for node, deps in graph.items():
-            for dep in deps:
-                indegree[node] += 1
+            indegree[node] += len(deps)
 
         heap = []
         for node, deg in indegree.items():
@@ -456,11 +455,11 @@ class ModelRegistry:
         storage = storage_of()
         try:
             exposed_functions = storage.operations
-        except ImportError:
+        except ImportError as error:
             raise PanglossImportError(
                 f"Failed to find the functions of the storage backend '{storage.name}' "
                 f"(in '{storage.package}')"
-            )
+            ) from error
 
         Document.get = classmethod(exposed_functions.get_document)  # type: ignore
         Entity.get = classmethod(exposed_functions.get_entity)  # type: ignore

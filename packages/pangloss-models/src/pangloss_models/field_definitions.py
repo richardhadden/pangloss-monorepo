@@ -53,9 +53,11 @@ class FieldDefinition:
         except KeyError:
             raise PanglossInitialisationError(
                 f"FieldInfo object for field {self.field_name} on model {self.field_on_model.__name__} not found"
-            )
-        except Exception:
-            raise PanglossInitialisationError("Model Config not accessible yet")
+            ) from None
+        except Exception as error:
+            raise PanglossInitialisationError(
+                "Model Config not accessible yet"
+            ) from error
 
 
 @dataclass(frozen=True, kw_only=True)

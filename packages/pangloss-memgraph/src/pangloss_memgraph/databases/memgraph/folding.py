@@ -51,7 +51,7 @@ async def refold(database: Database | None = None, batch_size: int = BATCH_SIZE)
     while True:
 
         @database.write_transaction
-        async def batch(tx: Any) -> tuple[str | None, int]:
+        async def batch(tx: Any, after: str = after) -> tuple[str | None, int]:
             return await _refold_batch(tx, after, batch_size)
 
         last, done = await batch()

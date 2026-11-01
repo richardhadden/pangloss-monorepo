@@ -28,7 +28,7 @@ def load(ctx: typer.Context):
         initialise()
     except (PanglossInitialisationError, PanglossImportError) as error:
         typer.secho(f"Cannot initialise the models: {error}", fg="red", err=True)
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
     return settings, project.location.root
 
 

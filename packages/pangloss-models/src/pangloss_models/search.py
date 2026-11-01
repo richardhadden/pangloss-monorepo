@@ -370,7 +370,7 @@ def checked_value(base: Any, kind: str, value: Any, where: str) -> Any:
     except ValidationError:
         raise PanglossSearchError(
             f"{where}: {value!r} is not a valid {getattr(base, '__name__', base)}"
-        )
+        ) from None
     if kind == "decimal":
         return float(converted)
     if isinstance(converted, enum.Enum):
@@ -676,7 +676,7 @@ def check_incoming(
     try:
         source = resolve_search_type(item.type)
     except PanglossUnknownTypeError as error:
-        raise PanglossSearchError(f"{field}: {error}")
+        raise PanglossSearchError(f"{field}: {error}") from None
     # (the relations of the source that can point at this entity, and whether through wrappers)
     reaching: dict[str, bool] = {}
     for name, definition in source._meta.fields.relation_fields.items():
@@ -792,7 +792,7 @@ def check_pattern(
         try:
             target = resolve_pattern_type(condition.type, roots)
         except PanglossUnknownTypeError as error:
-            raise PanglossSearchError(f"{field}: {error}")
+            raise PanglossSearchError(f"{field}: {error}") from None
         if options is not None and not any(issubclass(target, o) for o in roots):
             raise PanglossSearchError(
                 f"{field}: '{condition.type}' is not one of the types the relation allows ({allowed})"

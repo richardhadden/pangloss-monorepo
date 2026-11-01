@@ -283,7 +283,9 @@ async def create_access_token(
             user.username, body.name, body.scope, body.expires_days
         )
     except PanglossInvalidUserError as error:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(error))
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(error)
+        ) from error
     logger.info(
         "Personal access token %r (scope %s) made by %r",
         body.name,
