@@ -166,3 +166,21 @@ it does now (see the decisions).
    taken. A typed `order_by` (the fields that can be ordered by, as a `Literal`) can come later.
 5. **The interface.** Out of this plan: it writes the JSON. TypeScript types for patterns, from the export, would be
    the same idea for it, and could be done after.
+
+## Next steps (planned 2026-11-02)
+
+8. **`|`, `&` and `~` on a `Where`.** `a | b` is `any_of_=[a, b]`, `a & b` is `all_=[a, b]`, `~a` is `not_=a`;
+   both sides of the same class (a `TypeError` otherwise, as a type checker would say), and `a | b | c` one
+   `any_of_` of three, not nested. The stubs need nothing: the methods are on the base class, typed with `Self`.
+9. **A typed `order_by`.** `orderable_fields(model)` (in `search.py`) lists what `check_order` takes: `label`, the
+   fields of one text, number or date, and those of embedded objects, with dots (`when.sort_day`), to a few levels.
+   `initialise` makes `Letter.Order`, an `OrderBy` whose `field` is a `Literal` of them, so `Letter.Order(field=
+   "nonsense")` is refused; the stub's `search` takes `order_by: list[Letter.Order | Literal[...]]`. A test checks
+   that `check_order` takes each of `orderable_fields`, for every kitchen-sink model.
+10. **TypeScript types for patterns.** The interface's `export_definitions` (not `export_models`: not in the
+    snapshots) gets `searchPatterns`: for each model with a `Where`, its kind and, for each field, its operators
+    (`text`, `compare`, `choice`, `items`, `relation`), the type of its values, and for a relation the classes it can
+    point at. The generated `models.ts` has a type for each (`LetterWhere`, written as a type alias so that it fits
+    `SearchPattern.where`), `LetterPattern` (`{type: "Letter", where?: LetterWhere}`) and `Wheres` (name to type);
+    `interface-core` has the condition types (`TextCondition`, `CompareCondition<T>`, ...). A test generates
+    `models.ts` for the kitchen sink and runs `tsc` on it with a file that uses it, rightly and wrongly.
