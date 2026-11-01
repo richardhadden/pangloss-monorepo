@@ -13,8 +13,7 @@ from types import ModuleType
 
 import typer
 from pangloss_models.exceptions import (
-    PanglossImportError,
-    PanglossInitialisationError,
+    MODEL_ERRORS,
     PanglossMigrationError,
     PanglossMigrationIrreversible,
 )
@@ -75,7 +74,7 @@ def load_models(project: Project) -> dict:
     try:
         project.import_models()
         initialise()
-    except (PanglossInitialisationError, PanglossImportError) as error:
+    except MODEL_ERRORS as error:
         fail(f"Cannot initialise the models: {error}")
     return build_snapshot(structure_of(optional_migration_backend(project)))
 

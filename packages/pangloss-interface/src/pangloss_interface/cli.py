@@ -94,14 +94,11 @@ def project_of(ctx: typer.Context) -> Any:
 
 
 def export_or_exit(project: Any) -> dict[str, Any]:
-    from pangloss_models.exceptions import (
-        PanglossImportError,
-        PanglossInitialisationError,
-    )
+    from pangloss_models.exceptions import MODEL_ERRORS
 
     try:
         return export_project_models(project)
-    except (PanglossInitialisationError, PanglossImportError) as error:
+    except MODEL_ERRORS as error:
         fail(f"Cannot initialise the models: {error}")
         raise
 

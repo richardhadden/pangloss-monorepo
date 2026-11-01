@@ -21,10 +21,14 @@ Nothing has touched the database yet. To see what would happen:
 $ pangloss migrate --plan
 To apply:
   letters.0001_initial
+    ...
   pangloss_memgraph.0001_initial
+    ...
+  pangloss_memgraph.0006_removeindex_runpython_addindex
+    ...
 ```
 
-`pangloss_memgraph.0001_initial` is a migration that comes with the database package: the indexes and constraints Pangloss itself needs. You never write it. Now apply:
+The `pangloss_memgraph` migrations (six of them) come with the database package: the indexes and constraints Pangloss itself needs. You never write them. Now apply:
 
 ```console
 $ pangloss migrate
@@ -33,6 +37,8 @@ $ pangloss migrate
   letters.0001_initial: applied
   pangloss_memgraph.0001_initial: applying
   pangloss_memgraph.0001_initial: applied
+  ...
+  pangloss_memgraph.0006_removeindex_runpython_addindex: applied
 Done
 Nothing that exists is affected by these migrations: no data to read
 ```

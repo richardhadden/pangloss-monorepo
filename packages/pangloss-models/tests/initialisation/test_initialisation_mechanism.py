@@ -3509,3 +3509,38 @@ def test_initialisation_with_bound_self_reference():
         ]
 
     initialise()
+
+
+def test_a_field_of_an_abstract_embedded_type_takes_its_subclasses_whatever_the_modules_are_called():
+    """The models are made in the order of their dependencies, and then of their modules' names. A model in a module whose
+    name sorts first (`chronicle.models`) took only the base of an embedded type declared in another (`pangloss_dates.models`):
+    its subclasses' `Create` were not made yet, so each was the base's, which it inherits"""
+    from pangloss_models.model_bases.embedded import Embedded
+
+    class Date(Embedded):
+        __module__ = "zz_dates.models"
+        _meta = Embedded.Meta(abstract=True)
+
+    class ExactDate(Date):
+        __module__ = "zz_dates.models"
+        year: int
+
+    class Range(Date):
+        __module__ = "zz_dates.models"
+        start: int
+        end: int
+
+    class Journey(Document):
+        __module__ = "aa_app.models"
+        when: Date
+
+    initialise()
+
+    assert (
+        Journey.Create(label="J", when={"type": "ExactDate", "year": 799}).when.year
+        == 799
+    )
+    assert (
+        Journey.Create(label="J", when={"type": "Range", "start": 1, "end": 2}).when.end
+        == 2
+    )

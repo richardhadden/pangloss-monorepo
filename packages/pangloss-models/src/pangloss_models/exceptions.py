@@ -26,6 +26,16 @@ class PanglossImportError(ImportError):
     pass
 
 
+# What importing and initialising the models can raise when they are declared wrongly: a command that loads the models
+# reports these as a message, not a traceback
+MODEL_ERRORS = (
+    PanglossInitialisationError,
+    PanglossImportError,
+    PanglossModelError,
+    PanglossMetaError,
+)
+
+
 class PanglossWriteError(Exception):
     """A write to the database was rejected, and (unless the error says otherwise)
     nothing was written"""

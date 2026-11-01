@@ -184,6 +184,27 @@ def test_the_first_migration_makes_the_models(models_project: Path):
     assert migration_files(models_project) == ["0001_initial.py"]
 
 
+def test_a_model_declared_wrongly_is_a_message_not_a_traceback(models_project: Path):
+    set_models(
+        models_project,
+        """
+        from pangloss_models.model_bases.entity import Entity
+
+
+        class Person(Entity):
+            nickname: complex
+        """,
+    )
+    exit_code, output = invoke("makemigrations")
+    assert exit_code == 1
+    assert (
+        "Cannot initialise the models: Unsupported type for field Person.nickname"
+        in output
+    )
+    assert "Traceback" not in output
+    assert migration_files(models_project) == []
+
+
 def test_a_dry_run_and_a_check_write_nothing(models_project: Path):
     exit_code, output = invoke("makemigrations", "--dry-run")
     assert exit_code == 0

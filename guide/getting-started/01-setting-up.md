@@ -2,7 +2,7 @@
 
 ## What you need
 
-- **Python 3.14 or newer.**
+- **Python 3.15 or newer.**
 - **Memgraph**, the graph database Pangloss stores data in. The easiest way is Docker:
 
   ```bash

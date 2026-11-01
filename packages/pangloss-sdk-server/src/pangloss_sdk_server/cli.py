@@ -18,15 +18,12 @@ def load(ctx: typer.Context):
     assert project.location is not None
 
     from pangloss_models import initialise
-    from pangloss_models.exceptions import (
-        PanglossImportError,
-        PanglossInitialisationError,
-    )
+    from pangloss_models.exceptions import MODEL_ERRORS
 
     try:
         project.import_models()
         initialise()
-    except (PanglossInitialisationError, PanglossImportError) as error:
+    except MODEL_ERRORS as error:
         typer.secho(f"Cannot initialise the models: {error}", fg="red", err=True)
         raise typer.Exit(1) from None
     return settings, project.location.root

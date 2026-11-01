@@ -46,12 +46,12 @@ def setup_database(ctx: typer.Context) -> None:
     backend = project.require_database()
 
     from pangloss_models import initialise
-    from pangloss_models.exceptions import PanglossInitialisationError
+    from pangloss_models.exceptions import MODEL_ERRORS
 
     try:
         project.import_models()
         initialise()
-    except PanglossInitialisationError as error:
+    except MODEL_ERRORS as error:
         fail(f"Cannot initialise the models: {error}")
 
     from pangloss_models.migrations.files import graph_of
@@ -92,16 +92,13 @@ def make_stubs(
     assert project.location is not None
 
     from pangloss_models import initialise
-    from pangloss_models.exceptions import (
-        PanglossImportError,
-        PanglossInitialisationError,
-    )
+    from pangloss_models.exceptions import MODEL_ERRORS
     from pangloss_models.typestubs import write_stubs
 
     try:
         project.import_models()
         initialise()
-    except (PanglossInitialisationError, PanglossImportError) as error:
+    except MODEL_ERRORS as error:
         fail(f"Cannot initialise the models: {error}")
 
     root = project.location.root

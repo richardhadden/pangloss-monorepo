@@ -28,4 +28,6 @@ You describe your data as Python classes (`Person`, `Letter`). From each class P
 
 Each part builds on the one before. The code in this tutorial was run, in this order, on an empty database; the output shown is what it printed (shortened where it was long).
 
+For a longer walk through a whole application, with the reasons behind each choice, the interface, and the optional packages, see the [tutorial](../tutorial/README.md).
+
 Reference documentation for everything used here is in [`docs/`](../../docs/README.md), starting with [Defining models](../../docs/models.md) and [Command line](../../docs/cli.md).

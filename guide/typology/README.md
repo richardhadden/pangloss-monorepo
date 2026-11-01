@@ -55,7 +55,7 @@ official  = await RoleTypology.create("Court official")
 secretary = await RoleTypology.create("Secretary", supertype=official.id)
 await RoleTypology.move(secretary.id, to=chancery.id)       # re-parent (to=None: make it a root)
 await RoleTypology.tree()                                    # [{id, label, children: [...]}, ...]
-await RoleTypology.path(secretary.id)                        # Secretary › Court official
+await RoleTypology.path(secretary.id)                        # its ancestors and itself, from the root down
 await RoleTypology.merge(from_=a.id, into=b.id)              # repoint everything typed a, then delete a
 await RoleTypology.delete(id)                                # refused if it has subtypes or is in use
 

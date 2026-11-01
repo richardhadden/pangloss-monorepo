@@ -2,12 +2,13 @@
 
 Tutorials and how-tos. The reference, with the design of each part and what is built, is in [`docs/`](../docs/README.md).
 
-**New here?** Start with *Getting started*, then read the guide for the part you need. To see which package does what:
+**New here?** Take the half-hour tour in *Getting started*, or build a whole application step by step in the *Tutorial*; then read the guide for the part you need. To see which package does what:
 [the packages, and where each is explained](packages.md).
 
 | Guide | |
 |-------|--|
 | [Getting started](getting-started/README.md) | Make a project, declare some models, store data, and use it from Python and over HTTP (about 30 minutes) |
+| [Tutorial: your first application](tutorial/README.md) | Build an application from nothing, explaining why as well as how: entities and documents, the interface, statements with roles and dates, the API, optional packages, tests (a few hours) |
 | [Migrations](migrations/README.md) | Changing your models after there is data in the database |
 | [The SDK](sdk/README.md) | **Your models in your own scripts**: build the SDK on the server, install it, connect, read and write, stay current |
 | [Searching](search/README.md) | Lists, autocomplete, and structured search by a JSON pattern |

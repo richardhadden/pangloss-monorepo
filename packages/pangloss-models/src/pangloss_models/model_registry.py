@@ -207,6 +207,9 @@ class ModelRegistry:
         Optional light inference:
         Extract BaseModel types from annotations.
         """
+        from pangloss_models.model_bases.embedded import Embedded
+        from pangloss_models.utils import generic_get_subclasses
+
         deps = set()
 
         for field in getattr(model, "model_fields", {}).values():
@@ -218,6 +221,12 @@ class ModelRegistry:
 
                 if isinstance(tp, type) and issubclass(tp, BaseModel):
                     deps.add(tp)
+                    # (a field of an embedded type takes any of its subclasses, as their own `Create` and the rest: so
+                    # those are made first. Otherwise a model whose name sorts before theirs, `chronicle.models.Journey`
+                    # before `pangloss_dates.models.ExactDate`, finds the `Create` each inherits from the base, and takes
+                    # only the base)
+                    if issubclass(tp, Embedded):
+                        deps |= generic_get_subclasses(tp, include_abstract=True)
                     continue
 
                 origin = get_origin(tp)
