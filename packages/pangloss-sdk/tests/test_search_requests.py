@@ -96,6 +96,42 @@ def test_a_pattern_that_cannot_be_made_is_refused_before_it_is_sent(monkeypatch)
         exposed_functions.search(Letter, Match(type="Person"))
 
 
+def test_a_where_and_order_by_are_sent_as_the_json_of_a_match(monkeypatch):
+    from pangloss_models.search_where import Text
+
+    Letter = models()
+    sent = []
+
+    class Client:
+        def send(self, call):
+            sent.append(call)
+            return SimpleNamespace(
+                status_code=200,
+                is_success=True,
+                json=lambda: {
+                    "results": [],
+                    "count": 0,
+                    "page": 1,
+                    "pageSize": 25,
+                    "nextPage": None,
+                    "previousPage": None,
+                },
+            )
+
+    monkeypatch.setattr(exposed_functions, "current_client", lambda: Client())
+
+    exposed_functions.search(
+        Letter, Letter.Where(title=Text(in_=["a"])), page_size=5, order_by=["title"]
+    )
+
+    assert sent[0].json == {
+        "type": "Letter",
+        "where": {"title": {"in": ["a"]}},
+        "order_by": [{"field": "title"}],
+        "page_size": 5,
+    }
+
+
 def test_a_504_that_names_the_error_is_a_search_timeout():
     from pangloss_models.exceptions import PanglossSearchTimeoutError
 

@@ -20,7 +20,14 @@ from pangloss_models.model_bases.entity import (
     _EntityReferenceViewBase,
 )
 from pangloss_models.model_registry import ModelRegistry
-from pangloss_models.search import Match, check_match, check_order
+from pangloss_models.search import (
+    Match,
+    OrderBy,
+    check_match,
+    check_order,
+    search_match,
+)
+from pangloss_models.search_where import Where
 from pangloss_models.utils import get_concrete_types
 from pydantic import AnyHttpUrl, TypeAdapter
 
@@ -128,12 +135,16 @@ async def list_items(
 async def search(
     tx: Transaction,
     cls: type[Document | Entity],
-    match: Match,
+    pattern: Match | Where | None = None,
     page_number: int | None = None,
     page_size: int | None = None,
+    *,
+    order_by: list[OrderBy | str] | None = None,
 ) -> _ListItems[_DocumentReferenceViewBase | _EntityReferenceViewBase]:
-    """The head documents (or entities) of the class, and its subclasses, that fit the pattern, as a page of
-    reference views, like `list_items`. A pattern that cannot be made raises `PanglossSearchError`."""
+    """The head documents (or entities) of the class, and its subclasses, that fit the pattern (a `Match`, or a
+    `Where`; all of them, without one), as a page of reference views, like `list_items`. A pattern that cannot be
+    made raises `PanglossSearchError`."""
+    match = search_match(cls, pattern, order_by)
     conditions = check_match(cls, match)
     query, params = build_search_query(
         cls,

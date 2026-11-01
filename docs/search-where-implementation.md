@@ -128,6 +128,9 @@ it does now (see the decisions).
    `api_sync`, and anything else that binds `search`. A `Where` of another class than the one searched is an error
    (call `search` on that class). One conformance test (`pangloss-testing`) searches with a `Where`, so every
    backend runs it.
+   **Built:** `search_match(cls, pattern, order_by)` (in `search.py`) makes the `Match`, for the Cypher backend and
+   both SDK clients. `page_number` and `page_size` stay positional, as they were; `order_by` takes `OrderBy`s or the
+   names of fields (ascending), and is an error if the `Match` has one too.
 6. **Stubs.** The `Where` classes are nested classes of the models, so `generated_classes` already finds them; what
    is needed: `TypeRenderer` writes `Compare[datetime.date]` and the like, the fields are written by their Python
    names (pyright and ty take the constructor's parameters from them, and `validate_by_name` lets them be used),

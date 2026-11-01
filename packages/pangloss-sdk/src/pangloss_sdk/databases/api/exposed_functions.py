@@ -12,7 +12,8 @@ from pangloss_models.autocomplete import AutocompleteResults
 from pangloss_models.model_bases.base_models import _ListItems
 from pangloss_models.model_bases.document import Document
 from pangloss_models.model_bases.entity import Entity
-from pangloss_models.search import Match
+from pangloss_models.search import Match, OrderBy, search_match
+from pangloss_models.search_where import Where
 from pangloss_sdk import protocol
 from pangloss_sdk.client import current_async_client
 from pydantic import AnyHttpUrl
@@ -54,11 +55,15 @@ async def list_items(
 
 async def search(
     cls: type[Document | Entity],
-    match: Match,
+    pattern: Match | Where | None = None,
     page_number: int | None = None,
     page_size: int | None = None,
+    *,
+    order_by: list[OrderBy | str] | None = None,
 ) -> _ListItems:
-    call = protocol.search(cls, match, page_number, page_size)
+    call = protocol.search(
+        cls, search_match(cls, pattern, order_by), page_number, page_size
+    )
     return protocol.searched(cls, await current_async_client().send(call))
 
 

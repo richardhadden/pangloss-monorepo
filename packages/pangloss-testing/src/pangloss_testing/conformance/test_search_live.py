@@ -307,3 +307,42 @@ async def test_a_search_that_takes_too_long_is_stopped_and_not_tried_again(
 
     # (the driver tries a transient error again, with waits of seconds: this was not)
     assert time.monotonic() - started < 3
+
+
+@no_type_check
+async def test_a_search_can_be_written_with_where_and_ordered_without_a_match(
+    clear_database,
+):
+    from pangloss_models.search_where import Compare, Rel, Text
+
+    Person, Poet, Letter, john, jane, letter = await make(clear_database)
+    await letter("Plague in Venice", john, pages=3, sent=datetime.date(1576, 5, 1))
+    await letter("Wedding", jane, pages=10, copies=[john])
+    await letter("Bare", jane)
+
+    async def find(pattern=None, **more):
+        return [item.label for item in (await Letter.search(pattern, **more)).results]
+
+    assert await find(Letter.Where(title=Text(contains="venice"))) == [
+        "Plague in Venice"
+    ]
+    assert await find(Letter.Where(sent=Compare(lt=datetime.date(1600, 1, 1)))) == [
+        "Plague in Venice"
+    ]
+    assert await find(Letter.Where(sender=Poet.Where())) == ["Bare", "Wedding"]
+    assert await find(Letter.Where(copies_to=Rel(is_=john), pages=Compare(gt=5))) == [
+        "Wedding"
+    ]
+    assert await find(
+        Letter.Where(
+            any_of_=[
+                Letter.Where(title=Text(eq="Bare")),
+                Letter.Where(sender=Rel(is_=john)),
+            ]
+        )
+    ) == ["Bare", "Plague in Venice"]
+    # (nothing is all of them; `order_by` with no `Match`)
+    assert await find(order_by=["title"]) == ["Bare", "Plague in Venice", "Wedding"]
+    # (a pattern for another class is refused, as a `Match` for one is)
+    with pytest.raises(PanglossSearchError, match="the search is of 'Letter'"):
+        await Letter.search(Person.Where())

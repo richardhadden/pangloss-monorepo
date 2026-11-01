@@ -222,6 +222,40 @@ class Match(BaseModel):
         return parse_where(raw)
 
 
+def search_match(
+    cls: type, pattern: Any = None, order_by: list[OrderBy | str] | None = None
+) -> Match:
+    """What `Model.search` is given, as a `Match`: a `Match`, a `Where` (`Letter.Where(...)`; its model is the
+    `type`), or nothing (all of them); and `order_by`, of `OrderBy`s or the names of fields (ascending). The class
+    searched is the `type` if the pattern has none. (The backends and the SDK all take a search through this.)"""
+    from pangloss_models.search_where import Where
+
+    if pattern is None:
+        match = Match()
+    elif isinstance(pattern, Match):
+        match = pattern
+    elif isinstance(pattern, Where):
+        model = type(pattern)._model
+        match = Match(type=model.__name__ if model else None, where=pattern)
+    else:
+        raise TypeError(
+            f"A search is of a Match or a Where (such as {cls.__name__}.Where(...)), not {type(pattern).__name__}"
+        )
+    if order_by is not None:
+        if match.order_by:
+            raise ValueError("order_by is given both in the Match and to search")
+        match = match.model_copy(
+            update={
+                "order_by": [
+                    OrderBy(field=o) if isinstance(o, str) else o for o in order_by
+                ]
+            }
+        )
+    if not match.type:
+        match = match.model_copy(update={"type": cls.__name__})
+    return match
+
+
 class SearchRequest(Match):
     """The body of `POST /api/search`: a pattern and the page wanted"""
 

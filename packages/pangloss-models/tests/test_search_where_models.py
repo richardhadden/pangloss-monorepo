@@ -223,3 +223,28 @@ def test_a_field_with_a_name_of_the_pattern_is_an_error():
 
     with pytest.raises(PanglossModelError, match="a name of its search pattern"):
         initialise()
+
+
+def test_search_match_makes_a_match_of_a_where_a_match_or_nothing():
+    from pangloss_models.search import OrderBy, search_match
+
+    Person, Poet, Place, Letter, *_ = models()
+
+    assert search_match(Letter) == Match(type="Letter")
+    match = search_match(Letter, Letter.Where(title=Text(eq="a")))
+    assert match.type == "Letter" and list(match.where) == ["title"]
+    assert search_match(Letter, Match(where={})).type == "Letter"
+    # (a `Where` of another class keeps its type, for `check_match` to refuse)
+    assert search_match(Letter, Person.Where()).type == "Person"
+    assert search_match(
+        Letter, order_by=["title", OrderBy(field="sent", direction="desc")]
+    ).order_by == [
+        OrderBy(field="title"),
+        OrderBy(field="sent", direction="desc"),
+    ]
+    with pytest.raises(ValueError, match="both"):
+        search_match(
+            Letter, Match(order_by=[OrderBy(field="title")]), order_by=["title"]
+        )
+    with pytest.raises(TypeError, match="Letter.Where"):
+        search_match(Letter, {"title": {"eq": "a"}})
