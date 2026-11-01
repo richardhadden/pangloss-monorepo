@@ -10,7 +10,7 @@ Requirements: a Memgraph server with text search (the `text_search` module), sta
 |--------|------|
 | `database.py` | `Database` class: holds settings and a `neo4j.AsyncDriver`; provides `read_transaction` and `write_transaction` decorators |
 | `exposed_functions.py` | The functions bound to the models: `list_items`, `get_document`, `create_head_node`, `update_head_node` (plus the internal `write_head_node` and `replace_head_node`) |
-| `build_create_query.py` | Turns a `CreateDB` (or `UpdateDB`) instance into one Cypher statement (`build_head_create_query`); also the code, shared with updates, that writes everything below a head node |
+| `write_plan.py`, `render_write.py` (in `pangloss-cypher`, since 2026-11-01) | A `CreateDB` (or `UpdateDB`) instance becomes a `WritePlan` (`plan_create`, `plan_update`: nodes, relations, references, inline entities, URLs; no database, no Cypher), and the plan one Cypher statement (`render`). It replaced `build_create_query.py` |
 | `build_update_query.py` | The queries for an update: find the head node, collect `meta` of its tree, replace the head node and delete its tree, and write the new version (`build_head_update_query`) |
 | `read_incoming.py` | Reads the relations *to* an entity, for `get_entity` |
 | `delete_node.py` | Deleting (flagging) a head document or an entity, or marking an entity that is referred to |

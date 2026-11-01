@@ -414,6 +414,53 @@ Neo4j folds already (`standard-folding` analyzer, and `schema.fold` on the words
   must pass unchanged.
 - **Done when** `build_create_query.py` is gone and the planner has its own unit tests.
 
+**As built (2026-11-01):**
+
+- **`pangloss_cypher/write_plan.py`.**
+  - `plan_create(instance)` and `plan_update(instance, previous_meta)` give a `WritePlan`, a tree of `PlannedNode`s
+    (id, type, class labels, properties, URLs) and their `Relation`s.
+  - A relation has the `(forward, backward)` names of its edges (the field's, then each subclassed parent field's),
+    its edge properties, and a target: a `PlannedNode`, a `ReferenceToExisting` or an `InlineEntity` (which carries
+    the entity's own node).
+  - The plan has no Cypher variables, no `reverse: true`, no `HeadNode`/`PGIndexableNode`, no `PGCreation`/
+    `PGUpdate`, no user match, and no dialect encoding. All of those belong to the renderer.
+  - The hooks (`properties_for_new_head`) and `previous_meta` are planning inputs.
+  - `walk(existing)` goes through the relations in render order. It writes an inline entity once, at its first
+    place, and only if it does not exist.
+  - `inline_entities`, `references(existing)`, `nodes_to_write(existing)`, `urls_to_write(existing)` and
+    `created_entities(existing)` are built on `walk`.
+- **`render_write.py`.** `render(plan, existing)` gives the `QueryObject` (match and create parts, `QueryParams`).
+  `PropertyAssignments` encodes through the dialect. `build_head_create_query(instance, existing)` is `render(plan_create(...))`.
+- **Checks.** `validate_write`'s checks read the plan: `check_references_exist(tx, plan, existing)`,
+  `check_ids_available(tx, plan, existing)` (`is_update` comes from the plan) and `check_urls_available(tx, plan,
+  existing)`. `write_functions.checked_plan` runs them for both create and update. The plan is made once; the
+  builder used to build the query twice when the document had inline entities.
+- **Small modules.** `params.py` (`Identifier`, `QueryParams`) and `values.convert_type_for_writing`, which the reads
+  also use.
+- **`build_create_query.py` is gone.** `build_update_query.build_head_update_query` is `render(plan_update(...))`.
+  `build_replace_head_query` is unchanged.
+- **Same query text.** A script recorded the old builder's output for an `Order` with every shape and then compared
+  the planner and renderer against it, on both dialects. The shapes were:
+  - an inline entity, new and existing, by id and by URL, given twice;
+  - references by id, twice, and by URL;
+  - edge properties, subclassed edges, a semantic space, a conjunction, a reified relation, an embedded object and an
+    annotated value;
+  - an entity with a URL;
+  - an update with `previous_meta`.
+
+  The query text is the same apart from whitespace: two empty lines are gone, from the `set`/`merge` parts that were
+  never used. The parameters (`x1`, `x2`… with the same values), references, nodes, URLs, inline entities and created
+  entities are exactly the same in all 17 cases.
+
+  `test_a_write_of_the_same_shape_is_the_same_query_text` is unchanged apart from its import, which is now
+  `pangloss_cypher.render_write`.
+- **Tests.**
+  - `pangloss-cypher/tests/test_write_plan.py`: 7 planner tests with no database. They cover nesting, subclassed
+    edges with edge properties, references by URL, semantic spaces, `Fulfils` labels, inline entities (repeated,
+    by URL, existing) and an update keeping creation `meta`.
+  - `./run_tests.sh` passes: Memgraph 2,523, Neo4j 602, typology 19, calendar 16, dates 4, zotero 7 on Neo4j, and 57
+    browser tests.
+
 ### Phase 7: read, list, search and autocomplete in the kit (1 week)
 
 - Move `build_read_query`, `build_list_query`, `build_search_query` and `build_autocomplete_query` into the kit, using

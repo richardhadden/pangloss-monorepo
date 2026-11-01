@@ -13,11 +13,11 @@ from pangloss_models.exceptions import (
 )
 from pangloss_models.model_bases.labels import has_allowed_label
 
-from pangloss_cypher.build_create_query import (
+from pangloss_cypher.write_plan import (
     ExistingEntity,
     InlineEntity,
     InlineEntityKey,
-    QueryObject,
+    WritePlan,
 )
 from pangloss_cypher.build_update_query import (
     build_head_query,
@@ -35,11 +35,17 @@ class ExistingHead:
     version: int = 1
 
 
-async def check_references_exist(tx: Transaction, query_object: QueryObject) -> None:
-    """Check that every existing entity referred to exists and is of an allowed type"""
+async def check_references_exist(
+    tx: Transaction,
+    plan: WritePlan,
+    existing: dict[InlineEntityKey, ExistingEntity] | None = None,
+) -> None:
+    """Check that every existing entity referred to exists and is of an allowed type (`existing`: which of the
+    entities written in the document exist, whose own references are not written)"""
 
-    by_id = [r for r in query_object.references if not r.is_url]
-    by_url = [r for r in query_object.references if r.is_url]
+    references = plan.references(existing)
+    by_id = [r for r in references if not r.is_url]
+    by_url = [r for r in references if r.is_url]
 
     found: dict[str, list[set[str]]] = {}
     deleted_values: set[str] = set()
@@ -73,7 +79,7 @@ async def check_references_exist(tx: Transaction, query_object: QueryObject) -> 
                 deleted_values.add(value)
 
     problems = []
-    for reference in query_object.references:
+    for reference in references:
         matches = [labels for labels in found.get(reference.value, []) if labels]
         if not matches:
             problems.append(f"{reference.field_name}: '{reference.value}' not found")
@@ -162,13 +168,18 @@ def check_inline_entities(
         )
 
 
-async def check_urls_available(tx: Transaction, query_object: QueryObject) -> None:
+async def check_urls_available(
+    tx: Transaction,
+    plan: WritePlan,
+    existing: dict[InlineEntityKey, ExistingEntity] | None = None,
+) -> None:
     """Check that no URL of a new entity is already the URL of an entity"""
-    if not query_object.urls_to_write:
+    urls = plan.urls_to_write(existing)
+    if not urls:
         return
     result = await tx.run(
         "UNWIND $urls AS url MATCH (node:PGUrl {url: url}) RETURN node.url AS url",
-        urls=sorted(set(query_object.urls_to_write)),
+        urls=sorted(set(urls)),
     )
     in_use = [url for (url,) in await result.values()]
     if in_use:
@@ -176,7 +187,9 @@ async def check_urls_available(tx: Transaction, query_object: QueryObject) -> No
 
 
 async def check_ids_available(
-    tx: Transaction, query_object: QueryObject, is_update: bool
+    tx: Transaction,
+    plan: WritePlan,
+    existing: dict[InlineEntityKey, ExistingEntity] | None = None,
 ) -> None:
     """Check that no id given for a new node is already used.
 
@@ -184,8 +197,9 @@ async def check_ids_available(
     again (they are replaced), but nodes belonging to anything else may not.
     Entities written inline are not checked: one that exists is left as it is."""
 
-    ids = {str(query_object.head_id)}
-    ids.update(n.id for n in query_object.nodes_to_write if not n.is_entity)
+    is_update = plan.is_update
+    ids = {str(plan.head_id)}
+    ids.update(n.id for n in plan.nodes_to_write(existing) if not n.is_entity)
 
     result = await tx.run(
         """
@@ -195,7 +209,7 @@ async def check_ids_available(
         """,
         ids=sorted(ids),
     )
-    head_id = str(query_object.head_id)
+    head_id = str(plan.head_id)
     in_use = [
         id
         for id, head_node_id in await result.values()

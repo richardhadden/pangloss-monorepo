@@ -46,7 +46,7 @@ Copied from `pangloss_memgraph`, renamed, and changed only where the table above
 | `properties.py` (new) | the flattening of maps ([§4.1](#41-properties-maps-are-flattened)) |
 | `from_database.py` | also rebuilds the flattened properties |
 | `initialise_database.py` | Neo4j DDL; constraints before indexes; the full-text index; `awaitIndexes` |
-| `build_create_query.py`, `build_update_query.py` | node and edge properties go through `properties.flatten` |
+| `render_write.py` (was `build_create_query.py`), `build_update_query.py` | node and edge properties go through `properties.flatten` (the dialect's `encode_properties`) |
 | `build_read_query.py`, `build_list_query.py`, `build_search_query.py`, `build_autocomplete_query.py`, `read_incoming.py`, `build_tree.py`, `delete_node.py` | `$($label)`, the full-text call, `meta` read from its flat properties, facets, tie-breaks |
 | `validate_write.py`, `lookup.py`, `visibility.py`, `users.py`, `review.py` | the same Cypher, checked for map properties (users and review keep tokens, sessions, state) |
 | `exposed_functions.py`, `setup.py` | the same functions |

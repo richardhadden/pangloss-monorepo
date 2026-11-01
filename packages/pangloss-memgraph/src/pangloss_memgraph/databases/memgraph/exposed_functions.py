@@ -26,9 +26,7 @@ from pydantic import AnyHttpUrl, TypeAdapter
 from pangloss_memgraph.databases.memgraph.build_autocomplete_query import (
     AUTOCOMPLETE_QUERY,
 )
-from pangloss_cypher.build_create_query import (
-    convert_type_for_writing,
-)
+from pangloss_cypher.values import convert_type_for_writing
 from pangloss_memgraph.databases.memgraph.build_list_query import (
     DEFAULT_HIT_LIMIT,
     build_generic_list_query,

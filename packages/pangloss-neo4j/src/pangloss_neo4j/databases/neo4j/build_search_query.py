@@ -19,9 +19,7 @@ from pangloss_models.search import (
     Not,
 )
 
-from pangloss_cypher.build_create_query import (
-    convert_type_for_writing,
-)
+from pangloss_cypher.values import convert_type_for_writing
 from pangloss_neo4j.databases.neo4j.traversal import hops
 from pangloss_cypher import fragments
 from pangloss_cypher.visibility import unpublished_visible

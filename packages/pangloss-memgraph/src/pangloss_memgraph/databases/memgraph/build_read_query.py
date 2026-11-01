@@ -3,10 +3,8 @@ import uuid
 from pangloss_models.model_bases.document import Document
 from pangloss_models.model_bases.entity import Entity
 
-from pangloss_cypher.build_create_query import (
-    QueryParams,
-    convert_type_for_writing,
-)
+from pangloss_cypher.params import QueryParams
+from pangloss_cypher.values import convert_type_for_writing
 from pangloss_cypher import fragments
 from pangloss_cypher.visibility import unpublished_visible
 

@@ -32,12 +32,9 @@ from pangloss_users.models import AccessTokenRecord, UserInDB
 from pydantic import AnyHttpUrl
 
 from pangloss_cypher import review, users
-from pangloss_cypher.build_create_query import build_head_create_query
-from pangloss_cypher.build_update_query import (
-    build_head_update_query,
-    build_replace_head_query,
-)
+from pangloss_cypher.build_update_query import build_replace_head_query
 from pangloss_cypher.delete_node import DeletionResult, soft_delete, undelete
+from pangloss_cypher.render_write import render
 from pangloss_cypher.transactions import (
     Transaction,
     dialect,
@@ -55,6 +52,13 @@ from pangloss_cypher.validate_write import (
     get_existing_head,
     get_tree_meta,
     replace_urls,
+)
+from pangloss_cypher.write_plan import (
+    ExistingEntity,
+    InlineEntityKey,
+    WritePlan,
+    plan_create,
+    plan_update,
 )
 
 
@@ -153,23 +157,32 @@ async def write_head_node(
 
     await check_user_exists(tx)
 
-    query_object = build_head_create_query(db_instance)
-    if query_object.inline_entities:
-        # (the query is different for those that exist already)
-        existing = await find_existing_entities(tx, query_object.inline_entities)
-        check_inline_entities(query_object.inline_entities, existing)
-        query_object = build_head_create_query(db_instance, existing)
+    plan = plan_create(db_instance)
+    existing = await checked_plan(tx, plan)
 
-    await check_references_exist(tx, query_object)
-    await check_ids_available(tx, query_object, is_update=False)
-    await check_urls_available(tx, query_object)
-
+    query_object = render(plan, existing)
     result = await run_write_query(
         tx, query_object.to_query_string(), query_object.params
     )
     if not result:
         raise PanglossWriteError("Nothing was written")
-    return query_object.created_entities()
+    return plan.created_entities(existing)
+
+
+async def checked_plan(
+    tx: Transaction, plan: WritePlan
+) -> dict[InlineEntityKey, ExistingEntity]:
+    """Check that a write can be made, before anything is written: the entities written in it are the ones there are,
+    if they exist; what it refers to exists; no id or URL it gives is taken. Gives the entities written in it that
+    exist (the query is different for them)"""
+    existing: dict[InlineEntityKey, ExistingEntity] = {}
+    if plan.inline_entities:
+        existing = await find_existing_entities(tx, plan.inline_entities)
+        check_inline_entities(plan.inline_entities, existing)
+    await check_references_exist(tx, plan, existing)
+    await check_ids_available(tx, plan, existing)
+    await check_urls_available(tx, plan, existing)
+    return existing
 
 
 # How many times a write is tried, if it loses a race to write the same id or URL
@@ -265,15 +278,8 @@ async def replace_head_node(
         )
     previous_meta = await get_tree_meta(tx, db_instance.id)
 
-    query_object = build_head_update_query(db_instance, previous_meta)
-    if query_object.inline_entities:
-        existing = await find_existing_entities(tx, query_object.inline_entities)
-        check_inline_entities(query_object.inline_entities, existing)
-        query_object = build_head_update_query(db_instance, previous_meta, existing)
-
-    await check_references_exist(tx, query_object)
-    await check_ids_available(tx, query_object, is_update=True)
-    await check_urls_available(tx, query_object)
+    plan = plan_update(db_instance, previous_meta)
+    existing = await checked_plan(tx, plan)
 
     replace_query, replace_params = build_replace_head_query(db_instance)
 
@@ -285,12 +291,13 @@ async def replace_head_node(
     if urls is not None:
         await replace_urls(tx, db_instance.id, [str(url) for url in urls])
 
+    query_object = render(plan, existing)
     if not await run_write_query(
         tx, query_object.to_query_string(), query_object.params
     ):
         raise PanglossWriteError("Nothing was written")
 
-    return existing_head, query_object.created_entities()
+    return existing_head, plan.created_entities(existing)
 
 
 async def update_head_node(

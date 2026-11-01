@@ -15,7 +15,6 @@ the reverse edges pointing back at it. Edges from documents *to* an entity (whic
 the entity does not own) are therefore left alone when an entity is updated.
 """
 
-import datetime
 import typing
 import uuid
 
@@ -23,16 +22,14 @@ from pangloss_models import hooks
 from pangloss_models.model_bases.document import _DocumentUpdateDBBase
 from pangloss_models.model_bases.entity import _EntityUpdateDBBase
 from pangloss_models.model_bases.labels import fulfillable_labels
-from pangloss_users import current_request_username
 
-from pangloss_cypher.build_create_query import (
+from pangloss_cypher.params import QueryParams
+from pangloss_cypher.render_write import PropertyAssignments, QueryObject, render
+from pangloss_cypher.write_plan import (
     ExistingEntity,
     InlineEntityKey,
-    PropertyAssignments,
-    QueryObject,
-    QueryParams,
-    build_attached_nodes,
     get_node_fields_as_writable_dict,
+    plan_update,
 )
 from pangloss_cypher.heads import VERSION_OF_HEAD
 from pangloss_cypher.transactions import dialect
@@ -132,40 +129,5 @@ def build_head_update_query(
     previous_meta: dict[str, dict[str, typing.Any]],
     existing_entities: dict[InlineEntityKey, ExistingEntity] | None = None,
 ) -> QueryObject:
-    """Write the new tree below an existing head node, and record the update"""
-
-    query_object = QueryObject(
-        head_id=instance.id,
-        head_type=instance.type,
-        existing_entities=existing_entities,
-    )
-    query_object.previous_meta = previous_meta
-
-    node_identifier = query_object.params.new_identifier()
-    query_object.return_identifier = node_identifier
-
-    head_id_identifier = query_object.params.add(str(instance.id))
-    username_identifier = query_object.params.add(current_request_username.get())
-    update_data_identifier = query_object.params.add(
-        {
-            "id": str(uuid.uuid7()),
-            "updated_when": datetime.datetime.now(datetime.UTC),
-        }
-    )
-
-    query_object.match_query_strings.append(
-        f"""MATCH (user:PGUser {{username: ${username_identifier}}})
-            MATCH ({node_identifier}:HeadNode {{id: ${head_id_identifier}}})"""
-    )
-    query_object.create_query_strings.append(f"""
-        CREATE (update:PGUpdate)
-        SET update = ${update_data_identifier}
-        CREATE (update)-[:is_update_of]->({node_identifier})
-        CREATE (update)-[:updated_by]->(user)
-    """)
-
-    build_attached_nodes(
-        query_object, instance, node_identifier, instance.type, instance.id
-    )
-
-    return query_object
+    """Write the new tree below an existing head node, and record the update (`plan_update`, rendered)"""
+    return render(plan_update(instance, previous_meta), existing_entities)

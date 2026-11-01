@@ -2959,9 +2959,7 @@ async def test_a_write_of_the_same_shape_is_the_same_query_text(
     random planned every write afresh; they are counted, so the text depends only on the shape"""
     import uuid
 
-    from pangloss_cypher.build_create_query import (
-        build_head_create_query,
-    )
+    from pangloss_cypher.render_write import build_head_create_query
 
     class Person(Entity):
         pass
