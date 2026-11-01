@@ -248,3 +248,29 @@ def test_search_match_makes_a_match_of_a_where_a_match_or_nothing():
         )
     with pytest.raises(TypeError, match="Letter.Where"):
         search_match(Letter, {"title": {"eq": "a"}})
+
+
+def test_or_and_and_not_are_the_combinators():
+    Person, Poet, Place, Letter, *_ = models()
+    a, b, c = (Letter.Where(title=Text(eq=t)) for t in "abc")
+
+    assert (a | b).to_json() == {
+        "$any_of": [{"title": {"eq": "a"}}, {"title": {"eq": "b"}}]
+    }
+    assert (a & b).to_json() == {
+        "$all": [{"title": {"eq": "a"}}, {"title": {"eq": "b"}}]
+    }
+    assert (~a).to_json() == {"$not": {"title": {"eq": "a"}}}
+    # (one combinator of three, not two nested; and a mixed one is kept as it is)
+    assert len((a | b | c).any_of_) == 3
+    assert len(((a & b) | c).any_of_) == 2
+    assert ((a | b) & ~c).to_json() == {
+        "$all": [
+            {"$any_of": [{"title": {"eq": "a"}}, {"title": {"eq": "b"}}]},
+            {"$not": {"title": {"eq": "c"}}},
+        ]
+    }
+    # (the same search as the dict)
+    check_match(Letter, Match(where=a | ~b))
+    with pytest.raises(TypeError, match="can only be combined with another"):
+        a | Person.Where()

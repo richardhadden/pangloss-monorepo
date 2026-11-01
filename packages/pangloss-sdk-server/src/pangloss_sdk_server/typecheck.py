@@ -64,6 +64,7 @@ def usage_source(models: Iterable[type], mode: str) -> str:
             f"    assert_type({wait}{name}.list(), _ListItems[{name}.ReferenceView])",
             f"    assert_type({wait}{name}.search(Match()), _ListItems[{name}.ReferenceView])",
             f"    assert_type({wait}{name}.search({name}.Where(), order_by=['label']), _ListItems[{name}.ReferenceView])",
+            f"    assert_type({name}.Where() | ~{name}.Where() & {name}.Where(), {name}.Where)",
             f"    assert_type({wait}{name}.delete(i), None)",
             f"    assert_type({wait}{name}.undelete(i), None)",
             f"    assert_type({wait}c.save(), {name}.ReferenceView)",

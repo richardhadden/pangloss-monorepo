@@ -89,7 +89,9 @@ page = await Letter.search(
 | list of literals | `Items(contains=…, contains_any=[…])` |
 | relation, embedded object | `Rel(is_=…, is_any=[…], exists=…, through=[Negative], match=Person.Where(…))`, or the `Where` alone |
 
-The `$` keys are fields with a trailing underscore: `any_of_=[Letter.Where(…), …]`, `all_`, `not_`, `any_` and
+`a | b`, `a & b` and `~a` are `any_of_`, `all_` and `not_` (of two `Where`s of the same class): `Letter.Where(title=
+Text(eq="Bare")) | ~Letter.Where(sender=Rel(is_=john))`. The `$` keys are fields with a trailing underscore:
+`any_of_=[Letter.Where(…), …]`, `all_`, `not_`, `any_` and
 `mentions_` (`AnyRel(is_=…)`), `somewhere_=[Place.Where(…)]`, `spaces_=[Negative]`, and on an entity
 `incoming_=[Letter.Where(…)]` (or `IncomingFrom(where=Letter.Where(…), field="sender")`). In a dict the keys can
 be written as `SearchKey.ANY_OF` and the like (`pangloss_models.search`). A `Match` and the dicts still work, and

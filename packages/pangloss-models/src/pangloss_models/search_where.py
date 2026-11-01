@@ -21,7 +21,7 @@ from decimal import Decimal
 import operator
 from collections.abc import Iterable
 from functools import reduce
-from typing import Annotated, Any, ClassVar
+from typing import Annotated, Any, ClassVar, Self
 from uuid import UUID
 
 from pydantic import (
@@ -196,6 +196,34 @@ class Where(Written):
         return where_json(
             dict(sorted(given.items(), key=lambda kv: kv[0].startswith("$")))
         )
+
+    def __or__(self, other: Self) -> Self:
+        """`a | b`: either holds (`any_of_`)"""
+        return self.combined(other, "any_of_")
+
+    def __and__(self, other: Self) -> Self:
+        """`a & b`: both hold (`all_`)"""
+        return self.combined(other, "all_")
+
+    def __invert__(self) -> Self:
+        """`~a`: it does not hold (`not_`)"""
+        return type(self)(not_=self)
+
+    def combined(self, other: Self, name: str) -> Self:
+        """The two in one combinator. One that is only that combinator already gives its items (`a | b | c` is
+        one `any_of_` of three)."""
+        if type(other) is not type(self):
+            raise TypeError(
+                f"A {type(self).__name__} can only be combined with another, not a {type(other).__name__}"
+            )
+        items: list[Self] = []
+        for where in (self, other):
+            if where.model_fields_set == {name}:
+                items.extend(getattr(where, name))
+            else:
+                items.append(where)
+        given: dict[str, Any] = {name: items}
+        return type(self)(**given)
 
     def to_pattern(self) -> dict[str, Any]:
         """The pattern of a node this is for: its `type` and its `where`"""

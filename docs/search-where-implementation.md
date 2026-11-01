@@ -172,6 +172,8 @@ it does now (see the decisions).
 8. **`|`, `&` and `~` on a `Where`.** `a | b` is `any_of_=[a, b]`, `a & b` is `all_=[a, b]`, `~a` is `not_=a`;
    both sides of the same class (a `TypeError` otherwise, as a type checker would say), and `a | b | c` one
    `any_of_` of three, not nested. The stubs need nothing: the methods are on the base class, typed with `Self`.
+   **Built.** `ty` (0.0.90) takes the result to be the class of the left side, but does not refuse a right side of
+   another class (`Self` is not held to): the `TypeError` does.
 9. **A typed `order_by`.** `orderable_fields(model)` (in `search.py`) lists what `check_order` takes: `label`, the
    fields of one text, number or date, and those of embedded objects, with dots (`when.sort_day`), to a few levels.
    `initialise` makes `Letter.Order`, an `OrderBy` whose `field` is a `Literal` of them, so `Letter.Order(field=
