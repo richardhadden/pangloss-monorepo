@@ -143,6 +143,14 @@ class TypeRenderer:
                 return "typing.Any"
             return f"{name}[{', '.join(self._render(a) for a in args)}]"
         if isinstance(annotation, type):
+            # (a generic pydantic class with its parameters, `Compare[datetime.date]`, is a class made at run time:
+            # it is written as its generic class with them)
+            generic = getattr(annotation, "__pydantic_generic_metadata__", None) or {}
+            if generic.get("origin") is not None and generic.get("args"):
+                name = self.class_name(generic["origin"])
+                if name is None:
+                    raise _Unwritable
+                return f"{name}[{', '.join(self._render(a) for a in generic['args'])}]"
             name = self.class_name(annotation)
             if name is None:
                 raise _Unwritable
@@ -217,7 +225,7 @@ OPERATION_IMPORTS = (
     "import uuid as _pg_uuid",
     "import pydantic as _pg_pydantic",
     "from pangloss_models.model_bases.base_models import _ListItems as _PgListItems",
-    "from pangloss_models.search import Match as _PgMatch",
+    "from pangloss_models.search import Match as _PgMatch, OrderBy as _PgOrderBy",
 )
 
 
@@ -279,8 +287,9 @@ def operations_source(model: type, qualified_name: str, mode: Operations) -> str
         f"published: bool | None = None, review_status: str | None = None) "
         f"-> _PgListItems[{qualified_name}.ReferenceView]: ...  # type: ignore",
         "@classmethod",
-        f"{define} search(cls, match: _PgMatch, page_number: int | None = None, "
-        f"page_size: int | None = None) "
+        f"{define} search(cls, pattern: {qualified_name}.Where | _PgMatch | None = None, "
+        f"page_number: int | None = None, page_size: int | None = None, *, "
+        f"order_by: _pg_builtins.list[_PgOrderBy | str] | None = None) "
         f"-> _PgListItems[{qualified_name}.ReferenceView]: ...  # type: ignore",
         "@classmethod",
         f"{define} delete(cls, id: {id_type}) -> None: ...  # type: ignore",

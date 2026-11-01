@@ -138,6 +138,13 @@ it does now (see the decisions).
    sync stubs) both use `stub_for_module`, so both get them. Tests: `test_stub_source.py` for the source, and the
    SDK server's `typecheck` test with a usage file that searches with a `Where`, and one with a wrong field and a
    wrong operator that `ty` has to refuse.
+   **Built:** `TypeRenderer` writes a parametrised pydantic class as its generic class and parameters
+   (`Compare[datetime.date]`). The stub's `search` is `search(cls, pattern: Letter.Where | Match | None = None,
+   page_number=None, page_size=None, *, order_by=None)`. With `ty` 0.0.90 the stubs catch a field that is not
+   there, an operator class that is not the field's, a pattern of another class for a relation or for `search`,
+   and a combinator of another class. (A relation to a model of an add-on package, `pangloss_dates.models.Date`,
+   names its `Where` as the other generated classes are named: a checker sees it only if that package has stubs.)
+   `pangloss-demo/demo_app/models.pyi` is made again.
 7. **Docs, and the uses.** `structured-search.md` (a section on `Where`, the dict form kept as the JSON),
    `sdk.md`, `generated-models.md` (the list of generated classes), the guide/tutorial where it searches, and
    `pangloss-dates/query.py` and the tests where a `Where` reads better.

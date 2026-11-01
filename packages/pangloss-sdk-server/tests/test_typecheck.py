@@ -104,3 +104,35 @@ def test_without_ty_auto_says_so_required_fails_and_off_does_not_look(
     )
     with pytest.raises(SdkBuildError, match="not installed"):
         typecheck.check_types(directory, built.manifest["module"], models, "required")
+
+
+@needs_ty
+def test_a_search_pattern_with_a_wrong_field_or_operator_does_not_type_check(package):
+    """The `Where` of each model is in the stubs, with the operators of each field"""
+    built, directory, _ = package
+    usage = directory / "usage.py"
+    usage.write_text(
+        "from pangloss_models.search_where import Compare, Text\n"
+        "from shop.models import Person, Statement\n"
+        "Statement.search(Statement.Where(text=Text(contains='a'), about=Person.Where()))\n"
+        "Statement.search(Statement.Where(nonsense=Text(eq='a')))\n"
+        "Statement.search(Statement.Where(text=Compare(gt=1)))\n"
+        "Statement.search(Person.Where())\n"
+    )
+    sync = directory / "shop_sdk" / SYNC_STUBS
+
+    problems = typecheck.run_ty(
+        typecheck.find_ty(),
+        directory,
+        [sync, directory],
+        [usage, *sync.rglob("*.pyi")],
+    )
+
+    lines = sorted(
+        {
+            line.split("usage.py:", 1)[1].split(":", 1)[0]
+            for line in problems
+            if "usage.py:" in line
+        }
+    )
+    assert lines == ["4", "5", "6"], problems

@@ -10,6 +10,7 @@ import pangloss_models.model_bases.document
 import pangloss_models.model_bases.entity
 import pangloss_models.model_bases.reified_relation
 import pangloss_models.model_bases.semantic_space
+import pangloss_models.search_where
 import pydantic.networks
 import typing
 import uuid
@@ -173,6 +174,14 @@ class Person(Entity, Agent):
     class EditView(pangloss_models.model_bases.entity._EntityEditViewBase, Person.View):  # type: ignore
         ...
 
+    class Where(pangloss_models.search_where.EntityWhere):  # type: ignore
+        all_: list[Person.Where] | None = ...  # type: ignore
+        any_of_: list[Person.Where] | None = ...  # type: ignore
+        not_: Person.Where | None = ...  # type: ignore
+        born: pangloss_dates.models.Date.Where | pangloss_dates.models.DateRange.Where | pangloss_dates.models.EDTFDate.Where | pangloss_dates.models.ExactDate.Where | pangloss_dates.models.OngoingDate.Where | pangloss_dates.models.Period.Where | pangloss_dates.models.Recurrence.Where | pangloss_dates.models.UnknownDate.Where | pangloss_models.search_where.Rel | None = ...
+        aliases: pangloss_models.search_where.Items[str] | None = ...
+        has_type: typing.Any = ...
+
 class Group(Entity, Agent):
     name: Annotated[str, MinLen(2), MaxLen(100)]
     class ReferenceSet(pangloss_models.model_bases.entity._EntityReferenceSetBase):  # type: ignore
@@ -209,6 +218,12 @@ class Group(Entity, Agent):
     class EditView(pangloss_models.model_bases.entity._EntityEditViewBase, Group.View):  # type: ignore
         ...
 
+    class Where(pangloss_models.search_where.EntityWhere):  # type: ignore
+        all_: list[Group.Where] | None = ...  # type: ignore
+        any_of_: list[Group.Where] | None = ...  # type: ignore
+        not_: Group.Where | None = ...  # type: ignore
+        name: pangloss_models.search_where.Text | None = ...
+
 class Place(Entity):
     coordinates: Coordinates | None = None
     class ReferenceSet(pangloss_models.model_bases.entity._EntityReferenceSetBase):  # type: ignore
@@ -239,6 +254,11 @@ class Place(Entity):
 
     class EditView(pangloss_models.model_bases.entity._EntityEditViewBase, Place.View):  # type: ignore
         ...
+
+    class Where(pangloss_models.search_where.EntityWhere):  # type: ignore
+        all_: list[Place.Where] | None = ...  # type: ignore
+        any_of_: list[Place.Where] | None = ...  # type: ignore
+        not_: Place.Where | None = ...  # type: ignore
 
 class Source(Entity):
     _meta = ...
@@ -282,6 +302,14 @@ class Source(Entity):
     class EditView(pangloss_models.model_bases.entity._EntityEditViewBase, Source.View):  # type: ignore
         ...
 
+    class Where(pangloss_models.search_where.EntityWhere):  # type: ignore
+        all_: list[Source.Where] | None = ...  # type: ignore
+        any_of_: list[Source.Where] | None = ...  # type: ignore
+        not_: Source.Where | None = ...  # type: ignore
+        author: pangloss_models.search_where.Text | None = ...
+        written: pangloss_models.search_where.Compare[datetime.date] | None = ...
+        edition_price: pangloss_models.search_where.Compare[decimal.Decimal] | None = ...
+
 class Statement(Document):
     _meta = ...
     text: Annotated[str, MinLen(5)]
@@ -297,7 +325,7 @@ class Statement(Document):
         label: str
         text: str
         year: int
-        date: pangloss_dates.models.Date.Create
+        date: pangloss_dates.models.DateRange.Create | pangloss_dates.models.EDTFDate.Create | pangloss_dates.models.ExactDate.Create | pangloss_dates.models.OngoingDate.Create | pangloss_dates.models.Period.Create | pangloss_dates.models.Recurrence.Create | pangloss_dates.models.UnknownDate.Create
         involves: list[Group.ReferenceSet | Person.Create | Person.ReferenceSet]
         places: list[Place.ReferenceSet]
 
@@ -306,7 +334,7 @@ class Statement(Document):
         label: str
         text: str
         year: int
-        date: pangloss_dates.models.Date.Update | pangloss_dates.models.DateRange.Create | pangloss_dates.models.EDTFDate.Create | pangloss_dates.models.ExactDate.Create | pangloss_dates.models.OngoingDate.Create | pangloss_dates.models.Period.Create | pangloss_dates.models.Recurrence.Create | pangloss_dates.models.UnknownDate.Create
+        date: pangloss_dates.models.DateRange.Create | pangloss_dates.models.DateRange.Update | pangloss_dates.models.EDTFDate.Create | pangloss_dates.models.EDTFDate.Update | pangloss_dates.models.ExactDate.Create | pangloss_dates.models.ExactDate.Update | pangloss_dates.models.OngoingDate.Create | pangloss_dates.models.OngoingDate.Update | pangloss_dates.models.Period.Create | pangloss_dates.models.Period.Update | pangloss_dates.models.Recurrence.Create | pangloss_dates.models.Recurrence.Update | pangloss_dates.models.UnknownDate.Create | pangloss_dates.models.UnknownDate.Update
         involves: list[Group.ReferenceSet | Person.Create | Person.ReferenceSet]
         places: list[Place.ReferenceSet]
 
@@ -315,12 +343,22 @@ class Statement(Document):
         label: str
         text: str
         year: int
-        date: pangloss_dates.models.Date.View
+        date: pangloss_dates.models.DateRange.View | pangloss_dates.models.EDTFDate.View | pangloss_dates.models.ExactDate.View | pangloss_dates.models.OngoingDate.View | pangloss_dates.models.Period.View | pangloss_dates.models.Recurrence.View | pangloss_dates.models.UnknownDate.View
         involves: list[Group.ReferenceView | Person.ReferenceView] = ...
         places: list[Place.ReferenceView] = ...
 
     class HeadView(pangloss_models.model_bases.document._DocumentHeadViewBase, Statement.View):  # type: ignore
         ...
+
+    class Where(pangloss_models.search_where.DocumentWhere):  # type: ignore
+        all_: list[Statement.Where] | None = ...  # type: ignore
+        any_of_: list[Statement.Where] | None = ...  # type: ignore
+        not_: Statement.Where | None = ...  # type: ignore
+        text: pangloss_models.search_where.Text | None = ...
+        date: pangloss_dates.models.Date.Where | pangloss_dates.models.DateRange.Where | pangloss_dates.models.EDTFDate.Where | pangloss_dates.models.ExactDate.Where | pangloss_dates.models.OngoingDate.Where | pangloss_dates.models.Period.Where | pangloss_dates.models.Recurrence.Where | pangloss_dates.models.UnknownDate.Where | pangloss_models.search_where.Rel | None = ...
+        year: pangloss_models.search_where.Compare[int] | None = ...
+        involves: Group.Where | Person.Where | pangloss_models.search_where.Rel | None = ...
+        places: Place.Where | pangloss_models.search_where.Rel | None = ...
 
 class Activity(Statement):
     activity_type: ActivityType
@@ -364,6 +402,18 @@ class Activity(Statement):
 
     class HeadView(pangloss_models.model_bases.document._DocumentHeadViewBase, Activity.View):  # type: ignore
         ...
+
+    class Where(pangloss_models.search_where.DocumentWhere):  # type: ignore
+        all_: list[Activity.Where] | None = ...  # type: ignore
+        any_of_: list[Activity.Where] | None = ...  # type: ignore
+        not_: Activity.Where | None = ...  # type: ignore
+        text: pangloss_models.search_where.Text | None = ...
+        date: pangloss_dates.models.Date.Where | pangloss_dates.models.DateRange.Where | pangloss_dates.models.EDTFDate.Where | pangloss_dates.models.ExactDate.Where | pangloss_dates.models.OngoingDate.Where | pangloss_dates.models.Period.Where | pangloss_dates.models.Recurrence.Where | pangloss_dates.models.UnknownDate.Where | pangloss_models.search_where.Rel | None = ...
+        year: pangloss_models.search_where.Compare[int] | None = ...
+        places: Place.Where | pangloss_models.search_where.Rel | None = ...
+        activity_type: pangloss_models.search_where.Choice[ActivityType] | None = ...
+        carried_out_by: Group.Where | Person.Where | pangloss_models.search_where.Rel | None = ...
+        participants: Group.Where | Person.Where | pangloss_models.search_where.Rel | None = ...
 
 class Transfer(Statement):
     item: str
@@ -412,6 +462,19 @@ class Transfer(Statement):
     class HeadView(pangloss_models.model_bases.document._DocumentHeadViewBase, Transfer.View):  # type: ignore
         ...
 
+    class Where(pangloss_models.search_where.DocumentWhere):  # type: ignore
+        all_: list[Transfer.Where] | None = ...  # type: ignore
+        any_of_: list[Transfer.Where] | None = ...  # type: ignore
+        not_: Transfer.Where | None = ...  # type: ignore
+        text: pangloss_models.search_where.Text | None = ...
+        date: pangloss_dates.models.Date.Where | pangloss_dates.models.DateRange.Where | pangloss_dates.models.EDTFDate.Where | pangloss_dates.models.ExactDate.Where | pangloss_dates.models.OngoingDate.Where | pangloss_dates.models.Period.Where | pangloss_dates.models.Recurrence.Where | pangloss_dates.models.UnknownDate.Where | pangloss_models.search_where.Rel | None = ...
+        year: pangloss_models.search_where.Compare[int] | None = ...
+        places: Place.Where | pangloss_models.search_where.Rel | None = ...
+        item: pangloss_models.search_where.Text | None = ...
+        quantity: pangloss_models.search_where.Compare[decimal.Decimal] | None = ...
+        given_by: Group.Where | Person.Where | pangloss_models.search_where.Rel | None = ...
+        given_to: Group.Where | Person.Where | pangloss_models.search_where.Rel | None = ...
+
 class Order(Statement):
     ordered_by: Annotated[Agent | Identification[Alternative[ViaEdge[Person, Probability]]], RelationConfig(reverse_name='ordered', subclasses_parent_fields=[FieldSubclassing('involves', field_on_model=Statement)])]
     thing_ordered: PositiveSubjunctive[Statement] | NegativeSubjunctive[Statement]
@@ -450,6 +513,17 @@ class Order(Statement):
 
     class HeadView(pangloss_models.model_bases.document._DocumentHeadViewBase, Order.View):  # type: ignore
         ...
+
+    class Where(pangloss_models.search_where.DocumentWhere):  # type: ignore
+        all_: list[Order.Where] | None = ...  # type: ignore
+        any_of_: list[Order.Where] | None = ...  # type: ignore
+        not_: Order.Where | None = ...  # type: ignore
+        text: pangloss_models.search_where.Text | None = ...
+        date: pangloss_dates.models.Date.Where | pangloss_dates.models.DateRange.Where | pangloss_dates.models.EDTFDate.Where | pangloss_dates.models.ExactDate.Where | pangloss_dates.models.OngoingDate.Where | pangloss_dates.models.Period.Where | pangloss_dates.models.Recurrence.Where | pangloss_dates.models.UnknownDate.Where | pangloss_models.search_where.Rel | None = ...
+        year: pangloss_models.search_where.Compare[int] | None = ...
+        places: Place.Where | pangloss_models.search_where.Rel | None = ...
+        ordered_by: Group.Where | Person.Where | pangloss_models.search_where.Rel | None = ...
+        thing_ordered: Activity.Where | Order.Where | Transfer.Where | pangloss_models.search_where.Rel | None = ...
 
 class PositiveSubjunctive[T](SemanticSpace[T]):
     _interface_meta = ...
@@ -539,3 +613,11 @@ class Factoid(Document):
 
     class HeadView(pangloss_models.model_bases.document._DocumentHeadViewBase, Factoid.View):  # type: ignore
         ...
+
+    class Where(pangloss_models.search_where.DocumentWhere):  # type: ignore
+        all_: list[Factoid.Where] | None = ...  # type: ignore
+        any_of_: list[Factoid.Where] | None = ...  # type: ignore
+        not_: Factoid.Where | None = ...  # type: ignore
+        year: pangloss_models.search_where.Compare[int] | None = ...
+        source: Source.Where | pangloss_models.search_where.Rel | None = ...
+        statements: Activity.Where | Order.Where | Transfer.Where | pangloss_models.search_where.Rel | None = ...

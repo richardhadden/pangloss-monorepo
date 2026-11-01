@@ -237,7 +237,7 @@ def test_save_of_a_document_can_say_what_review_status_to_write_and_save_of_an_e
     assert "published" not in entity and "review_status" not in entity
 
 
-def test_a_model_with_operations_has_search_in_its_stub_taking_a_match():
+def test_a_model_with_operations_has_search_in_its_stub_taking_its_where_or_a_match():
     from pangloss_models import initialise
     from pangloss_models.model_bases.entity import Entity
     from pangloss_models.typestubs import operations_source
@@ -250,6 +250,23 @@ def test_a_model_with_operations_has_search_in_its_stub_taking_a_match():
     for mode, define in (("async", "async def"), ("sync", "def")):
         source = operations_source(Ship, "Ship", mode)
         assert (
-            f"{define} search(cls, match: _PgMatch, page_number: int | None = None, "
-            "page_size: int | None = None) -> _PgListItems[Ship.ReferenceView]"
+            f"{define} search(cls, pattern: Ship.Where | _PgMatch | None = None, "
+            "page_number: int | None = None, page_size: int | None = None, *, "
+            "order_by: _pg_builtins.list[_PgOrderBy | str] | None = None) "
+            "-> _PgListItems[Ship.ReferenceView]"
         ) in source
+
+
+def test_a_generic_pydantic_class_with_its_parameters_is_written_as_the_generic_and_them():
+    import datetime
+
+    from pangloss_models.search_where import Compare, Items, Text
+
+    rendered = TypeRenderer("here", {})
+    assert (
+        rendered.render(Compare[datetime.date] | None)
+        == "pangloss_models.search_where.Compare[datetime.date] | None"
+    )
+    assert rendered.render(Items[str]) == "pangloss_models.search_where.Items[str]"
+    assert rendered.render(Text) == "pangloss_models.search_where.Text"
+    assert {"datetime", "pangloss_models.search_where"} <= rendered.imports
