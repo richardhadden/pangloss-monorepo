@@ -93,8 +93,11 @@ class _Renderer:
         self,
         query: QueryObject,
         existing: Mapping[InlineEntityKey, ExistingEntity] | None,
+        user: Identifier,
     ):
         self.query = query
+        # The user making the write (`PGUser`), matched by `render`: the maker of the new entities too
+        self.user = user
         self.params = query.params
         self.existing = existing or {}
         # Identifiers of the existing nodes already matched, so that one referred to many times is matched once
@@ -192,7 +195,7 @@ class _Renderer:
             CREATE ({creation}:PGCreation)
             SET {creation} = ${creation_data}
             CREATE ({creation})-[:is_creation_of]->({identifier})
-            CREATE ({creation})-[:created_by]->(user)
+            CREATE ({creation})-[:created_by]->({self.user})
         """)
             self.urls(entity.node, identifier)
             self.relations(entity.node, identifier)
@@ -233,15 +236,19 @@ def render(
     """The query that makes the write of `plan`, given which of the entities written in it exist (`existing`, found by
     `validate_write.find_existing_entities`)"""
     query = QueryObject()
-    renderer = _Renderer(query, existing)
     params = query.params
     head = plan.head
     identifier = params.new_identifier()
     query.return_identifier = identifier
+    user = params.new_identifier()
+    username_identifier = params.add(current_request_username.get())
+    query.match_query_strings.append(
+        f"MATCH ({user}:PGUser {{username: ${username_identifier}}})"
+    )
+    renderer = _Renderer(query, existing, user)
 
     if plan.is_update:
         head_id_identifier = params.add(head.id)
-        username_identifier = params.add(current_request_username.get())
         update_data_identifier = params.add(
             {
                 "id": str(uuid.uuid7()),
@@ -249,14 +256,13 @@ def render(
             }
         )
         query.match_query_strings.append(
-            f"""MATCH (user:PGUser {{username: ${username_identifier}}})
-            MATCH ({identifier}:HeadNode {{id: ${head_id_identifier}}})"""
+            f"MATCH ({identifier}:HeadNode {{id: ${head_id_identifier}}})"
         )
         query.create_query_strings.append(f"""
         CREATE (update:PGUpdate)
         SET update = ${update_data_identifier}
         CREATE (update)-[:is_update_of]->({identifier})
-        CREATE (update)-[:updated_by]->(user)
+        CREATE (update)-[:updated_by]->({user})
     """)
     else:
         node_data = PropertyAssignments(params, head.properties)
@@ -266,17 +272,13 @@ def render(
                 "created_when": datetime.datetime.now(datetime.UTC),
             }
         )
-        username_identifier = params.add(current_request_username.get())
-        query.match_query_strings.append(
-            f"""MATCH (user:PGUser {{username: ${username_identifier}}})"""
-        )
         query.create_query_strings.append(f"""
         CREATE ({identifier}:{labels_of(head, HEAD_LABELS)})
         SET {node_data.set_items(identifier, replace=True)}
         CREATE (creation:PGCreation)
         SET creation = ${creation_data_identifier}
         CREATE (creation)-[:is_creation_of]->({identifier})
-        CREATE (creation)-[:created_by]->(user)
+        CREATE (creation)-[:created_by]->({user})
     """)
         renderer.urls(head, identifier)
 
