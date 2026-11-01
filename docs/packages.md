@@ -13,7 +13,7 @@ pangloss-cli ──► pangloss-core, pangloss-models, pangloss-users
 pangloss-api ──► pangloss-core, pangloss-models, pangloss-users
 
 optional apps (INSTALLED_APPS):  pangloss-history, -review, -typology, -calendar, -dates, -zotero, -interface, -sdk-server
-test support:                    pangloss-testing (live-database fixtures for either backend)
+test support:                    pangloss-testing (live-database fixtures for either backend; the conformance suite)
 ```
 
 Arrows show declared dependencies. [The guides](../guide/packages.md) say which guide explains which package. (`pangloss-models` uses `pangloss-sdk` only in its tests, as a database module that needs no connection: a dev dependency.) A client of the API needs only the SDK's side of this: it needs no `neo4j`, FastAPI or Memgraph package.
@@ -105,4 +105,4 @@ Optional: a vocabulary of types in a hierarchy. See [Typology](typology-implemen
 
 ## pangloss-testing
 
-Fixtures for the tests of add-on packages that need a live database, on Memgraph or Neo4j. See [Backend-neutral add-ons](backend-neutral-addons.md).
+Fixtures for the tests that need a live database, on Memgraph or Neo4j (`PANGLOSS_TEST_BACKEND`), and the **conformance suite** (`pangloss_testing/conformance/`): the tests every backend passes, written once and run on each by `run_tests.sh`. See [Backend-neutral add-ons](backend-neutral-addons.md) and [the plan, phase 9](database-abstraction-plan.md).

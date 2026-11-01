@@ -23,18 +23,6 @@ def settings_extras():
 
 
 @pytest.fixture
-def live_db(db_driver, backend_under_test, initialise_settings):
-    """Empty database, with the users there must be"""
-
-    def clear():
-        db_driver.execute_query(
-            "MATCH (n) DETACH DELETE n", database_=backend_under_test.database
-        )
-
-    clear()
-    db_driver.execute_query(
-        "MERGE (:PGUser {username: 'pangloss_default_user'})",
-        database_=backend_under_test.database,
-    )
+def live_db(clear_database, initialise_settings):
+    """An empty database, with the user of the tests (`clear_database`)"""
     yield initialise_settings
-    clear()

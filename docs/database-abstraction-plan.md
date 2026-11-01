@@ -644,6 +644,51 @@ part of the port):
 - **Done when** each backend's own test folder is under about 3,000 lines, and the suite runs on both backends from one
   copy.
 
+**As built (2026-11-01):**
+
+- **The suite.** `packages/pangloss-testing/src/pangloss_testing/conformance/` has 41 test modules and 484 tests, with
+  `migration_support.py` and `helpers.py`. Every test file that both backends had was moved there, and deleted from
+  both. Where the two copies differed, the Neo4j copy was taken, because its changes were the backend-neutral ones:
+  - labels in no order;
+  - `valueType(...)` with ` NOT NULL` stripped;
+  - a timeout query that Neo4j cannot count without looking;
+  - `meta` read through `run`.
+
+  `test_read_entity`, `test_edit_cycle`, `test_create` and `test_api_models` took Memgraph's. `test_read_entity` had
+  one more test there (edge properties of a held target); it now runs, and passes, on Neo4j too. Two search tests that
+  only Neo4j had now run on Memgraph too.
+- **Running it.**
+  - **Memgraph:** `run_tests.sh` runs it in the run of the packages (it is under `packages/`).
+  - **Neo4j:** a run of its own, `conformance on Neo4j` (`PANGLOSS_TEST_BACKEND=neo4j`).
+  - Both pass all 484.
+- **The backend under test.** A test imports the backend's modules from `pangloss_testing.under_test`. It is an alias
+  package, resolved by a small import finder to `pangloss_<backend>.databases.<backend>`.
+- **Neo4j's conftest** sets `PANGLOSS_TEST_BACKEND=neo4j` by default, for the modules its own tests import from the
+  suite (`migration_support`).
+- **`Inspect` is `conformance/helpers.py`** rather than a class: `run` (Cypher written as for Memgraph, translated for
+  Neo4j's flat `meta`, results decoded), `labels_of`, `count_nodes` and `index_labels` (the one place that differs by
+  backend, for the dry-run test). The tests keep the raw Cypher they had: they were not rewritten to go only through
+  the models. Every test that uses the driver is marked `requires("cypher")` by the conftest, and is skipped on a
+  backend without it.
+- **The add-ons.** Zotero's `live_db` uses the shared `clear_database`. Calendar's `clear_calendar` stays: it clears
+  only the calendar's own graph.
+- **The suite's rules.**
+  - The database is cleared on setup and teardown (`clear_database`).
+  - There is no blanket `except Exception`.
+  - **Each concurrency test was run with its mechanism taken out**, on both backends, with the result in its
+    docstring:
+    - `lock` doing nothing;
+    - no unique constraint on `PGLock(key)`;
+    - no constraint on `PGIndexableNode(id)`;
+    - one write attempt (`WRITE_ATTEMPTS = 1`);
+    - Neo4j's `before_replace` doing nothing.
+
+    Each failed. The exception is the version race on Memgraph, whose mechanism is the database's own write
+    conflict. It cannot be taken out, and the docstring says so.
+- **Size.** Each backend's own `tests/` is now under 3,000 lines: Memgraph 2,135 (70 tests), Neo4j 2,615 (146). They
+  hold what each `NOT_PORTED.md` lists: DDL, shipped migrations, model indexes and plans, bulk load, snapshots,
+  binding, the CLI, and Neo4j's flattening and contract.
+
 ### Phase 10: migration operations and `RunCypher` (1 week)
 
 - Move `migrations/operations.py`, `runner.py` and `conversion.py` into the kit, through the dialect (for `meta`, maps,

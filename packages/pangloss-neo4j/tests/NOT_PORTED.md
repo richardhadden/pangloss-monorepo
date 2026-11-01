@@ -1,11 +1,17 @@
-# Tests of `pangloss-memgraph` that are not in this package, or are not the same
+# The tests here, and not in the conformance suite
 
-The tests here are those of `pangloss-memgraph` run against Neo4j (see `docs/neo4j-implementation.md`). What differs, and why:
+Since 2026-11-01 (phase 9 of `docs/database-abstraction-plan.md`) the tests that every backend passes are written once, in
+`pangloss-testing` (`pangloss_testing/conformance/`), and run on each backend. What is left here is what is Neo4j's own:
 
-## Not here, because they are the add-on packages' tests
+- `test_initialise_database.py`, `test_migrations_structure_ddl.py`, `test_shipped_migrations.py`,
+  `test_shipped_migrations_live.py`, `schema_helpers.py`: the DDL (`SHOW INDEXES`, named constraints, the full-text index)
+  and the migrations shipped with this package.
+- `test_model_indexes_live.py`: the indexes a model asks for, and the query plans (`NodeIndexSeek`...).
+- `test_bulk_load.py`, `test_bulk_load_cli.py`, `test_migration_backend.py`, `test_database_binding.py`, `test_neo4j_cli.py`.
+- `test_properties.py` (the flattening of maps), `test_search_patterns.py`, `test_contract.py` (the two backends and their
+  dialects have the same parts), `test_dates_live.py`.
 
-The live tests of typology, calendar, dates and zotero are in `tests/live/` of those packages, and run on either backend
-(`PANGLOSS_TEST_BACKEND`; see `pangloss-testing` and `docs/backend-neutral-addons.md`).
+How the Neo4j copies of Memgraph's tests differed, before they were made one (kept for the history of the port):
 
 ## Replaced, because Memgraph's feature has no Neo4j counterpart
 

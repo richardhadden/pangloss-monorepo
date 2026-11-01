@@ -1,3 +1,8 @@
+import os
+
+# (what `pangloss_testing` takes for the backend under test, here: see `pangloss_testing.under_test`)
+os.environ.setdefault("PANGLOSS_TEST_BACKEND", "neo4j")
+
 import typing
 from collections.abc import Callable, Generator
 

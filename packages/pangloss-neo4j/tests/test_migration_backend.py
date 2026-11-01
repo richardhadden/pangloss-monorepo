@@ -17,7 +17,7 @@ from pangloss_models.model_bases.entity import Entity
 from pangloss_neo4j.databases.neo4j import migration_backend as backend
 
 from .helpers import run
-from .migration_support import declare
+from pangloss_testing.conformance.migration_support import declare
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 

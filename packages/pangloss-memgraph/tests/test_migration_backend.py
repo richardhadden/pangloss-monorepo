@@ -17,7 +17,7 @@ from pangloss_models.migrations.questions import with_answer
 from pangloss_models.model_bases.entity import Entity
 
 from .helpers import run
-from .migration_support import declare
+from pangloss_testing.conformance.migration_support import declare
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
