@@ -58,11 +58,7 @@ def search(
     page_number: int | None = None,
     page_size: int | None = None,
 ) -> _ListItems:
-    call = protocol.search(
-        match if match.type else match.model_copy(update={"type": cls.__name__}),
-        page_number,
-        page_size,
-    )
+    call = protocol.search(cls, match, page_number, page_size)
     return protocol.searched(cls, current_client().send(call))
 
 

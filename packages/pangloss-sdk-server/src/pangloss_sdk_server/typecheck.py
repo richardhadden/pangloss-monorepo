@@ -4,7 +4,7 @@ Each kind (the stubs next to the models, for `await Person.get(...)`; and `sync_
 blocking `connect(sync=True)`) is checked as a user would have it: a file that **uses** every
 model in the way the kind says (`assert_type(await Person.get(id), Person.HeadView | None)`, and
 so on), together with the stubs themselves. A stub that does not parse, names what is not there,
-or has the wrong type for `get`, `list` or `save` is an error that stops the build.
+or has the wrong type for `get`, `list`, `search` or `save` is an error that stops the build.
 
 `ty` has to be installed with the server (`SDK_TYPECHECK`: `"auto"` checks if it is found and says
 so when it is not, `"required"` fails without it, `"off"` does not look).
@@ -43,6 +43,7 @@ def usage_source(models: Iterable[type], mode: str) -> str:
         "import uuid",
         "from typing import assert_type",
         "from pangloss_models.model_bases.base_models import _ListItems",
+        "from pangloss_models.search import Match",
         "",
     ]
     imports: dict[str, set[str]] = {}
@@ -61,6 +62,7 @@ def usage_source(models: Iterable[type], mode: str) -> str:
             f"{define} check_{index}(i: uuid.UUID, c: {name}.Create, u: {name}.Update) -> None:",
             f"    assert_type({wait}{name}.get(i), {name}.HeadView | None)",
             f"    assert_type({wait}{name}.list(), _ListItems[{name}.ReferenceView])",
+            f"    assert_type({wait}{name}.search(Match()), _ListItems[{name}.ReferenceView])",
             f"    assert_type({wait}{name}.delete(i), None)",
             f"    assert_type({wait}{name}.undelete(i), None)",
             f"    assert_type({wait}c.save(), {name}.ReferenceView)",

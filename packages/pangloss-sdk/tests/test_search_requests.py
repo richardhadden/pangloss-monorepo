@@ -1,8 +1,12 @@
 """`Document.search` and `Entity.search` as a request to `/api/search`"""
 
+import re
 from types import SimpleNamespace
 
+import pytest
+
 from pangloss_models import initialise
+from pangloss_models.exceptions import PanglossSearchError
 from pangloss_models.model_bases.document import Document
 from pangloss_models.search import Match
 from pangloss_sdk import protocol
@@ -18,12 +22,12 @@ def models():
 
 
 def test_the_request_is_a_post_of_the_pattern_and_the_page():
-    models()
+    Letter = models()
     match = Match.model_validate(
         {"type": "Letter", "where": {"title": {"in": ["a"], "contains": "b"}}}
     )
 
-    call = protocol.search(match, 2, 5)
+    call = protocol.search(Letter, match, 2, 5)
 
     assert (call.method, call.path) == ("POST", "/api/search")
     assert call.json == {
@@ -36,9 +40,9 @@ def test_the_request_is_a_post_of_the_pattern_and_the_page():
 
 
 def test_a_page_not_asked_for_is_left_to_the_server():
-    models()
+    Letter = models()
 
-    call = protocol.search(Match(type="Letter"))
+    call = protocol.search(Letter, Match(type="Letter"))
 
     assert call.json == {"type": "Letter"}
 
@@ -71,6 +75,25 @@ def test_the_class_called_on_is_the_type_when_the_pattern_has_none(monkeypatch):
 
     assert sent[0].json["type"] == "Letter"
     assert found.count == 0
+
+
+def test_a_pattern_that_cannot_be_made_is_refused_before_it_is_sent(monkeypatch):
+    Letter = models()
+
+    class Client:
+        def send(self, call):
+            raise AssertionError("the search was sent")
+
+    monkeypatch.setattr(exposed_functions, "current_client", lambda: Client())
+
+    for where, message in [
+        ({"sender": {"eq": "x"}}, "Letter has no field 'sender'"),
+        ({"title": {"gt": "x"}}, "title.gt: not an operator for this field (text)"),
+    ]:
+        with pytest.raises(PanglossSearchError, match=re.escape(message)):
+            exposed_functions.search(Letter, Match.model_validate({"where": where}))
+    with pytest.raises(PanglossSearchError, match="the search is of 'Letter'"):
+        exposed_functions.search(Letter, Match(type="Person"))
 
 
 def test_a_504_that_names_the_error_is_a_search_timeout():

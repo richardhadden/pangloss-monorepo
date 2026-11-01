@@ -235,3 +235,21 @@ def test_save_of_a_document_can_say_what_review_status_to_write_and_save_of_an_e
     assert "expected_version: int | None = None" in document
     entity = "\n".join(save_methods("Person", "Create", "async"))
     assert "published" not in entity and "review_status" not in entity
+
+
+def test_a_model_with_operations_has_search_in_its_stub_taking_a_match():
+    from pangloss_models import initialise
+    from pangloss_models.model_bases.entity import Entity
+    from pangloss_models.typestubs import operations_source
+
+    class Ship(Entity):
+        pass
+
+    initialise()
+
+    for mode, define in (("async", "async def"), ("sync", "def")):
+        source = operations_source(Ship, "Ship", mode)
+        assert (
+            f"{define} search(cls, match: _PgMatch, page_number: int | None = None, "
+            "page_size: int | None = None) -> _PgListItems[Ship.ReferenceView]"
+        ) in source

@@ -13,6 +13,7 @@ from pangloss_models import exceptions as models_exceptions
 from pangloss_models import hooks
 from pangloss_models.autocomplete import AutocompleteResults
 from pangloss_models.model_bases.base_models import _ListItems
+from pangloss_models.search import Match, check_match
 from pangloss_models.utils import get_concrete_types
 from pydantic import TypeAdapter
 
@@ -205,8 +206,17 @@ def listed(cls: type, response: Any) -> Any:
 
 
 def search(
-    match: Any, page_number: int | None = None, page_size: int | None = None
+    cls: type,
+    match: Match,
+    page_number: int | None = None,
+    page_size: int | None = None,
 ) -> Call:
+    """The pattern is checked against the models here, as the database module would check it, so that a
+    pattern that cannot be made raises `PanglossSearchError` before it is sent. (The class called on is
+    its `type` if it has none.)"""
+    check_match(cls, match)
+    if not match.type:
+        match = match.model_copy(update={"type": cls.__name__})
     body = match.model_dump(by_alias=True, exclude_unset=True, mode="json")
     if page_number is not None:
         body["page"] = page_number

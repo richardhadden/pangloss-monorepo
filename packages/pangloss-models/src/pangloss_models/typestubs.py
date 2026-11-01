@@ -217,6 +217,7 @@ OPERATION_IMPORTS = (
     "import uuid as _pg_uuid",
     "import pydantic as _pg_pydantic",
     "from pangloss_models.model_bases.base_models import _ListItems as _PgListItems",
+    "from pangloss_models.search import Match as _PgMatch",
 )
 
 
@@ -276,6 +277,10 @@ def operations_source(model: type, qualified_name: str, mode: Operations) -> str
         f"{define} list(cls, search_terms: str | None = None, page_number: int | None = None, "
         f"page_size: int | None = None, deep_search: bool = False, "
         f"published: bool | None = None, review_status: str | None = None) "
+        f"-> _PgListItems[{qualified_name}.ReferenceView]: ...  # type: ignore",
+        "@classmethod",
+        f"{define} search(cls, match: _PgMatch, page_number: int | None = None, "
+        f"page_size: int | None = None) "
         f"-> _PgListItems[{qualified_name}.ReferenceView]: ...  # type: ignore",
         "@classmethod",
         f"{define} delete(cls, id: {id_type}) -> None: ...  # type: ignore",

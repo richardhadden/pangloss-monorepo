@@ -82,6 +82,8 @@ it does now (see the decisions).
 0. **The SDK checks a search before it sends it, and stubs have `search`.** `api` and `api_sync` call `check_match`
    before `POST /api/search` (the error is the same, raised locally). `operations_source` in `typestubs.py` has no
    `search` now: add it (taking `Match`, for now). Small, and of use without the rest.
+   **Built:** `protocol.search(cls, match, ...)` checks the pattern (and gives it the class's `type` if it has none)
+   for both clients; the stubs have `search`, and the SDK's `ty` check uses it.
 1. **The `$` keys as an enum.** A `StrEnum`, `SearchKey` (`ALL = "$all"`, `ANY_OF`, `NOT`, `ANY`, `MENTIONS`,
    `SOMEWHERE`, `INCOMING`, `SPACES`), used by `parse_where`, `check_where` and the aliases of the `Where` fields
    in place of the strings written in each (and of `ANY_RELATION` and `ANY_IN_DOCUMENT`). As a `StrEnum` is a
