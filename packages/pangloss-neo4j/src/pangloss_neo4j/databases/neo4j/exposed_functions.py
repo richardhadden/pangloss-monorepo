@@ -1,3 +1,4 @@
+import re
 from typing import Any, Union, cast
 from uuid import UUID
 
@@ -223,7 +224,9 @@ async def autocomplete(
     params = {
         "patterns": patterns,
         "labels": labels_to_match(types or [cls]),
-        "start": " ".join(words),
+        # (as typed, in lower case: the label it is compared with is not folded, as Neo4j's index folds only its
+        # own copy)
+        "start": " ".join(re.findall(r"\w+", search_terms.lower())),
         "page": page,
         "page_size": size,
     }

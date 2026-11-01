@@ -84,7 +84,7 @@ Queries that reached into a map (`n.meta.semantic_spaces`, `SET n.meta.updated_b
 
 The one full-text index `label_text` on `:PGIndexableNode(label)`, as Memgraph has one text index of that name. A word typed by the user becomes `*word*`, folded (below) and with nothing that Lucene reads as syntax: the text is cut where the index cuts a label into words (at anything that is not a letter, a digit or an underscore), so `max-planck` is the words `max` and `planck` (escaping `-` would have matched nothing, as the index has no token with a hyphen). The words of a search are *and*-ed by the same `UNWIND $patterns ... count(*) = size($patterns)` the Memgraph queries use (so the ranking sum of scores, and the query shapes, stay the same). The list, deep search, truncation check and autocomplete queries differ in this call only.
 
-- **Analyzer:** `standard-folding` (lower-cases and folds accents), so that "cafe" finds "Café" and "zurich" finds "Zürich". Memgraph's index does not fold; a project that wants exact accents would be given a setting. (Decision, [§8](#8-decisions-and-open-questions).)
+- **Analyzer:** `standard-folding` (lower-cases and folds accents), so that "cafe" finds "Café" and "zurich" finds "Zürich". Memgraph's index does not fold, so Memgraph indexes a folded copy of the label, `label_folded` (since 2026-11-01); the folding of the words is `pangloss_models.text.fold`, shared. A project that wants exact accents would be given a setting. (Decision, [§8](#8-decisions-and-open-questions).)
 - **Hit limit:** `SEARCH_HIT_LIMIT` is passed as the procedure's `limit`, as for Memgraph, and truncation is detected the same way (ask for one more).
 - **Wildcard terms are not analysed.** With the folding analyzer, `*zurich*` finds "Zürich" but `*Zürich*` finds nothing (checked): Lucene lower-cases a wildcard term but does not fold it. So the words of a search are folded in Python (`unicodedata` NFKD without the combining marks, and a table for what does not decompose: ß, æ, œ, ø, đ, ł, þ) before they are made into patterns, as the index folded the labels.
 - **Empty or all-special input** gives no pattern, as an empty search gives none now, instead of a parse error.
@@ -131,7 +131,7 @@ Not part of this task, recorded so that it is not forgotten:
 - The demo project and `pangloss new-project` offer a backend.
 - Enterprise features (property existence constraints as a safety net, online backup).
 - A version matrix (5.26 LTS and later) in CI.
-- **Accent-insensitive search on Memgraph too (noted 2026-10-29).** On Memgraph `zurich` does *not* find "Zürich" (its text index lower-cases but does not fold; this was not known before the Neo4j work), while Neo4j's folding index finds it. The two backends therefore answer the same search differently. Options: (a) fold on both sides on Memgraph, by writing a folded copy of the label (`label_folded`, indexed in the text index) and folding the search words in Python with the same function as `pangloss_neo4j.databases.neo4j.schema.fold`; (b) accept the difference and document it. (a) needs a migration to fill `label_folded` for existing data, and the folding function moved somewhere both backends import (`pangloss_models`), and would make the backends agree. Also decide whether exact-accent search needs a setting.
+- **Accent-insensitive search on Memgraph too (noted 2026-10-29; done 2026-11-01 by option (a), [plan](database-abstraction-plan.md) phase 5: `label_folded`, `pangloss_models.text.fold`, migration `0006`).** On Memgraph `zurich` does *not* find "Zürich" (its text index lower-cases but does not fold; this was not known before the Neo4j work), while Neo4j's folding index finds it. The two backends therefore answer the same search differently. Options: (a) fold on both sides on Memgraph, by writing a folded copy of the label (`label_folded`, indexed in the text index) and folding the search words in Python with the same function as `pangloss_neo4j.databases.neo4j.schema.fold`; (b) accept the difference and document it. (a) needs a migration to fill `label_folded` for existing data, and the folding function moved somewhere both backends import (`pangloss_models`), and would make the backends agree. Also decide whether exact-accent search needs a setting.
 
 ## 8. Decisions and open questions
 
@@ -161,7 +161,7 @@ Not part of this task, recorded so that it is not forgotten:
 
 - `pangloss migrate --backup`, `backups` and `restore` say "This database cannot take a backup" (Neo4j Community has no online snapshot).
 - `pangloss neo4j bulk-load` writes in ordinary transactions with the constraints in place. It does not use an analytical mode (there is none), so a duplicate id fails its own record, and there is no "read-only until the duplicates are put right" state. Not yet measured against Memgraph's analytical load: expected to be slower.
-- The search finds words by their folded form (a name search for `zurich` finds `Zürich`; Memgraph's does not fold).
+- The search finds words by their folded form (a name search for `zurich` finds `Zürich`; since 2026-11-01 Memgraph's does too).
 - Lists of maps and `meta` are not readable in the database browser as maps: they are flat properties and JSON text.
 
 **Not done**

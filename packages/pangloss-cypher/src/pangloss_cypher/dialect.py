@@ -44,8 +44,11 @@ class Dialect(Protocol):
 
     # --- the storage format ---------------------------------------------------------------------------------------
 
-    def encode_properties(self, properties: dict[str, Any]) -> dict[str, Any]:
-        """The properties of a node or an edge, as they are written"""
+    def encode_properties(
+        self, properties: dict[str, Any], *, node: bool = True
+    ) -> dict[str, Any]:
+        """The properties of a node (or, with `node=False`, an edge), as they are written. (Memgraph adds a node's
+        `label_folded`, which its text index is on: see `pangloss_models.text`)"""
         ...
 
     def has_meta(self, node: str) -> str:

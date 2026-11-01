@@ -179,3 +179,16 @@ def bulk_recover() -> None:
     except (PanglossBulkLoadError, PanglossMigrationError) as error:
         raise fail(str(error)) from error
     typer.secho("The database is back to normal", fg="green")
+
+
+@cli.command()
+def refold() -> None:
+    """Write the folded label (`label_folded`, which the text index is on) of every node from its label
+
+    What the models write has it already. Run this after a change that set labels without them: a migration's
+    `RunCypher`, or a query of your own. Searches find "Zürich" for `zurich` by it.
+    """
+    from pangloss_memgraph.databases.memgraph.folding import refold as refold_labels
+
+    done = run_connected(refold_labels)
+    typer.secho(f"Folded the labels of {done} nodes", fg="green")

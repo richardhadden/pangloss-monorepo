@@ -71,7 +71,7 @@ async def test_database_has_indexes_constraints_and_text_index(db_driver):
     assert any(
         row["index type"] == f"label_text (name: {TEXT_INDEX_NAME})"
         and row["label"] == "PGIndexableNode"
-        and row["property"] == ["label"]
+        and row["property"] == ["label_folded"]
         for row in existing
     )
 
@@ -105,7 +105,7 @@ async def test_initialise_database_recreates_what_is_missing(db_driver):
     assert sorted(setup.created) == sorted(
         [
             "index :HeadNode(id)",
-            f"text index {TEXT_INDEX_NAME} on :PGIndexableNode(label)",
+            f"text index {TEXT_INDEX_NAME} on :PGIndexableNode(label_folded)",
             "unique constraint on :PGUpdate(id)",
         ]
     )
@@ -127,12 +127,48 @@ async def test_ids_and_urls_are_unique(db_driver, clear_database, label, propert
 
 
 async def test_the_text_index_is_used_for_searching(db_driver, clear_database):
-    run(db_driver, "CREATE (:PGIndexableNode {id: 'a', label: 'A Gazetteer'})")
-    run(db_driver, "CREATE (:PGIndexableNode {id: 'b', label: 'Something else'})")
+    """(It is on the folded label, which the models write beside the label)"""
+    run(
+        db_driver,
+        "CREATE (:PGIndexableNode {id: 'a', label: 'A Gazetteer', label_folded: 'a gazetteer'})",
+    )
+    run(
+        db_driver,
+        "CREATE (:PGIndexableNode {id: 'b', label: 'Something else', label_folded: 'something else'})",
+    )
 
     rows = run(
         db_driver,
-        f'CALL text_search.regex_search("{TEXT_INDEX_NAME}", ".*Gazetteer.*") '
+        f'CALL text_search.regex_search("{TEXT_INDEX_NAME}", ".*gazetteer.*") '
         "YIELD node RETURN node.id AS id",
     )
     assert rows == [{"id": "a"}]
+
+
+async def test_a_text_index_of_before_folding_is_moved_and_the_labels_folded(
+    db_driver, clear_database
+):
+    run_alone(db_driver, f"DROP TEXT INDEX {TEXT_INDEX_NAME}")
+    run_alone(
+        db_driver, f"CREATE TEXT INDEX {TEXT_INDEX_NAME} ON :PGIndexableNode(label)"
+    )
+    run(db_driver, "CREATE (:PGIndexableNode {id: 'z', label: 'Zürich'})")
+
+    setup = await initialise_database()
+
+    assert (
+        f"text index {TEXT_INDEX_NAME} on :PGIndexableNode(label_folded)"
+        in setup.created
+    )
+    [row] = [
+        row
+        for row in indexes(db_driver)
+        if row["index type"] == f"label_text (name: {TEXT_INDEX_NAME})"
+    ]
+    assert row["property"] == ["label_folded"]
+    rows = run(
+        db_driver,
+        f'CALL text_search.regex_search("{TEXT_INDEX_NAME}", ".*zurich.*") '
+        "YIELD node RETURN node.id AS id",
+    )
+    assert rows == [{"id": "z"}]

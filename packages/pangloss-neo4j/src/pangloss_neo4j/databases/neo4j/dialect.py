@@ -116,8 +116,11 @@ class Neo4jDialect:
         # Memgraph does: so an update takes the node's lock first, and reads the version after it has it)
         await lock_node(tx, id)
 
-    def encode_properties(self, properties: dict[str, Any]) -> dict[str, Any]:
-        # (Neo4j cannot store a map as a property: `meta` and annotated values are flattened)
+    def encode_properties(
+        self, properties: dict[str, Any], *, node: bool = True
+    ) -> dict[str, Any]:
+        # (Neo4j cannot store a map as a property: `meta` and annotated values are flattened. Its full-text index folds
+        # the label itself)
         return flatten(properties)
 
     def has_meta(self, node: str) -> str:

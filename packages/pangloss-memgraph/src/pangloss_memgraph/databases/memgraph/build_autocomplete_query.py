@@ -6,7 +6,7 @@ from pangloss_cypher import fragments
 
 # $patterns: one `.*word.*` for each word typed (lower case: the index cuts labels into lower-case words)
 # $labels: any of these labels finds the node (the types asked for, with none that a parent already finds)
-# $start: what was typed, to put the labels that begin with it first
+# $start: what was typed (folded), to put the labels that begin with it (folded) first
 # $page (1-indexed), $page_size
 #
 # (What is collected is a map of the properties, not the node: nodes found by the text index, collected
@@ -23,7 +23,7 @@ AUTOCOMPLETE_QUERY = cast(
       AND any(label IN $labels WHERE label IN labels(n))
       AND {fragments.not_deleted("n")}
     WITH n, totalScore,
-         CASE WHEN toLower(n.label) STARTS WITH $start THEN 0 ELSE 1 END AS rank
+         CASE WHEN n.label_folded STARTS WITH $start THEN 0 ELSE 1 END AS rank
     ORDER BY rank, totalScore DESC, toLower(n.label), id(n)
     WITH collect({{id: n.id, type: n.type, label: n.label}}) AS allNodes
     WITH allNodes, size(allNodes) AS total,

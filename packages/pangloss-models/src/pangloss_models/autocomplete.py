@@ -14,6 +14,7 @@ from pangloss_models.exceptions import PanglossUnknownTypeError
 from pangloss_models.model_bases.base_models import _BaseObject
 from pangloss_models.model_bases.entity import Entity
 from pangloss_models.model_bases.labels import labels_for_model
+from pangloss_models.text import fold
 
 
 class AutocompleteItem(_BaseObject):
@@ -76,10 +77,10 @@ def smallest_types(types: list[type]) -> list[type]:
 
 
 def search_words(text: str) -> list[str]:
-    """What was typed as the words of the text index: lower case, cut at anything that is not a letter
-    or digit. (That is how the index cuts a label, so no punctuation, and no regular-expression
-    character, is left to be matched.)"""
-    return re.findall(r"\w+", text.lower())
+    """What was typed as the words of the text index: lower case, accents folded (`pangloss_models.text.fold`), cut at
+    anything that is not a letter or digit. (That is how the index cuts a label, so no punctuation, and no
+    regular-expression character, is left to be matched.)"""
+    return re.findall(r"\w+", fold(text))
 
 
 def labels_to_match(types: list[type]) -> list[str]:

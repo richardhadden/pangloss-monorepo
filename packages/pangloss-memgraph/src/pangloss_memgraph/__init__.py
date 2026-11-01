@@ -8,7 +8,7 @@ storage = Storage(
     capabilities=Capabilities(
         snapshots=True,
         fast_bulk_load=True,
-        accent_folding=False,
+        accent_folding=True,
         deep_search=True,
         cypher=True,
     ),

@@ -112,13 +112,13 @@ async def test_the_text_index_finds_what_the_load_wrote(database):
     async with bulk_ingest(database=database):
         await statements(
             database,
-            "CREATE (:PGIndexableNode {id: 'x1', label: 'Charlemagne crowned'}), "
-            "(:PGIndexableNode {id: 'x2', label: 'Leo III'})",
+            "CREATE (:PGIndexableNode {id: 'x1', label: 'Charlemagne crowned', label_folded: 'charlemagne crowned'}), "
+            "(:PGIndexableNode {id: 'x2', label: 'Leo III', label_folded: 'leo iii'})",
         )
 
     rows = await statements(
         database,
-        'CALL text_search.regex_search("label_text", "Charlemagne") YIELD node '
+        'CALL text_search.regex_search("label_text", "charlemagne") YIELD node '
         "RETURN node.id AS id",
     )
     assert [row["id"] for row in rows] == ["x1"]

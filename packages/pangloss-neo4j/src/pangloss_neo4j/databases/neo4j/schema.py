@@ -13,11 +13,11 @@ What was found out about Neo4j (see `docs/neo4j-implementation.md`), and is reli
 """
 
 import re
-import unicodedata
 from dataclasses import dataclass
 from typing import Any
 
 import neo4j
+from pangloss_models.text import fold
 
 TEXT_INDEX_NAME = "label_text"
 
@@ -202,19 +202,6 @@ def has_constraint(
 
 
 # --- searching the full-text index ------------------------------------------------------------------------------------
-
-# What does not decompose into a letter and an accent: the analyzer folds these (ASCII folding), the query must too
-FOLDED = str.maketrans(
-    {"ß": "ss", "æ": "ae", "œ": "oe", "ø": "o", "ð": "d", "đ": "d", "ł": "l", "þ": "th"}
-)
-
-
-def fold(text: str) -> str:
-    """The text as the index holds it: lower case, accents folded (wildcard terms are not analysed by the query parser, so
-    the words of a search are brought to the form of the index here)"""
-    lowered = text.lower().translate(FOLDED)
-    decomposed = unicodedata.normalize("NFKD", lowered)
-    return "".join(c for c in decomposed if not unicodedata.combining(c))
 
 
 def search_patterns(search_terms: str | None) -> list[str]:

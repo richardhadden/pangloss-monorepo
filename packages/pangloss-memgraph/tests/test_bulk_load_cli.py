@@ -312,3 +312,16 @@ def test_recover_does_nothing_when_there_is_nothing_to_recover(project, empty):
 
     assert done.returncode == 1
     assert "no bulk load to recover" in done.stderr
+
+
+def test_refold_writes_the_folded_labels_of_labels_written_without_them(project, empty):
+    query("CREATE (:PGIndexableNode {id: 'refold-1', label: 'Straße in Zürich'})")
+
+    done = pangloss(project, "memgraph", "refold")
+
+    assert done.returncode == 0, done.stderr
+    assert "Folded the labels of 1 nodes" in done.stdout
+    [row] = query(
+        "MATCH (n:PGIndexableNode {id: 'refold-1'}) RETURN n.label_folded AS folded"
+    )
+    assert row["folded"] == "strasse in zurich"

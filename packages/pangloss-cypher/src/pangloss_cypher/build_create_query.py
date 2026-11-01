@@ -247,9 +247,16 @@ def convert_edge_properties_for_writing(edge_properties: EdgeModel) -> dict[str,
 class PropertyAssignments:
     """The properties to set on a node or edge, from a single parameter"""
 
-    def __init__(self, params: QueryParams, properties: dict[str, typing.Any]):
-        # (as the backend writes them: Neo4j cannot store a map as a property, and flattens `meta` and annotated values)
-        self.identifier = params.add(dialect().encode_properties(properties))
+    def __init__(
+        self,
+        params: QueryParams,
+        properties: dict[str, typing.Any],
+        *,
+        node: bool = True,
+    ):
+        # (as the backend writes them: Neo4j cannot store a map as a property, and flattens `meta` and annotated values;
+        # Memgraph adds the folded label of a node)
+        self.identifier = params.add(dialect().encode_properties(properties, node=node))
 
     def set_items(self, variable: str, replace: bool = False) -> str:
         """What to put after `SET` to give `variable` the properties: replacing
@@ -477,7 +484,9 @@ def build_edges(
     edge_property_assignments: PropertyAssignments | None = None
     if edge_properties:
         edge_property_assignments = PropertyAssignments(
-            query_object.params, convert_edge_properties_for_writing(edge_properties)
+            query_object.params,
+            convert_edge_properties_for_writing(edge_properties),
+            node=False,
         )
 
     edge_names = [(field_name, reverse_name)]

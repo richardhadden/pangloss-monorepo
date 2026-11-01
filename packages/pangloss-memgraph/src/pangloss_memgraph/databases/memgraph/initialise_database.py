@@ -18,6 +18,7 @@ from pangloss_models.indexes import model_indexes
 
 from pangloss_memgraph.databases.memgraph.database import Database
 from pangloss_memgraph.databases.memgraph.database import current
+from pangloss_memgraph.databases.memgraph.folding import refold
 
 TEXT_INDEX_NAME = "label_text"
 
@@ -58,7 +59,8 @@ INDEXES = [
 # (A label+property index does not serve a scan by label alone.)
 LABEL_INDEXES = ["PGMigrationLock", "PGUser", "PGAccessToken", "HeadNode"]
 
-TEXT_INDEX = (TEXT_INDEX_NAME, "PGIndexableNode", "label")
+# (on the label folded, `label_folded`: the index does not fold accents itself. See `pangloss_models.text`)
+TEXT_INDEX = (TEXT_INDEX_NAME, "PGIndexableNode", "label_folded")
 
 
 # The app whose migrations make this structure: this package (`pangloss_memgraph.migrations`), which
@@ -174,8 +176,9 @@ async def initialise_database(database: Database | None = None) -> DatabaseSetup
     - for the ids (which are UUIDs) of every kind of node that has one, and for
       the URLs of entities, an index and a uniqueness constraint;
     - an index of `id` and `head_node_id` together, and one of `id` for head nodes;
-    - the text index `label_text` on the `label` of every `PGIndexableNode`, used
-      for searching.
+    - the text index `label_text` on the folded label (`label_folded`) of every
+      `PGIndexableNode`, used for searching. (One on `label`, from before, is moved,
+      and the folded labels are written.)
 
     Uses the default `Database`, unless given one.
     """
@@ -224,9 +227,16 @@ async def initialise_database(database: Database | None = None) -> DatabaseSetup
         record(description, existed)
 
     name, label, property_name = TEXT_INDEX
-    existed = any(
-        row["index type"] == f"label_text (name: {name})" for row in existing_indexes
-    )
+    found = [
+        row
+        for row in existing_indexes
+        if row["index type"] == f"label_text (name: {name})"
+    ]
+    existed = any(row["property"] == [property_name] for row in found)
+    if found and not existed:
+        # (an index of before the labels were folded, on `label`: it is moved, and the folded labels written)
+        await run(f"DROP TEXT INDEX {name}")
+        await refold(database)
     if not existed:
         await run(f"CREATE TEXT INDEX {name} ON :{label}({property_name})")
     record(f"text index {name} on :{label}({property_name})", existed)

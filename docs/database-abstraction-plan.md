@@ -362,6 +362,45 @@ Neo4j folds already (`standard-folding` analyzer, and `schema.fold` on the words
 - **Done when** the conformance test passes on both backends and a migrated copy of the demo database finds "Zürich"
   with `zurich`.
 
+**As built (2026-11-01):**
+
+- **`pangloss_models.text`** has `fold` and `FOLDED`, moved from Neo4j's `schema.py`, which now imports them.
+  `search_words` folds, so both backends fold the words of a list, deep list, truncation query and autocomplete in
+  the same way.
+- **`label_folded` on Memgraph.** `MemgraphDialect.encode_properties(properties, node=True)` adds
+  `label_folded = fold(label)`.
+  - A label of null gives a null `label_folded`, so `SET +=` clears it.
+  - Edges are encoded with `node=False` and get nothing. The `Dialect` protocol gained the `node` keyword for this.
+  - Creates, updates, inline entities and the bulk load all write through it.
+- **The text index** is `label_text` on `PGIndexableNode(label_folded)`, instead of `label`: there is still one text
+  index.
+  - `initialise_database` moves an index left on `label`, and fills in the folded labels.
+  - Autocomplete's "label begins with" ranking compares `label_folded` on Memgraph. Neo4j still compares
+    `toLower(label)` with the words as typed, as before.
+- **Shipped migration `0006_removeindex_runpython_addindex`** has three steps:
+  - `RemoveIndex` (on `label`);
+  - `RunPython` `folding.refold_in_migration`, in batches of 10,000 inside the migration's transaction;
+  - `AddIndex` (on `label_folded`).
+
+  The planner proposed `AddIndex` + `RemoveIndex`, with the same schema hash. I put the removal first so that the
+  two indexes, which share a name, never both exist. Neo4j needs no migration.
+- **`pangloss memgraph refold`** writes the folded labels in transactions of 10,000 (`folding.refold`). It is for
+  labels set outside the models, for example by a `RunCypher`; `docs/migrations.md` says so.
+- **`Capabilities.accent_folding`** is now on for Memgraph.
+- **Tests.**
+  - `test_accent_folding_live.py`, the same file in both backends: `zurich`, `ZURICH`, `Zürich`, `zür`, `strasse` and
+    `Straße` find "Hauptstraße, Zürich" in list and deep list. Autocomplete is covered too, and so is a changed label
+    being found only by its new words.
+  - In `test_initialise_database.py`: an index on `label` is moved, and `zurich` then finds "Zürich" through it.
+  - `test_refold_writes_the_folded_labels_of_labels_written_without_them`.
+  - `./run_tests.sh` passes: Memgraph 2,516, Neo4j 602, typology 19, calendar 16, dates 4, zotero 7 on Neo4j, and 57
+    browser tests.
+- **Not done.**
+  - No measurement on :7689: the scratch database was not running. There is still one indexed text property, now
+    `label_folded`, so the cost per write should be the same.
+  - I did not migrate a copy of the demo database, because I don't touch the demo Memgraph. The live test of the
+    shipped migrations and the index-move test cover the same path.
+
 ### Phase 6: separate the write plan from the Cypher (1 week)
 
 - `pangloss_cypher/write_plan.py`: `WritePlan` (nodes with labels and encoded-free properties; edge pairs with
