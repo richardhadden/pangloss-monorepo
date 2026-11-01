@@ -10,8 +10,6 @@ from typing import LiteralString, cast
 from pangloss_models.model_bases.document import Document
 from pangloss_models.model_bases.entity import Entity
 from pangloss_models.search import (
-    ANY_IN_DOCUMENT,
-    ANY_RELATION,
     WRAPPER_LABELS,
     AnyOf,
     CheckedCondition,
@@ -20,6 +18,7 @@ from pangloss_models.search import (
     CheckedPattern,
     Expr,
     Not,
+    SearchKey,
 )
 
 from pangloss_cypher import fragments
@@ -122,7 +121,7 @@ class Compiler:
         """Whether the node has a relation that is as the condition says. A relation to wrappers (a semantic
         space, a conjunction, a reified relation) is also to what is inside them, however deep; and one that
         has to pass through some is only that. `$mentions` is of the node or of any node of its document."""
-        if c.field == ANY_IN_DOCUMENT:
+        if c.field == SearchKey.MENTIONS:
             node = self.name("m")
             return (
                 f"({self.relation_of(c, var)} OR "
@@ -141,7 +140,7 @@ class Compiler:
     def reaching(self, c: CheckedCondition, var: str, through_wrappers: bool) -> str:
         e, w = self.name("e"), self.name("w")
         where = ["true"]
-        if c.field in (ANY_RELATION, ANY_IN_DOCUMENT):
+        if c.field in (SearchKey.ANY, SearchKey.MENTIONS):
             edge = f"({var})-[{e}]->({w})"
             where.append(f"NOT coalesce({e}.reverse, false) AND {w}:PGIndexableNode")
         else:

@@ -11,7 +11,7 @@ Dates that are not repeated are found by their bounds alone.
 from collections.abc import Iterable
 from typing import Any
 
-from pangloss_models.search import Match
+from pangloss_models.search import Match, SearchKey
 
 from pangloss_dates.calendar import Calendar
 from pangloss_dates.recurrence import day_keys, occurs_on
@@ -34,7 +34,7 @@ def dated_where(
     """The pattern for the documents with a date that holds the day, other than a repeated event (`family` is
     `""`, `"Julian"` or `"Gregorian"`)"""
     return {
-        "$any_of": [
+        SearchKey.ANY_OF: [
             {field: {"type": f"{family}{kind}", "where": bounds_where(day, fuzzy)}}
             for kind in SINGLE_KINDS
         ]

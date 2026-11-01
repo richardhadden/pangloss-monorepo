@@ -56,6 +56,21 @@ MAX_PATTERNS = 50  # (patterns for what a relation points at, in one search)
 MAX_EXPRESSIONS = 500
 
 
+class SearchKey(enum.StrEnum):
+    """The keys of a `where` that are not the fields of a model: combinators, and conditions of the whole node.
+    (A `StrEnum`: a key is its string, so either can be written in a `where`.)"""
+
+    ALL = "$all"
+    ANY_OF = "$any_of"
+    NOT = "$not"
+    # (any relation of the node; of any node of the document)
+    ANY = "$any"
+    MENTIONS = "$mentions"
+    SOMEWHERE = "$somewhere"
+    INCOMING = "$incoming"
+    SPACES = "$spaces"
+
+
 def parse_where(raw: Any, depth: int = 0) -> dict[str, Any]:
     """A `where`: a field's key to its `Condition`, and the combinators (`$all` and `$any_of`: lists of
     `where`s; `$not`: a `where`), each made into the same"""
@@ -65,26 +80,26 @@ def parse_where(raw: Any, depth: int = 0) -> dict[str, Any]:
         raise ValueError(f"patterns are nested more than {MAX_DEPTH} deep")
     parsed: dict[str, Any] = {}
     for key, value in raw.items():
-        if key in ("$all", "$any_of"):
+        if key in (SearchKey.ALL, SearchKey.ANY_OF):
             if not isinstance(value, list) or not value or len(value) > MAX_VALUES:
                 raise ValueError(f"{key} needs a list of conditions")
             parsed[key] = [parse_where(item, depth + 1) for item in value]
-        elif key == "$not":
+        elif key == SearchKey.NOT:
             parsed[key] = parse_where(value, depth + 1)
-        elif key in ("$any", "$mentions"):
+        elif key in (SearchKey.ANY, SearchKey.MENTIONS):
             parsed[key] = (
                 value
                 if isinstance(value, Condition)
                 else Condition.model_validate(value)
             )
-        elif key == "$somewhere":
+        elif key == SearchKey.SOMEWHERE:
             if not isinstance(value, list) or not value or len(value) > MAX_VALUES:
                 raise ValueError("$somewhere needs a list of patterns")
             parsed[key] = [
                 v if isinstance(v, Condition) else Condition.model_validate(v)
                 for v in value
             ]
-        elif key == "$incoming":
+        elif key == SearchKey.INCOMING:
             items = value if isinstance(value, list) else [value]
             if not items or len(items) > MAX_VALUES:
                 raise ValueError("$incoming needs a pattern, or a list of them")
@@ -92,7 +107,7 @@ def parse_where(raw: Any, depth: int = 0) -> dict[str, Any]:
                 v if isinstance(v, Incoming) else Incoming.model_validate(v)
                 for v in items
             ]
-        elif key == "$spaces":
+        elif key == SearchKey.SPACES:
             if (
                 not isinstance(value, list)
                 or not value
@@ -228,10 +243,6 @@ WRAPPER_LABELS = (
     "ReifiedRelation",
     "ReifiedRelationDocument",
 )
-
-# The fields that are not of one class: any relation of the node, or of any node of its document
-ANY_RELATION = "$any"
-ANY_IN_DOCUMENT = "$mentions"
 
 
 @dataclass(frozen=True)
@@ -466,32 +477,32 @@ def check_where(
             raise PanglossSearchError(
                 f"More than {MAX_EXPRESSIONS} conditions in one search"
             )
-        if name == "$all":
+        if name == SearchKey.ALL:
             for each in condition:
                 checked.extend(check_where(model, each, budget, path, top))
             continue
-        if name == "$any_of":
+        if name == SearchKey.ANY_OF:
             checked.append(
                 AnyOf(
                     [check_where(model, each, budget, path, top) for each in condition]
                 )
             )
             continue
-        if name == "$not":
+        if name == SearchKey.NOT:
             checked.append(Not(check_where(model, condition, budget, path, top)))
             continue
-        if name == "$spaces":
+        if name == SearchKey.SPACES:
             checked.append(check_spaces(model, condition, top, path))
             continue
-        if name == "$incoming":
+        if name == SearchKey.INCOMING:
             for each in condition:
                 checked.append(check_incoming(model, each, budget, path))
             continue
-        if name == "$somewhere":
+        if name == SearchKey.SOMEWHERE:
             for each in condition:
                 checked.append(check_somewhere(model, each, budget, path, top))
             continue
-        if name in (ANY_RELATION, ANY_IN_DOCUMENT):
+        if name in (SearchKey.ANY, SearchKey.MENTIONS):
             checked.extend(check_anywhere(model, name, condition, budget, path, top))
             continue
         field = f"{path}{name}"
@@ -636,14 +647,14 @@ def check_anywhere(
     only). Both take what a relation does (`is`, `is_any`, a pattern, `through`). `$any` also takes `contains` and
     `starts_with`, which are of the label (there is no text index over the other fields yet)."""
     field = f"{path}{name}"
-    if name == ANY_IN_DOCUMENT and not (top and issubclass(model, Document)):
+    if name == SearchKey.MENTIONS and not (top and issubclass(model, Document)):
         raise PanglossSearchError(
             f"{field}: only for a search of documents, and not inside a pattern for what a relation points at"
         )
-    if name == ANY_IN_DOCUMENT and "exists" in condition.model_fields_set:
+    if name == SearchKey.MENTIONS and "exists" in condition.model_fields_set:
         raise PanglossSearchError(f"{field}.exists: not an operator here")
     text = [o for o in condition.operators() if o in ("contains", "starts_with")]
-    if text and name == ANY_IN_DOCUMENT:
+    if text and name == SearchKey.MENTIONS:
         raise PanglossSearchError(f"{field}.{text[0]}: not an operator here")
     if "exists" in condition.model_fields_set:
         raise PanglossSearchError(f"{field}.exists: not an operator here")
@@ -665,7 +676,7 @@ def check_incoming(
     model: type, item: Incoming, budget: list[int], path: str
 ) -> CheckedCondition:
     """`$incoming`: the entity is pointed at by a node of a class (and pattern), by one of its relations"""
-    field = f"{path}$incoming"
+    field = f"{path}{SearchKey.INCOMING}"
     if not issubclass(model, Entity):
         raise PanglossSearchError(f"{field}: only an entity is referred to")
     budget[0] += 1
@@ -705,7 +716,7 @@ def check_incoming(
         source, check_where(source, item.where or {}, budget, f"{field}.")
     )
     return CheckedCondition(
-        "$incoming",
+        SearchKey.INCOMING,
         "incoming",
         "match",
         CheckedIncoming(pattern, tuple(sorted(reaching))),
@@ -721,7 +732,7 @@ def check_spaces(
     document is never inside one, and an entity is not part of a document.)"""
     from pangloss_models.model_registry import ModelRegistry
 
-    field = f"{path}$spaces"
+    field = f"{path}{SearchKey.SPACES}"
     if top or not issubclass(model, Document):
         raise PanglossSearchError(
             f"{field}: only for a pattern for a document that a relation points at (a head document, "
@@ -732,7 +743,7 @@ def check_spaces(
         space = models.get(name)
         if getattr(space, "__metatype__", None) != "SemanticSpace":
             raise PanglossSearchError(f"{field}: '{name}' is not a semantic space")
-    return CheckedCondition("$spaces", "spaces", "in", list(names))
+    return CheckedCondition(SearchKey.SPACES, "spaces", "in", list(names))
 
 
 def check_somewhere(
@@ -743,7 +754,7 @@ def check_somewhere(
     top: bool,
 ) -> CheckedCondition:
     """`$somewhere`: a document of this type and pattern is anywhere in this document, at any depth"""
-    field = f"{path}$somewhere"
+    field = f"{path}{SearchKey.SOMEWHERE}"
     if not (top and issubclass(model, Document)):
         raise PanglossSearchError(
             f"{field}: only for a search of documents, and not inside a pattern for what a relation points at"
@@ -758,7 +769,7 @@ def check_somewhere(
             f"{field}: '{condition.type}' is not a document type (an entity is not part of a document: "
             "use '$mentions' with its id, or a pattern)"
         )
-    return CheckedCondition("$somewhere", "somewhere", "match", pattern)
+    return CheckedCondition(SearchKey.SOMEWHERE, "somewhere", "match", pattern)
 
 
 def check_pattern(

@@ -153,3 +153,12 @@ def test_the_interface_meta_and_the_nav_have_the_keys_of_their_types(
     nav = merge([("a", InterfaceConfig(nav=[NavModel("X"), NavLink("L", "/l")]))])
     assert set(nav["models"]["X"]) == types["NavModelEntry"]
     assert set(nav["links"][0]) == types["NavLinkEntry"]
+
+
+def test_the_search_keys_are_the_same_in_python_and_typescript():
+    from pangloss_models.search import SearchKey
+
+    source = (MODELS_TS.parent.parent / "api/types.ts").read_text()
+    match = re.search(r"export type SearchKey =(.*?);\n", source, re.DOTALL)
+    assert match
+    assert set(re.findall(r'"(\$\w+)"', match.group(1))) == {k.value for k in SearchKey}

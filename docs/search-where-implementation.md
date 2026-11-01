@@ -90,6 +90,10 @@ it does now (see the decisions).
    `str`, a dict can be written with them (`{SearchKey.ANY_OF: [...]}`) and dumps to the same JSON, and the strings
    are still taken. The model export (`export.py`) gives the interface the list, so its TypeScript has them as a
    type from the same place (with `types/models.ts` and its guard test updated).
+   **Built**, but not through the export: the export is also what a migration snapshot holds, and the keys are the
+   same for every project, so they would be in every snapshot. The interface has the type `SearchKey` in
+   `interface-core/src/api/types.ts` instead, and `test_models_match_typescript.py` checks it against the enum, as
+   it does `Colour`. `ANY_RELATION` and `ANY_IN_DOCUMENT` are gone (the Cypher and Neo4j compilers use the enum).
 2. **The operator classes**, and `parse_where` taking them where it takes a `Condition` now (by their dump, so there
    is one path into `Condition`). Tests: each dumps to the dict it stands for; each refuses an operator its kind
    does not take; values are typed.

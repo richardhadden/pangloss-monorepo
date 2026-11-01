@@ -3,10 +3,9 @@ or to what fits a pattern, is found once, before the `MATCH`, from the ids back 
 Neo4j's planner looked the targets up again for each node. The rest is the kit's."""
 
 from pangloss_models.search import (
-    ANY_IN_DOCUMENT,
-    ANY_RELATION,
     CheckedCondition,
     CheckedPattern,
+    SearchKey,
 )
 
 from pangloss_cypher import fragments
@@ -23,7 +22,7 @@ class Neo4jCompiler(Compiler):
     CREATION = "(creation:PGCreation)-[:is_creation_of]->(n)"
 
     def relation(self, c: CheckedCondition, var: str) -> str:
-        if c.field == ANY_IN_DOCUMENT and c.operator in ("is", "is_any"):
+        if c.field == SearchKey.MENTIONS and c.operator in ("is", "is_any"):
             return self.mentioned_in_document(c, var)
         return super().relation(c, var)
 
@@ -124,8 +123,8 @@ class Neo4jCompiler(Compiler):
 
     def reaching(self, c: CheckedCondition, var: str, through_wrappers: bool) -> str:
         if c.operator in ("is", "is_any", "match") and c.field not in (
-            ANY_RELATION,
-            ANY_IN_DOCUMENT,
+            SearchKey.ANY,
+            SearchKey.MENTIONS,
         ):
             return self.related_to_targets(c, var, through_wrappers)
         return super().reaching(c, var, through_wrappers)

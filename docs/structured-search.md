@@ -72,6 +72,10 @@ Several keys in one `where` are all required (AND). `$all` and `$any_of` (a list
 | `$spaces` | The node sits inside all of these semantic spaces (`["Negative"]`): `meta.semantic_spaces` is already on every node inside a space |
 | `$id`, `label`, `$created_by`, … | The properties every node has, as ordinary fields (`label` is a field already) |
 
+In Python the keys are also `SearchKey` (`pangloss_models.search`), a `StrEnum`: `{SearchKey.ANY_OF: [...]}` is
+`{"$any_of": [...]}`. The interface has them as the TypeScript type `SearchKey` (`interface-core/src/api/types.ts`),
+and a test checks that the two have the same keys.
+
 The difference between `$any` ("a field of this node") and `$somewhere` ("a node of this type below this one") matters and should stay explicit. A third thing people mean by "any field contains Smith" is "Smith appears anywhere in the document", which is `$somewhere` with a pattern of `{"is": id}`; this is worth a short form (`$mentions: id`).
 
 ### Reverse relations

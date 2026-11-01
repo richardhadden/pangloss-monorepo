@@ -2,6 +2,7 @@
 
 import datetime
 import enum
+import json
 from decimal import Decimal
 from typing import TypedDict
 
@@ -14,6 +15,7 @@ from pangloss_models.model_bases.trait import Trait
 from pangloss_models.search import (
     CheckedCondition,
     Match,
+    SearchKey,
     SearchRequest,
     check_match,
     resolve_search_type,
@@ -267,6 +269,28 @@ def test_combinators_make_all_any_of_and_not():
     assert [[c.value for c in branch] for branch in any_of.branches] == [["a"], ["b"]]
     assert [c.value for c in not_.items] == ["c"]
     assert (gt.operator, lt.operator) == ("ne", "starts_with")
+
+
+def test_the_keys_can_be_written_with_search_key_and_dump_as_their_strings():
+    Person, Poet, Place, Letter = nested_models()
+    written = {
+        SearchKey.ANY_OF: [{"title": {"eq": "a"}}, {"title": {"eq": "b"}}],
+        SearchKey.NOT: {"title": {"eq": "c"}},
+    }
+    as_strings = {
+        "$any_of": [{"title": {"eq": "a"}}, {"title": {"eq": "b"}}],
+        "$not": {"title": {"eq": "c"}},
+    }
+
+    assert check_match(Letter, Match(where=written)) == check_match(
+        Letter, Match(where=as_strings)
+    )
+    assert Match(where=written).model_dump(
+        by_alias=True, exclude_unset=True, mode="json"
+    ) == Match(where=as_strings).model_dump(
+        by_alias=True, exclude_unset=True, mode="json"
+    )
+    assert json.dumps({SearchKey.SOMEWHERE: []}) == '{"$somewhere": []}'
 
 
 def test_the_combinators_need_the_right_shape_and_are_limited():

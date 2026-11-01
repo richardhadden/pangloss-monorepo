@@ -81,6 +81,17 @@ export interface AutocompleteParams {
   pageSize?: number;
 }
 
+/** The keys of a `where` that are not fields (`SearchKey` in `pangloss_models.search`) */
+export type SearchKey =
+  | "$all"
+  | "$any_of"
+  | "$not"
+  | "$any"
+  | "$mentions"
+  | "$somewhere"
+  | "$incoming"
+  | "$spaces";
+
 /** A search pattern; see docs/structured-search.md */
 export interface SearchPattern {
   type: string;
