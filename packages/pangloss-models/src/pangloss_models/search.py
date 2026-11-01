@@ -73,9 +73,16 @@ class SearchKey(enum.StrEnum):
 
 def parse_where(raw: Any, depth: int = 0) -> dict[str, Any]:
     """A `where`: a field's key to its `Condition`, and the combinators (`$all` and `$any_of`: lists of
-    `where`s; `$not`: a `where`), each made into the same"""
+    `where`s; `$not`: a `where`), each made into the same. A `Where` (or the classes of `search_where`, in the
+    dict) is taken as the JSON it stands for."""
+    from pangloss_models.search_where import Where, where_json
+
+    # (a pattern written with the classes of `search_where` is made into the JSON it stands for)
+    if isinstance(raw, Where):
+        raw = raw.to_json()
     if not isinstance(raw, dict):
         raise ValueError("'where' must be an object")
+    raw = where_json(raw)
     if depth > MAX_DEPTH:
         raise ValueError(f"patterns are nested more than {MAX_DEPTH} deep")
     parsed: dict[str, Any] = {}

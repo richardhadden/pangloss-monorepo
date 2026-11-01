@@ -37,7 +37,7 @@ tables (`OPERATORS`, `kind_and_base`), and by a test that compares them for ever
 
 ### Operators, one class for each kind of field
 
-In `pangloss_models.search` (exported from `pangloss_models`, and so from the SDK):
+In `pangloss_models.search_where`:
 
 | Class | For | Fields (as in `OPERATORS`) |
 |---|---|---|
@@ -47,9 +47,11 @@ In `pangloss_models.search` (exported from `pangloss_models`, and so from the SD
 | `Items[T]` | `list[...]` of any of these | `contains contains_any contains_all exists` |
 | `Rel` | a relation, an embedded field | `is_ is_any exists through`, and `match` (a `Where`) |
 | `AnyRel` | `$any`, `$mentions` | what `Rel` has, and `contains starts_with` (of the label) |
-| `Incoming` (typed) | `$incoming` | `where` (a `Where`: its class is the `type`), `field`, `through` |
+| `IncomingFrom` | `$incoming` | `where` (a `Where`: its class is the `type`), `field`, `through` (a `Where` alone will do, for any field) |
 
-`T` is the field's type, so `date=Compare(lt="1600")` is an error to a type checker and to pydantic. `is_` and
+`T` is the field's type, so `date=Compare(lt="x")` is an error to pydantic (`Compare(...)` given to a field typed
+`Compare[datetime.date]` is checked as one), and should be to a type checker: pyright checks the arguments of a
+generic pydantic class; `ty` (0.0.90) does not yet, though it does those of `Text` and `Rel`, and the names of all. `is_` and
 `is_any` take an id, or anything with an `id` (an entity, a reference view): `Rel(is_=smith)`. `through` takes the
 wrapper classes or their names. Each class is `extra="forbid"`, and dumps to the dict of a condition.
 
@@ -63,14 +65,15 @@ Made by `initialise_models` for every `Document`, `Entity` and `Embedded` model 
   `kind_and_base` refuses) are left out, so that a type checker says so.
 - **A relation or embedded field** is `Rel | A.Where | B.Where | None`, for the root classes it can point at. A
   `Where` given directly is the pattern; `Rel(match=A.Where(...), through=[Negative])` is a pattern with the rest.
-- **The `Where` classes inherit as the models do** (`Scholar.Where` is a `Person.Where`), so a field typed
-  `Person.Where` takes a pattern for any subclass, as `check_pattern` does.
+- **The `Where` classes do not inherit as the models do**: the fields of a generated class are put on it after it
+  is made, and a subclass does not take those. A relation's options have its subclasses in them already, so the
+  union of their `Where` classes is each class it can point at.
 - **`label: Text`**; on a document, `published: Choice[bool]` and `review_status: Text`.
 - **The `$` keys** as fields with a trailing underscore and the `$` name as alias: `all_`, `any_of_` (lists of the
   same class), `not_`, `any_`, `mentions_` (`AnyRel`), `somewhere_` (a list of any document's `Where`), `incoming_`
   (a list of `Incoming`, entities only), `spaces_` (semantic space classes or names, documents only). A model with a
   field of one of those names is an error when the models are initialised (none has one now).
-- **`to_where()`** gives the dict of the pattern; a `Where` nested as a relation's pattern is written
+- **`to_json()`** gives the dict of the pattern (the fields of the model, then the `$` keys); a `Where` nested as a relation's pattern is written
   `{"type": "<its class>", "where": {...}}`.
 
 `published`, `review_status`, `somewhere_` and `mentions_` are only for the head node of a search, and `spaces_`
@@ -97,6 +100,10 @@ it does now (see the decisions).
 2. **The operator classes**, and `parse_where` taking them where it takes a `Condition` now (by their dump, so there
    is one path into `Condition`). Tests: each dumps to the dict it stands for; each refuses an operator its kind
    does not take; values are typed.
+   **Built**, in a module of its own (`search_where.py`): the operator classes, `IncomingFrom`, and the bases of the
+   generated classes (`Where`, with the combinators and `any_`; `DocumentWhere`, `EntityWhere` and
+   `EmbeddedWhere`, with what each kind has). `parse_where` takes a `Where`, and any of the classes as a value in a
+   dict, by `where_json`: so a dict may mix the two.
 3. **One table of kinds.** Split `kind_and_base` into a function that says the kind and base of a field definition
    (or that it cannot be searched) without raising, used by both `check_where` and the generation, so that the two
    cannot differ about a field.
