@@ -34,7 +34,7 @@ import { createItem, ApiError, problemsOf } from "../../api";
 import type { Summary } from "../../api";
 import { EntityPicker } from "./EntityPicker";
 import { JsonEditor, LiteralEditor } from "./LiteralEditor";
-import { inputClass, smallButtonClass } from "./styles";
+import { inputClass, joinedButtonClass, smallButtonClass } from "./styles";
 import { TypeMenu } from "./TypeMenu";
 
 const isObject = (value: unknown): value is FormData =>
@@ -620,14 +620,17 @@ function PickOrCreate(props: { types: string[]; onPick: (entity: Summary) => voi
   const [creating, setCreating] = createSignal<string>();
   const groups = createMemo(() => menuGroups(definitions, typeOptions(props.types)));
   return (
-    <div class="flex w-full items-start gap-2">
-      <EntityPicker types={props.types} onPick={props.onPick} />
-      <TypeMenu
-        groups={groups()}
-        label="+"
-        title={t("new_entity", "Make a new one")}
-        onChoose={(choice) => setCreating(choice.type)}
-      />
+    <div class="w-full min-w-0">
+      <EntityPicker types={props.types} onPick={props.onPick}>
+        <TypeMenu
+          groups={groups()}
+          label="+"
+          title={t("new_entity", "Make a new one")}
+          buttonClass={joinedButtonClass}
+          alignRight
+          onChoose={(choice) => setCreating(choice.type)}
+        />
+      </EntityPicker>
       <Show when={creating()}>
         <EntityCreateDialog
           type={creating()!}

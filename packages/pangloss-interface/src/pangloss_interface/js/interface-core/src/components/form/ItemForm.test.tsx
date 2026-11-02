@@ -92,7 +92,13 @@ function fakeClient(answer: (sent: Sent) => unknown) {
     baseUrl: "/api",
     get: async (path: string) => {
       sent.push({ method: "GET", path, body: {} });
-      return { results: [{ id: "p1", type: "Person", label: "Alice" }], count: 1 };
+      return {
+        results: [
+          { id: "p1", type: "Person", label: "Alice" },
+          { id: "p2", type: "Person", label: "Bob" },
+        ],
+        count: 2,
+      };
     },
     post: write("POST"),
     put: write("PUT"),
@@ -222,7 +228,7 @@ test("an entity is found by searching, then shown as a reference, and only its t
   type("Find Person…", "ali");
   await settle(400);
   expect(sent.find((call) => call.method === "GET")?.path).toBe("/autocomplete");
-  click(document.body.querySelector('[role="option"] button'));
+  click(document.body.querySelector('[role="option"]'));
   await settle();
   expect(document.body.textContent).toContain("Alice");
   // (the remove button is the end of the chip, inside its frame)
@@ -233,11 +239,41 @@ test("an entity is found by searching, then shown as a reference, and only its t
   expect(document.body.textContent).not.toContain("Alice");
   type("Find Person…", "ali");
   await settle(400);
-  click(document.body.querySelector('[role="option"] button'));
+  click(document.body.querySelector('[role="option"]'));
   await settle();
   click(button("Save"));
   await settle();
   expect(sent.at(-1)!.body.author).toEqual({ type: "Person", id: "p1" });
+});
+
+test("the matches are chosen with the arrow keys and Enter, which does not save the form; Escape closes them", async () => {
+  const { client, sent } = fakeClient(() => ({ id: "f1", type: "Factoid", label: "F" }));
+  show(client);
+  await settle();
+  type("Find Person…", "a");
+  await settle(400);
+  const box = byLabel<HTMLInputElement>("Find Person…");
+  const key = async (name: string) => {
+    box.dispatchEvent(new KeyboardEvent("keydown", { key: name, bubbles: true }));
+    await settle();
+  };
+  const selected = () => document.body.querySelector('[role="option"][aria-selected="true"]')?.textContent;
+  expect(box.getAttribute("aria-expanded")).toBe("true");
+  expect(selected()).toContain("Alice");
+  await key("ArrowDown");
+  expect(selected()).toContain("Bob");
+  expect(box.getAttribute("aria-activedescendant")).toBe(document.body.querySelectorAll('[role="option"]')[1]!.id);
+  await key("ArrowDown");
+  expect(selected()).toContain("Alice");
+  await key("ArrowUp");
+  expect(selected()).toContain("Bob");
+  await key("Escape");
+  expect(document.body.querySelector('[role="option"]')).toBeNull();
+  await key("ArrowDown");
+  await key("Enter");
+  expect(sent.filter((call) => call.method !== "GET")).toEqual([]);
+  expect(document.body.textContent).toContain("Bob");
+  expect(document.body.querySelector('[role="option"]')).toBeNull();
 });
 
 test("an edit sends the whole item back with the version it was loaded at; what the API reads only is left out", async () => {
