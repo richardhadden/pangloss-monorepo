@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "skills": {
+    "solidjs-v2": {
+      "source": "khmm12/solidjs-v2-skills",
+      "sourceType": "github",
+      "skillPath": "skills/solidjs-v2/SKILL.md",
+      "computedHash": "d924aa92e53b1d2b379559e33802a061e095688519ac575582d9cefbd7f73917"
+    },
+    "solidjs-v2-migration": {
+      "source": "khmm12/solidjs-v2-skills",
+      "sourceType": "github",
+      "skillPath": "skills/solidjs-v2-migration/SKILL.md",
+      "computedHash": "b55411f736db4dc66363a009f7520458d2a3284036fb035ad3442514532d6151"
+    },
+    "solidjs-v2-reviewer": {
+      "source": "khmm12/solidjs-v2-skills",
+      "sourceType": "github",
+      "skillPath": "skills/solidjs-v2-reviewer/SKILL.md",
+      "computedHash": "520e00f530b5bf2552e528692a9ab70bfab6381164ab79fc7f88d936d39c7d37"
+    }
+  }
+}
