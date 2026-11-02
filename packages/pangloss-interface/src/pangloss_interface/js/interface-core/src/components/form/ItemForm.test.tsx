@@ -65,12 +65,15 @@ const definitions = {
       fields: [relation("contents", [{ kind: "typeVar", name: "T", edgeModel: null }])],
     }),
     Person: model("Person", { kind: "Entity" }),
+    Day: model("Day", { kind: "Embedded", fields: [literal("day", { type: "int" })] }),
+    Span: model("Span", { kind: "Embedded", fields: [literal("days", { type: "int" })] }),
     Factoid: model("Factoid", {
       fields: [
         literal("year", { type: "int" }, { required: true }),
         literal("aliases", { type: "list", item: { type: "str" } }),
         relation("author", [{ kind: "entity", type: "Person", edgeModel: null }], false),
         relation("statements", [doc("Activity"), doc("Transfer"), negative]),
+        { ...base, name: "when", key: "when", kind: "embedded", model: null, types: ["Day", "Span"] },
       ],
     }),
   },
@@ -308,6 +311,26 @@ test("the mark of a required field turns green once something is in it", async (
   type("year", "");
   await settle();
   expect(mark().className).not.toContain("text-green-600");
+});
+
+test("the type of an embedded value can be changed: its menu is not clipped by the chip it opens from", async () => {
+  const { client } = fakeClient(() => ({ id: "f1", type: "Factoid", label: "F" }));
+  show(client);
+  await settle();
+  click(button("Add when"));
+  await settle();
+  click([...document.body.querySelectorAll('[role="menuitem"]')].find((item) => item.textContent === "Day"));
+  await settle();
+  click(button("Day"));
+  await settle();
+  const menu = document.body.querySelector('[role="menu"]')!;
+  // (an ancestor that clips what overflows it would hide the menu, which hangs below the button)
+  for (let at = menu.parentElement; at; at = at.parentElement) {
+    expect(at.className.toString()).not.toMatch(/\boverflow-(hidden|clip)\b/);
+  }
+  click([...menu.querySelectorAll('[role="menuitem"]')].find((item) => item.textContent === "Span"));
+  await settle();
+  expect(button("Span")).toBeTruthy();
 });
 
 test("an edit sends the whole item back with the version it was loaded at; what the API reads only is left out", async () => {

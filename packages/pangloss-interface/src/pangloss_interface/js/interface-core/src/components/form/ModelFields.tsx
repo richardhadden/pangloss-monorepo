@@ -429,18 +429,19 @@ function EmbeddedEditor(props: { field: EmbeddedField; path: Accessor<Path>; lab
           />
         }
       >
-        {/* (the type chosen, which its menu changes, with the remove button joined on) */}
-        <div class="inline-flex self-start overflow-hidden rounded-sm border-[0.5px] border-slate-400/70 bg-slate-100/60">
+        {/* (the type chosen, which its menu changes, with the remove button joined on; the corners are
+            the parts', not clipped by the frame, which would hide the menu that opens below) */}
+        <div class="inline-flex self-start rounded-sm border-[0.5px] border-slate-400/70 bg-slate-100/60">
           <TypeMenu
             groups={groups()}
             label={modelName(String(value()!.type))}
-            buttonClass="flex cursor-pointer items-center gap-1 px-2 py-1 text-xs font-semibold uppercase select-none hover:bg-slate-300/50 focus:bg-slate-300/50 focus:outline-none"
+            buttonClass="flex cursor-pointer items-center gap-1 rounded-sm px-2 py-1 text-xs font-semibold uppercase select-none hover:bg-slate-300/50 focus:bg-slate-300/50 focus:outline-none"
             onChoose={choose}
           />
           <Show when={!props.field.required}>
             <button
               type="button"
-              class={joinedRemoveClass}
+              class={[joinedRemoveClass, "rounded-r-sm"]}
               aria-label={t("remove_item", "Remove {name}", { name: props.label })}
               title={t("remove_item", "Remove {name}", { name: props.label })}
               onClick={() => form.remove(props.path())}
