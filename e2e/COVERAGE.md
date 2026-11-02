@@ -12,7 +12,7 @@ about her "held court at Ghent") and Charles the Bold (no role); `types` has onl
 
 | Area | State | Where / notes |
 | --- | --- | --- |
-| Development build (`dev_url`: `pangloss interface dev` on the same API): lists, search, an item, back, a deleted item and a page that is not there, edit and new, a typology, with no error in the page (Solid's dev build stops on what the built one lets through, such as a write while rendering) | ✅ | `test_dev_mode.py` |
+| Development build (`dev_url`: `pangloss interface dev` on the same API): lists, search, the search form, an item, back, a deleted item and a page that is not there, edit and new, a typology, with no error in the page (Solid's dev build stops on what the built one lets through, such as a write while rendering) | ✅ | `test_dev_mode.py` |
 | Home: the models of the project are listed, each a link | ✅ | `test_navigation.py` (the page is a placeholder: unstyled, "Pangloss Yo!") |
 | Navigation bar: opens when the mouse is over it, closes when it leaves | ✅ | `test_the_navigation_bar_opens_and_closes` |
 | Navigation bar: while open its button is a pin; a click pins it open (stays when the mouse leaves or a link is followed), another unpins | ✅ | `test_clicking_the_button_of_the_bar_…`, `test_a_pinned_bar_…`, `test_unpinning_…` |
@@ -35,6 +35,8 @@ about her "held court at Ghent") and Charles the Bold (no role); `types` has onl
 | List page: items, count, links | ✅ | `test_lists_and_items.py` |
 | List page: search (`?q=`), kept in the address, no result is a red 0, an address with a search shows it; typing is not held up or undone by the searches it makes | ✅ | `test_typing_is_not_held_up_or_undone_by_the_searches_it_makes`; Vitest (`ConsoleSearch.test.tsx`) |
 | List page: deep search toggle, typing makes none, Enter / run button make it, turning it off | ✅ | finds a person through a statement |
+| List page: search form (button beside Deep search, panel under the console pushing the list down, closed again); a condition narrows the list and is kept in the address (`?form=`), reopened from it; not; Clear; entities picked; a nested form for what a relation points at; what refers to an entity; what a document mentions; the text box narrows it and Deep search is greyed out | ✅ | `test_search_form.py`; dev build: `test_the_search_form`; operators, between, enum pills, Enter: Vitest (`SearchPanel.test.tsx`, `searchForm.test.ts`, `ConsoleSearch.test.tsx`) |
+| List page: search form on dates, numbers, decimals, enums of the demo's models | 🚧 | checked by hand with screenshots; the e2e project has no such fields |
 | List page: "truncated" (`count+`, "narrow the search") | ⬜ | needs more results than `SEARCH_HIT_LIMIT`: set it low in the e2e settings |
 | List page: scrolling loads more (virtualised, a page at a time); `?at=` kept as it is scrolled, and reloading or going back starts there | ✅ | `test_a_long_list_is_loaded_as_it_is_scrolled_and_starts_where_it_was_left` (130 people) |
 | Item page: fields, references as chips, reverse relations, no empty rows | ✅ | |

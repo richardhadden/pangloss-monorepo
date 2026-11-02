@@ -1,5 +1,8 @@
 import {
   Customised,
+  SearchPanel,
+  decodeSearchForm,
+  encodeSearchForm,
   createWindowVirtualizer,
   useComponent,
   getModel,
@@ -23,7 +26,7 @@ import {
   Show,
   untrack,
 } from "solid-js";
-import { LIST_PAGE_SIZE, listQuery, pageOf, searchOf, startOf } from "../queries";
+import { LIST_PAGE_SIZE, listQuery, pageOf, searchOf, startOf, whereOf } from "../queries";
 import { Page } from "../Page";
 
 // The list of a type of Document or Entity: /Person
@@ -83,12 +86,37 @@ function NothingToList(props: { type: string }) {
 function ListOfItems(props: RouteProps<"/:type">) {
   const Console = useComponent("Console");
   const ErrorMessage = useComponent("ErrorMessage");
+  const definitions = useModels();
   const { t } = useTranslations();
-  // The search is in the address (`?q=rome&deep=1`), so it can be linked to, and the back button
-  // goes back through searches. A change of it asks the list again.
+  // The search is in the address (`?q=rome&deep=1`, and the search form's `?form={...}`), so it can be linked to,
+  // and the back button goes back through searches. A change of it asks the list again.
   const [search, setSearch] = useSearchParams();
   const text = () => searchOf(search).q;
-  const deep = () => searchOf(search).deep;
+  const form = () => searchOf(search).form;
+  // (the pattern of the search form, with the words typed; "" while the form has no condition)
+  const where = () => whereOf(props.params.type, form(), text());
+  const structured = () => where() !== "";
+  // (a deep search is not made with the form)
+  const deep = () => searchOf(search).deep && !structured();
+  // The search form: there if the type has a search pattern; open at first if the address has one
+  const searchable = () => definitions.searchPatterns?.[props.params.type] !== undefined;
+  const [formOpen, setFormOpen] = createSignal(
+    untrack(() => decodeSearchForm(form(), props.params.type) !== undefined),
+  );
+  const toggleForm = () => {
+    const opening = !formOpen();
+    setFormOpen(opening);
+    // (it opens at the top of the page, under the console: the page is taken there to see it)
+    if (opening && window.scrollY > 0) window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+  // (the form the panel last said it holds: one in the address that is not, as after going back, is shown in a new panel)
+  let askedForm = untrack(form);
+  const [generation, setGeneration] = createSignal(1);
+  createEffect(form, (now) => {
+    if (now === askedForm) return;
+    askedForm = now;
+    setGeneration((count) => count + 1);
+  });
   // The item the list is scrolled to: from the address (`?at=`) when the page is opened, then
   // kept by the list as it is scrolled (which writes it in the address without the router), and
   // back to the top for a new search. A list asked again (as after logging in) starts there.
@@ -96,9 +124,9 @@ function ListOfItems(props: RouteProps<"/:type">) {
   // (an async memo: what reads `first()` waits for it, inside the `Loading`; the arguments
   // are read before the query is called, so a change of them runs it again)
   const first = createMemo(async () => {
-    const asked = { type: props.params.type, q: text(), deep: deep() };
+    const asked = { type: props.params.type, q: text(), deep: deep(), form: form(), where: where() };
     const start = position;
-    const page = await listQuery(asked.type, asked.q, asked.deep, pageOf(start));
+    const page = await listQuery(asked.type, asked.q, asked.deep, asked.where, pageOf(start));
     return { ...asked, start, page };
   });
   // (true while a change of the search is being answered, the old results still on show)
@@ -118,7 +146,27 @@ function ListOfItems(props: RouteProps<"/:type">) {
         count={first().page.count}
         truncated={first().page.truncated}
         pending={pending()}
+        onToggleForm={searchable() ? toggleForm : undefined}
+        formOpen={formOpen()}
+        structured={structured()}
       />
+      <Show when={searchable()}>
+        <Show when={generation()} keyed>
+          {(_generation) => (
+            <SearchPanel
+              type={props.params.type}
+              initial={untrack(() => decodeSearchForm(form(), props.params.type))}
+              open={formOpen()}
+              onClose={() => setFormOpen(false)}
+              onChange={(changed) => {
+                askedForm = encodeSearchForm(changed) ?? "";
+                position = 0;
+                setSearch({ form: askedForm || null, at: null }, { replace: true });
+              }}
+            />
+          )}
+        </Show>
+      </Show>
       <Errored fallback={(error) => <ErrorMessage error={error()} />}>
         <Loading fallback={<p>{t("loading", "Loading…")}</p>}>
           {/* (a new list for each answer: what was fetched of the last one is not this one) */}
@@ -151,6 +199,9 @@ function Results(props: {
   type: string;
   q: string;
   deep: boolean;
+  /** The search form, as in the address, and the pattern it stands for */
+  form: string;
+  where: string;
   start: number;
   page: ListPage<Summary>;
   pending: boolean;
@@ -160,7 +211,7 @@ function Results(props: {
   const ResultButton = useComponent("ResultButton");
   const { t } = useTranslations();
   // (what the list was made from, read once: a new answer is a new list)
-  const { type, q, deep, start, page } = untrack(() => ({ ...props }));
+  const { type, q, deep, form, where, start, page } = untrack(() => ({ ...props }));
   // The pages fetched so far, by number
   const [pages, setPages] = createSignal(new Map([[page.page, page.results]]));
   const asked = new Set([page.page]);
@@ -182,7 +233,7 @@ function Results(props: {
       for (const number of needed) {
         if (asked.has(number)) continue;
         asked.add(number);
-        listQuery(type, q, deep, number).then(
+        listQuery(type, q, deep, where, number).then(
           (fetched) => setPages((old) => new Map(old).set(number, fetched.results)),
           // (asked again when it next comes on show)
           () => asked.delete(number),
@@ -200,8 +251,8 @@ function Results(props: {
     timer = setTimeout(() => {
       const url = new URL(window.location.href);
       // (not if the address is already that of another search: this list is on its way out)
-      if ((url.searchParams.get("q") ?? "") !== q || (url.searchParams.get("deep") === "1") !== deep)
-        return;
+      const params = searchOf(Object.fromEntries(url.searchParams));
+      if (params.q !== q || (params.deep && !where) !== deep || params.form !== form) return;
       const at = virtual.firstVisible();
       untrack(() => props.onScrolled(at));
       if (at > 0) url.searchParams.set("at", String(at));

@@ -154,6 +154,9 @@ export function Console(props: ConsoleProps) {
                   count={props.count}
                   truncated={props.truncated}
                   pending={props.pending}
+                  onToggleForm={props.onToggleForm}
+                  formOpen={props.formOpen}
+                  structured={props.structured}
                 />
               </div>
             </Show>

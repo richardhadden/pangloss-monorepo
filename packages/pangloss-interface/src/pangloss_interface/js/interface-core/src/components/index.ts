@@ -19,3 +19,4 @@ export * from "./form/ItemForm";
 export { ModelFields } from "./form/ModelFields";
 export * from "./form/NumberInput";
 export * from "./form/styles";
+export * from "./search/SearchPanel";

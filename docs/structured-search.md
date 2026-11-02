@@ -1,6 +1,6 @@
 # Structured search: finding documents and entities by pattern 🚧
 
-A planning document. **Steps 1 to 5 of the plan are done** (see [step 1](#step-1-built), [2](#step-2-built), [3](#step-3-built), [4](#step-4-built) and [step 5](#step-5-measured)); the interface (6) is not. It is a design for one endpoint that finds **documents and entities** by a pattern written as JSON: "a `Letter` whose `sender` is this person and whose `date` is after 1500, and which mentions a `Place` somewhere". The decisions made so far are at the end; the rest is a recommendation.
+A planning document. **Steps 1 to 5 of the plan are done** (see [step 1](#step-1-built), [2](#step-2-built), [3](#step-3-built), [4](#step-4-built) and [step 5](#step-5-measured)); the interface (6) is the search form of a list, [search-form.md](search-form.md) (built 2026-11-02). It is a design for one endpoint that finds **documents and entities** by a pattern written as JSON: "a `Letter` whose `sender` is this person and whose `date` is after 1500, and which mentions a `Place` somewhere". The decisions made so far are at the end; the rest is a recommendation.
 
 What exists today: `list` (by class, label text, and `deep_search`, which regex-searches the text index and resolves hits to head documents) and [autocomplete](autocomplete.md) (entities by label). Neither can say "where *this field* has *that value*".
 
@@ -114,7 +114,7 @@ Semantic spaces, conjunctions and reified relations sit between a field and its 
 | Memgraph (since 2026-11-01 the kit's, for both backends) | `pangloss_cypher/search_query.py`, `read_functions.search` | Compile a checked `Match` to Cypher and run it (`read_transaction`), returning the same page shape as `list` |
 | API | `routes/search.py` | `POST /api/search`, validation errors as 422, the limits below |
 | SDK | `protocol.search`, both flavours | One request; bound as `Document.search(match)` / `Entity.search(match)` (the class gives the root `type`) |
-| Interface | later | The create form in "pinned" mode: each field with an operator; serialises to this JSON |
+| Interface | `SearchPanel`, `schema/searchForm.ts` | The search form of a list: each field with an operator; serialises to this JSON ([search-form.md](search-form.md)) |
 
 ### How a pattern becomes Cypher
 

@@ -39,6 +39,37 @@ def test_lists_items_and_searching(page: Page, data, dev_url: str, errors: list[
     assert errors == []
 
 
+def test_the_search_form(page: Page, data, dev_url: str, errors: list[str]):
+    page.goto(f"{dev_url}/Person")
+    hydrated(page)
+    page.get_by_role("button", name="Search by fields").click()
+    page.get_by_role(
+        "combobox", name=re.compile("^Condition on has role", re.I)
+    ).select_option("missing")
+    expect(page.get_by_title("Found")).to_have_text("1")
+    page.get_by_role(
+        "combobox", name=re.compile("^Condition on has role", re.I)
+    ).select_option("match")
+    page.get_by_role("button", name="Choose a type").click()
+    page.get_by_role("menuitem", name="Role", exact=True).click()
+    page.locator('[data-search-node="Role"]').get_by_role("textbox", name="Label").fill(
+        "secretary"
+    )
+    expect(page.get_by_title("Found")).to_have_text("1")
+    page.get_by_role("combobox", name="Add what refers to it").last.select_option(
+        label="Statement · About"
+    )
+    expect(page.get_by_title("Found")).to_have_text("0")
+    # (the address of a search made with the form, opened again)
+    page.reload()
+    hydrated(page)
+    expect(page.locator('[data-search-node="Statement"]')).to_be_visible()
+    expect(page.locator("main")).not_to_contain_text(SOLID_ERROR)
+    page.get_by_role("button", name="Clear").click()
+    expect(page.get_by_title("Found")).to_have_text("3")
+    assert errors == []
+
+
 def test_pages_that_are_not_there(page: Page, data, dev_url: str, errors: list[str]):
     page.goto(f"{dev_url}/Person")
     hydrated(page)
@@ -79,7 +110,9 @@ def test_making_and_editing(page: Page, data, dev_url: str, errors: list[str]):
     # (the filter of the types in the navigation bar)
     expand_nav(page)
     page.get_by_label("Filter types").fill("stat")
-    expect(page.get_by_role("navigation", name="Main").get_by_role("link", name="Person")).to_have_count(0)
+    expect(
+        page.get_by_role("navigation", name="Main").get_by_role("link", name="Person")
+    ).to_have_count(0)
     page.get_by_role("button", name="Clear the filter").click()
     assert errors == []
 

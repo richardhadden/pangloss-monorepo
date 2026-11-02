@@ -89,16 +89,30 @@ export function createWindowVirtualizer(options: WindowVirtualizerOptions): Wind
     if (count !== settings.count) update({ count });
   });
 
-  onSettled(() => {
-    const cleanup = virtualizer._didMount();
-    // (where the list starts: below what is above it on the page)
+  // (where the list starts: below what is above it on the page)
+  const measureMargin = () => {
     const margin = list ? list.getBoundingClientRect().top + window.scrollY : 0;
+    if (margin === settings.scrollMargin) return;
     setScrollMargin(margin);
     update({ scrollMargin: margin });
+  };
+
+  onSettled(() => {
+    const cleanup = virtualizer._didMount();
+    measureMargin();
     // (a list that starts at the top is scrolled there: the window may still be where a list before it was)
     if (initialIndex > 0) virtualizer.scrollToIndex(initialIndex, { align: "start" });
     else if (window.scrollY > 0) window.scrollTo(0, 0);
-    return cleanup;
+    // (and again when what it is in changes size: what is above it may have grown, as a panel that opens over it)
+    const observer =
+      typeof ResizeObserver === "undefined" || !list?.parentElement
+        ? undefined
+        : new ResizeObserver(() => measureMargin());
+    if (observer && list?.parentElement) observer.observe(list.parentElement);
+    return () => {
+      observer?.disconnect();
+      cleanup();
+    };
   });
 
   return {

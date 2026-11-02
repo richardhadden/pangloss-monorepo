@@ -92,6 +92,12 @@ export interface ConsoleSearchProps {
   truncated?: boolean;
   /** Whether the result is being fetched again: a spinner is shown in place of the count */
   pending?: boolean;
+  /** Gives the search a button for the search form of the list, beside Deep search, which calls this */
+  onToggleForm?: () => void;
+  /** Whether the search form is open (the button is pressed) */
+  formOpen?: boolean;
+  /** Whether a search by fields is in use: what is typed narrows it, and Deep search cannot be used */
+  structured?: boolean;
 }
 
 export interface ConsoleProps extends ConsoleSearchProps {

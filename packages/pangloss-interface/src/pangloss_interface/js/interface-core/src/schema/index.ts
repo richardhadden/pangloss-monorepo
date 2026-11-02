@@ -39,3 +39,4 @@ export * from "./formValue";
 export * from "./clipboard";
 export * from "./retype";
 export * from "./validation";
+export * from "./searchForm";

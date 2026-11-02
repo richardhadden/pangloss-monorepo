@@ -27,6 +27,8 @@ export function EntityPicker(props: {
   types: string[];
   onPick: (entity: Summary) => void;
   children?: JSX.Element;
+  /** What the box says before anything is typed (by default, the types it finds) */
+  placeholder?: string;
 }) {
   const api = useApi();
   const definitions = useModels();
@@ -158,6 +160,7 @@ export function EntityPicker(props: {
     return kindTint(model?.kind, model?.interfaceMeta?.colour);
   };
   const placeholder = () =>
+    props.placeholder ??
     t("find_entity", "Find {type}…", {
       type: props.types.map((type) => modelName(type)).join(", "),
     });

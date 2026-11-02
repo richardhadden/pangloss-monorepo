@@ -2,7 +2,14 @@
 // (on the server for one request; in the browser for a few seconds, then while it is used),
 // so two components asking for the same thing share one request, and `revalidate` can
 // ask again. The arguments have to be plain values, as they make the key.
-import { getCurrentUser, getItem, listItems } from "@pangloss/interface-core";
+import {
+  compileSearch,
+  decodeSearchForm,
+  getCurrentUser,
+  getItem,
+  listItems,
+  searchItems,
+} from "@pangloss/interface-core";
 import { query, revalidate } from "@solidjs/router";
 import { isServer } from "@solidjs/web";
 import { apiClient } from "./api";
@@ -10,11 +17,23 @@ import { apiClient } from "./api";
 /** How many items a list asks for at a time (a page); more are asked for as it is scrolled */
 export const LIST_PAGE_SIZE = 50;
 
+/**
+ * A page of the list of a type: searched by the text `q` (deeply, with `deep`), or, with a `where` (the pattern of the
+ * search form, as JSON: `whereOf`), by that pattern, which has the words of `q` in it already
+ */
 export const listQuery = query(
-  (type: string, q: string, deep: boolean, page: number) =>
-    listItems(apiClient(), type, { q, deep, page, pageSize: LIST_PAGE_SIZE }),
+  (type: string, q: string, deep: boolean, where: string, page: number) =>
+    where
+      ? searchItems(apiClient(), { type, where: JSON.parse(where), page, pageSize: LIST_PAGE_SIZE })
+      : listItems(apiClient(), type, { q, deep, page, pageSize: LIST_PAGE_SIZE }),
   "list",
 );
+
+/** The pattern of the search form in the address with the words of `q`, as JSON for `listQuery` ("" if the form has no condition) */
+export function whereOf(type: string, form: string, q: string): string {
+  const where = compileSearch(decodeSearchForm(form, type), q);
+  return where ? JSON.stringify(where) : "";
+}
 
 export const itemQuery = query((type: string, id: string) => getItem(apiClient(), type, id), "item");
 
@@ -38,12 +57,12 @@ export function revalidateAll() {
 }
 
 /**
- * The search in the address of a list (`?q=rome&deep=1`), as the list query takes it. (A
- * parameter given more than once is the first.) The list page and its preload read it alike.
+ * The search in the address of a list (`?q=rome&deep=1`, and the search form's `?form={...}`), as the list query takes
+ * it. (A parameter given more than once is the first.) The list page and its preload read it alike.
  */
 export function searchOf(search: Record<string, string | string[] | undefined>) {
   const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);
-  return { q: first(search.q) ?? "", deep: first(search.deep) === "1" };
+  return { q: first(search.q) ?? "", deep: first(search.deep) === "1", form: first(search.form) ?? "" };
 }
 
 /**

@@ -66,7 +66,7 @@ export function ConsoleSearch(props: ConsoleSearchProps) {
     setDraft(text);
     clearTimeout(timer);
     // (not a deep one: that waits to be asked for)
-    if (!deepOn()) timer = setTimeout(() => search(false), DEBOUNCE_MS);
+    if (!deepOn() || props.structured) timer = setTimeout(() => search(false), DEBOUNCE_MS);
   };
   const toggleDeep = () => {
     const on = !deepOn();
@@ -103,7 +103,7 @@ export function ConsoleSearch(props: ConsoleSearchProps) {
         value={initial}
         onInput={(event) => typed(event.currentTarget.value)}
         onKeyDown={(event) => {
-          if (event.key === "Enter") search(deepOn());
+          if (event.key === "Enter") search(deepOn() && !props.structured);
         }}
         class="h-full min-w-0 flex-1 bg-transparent px-3 text-sm font-normal normal-case outline-none placeholder:text-xs placeholder:font-semibold placeholder:text-slate-500 placeholder:uppercase"
       />
@@ -124,7 +124,7 @@ export function ConsoleSearch(props: ConsoleSearchProps) {
           </Errored>
         </Show>
       </span>
-      <Show when={deepOn()}>
+      <Show when={deepOn() && !props.structured}>
         <ConsoleButton
           label={t("deep_search_run", "Run deep search (Enter)")}
           disabled={upToDate()}
@@ -139,9 +139,38 @@ export function ConsoleSearch(props: ConsoleSearchProps) {
           </svg>
         </ConsoleButton>
       </Show>
+      <Show when={props.onToggleForm}>
+        <ConsoleButton
+          label={
+            props.structured
+              ? t("search_form_in_use", "Search by fields (in use)")
+              : t("search_form", "Search by fields")
+          }
+          pressed={!!props.formOpen}
+          onClick={() => props.onToggleForm?.()}
+        >
+          {/* (a form: names, and the boxes beside them; a dot while it is in use) */}
+          <svg
+            viewBox="0 0 24 24"
+            class="size-5 select-none fill-none stroke-current stroke-2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M4 7.5h3M4 14.5h3" />
+            <rect x="10" y="5" width="10" height="5" rx="1" />
+            <rect x="10" y="12" width="10" height="5" rx="1" />
+            <path d="M4 20.5h16" />
+            <Show when={props.structured}>
+              <circle cx="20.5" cy="3.5" r="2.5" class="fill-current stroke-none" data-in-use="" />
+            </Show>
+          </svg>
+        </ConsoleButton>
+      </Show>
       <ConsoleButton
         label={t("deep_search", "Deep search")}
-        pressed={deepOn()}
+        pressed={deepOn() && !props.structured}
+        disabled={props.structured}
         onClick={toggleDeep}
       >
         <svg

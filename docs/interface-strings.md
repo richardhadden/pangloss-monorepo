@@ -6,7 +6,7 @@ a read of the source; **keep it up to date as strings are added** (and see [tran
 `ui.jsonc` slots, `title`, `log_in` and `log_out`, are where these are meant to go: slots are `snake_case`, with a text
 per language).
 
-Connected to `ui.jsonc` (with `useTranslations().t`, see [translations.md](translations.md)): the nav bar, `NavModelList` (section titles, model names), `Console` and `ConsoleSearch` (`search`, `found`, `found_more`, `deep_search`, `deep_search_run`, `new_item`) and `LoginForm`. Still English in the code: `LoginDialog`, the pages (`Loading…`, not found), `Modal`, `Spinner`, `ItemContents` (yes/no, and the field names, which should use `fieldName`), `EntityCard`, `FieldList`, `ResultButton`. "Slot" is a suggested name.
+Connected to `ui.jsonc` (with `useTranslations().t`, see [translations.md](translations.md)): the nav bar, `NavModelList` (section titles, model names), `Console` and `ConsoleSearch` (`search`, `found`, `found_more`, `deep_search`, `deep_search_run`, `search_form`, `new_item`), the search form (`search_*`) and `LoginForm`. Still English in the code: `LoginDialog`, the pages (`Loading…`, not found), `Modal`, `Spinner`, `ItemContents` (yes/no, and the field names, which should use `fieldName`), `EntityCard`, `FieldList`, `ResultButton`. "Slot" is a suggested name.
 
 **2026-11-02:** every `t()` slot of `interface-core`, `interface-app`, `pangloss_dates` and `pangloss_typology` is in
 `ui.jsonc` in English, German and French (162 slots). The typology module, the "Loading…" fallbacks, `Spinner`,
@@ -65,6 +65,18 @@ These are not shown, but are read aloud, or appear when the pointer rests on the
 | `found_more` | Found, and more: narrow the search | `ConsoleSearch` (tooltip of the count when the search was cut short: the count has a "+" after it) | the "+" is a sign, not a word |
 | `deep_search` | Deep search | `ConsoleSearch` (toggle) | |
 | `deep_search_run` | Run deep search (Enter) | `ConsoleSearch` (run button) | "Enter" names a key |
+| `search_form` | Search by fields | `ConsoleSearch` (the button of the search form) | |
+| `search_form_in_use` | Search by fields (in use) | `ConsoleSearch` (the same, while the form has a condition) | |
+| `search_form_of` | Search {type} by fields | `SearchPanel` (`aria-label` of the panel) | |
+| `search_clear`, `search_close` | Clear, Close | `SearchPanel` (buttons at its foot) | |
+| `search_not`, `search_not_named`, `search_not_title` | not; Not: {name}; Find what does not match this | `SearchPanel` (the toggle on each condition: text, `aria-label`, tooltip) | |
+| `search_operator` | Condition on {name} | `SearchPanel` (`aria-label` of the menu of operators) | |
+| `search_op_*` | contains, starts with, is, between, is one of, is any of, is all of, is one matching, has a value, has no value, has any, has none | `SearchPanel` (the operators) | `=`, `>`, `≥`, `<`, `≤` are symbols, not translated |
+| `search_from`, `search_to`, `search_and` | from, to, and | `SearchPanel` (between: the boxes' `aria-label`s, and the word between them) | |
+| `search_remove_condition` | Remove the condition on {name} | `SearchPanel` (✕ of a condition) | |
+| `search_choose_type`, `search_change_type`, `search_change_type_of` | Choose a type; Type; Change the type of {name} | `SearchPanel` (the type of a nested form) | |
+| `search_mentions`, `search_find_any_entity` | Mentions; Find an entity… | `SearchPanel` (the row of a document's mentions, and its search) | |
+| `search_referred_to_by`, `search_add_referring`, `search_source`, `search_any_field` | Referred to by; Add what refers to it; {type} · {field}; any field | `SearchPanel` (what refers to an entity) | |
 | `new_item` | New {type} | `Console` (the new button) | `{type}` is the name of the model, which has its own translation |
 | `go_to_head` | Go to the {type} | `ResultButton` (the button to the document an item is in: `aria-label` and tooltip) | `{type}` is the name of the model, which has its own translation |
 | `loading` | Loading | `Spinner` (`aria-label`), `pages/List.tsx` (a row whose page has not come yet: `aria-label`) | the same slot as above, but without the "…" |

@@ -8,7 +8,7 @@ import { httpStatus } from "@solidjs/web";
 import { lazy } from "solid-js";
 import { orderModules } from "@pangloss/interface-core";
 import { modules } from "@generated/modules";
-import { itemQuery, listQuery, pageOf, searchOf, startOf } from "./queries";
+import { itemQuery, listQuery, pageOf, searchOf, startOf, whereOf } from "./queries";
 
 // The pages of the interface modules of the installed apps: before `/:type`, which would take their addresses for a type
 // (a module that has none adds none)
@@ -29,8 +29,9 @@ export const routes = defineRoutes([
     path: "/:type",
     component: lazy(() => import("./pages/List")),
     preload: ({ params, location }) => {
-      const { q, deep } = searchOf(location.query);
-      void listQuery(params.type, q, deep, pageOf(startOf(location.query)));
+      const { q, deep, form } = searchOf(location.query);
+      const where = whereOf(params.type, form, q);
+      void listQuery(params.type, q, deep && !where, where, pageOf(startOf(location.query)));
     },
   }),
   defineRoute({ path: "/:type/new", component: lazy(() => import("./pages/New")) }),
