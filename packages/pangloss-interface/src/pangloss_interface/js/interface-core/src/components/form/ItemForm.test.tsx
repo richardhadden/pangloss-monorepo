@@ -100,7 +100,7 @@ const definitions = {
 
 type Sent = { method: string; path: string; body: Record<string, unknown>; headers?: Record<string, string> };
 
-function fakeClient(answer: (sent: Sent) => unknown) {
+function fakeClient(answer: (sent: Sent) => unknown, gone: string[] = []) {
   // (the writes; and the reads, apart: each entity field asks for the most used as it is drawn)
   const sent: Sent[] = [];
   const fetched: { path: string; params?: Record<string, unknown> }[] = [];
@@ -115,6 +115,8 @@ function fakeClient(answer: (sent: Sent) => unknown) {
     baseUrl: "/api",
     get: async (path: string, params?: Record<string, unknown>) => {
       fetched.push({ path, params });
+      // (an item that is not in the database)
+      if (gone.some((id) => path.endsWith(`/${id}`))) throw new ApiError(404, "Not found");
       return {
         results: [
           { id: "p1", type: "Person", label: "Alice" },
@@ -357,6 +359,57 @@ test("before anything is typed the most used are offered; what was picked lately
     type: "Person",
     label: "Alice",
   });
+});
+
+test("what was picked lately is offered only once the API says it is still there; one that is gone is forgotten", async () => {
+  // (p3 was picked in a database that has since been made again)
+  const { client, fetched } = fakeClient(() => ({ id: "f1", type: "Factoid", label: "F" }), ["p3"]);
+  localStorage.setItem(
+    "pangloss.recent-entities",
+    JSON.stringify([
+      { id: "p3", type: "Person", label: "Carol" },
+      { id: "p2", type: "Person", label: "Bob" },
+    ]),
+  );
+  show(client);
+  await settle();
+  // (each asked for once, by its own type)
+  expect(fetched.filter((call) => call.path === "/Person/p3")).toHaveLength(1);
+  expect(fetched.filter((call) => call.path === "/Person/p2")).toHaveLength(1);
+  const box = byLabel<HTMLInputElement>("Find Person…");
+  box.dispatchEvent(new FocusEvent("focus"));
+  await settle();
+  const options = () => [...document.body.querySelectorAll('[role="option"]')].map((option) => option.textContent);
+  expect(options()).toEqual(["PersonBob", "PersonAlice"]);
+  expect(JSON.parse(localStorage.getItem("pangloss.recent-entities")!)).toEqual([{ id: "p2", type: "Person", label: "Bob" }]);
+  // (focused again: not asked again)
+  box.dispatchEvent(new FocusEvent("focus"));
+  await settle();
+  expect(fetched.filter((call) => call.path === "/Person/p2")).toHaveLength(1);
+});
+
+test("a save refused for a reference that is not found forgets it: from those picked lately, and what holds it from the clipboard", async () => {
+  const { client } = fakeClient(() => {
+    throw new ApiError(422, "Invalid references to existing objects: author: 'p9' not found");
+  });
+  localStorage.setItem(
+    "pangloss.recent-entities",
+    JSON.stringify([
+      { id: "p9", type: "Person", label: "Gone" },
+      { id: "p2", type: "Person", label: "Bob" },
+    ]),
+  );
+  show(client, { initial: { type: "Factoid", label: "Fall of Rome", year: 476, author: { type: "Person", id: "p9", label: "Gone" } } });
+  await settle();
+  click(button("Copy Gone"));
+  await settle();
+  const clipped = () => JSON.stringify(Object.entries(localStorage).filter(([key]) => key.includes("clipboard") && !key.includes("collapsed")));
+  expect(clipped()).toContain("p9");
+  click(button("Save"));
+  await settle();
+  expect(toastText()).toContain("'p9' not found");
+  expect(JSON.parse(localStorage.getItem("pangloss.recent-entities")!)).toEqual([{ id: "p2", type: "Person", label: "Bob" }]);
+  expect(clipped()).not.toContain("p9");
 });
 
 test("the label is a heading that grows with a long label: one line of text, so Enter adds no line and pasted line breaks are spaces", async () => {

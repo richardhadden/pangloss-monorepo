@@ -5,7 +5,7 @@ import type { Summary } from "../../api";
 import { useApi, useModels, useTranslations } from "../../context";
 import { kindTint, Spinner } from "../../primitives";
 import { getModel } from "../../schema";
-import { matchingEntities, recentEntities, rememberEntity } from "./recent";
+import { matchingEntities, recentEntities, rememberEntity, stillThere } from "./recent";
 
 // (how long after the last key the search is made)
 const DEBOUNCE_MS = 250;
@@ -18,7 +18,8 @@ const TOP_SHOWN = 10;
  * A search box for an entity of one of `types`: what is typed is looked for in the labels (the
  * API's autocomplete), and the matches are listed under it, as wide as it, to choose from with
  * the mouse or with the arrow keys and Enter (Escape closes the list). Above the matches are the
- * entities of the types picked lately (in this browser) that match too, marked with a clock; before
+ * entities of the types picked lately (in this browser) that match too, marked with a clock (each only
+ * once the API has said it is still there: the browser outlives a database made again); before
  * anything is typed those are offered, and then the ones most used (asked for as soon as the box is
  * drawn). `children` are joined on to the right end of the box (the button to make a new one).
  */
@@ -36,6 +37,8 @@ export function EntityPicker(props: {
   // (the most used, offered before anything is typed; and those picked lately, of any type)
   const [top, setTop] = createSignal<Summary[]>([]);
   const [recent, setRecent] = createSignal<Summary[]>([]);
+  // (the ids of those picked lately that are still in the database)
+  const [alive, setAlive] = createSignal<Set<string>>(new Set());
   const [busy, setBusy] = createSignal(false);
   const [failed, setFailed] = createSignal(false);
   const [open, setOpen] = createSignal(false);
@@ -46,9 +49,20 @@ export function EntityPicker(props: {
   let timer: ReturnType<typeof setTimeout> | undefined;
   let ticket = 0;
   onCleanup(() => clearTimeout(timer));
+  // (those picked lately, and whether each of this field's types is still there; another field may have picked one since)
+  const loadRecent = () => {
+    const all = recentEntities();
+    setRecent(all);
+    for (const entity of matchingEntities(definitions, all, props.types, "")) {
+      void stillThere(api, entity).then((there) => {
+        if (there) setAlive((ids) => new Set(ids).add(entity.id));
+        else setRecent((now) => now.filter((other) => other.id !== entity.id));
+      });
+    }
+  };
   // (in the browser only: what was picked lately is in its storage)
   onSettled(() => {
-    setRecent(recentEntities());
+    loadRecent();
     autocomplete(api, { types: props.types, pageSize: TOP_SHOWN })
       .then((page) => setTop(page.results))
       .catch(() => {
@@ -95,7 +109,12 @@ export function EntityPicker(props: {
   };
   const blank = () => text().trim() === "";
   const recentShown = () =>
-    matchingEntities(definitions, recent(), props.types, text()).slice(0, RECENT_SHOWN);
+    matchingEntities(
+      definitions,
+      recent().filter((entity) => alive().has(entity.id)),
+      props.types,
+      text(),
+    ).slice(0, RECENT_SHOWN);
   // (what is listed: those picked lately first, then what was found, or the most used, without them)
   const options = () => {
     const first = recentShown();
@@ -173,8 +192,7 @@ export function EntityPicker(props: {
           }}
           onKeyDown={onKeyDown}
           onFocus={() => {
-            // (another field may have picked one since)
-            setRecent(recentEntities());
+            loadRecent();
             setOpen(true);
           }}
           onBlur={() => setOpen(false)}

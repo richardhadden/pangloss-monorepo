@@ -102,6 +102,7 @@
       "logging_in": "Logging in…",
       "login_failed": "That username and password do not match. Check them and try again.",
       "modified": "Modified",
+      "narrow_type": "Narrow {name} to a type below it",
       "nav_expand": "Expand the navigation bar",
       "nav_filter": "Filter types",
       "nav_filter_clear": "Clear the filter",
@@ -127,6 +128,9 @@
       "reload": "Load the new version",
       "remove": "Remove",
       "remove_item": "Remove {name}",
+      "retype_confirm": "Change the type",
+      "retype_loses": "{type} has no room for what is in these fields of {from}, which will be lost:",
+      "retype_title": "Change to {type}?",
       "save": "Save",
       "search": "Search",
       "search_failed": "The search failed",
@@ -168,6 +172,7 @@
       "typology_subtypes": "Subtypes",
       "typology_top_level": "(top level)",
       "username": "Username",
+      "widen_type": "Widen {name} to a type above it",
       "yes": "Yes"
     },
     "de": {
@@ -266,6 +271,7 @@
       "logging_in": "Anmeldung läuft …",
       "login_failed": "Benutzername und Passwort passen nicht zusammen. Bitte prüfen Sie Ihre Eingaben und versuchen Sie es erneut.",
       "modified": "Geändert",
+      "narrow_type": "{name} auf einen Untertyp einschränken",
       "nav_expand": "Navigationsleiste ausklappen",
       "nav_filter": "Typen filtern",
       "nav_filter_clear": "Filter löschen",
@@ -291,6 +297,9 @@
       "reload": "Neue Version laden",
       "remove": "Entfernen",
       "remove_item": "{name} entfernen",
+      "retype_confirm": "Typ ändern",
+      "retype_loses": "{type} hat keinen Platz für den Inhalt dieser Felder von {from}; er geht verloren:",
+      "retype_title": "In {type} ändern?",
       "save": "Speichern",
       "search": "Suchen",
       "search_failed": "Die Suche ist fehlgeschlagen",
@@ -332,6 +341,7 @@
       "typology_subtypes": "Untertypen",
       "typology_top_level": "(oberste Ebene)",
       "username": "Benutzername",
+      "widen_type": "{name} auf einen Obertyp erweitern",
       "yes": "Ja"
     },
     "fr": {
@@ -430,6 +440,7 @@
       "logging_in": "Connexion en cours…",
       "login_failed": "Ce nom d’utilisateur et ce mot de passe ne correspondent pas. Vérifiez-les et réessayez.",
       "modified": "Modifié",
+      "narrow_type": "Restreindre {name} à un sous-type",
       "nav_expand": "Déplier la barre de navigation",
       "nav_filter": "Filtrer les types",
       "nav_filter_clear": "Effacer le filtre",
@@ -455,6 +466,9 @@
       "reload": "Charger la nouvelle version",
       "remove": "Retirer",
       "remove_item": "Retirer : {name}",
+      "retype_confirm": "Changer le type",
+      "retype_loses": "{type} n’a pas de place pour le contenu de ces champs de {from}, qui sera perdu :",
+      "retype_title": "Changer en {type} ?",
       "save": "Enregistrer",
       "search": "Rechercher",
       "search_failed": "La recherche a échoué",
@@ -496,6 +510,7 @@
       "typology_subtypes": "Sous-types",
       "typology_top_level": "(niveau supérieur)",
       "username": "Nom d’utilisateur",
+      "widen_type": "Élargir {name} à un type parent",
       "yes": "Oui"
     }
   },

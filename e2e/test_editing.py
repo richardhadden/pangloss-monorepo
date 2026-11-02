@@ -71,6 +71,27 @@ def test_an_entity_field_offers_the_most_used_then_puts_those_picked_lately_firs
     expect(options).to_have_text([re.compile("Marie of Burgundy")])
 
 
+def test_an_entity_picked_lately_that_is_no_longer_in_the_database_is_not_offered(logged_in: Page, data):
+    page = logged_in
+    page.goto("/Statement/new")
+    hydrated(page)
+    # (picked in a database that has since been made again: the browser keeps it)
+    page.evaluate(
+        """localStorage.setItem("pangloss.recent-entities", JSON.stringify([
+            {id: "01a18ca9-70fa-76ff-a124-a0dedc18048b", type: "Person", label: "Gone for good"}]))"""
+    )
+    page.goto("/Statement/new")
+    hydrated(page)
+    options = page.get_by_role("option")
+    page.get_by_label("Find Person…").focus()
+    expect(options).to_have_text(
+        [re.compile("Marie of Burgundy"), re.compile("Maximilian"), re.compile("Charles the Bold")]
+    )
+    expect(page.get_by_role("option", name="Gone for good")).to_have_count(0)
+    # (and it is forgotten)
+    page.wait_for_function("localStorage.getItem('pangloss.recent-entities') === '[]'")
+
+
 def test_an_incomplete_form_is_not_sent_and_says_what_is_wrong_at_its_fields(logged_in: Page, data):
     page = logged_in
     page.goto("/Statement/new")

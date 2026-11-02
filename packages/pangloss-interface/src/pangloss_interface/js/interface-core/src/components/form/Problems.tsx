@@ -1,10 +1,18 @@
 import { createEffect, For, Show, untrack } from "solid-js";
 import { ApiError } from "../../api";
-import { useItemForm, useModels, useToasts, useTranslations } from "../../context";
+import { useClipboard, useItemForm, useModels, useToasts, useTranslations } from "../../context";
 import type { ItemFormState } from "../../context";
 import { useErrorText } from "../../primitives";
 import { ItemSchemas, serverProblems, setValidationMessages, validateItem } from "../../schema";
 import type { FieldProblem, Path, SayProblem } from "../../schema";
+import { forgetEntities, missingIds } from "./recent";
+
+/** Whether `value`, or anything inside it, has one of `ids` */
+function holds(value: unknown, ids: Set<string>): boolean {
+  if (Array.isArray(value)) return value.some((item) => holds(item, ids));
+  if (typeof value !== "object" || value === null) return false;
+  return Object.entries(value).some(([key, inner]) => (key === "id" && ids.has(String(inner))) || holds(inner, ids));
+}
 
 /**
  * What a problem says, by its code, in the language of the page (a UI string, `invalid_<code>`):
@@ -118,6 +126,7 @@ export function useSaveChecks(state: ItemFormState, root: () => HTMLElement | un
   const text = useProblemText();
   const say = useSayProblem();
   const errorText = useErrorText();
+  const clipboard = useClipboard();
   const schemas = new ItemSchemas(definitions);
   // (what the check found is shown, not what the API said: that can be checked again in another language)
   let checked = false;
@@ -176,6 +185,14 @@ export function useSaveChecks(state: ItemFormState, root: () => HTMLElement | un
       return false;
     },
     refused(error: unknown): void {
+      // (what the database does not have, such as an entity picked before it was made again, is not offered again)
+      const missing = new Set(missingIds(error));
+      if (missing.size > 0) {
+        forgetEntities(missing);
+        for (const entry of clipboard?.entries() ?? []) {
+          if (holds(entry.value, missing)) clipboard?.remove(entry.key);
+        }
+      }
       if (error instanceof ApiError && error.status === 422) {
         checked = false;
         show(serverProblems(definitions, error.detail));

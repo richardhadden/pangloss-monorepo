@@ -42,7 +42,7 @@ It answers one page, best match first:
 
 ## Before anything is typed: the most used
 
-With no `q` (or a blank one) the answer is the entities of the types, those with the most edges **out** of them first, then alphabetically. An entity's reverse edges go out of it, one for each place a document refers to it, so this is "the most referred to". The interface asks for it as soon as an empty entity field is drawn, and offers it (under the entities the user picked recently) before anything is typed. `pangloss_cypher.autocomplete_query.most_used_query`.
+With no `q` (or a blank one) the answer is the entities of the types, those with the most edges **out** of them first, then alphabetically. An entity's reverse edges go out of it, one for each place a document refers to it, so this is "the most referred to". The interface asks for it as soon as an empty entity field is drawn, and offers it (under the entities the user picked recently) before anything is typed. Those picked recently are kept in the browser (`pangloss.recent-entities` in local storage), which outlives a database made again: each is offered only once `GET /api/<Type>/<id>` has found it (asked once a page for each), and one that is a 404 is forgotten. A save refused because a reference is not found (a 422, `'<id>' not found`) also forgets it, and takes off the clipboard what holds it. `pangloss_cypher.autocomplete_query.most_used_query`.
 
 It counts the edges of every entity of the types, so on a big database it is not cheap (not measured yet on the 600,000 nodes of [large data](large-data.md)). A count kept on the node, or a cache, would be the next step if it is slow.
 
