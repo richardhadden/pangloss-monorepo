@@ -550,9 +550,10 @@ async def test_incoming_relation_through_a_reified_relation(clear_database):
     assert len(read.involves_person_reverse) == 1
     item = read.involves_person_reverse[0]
 
-    # The linked document, with only the fields of this chain
+    # The linked document, with its label and only the fields of this chain
     assert item.id == statement.id
     assert item.type == "Statement"
+    assert item.label == "A Statement"
     assert not hasattr(item, "text")
     assert not hasattr(item, "concerns_person")
 

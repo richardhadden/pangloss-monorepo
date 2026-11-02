@@ -3171,6 +3171,17 @@
      "required": true,
      "validation_alias": "'id'"
     },
+    "label": {
+     "alias": null,
+     "annotation": "None | str",
+     "default": "None",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": null
+    },
     "meta": {
      "alias": "meta",
      "annotation": "_DocumentViewAPIMeta",
@@ -3230,6 +3241,17 @@
      "metadata": [],
      "required": true,
      "validation_alias": "'id'"
+    },
+    "label": {
+     "alias": null,
+     "annotation": "None | str",
+     "default": "None",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": null
     },
     "meta": {
      "alias": "meta",
@@ -3291,6 +3313,17 @@
      "required": true,
      "validation_alias": "'id'"
     },
+    "label": {
+     "alias": null,
+     "annotation": "None | str",
+     "default": "None",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": null
+    },
     "meta": {
      "alias": "meta",
      "annotation": "_DocumentViewAPIMeta",
@@ -3351,6 +3384,17 @@
      "required": true,
      "validation_alias": "'id'"
     },
+    "label": {
+     "alias": null,
+     "annotation": "None | str",
+     "default": "None",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": null
+    },
     "meta": {
      "alias": "meta",
      "annotation": "_DocumentViewAPIMeta",
@@ -3410,6 +3454,17 @@
      "metadata": [],
      "required": true,
      "validation_alias": "'id'"
+    },
+    "label": {
+     "alias": null,
+     "annotation": "None | str",
+     "default": "None",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": null
     },
     "lived": {
      "alias": null,
@@ -9787,6 +9842,17 @@
      "required": true,
      "validation_alias": "'id'"
     },
+    "label": {
+     "alias": null,
+     "annotation": "None | str",
+     "default": "None",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": null
+    },
     "meta": {
      "alias": "meta",
      "annotation": "_DocumentViewAPIMeta",
@@ -9858,6 +9924,17 @@
      "required": true,
      "validation_alias": "'id'"
     },
+    "label": {
+     "alias": null,
+     "annotation": "None | str",
+     "default": "None",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": null
+    },
     "meta": {
      "alias": "meta",
      "annotation": "_DocumentViewAPIMeta",
@@ -9918,6 +9995,17 @@
      "required": true,
      "validation_alias": null
     },
+    "label": {
+     "alias": null,
+     "annotation": "None | str",
+     "default": "None",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": null
+    },
     "meta": {
      "alias": "meta",
      "annotation": "_DocumentViewAPIMeta",
@@ -9966,6 +10054,17 @@
      "metadata": [],
      "required": true,
      "validation_alias": "'id'"
+    },
+    "label": {
+     "alias": null,
+     "annotation": "None | str",
+     "default": "None",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": null
     },
     "meta": {
      "alias": "meta",
@@ -10036,6 +10135,17 @@
      "discriminator": null,
      "metadata": [],
      "required": true,
+     "validation_alias": null
+    },
+    "label": {
+     "alias": null,
+     "annotation": "None | str",
+     "default": "None",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
      "validation_alias": null
     },
     "meta": {
@@ -10876,6 +10986,17 @@
      "metadata": [],
      "required": true,
      "validation_alias": "'id'"
+    },
+    "label": {
+     "alias": null,
+     "annotation": "None | str",
+     "default": "None",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": null
     },
     "meta": {
      "alias": "meta",

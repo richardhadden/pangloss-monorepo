@@ -80,6 +80,11 @@ def build_incoming_bound_model(
         __config__=ConfigDict(alias_generator=to_camel),
         type=(Literal[source_model.__name__], source_model.__name__),  # type: ignore
     )
+    # What the document is called, so that it can be shown by name (the fields of `View` are not
+    # inherited by a model made from it; optional, so that a document with none is still read)
+    set_field(
+        incoming_bound_model, "label", FieldInfo(annotation=str | None, default=None)
+    )
     annotation = get_relation_annotation_types(
         incoming_relation_definition.field_definition, field_bindings=[]
     )

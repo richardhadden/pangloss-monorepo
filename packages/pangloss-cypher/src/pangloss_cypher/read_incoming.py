@@ -226,6 +226,8 @@ async def fetch_incoming_relations(
             item = {
                 "id": holder["id"],
                 "type": holder["type"],
+                # (what the document is called, so that it can be shown by name, not only by its type)
+                "label": holder.get("label"),
                 "meta": meta,
                 # (the field of the document, which may be a list of reified relations)
                 field_definition.field_name: (
