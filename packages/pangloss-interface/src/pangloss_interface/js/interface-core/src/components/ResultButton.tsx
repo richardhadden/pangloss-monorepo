@@ -1,7 +1,7 @@
 import { Show } from "solid-js";
 import type { ParentProps } from "solid-js";
 import { useModels, useTranslations } from "../context";
-import { kindTint } from "../primitives";
+import { kindRule, kindTint } from "../primitives";
 import { getModel } from "../schema";
 import type { ResultButtonProps } from "../types";
 import { Customised } from "./Customised";
@@ -36,12 +36,20 @@ function DefaultResultButton(props: ResultButtonProps) {
   const definitions = useModels();
   const { t, modelName } = useTranslations();
   const model = () => getModel(definitions, props.type);
-  // (what is next to the button to the head node is square on that side)
-  const flushLeft = () => props.head !== undefined;
-  const barFlush = () => flushLeft() && (props.spaces ?? []).length === 0;
   return (
-    <div class="flex items-stretch">
-      {/* (an item inside a document has a button to it, always at the left end: not in the bands) */}
+    // (an item inside a document has a button to it, always at the left end: what is next to it is in it, as the
+    // spaces are in each other: the button's colour is the whole row's, under the rounded corners of what is next)
+    <div
+      class={[
+        "flex items-stretch rounded-sm",
+        // (its hairlines too, top, bottom and left, as the tab of a space has them: drawn over its edges, under
+        // what is next, which hides them but at its rounded corners)
+        {
+          "relative isolate bg-slate-100/70 after:pointer-events-none after:absolute after:inset-0 after:-z-10 after:rounded-sm after:border-y-[0.5px] after:border-l-[0.5px] after:border-slate-400/70":
+            !!props.head,
+        },
+      ]}
+    >
       <Show when={props.head}>
         {(head) => (
           <a
@@ -52,7 +60,7 @@ function DefaultResultButton(props: ResultButtonProps) {
             title={t("go_to_head", "Go to the {type}", {
               type: modelName(head().type),
             })}
-            class="flex w-10 shrink-0 items-center justify-center rounded-l-sm border-[0.5px] border-r-0 border-slate-400/70 bg-slate-100/70 text-slate-500 select-none hover:bg-slate-200/70 active:bg-slate-300/70"
+            class="flex w-10 shrink-0 items-center justify-center rounded-l-sm text-slate-500 select-none hover:bg-slate-200/70 active:bg-slate-300/70"
           >
             {/* (layers: the context the item is in) */}
             <svg
@@ -72,25 +80,27 @@ function DefaultResultButton(props: ResultButtonProps) {
           </a>
         )}
       </Show>
-      <div class="min-w-0 flex-1">
-        <SpaceBands spaces={props.spaces ?? []} depth={0} flushLeft={flushLeft()}>
+      <div class="min-w-0 flex-1 rounded-sm bg-white">
+        <SpaceBands spaces={props.spaces ?? []} depth={0} fill>
           <a
             href={props.href}
             class={[
-              "flex w-full items-stretch overflow-hidden border-[0.5px] border-slate-400/70 bg-slate-100/70 hover:bg-slate-200/70 active:bg-slate-300/70",
-              { "rounded-sm": !barFlush(), "rounded-r-sm": barFlush() },
+              // (framed on its right only: its type has a frame in its own colour, as a chip's has, and the label top and bottom)
+              "flex w-full items-stretch overflow-hidden rounded-sm border-r-[0.5px] border-slate-400/70 bg-slate-100/70 hover:bg-slate-200/70 active:bg-slate-300/70",
             ]}
           >
             <span
               class={[
-                "flex shrink-0 items-center border-r-[0.5px] border-slate-400/70 px-4 py-3 text-xs font-semibold uppercase select-none",
+                "flex shrink-0 items-center border-[0.5px] px-4 py-3 text-xs font-semibold uppercase select-none",
+                "rounded-l-sm",
                 kindTint(model()?.kind, model()?.interfaceMeta?.colour),
+                kindRule(model()?.kind, model()?.interfaceMeta?.colour),
               ]}
             >
               <span class="min-w-0 truncate">{modelName(props.type)}</span>
             </span>
             {/* (a block, not a flex container, so that what does not fit ends in "…"; the line breaks of a label are spaces here) */}
-            <span class="min-w-0 flex-1 self-center truncate px-4 py-3 text-sm">
+            <span class="min-w-0 flex-1 truncate border-y-[0.5px] border-slate-400/70 px-4 py-3 text-sm">
               {props.label}
             </span>
           </a>

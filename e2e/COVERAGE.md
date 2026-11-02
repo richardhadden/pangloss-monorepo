@@ -38,7 +38,7 @@ about her "held court at Ghent") and Charles the Bold (no role); `types` has onl
 | List page: "truncated" (`count+`, "narrow the search") | ⬜ | needs more results than `SEARCH_HIT_LIMIT`: set it low in the e2e settings |
 | List page: scrolling loads more (virtualised, a page at a time); `?at=` kept as it is scrolled, and reloading or going back starts there | ✅ | `test_a_long_list_is_loaded_as_it_is_scrolled_and_starts_where_it_was_left` (130 people) |
 | Item page: fields, references as chips, reverse relations, no empty rows | ✅ | |
-| Item page and form: every row of fields under a faint rule; rows of reverse relations with more room, their items centred on each other in a line; head bars and chips framed by a hairline, square buttons; context labels round a chip smaller and muted | 🚧 | seen in screenshots of the demo data; no test of the look |
+| Item page and form: every row of fields under a faint rule; rows of reverse relations with more room, their items centred on each other in a line; head bars and chips framed by a hairline, square buttons; the spaces of a chip or a list row as muted tabs before it, not round it | 🚧 | seen in screenshots of the demo data; no test of the look |
 | Item page: reified relations without a "target" key; the full trail (spaces and documents) round a chip; reverse through a reified relation shows the field in its document | 🚧 | unit tests in `ItemContents.test.tsx`; the e2e project has no reified relation or semantic space |
 | Dates (`pangloss_dates` module): a date is said as a person would, not listed by field | 🚧 | unit tests in the module (`format.test.ts`, `DateCard.test.tsx`); the e2e project has no dates |
 | Item page: a type in a field leads to the page of the type (module page) | ✅ | |
@@ -51,6 +51,7 @@ about her "held court at Ghent") and Charles the Bold (no role); `types` has onl
 | Interface translations shown in another language | — | not connected |
 | Edit button in the console of an item: only for someone logged in | ✅ | `test_editing.py`; unit tests in `Console.test.tsx` |
 | Edit item: the form has the item, saves a change and shows the item | ✅ | |
+| Edit button of a document inside another: to the form of its head document (`?show=<id>`), scrolled to its block | 🚧 | checked with the demo data (a Transfer in a Factoid); the e2e models have no nested documents |
 | New item form: fields, an entity found by search, saved and shown | ✅ | |
 | A new entity made from the form (+ beside the search, dialog) is chosen | ✅ | |
 | A rejected form says what is wrong and keeps what was typed; Cancel leaves without saving | ✅ | |

@@ -7,7 +7,7 @@ import {
   useTranslations,
   userIsLoggedIn,
 } from "../context";
-import { ConsoleButton, kindTint, spaceTint } from "../primitives";
+import { ConsoleButton, kindRule, kindTint, spaceTint } from "../primitives";
 import { ConsoleSearch } from "./ConsoleSearch";
 import { getModel } from "../schema";
 import type { ConsoleProps } from "../types";
@@ -20,34 +20,31 @@ function pluralOf(name: string): string {
 }
 
 /**
- * What is in the semantic spaces `spaces` (outermost first): each is a band round the next,
- * the height of the bar, with its name at its left. (The same look as the bands round a result.)
+ * What is in the semantic spaces `spaces` (outermost first), as they are beside a chip: the name of
+ * each a muted tab before what is in it, the height of the bar, each a box of its colour that the
+ * next is inside, rounded on its left with a hairline, on a base the colour of the bar (so the
+ * colours of the spaces round it do not show through, but at its rounded corners). The top and
+ * bottom are the bar's own edges.
  */
 function Wrapped(props: ParentProps<{ spaces: string[]; depth: number }>) {
   const definitions = useModels();
   const { modelName } = useTranslations();
-  const tint = () =>
-    spaceTint(
-      getModel(definitions, props.spaces[0] ?? "")?.interfaceMeta?.colour,
-      props.depth,
-    );
   return (
     <Show when={props.spaces.length > 0} fallback={props.children}>
       <div
         class={[
-          "flex shrink-0 items-stretch self-stretch border-slate-400/70",
-          {
-            "border-r-[0.5px]": props.depth === 0,
-            "rounded-sm border-[0.5px]": props.depth > 0,
-          },
-          tint(),
+          "relative isolate flex shrink-0 items-stretch self-stretch",
+          // (quieter than the type: a veil over the tint, under what is in it)
+          "before:pointer-events-none before:absolute before:inset-0 before:-z-10 before:bg-white/30",
+          // (the outermost is at the left end of the bar; the others are in the one before)
+          { "rounded-l-sm border-l-[0.5px] border-slate-400/70 before:rounded-l-sm": props.depth > 0 },
+          spaceTint(getModel(definitions, props.spaces[0] ?? "")?.interfaceMeta?.colour, props.depth),
         ]}
       >
-        {/* (smaller than the type: the spaces are its context, the type is what the item is) */}
-        <span class="flex items-center px-2.5 text-[0.6rem] font-semibold uppercase select-none">
-          {modelName(props.spaces[0] ?? "")}
+        <span class="flex items-center px-2.5 font-medium select-none">
+          <span class="opacity-70">{modelName(props.spaces[0] ?? "")}</span>
         </span>
-        <div class="flex items-stretch py-1 pr-1">
+        <div class="flex items-stretch rounded-l-sm bg-slate-100 text-slate-700">
           <Wrapped spaces={props.spaces.slice(1)} depth={props.depth + 1}>
             {props.children}
           </Wrapped>
@@ -123,17 +120,16 @@ export function Console(props: ConsoleProps) {
         <Portal mount={element()}>
           <div class="flex h-full min-w-0 flex-1 items-center justify-between gap-4">
             <div class="flex h-full min-w-0 items-center">
-              {/* (the semantic spaces the item is in wrap its type, outermost first, as they wrap a result) */}
+              {/* (the semantic spaces the item is in come before its type, outermost first, as they do before a chip) */}
               <Wrapped spaces={props.spaces ?? []} depth={0}>
-                {/* (the type fills the height of the bar, tinted by its kind; inside a space, a box in the band) */}
+                {/* (the type fills the height of the bar, tinted by its kind, its sides in that colour as a chip's type is
+                     framed; inside a space, rounded on its left, as a tab in one is) */}
                 <span
                   class={[
-                    "flex shrink-0 items-center self-stretch border-slate-400/70 px-4",
-                    {
-                      "border-r-[0.5px]": !wrapped(),
-                      "rounded-sm border-[0.5px]": wrapped(),
-                    },
+                    "flex shrink-0 items-center self-stretch border-r-[0.5px] px-4",
+                    { "rounded-l-sm border-l-[0.5px]": wrapped() },
                     kindTint(kind(), model()?.interfaceMeta?.colour),
+                    kindRule(kind(), model()?.interfaceMeta?.colour),
                   ]}
                 >
                   <Show when={props.list} fallback={modelName(props.type)}>

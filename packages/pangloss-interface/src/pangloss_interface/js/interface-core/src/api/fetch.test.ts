@@ -188,6 +188,13 @@ test("only an item inside another has a head node to go to", () => {
   });
 });
 
+test("the head of an item from its whole meta, which has no isHeadNode: a head node's head is itself", () => {
+  const meta = (headNodeType: string, headNodeId: string) =>
+    ({ version: 1, published: true, reviewStatus: null, createdBy: null, createdWhen: "", updatedBy: null, updatedWhen: null, headNodeType, headNodeId });
+  expect(headOf({ id: "1", meta: meta("Factoid", "1") })).toBeUndefined();
+  expect(headOf({ id: "2", meta: meta("Factoid", "1") })).toEqual({ type: "Factoid", id: "1" });
+});
+
 test("the trail has the spaces and the documents between them, but not the item itself", () => {
   expect(contextTrail(undefined)).toEqual([]);
   expect(

@@ -4,6 +4,7 @@ import {
   getModel,
   useComponent,
   useModels,
+  headOf,
   useTranslations,
   wrappingSpaces,
 } from "@pangloss/interface-core";
@@ -79,6 +80,16 @@ function Forget(props: { onShow: (shown: undefined) => void }) {
   return null;
 }
 
+// Where the edit button goes: the item's own form, or, for a document inside another (which is edited only
+// as a part of it), the form of the one it is in, scrolled to it
+function editHref(shown: Shown | undefined): string | undefined {
+  if (!shown) return undefined;
+  const head = headOf(shown);
+  return head
+    ? `/${head.type}/${encodeURIComponent(head.id)}/edit?show=${encodeURIComponent(shown.id)}`
+    : `/${shown.type}/${encodeURIComponent(shown.id)}/edit`;
+}
+
 // One Document or Entity: /Person/<id>
 export default function EntityPage(props: RouteProps<"/:type/:id">) {
   const Console = useComponent("Console");
@@ -106,9 +117,7 @@ export default function EntityPage(props: RouteProps<"/:type/:id">) {
         label={shown()?.label}
         spaces={wrappingSpaces(shown()?.spaces)}
         meta={shown()?.meta}
-        editHref={
-          shown() ? `/${shown()!.type}/${encodeURIComponent(shown()!.id)}/edit` : undefined
-        }
+        editHref={editHref(shown())}
       />
       <Errored
         fallback={(error) => (

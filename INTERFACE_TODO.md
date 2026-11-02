@@ -39,3 +39,6 @@ Just human readable date / range
 [x] Reverse view from entity, e.g. http://localhost:3000/Person/01a18ca9-703f-7157-9205-0b98ab6f4e56 Items in the same field should be centered vertically (they can be different heights as some are wrapped)
 [x] More y height spacing between items in reverse relations from entity (screen shot it and take a look... a little too dense and confusing)
 [x] where we have nested context labels in chips, make the context labels smaller font, and maybe slightly mute the background colour of the context labels
+[ ] Typology types are displayed differently in view and edit. Make them chips, like edit
+[ ] don't use dropdowns for enums, use selectable pills -- unless the options are a huge number (I assume date gregorian and julian are enum?)
+[ ] when adding an item to a list field (on clicking add), add a small flash or something (slightly thicker border/some shadow that fades out) around the newly created input (hard to see what's happened otherwise); and auto-focus the field

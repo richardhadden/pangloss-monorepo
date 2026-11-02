@@ -1,4 +1,4 @@
-import type { ContextLabel, Summary } from "./types";
+import type { ContextLabel, ItemMeta, Summary } from "./types";
 
 /**
  * The semantic spaces an item is wrapped in, outermost first, from its context labels: the
@@ -12,12 +12,18 @@ export function wrappingSpaces(
     .filter((type) => type !== "#rootcontext");
 }
 
-/** The head node (the document, or entity, that holds it) of an item that is inside another, else undefined */
-export function headOf(
-  item: Summary,
-): { type: string; id: string } | undefined {
+/**
+ * The head node (the document, or entity, that holds it) of an item that is inside another, else
+ * undefined: from a list's summary or an item's whole meta (which has no `isHeadNode`: a head node's
+ * `headNodeId` is its own id)
+ */
+export function headOf(item: {
+  id?: string;
+  meta?: Pick<NonNullable<Summary["meta"]>, "isHeadNode" | "headNodeType" | "headNodeId"> | ItemMeta | null;
+}): { type: string; id: string } | undefined {
   const { isHeadNode, headNodeType, headNodeId } = item.meta ?? {};
-  if (isHeadNode || !headNodeType || !headNodeId) return undefined;
+  if (isHeadNode || typeof headNodeType !== "string" || typeof headNodeId !== "string") return undefined;
+  if (!headNodeType || !headNodeId || headNodeId === item.id) return undefined;
   return { type: headNodeType, id: headNodeId };
 }
 

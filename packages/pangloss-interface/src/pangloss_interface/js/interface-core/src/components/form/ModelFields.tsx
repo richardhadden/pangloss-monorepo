@@ -74,12 +74,15 @@ function Block(
     onRemove?: () => void;
     /** Puts it on the clipboard, copied or cut */
     clip?: { copy: () => void; cut: () => void };
+    /** The id of the item it is (a document inside the one edited), to find it by: `?show=` scrolls to it */
+    itemId?: string;
   }>,
 ) {
   const { t, modelName } = useTranslations();
   const [folded, setFolded] = createSignal(false);
   return (
-    <div class="flex w-full min-w-0 flex-col">
+    // (scrolled to, it stops clear of the console bar, with room for a line of what it is in)
+    <div class="flex w-full min-w-0 scroll-mt-28 flex-col" data-item-id={props.itemId}>
       <div class={headBarClass}>
         <span class={[typeChipClass, props.tint || plainTint, props.rule]}>{modelName(props.type)}</span>
         <div class={headRestClass}>
@@ -749,6 +752,7 @@ function RelationItem(props: {
           rule={kindRule(model()?.kind, model()?.interfaceMeta?.colour)}
           onRemove={props.onRemove}
           clip={clip}
+          itemId={typeof value()?.id === "string" ? String(value()!.id) : undefined}
         >
           <ItemFields model={model()!} path={props.path} />
         </Block>

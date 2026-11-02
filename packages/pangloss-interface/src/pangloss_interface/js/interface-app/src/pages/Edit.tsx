@@ -4,20 +4,42 @@ import {
   useComponent,
   useTranslations,
 } from "@pangloss/interface-core";
-import { useNavigate } from "@solidjs/router";
+import { useNavigate, useSearchParams } from "@solidjs/router";
 import type { RouteProps } from "@solidjs/router";
-import { createMemo, createSignal, Errored, Loading, Show } from "solid-js";
+import { createMemo, createSignal, Errored, Loading, onSettled, Show } from "solid-js";
 import { apiClient } from "../api";
 import { revalidateAll } from "../queries";
 import { Page } from "../Page";
 
-// Change an item: /Person/<id>/edit. Only for someone logged in. The form works on a copy of the
+// Once the form is on show, scrolls to the document inside it whose id is `id` (the block that has it in
+// `data-item-id`), and lights it up for a moment, so the eye finds it
+function ScrollToNested(props: { id: string | undefined }) {
+  onSettled(() => {
+    const id = props.id;
+    if (!id) return;
+    // (after the browser has laid the form out)
+    requestAnimationFrame(() => {
+      const block = document.querySelector<HTMLElement>(`[data-item-id="${CSS.escape(id)}"]`);
+      if (!block) return;
+      block.scrollIntoView({ block: "start" });
+      block.animate(
+        [{ backgroundColor: "rgb(253 230 138 / 0.45)" }, { backgroundColor: "transparent" }],
+        { duration: 2000, easing: "ease-out" },
+      );
+    });
+  });
+  return null;
+}
+
+// Change an item: /Person/<id>/edit (`?show=<id>`: of a document inside it, to scroll to; its own page's
+// edit button comes here, as such a document is edited only as a part of the one it is in). Only for someone logged in. The form works on a copy of the
 // edit view, and saving sends it back with the version it was loaded at; if someone saved
 // meanwhile, the form offers to load the item again (`reload`).
 export default function EditItem(props: RouteProps<"/:type/:id/edit">) {
   const ItemForm = useComponent("ItemForm");
   const ErrorMessage = useComponent("ErrorMessage");
   const navigate = useNavigate();
+  const [search] = useSearchParams();
   const { t } = useTranslations();
   const [reload, setReload] = createSignal(0);
   const item = createMemo(() => {
@@ -45,6 +67,9 @@ export default function EditItem(props: RouteProps<"/:type/:id/edit">) {
                   onReload={() => setReload(reload() + 1)}
                 />
               )}
+            </Show>
+            <Show when={item()}>
+              <ScrollToNested id={typeof search.show === "string" ? search.show : undefined} />
             </Show>
           </Loading>
         </Errored>
