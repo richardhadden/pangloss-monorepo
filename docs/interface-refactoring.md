@@ -41,7 +41,7 @@ for setup that returns its teardown, `class` arrays and objects, keyed `For`, co
 | 10 | `pages/List.tsx` `Results` | `untrack` around a call in a `setTimeout` callback (not tracked) | ✅ removed |
 | 11 | `Retype.tsx`, `ModelFields.tsx` (`PickOrCreate`), `Console.tsx` (history) | `when={x()}` then `x()!` | ✅ function children / plain values |
 | 12 | `LiteralEditor.tsx` `JsonEditor` | the store read in the body to seed the box, untracked but not said to be | ✅ `untrack` |
-| 13 | `EntityPicker.tsx` | the autocomplete is fetched in a handler with a ticket, `busy`, `failed`, `searched` and `results` signals kept in step by hand | ⏸ not now: see below |
+| 13 | `EntityPicker.tsx` | the autocomplete is fetched in a handler with a ticket, `busy`, `failed`, `searched` and `results` signals kept in step by hand | ✅ a debounced `asked` signal (`equals: false`, so the same words again are a new search) and an async memo of what was found, failure included as a value; `busy` is `isPending(found)`. Tests of its own: `EntityPicker.test.tsx` |
 | 14 | `ItemForm.tsx`, `EntityCreateDialog`, `LoginDialog.tsx`, `App.tsx` (log out) | saves as async functions with a `saving`/`busy` signal | ⏸ not now: see below |
 | 15 | `context/translations.tsx` | `setLanguage` loads with a ticket and a `loading` signal | ⏸ not now: see below |
 | 16 | `Problems.tsx` `useSaveChecks` | an effect writes the problems again in the new language | ⏸ not now: the problems would have to keep their codes and be put into words where shown |
@@ -70,10 +70,6 @@ for setup that returns its teardown, `class` arrays and objects, keyed `For`, co
 
 ### Not now (⏸), and why
 
-- **13, the entity picker.** The idiomatic form is a debounced text signal and an async memo of the matches
-  (`isPending` for the spinner, `Errored` for "The search failed"). But the list is a popup that has to stay open with
-  the last matches while the next are asked, has its own "Nothing found" state that depends on what was searched, and
-  is in every entity field of every form: it wants its own change with its own tests, not a sweep.
 - **14, saves as actions.** An `action` holds its writes until it settles, and the saves call `onSaved`, which
   navigates: what a navigation inside a held transaction does with the router (rc.19) needs trying first. The
   `saving` flag would become `createOptimistic(false)`. The typology mutations (6) have no navigation, so they were

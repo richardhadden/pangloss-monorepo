@@ -1,4 +1,4 @@
-import { createSignal, createUniqueId, For, onCleanup, onSettled, Show } from "solid-js";
+import { createMemo, createSignal, createUniqueId, For, isPending, onCleanup, onSettled, Show } from "solid-js";
 import type { JSX } from "@solidjs/web";
 import { autocomplete } from "../../api";
 import type { Summary } from "../../api";
@@ -13,6 +13,13 @@ const DEBOUNCE_MS = 250;
 const RECENT_SHOWN = 5;
 // (how many of the most used are offered before anything is typed)
 const TOP_SHOWN = 10;
+
+// What the API found for the words `q` (none for none); `failed` if it could not be asked
+interface Found {
+  q: string;
+  results: Summary[];
+  failed: boolean;
+}
 
 /**
  * A search box for an entity of one of `types`: what is typed is looked for in the labels (the
@@ -35,21 +42,30 @@ export function EntityPicker(props: {
   const { t, modelName } = useTranslations();
   const listId = createUniqueId();
   const [text, setText] = createSignal("");
-  const [results, setResults] = createSignal<Summary[]>([]);
+  // What is searched for: the words typed, a moment after the last key (or at once when there are none). Each time
+  // is a search, the same words again too (as after one that failed)
+  const [asked, setAsked] = createSignal("", { equals: false });
+  // What was found for them. While the next are being asked for, the last answer stays (and `busy()` is true); one
+  // superseded by newer words is never shown
+  const found = createMemo((): Found | Promise<Found> => {
+    const q = asked();
+    if (q === "") return { q, results: [], failed: false };
+    return autocomplete(api, { q, types: props.types, pageSize: 8 }).then(
+      (page) => ({ q, results: page.results, failed: false }),
+      () => ({ q, results: [], failed: true }),
+    );
+  });
+  const busy = () => isPending(found);
+  const failed = () => found().failed;
   // (the most used, offered before anything is typed; and those picked lately, of any type)
   const [top, setTop] = createSignal<Summary[]>([]);
   const [recent, setRecent] = createSignal<Summary[]>([]);
   // (the ids of those picked lately that are still in the database)
   const [alive, setAlive] = createSignal<Set<string>>(new Set());
-  const [busy, setBusy] = createSignal(false);
-  const [failed, setFailed] = createSignal(false);
   const [open, setOpen] = createSignal(false);
   const [active, setActive] = createSignal(0);
-  // (what the results are for: "Nothing found" only once the search for what is typed has answered)
-  const [searched, setSearched] = createSignal("");
   let list: HTMLUListElement | undefined;
   let timer: ReturnType<typeof setTimeout> | undefined;
-  let ticket = 0;
   onCleanup(() => clearTimeout(timer));
   // (those picked lately, and whether each of this field's types is still there; another field may have picked one since)
   const loadRecent = () => {
@@ -71,40 +87,19 @@ export function EntityPicker(props: {
         // (nothing is offered until something is typed)
       });
   });
-  const look = (q: string) => {
-    const mine = ++ticket;
-    setBusy(true);
-    setFailed(false);
-    autocomplete(api, { q, types: props.types, pageSize: 8 })
-      .then((page) => {
-        if (mine !== ticket) return;
-        setResults(page.results);
-        setSearched(q);
-        setActive(0);
-        setOpen(true);
-      })
-      .catch(() => {
-        if (mine === ticket) setFailed(true);
-      })
-      .finally(() => {
-        if (mine === ticket) setBusy(false);
-      });
-  };
   const typed = (value: string) => {
     setText(value);
+    setActive(0);
+    setOpen(true);
     clearTimeout(timer);
-    if (value.trim() === "") {
-      // (what is offered before anything is typed is shown again)
-      ticket += 1;
-      setResults([]);
-      setBusy(false);
-      return;
-    }
-    timer = setTimeout(() => look(value.trim()), DEBOUNCE_MS);
+    // (no words: what is offered before anything is typed is shown again, at once)
+    if (value.trim() === "") setAsked("");
+    else timer = setTimeout(() => setAsked(value.trim()), DEBOUNCE_MS);
   };
   const pick = (result: Summary) => {
     rememberEntity(result);
-    setResults([]);
+    clearTimeout(timer);
+    setAsked("");
     setText("");
     setOpen(false);
     props.onPick(result);
@@ -121,14 +116,17 @@ export function EntityPicker(props: {
   const options = () => {
     const first = recentShown();
     const ids = new Set(first.map((entity) => entity.id));
-    const rest = blank() ? top() : searched() === text().trim() ? results() : [];
+    // (the answer for what is typed: none while it is being asked for the first time)
+    const answer = found();
+    const rest = blank() ? top() : answer.q === text().trim() ? answer.results : [];
     return [...first, ...rest.filter((entity) => !ids.has(entity.id))];
   };
   const isRecent = (index: number) => index < recentShown().length;
   const showing = () => open() && !blank();
   const listed = () => open() && options().length > 0;
+  // ("Nothing found" only once the search for what is typed has answered)
   const empty = () =>
-    showing() && !busy() && !failed() && options().length === 0 && searched() === text().trim();
+    showing() && !busy() && !failed() && options().length === 0 && found().q === text().trim();
   const panel = () => (showing() && failed()) || listed() || empty();
   const optionId = (index: number) => `${listId}-${index}`;
   const move = (by: number) => {
@@ -189,10 +187,7 @@ export function EntityPicker(props: {
           aria-controls={listId}
           aria-expanded={listed() ? "true" : "false"}
           aria-activedescendant={listed() ? optionId(active()) : undefined}
-          onInput={(event) => {
-            setActive(0);
-            typed(event.currentTarget.value);
-          }}
+          onInput={(event) => typed(event.currentTarget.value)}
           onKeyDown={onKeyDown}
           onFocus={() => {
             loadRecent();
