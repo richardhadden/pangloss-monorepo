@@ -3,7 +3,7 @@
 import re
 
 from helpers import hydrated
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Page, Request, expect
 
 
 def test_an_item_page_has_an_edit_button_only_when_logged_in(page: Page, data):
@@ -76,7 +76,12 @@ def test_an_incomplete_form_is_not_sent_and_says_what_is_wrong_at_its_fields(log
     page.goto("/Statement/new")
     hydrated(page)
     sent = []
-    page.on("request", lambda request: request.method == "POST" and "/api/Statement" in request.url and sent.append(request.url))
+
+    def record(request: Request) -> None:
+        if request.method == "POST" and "/api/Statement" in request.url:
+            sent.append(request.url)
+
+    page.on("request", record)
     page.get_by_label("Label", exact=True).fill("Incomplete")
     page.get_by_role("button", name="Save").click()
     # (found in the browser: the names of the fields go red and say why, and a red toast says it was not saved)
