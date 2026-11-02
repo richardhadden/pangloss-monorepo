@@ -37,14 +37,14 @@ for setup that returns its teardown, `class` arrays and objects, keyed `For`, co
 | 6 | typology `TypeTree.tsx`, `TypeItem.tsx` | `version` counters; mutations as async functions that bump them | ✅ `action`s that `yield` the request and `yield refresh(...)`, catching the refusal into `refused` |
 | 7 | `TypeMenu.tsx` (3), `Problems.tsx`, `SearchPanel.tsx` (saved search name) | `setTimeout`/`queueMicrotask` to focus or scroll once the write has rendered | ✅ `flush()`, then the DOM; but not where `TypeChooser` opens its box (see below) |
 | 8 | `ModelFields.tsx` `TitleBox` | an effect that sizes the box | ✅ `createRenderEffect` |
-| 9 | `Problems.tsx` `useSaveChecks` | `untrack` around the effect's apply (it looked redundant) | ❌ kept: it is what keeps the dev build from warning `STRICT_READ_UNTRACKED` for the problems read there; a comment says so |
+| 9 | `Problems.tsx` `useSaveChecks` | `untrack` around the effect's apply (it looked redundant) | ❌ it was not (the dev build warns `STRICT_READ_UNTRACKED` without it); the effect itself went with 16 |
 | 10 | `pages/List.tsx` `Results` | `untrack` around a call in a `setTimeout` callback (not tracked) | ✅ removed |
 | 11 | `Retype.tsx`, `ModelFields.tsx` (`PickOrCreate`), `Console.tsx` (history) | `when={x()}` then `x()!` | ✅ function children / plain values |
 | 12 | `LiteralEditor.tsx` `JsonEditor` | the store read in the body to seed the box, untracked but not said to be | ✅ `untrack` |
 | 13 | `EntityPicker.tsx` | the autocomplete is fetched in a handler with a ticket, `busy`, `failed`, `searched` and `results` signals kept in step by hand | ✅ a debounced `asked` signal (`equals: false`, so the same words again are a new search) and an async memo of what was found, failure included as a value; `busy` is `isPending(found)`. Tests of its own: `EntityPicker.test.tsx` |
 | 14 | `ItemForm.tsx`, `EntityCreateDialog`, `LoginDialog.tsx`, `App.tsx` (log out) | saves as async functions with a `saving`/`busy` signal | ✅ the request is an `action` that sets a `createOptimistic(false)` flag (false again when it is over, whatever the answer); what comes of it (toast, `onSaved` and its navigation, problems at the fields, which need `flush()`, refused inside an action) is the caller's, once the action's promise settles. Log out has no flag, and stays a plain function. Test: `ItemForm.test.tsx` "Save is off while the item is being sent" |
 | 15 | `context/translations.tsx` | `setLanguage` loads with a ticket and a `loading` signal | ✅ the chosen language is a signal, the bundle an async memo of it (each fetched once; one that cannot be fetched resolves to what was shown), `language()` is the shown bundle's, `loading()` is `isPending(bundle)`, the choice is kept by an effect on the language shown. `setLanguage` keeps its contract: its promise is `resolve(bundle)`. The tests are unchanged, with one more: the rest of the page goes on changing while a language loads |
-| 16 | `Problems.tsx` `useSaveChecks` | an effect writes the problems again in the new language | ⏸ not now: the problems would have to keep their codes and be put into words where shown |
+| 16 | `Problems.tsx` `useSaveChecks` | an effect writes the problems again in the new language | ✅ the problems had their codes and parameters already: `useProblemText` words them by `useSayProblem` where they are shown, so they follow the language with no effect (nor the `checked` flag it needed) |
 
 ### Kept as they are, on purpose
 
@@ -68,10 +68,6 @@ for setup that returns its teardown, `class` arrays and objects, keyed `For`, co
 - **`createSignal(untrack(() => props.x))` and `untrack(() => ({ ...props }))`**: deliberate one-time captures, as the
   docs say to write them.
 
-### Not now (⏸), and why
-
-- **16.** Needs the problems to be stored as codes and parameters (`SayProblem`), and worded where shown.
-
 ## Status (2026-11-02)
 
 Done in one commit with this file. Tests run: the interface's Vitest suites (core and app: 214 passed) and its
@@ -80,4 +76,5 @@ typecheck; the interface module suites (typology 18, dates 12) and their typeche
 where Solid's dev-only errors show). A browser test was added for the Edit page's "Load the new version" (5), which no
 test covered: `test_editing.py::test_an_item_saved_meanwhile_is_not_overwritten_and_the_new_version_can_be_loaded`.
 
-To pick up next: the ⏸ rows, each a change of its own, the entity picker (13) first.
+Then, each in a commit of its own, the four that were left for later: the entity picker (13), the saves (14), the
+translations (15) and the problems (16). Nothing of the review is left to do.

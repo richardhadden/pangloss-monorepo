@@ -1,4 +1,4 @@
-import { createEffect, flush, For, Show, untrack } from "solid-js";
+import { createEffect, flush, For, Show } from "solid-js";
 import { ApiError } from "../../api";
 import { useClipboard, useItemForm, useModels, useToasts, useTranslations } from "../../context";
 import type { ItemFormState } from "../../context";
@@ -67,16 +67,19 @@ export function useSayProblem(): SayProblem {
 }
 
 /**
- * What a problem says to a person: its message, after the keys between the row it is shown at and
- * where it is (`under`: a date's year, the second of a list)
+ * What a problem says to a person: its text, by its code, in the language of the page (read where it is
+ * shown, it follows the language), after the keys between the row it is shown at and where it is (`under`: a
+ * date's year, the second of a list)
  */
 export function useProblemText() {
   const { fieldName } = useTranslations();
+  const say = useSayProblem();
   return (problem: FieldProblem, under: Path = []): string => {
+    const message = say(problem.code, problem.params);
     const where = problem.path
       .slice(under.length)
       .map((key) => (typeof key === "number" ? `#${key + 1}` : fieldName("", key)));
-    return where.length > 0 ? `${where.join(" › ")}: ${problem.message}` : problem.message;
+    return where.length > 0 ? `${where.join(" › ")}: ${message}` : message;
   };
 }
 
@@ -128,26 +131,14 @@ export function useSaveChecks(state: ItemFormState, root: () => HTMLElement | un
   const errorText = useErrorText();
   const clipboard = useClipboard();
   const schemas = new ItemSchemas(definitions);
-  // (what the check found is shown, not what the API said: that can be checked again in another language)
-  let checked = false;
 
+  // (the problems are kept by their codes, and worded where they are shown: valibot's own messages are in the
+  // language too, for what reads them)
   const validate = () => {
     const lang = language();
     setValidationMessages(lang, say);
     return validateItem(definitions, state.plain(), { lang, schemas });
   };
-
-  createEffect(
-    () => language(),
-    () =>
-      // (what is read here is read once: the language is what the effect follows)
-      untrack(() => {
-        if (!checked || state.problems().length === 0) return;
-        // (only what is still shown: a field changed since is not marked again)
-        const shown = new Set(state.problems().map(({ problem }) => JSON.stringify(problem.path)));
-        state.setProblems(validate().filter((problem) => shown.has(JSON.stringify(problem.path))));
-      }),
-  );
 
   const show = (problems: FieldProblem[]) => {
     // (what has no field to be shown at is said in the toast)
@@ -175,7 +166,6 @@ export function useSaveChecks(state: ItemFormState, root: () => HTMLElement | un
   return {
     check(): boolean {
       const problems = validate();
-      checked = true;
       if (problems.length === 0) {
         state.setProblems([]);
         return true;
@@ -193,7 +183,6 @@ export function useSaveChecks(state: ItemFormState, root: () => HTMLElement | un
         }
       }
       if (error instanceof ApiError && error.status === 422) {
-        checked = false;
         show(serverProblems(definitions, error.detail));
         return;
       }
