@@ -1,4 +1,4 @@
-import { createMemo, createSignal, For, onSettled, Show } from "solid-js";
+import { createMemo, createSignal, flush, For, onSettled, Show } from "solid-js";
 import type { ParentProps } from "solid-js";
 import { useModels, useTranslations } from "../../context";
 import { kindTint, spaceTint } from "../../primitives";
@@ -45,12 +45,11 @@ export function TypeMenu(props: {
   let root: HTMLDivElement | undefined;
   let opener: HTMLButtonElement | undefined;
   const items = () => [...(root?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? [])];
-  // (after the menu is drawn)
-  const focusItem = (which: (all: HTMLElement[]) => HTMLElement | undefined) =>
-    setTimeout(() => which(items())?.focus());
   const openMenu = (which: (all: HTMLElement[]) => HTMLElement | undefined) => {
     setOpen(true);
-    focusItem(which);
+    // (the menu drawn, then into it)
+    flush();
+    which(items())?.focus();
   };
   const close = () => {
     setOpen(false);
@@ -310,7 +309,8 @@ export function TypeChooser(
   let wrapper: HTMLDivElement | undefined;
   const openBox = () => {
     setOpen(true);
-    // (after the box is drawn: all of it in view, and the cursor in the types)
+    // (after the click that opened it, not during it: the box is drawn in the button's place, and the click, going on
+    // to the document, would find itself outside it and close it; then all of it in view, and the cursor in the types)
     setTimeout(() => {
       root?.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
       root?.querySelector<HTMLElement>('button[data-choice][tabindex="0"]')?.focus({ preventScroll: true });
@@ -319,7 +319,9 @@ export function TypeChooser(
   // (back to the button, which is drawn again in the box's place)
   const close = (refocus: boolean) => {
     setOpen(false);
-    if (refocus) setTimeout(() => wrapper?.querySelector<HTMLElement>("button[aria-expanded]")?.focus());
+    if (!refocus) return;
+    flush();
+    wrapper?.querySelector<HTMLElement>("button[aria-expanded]")?.focus();
   };
   const choose = (choice: Choice) => {
     setOpen(false);

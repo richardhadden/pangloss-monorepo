@@ -168,25 +168,21 @@ export function Console(props: ConsoleProps) {
                   data-testid="console-meta"
                 >
                   <Show when={props.meta?.createdWhen}>
-                    <HistoryRow
-                      what={t("created", "Created")}
-                      who={props.meta?.createdBy}
-                      when={props.meta!.createdWhen!}
-                    >
-                      {/* (a new page) */}
-                      <path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z" />
-                      <path d="M14 3v5h5M12 11v6M9 14h6" />
-                    </HistoryRow>
+                    {(created) => (
+                      <HistoryRow what={t("created", "Created")} who={props.meta?.createdBy} when={created()}>
+                        {/* (a new page) */}
+                        <path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z" />
+                        <path d="M14 3v5h5M12 11v6M9 14h6" />
+                      </HistoryRow>
+                    )}
                   </Show>
                   <Show when={props.meta?.updatedWhen}>
-                    <HistoryRow
-                      what={t("modified", "Modified")}
-                      who={props.meta?.updatedBy}
-                      when={props.meta!.updatedWhen!}
-                    >
-                      {/* (a pen) */}
-                      <path d="M4 20h4L19 9l-4-4L4 16v4z" />
-                    </HistoryRow>
+                    {(updated) => (
+                      <HistoryRow what={t("modified", "Modified")} who={props.meta?.updatedBy} when={updated()}>
+                        {/* (a pen) */}
+                        <path d="M4 20h4L19 9l-4-4L4 16v4z" />
+                      </HistoryRow>
+                    )}
                   </Show>
                 </div>
               </Show>

@@ -1,4 +1,4 @@
-import { createEffect, For, Show, untrack } from "solid-js";
+import { createEffect, flush, For, Show, untrack } from "solid-js";
 import { ApiError } from "../../api";
 import { useClipboard, useItemForm, useModels, useToasts, useTranslations } from "../../context";
 import type { ItemFormState } from "../../context";
@@ -140,6 +140,7 @@ export function useSaveChecks(state: ItemFormState, root: () => HTMLElement | un
   createEffect(
     () => language(),
     () =>
+      // (what is read here is read once: the language is what the effect follows)
       untrack(() => {
         if (!checked || state.problems().length === 0) return;
         // (only what is still shown: a field changed since is not marked again)
@@ -167,10 +168,8 @@ export function useSaveChecks(state: ItemFormState, root: () => HTMLElement | un
     ];
     toasts?.show(parts.join(" · "), "error");
     // (once the rows are red)
-    setTimeout(() => {
-      const first = root()?.querySelector("[data-problem]");
-      first?.scrollIntoView({ block: "center", behavior: "smooth" });
-    });
+    flush();
+    root()?.querySelector("[data-problem]")?.scrollIntoView({ block: "center", behavior: "smooth" });
   };
 
   return {

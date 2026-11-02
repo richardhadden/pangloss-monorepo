@@ -36,8 +36,8 @@ export function ConsoleSearch(props: ConsoleSearchProps) {
   // (the last search asked for: `props.query` coming back as it is not a change to show)
   let asked = initial;
   let box: HTMLInputElement | undefined;
-  // Whether Deep Search is on: ahead of `props.deep` until a deep search is made
-  const [deepOn, setDeepOn] = createSignal(untrack(() => props.deep ?? false));
+  // Whether Deep Search is on: ahead of `props.deep` until a deep search is made (and `props.deep` again when it changes)
+  const [deepOn, setDeepOn] = createSignal(() => props.deep ?? false);
   let timer: ReturnType<typeof setTimeout> | undefined;
   onCleanup(() => clearTimeout(timer));
   // (the address changed otherwise, such as by going back: show it)
@@ -48,12 +48,6 @@ export function ConsoleSearch(props: ConsoleSearchProps) {
       asked = query;
       setDraft(query);
       if (box) box.value = query;
-    },
-  );
-  createEffect(
-    () => props.deep ?? false,
-    (deep) => {
-      setDeepOn(deep);
     },
   );
   const search = (deep: boolean) => {

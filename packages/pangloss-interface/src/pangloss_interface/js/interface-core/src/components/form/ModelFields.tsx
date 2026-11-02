@@ -1,4 +1,4 @@
-import { createEffect, createMemo, createSignal, onSettled, untrack, For, Match, Show, Switch } from "solid-js";
+import { createMemo, createRenderEffect, createSignal, onSettled, untrack, For, Match, Show, Switch } from "solid-js";
 import type { Accessor, ParentProps } from "solid-js";
 import type { JSX } from "@solidjs/web";
 import {
@@ -342,7 +342,8 @@ function TitleBox(props: {
     box.style.height = "auto";
     box.style.height = `${box.scrollHeight}px`;
   };
-  createEffect(
+  // (sized with the DOM, before the page is painted)
+  createRenderEffect(
     () => props.value,
     () => {
       fit();
@@ -959,15 +960,17 @@ function PickOrCreate(props: {
         </Show>
       </EntityPicker>
       <Show when={creating()}>
-        <EntityCreateDialog
-          type={creating()!}
-          onClose={() => setCreating(undefined)}
-          onCreated={(entity) => {
-            setCreating(undefined);
-            rememberEntity(entity);
-            props.onPick(entity);
-          }}
-        />
+        {(type) => (
+          <EntityCreateDialog
+            type={type()}
+            onClose={() => setCreating(undefined)}
+            onCreated={(entity) => {
+              setCreating(undefined);
+              rememberEntity(entity);
+              props.onPick(entity);
+            }}
+          />
+        )}
       </Show>
     </div>
   );

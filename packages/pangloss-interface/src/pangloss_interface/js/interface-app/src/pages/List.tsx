@@ -109,13 +109,14 @@ function ListOfItems(props: RouteProps<"/:type">) {
     // (it opens at the top of the page, under the console: the page is taken there to see it)
     if (opening && window.scrollY > 0) window.scrollTo({ top: 0, behavior: "smooth" });
   };
-  // (the form the panel last said it holds: one in the address that is not, as after going back, is shown in a new panel)
+  // (the form the panel last said it holds: one in the address that is not, as after going back, is shown in a new
+  // panel, which is a new object here)
   let askedForm = untrack(form);
-  const [generation, setGeneration] = createSignal(1);
-  createEffect(form, (now) => {
-    if (now === askedForm) return;
+  const panel = createMemo<object>((previous) => {
+    const now = form();
+    if (previous && now === askedForm) return previous;
     askedForm = now;
-    setGeneration((count) => count + 1);
+    return {};
   });
   // The item the list is scrolled to: from the address (`?at=`) when the page is opened, then
   // kept by the list as it is scrolled (which writes it in the address without the router), and
@@ -151,8 +152,8 @@ function ListOfItems(props: RouteProps<"/:type">) {
         structured={structured()}
       />
       <Show when={searchable()}>
-        <Show when={generation()} keyed>
-          {(_generation) => (
+        <Show when={panel()} keyed>
+          {(_panel) => (
             <SearchPanel
               type={props.params.type}
               initial={untrack(() => decodeSearchForm(form(), props.params.type))}
@@ -254,7 +255,7 @@ function Results(props: {
       const params = searchOf(Object.fromEntries(url.searchParams));
       if (params.q !== q || (params.deep && !request) !== deep || params.form !== form) return;
       const at = virtual.firstVisible();
-      untrack(() => props.onScrolled(at));
+      props.onScrolled(at);
       if (at > 0) url.searchParams.set("at", String(at));
       else url.searchParams.delete("at");
       if (url.href !== window.location.href) window.history.replaceState(window.history.state, "", url);

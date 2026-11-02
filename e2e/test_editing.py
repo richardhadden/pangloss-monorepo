@@ -170,3 +170,31 @@ def test_an_entity_cut_in_one_form_is_pasted_into_another(logged_in: Page, data)
     page.get_by_role("button", name="Save").click()
     expect(page.get_by_role("heading", name="Pasted")).to_be_visible()
     expect(page.get_by_role("link", name="Marie of Burgundy")).to_be_visible()
+
+
+def test_an_item_saved_meanwhile_is_not_overwritten_and_the_new_version_can_be_loaded(
+    logged_in: Page, data
+):
+    page = logged_in
+    page.goto(f"/Statement/{data.statement}/edit")
+    hydrated(page)
+    expect(page.get_by_label("Label", exact=True)).to_have_value("Court at Ghent")
+    # (someone else, in another tab, saves first)
+    other = page.context.new_page()
+    other.goto(f"/Statement/{data.statement}/edit")
+    hydrated(other)
+    other.get_by_label("Label", exact=True).fill("Court at Lille")
+    other.get_by_role("button", name="Save").click()
+    other.wait_for_url(f"**/Statement/{data.statement}")
+    other.close()
+    page.get_by_label("Label", exact=True).fill("Court at Bruges")
+    page.get_by_role("button", name="Save").click()
+    expect(page.get_by_role("alert")).to_contain_text("Someone has saved this item since you opened it")
+    page.get_by_role("button", name="Load the new version").click()
+    # (the form is made again from the item as it is now)
+    expect(page.get_by_label("Label", exact=True)).to_have_value("Court at Lille")
+    expect(page.get_by_role("alert")).to_have_count(0)
+    page.get_by_label("Label", exact=True).fill("Court at Bruges")
+    page.get_by_role("button", name="Save").click()
+    page.wait_for_url(f"**/Statement/{data.statement}")
+    expect(page.get_by_role("heading", name="Court at Bruges")).to_be_visible()

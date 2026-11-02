@@ -1,4 +1,4 @@
-import { createContext, createEffect, createSignal, onSettled, useContext } from "solid-js";
+import { createContext, createEffect, createMemo, createSignal, onSettled, useContext } from "solid-js";
 import type { Accessor, ParentProps } from "solid-js";
 import type { FormData } from "../schema";
 
@@ -45,7 +45,11 @@ const ClipboardContext = createContext<Clipboard | null>(null);
  */
 export function ClipboardProvider(props: ParentProps<{ owner?: Accessor<string | undefined> }>) {
   const [entries, setEntries] = createSignal<ClipEntry[]>([]);
-  const [key, setKey] = createSignal<string>();
+  // (where this user's clipboard is kept)
+  const key = createMemo(() => {
+    const owner = props.owner?.() ?? "";
+    return owner ? `${PREFIX}.${owner}` : PREFIX;
+  });
   const [collapsed, setCollapsedSignal] = createSignal(false);
   const [forms, setForms] = createSignal(0);
   const load = (storageKey: string) => {
@@ -58,22 +62,16 @@ export function ClipboardProvider(props: ParentProps<{ owner?: Accessor<string |
   };
   const save = (next: ClipEntry[]) => {
     setEntries(next);
-    const storageKey = key();
-    if (!storageKey) return;
     try {
-      localStorage.setItem(storageKey, JSON.stringify(next));
+      localStorage.setItem(key(), JSON.stringify(next));
     } catch {
       // (storage unavailable or full: the clipboard is this page's only)
     }
   };
-  createEffect(
-    () => props.owner?.() ?? "",
-    (owner) => {
-      const storageKey = owner ? `${PREFIX}.${owner}` : PREFIX;
-      setKey(storageKey);
-      load(storageKey);
-    },
-  );
+  // (what is kept there: read in the browser, after the first render, which is the server's)
+  createEffect(key, (storageKey) => {
+    load(storageKey);
+  });
   onSettled(() => {
     try {
       setCollapsedSignal(localStorage.getItem(COLLAPSED_KEY) === "true");

@@ -1,4 +1,4 @@
-import { createSignal, For, Match, Show, Switch } from "solid-js";
+import { createSignal, For, Match, Show, Switch, untrack } from "solid-js";
 import type { Accessor } from "solid-js";
 import { useItemForm, useModels, useTranslations } from "../../context";
 import type { FieldType, Validator } from "../../types";
@@ -80,7 +80,8 @@ const joinable = (type: FieldType) =>
 export function JsonEditor(props: { path: Accessor<Path>; label: string }) {
   const form = useItemForm();
   const { t } = useTranslations();
-  const [text, setText] = createSignal(JSON.stringify(form.get(props.path()) ?? null, null, 2));
+  // (what is there when it is drawn: then the box is its own, as what is typed may not be JSON yet)
+  const [text, setText] = createSignal(untrack(() => JSON.stringify(form.get(props.path()) ?? null, null, 2)));
   const [bad, setBad] = createSignal(false);
   return (
     <div class="w-full">

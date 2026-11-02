@@ -1,6 +1,6 @@
 import { ApiError, useApi, useComponent, userIsLoggedIn, useTranslations } from "@pangloss/interface-core";
 import type { ItemPageProps } from "@pangloss/interface-core";
-import { createMemo, createSignal, Errored, For, Loading, Show } from "solid-js";
+import { action, createMemo, createSignal, Errored, For, Loading, refresh, Show } from "solid-js";
 import { editType, getView, setConcrete } from "../api";
 import type { Edit, TypeView } from "../api";
 
@@ -13,31 +13,35 @@ export default function TypeItem(props: ItemPageProps) {
   const api = useApi();
   const ErrorMessage = useComponent("ErrorMessage");
   const { t, modelName } = useTranslations();
-  const [version, setVersion] = createSignal(0);
   const [includeSubtypes, setIncludeSubtypes] = createSignal(true);
   const [limit, setLimit] = createSignal(PAGE);
   const [refused, setRefused] = createSignal<string | undefined>();
   const [editing, setEditing] = createSignal(false);
-  const view = createMemo(() => {
-    version();
-    return getView(api, props.type, props.id, { includeSubtypes: includeSubtypes(), limit: limit() });
-  });
+  // (read again after a change: `refresh(view)`)
+  const view = createMemo(() =>
+    getView(api, props.type, props.id, { includeSubtypes: includeSubtypes(), limit: limit() }),
+  );
   // The other languages a label can be given in, and whether the type can also be another class,
   // are what its model has as fields
   const languages = () =>
     props.model.fields.map((f) => f.name).filter((name) => name.startsWith("label_")).map((name) => name.slice("label_".length));
   const switchable = () => props.model.fields.some((f) => f.name === "is_concrete");
 
-  async function attempt(work: () => Promise<unknown>) {
-    setRefused(undefined);
+  // Makes a change, and reads the type again once it is made: true if it was; what the server refuses is said
+  const changing = action(function* (work: () => Promise<unknown>) {
     try {
-      await work();
-      setVersion((v) => v + 1);
-      return true;
+      yield work();
     } catch (error) {
       setRefused(error instanceof ApiError ? error.detail : String(error));
       return false;
     }
+    yield refresh(view);
+    return true;
+  });
+  function attempt(work: () => Promise<unknown>): Promise<boolean> {
+    setRefused(undefined);
+    // (a type that cannot be read again is shown by the page's boundary)
+    return changing(work).catch(() => false);
   }
 
   return (

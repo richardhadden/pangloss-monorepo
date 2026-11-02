@@ -64,38 +64,40 @@ export function RetypeButtons(props: {
         onChoose={(choice) => change(choice.type)}
       />
       <Show when={asking()}>
-        <Modal
-          title={t("retype_title", "Change to {type}?", { type: modelName(asking()!.to) })}
-          onClose={() => setAsking(undefined)}
-        >
-          <div class="flex flex-col gap-4 p-6 text-sm">
-            <p>
-              {t("retype_loses", "{type} has no room for what is in these fields of {from}, which will be lost:", {
-                type: modelName(asking()!.to),
-                from: modelName(props.type),
-              })}
-            </p>
-            <ul class="list-disc pl-5" data-lost>
-              <For each={asking()!.lost}>{(lost) => <li>{lostName(lost)}</li>}</For>
-            </ul>
-            <div class="flex justify-end gap-2">
-              <button type="button" class={smallButtonClass} autofocus onClick={() => setAsking(undefined)}>
-                {t("cancel", "Cancel")}
-              </button>
-              <button
-                type="button"
-                class={[smallButtonClass, "text-red-800"]}
-                onClick={() => {
-                  const to = asking()!.to;
-                  setAsking(undefined);
-                  change(to, true);
-                }}
-              >
-                {t("retype_confirm", "Change the type")}
-              </button>
+        {(ask) => (
+          <Modal
+            title={t("retype_title", "Change to {type}?", { type: modelName(ask().to) })}
+            onClose={() => setAsking(undefined)}
+          >
+            <div class="flex flex-col gap-4 p-6 text-sm">
+              <p>
+                {t("retype_loses", "{type} has no room for what is in these fields of {from}, which will be lost:", {
+                  type: modelName(ask().to),
+                  from: modelName(props.type),
+                })}
+              </p>
+              <ul class="list-disc pl-5" data-lost>
+                <For each={ask().lost}>{(lost) => <li>{lostName(lost)}</li>}</For>
+              </ul>
+              <div class="flex justify-end gap-2">
+                <button type="button" class={smallButtonClass} autofocus onClick={() => setAsking(undefined)}>
+                  {t("cancel", "Cancel")}
+                </button>
+                <button
+                  type="button"
+                  class={[smallButtonClass, "text-red-800"]}
+                  onClick={() => {
+                    const to = ask().to;
+                    setAsking(undefined);
+                    change(to, true);
+                  }}
+                >
+                  {t("retype_confirm", "Change the type")}
+                </button>
+              </div>
             </div>
-          </div>
-        </Modal>
+          </Modal>
+        )}
       </Show>
     </>
   );

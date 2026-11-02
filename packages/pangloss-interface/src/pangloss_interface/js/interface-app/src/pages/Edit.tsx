@@ -6,7 +6,7 @@ import {
 } from "@pangloss/interface-core";
 import { useNavigate, useSearchParams } from "@solidjs/router";
 import type { RouteProps } from "@solidjs/router";
-import { createMemo, createSignal, Errored, Loading, onSettled, Show } from "solid-js";
+import { createMemo, Errored, Loading, onSettled, refresh, Show } from "solid-js";
 import { apiClient } from "../api";
 import { revalidateAll } from "../queries";
 import { Page } from "../Page";
@@ -43,11 +43,7 @@ export default function EditItem(props: RouteProps<"/:type/:id/edit">) {
   const navigate = useNavigate();
   const [search] = useSearchParams();
   const { t } = useTranslations();
-  const [reload, setReload] = createSignal(0);
-  const item = createMemo(() => {
-    reload();
-    return getEditView(apiClient(), props.params.type, props.params.id);
-  });
+  const item = createMemo(() => getEditView(apiClient(), props.params.type, props.params.id));
   return (
     <RequireLogin onCancel={() => navigate("/", { replace: true })}>
       <Page>
@@ -66,7 +62,7 @@ export default function EditItem(props: RouteProps<"/:type/:id/edit">) {
                     navigate(`/${saved.type}/${encodeURIComponent(saved.id)}`);
                   }}
                   onCancel={() => navigate(`/${loaded.type}/${encodeURIComponent(loaded.id)}`)}
-                  onReload={() => setReload(reload() + 1)}
+                  onReload={() => void refresh(item)}
                 />
               )}
             </Show>

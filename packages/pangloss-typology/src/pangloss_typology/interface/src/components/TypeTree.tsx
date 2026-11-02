@@ -1,6 +1,6 @@
 import { ApiError, useApi, useComponent, userIsLoggedIn, useTranslations } from "@pangloss/interface-core";
 import type { ListPageProps } from "@pangloss/interface-core";
-import { createMemo, createSignal, Errored, For, Loading, Show } from "solid-js";
+import { action, createMemo, createSignal, Errored, For, Loading, refresh, Show } from "solid-js";
 import { getTree, moveType } from "../api";
 import type { TreeNode } from "../api";
 import { canMove, targetsFor } from "../tree";
@@ -14,26 +14,27 @@ export default function TypeTree(props: ListPageProps) {
   const Console = useComponent("Console");
   const ErrorMessage = useComponent("ErrorMessage");
   const { t } = useTranslations();
-  // (read again when it changes, after a move)
-  const [version, setVersion] = createSignal(0);
-  // (the version is read before the request is made, so a change of it asks again)
-  const nodes = createMemo(() => {
-    version();
-    return getTree(api, props.type);
-  });
+  // (read again after a move: `refresh(nodes)`)
+  const nodes = createMemo(() => getTree(api, props.type));
   const [dragging, setDragging] = createSignal<string | undefined>();
   const [refused, setRefused] = createSignal<string | undefined>();
   const [collapsed, setCollapsed] = createSignal<Record<string, boolean>>({});
 
-  async function move(id: string, to: string | null) {
-    setRefused(undefined);
-    setDragging(undefined);
+  // Moves the type, and reads the tree again once it is moved; what the server refuses is said
+  const moving = action(function* (id: string, to: string | null) {
     try {
-      await moveType(api, props.type, id, to);
-      setVersion((v) => v + 1);
+      yield moveType(api, props.type, id, to);
     } catch (error) {
       setRefused(error instanceof ApiError ? error.detail : String(error));
+      return;
     }
+    yield refresh(nodes);
+  });
+  function move(id: string, to: string | null) {
+    setRefused(undefined);
+    setDragging(undefined);
+    // (a tree that cannot be read again is shown where the tree is, by its boundary)
+    moving(id, to).catch(() => {});
   }
 
   const draggable = () => userIsLoggedIn();
@@ -60,7 +61,7 @@ export default function TypeTree(props: ListPageProps) {
           onDrop={(event) => {
             event.preventDefault();
             const id = dragging();
-            if (id !== undefined && mayDrop(row.node.id)) void move(id, row.node.id);
+            if (id !== undefined && mayDrop(row.node.id)) move(id, row.node.id);
           }}
           class={[
             "flex items-center gap-2 rounded-sm border-[0.5px] border-slate-400/70 bg-slate-100/70 px-3 py-2 text-sm",
@@ -93,7 +94,7 @@ export default function TypeTree(props: ListPageProps) {
               onChange={(event) => {
                 const value = event.currentTarget.value;
                 event.currentTarget.value = "";
-                if (value !== "") void move(row.node.id, value === "top" ? null : value);
+                if (value !== "") move(row.node.id, value === "top" ? null : value);
               }}
             >
               <option value="">{t("typology_move_to", "Move to…")}</option>
@@ -137,7 +138,7 @@ export default function TypeTree(props: ListPageProps) {
               onDrop={(event) => {
                 event.preventDefault();
                 const id = dragging();
-                if (id !== undefined && mayDrop(null)) void move(id, null);
+                if (id !== undefined && mayDrop(null)) move(id, null);
               }}
               class={[
                 "mb-2 rounded-sm border border-dashed border-slate-400 px-3 py-2 text-center text-xs text-slate-600",

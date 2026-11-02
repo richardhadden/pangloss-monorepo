@@ -1,4 +1,4 @@
-import { createContext, createMemo, createSignal, For, Match, onCleanup, onSettled, Show, Switch, untrack, useContext } from "solid-js";
+import { createContext, createMemo, createSignal, flush, For, Match, onCleanup, onSettled, Show, Switch, untrack, useContext } from "solid-js";
 import type { Accessor, ParentProps } from "solid-js";
 import type { JSX } from "@solidjs/web";
 import { createItemFormState, useComponent, useModels, useTranslations } from "../../context";
@@ -1274,6 +1274,7 @@ function SavedSearches(props: { type: string; current: () => NodeSearch; onLoad:
   const [chosen, setChosen] = createSignal("");
   const [naming, setNaming] = createSignal(false);
   const [name, setName] = createSignal("");
+  let nameBox: HTMLInputElement | undefined;
   // (in the browser only: they are in its storage)
   onSettled(() => {
     setAll(savedSearches(props.type));
@@ -1331,6 +1332,9 @@ function SavedSearches(props: { type: string; current: () => NodeSearch; onLoad:
             onClick={() => {
               setName(chosen());
               setNaming(true);
+              // (the box drawn, then the cursor in it)
+              flush();
+              nameBox?.focus();
             }}
           >
             {t("search_save", "Save")}…
@@ -1343,7 +1347,7 @@ function SavedSearches(props: { type: string; current: () => NodeSearch; onLoad:
           aria-label={t("search_save_name", "Name of this search")}
           placeholder={t("search_save_name", "Name of this search")}
           value={name()}
-          ref={(element) => queueMicrotask(() => element.focus())}
+          ref={nameBox}
           onInput={(event) => setName(event.currentTarget.value)}
           onKeyDown={(event) => {
             if (event.key === "Enter") save();
