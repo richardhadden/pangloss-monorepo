@@ -43,7 +43,7 @@ for setup that returns its teardown, `class` arrays and objects, keyed `For`, co
 | 12 | `LiteralEditor.tsx` `JsonEditor` | the store read in the body to seed the box, untracked but not said to be | ✅ `untrack` |
 | 13 | `EntityPicker.tsx` | the autocomplete is fetched in a handler with a ticket, `busy`, `failed`, `searched` and `results` signals kept in step by hand | ✅ a debounced `asked` signal (`equals: false`, so the same words again are a new search) and an async memo of what was found, failure included as a value; `busy` is `isPending(found)`. Tests of its own: `EntityPicker.test.tsx` |
 | 14 | `ItemForm.tsx`, `EntityCreateDialog`, `LoginDialog.tsx`, `App.tsx` (log out) | saves as async functions with a `saving`/`busy` signal | ✅ the request is an `action` that sets a `createOptimistic(false)` flag (false again when it is over, whatever the answer); what comes of it (toast, `onSaved` and its navigation, problems at the fields, which need `flush()`, refused inside an action) is the caller's, once the action's promise settles. Log out has no flag, and stays a plain function. Test: `ItemForm.test.tsx` "Save is off while the item is being sent" |
-| 15 | `context/translations.tsx` | `setLanguage` loads with a ticket and a `loading` signal | ⏸ not now: see below |
+| 15 | `context/translations.tsx` | `setLanguage` loads with a ticket and a `loading` signal | ✅ the chosen language is a signal, the bundle an async memo of it (each fetched once; one that cannot be fetched resolves to what was shown), `language()` is the shown bundle's, `loading()` is `isPending(bundle)`, the choice is kept by an effect on the language shown. `setLanguage` keeps its contract: its promise is `resolve(bundle)`. The tests are unchanged, with one more: the rest of the page goes on changing while a language loads |
 | 16 | `Problems.tsx` `useSaveChecks` | an effect writes the problems again in the new language | ⏸ not now: the problems would have to keep their codes and be put into words where shown |
 
 ### Kept as they are, on purpose
@@ -70,9 +70,6 @@ for setup that returns its teardown, `class` arrays and objects, keyed `For`, co
 
 ### Not now (⏸), and why
 
-- **15, translations.** `setLanguage` returns a promise the tests and the language menu wait for, and a language that
-  fails to load must leave the page as it was (not reach an error boundary). An async memo of the bundle would hold the
-  whole page in a transition while a language loads, which is what is wanted, but changes the provider's contract.
 - **16.** Needs the problems to be stored as codes and parameters (`SayProblem`), and worded where shown.
 
 ## Status (2026-11-02)

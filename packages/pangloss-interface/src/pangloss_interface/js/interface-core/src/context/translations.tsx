@@ -1,4 +1,15 @@
-import { createContext, createEffect, createSignal, onSettled, untrack, useContext } from "solid-js";
+import {
+  createContext,
+  createEffect,
+  createMemo,
+  createSignal,
+  flush,
+  isPending,
+  onSettled,
+  resolve,
+  untrack,
+  useContext,
+} from "solid-js";
 import type { Accessor, ParentProps } from "solid-js";
 import type { ItemTexts, LoadTranslations, TranslationBundle } from "../types";
 
@@ -68,45 +79,38 @@ const TranslationsContext = createContext<Translations>(untranslated);
 export function TranslationsProvider(
   props: ParentProps<{ initial: TranslationBundle; load: LoadTranslations }>,
 ) {
-  const [loaded, setLoaded] = createSignal<Record<string, TranslationBundle>>({});
-  const [language, setCurrent] = createSignal<string>(untrack(() => props.initial.language));
-  const [loading, setLoading] = createSignal(false);
-  let request = 0;
-
-  const bundle = (): TranslationBundle =>
-    language() === props.initial.language
-      ? props.initial
-      : (loaded()[language()] ?? props.initial);
-
-  async function setLanguage(code: string): Promise<void> {
-    if (!props.initial.languages.includes(code)) return;
-    const ticket = ++request;
-    if (code === untrack(language)) {
-      // (the language shown is chosen again: a load of another that is under way is given up)
-      setLoading(false);
-      return;
-    }
-    if (code !== props.initial.language && !(code in untrack(loaded))) {
-      setLoading(true);
-      try {
-        const fetched = await props.load(code);
-        setLoaded((all) => ({ ...all, [code]: fetched }));
-      } catch (error) {
-        // (the page stays as it is; a choice that could not be made is not kept)
-        if (ticket === request) setLoading(false);
+  // The language chosen last (each choice is one, the same again too: after one that could not be loaded)
+  const [chosen, setChosen] = createSignal<string>(untrack(() => props.initial.language), { equals: false });
+  // (each language fetched once: those fetched, by code)
+  const fetched = new Map<string, TranslationBundle>();
+  // The texts on show: those of the language chosen, once they are here. While they are being fetched the page keeps
+  // the words it has (and `loading()` is true); a choice made meanwhile replaces it; one that cannot be fetched
+  // leaves the page as it was
+  const bundle = createMemo((shown?: TranslationBundle): TranslationBundle | Promise<TranslationBundle> => {
+    const code = chosen();
+    if (code === props.initial.language) return props.initial;
+    const known = fetched.get(code);
+    if (known) return known;
+    return props.load(code).then(
+      (texts) => {
+        fetched.set(code, texts);
+        return texts;
+      },
+      (error) => {
         console.error(`The ${code} translations could not be loaded`, error);
-        return;
-      }
-      // (another choice has been made since this was asked for: that one is shown)
-      if (ticket !== request) return;
-    }
-    setCurrent(code);
-    setLoading(false);
-    try {
-      localStorage.setItem(LANGUAGE_KEY, code);
-    } catch {
-      // (storage unavailable: the choice is just not remembered)
-    }
+        return shown ?? props.initial;
+      },
+    );
+  });
+  const language = () => bundle().language;
+  const loading = () => isPending(bundle);
+
+  function setLanguage(code: string): Promise<void> {
+    if (!props.initial.languages.includes(code)) return Promise.resolve();
+    setChosen(code);
+    // (once what is on show is what was chosen, or what was chosen since)
+    flush();
+    return resolve(bundle).then(() => undefined);
   }
 
   // The language last chosen (read once settled, so that the server-side render and the first client render agree)
@@ -127,6 +131,18 @@ export function TranslationsProvider(
       document.documentElement.lang = language;
       document.documentElement.toggleAttribute("data-translating", loading);
     },
+  );
+  // A language shown that was chosen is kept for next time (not the first: that is what the page was made in)
+  createEffect(
+    language,
+    (code) => {
+      try {
+        localStorage.setItem(LANGUAGE_KEY, code);
+      } catch {
+        // (storage unavailable: the choice is just not remembered)
+      }
+    },
+    { defer: true },
   );
 
   const texts = (section: "models" | "enums", name: string): ItemTexts | undefined =>
