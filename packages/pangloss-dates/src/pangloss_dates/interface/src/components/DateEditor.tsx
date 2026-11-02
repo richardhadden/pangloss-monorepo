@@ -9,7 +9,7 @@ import {
 } from "@pangloss/interface-core";
 import type { EditCardProps } from "@pangloss/interface-core";
 import { For, Match, Show, Switch } from "solid-js";
-import { formatDate, MONTHS } from "../format";
+import { formatDate, monthNames } from "../format";
 
 type Data = Record<string, unknown>;
 
@@ -45,9 +45,9 @@ const isData = (value: unknown): value is Data =>
  */
 export default function DateEditor(props: EditCardProps) {
   const form = useItemForm();
-  const { t } = useTranslations();
+  const { t, language, memberName } = useTranslations();
   const reads = () => {
-    const text = formatDate(props.value);
+    const text = formatDate(props.value, { language: language(), t, memberName });
     // (not until it is all there: a range without its latest does not read)
     return text && !text.includes("undefined") ? text : undefined;
   };
@@ -142,7 +142,7 @@ export default function DateEditor(props: EditCardProps) {
  */
 function ExactParts(props: { path: Path; label: string }) {
   const form = useItemForm();
-  const { t } = useTranslations();
+  const { t, language } = useTranslations();
   const value = (): Data => {
     const at = form.get(props.path);
     return isData(at) ? at : {};
@@ -179,7 +179,7 @@ function ExactParts(props: { path: Path; label: string }) {
           onChange={(event) => write("month", event.currentTarget.value)}
         >
           <option value="">{t("date_no_month", "(no month)")}</option>
-          <For each={MONTHS}>
+          <For each={monthNames(language())}>
             {(name, index) => (
               <option
                 value={String(index() + 1)}

@@ -4,7 +4,7 @@ import { useClipboard, useToasts, useTranslations } from "../context";
 /**
  * The toasts (`useToasts().show`), fixed at the bottom right of the page, the latest lowest, each
  * glassy as the bars are (sliding up as it comes), and closed by clicking it. They are kept clear of the clipboard bar when it
- * is showing. A screen reader is told of each (`role="status"`).
+ * is showing, and above a dialog. A screen reader is told of each (`role="status"`).
  */
 export function Toasts() {
   const toasts = useToasts();
@@ -17,7 +17,7 @@ export function Toasts() {
       aria-live="polite"
       aria-label={t("toasts", "Notifications")}
       class={[
-        "pointer-events-none fixed right-4 z-50 flex w-80 flex-col items-end gap-2 transition-[bottom] duration-300",
+        "pointer-events-none fixed right-4 z-60 flex w-80 flex-col items-end gap-2 transition-[bottom] duration-300",
         {
           "bottom-4": !barShown(),
           "bottom-52": barShown() && !clipboard?.collapsed(),

@@ -232,9 +232,9 @@ def test_the_names_of_models_follow_the_language(page: Page, data):
     expand_nav(page)
     page.get_by_role("button", name="Deutsch").click()
     # (the console names the page in the plural of the language; the e2e project has no German
-    # model texts, so the names stay: the words of the interface itself are what change)
+    # model texts, so the names stay: the words of the interface itself are what change, the console's own name too)
     expect(page.get_by_role("button", name="Anmelden")).to_be_visible()
-    expect(page.get_by_role("banner", name="Console")).to_contain_text("Persons")
+    expect(page.get_by_role("banner", name="Konsole")).to_contain_text("Persons")
 
 
 def test_an_item_that_disappears_on_logging_out_is_a_404_and_leaves_no_label(

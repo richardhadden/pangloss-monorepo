@@ -1,4 +1,4 @@
-import { useConsoleMount, useNavExpanded } from "../context";
+import { useConsoleMount, useNavExpanded, useTranslations } from "../context";
 
 /**
  * The console, fixed along the top of the page, 5rem in from each side of it (the page
@@ -12,9 +12,10 @@ import { useConsoleMount, useNavExpanded } from "../context";
 export function ConsoleBar() {
   const { setMount, active } = useConsoleMount();
   const { navPinned } = useNavExpanded();
+  const { t } = useTranslations();
   return (
     <header
-      aria-label="Console"
+      aria-label={t("console", "Console")}
       aria-hidden={active() ? undefined : "true"}
       class={[
         "fixed top-0 z-30 flex h-12 items-center overflow-hidden rounded-b-sm border-[0.5px] border-t-0 border-slate-400/70 bg-slate-200/60 text-xs font-semibold text-slate-700 uppercase backdrop-blur-md transition-[opacity,translate] duration-300",

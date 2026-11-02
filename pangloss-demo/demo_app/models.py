@@ -271,6 +271,49 @@ class Causes[TCause, TResult](Conjunction):
     result: TResult
 
 
+class PhysicalObject(Entity):
+    """Any physical object"""
+
+
+class Artwork(PhysicalObject):
+    """Any artwork object"""
+
+
+class Painting(Artwork):
+    """A painting"""
+
+
+class CreationOfPhysicalObject(Document):
+    created_by: Person
+    object_created: PhysicalObject
+
+
+class CreationOfArtwork(CreationOfPhysicalObject):
+    artwork_created: Annotated[
+        Artwork,
+        RelationConfig(
+            subclasses_parent_fields=[
+                FieldSubclassing(
+                    field_name="object_created", field_on_model=CreationOfPhysicalObject
+                )
+            ]
+        ),
+    ]
+
+
+class CreationOfPainting(CreationOfArtwork):
+    painting_created: Annotated[
+        Artwork,
+        RelationConfig(
+            subclasses_parent_fields=[
+                FieldSubclassing(
+                    field_name="artwork_created", field_on_model=CreationOfArtwork
+                )
+            ]
+        ),
+    ]
+
+
 class Factoid(Document):
     """What a source says, at a page: a set of statements"""
 

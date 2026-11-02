@@ -5,8 +5,8 @@ import { NavModelList } from "./NavModelList";
 import type { NavBarProps } from "../types";
 
 // (emoji for now) a language has a flag only where it is chosen here; the others show their code. English is shown
-// with the UK flag, German with the Austrian one
-const FLAGS: Record<string, string> = { en: "🇬🇧", de: "🇦🇹" };
+// with the UK flag, German with the Austrian one, French with the French one
+const FLAGS: Record<string, string> = { en: "🇬🇧", de: "🇦🇹", fr: "🇫🇷" };
 
 /** A language is named in itself ("Deutsch"), not in the language of the page */
 function languageName(code: string): string {

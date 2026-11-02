@@ -15,6 +15,7 @@ import {
   ToastsProvider,
   useClipboard,
   useComponent,
+  useTranslations,
 } from "@pangloss/interface-core";
 import { Title } from "@solidjs/meta";
 import { createMemo, Loading } from "solid-js";
@@ -36,6 +37,7 @@ function Frame(props: ParentProps) {
   const Toasts = useComponent("Toasts");
   const { openLogin } = useLoginDialog();
   const { navPinned } = useNavExpanded();
+  const { t } = useTranslations();
   // Who is logged in (an async memo: what reads `user()` waits for it, inside a `Loading`).
   // The server holds back the first part of the page until it is known, so the bar is not
   // sent as "not logged in" and then changed.
@@ -61,7 +63,7 @@ function Frame(props: ParentProps) {
           </Loading>
           <ConsoleBar />
           <Padded navPinned={navPinned()}>
-            <Loading fallback={<main>Loading…</main>}>{props.children}</Loading>
+            <Loading fallback={<main>{t("loading", "Loading…")}</main>}>{props.children}</Loading>
           </Padded>
           <ClipboardBar />
           <Toasts />

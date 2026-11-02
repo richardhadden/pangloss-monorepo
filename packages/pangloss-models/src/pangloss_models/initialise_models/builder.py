@@ -471,6 +471,9 @@ def _build_generic_model(
                 ),
             ),
         )
+        if kind.empty_list_default and definition.wrapper:
+            # (as in `add_fields`: a relation with no items has no edges, so nothing to read back)
+            bound.model_fields[name].default_factory = definition.wrapper  # type: ignore[attr-defined]
         bound.model_rebuild(force=True)
 
     return bound

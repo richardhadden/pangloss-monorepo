@@ -905,6 +905,31 @@ def test_list_relations_default_to_empty_in_view_models():
 
 
 @no_type_check
+def test_list_relations_of_a_bound_generic_default_to_empty_in_view_models():
+    """The same for the type variable of a reified relation where it is used: one saved
+    with an empty target has no edges, and must still be read back (it was a missing field)"""
+    from pangloss_models.model_bases.reified_relation import ReifiedRelation
+
+    class Source(Entity):
+        pass
+
+    class AtPage[T](ReifiedRelation[T]):
+        page: str
+
+    class Factoid(Document):
+        source: AtPage[Source]
+
+    initialise()
+
+    view = Factoid.View(
+        id=uuid7(),
+        label="A factoid",
+        source={"type": "AtPage", "id": uuid7(), "page": "ch. 28"},
+    )
+    assert view.source.target == []
+
+
+@no_type_check
 def test_reified_relation_document_view_requires_a_label():
     from pangloss_models.model_bases.reified_relation import ReifiedRelationDocument
 

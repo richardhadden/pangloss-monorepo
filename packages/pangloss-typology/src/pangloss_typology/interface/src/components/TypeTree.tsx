@@ -1,4 +1,4 @@
-import { ApiError, useApi, useComponent, userIsLoggedIn } from "@pangloss/interface-core";
+import { ApiError, useApi, useComponent, userIsLoggedIn, useTranslations } from "@pangloss/interface-core";
 import type { ListPageProps } from "@pangloss/interface-core";
 import { createMemo, createSignal, Errored, For, Loading, Show } from "solid-js";
 import { getTree, moveType } from "../api";
@@ -13,6 +13,7 @@ export default function TypeTree(props: ListPageProps) {
   const api = useApi();
   const Console = useComponent("Console");
   const ErrorMessage = useComponent("ErrorMessage");
+  const { t } = useTranslations();
   // (read again when it changes, after a move)
   const [version, setVersion] = createSignal(0);
   // (the version is read before the request is made, so a change of it asks again)
@@ -69,7 +70,7 @@ export default function TypeTree(props: ListPageProps) {
         >
           <button
             type="button"
-            aria-label={open() ? "Collapse" : "Expand"}
+            aria-label={open() ? t("typology_collapse", "Collapse") : t("typology_expand", "Expand")}
             aria-expanded={open() ? "true" : "false"}
             disabled={row.node.children.length === 0}
             class="w-5 text-slate-600 disabled:opacity-20"
@@ -87,7 +88,7 @@ export default function TypeTree(props: ListPageProps) {
           </Show>
           <Show when={draggable()}>
             <select
-              aria-label={`Move ${row.node.label} to`}
+              aria-label={t("typology_move", "Move {name} to", { name: row.node.label })}
               class="max-w-40 rounded-sm border-[0.5px] border-slate-400/70 bg-white px-1 text-xs"
               onChange={(event) => {
                 const value = event.currentTarget.value;
@@ -95,9 +96,9 @@ export default function TypeTree(props: ListPageProps) {
                 if (value !== "") void move(row.node.id, value === "top" ? null : value);
               }}
             >
-              <option value="">Move to…</option>
+              <option value="">{t("typology_move_to", "Move to…")}</option>
               <Show when={canMove(nodes(), row.node.id, null)}>
-                <option value="top">(top level)</option>
+                <option value="top">{t("typology_top_level", "(top level)")}</option>
               </Show>
               <For each={targetsFor(nodes(), row.node.id).filter((t) => canMove(nodes(), row.node.id, t.id))}>
                 {(target) => <option value={target.id}>{`${"– ".repeat(target.depth)}${target.label}`}</option>}
@@ -125,7 +126,7 @@ export default function TypeTree(props: ListPageProps) {
         )}
       </Show>
       <Errored fallback={(error) => <ErrorMessage error={error()} />}>
-        <Loading fallback={<p>Loading…</p>}>
+        <Loading fallback={<p>{t("loading", "Loading…")}</p>}>
           {/* (always there for someone who can move, hidden until a drag: the rows must not move when it starts) */}
           <Show when={draggable()}>
             <div
@@ -143,10 +144,10 @@ export default function TypeTree(props: ListPageProps) {
                 { invisible: dragging() === undefined },
               ]}
             >
-              Drop here for the top level
+              {t("typology_drop_top", "Drop here for the top level")}
             </div>
           </Show>
-          <Show when={nodes().length > 0} fallback={<p class="text-sm text-slate-600">No types yet.</p>}>
+          <Show when={nodes().length > 0} fallback={<p class="text-sm text-slate-600">{t("typology_no_types", "No types yet.")}</p>}>
             <ul class="flex flex-col gap-1">
               <For each={nodes()}>{(node) => <Row node={node} depth={0} />}</For>
             </ul>

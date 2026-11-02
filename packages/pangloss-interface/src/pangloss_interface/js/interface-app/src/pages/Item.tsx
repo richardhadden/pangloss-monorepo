@@ -95,6 +95,7 @@ export default function EntityPage(props: RouteProps<"/:type/:id">) {
   const Console = useComponent("Console");
   const ItemContents = useComponent("ItemContents");
   const ErrorMessage = useComponent("ErrorMessage");
+  const { t } = useTranslations();
   const item = createMemo(() => itemQuery(props.params.type, props.params.id));
   // (a model may name a page of an interface module for its items: it replaces the rest of this one)
   // What the console says of the item, kept in a signal of its own (set by `Track`, which is inside the error
@@ -136,7 +137,7 @@ export default function EntityPage(props: RouteProps<"/:type/:id">) {
           </>
         )}
       >
-        <Loading fallback={<p>Loading…</p>}>
+        <Loading fallback={<p>{t("loading", "Loading…")}</p>}>
           <Track item={item} onShow={setShown} />
           <Customised
             slot="itemPage"

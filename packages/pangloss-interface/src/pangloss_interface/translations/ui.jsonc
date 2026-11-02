@@ -1,89 +1,217 @@
 // The fixed text of the interface (the slots on its pages): {"key": {"language": "text"}}.
 // A project changes or adds a language in its own translations/ui.jsonc.
 {
-  "title": { "en": "Pangloss", "de": "Pangloss" },
-  "log_in": { "en": "Log in", "de": "Anmelden" },
-  "log_out": { "en": "Log out", "de": "Abmelden" },
+  "title": { "en": "Pangloss", "de": "Pangloss", "fr": "Pangloss" },
+  "log_in": { "en": "Log in", "de": "Anmelden", "fr": "Se connecter" },
+  "log_out": { "en": "Log out", "de": "Abmelden", "fr": "Se déconnecter" },
 
   // The navigation bar
-  "home": { "en": "Home", "de": "Startseite" },
-  "log_out_user": { "en": "Log out {user}", "de": "{user} abmelden" },
-  "nav_main": { "en": "Main", "de": "Hauptnavigation" },
-  "nav_expand": { "en": "Expand the navigation bar", "de": "Navigationsleiste ausklappen" },
-  "nav_pin": { "en": "Pin the navigation bar open", "de": "Navigationsleiste angeheftet offen halten" },
-  "nav_unpin": { "en": "Unpin the navigation bar", "de": "Navigationsleiste lösen" },
-  "status_logged_in_as": { "en": "Logged in as {user}", "de": "Angemeldet als {user}" },
-  "status_not_logged_in": { "en": "Not logged in", "de": "Nicht angemeldet" },
-  "language_current": { "en": "Language: {language}", "de": "Sprache: {language}" },
-  "nav_section_typologies": { "en": "Typologies", "de": "Typologien" },
-  "section_links": { "en": "Links", "de": "Links" },
+  "home": { "en": "Home", "de": "Startseite", "fr": "Accueil" },
+  "log_out_user": { "en": "Log out {user}", "de": "{user} abmelden", "fr": "Déconnecter {user}" },
+  "nav_main": { "en": "Main", "de": "Hauptnavigation", "fr": "Navigation principale" },
+  "nav_expand": { "en": "Expand the navigation bar", "de": "Navigationsleiste ausklappen", "fr": "Déplier la barre de navigation" },
+  "nav_pin": { "en": "Pin the navigation bar open", "de": "Navigationsleiste angeheftet offen halten", "fr": "Garder la barre de navigation ouverte" },
+  "nav_unpin": { "en": "Unpin the navigation bar", "de": "Navigationsleiste lösen", "fr": "Ne plus garder la barre de navigation ouverte" },
+  "status_logged_in_as": { "en": "Logged in as {user}", "de": "Angemeldet als {user}", "fr": "Connecté en tant que {user}" },
+  "status_not_logged_in": { "en": "Not logged in", "de": "Nicht angemeldet", "fr": "Non connecté" },
+  "language_current": { "en": "Language: {language}", "de": "Sprache: {language}", "fr": "Langue : {language}" },
+  "nav_section_typologies": { "en": "Typologies", "de": "Typologien", "fr": "Typologies" },
+  "section_links": { "en": "Links", "de": "Links", "fr": "Liens" },
 
   // The console
-  "search": { "en": "Search", "de": "Suchen" },
-  "found": { "en": "Found", "de": "Gefunden" },
-  "found_more": { "en": "Found, and more: narrow the search", "de": "Gefunden, und mehr: Suche eingrenzen" },
-  "deep_search": { "en": "Deep search", "de": "Tiefensuche" },
-  "deep_search_run": { "en": "Run deep search (Enter)", "de": "Tiefensuche starten (Eingabe)" },
-  "new_item": { "en": "New {type}", "de": "{type} anlegen" },
+  "search": { "en": "Search", "de": "Suchen", "fr": "Rechercher" },
+  "found": { "en": "Found", "de": "Gefunden", "fr": "Trouvés" },
+  "found_more": { "en": "Found, and more: narrow the search", "de": "Gefunden, und mehr: Suche eingrenzen", "fr": "Trouvés, et d’autres encore : affinez la recherche" },
+  "deep_search": { "en": "Deep search", "de": "Tiefensuche", "fr": "Recherche approfondie" },
+  "deep_search_run": { "en": "Run deep search (Enter)", "de": "Tiefensuche starten (Eingabe)", "fr": "Lancer la recherche approfondie (Entrée)" },
+  "new_item": { "en": "New {type}", "de": "{type} anlegen", "fr": "Nouveau : {type}" },
 
   "abstract_no_types": {
     "en": "{type} is an abstract type, and no type of it exists in this project: there is nothing to list.",
-    "de": "{type} ist ein abstrakter Typ, und es gibt in diesem Projekt keinen Typ davon: Es gibt nichts aufzulisten."
+    "de": "{type} ist ein abstrakter Typ, und es gibt in diesem Projekt keinen Typ davon: Es gibt nichts aufzulisten.",
+    "fr": "{type} est un type abstrait, et aucun de ses types n’existe dans ce projet : il n’y a rien à afficher."
   },
 
-  "close": { "en": "Close", "de": "Schließen" },
+  "close": { "en": "Close", "de": "Schließen", "fr": "Fermer" },
 
-  "page_not_found": { "en": "Page not found", "de": "Seite nicht gefunden" },
-  "title_not_found": { "en": "Not found - Pangloss", "de": "Nicht gefunden - Pangloss" },
+  "page_not_found": { "en": "Page not found", "de": "Seite nicht gefunden", "fr": "Page introuvable" },
+  "title_not_found": { "en": "Not found - Pangloss", "de": "Nicht gefunden - Pangloss", "fr": "Introuvable - Pangloss" },
   "item_not_found": {
     "en": "There is nothing here. It may not exist, or you may need to log in to see it.",
-    "de": "Hier ist nichts. Es existiert vielleicht nicht, oder Sie müssen sich anmelden, um es zu sehen."
+    "de": "Hier ist nichts. Es existiert vielleicht nicht, oder Sie müssen sich anmelden, um es zu sehen.",
+    "fr": "Il n’y a rien ici. Cet élément n’existe peut-être pas, ou il faut vous connecter pour le voir."
   },
 
   // What an error says (the API's own explanations are English: the API is not multilingual)
-  "error_unauthorised": { "en": "You need to log in to do this.", "de": "Dafür müssen Sie sich anmelden." },
-  "error_forbidden": { "en": "You are not allowed to do this.", "de": "Sie dürfen das nicht tun." },
+  "error_unauthorised": { "en": "You need to log in to do this.", "de": "Dafür müssen Sie sich anmelden.", "fr": "Vous devez vous connecter pour faire cela." },
+  "error_forbidden": { "en": "You are not allowed to do this.", "de": "Sie dürfen das nicht tun.", "fr": "Vous n’êtes pas autorisé à faire cela." },
   "error_server": {
     "en": "Something went wrong on the server. Please try again in a moment.",
-    "de": "Auf dem Server ist etwas schiefgegangen. Bitte versuchen Sie es gleich noch einmal."
+    "de": "Auf dem Server ist etwas schiefgegangen. Bitte versuchen Sie es gleich noch einmal.",
+    "fr": "Une erreur s’est produite sur le serveur. Veuillez réessayer dans un instant."
   },
 
   // Values and links in the results
-  "yes": { "en": "Yes", "de": "Ja" },
-  "no": { "en": "No", "de": "Nein" },
-  "go_to_head": { "en": "Go to the {type}", "de": "Zum Objekt: {type}" },
-  "type_marker": { "en": "type", "de": "Typ" },
+  "yes": { "en": "Yes", "de": "Ja", "fr": "Oui" },
+  "no": { "en": "No", "de": "Nein", "fr": "Non" },
+  "go_to_head": { "en": "Go to the {type}", "de": "Zum Objekt: {type}", "fr": "Aller à l’objet : {type}" },
+  "type_marker": { "en": "type", "de": "Typ", "fr": "type" },
 
   // The login form
-  "username": { "en": "Username", "de": "Benutzername" },
-  "password": { "en": "Password", "de": "Passwort" },
+  "username": { "en": "Username", "de": "Benutzername", "fr": "Nom d’utilisateur" },
+  "password": { "en": "Password", "de": "Passwort", "fr": "Mot de passe" },
   "login_failed": {
     "en": "That username and password do not match. Check them and try again.",
-    "de": "Benutzername und Passwort passen nicht zusammen. Bitte prüfen Sie Ihre Eingaben und versuchen Sie es erneut."
+    "de": "Benutzername und Passwort passen nicht zusammen. Bitte prüfen Sie Ihre Eingaben und versuchen Sie es erneut.",
+    "fr": "Ce nom d’utilisateur et ce mot de passe ne correspondent pas. Vérifiez-les et réessayez."
   },
-  "logging_in": { "en": "Logging in…", "de": "Anmeldung läuft …" },
+  "logging_in": { "en": "Logging in…", "de": "Anmeldung läuft …", "fr": "Connexion en cours…" },
 
   // The form: the types to choose from where the next thing is added ({name} is the type they all come from)
-  "select_type_of": { "en": "Select {name} type…", "de": "{name}: Typ auswählen …" },
-  "select_type": { "en": "Select a type…", "de": "Typ auswählen …" },
+  "select_type_of": { "en": "Select {name} type…", "de": "{name}: Typ auswählen …", "fr": "{name} : choisir un type…" },
+  "select_type": { "en": "Select a type…", "de": "Typ auswählen …", "fr": "Choisir un type…" },
+
+  // The form, when it is saved and something is wrong: the red toast ({count} is a number), and what a field
+  // says under its name (the checks of the models; {n} is a number)
+  "not_saved": { "en": "Not saved", "de": "Nicht gespeichert", "fr": "Non enregistré" },
+  "not_saved_problem": { "en": "Not saved: a field has a problem, marked in red", "de": "Nicht gespeichert: Ein Feld hat einen Fehler, rot markiert", "fr": "Non enregistré : un champ comporte une erreur, signalée en rouge" },
+  "not_saved_problems": { "en": "Not saved: {count} problems, marked in red", "de": "Nicht gespeichert: {count} Fehler, rot markiert", "fr": "Non enregistré : {count} erreurs, signalées en rouge" },
+  "invalid_required": { "en": "Required", "de": "Pflichtfeld", "fr": "Obligatoire" },
+  "invalid_too_short": { "en": "At least {n} characters", "de": "Mindestens {n} Zeichen", "fr": "Au moins {n} caractères" },
+  "invalid_too_long": { "en": "At most {n} characters", "de": "Höchstens {n} Zeichen", "fr": "Au plus {n} caractères" },
+  "invalid_too_few": { "en": "At least {n} needed", "de": "Mindestens {n} erforderlich", "fr": "Au moins {n} requis" },
+  "invalid_too_many": { "en": "At most {n} allowed", "de": "Höchstens {n} erlaubt", "fr": "Au plus {n} autorisés" },
+  "invalid_too_small": { "en": "Must be {n} or more", "de": "Muss mindestens {n} sein", "fr": "Doit être supérieur ou égal à {n}" },
+  "invalid_must_exceed": { "en": "Must be more than {n}", "de": "Muss größer als {n} sein", "fr": "Doit être supérieur à {n}" },
+  "invalid_too_large": { "en": "Must be {n} or less", "de": "Darf höchstens {n} sein", "fr": "Doit être inférieur ou égal à {n}" },
+  "invalid_must_be_under": { "en": "Must be less than {n}", "de": "Muss kleiner als {n} sein", "fr": "Doit être inférieur à {n}" },
+  "invalid_not_whole": { "en": "Must be a whole number", "de": "Muss eine ganze Zahl sein", "fr": "Doit être un nombre entier" },
+  "invalid_not_multiple": { "en": "Must be a multiple of {n}", "de": "Muss ein Vielfaches von {n} sein", "fr": "Doit être un multiple de {n}" },
+  "invalid_not_number": { "en": "Must be a number", "de": "Muss eine Zahl sein", "fr": "Doit être un nombre" },
+  "invalid_not_date": { "en": "Must be a date", "de": "Muss ein Datum sein", "fr": "Doit être une date" },
+  "invalid_not_datetime": { "en": "Must be a date and time", "de": "Muss ein Datum mit Uhrzeit sein", "fr": "Doit être une date et une heure" },
+  "invalid_not_uuid": { "en": "Must be a UUID", "de": "Muss eine UUID sein", "fr": "Doit être un UUID" },
+  "invalid_not_choice": { "en": "Not one of the choices", "de": "Keine der Auswahlmöglichkeiten", "fr": "Ne fait pas partie des choix" },
+  "invalid_type_not_allowed": { "en": "This type is not allowed here", "de": "Dieser Typ ist hier nicht erlaubt", "fr": "Ce type n’est pas autorisé ici" },
+  "invalid_value": { "en": "Not a valid value", "de": "Kein gültiger Wert", "fr": "Valeur non valide" },
 
   // The kinds of model (a model's "kind" in the gathered file is one of these, as kind_<snake case>)
-  "kind_document": { "en": "Document", "de": "Dokument" },
-  "kind_document_plural": { "en": "Documents", "de": "Dokumente" },
-  "kind_entity": { "en": "Entity", "de": "Entität" },
-  "kind_entity_plural": { "en": "Entities", "de": "Entitäten" },
-  "kind_embedded": { "en": "Embedded object", "de": "Eingebettetes Objekt" },
-  "kind_embedded_plural": { "en": "Embedded objects", "de": "Eingebettete Objekte" },
-  "kind_reified_relation": { "en": "Relation with fields", "de": "Beziehung mit Feldern" },
-  "kind_reified_relation_plural": { "en": "Relations with fields", "de": "Beziehungen mit Feldern" },
-  "kind_reified_relation_document": { "en": "Relation document", "de": "Beziehungsdokument" },
-  "kind_reified_relation_document_plural": { "en": "Relation documents", "de": "Beziehungsdokumente" },
-  "kind_conjunction": { "en": "Conjunction", "de": "Konjunktion" },
-  "kind_conjunction_plural": { "en": "Conjunctions", "de": "Konjunktionen" },
-  "kind_semantic_space": { "en": "Semantic space", "de": "Semantischer Raum" },
-  "kind_semantic_space_plural": { "en": "Semantic spaces", "de": "Semantische Räume" },
-  "kind_annotated_value": { "en": "Annotated value", "de": "Annotierter Wert" },
-  "kind_annotated_value_plural": { "en": "Annotated values", "de": "Annotierte Werte" },
-  "kind_edge_model": { "en": "Edge properties", "de": "Kanteneigenschaften" },
-  "kind_edge_model_plural": { "en": "Edge properties", "de": "Kanteneigenschaften" }
+  "kind_document": { "en": "Document", "de": "Dokument", "fr": "Document" },
+  "kind_document_plural": { "en": "Documents", "de": "Dokumente", "fr": "Documents" },
+  "kind_entity": { "en": "Entity", "de": "Entität", "fr": "Entité" },
+  "kind_entity_plural": { "en": "Entities", "de": "Entitäten", "fr": "Entités" },
+  "kind_embedded": { "en": "Embedded object", "de": "Eingebettetes Objekt", "fr": "Objet intégré" },
+  "kind_embedded_plural": { "en": "Embedded objects", "de": "Eingebettete Objekte", "fr": "Objets intégrés" },
+  "kind_reified_relation": { "en": "Relation with fields", "de": "Beziehung mit Feldern", "fr": "Relation avec champs" },
+  "kind_reified_relation_plural": { "en": "Relations with fields", "de": "Beziehungen mit Feldern", "fr": "Relations avec champs" },
+  "kind_reified_relation_document": { "en": "Relation document", "de": "Beziehungsdokument", "fr": "Document de relation" },
+  "kind_reified_relation_document_plural": { "en": "Relation documents", "de": "Beziehungsdokumente", "fr": "Documents de relation" },
+  "kind_conjunction": { "en": "Conjunction", "de": "Konjunktion", "fr": "Conjonction" },
+  "kind_conjunction_plural": { "en": "Conjunctions", "de": "Konjunktionen", "fr": "Conjonctions" },
+  "kind_semantic_space": { "en": "Semantic space", "de": "Semantischer Raum", "fr": "Espace sémantique" },
+  "kind_semantic_space_plural": { "en": "Semantic spaces", "de": "Semantische Räume", "fr": "Espaces sémantiques" },
+  "kind_annotated_value": { "en": "Annotated value", "de": "Annotierter Wert", "fr": "Valeur annotée" },
+  "kind_annotated_value_plural": { "en": "Annotated values", "de": "Annotierte Werte", "fr": "Valeurs annotées" },
+  "kind_edge_model": { "en": "Edge properties", "de": "Kanteneigenschaften", "fr": "Propriétés de la relation" },
+  "kind_edge_model_plural": { "en": "Edge properties", "de": "Kanteneigenschaften", "fr": "Propriétés de la relation" },
+
+  // Shared: buttons, loading, the console, the label of an item
+  "loading": { "en": "Loading…", "de": "Wird geladen …", "fr": "Chargement…" },
+  "save": { "en": "Save", "de": "Speichern", "fr": "Enregistrer" },
+  "cancel": { "en": "Cancel", "de": "Abbrechen", "fr": "Annuler" },
+  "new": { "en": "New", "de": "Neu", "fr": "Nouveau" },
+  "edit": { "en": "Edit", "de": "Bearbeiten", "fr": "Modifier" },
+  "open": { "en": "Open", "de": "Öffnen", "fr": "Ouvrir" },
+  "remove": { "en": "Remove", "de": "Entfernen", "fr": "Retirer" },
+  "console": { "en": "Console", "de": "Konsole", "fr": "Console" },
+  "created": { "en": "Created", "de": "Erstellt", "fr": "Créé" },
+  "modified": { "en": "Modified", "de": "Geändert", "fr": "Modifié" },
+  "label": { "en": "Label", "de": "Bezeichnung", "fr": "Libellé" },
+  "id": { "en": "ID", "de": "ID", "fr": "ID" },
+
+  // The form ({name} is the name of a field or a type; {type} a type; {label} an item's label)
+  "edit_form": { "en": "{type} form", "de": "Formular: {type}", "fr": "Formulaire : {type}" },
+  "add": { "en": "Add", "de": "Hinzufügen", "fr": "Ajouter" },
+  "add_named": { "en": "Add {name}", "de": "{name} hinzufügen", "fr": "Ajouter : {name}" },
+  "add_to": { "en": "Add to {name}", "de": "Zu {name} hinzufügen", "fr": "Ajouter à {name}" },
+  "remove_item": { "en": "Remove {name}", "de": "{name} entfernen", "fr": "Retirer : {name}" },
+  "fold": { "en": "Fold or unfold {name}", "de": "{name} ein- oder ausklappen", "fr": "Plier ou déplier : {name}" },
+  "find_entity": { "en": "Find {type}…", "de": "{type} suchen …", "fr": "Rechercher : {type}…" },
+  "nothing_found": { "en": "Nothing found", "de": "Nichts gefunden", "fr": "Aucun résultat" },
+  "search_failed": { "en": "The search failed", "de": "Die Suche ist fehlgeschlagen", "fr": "La recherche a échoué" },
+  "picked_lately": { "en": "Used recently", "de": "Kürzlich verwendet", "fr": "Utilisé récemment" },
+  "new_entity": { "en": "Make a new one", "de": "Neu anlegen", "fr": "En créer un nouveau" },
+  "step_up": { "en": "Increase {name}", "de": "{name} erhöhen", "fr": "Augmenter : {name}" },
+  "step_down": { "en": "Decrease {name}", "de": "{name} verringern", "fr": "Diminuer : {name}" },
+  "invalid_json": { "en": "This is not valid JSON, so it is not changed", "de": "Das ist kein gültiges JSON und wird daher nicht übernommen", "fr": "Ce n’est pas du JSON valide : rien n’est modifié" },
+  "stale_version": { "en": "Someone has saved this item since you opened it. Nothing was overwritten: load the new version, and make your changes again.", "de": "Jemand hat dieses Objekt gespeichert, seit Sie es geöffnet haben. Nichts wurde überschrieben: Laden Sie die neue Version und nehmen Sie Ihre Änderungen erneut vor.", "fr": "Quelqu’un a enregistré cet élément depuis que vous l’avez ouvert. Rien n’a été écrasé : chargez la nouvelle version, puis refaites vos modifications." },
+  "reload": { "en": "Load the new version", "de": "Neue Version laden", "fr": "Charger la nouvelle version" },
+
+  // Toasts (the short messages at the bottom right)
+  "toasts": { "en": "Notifications", "de": "Benachrichtigungen", "fr": "Notifications" },
+  "toast_dismiss": { "en": "Dismiss: {message}", "de": "Schließen: {message}", "fr": "Fermer : {message}" },
+  "toast_created": { "en": "{type} “{label}” created", "de": "{type} „{label}“ angelegt", "fr": "{type} « {label} » créé" },
+  "toast_saved": { "en": "{type} “{label}” saved", "de": "{type} „{label}“ gespeichert", "fr": "{type} « {label} » enregistré" },
+
+  // The clipboard
+  "clipboard": { "en": "Clipboard", "de": "Zwischenablage", "fr": "Presse-papiers" },
+  "clipboard_count": { "en": "Clipboard ({count})", "de": "Zwischenablage ({count})", "fr": "Presse-papiers ({count})" },
+  "clipboard_fold": { "en": "Fold or unfold the clipboard", "de": "Zwischenablage ein- oder ausklappen", "fr": "Plier ou déplier le presse-papiers" },
+  "clipboard_clear": { "en": "Clear", "de": "Leeren", "fr": "Vider" },
+  "clipboard_more": { "en": "Show all", "de": "Alle anzeigen", "fr": "Tout afficher" },
+  "clipboard_less": { "en": "Show less", "de": "Weniger anzeigen", "fr": "Afficher moins" },
+  "clip_copied": { "en": "Copied", "de": "Kopiert", "fr": "Copié" },
+  "clip_cut": { "en": "Cut", "de": "Ausgeschnitten", "fr": "Coupé" },
+  "clip_remove": { "en": "Take off the clipboard", "de": "Aus der Zwischenablage entfernen", "fr": "Retirer du presse-papiers" },
+  "copy_item": { "en": "Copy {name}", "de": "{name} kopieren", "fr": "Copier : {name}" },
+  "cut_item": { "en": "Cut {name}", "de": "{name} ausschneiden", "fr": "Couper : {name}" },
+  "paste_item": { "en": "Paste {name}", "de": "{name} einfügen", "fr": "Coller : {name}" },
+  "paste_here": { "en": "Paste here", "de": "Hier einfügen", "fr": "Coller ici" },
+
+  // The navigation bar: the filter of the types
+  "nav_filter": { "en": "Filter types", "de": "Typen filtern", "fr": "Filtrer les types" },
+  "nav_filter_clear": { "en": "Clear the filter", "de": "Filter löschen", "fr": "Effacer le filtre" },
+  "nav_filter_none": { "en": "No types match", "de": "Keine passenden Typen", "fr": "Aucun type ne correspond" },
+
+  // Dates (pangloss_dates)
+  "date_year": { "en": "Year", "de": "Jahr", "fr": "Année" },
+  "date_month": { "en": "Month", "de": "Monat", "fr": "Mois" },
+  "date_day": { "en": "Day", "de": "Tag", "fr": "Jour" },
+  "date_no_month": { "en": "(no month)", "de": "(kein Monat)", "fr": "(pas de mois)" },
+  "date_earliest": { "en": "Earliest", "de": "Frühestens", "fr": "Au plus tôt" },
+  "date_latest": { "en": "Latest", "de": "Spätestens", "fr": "Au plus tard" },
+  "date_reads": { "en": "Reads", "de": "Lautet", "fr": "Se lit" },
+  // (how a date reads: {day}, {month} (a name, from the browser in the language), {year}; {from} and {to} are dates; {what} a weekday or a frequency)
+  "date_day_month_year": { "en": "{day} {month} {year}", "de": "{day}. {month} {year}", "fr": "{day} {month} {year}" },
+  "date_month_year": { "en": "{month} {year}", "de": "{month} {year}", "fr": "{month} {year}" },
+  "date_range": { "en": "{from} to {to}", "de": "{from} bis {to}", "fr": "de {from} à {to}" },
+  "date_ongoing": { "en": "ongoing", "de": "laufend", "fr": "en cours" },
+  "date_unknown": { "en": "unknown", "de": "unbekannt", "fr": "inconnue" },
+  "date_every": { "en": "every {what}", "de": "jeden {what}", "fr": "chaque {what}" },
+  "date_every_n": { "en": "every {n} {what}", "de": "alle {n} {what}", "fr": "tous les {n} {what}" },
+  "date_edtf_help": { "en": "Extended Date/Time Format: 1500-03~ is about March 1500, 15XX some year of the 1500s, 1500/1510 from 1500 to 1510", "de": "Extended Date/Time Format: 1500-03~ ist etwa März 1500, 15XX ein Jahr der 1500er, 1500/1510 von 1500 bis 1510", "fr": "Extended Date/Time Format : 1500-03~ signifie vers mars 1500, 15XX une année des années 1500, 1500/1510 de 1500 à 1510" },
+
+  // Typologies (pangloss_typology)
+  "typology_path": { "en": "Path", "de": "Pfad", "fr": "Chemin" },
+  "typology_all": { "en": "All", "de": "Alle", "fr": "Tous" },
+  "typology_labels": { "en": "Labels", "de": "Bezeichnungen", "fr": "Libellés" },
+  "typology_default_label": { "en": "default", "de": "Standard", "fr": "par défaut" },
+  "typology_not_translated_shown": { "en": "(not translated: the default is shown)", "de": "(nicht übersetzt: der Standard wird angezeigt)", "fr": "(non traduit : le libellé par défaut est affiché)" },
+  "typology_not_translated": { "en": "(not translated)", "de": "(nicht übersetzt)", "fr": "(non traduit)" },
+  "typology_description": { "en": "description", "de": "Beschreibung", "fr": "description" },
+  "typology_edit_labels": { "en": "Edit labels", "de": "Bezeichnungen bearbeiten", "fr": "Modifier les libellés" },
+  "typology_concrete": { "en": "Also a concrete entity (a relation that takes the other class takes this type)", "de": "Auch eine konkrete Entität (eine Beziehung, die die andere Klasse annimmt, nimmt auch diesen Typ an)", "fr": "Aussi une entité concrète (une relation qui accepte l’autre classe accepte ce type)" },
+  "typology_subtypes": { "en": "Subtypes", "de": "Untertypen", "fr": "Sous-types" },
+  "typology_none": { "en": "None.", "de": "Keine.", "fr": "Aucun." },
+  "typology_counts": { "en": "{subtypes} subtypes · {entities} entities", "de": "{subtypes} Untertypen · {entities} Entitäten", "fr": "{subtypes} sous-types · {entities} entités" },
+  "typology_entities_with": { "en": "Entities with this type ({count})", "de": "Entitäten mit diesem Typ ({count})", "fr": "Entités de ce type ({count})" },
+  "typology_including_subtypes": { "en": "including subtypes", "de": "einschließlich Untertypen", "fr": "y compris les sous-types" },
+  "typology_show_more": { "en": "Show more", "de": "Mehr anzeigen", "fr": "Afficher plus" },
+  "typology_collapse": { "en": "Collapse", "de": "Einklappen", "fr": "Replier" },
+  "typology_expand": { "en": "Expand", "de": "Ausklappen", "fr": "Déplier" },
+  "typology_move": { "en": "Move {name} to", "de": "{name} verschieben nach", "fr": "Déplacer {name} vers" },
+  "typology_move_to": { "en": "Move to…", "de": "Verschieben nach …", "fr": "Déplacer vers…" },
+  "typology_top_level": { "en": "(top level)", "de": "(oberste Ebene)", "fr": "(niveau supérieur)" },
+  "typology_drop_top": { "en": "Drop here for the top level", "de": "Hier ablegen für die oberste Ebene", "fr": "Déposer ici pour le niveau supérieur" },
+  "typology_no_types": { "en": "No types yet.", "de": "Noch keine Typen.", "fr": "Aucun type pour l’instant." }
 }

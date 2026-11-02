@@ -11,13 +11,24 @@ import {
   ModelsProvider,
   NavExpandedProvider,
   SessionProvider,
+  ToastsProvider,
+  TranslationsProvider,
+  useTranslations,
 } from "../../context";
-import type { ComponentMap, FieldDefinition, ModelDefinition, ModelDefinitions, RelationOption } from "../../types";
+import type {
+  ComponentMap,
+  FieldDefinition,
+  ModelDefinition,
+  ModelDefinitions,
+  RelationOption,
+  TranslationBundle,
+} from "../../types";
 import { Console } from "../Console";
 import { ConsoleBar } from "../ConsoleBar";
 import { ClipboardBar } from "../ClipboardBar";
 import { Modal } from "../../primitives";
 import { ReferenceChip } from "../ReferenceChip";
+import { Toasts } from "../Toasts";
 import { ItemForm } from "./ItemForm";
 
 const model = (name: string, extra: Partial<ModelDefinition> = {}) =>
@@ -59,9 +70,14 @@ const definitions = {
     Statement: model("Statement", { abstract: true, concreteTypes: ["Activity", "Transfer"] }),
     Activity: model("Activity", {
       parent: "Statement",
+      requireLabel: false,
       fields: [literal("text", { type: "str" }), literal("kind", { type: "enum", enum: "Kind" })],
     }),
-    Transfer: model("Transfer", { parent: "Statement", fields: [literal("item", { type: "str" })] }),
+    Transfer: model("Transfer", {
+      parent: "Statement",
+      requireLabel: false,
+      fields: [literal("item", { type: "str" }, { validators: [{ name: "MinLen", min_length: 3 }] })],
+    }),
     Negative: model("Negative", {
       kind: "SemanticSpace",
       fields: [relation("contents", [{ kind: "typeVar", name: "T", edgeModel: null }])],
@@ -137,15 +153,18 @@ function show(client: ApiClient, props: Partial<Parameters<typeof ItemForm>[0]> 
               <NavExpandedProvider>
                 <ConsoleMountProvider>
                   <ClipboardProvider>
-                    <ConsoleBar />
-                    <ItemForm
-                      type="Factoid"
-                      initial={{ type: "Factoid" }}
-                      onSaved={(summary) => saved.push(summary)}
-                      onCancel={() => {}}
-                      {...props}
-                    />
-                    <ClipboardBar />
+                    <ToastsProvider>
+                      <ConsoleBar />
+                      <ItemForm
+                        type="Factoid"
+                        initial={{ type: "Factoid" }}
+                        onSaved={(summary) => saved.push(summary)}
+                        onCancel={() => {}}
+                        {...props}
+                      />
+                      <ClipboardBar />
+                      <Toasts />
+                    </ToastsProvider>
                   </ClipboardProvider>
                 </ConsoleMountProvider>
               </NavExpandedProvider>
@@ -174,6 +193,15 @@ const button = (name: string) =>
   );
 // (the types a field can hold, laid out open where the next one is added)
 const chooser = (label: string) => document.body.querySelector<HTMLElement>(`[role="group"][aria-label="${label}"]`)!;
+/** What a form needs to be sent: the Factoid's label and year */
+const fillRequired = () => {
+  type("Label", "Fall of Rome");
+  type("year", "476");
+};
+/** The name of a field's row, and what it says is wrong */
+const rowName = (name: string) =>
+  [...document.body.querySelectorAll("dt")].find((dt) => dt.firstChild?.textContent === name)!;
+const toastText = () => document.body.querySelector('[role="status"]')?.textContent ?? "";
 const choices = (label: string) =>
   [...chooser(label).querySelectorAll("button[data-choice], [aria-disabled]")].map((item) => item.textContent?.trim());
 
@@ -214,6 +242,7 @@ test("a statement is chosen from the types the add button opens, on their own or
   // (only the space has a heading)
   const headings = [...chooser("Add statements").querySelectorAll("h3")].map((h) => h.textContent);
   expect(headings).toEqual(["Negative"]);
+  fillRequired();
   // choose Activity inside Negative
   const inNegative = [...chooser("Add statements").querySelectorAll("section")][1]!;
   click(inNegative.querySelector("button[data-choice]"));
@@ -257,6 +286,7 @@ test("an entity is found by searching, then shown as a reference, and only its t
   await settle(400);
   click(document.body.querySelector('[role="option"]'));
   await settle();
+  fillRequired();
   click(button("Save"));
   await settle();
   expect(sent.at(-1)!.body.author).toEqual({ type: "Person", id: "p1" });
@@ -342,6 +372,7 @@ test("the label is a heading that grows with a long label: one line of text, so 
   type("Label", "The fall\nof Rome");
   await settle();
   expect(box.value).toBe("The fall of Rome");
+  type("year", "476");
   click(button("Save"));
   await settle();
   expect(sent.find((call) => call.method === "POST")!.body.label).toBe("The fall of Rome");
@@ -403,17 +434,93 @@ test("an edit sends the whole item back with the version it was loaded at; what 
   expect(sent[0]!.body).not.toHaveProperty("meta");
 });
 
-test("a problem the API names is shown, and the form keeps what was typed", async () => {
+test("what is wrong is found before anything is sent: the fields are red and say why, in a red toast, with no box at the top", async () => {
+  const { client, sent } = fakeClient(() => ({ id: "f1", type: "Factoid", label: "F" }));
+  show(client);
+  await settle();
+  click(button("Add statements"));
+  await settle();
+  click([...chooser("Add statements").querySelectorAll("button[data-choice]")].find((b) => b.textContent === "Transfer"));
+  await settle();
+  type("item", "ox");
+  click(button("Save"));
+  await settle();
+  expect(sent).toHaveLength(0);
+  // (the label is a heading: its rule is red, and it says why under it)
+  expect(byLabel("Label").getAttribute("aria-invalid")).toBe("true");
+  expect(byLabel("Label").parentElement?.textContent).toContain("Required");
+  expect(rowName("year").className).toContain("text-red-700");
+  expect(rowName("year").textContent).toContain("Required");
+  // (inside the statement, at its own field)
+  expect(rowName("item").className).toContain("text-red-700");
+  expect(rowName("item").textContent).toContain("At least 3 characters");
+  expect(rowName("aliases").className).not.toContain("text-red-700");
+  expect(toastText()).toContain("Not saved: 3 problems, marked in red");
+  expect(document.body.querySelector("form ul[role=alert]")).toBeNull();
+  // (a field changed is no longer marked; the others are, until saved again)
+  type("year", "476");
+  await settle();
+  expect(rowName("year").className).not.toContain("text-red-700");
+  expect(rowName("item").className).toContain("text-red-700");
+  type("Label", "Fall of Rome");
+  type("item", "an ox");
+  click(button("Save"));
+  await settle();
+  expect(sent).toHaveLength(1);
+  expect(sent[0]!.body).toMatchObject({ label: "Fall of Rome", year: 476, statements: [{ type: "Transfer", item: "an ox" }] });
+});
+
+test("an entity not yet chosen for a required relation, and an embedded value without its required fields, are marked", async () => {
+  const { client, sent } = fakeClient(() => ({ id: "f1", type: "Factoid", label: "F" }));
+  show(client);
+  await settle();
+  fillRequired();
+  click(button("Add when"));
+  await settle();
+  click([...chooser("Add when").querySelectorAll("button")].find((item) => item.textContent === "Day"));
+  await settle();
+  type("day", "1.5");
+  click(button("Save"));
+  await settle();
+  expect(sent).toHaveLength(0);
+  expect(rowName("day").textContent).toContain("Must be a whole number");
+  expect(toastText()).toContain("Not saved: a field has a problem, marked in red");
+});
+
+test("a problem the API names is shown at its field, and the form keeps what was typed", async () => {
   const { client } = fakeClient(() => {
-    throw new ApiError(422, JSON.stringify([{ loc: ["body", "year"], msg: "Field required" }]));
+    throw new ApiError(
+      422,
+      JSON.stringify([
+        { loc: ["body", "year"], msg: "Year out of range" },
+        { loc: ["body", "elsewhere"], msg: "Something else" },
+      ]),
+    );
   });
   show(client);
   await settle();
-  type("Label", "x");
+  fillRequired();
   click(button("Save"));
   await settle();
-  expect(document.body.querySelector('[role="alert"]')?.textContent).toContain("year: Field required");
-  expect(byLabel<HTMLInputElement>("Label").value).toBe("x");
+  expect(rowName("year").className).toContain("text-red-700");
+  expect(rowName("year").textContent).toContain("Year out of range");
+  // (what has no field on the page is said in the toast)
+  expect(toastText()).toContain("Not saved: a field has a problem, marked in red");
+  expect(toastText()).toContain("elsewhere: Something else");
+  expect(byLabel<HTMLInputElement>("Label").value).toBe("Fall of Rome");
+});
+
+test("an error that is not about the fields is a red toast", async () => {
+  const { client } = fakeClient(() => {
+    throw new ApiError(403, "Forbidden");
+  });
+  show(client);
+  await settle();
+  fillRequired();
+  click(button("Save"));
+  await settle();
+  expect(toastText()).toContain("You are not allowed to do this.");
+  expect(document.body.querySelector('[role="status"] button')?.className).toContain("bg-red-100/80");
 });
 
 test("an item saved by someone else meanwhile is not overwritten: the form says so and offers the new version", async () => {
@@ -422,7 +529,7 @@ test("an item saved by someone else meanwhile is not overwritten: the form says 
   });
   let reloaded = 0;
   show(client, {
-    initial: { id: "f1", type: "Factoid", label: "F", meta: { version: 3 } },
+    initial: { id: "f1", type: "Factoid", label: "F", year: 476, meta: { version: 3 } },
     version: 3,
     onReload: () => (reloaded += 1),
   });
@@ -452,13 +559,14 @@ test("an entity can be made from the form: a dialog with its own form, and what 
   expect(sent.find((call) => call.method === "POST")).toMatchObject({ path: "/Person", body: { label: "Bede" } });
   expect(document.body.querySelector('[role="dialog"]')).toBeNull();
   expect(document.body.textContent).toContain("Bede");
+  fillRequired();
   click(button("Save"));
   await settle();
   expect(sent.at(-1)).toMatchObject({ path: "/Factoid", body: { author: { type: "Person", id: "p9" } } });
 });
 
-test("a refused entity keeps the dialog open and says why; Cancel leaves the form as it was", async () => {
-  const { client } = fakeClient(() => {
+test("a refused entity keeps the dialog open and says why, at its field; Cancel leaves the form as it was", async () => {
+  const { client, sent } = fakeClient(() => {
     throw new ApiError(422, JSON.stringify([{ loc: ["body", "label"], msg: "too short" }]));
   });
   show(client);
@@ -470,7 +578,18 @@ test("a refused entity keeps the dialog open and says why; Cancel leaves the for
     [...dialog().querySelectorAll("button")].find((b) => b.textContent?.trim() === name)!;
   click(inDialog("Save"));
   await settle();
-  expect(dialog().textContent).toContain("label: too short");
+  // (found before it is sent: a person has to have a label)
+  expect(sent).toHaveLength(0);
+  const label = dialog().querySelector<HTMLInputElement>('[aria-label="Label"]')!;
+  expect(label.getAttribute("aria-invalid")).toBe("true");
+  expect(label.parentElement?.textContent).toContain("Required");
+  label.value = "B";
+  label.dispatchEvent(new InputEvent("input", { bubbles: true }));
+  click(inDialog("Save"));
+  await settle();
+  expect(sent).toHaveLength(1);
+  expect(label.parentElement?.textContent).toContain("too short");
+  expect(toastText()).toContain("Not saved");
   click(inDialog("Cancel"));
   await settle();
   expect(document.body.querySelector('[role="dialog"]')).toBeNull();
@@ -571,4 +690,80 @@ test("the buttons of a block are fold, cut, copy, remove; the clipboard folds to
   expect(list.classList.contains("hidden")).toBe(true);
   expect(byLabel("Fold or unfold the clipboard").getAttribute("aria-expanded")).toBe("false");
   expect(localStorage.getItem("pangloss.clipboardCollapsed")).toBe("true");
+});
+
+test("what is wrong is said in the language of the page, and again in another when the language changes", async () => {
+  const bundle = (language: string, ui: Record<string, string>): TranslationBundle => ({
+    language,
+    default: "de",
+    languages: ["de", "en"],
+    ui,
+    models: {},
+    enums: {},
+  });
+  const german = bundle("de", {
+    invalid_required: "Pflichtfeld",
+    invalid_too_short: "Mindestens {n} Zeichen",
+    not_saved_problems: "Nicht gespeichert: {count} Fehler, rot markiert",
+  });
+  const english = bundle("en", { invalid_required: "Required", invalid_too_short: "At least {n} characters" });
+  const { client, sent } = fakeClient(() => ({ id: "f1", type: "Factoid", label: "F" }));
+  let setLanguage!: (code: string) => Promise<void>;
+  const Switch = () => {
+    setLanguage = useTranslations().setLanguage;
+    return null;
+  };
+  const container = document.createElement("div");
+  document.body.append(container);
+  dispose = render(
+    () => (
+      <TranslationsProvider initial={german} load={async () => english}>
+        <ComponentsProvider components={{ Console, ReferenceChip, Modal } as unknown as ComponentMap}>
+          <SessionProvider user={() => undefined}>
+            <ModelsProvider definitions={definitions}>
+              <ApiProvider client={client}>
+                <NavExpandedProvider>
+                  <ConsoleMountProvider>
+                    <ClipboardProvider>
+                      <ToastsProvider>
+                        <Switch />
+                        <ConsoleBar />
+                        <ItemForm type="Factoid" initial={{ type: "Factoid" }} onSaved={() => {}} onCancel={() => {}} />
+                        <Toasts />
+                      </ToastsProvider>
+                    </ClipboardProvider>
+                  </ConsoleMountProvider>
+                </NavExpandedProvider>
+              </ApiProvider>
+            </ModelsProvider>
+          </SessionProvider>
+        </ComponentsProvider>
+      </TranslationsProvider>
+    ),
+    container,
+  );
+  await settle();
+  click(button("Add statements"));
+  await settle();
+  click([...chooser("Add statements").querySelectorAll("button[data-choice]")].find((b) => b.textContent === "Transfer"));
+  await settle();
+  type("item", "ox");
+  click(button("Save"));
+  await settle();
+  expect(sent).toHaveLength(0);
+  const row = (name: string) =>
+    [...document.body.querySelectorAll("dt")].find((dt) => dt.firstChild?.textContent?.toLowerCase() === name)!;
+  expect(row("year").textContent).toContain("Pflichtfeld");
+  expect(row("item").textContent).toContain("Mindestens 3 Zeichen");
+  expect(byLabel("Label").parentElement?.textContent).toContain("Pflichtfeld");
+  expect(toastText()).toContain("Nicht gespeichert: 3 Fehler, rot markiert");
+  // (what is shown is said again in English; a field changed meanwhile is not marked again)
+  type("item", "an ox");
+  await settle();
+  await setLanguage("en");
+  await settle();
+  expect(row("year").textContent).toContain("Required");
+  expect(row("year").textContent).not.toContain("Pflichtfeld");
+  expect(byLabel("Label").parentElement?.textContent).toContain("Required");
+  expect(row("item").className).not.toContain("text-red-700");
 });

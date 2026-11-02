@@ -31,7 +31,7 @@ import type {
   RelationField,
   RelationOption,
 } from "../../types";
-import { createItem, ApiError, problemsOf } from "../../api";
+import { createItem } from "../../api";
 import type { Summary } from "../../api";
 import { EntityPicker } from "./EntityPicker";
 import { rememberEntity } from "./recent";
@@ -58,6 +58,7 @@ import {
 import { TypeChooser, TypeMenu } from "./TypeMenu";
 import { revealAdded } from "./reveal";
 import { ClipButtons, EmbeddedPasteSlot, RelationPasteSlot, useClipActions } from "./Clip";
+import { FieldProblems, useRowProblems, useSaveChecks } from "./Problems";
 import { Customised } from "../Customised";
 
 const isObject = (value: unknown): value is FormData =>
@@ -149,33 +150,45 @@ function filled(value: unknown): boolean {
 
 /**
  * One labelled row of a form: the name on the left, the editor on the right. A required field has
- * a mark after its name, green once it is `met` (something is in it).
+ * a mark after its name, green once it is `met` (something is in it, and nothing wrong). The row of the field at
+ * `path` shows what was found wrong in it when it was saved: its name turns red, with why under it.
  */
 function Row(
   props: ParentProps<{
     name: string;
+    path?: Path;
     required?: boolean;
     met?: boolean;
     description?: string | null;
     bare?: boolean;
   }>,
 ) {
+  const problems = useRowProblems(() => props.path);
+  const bad = () => problems().length > 0;
   return (
     <Show
       when={!props.bare}
       fallback={
-        <div class={fieldRowClass}>
-          <div class="col-span-2 min-w-0">{props.children}</div>
+        <div class={fieldRowClass} data-problem={bad() ? "" : undefined}>
+          <div class="col-span-2 min-w-0">
+            <FieldProblems problems={problems()} path={props.path ?? []} />
+            {props.children}
+          </div>
         </div>
       }
     >
-      <div class={fieldRowClass}>
-        <dt class="pt-2 text-xs font-semibold text-slate-500 uppercase">
+      <div class={fieldRowClass} data-problem={bad() ? "" : undefined}>
+        <dt
+          class={[
+            "pt-2 text-xs font-semibold uppercase transition-colors",
+            { "text-slate-500": !bad(), "text-red-700": bad() },
+          ]}
+        >
           {props.name}
           <Show when={props.required}>
             <span
               aria-hidden="true"
-              class={["transition-colors", { "text-green-600": !!props.met }]}
+              class={["transition-colors", { "text-green-600": !!props.met && !bad() }]}
             >
               {" *"}
             </span>
@@ -183,6 +196,7 @@ function Row(
           <Show when={props.description}>
             <span class="mt-0.5 block text-xs font-normal text-slate-400 normal-case">{props.description}</span>
           </Show>
+          <FieldProblems problems={problems()} path={props.path ?? []} />
         </dt>
         <dd class="flex min-w-0 flex-col items-start gap-1">{props.children}</dd>
       </div>
@@ -216,6 +230,7 @@ export function ModelFields(props: {
           <Show when={!(props.skip ?? []).includes(field.key)}>
             <Row
               name={fieldName(props.model.name, field.name)}
+              path={[...props.path(), field.key]}
               required={field.required}
               met={filled(form.get([...props.path(), field.key]))}
               description={field.description}
@@ -270,6 +285,7 @@ export function ItemFields(props: {
         <TitleBox
           value={text("label")}
           label={t("label", "Label")}
+          path={[...props.path(), "label"]}
           required={props.model.requireLabel}
           onInput={(value) => form.set([...props.path(), "label"], value)}
         />
@@ -277,12 +293,17 @@ export function ItemFields(props: {
       <Show when={!props.title || (props.creating && props.model.createWithId)}>
         <dl class={fieldGridClass}>
           <Show when={!props.title}>
-            <Row name={t("label", "Label")} required={props.model.requireLabel} met={text("label") !== ""}>
+            <Row
+              name={t("label", "Label")}
+              path={[...props.path(), "label"]}
+              required={props.model.requireLabel}
+              met={text("label") !== ""}
+            >
               {labelInput(inputClass)}
             </Row>
           </Show>
           <Show when={props.creating && props.model.createWithId}>
-            <Row name={fieldName(props.model.name, "id")}>
+            <Row name={fieldName(props.model.name, "id")} path={[...props.path(), "id"]}>
               <input
                 type="text"
                 class={inputClass}
@@ -310,14 +331,17 @@ export function ItemFields(props: {
  * The label of the item as a heading: a box in large type, one line high, that grows a line at a
  * time as a long label wraps (to the width of the page, and again when that changes). A label is
  * one line of text, only wrapped: Enter makes no new line, and the line breaks of what is pasted
- * are spaces.
+ * are spaces. What was found wrong with it is shown as at a row: the rule and what it says red.
  */
 function TitleBox(props: {
   value: string;
   label: string;
+  path: Path;
   required?: boolean;
   onInput: (value: string) => void;
 }) {
+  const problems = useRowProblems(() => props.path);
+  const bad = () => problems().length > 0;
   let box: HTMLTextAreaElement | undefined;
   // (as tall as what is in it: first none, so that it can shrink too)
   const fit = () => {
@@ -337,30 +361,43 @@ function TitleBox(props: {
     return () => window.removeEventListener("resize", fit);
   });
   return (
-    <textarea
-      ref={box}
-      rows={1}
-      class="block w-full min-w-0 resize-none overflow-hidden border-b-[0.5px] border-slate-400/70 bg-transparent pt-1 pb-2 text-2xl leading-snug font-semibold placeholder:font-normal placeholder:text-slate-400 focus:border-slate-600 focus:outline-none"
-      aria-label={props.label}
-      aria-required={props.required ? "true" : undefined}
-      placeholder={`${props.label}${props.required ? " *" : ""}`}
-      value={props.value}
-      onKeyDown={(event) => {
-        // (Enter in a one-line field: nothing, rather than a line break, or the form's submit)
-        if (event.key === "Enter") event.preventDefault();
-      }}
-      onInput={(event) => {
-        const box = event.currentTarget;
-        const flat = box.value.replace(/\r?\n/g, " ");
-        if (flat !== box.value) {
-          const at = box.selectionStart;
-          box.value = flat;
-          box.setSelectionRange(at, at);
-        }
-        props.onInput(flat);
-        fit();
-      }}
-    />
+    <div data-problem={bad() ? "" : undefined}>
+      <textarea
+        ref={box}
+        rows={1}
+        class={[
+          "block w-full min-w-0 resize-none overflow-hidden border-b-[0.5px] bg-transparent pt-1 pb-2 text-2xl leading-snug font-semibold placeholder:font-normal focus:outline-none",
+          {
+            "border-slate-400/70": !bad(),
+            "placeholder:text-slate-400": !bad(),
+            "focus:border-slate-600": !bad(),
+            "border-red-700": bad(),
+            "placeholder:text-red-700/70": bad(),
+          },
+        ]}
+        aria-label={props.label}
+        aria-invalid={bad() ? "true" : undefined}
+        aria-required={props.required ? "true" : undefined}
+        placeholder={`${props.label}${props.required ? " *" : ""}`}
+        value={props.value}
+        onKeyDown={(event) => {
+          // (Enter in a one-line field: nothing, rather than a line break, or the form's submit)
+          if (event.key === "Enter") event.preventDefault();
+        }}
+        onInput={(event) => {
+          const box = event.currentTarget;
+          const flat = box.value.replace(/\r?\n/g, " ");
+          if (flat !== box.value) {
+            const at = box.selectionStart;
+            box.value = flat;
+            box.setSelectionRange(at, at);
+          }
+          props.onInput(flat);
+          fit();
+        }}
+      />
+      <FieldProblems problems={problems()} path={props.path} />
+    </div>
   );
 }
 
@@ -830,11 +867,12 @@ function EntityCreateDialog(props: {
   const state = createItemFormState(blankItem(definitions, untrack(() => props.type)));
   const model = () => getModel(definitions, props.type);
   const [saving, setSaving] = createSignal(false);
-  const [problems, setProblems] = createSignal<string[]>([]);
   const toasts = useToasts();
+  let root: HTMLDivElement | undefined;
+  const checks = useSaveChecks(state, () => root);
   async function save() {
+    if (!checks.check()) return;
     setSaving(true);
-    setProblems([]);
     try {
       const body = cleanForSave(definitions, state.plain());
       delete body.type;
@@ -847,7 +885,7 @@ function EntityCreateDialog(props: {
       );
       props.onCreated(created);
     } catch (error) {
-      setProblems(error instanceof ApiError ? problemsOf(error) : [String(error)]);
+      checks.refused(error);
     } finally {
       setSaving(false);
     }
@@ -855,15 +893,7 @@ function EntityCreateDialog(props: {
   return (
     <Modal title={t("new_item", "New {type}", { type: modelName(props.type) })} onClose={props.onClose} size="lg">
       <ItemFormProvider state={state}>
-        <div class="flex flex-col gap-6 p-6">
-          <Show when={problems().length > 0}>
-            <ul
-              role="alert"
-              class="list-disc rounded-sm border-[0.5px] border-red-700/60 bg-red-100/70 p-3 pl-7 text-sm"
-            >
-              <For each={problems()}>{(problem) => <li>{problem}</li>}</For>
-            </ul>
-          </Show>
+        <div ref={root} class="flex flex-col gap-6 p-6">
           <Show when={model()}>
             <ItemFields model={model()!} path={() => []} creating title />
           </Show>

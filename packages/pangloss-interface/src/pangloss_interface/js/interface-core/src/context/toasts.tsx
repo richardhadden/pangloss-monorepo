@@ -13,7 +13,7 @@ export interface Toast {
 interface Toasts {
   /** What is showing, the oldest first */
   toasts: Accessor<Toast[]>;
-  /** Shows a message for a few seconds (`TOAST_MS`) */
+  /** Shows a message for a few seconds (`TOAST_MS`; an error twice as long, to be read) */
   show: (message: string, tone?: ToastTone) => void;
   dismiss: (key: number) => void;
 }
@@ -35,7 +35,7 @@ export function ToastsProvider(props: ParentProps) {
   const show = (message: string, tone: ToastTone = "success") => {
     const key = ++next;
     setToasts((all) => [...all, { key, message, tone }]);
-    setTimeout(() => dismiss(key), TOAST_MS);
+    setTimeout(() => dismiss(key), tone === "error" ? TOAST_MS * 2 : TOAST_MS);
   };
   return <ToastsContext value={{ toasts, show, dismiss }}>{props.children}</ToastsContext>;
 }

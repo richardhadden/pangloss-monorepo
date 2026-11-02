@@ -71,14 +71,25 @@ def test_an_entity_field_offers_the_most_used_then_puts_those_picked_lately_firs
     expect(options).to_have_text([re.compile("Marie of Burgundy")])
 
 
-def test_a_rejected_form_says_what_is_wrong_and_keeps_what_was_typed(logged_in: Page, data):
+def test_an_incomplete_form_is_not_sent_and_says_what_is_wrong_at_its_fields(logged_in: Page, data):
     page = logged_in
     page.goto("/Statement/new")
     hydrated(page)
+    sent = []
+    page.on("request", lambda request: request.method == "POST" and "/api/Statement" in request.url and sent.append(request.url))
     page.get_by_label("Label", exact=True).fill("Incomplete")
     page.get_by_role("button", name="Save").click()
-    expect(page.get_by_role("alert")).to_contain_text("text")
+    # (found in the browser: the names of the fields go red and say why, and a red toast says it was not saved)
+    expect(page.get_by_role("status")).to_contain_text("Not saved: 2 problems, marked in red")
+    text = page.locator("dt", has_text="Text")
+    expect(text).to_have_class(re.compile(r"\btext-red-700\b"))
+    expect(text).to_contain_text("Required")
+    expect(page.locator("dt", has_text="About")).to_contain_text("Required")
     expect(page.get_by_label("Label", exact=True)).to_have_value("Incomplete")
+    assert sent == []
+    # (a field filled in is no longer marked)
+    page.get_by_label("Text", exact=True).fill("Something")
+    expect(text).not_to_have_class(re.compile(r"\btext-red-700\b"))
 
 
 def test_cancel_goes_back_without_saving(logged_in: Page, data):

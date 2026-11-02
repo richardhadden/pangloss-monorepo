@@ -83,6 +83,7 @@ function NothingToList(props: { type: string }) {
 function ListOfItems(props: RouteProps<"/:type">) {
   const Console = useComponent("Console");
   const ErrorMessage = useComponent("ErrorMessage");
+  const { t } = useTranslations();
   // The search is in the address (`?q=rome&deep=1`), so it can be linked to, and the back button
   // goes back through searches. A change of it asks the list again.
   const [search, setSearch] = useSearchParams();
@@ -119,7 +120,7 @@ function ListOfItems(props: RouteProps<"/:type">) {
         pending={pending()}
       />
       <Errored fallback={(error) => <ErrorMessage error={error()} />}>
-        <Loading fallback={<p>Loading…</p>}>
+        <Loading fallback={<p>{t("loading", "Loading…")}</p>}>
           {/* (a new list for each answer: what was fetched of the last one is not this one) */}
           <Show when={first()} keyed>
             {(answer) => (
@@ -232,7 +233,7 @@ function Results(props: {
               when={itemAt(row().index)}
               fallback={
                 <div
-                  aria-label={t("loading", "Loading")}
+                  aria-label={t("loading", "Loading…")}
                   class="animate-pulse rounded-sm border-[0.5px] border-slate-300/70 bg-slate-100/50"
                   style={{ height: `${ROW_HEIGHT}px` }}
                 />

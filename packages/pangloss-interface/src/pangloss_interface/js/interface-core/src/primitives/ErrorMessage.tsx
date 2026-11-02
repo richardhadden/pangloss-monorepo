@@ -9,9 +9,19 @@ import type { ErrorMessageProps } from "../types";
  * own explanation is shown (it is English: the API is not multilingual). Anything else shows its message.
  */
 export function ErrorMessage(props: ErrorMessageProps) {
+  const errorText = useErrorText();
+  const text = () => errorText(props.error);
+  return (
+    <p role="alert" class="pg-error-message">
+      <Show when={text()}>{text()}</Show>
+    </p>
+  );
+}
+
+/** What an error says to a person, as `ErrorMessage` shows it (for a toast) */
+export function useErrorText(): (error: unknown) => string {
   const { t } = useTranslations();
-  const text = () => {
-    const error = props.error;
+  return (error) => {
     if (error instanceof ApiError) {
       if (error.status === 401)
         return t("error_unauthorised", "You need to log in to do this.");
@@ -26,9 +36,4 @@ export function ErrorMessage(props: ErrorMessageProps) {
     }
     return error instanceof Error ? error.message : String(error);
   };
-  return (
-    <p role="alert" class="pg-error-message">
-      <Show when={text()}>{text()}</Show>
-    </p>
-  );
 }

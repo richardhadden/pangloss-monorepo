@@ -41,6 +41,42 @@
             "name": "Sortiertag (Ende)"
           }
         }
+      },
+      "fr": {
+        "name": "Date",
+        "plural": "Dates",
+        "fields": {
+          "calendar": {
+            "name": "Calendrier"
+          },
+          "source_text": {
+            "name": "Texte de la source"
+          },
+          "sort_by": {
+            "name": "Trier par"
+          },
+          "precision": {
+            "name": "Précision"
+          },
+          "earliest_fuzzy": {
+            "name": "Au plus tôt (approximatif)"
+          },
+          "earliest_strict": {
+            "name": "Au plus tôt (strict)"
+          },
+          "latest_strict": {
+            "name": "Au plus tard (strict)"
+          },
+          "latest_fuzzy": {
+            "name": "Au plus tard (approximatif)"
+          },
+          "sort_day": {
+            "name": "Jour de tri"
+          },
+          "end_sort_day": {
+            "name": "Jour de tri (fin)"
+          }
+        }
       }
     },
     "DateCharacterisation": {
@@ -61,6 +97,21 @@
             "name": "Wann"
           }
         }
+      },
+      "fr": {
+        "name": "Caractérisation de date",
+        "plural": "Caractérisations de date",
+        "fields": {
+          "use": {
+            "name": "Usage"
+          },
+          "rank": {
+            "name": "Rang"
+          },
+          "when": {
+            "name": "Quand"
+          }
+        }
       }
     },
     "DateRange": {
@@ -79,6 +130,19 @@
             "name": "Spätestens"
           }
         }
+      },
+      "fr": {
+        "name": "Intervalle de dates",
+        "plural": "Intervalles de dates",
+        "description": "Une date dont le jour n’est pas connu : quelque part entre `earliest` et `latest`",
+        "fields": {
+          "earliest": {
+            "name": "Au plus tôt"
+          },
+          "latest": {
+            "name": "Au plus tard"
+          }
+        }
       }
     },
     "EDTFDate": {
@@ -93,6 +157,15 @@
       },
       "de": {
         "name": "EDTF-Datum",
+        "fields": {
+          "edtf": {
+            "name": "EDTF"
+          }
+        }
+      },
+      "fr": {
+        "name": "Date EDTF",
+        "plural": "Dates EDTF",
         "fields": {
           "edtf": {
             "name": "EDTF"
@@ -118,6 +191,21 @@
             "name": "Tag"
           }
         }
+      },
+      "fr": {
+        "name": "Date exacte",
+        "plural": "Dates exactes",
+        "fields": {
+          "year": {
+            "name": "Année"
+          },
+          "month": {
+            "name": "Mois"
+          },
+          "day": {
+            "name": "Jour"
+          }
+        }
       }
     },
     "NoRule": {
@@ -128,6 +216,11 @@
       "de": {
         "name": "Keine Regel",
         "description": "Eine Charakterisierung ohne Regel: Sie wird von Hand an Tage, Monate, Jahre oder Zeitspannen angehängt"
+      },
+      "fr": {
+        "name": "Sans règle",
+        "plural": "Sans règle",
+        "description": "Une caractérisation sans règle : elle est rattachée à la main à des jours, des mois, des années ou des périodes"
       }
     },
     "OngoingDate": {
@@ -138,6 +231,11 @@
       "de": {
         "name": "Laufendes Datum",
         "description": "Das Ende eines Zeitraums, der noch nicht zu Ende ist (er gilt als beendet bis zum Ende von `DATES_OPEN_END_YEAR`)"
+      },
+      "fr": {
+        "name": "Date en cours",
+        "plural": "Dates en cours",
+        "description": "La fin d’une période qui n’est pas terminée (elle est réputée s’arrêter à la fin de `DATES_OPEN_END_YEAR`)"
       }
     },
     "Period": {
@@ -154,6 +252,19 @@
           },
           "end": {
             "name": "Ende"
+          }
+        }
+      },
+      "fr": {
+        "name": "Période",
+        "plural": "Périodes",
+        "description": "De `start` à `end` : une profession, un rôle, une résidence. Triée selon son début",
+        "fields": {
+          "start": {
+            "name": "Début"
+          },
+          "end": {
+            "name": "Fin"
           }
         }
       }
@@ -212,6 +323,52 @@
             "name": "Musterschlüssel"
           }
         }
+      },
+      "fr": {
+        "name": "Récurrence",
+        "plural": "Récurrences",
+        "description": "Quelque chose qui se répète au cours d’une vie (de `start` à `end`) : « chaque dimanche », « le troisième dimanche de mars », « le 21 de chaque mois ». Les jours ne sont jamais enregistrés ; `pattern_keys` retrouvent les règles qui pourraient tomber un jour donné (voir `pangloss_dates.recurrence`)",
+        "fields": {
+          "frequency": {
+            "name": "Fréquence"
+          },
+          "weekdays": {
+            "name": "Jours de la semaine"
+          },
+          "nth": {
+            "name": "N-ième"
+          },
+          "month": {
+            "name": "Mois"
+          },
+          "month_day": {
+            "name": "Jour du mois"
+          },
+          "interval": {
+            "name": "Intervalle"
+          },
+          "excluded_days": {
+            "name": "Jours exclus"
+          },
+          "leap_shift": {
+            "name": "Décalage bissextile"
+          },
+          "easter_offset": {
+            "name": "Décalage par rapport à Pâques"
+          },
+          "feast": {
+            "name": "Fête"
+          },
+          "start": {
+            "name": "Début"
+          },
+          "end": {
+            "name": "Fin"
+          },
+          "pattern_keys": {
+            "name": "Clés de motif"
+          }
+        }
       }
     },
     "UnknownDate": {
@@ -222,6 +379,11 @@
       "de": {
         "name": "Unbekanntes Datum",
         "description": "Der Beginn oder das Ende eines Zeitraums, den niemand kennt. Er ist offen von `DATES_EARLIEST_YEAR` bis\n`DATES_OPEN_END_YEAR`, sodass der Zeitraum dennoch über ein Datum gefunden wird, das er enthalten könnte. Sagen Sie, was bekannt ist,\nwenn irgendetwas bekannt ist: ein Bereich mit einer vernünftigen Schätzung (`DateRange` oder EDTF `1500~`) sagt mehr, ein\nunbekanntes Datum nur, dass nichts bekannt ist. Beide Enden eines Zeitraums können nicht unbekannt sein."
+      },
+      "fr": {
+        "name": "Date inconnue",
+        "plural": "Dates inconnues",
+        "description": "Le début ou la fin d’une période que personne ne connaît. Elle est ouverte de `DATES_EARLIEST_YEAR` à `DATES_OPEN_END_YEAR`, de sorte que la période est tout de même trouvée par une date qu’elle pourrait inclure. Dites ce qui est connu, si quelque chose l’est : un intervalle avec une estimation raisonnable (`DateRange` ou EDTF `1500~`) en dit plus, une date inconnue dit seulement que rien n’est connu. Les deux bouts d’une période ne peuvent pas être inconnus."
       }
     }
   },
@@ -239,6 +401,18 @@
           },
           "GREGORIAN": {
             "name": "Gregorianisch"
+          }
+        }
+      },
+      "fr": {
+        "name": "Calendrier",
+        "plural": "Calendriers",
+        "members": {
+          "JULIAN": {
+            "name": "Julien"
+          },
+          "GREGORIAN": {
+            "name": "Grégorien"
           }
         }
       }
@@ -259,6 +433,21 @@
           },
           "YEARLY": {
             "name": "Jährlich"
+          }
+        }
+      },
+      "fr": {
+        "name": "Fréquence",
+        "plural": "Fréquences",
+        "members": {
+          "WEEKLY": {
+            "name": "Hebdomadaire"
+          },
+          "MONTHLY": {
+            "name": "Mensuelle"
+          },
+          "YEARLY": {
+            "name": "Annuelle"
           }
         }
       }
@@ -290,6 +479,30 @@
             "name": "Unbekannt"
           }
         }
+      },
+      "fr": {
+        "name": "Précision",
+        "plural": "Précisions",
+        "members": {
+          "YEAR": {
+            "name": "Année"
+          },
+          "MONTH": {
+            "name": "Mois"
+          },
+          "DAY": {
+            "name": "Jour"
+          },
+          "RANGE": {
+            "name": "Intervalle"
+          },
+          "ONGOING": {
+            "name": "En cours"
+          },
+          "UNKNOWN": {
+            "name": "Inconnue"
+          }
+        }
       }
     },
     "SortBy": {
@@ -318,6 +531,31 @@
           },
           "MIDPOINT_FUZZY": {
             "name": "Mittelpunkt (unscharf)"
+          }
+        }
+      },
+      "fr": {
+        "name": "Trier par",
+        "plural": "Critères de tri",
+        "description": "Le jour selon lequel une date est classée",
+        "members": {
+          "MIDPOINT": {
+            "name": "Milieu"
+          },
+          "EARLIEST_STRICT": {
+            "name": "Au plus tôt (strict)"
+          },
+          "LATEST_STRICT": {
+            "name": "Au plus tard (strict)"
+          },
+          "EARLIEST_FUZZY": {
+            "name": "Au plus tôt (approximatif)"
+          },
+          "LATEST_FUZZY": {
+            "name": "Au plus tard (approximatif)"
+          },
+          "MIDPOINT_FUZZY": {
+            "name": "Milieu (approximatif)"
           }
         }
       }

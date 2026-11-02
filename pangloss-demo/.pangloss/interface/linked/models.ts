@@ -2,7 +2,7 @@
 // It is made again each time the interface is built.
 import type { AnyRelationCondition, ChoiceCondition, CompareCondition, ItemsCondition, ModelDefinitions, NodePattern, RelationCondition, SearchOrder, SearchPattern, TextCondition } from "@pangloss/interface-core";
 
-export type ModelName = "Activity" | "Alternative" | "AtPage" | "Causes" | "Certainty" | "Date" | "DateCharacterisation" | "DateRange" | "EDTFDate" | "ExactDate" | "Factoid" | "Group" | "Hypothetical" | "Identification" | "InRole" | "Negative" | "NegativeSubjunctive" | "NoRule" | "OccupationType" | "OngoingDate" | "Order" | "Period" | "Person" | "Place" | "PositiveSubjunctive" | "Probability" | "Recurrence" | "Source" | "Statement" | "Transfer" | "UnknownDate" | "WithCertainty";
+export type ModelName = "Activity" | "Alternative" | "Artwork" | "AtPage" | "Causes" | "Certainty" | "CreationOfArtwork" | "CreationOfPainting" | "CreationOfPhysicalObject" | "Date" | "DateCharacterisation" | "DateRange" | "EDTFDate" | "ExactDate" | "Factoid" | "Group" | "Hypothetical" | "Identification" | "InRole" | "Negative" | "NegativeSubjunctive" | "NoRule" | "OccupationType" | "OngoingDate" | "Order" | "Painting" | "Period" | "Person" | "PhysicalObject" | "Place" | "PositiveSubjunctive" | "Probability" | "Recurrence" | "Source" | "Statement" | "Transfer" | "UnknownDate" | "WithCertainty";
 
 export const definitions: ModelDefinitions = {
   "models": {
@@ -208,6 +208,59 @@ export const definitions: ModelDefinitions = {
       "incoming": [],
       "interfaceMeta": null
     },
+    "Artwork": {
+      "name": "Artwork",
+      "kind": "Entity",
+      "abstract": false,
+      "description": "Any artwork object",
+      "parent": "PhysicalObject",
+      "concreteTypes": [
+        "Artwork",
+        "Painting"
+      ],
+      "typeParameters": [],
+      "createWithId": false,
+      "acceptUrlAsId": true,
+      "requireLabel": true,
+      "useInSemanticSpaceLabel": true,
+      "fields": [],
+      "incoming": [
+        {
+          "name": "artwork_created_reverse",
+          "key": "artworkCreatedReverse",
+          "sources": [
+            {
+              "model": "CreationOfArtwork",
+              "field": "artwork_created",
+              "viaReified": false
+            }
+          ]
+        },
+        {
+          "name": "object_created_reverse",
+          "key": "objectCreatedReverse",
+          "sources": [
+            {
+              "model": "CreationOfPhysicalObject",
+              "field": "object_created",
+              "viaReified": false
+            }
+          ]
+        },
+        {
+          "name": "painting_created_reverse",
+          "key": "paintingCreatedReverse",
+          "sources": [
+            {
+              "model": "CreationOfPainting",
+              "field": "painting_created",
+              "viaReified": false
+            }
+          ]
+        }
+      ],
+      "interfaceMeta": null
+    },
     "AtPage": {
       "name": "AtPage",
       "kind": "ReifiedRelation",
@@ -349,6 +402,200 @@ export const definitions: ModelDefinitions = {
               "ge": 1
             }
           ]
+        }
+      ],
+      "incoming": [],
+      "interfaceMeta": null
+    },
+    "CreationOfArtwork": {
+      "name": "CreationOfArtwork",
+      "kind": "Document",
+      "abstract": false,
+      "description": null,
+      "parent": "CreationOfPhysicalObject",
+      "concreteTypes": [
+        "CreationOfArtwork",
+        "CreationOfPainting"
+      ],
+      "typeParameters": [],
+      "createWithId": false,
+      "acceptUrlAsId": false,
+      "requireLabel": true,
+      "useInSemanticSpaceLabel": true,
+      "fields": [
+        {
+          "name": "created_by",
+          "key": "createdBy",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "relation",
+          "many": false,
+          "reverseName": "created_by_reverse",
+          "options": [
+            {
+              "kind": "entity",
+              "type": "Person",
+              "edgeModel": null
+            }
+          ],
+          "validators": []
+        },
+        {
+          "name": "artwork_created",
+          "key": "artworkCreated",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "relation",
+          "many": false,
+          "reverseName": "artwork_created_reverse",
+          "options": [
+            {
+              "kind": "entity",
+              "type": "Artwork",
+              "edgeModel": null
+            },
+            {
+              "kind": "entity",
+              "type": "Painting",
+              "edgeModel": null
+            }
+          ],
+          "validators": []
+        }
+      ],
+      "incoming": [],
+      "interfaceMeta": null
+    },
+    "CreationOfPainting": {
+      "name": "CreationOfPainting",
+      "kind": "Document",
+      "abstract": false,
+      "description": null,
+      "parent": "CreationOfArtwork",
+      "concreteTypes": [
+        "CreationOfPainting"
+      ],
+      "typeParameters": [],
+      "createWithId": false,
+      "acceptUrlAsId": false,
+      "requireLabel": true,
+      "useInSemanticSpaceLabel": true,
+      "fields": [
+        {
+          "name": "created_by",
+          "key": "createdBy",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "relation",
+          "many": false,
+          "reverseName": "created_by_reverse",
+          "options": [
+            {
+              "kind": "entity",
+              "type": "Person",
+              "edgeModel": null
+            }
+          ],
+          "validators": []
+        },
+        {
+          "name": "painting_created",
+          "key": "paintingCreated",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "relation",
+          "many": false,
+          "reverseName": "painting_created_reverse",
+          "options": [
+            {
+              "kind": "entity",
+              "type": "Artwork",
+              "edgeModel": null
+            },
+            {
+              "kind": "entity",
+              "type": "Painting",
+              "edgeModel": null
+            }
+          ],
+          "validators": []
+        }
+      ],
+      "incoming": [],
+      "interfaceMeta": null
+    },
+    "CreationOfPhysicalObject": {
+      "name": "CreationOfPhysicalObject",
+      "kind": "Document",
+      "abstract": false,
+      "description": null,
+      "parent": null,
+      "concreteTypes": [
+        "CreationOfArtwork",
+        "CreationOfPainting",
+        "CreationOfPhysicalObject"
+      ],
+      "typeParameters": [],
+      "createWithId": false,
+      "acceptUrlAsId": false,
+      "requireLabel": true,
+      "useInSemanticSpaceLabel": true,
+      "fields": [
+        {
+          "name": "created_by",
+          "key": "createdBy",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "relation",
+          "many": false,
+          "reverseName": "created_by_reverse",
+          "options": [
+            {
+              "kind": "entity",
+              "type": "Person",
+              "edgeModel": null
+            }
+          ],
+          "validators": []
+        },
+        {
+          "name": "object_created",
+          "key": "objectCreated",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "relation",
+          "many": false,
+          "reverseName": "object_created_reverse",
+          "options": [
+            {
+              "kind": "entity",
+              "type": "Artwork",
+              "edgeModel": null
+            },
+            {
+              "kind": "entity",
+              "type": "Painting",
+              "edgeModel": null
+            },
+            {
+              "kind": "entity",
+              "type": "PhysicalObject",
+              "edgeModel": null
+            }
+          ],
+          "validators": []
         }
       ],
       "incoming": [],
@@ -1791,6 +2038,19 @@ export const definitions: ModelDefinitions = {
             "type": "str"
           },
           "validators": []
+        },
+        {
+          "name": "label_fr",
+          "key": "labelFr",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": []
         }
       ],
       "incoming": [
@@ -2209,6 +2469,58 @@ export const definitions: ModelDefinitions = {
       "incoming": [],
       "interfaceMeta": null
     },
+    "Painting": {
+      "name": "Painting",
+      "kind": "Entity",
+      "abstract": false,
+      "description": "A painting",
+      "parent": "Artwork",
+      "concreteTypes": [
+        "Painting"
+      ],
+      "typeParameters": [],
+      "createWithId": false,
+      "acceptUrlAsId": true,
+      "requireLabel": true,
+      "useInSemanticSpaceLabel": true,
+      "fields": [],
+      "incoming": [
+        {
+          "name": "artwork_created_reverse",
+          "key": "artworkCreatedReverse",
+          "sources": [
+            {
+              "model": "CreationOfArtwork",
+              "field": "artwork_created",
+              "viaReified": false
+            }
+          ]
+        },
+        {
+          "name": "object_created_reverse",
+          "key": "objectCreatedReverse",
+          "sources": [
+            {
+              "model": "CreationOfPhysicalObject",
+              "field": "object_created",
+              "viaReified": false
+            }
+          ]
+        },
+        {
+          "name": "painting_created_reverse",
+          "key": "paintingCreatedReverse",
+          "sources": [
+            {
+              "model": "CreationOfPainting",
+              "field": "painting_created",
+              "viaReified": false
+            }
+          ]
+        }
+      ],
+      "interfaceMeta": null
+    },
     "Period": {
       "name": "Period",
       "kind": "Embedded",
@@ -2501,6 +2813,27 @@ export const definitions: ModelDefinitions = {
           ]
         },
         {
+          "name": "created_by_reverse",
+          "key": "createdByReverse",
+          "sources": [
+            {
+              "model": "CreationOfArtwork",
+              "field": "created_by",
+              "viaReified": false
+            },
+            {
+              "model": "CreationOfPainting",
+              "field": "created_by",
+              "viaReified": false
+            },
+            {
+              "model": "CreationOfPhysicalObject",
+              "field": "created_by",
+              "viaReified": false
+            }
+          ]
+        },
+        {
           "name": "gave",
           "key": "gave",
           "sources": [
@@ -2567,6 +2900,38 @@ export const definitions: ModelDefinitions = {
               "model": "Transfer",
               "field": "given_to",
               "viaReified": true
+            }
+          ]
+        }
+      ],
+      "interfaceMeta": null
+    },
+    "PhysicalObject": {
+      "name": "PhysicalObject",
+      "kind": "Entity",
+      "abstract": false,
+      "description": "Any physical object",
+      "parent": null,
+      "concreteTypes": [
+        "Artwork",
+        "Painting",
+        "PhysicalObject"
+      ],
+      "typeParameters": [],
+      "createWithId": false,
+      "acceptUrlAsId": true,
+      "requireLabel": true,
+      "useInSemanticSpaceLabel": true,
+      "fields": [],
+      "incoming": [
+        {
+          "name": "object_created_reverse",
+          "key": "objectCreatedReverse",
+          "sources": [
+            {
+              "model": "CreationOfPhysicalObject",
+              "field": "object_created",
+              "viaReified": false
             }
           ]
         }
@@ -3897,6 +4262,77 @@ export const definitions: ModelDefinitions = {
         "year"
       ]
     },
+    "Artwork": {
+      "kind": "entity",
+      "fields": {},
+      "orderBy": [
+        "label"
+      ]
+    },
+    "CreationOfArtwork": {
+      "kind": "document",
+      "fields": {
+        "created_by": {
+          "operators": "relation",
+          "targets": [
+            "Person"
+          ]
+        },
+        "artwork_created": {
+          "operators": "relation",
+          "targets": [
+            "Artwork",
+            "Painting"
+          ]
+        }
+      },
+      "orderBy": [
+        "label"
+      ]
+    },
+    "CreationOfPainting": {
+      "kind": "document",
+      "fields": {
+        "created_by": {
+          "operators": "relation",
+          "targets": [
+            "Person"
+          ]
+        },
+        "painting_created": {
+          "operators": "relation",
+          "targets": [
+            "Artwork",
+            "Painting"
+          ]
+        }
+      },
+      "orderBy": [
+        "label"
+      ]
+    },
+    "CreationOfPhysicalObject": {
+      "kind": "document",
+      "fields": {
+        "created_by": {
+          "operators": "relation",
+          "targets": [
+            "Person"
+          ]
+        },
+        "object_created": {
+          "operators": "relation",
+          "targets": [
+            "Artwork",
+            "Painting",
+            "PhysicalObject"
+          ]
+        }
+      },
+      "orderBy": [
+        "label"
+      ]
+    },
     "Date": {
       "kind": "embedded",
       "fields": {
@@ -4307,12 +4743,19 @@ export const definitions: ModelDefinitions = {
           "value": {
             "type": "str"
           }
+        },
+        "label_fr": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
         }
       },
       "orderBy": [
         "label",
         "description",
-        "label_de"
+        "label_de",
+        "label_fr"
       ]
     },
     "OngoingDate": {
@@ -4447,6 +4890,13 @@ export const definitions: ModelDefinitions = {
         "year"
       ]
     },
+    "Painting": {
+      "kind": "entity",
+      "fields": {},
+      "orderBy": [
+        "label"
+      ]
+    },
     "Period": {
       "kind": "embedded",
       "fields": {
@@ -4573,6 +5023,13 @@ export const definitions: ModelDefinitions = {
         "born.latest_fuzzy",
         "born.sort_day",
         "born.end_sort_day"
+      ]
+    },
+    "PhysicalObject": {
+      "kind": "entity",
+      "fields": {},
+      "orderBy": [
+        "label"
       ]
     },
     "Place": {
@@ -4993,6 +5450,68 @@ export type ActivityWhere = {
 
 export type ActivityPattern = { type: "Activity"; where?: ActivityWhere };
 
+export type ArtworkWhere = {
+  $all?: ArtworkWhere[];
+  $any_of?: ArtworkWhere[];
+  $not?: ArtworkWhere;
+  $any?: AnyRelationCondition;
+  label?: TextCondition;
+  $incoming?: NodePattern | NodePattern[];
+};
+
+export type ArtworkPattern = { type: "Artwork"; where?: ArtworkWhere };
+
+export type CreationOfArtworkWhere = {
+  created_by?: RelationCondition | (RelationCondition & (PersonPattern));
+  artwork_created?: RelationCondition | (RelationCondition & (ArtworkPattern | PaintingPattern));
+  $all?: CreationOfArtworkWhere[];
+  $any_of?: CreationOfArtworkWhere[];
+  $not?: CreationOfArtworkWhere;
+  $any?: AnyRelationCondition;
+  label?: TextCondition;
+  published?: ChoiceCondition<boolean>;
+  review_status?: TextCondition;
+  $mentions?: AnyRelationCondition;
+  $somewhere?: NodePattern[];
+  $spaces?: string[];
+};
+
+export type CreationOfArtworkPattern = { type: "CreationOfArtwork"; where?: CreationOfArtworkWhere };
+
+export type CreationOfPaintingWhere = {
+  created_by?: RelationCondition | (RelationCondition & (PersonPattern));
+  painting_created?: RelationCondition | (RelationCondition & (ArtworkPattern | PaintingPattern));
+  $all?: CreationOfPaintingWhere[];
+  $any_of?: CreationOfPaintingWhere[];
+  $not?: CreationOfPaintingWhere;
+  $any?: AnyRelationCondition;
+  label?: TextCondition;
+  published?: ChoiceCondition<boolean>;
+  review_status?: TextCondition;
+  $mentions?: AnyRelationCondition;
+  $somewhere?: NodePattern[];
+  $spaces?: string[];
+};
+
+export type CreationOfPaintingPattern = { type: "CreationOfPainting"; where?: CreationOfPaintingWhere };
+
+export type CreationOfPhysicalObjectWhere = {
+  created_by?: RelationCondition | (RelationCondition & (PersonPattern));
+  object_created?: RelationCondition | (RelationCondition & (ArtworkPattern | PaintingPattern | PhysicalObjectPattern));
+  $all?: CreationOfPhysicalObjectWhere[];
+  $any_of?: CreationOfPhysicalObjectWhere[];
+  $not?: CreationOfPhysicalObjectWhere;
+  $any?: AnyRelationCondition;
+  label?: TextCondition;
+  published?: ChoiceCondition<boolean>;
+  review_status?: TextCondition;
+  $mentions?: AnyRelationCondition;
+  $somewhere?: NodePattern[];
+  $spaces?: string[];
+};
+
+export type CreationOfPhysicalObjectPattern = { type: "CreationOfPhysicalObject"; where?: CreationOfPhysicalObjectWhere };
+
 export type DateWhere = {
   calendar?: ChoiceCondition<"julian" | "gregorian">;
   source_text?: TextCondition;
@@ -5132,6 +5651,7 @@ export type OccupationTypeWhere = {
   description?: TextCondition;
   is_subtype_of?: RelationCondition | (RelationCondition & (OccupationTypePattern));
   label_de?: TextCondition;
+  label_fr?: TextCondition;
   $all?: OccupationTypeWhere[];
   $any_of?: OccupationTypeWhere[];
   $not?: OccupationTypeWhere;
@@ -5182,6 +5702,17 @@ export type OrderWhere = {
 
 export type OrderPattern = { type: "Order"; where?: OrderWhere };
 
+export type PaintingWhere = {
+  $all?: PaintingWhere[];
+  $any_of?: PaintingWhere[];
+  $not?: PaintingWhere;
+  $any?: AnyRelationCondition;
+  label?: TextCondition;
+  $incoming?: NodePattern | NodePattern[];
+};
+
+export type PaintingPattern = { type: "Painting"; where?: PaintingWhere };
+
 export type PeriodWhere = {
   calendar?: ChoiceCondition<"julian" | "gregorian">;
   source_text?: TextCondition;
@@ -5216,6 +5747,17 @@ export type PersonWhere = {
 };
 
 export type PersonPattern = { type: "Person"; where?: PersonWhere };
+
+export type PhysicalObjectWhere = {
+  $all?: PhysicalObjectWhere[];
+  $any_of?: PhysicalObjectWhere[];
+  $not?: PhysicalObjectWhere;
+  $any?: AnyRelationCondition;
+  label?: TextCondition;
+  $incoming?: NodePattern | NodePattern[];
+};
+
+export type PhysicalObjectPattern = { type: "PhysicalObject"; where?: PhysicalObjectWhere };
 
 export type PlaceWhere = {
   $all?: PlaceWhere[];
@@ -5338,12 +5880,18 @@ export type UnknownDatePattern = { type: "UnknownDate"; where?: UnknownDateWhere
 
 export interface Wheres {
   Activity: ActivityWhere;
+  Artwork: ArtworkWhere;
+  CreationOfArtwork: CreationOfArtworkWhere;
+  CreationOfPainting: CreationOfPaintingWhere;
+  CreationOfPhysicalObject: CreationOfPhysicalObjectWhere;
   DateCharacterisation: DateCharacterisationWhere;
   Factoid: FactoidWhere;
   Group: GroupWhere;
   OccupationType: OccupationTypeWhere;
   Order: OrderWhere;
+  Painting: PaintingWhere;
   Person: PersonWhere;
+  PhysicalObject: PhysicalObjectWhere;
   Place: PlaceWhere;
   Source: SourceWhere;
   Statement: StatementWhere;
@@ -5352,12 +5900,18 @@ export interface Wheres {
 
 export interface OrderFields {
   Activity: "label" | "text" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day" | "year";
+  Artwork: "label";
+  CreationOfArtwork: "label";
+  CreationOfPainting: "label";
+  CreationOfPhysicalObject: "label";
   DateCharacterisation: "label" | "use" | "rank";
   Factoid: "label" | "year";
   Group: "label" | "name";
-  OccupationType: "label" | "description" | "label_de";
+  OccupationType: "label" | "description" | "label_de" | "label_fr";
   Order: "label" | "text" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day" | "year";
+  Painting: "label";
   Person: "label" | "born.source_text" | "born.earliest_fuzzy" | "born.earliest_strict" | "born.latest_strict" | "born.latest_fuzzy" | "born.sort_day" | "born.end_sort_day";
+  PhysicalObject: "label";
   Place: "label";
   Source: "label" | "author" | "written" | "edition_price";
   Statement: "label" | "text" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day" | "year";

@@ -1,5 +1,5 @@
-import { createSignal, For, onSettled, Show, untrack } from "solid-js";
-import { ApiError, createItem, problemsOf, updateItem } from "../../api";
+import { createSignal, onSettled, Show, untrack } from "solid-js";
+import { ApiError, createItem, updateItem } from "../../api";
 import type { Summary } from "../../api";
 import {
   createItemFormState,
@@ -15,12 +15,14 @@ import { ConsoleButton } from "../../primitives";
 import { cleanForSave, getModel } from "../../schema";
 import type { ItemFormProps } from "../../types";
 import { ItemFields } from "./ModelFields";
+import { useSaveChecks } from "./Problems";
 
 /**
  * The form to make an item or to change one. It edits a copy of `initial` (the edit view of an
  * item, or `{ type }` for a new one) in the fields of the model, and Save, on the right of the
- * console, sends it all: a create, or an update that says which version it is based on. A
- * rejected form shows what is wrong, in the place the API names; an item someone else saved
+ * console, sends it all: a create, or an update that says which version it is based on. It is
+ * checked first, by the schemas of the models (`useSaveChecks`): what is wrong is not sent, but
+ * shown at its fields, red, with a red toast; so is what the API refuses. An item someone else saved
  * meanwhile (a 412) is not overwritten, and the form offers to load the new version. A save that
  * worked is told in a toast (`useToasts`).
  */
@@ -35,8 +37,9 @@ export function ItemForm(props: ItemFormProps) {
   );
   const model = () => getModel(definitions, props.type);
   const [saving, setSaving] = createSignal(false);
-  const [problems, setProblems] = createSignal<string[]>([]);
   const [stale, setStale] = createSignal(false);
+  let formElement: HTMLFormElement | undefined;
+  const checks = useSaveChecks(state, () => formElement);
   const creating = () => props.version === undefined;
   const toasts = useToasts();
   // (tells the clipboard bar there is somewhere to paste, for as long as the page has this)
@@ -48,9 +51,9 @@ export function ItemForm(props: ItemFormProps) {
   };
 
   async function save() {
-    setSaving(true);
-    setProblems([]);
     setStale(false);
+    if (!checks.check()) return;
+    setSaving(true);
     try {
       const body = cleanForSave(definitions, state.plain());
       let saved: Summary;
@@ -70,8 +73,7 @@ export function ItemForm(props: ItemFormProps) {
       props.onSaved(saved);
     } catch (error) {
       if (error instanceof ApiError && error.status === 412) setStale(true);
-      else if (error instanceof ApiError) setProblems(problemsOf(error));
-      else setProblems([String(error)]);
+      else checks.refused(error);
     } finally {
       setSaving(false);
     }
@@ -113,6 +115,7 @@ export function ItemForm(props: ItemFormProps) {
         </ConsoleButton>
       </Console>
       <form
+        ref={formElement}
         class="flex flex-col gap-6"
         aria-label={t("edit_form", "{type} form", { type: modelName(props.type) })}
         onSubmit={(event) => {
@@ -139,14 +142,6 @@ export function ItemForm(props: ItemFormProps) {
               {t("reload", "Load the new version")}
             </button>
           </div>
-        </Show>
-        <Show when={problems().length > 0}>
-          <ul
-            role="alert"
-            class="list-disc rounded-sm border-[0.5px] border-red-700/60 bg-red-100/70 p-3 pl-7 text-sm"
-          >
-            <For each={problems()}>{(problem) => <li>{problem}</li>}</For>
-          </ul>
         </Show>
         <Show when={model()}>
           <ItemFields model={model()!} path={() => []} creating={creating()} title />

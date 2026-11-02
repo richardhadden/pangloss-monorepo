@@ -54,12 +54,12 @@ function Wrapped(props: ParentProps<{ spaces: string[]; depth: number }>) {
   );
 }
 
-// (a time as the reader's locale says it; what cannot be read is left as it came)
-function when(value: string): string {
+// (a time as it is said in the language of the page; what cannot be read is left as it came)
+function when(value: string, language: string): string {
   const date = new Date(value);
   return Number.isNaN(date.getTime())
     ? value
-    : date.toLocaleString(undefined, {
+    : date.toLocaleString(language, {
         dateStyle: "medium",
         timeStyle: "short",
       });
@@ -73,6 +73,7 @@ function when(value: string): string {
 function HistoryRow(
   props: ParentProps<{ what: string; who?: string | null; when: string }>,
 ) {
+  const { language } = useTranslations();
   return (
     <span class="flex items-center gap-1 truncate" title={props.what}>
       <svg
@@ -88,7 +89,7 @@ function HistoryRow(
       <Show when={props.who}>
         <span>{props.who} </span>
       </Show>
-      <span>· {when(props.when)}</span>
+      <span>· {when(props.when, language())}</span>
     </span>
   );
 }

@@ -8,6 +8,13 @@ per language).
 
 Connected to `ui.jsonc` (with `useTranslations().t`, see [translations.md](translations.md)): the nav bar, `NavModelList` (section titles, model names), `Console` and `ConsoleSearch` (`search`, `found`, `found_more`, `deep_search`, `deep_search_run`, `new_item`) and `LoginForm`. Still English in the code: `LoginDialog`, the pages (`Loading…`, not found), `Modal`, `Spinner`, `ItemContents` (yes/no, and the field names, which should use `fieldName`), `EntityCard`, `FieldList`, `ResultButton`. "Slot" is a suggested name.
 
+**2026-11-02:** every `t()` slot of `interface-core`, `interface-app`, `pangloss_dates` and `pangloss_typology` is in
+`ui.jsonc` in English, German and French (162 slots). The typology module, the "Loading…" fallbacks, `Spinner`,
+`ConsoleBar` and `EntityCard` now go through `t()` too (`typology_*`, `loading`, `console`, `open`). Dates are said in the
+language of the page (`formatDate(date, words)`: month and weekday names from `Intl`, the `date_*` slots for the order
+and the words), and so are the times in the console. What is still not translatable: the labels of typology types in the
+tree and in reference chips (the typology API sends the default label only), and the API's own messages (English).
+
 ## Visible text
 
 | Slot | English | Where | Notes |
@@ -100,6 +107,28 @@ These are not shown, but are read aloud, or appear when the pointer rests on the
 | `toast_dismiss` | Dismiss: {message} | `Toasts` (`aria-label` of a toast: clicking it closes it) | `{message}` is the toast's text |
 | `toast_created` | {type} “{label}” created | `ItemForm`, `ModelFields` (`EntityCreateDialog`): the toast after a new item is saved | `{type}` is the name of the model; the quotation marks belong to the language |
 | `toast_saved` | {type} “{label}” saved | `ItemForm` (the toast after a change is saved) | as above |
+| *(the validation slots below, `not_saved*` and `invalid_*`, are in `ui.jsonc`, English and German, since 2026-11-02; valibot is given them per language)* | | | |
+| `not_saved_problem` | Not saved: a field has a problem, marked in red | `useSaveChecks` (`form/Problems.tsx`): the red toast when one field has a problem | the form is not sent |
+| `not_saved_problems` | Not saved: {count} problems, marked in red | `useSaveChecks`: the same, for more | `{count}` is a number |
+| `not_saved` | Not saved | `useSaveChecks`: when no problem has a field to be shown at (they follow it, after ` · `) |  |
+| `invalid_required` | Required | `useProblemText` (`form/Problems.tsx`): under the name of a field, red |  |
+| `invalid_too_short` | At least {n} characters | `useProblemText` | `MinLen` of a text |
+| `invalid_too_long` | At most {n} characters | `useProblemText` | `MaxLen` of a text |
+| `invalid_too_few` | At least {n} needed | `useProblemText` | `MinLen` of a list or relation |
+| `invalid_too_many` | At most {n} allowed | `useProblemText` | `MaxLen` of a list or relation |
+| `invalid_too_small` | Must be {n} or more | `useProblemText` | `Ge` |
+| `invalid_must_exceed` | Must be more than {n} | `useProblemText` | `Gt` |
+| `invalid_too_large` | Must be {n} or less | `useProblemText` | `Le` |
+| `invalid_must_be_under` | Must be less than {n} | `useProblemText` | `Lt` |
+| `invalid_not_whole` | Must be a whole number | `useProblemText` |  |
+| `invalid_not_multiple` | Must be a multiple of {n} | `useProblemText` | `MultipleOf` |
+| `invalid_not_number` | Must be a number | `useProblemText` | a decimal |
+| `invalid_not_date` | Must be a date | `useProblemText` |  |
+| `invalid_not_datetime` | Must be a date and time | `useProblemText` |  |
+| `invalid_not_uuid` | Must be a UUID | `useProblemText` |  |
+| `invalid_not_choice` | Not one of the choices | `useProblemText` | an enum or literal |
+| `invalid_type_not_allowed` | This type is not allowed here | `useProblemText` | a pasted or edited value of a type the field does not hold |
+| `invalid_value` | Not a valid value | `useProblemText` | a value of the wrong type, or not matching a pattern |
 
 ## Not translated by the interface's own file
 
