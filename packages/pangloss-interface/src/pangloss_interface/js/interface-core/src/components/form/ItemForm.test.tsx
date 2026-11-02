@@ -221,8 +221,15 @@ test("a statement is chosen from the types, plain or inside the Negative space, 
   // (the space's contents have no key of their own: they fill the width)
   expect(document.body.textContent).not.toMatch(/contents/i);
   type("text", "A meeting");
-  byLabel<HTMLSelectElement>("kind").value = "meeting";
-  byLabel("kind").dispatchEvent(new Event("change", { bubbles: true }));
+  // (a few values are pills: the first is meeting; clicked again, none is chosen, and once more, it is)
+  const meeting = byLabel("kind").querySelector('[role="radio"]');
+  click(meeting);
+  await settle();
+  expect(meeting?.getAttribute("aria-checked")).toBe("true");
+  click(meeting);
+  await settle();
+  expect(meeting?.getAttribute("aria-checked")).toBe("false");
+  click(meeting);
   click(button("Save"));
   await settle();
   expect(sent[0]!.body).toMatchObject({

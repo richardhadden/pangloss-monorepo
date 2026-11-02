@@ -51,6 +51,9 @@ about her "held court at Ghent") and Charles the Bold (no role); `types` has onl
 | Interface translations shown in another language | — | not connected |
 | Edit button in the console of an item: only for someone logged in | ✅ | `test_editing.py`; unit tests in `Console.test.tsx` |
 | Edit item: the form has the item, saves a change and shows the item | ✅ | |
+| Form: an enum or literal field of 8 values or fewer is pills (a radio group; the chosen one again: none), more is a dropdown | 🚧 | unit test in `ItemForm.test.tsx`; the e2e models have no enum |
+| Form: what is added to a list (Add, a type from the menu, a paste, an entity found) lights up for a moment, and the cursor goes into it (not for an entity found: the search keeps it) | 🚧 | checked with the demo data; no test |
+| Item page: a type of a typology in a field is the same chip as in the form (`TypeCard` uses `DefaultReferenceChip` as a reference) | 🚧 | checked with the demo data |
 | Edit button of a document inside another: to the form of its head document (`?show=<id>`), scrolled to its block | 🚧 | checked with the demo data (a Transfer in a Factoid); the e2e models have no nested documents |
 | New item form: fields, an entity found by search, saved and shown | ✅ | |
 | A new entity made from the form (+ beside the search, dialog) is chosen | ✅ | |

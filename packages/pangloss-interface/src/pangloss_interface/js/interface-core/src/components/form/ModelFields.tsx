@@ -55,6 +55,7 @@ import {
   typeChipClass,
 } from "./styles";
 import { TypeMenu } from "./TypeMenu";
+import { revealAdded } from "./reveal";
 import { ClipButtons, EmbeddedPasteSlot, RelationPasteSlot, useClipActions } from "./Clip";
 import { Customised } from "../Customised";
 
@@ -549,6 +550,9 @@ function RelationEditor(props: {
   };
   const where = () => (props.field.many ? [...props.path(), items().length] : props.path());
   const canAdd = () => props.field.many || items().length === 0;
+  // (the items, side by side or a line each: the last is the one just added)
+  let list: HTMLDivElement | undefined;
+  const lastAdded = () => (props.field.many ? list?.lastElementChild : list);
   const add = (choice: Choice) => {
     const option = optionFor(options(), choice.type);
     form.set(
@@ -557,6 +561,7 @@ function RelationEditor(props: {
         ? blankItem(definitions, choice.type, envOf(option, props.env))
         : choiceValue(definitions, choice),
     );
+    revealAdded(lastAdded);
   };
   const only = () => choicesOf(groups());
   return (
@@ -565,18 +570,20 @@ function RelationEditor(props: {
         when={props.field.many}
         fallback={
           <Show when={items().length > 0}>
-            <RelationItem
-              path={props.path}
-              options={options()}
-              env={props.env}
-              onRemove={() => form.remove(props.path())}
-            />
+            <div ref={list} class="flex w-full min-w-0">
+              <RelationItem
+                path={props.path}
+                options={options()}
+                env={props.env}
+                onRemove={() => form.remove(props.path())}
+              />
+            </div>
           </Show>
         }
       >
         {/* (entities as chips side by side; anything bigger, a line of its own) */}
         <Show when={items().length > 0}>
-          <div class="flex w-full min-w-0 flex-wrap items-start gap-x-2 gap-y-6">
+          <div ref={list} class="flex w-full min-w-0 flex-wrap items-start gap-x-2 gap-y-6">
             <For each={items()}>
               {(_, index) => (
                 <RelationItem
@@ -616,10 +623,21 @@ function RelationEditor(props: {
         >
           <PickOrCreate
             types={entityTypes()}
-            onPick={(entity) => form.set(where(), { type: entity.type, id: entity.id, label: entity.label })}
+            onPick={(entity) => {
+              form.set(where(), { type: entity.type, id: entity.id, label: entity.label });
+              // (the chip lights up, but the cursor stays in the search, for the next)
+              revealAdded(lastAdded, false);
+            }}
           />
         </Show>
-        <RelationPasteSlot options={options()} env={props.env} onPaste={(pasted) => form.set(where(), pasted)} />
+        <RelationPasteSlot
+          options={options()}
+          env={props.env}
+          onPaste={(pasted) => {
+            form.set(where(), pasted);
+            revealAdded(lastAdded);
+          }}
+        />
       </Show>
     </div>
   );

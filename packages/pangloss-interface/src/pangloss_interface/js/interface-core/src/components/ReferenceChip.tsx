@@ -32,7 +32,11 @@ export function ReferenceChip(props: ReferenceChipProps) {
   );
 }
 
-function DefaultReferenceChip(props: ReferenceChipProps) {
+/**
+ * The chip itself, never a module's card: for a card that wants to look like the chip where it is a
+ * reference (a type of a typology), as it does in a form
+ */
+export function DefaultReferenceChip(props: ReferenceChipProps) {
   const definitions = useModels();
   const { t, modelName } = useTranslations();
   const model = () => getModel(definitions, props.type);

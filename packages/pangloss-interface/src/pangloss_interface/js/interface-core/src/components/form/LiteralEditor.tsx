@@ -14,6 +14,7 @@ import {
   smallButtonClass,
 } from "./styles";
 import { allowOnly, decimalCharacters, NumberInput } from "./NumberInput";
+import { revealAdded } from "./reveal";
 
 type Typed<T extends FieldType["type"]> = Extract<FieldType, { type: T }>;
 
@@ -29,6 +30,46 @@ function widthOf(type: FieldType): string {
   if (type.type === "date") return dateWidthClass;
   if (type.type === "datetime") return dateTimeWidthClass;
   return "";
+}
+
+// (more choices than this are a dropdown; as many or fewer, pills to click)
+const MAX_PILLS = 8;
+
+/**
+ * One of a few values, as pills side by side, the chosen one filled; clicking it again chooses none
+ * (a field that must have one says so when the form is saved). A radio group to a screen reader.
+ */
+function ChoicePills(props: {
+  label: string;
+  options: { value: string; name: string }[];
+  value: string;
+  onChoose: (value: string) => void;
+}) {
+  return (
+    <div role="radiogroup" aria-label={props.label} class="flex flex-wrap gap-1.5">
+      <For each={props.options}>
+        {(option) => {
+          const chosen = () => props.value === option.value;
+          return (
+            <button
+              type="button"
+              role="radio"
+              aria-checked={chosen() ? "true" : "false"}
+              class={[
+                "cursor-pointer rounded-full border-[0.5px] px-3 py-1 text-sm select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60",
+                chosen()
+                  ? "border-slate-700 bg-slate-700 text-white hover:bg-slate-600"
+                  : "border-slate-400/70 bg-white/80 text-slate-700 hover:bg-slate-200/70",
+              ]}
+              onClick={() => props.onChoose(chosen() ? "" : option.value)}
+            >
+              {option.name}
+            </button>
+          );
+        }}
+      </For>
+    </div>
+  );
 }
 
 // (a value in a single box, which the remove button of a list can be joined on to)
@@ -127,7 +168,12 @@ function ListEditor(props: {
         type="button"
         class={addSlotClass}
         aria-label={t("add_to", "Add to {name}", { name: props.label })}
-        onClick={() => form.set([...props.path(), items().length], blank())}
+        onClick={(event) => {
+          const slot = event.currentTarget;
+          form.set([...props.path(), items().length], blank());
+          // (the new one is just before the slot)
+          revealAdded(() => slot.previousElementSibling);
+        }}
       >
         + {t("add", "Add")}
       </button>
@@ -208,6 +254,33 @@ export function LiteralEditor(props: {
           aria-label={props.label}
           value={text().slice(0, 16)}
           onInput={(event) => write(event.currentTarget.value)}
+        />
+      </Match>
+      <Match when={props.type.type === "enum" && members().length <= MAX_PILLS}>
+        <ChoicePills
+          label={props.label}
+          options={members().map((member) => ({
+            value: String(member.value),
+            name: memberName((props.type as Typed<"enum">).enum, member.name),
+          }))}
+          value={text()}
+          onChoose={write}
+        />
+      </Match>
+      <Match
+        when={
+          props.type.type === "literal" &&
+          (props.type as Typed<"literal">).values.length <= MAX_PILLS
+        }
+      >
+        <ChoicePills
+          label={props.label}
+          options={(props.type as Typed<"literal">).values.map((option) => ({
+            value: String(option),
+            name: String(option),
+          }))}
+          value={text()}
+          onChoose={write}
         />
       </Match>
       <Match when={props.type.type === "enum"}>
