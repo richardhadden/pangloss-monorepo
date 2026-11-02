@@ -66,6 +66,21 @@ def test_the_search_form(page: Page, data, dev_url: str, errors: list[str]):
     expect(page.locator('[data-search-node="Statement"]')).to_be_visible()
     expect(page.locator("main")).not_to_contain_text(SOLID_ERROR)
     page.get_by_role("button", name="Clear").click()
+    # (the nested forms go with what was in them: one form, so one group of alternatives to add)
+    expect(page.get_by_role("button", name="+ Add alternatives")).to_have_count(1)
+    page.get_by_role("button", name="+ Add alternatives").click()
+    page.get_by_role("group", name="Alternatives 1").get_by_role(
+        "textbox", name="Label", exact=True
+    ).first.fill("Max")
+    page.get_by_role("combobox", name="Order by").select_option("label")
+    expect(page.get_by_title("Found")).to_have_text("1")
+    page.get_by_role("button", name="Save…").click()
+    page.get_by_role("textbox", name="Name of this search").fill("Max")
+    page.get_by_role("button", name="Save", exact=True).click()
+    page.get_by_role("button", name="Clear").click()
+    page.get_by_role("combobox", name="Saved searches").select_option("Max")
+    expect(page.get_by_title("Found")).to_have_text("1")
+    page.get_by_role("button", name="Clear").click()
     expect(page.get_by_title("Found")).to_have_text("3")
     assert errors == []
 

@@ -1,4 +1,4 @@
-import { createContext, createMemo, createSignal, For, Match, onCleanup, Show, Switch, untrack, useContext } from "solid-js";
+import { createContext, createMemo, createSignal, For, Match, onCleanup, onSettled, Show, Switch, untrack, useContext } from "solid-js";
 import type { Accessor, ParentProps } from "solid-js";
 import type { JSX } from "@solidjs/web";
 import { createItemFormState, useComponent, useModels, useTranslations } from "../../context";
@@ -6,16 +6,22 @@ import type { ItemFormState } from "../../context";
 import { kindRule, kindTint } from "../../primitives";
 import {
   getModel,
+  documentTypesOf,
   incomingSourcesOf,
   menuGroups,
   operatorsOf,
   searchFieldsOf,
   searchKindOf,
+  semanticSpacesOf,
+  orderFieldsOf,
+  wrappersOf,
   targetsEntities,
 } from "../../schema";
 import type {
   FieldSearch,
   IncomingSearch,
+  OrderSearch,
+  SomewhereSearch,
   MenuGroup,
   NodeSearch,
   FormData,
@@ -27,6 +33,8 @@ import type {
 } from "../../schema";
 import type { FieldType, ModelDefinitions, RelationOption } from "../../types";
 import { EntityPicker } from "../form/EntityPicker";
+import { deleteSearch, saveSearch, savedSearches } from "./saved";
+import type { SavedSearch } from "./saved";
 import { NumberInput, allowOnly, decimalCharacters } from "../form/NumberInput";
 import { TypeMenu } from "../form/TypeMenu";
 import {
@@ -52,6 +60,10 @@ const DEBOUNCE_MS = 250;
 
 // (a box as wide as what it holds, such as the menu of the operators: the input's look without its whole width)
 const compactClass = `${inputClass.replace("w-full ", "")} w-auto shrink-0`;
+
+// (the button that adds another condition on the same field: quiet, under what is there)
+const addConditionClass =
+  "inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-sm border-[0.5px] border-dashed border-slate-400/80 px-2 py-0.5 text-xs font-semibold text-slate-500 uppercase select-none hover:border-slate-600 hover:bg-slate-100/60 hover:text-slate-800";
 
 // (the button that takes a condition out: as tall as the boxes of the row, however tall the row grows)
 const removeConditionClass =
@@ -108,12 +120,18 @@ export function SearchPanel(props: {
       changed();
     },
   };
-  const clear = () => {
-    state.set(["fields"], {});
-    state.remove(["mentions"]);
-    state.set(["incoming"], []);
+  // (the whole form, at once: a saved search loaded, or nothing)
+  const replace = (next: NodeSearch) => {
+    const now = state.plain() as Record<string, unknown>;
+    const given = next as unknown as Record<string, unknown>;
+    for (const key of new Set([...Object.keys(now), ...Object.keys(given)])) {
+      if (key === "type") continue;
+      if (key in given) state.set([key], structuredClone(given[key]));
+      else state.remove([key]);
+    }
     emit();
   };
+  const clear = () => replace({ type });
   // (what is in it can only be clipped while it slides: a menu or a list of matches opens over its edge)
   const [settled, setSettled] = createSignal(untrack(() => props.open));
   return (
@@ -126,7 +144,8 @@ export function SearchPanel(props: {
           inert={props.open ? undefined : true}
           data-open={props.open ? "" : undefined}
           class={[
-            "grid transition-[grid-template-rows,opacity] duration-300",
+            // (a little in from the ends of the console, so the two read as two things)
+            "mx-3 grid transition-[grid-template-rows,opacity] duration-300",
             { "grid-rows-[1fr]": props.open, "opacity-100": props.open },
             { "grid-rows-[0fr]": !props.open, "opacity-0": !props.open },
           ]}
@@ -148,6 +167,7 @@ export function SearchPanel(props: {
                 <NodeFields type={props.type} path={() => []} root />
               </div>
               <div class="flex items-center justify-end gap-2 border-t-[0.5px] border-slate-400/50 px-6 py-2">
+                <SavedSearches type={props.type} current={() => state.plain() as unknown as NodeSearch} onLoad={replace} />
                 <button type="button" class={smallButtonClass} onClick={clear}>
                   {t("search_clear", "Clear")}
                 </button>
@@ -165,7 +185,14 @@ export function SearchPanel(props: {
 }
 
 /** The rows of the form for a node of `type` at `path`: its fields; mentions (a document at the root); what refers to it (an entity) */
-function NodeFields(props: { type: string; path: Accessor<Path>; root?: boolean }) {
+function NodeFields(props: {
+  type: string;
+  path: Accessor<Path>;
+  /** The node the search is of (not what a relation points at) */
+  root?: boolean;
+  /** One of a group of alternatives: it has no groups of its own, nor an order */
+  alternative?: boolean;
+}) {
   const definitions = useModels();
   const { t, fieldName } = useTranslations();
   const fields = createMemo(() => searchFieldsOf(definitions, props.type));
@@ -189,6 +216,18 @@ function NodeFields(props: { type: string; path: Accessor<Path>; root?: boolean 
       </Show>
       <Show when={kind() === "entity" && incomingSourcesOf(definitions, props.type).length > 0}>
         <IncomingRow type={props.type} path={() => [...props.path(), "incoming"]} />
+      </Show>
+      <Show when={props.root && kind() === "document"}>
+        <SomewhereRow path={() => [...props.path(), "somewhere"]} />
+      </Show>
+      <Show when={!props.root && kind() === "document" && semanticSpacesOf(definitions).length > 0}>
+        <SpacesRow path={() => [...props.path(), "spaces"]} />
+      </Show>
+      <Show when={!props.alternative}>
+        <AnyOfRow type={props.type} path={() => [...props.path(), "anyOf"]} root={props.root} />
+      </Show>
+      <Show when={props.root && !props.alternative && orderFieldsOf(definitions, props.type).length > 0}>
+        <OrderRow type={props.type} path={() => [...props.path(), "order"]} />
       </Show>
     </dl>
   );
@@ -333,12 +372,70 @@ function isActive(search: FieldSearch | undefined): boolean {
   }
 }
 
-/** One field of the form: the toggle for not, its operator, and what it is compared with */
+/**
+ * One field of the form: its condition (a toggle for not, the operator, what it is compared with), and any more on the
+ * same field, each of which must hold too
+ */
 function ConditionRow(props: { type: string; field: SearchField; name: string; path: Accessor<Path> }) {
   const form = useSearchForm();
   const definitions = useModels();
   const { t } = useTranslations();
+  const search = () => form.get(props.path()) as FieldSearch | undefined;
+  const more = () => search()?.and ?? [];
+  const active = () => isActive(search()) || more().some(isActive);
+  return (
+    <SearchRow name={props.name} active={active()}>
+      <ConditionLine
+        type={props.type}
+        field={props.field}
+        name={props.name}
+        path={props.path}
+        onRemove={() => form.remove(props.path())}
+      />
+      <For each={more()}>
+        {(_, index) => (
+          <>
+            <span class="text-xs font-semibold text-slate-500 uppercase select-none">{t("search_and", "and")}</span>
+            <ConditionLine
+              type={props.type}
+              field={props.field}
+              name={props.name}
+              path={() => [...props.path(), "and", index()]}
+              onRemove={() => form.remove([...props.path(), "and", index()])}
+            />
+          </>
+        )}
+      </For>
+      <Show when={search()}>
+        <button
+          type="button"
+          class={addConditionClass}
+          aria-label={t("search_and_condition", "And another condition on {name}", { name: props.name })}
+          title={t("search_and_condition", "And another condition on {name}", { name: props.name })}
+          onClick={() => form.set([...props.path(), "and", more().length], { op: operatorsOf(definitions, props.field)[0]! })}
+        >
+          + {t("search_and", "and")}
+        </button>
+      </Show>
+    </SearchRow>
+  );
+}
+
+/** One condition on a field: the toggle for not, its operator, what it is compared with, and (a relation) the wrappers it passes through */
+function ConditionLine(props: {
+  type: string;
+  field: SearchField;
+  name: string;
+  path: Accessor<Path>;
+  onRemove: () => void;
+}) {
+  const form = useSearchForm();
+  const definitions = useModels();
+  const { t } = useTranslations();
   const ops = createMemo(() => operatorsOf(definitions, props.field));
+  const wrappers = createMemo(() =>
+    props.field.operators === "relation" ? wrappersOf(definitions, props.type, props.field.name) : [],
+  );
   const search = () => form.get(props.path()) as FieldSearch | undefined;
   const op = () => search()?.op ?? ops()[0]!;
   // (a condition is written when something is first put in it, with the operator on show)
@@ -350,6 +447,8 @@ function ConditionRow(props: { type: string; field: SearchField; name: string; p
     const before = search();
     const chosen: FieldSearch = { op: next };
     if (before?.not) chosen.not = true;
+    if (before?.through) chosen.through = before.through;
+    if (before?.and) chosen.and = before.and;
     const value = carried(before, next);
     if (value !== undefined) chosen.value = value;
     if ((next === "any" || next === "all") && before?.entities) chosen.entities = before.entities;
@@ -361,7 +460,7 @@ function ConditionRow(props: { type: string; field: SearchField; name: string; p
     form.set(props.path(), chosen);
   };
   return (
-    <SearchRow name={props.name} active={isActive(search())}>
+    <div class="flex w-full min-w-0 flex-col items-start gap-3">
       <div class="flex w-full min-w-0 items-start gap-2">
         <NotToggle name={props.name} pressed={!!search()?.not} onToggle={() => write("not", !search()?.not)} />
         <OperatorSelect
@@ -387,12 +486,24 @@ function ConditionRow(props: { type: string; field: SearchField; name: string; p
             class={removeConditionClass}
             aria-label={t("search_remove_condition", "Remove the condition on {name}", { name: props.name })}
             title={t("search_remove_condition", "Remove the condition on {name}", { name: props.name })}
-            onClick={() => form.remove(props.path())}
+            onClick={() => props.onRemove()}
           >
             ✕
           </button>
         </Show>
       </div>
+      <Show when={wrappers().length > 0 && op() !== "missing"}>
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="text-xs font-semibold text-slate-500 uppercase select-none">{t("search_through", "through")}</span>
+          <ChoiceSet
+            type={{ type: "str" }}
+            label={t("search_through_named", "Through, for {name}", { name: props.name })}
+            choices={wrappers()}
+            value={search()?.through ?? []}
+            onChange={(through) => write("through", through)}
+          />
+        </div>
+      </Show>
       <Show when={op() === "match" && search()?.node?.type}>
         <NestedNode
           type={search()!.node!.type}
@@ -401,7 +512,7 @@ function ConditionRow(props: { type: string; field: SearchField; name: string; p
           onRetype={(type) => form.set([...props.path(), "node"], { type })}
         />
       </Show>
-    </SearchRow>
+    </div>
   );
 }
 
@@ -588,10 +699,18 @@ function ValueInput(props: { type: FieldType; label: string; value: unknown; onI
 }
 
 /** The values of an enum (or yes and no) as pills, any number of them chosen: what is one of them is found */
-function ChoiceSet(props: { type: FieldType; label: string; value: unknown[]; onChange: (values: unknown[]) => void }) {
+function ChoiceSet(props: {
+  type: FieldType;
+  label: string;
+  value: unknown[];
+  onChange: (values: unknown[]) => void;
+  /** Names of models to choose from, instead of the values of the type */
+  choices?: string[];
+}) {
   const definitions = useModels();
-  const { t, memberName } = useTranslations();
+  const { t, memberName, modelName } = useTranslations();
   const options = (): { value: unknown; name: string }[] => {
+    if (props.choices) return props.choices.map((name) => ({ value: name, name: modelName(name) }));
     if (props.type.type === "bool")
       return [
         { value: true, name: t("yes", "Yes") },
@@ -879,5 +998,365 @@ function IncomingRow(props: { type: string; path: Accessor<Path> }) {
         </For>
       </select>
     </SearchRow>
+  );
+}
+
+/** The buttons of a thing added to a row (a document it contains, an alternative): not, and remove */
+function EntryButtons(props: { name: string; not?: boolean; onNot?: () => void; onRemove: () => void }) {
+  const { t } = useTranslations();
+  return (
+    <>
+      <Show when={props.onNot}>
+        <button
+          type="button"
+          aria-pressed={props.not ? "true" : "false"}
+          aria-label={t("search_not_named", "Not: {name}", { name: props.name })}
+          title={t("search_not_title", "Find what does not match this")}
+          class={[
+            headMenuButtonClass,
+            "font-semibold uppercase",
+            { "bg-red-800 text-white hover:bg-red-700": !!props.not },
+            { "text-slate-500 hover:bg-slate-400/30": !props.not },
+          ]}
+          onClick={() => props.onNot?.()}
+        >
+          {t("search_not", "not")}
+        </button>
+      </Show>
+      <button
+        type="button"
+        class={[headButtonClass, "text-red-800 hover:bg-red-400/30"]}
+        aria-label={t("remove_item", "Remove {name}", { name: props.name })}
+        onClick={() => props.onRemove()}
+      >
+        ✕
+      </button>
+    </>
+  );
+}
+
+/** A menu that adds something to a row: it says what it adds, and goes back to that once it has */
+function AddSelect(props: { label: string; options: { value: string; name: string }[]; onChoose: (value: string) => void }) {
+  return (
+    <select
+      class={compactClass}
+      aria-label={props.label}
+      onChange={(event) => {
+        const chosen = event.currentTarget.value;
+        event.currentTarget.value = "";
+        if (chosen) props.onChoose(chosen);
+      }}
+    >
+      <option value="">{`+ ${props.label}`}</option>
+      <For each={props.options}>{(option) => <option value={option.value}>{option.name}</option>}</For>
+    </select>
+  );
+}
+
+/** Documents: documents of other types somewhere inside them (`$somewhere`), each with a form of its own */
+function SomewhereRow(props: { path: Accessor<Path> }) {
+  const form = useSearchForm();
+  const definitions = useModels();
+  const { t, modelName } = useTranslations();
+  const entries = () => (form.get(props.path()) as SomewhereSearch[] | undefined) ?? [];
+  const types = createMemo(() => documentTypesOf(definitions));
+  return (
+    <SearchRow name={t("search_somewhere", "Contains")} active={entries().length > 0}>
+      <Show when={entries().length > 0}>
+        <div class="flex w-full min-w-0 flex-col gap-4">
+          <For each={entries()}>
+            {(entry, index) => {
+              const at = () => [...props.path(), index()];
+              const model = () => getModel(definitions, entry.node.type);
+              return (
+                <NestedBox
+                  type={entry.node.type}
+                  tint={kindTint(model()?.kind, model()?.interfaceMeta?.colour)}
+                  rule={kindRule(model()?.kind, model()?.interfaceMeta?.colour)}
+                  buttons={
+                    <EntryButtons
+                      name={modelName(entry.node.type)}
+                      not={entry.not}
+                      onNot={() => form.set([...at(), "not"], !entry.not)}
+                      onRemove={() => form.remove(at())}
+                    />
+                  }
+                >
+                  <NodeFields type={entry.node.type} path={() => [...at(), "node"]} />
+                </NestedBox>
+              );
+            }}
+          </For>
+        </div>
+      </Show>
+      <AddSelect
+        label={t("search_add_somewhere", "Add a document it contains")}
+        options={types().map((type) => ({ value: type, name: modelName(type) }))}
+        onChoose={(type) => form.set([...props.path(), entries().length], { node: { type } })}
+      />
+    </SearchRow>
+  );
+}
+
+/** A document that a relation points at: the semantic spaces it is inside, all of them (`$spaces`) */
+function SpacesRow(props: { path: Accessor<Path> }) {
+  const form = useSearchForm();
+  const definitions = useModels();
+  const { t } = useTranslations();
+  const name = () => t("search_in_spaces", "Inside");
+  const chosen = () => (form.get(props.path()) as string[] | undefined) ?? [];
+  return (
+    <SearchRow name={name()} active={chosen().length > 0}>
+      <ChoiceSet
+        type={{ type: "str" }}
+        label={name()}
+        choices={semanticSpacesOf(definitions)}
+        value={chosen()}
+        onChange={(spaces) => {
+          if (spaces.length > 0) form.set(props.path(), spaces);
+          else form.remove(props.path());
+        }}
+      />
+    </SearchRow>
+  );
+}
+
+/**
+ * Groups of alternatives (`$any_of`): of each group at least one has to hold. Each alternative is a form of the same
+ * type, in a box of its own, with "or" between them.
+ */
+function AnyOfRow(props: { type: string; path: Accessor<Path>; root?: boolean }) {
+  const form = useSearchForm();
+  const definitions = useModels();
+  const { t, modelName } = useTranslations();
+  const groups = () => (form.get(props.path()) as NodeSearch[][] | undefined) ?? [];
+  const model = () => getModel(definitions, props.type);
+  return (
+    <SearchRow name={t("search_any_of", "Any of")} active={groups().length > 0}>
+      <For each={groups()}>
+        {(group, g) => (
+          <div
+            role="group"
+            aria-label={t("search_alternatives_n", "Alternatives {n}", { n: g() + 1 })}
+            class="flex w-full min-w-0 flex-col items-start gap-3 rounded-sm border-[0.5px] border-dashed border-slate-400/80 p-3"
+          >
+            <For each={group}>
+              {(_, a) => (
+                <>
+                  <Show when={a() > 0}>
+                    <span class="text-xs font-semibold text-slate-500 uppercase select-none">{t("search_or", "or")}</span>
+                  </Show>
+                  <NestedBox
+                    type={props.type}
+                    label={t("search_alternative", "alternative {n}", { n: a() + 1 })}
+                    tint={kindTint(model()?.kind, model()?.interfaceMeta?.colour)}
+                    rule={kindRule(model()?.kind, model()?.interfaceMeta?.colour)}
+                    buttons={
+                      <EntryButtons
+                        name={`${modelName(props.type)} ${t("search_alternative", "alternative {n}", { n: a() + 1 })}`}
+                        onRemove={() =>
+                          group.length <= 1 ? form.remove([...props.path(), g()]) : form.remove([...props.path(), g(), a()])
+                        }
+                      />
+                    }
+                  >
+                    <NodeFields type={props.type} path={() => [...props.path(), g(), a()]} root={props.root} alternative />
+                  </NestedBox>
+                </>
+              )}
+            </For>
+            <button
+              type="button"
+              class={addConditionClass}
+              onClick={() => form.set([...props.path(), g(), group.length], { type: props.type })}
+            >
+              + {t("search_or", "or")}
+            </button>
+          </div>
+        )}
+      </For>
+      <button
+        type="button"
+        class={addConditionClass}
+        onClick={() => form.set([...props.path(), groups().length], [{ type: props.type }, { type: props.type }])}
+      >
+        + {t("search_add_alternatives", "Add alternatives")}
+      </button>
+    </SearchRow>
+  );
+}
+
+// (how many fields a search can be ordered by, as the API takes)
+const MAX_ORDER = 3;
+
+/** The root: what the results are ordered by, a field after another, each up or down */
+function OrderRow(props: { type: string; path: Accessor<Path> }) {
+  const form = useSearchForm();
+  const definitions = useModels();
+  const { t, fieldName } = useTranslations();
+  const entries = () => (form.get(props.path()) as OrderSearch[] | undefined) ?? [];
+  const fields = createMemo(() => orderFieldsOf(definitions, props.type));
+  // (`date.sort_day`: the field, then the field of the embedded object in it)
+  const nameOf = (field: string) =>
+    field
+      .split(".")
+      .map((part, at) => (part === "label" && at === 0 ? t("label", "Label") : fieldName(at === 0 ? props.type : "", part)))
+      .join(" › ");
+  const name = () => t("search_order_by", "Order by");
+  return (
+    <SearchRow name={name()} active={entries().length > 0}>
+      <For each={entries()}>
+        {(entry, index) => (
+          <div class="flex w-full min-w-0 items-start gap-2">
+            <Show when={index() > 0}>
+              <span class="self-center text-xs font-semibold text-slate-500 uppercase select-none">
+                {t("search_then_by", "then by")}
+              </span>
+            </Show>
+            <select
+              class={[compactClass, "min-w-36"]}
+              aria-label={t("search_order_n", "Order by, {n}", { n: index() + 1 })}
+              value={entry.field}
+              onChange={(event) => form.set([...props.path(), index(), "field"], event.currentTarget.value)}
+            >
+              <For each={fields()}>
+                {(field) => (
+                  <option value={field} selected={entry.field === field}>
+                    {nameOf(field)}
+                  </option>
+                )}
+              </For>
+            </select>
+            <select
+              class={compactClass}
+              aria-label={t("search_direction", "Direction of {name}", { name: nameOf(entry.field) })}
+              value={entry.direction ?? "asc"}
+              onChange={(event) => form.set([...props.path(), index(), "direction"], event.currentTarget.value)}
+            >
+              <option value="asc" selected={(entry.direction ?? "asc") === "asc"}>
+                {t("search_ascending", "ascending")}
+              </option>
+              <option value="desc" selected={entry.direction === "desc"}>
+                {t("search_descending", "descending")}
+              </option>
+            </select>
+            <button
+              type="button"
+              class={removeConditionClass}
+              aria-label={t("remove_item", "Remove {name}", { name: nameOf(entry.field) })}
+              onClick={() => form.remove([...props.path(), index()])}
+            >
+              ✕
+            </button>
+          </div>
+        )}
+      </For>
+      <Show when={entries().length < MAX_ORDER}>
+        <AddSelect
+          label={entries().length > 0 ? t("search_then_by", "then by") : t("search_order_by", "Order by")}
+          options={fields()
+            .filter((field) => !entries().some((entry) => entry.field === field))
+            .map((field) => ({ value: field, name: nameOf(field) }))}
+          onChoose={(field) => form.set([...props.path(), entries().length], { field, direction: "asc" })}
+        />
+      </Show>
+    </SearchRow>
+  );
+}
+
+/**
+ * The searches saved in this browser for the type (local storage): a menu to load one (which replaces what is in the
+ * form) and a button to delete it; Save asks for a name, and saves what is in the form under it
+ */
+function SavedSearches(props: { type: string; current: () => NodeSearch; onLoad: (form: NodeSearch) => void }) {
+  const { t } = useTranslations();
+  const [all, setAll] = createSignal<SavedSearch[]>([]);
+  const [chosen, setChosen] = createSignal("");
+  const [naming, setNaming] = createSignal(false);
+  const [name, setName] = createSignal("");
+  // (in the browser only: they are in its storage)
+  onSettled(() => {
+    setAll(savedSearches(props.type));
+  });
+  const save = () => {
+    const given = name().trim();
+    if (!given) return;
+    setAll(saveSearch(props.type, given, props.current()));
+    setChosen(given);
+    setNaming(false);
+  };
+  return (
+    <div class="mr-auto flex min-w-0 items-center gap-2">
+      <Show when={all().length > 0}>
+        <select
+          class={compactClass}
+          aria-label={t("search_saved", "Saved searches")}
+          value={chosen()}
+          onChange={(event) => {
+            const found = all().find((each) => each.name === event.currentTarget.value);
+            setChosen(event.currentTarget.value);
+            if (found) props.onLoad(structuredClone(found.form));
+          }}
+        >
+          <option value="">{t("search_saved_placeholder", "Saved searches…")}</option>
+          <For each={all()}>
+            {(each) => (
+              <option value={each.name} selected={chosen() === each.name}>
+                {each.name}
+              </option>
+            )}
+          </For>
+        </select>
+        <Show when={chosen()}>
+          <button
+            type="button"
+            class={removeConditionClass}
+            aria-label={t("search_delete_saved", "Delete the saved search {name}", { name: chosen() })}
+            title={t("search_delete_saved", "Delete the saved search {name}", { name: chosen() })}
+            onClick={() => {
+              setAll(deleteSearch(props.type, chosen()));
+              setChosen("");
+            }}
+          >
+            ✕
+          </button>
+        </Show>
+      </Show>
+      <Show
+        when={naming()}
+        fallback={
+          <button
+            type="button"
+            class={smallButtonClass}
+            onClick={() => {
+              setName(chosen());
+              setNaming(true);
+            }}
+          >
+            {t("search_save", "Save")}…
+          </button>
+        }
+      >
+        <input
+          type="text"
+          class={[compactClass, "min-w-48"]}
+          aria-label={t("search_save_name", "Name of this search")}
+          placeholder={t("search_save_name", "Name of this search")}
+          value={name()}
+          ref={(element) => queueMicrotask(() => element.focus())}
+          onInput={(event) => setName(event.currentTarget.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") save();
+            if (event.key === "Escape") setNaming(false);
+          }}
+        />
+        <button type="button" class={smallButtonClass} disabled={!name().trim()} onClick={save}>
+          {t("search_save", "Save")}
+        </button>
+        <button type="button" class={smallButtonClass} onClick={() => setNaming(false)}>
+          {t("cancel", "Cancel")}
+        </button>
+      </Show>
+    </div>
   );
 }

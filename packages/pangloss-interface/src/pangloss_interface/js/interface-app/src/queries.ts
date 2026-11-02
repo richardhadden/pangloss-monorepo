@@ -3,7 +3,7 @@
 // so two components asking for the same thing share one request, and `revalidate` can
 // ask again. The arguments have to be plain values, as they make the key.
 import {
-  compileSearch,
+  compileRequest,
   decodeSearchForm,
   getCurrentUser,
   getItem,
@@ -18,21 +18,22 @@ import { apiClient } from "./api";
 export const LIST_PAGE_SIZE = 50;
 
 /**
- * A page of the list of a type: searched by the text `q` (deeply, with `deep`), or, with a `where` (the pattern of the
- * search form, as JSON: `whereOf`), by that pattern, which has the words of `q` in it already
+ * A page of the list of a type: searched by the text `q` (deeply, with `deep`), or, with a `request` (the search
+ * form's `where` and order, as JSON: `requestOf`), by that, which has the words of `q` in it already
  */
 export const listQuery = query(
-  (type: string, q: string, deep: boolean, where: string, page: number) =>
-    where
-      ? searchItems(apiClient(), { type, where: JSON.parse(where), page, pageSize: LIST_PAGE_SIZE })
-      : listItems(apiClient(), type, { q, deep, page, pageSize: LIST_PAGE_SIZE }),
+  (type: string, q: string, deep: boolean, request: string, page: number) => {
+    if (!request) return listItems(apiClient(), type, { q, deep, page, pageSize: LIST_PAGE_SIZE });
+    const { where, orderBy } = JSON.parse(request);
+    return searchItems(apiClient(), { type, where, orderBy, page, pageSize: LIST_PAGE_SIZE });
+  },
   "list",
 );
 
-/** The pattern of the search form in the address with the words of `q`, as JSON for `listQuery` ("" if the form has no condition) */
-export function whereOf(type: string, form: string, q: string): string {
-  const where = compileSearch(decodeSearchForm(form, type), q);
-  return where ? JSON.stringify(where) : "";
+/** The search form in the address, with the words of `q`, as JSON for `listQuery` ("" if it has no condition nor order) */
+export function requestOf(type: string, form: string, q: string): string {
+  const request = compileRequest(decodeSearchForm(form, type), q);
+  return request ? JSON.stringify(request) : "";
 }
 
 export const itemQuery = query((type: string, id: string) => getItem(apiClient(), type, id), "item");

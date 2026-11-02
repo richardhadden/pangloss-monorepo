@@ -4,7 +4,7 @@ import { render } from "@solidjs/web";
 import { afterEach, expect, test } from "vitest";
 import type { ApiClient } from "../../api";
 import { ApiProvider, ComponentsProvider, ModelsProvider } from "../../context";
-import { compileSearch } from "../../schema";
+import { compileRequest, compileSearch } from "../../schema";
 import type { NodeSearch } from "../../schema";
 import type { ComponentMap, ModelDefinition, ModelDefinitions } from "../../types";
 import { ReferenceChip } from "../ReferenceChip";
@@ -26,7 +26,24 @@ const model = (name: string, kind: string, extra: Partial<ModelDefinition> = {})
 // (a Letter has a year, a sender (a person), statements (activities) and a date; a Person is sent letters)
 const definitions = {
   models: {
-    Letter: model("Letter", "Document"),
+    Letter: model("Letter", "Document", {
+      fields: [
+        {
+          name: "statements",
+          kind: "relation",
+          options: [
+            { kind: "document", type: "Activity", edgeModel: null },
+            {
+              kind: "semanticSpace",
+              type: "Negative",
+              edgeModel: null,
+              params: { T: { typeVar: "T", options: [{ kind: "document", type: "Activity", edgeModel: null }] } },
+            },
+          ],
+        } as never,
+      ],
+    }),
+    Negative: model("Negative", "SemanticSpace"),
     Activity: model("Activity", "Document"),
     Day: model("Day", "Embedded"),
     Person: model("Person", "Entity", {
@@ -44,7 +61,7 @@ const definitions = {
         statements: { operators: "relation", targets: ["Activity"] },
         when: { operators: "relation", targets: ["Day"] },
       },
-      orderBy: [],
+      orderBy: ["label", "year", "when.day"],
     },
     Activity: { kind: "document", fields: { text: { operators: "text", value: { type: "str" } } }, orderBy: [] },
     Day: { kind: "embedded", fields: { day: { operators: "compare", value: { type: "int" } } }, orderBy: [] },
@@ -118,7 +135,18 @@ const names = () => [...document.body.querySelectorAll("dt")].map((dt) => dt.tex
 
 test("a row for each field of the type, as the entry form has them, and Mentions for a document", () => {
   show("Letter");
-  expect(names()).toEqual(["Label", "year", "kind", "sender", "statements", "when", "Mentions"]);
+  expect(names()).toEqual([
+    "Label",
+    "year",
+    "kind",
+    "sender",
+    "statements",
+    "when",
+    "Mentions",
+    "Contains",
+    "Any of",
+    "Order by",
+  ]);
   // (each with its operators)
   const operators = [...byLabel<HTMLSelectElement>("Condition on year").options].map((option) => option.text);
   expect(operators).toEqual(["=", ">", "≥", "<", "≤", "between", "has a value", "has no value"]);
@@ -200,7 +228,7 @@ test("a document or embedded field is a form of its own type, nested", async () 
 
 test("an entity is found by what refers to it, with a form for that", async () => {
   const pattern = show("Person");
-  expect(names()).toEqual(["Label", "Referred to by"]);
+  expect(names()).toEqual(["Label", "Referred to by", "Any of"]);
   choose("Add what refers to it", "0");
   flush();
   type("year", "1500");
@@ -224,4 +252,110 @@ test("it starts from what it is given, and Clear takes everything out at once", 
   expect(pattern()).toBeUndefined();
   flush();
   expect(byLabel<HTMLInputElement>("year").value).toBe("");
+});
+
+test("more conditions on one field, each with its own operator, all needed", async () => {
+  const pattern = show("Letter");
+  type("year", "1500");
+  choose("Condition on year", "gte");
+  click(button("And another condition on year"));
+  const [, second] = [...document.body.querySelectorAll<HTMLSelectElement>('[aria-label="Condition on year"]')];
+  second!.value = "lt";
+  second!.dispatchEvent(new Event("change", { bubbles: true }));
+  flush();
+  const boxes = [...document.body.querySelectorAll<HTMLInputElement>('input[aria-label="year"]')];
+  boxes[1]!.value = "1600";
+  boxes[1]!.dispatchEvent(new InputEvent("input", { bubbles: true }));
+  await settle(300);
+  expect(pattern()).toEqual({ year: { gte: 1500 }, $all: [{ year: { lt: 1600 } }] });
+});
+
+test("alternatives: at least one of a group has to hold", async () => {
+  const pattern = show("Letter");
+  click(button("+ Add alternatives"));
+  const years = () => [...document.body.querySelectorAll<HTMLInputElement>('[role="group"] input[aria-label="year"]')];
+  expect(years()).toHaveLength(2);
+  for (const [at, value] of [[0, "1500"], [1, "1600"]] as const) {
+    years()[at]!.value = value;
+    years()[at]!.dispatchEvent(new InputEvent("input", { bubbles: true }));
+    flush();
+  }
+  await settle(300);
+  expect(pattern()).toEqual({ $any_of: [{ year: { eq: 1500 } }, { year: { eq: 1600 } }] });
+  // (an alternative has no group of its own, nor an order)
+  expect(document.body.querySelectorAll('[role="group"] [aria-label="Order by"]')).toHaveLength(0);
+});
+
+test("a document it contains, somewhere, with a form of its own", async () => {
+  const pattern = show("Letter");
+  choose("Add a document it contains", "Activity");
+  const nested = document.body.querySelector('[data-search-node="Activity"]')!;
+  const text = nested.querySelector<HTMLInputElement>('input[aria-label="text"]')!;
+  text.value = "battle";
+  text.dispatchEvent(new InputEvent("input", { bubbles: true }));
+  await settle(300);
+  expect(pattern()).toEqual({ $somewhere: [{ type: "Activity", where: { text: { contains: "battle" } } }] });
+});
+
+test("a relation that can pass through a semantic space: through it; the document it points at: inside spaces", async () => {
+  const pattern = show("Letter");
+  const through = () => byLabel("Through, for statements");
+  click(through().querySelector("button"));
+  await settle(300);
+  expect(pattern()).toEqual({ statements: { through: ["Negative"] } });
+  click(button("Choose a type"));
+  click(byLabel("Inside").querySelector("button"));
+  await settle(300);
+  expect(pattern()).toEqual({
+    statements: { type: "Activity", where: { $spaces: ["Negative"] }, through: ["Negative"] },
+  });
+});
+
+test("an order is chosen field by field, each up or down", async () => {
+  const said: NodeSearch[] = [];
+  const container = document.createElement("div");
+  document.body.append(container);
+  dispose = render(
+    () => (
+      <ComponentsProvider components={{ ReferenceChip } as unknown as ComponentMap}>
+        <ModelsProvider definitions={definitions}>
+          <ApiProvider client={client}>
+            <SearchPanel type="Letter" open onChange={(form) => said.push(form)} onClose={() => {}} />
+          </ApiProvider>
+        </ModelsProvider>
+      </ComponentsProvider>
+    ),
+    container,
+  );
+  choose("Order by", "year");
+  choose("Direction of year", "desc");
+  const then = [...byLabel<HTMLSelectElement>("then by").options].map((option) => option.text);
+  expect(then).toEqual(["+ then by", "Label", "when › day"]);
+  choose("then by", "label");
+  await settle(300);
+  expect(compileRequest(said.at(-1))).toEqual({
+    where: {},
+    orderBy: [
+      { field: "year", direction: "desc" },
+      { field: "label", direction: "asc" },
+    ],
+  });
+});
+
+test("a search is saved in the browser by name, and loaded again", async () => {
+  const pattern = show("Letter");
+  type("year", "1500");
+  click(button("Save…"));
+  type("Name of this search", "Early");
+  click(button("Save"));
+  expect(JSON.parse(localStorage.getItem("pangloss.savedSearches.Letter")!)).toEqual([
+    { name: "Early", form: { type: "Letter", fields: { year: { op: "eq", value: 1500 } } } },
+  ]);
+  click(button("Clear"));
+  expect(pattern()).toBeUndefined();
+  choose("Saved searches", "Early");
+  expect(pattern()).toEqual({ year: { eq: 1500 } });
+  expect(byLabel<HTMLInputElement>("year").value).toBe("1500");
+  click(button("Delete the saved search Early"));
+  expect(JSON.parse(localStorage.getItem("pangloss.savedSearches.Letter")!)).toEqual([]);
 });

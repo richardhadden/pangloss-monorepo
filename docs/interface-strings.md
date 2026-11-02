@@ -77,6 +77,12 @@ These are not shown, but are read aloud, or appear when the pointer rests on the
 | `search_choose_type`, `search_change_type`, `search_change_type_of` | Choose a type; Type; Change the type of {name} | `SearchPanel` (the type of a nested form) | |
 | `search_mentions`, `search_find_any_entity` | Mentions; Find an entity… | `SearchPanel` (the row of a document's mentions, and its search) | |
 | `search_referred_to_by`, `search_add_referring`, `search_source`, `search_any_field` | Referred to by; Add what refers to it; {type} · {field}; any field | `SearchPanel` (what refers to an entity) | |
+| `search_and_condition` | And another condition on {name} | `SearchPanel` ("+ and" under a row: `aria-label`, tooltip) | |
+| `search_through`, `search_through_named`, `search_in_spaces` | through; Through, for {name}; Inside | `SearchPanel` (wrappers a relation passes through; the spaces a document is in) | |
+| `search_somewhere`, `search_add_somewhere` | Contains; Add a document it contains | `SearchPanel` (documents inside a document) | |
+| `search_any_of`, `search_alternatives_n`, `search_alternative`, `search_or`, `search_add_alternatives` | Any of; Alternatives {n}; alternative {n}; or; Add alternatives | `SearchPanel` (groups of alternatives) | |
+| `search_order_by`, `search_then_by`, `search_order_n`, `search_direction`, `search_ascending`, `search_descending` | Order by; then by; Order by, {n}; Direction of {name}; ascending; descending | `SearchPanel` (the order) | |
+| `search_saved`, `search_saved_placeholder`, `search_save`, `search_save_name`, `search_delete_saved` | Saved searches; Saved searches…; Save; Name of this search; Delete the saved search {name} | `SearchPanel` (searches saved in the browser) | |
 | `new_item` | New {type} | `Console` (the new button) | `{type}` is the name of the model, which has its own translation |
 | `go_to_head` | Go to the {type} | `ResultButton` (the button to the document an item is in: `aria-label` and tooltip) | `{type}` is the name of the model, which has its own translation |
 | `loading` | Loading | `Spinner` (`aria-label`), `pages/List.tsx` (a row whose page has not come yet: `aria-label`) | the same slot as above, but without the "…" |

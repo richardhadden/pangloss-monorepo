@@ -32,10 +32,26 @@ Step 6 of [structured search](structured-search.md): a form on the list page of 
 | List | `interface-app/src/pages/List.tsx`, `queries.ts` | `?form=` in the address; `listQuery(type, q, deep, where, page)` posts to `/api/search` when there is a `where` |
 | Scroll | `createWindowVirtualizer` | Where the list starts is measured again when the page round it changes size (the panel opening) |
 
+## Built after (2026-11-02, the same day)
+
+- The panel is a little in from the ends of the console (`mx-3`), so the two read as two things.
+- **Order by**: up to 3 fields of the type's `orderBy` (`date.sort_day` is named "date › sort day"), each ascending or
+  descending. An order alone is a search (with an empty `where`): `compileRequest` gives `{where, orderBy}`, and the
+  address-to-query string is that (`requestOf`).
+- **More conditions on one field** ("+ and" under a row): `FieldSearch.and`, each with its own not and operator; all
+  must hold (they go into `$all`).
+- **Any of** (`$any_of`): groups of alternatives, each a form of the same type in its own box, "or" between them; an
+  alternative with nothing in it is left out, and a group with one left is that one. An alternative has no groups of
+  its own, nor an order.
+- **Contains** (`$somewhere`, documents at the root): documents of any type somewhere inside, each with a form, and not.
+- **Through** (a relation that can pass through semantic spaces, conjunctions or reified relations, from the model's
+  field options): pills under the condition; with nothing else chosen it is "has one through these". **Inside**
+  (`$spaces`): pills of the semantic spaces, on a nested form for a document that a relation points at.
+- **Saved searches**, in this browser (local storage, `pangloss.savedSearches.<type>`, the user's choice): Save… asks
+  for a name (the same name replaces the one before); a menu at the foot loads one into the form; ✕ deletes it.
+
 ## Not done (yet)
 
-- Two conditions on one field (`$all` over the same field), and "any of" groups of rows (`$any_of`).
-- Ordering by a field (`order_by`); the order is by label, as the list's.
-- `$somewhere` (a document of some type anywhere in the document), `through` and `$spaces` (semantic spaces).
+- Saved searches shared between people or browsers (in the database).
 - `$incoming` of a document (the API has it for entities only).
-- Saving searches.
+- Groups of alternatives inside an alternative (the API takes them; the form does not offer them).

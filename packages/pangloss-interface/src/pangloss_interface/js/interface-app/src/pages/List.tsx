@@ -26,7 +26,7 @@ import {
   Show,
   untrack,
 } from "solid-js";
-import { LIST_PAGE_SIZE, listQuery, pageOf, searchOf, startOf, whereOf } from "../queries";
+import { LIST_PAGE_SIZE, listQuery, pageOf, searchOf, startOf, requestOf } from "../queries";
 import { Page } from "../Page";
 
 // The list of a type of Document or Entity: /Person
@@ -93,9 +93,9 @@ function ListOfItems(props: RouteProps<"/:type">) {
   const [search, setSearch] = useSearchParams();
   const text = () => searchOf(search).q;
   const form = () => searchOf(search).form;
-  // (the pattern of the search form, with the words typed; "" while the form has no condition)
-  const where = () => whereOf(props.params.type, form(), text());
-  const structured = () => where() !== "";
+  // (the pattern and order of the search form, with the words typed; "" while the form has neither)
+  const request = () => requestOf(props.params.type, form(), text());
+  const structured = () => request() !== "";
   // (a deep search is not made with the form)
   const deep = () => searchOf(search).deep && !structured();
   // The search form: there if the type has a search pattern; open at first if the address has one
@@ -124,9 +124,9 @@ function ListOfItems(props: RouteProps<"/:type">) {
   // (an async memo: what reads `first()` waits for it, inside the `Loading`; the arguments
   // are read before the query is called, so a change of them runs it again)
   const first = createMemo(async () => {
-    const asked = { type: props.params.type, q: text(), deep: deep(), form: form(), where: where() };
+    const asked = { type: props.params.type, q: text(), deep: deep(), form: form(), request: request() };
     const start = position;
-    const page = await listQuery(asked.type, asked.q, asked.deep, asked.where, pageOf(start));
+    const page = await listQuery(asked.type, asked.q, asked.deep, asked.request, pageOf(start));
     return { ...asked, start, page };
   });
   // (true while a change of the search is being answered, the old results still on show)
@@ -199,9 +199,9 @@ function Results(props: {
   type: string;
   q: string;
   deep: boolean;
-  /** The search form, as in the address, and the pattern it stands for */
+  /** The search form, as in the address, and the request it stands for */
   form: string;
-  where: string;
+  request: string;
   start: number;
   page: ListPage<Summary>;
   pending: boolean;
@@ -211,7 +211,7 @@ function Results(props: {
   const ResultButton = useComponent("ResultButton");
   const { t } = useTranslations();
   // (what the list was made from, read once: a new answer is a new list)
-  const { type, q, deep, form, where, start, page } = untrack(() => ({ ...props }));
+  const { type, q, deep, form, request, start, page } = untrack(() => ({ ...props }));
   // The pages fetched so far, by number
   const [pages, setPages] = createSignal(new Map([[page.page, page.results]]));
   const asked = new Set([page.page]);
@@ -233,7 +233,7 @@ function Results(props: {
       for (const number of needed) {
         if (asked.has(number)) continue;
         asked.add(number);
-        listQuery(type, q, deep, where, number).then(
+        listQuery(type, q, deep, request, number).then(
           (fetched) => setPages((old) => new Map(old).set(number, fetched.results)),
           // (asked again when it next comes on show)
           () => asked.delete(number),
@@ -252,7 +252,7 @@ function Results(props: {
       const url = new URL(window.location.href);
       // (not if the address is already that of another search: this list is on its way out)
       const params = searchOf(Object.fromEntries(url.searchParams));
-      if (params.q !== q || (params.deep && !where) !== deep || params.form !== form) return;
+      if (params.q !== q || (params.deep && !request) !== deep || params.form !== form) return;
       const at = virtual.firstVisible();
       untrack(() => props.onScrolled(at));
       if (at > 0) url.searchParams.set("at", String(at));

@@ -146,3 +146,64 @@ def test_a_document_is_found_by_what_it_mentions(page: Page, data):
     page.get_by_role("option", name="Person Marie of Burgundy").click()
     expect(results(page)).to_have_count(1)
     expect(page.get_by_role("link", name="Court at Ghent")).to_be_visible()
+
+
+def test_the_panel_is_a_little_in_from_the_ends_of_the_console(page: Page, data):
+    open_form(page)
+    console = box(page.get_by_role("banner", name="Console"))
+    top = box(panel(page))
+    assert top["x"] >= console["x"] + 8
+    assert top["x"] + top["width"] <= console["x"] + console["width"] - 8
+
+
+def test_the_results_can_be_ordered(page: Page, data):
+    open_form(page)
+    page.get_by_role("combobox", name="Order by").select_option("label")
+    page.get_by_role("combobox", name="Direction of Label").select_option("desc")
+    expect(results(page)).to_have_text(
+        ["PersonMaximilian", "PersonMarie of Burgundy", "PersonCharles the Bold"]
+    )
+    page.get_by_role("combobox", name="Direction of Label").select_option("asc")
+    expect(results(page)).to_have_text(
+        ["PersonCharles the Bold", "PersonMarie of Burgundy", "PersonMaximilian"]
+    )
+
+
+def test_alternatives_and_two_conditions_on_one_field(page: Page, data):
+    open_form(page)
+    page.get_by_role("button", name="+ Add alternatives").click()
+    alternatives = page.get_by_role("group", name="Alternatives 1")
+    labels = alternatives.get_by_role("textbox", name="Label", exact=True)
+    labels.nth(0).fill("Max")
+    labels.nth(1).fill("Charles")
+    expect(results(page)).to_have_count(2)
+    # (and a label that also does not contain "Bold": both conditions on the label)
+    label = page.get_by_role("textbox", name="Label", exact=True).first
+    label.fill("a")
+    # (the first: the form's own label, before those of the alternatives)
+    page.get_by_role("button", name="And another condition on Label").first.click()
+    page.get_by_role("textbox", name="Label", exact=True).nth(1).fill("Bold")
+    page.get_by_role("button", name="Not: Label").nth(1).click()
+    expect(results(page)).to_have_count(1)
+    expect(page.get_by_role("link", name="Maximilian")).to_be_visible()
+
+
+def test_a_search_is_saved_in_the_browser_and_loaded_again(page: Page, data):
+    open_form(page)
+    page.get_by_role(
+        "combobox", name=re.compile("^Condition on has role", re.I)
+    ).select_option("missing")
+    expect(results(page)).to_have_count(1)
+    page.get_by_role("button", name="Save…").click()
+    page.get_by_role("textbox", name="Name of this search").fill("No role")
+    page.get_by_role("button", name="Save", exact=True).click()
+    # (another visit, with nothing in the form)
+    page.goto("/Person")
+    hydrated(page)
+    page.get_by_role("button", name="Search by fields").click()
+    expect(results(page)).to_have_count(3)
+    page.get_by_role("combobox", name="Saved searches").select_option("No role")
+    expect(results(page)).to_have_count(1)
+    expect(page.get_by_role("link", name="Charles the Bold")).to_be_visible()
+    page.get_by_role("button", name="Delete the saved search No role").click()
+    expect(page.get_by_role("combobox", name="Saved searches")).to_have_count(0)
