@@ -283,8 +283,15 @@ class Painting(Artwork):
     """A painting"""
 
 
-class CreationOfPhysicalObject(Document):
-    created_by: Person
+class CreationOfPhysicalObject(Statement):
+    created_by: Annotated[
+        Person,
+        RelationConfig(
+            subclasses_parent_fields=[
+                FieldSubclassing(field_name="involves", field_on_model=Statement)
+            ]
+        ),
+    ]
     object_created: PhysicalObject
 
 
@@ -303,7 +310,7 @@ class CreationOfArtwork(CreationOfPhysicalObject):
 
 class CreationOfPainting(CreationOfArtwork):
     painting_created: Annotated[
-        Artwork,
+        Painting,
         RelationConfig(
             subclasses_parent_fields=[
                 FieldSubclassing(

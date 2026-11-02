@@ -246,17 +246,6 @@ export const definitions: ModelDefinitions = {
               "viaReified": false
             }
           ]
-        },
-        {
-          "name": "painting_created_reverse",
-          "key": "paintingCreatedReverse",
-          "sources": [
-            {
-              "model": "CreationOfPainting",
-              "field": "painting_created",
-              "viaReified": false
-            }
-          ]
         }
       ],
       "interfaceMeta": null
@@ -424,6 +413,75 @@ export const definitions: ModelDefinitions = {
       "useInSemanticSpaceLabel": true,
       "fields": [
         {
+          "name": "text",
+          "key": "text",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [
+            {
+              "name": "MinLen",
+              "min_length": 5
+            }
+          ]
+        },
+        {
+          "name": "date",
+          "key": "date",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "embedded",
+          "model": "Date",
+          "types": [
+            "DateRange",
+            "EDTFDate",
+            "ExactDate",
+            "OngoingDate",
+            "Period",
+            "Recurrence",
+            "UnknownDate"
+          ]
+        },
+        {
+          "name": "year",
+          "key": "year",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": []
+        },
+        {
+          "name": "places",
+          "key": "places",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "relation",
+          "many": true,
+          "reverseName": "places_reverse",
+          "options": [
+            {
+              "kind": "entity",
+              "type": "Place",
+              "edgeModel": null
+            }
+          ],
+          "validators": []
+        },
+        {
           "name": "created_by",
           "key": "createdBy",
           "description": null,
@@ -486,6 +544,75 @@ export const definitions: ModelDefinitions = {
       "useInSemanticSpaceLabel": true,
       "fields": [
         {
+          "name": "text",
+          "key": "text",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [
+            {
+              "name": "MinLen",
+              "min_length": 5
+            }
+          ]
+        },
+        {
+          "name": "date",
+          "key": "date",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "embedded",
+          "model": "Date",
+          "types": [
+            "DateRange",
+            "EDTFDate",
+            "ExactDate",
+            "OngoingDate",
+            "Period",
+            "Recurrence",
+            "UnknownDate"
+          ]
+        },
+        {
+          "name": "year",
+          "key": "year",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": []
+        },
+        {
+          "name": "places",
+          "key": "places",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "relation",
+          "many": true,
+          "reverseName": "places_reverse",
+          "options": [
+            {
+              "kind": "entity",
+              "type": "Place",
+              "edgeModel": null
+            }
+          ],
+          "validators": []
+        },
+        {
           "name": "created_by",
           "key": "createdBy",
           "description": null,
@@ -517,11 +644,6 @@ export const definitions: ModelDefinitions = {
           "options": [
             {
               "kind": "entity",
-              "type": "Artwork",
-              "edgeModel": null
-            },
-            {
-              "kind": "entity",
               "type": "Painting",
               "edgeModel": null
             }
@@ -537,7 +659,7 @@ export const definitions: ModelDefinitions = {
       "kind": "Document",
       "abstract": false,
       "description": null,
-      "parent": null,
+      "parent": "Statement",
       "concreteTypes": [
         "CreationOfArtwork",
         "CreationOfPainting",
@@ -549,6 +671,75 @@ export const definitions: ModelDefinitions = {
       "requireLabel": true,
       "useInSemanticSpaceLabel": true,
       "fields": [
+        {
+          "name": "text",
+          "key": "text",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [
+            {
+              "name": "MinLen",
+              "min_length": 5
+            }
+          ]
+        },
+        {
+          "name": "date",
+          "key": "date",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "embedded",
+          "model": "Date",
+          "types": [
+            "DateRange",
+            "EDTFDate",
+            "ExactDate",
+            "OngoingDate",
+            "Period",
+            "Recurrence",
+            "UnknownDate"
+          ]
+        },
+        {
+          "name": "year",
+          "key": "year",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": []
+        },
+        {
+          "name": "places",
+          "key": "places",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "relation",
+          "many": true,
+          "reverseName": "places_reverse",
+          "options": [
+            {
+              "kind": "entity",
+              "type": "Place",
+              "edgeModel": null
+            }
+          ],
+          "validators": []
+        },
         {
           "name": "created_by",
           "key": "createdBy",
@@ -1487,6 +1678,21 @@ export const definitions: ModelDefinitions = {
                     },
                     {
                       "kind": "document",
+                      "type": "CreationOfArtwork",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "CreationOfPainting",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "CreationOfPhysicalObject",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
                       "type": "Order",
                       "edgeModel": null
                     },
@@ -1507,6 +1713,21 @@ export const definitions: ModelDefinitions = {
                     },
                     {
                       "kind": "document",
+                      "type": "CreationOfArtwork",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "CreationOfPainting",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "CreationOfPhysicalObject",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
                       "type": "Order",
                       "edgeModel": null
                     },
@@ -1522,6 +1743,21 @@ export const definitions: ModelDefinitions = {
             {
               "kind": "document",
               "type": "Activity",
+              "edgeModel": null
+            },
+            {
+              "kind": "document",
+              "type": "CreationOfArtwork",
+              "edgeModel": null
+            },
+            {
+              "kind": "document",
+              "type": "CreationOfPainting",
+              "edgeModel": null
+            },
+            {
+              "kind": "document",
+              "type": "CreationOfPhysicalObject",
               "edgeModel": null
             },
             {
@@ -1549,6 +1785,21 @@ export const definitions: ModelDefinitions = {
                     },
                     {
                       "kind": "document",
+                      "type": "CreationOfArtwork",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "CreationOfPainting",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "CreationOfPhysicalObject",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
                       "type": "Order",
                       "edgeModel": null
                     },
@@ -1572,6 +1823,21 @@ export const definitions: ModelDefinitions = {
                     {
                       "kind": "document",
                       "type": "Activity",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "CreationOfArtwork",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "CreationOfPainting",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "CreationOfPhysicalObject",
                       "edgeModel": null
                     },
                     {
@@ -2423,6 +2689,21 @@ export const definitions: ModelDefinitions = {
                     },
                     {
                       "kind": "document",
+                      "type": "CreationOfArtwork",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "CreationOfPainting",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "CreationOfPhysicalObject",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
                       "type": "Order",
                       "edgeModel": null
                     },
@@ -2446,6 +2727,21 @@ export const definitions: ModelDefinitions = {
                     {
                       "kind": "document",
                       "type": "Activity",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "CreationOfArtwork",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "CreationOfPainting",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "CreationOfPhysicalObject",
                       "edgeModel": null
                     },
                     {
@@ -2840,12 +3136,12 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Transfer",
               "field": "given_by",
-              "viaReified": false
+              "viaReified": true
             },
             {
               "model": "Transfer",
               "field": "given_by",
-              "viaReified": true
+              "viaReified": false
             }
           ]
         },
@@ -2867,12 +3163,12 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Order",
               "field": "ordered_by",
-              "viaReified": false
+              "viaReified": true
             },
             {
               "model": "Order",
               "field": "ordered_by",
-              "viaReified": true
+              "viaReified": false
             }
           ]
         },
@@ -2894,12 +3190,12 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Transfer",
               "field": "given_to",
-              "viaReified": false
+              "viaReified": true
             },
             {
               "model": "Transfer",
               "field": "given_to",
-              "viaReified": true
+              "viaReified": false
             }
           ]
         }
@@ -2982,6 +3278,21 @@ export const definitions: ModelDefinitions = {
           "sources": [
             {
               "model": "Activity",
+              "field": "places",
+              "viaReified": false
+            },
+            {
+              "model": "CreationOfArtwork",
+              "field": "places",
+              "viaReified": false
+            },
+            {
+              "model": "CreationOfPainting",
+              "field": "places",
+              "viaReified": false
+            },
+            {
+              "model": "CreationOfPhysicalObject",
               "field": "places",
               "viaReified": false
             },
@@ -3514,6 +3825,9 @@ export const definitions: ModelDefinitions = {
       "parent": null,
       "concreteTypes": [
         "Activity",
+        "CreationOfArtwork",
+        "CreationOfPainting",
+        "CreationOfPhysicalObject",
         "Order",
         "Transfer"
       ],
@@ -4272,6 +4586,37 @@ export const definitions: ModelDefinitions = {
     "CreationOfArtwork": {
       "kind": "document",
       "fields": {
+        "text": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "date": {
+          "operators": "relation",
+          "targets": [
+            "Date",
+            "DateRange",
+            "EDTFDate",
+            "ExactDate",
+            "OngoingDate",
+            "Period",
+            "Recurrence",
+            "UnknownDate"
+          ]
+        },
+        "year": {
+          "operators": "compare",
+          "value": {
+            "type": "int"
+          }
+        },
+        "places": {
+          "operators": "relation",
+          "targets": [
+            "Place"
+          ]
+        },
         "created_by": {
           "operators": "relation",
           "targets": [
@@ -4287,12 +4632,52 @@ export const definitions: ModelDefinitions = {
         }
       },
       "orderBy": [
-        "label"
+        "label",
+        "text",
+        "date.source_text",
+        "date.earliest_fuzzy",
+        "date.earliest_strict",
+        "date.latest_strict",
+        "date.latest_fuzzy",
+        "date.sort_day",
+        "date.end_sort_day",
+        "year"
       ]
     },
     "CreationOfPainting": {
       "kind": "document",
       "fields": {
+        "text": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "date": {
+          "operators": "relation",
+          "targets": [
+            "Date",
+            "DateRange",
+            "EDTFDate",
+            "ExactDate",
+            "OngoingDate",
+            "Period",
+            "Recurrence",
+            "UnknownDate"
+          ]
+        },
+        "year": {
+          "operators": "compare",
+          "value": {
+            "type": "int"
+          }
+        },
+        "places": {
+          "operators": "relation",
+          "targets": [
+            "Place"
+          ]
+        },
         "created_by": {
           "operators": "relation",
           "targets": [
@@ -4302,18 +4687,57 @@ export const definitions: ModelDefinitions = {
         "painting_created": {
           "operators": "relation",
           "targets": [
-            "Artwork",
             "Painting"
           ]
         }
       },
       "orderBy": [
-        "label"
+        "label",
+        "text",
+        "date.source_text",
+        "date.earliest_fuzzy",
+        "date.earliest_strict",
+        "date.latest_strict",
+        "date.latest_fuzzy",
+        "date.sort_day",
+        "date.end_sort_day",
+        "year"
       ]
     },
     "CreationOfPhysicalObject": {
       "kind": "document",
       "fields": {
+        "text": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "date": {
+          "operators": "relation",
+          "targets": [
+            "Date",
+            "DateRange",
+            "EDTFDate",
+            "ExactDate",
+            "OngoingDate",
+            "Period",
+            "Recurrence",
+            "UnknownDate"
+          ]
+        },
+        "year": {
+          "operators": "compare",
+          "value": {
+            "type": "int"
+          }
+        },
+        "places": {
+          "operators": "relation",
+          "targets": [
+            "Place"
+          ]
+        },
         "created_by": {
           "operators": "relation",
           "targets": [
@@ -4330,7 +4754,16 @@ export const definitions: ModelDefinitions = {
         }
       },
       "orderBy": [
-        "label"
+        "label",
+        "text",
+        "date.source_text",
+        "date.earliest_fuzzy",
+        "date.earliest_strict",
+        "date.latest_strict",
+        "date.latest_fuzzy",
+        "date.sort_day",
+        "date.end_sort_day",
+        "year"
       ]
     },
     "Date": {
@@ -4693,6 +5126,9 @@ export const definitions: ModelDefinitions = {
           "operators": "relation",
           "targets": [
             "Activity",
+            "CreationOfArtwork",
+            "CreationOfPainting",
+            "CreationOfPhysicalObject",
             "Order",
             "Transfer"
           ]
@@ -4872,6 +5308,9 @@ export const definitions: ModelDefinitions = {
           "operators": "relation",
           "targets": [
             "Activity",
+            "CreationOfArtwork",
+            "CreationOfPainting",
+            "CreationOfPhysicalObject",
             "Order",
             "Transfer"
           ]
@@ -5462,6 +5901,10 @@ export type ArtworkWhere = {
 export type ArtworkPattern = { type: "Artwork"; where?: ArtworkWhere };
 
 export type CreationOfArtworkWhere = {
+  text?: TextCondition;
+  date?: RelationCondition | (RelationCondition & (DatePattern | DateRangePattern | EDTFDatePattern | ExactDatePattern | OngoingDatePattern | PeriodPattern | RecurrencePattern | UnknownDatePattern));
+  year?: CompareCondition<number>;
+  places?: RelationCondition | (RelationCondition & (PlacePattern));
   created_by?: RelationCondition | (RelationCondition & (PersonPattern));
   artwork_created?: RelationCondition | (RelationCondition & (ArtworkPattern | PaintingPattern));
   $all?: CreationOfArtworkWhere[];
@@ -5479,8 +5922,12 @@ export type CreationOfArtworkWhere = {
 export type CreationOfArtworkPattern = { type: "CreationOfArtwork"; where?: CreationOfArtworkWhere };
 
 export type CreationOfPaintingWhere = {
+  text?: TextCondition;
+  date?: RelationCondition | (RelationCondition & (DatePattern | DateRangePattern | EDTFDatePattern | ExactDatePattern | OngoingDatePattern | PeriodPattern | RecurrencePattern | UnknownDatePattern));
+  year?: CompareCondition<number>;
+  places?: RelationCondition | (RelationCondition & (PlacePattern));
   created_by?: RelationCondition | (RelationCondition & (PersonPattern));
-  painting_created?: RelationCondition | (RelationCondition & (ArtworkPattern | PaintingPattern));
+  painting_created?: RelationCondition | (RelationCondition & (PaintingPattern));
   $all?: CreationOfPaintingWhere[];
   $any_of?: CreationOfPaintingWhere[];
   $not?: CreationOfPaintingWhere;
@@ -5496,6 +5943,10 @@ export type CreationOfPaintingWhere = {
 export type CreationOfPaintingPattern = { type: "CreationOfPainting"; where?: CreationOfPaintingWhere };
 
 export type CreationOfPhysicalObjectWhere = {
+  text?: TextCondition;
+  date?: RelationCondition | (RelationCondition & (DatePattern | DateRangePattern | EDTFDatePattern | ExactDatePattern | OngoingDatePattern | PeriodPattern | RecurrencePattern | UnknownDatePattern));
+  year?: CompareCondition<number>;
+  places?: RelationCondition | (RelationCondition & (PlacePattern));
   created_by?: RelationCondition | (RelationCondition & (PersonPattern));
   object_created?: RelationCondition | (RelationCondition & (ArtworkPattern | PaintingPattern | PhysicalObjectPattern));
   $all?: CreationOfPhysicalObjectWhere[];
@@ -5611,7 +6062,7 @@ export type ExactDatePattern = { type: "ExactDate"; where?: ExactDateWhere };
 export type FactoidWhere = {
   year?: CompareCondition<number>;
   source?: RelationCondition | (RelationCondition & (SourcePattern));
-  statements?: RelationCondition | (RelationCondition & (ActivityPattern | OrderPattern | TransferPattern));
+  statements?: RelationCondition | (RelationCondition & (ActivityPattern | CreationOfArtworkPattern | CreationOfPaintingPattern | CreationOfPhysicalObjectPattern | OrderPattern | TransferPattern));
   $all?: FactoidWhere[];
   $any_of?: FactoidWhere[];
   $not?: FactoidWhere;
@@ -5687,7 +6138,7 @@ export type OrderWhere = {
   year?: CompareCondition<number>;
   places?: RelationCondition | (RelationCondition & (PlacePattern));
   ordered_by?: RelationCondition | (RelationCondition & (GroupPattern | PersonPattern));
-  thing_ordered?: RelationCondition | (RelationCondition & (ActivityPattern | OrderPattern | TransferPattern));
+  thing_ordered?: RelationCondition | (RelationCondition & (ActivityPattern | CreationOfArtworkPattern | CreationOfPaintingPattern | CreationOfPhysicalObjectPattern | OrderPattern | TransferPattern));
   $all?: OrderWhere[];
   $any_of?: OrderWhere[];
   $not?: OrderWhere;
@@ -5901,9 +6352,9 @@ export interface Wheres {
 export interface OrderFields {
   Activity: "label" | "text" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day" | "year";
   Artwork: "label";
-  CreationOfArtwork: "label";
-  CreationOfPainting: "label";
-  CreationOfPhysicalObject: "label";
+  CreationOfArtwork: "label" | "text" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day" | "year";
+  CreationOfPainting: "label" | "text" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day" | "year";
+  CreationOfPhysicalObject: "label" | "text" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day" | "year";
   DateCharacterisation: "label" | "use" | "rank";
   Factoid: "label" | "year";
   Group: "label" | "name";

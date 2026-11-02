@@ -578,11 +578,6 @@
             "name": "Object created reverse",
             "plural": "Object created reverse",
             "help": ""
-          },
-          "painting_created_reverse": {
-            "name": "Painting created reverse",
-            "plural": "Painting created reverse",
-            "help": ""
           }
         }
       },
@@ -648,6 +643,26 @@
         "description": "",
         "kind": "Document",
         "fields": {
+          "text": {
+            "name": "Text",
+            "plural": "Text",
+            "help": ""
+          },
+          "date": {
+            "name": "Date",
+            "plural": "Date",
+            "help": ""
+          },
+          "year": {
+            "name": "Year",
+            "plural": "Year",
+            "help": ""
+          },
+          "places": {
+            "name": "Places",
+            "plural": "Places",
+            "help": ""
+          },
           "created_by": {
             "name": "Created by",
             "plural": "Created by",
@@ -668,6 +683,26 @@
         "description": "",
         "kind": "Document",
         "fields": {
+          "text": {
+            "name": "Text",
+            "plural": "Text",
+            "help": ""
+          },
+          "date": {
+            "name": "Date",
+            "plural": "Date",
+            "help": ""
+          },
+          "year": {
+            "name": "Year",
+            "plural": "Year",
+            "help": ""
+          },
+          "places": {
+            "name": "Places",
+            "plural": "Places",
+            "help": ""
+          },
           "created_by": {
             "name": "Created by",
             "plural": "Created by",
@@ -688,6 +723,26 @@
         "description": "",
         "kind": "Document",
         "fields": {
+          "text": {
+            "name": "Text",
+            "plural": "Text",
+            "help": ""
+          },
+          "date": {
+            "name": "Date",
+            "plural": "Date",
+            "help": ""
+          },
+          "year": {
+            "name": "Year",
+            "plural": "Year",
+            "help": ""
+          },
+          "places": {
+            "name": "Places",
+            "plural": "Places",
+            "help": ""
+          },
           "created_by": {
             "name": "Created by",
             "plural": "Created by",
@@ -1929,11 +1984,6 @@
             "name": "Object created reverse",
             "plural": "Object created reverse",
             "help": ""
-          },
-          "painting_created_reverse": {
-            "name": "Painting created reverse",
-            "plural": "Painting created reverse",
-            "help": ""
           }
         }
       },
@@ -1999,6 +2049,26 @@
         "description": "",
         "kind": "Document",
         "fields": {
+          "text": {
+            "name": "Text",
+            "plural": "Text",
+            "help": ""
+          },
+          "date": {
+            "name": "Datum",
+            "plural": "Datum",
+            "help": ""
+          },
+          "year": {
+            "name": "Jahr",
+            "plural": "Jahr",
+            "help": ""
+          },
+          "places": {
+            "name": "Orte",
+            "plural": "Orte",
+            "help": ""
+          },
           "created_by": {
             "name": "Created by",
             "plural": "Created by",
@@ -2019,6 +2089,26 @@
         "description": "",
         "kind": "Document",
         "fields": {
+          "text": {
+            "name": "Text",
+            "plural": "Text",
+            "help": ""
+          },
+          "date": {
+            "name": "Datum",
+            "plural": "Datum",
+            "help": ""
+          },
+          "year": {
+            "name": "Jahr",
+            "plural": "Jahr",
+            "help": ""
+          },
+          "places": {
+            "name": "Orte",
+            "plural": "Orte",
+            "help": ""
+          },
           "created_by": {
             "name": "Created by",
             "plural": "Created by",
@@ -2039,6 +2129,26 @@
         "description": "",
         "kind": "Document",
         "fields": {
+          "text": {
+            "name": "Text",
+            "plural": "Text",
+            "help": ""
+          },
+          "date": {
+            "name": "Datum",
+            "plural": "Datum",
+            "help": ""
+          },
+          "year": {
+            "name": "Jahr",
+            "plural": "Jahr",
+            "help": ""
+          },
+          "places": {
+            "name": "Orte",
+            "plural": "Orte",
+            "help": ""
+          },
           "created_by": {
             "name": "Created by",
             "plural": "Created by",
@@ -3280,11 +3390,6 @@
             "name": "Object created reverse",
             "plural": "Object created reverse",
             "help": ""
-          },
-          "painting_created_reverse": {
-            "name": "Painting created reverse",
-            "plural": "Painting created reverse",
-            "help": ""
           }
         }
       },
@@ -3350,6 +3455,26 @@
         "description": "",
         "kind": "Document",
         "fields": {
+          "text": {
+            "name": "Texte",
+            "plural": "Texte",
+            "help": ""
+          },
+          "date": {
+            "name": "Date",
+            "plural": "Date",
+            "help": ""
+          },
+          "year": {
+            "name": "Année",
+            "plural": "Année",
+            "help": ""
+          },
+          "places": {
+            "name": "Lieux",
+            "plural": "Lieux",
+            "help": ""
+          },
           "created_by": {
             "name": "Created by",
             "plural": "Created by",
@@ -3370,6 +3495,26 @@
         "description": "",
         "kind": "Document",
         "fields": {
+          "text": {
+            "name": "Texte",
+            "plural": "Texte",
+            "help": ""
+          },
+          "date": {
+            "name": "Date",
+            "plural": "Date",
+            "help": ""
+          },
+          "year": {
+            "name": "Année",
+            "plural": "Année",
+            "help": ""
+          },
+          "places": {
+            "name": "Lieux",
+            "plural": "Lieux",
+            "help": ""
+          },
           "created_by": {
             "name": "Created by",
             "plural": "Created by",
@@ -3390,6 +3535,26 @@
         "description": "",
         "kind": "Document",
         "fields": {
+          "text": {
+            "name": "Texte",
+            "plural": "Texte",
+            "help": ""
+          },
+          "date": {
+            "name": "Date",
+            "plural": "Date",
+            "help": ""
+          },
+          "year": {
+            "name": "Année",
+            "plural": "Année",
+            "help": ""
+          },
+          "places": {
+            "name": "Lieux",
+            "plural": "Lieux",
+            "help": ""
+          },
           "created_by": {
             "name": "Created by",
             "plural": "Created by",
