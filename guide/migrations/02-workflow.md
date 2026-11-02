@@ -68,7 +68,7 @@ class Person(Entity):
 
 ```console
 $ pangloss makemigrations
-A value for Person.born on the nodes that exist: 1900
+A value for Person.born on the nodes that exist (nothing: it fails if any exist): 1900
 library.0003_addfield_person_born
     - Add the literal field Person.born (a value is needed for the nodes that exist)
 Wrote library/migrations/0003_addfield_person_born.py

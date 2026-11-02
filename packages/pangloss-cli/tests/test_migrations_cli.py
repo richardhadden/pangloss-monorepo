@@ -221,9 +221,10 @@ def test_a_required_field_asks_for_a_value(models_project: Path):
     assert invoke("makemigrations")[0] == 0
     set_models(models_project, V2)
 
-    exit_code, output = invoke("makemigrations", "--noinput")
-    assert exit_code == 1  # (it would have to ask)
-    assert "value for" in output and "born" in output
+    # (it may be left out, as no node may need it: said, as `migrate` fails if one does)
+    exit_code, output = invoke("makemigrations", "--dry-run", "--noinput")
+    assert exit_code == 0, output
+    assert "Left without an answer" in output and "born" in output
     assert migration_files(models_project) == ["0001_initial.py"]
 
     exit_code, output = invoke("makemigrations", input="nonsense\n1900\n")
@@ -856,8 +857,8 @@ def test_migrations_can_be_made_for_one_app(models_project: Path):
 
     # (a change to the app's models, asked about as for all)
     set_models(models_project, V2)
-    exit_code, output = invoke("makemigrations", "fakeapp", "--noinput")
-    assert exit_code == 1 and "born" in output
+    exit_code, output = invoke("makemigrations", "fakeapp", "--dry-run", "--noinput")
+    assert exit_code == 0 and "Left without an answer" in output and "born" in output
     exit_code, output = invoke("makemigrations", "fakeapp", "--check")
     assert exit_code == 1 and "changes since the last migration" in output
     exit_code, output = invoke("makemigrations", "fakeapp", input="1900\n")

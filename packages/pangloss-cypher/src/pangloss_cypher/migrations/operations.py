@@ -176,6 +176,12 @@ async def run_on_nodes(
     return [row["id"] for row in rows]
 
 
+async def any_nodes(tx: Transaction, model: str) -> bool:
+    """Whether a model has nodes: what is asked for the nodes that exist is not needed if none do"""
+    rows = await run(tx, f"MATCH (n:{ident(model)}) RETURN n.id AS id LIMIT 1")
+    return bool(rows)
+
+
 def needs(change: c.Change, value: Any, what: str) -> None:
     if value is None:
         raise PanglossMigrationAnswerNeeded(f"{change.describe()}: {what}")
@@ -379,6 +385,8 @@ async def add_field(
         change = dataclasses.replace(
             change, default=[]
         )  # (a list that is needed starts empty)
+    if change.default is None and not await any_nodes(tx, change.model):
+        return None if window is None else []  # (there are none to give a value to)
     needs(change, change.default, "a value for the nodes that exist (`default`)")
     params: dict[str, Any] = {}
     if field["kind"] in ("literal", "list"):
@@ -404,6 +412,8 @@ async def add_embedded(
     """A field that is an embedded object, new: each node that exists is given one, with the values
     that were answered (`default`: a value for each field the embedded object requires). Done as
     for literals that become an embedded object, with no literals to move."""
+    if not await any_nodes(tx, change.model):
+        return 0  # (there are none to give one to: nothing to choose or answer)
     field = change.definition
     types = field.get("types") or ([field["model"]] if field.get("model") else [])
     if len(types) != 1:

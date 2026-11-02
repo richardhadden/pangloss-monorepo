@@ -17,7 +17,7 @@ Your database already has a letter without a year, so the models and the data no
 
 ```console
 $ pangloss makemigrations
-A value for Letter.year on the nodes that exist: 1843
+A value for Letter.year on the nodes that exist (nothing: it fails if any exist): 1843
 letters.0002_addfield_letter_year
     - Add the literal field Letter.year (a value is needed for the nodes that exist)
 Wrote letters/migrations/0002_addfield_letter_year.py

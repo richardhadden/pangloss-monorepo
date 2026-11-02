@@ -88,6 +88,8 @@ MODEL_OPTIONS = [
     "requireLabel",
     "useInSemanticSpaceLabel",
     "typeParameters",
+    # (the labels of a new parent are a change of its own, AlterModelLabels)
+    "parent",
 ]
 # How alike two models are (the fields they share, of all they have) to ask if one is a
 # renaming of the other

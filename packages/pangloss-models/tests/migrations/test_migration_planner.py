@@ -504,6 +504,40 @@ def test_the_migrations_of_one_app_come_with_those_of_others_that_they_need(apps
 
 
 @no_type_check
+def test_a_model_given_a_parent_class_gets_its_labels_and_the_parent(apps):
+    def one():
+        class Event(Document):
+            pass
+
+        class Creation(Document):
+            pass
+
+    def two():
+        class Event(Document):
+            pass
+
+        class Creation(Event):
+            pass
+
+    first = in_app(snapshot_of(one), Event="appone.models", Creation="appone.models")
+    graph = write_all(plan(MigrationGraph(), first, apps).migrations, apps)
+
+    second = in_app(snapshot_of(two), Event="appone.models", Creation="appone.models")
+    result = plan(graph, second, apps)
+    (migration,) = result.migrations
+    assert {type(ch) for ch in migration.changes} == {
+        c.AlterModelLabels,
+        c.AlterModelOption,
+    }
+    (option,) = [ch for ch in migration.changes if isinstance(ch, c.AlterModelOption)]
+    assert (option.option, option.old, option.new) == ("parent", None, "Event")
+
+    graph = write_all(result.migrations, apps)
+    assert graph.state() == data_view(second)
+    assert plan(graph, second, apps).is_empty
+
+
+@no_type_check
 def test_changing_the_kind_of_a_model_or_a_field_is_refused(apps):
     from pangloss_models.exceptions import PanglossMigrationNotSupported
 

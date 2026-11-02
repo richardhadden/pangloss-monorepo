@@ -451,3 +451,21 @@ async def test_a_new_embedded_object_that_could_be_of_several_kinds_is_not_guess
                 AddField={"default": {"when": "x", "precision": 0, "at": "y"}}
             ),
         )
+
+
+@no_type_check
+@pytest.mark.parametrize("two", [False, True])
+@pytest.mark.parametrize("batch_size", [None, 2])
+async def test_a_new_embedded_object_needs_no_answer_when_no_node_exists(
+    db_driver, clear_database, two, batch_size
+):
+    _, old = declare(new_embedded_models(embedded=False))
+    new_models, new = declare(new_embedded_models(embedded=True, two=two))
+
+    # (no Statement is there to be given one: nothing to answer, nor to choose among the kinds)
+    await migrate(old, new, batch_size=batch_size)
+
+    saved = await new_models.Statement.Create(
+        label="S", date={"when": "x", "precision": 0}, text="T"
+    ).save()
+    assert (await new_models.Statement.get(id=saved.id)).date.when == "x"

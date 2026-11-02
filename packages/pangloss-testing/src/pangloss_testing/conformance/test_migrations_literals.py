@@ -54,6 +54,33 @@ async def test_a_required_field_is_given_a_value_for_what_exists(
 
 
 @no_type_check
+@pytest.mark.parametrize("batch_size", [None, 2])
+async def test_a_required_field_needs_no_value_when_no_node_exists(
+    db_driver, clear_database, batch_size
+):
+    def v1():
+        class Person(Entity):
+            name: str
+
+        return ns(Person=Person)
+
+    def v2():
+        class Person(Entity):
+            name: str
+            born: int
+
+        return ns(Person=Person)
+
+    _, old = declare(v1)
+    new_models, new = declare(v2)
+
+    await migrate(old, new, batch_size=batch_size)
+
+    saved = await new_models.Person.Create(label="Ann", name="Ann", born=1900).save()
+    assert (await new_models.Person.get(id=saved.id)).born == 1900
+
+
+@no_type_check
 async def test_an_optional_field_is_added_and_a_field_removed(
     db_driver, clear_database
 ):

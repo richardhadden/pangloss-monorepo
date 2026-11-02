@@ -149,19 +149,23 @@ def ask_answers(
     changes = list(changes)
     unanswerable: list[str] = []
     refused: list[str] = []
+    left_out: list[str] = []
     for index, question in needed:
         change = changes[index]
         if question.descriptor is None:
             unanswerable.append(f"{change.describe()}: {question.prompt}")
             continue
         if noinput:
-            if not question.optional:
+            if question.optional:
+                left_out.append(f"{change.describe()}: {question.prompt}")
+            else:
                 refused.append(f"{change.describe()}: {question.prompt}")
             continue
         while True:
             text = typer.prompt(question.prompt, default="", show_default=False)
             if not text.strip():
                 if question.optional:
+                    left_out.append(f"{change.describe()}: {question.prompt}")
                     break
                 typer.secho("An answer is needed.", fg="red", err=True)
                 continue
@@ -177,6 +181,14 @@ def ask_answers(
             "These need an answer (so no migration is written without asking):\n  "
             + "\n  ".join(refused)
         )
+    if left_out:
+        typer.secho(
+            "Left without an answer (`migrate` fails if what it is for exists):",
+            fg="yellow",
+            err=True,
+        )
+        for line in left_out:
+            typer.secho(f"  {line}", fg="yellow", err=True)
     if unanswerable:
         typer.secho(
             "These need an answer that is written in the migration:",
@@ -581,8 +593,8 @@ def go_backwards(
             changes = list(reversal.changes)
             to_be_asked += [
                 f"{migration}: {question.prompt}"
+                + (" (may be left out)" if question.optional else "")
                 for _, question in collect_questions(changes, after[migration.key])
-                if not question.optional
             ]
         else:
             changes = ask_answers(reversal.changes, after[migration.key], noinput=False)

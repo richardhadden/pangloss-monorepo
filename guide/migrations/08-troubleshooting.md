@@ -33,7 +33,9 @@ You can silence the server's check with `MIGRATION_CHECK = "warn"` or `"off"` wh
 
 ## `makemigrations`
 
-**"These need an answer (so no migration is written without asking)"** — you ran with `--noinput` and Pangloss needed to ask something (a rename, a value). Run it without `--noinput`.
+**"These need an answer (so no migration is written without asking)"** — you ran with `--noinput` and Pangloss needed to ask something (a rename). Run it without `--noinput`.
+
+**"Left without an answer (`migrate` fails if what it is for exists)"** — a value for the nodes that exist was not given (Enter at the question, or `--noinput`). If the model has no nodes in any database the migration will run on, nothing is needed. Otherwise `migrate` refuses that change: put the value in the migration file (`'default': ...`).
 
 **It asks a rename question I don't understand.** It is asking whether a field/model/enum that has disappeared is the same thing as one that has appeared. Answer `y` only if the *values should move across*. If unsure, answer `n`, read the migration it writes (`--dry-run` first), and re-run: the removal will be marked `[LOSES DATA]`, which tells you what `n` costs.
 

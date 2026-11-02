@@ -123,7 +123,7 @@ You can wrap what a relation points to, for example `person: Person` becomes `pe
 |------------|--------------|--------|
 | Some literal fields become an embedded object | A node is made for each owner, the values moved into it. **Asked** for the embedded object's other required fields | transforming |
 | An embedded object becomes plain fields | The values are copied out and the node deleted; its other fields are lost | **lossy** |
-| Add an embedded object (not made of fields that were there) | A node of it is made for each owner that exists. **Asked** for the values of its required fields. Refused when it could be any of several kinds (which one is not known) | additive |
+| Add an embedded object (not made of fields that were there) | A node of it is made for each owner that exists. **Asked** for the values of its required fields (they may be left out: nothing is needed if no owner exists). Refused when it could be any of several kinds (which one is not known) and an owner exists | additive |
 
 ## `Fulfils`
 
@@ -142,7 +142,8 @@ Pangloss itself needs some indexes and uniqueness constraints. They are migratio
 **Found, but refused when applied** (`migrate` stops before changing anything, `--plan` shows them and `--dry-run` says `WOULD FAIL`), so you write them by hand ([chapter 6](06-by-hand.md)):
 
 - wrapping in a **conjunction**;
-- adding an **embedded object** that could be of several kinds (which one to make is not known);
+- adding an **embedded object** that could be of several kinds (which one to make is not known), when the model has nodes;
+- adding a **required field** whose value was left out, when the model has nodes;
 - a **type conversion** Pangloss does not know (see the table above).
 
 ## Editing the answers in the file

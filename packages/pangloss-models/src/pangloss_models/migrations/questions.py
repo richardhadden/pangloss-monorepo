@@ -58,8 +58,10 @@ def answers_needed(change: c.Change, state: dict[str, Any]) -> list[Question]:
         return [
             Question(
                 f"default.{f['name']}",
-                f"{types[0]}.{f['name']} for the {change.model} that exist (each is given a {types[0]})",
+                f"{types[0]}.{f['name']} for the {change.model} that exist (each is given a {types[0]}; "
+                f"nothing: it fails if any exist)",
                 field_descriptor(f),
+                optional=True,
             )
             for f in required_literals(embedded)
             if f["name"] not in have
@@ -73,8 +75,10 @@ def answers_needed(change: c.Change, state: dict[str, Any]) -> list[Question]:
             return [
                 Question(
                     "default",
-                    f"A value for {change.model}.{change.name} on the nodes that exist",
+                    f"A value for {change.model}.{change.name} on the nodes that exist "
+                    "(nothing: it fails if any exist)",
                     field_descriptor(change.definition),
+                    optional=True,
                 )
             ]
     if (
