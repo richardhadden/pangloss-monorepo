@@ -1,4 +1,4 @@
-import { createMemo, createRenderEffect, createSignal, onSettled, untrack, For, Match, Show, Switch } from "solid-js";
+import { action, createMemo, createOptimistic, createRenderEffect, createSignal, onSettled, untrack, For, Match, Show, Switch } from "solid-js";
 import type { Accessor, ParentProps } from "solid-js";
 import type { JSX } from "@solidjs/web";
 import {
@@ -870,29 +870,34 @@ function EntityCreateDialog(props: {
   const { t, modelName } = useTranslations();
   const state = createItemFormState(blankItem(definitions, untrack(() => props.type)));
   const model = () => getModel(definitions, props.type);
-  const [saving, setSaving] = createSignal(false);
+  // (while it is being made: back to false when that is over, whatever the answer)
+  const [saving, setSaving] = createOptimistic(false);
   const toasts = useToasts();
   let root: HTMLDivElement | undefined;
   const checks = useSaveChecks(state, () => root);
+  // (what comes of it is `save`'s, once it is over)
+  const make = action(function* (body: FormData) {
+    setSaving(true);
+    return (yield createItem(api, props.type, body)) as Summary;
+  });
   async function save() {
     if (!checks.check()) return;
-    setSaving(true);
+    const body = cleanForSave(definitions, state.plain());
+    delete body.type;
+    let created: Summary;
     try {
-      const body = cleanForSave(definitions, state.plain());
-      delete body.type;
-      const created = await createItem(api, props.type, body);
-      toasts?.show(
-        t("toast_created", "{type} “{label}” created", {
-          type: modelName(created.type),
-          label: created.label,
-        }),
-      );
-      props.onCreated(created);
+      created = await make(body);
     } catch (error) {
       checks.refused(error);
-    } finally {
-      setSaving(false);
+      return;
     }
+    toasts?.show(
+      t("toast_created", "{type} “{label}” created", {
+        type: modelName(created.type),
+        label: created.label,
+      }),
+    );
+    props.onCreated(created);
   }
   return (
     <Modal title={t("new_item", "New {type}", { type: modelName(props.type) })} onClose={props.onClose} size="lg">

@@ -1,4 +1,4 @@
-import { createSignal, onSettled, Show, untrack } from "solid-js";
+import { action, createOptimistic, createSignal, onSettled, Show, untrack } from "solid-js";
 import { ApiError, createItem, updateItem } from "../../api";
 import type { Summary } from "../../api";
 import {
@@ -13,6 +13,7 @@ import {
 } from "../../context";
 import { ConsoleButton } from "../../primitives";
 import { cleanForSave, getModel } from "../../schema";
+import type { FormData } from "../../schema";
 import type { ItemFormProps } from "../../types";
 import { ItemFields } from "./ModelFields";
 import { useSaveChecks } from "./Problems";
@@ -36,7 +37,8 @@ export function ItemForm(props: ItemFormProps) {
     untrack(() => (props.version === undefined ? undefined : String(props.initial.id))),
   );
   const model = () => getModel(definitions, props.type);
-  const [saving, setSaving] = createSignal(false);
+  // (while a save is being sent: it goes back to false when the save is over, whatever the answer)
+  const [saving, setSaving] = createOptimistic(false);
   const [stale, setStale] = createSignal(false);
   let formElement: HTMLFormElement | undefined;
   const checks = useSaveChecks(state, () => formElement);
@@ -50,33 +52,36 @@ export function ItemForm(props: ItemFormProps) {
     return typeof given === "string" && given !== "" ? given : undefined;
   };
 
+  // Sends the item: a create, or an update of the version it was loaded at. What comes of it is the caller's
+  // (`save`), once it is over: a toast and `onSaved`, or what is wrong shown at the fields
+  const send = action(function* (body: FormData) {
+    setSaving(true);
+    if (props.version === undefined) {
+      // (the type of what is made is the address's: the body of a create has none of its own)
+      delete body.type;
+      return (yield createItem(api, props.type, body)) as Summary;
+    }
+    return (yield updateItem(api, props.type, String(props.initial.id), body, props.version)) as Summary;
+  });
+
   async function save() {
     setStale(false);
     if (!checks.check()) return;
-    setSaving(true);
+    let saved: Summary;
     try {
-      const body = cleanForSave(definitions, state.plain());
-      let saved: Summary;
-      if (props.version === undefined) {
-        // (the type of what is made is the address's: the body of a create has none of its own)
-        delete body.type;
-        saved = await createItem(api, props.type, body);
-      } else {
-        saved = await updateItem(api, props.type, String(props.initial.id), body, props.version);
-      }
-      const named = { type: modelName(saved.type), label: saved.label };
-      toasts?.show(
-        props.version === undefined
-          ? t("toast_created", "{type} “{label}” created", named)
-          : t("toast_saved", "{type} “{label}” saved", named),
-      );
-      props.onSaved(saved);
+      saved = await send(cleanForSave(definitions, state.plain()));
     } catch (error) {
       if (error instanceof ApiError && error.status === 412) setStale(true);
       else checks.refused(error);
-    } finally {
-      setSaving(false);
+      return;
     }
+    const named = { type: modelName(saved.type), label: saved.label };
+    toasts?.show(
+      props.version === undefined
+        ? t("toast_created", "{type} “{label}” created", named)
+        : t("toast_saved", "{type} “{label}” saved", named),
+    );
+    props.onSaved(saved);
   }
 
   return (

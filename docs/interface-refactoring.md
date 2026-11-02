@@ -42,7 +42,7 @@ for setup that returns its teardown, `class` arrays and objects, keyed `For`, co
 | 11 | `Retype.tsx`, `ModelFields.tsx` (`PickOrCreate`), `Console.tsx` (history) | `when={x()}` then `x()!` | ✅ function children / plain values |
 | 12 | `LiteralEditor.tsx` `JsonEditor` | the store read in the body to seed the box, untracked but not said to be | ✅ `untrack` |
 | 13 | `EntityPicker.tsx` | the autocomplete is fetched in a handler with a ticket, `busy`, `failed`, `searched` and `results` signals kept in step by hand | ✅ a debounced `asked` signal (`equals: false`, so the same words again are a new search) and an async memo of what was found, failure included as a value; `busy` is `isPending(found)`. Tests of its own: `EntityPicker.test.tsx` |
-| 14 | `ItemForm.tsx`, `EntityCreateDialog`, `LoginDialog.tsx`, `App.tsx` (log out) | saves as async functions with a `saving`/`busy` signal | ⏸ not now: see below |
+| 14 | `ItemForm.tsx`, `EntityCreateDialog`, `LoginDialog.tsx`, `App.tsx` (log out) | saves as async functions with a `saving`/`busy` signal | ✅ the request is an `action` that sets a `createOptimistic(false)` flag (false again when it is over, whatever the answer); what comes of it (toast, `onSaved` and its navigation, problems at the fields, which need `flush()`, refused inside an action) is the caller's, once the action's promise settles. Log out has no flag, and stays a plain function. Test: `ItemForm.test.tsx` "Save is off while the item is being sent" |
 | 15 | `context/translations.tsx` | `setLanguage` loads with a ticket and a `loading` signal | ⏸ not now: see below |
 | 16 | `Problems.tsx` `useSaveChecks` | an effect writes the problems again in the new language | ⏸ not now: the problems would have to keep their codes and be put into words where shown |
 
@@ -70,10 +70,6 @@ for setup that returns its teardown, `class` arrays and objects, keyed `For`, co
 
 ### Not now (⏸), and why
 
-- **14, saves as actions.** An `action` holds its writes until it settles, and the saves call `onSaved`, which
-  navigates: what a navigation inside a held transaction does with the router (rc.19) needs trying first. The
-  `saving` flag would become `createOptimistic(false)`. The typology mutations (6) have no navigation, so they were
-  done.
 - **15, translations.** `setLanguage` returns a promise the tests and the language menu wait for, and a language that
   fails to load must leave the page as it was (not reach an error boundary). An async memo of the bundle would hold the
   whole page in a transition while a language loads, which is what is wanted, but changes the provider's contract.

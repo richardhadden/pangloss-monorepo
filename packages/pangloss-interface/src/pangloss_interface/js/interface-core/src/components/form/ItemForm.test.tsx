@@ -563,6 +563,32 @@ test("a problem the API names is shown at its field, and the form keeps what was
   expect(byLabel<HTMLInputElement>("Label").value).toBe("Fall of Rome");
 });
 
+test("Save is off while the item is being sent, and on again whatever the answer", async () => {
+  let finish!: (value: unknown) => void;
+  let refuse!: (error: unknown) => void;
+  const { client } = fakeClient(() => new Promise((resolve, reject) => ((finish = resolve), (refuse = reject))));
+  const saved = show(client);
+  await settle();
+  fillRequired();
+  const save = () => button("Save") as HTMLButtonElement;
+  expect(save().disabled).toBe(false);
+  click(save());
+  await settle();
+  expect(save().disabled).toBe(true);
+  refuse(new ApiError(500, "Down"));
+  await settle();
+  expect(save().disabled).toBe(false);
+  expect(saved).toEqual([]);
+  click(save());
+  await settle();
+  expect(save().disabled).toBe(true);
+  finish({ id: "f1", type: "Factoid", label: "Fall of Rome" });
+  await settle();
+  expect(save().disabled).toBe(false);
+  expect(saved).toEqual([{ id: "f1", type: "Factoid", label: "Fall of Rome" }]);
+  expect(toastText()).toContain("Factoid “Fall of Rome” created");
+});
+
 test("an error that is not about the fields is a red toast", async () => {
   const { client } = fakeClient(() => {
     throw new ApiError(403, "Forbidden");
