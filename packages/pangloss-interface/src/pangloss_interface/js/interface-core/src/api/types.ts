@@ -64,6 +64,9 @@ export interface HeadView {
   [field: string]: unknown;
 }
 
+/** The body of a create or an update: the fields of the model, as the edit view has them */
+export type ItemBody = Record<string, unknown>;
+
 export interface ListParams {
   /** Searches the labels */
   q?: string;

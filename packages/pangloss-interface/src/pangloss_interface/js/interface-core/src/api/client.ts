@@ -11,12 +11,17 @@ export interface ApiClientOptions {
 /** Values of a query string; those that are `undefined` (or empty) are left out */
 export type QueryParams = Record<string, string | number | boolean | string[] | undefined>;
 
+/** What else a write can say: headers, such as `If-Match` (the version an update is based on) */
+export interface WriteOptions {
+  headers?: Record<string, string>;
+}
+
 export interface ApiClient {
   readonly baseUrl: string;
   get<T>(path: string, query?: QueryParams): Promise<T>;
-  post<T>(path: string, body?: unknown): Promise<T>;
-  put<T>(path: string, body?: unknown): Promise<T>;
-  patch<T>(path: string, body?: unknown): Promise<T>;
+  post<T>(path: string, body?: unknown, options?: WriteOptions): Promise<T>;
+  put<T>(path: string, body?: unknown, options?: WriteOptions): Promise<T>;
+  patch<T>(path: string, body?: unknown, options?: WriteOptions): Promise<T>;
   /** A form, as a browser sends one (`application/x-www-form-urlencoded`), which logging in wants */
   postForm<T>(path: string, fields: Record<string, string>): Promise<T>;
   delete<T>(path: string): Promise<T>;
@@ -27,6 +32,8 @@ export class ApiError extends Error {
   constructor(
     readonly status: number,
     readonly detail: string,
+    /** (what else the answer said, such as `currentVersion` of a 412) */
+    readonly body?: Record<string, unknown>,
   ) {
     super(`${status} ${detail}`);
     this.name = "ApiError";
@@ -45,15 +52,16 @@ export function queryString(query: QueryParams = {}): string {
 }
 
 // FastAPI answers `{"detail": "..."}`, or a list of problems for a 422
-async function detailOf(response: Response): Promise<string> {
+async function detailOf(response: Response): Promise<{ detail: string; body?: Record<string, unknown> }> {
   try {
     const body = (await response.json()) as { detail?: unknown };
-    if (typeof body.detail === "string") return body.detail;
-    if (body.detail !== undefined) return JSON.stringify(body.detail);
+    if (typeof body.detail === "string") return { detail: body.detail, body };
+    if (body.detail !== undefined) return { detail: JSON.stringify(body.detail), body };
+    return { detail: response.statusText, body };
   } catch {
     // (not JSON)
   }
-  return response.statusText;
+  return { detail: response.statusText };
 }
 
 export function createApiClient(options: ApiClientOptions): ApiClient {
@@ -65,7 +73,8 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
       credentials: "include",
     });
     if (!response.ok) {
-      throw new ApiError(response.status, await detailOf(response));
+      const { detail, body } = await detailOf(response);
+      throw new ApiError(response.status, detail, body);
     }
     // (an answer with no content, such as a 204)
     if (response.status === 204) return undefined as T;
@@ -74,22 +83,22 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
   return {
     baseUrl: options.baseUrl,
     get: (path, query) => request(`${path}${queryString(query)}`, {}),
-    post: (path, body) =>
+    post: (path, body, options) =>
       request(path, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...options?.headers },
         body: body === undefined ? undefined : JSON.stringify(body),
       }),
-    put: (path, body) =>
+    put: (path, body, options) =>
       request(path, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...options?.headers },
         body: body === undefined ? undefined : JSON.stringify(body),
       }),
-    patch: (path, body) =>
+    patch: (path, body, options) =>
       request(path, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...options?.headers },
         body: body === undefined ? undefined : JSON.stringify(body),
       }),
     postForm: (path, fields) =>
@@ -100,4 +109,25 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
       }),
     delete: (path) => request(path, { method: "DELETE" }),
   };
+}
+
+/**
+ * What was wrong with a write, one line each. A 422 has a list of problems (`loc` and `msg`
+ * each); anything else has a text. The location is joined with `›`, without the `body` the
+ * API puts first.
+ */
+export function problemsOf(error: ApiError): string[] {
+  try {
+    const detail = JSON.parse(error.detail) as unknown;
+    if (Array.isArray(detail)) {
+      return detail.map((problem: { loc?: unknown[]; msg?: unknown }) => {
+        const where = (problem.loc ?? []).filter((part) => part !== "body").join(" › ");
+        const msg = typeof problem.msg === "string" ? problem.msg : JSON.stringify(problem);
+        return where ? `${where}: ${msg}` : msg;
+      });
+    }
+  } catch {
+    // (a text, not JSON)
+  }
+  return [error.detail];
 }

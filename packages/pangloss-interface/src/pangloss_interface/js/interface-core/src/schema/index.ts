@@ -2,6 +2,7 @@
  * Questions of the definitions of the models, that need no components: what can be
  * shown or related to.
  */
+export { getModel } from "./lookup";
 import type {
   FieldDefinition,
   ModelDefinition,
@@ -14,10 +15,6 @@ export function headModels(definitions: ModelDefinitions): ModelDefinition[] {
   return Object.values(definitions.models)
     .filter((model) => (model.kind === "Document" || model.kind === "Entity") && !model.abstract)
     .sort((a, b) => a.name.localeCompare(b.name));
-}
-
-export function getModel(definitions: ModelDefinitions, name: string): ModelDefinition | undefined {
-  return Object.hasOwn(definitions.models, name) ? definitions.models[name] : undefined;
 }
 
 export function isRelation(field: FieldDefinition): field is RelationField {
@@ -37,3 +34,5 @@ export function relatedModelNames(field: RelationField): string[] {
 export * from "./modules";
 export * from "./nav";
 export * from "./hierarchy";
+export * from "./typeChoices";
+export * from "./formValue";

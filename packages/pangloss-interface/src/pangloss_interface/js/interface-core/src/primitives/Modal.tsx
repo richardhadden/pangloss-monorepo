@@ -60,7 +60,10 @@ export function Modal(props: ModalProps) {
           role="dialog"
           aria-modal="true"
           aria-labelledby={titleId}
-          class="flex max-h-full w-full max-w-sm flex-col overflow-hidden rounded-sm border-[0.5px] border-slate-400/70 bg-slate-100"
+          class={[
+            "flex max-h-full w-full flex-col overflow-hidden rounded-sm border-[0.5px] border-slate-400/70 bg-slate-100",
+            { "max-w-sm": props.size !== "lg", "max-w-4xl": props.size === "lg" },
+          ]}
         >
           <div class="flex h-12 shrink-0 items-center justify-between border-b-[0.5px] border-slate-400/70 text-xs font-semibold text-slate-700 uppercase">
             <h2 id={titleId} class="px-4">

@@ -34,6 +34,7 @@ export const routes = defineRoutes([
     },
   }),
   defineRoute({ path: "/:type/new", component: lazy(() => import("./pages/New")) }),
+  defineRoute({ path: "/:type/:id/edit", component: lazy(() => import("./pages/Edit")) }),
   defineRoute({
     path: "/:type/:id",
     component: lazy(() => import("./pages/Item")),

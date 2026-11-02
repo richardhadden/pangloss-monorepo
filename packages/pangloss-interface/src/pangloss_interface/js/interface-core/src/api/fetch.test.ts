@@ -1,8 +1,10 @@
 import { expect, test } from "vitest";
 import { contextTrail, headOf, wrappingSpaces } from "./context";
-import { ApiError, createApiClient, queryString } from "./client";
+import { ApiError, createApiClient, problemsOf, queryString } from "./client";
 import {
   autocomplete,
+  createItem,
+  updateItem,
   getCurrentUser,
   getItem,
   listItems,
@@ -198,4 +200,31 @@ test("the trail has the spaces and the documents between them, but not the item 
     ),
   ).toEqual(["Negative", "Order", "Hypothetical"]);
   expect(contextTrail([{ type: "#rootcontext", contents: [{ type: "Order", id: "1" }] }])).toEqual(["Order"]);
+});
+
+test("an item is created by a POST of the body, and updated by a PUT that says which version it is based on", async () => {
+  const { client, calls } = clientAnswering(() => json({ id: "n1", type: "Place", label: "Rome" }, 201));
+  await createItem(client, "Place", { label: "Rome" });
+  expect(calls[0]!.url).toBe("http://api.test/api/Place");
+  expect(calls[0]!.init).toMatchObject({ method: "POST", body: '{"label":"Rome"}' });
+  await updateItem(client, "Place", "n1", { id: "n1", label: "Roma" }, 3);
+  expect(calls[1]!.url).toBe("http://api.test/api/Place/n1");
+  expect(calls[1]!.init.method).toBe("PUT");
+  expect(calls[1]!.init.headers).toMatchObject({ "If-Match": '"3"', "Content-Type": "application/json" });
+});
+
+test("a 412 keeps what else the API said, and a 422 is read as a line for each problem", async () => {
+  const stale = clientAnswering(() => json({ detail: "Stale", currentVersion: 4 }, 412));
+  const error = (await updateItem(stale.client, "Place", "n1", {}, 3).catch((e: unknown) => e)) as ApiError;
+  expect(error.status).toBe(412);
+  expect(error.body).toMatchObject({ currentVersion: 4 });
+  const invalid = new ApiError(
+    422,
+    JSON.stringify([
+      { loc: ["body", "statements", 0, "text"], msg: "too short" },
+      { loc: [], msg: "odd" },
+    ]),
+  );
+  expect(problemsOf(invalid)).toEqual(["statements › 0 › text: too short", "odd"]);
+  expect(problemsOf(new ApiError(409, "Id in use"))).toEqual(["Id in use"]);
 });

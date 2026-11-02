@@ -7,7 +7,7 @@ import {
   useTranslations,
   wrappingSpaces,
 } from "@pangloss/interface-core";
-import type { ContextLabel } from "@pangloss/interface-core";
+import type { ContextLabel, ItemMeta } from "@pangloss/interface-core";
 import type { Accessor } from "solid-js";
 import type { RouteProps } from "@solidjs/router";
 import {
@@ -42,9 +42,11 @@ function ItemNotFound() {
 }
 
 interface Shown {
+  id: string;
   type: string;
   label: string;
   spaces: ContextLabel[] | null | undefined;
+  meta: ItemMeta;
 }
 
 // Tells the page what the console is to say of the item, for as long as the item is on show
@@ -57,9 +59,11 @@ function Track(props: {
     (item) => {
       // (braces: what an effect returns is taken to be its cleanup)
       props.onShow({
+        id: item.id,
         type: item.type,
         label: item.label ?? item.id,
         spaces: item.meta.contextLabels as ContextLabel[] | null | undefined,
+        meta: item.meta,
       });
     },
   );
@@ -78,9 +82,11 @@ export default function EntityPage(props: RouteProps<"/:type/:id">) {
   // boundary below and so goes with the item's page): the console is outside it, and an item that was there and
   // is not now (a document seen while logged in, not published after logging out) must not leave its label in the bar
   const [shown, setShown] = createSignal<{
+    id: string;
     type: string;
     label: string;
     spaces: ContextLabel[] | null | undefined;
+    meta: ItemMeta;
   }>();
   const definitions = useModels();
   const model = () => getModel(definitions, item().type);
@@ -91,6 +97,10 @@ export default function EntityPage(props: RouteProps<"/:type/:id">) {
         type={shown()?.type ?? props.params.type}
         label={shown()?.label}
         spaces={wrappingSpaces(shown()?.spaces)}
+        meta={shown()?.meta}
+        editHref={
+          shown() ? `/${shown()!.type}/${encodeURIComponent(shown()!.id)}/edit` : undefined
+        }
       />
       <Errored
         fallback={(error) => {

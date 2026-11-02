@@ -8,6 +8,7 @@ import type { ApiClient } from "./client";
 import type {
   AutocompleteParams,
   HeadView,
+  ItemBody,
   ListParams,
   Page,
   SearchPattern,
@@ -40,6 +41,28 @@ export function getItem(client: ApiClient, type: string, id: string): Promise<He
 /** What to edit; needs a login. (An item of a subtype is a 308 to its own route, which `fetch` follows) */
 export function getEditView(client: ApiClient, type: string, id: string): Promise<HeadView> {
   return client.get(`/${segment(type)}/${segment(id)}/edit`);
+}
+
+/** Make an item of the type (which is not abstract); the answer is a summary of it. Needs a login */
+export function createItem(client: ApiClient, type: string, body: ItemBody): Promise<Summary> {
+  return client.post(`/${segment(type)}`, body);
+}
+
+/**
+ * Replace an item with `body` (all of it: what `getEditView` returned, changed). `version` is the
+ * `meta.version` it was loaded at: if someone has saved since, nothing is written and the answer is
+ * an `ApiError` with status 412. Needs a login.
+ */
+export function updateItem(
+  client: ApiClient,
+  type: string,
+  id: string,
+  body: ItemBody,
+  version: number,
+): Promise<Summary> {
+  return client.put(`/${segment(type)}/${segment(id)}`, body, {
+    headers: { "If-Match": `"${version}"` },
+  });
 }
 
 /** Entities whose label has every word of `q` */

@@ -17,6 +17,7 @@ export function ReferenceChip(props: ReferenceChipProps) {
     <Customised
       slot="viewCard"
       type={props.type}
+      skip={props.onRemove !== undefined}
       props={{
         type: props.type,
         label: props.label,
@@ -30,7 +31,7 @@ export function ReferenceChip(props: ReferenceChipProps) {
 
 function DefaultReferenceChip(props: ReferenceChipProps) {
   const definitions = useModels();
-  const { modelName } = useTranslations();
+  const { t, modelName } = useTranslations();
   const model = () => getModel(definitions, props.type);
   const properties = () => Object.entries(props.edgeProperties ?? {});
   const body = () => (
@@ -50,26 +51,40 @@ function DefaultReferenceChip(props: ReferenceChipProps) {
     "inline-flex max-w-full min-w-0 items-stretch overflow-hidden rounded-sm border-[0.5px] border-slate-400/70 bg-slate-100/70";
   return (
     <SpaceBands spaces={props.spaces ?? []} depth={0}>
-    <span class="inline-flex max-w-full min-w-0 items-center gap-2">
-      <Show
-        when={props.href !== undefined}
-        fallback={<span class={frame}>{body()}</span>}
-      >
-        <a
-          href={props.href}
-          class={[frame, "hover:bg-slate-200/70 active:bg-slate-300/70"]}
-        >
-          {body()}
-        </a>
-      </Show>
-      <For each={properties()}>
-        {([name, value]) => (
-          <span class="shrink-0 rounded-full border-[0.5px] border-slate-400/70 bg-slate-200/70 px-2 py-0.5 text-xs text-slate-600">
-            {name} {String(value)}
-          </span>
-        )}
-      </For>
-    </span>
+      <span class="inline-flex max-w-full min-w-0 items-center gap-2">
+        {/* (the remove button is the end of the chip, so the link is inside the frame, not the frame itself) */}
+        <span class={frame}>
+          <Show
+            when={props.href !== undefined}
+            fallback={<span class="flex min-w-0 items-stretch">{body()}</span>}
+          >
+            <a
+              href={props.href}
+              class="flex min-w-0 items-stretch hover:bg-slate-200/70 active:bg-slate-300/70"
+            >
+              {body()}
+            </a>
+          </Show>
+          <Show when={props.onRemove}>
+            <button
+              type="button"
+              class="flex shrink-0 cursor-pointer items-center border-l-[0.5px] border-slate-400/70 px-2 text-xs text-red-800 select-none hover:bg-red-400/30"
+              aria-label={props.removeLabel ?? t("remove", "Remove")}
+              title={props.removeLabel ?? t("remove", "Remove")}
+              onClick={() => props.onRemove?.()}
+            >
+              ✕
+            </button>
+          </Show>
+        </span>
+        <For each={properties()}>
+          {([name, value]) => (
+            <span class="shrink-0 rounded-full border-[0.5px] border-slate-400/70 bg-slate-200/70 px-2 py-0.5 text-xs text-slate-600">
+              {name} {String(value)}
+            </span>
+          )}
+        </For>
+      </span>
     </SpaceBands>
   );
 }

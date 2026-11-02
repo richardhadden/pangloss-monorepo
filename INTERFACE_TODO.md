@@ -2,7 +2,7 @@
 [x] ReifiedRelations do not need the field name "Target" — just show the content full width
 [x] Viewing reverse through reified relation should show the whole field in the context of the document. At the moment it just has a type and ID.
 [x] when viewing a document, the semantic space type in its wrapper is on the left. This eats up Y-axis screen real estate. Put the type at the top
-[ ] when viewing dates, we don't need the full:
+[x] when viewing dates, we don't need the full:
 
 Calendar
     julian
@@ -26,4 +26,4 @@ EDTF
 Just human readable date / range
 
 
-[ ] add created_by/when modified_by/when to the console. Put it to the right, in two rows, quite light slate font
+[x] add created_by/when modified_by/when to the console. Put it to the right, in two rows, quite light slate font

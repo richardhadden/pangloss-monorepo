@@ -63,8 +63,15 @@ function show(
     list?: boolean;
     label?: string;
     spaces?: string[];
+    meta?: {
+      createdBy?: string | null;
+      createdWhen?: string | null;
+      updatedBy?: string | null;
+      updatedWhen?: string | null;
+    };
     count?: number;
     truncated?: boolean;
+    editHref?: string;
   },
 ) {
   const container = document.createElement("div");
@@ -153,4 +160,70 @@ test("a count that is not all there is has a plus, and says so", async () => {
   expect(document.body.querySelector('[title="Found"]')?.textContent).toBe(
     "100",
   );
+});
+
+const metaRows = () =>
+  [...document.body.querySelectorAll('[data-testid="console-meta"] span')].map(
+    (row) => row.textContent,
+  );
+
+test("an item says who made it and who changed it last, in two rows", async () => {
+  show(() => demo, {
+    type: "Place",
+    label: "Rome",
+    meta: {
+      createdBy: "alice",
+      createdWhen: "2026-01-02T10:00:00Z",
+      updatedBy: "bob",
+      updatedWhen: "2026-03-04T11:30:00Z",
+    },
+  });
+  await settle();
+  const rows = metaRows();
+  expect(rows.length).toBe(2);
+  expect(rows[0]).toMatch(/^Created alice · .*2026/);
+  expect(rows[1]).toMatch(/^Modified bob · .*2026/);
+});
+
+test("a row of the item's history is left out when it is not known; a list has none", async () => {
+  show(() => demo, {
+    type: "Place",
+    label: "Rome",
+    meta: {
+      createdBy: null,
+      createdWhen: "2026-01-02T10:00:00Z",
+      updatedBy: null,
+      updatedWhen: null,
+    },
+  });
+  await settle();
+  expect(metaRows().length).toBe(1);
+  expect(metaRows()[0]).toMatch(/^Created · /);
+  dispose?.();
+  document.body.innerHTML = "";
+  show(() => demo, { type: "Place", list: true });
+  await settle();
+  expect(metaRows()).toEqual([]);
+});
+
+const editLink = () => document.body.querySelector('a[aria-label="Edit"]');
+
+test("an item has an edit button, on the far right, for someone logged in", async () => {
+  show(() => demo, { type: "Place", label: "Rome", editHref: "/Place/p1/edit" });
+  await settle();
+  expect(editLink()?.getAttribute("href")).toBe("/Place/p1/edit");
+  // (after the actions the page gave, and the history: the buttons are the last things on the right)
+  const buttons = [...document.body.querySelectorAll("header a, header button")];
+  expect(buttons[buttons.length - 1]).toBe(editLink());
+});
+
+test("and none for no one, or for a page that offers no edit", async () => {
+  show(() => undefined, { type: "Place", label: "Rome", editHref: "/Place/p1/edit" });
+  await settle();
+  expect(editLink()).toBeNull();
+  dispose?.();
+  document.body.innerHTML = "";
+  show(() => demo, { type: "Place", label: "Rome" });
+  await settle();
+  expect(editLink()).toBeNull();
 });

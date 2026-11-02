@@ -23,6 +23,7 @@ about her "held court at Ghent") and Charles the Bold (no role); `types` has onl
 | Navigation bar: sections and links to the lists of the models | ✅ | `test_the_navigation_bar_links_to_the_lists` |
 | Navigation bar on a touch device (no hover) | ⬜ | |
 | Console bar names the type (plural on a list) and the item | ✅ | `test_the_console_names_the_type_of_the_page` |
+| Console bar on an item page: created / modified, by whom and when, two light rows on the right | 🚧 | unit tests in `Console.test.tsx`; not in e2e |
 | Login dialog: logging in; the session survives a reload | ✅ | `test_login.py` |
 | Login dialog: a wrong password is explained, the right one then works | ✅ | |
 | Login dialog: Escape and the close button give up | ✅ | |
@@ -45,8 +46,12 @@ about her "held court at Ghent") and Charles the Bold (no role); `types` has onl
 | Server rendering: the first response has the data | ✅ | raw response text; **not** complete without JavaScript (Solid streams it) |
 | Language switch | — | the bar shows the languages but `App.tsx` passes no `onLanguage`: it does nothing yet |
 | Interface translations shown in another language | — | not connected |
-| New item form | — | not built (the page has the console only) |
-| Edit item | — | not built |
+| Edit button in the console of an item: only for someone logged in | ✅ | `test_editing.py`; unit tests in `Console.test.tsx` |
+| Edit item: the form has the item, saves a change and shows the item | ✅ | |
+| New item form: fields, an entity found by search, saved and shown | ✅ | |
+| A new entity made from the form (+ beside the search, dialog) is chosen | ✅ | |
+| A rejected form says what is wrong and keeps what was typed; Cancel leaves without saving | ✅ | |
+| Form: the menu of types (hierarchy in vertical lists, abstract classes not selectable, the same types inside each semantic space), nested documents, reified relations, conjunctions, edge properties, dates, the 412 "someone else saved" message | 🚧 | unit tests (`TypeMenu.test.tsx`, `ItemForm.test.tsx`, `typeChoices.test.ts`); the e2e project has no semantic space, conjunction, reified relation or date |
 | Search from the home page / global search | — | not built |
 
 ## `pangloss_typology` module

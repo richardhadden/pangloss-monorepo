@@ -61,6 +61,26 @@ These are not shown, but are read aloud, or appear when the pointer rests on the
 | `new_item` | New {type} | `Console` (the new button) | `{type}` is the name of the model, which has its own translation |
 | `go_to_head` | Go to the {type} | `ResultButton` (the button to the document an item is in: `aria-label` and tooltip) | `{type}` is the name of the model, which has its own translation |
 | `loading` | Loading | `Spinner` (`aria-label`) | the same slot as above, but without the "…" |
+| `edit` | Edit | `Console` (the edit button on an item) | |
+| `new` | New | `ItemForm` (the label in the console of a new item) | |
+| `save` | Save | `ItemForm` (console button) | |
+| `cancel` | Cancel | `ItemForm` (console button) | |
+| `edit_form` | {type} form | `ItemForm` (`aria-label` of the form) | |
+| `stale_version` | Someone has saved this item since you opened it. Nothing was overwritten: load the new version, and make your changes again. | `ItemForm` (after a 412) | |
+| `reload` | Load the new version | `ItemForm` (button in the message above) | |
+| `label` | Label | `ModelFields` (`ItemFields`: the label of every Document and Entity) | |
+| `id` | ID | `ItemFields` (`aria-label`; shown when making an item of a model that can be given an id) | |
+| `plain` | Plain | `TypeMenu` (the section of the types that are in no semantic space) | the sections of the spaces are headed with the name of the space model |
+| `add` | Add | `LiteralEditor` (add to a list of literals) | |
+| `add_to` | Add to {name} | `LiteralEditor` (`aria-label` of that button) | |
+| `add_named` | Add {name} | `ModelFields` (the button of the menu of a relation or embedded field) | `{name}` is the name of the field |
+| `remove_item` | Remove {name} | `LiteralEditor`, `ModelFields` (`aria-label` of the ✕ buttons) | |
+| `fold` | Fold or unfold {name} | `ModelFields` (`Block`: `aria-label` of the fold button) | |
+| `invalid_json` | This is not valid JSON, so it is not changed | `LiteralEditor` (`JsonEditor`, for a field the form has no editor for) | |
+| `find_entity` | Find {type}… | `EntityPicker` (placeholder and `aria-label`) | `{type}` is the names of the models it looks in |
+| `new_entity` | Make a new one | `ModelFields` (`PickOrCreate`: the + button beside the search; `aria-label` and tooltip) | the dialog is headed `new_item` |
+| `search_failed` | The search failed | `EntityPicker` | |
+| `nothing_found` | Nothing found | `EntityPicker` | |
 
 ## Not translated by the interface's own file
 

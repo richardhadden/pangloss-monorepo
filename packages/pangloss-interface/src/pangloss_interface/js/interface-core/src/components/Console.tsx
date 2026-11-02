@@ -1,7 +1,12 @@
 import { Portal } from "@solidjs/web";
 import { Loading, onSettled, Show } from "solid-js";
 import type { ParentProps } from "solid-js";
-import { useConsoleMount, useModels, useTranslations, userIsLoggedIn } from "../context";
+import {
+  useConsoleMount,
+  useModels,
+  useTranslations,
+  userIsLoggedIn,
+} from "../context";
 import { ConsoleButton, kindTint, spaceTint } from "../primitives";
 import { ConsoleSearch } from "./ConsoleSearch";
 import { getModel } from "../schema";
@@ -22,13 +27,19 @@ function Wrapped(props: ParentProps<{ spaces: string[]; depth: number }>) {
   const definitions = useModels();
   const { modelName } = useTranslations();
   const tint = () =>
-    spaceTint(getModel(definitions, props.spaces[0] ?? "")?.interfaceMeta?.colour, props.depth);
+    spaceTint(
+      getModel(definitions, props.spaces[0] ?? "")?.interfaceMeta?.colour,
+      props.depth,
+    );
   return (
     <Show when={props.spaces.length > 0} fallback={props.children}>
       <div
         class={[
           "flex shrink-0 items-stretch self-stretch border-slate-400/70",
-          { "border-r-[0.5px]": props.depth === 0, "rounded-sm border-[0.5px]": props.depth > 0 },
+          {
+            "border-r-[0.5px]": props.depth === 0,
+            "rounded-sm border-[0.5px]": props.depth > 0,
+          },
           tint(),
         ]}
       >
@@ -43,6 +54,17 @@ function Wrapped(props: ParentProps<{ spaces: string[]; depth: number }>) {
       </div>
     </Show>
   );
+}
+
+// (a time as the reader's locale says it; what cannot be read is left as it came)
+function when(value: string): string {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? value
+    : date.toLocaleString(undefined, {
+        dateStyle: "medium",
+        timeStyle: "short",
+      });
 }
 
 /**
@@ -78,7 +100,10 @@ export function Console(props: ConsoleProps) {
                 <span
                   class={[
                     "flex shrink-0 items-center self-stretch border-slate-400/70 px-4",
-                    { "border-r-[0.5px]": !wrapped(), "rounded-sm border-[0.5px]": wrapped() },
+                    {
+                      "border-r-[0.5px]": !wrapped(),
+                      "rounded-sm border-[0.5px]": wrapped(),
+                    },
                     kindTint(kind(), model()?.interfaceMeta?.colour),
                   ]}
                 >
@@ -88,7 +113,9 @@ export function Console(props: ConsoleProps) {
                 </span>
               </Wrapped>
               <Show when={props.label}>
-                <span class="truncate px-3 text-sm normal-case">{props.label}</span>
+                <span class="truncate px-3 text-sm normal-case">
+                  {props.label}
+                </span>
               </Show>
             </div>
             {/* A list has a search, in the middle */}
@@ -105,12 +132,66 @@ export function Console(props: ConsoleProps) {
               </div>
             </Show>
             <div class="flex h-full shrink-0 items-center">
+              {/* Who made the item and who last changed it, two light rows (a row only when it is known) */}
+              <Show when={props.meta?.createdWhen || props.meta?.updatedWhen}>
+                <div
+                  class="flex flex-col px-3 text-[0.65rem] leading-tight font-normal text-slate-500 normal-case"
+                  data-testid="console-meta"
+                >
+                  <Show when={props.meta?.createdWhen}>
+                    <span class="truncate">
+                      {t("created", "Created")}
+                      {props.meta?.createdBy
+                        ? ` ${props.meta.createdBy}`
+                        : ""}{" "}
+                      · {when(props.meta!.createdWhen!)}
+                    </span>
+                  </Show>
+                  <Show when={props.meta?.updatedWhen}>
+                    <span class="truncate">
+                      {t("modified", "Modified")}
+                      {props.meta?.updatedBy
+                        ? ` ${props.meta.updatedBy}`
+                        : ""}{" "}
+                      · {when(props.meta!.updatedWhen!)}
+                    </span>
+                  </Show>
+                </div>
+              </Show>
               {props.children}
+              {/* An item can be edited by someone who is logged in */}
+              <Loading fallback={null}>
+                <Show when={props.editHref && userIsLoggedIn()}>
+                  <ConsoleButton label={t("edit", "Edit")} href={props.editHref}>
+                    <svg
+                      viewBox="0 0 24 24"
+                      class="size-5 select-none fill-none stroke-current stroke-2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4" />
+                    </svg>
+                  </ConsoleButton>
+                </Show>
+              </Loading>
               {/* A list can have a new item made, if the type is one that can be and someone is
                   logged in (reading who is may wait, so it has a boundary of its own) */}
               <Loading fallback={null}>
-                <Show when={props.list && model() && !model()!.abstract && userIsLoggedIn()}>
-                  <ConsoleButton label={t("new_item", "New {type}", { type: modelName(props.type) })} href={`/${props.type}/new`}>
+                <Show
+                  when={
+                    props.list &&
+                    model() &&
+                    !model()!.abstract &&
+                    userIsLoggedIn()
+                  }
+                >
+                  <ConsoleButton
+                    label={t("new_item", "New {type}", {
+                      type: modelName(props.type),
+                    })}
+                    href={`/${props.type}/new`}
+                  >
                     <svg
                       viewBox="0 0 24 24"
                       class="size-5 select-none fill-none stroke-current stroke-2"

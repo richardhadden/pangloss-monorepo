@@ -1,4 +1,12 @@
-import { createEffect, createSignal, Errored, Loading, onCleanup, Show, untrack } from "solid-js";
+import {
+  createEffect,
+  createSignal,
+  Errored,
+  Loading,
+  onCleanup,
+  Show,
+  untrack,
+} from "solid-js";
 import { useTranslations } from "../context";
 import { ConsoleButton, Spinner } from "../primitives";
 import type { ConsoleSearchProps } from "../types";
@@ -54,10 +62,12 @@ export function ConsoleSearch(props: ConsoleSearchProps) {
     if (!on) search(false);
   };
   // Run only changes anything if it is not what is on show already
-  const upToDate = () => draft() === (props.query ?? "") && (props.deep ?? false) === deepOn();
+  const upToDate = () =>
+    draft() === (props.query ?? "") && (props.deep ?? false) === deepOn();
   // (a count that is not all there is says so: the search has to be narrowed)
   const foundTitle = () => {
-    if (props.truncated) return t("found_more", "Found, and more: narrow the search");
+    if (props.truncated)
+      return t("found_more", "Found, and more: narrow the search");
     return t("found", "Found");
   };
 
@@ -89,7 +99,10 @@ export function ConsoleSearch(props: ConsoleSearchProps) {
         <Show when={!props.pending} fallback={<Spinner />}>
           <Errored fallback="–">
             <Loading fallback={<Spinner />}>
-              <span title={foundTitle()} class={{ "text-red-800": props.count === 0 }}>
+              <span
+                title={foundTitle()}
+                class={{ "text-red-800": props.count === 0 }}
+              >
                 {props.count}
                 <Show when={props.truncated}>+</Show>
               </span>
@@ -98,13 +111,25 @@ export function ConsoleSearch(props: ConsoleSearchProps) {
         </Show>
       </span>
       <Show when={deepOn()}>
-        <ConsoleButton label={t("deep_search_run", "Run deep search (Enter)")} disabled={upToDate()} onClick={() => search(true)}>
-          <svg viewBox="0 0 24 24" class="size-5 select-none fill-current" aria-hidden="true">
+        <ConsoleButton
+          label={t("deep_search_run", "Run deep search (Enter)")}
+          disabled={upToDate()}
+          onClick={() => search(true)}
+        >
+          <svg
+            viewBox="0 0 24 24"
+            class="size-5 select-none fill-current"
+            aria-hidden="true"
+          >
             <path d="M8 5.5v13l11-6.5z" />
           </svg>
         </ConsoleButton>
       </Show>
-      <ConsoleButton label={t("deep_search", "Deep search")} pressed={deepOn()} onClick={toggleDeep}>
+      <ConsoleButton
+        label={t("deep_search", "Deep search")}
+        pressed={deepOn()}
+        onClick={toggleDeep}
+      >
         <svg
           viewBox="0 0 24 24"
           class="size-5 select-none fill-none stroke-current stroke-2"

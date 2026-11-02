@@ -103,8 +103,33 @@ export interface ConsoleProps extends ConsoleSearchProps {
   label?: string;
   /** The semantic spaces the item is in, outermost first: a cell for each, left of the type */
   spaces?: string[];
+  /** Who made the item and who changed it last, and when: two light rows on the right */
+  meta?: {
+    createdBy?: string | null;
+    createdWhen?: string | null;
+    updatedBy?: string | null;
+    updatedWhen?: string | null;
+  };
+  /** Where the item can be edited: an Edit button, for someone who is logged in */
+  editHref?: string;
   /** The actions that can be taken, shown on the right */
   children?: JSX.Element;
+}
+
+export interface ItemFormProps {
+  /** The type of the item (not abstract); a new item is made of this type */
+  type: string;
+  /** What to edit: the edit view of an item, or `{ type }` for a new one */
+  initial: Record<string, unknown>;
+  /** The `meta.version` the item was loaded at (an update is based on it); without one, the form makes a new item */
+  version?: number;
+  /** The meta of the item, for the console */
+  meta?: ConsoleProps["meta"];
+  /** Called with the summary the API answers when the item is saved */
+  onSaved: (saved: { id: string; type: string; label: string }) => void;
+  onCancel: () => void;
+  /** Called to load the item again, after it was found to have been changed by someone else */
+  onReload?: () => void;
 }
 
 export interface ModalProps {
@@ -114,6 +139,8 @@ export interface ModalProps {
   onClose: () => void;
   /** The name of the close button (`Close` if not given) */
   closeLabel?: string;
+  /** How wide it is: `sm` for a short form such as the login (the default), `lg` for a form with many fields */
+  size?: "sm" | "lg";
   children?: JSX.Element;
 }
 
@@ -148,6 +175,10 @@ export interface ReferenceChipProps {
   edgeProperties?: Record<string, unknown>;
   /** The semantic spaces what is referred to is in, outermost first: the chip is wrapped in a band for each */
   spaces?: string[];
+  /** Gives the chip a remove button at its end (a form's): the chip is then always the default one */
+  onRemove?: () => void;
+  /** The name of that button for a screen reader */
+  removeLabel?: string;
 }
 
 export interface ItemContentsProps {
@@ -192,6 +223,7 @@ export interface ComponentMap {
   Modal: Component<ModalProps>;
   ConsoleBar: Component;
   Console: Component<ConsoleProps>;
+  ItemForm: Component<ItemFormProps>;
 }
 
 export type ComponentName = keyof ComponentMap;
