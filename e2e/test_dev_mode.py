@@ -10,6 +10,10 @@ from helpers import expand_nav, hydrated
 from playwright.sync_api import Page, expect
 
 
+# (what an error of the development build of Solid says first: `[PRIMITIVE_IN_FORBIDDEN_SCOPE] Cannot create ...`)
+SOLID_ERROR = re.compile(r"\[[A-Z]+(_[A-Z]+)+\]")
+
+
 @pytest.fixture
 def errors(page: Page) -> list[str]:
     found: list[str] = []
@@ -63,6 +67,10 @@ def test_making_and_editing(page: Page, data, dev_url: str, errors: list[str]):
     page.get_by_role("link", name=re.compile("^Edit")).click()
     page.wait_for_url(re.compile(r"/edit$"))
     expect(page.get_by_role("button", name="Save")).to_be_visible()
+    # (an error that the page's boundary catches is no error in the page, but shown in place of the form: the
+    # Save button is in the console, outside it, so the form itself is looked for)
+    expect(page.get_by_role("textbox", name="Text")).to_be_visible()
+    expect(page.locator("main")).not_to_contain_text(SOLID_ERROR)
     page.get_by_role("button", name="Save").click()
     expect(page.get_by_role("status", name="Notifications")).to_contain_text("saved")
     page.goto(f"{dev_url}/Statement/new")

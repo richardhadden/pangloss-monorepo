@@ -14,8 +14,10 @@ import { Page } from "../Page";
 // Once the form is on show, scrolls to the document inside it whose id is `id` (the block that has it in
 // `data-item-id`), and lights it up for a moment, so the eye finds it
 function ScrollToNested(props: { id: string | undefined }) {
+  // (read here, not in `onSettled`: reading the address there makes the router's reactive values in a place
+  // that may not have them, which the development build stops at)
+  const id = props.id;
   onSettled(() => {
-    const id = props.id;
     if (!id) return;
     // (after the browser has laid the form out)
     requestAnimationFrame(() => {
