@@ -48,6 +48,7 @@ import {
   typeChipClass,
 } from "./styles";
 import { TypeMenu } from "./TypeMenu";
+import { ClipButtons, EmbeddedPasteSlot, RelationPasteSlot, useClipActions } from "./Clip";
 import { Customised } from "../Customised";
 
 const isObject = (value: unknown): value is FormData =>
@@ -64,6 +65,8 @@ function Block(
     tint: string;
     rule: string;
     onRemove?: () => void;
+    /** Puts it on the clipboard, copied or cut */
+    clip?: { copy: () => void; cut: () => void };
   }>,
 ) {
   const { t, modelName } = useTranslations();
@@ -73,6 +76,7 @@ function Block(
       <div class={headBarClass}>
         <span class={[typeChipClass, props.tint || plainTint]}>{modelName(props.type)}</span>
         <span class={headLabelClass}>{props.label}</span>
+        {/* (fold, cut, copy, remove) */}
         <button
           type="button"
           class={[headButtonClass, "text-slate-500 hover:bg-slate-400/30"]}
@@ -84,6 +88,14 @@ function Block(
             ▸
           </Show>
         </button>
+        <Show when={props.clip}>
+          <ClipButtons
+            name={props.label || modelName(props.type)}
+            buttonClass={[headButtonClass, "text-slate-500 hover:bg-slate-400/30"].join(" ")}
+            onCopy={() => props.clip!.copy()}
+            onCut={() => props.clip!.cut()}
+          />
+        </Show>
         <Show when={props.onRemove}>
           <button
             type="button"
@@ -407,6 +419,7 @@ function EmbeddedEditor(props: { field: EmbeddedField; path: Accessor<Path>; lab
   };
   const groups = createMemo(() => menuGroups(definitions, typeOptions(props.field.types)));
   const model = () => (value() ? getModel(definitions, String(value()!.type)) : undefined);
+  const clip = useClipActions(props.path, () => form.remove(props.path()));
   const choose = (choice: Choice) => {
     const next = getModel(definitions, choice.type);
     // (what the two types have in common is kept when the type is changed)
@@ -420,13 +433,16 @@ function EmbeddedEditor(props: { field: EmbeddedField; path: Accessor<Path>; lab
       <Show
         when={value()}
         fallback={
-          <TypeMenu
-            groups={groups()}
-            label={t("add_named", "Add {name}", { name: props.label })}
-            buttonClass={addSlotClass}
-            wide
-            onChoose={choose}
-          />
+          <div class="flex w-full flex-col gap-2">
+            <TypeMenu
+              groups={groups()}
+              label={t("add_named", "Add {name}", { name: props.label })}
+              buttonClass={addSlotClass}
+              wide
+              onChoose={choose}
+            />
+            <EmbeddedPasteSlot field={props.field} onPaste={(pasted) => form.set(props.path(), pasted)} />
+          </div>
         }
       >
         {/* (the type chosen, which its menu changes, with the remove button joined on; the corners are
@@ -438,6 +454,14 @@ function EmbeddedEditor(props: { field: EmbeddedField; path: Accessor<Path>; lab
             buttonClass="flex cursor-pointer items-center gap-1 rounded-sm px-2 py-1 text-xs font-semibold uppercase select-none hover:bg-slate-300/50 focus:bg-slate-300/50 focus:outline-none"
             onChoose={choose}
           />
+          <Show when={clip}>
+            <ClipButtons
+              name={props.label}
+              buttonClass="flex cursor-pointer items-center border-l-[0.5px] border-slate-400/70 px-2 text-slate-500 select-none hover:bg-slate-300/50 focus:bg-slate-300/50 focus:outline-none"
+              onCopy={() => clip!.copy()}
+              onCut={() => clip!.cut()}
+            />
+          </Show>
           <Show when={!props.field.required}>
             <button
               type="button"
@@ -576,6 +600,7 @@ function RelationEditor(props: {
             onPick={(entity) => form.set(where(), { type: entity.type, id: entity.id, label: entity.label })}
           />
         </Show>
+        <RelationPasteSlot options={options()} env={props.env} onPaste={(pasted) => form.set(where(), pasted)} />
       </Show>
     </div>
   );
@@ -614,6 +639,10 @@ function RelationItem(props: {
       : undefined;
   };
   const label = () => (typeof value()?.label === "string" ? String(value()!.label) : undefined);
+  const clip = useClipActions(props.path, () => props.onRemove(), () => {
+    const found = option();
+    return found && "edgeModel" in found ? found.edgeModel : null;
+  });
   return (
     <Switch fallback={<JsonEditor path={props.path} label={type()} />}>
       <Match when={model()?.kind === "Entity"}>
@@ -647,6 +676,8 @@ function RelationItem(props: {
               type={type()}
               label={label() ?? String(value()?.id)}
               onRemove={props.onRemove}
+              onCopy={clip?.copy}
+              onCut={clip?.cut}
               removeLabel={t("remove_item", "Remove {name}", { name: label() ?? type() })}
             />
           </Show>
@@ -669,7 +700,15 @@ function RelationItem(props: {
           ]}
         >
           <div class="flex items-center justify-between">
-            <span class="px-3 pt-2 text-xs font-semibold uppercase select-none">{modelName(type())}</span>
+            <span class="flex-1 px-3 pt-2 text-xs font-semibold uppercase select-none">{modelName(type())}</span>
+            <Show when={clip}>
+              <ClipButtons
+                name={modelName(type())}
+                buttonClass="flex cursor-pointer items-center self-stretch px-3 pt-1 text-slate-600 select-none hover:bg-slate-400/30"
+                onCopy={() => clip!.copy()}
+                onCut={() => clip!.cut()}
+              />
+            </Show>
             <button
               type="button"
               class="cursor-pointer self-stretch px-3 pt-1 text-xs text-red-800 select-none hover:bg-red-400/30"
@@ -691,6 +730,7 @@ function RelationItem(props: {
           tint={kindTint(model()?.kind, model()?.interfaceMeta?.colour)}
           rule={kindRule(model()?.kind, model()?.interfaceMeta?.colour)}
           onRemove={props.onRemove}
+          clip={clip}
         >
           <ItemFields model={model()!} path={props.path} />
         </Block>
@@ -702,6 +742,7 @@ function RelationItem(props: {
           tint={kindTint(model()?.kind, model()?.interfaceMeta?.colour)}
           rule={kindRule(model()?.kind, model()?.interfaceMeta?.colour)}
           onRemove={props.onRemove}
+          clip={clip}
         >
           <ModelFields
             model={model()!}

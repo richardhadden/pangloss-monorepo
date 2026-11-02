@@ -1,10 +1,11 @@
-import { createSignal, For, Show, untrack } from "solid-js";
+import { createSignal, For, onSettled, Show, untrack } from "solid-js";
 import { ApiError, createItem, problemsOf, updateItem } from "../../api";
 import type { Summary } from "../../api";
 import {
   createItemFormState,
   ItemFormProvider,
   useApi,
+  useClipboard,
   useComponent,
   useModels,
   useTranslations,
@@ -26,12 +27,18 @@ export function ItemForm(props: ItemFormProps) {
   const api = useApi();
   const definitions = useModels();
   const { t, modelName } = useTranslations();
-  const state = createItemFormState(untrack(() => props.initial));
+  const state = createItemFormState(
+    untrack(() => props.initial),
+    untrack(() => (props.version === undefined ? undefined : String(props.initial.id))),
+  );
   const model = () => getModel(definitions, props.type);
   const [saving, setSaving] = createSignal(false);
   const [problems, setProblems] = createSignal<string[]>([]);
   const [stale, setStale] = createSignal(false);
   const creating = () => props.version === undefined;
+  // (tells the clipboard bar there is somewhere to paste, for as long as the page has this)
+  const clipboard = useClipboard();
+  onSettled(() => clipboard?.registerForm());
   const label = () => {
     const given = state.get(["label"]);
     return typeof given === "string" && given !== "" ? given : undefined;

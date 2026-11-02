@@ -15,10 +15,12 @@ export interface ItemFormState {
   remove: (path: Path) => void;
   /** The whole item as it is now, a plain copy */
   plain: () => FormData;
+  /** The id of the item, if it is one that exists (not one being made): what is cut from it and pasted back keeps its ids */
+  headId?: string;
 }
 
-/** Starts from a copy of `initial` */
-export function createItemFormState(initial: FormData): ItemFormState {
+/** Starts from a copy of `initial`; `headId` for an item that exists */
+export function createItemFormState(initial: FormData, headId?: string): ItemFormState {
   const [data, setData] = createStore<FormData>(structuredClone(initial));
   return {
     get: (path) => getAt(data, path),
@@ -31,6 +33,7 @@ export function createItemFormState(initial: FormData): ItemFormState {
         removeAt(draft, path);
       }),
     plain: () => snapshot(data) as FormData,
+    headId,
   };
 }
 

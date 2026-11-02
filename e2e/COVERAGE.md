@@ -51,6 +51,7 @@ about her "held court at Ghent") and Charles the Bold (no role); `types` has onl
 | New item form: fields, an entity found by search, saved and shown | ✅ | |
 | A new entity made from the form (+ beside the search, dialog) is chosen | ✅ | |
 | A rejected form says what is wrong and keeps what was typed; Cancel leaves without saving | ✅ | |
+| Clipboard: cut in one form, kept across pages (local storage), shown at the bottom of a form page only, pasted into another form | ✅ | `test_an_entity_cut_in_one_form_is_pasted_into_another`; ids kept or dropped, what fits where, folding: Vitest (`ItemForm.test.tsx`, `clipboard.test.ts`); the e2e project has no sub-documents to cut |
 | Form: the entity search chosen with the arrow keys and Enter (Enter does not save), Escape closes it; the menu of types (hierarchy in vertical lists, abstract classes not selectable, the same types inside each semantic space), nested documents, reified relations, conjunctions, edge properties, dates, the 412 "someone else saved" message | 🚧 | unit tests (`TypeMenu.test.tsx`, `ItemForm.test.tsx`, `typeChoices.test.ts`); the e2e project has no semantic space, conjunction, reified relation or date |
 | Search from the home page / global search | — | not built |
 

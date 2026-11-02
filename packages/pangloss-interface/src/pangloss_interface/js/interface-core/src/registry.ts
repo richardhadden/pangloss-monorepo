@@ -4,6 +4,7 @@
  */
 import {
   Console,
+  ClipboardBar,
   ConsoleBar,
   EntityCard,
   FieldList,
@@ -30,6 +31,7 @@ export const defaultComponents: ComponentMap = {
   LoginForm,
   Modal,
   ConsoleBar,
+  ClipboardBar,
   Console,
 };
 

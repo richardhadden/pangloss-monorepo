@@ -3,6 +3,7 @@ export * from "./FieldList";
 export * from "./NavBar";
 export * from "./NavModelList";
 export * from "./ConsoleBar";
+export * from "./ClipboardBar";
 export * from "./Console";
 export * from "./ConsoleSearch";
 export * from "./ResultButton";

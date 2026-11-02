@@ -5,6 +5,7 @@ import { getModel } from "../schema";
 import type { ReferenceChipProps } from "../types";
 import { Customised } from "./Customised";
 import { SpaceBands } from "./SpaceBands";
+import { ClipButtons } from "./form/Clip";
 
 /**
  * A small chip for something that is referred to: its type on the left (tinted by its kind or
@@ -64,6 +65,14 @@ function DefaultReferenceChip(props: ReferenceChipProps) {
             >
               {body()}
             </a>
+          </Show>
+          <Show when={props.onCopy}>
+            <ClipButtons
+              name={props.label}
+              buttonClass="flex shrink-0 cursor-pointer items-center border-l-[0.5px] border-slate-400/70 px-2 text-slate-500 select-none hover:bg-slate-300/60"
+              onCopy={() => props.onCopy?.()}
+              onCut={props.onCut}
+            />
           </Show>
           <Show when={props.onRemove}>
             <button

@@ -179,6 +179,10 @@ export interface ReferenceChipProps {
   onRemove?: () => void;
   /** The name of that button for a screen reader */
   removeLabel?: string;
+  /** Gives the chip a copy button, in a form (the reference goes on the clipboard) */
+  onCopy?: () => void;
+  /** Gives the chip a cut button, in a form */
+  onCut?: () => void;
 }
 
 export interface ItemContentsProps {
@@ -222,6 +226,7 @@ export interface ComponentMap {
   LoginForm: Component<LoginFormProps>;
   Modal: Component<ModalProps>;
   ConsoleBar: Component;
+  ClipboardBar: Component;
   Console: Component<ConsoleProps>;
   ItemForm: Component<ItemFormProps>;
 }

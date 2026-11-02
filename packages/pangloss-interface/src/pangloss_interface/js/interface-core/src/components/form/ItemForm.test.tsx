@@ -5,6 +5,7 @@ import { ApiError } from "../../api";
 import type { ApiClient } from "../../api";
 import {
   ApiProvider,
+  ClipboardProvider,
   ComponentsProvider,
   ConsoleMountProvider,
   ModelsProvider,
@@ -14,6 +15,7 @@ import {
 import type { ComponentMap, FieldDefinition, ModelDefinition, ModelDefinitions, RelationOption } from "../../types";
 import { Console } from "../Console";
 import { ConsoleBar } from "../ConsoleBar";
+import { ClipboardBar } from "../ClipboardBar";
 import { Modal } from "../../primitives";
 import { ReferenceChip } from "../ReferenceChip";
 import { ItemForm } from "./ItemForm";
@@ -117,6 +119,7 @@ let dispose: (() => void) | undefined;
 afterEach(() => {
   dispose?.();
   document.body.innerHTML = "";
+  localStorage.clear();
 });
 
 function show(client: ApiClient, props: Partial<Parameters<typeof ItemForm>[0]> = {}) {
@@ -131,14 +134,17 @@ function show(client: ApiClient, props: Partial<Parameters<typeof ItemForm>[0]> 
             <ApiProvider client={client}>
               <NavExpandedProvider>
                 <ConsoleMountProvider>
-                  <ConsoleBar />
-                  <ItemForm
-                    type="Factoid"
-                    initial={{ type: "Factoid" }}
-                    onSaved={(summary) => saved.push(summary)}
-                    onCancel={() => {}}
-                    {...props}
-                  />
+                  <ClipboardProvider>
+                    <ConsoleBar />
+                    <ItemForm
+                      type="Factoid"
+                      initial={{ type: "Factoid" }}
+                      onSaved={(summary) => saved.push(summary)}
+                      onCancel={() => {}}
+                      {...props}
+                    />
+                    <ClipboardBar />
+                  </ClipboardProvider>
                 </ConsoleMountProvider>
               </NavExpandedProvider>
             </ApiProvider>
@@ -424,4 +430,101 @@ test("a refused entity keeps the dialog open and says why; Cancel leaves the for
   click(inDialog("Cancel"));
   await settle();
   expect(document.body.querySelector('[role="dialog"]')).toBeNull();
+});
+
+const pasteSlots = () => [...document.body.querySelectorAll<HTMLElement>('[role="group"][aria-label="Paste here"]')];
+const clipboardCards = () =>
+  [...document.body.querySelectorAll('aside[aria-label="Clipboard"] li.w-72')].map((card) => card.textContent);
+
+const meeting = { id: "a1", type: "Activity", label: "Meeting", text: "met", meta: { version: 1 } };
+
+test("a statement cut and pasted back into its document keeps its id; a copy pasted twice is new the second time", async () => {
+  const { client, sent } = fakeClient(() => ({ id: "f1", type: "Factoid", label: "F" }));
+  show(client, {
+    initial: { id: "f1", type: "Factoid", label: "F", year: 476, statements: [meeting] },
+    version: 3,
+  });
+  await settle();
+  expect(pasteSlots()).toHaveLength(0);
+  click(button("Cut Meeting"));
+  await settle();
+  // (it has gone from the form, onto the clipboard, which shows it at the bottom)
+  expect(document.body.querySelector('[aria-label="Fold or unfold Activity"]')).toBeNull();
+  expect(clipboardCards()).toHaveLength(1);
+  expect(clipboardCards()[0]).toContain("Meeting");
+  expect(JSON.parse(localStorage.getItem("pangloss.clipboard")!)[0]).toMatchObject({
+    cut: true,
+    source: "f1",
+    value: { type: "Activity", id: "a1", label: "Meeting", text: "met" },
+  });
+  // (offered where statements are added: not as the author, a person)
+  expect(pasteSlots()).toHaveLength(1);
+  click(pasteSlots()[0]!.querySelector("button"));
+  await settle();
+  // (something cut is pasted once)
+  expect(clipboardCards()).toHaveLength(0);
+  click(button("Copy Meeting"));
+  await settle();
+  click(pasteSlots()[0]!.querySelector("button"));
+  await settle();
+  // (something copied stays)
+  expect(clipboardCards()).toHaveLength(1);
+  click(button("Save"));
+  await settle();
+  expect(sent[0]!.body.statements).toEqual([
+    { type: "Activity", id: "a1", label: "Meeting", text: "met" },
+    { type: "Activity", label: "Meeting", text: "met" },
+  ]);
+});
+
+test("pasted into another document, a statement is new; what is inside it fits or it is not offered", async () => {
+  localStorage.setItem(
+    "pangloss.clipboard",
+    JSON.stringify([
+      { key: "k1", cut: false, source: "f9", value: { type: "Activity", id: "a1", label: "Meeting" } },
+      { key: "k2", cut: false, source: "f9", value: { type: "Negative", id: "n1", contents: [{ type: "Transfer", id: "t1", item: "a horse" }] } },
+      // (a Negative may not hold another Negative here)
+      { key: "k3", cut: false, source: "f9", value: { type: "Negative", contents: [{ type: "Negative" }] } },
+      { key: "k4", cut: false, source: "f9", value: { type: "Person", id: "p1", label: "Alice" } },
+    ]),
+  );
+  const { client, sent } = fakeClient(() => ({ id: "f1", type: "Factoid", label: "F" }));
+  show(client, { initial: { id: "f1", type: "Factoid", label: "F", year: 476, statements: [] }, version: 3 });
+  await settle();
+  expect(clipboardCards()).toHaveLength(4);
+  const [author, statements] = pasteSlots();
+  expect([...author!.querySelectorAll("button")].map((b) => b.textContent)).toEqual(["PersonAlice"]);
+  expect([...statements!.querySelectorAll("button")].map((b) => b.textContent)).toEqual(["ActivityMeeting", "Negative"]);
+  click(statements!.querySelectorAll("button")[1]);
+  click(author!.querySelector("button"));
+  await settle();
+  click(button("Save"));
+  await settle();
+  expect(sent[0]!.body).toMatchObject({
+    author: { type: "Person", id: "p1" },
+    statements: [{ type: "Negative", contents: [{ type: "Transfer", item: "a horse" }] }],
+  });
+  expect(JSON.stringify(sent[0]!.body.statements)).not.toContain('"id"');
+});
+
+test("the buttons of a block are fold, cut, copy, remove; the clipboard folds to its head line, and stays folded", async () => {
+  const { client } = fakeClient(() => ({ id: "f1", type: "Factoid", label: "F" }));
+  show(client, { initial: { id: "f1", type: "Factoid", label: "F", year: 476, statements: [meeting] }, version: 3 });
+  await settle();
+  const head = byLabel("Fold or unfold Activity").parentElement!;
+  expect([...head.querySelectorAll("button")].map((b) => b.getAttribute("aria-label"))).toEqual([
+    "Fold or unfold Activity",
+    "Cut Meeting",
+    "Copy Meeting",
+    "Remove Activity",
+  ]);
+  click(button("Copy Meeting"));
+  await settle();
+  const list = document.body.querySelector('aside[aria-label="Clipboard"] ul')!;
+  expect(list.classList.contains("hidden")).toBe(false);
+  click(byLabel("Fold or unfold the clipboard"));
+  await settle();
+  expect(list.classList.contains("hidden")).toBe(true);
+  expect(byLabel("Fold or unfold the clipboard").getAttribute("aria-expanded")).toBe("false");
+  expect(localStorage.getItem("pangloss.clipboardCollapsed")).toBe("true");
 });
