@@ -23,7 +23,7 @@ export const joinedRemoveClass =
  * corners are taken off, and this frame has them. (The input inside is still `inputClass`.)
  */
 export const joinedFrameClass =
-  "flex w-full min-w-0 items-stretch overflow-hidden rounded-sm border-[0.5px] border-slate-400/70 bg-white/80 focus-within:border-slate-600 [&_input]:rounded-none [&_input]:border-0 [&_select]:rounded-none [&_select]:border-0";
+  "flex w-full min-w-0 items-stretch overflow-hidden rounded-sm border-[0.5px] border-slate-400/70 bg-white/80 focus-within:border-slate-600 [&_input]:rounded-none [&_input]:border-0 [&_select]:rounded-none [&_select]:border-0 [&>div]:rounded-none [&>div]:border-0";
 
 // (the place at the end of a list where the next one is added: as wide as what is in the list)
 export const addSlotClass =

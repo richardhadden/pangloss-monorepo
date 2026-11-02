@@ -32,3 +32,5 @@ Just human readable date / range
 [x] In console, replace the words created and modified with icons
 [x] The date forms should not show the earliest/latest strict/fuzzy. These are not to be manually entered. Make nice components for Dates and put the in the dating package
 [x] In the console, when the type is wrapped by semantic spaces, make the font of the semantic spaces smaller
+[x] Make date typing fields (especially EDTF) reject wrong characters
+[x] up and down buttons on number fields are ugly -- fix them properly to the right side of the input and style properly

@@ -1,6 +1,9 @@
 import {
+  allowOnly,
   inputClass,
+  integerCharacters,
   ModelFields,
+  NumberInput,
   useItemForm,
   useTranslations,
 } from "@pangloss/interface-core";
@@ -9,6 +12,10 @@ import { For, Match, Show, Switch } from "solid-js";
 import { formatDate, MONTHS } from "../format";
 
 type Data = Record<string, unknown>;
+
+// (what EDTF is written with, up to level 2: digits, the separators, the marks of doubt (~ ? %),
+// unspecified digits (X), times, years with Y, exponent and significant digits (E S), and sets ([ ] { } , ..)
+const EDTF_CHARACTERS = /[0-9\-/~?%XxTZ:+YES[\]{},.]/;
 type Path = (string | number)[];
 
 // (what the server works out from the rest, whatever is sent: never typed in)
@@ -87,9 +94,17 @@ export default function DateEditor(props: EditCardProps) {
               value={
                 typeof props.value.edtf === "string" ? props.value.edtf : ""
               }
-              onInput={(event) =>
-                form.set([...props.path, "edtf"], event.currentTarget.value)
-              }
+              onBeforeInput={allowOnly(EDTF_CHARACTERS)}
+              onInput={(event) => {
+                // (an unspecified digit is a capital X in EDTF: a small one is made one, where it is)
+                const box = event.currentTarget;
+                if (box.value.includes("x")) {
+                  const at = box.selectionStart;
+                  box.value = box.value.replaceAll("x", "X");
+                  box.setSelectionRange(at, at);
+                }
+                form.set([...props.path, "edtf"], box.value);
+              }}
             />
             <p class="text-xs text-slate-500">
               {t(
@@ -147,15 +162,13 @@ function ExactParts(props: { path: Path; label: string }) {
   return (
     // (each part in a box of its width: the input fills it)
     <div class="flex flex-wrap items-center gap-2">
-      <div class="w-28 shrink-0">
-        <input
-          type="number"
-          step="1"
-          class={inputClass}
-          aria-label={`${props.label} ${t("date_year", "Year")}`}
+      <div class="w-32 shrink-0">
+        <NumberInput
+          label={`${props.label} ${t("date_year", "Year")}`}
           placeholder={t("date_year", "Year")}
+          allowed={integerCharacters}
           value={part("year")}
-          onInput={(event) => write("year", event.currentTarget.value)}
+          onInput={(typed) => write("year", typed)}
         />
       </div>
       <div class="w-40 shrink-0">
@@ -178,17 +191,16 @@ function ExactParts(props: { path: Path; label: string }) {
           </For>
         </select>
       </div>
-      <div class="w-20 shrink-0">
-        <input
-          type="number"
-          step="1"
-          min="1"
-          max="31"
-          class={inputClass}
-          aria-label={`${props.label} ${t("date_day", "Day")}`}
+      <div class="w-24 shrink-0">
+        <NumberInput
+          label={`${props.label} ${t("date_day", "Day")}`}
           placeholder={t("date_day", "Day")}
+          min={1}
+          max={31}
+          // (a day is never below nothing: no minus)
+          allowed={/[0-9]/}
           value={part("day")}
-          onInput={(event) => write("day", event.currentTarget.value)}
+          onInput={(typed) => write("day", typed)}
         />
       </div>
     </div>

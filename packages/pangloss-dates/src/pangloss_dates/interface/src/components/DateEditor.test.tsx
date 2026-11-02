@@ -58,6 +58,7 @@ const enumOf = (name: string, values: string[]) => ({
 const definitions = {
   models: {
     ExactDate: model("ExactDate", [field("year", int), field("month", int), field("day", int)]),
+    EDTFDate: model("EDTFDate", [field("edtf", { type: "str" })]),
   },
   enums: {
     Calendar: enumOf("Calendar", ["gregorian", "julian"]),
@@ -125,4 +126,38 @@ test("the date is said as it reads, as it is typed", async () => {
   const { host } = show({ type: "ExactDate", year: 800, month: 12, day: 25 });
   await settle();
   expect(host.querySelector('[data-testid="date-reads"]')?.textContent).toContain("25 December 800");
+});
+
+test("an EDTF date takes only what EDTF is written with, and an unspecified digit is a capital X", async () => {
+  const { state } = show({ type: "EDTFDate" });
+  await settle();
+  const box = byLabel<HTMLInputElement>("Date EDTF")!;
+  const typing = (data: string) => {
+    const event = new InputEvent("beforeinput", { data, cancelable: true, bubbles: true });
+    box.dispatchEvent(event);
+    return event.defaultPrevented;
+  };
+  expect(["1", "5", "x", "~", "?", "%", "-", "/", "[", ".."].map(typing)).toEqual(Array(10).fill(false));
+  expect(["a", " ", "q", "!", "March"].map(typing)).toEqual(Array(5).fill(true));
+  box.value = "15xx~";
+  box.dispatchEvent(new InputEvent("input", { bubbles: true }));
+  await settle();
+  expect(box.value).toBe("15XX~");
+  expect(state.get(["date", "edtf"])).toBe("15XX~");
+});
+
+test("the year and the day refuse what is not in them: the day takes no minus", async () => {
+  show({ type: "ExactDate" });
+  await settle();
+  const refused = (label: string, data: string) => {
+    const event = new InputEvent("beforeinput", { data, cancelable: true, bubbles: true });
+    byLabel(label)!.dispatchEvent(event);
+    return event.defaultPrevented;
+  };
+  expect([refused("Date Year", "-"), refused("Date Year", "e"), refused("Date Day", "-"), refused("Date Day", "7")]).toEqual([
+    false,
+    true,
+    true,
+    false,
+  ]);
 });

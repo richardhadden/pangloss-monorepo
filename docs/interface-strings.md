@@ -83,6 +83,8 @@ These are not shown, but are read aloud, or appear when the pointer rests on the
 | `nothing_found` | Nothing found | `EntityPicker` | |
 | `created` | Created | `Console` (the history of an item: tooltip and screen-reader text of the icon of a new page) | shown as an icon, no longer as a word |
 | `modified` | Modified | `Console` (the same, for the icon of a pen) | |
+| `step_up` | Increase {name} | `NumberInput` (`aria-label` of its up button) | `{name}` is the label of the box; the buttons are not Tab stops (the Up key does the same) |
+| `step_down` | Decrease {name} | `NumberInput` (`aria-label` of its down button) | |
 | `date_year` | Year | `pangloss_dates` `DateEditor` (placeholder and `aria-label` of the year of an exact date) | a module's string, in the same `ui` slots |
 | `date_month` | Month | `DateEditor` (`aria-label` of the month) | the names of the months are English in the module (`MONTHS` in `format.ts`), as in `DateCard` |
 | `date_no_month` | (no month) | `DateEditor` (the empty choice of the month) | |

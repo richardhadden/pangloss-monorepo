@@ -13,6 +13,7 @@ import {
   numberWidthClass,
   smallButtonClass,
 } from "./styles";
+import { allowOnly, decimalCharacters, NumberInput } from "./NumberInput";
 
 type Typed<T extends FieldType["type"]> = Extract<FieldType, { type: T }>;
 
@@ -168,18 +169,14 @@ export function LiteralEditor(props: {
         />
       </Match>
       <Match when={props.type.type === "int" || props.type.type === "float"}>
-        <input
-          type="number"
-          class={[inputClass, numberWidthClass]}
-          aria-label={props.label}
+        <NumberInput
+          class={["w-full", numberWidthClass].join(" ")}
+          label={props.label}
           step={props.type.type === "int" ? 1 : "any"}
           min={limit(props.validators, "Ge", "ge")}
           max={limit(props.validators, "Le", "le")}
           value={text()}
-          onInput={(event) => {
-            const typed = event.currentTarget.value;
-            write(typed === "" ? "" : Number(typed));
-          }}
+          onInput={(typed) => write(typed === "" ? "" : Number(typed))}
         />
       </Match>
       <Match when={props.type.type === "str" || props.type.type === "uuid" || props.type.type === "decimal"}>
@@ -188,6 +185,8 @@ export function LiteralEditor(props: {
           class={inputClass}
           aria-label={props.label}
           inputmode={props.type.type === "decimal" ? "decimal" : undefined}
+          // (a decimal is a number: what is not in one is refused as it is typed)
+          onBeforeInput={props.type.type === "decimal" ? allowOnly(decimalCharacters) : undefined}
           maxlength={limit(props.validators, "MaxLen", "max_length")}
           value={text()}
           onInput={(event) => write(event.currentTarget.value)}
