@@ -244,3 +244,19 @@ def test_an_item_that_disappears_on_logging_out_is_a_404_and_leaves_no_label(
     expect(page.get_by_role("alert")).to_contain_text("may not exist, or you may need to log in")
     expect(page.get_by_role("alert")).not_to_contain_text("There is no Person with id")
     expect(console).not_to_contain_text("Maximilian")
+
+
+def test_following_a_link_to_an_item_that_is_gone_is_a_404(page: Page, data):
+    # (a list read before the item was deleted: its page is asked for in the browser, not rendered on the server)
+    page.goto("/Person")
+    hydrated(page)
+    data.api.ok("DELETE", f"/api/Person/{data.charles}")
+    errors: list[str] = []
+    page.on("pageerror", lambda error: errors.append(str(error)))
+    page.get_by_role("link", name="Charles the Bold").click()
+    page.wait_for_url(f"**/Person/{data.charles}")
+    expect(page.get_by_role("heading", name="Page not found")).to_be_visible()
+    assert errors == []
+    # (the interface still works)
+    page.go_back()
+    expect(page.get_by_role("link", name="Maximilian")).to_be_visible()

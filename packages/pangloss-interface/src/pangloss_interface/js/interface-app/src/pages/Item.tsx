@@ -17,8 +17,8 @@ import {
   Errored,
   Loading,
   onCleanup,
+  onSettled,
   Show,
-  untrack,
 } from "solid-js";
 import { itemQuery } from "../queries";
 import { Page } from "../Page";
@@ -72,6 +72,13 @@ function Track(props: {
   return null;
 }
 
+// Tells the page that no item is on show, once the error that is in its place is (not while it is
+// rendered: state is not written then)
+function Forget(props: { onShow: (shown: undefined) => void }) {
+  onSettled(() => props.onShow(undefined));
+  return null;
+}
+
 // One Document or Entity: /Person/<id>
 export default function EntityPage(props: RouteProps<"/:type/:id">) {
   const Console = useComponent("Console");
@@ -104,10 +111,10 @@ export default function EntityPage(props: RouteProps<"/:type/:id">) {
         }
       />
       <Errored
-        fallback={(error) => {
-          // (the page's own content did not go the way its cleanup would: the bar forgets the item here)
-          untrack(() => setShown(undefined));
-          return (
+        fallback={(error) => (
+          <>
+            {/* (the page's own content did not go the way its cleanup would: the bar forgets the item here) */}
+            <Forget onShow={setShown} />
             <Show
               when={
                 error() instanceof ApiError &&
@@ -117,8 +124,8 @@ export default function EntityPage(props: RouteProps<"/:type/:id">) {
             >
               <ItemNotFound />
             </Show>
-          );
-        }}
+          </>
+        )}
       >
         <Loading fallback={<p>Loading…</p>}>
           <Track item={item} onShow={setShown} />

@@ -113,3 +113,39 @@ def test_an_item_with_nothing_to_show_has_no_empty_rows(page: Page, data):
     page.goto(f"/Person/{data.charles}")
     expect(page.get_by_role("heading", name="Charles the Bold")).to_be_visible()
     expect(page.get_by_text("Has role", exact=True)).to_have_count(0)
+
+
+def test_a_long_list_is_loaded_as_it_is_scrolled_and_starts_where_it_was_left(
+    page: Page, types
+):
+    # (more than a page, LIST_PAGE_SIZE: 50; numbered so each label is its own)
+    api = types.admin()
+    for number in range(130):
+        api.ok("POST", "/api/Person", {"label": f"Person {number:03d}", "has_role": []})
+    page.goto("/Person")
+    hydrated(page)
+    expect(page.get_by_title("Found")).to_have_text("130")
+    # (only what is on show, and a few beyond, is rendered)
+    assert results(page).count() < 60
+
+    # The last ones are fetched when they are scrolled to
+    page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+    expect(page.locator("main ul > li[data-index='129'] a")).to_be_visible()
+
+    # Where it is is kept in the address, and the page loaded again starts there
+    page.evaluate("window.scrollTo(0, document.body.scrollHeight / 2)")
+    page.wait_for_url(re.compile(r"[?&]at=\d+"))
+    at = int(re.search(r"at=(\d+)", page.url).group(1))  # ty: ignore[possibly-missing-attribute]
+    assert 30 < at < 110
+    label = page.locator(f"main ul > li[data-index='{at}']").text_content()
+    page.reload()
+    hydrated(page)
+    expect(page.locator(f"main ul > li[data-index='{at}']")).to_have_text(label or "")
+    expect(page.locator(f"main ul > li[data-index='{at}']")).to_be_in_viewport()
+
+    # A new search starts at the top
+    page.get_by_role("searchbox").fill("Person 00")
+    expect(page.get_by_title("Found")).not_to_have_text("130")
+    page.wait_for_url(re.compile(r"q=Person"))
+    assert "at=" not in page.url
+    assert page.evaluate("window.scrollY") == 0

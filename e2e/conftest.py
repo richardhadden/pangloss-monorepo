@@ -335,6 +335,42 @@ def stack(tmp_path_factory) -> Iterator[Stack]:
 
 
 @pytest.fixture(scope="session")
+def dev_url(stack: Stack) -> Iterator[str]:
+    """The interface from its development server (`pangloss interface dev`), on the same API and database: the
+    development build of Solid checks what the production build does not (a write while rendering stops the whole
+    app there), so a page that works in `stack` can still be broken here. It passes `/api` on itself."""
+    port = free_port()
+    process = subprocess.Popen(
+        [
+            str(BIN / "pangloss"),
+            "interface",
+            "dev",
+            "--port",
+            str(port),
+            "--api-url",
+            stack.api,
+        ],
+        cwd=stack.project,
+        env=environment(),
+        stdout=open(stack.project / "dev.log", "w"),  # noqa: SIM115 (closed with the process)
+        stderr=subprocess.STDOUT,
+        start_new_session=True,
+    )
+    try:
+        # (Vite listens on `localhost`, which can be IPv6 only; a login there is a cookie of that host, not of
+        # 127.0.0.1. The first page is compiled when it is asked for: slower than a built one)
+        url = f"http://localhost:{port}"
+        wait_for(f"{url}/", "the development server", process, 120)
+        yield url
+    finally:
+        stop(process, signal.SIGTERM)
+        try:
+            process.wait(10)
+        except subprocess.TimeoutExpired:
+            stop(process, signal.SIGKILL)
+
+
+@pytest.fixture(scope="session")
 def base_url(stack: Stack) -> str:
     return stack.url
 

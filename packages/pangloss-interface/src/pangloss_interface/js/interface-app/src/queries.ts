@@ -7,9 +7,12 @@ import { query, revalidate } from "@solidjs/router";
 import { isServer } from "@solidjs/web";
 import { apiClient } from "./api";
 
+/** How many items a list asks for at a time (a page); more are asked for as it is scrolled */
+export const LIST_PAGE_SIZE = 50;
+
 export const listQuery = query(
   (type: string, q: string, deep: boolean, page: number) =>
-    listItems(apiClient(), type, { q, deep, page }),
+    listItems(apiClient(), type, { q, deep, page, pageSize: LIST_PAGE_SIZE }),
   "list",
 );
 
@@ -41,4 +44,19 @@ export function revalidateAll() {
 export function searchOf(search: Record<string, string | string[] | undefined>) {
   const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);
   return { q: first(search.q) ?? "", deep: first(search.deep) === "1" };
+}
+
+/**
+ * The item at the top of a list when it was last looked at (`?at=40`), which the list starts from,
+ * so that only the page it is on is asked for first: 0 if there is none.
+ */
+export function startOf(search: Record<string, string | string[] | undefined>) {
+  const value = Array.isArray(search.at) ? search.at[0] : search.at;
+  const at = Number.parseInt(value ?? "", 10);
+  return Number.isFinite(at) && at > 0 ? at : 0;
+}
+
+/** The page of a list that the item at that index is on (counting from 1, as the API does) */
+export function pageOf(index: number) {
+  return Math.floor(index / LIST_PAGE_SIZE) + 1;
 }
