@@ -1,16 +1,27 @@
-import { createSignal, For, onSettled, Show } from "solid-js";
+import { createMemo, createSignal, For, onSettled, Show } from "solid-js";
+import type { ParentProps } from "solid-js";
 import { useModels, useTranslations } from "../../context";
-import { spaceTint } from "../../primitives";
-import { choicesOf, getModel } from "../../schema";
-import type { Choice, MenuGroup } from "../../schema";
-import { smallButtonClass } from "./styles";
+import { kindTint, spaceTint } from "../../primitives";
+import { ancestry, choicesOf, getModel, typeColumns } from "../../schema";
+import type { Choice, MenuGroup, TypeRow } from "../../schema";
+import type { ModelDefinitions } from "../../types";
+import { plainTint, smallButtonClass } from "./styles";
+
+// (the types with no space round them have no tint; a space has its model's colour, else one by how deep it is)
+const groupTint = (definitions: ModelDefinitions, group: MenuGroup) =>
+  group.spaces.length === 0
+    ? ""
+    : spaceTint(
+        getModel(definitions, group.spaces[group.spaces.length - 1]!)?.interfaceMeta?.colour,
+        group.spaces.length - 1,
+      );
 
 /**
  * A button that opens the menu of the types a field can hold. The types are listed by the hierarchy,
  * in vertical lists split where the types stop having an ancestor in common; an abstract class is
- * shown, so the hierarchy reads, but cannot be chosen. A field that accepts semantic spaces has a
- * section for the plain types and one for each space, with the same types inside it (shown on the
- * colour of the space). With only one thing to choose there is no menu: the button chooses it.
+ * shown, so the hierarchy reads, but cannot be chosen. A field that accepts semantic spaces has the
+ * types on their own, then a section for each space, headed by its name, with the same types inside
+ * it (shown on the colour of the space). With only one thing to choose there is no menu: the button chooses it.
  * The keys move in the menu as in any other: Down (or Up) opens it, Up and Down go through what
  * can be chosen (Home and End to the first and last), Enter chooses, Escape and Tab close it.
  */
@@ -29,7 +40,7 @@ export function TypeMenu(props: {
   wide?: boolean;
 }) {
   const definitions = useModels();
-  const { t, modelName } = useTranslations();
+  const { modelName } = useTranslations();
   const [open, setOpen] = createSignal(false);
   let root: HTMLDivElement | undefined;
   let opener: HTMLButtonElement | undefined;
@@ -81,14 +92,7 @@ export function TypeMenu(props: {
     setOpen(false);
     props.onChoose(choice);
   };
-  // (a plain section has none; a space has its model's colour, else one by how deep it is)
-  const tintOf = (group: MenuGroup) =>
-    group.spaces.length === 0
-      ? ""
-      : spaceTint(
-          getModel(definitions, group.spaces[group.spaces.length - 1]!)?.interfaceMeta?.colour,
-          group.spaces.length - 1,
-        );
+  const tintOf = (group: MenuGroup) => groupTint(definitions, group);
   const spaceName = (group: MenuGroup) => group.spaces.map((space) => modelName(space)).join(" › ");
   return (
     <Show when={choices().length > 0}>
@@ -147,12 +151,8 @@ export function TypeMenu(props: {
                   <section
                     class={["rounded-sm border-[0.5px] border-slate-400/50 p-2", tintOf(group)]}
                   >
-                    <Show when={props.groups.length > 1}>
-                      <h3 class="mb-1 text-xs font-semibold uppercase select-none">
-                        <Show when={group.spaces.length > 0} fallback={t("plain", "Plain")}>
-                          {spaceName(group)}
-                        </Show>
-                      </h3>
+                    <Show when={group.spaces.length > 0}>
+                      <h3 class="mb-1 text-xs font-semibold uppercase select-none">{spaceName(group)}</h3>
                     </Show>
                     <div class="flex items-start gap-6">
                       <For each={group.columns}>
@@ -195,6 +195,263 @@ export function TypeMenu(props: {
             </div>
           </Show>
         </Show>
+      </div>
+    </Show>
+  );
+}
+
+/**
+ * The add button of a field (Add statements), which opens, in its place, a box of the types the field
+ * can hold: under a title bar that names what is chosen (Select statement type…, by the type they
+ * all come from), zones one under another: the types on their own at the top; then each semantic
+ * space, on its colour, with the same types inside it, its name at the top left; then the
+ * conjunctions, on slate. Each type is a button in the colour of its type, as its chip is; the
+ * buttons of a list are joined into one block, the names inside indented to show the hierarchy (an
+ * abstract class is a line of the block, not a button). Choosing one, Escape, the close button, a
+ * click elsewhere or Tab out of it close the box. With only one thing to choose the button chooses it.
+ * What is given as `children` (what can be pasted here) is under the button. In the box the types
+ * are one stop for Tab; the arrow keys go through them (Home and End to the first and last).
+ */
+export function TypeChooser(
+  props: ParentProps<{
+    groups: MenuGroup[];
+    /** What the button says (Add statements), and the name of the box for a screen reader */
+    label: string;
+    onChoose: (choice: Choice) => void;
+    /** The classes of the button */
+    buttonClass?: string;
+  }>,
+) {
+  const definitions = useModels();
+  const { t, modelName } = useTranslations();
+  const choices = () => choicesOf(props.groups);
+  // (the type that all the types, but the conjunctions, come from: what the title says is chosen)
+  const common = createMemo(() => {
+    const chains = [...new Set(choices().map((choice) => choice.type))]
+      .filter((name) => getModel(definitions, name)?.kind !== "Conjunction")
+      .map((name) => ancestry(definitions, name));
+    if (chains.length === 0) return undefined;
+    let at = 0;
+    while (chains.every((chain) => chain[at] !== undefined && chain[at] === chains[0]![at])) at++;
+    return at > 0 ? chains[0]![at - 1] : undefined;
+  });
+  const title = () =>
+    common()
+      ? t("select_type_of", "Select {name} type…", { name: modelName(common()!) })
+      : t("select_type", "Select a type…");
+  const keyOf = (choice: Choice) => [...choice.spaces, choice.type].join("/");
+  // (the one of the buttons that Tab goes to: the last one gone to, else the first)
+  const [current, setCurrent] = createSignal<string>();
+  // (in the order they are drawn, zone by zone)
+  const tabStop = () => {
+    const keys = zones().flatMap((zone) =>
+      zone.columns.flat().filter((row) => row.selectable).map((row) => keyOf({ spaces: zone.spaces, type: row.name })),
+    );
+    return keys.includes(current() ?? "") ? current() : keys[0];
+  };
+  // (the conjunctions of the types on their own go to their zone at the bottom, those inside a space
+  // stay in it; the lists of each are made again without the others, so they split as they would alone)
+  const zones = createMemo(() => {
+    const isConjunction = (name: string) => getModel(definitions, name)?.kind === "Conjunction";
+    const namesOf = (group: MenuGroup, conjunctions: boolean) =>
+      group.columns
+        .flat()
+        .filter((row) => row.selectable && isConjunction(row.name) === conjunctions)
+        .map((row) => row.name);
+    const columnsOf = (names: string[]) => (names.length > 0 ? typeColumns(definitions, names) : []);
+    const found: { spaces: string[]; columns: TypeRow[][]; class: string }[] = [];
+    const plain = props.groups.find((group) => group.spaces.length === 0);
+    if (plain) found.push({ spaces: [], columns: columnsOf(namesOf(plain, false)), class: "" });
+    for (const group of props.groups) {
+      if (group.spaces.length === 0) continue;
+      found.push({
+        spaces: group.spaces,
+        columns: [...columnsOf(namesOf(group, false)), ...columnsOf(namesOf(group, true))],
+        class: groupTint(definitions, group),
+      });
+    }
+    if (plain) found.push({ spaces: [], columns: columnsOf(namesOf(plain, true)), class: "bg-slate-400/20" });
+    return found.filter((zone) => zone.columns.length > 0);
+  });
+  let root: HTMLDivElement | undefined;
+  const onKeyDown = (event: KeyboardEvent) => {
+    if (event.key === "Escape") {
+      // (only the box: a dialog it is in stays open)
+      event.stopPropagation();
+      close(true);
+      return;
+    }
+    const all = [...(root?.querySelectorAll<HTMLElement>("button[data-choice]") ?? [])];
+    const at = all.indexOf(document.activeElement as HTMLElement);
+    if (at < 0 || all.length === 0) return;
+    const next =
+      event.key === "ArrowDown" || event.key === "ArrowRight"
+        ? (at + 1) % all.length
+        : event.key === "ArrowUp" || event.key === "ArrowLeft"
+          ? (at - 1 + all.length) % all.length
+          : event.key === "Home"
+            ? 0
+            : event.key === "End"
+              ? all.length - 1
+              : undefined;
+    if (next === undefined) return;
+    event.preventDefault();
+    all[next]!.focus();
+  };
+  const spaceName = (spaces: string[]) => spaces.map((space) => modelName(space)).join(" › ");
+  // (a button is in the colour of its type, as its chip is; a type with none has the plain one)
+  const tintOf = (name: string) => {
+    const model = getModel(definitions, name);
+    return kindTint(model?.kind, model?.interfaceMeta?.colour) || plainTint;
+  };
+  // (the name inside a button or an abstract class's line, indented by how deep it is)
+  const indent = (row: TypeRow) => ({ "padding-left": `${0.75 + row.depth * 1}rem` });
+  const [open, setOpen] = createSignal(false);
+  let wrapper: HTMLDivElement | undefined;
+  const openBox = () => {
+    setOpen(true);
+    // (after the box is drawn: all of it in view, and the cursor in the types)
+    setTimeout(() => {
+      root?.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
+      root?.querySelector<HTMLElement>('button[data-choice][tabindex="0"]')?.focus({ preventScroll: true });
+    });
+  };
+  // (back to the button, which is drawn again in the box's place)
+  const close = (refocus: boolean) => {
+    setOpen(false);
+    if (refocus) setTimeout(() => wrapper?.querySelector<HTMLElement>("button[aria-expanded]")?.focus());
+  };
+  const choose = (choice: Choice) => {
+    setOpen(false);
+    props.onChoose(choice);
+  };
+  onSettled(() => {
+    // (a click anywhere else closes it; the path is the one when it was clicked, as the button is gone once the box opens)
+    const away = (event: MouseEvent) => {
+      if (open() && wrapper && !event.composedPath().includes(wrapper)) setOpen(false);
+    };
+    document.addEventListener("click", away);
+    return () => document.removeEventListener("click", away);
+  });
+  return (
+    <Show when={choices().length > 0}>
+      <div ref={wrapper} class="flex w-full flex-col gap-2">
+        <Show
+          when={open()}
+          fallback={
+            <Show
+              when={choices().length > 1}
+              fallback={
+                <button type="button" class={props.buttonClass ?? smallButtonClass} onClick={() => choose(choices()[0]!)}>
+                  {props.label}
+                </button>
+              }
+            >
+              <button
+                type="button"
+                class={props.buttonClass ?? smallButtonClass}
+                aria-expanded="false"
+                onClick={openBox}
+                onKeyDown={(event) => {
+                  if (event.key === "ArrowDown") {
+                    event.preventDefault();
+                    openBox();
+                  }
+                }}
+              >
+                {props.label} <span aria-hidden="true">▾</span>
+              </button>
+            </Show>
+          }
+        >
+        <div
+          ref={root}
+          role="group"
+          aria-label={props.label}
+          class="flex w-full flex-col overflow-hidden rounded-sm border-[0.5px] border-dashed border-slate-400/80 bg-white/60"
+          onKeyDown={onKeyDown}
+          onFocusOut={(event) => {
+            // (Tab out of it closes it)
+            const to = event.relatedTarget;
+            if (to instanceof Node && root && !root.contains(to)) setOpen(false);
+          }}
+        >
+          <div class="flex items-stretch border-b-[0.5px] border-dashed border-slate-400/80 bg-slate-100 text-xs font-semibold tracking-wide text-slate-700 uppercase select-none">
+            <span class="flex flex-1 items-center gap-2 px-3 py-1.5">
+              <span aria-hidden="true" class="text-sm leading-none text-slate-500">
+                +
+              </span>
+              {title()}
+            </span>
+            <button
+              type="button"
+              class="flex w-8 shrink-0 cursor-pointer items-center justify-center border-l-[0.5px] border-dashed border-slate-400/80 text-slate-500 hover:bg-slate-300/50 hover:text-slate-800 focus:bg-slate-300/50 focus:outline-none"
+              aria-label={t("close", "Close")}
+              title={t("close", "Close")}
+              onClick={() => close(true)}
+            >
+              ✕
+            </button>
+          </div>
+          <For each={zones()}>
+            {(zone) => (
+              <section
+                class={[
+                  "flex flex-col gap-2 px-3 pt-2 pb-3",
+                  { "border-t-[0.5px] border-dashed border-slate-400/60": zone.class !== "" },
+                  zone.class,
+                ]}
+              >
+                <Show when={zone.spaces.length > 0}>
+                  <h3 class="text-xs font-semibold uppercase select-none">{spaceName(zone.spaces)}</h3>
+                </Show>
+                <div class="flex flex-wrap items-start gap-3">
+                  <For each={zone.columns}>
+                    {(column) => (
+                      <ul class="flex w-max flex-col divide-y-[0.5px] divide-slate-400/70 overflow-hidden rounded-sm border-[0.5px] border-slate-400/70 bg-white shadow-xs">
+                        <For each={column}>
+                          {(row) => (
+                            <li class="flex flex-col">
+                              <Show
+                                when={row.selectable}
+                                fallback={
+                                  <span
+                                    class="bg-slate-50 py-1 pr-4 text-xs text-slate-500 italic select-none"
+                                    style={indent(row)}
+                                    aria-disabled="true"
+                                  >
+                                    {modelName(row.name)}
+                                  </span>
+                                }
+                              >
+                                <button
+                                  type="button"
+                                  data-choice
+                                  tabindex={tabStop() === keyOf({ spaces: zone.spaces, type: row.name }) ? 0 : -1}
+                                  class={[
+                                    "min-w-28 cursor-pointer py-1.5 pr-4 text-left text-xs font-semibold whitespace-nowrap uppercase select-none hover:shadow-[inset_0_0_0_100vmax_rgb(15_23_42/0.08)] focus:shadow-[inset_0_0_0_100vmax_rgb(15_23_42/0.12)] focus:outline-none active:shadow-[inset_0_0_0_100vmax_rgb(15_23_42/0.16)]",
+                                    tintOf(row.name),
+                                  ]}
+                                  style={indent(row)}
+                                  onFocus={() => setCurrent(keyOf({ spaces: zone.spaces, type: row.name }))}
+                                  onClick={() => choose({ spaces: zone.spaces, type: row.name })}
+                                >
+                                  {modelName(row.name)}
+                                </button>
+                              </Show>
+                            </li>
+                          )}
+                        </For>
+                      </ul>
+                    )}
+                  </For>
+                </div>
+              </section>
+            )}
+          </For>
+        </div>
+        </Show>
+        {props.children}
       </div>
     </Show>
   );

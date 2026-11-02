@@ -207,9 +207,10 @@ function Value(props: {
 /**
  * An object in a field. An Entity is a chip. A semantic space is a band, with what is in it
  * inside. An embedded object is only its rows, indented under a plain rule (it is in one place
- * only). Anything else (a Document inside, a reified relation, a conjunction, an annotated value)
- * has a head (its type as a chip, and its label) and its own rows under it, indented, with a
- * rule in the colour of its type down the left: the look of the form.
+ * only). An annotated value is its value, as if it were the field's own, with what is said of it
+ * under it. Anything else (a Document inside, a reified relation, a conjunction) has a head (its
+ * type as a chip, and its label) and its own rows under it, indented, with a rule in the colour of
+ * its type down the left: the look of the form.
  */
 function ObjectValue(props: {
   value: Data;
@@ -248,6 +249,8 @@ function ObjectValue(props: {
   const tint = () => kindTint(model()?.kind, model()?.interfaceMeta?.colour);
   const rule = () => kindRule(model()?.kind, model()?.interfaceMeta?.colour);
   const isEmbedded = () => model()?.kind === "Embedded";
+  const isAnnotated = () =>
+    type() === undefined && props.field?.kind === "annotatedValue";
   return (
     // (a card that the model names for itself shows an embedded item or a block; a chip is the reference's card)
     <Customised
@@ -333,6 +336,20 @@ function ObjectValue(props: {
                   exclude="target"
                 />
               </div>
+            </div>
+          </Match>
+          <Match when={isAnnotated()}>
+            {/* (an annotated value: the value as the field's own, then what is said of it, as in the form) */}
+            <div class="flex w-full min-w-0 flex-col gap-2">
+              <div class="flex min-w-0 flex-wrap items-start gap-x-2 gap-y-4">
+                <Value value={props.value.value} depth={props.depth} />
+              </div>
+              <Fields
+                value={props.value}
+                model={model()}
+                depth={props.depth}
+                exclude="value"
+              />
             </div>
           </Match>
           <Match when={isEmbedded()}>

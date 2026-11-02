@@ -170,10 +170,10 @@ const button = (name: string) =>
   [...document.body.querySelectorAll<HTMLElement>("button, a")].find(
     (b) => b.textContent?.trim().startsWith(name) || b.getAttribute("aria-label") === name,
   );
-const menuItems = () =>
-  [...document.body.querySelectorAll('[role="menu"] [role="menuitem"], [role="menu"] [aria-disabled]')].map(
-    (item) => item.textContent?.trim(),
-  );
+// (the types a field can hold, laid out open where the next one is added)
+const chooser = (label: string) => document.body.querySelector<HTMLElement>(`[role="group"][aria-label="${label}"]`)!;
+const choices = (label: string) =>
+  [...chooser(label).querySelectorAll("button[data-choice], [aria-disabled]")].map((item) => item.textContent?.trim());
 
 test("a new item is created with what was typed, keeping the focus in the field while typing", async () => {
   const { client, sent } = fakeClient(() => ({ id: "f1", type: "Factoid", label: "F" }));
@@ -201,23 +201,21 @@ test("a new item is created with what was typed, keeping the focus in the field 
   expect(saved).toEqual([{ id: "f1", type: "Factoid", label: "F" }]);
 });
 
-test("a statement is chosen from the types, plain or inside the Negative space, in vertical lists with the abstract class not selectable", async () => {
+test("a statement is chosen from the types the add button opens, on their own or inside the Negative space, in vertical lists with the abstract class not selectable", async () => {
   const { client, sent } = fakeClient(() => ({ id: "f1", type: "Factoid", label: "F" }));
   show(client);
   await settle();
   click(button("Add statements"));
   await settle();
-  const items = menuItems();
-  // (the plain types, then the same inside Negative: Statement is common to both, so it is not shown)
-  expect(items).toEqual(["Activity", "Transfer", "Activity", "Transfer"]);
-  expect(document.body.textContent).toContain("Plain");
-  const headings = [...document.body.querySelectorAll('[role="menu"] h3')].map((h) => h.textContent);
-  expect(headings).toEqual(["Plain", "Negative"]);
+  // (the types on their own, then the same inside Negative: Statement is common to both, so it is not shown)
+  expect(choices("Add statements")).toEqual(["Activity", "Transfer", "Activity", "Transfer"]);
+  // (only the space has a heading)
+  const headings = [...chooser("Add statements").querySelectorAll("h3")].map((h) => h.textContent);
+  expect(headings).toEqual(["Negative"]);
   // choose Activity inside Negative
-  const inNegative = [...document.body.querySelectorAll('[role="menu"] section')][1]!;
-  click(inNegative.querySelector('[role="menuitem"]'));
+  const inNegative = [...chooser("Add statements").querySelectorAll("section")][1]!;
+  click(inNegative.querySelector("button[data-choice]"));
   await settle();
-  expect(document.body.querySelector('[role="menu"]')).toBeNull();
   // (the space's contents have no key of their own: they fill the width)
   expect(document.body.textContent).not.toMatch(/contents/i);
   type("text", "A meeting");
@@ -332,7 +330,7 @@ test("the type of an embedded value can be changed: its menu is not clipped by t
   await settle();
   click(button("Add when"));
   await settle();
-  click([...document.body.querySelectorAll('[role="menuitem"]')].find((item) => item.textContent === "Day"));
+  click([...chooser("Add when").querySelectorAll("button")].find((item) => item.textContent === "Day"));
   await settle();
   click(button("Day"));
   await settle();

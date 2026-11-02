@@ -63,6 +63,10 @@
   },
   "logging_in": { "en": "Logging in…", "de": "Anmeldung läuft …" },
 
+  // The form: the types to choose from where the next thing is added ({name} is the type they all come from)
+  "select_type_of": { "en": "Select {name} type…", "de": "{name}: Typ auswählen …" },
+  "select_type": { "en": "Select a type…", "de": "Typ auswählen …" },
+
   // The kinds of model (a model's "kind" in the gathered file is one of these, as kind_<snake case>)
   "kind_document": { "en": "Document", "de": "Dokument" },
   "kind_document_plural": { "en": "Documents", "de": "Dokumente" },

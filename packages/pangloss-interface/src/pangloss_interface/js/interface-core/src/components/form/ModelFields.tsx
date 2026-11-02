@@ -54,7 +54,7 @@ import {
   spaceTypeClass,
   typeChipClass,
 } from "./styles";
-import { TypeMenu } from "./TypeMenu";
+import { TypeChooser, TypeMenu } from "./TypeMenu";
 import { revealAdded } from "./reveal";
 import { ClipButtons, EmbeddedPasteSlot, RelationPasteSlot, useClipActions } from "./Clip";
 import { Customised } from "../Customised";
@@ -428,7 +428,7 @@ function AnnotatedEditor(props: { field: AnnotatedValueField; path: Accessor<Pat
 const typeOptions = (types: string[]): RelationOption[] =>
   types.map((type) => ({ kind: "document", type, edgeModel: null }));
 
-/** An embedded object: a menu of its types (a date is an exact date, a range...), then the fields of the one chosen */
+/** An embedded object: its types to choose from (a date is an exact date, a range...), then the fields of the one chosen, under a menu to change the type */
 function EmbeddedEditor(props: { field: EmbeddedField; path: Accessor<Path>; label: string }) {
   const form = useItemForm();
   const definitions = useModels();
@@ -446,22 +446,31 @@ function EmbeddedEditor(props: { field: EmbeddedField; path: Accessor<Path>; lab
     const kept = Object.fromEntries(
       Object.entries(value() ?? {}).filter(([key]) => next?.fields.some((field) => field.key === key)),
     );
+    const added = !value();
     form.set(props.path(), { ...kept, type: choice.type });
+    if (added) revealAdded(() => root);
   };
+  let root: HTMLDivElement | undefined;
   return (
-    <div class="flex w-full min-w-0 flex-col">
+    <div ref={root} class="flex w-full min-w-0 flex-col">
       <Show
         when={value()}
         fallback={
           <div class="flex w-full flex-col gap-2">
-            <TypeMenu
+            <TypeChooser
               groups={groups()}
               label={t("add_named", "Add {name}", { name: props.label })}
               buttonClass={addSlotClass}
-              wide
               onChoose={choose}
-            />
-            <EmbeddedPasteSlot field={props.field} onPaste={(pasted) => form.set(props.path(), pasted)} />
+            >
+              <EmbeddedPasteSlot
+                field={props.field}
+                onPaste={(pasted) => {
+                  form.set(props.path(), pasted);
+                  revealAdded(() => root);
+                }}
+              />
+            </TypeChooser>
           </div>
         }
       >
@@ -564,6 +573,16 @@ function RelationEditor(props: {
     revealAdded(lastAdded);
   };
   const only = () => choicesOf(groups());
+  const pasteSlot = () => (
+    <RelationPasteSlot
+      options={options()}
+      env={props.env}
+      onPaste={(pasted) => {
+        form.set(where(), pasted);
+        revealAdded(lastAdded);
+      }}
+    />
+  );
   return (
     <div class="flex w-full min-w-0 flex-col gap-4">
       <Show
@@ -609,15 +628,17 @@ function RelationEditor(props: {
                 </Show>
               }
             >
-              <TypeMenu
+              {/* (what can be pasted is the last part of the types to choose from) */}
+              <TypeChooser
                 groups={groups()}
                 label={
                   props.bare ? t("add", "Add") : t("add_named", "Add {name}", { name: props.label })
                 }
                 buttonClass={addSlotClass}
-                wide
                 onChoose={add}
-              />
+              >
+                {pasteSlot()}
+              </TypeChooser>
             </Show>
           }
         >
@@ -629,15 +650,8 @@ function RelationEditor(props: {
               revealAdded(lastAdded, false);
             }}
           />
+          {pasteSlot()}
         </Show>
-        <RelationPasteSlot
-          options={options()}
-          env={props.env}
-          onPaste={(pasted) => {
-            form.set(where(), pasted);
-            revealAdded(lastAdded);
-          }}
-        />
       </Show>
     </div>
   );

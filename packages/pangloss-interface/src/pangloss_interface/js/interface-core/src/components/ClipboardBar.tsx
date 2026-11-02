@@ -1,4 +1,4 @@
-import { createSignal, For, Show } from "solid-js";
+import { createEffect, createSignal, For, onSettled, Show } from "solid-js";
 import { useClipboard, useModels, useNavExpanded, useTranslations } from "../context";
 import { outline } from "../schema";
 import type { FormData } from "../schema";
@@ -10,7 +10,8 @@ import { ClipLabel, CutIcon, CopyIcon } from "./form/Clip";
  * page has a form (making an item, or changing one), and can
  * be folded to its head line. Each thing is a card: its type and label, and what is inside it, two
  * levels down (all of it when the bar is opened out). Pasting is done in a form, at the place
- * offered for it.
+ * offered for it. While it is there the page has room at the bottom as tall as it is, so the end of
+ * the form can be scrolled clear of it (and what is scrolled into view stops above it).
  */
 export function ClipboardBar() {
   const clipboard = useClipboard();
@@ -21,10 +22,33 @@ export function ClipboardBar() {
   // (only where something can be pasted: on a page with a form)
   const shown = () => entries().length > 0 && !!clipboard?.formShown();
   const collapsed = () => clipboard?.collapsed() ?? false;
+  // (how tall it is, followed as it folds, opens out and has more or fewer things)
+  const [height, setHeight] = createSignal(0);
+  let bar: HTMLElement | undefined;
+  onSettled(() => {
+    if (!bar || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(() => setHeight(bar!.offsetHeight));
+    observer.observe(bar);
+    return () => observer.disconnect();
+  });
+  createEffect(
+    () => (shown() ? height() : 0),
+    (tall) => {
+      // (with a little more, so the last thing is not flush against it)
+      const room = tall > 0 ? `${tall + 16}px` : "";
+      document.body.style.paddingBottom = room;
+      document.documentElement.style.scrollPaddingBottom = room;
+      return () => {
+        document.body.style.paddingBottom = "";
+        document.documentElement.style.scrollPaddingBottom = "";
+      };
+    },
+  );
   const barButton =
     "flex cursor-pointer items-center px-3 text-xs font-semibold uppercase select-none hover:bg-slate-300/50";
   return (
     <aside
+      ref={bar}
       aria-label={t("clipboard", "Clipboard")}
       aria-hidden={shown() ? undefined : "true"}
       class={[

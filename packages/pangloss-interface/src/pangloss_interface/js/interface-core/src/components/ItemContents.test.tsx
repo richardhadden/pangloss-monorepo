@@ -55,6 +55,15 @@ const definitions: ModelDefinitions = {
       field("year", "year"),
       field("statements", "statements", "relation"),
       field("involves", "involves", "relation"),
+      {
+        ...field("known_as", "knownAs", "annotatedValue"),
+        model: "WithCertainty",
+        valueType: { type: "string" },
+      } as unknown as FieldDefinition,
+    ]),
+    WithCertainty: model("WithCertainty", "AnnotatedValue", [
+      field("value", "value"),
+      field("certainty", "certainty"),
     ]),
     Activity: model("Activity", "Document", [
       field("activity_type", "activityType"),
@@ -352,4 +361,17 @@ test("what refers to an item through a reified relation is shown with the field,
   expect(dd.textContent).toContain("high");
   expect(dd.textContent).toContain("Negative");
   expect(dd.querySelector('a[href="/Place/p1"]')).toBeTruthy();
+});
+
+test("an annotated value is its value, as the field's own, without its type or a key for the value; then what is said of it", () => {
+  const host = show({
+    id: "f1",
+    type: "Factoid",
+    knownAs: { value: "Karolus Magnus", certainty: 5 },
+  });
+  expect([...host.querySelectorAll("dt")].map((dt) => dt.textContent)).toEqual(["known as", "certainty"]);
+  expect(host.textContent).not.toMatch(/WithCertainty|value/);
+  const value = [...host.querySelectorAll("span")].find((span) => span.textContent === "Karolus Magnus")!;
+  const certainty = [...host.querySelectorAll("dt")].find((dt) => dt.textContent === "certainty")!;
+  expect(value.compareDocumentPosition(certainty) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 });
