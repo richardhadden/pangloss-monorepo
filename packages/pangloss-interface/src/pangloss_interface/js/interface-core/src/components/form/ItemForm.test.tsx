@@ -67,7 +67,7 @@ const definitions = {
     Person: model("Person", { kind: "Entity" }),
     Factoid: model("Factoid", {
       fields: [
-        literal("year", { type: "int" }),
+        literal("year", { type: "int" }, { required: true }),
         literal("aliases", { type: "list", item: { type: "str" } }),
         relation("author", [{ kind: "entity", type: "Person", edgeModel: null }], false),
         relation("statements", [doc("Activity"), doc("Transfer"), negative]),
@@ -274,6 +274,40 @@ test("the matches are chosen with the arrow keys and Enter, which does not save 
   expect(sent.filter((call) => call.method !== "GET")).toEqual([]);
   expect(document.body.textContent).toContain("Bob");
   expect(document.body.querySelector('[role="option"]')).toBeNull();
+});
+
+test("the label is a heading that grows with a long label: one line of text, so Enter adds no line and pasted line breaks are spaces", async () => {
+  const { client, sent } = fakeClient(() => ({ id: "f1", type: "Factoid", label: "F" }));
+  show(client);
+  await settle();
+  const box = byLabel<HTMLTextAreaElement>("Label");
+  expect(box.tagName).toBe("TEXTAREA");
+  expect(box.getAttribute("rows")).toBe("1");
+  const enter = new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true });
+  box.dispatchEvent(enter);
+  expect(enter.defaultPrevented).toBe(true);
+  type("Label", "The fall\nof Rome");
+  await settle();
+  expect(box.value).toBe("The fall of Rome");
+  click(button("Save"));
+  await settle();
+  expect(sent.find((call) => call.method === "POST")!.body.label).toBe("The fall of Rome");
+});
+
+test("the mark of a required field turns green once something is in it", async () => {
+  const { client } = fakeClient(() => ({ id: "f1", type: "Factoid", label: "F" }));
+  show(client);
+  await settle();
+  const mark = () =>
+    [...document.body.querySelectorAll("dt")].find((dt) => dt.textContent?.startsWith("year"))!.querySelector("span")!;
+  expect(mark().textContent).toBe(" *");
+  expect(mark().className).not.toContain("text-green-600");
+  type("year", "476");
+  await settle();
+  expect(mark().className).toContain("text-green-600");
+  type("year", "");
+  await settle();
+  expect(mark().className).not.toContain("text-green-600");
 });
 
 test("an edit sends the whole item back with the version it was loaded at; what the API reads only is left out", async () => {

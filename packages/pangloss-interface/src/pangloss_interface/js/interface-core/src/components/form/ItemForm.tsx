@@ -65,7 +65,7 @@ export function ItemForm(props: ItemFormProps) {
     <ItemFormProvider state={state}>
       <Console
         type={props.type}
-        label={creating() ? t("new", "New") : label()}
+        label={label() ?? (creating() ? t("new", "New") : undefined)}
         meta={props.meta}
       >
         <ConsoleButton label={t("cancel", "Cancel")} onClick={props.onCancel} tone="danger">
@@ -97,7 +97,7 @@ export function ItemForm(props: ItemFormProps) {
         </ConsoleButton>
       </Console>
       <form
-        class="flex flex-col gap-4"
+        class="flex flex-col gap-6"
         aria-label={t("edit_form", "{type} form", { type: modelName(props.type) })}
         onSubmit={(event) => {
           event.preventDefault();
@@ -133,7 +133,7 @@ export function ItemForm(props: ItemFormProps) {
           </ul>
         </Show>
         <Show when={model()}>
-          <ItemFields model={model()!} path={() => []} creating={creating()} />
+          <ItemFields model={model()!} path={() => []} creating={creating()} title />
         </Show>
       </form>
     </ItemFormProvider>

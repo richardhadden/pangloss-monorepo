@@ -25,6 +25,8 @@ export function TypeMenu(props: {
   buttonClass?: string;
   /** Open the menu leftwards from the right edge of the button (for a button at the right of a row) */
   alignRight?: boolean;
+  /** As wide as what it is in (an add slot at the end of a list) */
+  wide?: boolean;
 }) {
   const definitions = useModels();
   const { t, modelName } = useTranslations();
@@ -91,7 +93,12 @@ export function TypeMenu(props: {
   return (
     <Show when={choices().length > 0}>
       <div
-        class={["relative", { "inline-block": !props.buttonClass }, { flex: !!props.buttonClass }]}
+        class={[
+          "relative",
+          { "inline-block": !props.buttonClass },
+          { flex: !!props.buttonClass },
+          { "w-full": !!props.wide },
+        ]}
         ref={root}
         onKeyDown={onKeyDown}
       >

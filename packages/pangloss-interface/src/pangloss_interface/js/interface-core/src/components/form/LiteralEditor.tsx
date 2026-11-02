@@ -3,7 +3,16 @@ import type { Accessor } from "solid-js";
 import { useItemForm, useModels, useTranslations } from "../../context";
 import type { FieldType, Validator } from "../../types";
 import type { Path } from "../../schema";
-import { inputClass, smallButtonClass } from "./styles";
+import {
+  addSlotClass,
+  dateTimeWidthClass,
+  dateWidthClass,
+  inputClass,
+  joinedFrameClass,
+  joinedRemoveClass,
+  numberWidthClass,
+  smallButtonClass,
+} from "./styles";
 
 type Typed<T extends FieldType["type"]> = Extract<FieldType, { type: T }>;
 
@@ -12,6 +21,18 @@ function limit(validators: Validator[] | undefined, name: string, key: string): 
   const found = validators?.find((validator) => validator.name === name)?.[key];
   return typeof found === "number" ? found : undefined;
 }
+
+/** How wide an input for a value of the type is: short for what is always short (a number, a date), else "" (the whole width) */
+function widthOf(type: FieldType): string {
+  if (type.type === "int" || type.type === "float") return numberWidthClass;
+  if (type.type === "date") return dateWidthClass;
+  if (type.type === "datetime") return dateTimeWidthClass;
+  return "";
+}
+
+// (a value in a single box, which the remove button of a list can be joined on to)
+const joinable = (type: FieldType) =>
+  ["int", "float", "str", "uuid", "decimal", "date", "datetime", "enum", "literal"].includes(type.type);
 
 /** A value of the type that is not a literal the form knows (or that is in a list of the field's): the JSON, to edit as it is */
 export function JsonEditor(props: { path: Accessor<Path>; label: string }) {
@@ -58,30 +79,52 @@ function ListEditor(props: {
   const items = () => (form.get(props.path()) as unknown[] | undefined) ?? [];
   const blank = () => (props.item.type === "typedDict" ? {} : props.item.type === "bool" ? false : "");
   return (
-    <div class="flex w-full flex-col items-start gap-1">
+    <div class={["flex w-full flex-col gap-1.5", widthOf(props.item)]}>
       {/* (by place, not by value: the value changes with every key) */}
       <For each={items()} keyed={false}>
         {(_, index) => (
-          <div class="flex w-full items-start gap-2">
-            <LiteralEditor
-              type={props.item}
-              path={() => [...props.path(), index]}
-              label={`${props.label} ${index + 1}`}
-            />
-            <button
-              type="button"
-              class={smallButtonClass}
-              aria-label={t("remove_item", "Remove {name}", { name: `${props.label} ${index + 1}` })}
-              onClick={() => form.remove([...props.path(), index])}
-            >
-              ✕
-            </button>
-          </div>
+          <Show
+            when={joinable(props.item)}
+            fallback={
+              <div class="flex w-full items-start gap-2">
+                <LiteralEditor
+                  type={props.item}
+                  path={() => [...props.path(), index]}
+                  label={`${props.label} ${index + 1}`}
+                />
+                <button
+                  type="button"
+                  class={smallButtonClass}
+                  aria-label={t("remove_item", "Remove {name}", { name: `${props.label} ${index + 1}` })}
+                  onClick={() => form.remove([...props.path(), index])}
+                >
+                  ✕
+                </button>
+              </div>
+            }
+          >
+            <div class={joinedFrameClass}>
+              <LiteralEditor
+                type={props.item}
+                path={() => [...props.path(), index]}
+                label={`${props.label} ${index + 1}`}
+              />
+              <button
+                type="button"
+                class={joinedRemoveClass}
+                aria-label={t("remove_item", "Remove {name}", { name: `${props.label} ${index + 1}` })}
+                title={t("remove_item", "Remove {name}", { name: `${props.label} ${index + 1}` })}
+                onClick={() => form.remove([...props.path(), index])}
+              >
+                ✕
+              </button>
+            </div>
+          </Show>
         )}
       </For>
       <button
         type="button"
-        class={smallButtonClass}
+        class={addSlotClass}
         aria-label={t("add_to", "Add to {name}", { name: props.label })}
         onClick={() => form.set([...props.path(), items().length], blank())}
       >
@@ -127,7 +170,7 @@ export function LiteralEditor(props: {
       <Match when={props.type.type === "int" || props.type.type === "float"}>
         <input
           type="number"
-          class={inputClass}
+          class={[inputClass, numberWidthClass]}
           aria-label={props.label}
           step={props.type.type === "int" ? 1 : "any"}
           min={limit(props.validators, "Ge", "ge")}
@@ -153,7 +196,7 @@ export function LiteralEditor(props: {
       <Match when={props.type.type === "date"}>
         <input
           type="date"
-          class={inputClass}
+          class={[inputClass, dateWidthClass]}
           aria-label={props.label}
           value={text()}
           onInput={(event) => write(event.currentTarget.value)}
@@ -162,7 +205,7 @@ export function LiteralEditor(props: {
       <Match when={props.type.type === "datetime"}>
         <input
           type="datetime-local"
-          class={inputClass}
+          class={[inputClass, dateTimeWidthClass]}
           aria-label={props.label}
           value={text().slice(0, 16)}
           onInput={(event) => write(event.currentTarget.value)}
@@ -211,7 +254,7 @@ export function LiteralEditor(props: {
         />
       </Match>
       <Match when={props.type.type === "typedDict"}>
-        <div class="grid w-full grid-cols-[8rem_minmax(0,1fr)] items-center gap-x-3 gap-y-1">
+        <div class="grid w-full grid-cols-[8rem_minmax(0,1fr)] items-center gap-x-4 gap-y-2">
           <For each={Object.entries((props.type as Typed<"typedDict">).fields)}>
             {([key, fieldType]) => (
               <>

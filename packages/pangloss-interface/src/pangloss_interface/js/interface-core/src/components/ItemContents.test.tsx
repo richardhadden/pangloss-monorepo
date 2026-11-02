@@ -274,7 +274,10 @@ test("a reified relation shows its own fields, apart from what it holds", () => 
     "involves",
     "certainty",
   ]);
-  expect(host.querySelector('a[href="/Place/p1"]')).toBeTruthy();
+  // (what it holds comes first, above what is said of the relation)
+  const target = host.querySelector('a[href="/Place/p1"]')!;
+  const own = [...host.querySelectorAll("dt")].find((dt) => dt.textContent === "certainty")!;
+  expect(target.compareDocumentPosition(own) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 });
 
 test("the full trail of a chip: spaces and the documents it is nested in, outermost first", () => {
@@ -342,11 +345,11 @@ test("what refers to an item through a reified relation is shown with the field,
     ],
   });
   const dd = host.querySelector("dd")!;
-  // (the document is a block, not a chip, with its type linking to it)
-  expect(dd.querySelector('a[href="/Factoid/f1"]')?.textContent).toBe(
-    "Factoid",
-  );
-  expect(dd.querySelector('a[href="/Factoid/f1"]')?.children.length).toBe(0);
+  // (the document is a block, not a chip: its head bar, with its type, is the link to it; its fields are not in the link)
+  const link = dd.querySelector('a[href="/Factoid/f1"]')!;
+  expect(link.textContent).toBe("Factoid");
+  expect(link.querySelector("dl")).toBeNull();
+  expect(link.className).not.toContain("underline");
   expect(dd.textContent).toContain("involves");
   expect(dd.textContent).toContain("high");
   expect(dd.textContent).toContain("Negative");

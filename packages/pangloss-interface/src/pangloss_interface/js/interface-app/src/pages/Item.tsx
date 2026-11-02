@@ -21,6 +21,7 @@ import {
   untrack,
 } from "solid-js";
 import { itemQuery } from "../queries";
+import { Page } from "../Page";
 
 // An item that is not there for this reader: it does not exist, or (as an unpublished document is to
 // someone who is not logged in) they may not see it. The API says which, but the page does not tell.
@@ -91,7 +92,7 @@ export default function EntityPage(props: RouteProps<"/:type/:id">) {
   const definitions = useModels();
   const model = () => getModel(definitions, item().type);
   return (
-    <main class="mx-auto w-full max-w-[100rem] px-6 py-6">
+    <Page>
       {/* (the type is the item's own, which can be a subtype of the one in the address) */}
       <Console
         type={shown()?.type ?? props.params.type}
@@ -133,7 +134,7 @@ export default function EntityPage(props: RouteProps<"/:type/:id">) {
             }}
             fallback={
               <>
-                <h1 class="mb-6 text-xl font-semibold">
+                <h1 class="mb-6 border-b-[0.5px] border-slate-400/70 pt-1 pb-2 text-2xl font-semibold">
                   {item().label ?? item().id}
                 </h1>
                 <ItemContents item={item()} />
@@ -142,6 +143,6 @@ export default function EntityPage(props: RouteProps<"/:type/:id">) {
           />
         </Loading>
       </Errored>
-    </main>
+    </Page>
   );
 }

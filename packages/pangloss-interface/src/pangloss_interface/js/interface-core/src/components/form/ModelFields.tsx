@@ -1,4 +1,4 @@
-import { createMemo, createSignal, untrack, For, Match, Show, Switch } from "solid-js";
+import { createEffect, createMemo, createSignal, onSettled, untrack, For, Match, Show, Switch } from "solid-js";
 import type { Accessor, ParentProps } from "solid-js";
 import {
   createItemFormState,
@@ -9,7 +9,7 @@ import {
   useModels,
   useTranslations,
 } from "../../context";
-import { kindTint, spaceTint } from "../../primitives";
+import { kindRule, kindTint, spaceTint } from "../../primitives";
 import {
   blankItem,
   cleanForSave,
@@ -34,38 +34,47 @@ import { createItem, ApiError, problemsOf } from "../../api";
 import type { Summary } from "../../api";
 import { EntityPicker } from "./EntityPicker";
 import { JsonEditor, LiteralEditor } from "./LiteralEditor";
-import { inputClass, joinedButtonClass, smallButtonClass } from "./styles";
+import {
+  addSlotClass,
+  inputClass,
+  joinedButtonClass,
+  joinedRemoveClass,
+  headBarClass,
+  headButtonClass,
+  headLabelClass,
+  nestedClass,
+  plainTint,
+  smallButtonClass,
+  typeChipClass,
+} from "./styles";
 import { TypeMenu } from "./TypeMenu";
 
 const isObject = (value: unknown): value is FormData =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
-/** A box for something nested: its type at the head (tinted), what it is called, a fold and a remove button */
+/**
+ * Something nested: a head line with its type (a tinted chip), what it is called, a fold and a
+ * remove button; under it, its fields, indented, with a rule in the colour of its type down the left.
+ */
 function Block(
   props: ParentProps<{
     type: string;
     label?: string;
     tint: string;
+    rule: string;
     onRemove?: () => void;
   }>,
 ) {
   const { t, modelName } = useTranslations();
   const [folded, setFolded] = createSignal(false);
   return (
-    <div class="w-full rounded-sm border-[0.5px] border-slate-400/70 bg-slate-100/50">
-      <div class="flex items-stretch border-b-[0.5px] border-slate-400/70">
-        <span
-          class={[
-            "flex shrink-0 items-center px-3 py-1 text-xs font-semibold uppercase select-none",
-            props.tint,
-          ]}
-        >
-          {modelName(props.type)}
-        </span>
-        <span class="min-w-0 flex-1 truncate px-3 py-1 text-sm">{props.label}</span>
+    <div class="flex w-full min-w-0 flex-col">
+      <div class={headBarClass}>
+        <span class={[typeChipClass, props.tint || plainTint]}>{modelName(props.type)}</span>
+        <span class={headLabelClass}>{props.label}</span>
         <button
           type="button"
-          class="cursor-pointer px-3 text-xs select-none hover:bg-slate-400/30"
+          class={[headButtonClass, "text-slate-500 hover:bg-slate-400/30"]}
           aria-expanded={folded() ? "false" : "true"}
           aria-label={t("fold", "Fold or unfold {name}", { name: modelName(props.type) })}
           onClick={() => setFolded(!folded())}
@@ -77,7 +86,7 @@ function Block(
         <Show when={props.onRemove}>
           <button
             type="button"
-            class="cursor-pointer px-3 text-xs text-red-800 select-none hover:bg-red-400/30"
+            class={[headButtonClass, "text-red-800 hover:bg-red-400/30"]}
             aria-label={t("remove_item", "Remove {name}", { name: modelName(props.type) })}
             onClick={() => props.onRemove?.()}
           >
@@ -86,23 +95,61 @@ function Block(
         </Show>
       </div>
       <Show when={!folded()}>
-        <div class="flex flex-col gap-2 p-3">{props.children}</div>
+        {/* (the rule starts at the bar: what is under it hangs from the head) */}
+        <div class={["ml-2 pt-4", nestedClass, props.rule]}>{props.children}</div>
       </Show>
     </div>
   );
 }
 
-/** One labelled row of a form: the name on the left, the editor on the right */
-function Row(props: ParentProps<{ name: string; required?: boolean; description?: string | null; bare?: boolean }>) {
+// (the names of the fields in a column on the left, their editors beside them)
+const fieldGridClass = "grid w-full grid-cols-[10rem_minmax(0,1fr)] gap-x-6 gap-y-5";
+
+/**
+ * Whether a field has something in it, for its required mark: not nothing, an empty text or an empty
+ * list; a thing that is only its type (an entity not yet chosen) is nothing, and so is an annotated
+ * value without its value. (Only for the mark: whether it is valid is the API's to say.)
+ */
+function filled(value: unknown): boolean {
+  if (value === null || value === undefined || value === "") return false;
+  if (Array.isArray(value)) return value.some(filled);
+  if (isObject(value)) {
+    if ("value" in value) return filled(value.value);
+    return Object.keys(value).some((key) => key !== "type");
+  }
+  return true;
+}
+
+/**
+ * One labelled row of a form: the name on the left, the editor on the right. A required field has
+ * a mark after its name, green once it is `met` (something is in it).
+ */
+function Row(
+  props: ParentProps<{
+    name: string;
+    required?: boolean;
+    met?: boolean;
+    description?: string | null;
+    bare?: boolean;
+  }>,
+) {
   return (
     <Show
       when={!props.bare}
       fallback={<div class="col-span-2 min-w-0">{props.children}</div>}
     >
-      <dt class="pt-1 text-xs font-semibold text-slate-500 uppercase" title={props.description ?? undefined}>
+      <dt class="pt-2 text-xs font-semibold text-slate-500 uppercase">
         {props.name}
         <Show when={props.required}>
-          <span aria-hidden="true"> *</span>
+          <span
+            aria-hidden="true"
+            class={["transition-colors", { "text-green-600": !!props.met }]}
+          >
+            {" *"}
+          </span>
+        </Show>
+        <Show when={props.description}>
+          <span class="mt-0.5 block text-xs font-normal text-slate-400 normal-case">{props.description}</span>
         </Show>
       </dt>
       <dd class="flex min-w-0 flex-col items-start gap-1">{props.children}</dd>
@@ -114,7 +161,7 @@ function Row(props: ParentProps<{ name: string; required?: boolean; description?
  * The editors of the fields of a model, each in its row, in the order of the model, for the
  * object at `path` of the form. `env` says what the type variables of a generic model stand for
  * here; `skip` leaves fields out, and `bare` is the field (a reified relation's target) shown
- * without its name.
+ * without its name, first: what the thing holds, then what is said of it.
  */
 export function ModelFields(props: {
   model: ModelDefinition;
@@ -123,15 +170,21 @@ export function ModelFields(props: {
   skip?: string[];
   bare?: string;
 }) {
+  const form = useItemForm();
   const { fieldName } = useTranslations();
+  const fields = () => [
+    ...props.model.fields.filter((field) => field.key === props.bare),
+    ...props.model.fields.filter((field) => field.key !== props.bare),
+  ];
   return (
-    <dl class="grid w-full grid-cols-[10rem_minmax(0,1fr)] gap-x-4 gap-y-2">
-      <For each={props.model.fields}>
+    <dl class={fieldGridClass}>
+      <For each={fields()}>
         {(field) => (
           <Show when={!(props.skip ?? []).includes(field.key)}>
             <Row
               name={fieldName(props.model.name, field.name)}
               required={field.required}
+              met={filled(form.get([...props.path(), field.key]))}
               description={field.description}
               bare={field.key === props.bare}
             >
@@ -150,12 +203,17 @@ export function ModelFields(props: {
   );
 }
 
-/** What a Document or an Entity has beside its fields: its label (and, to make one, its id if it can be chosen) */
+/**
+ * What a Document or an Entity has beside its fields: its label (and, to make one, its id if it
+ * can be chosen). With `title` (the item the page or the dialog is for) the label is a heading,
+ * a large box above the rest, rather than a row like the fields.
+ */
 export function ItemFields(props: {
   model: ModelDefinition;
   path: Accessor<Path>;
   /** Show the id too, for an item that is being made */
   creating?: boolean;
+  title?: boolean;
 }) {
   const form = useItemForm();
   const { t, fieldName } = useTranslations();
@@ -163,36 +221,110 @@ export function ItemFields(props: {
     const value = form.get([...props.path(), key]);
     return typeof value === "string" ? value : "";
   };
+  const labelInput = (classes: string) => (
+    <input
+      type="text"
+      class={classes}
+      aria-label={t("label", "Label")}
+      aria-required={props.model.requireLabel ? "true" : undefined}
+      value={text("label")}
+      onInput={(event) => form.set([...props.path(), "label"], event.currentTarget.value)}
+    />
+  );
   return (
-    <div class="flex flex-col gap-2">
-      <dl class="grid w-full grid-cols-[10rem_minmax(0,1fr)] gap-x-4 gap-y-2">
-        <Row name={t("label", "Label")} required={props.model.requireLabel}>
-          <input
-            type="text"
-            class={inputClass}
-            aria-label={t("label", "Label")}
-            value={text("label")}
-            onInput={(event) => form.set([...props.path(), "label"], event.currentTarget.value)}
-          />
-        </Row>
-        <Show when={props.creating && props.model.createWithId}>
-          <Row name={fieldName(props.model.name, "id")}>
-            <input
-              type="text"
-              class={inputClass}
-              aria-label={t("id", "ID")}
-              value={text("id")}
-              onInput={(event) => form.set([...props.path(), "id"], event.currentTarget.value)}
-            />
-          </Row>
-        </Show>
-      </dl>
+    <div class="flex flex-col gap-5">
+      <Show when={props.title}>
+        <TitleBox
+          value={text("label")}
+          label={t("label", "Label")}
+          required={props.model.requireLabel}
+          onInput={(value) => form.set([...props.path(), "label"], value)}
+        />
+      </Show>
+      <Show when={!props.title || (props.creating && props.model.createWithId)}>
+        <dl class={fieldGridClass}>
+          <Show when={!props.title}>
+            <Row name={t("label", "Label")} required={props.model.requireLabel} met={text("label") !== ""}>
+              {labelInput(inputClass)}
+            </Row>
+          </Show>
+          <Show when={props.creating && props.model.createWithId}>
+            <Row name={fieldName(props.model.name, "id")}>
+              <input
+                type="text"
+                class={inputClass}
+                aria-label={t("id", "ID")}
+                value={text("id")}
+                onInput={(event) => form.set([...props.path(), "id"], event.currentTarget.value)}
+              />
+            </Row>
+          </Show>
+        </dl>
+      </Show>
       <ModelFields
         model={props.model}
         path={props.path}
         env={{}}
       />
     </div>
+  );
+}
+
+/**
+ * The label of the item as a heading: a box in large type, one line high, that grows a line at a
+ * time as a long label wraps (to the width of the page, and again when that changes). A label is
+ * one line of text, only wrapped: Enter makes no new line, and the line breaks of what is pasted
+ * are spaces.
+ */
+function TitleBox(props: {
+  value: string;
+  label: string;
+  required?: boolean;
+  onInput: (value: string) => void;
+}) {
+  let box: HTMLTextAreaElement | undefined;
+  // (as tall as what is in it: first none, so that it can shrink too)
+  const fit = () => {
+    if (!box) return;
+    box.style.height = "auto";
+    box.style.height = `${box.scrollHeight}px`;
+  };
+  createEffect(
+    () => props.value,
+    () => {
+      fit();
+    },
+  );
+  onSettled(() => {
+    fit();
+    window.addEventListener("resize", fit);
+    return () => window.removeEventListener("resize", fit);
+  });
+  return (
+    <textarea
+      ref={box}
+      rows={1}
+      class="block w-full min-w-0 resize-none overflow-hidden border-b-[0.5px] border-slate-400/70 bg-transparent pt-1 pb-2 text-2xl leading-snug font-semibold placeholder:font-normal placeholder:text-slate-400 focus:border-slate-600 focus:outline-none"
+      aria-label={props.label}
+      aria-required={props.required ? "true" : undefined}
+      placeholder={`${props.label}${props.required ? " *" : ""}`}
+      value={props.value}
+      onKeyDown={(event) => {
+        // (Enter in a one-line field: nothing, rather than a line break, or the form's submit)
+        if (event.key === "Enter") event.preventDefault();
+      }}
+      onInput={(event) => {
+        const box = event.currentTarget;
+        const flat = box.value.replace(/\r?\n/g, " ");
+        if (flat !== box.value) {
+          const at = box.selectionStart;
+          box.value = flat;
+          box.setSelectionRange(at, at);
+        }
+        props.onInput(flat);
+        fit();
+      }}
+    />
   );
 }
 
@@ -283,30 +415,42 @@ function EmbeddedEditor(props: { field: EmbeddedField; path: Accessor<Path>; lab
     form.set(props.path(), { ...kept, type: choice.type });
   };
   return (
-    <div class="flex w-full flex-col gap-2">
-      <div class="flex items-center gap-2">
-        <TypeMenu
-          groups={groups()}
-          label={
-            value()
-              ? modelName(String(value()!.type))
-              : t("add_named", "Add {name}", { name: props.label })
-          }
-          onChoose={choose}
-        />
-        <Show when={value() && !props.field.required}>
-          <button
-            type="button"
-            class={smallButtonClass}
-            aria-label={t("remove_item", "Remove {name}", { name: props.label })}
-            onClick={() => form.remove(props.path())}
-          >
-            ✕
-          </button>
-        </Show>
-      </div>
+    <div class="flex w-full min-w-0 flex-col">
+      <Show
+        when={value()}
+        fallback={
+          <TypeMenu
+            groups={groups()}
+            label={t("add_named", "Add {name}", { name: props.label })}
+            buttonClass={addSlotClass}
+            wide
+            onChoose={choose}
+          />
+        }
+      >
+        {/* (the type chosen, which its menu changes, with the remove button joined on) */}
+        <div class="inline-flex self-start overflow-hidden rounded-sm border-[0.5px] border-slate-400/70 bg-slate-100/60">
+          <TypeMenu
+            groups={groups()}
+            label={modelName(String(value()!.type))}
+            buttonClass="flex cursor-pointer items-center gap-1 px-2 py-1 text-xs font-semibold uppercase select-none hover:bg-slate-300/50 focus:bg-slate-300/50 focus:outline-none"
+            onChoose={choose}
+          />
+          <Show when={!props.field.required}>
+            <button
+              type="button"
+              class={joinedRemoveClass}
+              aria-label={t("remove_item", "Remove {name}", { name: props.label })}
+              title={t("remove_item", "Remove {name}", { name: props.label })}
+              onClick={() => form.remove(props.path())}
+            >
+              ✕
+            </button>
+          </Show>
+        </div>
+      </Show>
       <Show when={model()}>
-        <div class="w-full pl-4">
+        <div class={["ml-2 pt-4", nestedClass, "border-slate-300"]}>
           <ModelFields model={model()!} path={props.path} env={{}} />
         </div>
       </Show>
@@ -354,7 +498,7 @@ function RelationEditor(props: {
   };
   const only = () => choicesOf(groups());
   return (
-    <div class="flex w-full flex-col items-start gap-2">
+    <div class="flex w-full min-w-0 flex-col gap-4">
       <Show
         when={props.field.many}
         fallback={
@@ -368,16 +512,21 @@ function RelationEditor(props: {
           </Show>
         }
       >
-        <For each={items()}>
-          {(_, index) => (
-            <RelationItem
-              path={() => [...props.path(), index()]}
-              options={options()}
-              env={props.env}
-              onRemove={() => form.remove([...props.path(), index()])}
-            />
-          )}
-        </For>
+        {/* (entities as chips side by side; anything bigger, a line of its own) */}
+        <Show when={items().length > 0}>
+          <div class="flex w-full min-w-0 flex-wrap items-start gap-x-2 gap-y-6">
+            <For each={items()}>
+              {(_, index) => (
+                <RelationItem
+                  path={() => [...props.path(), index()]}
+                  options={options()}
+                  env={props.env}
+                  onRemove={() => form.remove([...props.path(), index()])}
+                />
+              )}
+            </For>
+          </div>
+        </Show>
       </Show>
       <Show when={canAdd()}>
         <Show
@@ -396,6 +545,8 @@ function RelationEditor(props: {
                 label={
                   props.bare ? t("add", "Add") : t("add_named", "Add {name}", { name: props.label })
                 }
+                buttonClass={addSlotClass}
+                wide
                 onChoose={add}
               />
             </Show>
@@ -447,31 +598,30 @@ function RelationItem(props: {
   return (
     <Switch fallback={<JsonEditor path={props.path} label={type()} />}>
       <Match when={model()?.kind === "Entity"}>
-        <div class="flex w-full flex-col items-start gap-2">
+        <div
+          class={[
+            "flex min-w-0 flex-col items-start gap-3",
+            // (a chip alone is as wide as itself, beside the others; a search, or a chip with properties, the whole line)
+            { "w-full": !value()?.id || !!edgeModel() },
+            { "max-w-full": !!value()?.id && !edgeModel() },
+          ]}
+        >
           <Show
             when={value()?.id}
             fallback={
-              <div class="flex w-full items-center gap-2">
-                <PickOrCreate
-                  types={[type()]}
-                  onPick={(entity) =>
-                    form.set(props.path(), {
-                      ...value(),
-                      type: entity.type,
-                      id: entity.id,
-                      label: entity.label,
-                    })
-                  }
-                />
-                <button
-                  type="button"
-                  class={smallButtonClass}
-                  aria-label={t("remove_item", "Remove {name}", { name: modelName(type()) })}
-                  onClick={props.onRemove}
-                >
-                  ✕
-                </button>
-              </div>
+              <PickOrCreate
+                types={[type()]}
+                onPick={(entity) =>
+                  form.set(props.path(), {
+                    ...value(),
+                    type: entity.type,
+                    id: entity.id,
+                    label: entity.label,
+                  })
+                }
+                onRemove={props.onRemove}
+                removeLabel={t("remove_item", "Remove {name}", { name: modelName(type()) })}
+              />
             }
           >
             <ReferenceChip
@@ -482,7 +632,7 @@ function RelationItem(props: {
             />
           </Show>
           <Show when={edgeModel() && value()?.id}>
-            <div class="w-full pl-4">
+            <div class={["ml-2", nestedClass, kindRule("Entity", model()?.interfaceMeta?.colour)]}>
               <ModelFields
                 model={edgeModel()!}
                 path={() => [...props.path(), "edgeProperties"]}
@@ -495,22 +645,22 @@ function RelationItem(props: {
       <Match when={model()?.kind === "SemanticSpace"}>
         <div
           class={[
-            "flex w-full flex-col rounded-sm border-[0.5px] border-slate-400/70",
+            "flex w-full min-w-0 flex-col rounded-sm border-[0.5px] border-slate-400/70",
             spaceTint(model()?.interfaceMeta?.colour, Math.floor(props.path().length / 2)),
           ]}
         >
           <div class="flex items-center justify-between">
-            <span class="px-3 pt-1 text-xs font-semibold uppercase select-none">{modelName(type())}</span>
+            <span class="px-3 pt-2 text-xs font-semibold uppercase select-none">{modelName(type())}</span>
             <button
               type="button"
-              class="cursor-pointer px-3 text-xs text-red-800 select-none hover:bg-red-400/30"
+              class="cursor-pointer self-stretch px-3 pt-1 text-xs text-red-800 select-none hover:bg-red-400/30"
               aria-label={t("remove_item", "Remove {name}", { name: modelName(type()) })}
               onClick={props.onRemove}
             >
               ✕
             </button>
           </div>
-          <div class="flex min-w-0 flex-1 flex-col gap-1 p-2">
+          <div class="flex min-w-0 flex-1 flex-col gap-4 p-3">
             <ModelFields model={model()!} path={props.path} env={childEnv()} bare="contents" />
           </div>
         </div>
@@ -520,6 +670,7 @@ function RelationItem(props: {
           type={type()}
           label={label()}
           tint={kindTint(model()?.kind, model()?.interfaceMeta?.colour)}
+          rule={kindRule(model()?.kind, model()?.interfaceMeta?.colour)}
           onRemove={props.onRemove}
         >
           <ItemFields model={model()!} path={props.path} />
@@ -530,13 +681,13 @@ function RelationItem(props: {
         <Block
           type={type()}
           tint={kindTint(model()?.kind, model()?.interfaceMeta?.colour)}
+          rule={kindRule(model()?.kind, model()?.interfaceMeta?.colour)}
           onRemove={props.onRemove}
         >
           <ModelFields
             model={model()!}
             path={props.path}
             env={childEnv()}
-           
             bare={model()?.kind === "ReifiedRelation" ? "target" : undefined}
           />
         </Block>
@@ -578,7 +729,7 @@ function EntityCreateDialog(props: {
   return (
     <Modal title={t("new_item", "New {type}", { type: modelName(props.type) })} onClose={props.onClose} size="lg">
       <ItemFormProvider state={state}>
-        <div class="flex flex-col gap-4 p-6">
+        <div class="flex flex-col gap-6 p-6">
           <Show when={problems().length > 0}>
             <ul
               role="alert"
@@ -588,7 +739,7 @@ function EntityCreateDialog(props: {
             </ul>
           </Show>
           <Show when={model()}>
-            <ItemFields model={model()!} path={() => []} creating />
+            <ItemFields model={model()!} path={() => []} creating title />
           </Show>
           <div class="flex justify-end gap-2">
             <button type="button" class={smallButtonClass} onClick={props.onClose}>
@@ -610,11 +761,17 @@ function EntityCreateDialog(props: {
 }
 
 /**
- * Finds an entity of one of `types`, or makes a new one: a + button beside the search (a menu of
- * the types, when there are several) opens the form for the entity in a dialog; the entity made
- * is chosen as if it had been found.
+ * Finds an entity of one of `types`, or makes a new one: a + button joined on to the end of the
+ * search (a menu of the types, when there are several) opens the form for the entity in a dialog;
+ * the entity made is chosen as if it had been found. With `onRemove`, a remove button is joined
+ * on after it (for a place in a list that has no entity yet).
  */
-function PickOrCreate(props: { types: string[]; onPick: (entity: Summary) => void }) {
+function PickOrCreate(props: {
+  types: string[];
+  onPick: (entity: Summary) => void;
+  onRemove?: () => void;
+  removeLabel?: string;
+}) {
   const definitions = useModels();
   const { t } = useTranslations();
   const [creating, setCreating] = createSignal<string>();
@@ -630,6 +787,17 @@ function PickOrCreate(props: { types: string[]; onPick: (entity: Summary) => voi
           alignRight
           onChoose={(choice) => setCreating(choice.type)}
         />
+        <Show when={props.onRemove}>
+          <button
+            type="button"
+            class={joinedRemoveClass}
+            aria-label={props.removeLabel}
+            title={props.removeLabel}
+            onClick={() => props.onRemove?.()}
+          >
+            ✕
+          </button>
+        </Show>
       </EntityPicker>
       <Show when={creating()}>
         <EntityCreateDialog

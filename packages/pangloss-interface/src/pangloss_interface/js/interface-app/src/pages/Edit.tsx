@@ -9,6 +9,7 @@ import type { RouteProps } from "@solidjs/router";
 import { createMemo, createSignal, Errored, Loading, Show } from "solid-js";
 import { apiClient } from "../api";
 import { revalidateAll } from "../queries";
+import { Page } from "../Page";
 
 // Change an item: /Person/<id>/edit. Only for someone logged in. The form works on a copy of the
 // edit view, and saving sends it back with the version it was loaded at; if someone saved
@@ -25,7 +26,7 @@ export default function EditItem(props: RouteProps<"/:type/:id/edit">) {
   });
   return (
     <RequireLogin onCancel={() => navigate("/", { replace: true })}>
-      <main class="mx-auto w-full max-w-[100rem] px-6 py-6">
+      <Page>
         <Errored fallback={(error) => <ErrorMessage error={error()} />}>
           <Loading fallback={<p>{t("loading", "Loading…")}</p>}>
             {/* (the form starts from a copy of the item, so it is made once the item is here, and again for a new one) */}
@@ -47,7 +48,7 @@ export default function EditItem(props: RouteProps<"/:type/:id/edit">) {
             </Show>
           </Loading>
         </Errored>
-      </main>
+      </Page>
     </RequireLogin>
   );
 }

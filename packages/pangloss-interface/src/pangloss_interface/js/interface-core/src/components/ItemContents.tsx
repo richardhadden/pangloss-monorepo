@@ -1,7 +1,7 @@
 import { For, Match, Show, Switch } from "solid-js";
 import type { ParentProps } from "solid-js";
 import { useComponent, useModels, useTranslations } from "../context";
-import { kindTint, spaceTint } from "../primitives";
+import { kindRule, kindTint, spaceTint } from "../primitives";
 import { contextTrail } from "../api";
 import type { ContextLabel } from "../api";
 import { getModel } from "../schema";
@@ -12,6 +12,14 @@ import type {
 } from "../types";
 import { Customised } from "./Customised";
 import { SpaceBands } from "./SpaceBands";
+import {
+  headBarClass,
+  headBarLinkClass,
+  headLabelClass,
+  nestedClass,
+  plainTint,
+  typeChipClass,
+} from "./form/styles";
 
 type Data = Record<string, unknown>;
 
@@ -25,15 +33,53 @@ const isEmpty = (value: unknown) =>
   value === "" ||
   (Array.isArray(value) && value.length === 0);
 
-/** A key on the left, its contents on the right */
+/**
+ * A key on the left, its contents on the right: chips side by side (as many as fit on a line),
+ * anything bigger, and each text, on a line of its own
+ */
 function Row(props: ParentProps<{ name: string }>) {
   return (
     <>
       <dt class="pt-1 text-xs font-semibold text-slate-500 uppercase">
         {props.name}
       </dt>
-      <dd class="flex min-w-0 flex-col items-start gap-1">{props.children}</dd>
+      <dd class="flex min-w-0 flex-wrap items-start gap-x-2 gap-y-4">
+        {props.children}
+      </dd>
     </>
+  );
+}
+
+/**
+ * The head of something nested: a bar with its type as a chip at the left end, and its label. If it
+ * is an item of its own (`href`), the whole bar is a link to it, and darkens as a chip does.
+ */
+function Head(props: {
+  type: string;
+  tint: string;
+  label?: string;
+  href?: string;
+}) {
+  const { modelName } = useTranslations();
+  const contents = () => (
+    <>
+      <span class={[typeChipClass, props.tint || plainTint]}>
+        {modelName(props.type)}
+      </span>
+      <Show when={props.label}>
+        <span class={headLabelClass}>{props.label}</span>
+      </Show>
+    </>
+  );
+  return (
+    <Show
+      when={props.href}
+      fallback={<div class={headBarClass}>{contents()}</div>}
+    >
+      <a href={props.href} class={[headBarClass, headBarLinkClass]}>
+        {contents()}
+      </a>
+    </Show>
   );
 }
 
@@ -52,7 +98,7 @@ function Fields(props: {
 }) {
   const { fieldName, incomingName } = useTranslations();
   return (
-    <dl class="grid grid-cols-[10rem_minmax(0,1fr)] gap-x-4 gap-y-2">
+    <dl class="grid w-full grid-cols-[10rem_minmax(0,1fr)] gap-x-6 gap-y-5">
       <For each={props.model?.fields ?? []}>
         {(field) => (
           <Show
@@ -98,7 +144,7 @@ function Value(props: {
   return (
     <Switch
       fallback={
-        <span class="text-sm break-words whitespace-pre-wrap">
+        <span class="w-full text-sm break-words whitespace-pre-wrap">
           {String(props.value)}
         </span>
       }
@@ -124,7 +170,7 @@ function Value(props: {
         />
       </Match>
       <Match when={typeof props.value === "boolean"}>
-        <span class="text-sm">
+        <span class="w-full text-sm">
           {props.value ? t("yes", "Yes") : t("no", "No")}
         </span>
       </Match>
@@ -134,9 +180,10 @@ function Value(props: {
 
 /**
  * An object in a field. An Entity is a chip. A semantic space is a band, with what is in it
- * inside. An embedded object is only its rows, indented (it is in one place only). Anything else
- * (a Document inside, a reified relation, a conjunction, an annotated value) is a block with its
- * type at the head and its own rows.
+ * inside. An embedded object is only its rows, indented under a plain rule (it is in one place
+ * only). Anything else (a Document inside, a reified relation, a conjunction, an annotated value)
+ * has a head (its type as a chip, and its label) and its own rows under it, indented, with a
+ * rule in the colour of its type down the left: the look of the form.
  */
 function ObjectValue(props: {
   value: Data;
@@ -172,6 +219,8 @@ function ObjectValue(props: {
     model()?.kind === "ReifiedRelation" ||
     model()?.kind === "ReifiedRelationDocument";
   const isSpace = () => model()?.kind === "SemanticSpace";
+  const tint = () => kindTint(model()?.kind, model()?.interfaceMeta?.colour);
+  const rule = () => kindRule(model()?.kind, model()?.interfaceMeta?.colour);
   const isEmbedded = () => model()?.kind === "Embedded";
   return (
     // (a card that the model names for itself shows an embedded item or a block; a chip is the reference's card)
@@ -188,49 +237,41 @@ function ObjectValue(props: {
       fallback={
         <Switch
           fallback={
-            <SpaceBands
-              spaces={
-                props.asChip
-                  ? contextTrail(contextLabels(), String(props.value.id ?? ""))
-                  : []
-              }
-              depth={0}
-            >
-              <div class="w-full rounded-sm border-[0.5px] border-slate-400/70 bg-slate-100/50">
-                <div class="flex items-stretch border-b-[0.5px] border-slate-400/70">
-                  <span
-                    class={[
-                      "flex shrink-0 items-center border-r-[0.5px] border-slate-400/70 px-3 py-1 text-xs font-semibold uppercase select-none",
-                      kindTint(model()?.kind, model()?.interfaceMeta?.colour),
-                    ]}
-                  >
-                    <Show
-                      when={props.asChip && props.value.id}
-                      fallback={modelName(type() ?? model()?.name ?? "")}
-                    >
-                      <a
-                        href={`/${type()}/${props.value.id}`}
-                        class="hover:underline"
-                      >
-                        {modelName(type() ?? model()?.name ?? "")}
-                      </a>
-                    </Show>
-                  </span>
-                  <Show when={label()}>
-                    <span class="min-w-0 flex-1 truncate px-3 py-1 text-sm">
-                      {label()}
-                    </span>
-                  </Show>
-                </div>
-                <div class="p-3">
-                  <Fields
-                    value={props.value}
-                    model={model()}
-                    depth={props.depth}
+            // (a block takes a line of its own, with more space under it than chips have: where one ends is plain)
+            <div class="mb-4 w-full min-w-0 last:mb-0">
+              <SpaceBands
+                spaces={
+                  props.asChip
+                    ? contextTrail(
+                        contextLabels(),
+                        String(props.value.id ?? ""),
+                      )
+                    : []
+                }
+                depth={0}
+                stacked
+              >
+                <div class="flex w-full min-w-0 flex-col">
+                  <Head
+                    type={type() ?? model()?.name ?? ""}
+                    tint={tint()}
+                    label={label()}
+                    href={
+                      props.asChip && props.value.id
+                        ? `/${type()}/${props.value.id}`
+                        : undefined
+                    }
                   />
+                  <div class={["ml-2 pt-4", nestedClass, rule()]}>
+                    <Fields
+                      value={props.value}
+                      model={model()}
+                      depth={props.depth}
+                    />
+                  </div>
                 </div>
-              </div>
-            </SpaceBands>
+              </SpaceBands>
+            </div>
           }
         >
           <Match when={isChip()}>
@@ -250,51 +291,40 @@ function ObjectValue(props: {
             />
           </Match>
           <Match when={isReified()}>
-            {/* (a reified relation: its type at the head, then its own fields, if it has any, and what it holds, full width and without its field name) */}
-            <div class="w-full rounded-sm border-[0.5px] border-slate-400/70 bg-slate-100/50">
-              <div class="flex items-stretch border-b-[0.5px] border-slate-400/70">
-                <span
-                  class={[
-                    "flex shrink-0 items-center px-3 py-1 text-xs font-semibold uppercase select-none",
-                    kindTint(model()?.kind, model()?.interfaceMeta?.colour),
-                  ]}
-                >
-                  {modelName(type() ?? "")}
-                </span>
-                <Show when={label()}>
-                  <span class="min-w-0 flex-1 truncate px-3 py-1 text-sm">
-                    {label()}
-                  </span>
-                </Show>
-              </div>
-              <div class="flex flex-col gap-2 p-3">
+            {/* (a reified relation: its type at the head, then what it holds, full width and without its field name, then its own fields, if it has any) */}
+            <div class="mb-4 flex w-full min-w-0 flex-col last:mb-0">
+              <Head type={type() ?? ""} tint={tint()} label={label()} />
+              <div class={["ml-2 pt-4", nestedClass, rule()]}>
+                {/* (what it holds first, then what is said of the relation) */}
+                <div class="flex min-w-0 flex-wrap items-start gap-x-2 gap-y-4">
+                  <Value value={props.value.target} depth={props.depth} />
+                </div>
                 <Fields
                   value={props.value}
                   model={model()}
                   depth={props.depth}
                   exclude="target"
                 />
-                <Value value={props.value.target} depth={props.depth} />
               </div>
             </div>
           </Match>
           <Match when={isEmbedded()}>
             {/* (it is in this one place only: no box, no type, only its fields, indented to show they go together) */}
-            <div class="w-full pl-4">
+            <div class={["ml-2 w-full", nestedClass, "border-slate-300"]}>
               <Fields value={props.value} model={model()} depth={props.depth} />
             </div>
           </Match>
           <Match when={isSpace()}>
             <div
               class={[
-                "flex w-full flex-col rounded-sm border-[0.5px] border-slate-400/70",
+                "flex w-full min-w-0 flex-col rounded-sm border-[0.5px] border-slate-400/70",
                 spaceTint(model()?.interfaceMeta?.colour, props.depth),
               ]}
             >
-              <span class="px-3 pt-1 text-xs font-semibold uppercase select-none">
+              <span class="px-3 pt-2 text-xs font-semibold uppercase select-none">
                 {modelName(type() ?? "")}
               </span>
-              <div class="flex min-w-0 flex-1 flex-col gap-1 p-1">
+              <div class="flex min-w-0 flex-1 flex-wrap items-start gap-x-2 gap-y-6 p-3">
                 <Value value={props.value.contents} depth={props.depth + 1} />
               </div>
             </div>

@@ -3,6 +3,7 @@ import { useSearchParams } from "@solidjs/router";
 import type { RouteProps } from "@solidjs/router";
 import { createMemo, Errored, For, isPending, Loading, Show } from "solid-js";
 import { listQuery, searchOf } from "../queries";
+import { Page } from "../Page";
 
 // The list of a type of Document or Entity: /Person
 export default function EntityList(props: RouteProps<"/:type">) {
@@ -45,7 +46,7 @@ function NothingToList(props: { type: string }) {
   const Console = useComponent("Console");
   const { t, modelName } = useTranslations();
   return (
-    <main class="mx-auto w-full max-w-[100rem] px-6 py-6">
+    <Page>
       <Console type={props.type} list />
       <p>
         {t(
@@ -54,7 +55,7 @@ function NothingToList(props: { type: string }) {
           { type: modelName(props.type) },
         )}
       </p>
-    </main>
+    </Page>
   );
 }
 
@@ -73,7 +74,7 @@ function ListOfItems(props: RouteProps<"/:type">) {
   // (true while a change of the search is being answered, the old results still on show)
   const pending = () => isPending(items);
   return (
-    <main class="mx-auto w-full max-w-[100rem] px-6 py-6">
+    <Page>
       <Console
         type={props.params.type}
         list
@@ -106,6 +107,6 @@ function ListOfItems(props: RouteProps<"/:type">) {
           </ul>
         </Loading>
       </Errored>
-    </main>
+    </Page>
   );
 }

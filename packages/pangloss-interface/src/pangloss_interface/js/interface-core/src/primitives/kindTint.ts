@@ -63,3 +63,44 @@ const DEPTH_TINTS = [
 export function spaceTint(colour: Colour | null | undefined, depth: number): string {
   return colourTint(colour) || DEPTH_TINTS[depth % DEPTH_TINTS.length];
 }
+
+// (the same colours as a rule: the line down the side of what is nested in a form)
+const RULES: Record<Colour, string> = {
+  slate: "border-slate-400/60",
+  gray: "border-gray-400/60",
+  zinc: "border-zinc-400/60",
+  neutral: "border-neutral-400/60",
+  stone: "border-stone-400/60",
+  mauve: "border-mauve-400/60",
+  olive: "border-olive-400/60",
+  mist: "border-mist-400/60",
+  taupe: "border-taupe-400/60",
+  red: "border-red-400/60",
+  orange: "border-orange-400/60",
+  amber: "border-amber-400/60",
+  yellow: "border-yellow-400/60",
+  lime: "border-lime-400/60",
+  green: "border-green-400/60",
+  emerald: "border-emerald-400/60",
+  teal: "border-teal-400/60",
+  cyan: "border-cyan-400/60",
+  sky: "border-sky-400/60",
+  blue: "border-blue-400/60",
+  indigo: "border-indigo-400/60",
+  violet: "border-violet-400/60",
+  purple: "border-purple-400/60",
+  fuchsia: "border-fuchsia-400/60",
+  pink: "border-pink-400/60",
+  rose: "border-rose-400/60",
+};
+
+/**
+ * The rule down the left of a nested item in a form, in the colour of its type's tint: the
+ * colour its model chose, else Entities sky and Documents green; anything else slate.
+ */
+export function kindRule(kind: string | undefined, colour?: Colour | null): string {
+  if (colour) return RULES[colour];
+  if (kind === "Entity") return RULES.sky;
+  if (kind === "Document") return RULES.green;
+  return "border-slate-400/60";
+}
