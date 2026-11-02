@@ -27,3 +27,8 @@ Just human readable date / range
 
 
 [x] add created_by/when modified_by/when to the console. Put it to the right, in two rows, quite light slate font
+
+
+[x] In console, replace the words created and modified with icons
+[x] The date forms should not show the earliest/latest strict/fuzzy. These are not to be manually entered. Make nice components for Dates and put the in the dating package
+[x] In the console, when the type is wrapped by semantic spaces, make the font of the semantic spaces smaller

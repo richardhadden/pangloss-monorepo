@@ -43,15 +43,26 @@ export interface ViewCardProps {
   context: "result" | "reference" | "embedded" | "page";
 }
 
-/** Provisional: fixed when the forms are built */
+/**
+ * An embedded value in a form (a date, ...), under the menu of its types: what the model's own editor is
+ * given instead of the rows of its fields. `value` and `onChange` are the whole value; for its parts,
+ * `path` is where it is in the form (`useItemForm().get/set`), and `ModelFields` (with `skip`) edits
+ * any of its fields as the form would, an embedded one with its own editor again.
+ */
 export interface EditCardProps {
-  /** undefined: a new one */
-  item?: Record<string, unknown>;
+  /** The type of the value (chosen in the menu above the card) */
+  type: string;
   model: ModelDefinition;
-  value: unknown;
-  onChange: (value: unknown) => void;
-  errors?: { path: string[]; message: string }[];
-  disabled?: boolean;
+  /** The name of the field, for the labels of inputs */
+  label: string;
+  /** Where the value is in the form */
+  path: (string | number)[];
+  value: Record<string, unknown>;
+  /**
+   * Replaces the whole value (keep its `type`). To change one part, set it by its path instead: a
+   * copy of `value` taken before an earlier change has been applied would undo that change.
+   */
+  onChange: (value: Record<string, unknown>) => void;
 }
 
 export interface CustomProps {

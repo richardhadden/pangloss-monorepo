@@ -163,8 +163,12 @@ test("a count that is not all there is has a plus, and says so", async () => {
 });
 
 const metaRows = () =>
-  [...document.body.querySelectorAll('[data-testid="console-meta"] span')].map(
+  [...document.body.querySelectorAll('[data-testid="console-meta"] > span')].map(
     (row) => row.textContent,
+  );
+const metaIcons = () =>
+  [...document.body.querySelectorAll('[data-testid="console-meta"] > span')].map(
+    (row) => [row.querySelector("svg") !== null, row.getAttribute("title")],
   );
 
 test("an item says who made it and who changed it last, in two rows", async () => {
@@ -181,8 +185,15 @@ test("an item says who made it and who changed it last, in two rows", async () =
   await settle();
   const rows = metaRows();
   expect(rows.length).toBe(2);
+  // (what happened is an icon; the words are for a screen reader, and the tooltip)
   expect(rows[0]).toMatch(/^Created alice · .*2026/);
   expect(rows[1]).toMatch(/^Modified bob · .*2026/);
+  expect(metaIcons()).toEqual([
+    [true, "Created"],
+    [true, "Modified"],
+  ]);
+  const words = document.body.querySelectorAll('[data-testid="console-meta"] .sr-only');
+  expect([...words].map((word) => word.textContent?.trim())).toEqual(["Created", "Modified"]);
 });
 
 test("a row of the item's history is left out when it is not known; a list has none", async () => {

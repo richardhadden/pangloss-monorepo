@@ -1,6 +1,6 @@
 type Data = Record<string, unknown>;
 
-const MONTHS = [
+export const MONTHS = [
   "January",
   "February",
   "March",

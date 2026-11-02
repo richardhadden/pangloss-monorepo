@@ -43,7 +43,8 @@ function Wrapped(props: ParentProps<{ spaces: string[]; depth: number }>) {
           tint(),
         ]}
       >
-        <span class="flex items-center px-3 text-xs font-semibold uppercase select-none">
+        {/* (smaller than the type: the spaces are its context, the type is what the item is) */}
+        <span class="flex items-center px-2.5 text-[0.6rem] font-semibold uppercase select-none">
           {modelName(props.spaces[0] ?? "")}
         </span>
         <div class="flex items-stretch py-1 pr-1">
@@ -65,6 +66,34 @@ function when(value: string): string {
         dateStyle: "medium",
         timeStyle: "short",
       });
+}
+
+/**
+ * A row of the history of an item in the console: an icon for what happened (the `children`, the
+ * paths of a 24-unit SVG), who did it and when. What happened is said to a screen reader, and as
+ * the tooltip, in words.
+ */
+function HistoryRow(
+  props: ParentProps<{ what: string; who?: string | null; when: string }>,
+) {
+  return (
+    <span class="flex items-center gap-1 truncate" title={props.what}>
+      <svg
+        viewBox="0 0 24 24"
+        class="size-3 shrink-0 select-none fill-none stroke-current stroke-2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        {props.children}
+      </svg>
+      <span class="sr-only">{props.what} </span>
+      <Show when={props.who}>
+        <span>{props.who} </span>
+      </Show>
+      <span>· {when(props.when)}</span>
+    </span>
+  );
 }
 
 /**
@@ -139,22 +168,25 @@ export function Console(props: ConsoleProps) {
                   data-testid="console-meta"
                 >
                   <Show when={props.meta?.createdWhen}>
-                    <span class="truncate">
-                      {t("created", "Created")}
-                      {props.meta?.createdBy
-                        ? ` ${props.meta.createdBy}`
-                        : ""}{" "}
-                      · {when(props.meta!.createdWhen!)}
-                    </span>
+                    <HistoryRow
+                      what={t("created", "Created")}
+                      who={props.meta?.createdBy}
+                      when={props.meta!.createdWhen!}
+                    >
+                      {/* (a new page) */}
+                      <path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z" />
+                      <path d="M14 3v5h5M12 11v6M9 14h6" />
+                    </HistoryRow>
                   </Show>
                   <Show when={props.meta?.updatedWhen}>
-                    <span class="truncate">
-                      {t("modified", "Modified")}
-                      {props.meta?.updatedBy
-                        ? ` ${props.meta.updatedBy}`
-                        : ""}{" "}
-                      · {when(props.meta!.updatedWhen!)}
-                    </span>
+                    <HistoryRow
+                      what={t("modified", "Modified")}
+                      who={props.meta?.updatedBy}
+                      when={props.meta!.updatedWhen!}
+                    >
+                      {/* (a pen) */}
+                      <path d="M4 20h4L19 9l-4-4L4 16v4z" />
+                    </HistoryRow>
                   </Show>
                 </div>
               </Show>

@@ -81,6 +81,16 @@ These are not shown, but are read aloud, or appear when the pointer rests on the
 | `new_entity` | Make a new one | `ModelFields` (`PickOrCreate`: the + button beside the search; `aria-label` and tooltip) | the dialog is headed `new_item` |
 | `search_failed` | The search failed | `EntityPicker` | |
 | `nothing_found` | Nothing found | `EntityPicker` | |
+| `created` | Created | `Console` (the history of an item: tooltip and screen-reader text of the icon of a new page) | shown as an icon, no longer as a word |
+| `modified` | Modified | `Console` (the same, for the icon of a pen) | |
+| `date_year` | Year | `pangloss_dates` `DateEditor` (placeholder and `aria-label` of the year of an exact date) | a module's string, in the same `ui` slots |
+| `date_month` | Month | `DateEditor` (`aria-label` of the month) | the names of the months are English in the module (`MONTHS` in `format.ts`), as in `DateCard` |
+| `date_no_month` | (no month) | `DateEditor` (the empty choice of the month) | |
+| `date_day` | Day | `DateEditor` (placeholder and `aria-label` of the day) | |
+| `date_earliest` | Earliest | `DateEditor` (a range: the label of its first end) | |
+| `date_latest` | Latest | `DateEditor` (a range: the label of its last end) | |
+| `date_edtf_help` | Extended Date/Time Format: 1500-03~ is about March 1500, 15XX some year of the 1500s, 1500/1510 from 1500 to 1510 | `DateEditor` (under the EDTF box) | the examples are EDTF, not words |
+| `date_reads` | Reads | `DateEditor` (before the date as it reads) | |
 
 ## Not translated by the interface's own file
 

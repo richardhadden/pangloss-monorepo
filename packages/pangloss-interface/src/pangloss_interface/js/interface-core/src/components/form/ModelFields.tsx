@@ -48,6 +48,7 @@ import {
   typeChipClass,
 } from "./styles";
 import { TypeMenu } from "./TypeMenu";
+import { Customised } from "../Customised";
 
 const isObject = (value: unknown): value is FormData =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -451,7 +452,24 @@ function EmbeddedEditor(props: { field: EmbeddedField; path: Accessor<Path>; lab
       </Show>
       <Show when={model()}>
         <div class={["ml-2 pt-4", nestedClass, "border-slate-300"]}>
-          <ModelFields model={model()!} path={props.path} env={{}} />
+          {/* (a model can name an editor of its own, in an interface module: the dates do) */}
+          <Customised
+            slot="editCard"
+            type={String(value()!.type)}
+            props={{
+              type: String(value()!.type),
+              model: model()!,
+              label: props.label,
+              get path() {
+                return props.path();
+              },
+              get value() {
+                return value() ?? {};
+              },
+              onChange: (next) => form.set(props.path(), next),
+            }}
+            fallback={<ModelFields model={model()!} path={props.path} env={{}} />}
+          />
         </div>
       </Show>
     </div>
