@@ -14,6 +14,7 @@ import {
   NavBar,
   ReferenceChip,
   ResultButton,
+  Toasts,
 } from "./components";
 import { Button, ErrorMessage, Modal } from "./primitives";
 import type { ComponentMap } from "./types";
@@ -32,6 +33,7 @@ export const defaultComponents: ComponentMap = {
   Modal,
   ConsoleBar,
   ClipboardBar,
+  Toasts,
   Console,
 };
 

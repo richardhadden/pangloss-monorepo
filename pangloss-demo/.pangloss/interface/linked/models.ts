@@ -519,7 +519,10 @@ export const definitions: ModelDefinitions = {
           "module": "pangloss_dates",
           "name": "DateCard"
         },
-        "editCard": null
+        "editCard": {
+          "module": "pangloss_dates",
+          "name": "DateEditor"
+        }
       }
     },
     "DateCharacterisation": {
@@ -764,7 +767,10 @@ export const definitions: ModelDefinitions = {
           "module": "pangloss_dates",
           "name": "DateCard"
         },
-        "editCard": null
+        "editCard": {
+          "module": "pangloss_dates",
+          "name": "DateEditor"
+        }
       }
     },
     "EDTFDate": {
@@ -939,7 +945,10 @@ export const definitions: ModelDefinitions = {
           "module": "pangloss_dates",
           "name": "DateCard"
         },
-        "editCard": null
+        "editCard": {
+          "module": "pangloss_dates",
+          "name": "DateEditor"
+        }
       }
     },
     "ExactDate": {
@@ -1140,7 +1149,10 @@ export const definitions: ModelDefinitions = {
           "module": "pangloss_dates",
           "name": "DateCard"
         },
-        "editCard": null
+        "editCard": {
+          "module": "pangloss_dates",
+          "name": "DateEditor"
+        }
       }
     },
     "Factoid": {
@@ -1982,7 +1994,10 @@ export const definitions: ModelDefinitions = {
           "module": "pangloss_dates",
           "name": "DateCard"
         },
-        "editCard": null
+        "editCard": {
+          "module": "pangloss_dates",
+          "name": "DateEditor"
+        }
       }
     },
     "Order": {
@@ -2386,7 +2401,10 @@ export const definitions: ModelDefinitions = {
           "module": "pangloss_dates",
           "name": "DateCard"
         },
-        "editCard": null
+        "editCard": {
+          "module": "pangloss_dates",
+          "name": "DateEditor"
+        }
       }
     },
     "Person": {
@@ -3047,7 +3065,10 @@ export const definitions: ModelDefinitions = {
           "module": "pangloss_dates",
           "name": "DateCard"
         },
-        "editCard": null
+        "editCard": {
+          "module": "pangloss_dates",
+          "name": "DateEditor"
+        }
       }
     },
     "Source": {
@@ -3613,7 +3634,10 @@ export const definitions: ModelDefinitions = {
           "module": "pangloss_dates",
           "name": "DateCard"
         },
-        "editCard": null
+        "editCard": {
+          "module": "pangloss_dates",
+          "name": "DateEditor"
+        }
       }
     },
     "WithCertainty": {

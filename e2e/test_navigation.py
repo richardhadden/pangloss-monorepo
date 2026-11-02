@@ -41,6 +41,25 @@ def test_the_navigation_bar_links_to_the_lists(page: Page, data):
     expect(page.get_by_role("link", name="Marie of Burgundy")).to_be_visible()
 
 
+def test_the_types_in_the_navigation_bar_are_filtered(page: Page, data):
+    page.goto("/")
+    expand_nav(page)
+    nav = page.get_by_role("navigation", name="Main")
+    nav.get_by_label("Filter types").fill("ERSO")
+    expect(nav.get_by_role("link", name="Person")).to_be_visible()
+    expect(nav.get_by_role("link", name="Statement")).to_have_count(0)
+    nav.get_by_label("Filter types").fill("nothing like this")
+    expect(nav).to_contain_text("No types match")
+    nav.get_by_role("button", name="Clear the filter").click()
+    expect(nav.get_by_label("Filter types")).to_have_value("")
+    expect(nav.get_by_role("link", name="Statement")).to_be_visible()
+    # (Escape clears it too)
+    nav.get_by_label("Filter types").fill("stat")
+    expect(nav.get_by_role("link", name="Person")).to_have_count(0)
+    nav.get_by_label("Filter types").press("Escape")
+    expect(nav.get_by_role("link", name="Person")).to_be_visible()
+
+
 def test_the_console_names_the_type_of_the_page(page: Page, data):
     page.goto("/Person")
     expect(page.get_by_role("banner", name="Console")).to_contain_text("Persons")

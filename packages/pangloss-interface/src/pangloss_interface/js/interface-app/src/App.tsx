@@ -12,6 +12,7 @@ import {
   useNavExpanded,
   TranslationsProvider,
   SessionProvider,
+  ToastsProvider,
   useClipboard,
   useComponent,
 } from "@pangloss/interface-core";
@@ -32,6 +33,7 @@ function Frame(props: ParentProps) {
   const NavBar = useComponent("NavBar");
   const ConsoleBar = useComponent("ConsoleBar");
   const ClipboardBar = useComponent("ClipboardBar");
+  const Toasts = useComponent("Toasts");
   const { openLogin } = useLoginDialog();
   const { navPinned } = useNavExpanded();
   // Who is logged in (an async memo: what reads `user()` waits for it, inside a `Loading`).
@@ -46,21 +48,25 @@ function Frame(props: ParentProps) {
     <SessionProvider user={user}>
       {/* (each user has their own clipboard) */}
       <ClipboardProvider owner={() => user()?.username}>
-        {/* (the bar reads the user, so it waits for it: until then, one with no one logged in) */}
-        <Loading fallback={<NavBar homeHref={paths()} onLogin={openLogin} />}>
-          <NavBar
-            homeHref={paths()}
-            user={user()?.username}
-            onLogin={openLogin}
-            onLogout={logOutHere}
-          />
-        </Loading>
-        <ConsoleBar />
-        <Padded navPinned={navPinned()}>
-          <Loading fallback={<main>Loading…</main>}>{props.children}</Loading>
-        </Padded>
-        <ClipboardBar />
-        <LoginDialog />
+        {/* (the frame outlives the pages, so a toast stays when a save goes to another page) */}
+        <ToastsProvider>
+          {/* (the bar reads the user, so it waits for it: until then, one with no one logged in) */}
+          <Loading fallback={<NavBar homeHref={paths()} onLogin={openLogin} />}>
+            <NavBar
+              homeHref={paths()}
+              user={user()?.username}
+              onLogin={openLogin}
+              onLogout={logOutHere}
+            />
+          </Loading>
+          <ConsoleBar />
+          <Padded navPinned={navPinned()}>
+            <Loading fallback={<main>Loading…</main>}>{props.children}</Loading>
+          </Padded>
+          <ClipboardBar />
+          <Toasts />
+          <LoginDialog />
+        </ToastsProvider>
       </ClipboardProvider>
     </SessionProvider>
   );

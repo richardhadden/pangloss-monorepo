@@ -13,11 +13,14 @@ import type {
 import { Customised } from "./Customised";
 import { SpaceBands } from "./SpaceBands";
 import {
+  fieldGridClass,
+  fieldRowClass,
   headBarClass,
   headBarLinkClass,
   headLabelClass,
   nestedClass,
   plainTint,
+  spaceTypeClass,
   typeChipClass,
 } from "./form/styles";
 
@@ -35,18 +38,36 @@ const isEmpty = (value: unknown) =>
 
 /**
  * A key on the left, its contents on the right: chips side by side (as many as fit on a line),
- * anything bigger, and each text, on a line of its own
+ * anything bigger, and each text, on a line of its own, with a faint rule above it as in a form. A
+ * row of what refers to the item from elsewhere (`incoming`) has more room above it and between its
+ * items, and centres the chips of a line on each other (some are taller, wrapped in semantic spaces).
  */
-function Row(props: ParentProps<{ name: string }>) {
+function Row(props: ParentProps<{ name: string; incoming?: boolean }>) {
   return (
-    <>
+    <div
+      class={[
+        fieldRowClass,
+        // (more room above what refers to the item from elsewhere)
+        { "pt-7": props.incoming, "first:pt-0": props.incoming },
+      ]}
+    >
       <dt class="pt-1 text-xs font-semibold text-slate-500 uppercase">
         {props.name}
       </dt>
-      <dd class="flex min-w-0 flex-wrap items-start gap-x-2 gap-y-4">
+      <dd
+        class={[
+          "flex min-w-0 flex-wrap gap-x-2",
+          {
+            "items-start": !props.incoming,
+            "gap-y-4": !props.incoming,
+            "items-center": props.incoming,
+            "gap-y-6": props.incoming,
+          },
+        ]}
+      >
         {props.children}
       </dd>
-    </>
+    </div>
   );
 }
 
@@ -98,7 +119,7 @@ function Fields(props: {
 }) {
   const { fieldName, incomingName } = useTranslations();
   return (
-    <dl class="grid w-full grid-cols-[10rem_minmax(0,1fr)] gap-x-6 gap-y-5">
+    <dl class={fieldGridClass}>
       <For each={props.model?.fields ?? []}>
         {(field) => (
           <Show
@@ -119,7 +140,7 @@ function Fields(props: {
       <For each={props.model?.incoming ?? []}>
         {(incoming) => (
           <Show when={!isEmpty(props.value[incoming.key])}>
-            <Row name={incomingName(props.model!.name, incoming.name)}>
+            <Row name={incomingName(props.model!.name, incoming.name)} incoming>
               <Value
                 value={props.value[incoming.key]}
                 depth={props.depth}
@@ -321,9 +342,7 @@ function ObjectValue(props: {
                 spaceTint(model()?.interfaceMeta?.colour, props.depth),
               ]}
             >
-              <span class="px-3 pt-2 text-xs font-semibold uppercase select-none">
-                {modelName(type() ?? "")}
-              </span>
+              <span class={spaceTypeClass}>{modelName(type() ?? "")}</span>
               <div class="flex min-w-0 flex-1 flex-wrap items-start gap-x-2 gap-y-6 p-3">
                 <Value value={props.value.contents} depth={props.depth + 1} />
               </div>

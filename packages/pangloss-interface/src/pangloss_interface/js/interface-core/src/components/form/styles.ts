@@ -16,7 +16,7 @@ export const joinedButtonClass =
 
 // (the same, to take out what it is joined to)
 export const joinedRemoveClass =
-  "flex shrink-0 cursor-pointer items-center border-l-[0.5px] border-slate-400/70 bg-slate-100/60 px-2.5 text-xs text-red-800 select-none hover:bg-red-400/30 focus:bg-red-400/30 focus:outline-none";
+  "flex w-8 shrink-0 cursor-pointer items-center justify-center border-l-[0.5px] border-slate-400/70 bg-slate-100/60 text-xs text-red-800 select-none hover:bg-red-400/30 focus:bg-red-400/30 focus:outline-none";
 
 /**
  * A box with something joined on to its right end (a remove button): the box's own border and
@@ -29,21 +29,37 @@ export const joinedFrameClass =
 export const addSlotClass =
   "flex w-full cursor-pointer items-center justify-center gap-1 rounded-sm border-[0.5px] border-dashed border-slate-400/80 px-3 py-1.5 text-xs font-semibold text-slate-500 uppercase select-none hover:border-slate-600 hover:bg-slate-100/60 hover:text-slate-800 focus:border-slate-600 focus:outline-none";
 
+// (a field's row, a name and what is in it, in a grid of fields: a faint rule above each but the first, so
+// that where one field ends and the next starts is plain to see; translucent, so it shows on a tinted space too)
+export const fieldRuleClass = "border-slate-500/15";
+export const fieldRowClass = `col-span-2 grid grid-cols-subgrid border-t ${fieldRuleClass} pt-5 first:border-t-0 first:pt-0`;
+export const fieldGridClass = "grid w-full grid-cols-[10rem_minmax(0,1fr)] gap-x-6 gap-y-5";
+
 // (what a nested thing's fields are in: indented, with a rule down the left in the colour of its type)
 export const nestedClass = "flex min-w-0 flex-col gap-5 self-stretch border-l-2 pl-4";
 
 // (the type of a nested thing, the left end of its head bar, as tall as the bar: tinted by its kind or its
-// model's colour; a type with no tint of its own, such as a reified relation, has a plain one, so it still reads as a chip)
-export const typeChipClass = "flex shrink-0 items-center px-2.5 py-1 text-xs font-semibold uppercase select-none";
+// model's colour; a type with no tint of its own, such as a reified relation, has a plain one, so it still reads as a chip;
+// a hairline between it and the label, as in a reference chip)
+export const typeChipClass = "flex shrink-0 items-center border-r-[0.5px] border-slate-400/70 px-2.5 py-1 text-xs font-semibold uppercase select-none";
 export const plainTint = "bg-slate-400/20 text-slate-800";
 
 // (the head line of a nested thing: a faint bar as wide as it, so that where each one starts is plain to see;
-// its type at the left end, then its label (`headLabelClass`), then any buttons, each as tall as the bar)
-export const headBarClass = "flex min-w-0 items-stretch overflow-hidden rounded-sm bg-slate-400/10";
+// its type at the left end, then its label (`headLabelClass`), then any buttons, each as tall as the bar;
+// framed by the same hairline as a chip or a field, since it is something you act on)
+export const headBarClass =
+  "flex min-w-0 items-stretch overflow-hidden rounded-sm border-[0.5px] border-slate-400/70 bg-slate-400/10";
 export const headLabelClass = "min-w-0 flex-1 self-center truncate px-3 py-1 text-sm";
 
 // (the same bar as a link to the item: it darkens as a chip does, the type's tint with it)
 export const headBarLinkClass = "hover:bg-slate-400/25 active:bg-slate-400/40";
 
-// (a button at the right end of a head bar)
-export const headButtonClass = "flex cursor-pointer items-center px-3 text-xs select-none";
+// (a semantic space's type and buttons: no bar; its type a plain label, its buttons a tab in the top right
+// corner of its box, with the hairline on their inner sides, divided as in a head bar)
+export const spaceTypeClass = "px-3 py-1.5 text-xs font-semibold uppercase select-none";
+export const spaceButtonsClass =
+  "flex self-start overflow-hidden rounded-tr-sm rounded-bl-sm border-b-[0.5px] border-slate-400/70";
+
+// (a button at the right end of a head bar, with a hairline before it, as in a reference chip: square, as wide as the bar is tall)
+export const headButtonClass =
+  "flex w-7 shrink-0 cursor-pointer items-center justify-center border-l-[0.5px] border-slate-400/70 text-xs select-none";

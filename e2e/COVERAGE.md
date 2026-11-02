@@ -22,6 +22,7 @@ about her "held court at Ghent") and Charles the Bold (no role); `types` has onl
 | Language: the fade while it loads | ⬜ | (CSS on `html[data-translating]`; checked by hand) |
 | Navigation bar: the pin is kept in `localStorage` over a reload | ✅ | `test_the_pin_is_remembered` |
 | Navigation bar: sections and links to the lists of the models | ✅ | `test_the_navigation_bar_links_to_the_lists` |
+| Navigation bar: the filter above the types (part of any name, any case; nothing left: a message; ✕ and Escape clear it) | ✅ | `test_the_types_in_the_navigation_bar_are_filtered`, dev build in `test_making_and_editing`; names in other languages and accents: Vitest (`NavModelList.test.tsx`) |
 | Navigation bar on a touch device (no hover) | ⬜ | |
 | Console bar names the type (plural on a list) and the item | ✅ | `test_the_console_names_the_type_of_the_page` |
 | Console bar on an item page: created / modified, by whom and when, two light rows on the right | 🚧 | unit tests in `Console.test.tsx`; not in e2e |
@@ -37,6 +38,7 @@ about her "held court at Ghent") and Charles the Bold (no role); `types` has onl
 | List page: "truncated" (`count+`, "narrow the search") | ⬜ | needs more results than `SEARCH_HIT_LIMIT`: set it low in the e2e settings |
 | List page: scrolling loads more (virtualised, a page at a time); `?at=` kept as it is scrolled, and reloading or going back starts there | ✅ | `test_a_long_list_is_loaded_as_it_is_scrolled_and_starts_where_it_was_left` (130 people) |
 | Item page: fields, references as chips, reverse relations, no empty rows | ✅ | |
+| Item page and form: every row of fields under a faint rule; rows of reverse relations with more room, their items centred on each other in a line; head bars and chips framed by a hairline, square buttons; context labels round a chip smaller and muted | 🚧 | seen in screenshots of the demo data; no test of the look |
 | Item page: reified relations without a "target" key; the full trail (spaces and documents) round a chip; reverse through a reified relation shows the field in its document | 🚧 | unit tests in `ItemContents.test.tsx`; the e2e project has no reified relation or semantic space |
 | Dates (`pangloss_dates` module): a date is said as a person would, not listed by field | 🚧 | unit tests in the module (`format.test.ts`, `DateCard.test.tsx`); the e2e project has no dates |
 | Item page: a type in a field leads to the page of the type (module page) | ✅ | |
@@ -52,6 +54,7 @@ about her "held court at Ghent") and Charles the Bold (no role); `types` has onl
 | New item form: fields, an entity found by search, saved and shown | ✅ | |
 | A new entity made from the form (+ beside the search, dialog) is chosen | ✅ | |
 | A rejected form says what is wrong and keeps what was typed; Cancel leaves without saving | ✅ | |
+| A toast at the bottom right after an item is saved or made (also an entity made from the form); it goes after 4 s or on a click | ✅ | `test_editing_an_item_saves_a_change`, `test_an_entity_is_made_from_the_form_and_chosen`; timing and click: Vitest (`Toasts.test.tsx`) |
 | Clipboard: cut in one form, kept across pages (local storage), shown at the bottom of a form page only, pasted into another form | ✅ | `test_an_entity_cut_in_one_form_is_pasted_into_another`; ids kept or dropped, what fits where, folding: Vitest (`ItemForm.test.tsx`, `clipboard.test.ts`); the e2e project has no sub-documents to cut |
 | Form: the entity search chosen with the arrow keys and Enter (Enter does not save), Escape closes it; the menu of types (hierarchy in vertical lists, abstract classes not selectable, the same types inside each semantic space), nested documents, reified relations, conjunctions, edge properties, dates, the 412 "someone else saved" message | 🚧 | unit tests (`TypeMenu.test.tsx`, `ItemForm.test.tsx`, `typeChoices.test.ts`); the e2e project has no semantic space, conjunction, reified relation or date |
 | Search from the home page / global search | — | not built |

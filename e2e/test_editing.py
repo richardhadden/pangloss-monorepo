@@ -24,6 +24,8 @@ def test_editing_an_item_saves_a_change(logged_in: Page, data):
     page.wait_for_url(f"**/Statement/{data.statement}")
     expect(page.get_by_text("Marie held court at Bruges")).to_be_visible()
     expect(page.get_by_text("Court at Bruges").first).to_be_visible()
+    # (a toast says it was saved, on the page of the item)
+    expect(page.get_by_role("status", name="Notifications")).to_contain_text("Statement “Court at Bruges” saved")
 
 
 def test_a_new_item_is_made_with_an_entity_found_by_search(logged_in: Page, data):
@@ -73,8 +75,10 @@ def test_an_entity_is_made_from_the_form_and_chosen(logged_in: Page, data):
     dialog.get_by_role("button", name="Save").click()
     expect(dialog).to_have_count(0)
     expect(page.get_by_text("Bede", exact=True)).to_be_visible()
+    expect(page.get_by_role("status", name="Notifications")).to_contain_text("Person “Bede” created")
     page.get_by_role("button", name="Save").click()
     expect(page.get_by_role("heading", name="Statement about Bede")).to_be_visible()
+    expect(page.get_by_role("status", name="Notifications")).to_contain_text("Statement “Statement about Bede” created")
     expect(page.get_by_role("link", name="Bede")).to_be_visible()
 
 

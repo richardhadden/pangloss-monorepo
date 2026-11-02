@@ -34,3 +34,8 @@ Just human readable date / range
 [x] In the console, when the type is wrapped by semantic spaces, make the font of the semantic spaces smaller
 [x] Make date typing fields (especially EDTF) reject wrong characters
 [x] up and down buttons on number fields are ugly -- fix them properly to the right side of the input and style properly
+[x] let's have some notifcation when creating/saving was successful (toast in bottom right?)
+[x] in the nav bar, above all the item types, create a search box that filters the types — by any label language, matching any part of token. Should also have a clear search button
+[x] Reverse view from entity, e.g. http://localhost:3000/Person/01a18ca9-703f-7157-9205-0b98ab6f4e56 Items in the same field should be centered vertically (they can be different heights as some are wrapped)
+[x] More y height spacing between items in reverse relations from entity (screen shot it and take a look... a little too dense and confusing)
+[x] where we have nested context labels in chips, make the context labels smaller font, and maybe slightly mute the background colour of the context labels

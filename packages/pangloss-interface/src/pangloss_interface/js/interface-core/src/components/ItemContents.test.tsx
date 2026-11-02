@@ -138,9 +138,7 @@ test("the keys are on the left, in the order of the model, the contents on the r
 
 test("a field with nothing in it is left out; a yes or a no is said", () => {
   const host = show(activity);
-  const keys = [...host.querySelectorAll("dl")[0].children].filter(
-    (e) => e.tagName === "DT",
-  );
+  const keys = [...host.querySelectorAll("dl")[0].querySelectorAll(":scope > div > dt")];
   expect(keys.map((dt) => dt.textContent)).toEqual([
     "activity type",
     "places",

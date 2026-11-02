@@ -22,6 +22,12 @@ export interface TranslationBundle {
   ui: Record<string, string>;
   models: Record<string, ItemTexts>;
   enums: Record<string, ItemTexts>;
+  /**
+   * Every name of each model (singular and plural) in every language, so that the types can be
+   * searched for in any of them without sending the other languages' texts. Optional: a bundle
+   * made without it searches the language shown and the default.
+   */
+  modelNames?: Record<string, string[]>;
 }
 
 export type LoadTranslations = (language?: string) => Promise<TranslationBundle>;

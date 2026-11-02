@@ -8,6 +8,7 @@ import {
   useClipboard,
   useComponent,
   useModels,
+  useToasts,
   useTranslations,
 } from "../../context";
 import { ConsoleButton } from "../../primitives";
@@ -20,7 +21,8 @@ import { ItemFields } from "./ModelFields";
  * item, or `{ type }` for a new one) in the fields of the model, and Save, on the right of the
  * console, sends it all: a create, or an update that says which version it is based on. A
  * rejected form shows what is wrong, in the place the API names; an item someone else saved
- * meanwhile (a 412) is not overwritten, and the form offers to load the new version.
+ * meanwhile (a 412) is not overwritten, and the form offers to load the new version. A save that
+ * worked is told in a toast (`useToasts`).
  */
 export function ItemForm(props: ItemFormProps) {
   const Console = useComponent("Console");
@@ -36,6 +38,7 @@ export function ItemForm(props: ItemFormProps) {
   const [problems, setProblems] = createSignal<string[]>([]);
   const [stale, setStale] = createSignal(false);
   const creating = () => props.version === undefined;
+  const toasts = useToasts();
   // (tells the clipboard bar there is somewhere to paste, for as long as the page has this)
   const clipboard = useClipboard();
   onSettled(() => clipboard?.registerForm());
@@ -58,6 +61,12 @@ export function ItemForm(props: ItemFormProps) {
       } else {
         saved = await updateItem(api, props.type, String(props.initial.id), body, props.version);
       }
+      const named = { type: modelName(saved.type), label: saved.label };
+      toasts?.show(
+        props.version === undefined
+          ? t("toast_created", "{type} “{label}” created", named)
+          : t("toast_saved", "{type} “{label}” saved", named),
+      );
       props.onSaved(saved);
     } catch (error) {
       if (error instanceof ApiError && error.status === 412) setStale(true);

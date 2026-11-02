@@ -22,6 +22,8 @@ export interface Translations {
   t: (key: string, english: string, params?: Record<string, string | number>) => string;
   /** The name of a model, in the singular or the plural (the name itself when it has no text) */
   modelName: (model: string, plural?: boolean) => string;
+  /** Every name the model has: its own, and its names in all the languages (for searching the types) */
+  modelNames: (model: string) => string[];
   fieldName: (model: string, field: string) => string;
   /** A relation that other models make to this one, by its reverse name */
   incomingName: (model: string, reverse: string) => string;
@@ -45,6 +47,7 @@ const untranslated: Translations = {
   setLanguage: async () => {},
   t: (_key, english, params) => interpolate(english, params),
   modelName: (model) => model,
+  modelNames: (model) => [model],
   fieldName: (_model, field) => field.replaceAll("_", " "),
   incomingName: (_model, reverse) => reverse.replaceAll("_", " "),
   enumName: (name) => name,
@@ -140,6 +143,16 @@ export function TranslationsProvider(
     t: (key, english, params) =>
       interpolate(bundle().ui[key] || props.initial.ui[key] || english, params),
     modelName: (model, wanted) => plural(texts("models", model), model, wanted),
+    modelNames: (model) => {
+      const shown = texts("models", model);
+      const all = [
+        model,
+        ...(props.initial.modelNames?.[model] ?? []),
+        shown?.name,
+        shown?.plural,
+      ].filter((name): name is string => !!name);
+      return [...new Set(all)];
+    },
     fieldName: (model, field) =>
       texts("models", model)?.fields?.[field]?.name || words(field),
     incomingName: (model, reverse) =>

@@ -93,6 +93,13 @@ These are not shown, but are read aloud, or appear when the pointer rests on the
 | `date_latest` | Latest | `DateEditor` (a range: the label of its last end) | |
 | `date_edtf_help` | Extended Date/Time Format: 1500-03~ is about March 1500, 15XX some year of the 1500s, 1500/1510 from 1500 to 1510 | `DateEditor` (under the EDTF box) | the examples are EDTF, not words |
 | `date_reads` | Reads | `DateEditor` (before the date as it reads) | |
+| `nav_filter` | Filter types | `NavBar` (`NavFilter`: placeholder and `aria-label` of the box above the types) | |
+| `nav_filter_clear` | Clear the filter | `NavBar` (`NavFilter`: `aria-label` and tooltip of its ✕ button) | |
+| `nav_filter_none` | No types match | `NavModelList` (shown when the filter leaves nothing) | |
+| `toasts` | Notifications | `Toasts` (`aria-label` of the region the toasts are in) | |
+| `toast_dismiss` | Dismiss: {message} | `Toasts` (`aria-label` of a toast: clicking it closes it) | `{message}` is the toast's text |
+| `toast_created` | {type} “{label}” created | `ItemForm`, `ModelFields` (`EntityCreateDialog`): the toast after a new item is saved | `{type}` is the name of the model; the quotation marks belong to the language |
+| `toast_saved` | {type} “{label}” saved | `ItemForm` (the toast after a change is saved) | as above |
 
 ## Not translated by the interface's own file
 

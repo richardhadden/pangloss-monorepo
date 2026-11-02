@@ -6,7 +6,7 @@ rendered in the browser, not on the server), and fails on any error in the page.
 import re
 
 import pytest
-from helpers import hydrated
+from helpers import expand_nav, hydrated
 from playwright.sync_api import Page, expect
 
 
@@ -63,9 +63,16 @@ def test_making_and_editing(page: Page, data, dev_url: str, errors: list[str]):
     page.get_by_role("link", name=re.compile("^Edit")).click()
     page.wait_for_url(re.compile(r"/edit$"))
     expect(page.get_by_role("button", name="Save")).to_be_visible()
+    page.get_by_role("button", name="Save").click()
+    expect(page.get_by_role("status", name="Notifications")).to_contain_text("saved")
     page.goto(f"{dev_url}/Statement/new")
     hydrated(page)
     expect(page.get_by_role("button", name="Save")).to_be_visible()
+    # (the filter of the types in the navigation bar)
+    expand_nav(page)
+    page.get_by_label("Filter types").fill("stat")
+    expect(page.get_by_role("navigation", name="Main").get_by_role("link", name="Person")).to_have_count(0)
+    page.get_by_role("button", name="Clear the filter").click()
     assert errors == []
 
 

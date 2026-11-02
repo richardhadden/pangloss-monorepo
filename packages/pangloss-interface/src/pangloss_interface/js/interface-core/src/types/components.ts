@@ -227,6 +227,7 @@ export interface ComponentMap {
   Modal: Component<ModalProps>;
   ConsoleBar: Component;
   ClipboardBar: Component;
+  Toasts: Component;
   Console: Component<ConsoleProps>;
   ItemForm: Component<ItemFormProps>;
 }

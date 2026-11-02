@@ -9,3 +9,4 @@ export * from "./modules";
 export * from "./translations";
 export * from "./form";
 export * from "./clipboard";
+export * from "./toasts";

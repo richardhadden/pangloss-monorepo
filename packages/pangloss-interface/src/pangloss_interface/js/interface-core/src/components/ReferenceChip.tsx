@@ -69,7 +69,7 @@ function DefaultReferenceChip(props: ReferenceChipProps) {
           <Show when={props.onCopy}>
             <ClipButtons
               name={props.label}
-              buttonClass="flex shrink-0 cursor-pointer items-center border-l-[0.5px] border-slate-400/70 px-2 text-slate-500 select-none hover:bg-slate-300/60"
+              buttonClass="flex w-6 shrink-0 cursor-pointer items-center justify-center border-l-[0.5px] border-slate-400/70 text-slate-500 select-none hover:bg-slate-300/60"
               onCopy={() => props.onCopy?.()}
               onCut={props.onCut}
             />
@@ -77,7 +77,7 @@ function DefaultReferenceChip(props: ReferenceChipProps) {
           <Show when={props.onRemove}>
             <button
               type="button"
-              class="flex shrink-0 cursor-pointer items-center border-l-[0.5px] border-slate-400/70 px-2 text-xs text-red-800 select-none hover:bg-red-400/30"
+              class="flex w-6 shrink-0 cursor-pointer items-center justify-center border-l-[0.5px] border-slate-400/70 text-xs text-red-800 select-none hover:bg-red-400/30"
               aria-label={props.removeLabel ?? t("remove", "Remove")}
               title={props.removeLabel ?? t("remove", "Remove")}
               onClick={() => props.onRemove?.()}

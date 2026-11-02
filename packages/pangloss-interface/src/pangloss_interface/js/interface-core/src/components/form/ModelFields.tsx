@@ -7,6 +7,7 @@ import {
   useComponent,
   useItemForm,
   useModels,
+  useToasts,
   useTranslations,
 } from "../../context";
 import { kindRule, kindTint, spaceTint } from "../../primitives";
@@ -36,6 +37,9 @@ import { EntityPicker } from "./EntityPicker";
 import { JsonEditor, LiteralEditor } from "./LiteralEditor";
 import {
   addSlotClass,
+  fieldGridClass,
+  fieldRowClass,
+  fieldRuleClass,
   inputClass,
   joinedButtonClass,
   joinedRemoveClass,
@@ -45,6 +49,8 @@ import {
   nestedClass,
   plainTint,
   smallButtonClass,
+  spaceButtonsClass,
+  spaceTypeClass,
   typeChipClass,
 } from "./styles";
 import { TypeMenu } from "./TypeMenu";
@@ -115,8 +121,6 @@ function Block(
   );
 }
 
-// (the names of the fields in a column on the left, their editors beside them)
-const fieldGridClass = "grid w-full grid-cols-[10rem_minmax(0,1fr)] gap-x-6 gap-y-5";
 
 /**
  * Whether a field has something in it, for its required mark: not nothing, an empty text or an empty
@@ -149,23 +153,29 @@ function Row(
   return (
     <Show
       when={!props.bare}
-      fallback={<div class="col-span-2 min-w-0">{props.children}</div>}
+      fallback={
+        <div class={fieldRowClass}>
+          <div class="col-span-2 min-w-0">{props.children}</div>
+        </div>
+      }
     >
-      <dt class="pt-2 text-xs font-semibold text-slate-500 uppercase">
-        {props.name}
-        <Show when={props.required}>
-          <span
-            aria-hidden="true"
-            class={["transition-colors", { "text-green-600": !!props.met }]}
-          >
-            {" *"}
-          </span>
-        </Show>
-        <Show when={props.description}>
-          <span class="mt-0.5 block text-xs font-normal text-slate-400 normal-case">{props.description}</span>
-        </Show>
-      </dt>
-      <dd class="flex min-w-0 flex-col items-start gap-1">{props.children}</dd>
+      <div class={fieldRowClass}>
+        <dt class="pt-2 text-xs font-semibold text-slate-500 uppercase">
+          {props.name}
+          <Show when={props.required}>
+            <span
+              aria-hidden="true"
+              class={["transition-colors", { "text-green-600": !!props.met }]}
+            >
+              {" *"}
+            </span>
+          </Show>
+          <Show when={props.description}>
+            <span class="mt-0.5 block text-xs font-normal text-slate-400 normal-case">{props.description}</span>
+          </Show>
+        </dt>
+        <dd class="flex min-w-0 flex-col items-start gap-1">{props.children}</dd>
+      </div>
     </Show>
   );
 }
@@ -274,11 +284,14 @@ export function ItemFields(props: {
           </Show>
         </dl>
       </Show>
-      <ModelFields
-        model={props.model}
-        path={props.path}
-        env={{}}
-      />
+      {/* (a rule between the label's row and the first field, as between fields; the heading has its own) */}
+      <div class={{ [`border-t pt-5 ${fieldRuleClass}`]: !props.title || !!(props.creating && props.model.createWithId) }}>
+        <ModelFields
+          model={props.model}
+          path={props.path}
+          env={{}}
+        />
+      </div>
     </div>
   );
 }
@@ -457,7 +470,7 @@ function EmbeddedEditor(props: { field: EmbeddedField; path: Accessor<Path>; lab
           <Show when={clip}>
             <ClipButtons
               name={props.label}
-              buttonClass="flex cursor-pointer items-center border-l-[0.5px] border-slate-400/70 px-2 text-slate-500 select-none hover:bg-slate-300/50 focus:bg-slate-300/50 focus:outline-none"
+              buttonClass="flex w-6 shrink-0 cursor-pointer items-center justify-center border-l-[0.5px] border-slate-400/70 text-slate-500 select-none hover:bg-slate-300/50 focus:bg-slate-300/50 focus:outline-none"
               onCopy={() => clip!.copy()}
               onCut={() => clip!.cut()}
             />
@@ -700,23 +713,25 @@ function RelationItem(props: {
           ]}
         >
           <div class="flex items-center justify-between">
-            <span class="flex-1 px-3 pt-2 text-xs font-semibold uppercase select-none">{modelName(type())}</span>
-            <Show when={clip}>
-              <ClipButtons
-                name={modelName(type())}
-                buttonClass="flex cursor-pointer items-center self-stretch px-3 pt-1 text-slate-600 select-none hover:bg-slate-400/30"
-                onCopy={() => clip!.copy()}
-                onCut={() => clip!.cut()}
-              />
-            </Show>
-            <button
-              type="button"
-              class="cursor-pointer self-stretch px-3 pt-1 text-xs text-red-800 select-none hover:bg-red-400/30"
-              aria-label={t("remove_item", "Remove {name}", { name: modelName(type()) })}
-              onClick={props.onRemove}
-            >
-              ✕
-            </button>
+            <span class={spaceTypeClass}>{modelName(type())}</span>
+            <div class={spaceButtonsClass}>
+              <Show when={clip}>
+                <ClipButtons
+                  name={modelName(type())}
+                  buttonClass={[headButtonClass, "h-7 text-slate-600 hover:bg-slate-400/30"].join(" ")}
+                  onCopy={() => clip!.copy()}
+                  onCut={() => clip!.cut()}
+                />
+              </Show>
+              <button
+                type="button"
+                class={[headButtonClass, "h-7 text-red-800 hover:bg-red-400/30"]}
+                aria-label={t("remove_item", "Remove {name}", { name: modelName(type()) })}
+                onClick={props.onRemove}
+              >
+                ✕
+              </button>
+            </div>
           </div>
           <div class="flex min-w-0 flex-1 flex-col gap-4 p-3">
             <ModelFields model={model()!} path={props.path} env={childEnv()} bare="contents" />
@@ -773,13 +788,21 @@ function EntityCreateDialog(props: {
   const model = () => getModel(definitions, props.type);
   const [saving, setSaving] = createSignal(false);
   const [problems, setProblems] = createSignal<string[]>([]);
+  const toasts = useToasts();
   async function save() {
     setSaving(true);
     setProblems([]);
     try {
       const body = cleanForSave(definitions, state.plain());
       delete body.type;
-      props.onCreated(await createItem(api, props.type, body));
+      const created = await createItem(api, props.type, body);
+      toasts?.show(
+        t("toast_created", "{type} “{label}” created", {
+          type: modelName(created.type),
+          label: created.label,
+        }),
+      );
+      props.onCreated(created);
     } catch (error) {
       setProblems(error instanceof ApiError ? problemsOf(error) : [String(error)]);
     } finally {

@@ -25,6 +25,11 @@ export function SpaceBands(
       <div
         class={[
           "flex border-[0.5px] border-slate-400/70",
+          // (round a chip, the context is quieter than the chip: a veil over the tint, under what is in it)
+          {
+            "relative isolate before:pointer-events-none before:absolute before:inset-0 before:-z-10 before:bg-white/30":
+              !props.stacked,
+          },
           {
             "items-stretch": !props.stacked,
             "w-full": props.stacked,
@@ -37,8 +42,9 @@ export function SpaceBands(
       >
         <span
           class={[
-            "flex shrink-0 items-center px-3 text-xs font-semibold uppercase select-none",
-            { "pt-2": props.stacked },
+            "flex shrink-0 items-center font-semibold uppercase select-none",
+            // (round a chip, smaller than the chip's type, as in the console: the spaces are its context)
+            { "px-3 pt-2 text-xs": props.stacked, "px-2 text-[0.6rem]": !props.stacked },
           ]}
         >
           {modelName(props.spaces[0] ?? "")}
