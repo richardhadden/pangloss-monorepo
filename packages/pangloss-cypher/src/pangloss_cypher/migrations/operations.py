@@ -35,6 +35,7 @@ from pangloss_models.migrations import changes as c
 from pangloss_models.migrations.state import rename_field
 from pangloss_models.migrations.state import rename_model as state_after_rename
 
+from pangloss_cypher.build_tree import POSITION
 from pangloss_cypher.dialect import MigrationDialect
 from pangloss_cypher.migrations.conversion import convert_expression
 from pangloss_cypher.transactions import Database, Transaction, dialect
@@ -1208,7 +1209,7 @@ async def wrap_reified(
     pairs_to_wrap = f"""
         MATCH (s:{model})-[e]->(p)
         WHERE type(e) = $primary AND NOT coalesce(e.reverse, false) AND NOT p:{wrapper_label}{not_narrowed}
-        {"WITH s, p ORDER BY s.id, p.id LIMIT $limit" if limit else ""}
+        {"WITH s, p, e ORDER BY s.id, p.id LIMIT $limit" if limit else ""}
     """
 
     count = (
@@ -1225,15 +1226,18 @@ async def wrap_reified(
 
     new_edges = []
     for forward, reverse in pairs:
-        new_edges.append(f"CREATE (s)-[:{ident(forward)}]->(r)")
+        # (in the place in its list that the relation had)
+        new_edges.append(
+            f"CREATE (s)-[:{ident(forward)} {{{POSITION}: position}}]->(r)"
+        )
         new_edges.append(f"CREATE (r)-[:{ident(reverse)} {{reverse: true}}]->(s)")
     await run(
         tx,
         f"""
         {pairs_to_wrap}
-        WITH collect({{s: s, p: p}}) AS pairs
+        WITH collect({{s: s, p: p, position: e.{POSITION}}}) AS pairs
         UNWIND range(0, size(pairs) - 1) AS i
-        WITH pairs[i].s AS s, pairs[i].p AS p, $ids[i] AS new_id
+        WITH pairs[i].s AS s, pairs[i].p AS p, pairs[i].position AS position, $ids[i] AS new_id
         {migration_dialect().inserted_node_meta}
         CREATE (r{wrapper_labels} {{
             id: new_id,
@@ -1243,7 +1247,7 @@ async def wrap_reified(
             {migration_dialect().new_meta_properties(context=True)}{", " + assignments if assignments else ""}
         }})
         {" ".join(new_edges)}
-        CREATE (r)-[:target]->(p)
+        CREATE (r)-[:target {{{POSITION}: 0}}]->(p)
         CREATE (p)-[:target_reverse {{reverse: true}}]->(r)
         """,
         primary=primary,
@@ -1302,8 +1306,11 @@ async def unwrap_relation(
     if not ids:
         return 0
     creates = []
-    for forward, reverse in pairs:
-        creates.append(f"MERGE (s)-[:{ident(forward)}]->(p)")
+    for index, (forward, reverse) in enumerate(pairs):
+        # (in the place in its list that the edge to the wrapper had)
+        creates.append(
+            f"MERGE (s)-[f{index}:{ident(forward)}]->(p) SET f{index}.{POSITION} = e.{POSITION}"
+        )
         creates.append(f"MERGE (p)-[:{ident(reverse)} {{reverse: true}}]->(s)")
     await run(
         tx,
@@ -1495,7 +1502,7 @@ async def wrap_in_semantic_space(
         f" AND NOT (s)-[:{ident(n)}]->(p)" for n in narrowers_of(state, primary)
     )
 
-    window = f"WITH s, p LIMIT {int(limit)}" if limit else ""
+    window = f"WITH s, p, e LIMIT {int(limit)}" if limit else ""
     match = f"""
         MATCH (s:{model})-[e]->(p)
         WHERE type(e) = $primary AND NOT coalesce(e.reverse, false) AND NOT p:{space_label}{not_narrowed}
@@ -1509,15 +1516,18 @@ async def wrap_in_semantic_space(
     ids = [str(uuid.uuid7()) for _ in range(count)]
     new_edges = []
     for forward, reverse in pairs:
-        new_edges.append(f"CREATE (s)-[:{ident(forward)}]->(r)")
+        # (in the place in its list that the relation had)
+        new_edges.append(
+            f"CREATE (s)-[:{ident(forward)} {{{POSITION}: position}}]->(r)"
+        )
         new_edges.append(f"CREATE (r)-[:{ident(reverse)} {{reverse: true}}]->(s)")
     heads = await run(
         tx,
         f"""
         {match}
-        WITH collect({{s: s, p: p}}) AS pairs
+        WITH collect({{s: s, p: p, position: e.{POSITION}}}) AS pairs
         UNWIND range(0, size(pairs) - 1) AS i
-        WITH pairs[i].s AS s, pairs[i].p AS p, $ids[i] AS new_id
+        WITH pairs[i].s AS s, pairs[i].p AS p, pairs[i].position AS position, $ids[i] AS new_id
         {migration_dialect().inserted_node_meta}
         CREATE (r{labels} {{
             id: new_id,
@@ -1527,7 +1537,7 @@ async def wrap_in_semantic_space(
             {migration_dialect().new_meta_properties(context=False)}
         }})
         {" ".join(new_edges)}
-        CREATE (r)-[:{ident(contents_forward)}]->(p)
+        CREATE (r)-[:{ident(contents_forward)} {{{POSITION}: 0}}]->(p)
         CREATE (p)-[:{ident(contents_reverse)} {{reverse: true}}]->(r)
         RETURN DISTINCT coalesce(s.head_node_id, s.id) AS head
         """,
@@ -1574,8 +1584,11 @@ async def unwrap_semantic_space(
     if not ids:
         return 0
     creates = []
-    for forward, reverse in pairs:
-        creates.append(f"MERGE (s)-[:{ident(forward)}]->(p)")
+    for index, (forward, reverse) in enumerate(pairs):
+        # (in the place in its list that the edge to the wrapper had)
+        creates.append(
+            f"MERGE (s)-[f{index}:{ident(forward)}]->(p) SET f{index}.{POSITION} = e.{POSITION}"
+        )
         creates.append(f"MERGE (p)-[:{ident(reverse)} {{reverse: true}}]->(s)")
     heads = await run(
         tx,
@@ -1760,7 +1773,7 @@ async def literals_to_embedded(
             head_node_type: coalesce(s.head_node_type, s.type),
             {migration_dialect().new_meta_properties(context=False)}{tail}
         }})
-        CREATE (s)-[:{ident(forward)}]->(e)
+        CREATE (s)-[:{ident(forward)} {{{POSITION}: 0}}]->(e)
         CREATE (e)-[:{ident(reverse)} {{reverse: true}}]->(s)
         {removes}
         RETURN DISTINCT coalesce(s.head_node_id, s.id) AS head

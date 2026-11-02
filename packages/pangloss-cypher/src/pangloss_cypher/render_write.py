@@ -6,7 +6,8 @@ How the plan is stored is said here:
   to the user), or, for an update, of the update (`PGUpdate`);
 - a node of a document has `PGIndexableNode`, and is `MERGE`d by its id;
 - a relation is a pair of edges for each name it has: forward, and backward marked `{reverse: true}`, with the edge
-  properties on both;
+  properties on both; the forward edges have the place of the value in the field's list, from 0 (`pg_position`), so
+  that a list is read in the order it was written;
 - a URL of an entity is a node of its own (`PGUrl`, unique), that the entity `has_url`;
 - an existing node is matched by its id (or by a URL it has), and must have one of the allowed labels.
 
@@ -20,6 +21,7 @@ from collections.abc import Mapping
 
 from pangloss_users import current_request_username
 
+from pangloss_cypher.build_tree import POSITION
 from pangloss_cypher.params import Identifier, QueryParams
 from pangloss_cypher.transactions import dialect
 from pangloss_cypher.write_plan import (
@@ -106,14 +108,19 @@ class _Renderer:
         self.inline_entity_identifiers: dict[InlineEntityKey, Identifier] = {}
 
     def relations(self, node: PlannedNode, identifier: Identifier) -> None:
+        # (the values of a field are in the plan in the order of its list: each has its place in it)
+        positions: dict[str, int] = {}
         for relation in node.relations:
+            field = relation.edges[0][0]
+            position = positions.get(field, 0)
+            positions[field] = position + 1
             target = relation.target
             if isinstance(target, InlineEntity):
-                self.inline_entity(relation, target, identifier)
+                self.inline_entity(relation, target, identifier, position)
             elif isinstance(target, ReferenceToExisting):
-                self.reference(relation, target, identifier)
+                self.reference(relation, target, identifier, position)
             else:
-                self.tree_node(relation, target, identifier)
+                self.tree_node(relation, target, identifier, position)
 
     def urls(self, node: PlannedNode, identifier: Identifier) -> None:
         """The URLs of a new entity, as nodes (`PGUrl`) that it has, rather than as a
@@ -127,19 +134,23 @@ class _Renderer:
             CREATE ({identifier})-[:has_url]->({url_identifier})
         """)
 
-    def edges(self, relation: Relation, source: Identifier, target: Identifier) -> None:
+    def edges(
+        self, relation: Relation, source: Identifier, target: Identifier, position: int
+    ) -> None:
         """The forward and reverse edges between two nodes — and the same pair for each parent field that the field
-        subclasses — with any edge properties on all of them"""
+        subclasses — with any edge properties on all of them, and the place of the value in its list on the forward
+        ones (`pg_position`)"""
         edge_property_assignments: PropertyAssignments | None = None
         if relation.edge_properties:
             edge_property_assignments = PropertyAssignments(
                 self.params, relation.edge_properties, node=False
             )
+        position_parameter = self.params.add(position)
         for forward_name, backward_name in relation.edges:
             forward_query_identifier = self.params.new_identifier()
             reverse_query_identifier = self.params.new_identifier()
             self.query.create_query_strings.append(f"""
-            CREATE ({source})-[{forward_query_identifier}:{forward_name}]->({target})
+            CREATE ({source})-[{forward_query_identifier}:{forward_name} {{{POSITION}: ${position_parameter}}}]->({target})
             CREATE ({source})<-[{reverse_query_identifier}:{backward_name} {{reverse: true}}]-({target})
         """)
             if edge_property_assignments:
@@ -151,7 +162,7 @@ class _Renderer:
             """)
 
     def tree_node(
-        self, relation: Relation, node: PlannedNode, source: Identifier
+        self, relation: Relation, node: PlannedNode, source: Identifier, position: int
     ) -> None:
         identifier = self.params.new_identifier()
         node_id_identifier = self.params.add(node.id)
@@ -160,11 +171,15 @@ class _Renderer:
         MERGE ({identifier}:{labels_of(node, TREE_LABELS)} {{id: ${node_id_identifier}}})
         ON CREATE SET {node_data.set_items(identifier, replace=True)}
     """)
-        self.edges(relation, source, identifier)
+        self.edges(relation, source, identifier, position)
         self.relations(node, identifier)
 
     def inline_entity(
-        self, relation: Relation, entity: InlineEntity, source: Identifier
+        self,
+        relation: Relation,
+        entity: InlineEntity,
+        source: Identifier,
+        position: int,
     ) -> None:
         """An entity written in the document: the one there is, or a new head node of its own"""
         key = entity.key
@@ -199,10 +214,14 @@ class _Renderer:
         """)
             self.urls(entity.node, identifier)
             self.relations(entity.node, identifier)
-        self.edges(relation, source, identifier)
+        self.edges(relation, source, identifier, position)
 
     def reference(
-        self, relation: Relation, reference: ReferenceToExisting, source: Identifier
+        self,
+        relation: Relation,
+        reference: ReferenceToExisting,
+        source: Identifier,
+        position: int,
     ) -> None:
         allowed_types = list(reference.allowed_types)
         reference_key = (reference.value, reference.allowed_types)
@@ -226,7 +245,7 @@ class _Renderer:
                 WHERE ANY(label IN labels({identifier}) WHERE label IN ${allowed_types_identifier})
             """
             )
-        self.edges(relation, source, identifier)
+        self.edges(relation, source, identifier, position)
 
 
 def render(

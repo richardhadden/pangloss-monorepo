@@ -11,7 +11,7 @@ head that changes is written as an update is:
   records the version.
 
 The head of a node is the node itself, or the head node of the document it is in (`head_node_id`). The properties of an
-edge (a `ViaEdge`) go to the new edge. A node that already has the relation to the other node keeps the edge it has.
+edge (a `ViaEdge`) go to the new edge, and its place in its list (`pg_position`, on the forward edge only). A node that already has the relation to the other node keeps the edge it has.
 """
 
 import datetime
@@ -28,6 +28,7 @@ from pangloss_models.model_registry import ModelRegistry
 from pangloss_users import current_request_username
 from pydantic import ValidationError
 
+from pangloss_cypher.build_tree import POSITION
 from pangloss_cypher.checks import check_user_exists
 from pangloss_cypher.fragments import field_edge
 from pangloss_cypher.read_functions import get_document, get_entity_for_edit
@@ -151,6 +152,7 @@ async def relink_batch(
             SET new = properties(old)
             CREATE (e)<-[new_reverse:{backward}]-(b)
             SET new_reverse = properties(old), new_reverse.reverse = true
+            REMOVE new_reverse.{POSITION}
             """,  # ty: ignore[invalid-argument-type]
             ids=ids,
             from_id=from_id,

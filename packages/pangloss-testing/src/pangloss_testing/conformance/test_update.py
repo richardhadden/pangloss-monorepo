@@ -712,7 +712,8 @@ async def test_update_keeps_reverse_marker_with_edge_properties(
         db_driver,
         "MATCH (:Statement)<-[r:concerns_person_reverse]-(:Person) RETURN properties(r) AS p",
     )
-    assert forward == [{"p": {"number": 2}}]
+    # (the forward edge has the place of the value in its list too)
+    assert forward == [{"p": {"number": 2, "pg_position": 0}}]
     assert reverse == [{"p": {"number": 2, "reverse": True}}]
 
 
@@ -1260,3 +1261,73 @@ async def test_update_switches_the_member_of_a_union_of_embedded_objects(
     read = await Statement.get(id=saved.id)
     assert read.date.type == "DateRange"
     assert read.date.end == datetime.date(2020, 12, 31)
+
+
+# ---------------------------------------------------------------------------
+# The order of a list
+# ---------------------------------------------------------------------------
+
+
+@no_type_check
+async def test_a_list_is_read_in_the_order_it_was_written(db_driver, clear_database):
+    """Of nested documents and of references: as it was made, and as an update has it (kept, moved, added)"""
+
+    class Person(Entity):
+        pass
+
+    class Action(Document):
+        detail: str
+
+    class Statement(Document):
+        actions: list[Action]
+        people: list[Person]
+
+    initialise()
+
+    people = [await Person.Create(label=name).save() for name in ("Ann", "Bob", "Cat")]
+    ann, bob, cat = ({"type": "Person", "id": person.id} for person in people)
+    saved = await Statement.Create(
+        label="A Statement",
+        actions=[
+            {"type": "Action", "label": label, "detail": label}
+            for label in ("Charlie", "Alpha", "Bravo")
+        ],
+        # (not in the order they were made, nor of their names)
+        people=[cat, ann, bob],
+    ).save()
+
+    head = await Statement.get(id=saved.id)
+    assert [action.label for action in head.actions] == ["Charlie", "Alpha", "Bravo"]
+    assert [person.label for person in head.people] == ["Cat", "Ann", "Bob"]
+
+    by_label = {action.label: action.id for action in head.actions}
+    await Statement.Update(
+        id=saved.id,
+        label="A Statement",
+        actions=[
+            {"type": "Action", "label": "Delta", "detail": "Delta"},
+            *(
+                {
+                    "type": "Action",
+                    "id": by_label[label],
+                    "label": label,
+                    "detail": label,
+                }
+                for label in ("Bravo", "Alpha", "Charlie")
+            ),
+        ],
+        people=[bob, cat, ann],
+    ).save()
+
+    head = await Statement.get(id=saved.id)
+    assert [action.label for action in head.actions] == [
+        "Delta",
+        "Bravo",
+        "Alpha",
+        "Charlie",
+    ]
+    assert [person.label for person in head.people] == ["Bob", "Cat", "Ann"]
+    # (the place is no property of the relation: an edge model has only its own)
+    assert all(
+        getattr(action, "edge_properties", None) is None for action in head.actions
+    )

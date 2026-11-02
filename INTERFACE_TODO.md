@@ -42,3 +42,6 @@ Just human readable date / range
 [x] Typology types are displayed differently in view and edit. Make them chips, like edit
 [x] don't use dropdowns for enums, use selectable pills -- unless the options are a huge number (I assume date gregorian and julian are enum?)
 [x] when adding an item to a list field (on clicking add), add a small flash or something (slightly thicker border/some shadow that fades out) around the newly created input (hard to see what's happened otherwise); and auto-focus the field
+[ ] AnnotatedValue does not need to show the key "value", just the field
+[ ] the "add statement" dropdown is ugly as hell. Maybe don't make it a dropdown, but make it a whole "Select a type" box, which is open if there is the possibility of adding another thing in this field. Make the types into proper buttons, not just text; and don't use "plain" (that was just my way of describing it)
+[ ] in general, when adding something (a new statement for example), make it flash slightly so it's more obvious what's happened (same with pasting)

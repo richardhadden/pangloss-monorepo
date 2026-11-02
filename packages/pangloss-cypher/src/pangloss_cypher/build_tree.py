@@ -2,7 +2,8 @@
 
 A relation is stored as a node's forward edge (named after the field) to the
 related node, so a document is a tree: each node has, under the name of each of its
-fields, a list of what it is related to. The read query returns the root node and
+fields, a list of what it is related to, in the order it was written (`pg_position` on
+the edge). The read query returns the root node and
 the forward edges of the tree:
 
     {"source": <id>, "type": <field name>, "properties": {...},
@@ -18,8 +19,24 @@ what a backend of another kind would give as well.
 import dataclasses
 import typing
 
+# The edge property of a value's place in the list of its field, from 0: written on the forward edges (`render_write`,
+# and by the migrations that make edges), and read here to put each list in its order
+POSITION = "pg_position"
+
 # Properties of an edge that are not those of an `EdgeModel`
-INTERNAL_EDGE_PROPERTIES = {"reverse"}
+INTERNAL_EDGE_PROPERTIES = {"reverse", POSITION}
+
+
+def _list_order(edge: dict[str, typing.Any]) -> tuple[bool, int, str]:
+    """Where an edge's value goes in the list of its field: by its place as written (`pg_position`); one written
+    before there were places, after those, by the id of what it is to (ids are made in time order, so the nodes of a
+    document made at once are in the order they were in)"""
+    position = edge["properties"].get(POSITION)
+    return (
+        position is None,
+        position if isinstance(position, int) else 0,
+        str(edge["target"].get("id", "")),
+    )
 
 
 def build_tree(
@@ -30,6 +47,9 @@ def build_tree(
     edges_from: dict[str, list[dict[str, typing.Any]]] = {}
     for edge in edges:
         edges_from.setdefault(edge["source"], []).append(edge)
+    # (the query gives the edges in no order: each list in the order it was written)
+    for outgoing in edges_from.values():
+        outgoing.sort(key=_list_order)
 
     def build(properties: dict[str, typing.Any], labels: list[str]) -> dict:
         node = dict(properties)
