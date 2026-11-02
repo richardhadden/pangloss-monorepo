@@ -54,6 +54,7 @@ const definitions: ModelDefinitions = {
     Factoid: model("Factoid", "Document", [
       field("year", "year"),
       field("statements", "statements", "relation"),
+      field("involves", "involves", "relation"),
     ]),
     Activity: model("Activity", "Document", [
       field("activity_type", "activityType"),
@@ -61,6 +62,13 @@ const definitions: ModelDefinitions = {
       field("done", "done"),
       field("date", "date", "embedded"),
       field("note", "note"),
+    ]),
+    Involves: model("Involves", "ReifiedRelation", [
+      field("certainty", "certainty"),
+      field("target", "target", "relation"),
+    ]),
+    Claim: model("Claim", "ReifiedRelationDocument", [
+      field("target", "target", "relation"),
     ]),
     Date: model("Date", "Embedded", [field("when", "when")]),
     Place: model(
@@ -177,6 +185,21 @@ test("a semantic space is a band round what is in it, in the colour of its model
   const band = host.querySelector(".bg-rose-400\\/25")!;
   expect(band.textContent).toContain("Negative");
   expect(band.textContent).toContain("A crowning");
+  // (the name is above what is in the band, not beside it)
+  expect(band.className).toContain("flex-col");
+});
+
+test("a reified relation document is laid out like a reified relation, with its label", () => {
+  const host = show({
+    id: "f1",
+    type: "Factoid",
+    involves: { id: "r1", type: "Claim", label: "A claim", target: place },
+  });
+  expect(host.textContent).toContain("A claim");
+  expect(host.textContent).not.toMatch(/target/i);
+  expect([...host.querySelectorAll("dt")].map((d) => d.textContent)).toEqual([
+    "involves",
+  ]);
 });
 
 test("what refers to an item from elsewhere follows, as chips", () => {
@@ -221,4 +244,111 @@ test("a chip for what refers to an item from inside semantic spaces is wrapped i
       .map((band) => band.textContent);
   expect(bands("a1")).toEqual(["Negative", "Hypothetical"]);
   expect(bands("a2")).toEqual([]);
+});
+
+test("a reified relation has no key for what it holds: that fills the width of the block", () => {
+  const host = show({
+    id: "f1",
+    type: "Factoid",
+    involves: { id: "r1", type: "Involves", target: place },
+  });
+  const keys = [...host.querySelectorAll("dt")].map((dt) => dt.textContent);
+  expect(keys).toEqual(["involves"]);
+  expect(host.textContent).not.toMatch(/target/i);
+  const chip = host.querySelector('a[href="/Place/p1"]')!;
+  expect(chip.closest("dd")?.querySelectorAll("dl").length).toBe(1);
+});
+
+test("a reified relation shows its own fields, apart from what it holds", () => {
+  const host = show({
+    id: "f1",
+    type: "Factoid",
+    involves: {
+      id: "r1",
+      type: "Involves",
+      certainty: "high",
+      target: [place],
+    },
+  });
+  expect([...host.querySelectorAll("dt")].map((dt) => dt.textContent)).toEqual([
+    "involves",
+    "certainty",
+  ]);
+  expect(host.querySelector('a[href="/Place/p1"]')).toBeTruthy();
+});
+
+test("the full trail of a chip: spaces and the documents it is nested in, outermost first", () => {
+  const host = show({
+    ...place,
+    happenedHere: [
+      {
+        id: "a2",
+        type: "Activity",
+        label: "A feast",
+        meta: {
+          contextLabels: [
+            {
+              type: "Negative",
+              contents: [
+                { type: "Factoid", id: "f9" },
+                { type: "Activity", id: "a2" },
+              ],
+            },
+          ],
+        },
+      },
+      {
+        id: "a3",
+        type: "Activity",
+        label: "A toast",
+        meta: {
+          contextLabels: [
+            {
+              type: "#rootcontext",
+              contents: [{ type: "Factoid", id: "f9" }],
+            },
+          ],
+        },
+      },
+    ],
+  });
+  const bands = (id: string) => {
+    const chip = host.querySelector(`a[href="/Activity/${id}"]`)!;
+    return [...host.querySelectorAll("span.uppercase")]
+      .filter((b) => b.parentElement?.contains(chip) && !chip.contains(b))
+      .map((b) => b.textContent);
+  };
+  expect(bands("a2")).toEqual(["Negative", "Factoid"]);
+  expect(bands("a3")).toEqual(["Factoid"]);
+});
+
+test("what refers to an item through a reified relation is shown with the field, in its document", () => {
+  const host = show({
+    ...place,
+    happenedHere: [
+      {
+        id: "f1",
+        type: "Factoid",
+        meta: {
+          contextLabels: [{ type: "Negative", contents: [] }],
+        },
+        involves: {
+          id: "r1",
+          type: "Involves",
+          certainty: "high",
+          target: place,
+        },
+      },
+    ],
+  });
+  const dd = host.querySelector("dd")!;
+  // (the document is a block, not a chip, with its type linking to it)
+  expect(dd.querySelector('a[href="/Factoid/f1"]')?.textContent).toBe(
+    "Factoid",
+  );
+  expect(dd.querySelector('a[href="/Factoid/f1"]')?.children.length).toBe(0);
+  expect(dd.textContent).toContain("involves");
+  expect(dd.textContent).toContain("high");
+  expect(dd.textContent).toContain("Negative");
+  expect(dd.querySelector('a[href="/Place/p1"]')).toBeTruthy();
 });

@@ -2,7 +2,7 @@ import { For, Match, Show, Switch } from "solid-js";
 import type { ParentProps } from "solid-js";
 import { useComponent, useModels, useTranslations } from "../context";
 import { kindTint, spaceTint } from "../primitives";
-import { wrappingSpaces } from "../api";
+import { contextTrail } from "../api";
 import type { ContextLabel } from "../api";
 import { getModel } from "../schema";
 import type {
@@ -11,6 +11,7 @@ import type {
   ModelDefinition,
 } from "../types";
 import { Customised } from "./Customised";
+import { SpaceBands } from "./SpaceBands";
 
 type Data = Record<string, unknown>;
 
@@ -46,13 +47,19 @@ function Fields(props: {
   value: Data;
   model: ModelDefinition | undefined;
   depth: number;
+  /** (a field that is shown some other way) */
+  exclude?: string;
 }) {
   const { fieldName, incomingName } = useTranslations();
   return (
     <dl class="grid grid-cols-[10rem_minmax(0,1fr)] gap-x-4 gap-y-2">
       <For each={props.model?.fields ?? []}>
         {(field) => (
-          <Show when={!isEmpty(props.value[field.key])}>
+          <Show
+            when={
+              field.key !== props.exclude && !isEmpty(props.value[field.key])
+            }
+          >
             <Row name={fieldName(props.model!.name, field.name)}>
               <Value
                 value={props.value[field.key]}
@@ -155,8 +162,15 @@ function ObjectValue(props: {
     isObject(props.value.meta)
       ? (props.value.meta.contextLabels as ContextLabel[] | undefined)
       : undefined;
+  // (what refers to the item from elsewhere through a reified relation comes with the field that holds it)
+  const hasFields = () =>
+    (model()?.fields ?? []).some((field) => !isEmpty(props.value[field.key]));
   const isChip = () =>
-    type() !== undefined && (props.asChip || model()?.kind === "Entity");
+    type() !== undefined &&
+    ((props.asChip && !hasFields()) || model()?.kind === "Entity");
+  const isReified = () =>
+    model()?.kind === "ReifiedRelation" ||
+    model()?.kind === "ReifiedRelationDocument";
   const isSpace = () => model()?.kind === "SemanticSpace";
   const isEmbedded = () => model()?.kind === "Embedded";
   return (
@@ -174,30 +188,49 @@ function ObjectValue(props: {
       fallback={
         <Switch
           fallback={
-            <div class="w-full rounded-sm border-[0.5px] border-slate-400/70 bg-slate-100/50">
-              <div class="flex items-stretch border-b-[0.5px] border-slate-400/70">
-                <span
-                  class={[
-                    "flex shrink-0 items-center border-r-[0.5px] border-slate-400/70 px-3 py-1 text-xs font-semibold uppercase select-none",
-                    kindTint(model()?.kind, model()?.interfaceMeta?.colour),
-                  ]}
-                >
-                  {modelName(type() ?? model()?.name ?? "")}
-                </span>
-                <Show when={label()}>
-                  <span class="min-w-0 flex-1 truncate px-3 py-1 text-sm">
-                    {label()}
+            <SpaceBands
+              spaces={
+                props.asChip
+                  ? contextTrail(contextLabels(), String(props.value.id ?? ""))
+                  : []
+              }
+              depth={0}
+            >
+              <div class="w-full rounded-sm border-[0.5px] border-slate-400/70 bg-slate-100/50">
+                <div class="flex items-stretch border-b-[0.5px] border-slate-400/70">
+                  <span
+                    class={[
+                      "flex shrink-0 items-center border-r-[0.5px] border-slate-400/70 px-3 py-1 text-xs font-semibold uppercase select-none",
+                      kindTint(model()?.kind, model()?.interfaceMeta?.colour),
+                    ]}
+                  >
+                    <Show
+                      when={props.asChip && props.value.id}
+                      fallback={modelName(type() ?? model()?.name ?? "")}
+                    >
+                      <a
+                        href={`/${type()}/${props.value.id}`}
+                        class="hover:underline"
+                      >
+                        {modelName(type() ?? model()?.name ?? "")}
+                      </a>
+                    </Show>
                   </span>
-                </Show>
+                  <Show when={label()}>
+                    <span class="min-w-0 flex-1 truncate px-3 py-1 text-sm">
+                      {label()}
+                    </span>
+                  </Show>
+                </div>
+                <div class="p-3">
+                  <Fields
+                    value={props.value}
+                    model={model()}
+                    depth={props.depth}
+                  />
+                </div>
               </div>
-              <div class="p-3">
-                <Fields
-                  value={props.value}
-                  model={model()}
-                  depth={props.depth}
-                />
-              </div>
-            </div>
+            </SpaceBands>
           }
         >
           <Match when={isChip()}>
@@ -205,13 +238,45 @@ function ObjectValue(props: {
               type={type() ?? ""}
               label={label() ?? String(props.value.id ?? "")}
               href={`/${type()}/${props.value.id}`}
-              spaces={wrappingSpaces(contextLabels())}
+              spaces={contextTrail(
+                contextLabels(),
+                String(props.value.id ?? ""),
+              )}
               edgeProperties={
                 isObject(props.value.edgeProperties)
                   ? props.value.edgeProperties
                   : undefined
               }
             />
+          </Match>
+          <Match when={isReified()}>
+            {/* (a reified relation: its type at the head, then its own fields, if it has any, and what it holds, full width and without its field name) */}
+            <div class="w-full rounded-sm border-[0.5px] border-slate-400/70 bg-slate-100/50">
+              <div class="flex items-stretch border-b-[0.5px] border-slate-400/70">
+                <span
+                  class={[
+                    "flex shrink-0 items-center px-3 py-1 text-xs font-semibold uppercase select-none",
+                    kindTint(model()?.kind, model()?.interfaceMeta?.colour),
+                  ]}
+                >
+                  {modelName(type() ?? "")}
+                </span>
+                <Show when={label()}>
+                  <span class="min-w-0 flex-1 truncate px-3 py-1 text-sm">
+                    {label()}
+                  </span>
+                </Show>
+              </div>
+              <div class="flex flex-col gap-2 p-3">
+                <Fields
+                  value={props.value}
+                  model={model()}
+                  depth={props.depth}
+                  exclude="target"
+                />
+                <Value value={props.value.target} depth={props.depth} />
+              </div>
+            </div>
           </Match>
           <Match when={isEmbedded()}>
             {/* (it is in this one place only: no box, no type, only its fields, indented to show they go together) */}
@@ -222,11 +287,11 @@ function ObjectValue(props: {
           <Match when={isSpace()}>
             <div
               class={[
-                "flex w-full items-stretch rounded-sm border-[0.5px] border-slate-400/70",
+                "flex w-full flex-col rounded-sm border-[0.5px] border-slate-400/70",
                 spaceTint(model()?.interfaceMeta?.colour, props.depth),
               ]}
             >
-              <span class="flex shrink-0 items-center px-3 text-xs font-semibold uppercase select-none">
+              <span class="px-3 pt-1 text-xs font-semibold uppercase select-none">
                 {modelName(type() ?? "")}
               </span>
               <div class="flex min-w-0 flex-1 flex-col gap-1 p-1">

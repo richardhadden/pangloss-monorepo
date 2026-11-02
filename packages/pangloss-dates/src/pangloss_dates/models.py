@@ -45,7 +45,18 @@ def bounds_of(date) -> Bounds:
     )
 
 
+def interface_meta() -> dict:
+    """The card of the interface module of this package (`pangloss_dates/interface/`), if the interface is installed: a date is
+    said as a person would, not listed field by field. It is used when `pangloss_dates` is in `INSTALLED_APPS`"""
+    try:
+        from pangloss_interface import InterfaceMeta
+    except ImportError:
+        return {}
+    return {"_interface_meta": InterfaceMeta(view_card="pangloss_dates:DateCard")}
+
+
 class Date(Embedded):
+    locals().update(interface_meta())
     _meta = Embedded.Meta(
         abstract=True,
         indexes=["sort_day", "end_sort_day", "earliest_fuzzy", "latest_fuzzy"],

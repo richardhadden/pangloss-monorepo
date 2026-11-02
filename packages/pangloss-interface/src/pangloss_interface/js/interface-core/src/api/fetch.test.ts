@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { headOf, wrappingSpaces } from "./context";
+import { contextTrail, headOf, wrappingSpaces } from "./context";
 import { ApiError, createApiClient, queryString } from "./client";
 import {
   autocomplete,
@@ -184,4 +184,18 @@ test("only an item inside another has a head node to go to", () => {
     type: "Factoid",
     id: "1",
   });
+});
+
+test("the trail has the spaces and the documents between them, but not the item itself", () => {
+  expect(contextTrail(undefined)).toEqual([]);
+  expect(
+    contextTrail(
+      [
+        { type: "Negative", contents: [{ type: "Order", id: "1" }, { type: "Action", id: "2" }] },
+        { type: "Hypothetical" },
+      ],
+      "2",
+    ),
+  ).toEqual(["Negative", "Order", "Hypothetical"]);
+  expect(contextTrail([{ type: "#rootcontext", contents: [{ type: "Order", id: "1" }] }])).toEqual(["Order"]);
 });

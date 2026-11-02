@@ -35,6 +35,8 @@ about her "held court at Ghent") and Charles the Bold (no role); `types` has onl
 | List page: "truncated" (`count+`, "narrow the search") | ⬜ | needs more results than `SEARCH_HIT_LIMIT`: set it low in the e2e settings |
 | List page: paging (`nextPage`) | ⬜ | the list shows the first page only (the interface has no pager yet) |
 | Item page: fields, references as chips, reverse relations, no empty rows | ✅ | |
+| Item page: reified relations without a "target" key; the full trail (spaces and documents) round a chip; reverse through a reified relation shows the field in its document | 🚧 | unit tests in `ItemContents.test.tsx`; the e2e project has no reified relation or semantic space |
+| Dates (`pangloss_dates` module): a date is said as a person would, not listed by field | 🚧 | unit tests in the module (`format.test.ts`, `DateCard.test.tsx`); the e2e project has no dates |
 | Item page: a type in a field leads to the page of the type (module page) | ✅ | |
 | Item page of a subtype (308 to its own route) | ✅ | through `/Role/<concrete type id>` in `test_typology_item.py` |
 | Not-found page, with a 404 status | ✅ | `test_navigation.py` |
