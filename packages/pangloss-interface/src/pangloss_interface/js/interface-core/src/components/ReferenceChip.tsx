@@ -43,7 +43,9 @@ export function DefaultReferenceChip(props: ReferenceChipProps) {
   const properties = () => Object.entries(props.edgeProperties ?? {});
   const body = () => (
     <>
+      {/* (`data-tint`: what was just added flashes in its colour: `revealAdded`) */}
       <span
+        data-tint
         class={[
           typeChipClass,
           kindTint(model()?.kind, model()?.interfaceMeta?.colour),

@@ -65,7 +65,7 @@ export function updateItem(
   });
 }
 
-/** Entities whose label has every word of `q` */
+/** Entities whose label has every word of `q` (without it, those most used) */
 export function autocomplete(
   client: ApiClient,
   params: AutocompleteParams,

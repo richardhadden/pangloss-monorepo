@@ -1,5 +1,7 @@
 """Making an item and changing one, through the form"""
 
+import re
+
 from helpers import hydrated
 from playwright.sync_api import Page, expect
 
@@ -41,6 +43,32 @@ def test_a_new_item_is_made_with_an_entity_found_by_search(logged_in: Page, data
     page.get_by_role("button", name="Save").click()
     expect(page.get_by_role("heading", name="A new statement")).to_be_visible()
     expect(page.get_by_role("link", name="Marie of Burgundy")).to_be_visible()
+
+
+def test_an_entity_field_offers_the_most_used_then_puts_those_picked_lately_first(
+    logged_in: Page, data
+):
+    page = logged_in
+    page.goto("/Statement/new")
+    hydrated(page)
+    options = page.get_by_role("option")
+    page.get_by_label("Find Person…").focus()
+    # (Marie has a role and a statement about her, Maximilian a role, Charles nothing)
+    expect(options).to_have_text(
+        [re.compile("Marie of Burgundy"), re.compile("Maximilian"), re.compile("Charles the Bold")]
+    )
+    page.get_by_label("Find Person…").fill("Charl")
+    page.get_by_role("option", name="Charles the Bold").click()
+    page.goto("/Statement/new")
+    hydrated(page)
+    page.get_by_label("Find Person…").focus()
+    expect(options).to_have_text(
+        [re.compile("Charles the Bold"), re.compile("Marie of Burgundy"), re.compile("Maximilian")]
+    )
+    expect(options.first.get_by_title("Used recently")).to_be_visible()
+    # (typing leaves out what was picked lately, if it does not match)
+    page.get_by_label("Find Person…").fill("Mari")
+    expect(options).to_have_text([re.compile("Marie of Burgundy")])
 
 
 def test_a_rejected_form_says_what_is_wrong_and_keeps_what_was_typed(logged_in: Page, data):

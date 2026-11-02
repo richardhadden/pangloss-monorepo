@@ -69,7 +69,7 @@ def search(
 
 def autocomplete(
     cls: type[Entity],
-    search_terms: str,
+    search_terms: str = "",
     types: list[type] | None = None,
     page_number: int | None = None,
     page_size: int | None = None,

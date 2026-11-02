@@ -31,7 +31,7 @@ from pangloss_models.search_where import Where
 from pangloss_models.utils import get_concrete_types
 from pydantic import AnyHttpUrl, TypeAdapter
 
-from pangloss_cypher.autocomplete_query import autocomplete_query
+from pangloss_cypher.autocomplete_query import autocomplete_query, most_used_query
 from pangloss_cypher.build_tree import GraphFragment
 from pangloss_cypher.list_query import (
     DEFAULT_HIT_LIMIT,
@@ -167,34 +167,37 @@ async def search(
 async def autocomplete(
     tx: Transaction,
     cls: type[Entity],
-    search_terms: str,
+    search_terms: str = "",
     types: list[type[Entity]] | None = None,
     page_number: int | None = None,
     page_size: int | None = None,
 ) -> AutocompleteResults:
     """The entities of the given types (or of `cls`) whose label has every word of the search
-    terms in it: a label that begins with them first, then by how well the index scores them."""
+    terms in it: a label that begins with them first, then by how well the index scores them.
+    With no search terms (blank), the entities of the types most used first (`most_used_query`)."""
     d = dialect()
-    patterns = d.search_patterns(search_terms)
     page, size = page_number or 1, page_size or 10
-    if not patterns:
-        return AutocompleteResults(
-            results=[],
-            count=0,
-            page=page,
-            page_size=size,
-            next_page=None,
-            previous_page=page - 1 if page > 1 else None,
-        )
-    params = {
-        "patterns": patterns,
+    params: dict[str, Any] = {
         "labels": labels_to_match(types or [cls]),
-        "start": d.autocomplete_start(search_terms),
         "page": page,
         "page_size": size,
     }
-    query = autocomplete_query(d)
-    result = await tx.run(query, **params)  # ty: ignore[invalid-argument-type]
+    if search_terms.strip():
+        patterns = d.search_patterns(search_terms)
+        if not patterns:
+            return AutocompleteResults(
+                results=[],
+                count=0,
+                page=page,
+                page_size=size,
+                next_page=None,
+                previous_page=page - 1 if page > 1 else None,
+            )
+        params |= {"patterns": patterns, "start": d.autocomplete_start(search_terms)}
+        query = autocomplete_query(d)
+    else:
+        query = most_used_query(d)
+    result = await tx.run(query, **params)
     rows = await result.value()
     found: dict = rows[0] if rows else await empty_page(tx, query, params)
     return AutocompleteResults.model_validate(found)

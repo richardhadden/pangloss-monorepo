@@ -6,13 +6,30 @@ from pangloss_cypher import fragments
 from pangloss_cypher.dialect import Dialect
 
 
+# The end of both queries: the page of the ordered nodes `n`. (What is collected is a map of the properties, not the
+# node: nodes found by the text index, collected after the ordering, came back as the same node several times.)
+PAGE = """\
+    WITH collect({id: n.id, type: n.type, label: n.label}) AS allNodes
+    WITH allNodes, size(allNodes) AS total,
+         toInteger(ceil(toFloat(size(allNodes)) / $page_size)) AS totalPages
+    WITH allNodes[($page - 1) * $page_size .. $page * $page_size] AS pageNodes,
+         total, totalPages
+    RETURN {
+        results: pageNodes,
+        count: total,
+        page: $page,
+        page_size: $page_size,
+        page_count: totalPages,
+        previous_page: CASE WHEN $page > 1 THEN $page - 1 ELSE null END,
+        next_page: CASE WHEN $page < totalPages THEN $page + 1 ELSE null END
+    } AS response
+"""
+
+
 # $patterns: a pattern for each word typed (`Dialect.search_patterns`)
 # $labels: any of these labels finds the node (the types asked for, with none that a parent already finds)
 # $start: what was typed (`Dialect.autocomplete_start`), to put the labels that begin with it first
 # $page (1-indexed), $page_size
-#
-# (What is collected is a map of the properties, not the node: nodes found by the text index, collected
-# after the ordering, came back as the same node several times.)
 def autocomplete_query(d: Dialect) -> LiteralString:
     return cast(
         LiteralString,
@@ -28,19 +45,23 @@ def autocomplete_query(d: Dialect) -> LiteralString:
     WITH n, totalScore,
          CASE WHEN {d.folded_label("n")} STARTS WITH $start THEN 0 ELSE 1 END AS rank
     ORDER BY rank, totalScore DESC, toLower(n.label), {d.tie_break("n")}
-    WITH collect({{id: n.id, type: n.type, label: n.label}}) AS allNodes
-    WITH allNodes, size(allNodes) AS total,
-         toInteger(ceil(toFloat(size(allNodes)) / $page_size)) AS totalPages
-    WITH allNodes[($page - 1) * $page_size .. $page * $page_size] AS pageNodes,
-         total, totalPages
-    RETURN {{
-        results: pageNodes,
-        count: total,
-        page: $page,
-        page_size: $page_size,
-        page_count: totalPages,
-        previous_page: CASE WHEN $page > 1 THEN $page - 1 ELSE null END,
-        next_page: CASE WHEN $page < totalPages THEN $page + 1 ELSE null END
-    }} AS response
-""",
+{PAGE}""",
+    )
+
+
+# $labels, $page, $page_size: as above
+#
+# What is offered before anything is typed: the entities of the types that have the most edges out of them (an entity's
+# reverse edges go out of it, one for each place it is referred to), so the ones most used come first.
+def most_used_query(d: Dialect) -> LiteralString:
+    return cast(
+        LiteralString,
+        f"""
+    MATCH (n:Entity)
+    WHERE any(label IN $labels WHERE label IN labels(n))
+      AND {fragments.not_deleted("n")}
+    OPTIONAL MATCH (n)-[edge]->()
+    WITH n, count(edge) AS uses
+    ORDER BY uses DESC, toLower(n.label), {d.tie_break("n")}
+{PAGE}""",
     )

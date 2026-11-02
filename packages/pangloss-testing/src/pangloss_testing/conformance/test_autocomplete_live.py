@@ -134,7 +134,8 @@ async def test_nothing_typed_but_punctuation_finds_nothing_and_breaks_nothing(
     *_, Place, _ = models()
     await Place.Create(label="Smithfield").save()
 
-    for text in ("(", ".*", "[a-", "\\", "   ", "a)b("):
+    # (blank, it is as if nothing was typed: see below)
+    for text in ("(", ".*", "[a-", "\\", "a)b("):
         found = await Place.autocomplete(text)
         assert found.results == [], text
 
@@ -207,3 +208,45 @@ async def test_documents_are_not_found(clear_database):
     await Person.Create(label="Smith").save()
 
     assert labels(await Entity.autocomplete("smith")) == ["Smith"]
+
+
+@no_type_check
+async def test_with_nothing_typed_the_entities_most_referred_to_come_first(
+    clear_database,
+):
+    from typing import Annotated
+
+    from pangloss_models.model_bases.configs import RelationConfig
+    from pangloss_models.model_bases.document import Document
+
+    class Person(Entity):
+        pass
+
+    class Place(Entity):
+        pass
+
+    class Letter(Document):
+        mentions: Annotated[list[Person], RelationConfig(reverse_name="mentioned_in")]
+
+    initialise()
+    alice = await Person.Create(label="Alice").save()
+    bob = await Person.Create(label="Bob").save()
+    await Person.Create(label="Carol").save()
+    await Place.Create(label="Atlanta").save()
+    deleted = await Person.Create(label="Dave").save()
+    for mentioned in ([bob], [bob, alice], [bob]):
+        await Letter.Create(
+            label="A letter",
+            mentions=[{"type": "Person", "id": p.id} for p in mentioned],
+        ).save()
+    await Person.delete(deleted.id)
+
+    found = await Person.autocomplete("")
+    assert labels(found) == ["Bob", "Alice", "Carol"]
+    assert found.count == 3
+
+    assert labels(await Person.autocomplete("  ", page_size=1)) == ["Bob"]
+    second = await Person.autocomplete(page_number=2, page_size=2)
+    assert labels(second) == ["Carol"]
+    assert second.previous_page == 1
+    assert labels(await Entity.autocomplete(types=[Place])) == ["Atlanta"]

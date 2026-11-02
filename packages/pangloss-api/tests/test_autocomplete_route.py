@@ -109,13 +109,28 @@ def test_the_page_defaults_to_ten_items_of_the_first_page(settings, monkeypatch)
     assert seen == {"page": 1, "size": 10}
 
 
-def test_it_is_refused_without_text_or_type_or_with_too_big_a_page(settings):
+def test_without_text_it_asks_for_those_most_used(settings, monkeypatch):
+    make_models()
+    client = TestClient(create_app())
+    seen = []
+
+    async def autocomplete(cls, search_terms, types=None, **more):
+        seen.append(search_terms)
+        return page()
+
+    stub(monkeypatch, Entity, "autocomplete", autocomplete)
+
+    for params in ({"type": "Person"}, {"q": "", "type": "Person"}):
+        assert client.get("/api/autocomplete", params=params).status_code == 200
+
+    assert seen == ["", ""]
+
+
+def test_it_is_refused_without_a_type_or_with_too_big_a_page(settings):
     make_models()
     client = TestClient(create_app())
 
     for params in (
-        {"type": "Person"},
-        {"q": "", "type": "Person"},
         {"q": "a"},
         {"q": "a", "type": "Person", "page": 0},
         {"q": "a", "type": "Person", "page_size": 51},

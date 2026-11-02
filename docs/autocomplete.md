@@ -14,7 +14,7 @@ GET /api/autocomplete?q=smi&type=Person&type=Organisation&page=1&page_size=10
 
 | Parameter | Meaning |
 |-----------|---------|
-| `q` | What was typed. Required, at least one character. Every word of it has to occur in the label (as in `list`), as the start or the middle of a word, in any case |
+| `q` | What was typed. Every word of it has to occur in the label (as in `list`), as the start or the middle of a word, in any case. Without it (or blank), the entities of the types most used (below) |
 | `type` | An entity class, or a trait that only entities have, or `Entity` (any entity). Repeat it for several. At least one is required |
 | `page` | The page, from 1 (default 1) |
 | `page_size` | Items on a page: 10 by default, at most 50 |
@@ -36,9 +36,15 @@ It answers one page, best match first:
 - The order is: labels that **begin with** what was typed first, then by the text index's score, then alphabetically.
 - An entity that has been deleted is not found.
 - A `type` that is not an entity type (a document, an embedded model, a name that does not exist) is a 422 that names it. It is never ignored.
-- Text with no letters or digits (`(`, `.*`) finds nothing; it is not an error.
+- Text with no letters or digits (`(`, `.*`) finds nothing; it is not an error. Blank text is as if nothing was typed.
 - Reading is open to everyone, like the lists.
 - A model cannot be called `autocomplete`: the path is taken (like `users`).
+
+## Before anything is typed: the most used
+
+With no `q` (or a blank one) the answer is the entities of the types, those with the most edges **out** of them first, then alphabetically. An entity's reverse edges go out of it, one for each place a document refers to it, so this is "the most referred to". The interface asks for it as soon as an empty entity field is drawn, and offers it (under the entities the user picked recently) before anything is typed. `pangloss_cypher.autocomplete_query.most_used_query`.
+
+It counts the edges of every entity of the types, so on a big database it is not cheap (not measured yet on the 600,000 nodes of [large data](large-data.md)). A count kept on the node, or a cache, would be the next step if it is slow.
 
 ## Making the query small
 
@@ -46,11 +52,12 @@ A node has the name of each of its parents and traits as a label, so the types a
 
 ## Calling it from Python
 
-`Entity.autocomplete(search_terms, types=None, page_number=None, page_size=None)` is bound to the entities like `list` is. `types` default to the class it is called on:
+`Entity.autocomplete(search_terms="", types=None, page_number=None, page_size=None)` is bound to the entities like `list` is. `types` default to the class it is called on:
 
 ```python
 await Person.autocomplete("smi")                          # only Persons (and subclasses)
 await Entity.autocomplete("smi", types=[Agent, Place])    # either
+await Person.autocomplete(page_size=10)                    # the ten most used Persons
 ```
 
 Over the SDK it is one request to the endpoint. The answer is an `AutocompleteResults` (`results`, `count`, `page`, `page_size`, `next_page`, `previous_page`), whose items are `AutocompleteItem`s (`id`, `type`, `label`).

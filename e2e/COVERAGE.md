@@ -3,7 +3,7 @@
 Keep this current: when a page or feature is added to the interface (or a test is added here), change its row.
 ✅ tested · 🚧 partly · ⬜ not yet · — not built, so nothing to test
 
-46 tests, about 65 s. The e2e project (`conftest.py`) has `Person` (`has_role: list[Role]`), `Role` (`has_type`), `RoleType` (a
+73 tests, about 110 s. The e2e project (`conftest.py`) has `Person` (`has_role: list[Role]`), `Role` (`has_type`), `RoleType` (a
 typology, also a `Role`) with Clerk > Secretary and Advisor, and `Statement` (a document: `text`, `about: Person`). The `data`
 fixture adds Maximilian (his secretary: a `Role` of the type Secretary), Marie of Burgundy (her advisor, and a statement
 about her "held court at Ghent") and Charles the Bold (no role); `types` has only the types; `stack` has one admin user.
@@ -33,7 +33,7 @@ about her "held court at Ghent") and Charles the Bold (no role); `types` has onl
 | `RequireLogin`: `/Person/new` opens the dialog; giving up goes home; logging in shows the page | ✅ | |
 | "New Person" button only for someone logged in | ✅ | |
 | List page: items, count, links | ✅ | `test_lists_and_items.py` |
-| List page: search (`?q=`), kept in the address, no result is a red 0, an address with a search shows it | ✅ | |
+| List page: search (`?q=`), kept in the address, no result is a red 0, an address with a search shows it; typing is not held up or undone by the searches it makes | ✅ | `test_typing_is_not_held_up_or_undone_by_the_searches_it_makes`; Vitest (`ConsoleSearch.test.tsx`) |
 | List page: deep search toggle, typing makes none, Enter / run button make it, turning it off | ✅ | finds a person through a statement |
 | List page: "truncated" (`count+`, "narrow the search") | ⬜ | needs more results than `SEARCH_HIT_LIMIT`: set it low in the e2e settings |
 | List page: scrolling loads more (virtualised, a page at a time); `?at=` kept as it is scrolled, and reloading or going back starts there | ✅ | `test_a_long_list_is_loaded_as_it_is_scrolled_and_starts_where_it_was_left` (130 people) |
@@ -57,6 +57,7 @@ about her "held court at Ghent") and Charles the Bold (no role); `types` has onl
 | Edit button of a document inside another: to the form of its head document (`?show=<id>`), scrolled to its block | 🚧 | checked with the demo data (a Transfer in a Factoid); the e2e models have no nested documents |
 | New item form: fields, an entity found by search, saved and shown | ✅ | |
 | A new entity made from the form (+ beside the search, dialog) is chosen | ✅ | |
+| Entity search before anything is typed: the most used of the types (most edges out: referred to most), asked for as the field is drawn; those picked lately (local storage) first, with a clock, and only while they match what is typed | ✅ | `test_an_entity_field_offers_the_most_used_then_puts_those_picked_lately_first`; types and subclasses, accents: Vitest (`ItemForm.test.tsx`) |
 | A rejected form says what is wrong and keeps what was typed; Cancel leaves without saving | ✅ | |
 | A toast at the bottom right after an item is saved or made (also an entity made from the form); it goes after 4 s or on a click | ✅ | `test_editing_an_item_saves_a_change`, `test_an_entity_is_made_from_the_form_and_chosen`; timing and click: Vitest (`Toasts.test.tsx`) |
 | Clipboard: cut in one form, kept across pages (local storage), shown at the bottom of a form page only, pasted into another form | ✅ | `test_an_entity_cut_in_one_form_is_pasted_into_another`; ids kept or dropped, what fits where, folding: Vitest (`ItemForm.test.tsx`, `clipboard.test.ts`); the e2e project has no sub-documents to cut |

@@ -3,8 +3,9 @@
     GET /api/autocomplete?q=smi&type=Person&type=Organisation&page=1&page_size=10
 
 `type` (at least one, repeated for more) names entity classes, or traits that only entities have; what
-is found is an entity of one of them or of a subclass. Every word of `q` has to occur in the label.
-Reading is open to everyone, as for the lists. See docs/autocomplete.md.
+is found is an entity of one of them or of a subclass. Every word of `q` has to occur in the label. Without
+`q` (or with it blank) the entities of the types are listed, those most used first: what to offer before anything
+is typed. Reading is open to everyone, as for the lists. See docs/autocomplete.md.
 """
 
 from typing import Annotated
@@ -24,13 +25,15 @@ router = APIRouter(prefix="/api/autocomplete", tags=["autocomplete"])
 
 @router.get("", response_model=AutocompleteResults, operation_id="autocomplete")
 async def autocomplete(
-    q: Annotated[str, Query(min_length=1, description="What has been typed")],
     type: Annotated[
         list[str],
         Query(
             min_length=1, description="An entity class to search; repeat for several"
         ),
     ],
+    q: Annotated[
+        str, Query(description="What has been typed: none, for those most used")
+    ] = "",
     page: Annotated[int, Query(ge=1)] = 1,
     page_size: Annotated[int, Query(ge=1, le=MAX_AUTOCOMPLETE_PAGE_SIZE)] = 10,
 ):

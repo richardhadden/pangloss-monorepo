@@ -1,19 +1,26 @@
-import { createSignal, createUniqueId, For, onCleanup, Show } from "solid-js";
+import { createSignal, createUniqueId, For, onCleanup, onSettled, Show } from "solid-js";
 import type { JSX } from "@solidjs/web";
 import { autocomplete } from "../../api";
 import type { Summary } from "../../api";
 import { useApi, useModels, useTranslations } from "../../context";
 import { kindTint, Spinner } from "../../primitives";
 import { getModel } from "../../schema";
+import { matchingEntities, recentEntities, rememberEntity } from "./recent";
 
 // (how long after the last key the search is made)
 const DEBOUNCE_MS = 250;
+// (how many of those picked lately are offered, above what is found)
+const RECENT_SHOWN = 5;
+// (how many of the most used are offered before anything is typed)
+const TOP_SHOWN = 10;
 
 /**
  * A search box for an entity of one of `types`: what is typed is looked for in the labels (the
  * API's autocomplete), and the matches are listed under it, as wide as it, to choose from with
- * the mouse or with the arrow keys and Enter (Escape closes the list). `children` are joined on
- * to the right end of the box (the button to make a new one).
+ * the mouse or with the arrow keys and Enter (Escape closes the list). Above the matches are the
+ * entities of the types picked lately (in this browser) that match too, marked with a clock; before
+ * anything is typed those are offered, and then the ones most used (asked for as soon as the box is
+ * drawn). `children` are joined on to the right end of the box (the button to make a new one).
  */
 export function EntityPicker(props: {
   types: string[];
@@ -26,6 +33,9 @@ export function EntityPicker(props: {
   const listId = createUniqueId();
   const [text, setText] = createSignal("");
   const [results, setResults] = createSignal<Summary[]>([]);
+  // (the most used, offered before anything is typed; and those picked lately, of any type)
+  const [top, setTop] = createSignal<Summary[]>([]);
+  const [recent, setRecent] = createSignal<Summary[]>([]);
   const [busy, setBusy] = createSignal(false);
   const [failed, setFailed] = createSignal(false);
   const [open, setOpen] = createSignal(false);
@@ -36,6 +46,15 @@ export function EntityPicker(props: {
   let timer: ReturnType<typeof setTimeout> | undefined;
   let ticket = 0;
   onCleanup(() => clearTimeout(timer));
+  // (in the browser only: what was picked lately is in its storage)
+  onSettled(() => {
+    setRecent(recentEntities());
+    autocomplete(api, { types: props.types, pageSize: TOP_SHOWN })
+      .then((page) => setTop(page.results))
+      .catch(() => {
+        // (nothing is offered until something is typed)
+      });
+  });
   const look = (q: string) => {
     const mine = ++ticket;
     setBusy(true);
@@ -59,28 +78,40 @@ export function EntityPicker(props: {
     setText(value);
     clearTimeout(timer);
     if (value.trim() === "") {
+      // (what is offered before anything is typed is shown again)
       ticket += 1;
       setResults([]);
       setBusy(false);
-      setOpen(false);
       return;
     }
     timer = setTimeout(() => look(value.trim()), DEBOUNCE_MS);
   };
   const pick = (result: Summary) => {
+    rememberEntity(result);
     setResults([]);
     setText("");
     setOpen(false);
     props.onPick(result);
   };
-  const showing = () => open() && text().trim() !== "";
-  const listed = () => showing() && results().length > 0;
+  const blank = () => text().trim() === "";
+  const recentShown = () =>
+    matchingEntities(definitions, recent(), props.types, text()).slice(0, RECENT_SHOWN);
+  // (what is listed: those picked lately first, then what was found, or the most used, without them)
+  const options = () => {
+    const first = recentShown();
+    const ids = new Set(first.map((entity) => entity.id));
+    const rest = blank() ? top() : searched() === text().trim() ? results() : [];
+    return [...first, ...rest.filter((entity) => !ids.has(entity.id))];
+  };
+  const isRecent = (index: number) => index < recentShown().length;
+  const showing = () => open() && !blank();
+  const listed = () => open() && options().length > 0;
   const empty = () =>
-    showing() && !busy() && !failed() && results().length === 0 && searched() === text().trim();
+    showing() && !busy() && !failed() && options().length === 0 && searched() === text().trim();
   const panel = () => (showing() && failed()) || listed() || empty();
   const optionId = (index: number) => `${listId}-${index}`;
   const move = (by: number) => {
-    const count = results().length;
+    const count = options().length;
     if (count === 0) return;
     // (a closed list opens again where it was)
     if (!listed()) return setOpen(true);
@@ -95,7 +126,7 @@ export function EntityPicker(props: {
     } else if (event.key === "Enter") {
       // (never the form's submit: Enter in the search chooses, or does nothing)
       event.preventDefault();
-      const chosen = results()[active()];
+      const chosen = options()[active()];
       if (listed() && chosen) pick(chosen);
     } else if (event.key === "Escape" && showing()) {
       // (only the list: a dialog the form is in stays open)
@@ -136,9 +167,16 @@ export function EntityPicker(props: {
           aria-controls={listId}
           aria-expanded={listed() ? "true" : "false"}
           aria-activedescendant={listed() ? optionId(active()) : undefined}
-          onInput={(event) => typed(event.currentTarget.value)}
+          onInput={(event) => {
+            setActive(0);
+            typed(event.currentTarget.value);
+          }}
           onKeyDown={onKeyDown}
-          onFocus={() => setOpen(true)}
+          onFocus={() => {
+            // (another field may have picked one since)
+            setRecent(recentEntities());
+            setOpen(true);
+          }}
           onBlur={() => setOpen(false)}
         />
         {props.children}
@@ -155,7 +193,7 @@ export function EntityPicker(props: {
           </Show>
           <ul id={listId} ref={list} class="max-h-72 overflow-y-auto" role="listbox">
             <Show when={!failed()}>
-              <For each={results()}>
+              <For each={options()}>
                 {(result, index) => (
                   <li
                     id={optionId(index())}
@@ -178,7 +216,12 @@ export function EntityPicker(props: {
                     >
                       {modelName(result.type)}
                     </span>
-                    <span class="truncate">{result.label}</span>
+                    <span class="min-w-0 flex-1 truncate">{result.label}</span>
+                    <Show when={isRecent(index())}>
+                      <span class="shrink-0 text-slate-400" title={t("picked_lately", "Used recently")}>
+                        <ClockIcon />
+                      </span>
+                    </Show>
                   </li>
                 )}
               </For>
@@ -187,6 +230,21 @@ export function EntityPicker(props: {
         </div>
       </Show>
     </div>
+  );
+}
+
+function ClockIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      class="size-3.5 select-none fill-none stroke-current stroke-2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M12 7.5V12l3 2" />
+    </svg>
   );
 }
 

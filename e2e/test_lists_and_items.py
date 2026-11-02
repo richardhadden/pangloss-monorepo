@@ -29,6 +29,18 @@ def test_a_search_narrows_the_list_and_is_kept_in_the_address(page: Page, data):
     expect(results(page)).to_have_count(3)
 
 
+def test_typing_is_not_held_up_or_undone_by_the_searches_it_makes(page: Page, data):
+    page.goto("/Person")
+    hydrated(page)
+    box = page.get_by_role("searchbox")
+    # (slower than the debounce: a search is made after each key, while the next is typed)
+    box.press_sequentially("Marie of B", delay=300)
+    expect(box).to_have_value("Marie of B")
+    page.wait_for_url("**/Person?q=Marie+of+B")
+    expect(results(page)).to_have_count(1)
+    expect(box).to_have_value("Marie of B")
+
+
 def test_a_search_with_no_result_says_none(page: Page, data):
     page.goto("/Person")
     hydrated(page)

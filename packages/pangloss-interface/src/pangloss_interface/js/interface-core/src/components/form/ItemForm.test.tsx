@@ -85,7 +85,9 @@ const definitions = {
 type Sent = { method: string; path: string; body: Record<string, unknown>; headers?: Record<string, string> };
 
 function fakeClient(answer: (sent: Sent) => unknown) {
+  // (the writes; and the reads, apart: each entity field asks for the most used as it is drawn)
   const sent: Sent[] = [];
+  const fetched: { path: string; params?: Record<string, unknown> }[] = [];
   const write =
     (method: string) =>
     async (path: string, body?: unknown, options?: { headers?: Record<string, string> }) => {
@@ -95,8 +97,8 @@ function fakeClient(answer: (sent: Sent) => unknown) {
     };
   const client = {
     baseUrl: "/api",
-    get: async (path: string) => {
-      sent.push({ method: "GET", path, body: {} });
+    get: async (path: string, params?: Record<string, unknown>) => {
+      fetched.push({ path, params });
       return {
         results: [
           { id: "p1", type: "Person", label: "Alice" },
@@ -111,7 +113,7 @@ function fakeClient(answer: (sent: Sent) => unknown) {
     delete: async () => undefined,
     postForm: async () => undefined,
   } as unknown as ApiClient;
-  return { client, sent };
+  return { client, sent, fetched };
 }
 
 const settle = (ms = 0) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -236,12 +238,12 @@ test("a statement is chosen from the types the add button opens, on their own or
 });
 
 test("an entity is found by searching, then shown as a reference, and only its type and id are sent", async () => {
-  const { client, sent } = fakeClient(() => ({ id: "f1", type: "Factoid", label: "F" }));
+  const { client, sent, fetched } = fakeClient(() => ({ id: "f1", type: "Factoid", label: "F" }));
   show(client);
   await settle();
   type("Find Person…", "ali");
   await settle(400);
-  expect(sent.find((call) => call.method === "GET")?.path).toBe("/autocomplete");
+  expect(fetched.at(-1)).toMatchObject({ path: "/autocomplete", params: { q: "ali" } });
   click(document.body.querySelector('[role="option"]'));
   await settle();
   expect(document.body.textContent).toContain("Alice");
@@ -285,9 +287,46 @@ test("the matches are chosen with the arrow keys and Enter, which does not save 
   expect(document.body.querySelector('[role="option"]')).toBeNull();
   await key("ArrowDown");
   await key("Enter");
-  expect(sent.filter((call) => call.method !== "GET")).toEqual([]);
+  expect(sent).toEqual([]);
   expect(document.body.textContent).toContain("Bob");
   expect(document.body.querySelector('[role="option"]')).toBeNull();
+});
+
+test("before anything is typed the most used are offered; what was picked lately comes first, and stays only while it matches", async () => {
+  const { client, fetched } = fakeClient(() => ({ id: "f1", type: "Factoid", label: "F" }));
+  localStorage.setItem(
+    "pangloss.recent-entities",
+    JSON.stringify([
+      { id: "p3", type: "Person", label: "Carol" },
+      { id: "x1", type: "Factoid", label: "Not a person" },
+      { id: "p2", type: "Person", label: "Bob" },
+    ]),
+  );
+  show(client);
+  await settle();
+  // (asked for as the field is drawn, with nothing typed)
+  expect(fetched).toContainEqual({ path: "/autocomplete", params: expect.objectContaining({ q: undefined, page_size: 10 }) });
+  const box = byLabel<HTMLInputElement>("Find Person…");
+  const options = () => [...document.body.querySelectorAll('[role="option"]')].map((option) => option.textContent);
+  box.dispatchEvent(new FocusEvent("focus"));
+  await settle();
+  // (those picked lately, of the type, then the most used without them)
+  expect(options()).toEqual(["PersonCarol", "PersonBob", "PersonAlice"]);
+  expect(box.getAttribute("aria-expanded")).toBe("true");
+  type("Find Person…", "car");
+  await settle();
+  expect(options()[0]).toBe("PersonCarol");
+  expect(options()).not.toContain("PersonBob");
+  type("Find Person…", "ali");
+  await settle(400);
+  expect(options()).toEqual(["PersonAlice", "PersonBob"]);
+  click(document.body.querySelector('[role="option"]'));
+  await settle();
+  expect(JSON.parse(localStorage.getItem("pangloss.recent-entities")!)[0]).toEqual({
+    id: "p1",
+    type: "Person",
+    label: "Alice",
+  });
 });
 
 test("the label is a heading that grows with a long label: one line of text, so Enter adds no line and pasted line breaks are spaces", async () => {

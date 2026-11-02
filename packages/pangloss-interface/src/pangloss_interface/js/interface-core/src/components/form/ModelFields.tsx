@@ -34,6 +34,7 @@ import type {
 import { createItem, ApiError, problemsOf } from "../../api";
 import type { Summary } from "../../api";
 import { EntityPicker } from "./EntityPicker";
+import { rememberEntity } from "./recent";
 import { JsonEditor, LiteralEditor } from "./LiteralEditor";
 import {
   addSlotClass,
@@ -85,7 +86,9 @@ function Block(
     // (scrolled to, it stops clear of the console bar, with room for a line of what it is in)
     <div class="flex w-full min-w-0 scroll-mt-28 flex-col" data-item-id={props.itemId}>
       <div class={headBarClass}>
-        <span class={[typeChipClass, props.tint || plainTint, props.rule]}>{modelName(props.type)}</span>
+        <span data-tint class={[typeChipClass, props.tint || plainTint, props.rule]}>
+          {modelName(props.type)}
+        </span>
         <div class={headRestClass}>
           <span class={headLabelClass}>{props.label}</span>
           {/* (fold, cut, copy, remove) */}
@@ -745,6 +748,7 @@ function RelationItem(props: {
       </Match>
       <Match when={model()?.kind === "SemanticSpace"}>
         <div
+          data-tint
           class={[
             "flex w-full min-w-0 flex-col rounded-sm border-[0.5px] border-slate-400/70",
             spaceTint(model()?.interfaceMeta?.colour, Math.floor(props.path().length / 2)),
@@ -927,6 +931,7 @@ function PickOrCreate(props: {
           onClose={() => setCreating(undefined)}
           onCreated={(entity) => {
             setCreating(undefined);
+            rememberEntity(entity);
             props.onPick(entity);
           }}
         />

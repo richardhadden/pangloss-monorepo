@@ -77,7 +77,8 @@ export interface ListParams {
 }
 
 export interface AutocompleteParams {
-  q: string;
+  /** What was typed: without it, the entities of the types most used */
+  q?: string;
   /** The entity types to look in (all, if none) */
   types?: string[];
   page?: number;

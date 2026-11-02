@@ -21,12 +21,21 @@ const DEBOUNCE_MS = 250;
  * the address. An ordinary search is made a moment after the last key, or at once on Enter. A
  * Deep Search is slow, so turning it on makes none: it is made on Enter, or by the run
  * button that appears with it. With `count`, it says how many were found: in red if none.
+ *
+ * The box's value is never bound to `query`: what is typed is the box's own, and a search the
+ * page is answering (the address changed, and the list is being asked again) cannot hold it up or
+ * put back what it was when that search was made. Only a `query` that is not the last one asked
+ * for (the address changed otherwise, as by going back) is written into it.
  */
 export function ConsoleSearch(props: ConsoleSearchProps) {
   const { t } = useTranslations();
-  // What is typed, which is ahead of `props.query` until the search is made (starting from it:
-  // a snapshot, which the effect below keeps up to date when the address changes)
-  const [draft, setDraft] = createSignal(untrack(() => props.query ?? ""));
+  // What the page was opened with (in the box from the server's render on, not followed)
+  const initial = untrack(() => props.query ?? "");
+  // What is typed, which is ahead of `props.query` until the search is made (for the run button)
+  const [draft, setDraft] = createSignal(initial);
+  // (the last search asked for: `props.query` coming back as it is not a change to show)
+  let asked = initial;
+  let box: HTMLInputElement | undefined;
   // Whether Deep Search is on: ahead of `props.deep` until a deep search is made
   const [deepOn, setDeepOn] = createSignal(untrack(() => props.deep ?? false));
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -35,8 +44,10 @@ export function ConsoleSearch(props: ConsoleSearchProps) {
   createEffect(
     () => props.query ?? "",
     (query) => {
-      // (what is typed is read as it is, not followed: only the address changing comes here)
-      if (query !== untrack(draft)) setDraft(query);
+      if (query === asked) return;
+      asked = query;
+      setDraft(query);
+      if (box) box.value = query;
     },
   );
   createEffect(
@@ -47,7 +58,9 @@ export function ConsoleSearch(props: ConsoleSearchProps) {
   );
   const search = (deep: boolean) => {
     clearTimeout(timer);
-    props.onSearch?.({ query: draft(), deep });
+    // (the box, not `draft`: a write is not read back until the next flush)
+    asked = box?.value ?? untrack(draft);
+    props.onSearch?.({ query: asked, deep });
   };
   const typed = (text: string) => {
     setDraft(text);
@@ -86,7 +99,8 @@ export function ConsoleSearch(props: ConsoleSearchProps) {
         type="search"
         aria-label={t("search", "Search")}
         placeholder={t("search", "Search")}
-        value={draft()}
+        ref={box}
+        value={initial}
         onInput={(event) => typed(event.currentTarget.value)}
         onKeyDown={(event) => {
           if (event.key === "Enter") search(deepOn());
