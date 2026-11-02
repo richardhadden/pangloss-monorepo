@@ -51,6 +51,10 @@ export const plainTint = "bg-slate-400/20 text-slate-800";
 export const headBarClass = "flex min-w-0 items-stretch rounded-sm bg-slate-400/10";
 export const headRestClass =
   "flex min-w-0 flex-1 items-stretch overflow-hidden rounded-r-sm border-[0.5px] border-l-0 border-slate-400/70";
+// (the same, where a button in it opens a menu, which hiding the overflow would cut off: its last button is rounded
+// instead, so that its colour on hover keeps to the corner)
+export const headRestOpenClass =
+  "flex min-w-0 flex-1 items-stretch rounded-r-sm border-[0.5px] border-l-0 border-slate-400/70 [&>:last-child]:rounded-r-sm";
 export const headLabelClass = "min-w-0 flex-1 self-center truncate px-3 py-1 text-sm";
 
 // (the same bar as a link to the item: it darkens as a chip does, the type's tint with it)
@@ -66,3 +70,6 @@ export const spaceButtonsClass =
 // the bar is tall)
 export const headButtonClass =
   "flex w-7 shrink-0 cursor-pointer items-center justify-center border-l-[0.5px] border-slate-400/70 text-xs select-none";
+// (the same, as wide as what it says: a button that opens a menu has its ▾ too)
+export const headMenuButtonClass =
+  "flex min-w-7 shrink-0 cursor-pointer items-center justify-center gap-0.5 border-l-[0.5px] border-slate-400/70 px-1.5 text-xs select-none";

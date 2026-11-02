@@ -141,5 +141,52 @@ def test_models_are_exported_as_plain_data():
     assert incoming["via_reverse"]["sources"][0]["viaReified"] is True
 
 
+def test_a_relation_says_which_fields_of_its_ancestors_it_stands_for():
+    from pangloss_models.field_definitions import FieldSubclassing
+
+    class Agent(Entity):
+        pass
+
+    class Person(Agent):
+        pass
+
+    class PhysicalObject(Entity):
+        pass
+
+    class Artwork(PhysicalObject):
+        pass
+
+    class Statement(Document):
+        _meta = Document.Meta(abstract=True)
+        involves: list[Agent]
+
+    class Creation(Statement):
+        created_by: Annotated[
+            Person,
+            RelationConfig(
+                subclasses_parent_fields=[
+                    FieldSubclassing(field_name="involves", field_on_model=Statement)
+                ]
+            ),
+        ]
+        object_created: PhysicalObject
+
+    class CreationOfArtwork(Creation):
+        artwork_created: Annotated[
+            Artwork, RelationConfig(subclasses_parent_fields=["object_created"])
+        ]
+
+    initialise()
+    models = export_models()["models"]
+    creation = by_name(models["Creation"])
+    assert creation["created_by"]["subclasses"] == ["involves"]
+    assert creation["object_created"]["subclasses"] == []
+    artwork = by_name(models["CreationOfArtwork"])
+    # (what it stands for, and what that stood for in turn: here nothing)
+    assert artwork["artwork_created"]["subclasses"] == ["object_created"]
+    assert "object_created" not in artwork
+    assert by_name(models["Statement"])["involves"]["subclasses"] == []
+
+
 def test_nothing_is_exported_before_there_are_models():
     assert export_models() == {"models": {}, "enums": {}}

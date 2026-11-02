@@ -39,6 +39,7 @@ NOT_DATA_KEYS = {
     "required",  # whether it has a default
     "concreteTypes",  # follows from the models that exist
     "incoming",  # follows from the fields of the other models
+    "subclasses",  # the fields a relation stands for: in its `storage`, as their edges
     "app",  # the app an index or constraint is for (which migration makes it)
 }
 

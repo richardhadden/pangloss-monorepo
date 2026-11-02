@@ -88,7 +88,8 @@ export const definitions: ModelDefinitions = {
               "edgeModel": null
             }
           ],
-          "validators": []
+          "validators": [],
+          "subclasses": []
         },
         {
           "name": "activity_type",
@@ -126,7 +127,10 @@ export const definitions: ModelDefinitions = {
               "edgeModel": "Certainty"
             }
           ],
-          "validators": []
+          "validators": [],
+          "subclasses": [
+            "involves"
+          ]
         },
         {
           "name": "participants",
@@ -162,7 +166,8 @@ export const definitions: ModelDefinitions = {
               }
             }
           ],
-          "validators": []
+          "validators": [],
+          "subclasses": []
         }
       ],
       "incoming": [],
@@ -202,7 +207,8 @@ export const definitions: ModelDefinitions = {
               "edgeModel": null
             }
           ],
-          "validators": []
+          "validators": [],
+          "subclasses": []
         }
       ],
       "incoming": [],
@@ -282,7 +288,8 @@ export const definitions: ModelDefinitions = {
               "edgeModel": null
             }
           ],
-          "validators": []
+          "validators": [],
+          "subclasses": []
         },
         {
           "name": "page",
@@ -336,7 +343,8 @@ export const definitions: ModelDefinitions = {
               "edgeModel": null
             }
           ],
-          "validators": []
+          "validators": [],
+          "subclasses": []
         },
         {
           "name": "result",
@@ -355,7 +363,8 @@ export const definitions: ModelDefinitions = {
               "edgeModel": null
             }
           ],
-          "validators": []
+          "validators": [],
+          "subclasses": []
         }
       ],
       "incoming": [],
@@ -479,7 +488,8 @@ export const definitions: ModelDefinitions = {
               "edgeModel": null
             }
           ],
-          "validators": []
+          "validators": [],
+          "subclasses": []
         },
         {
           "name": "created_by",
@@ -498,7 +508,10 @@ export const definitions: ModelDefinitions = {
               "edgeModel": null
             }
           ],
-          "validators": []
+          "validators": [],
+          "subclasses": [
+            "involves"
+          ]
         },
         {
           "name": "artwork_created",
@@ -522,7 +535,10 @@ export const definitions: ModelDefinitions = {
               "edgeModel": null
             }
           ],
-          "validators": []
+          "validators": [],
+          "subclasses": [
+            "object_created"
+          ]
         }
       ],
       "incoming": [],
@@ -610,7 +626,8 @@ export const definitions: ModelDefinitions = {
               "edgeModel": null
             }
           ],
-          "validators": []
+          "validators": [],
+          "subclasses": []
         },
         {
           "name": "created_by",
@@ -629,7 +646,10 @@ export const definitions: ModelDefinitions = {
               "edgeModel": null
             }
           ],
-          "validators": []
+          "validators": [],
+          "subclasses": [
+            "involves"
+          ]
         },
         {
           "name": "painting_created",
@@ -648,7 +668,11 @@ export const definitions: ModelDefinitions = {
               "edgeModel": null
             }
           ],
-          "validators": []
+          "validators": [],
+          "subclasses": [
+            "artwork_created",
+            "object_created"
+          ]
         }
       ],
       "incoming": [],
@@ -738,7 +762,8 @@ export const definitions: ModelDefinitions = {
               "edgeModel": null
             }
           ],
-          "validators": []
+          "validators": [],
+          "subclasses": []
         },
         {
           "name": "created_by",
@@ -757,7 +782,10 @@ export const definitions: ModelDefinitions = {
               "edgeModel": null
             }
           ],
-          "validators": []
+          "validators": [],
+          "subclasses": [
+            "involves"
+          ]
         },
         {
           "name": "object_created",
@@ -786,7 +814,8 @@ export const definitions: ModelDefinitions = {
               "edgeModel": null
             }
           ],
-          "validators": []
+          "validators": [],
+          "subclasses": []
         }
       ],
       "incoming": [],
@@ -1650,7 +1679,8 @@ export const definitions: ModelDefinitions = {
               }
             }
           ],
-          "validators": []
+          "validators": [],
+          "subclasses": []
         },
         {
           "name": "statements",
@@ -1855,7 +1885,8 @@ export const definitions: ModelDefinitions = {
               }
             }
           ],
-          "validators": []
+          "validators": [],
+          "subclasses": []
         }
       ],
       "incoming": [],
@@ -2003,7 +2034,8 @@ export const definitions: ModelDefinitions = {
               "edgeModel": null
             }
           ],
-          "validators": []
+          "validators": [],
+          "subclasses": []
         }
       ],
       "incoming": [],
@@ -2057,7 +2089,8 @@ export const definitions: ModelDefinitions = {
               "name": "MaxLen",
               "max_length": 1
             }
-          ]
+          ],
+          "subclasses": []
         },
         {
           "name": "identified_by",
@@ -2108,7 +2141,8 @@ export const definitions: ModelDefinitions = {
               "edgeModel": null
             }
           ],
-          "validators": []
+          "validators": [],
+          "subclasses": []
         },
         {
           "name": "role",
@@ -2162,7 +2196,8 @@ export const definitions: ModelDefinitions = {
               "edgeModel": null
             }
           ],
-          "validators": []
+          "validators": [],
+          "subclasses": []
         }
       ],
       "incoming": [],
@@ -2209,7 +2244,8 @@ export const definitions: ModelDefinitions = {
               "edgeModel": null
             }
           ],
-          "validators": []
+          "validators": [],
+          "subclasses": []
         }
       ],
       "incoming": [],
@@ -2290,7 +2326,8 @@ export const definitions: ModelDefinitions = {
               "name": "MaxLen",
               "max_length": 1
             }
-          ]
+          ],
+          "subclasses": []
         },
         {
           "name": "label_de",
@@ -2608,7 +2645,8 @@ export const definitions: ModelDefinitions = {
               "edgeModel": null
             }
           ],
-          "validators": []
+          "validators": [],
+          "subclasses": []
         },
         {
           "name": "ordered_by",
@@ -2661,7 +2699,10 @@ export const definitions: ModelDefinitions = {
               }
             }
           ],
-          "validators": []
+          "validators": [],
+          "subclasses": [
+            "involves"
+          ]
         },
         {
           "name": "thing_ordered",
@@ -2759,7 +2800,8 @@ export const definitions: ModelDefinitions = {
               }
             }
           ],
-          "validators": []
+          "validators": [],
+          "subclasses": []
         }
       ],
       "incoming": [],
@@ -3093,7 +3135,8 @@ export const definitions: ModelDefinitions = {
               "edgeModel": null
             }
           ],
-          "validators": []
+          "validators": [],
+          "subclasses": []
         }
       ],
       "incoming": [
@@ -3350,7 +3393,8 @@ export const definitions: ModelDefinitions = {
               "edgeModel": null
             }
           ],
-          "validators": []
+          "validators": [],
+          "subclasses": []
         }
       ],
       "incoming": [],
@@ -3909,7 +3953,8 @@ export const definitions: ModelDefinitions = {
               "edgeModel": null
             }
           ],
-          "validators": []
+          "validators": [],
+          "subclasses": []
         },
         {
           "name": "places",
@@ -3928,7 +3973,8 @@ export const definitions: ModelDefinitions = {
               "edgeModel": null
             }
           ],
-          "validators": []
+          "validators": [],
+          "subclasses": []
         }
       ],
       "incoming": [],
@@ -4016,7 +4062,8 @@ export const definitions: ModelDefinitions = {
               "edgeModel": null
             }
           ],
-          "validators": []
+          "validators": [],
+          "subclasses": []
         },
         {
           "name": "item",
@@ -4095,7 +4142,10 @@ export const definitions: ModelDefinitions = {
               }
             }
           ],
-          "validators": []
+          "validators": [],
+          "subclasses": [
+            "involves"
+          ]
         },
         {
           "name": "given_to",
@@ -4148,7 +4198,8 @@ export const definitions: ModelDefinitions = {
               }
             }
           ],
-          "validators": []
+          "validators": [],
+          "subclasses": []
         }
       ],
       "incoming": [],

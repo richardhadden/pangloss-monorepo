@@ -83,6 +83,11 @@ These are not shown, but are read aloud, or appear when the pointer rests on the
 | `add_named` | Add {name} | `ModelFields` (the button of the menu of a relation or embedded field) | `{name}` is the name of the field |
 | `remove_item` | Remove {name} | `LiteralEditor`, `ModelFields` (`aria-label` of the ✕ buttons) | |
 | `fold` | Fold or unfold {name} | `ModelFields` (`Block`: `aria-label` of the fold button) | |
+| `narrow_type` | Narrow {name} to a type below it | `RetypeButtons` (`aria-label` and tooltip of ↧) | |
+| `widen_type` | Widen {name} to a type above it | `RetypeButtons` (`aria-label` and tooltip of ↥) | |
+| `retype_title` | Change to {type}? | `RetypeButtons` (the dialog's heading) | |
+| `retype_loses` | {type} has no room for what is in these fields of {from}, which will be lost: | `RetypeButtons` (the dialog, above the list of fields) | |
+| `retype_confirm` | Change the type | `RetypeButtons` (the dialog's button) | |
 | `invalid_json` | This is not valid JSON, so it is not changed | `LiteralEditor` (`JsonEditor`, for a field the form has no editor for) | |
 | `find_entity` | Find {type}… | `EntityPicker` (placeholder and `aria-label`) | `{type}` is the names of the models it looks in |
 | `new_entity` | Make a new one | `ModelFields` (`PickOrCreate`: the + button beside the search; `aria-label` and tooltip) | the dialog is headed `new_item` |

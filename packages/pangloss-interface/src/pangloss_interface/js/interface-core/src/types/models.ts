@@ -96,6 +96,8 @@ export interface RelationField extends FieldBase {
   /** What it can relate to */
   options: RelationOption[];
   validators: Validator[];
+  /** The fields of its ancestors that it stands for (`subclasses_parent_fields`), directly or through another, by name */
+  subclasses: string[];
 }
 
 export interface UnknownField extends FieldBase {

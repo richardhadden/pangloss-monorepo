@@ -54,7 +54,7 @@ const base = { description: null, dbField: false, required: false, nullable: fal
 const literal = (name: string, type: object, extra: object = {}) =>
   ({ ...base, name, key: name, kind: "literal", type, validators: [], ...extra }) as FieldDefinition;
 const relation = (name: string, options: RelationOption[], many = true) =>
-  ({ ...base, name, key: name, kind: "relation", many, reverseName: `${name}_r`, options, validators: [] }) as FieldDefinition;
+  ({ ...base, name, key: name, kind: "relation", many, reverseName: `${name}_r`, options, validators: [], subclasses: [] }) as FieldDefinition;
 
 const doc = (type: string): RelationOption => ({ kind: "document", type, edgeModel: null });
 const negative: RelationOption = {

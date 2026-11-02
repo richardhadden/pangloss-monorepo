@@ -37,4 +37,5 @@ export * from "./hierarchy";
 export * from "./typeChoices";
 export * from "./formValue";
 export * from "./clipboard";
+export * from "./retype";
 export * from "./validation";

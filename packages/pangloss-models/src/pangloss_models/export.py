@@ -18,7 +18,9 @@ and each field has a `kind`:
     annotatedValue  model, valueType
     typeVar         typeVar
     embedded        model, types
-    relation        many, reverseName, options, validators
+    relation        many, reverseName, options, validators, subclasses (the names of the
+                    fields of its ancestors that it stands for, directly or through another:
+                    `RelationConfig(subclasses_parent_fields=...)`)
 
 A type is `{"type": "str"}` (also `int`, `float`, `bool`, `decimal`, `date`, `datetime`,
 `uuid`), `{"type": "enum", "enum": "Name"}` (the members are in `enums`), `{"type":
@@ -202,6 +204,12 @@ class Exporter:
                 "reverseName": definition.reverse_name,
                 "options": self.options(definition.type_options),
                 "validators": self.validators(definition.validators),
+                "subclasses": sorted(
+                    {
+                        s if isinstance(s, str) else s.field_name
+                        for s in definition.subclasses_parent_fields
+                    }
+                ),
             }
         else:
             entry["kind"] = "unknown"

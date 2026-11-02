@@ -1,5 +1,6 @@
 import { createEffect, createMemo, createSignal, onSettled, untrack, For, Match, Show, Switch } from "solid-js";
 import type { Accessor, ParentProps } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import {
   createItemFormState,
   ItemFormProvider,
@@ -17,6 +18,7 @@ import {
   choicesOf,
   choiceValue,
   envOf,
+  filled,
   getModel,
   menuGroups,
   optionFor,
@@ -47,7 +49,9 @@ import {
   headBarClass,
   headButtonClass,
   headLabelClass,
+  headMenuButtonClass,
   headRestClass,
+  headRestOpenClass,
   nestedClass,
   plainTint,
   smallButtonClass,
@@ -57,6 +61,7 @@ import {
 } from "./styles";
 import { TypeChooser, TypeMenu } from "./TypeMenu";
 import { revealAdded } from "./reveal";
+import { RetypeButtons } from "./Retype";
 import { ClipButtons, EmbeddedPasteSlot, RelationPasteSlot, useClipActions } from "./Clip";
 import { FieldProblems, useRowProblems, useSaveChecks } from "./Problems";
 import { Customised } from "../Customised";
@@ -65,8 +70,8 @@ const isObject = (value: unknown): value is FormData =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
 /**
- * Something nested: a head line with its type (a tinted chip), what it is called, a fold and a
- * remove button; under it, its fields, indented, with a rule in the colour of its type down the left.
+ * Something nested: a head line with its type (a tinted chip), what it is called, any `buttons` of
+ * its own (a document's, to change its type), a fold and a remove button; under it, its fields, indented, with a rule in the colour of its type down the left.
  */
 function Block(
   props: ParentProps<{
@@ -79,6 +84,8 @@ function Block(
     clip?: { copy: () => void; cut: () => void };
     /** The id of the item it is (a document inside the one edited), to find it by: `?show=` scrolls to it */
     itemId?: string;
+    /** Buttons before the fold (they may open menus, so the bar does not cut off what is over its edge) */
+    buttons?: JSX.Element;
   }>,
 ) {
   const { t, modelName } = useTranslations();
@@ -90,8 +97,9 @@ function Block(
         <span data-tint class={[typeChipClass, props.tint || plainTint, props.rule]}>
           {modelName(props.type)}
         </span>
-        <div class={headRestClass}>
+        <div class={props.buttons ? headRestOpenClass : headRestClass}>
           <span class={headLabelClass}>{props.label}</span>
+          {props.buttons}
           {/* (fold, cut, copy, remove) */}
           <button
             type="button"
@@ -132,21 +140,6 @@ function Block(
   );
 }
 
-
-/**
- * Whether a field has something in it, for its required mark: not nothing, an empty text or an empty
- * list; a thing that is only its type (an entity not yet chosen) is nothing, and so is an annotated
- * value without its value. (Only for the mark: whether it is valid is the API's to say.)
- */
-function filled(value: unknown): boolean {
-  if (value === null || value === undefined || value === "") return false;
-  if (Array.isArray(value)) return value.some(filled);
-  if (isObject(value)) {
-    if ("value" in value) return filled(value.value);
-    return Object.keys(value).some((key) => key !== "type");
-  }
-  return true;
-}
 
 /**
  * One labelled row of a form: the name on the left, the editor on the right. A required field has
@@ -826,6 +819,16 @@ function RelationItem(props: {
           onRemove={props.onRemove}
           clip={clip}
           itemId={typeof value()?.id === "string" ? String(value()!.id) : undefined}
+          buttons={
+            <RetypeButtons
+              type={type()}
+              options={props.options}
+              name={label() || modelName(type())}
+              buttonClass={[headMenuButtonClass, "text-slate-500 hover:bg-slate-400/30"].join(" ")}
+              value={value}
+              onRetype={(next) => form.set(props.path(), next)}
+            />
+          }
         >
           <ItemFields model={model()!} path={props.path} />
         </Block>

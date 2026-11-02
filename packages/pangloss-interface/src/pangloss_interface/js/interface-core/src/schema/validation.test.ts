@@ -27,7 +27,7 @@ const literal = (name: string, type: object, extra: object = {}) =>
 const list = (name: string, item: object, extra: object = {}) =>
   ({ ...base, name, key: name, kind: "list", item, validators: [], itemValidators: [], ...extra }) as FieldDefinition;
 const relation = (name: string, options: RelationOption[], extra: object = {}) =>
-  ({ ...base, name, key: name, kind: "relation", many: true, reverseName: `${name}_r`, options, validators: [], ...extra }) as FieldDefinition;
+  ({ ...base, name, key: name, kind: "relation", many: true, reverseName: `${name}_r`, options, validators: [], subclasses: [], ...extra }) as FieldDefinition;
 const embedded = (name: string, types: string[], extra: object = {}) =>
   ({ ...base, name, key: name, kind: "embedded", model: null, types, ...extra }) as FieldDefinition;
 

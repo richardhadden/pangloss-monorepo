@@ -1,5 +1,5 @@
 import datetime
-from typing import no_type_check
+from typing import Annotated, no_type_check
 from uuid import uuid7
 
 import pytest
@@ -11,6 +11,7 @@ from pangloss_models.exceptions import (
     PanglossUserNotFoundError,
 )
 from pangloss_models.model_bases.annotated_value import AnnotatedValue
+from pangloss_models.model_bases.configs import RelationConfig
 from pangloss_models.model_bases.conjunction import Conjunction
 from pangloss_models.model_bases.document import Document
 from pangloss_models.model_bases.edge_model import EdgeModel
@@ -438,6 +439,87 @@ async def test_update_keeps_creation_meta_of_nested_nodes(db_driver, clear_datab
 
     # Only new nodes are created by the user doing the update
     assert metas["A new Action"]["created_by"] == "editor"
+
+
+@no_type_check
+async def test_update_changes_the_type_of_a_nested_document_that_keeps_its_id(
+    db_driver, clear_database
+):
+    """The interface narrows or widens a document inside another (`retype`), keeping its id: saved, it is
+    the same node, with the labels and fields of its new type, and when it was made"""
+
+    class Thing(Entity):
+        pass
+
+    class Artwork(Thing):
+        pass
+
+    class Creation(Document):
+        thing: Thing
+
+    class CreationOfArtwork(Creation):
+        artwork: Annotated[Artwork, RelationConfig(subclasses_parent_fields=["thing"])]
+        medium: str | None = None
+
+    class Factoid(Document):
+        statements: list[Creation]
+
+    initialise()
+
+    artwork = await Artwork.Create(label="The thing").save()
+    saved = await Factoid.Create(
+        label="F",
+        statements=[
+            {
+                "type": "Creation",
+                "label": "Making it",
+                "thing": {"type": "Artwork", "id": artwork.id},
+            }
+        ],
+    ).save()
+    before = run(db_driver, "MATCH (c:Creation) RETURN c.id AS id, c.meta AS meta")[0]
+
+    # narrowed
+    await Factoid.Update(
+        id=saved.id,
+        label="F",
+        statements=[
+            {
+                "type": "CreationOfArtwork",
+                "id": before["id"],
+                "label": "Making it",
+                "artwork": {"type": "Artwork", "id": artwork.id},
+                "medium": "oil",
+            }
+        ],
+    ).save()
+    assert labels_of(db_driver, before["id"]) >= {"CreationOfArtwork", "Creation"}
+    (read,) = (await Factoid.get(saved.id)).statements
+    assert read.type == "CreationOfArtwork"
+    assert str(read.id) == before["id"]
+    assert read.artwork.id == artwork.id
+    assert read.medium == "oil"
+    meta = run(db_driver, "MATCH (c:Creation) RETURN c.meta AS meta")[0]["meta"]
+    assert native(meta["created_when"]) == native(before["meta"]["created_when"])
+
+    # and widened again
+    await Factoid.Update(
+        id=saved.id,
+        label="F",
+        statements=[
+            {
+                "type": "Creation",
+                "id": before["id"],
+                "label": "Making it",
+                "thing": {"type": "Artwork", "id": artwork.id},
+            }
+        ],
+    ).save()
+    assert "CreationOfArtwork" not in labels_of(db_driver, before["id"])
+    (read,) = (await Factoid.get(saved.id)).statements
+    assert read.type == "Creation"
+    assert read.thing.id == artwork.id
+    assert count_nodes(db_driver, "Creation") == 1
 
 
 @no_type_check

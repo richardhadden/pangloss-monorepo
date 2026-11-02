@@ -38,6 +38,20 @@ export function setAt(root: FormData, path: Path, value: unknown): void {
   });
 }
 
+/**
+ * Whether a value has something in it: not nothing, an empty text or an empty list; a thing that is
+ * only its type (an entity not yet chosen) is nothing, and so is an annotated value without its value.
+ */
+export function filled(value: unknown): boolean {
+  if (value === null || value === undefined || value === "") return false;
+  if (Array.isArray(value)) return value.some(filled);
+  if (isObject(value)) {
+    if ("value" in value) return filled(value.value);
+    return Object.keys(value).some((key) => key !== "type");
+  }
+  return true;
+}
+
 /** Takes away what is at `path`: an item of a list is cut out, a key of an object is deleted */
 export function removeAt(root: FormData, path: Path): void {
   const parent = getAt(root, path.slice(0, -1));
