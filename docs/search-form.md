@@ -7,6 +7,32 @@ Step 6 of [structured search](structured-search.md): a form on the list page of 
 (the rows, operators, entities, nested forms, what refers to an entity), `ConsoleSearch.test.tsx` (the button),
 `e2e/test_search_form.py` and `test_dev_mode.py::test_the_search_form` (in the browser).
 
+## Status and where to resume (2026-11-02)
+
+**Built and tested**, in two commits (`4cd1282`, `042b025`): the panel (button beside Deep search, slides out under the
+console, pushes the list down, `mx-3` in from its ends), every field with not + operator + value, entity picking,
+nested forms, Mentions, Contains (`$somewhere`), Referred to by (`$incoming`), Any of (`$any_of`), "+ and" on a row,
+through / Inside (`$spaces`), Order by, saved searches in the browser, `?form=` in the address, text box narrowing.
+Full `./run_tests.sh` passed (the e2e suite again after a test fix: 86).
+
+**Where the code is**
+
+| What | File |
+|------|------|
+| Form state, fields/operators, compile to the API (`compileSearch`, `compileRequest`), address encoding | `interface-core/src/schema/searchForm.ts` (+ `.test.ts`) |
+| The panel and all its rows | `interface-core/src/components/search/SearchPanel.tsx` (+ `.test.tsx`) |
+| Saved searches (local storage) | `interface-core/src/components/search/saved.ts` |
+| Button in the console | `interface-core/src/components/ConsoleSearch.tsx` |
+| List page wiring, query, preload | `interface-app/src/pages/List.tsx`, `queries.ts` (`listQuery`, `requestOf`), `routes.ts` |
+| Browser tests | `e2e/test_search_form.py`, `e2e/test_dev_mode.py::test_the_search_form` |
+| Strings | `translations/ui.jsonc` (`search_*`, en/de/fr), `docs/interface-strings.md` |
+
+**To pick up next** (see "Not done" at the end): saved searches in the database (shared), `$incoming` of documents
+(needs the API first), any-of groups inside alternatives. Not checked yet: the form with the demo's richer models while
+logged in (unpublished factoids), and on a large database (a nested form's search cost is as in
+[structured search, step 5](structured-search.md#step-5-measured)). The e2e project has no nested documents or semantic
+spaces, so Contains, through and Inside are tested only in Vitest.
+
 ## What was decided (2026-11-02)
 
 - **A button beside Deep search**, in the console (an icon of a form). It opens a panel that slides out from under the
