@@ -46,6 +46,7 @@ import {
   headBarClass,
   headButtonClass,
   headLabelClass,
+  headRestClass,
   nestedClass,
   plainTint,
   smallButtonClass,
@@ -80,38 +81,40 @@ function Block(
   return (
     <div class="flex w-full min-w-0 flex-col">
       <div class={headBarClass}>
-        <span class={[typeChipClass, props.tint || plainTint]}>{modelName(props.type)}</span>
-        <span class={headLabelClass}>{props.label}</span>
-        {/* (fold, cut, copy, remove) */}
-        <button
-          type="button"
-          class={[headButtonClass, "text-slate-500 hover:bg-slate-400/30"]}
-          aria-expanded={folded() ? "false" : "true"}
-          aria-label={t("fold", "Fold or unfold {name}", { name: modelName(props.type) })}
-          onClick={() => setFolded(!folded())}
-        >
-          <Show when={folded()} fallback="▾">
-            ▸
-          </Show>
-        </button>
-        <Show when={props.clip}>
-          <ClipButtons
-            name={props.label || modelName(props.type)}
-            buttonClass={[headButtonClass, "text-slate-500 hover:bg-slate-400/30"].join(" ")}
-            onCopy={() => props.clip!.copy()}
-            onCut={() => props.clip!.cut()}
-          />
-        </Show>
-        <Show when={props.onRemove}>
+        <span class={[typeChipClass, props.tint || plainTint, props.rule]}>{modelName(props.type)}</span>
+        <div class={headRestClass}>
+          <span class={headLabelClass}>{props.label}</span>
+          {/* (fold, cut, copy, remove) */}
           <button
             type="button"
-            class={[headButtonClass, "text-red-800 hover:bg-red-400/30"]}
-            aria-label={t("remove_item", "Remove {name}", { name: modelName(props.type) })}
-            onClick={() => props.onRemove?.()}
+            class={[headButtonClass, "text-slate-500 hover:bg-slate-400/30"]}
+            aria-expanded={folded() ? "false" : "true"}
+            aria-label={t("fold", "Fold or unfold {name}", { name: modelName(props.type) })}
+            onClick={() => setFolded(!folded())}
           >
-            ✕
+            <Show when={folded()} fallback="▾">
+              ▸
+            </Show>
           </button>
-        </Show>
+          <Show when={props.clip}>
+            <ClipButtons
+              name={props.label || modelName(props.type)}
+              buttonClass={[headButtonClass, "text-slate-500 hover:bg-slate-400/30"].join(" ")}
+              onCopy={() => props.clip!.copy()}
+              onCut={() => props.clip!.cut()}
+            />
+          </Show>
+          <Show when={props.onRemove}>
+            <button
+              type="button"
+              class={[headButtonClass, "text-red-800 hover:bg-red-400/30"]}
+              aria-label={t("remove_item", "Remove {name}", { name: modelName(props.type) })}
+              onClick={() => props.onRemove?.()}
+            >
+              ✕
+            </button>
+          </Show>
+        </div>
       </div>
       <Show when={!folded()}>
         {/* (the rule starts at the bar: what is under it hangs from the head) */}

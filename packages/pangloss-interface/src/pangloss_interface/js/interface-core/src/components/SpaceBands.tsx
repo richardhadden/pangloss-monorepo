@@ -42,9 +42,9 @@ export function SpaceBands(
       >
         <span
           class={[
-            "flex shrink-0 items-center font-semibold uppercase select-none",
-            // (round a chip, smaller than the chip's type, as in the console: the spaces are its context)
-            { "px-3 pt-2 text-xs": props.stacked, "px-2 text-[0.6rem]": !props.stacked },
+            "flex shrink-0 items-center uppercase select-none",
+            // (round a chip, as big as the chip's type but quieter, lighter in weight and colour: the spaces are its context)
+            { "px-3 pt-2 text-xs font-semibold": props.stacked, "px-2 text-xs font-medium opacity-70": !props.stacked },
           ]}
         >
           {modelName(props.spaces[0] ?? "")}

@@ -40,15 +40,17 @@ export const nestedClass = "flex min-w-0 flex-col gap-5 self-stretch border-l-2 
 
 // (the type of a nested thing, the left end of its head bar, as tall as the bar: tinted by its kind or its
 // model's colour; a type with no tint of its own, such as a reified relation, has a plain one, so it still reads as a chip;
-// a hairline between it and the label, as in a reference chip)
-export const typeChipClass = "flex shrink-0 items-center border-r-[0.5px] border-slate-400/70 px-2.5 py-1 text-xs font-semibold uppercase select-none";
+// framed in the colour of the rule that hangs from it (`kindRule`, given with it), so the two meet in one colour)
+export const typeChipClass =
+  "flex shrink-0 items-center rounded-l-sm border-[0.5px] px-2.5 py-1 text-xs font-semibold uppercase select-none";
 export const plainTint = "bg-slate-400/20 text-slate-800";
 
 // (the head line of a nested thing: a faint bar as wide as it, so that where each one starts is plain to see;
-// its type at the left end, then its label (`headLabelClass`), then any buttons, each as tall as the bar;
-// framed by the same hairline as a chip or a field, since it is something you act on)
-export const headBarClass =
-  "flex min-w-0 items-stretch overflow-hidden rounded-sm border-[0.5px] border-slate-400/70 bg-slate-400/10";
+// its type at the left end (`typeChipClass`), then the rest (`headRestClass`): its label (`headLabelClass`), then any
+// buttons, each as tall as the bar, framed by the same hairline as a chip or a field, since it is something you act on)
+export const headBarClass = "flex min-w-0 items-stretch rounded-sm bg-slate-400/10";
+export const headRestClass =
+  "flex min-w-0 flex-1 items-stretch overflow-hidden rounded-r-sm border-[0.5px] border-l-0 border-slate-400/70";
 export const headLabelClass = "min-w-0 flex-1 self-center truncate px-3 py-1 text-sm";
 
 // (the same bar as a link to the item: it darkens as a chip does, the type's tint with it)
@@ -60,6 +62,7 @@ export const spaceTypeClass = "px-3 py-1.5 text-xs font-semibold uppercase selec
 export const spaceButtonsClass =
   "flex self-start overflow-hidden rounded-tr-sm rounded-bl-sm border-b-[0.5px] border-slate-400/70";
 
-// (a button at the right end of a head bar, with a hairline before it, as in a reference chip: square, as wide as the bar is tall)
+// (a button at the right end of a head bar, with a hairline before it, as in a reference chip: square, as wide as
+// the bar is tall)
 export const headButtonClass =
   "flex w-7 shrink-0 cursor-pointer items-center justify-center border-l-[0.5px] border-slate-400/70 text-xs select-none";

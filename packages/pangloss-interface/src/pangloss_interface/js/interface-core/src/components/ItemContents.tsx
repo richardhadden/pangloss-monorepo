@@ -18,6 +18,7 @@ import {
   headBarClass,
   headBarLinkClass,
   headLabelClass,
+  headRestClass,
   nestedClass,
   plainTint,
   spaceTypeClass,
@@ -78,18 +79,22 @@ function Row(props: ParentProps<{ name: string; incoming?: boolean }>) {
 function Head(props: {
   type: string;
   tint: string;
+  /** The colour of the rule that hangs from it, which the frame of its type has too */
+  rule: string;
   label?: string;
   href?: string;
 }) {
   const { modelName } = useTranslations();
   const contents = () => (
     <>
-      <span class={[typeChipClass, props.tint || plainTint]}>
+      <span class={[typeChipClass, props.tint || plainTint, props.rule]}>
         {modelName(props.type)}
       </span>
-      <Show when={props.label}>
-        <span class={headLabelClass}>{props.label}</span>
-      </Show>
+      <span class={headRestClass}>
+        <Show when={props.label}>
+          <span class={headLabelClass}>{props.label}</span>
+        </Show>
+      </span>
     </>
   );
   return (
@@ -276,6 +281,7 @@ function ObjectValue(props: {
                   <Head
                     type={type() ?? model()?.name ?? ""}
                     tint={tint()}
+                    rule={rule()}
                     label={label()}
                     href={
                       props.asChip && props.value.id
@@ -314,7 +320,7 @@ function ObjectValue(props: {
           <Match when={isReified()}>
             {/* (a reified relation: its type at the head, then what it holds, full width and without its field name, then its own fields, if it has any) */}
             <div class="mb-4 flex w-full min-w-0 flex-col last:mb-0">
-              <Head type={type() ?? ""} tint={tint()} label={label()} />
+              <Head type={type() ?? ""} tint={tint()} rule={rule()} label={label()} />
               <div class={["ml-2 pt-4", nestedClass, rule()]}>
                 {/* (what it holds first, then what is said of the relation) */}
                 <div class="flex min-w-0 flex-wrap items-start gap-x-2 gap-y-4">
