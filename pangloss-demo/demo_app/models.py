@@ -24,6 +24,7 @@ small, and between them use most of what Pangloss has:
 | A reified relation to a conjunction, with edge properties on its members | `Identification[Alternative[ViaEdge[Person, Probability]]]` |
 | Binding a value of the parent into its children | `Factoid.year` into `Statement.year` |
 | Literals: enums, dates, decimals, a TypedDict, lists, validators | throughout |
+| What a space or a conjunction does to a derived relation (`pangloss-derived`; the rules are in `derived.py`) | `Alternative`, `InRole` |
 """
 
 import datetime
@@ -34,6 +35,7 @@ from typing import Annotated, TypedDict
 from annotated_types import Ge, Le, MaxLen, MinLen
 from pangloss_dates.bounds import SortBy
 from pangloss_dates.models import Date, SortDefault
+from pangloss_derived import DerivedMeta
 from pangloss_interface import InterfaceMeta
 from pangloss_models.field_definitions import FieldBinding, FieldSubclassing
 from pangloss_models.model_bases.annotated_value import AnnotatedValue
@@ -101,12 +103,18 @@ class AtPage[T](ReifiedRelation[T]):
 class InRole[T](ReifiedRelation[T]):
     """A relation to something *in a role*"""
 
+    # (a derived relation through a role is as if there were no role: "took part" is plain)
+    _derived_meta = DerivedMeta(derivation="transparent")
+
     role: Role
 
 
 class Alternative[T](Conjunction):
     """One of several things, not known which: any number of statements or entities.
     `Alternative[ViaEdge[Person, Probability]]` gives each person how likely it is the one meant"""
+
+    # (one of them, not known which: a derived relation takes one alternative at a time, never two together)
+    _derived_meta = DerivedMeta(exclusive=True)
 
     alternatives: list[T]
 
@@ -222,6 +230,22 @@ class Transfer(Statement):
         Agent | Identification[Alternative[ViaEdge[Person, Probability]]],
         RelationConfig(reverse_name="received"),
     ]
+
+
+class MemberOf(Statement):
+    """Someone was a member of a group: of a family, an order, an army. (Two factoids that say so of two people make
+    them members of the same group: see `derived.py`)"""
+
+    member: Annotated[
+        Agent | Identification[Alternative[ViaEdge[Person, Probability]]],
+        RelationConfig(
+            reverse_name="member_of",
+            subclasses_parent_fields=[
+                FieldSubclassing("involves", field_on_model=Statement)
+            ],
+        ),
+    ]
+    group: Annotated[Group, RelationConfig(reverse_name="has_member")]
 
 
 class Order(Statement):

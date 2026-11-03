@@ -26,6 +26,7 @@ class Settings(BaseSettings[MemgraphDatabaseSettings]):
         "pangloss_calendar",
         "pangloss_typology",
         "pangloss_review",
+        "pangloss_derived",
         "demo_app",
         "pangloss_interface",
         "pangloss_history",
