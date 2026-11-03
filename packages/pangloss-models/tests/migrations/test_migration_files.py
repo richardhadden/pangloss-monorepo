@@ -71,6 +71,28 @@ def test_a_migration_is_written_and_read_back(app):
 
 
 @no_type_check
+def test_create_directly_is_not_a_change_of_the_data():
+    """Whether a document can be made on its own changes nothing stored: `makemigrations` has nothing to
+    write, so the state the migrations come to must be the models' (as `pangloss dev` checks it)"""
+    from pangloss_models.model_bases.document import Document
+
+    def declare(create_directly: bool):
+        def make():
+            class Statement(Document):
+                _meta = Document.Meta(create_directly=create_directly)
+                text: str
+
+        return make
+
+    old = snapshot_of(declare(True))
+    new = snapshot_of(declare(False))
+    state = replay(EMPTY_SNAPSHOT, diff(EMPTY_SNAPSHOT, old).changes)
+
+    assert diff(old, new).changes == []
+    assert state == data_view(new)
+
+
+@no_type_check
 def test_a_migration_is_not_written_over(app):
     migration = Migration(app=app, name="0001_initial", changes=())
     write(migration, migrations_directory(app))

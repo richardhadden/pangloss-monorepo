@@ -41,6 +41,7 @@ NOT_DATA_KEYS = {
     "incoming",  # follows from the fields of the other models
     "subclasses",  # the fields a relation stands for: in its `storage`, as their edges
     "defaultReifiedType",  # what the interface offers first
+    "createDirectly",  # whether one can be made on its own, or only as part of another document
     "app",  # the app an index or constraint is for (which migration makes it)
 }
 
