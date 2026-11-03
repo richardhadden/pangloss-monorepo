@@ -21,6 +21,7 @@ small, and between them use most of what Pangloss has:
 | An annotated value (a value with fields of its own) | `WithCertainty[str]` |
 | Semantic spaces (a context for statements) | `Negative`, `Hypothetical`, `PositiveSubjunctive`, `NegativeSubjunctive` |
 | A statement that holds another statement | `Order.thing_ordered` |
+| Binding a value of the parent into its children | `Order.ordered_to` into the `given_by` or `ordered_by` of what is ordered |
 | A conjunction (a join of several things) | `Causes`, `Alternative` (any number) |
 | A reified relation to a conjunction, with edge properties on its members | `Identification[Alternative[ViaEdge[Person, Probability]]]` |
 | Literals: enums, dates, decimals, a TypedDict, lists, validators | throughout |
@@ -38,7 +39,7 @@ from pangloss_dates.bounds import SortBy
 from pangloss_dates.models import Date, SortDefault
 from pangloss_derived import DerivedMeta
 from pangloss_interface import InterfaceMeta
-from pangloss_models.field_definitions import FieldSubclassing
+from pangloss_models.field_definitions import FieldBinding, FieldSubclassing
 from pangloss_models.model_bases.annotated_value import AnnotatedValue
 from pangloss_models.model_bases.configs import RelationConfig
 from pangloss_models.model_bases.conjunction import Conjunction
@@ -280,7 +281,22 @@ class Order(Statement):
             ],
         ),
     ]
-    thing_ordered: PositiveSubjunctive[Statement] | NegativeSubjunctive[Statement]
+    # Who received the order: the one who is to do what is ordered, so it is given to what is ordered (in the
+    # subjunctive space) that does not say otherwise: who gives, in a transfer, or who orders, in an order passed on
+    ordered_to: Annotated[
+        Agent | Identification[Alternative[ViaEdge[Person, Probability]]],
+        RelationConfig(reverse_name="received_order"),
+    ]
+    thing_ordered: Annotated[
+        PositiveSubjunctive[Statement] | NegativeSubjunctive[Statement],
+        RelationConfig(
+            bind_to_child_field=[
+                FieldBinding(
+                    bound_field="ordered_to", child_fields=["given_by", "ordered_by"]
+                )
+            ]
+        ),
+    ]
 
 
 class PositiveSubjunctive[T](SemanticSpace[T]):

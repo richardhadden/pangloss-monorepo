@@ -28,7 +28,7 @@ from pangloss_dates.bounds import SortBy
 from pangloss_dates.models import Date, SortDefault
 from pangloss_derived import DerivedMeta
 from pangloss_interface import InterfaceMeta
-from pangloss_models.field_definitions import FieldSubclassing
+from pangloss_models.field_definitions import FieldBinding, FieldSubclassing
 from pangloss_models.model_bases.annotated_value import AnnotatedValue
 from pangloss_models.model_bases.configs import RelationConfig
 from pangloss_models.model_bases.conjunction import Conjunction
@@ -180,6 +180,7 @@ class Person(Entity, Agent):
         received: typing.Any = ...
         member_of: typing.Any = ...
         ordered: typing.Any = ...
+        received_order: typing.Any = ...
         created_by_reverse: list[CreationOfArtwork.ReferenceView | CreationOfPainting.ReferenceView | CreationOfPhysicalObject.ReferenceView] = ...
 
     class EditView(pangloss_models.model_bases.entity._EntityEditViewBase, Person.View):  # type: ignore
@@ -233,6 +234,7 @@ class Group(Entity, Agent):
         member_of: list[MemberOf.ReferenceView] = ...
         has_member: list[MemberOf.ReferenceView] = ...
         ordered: list[Order.ReferenceView] = ...
+        received_order: list[Order.ReferenceView] = ...
 
     class EditView(pangloss_models.model_bases.entity._EntityEditViewBase, Group.View):  # type: ignore
         ...
@@ -619,7 +621,8 @@ class MemberOf(Statement):
 
 class Order(Statement):
     ordered_by: Annotated[Agent | Identification[Alternative[ViaEdge[Person, Probability]]], RelationConfig(reverse_name='ordered', subclasses_parent_fields=[FieldSubclassing('involves', field_on_model=Statement)])]
-    thing_ordered: PositiveSubjunctive[Statement] | NegativeSubjunctive[Statement]
+    ordered_to: Annotated[Agent | Identification[Alternative[ViaEdge[Person, Probability]]], RelationConfig(reverse_name='received_order')]
+    thing_ordered: Annotated[PositiveSubjunctive[Statement] | NegativeSubjunctive[Statement], RelationConfig(bind_to_child_field=[FieldBinding(bound_field='ordered_to', child_fields=['given_by', 'ordered_by'])])]
     class ReferenceView(pangloss_models.model_bases.document._DocumentReferenceViewBase):  # type: ignore
         type: typing.Literal['Order'] = ...
 
@@ -630,6 +633,7 @@ class Order(Statement):
         date: pangloss_dates.models.DateRange.Create | pangloss_dates.models.EDTFDate.Create | pangloss_dates.models.ExactDate.Create | pangloss_dates.models.OngoingDate.Create | pangloss_dates.models.Period.Create | pangloss_dates.models.Recurrence.Create | pangloss_dates.models.UnknownDate.Create
         places: list[Place.ReferenceSet]
         ordered_by: typing.Any
+        ordered_to: typing.Any
         thing_ordered: typing.Any
 
     class Update(pangloss_models.model_bases.document._DocumentUpdateBase):  # type: ignore
@@ -639,6 +643,7 @@ class Order(Statement):
         date: pangloss_dates.models.DateRange.Create | pangloss_dates.models.DateRange.Update | pangloss_dates.models.EDTFDate.Create | pangloss_dates.models.EDTFDate.Update | pangloss_dates.models.ExactDate.Create | pangloss_dates.models.ExactDate.Update | pangloss_dates.models.OngoingDate.Create | pangloss_dates.models.OngoingDate.Update | pangloss_dates.models.Period.Create | pangloss_dates.models.Period.Update | pangloss_dates.models.Recurrence.Create | pangloss_dates.models.Recurrence.Update | pangloss_dates.models.UnknownDate.Create | pangloss_dates.models.UnknownDate.Update
         places: list[Place.ReferenceSet]
         ordered_by: typing.Any
+        ordered_to: typing.Any
         thing_ordered: typing.Any
 
     class View(pangloss_models.model_bases.document._DocumentViewBase):  # type: ignore
@@ -648,6 +653,7 @@ class Order(Statement):
         date: pangloss_dates.models.DateRange.View | pangloss_dates.models.EDTFDate.View | pangloss_dates.models.ExactDate.View | pangloss_dates.models.OngoingDate.View | pangloss_dates.models.Period.View | pangloss_dates.models.Recurrence.View | pangloss_dates.models.UnknownDate.View
         places: list[Place.ReferenceView] = ...
         ordered_by: typing.Any
+        ordered_to: typing.Any
         thing_ordered: typing.Any
 
     class HeadView(pangloss_models.model_bases.document._DocumentHeadViewBase, Order.View):  # type: ignore
@@ -662,8 +668,9 @@ class Order(Statement):
         date: pangloss_dates.models.Date.Where | pangloss_dates.models.DateRange.Where | pangloss_dates.models.EDTFDate.Where | pangloss_dates.models.ExactDate.Where | pangloss_dates.models.OngoingDate.Where | pangloss_dates.models.Period.Where | pangloss_dates.models.Recurrence.Where | pangloss_dates.models.UnknownDate.Where | pangloss_models.search.Var[pangloss_dates.models.DateRange] | pangloss_models.search.Var[pangloss_dates.models.Date] | pangloss_models.search.Var[pangloss_dates.models.EDTFDate] | pangloss_models.search.Var[pangloss_dates.models.ExactDate] | pangloss_models.search.Var[pangloss_dates.models.OngoingDate] | pangloss_models.search.Var[pangloss_dates.models.Period] | pangloss_models.search.Var[pangloss_dates.models.Recurrence] | pangloss_models.search.Var[pangloss_dates.models.UnknownDate] | pangloss_models.search_where.Rel | None = ...
         places: Place.Where | pangloss_models.search.Var[Place] | pangloss_models.search_where.Rel | None = ...
         ordered_by: Group.Where | Person.Where | pangloss_models.search.Var[Group] | pangloss_models.search.Var[Person] | pangloss_models.search_where.Rel | None = ...
+        ordered_to: Group.Where | Person.Where | pangloss_models.search.Var[Group] | pangloss_models.search.Var[Person] | pangloss_models.search_where.Rel | None = ...
         thing_ordered: Activity.Where | CreationOfArtwork.Where | CreationOfPainting.Where | CreationOfPhysicalObject.Where | MemberOf.Where | Order.Where | Transfer.Where | pangloss_models.search.Var[Activity] | pangloss_models.search.Var[CreationOfArtwork] | pangloss_models.search.Var[CreationOfPainting] | pangloss_models.search.Var[CreationOfPhysicalObject] | pangloss_models.search.Var[MemberOf] | pangloss_models.search.Var[Order] | pangloss_models.search.Var[Transfer] | pangloss_models.search_where.Rel | None = ...
-        def __init__(self, *, is_: pangloss_models.search.Var[Order] | None = ..., all_: list[Order.Where] | None = ..., any_of_: list[Order.Where] | None = ..., not_: Order.Where | None = ..., any_: pangloss_models.search_where.AnyRel | None = ..., label: pangloss_models.search_where.Text | None = ..., published: pangloss_models.search_where.Choice[bool] | None = ..., review_status: pangloss_models.search_where.Text | None = ..., mentions_: pangloss_models.search_where.AnyRel | None = ..., somewhere_: list[pangloss_models.search_where.DocumentWhere] | None = ..., spaces_: typing.Any = ..., text: pangloss_models.search.Var[str] | pangloss_models.search_where.Text | None = ..., date: pangloss_dates.models.Date.Where | pangloss_dates.models.DateRange.Where | pangloss_dates.models.EDTFDate.Where | pangloss_dates.models.ExactDate.Where | pangloss_dates.models.OngoingDate.Where | pangloss_dates.models.Period.Where | pangloss_dates.models.Recurrence.Where | pangloss_dates.models.UnknownDate.Where | pangloss_models.search.Var[pangloss_dates.models.DateRange] | pangloss_models.search.Var[pangloss_dates.models.Date] | pangloss_models.search.Var[pangloss_dates.models.EDTFDate] | pangloss_models.search.Var[pangloss_dates.models.ExactDate] | pangloss_models.search.Var[pangloss_dates.models.OngoingDate] | pangloss_models.search.Var[pangloss_dates.models.Period] | pangloss_models.search.Var[pangloss_dates.models.Recurrence] | pangloss_models.search.Var[pangloss_dates.models.UnknownDate] | pangloss_models.search_where.Rel | None = ..., places: Place.Where | pangloss_models.search.Var[Place] | pangloss_models.search_where.Rel | None = ..., ordered_by: Group.Where | Person.Where | pangloss_models.search.Var[Group] | pangloss_models.search.Var[Person] | pangloss_models.search_where.Rel | None = ..., thing_ordered: Activity.Where | CreationOfArtwork.Where | CreationOfPainting.Where | CreationOfPhysicalObject.Where | MemberOf.Where | Order.Where | Transfer.Where | pangloss_models.search.Var[Activity] | pangloss_models.search.Var[CreationOfArtwork] | pangloss_models.search.Var[CreationOfPainting] | pangloss_models.search.Var[CreationOfPhysicalObject] | pangloss_models.search.Var[MemberOf] | pangloss_models.search.Var[Order] | pangloss_models.search.Var[Transfer] | pangloss_models.search_where.Rel | None = ...) -> None: ...  # type: ignore
+        def __init__(self, *, is_: pangloss_models.search.Var[Order] | None = ..., all_: list[Order.Where] | None = ..., any_of_: list[Order.Where] | None = ..., not_: Order.Where | None = ..., any_: pangloss_models.search_where.AnyRel | None = ..., label: pangloss_models.search_where.Text | None = ..., published: pangloss_models.search_where.Choice[bool] | None = ..., review_status: pangloss_models.search_where.Text | None = ..., mentions_: pangloss_models.search_where.AnyRel | None = ..., somewhere_: list[pangloss_models.search_where.DocumentWhere] | None = ..., spaces_: typing.Any = ..., text: pangloss_models.search.Var[str] | pangloss_models.search_where.Text | None = ..., date: pangloss_dates.models.Date.Where | pangloss_dates.models.DateRange.Where | pangloss_dates.models.EDTFDate.Where | pangloss_dates.models.ExactDate.Where | pangloss_dates.models.OngoingDate.Where | pangloss_dates.models.Period.Where | pangloss_dates.models.Recurrence.Where | pangloss_dates.models.UnknownDate.Where | pangloss_models.search.Var[pangloss_dates.models.DateRange] | pangloss_models.search.Var[pangloss_dates.models.Date] | pangloss_models.search.Var[pangloss_dates.models.EDTFDate] | pangloss_models.search.Var[pangloss_dates.models.ExactDate] | pangloss_models.search.Var[pangloss_dates.models.OngoingDate] | pangloss_models.search.Var[pangloss_dates.models.Period] | pangloss_models.search.Var[pangloss_dates.models.Recurrence] | pangloss_models.search.Var[pangloss_dates.models.UnknownDate] | pangloss_models.search_where.Rel | None = ..., places: Place.Where | pangloss_models.search.Var[Place] | pangloss_models.search_where.Rel | None = ..., ordered_by: Group.Where | Person.Where | pangloss_models.search.Var[Group] | pangloss_models.search.Var[Person] | pangloss_models.search_where.Rel | None = ..., ordered_to: Group.Where | Person.Where | pangloss_models.search.Var[Group] | pangloss_models.search.Var[Person] | pangloss_models.search_where.Rel | None = ..., thing_ordered: Activity.Where | CreationOfArtwork.Where | CreationOfPainting.Where | CreationOfPhysicalObject.Where | MemberOf.Where | Order.Where | Transfer.Where | pangloss_models.search.Var[Activity] | pangloss_models.search.Var[CreationOfArtwork] | pangloss_models.search.Var[CreationOfPainting] | pangloss_models.search.Var[CreationOfPhysicalObject] | pangloss_models.search.Var[MemberOf] | pangloss_models.search.Var[Order] | pangloss_models.search.Var[Transfer] | pangloss_models.search_where.Rel | None = ...) -> None: ...  # type: ignore
 
     class Order(pangloss_models.search.OrderBy):  # type: ignore
         field: typing.Literal['label', 'text', 'date.source_text', 'date.earliest_fuzzy', 'date.earliest_strict', 'date.latest_strict', 'date.latest_fuzzy', 'date.sort_day', 'date.end_sort_day']  # type: ignore

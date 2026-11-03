@@ -269,35 +269,54 @@ async def populate() -> None:
     ).save()
 
     # --- Orders, and a name that could be one of two men ------------------------------
+    orders = await write_orders(
+        charlemagne, leo, wido_of_spoleto, wido_of_brittany, frankish_army, roman_church, paderborn, annales
+    )
+
+    print("Wrote 4 factoids:")
+    for factoid in (coronation, einhard_life, letter, orders):
+        print(f"  {factoid.id}  {factoid.label}")
+    await add_order_chain()
+
+
+def identified(name: str, alternatives: list[tuple]) -> dict:
+    """A name the source gives, identified with one of several people, each with how likely it is that he is meant"""
+    return {
+        "type": "Identification",
+        "identified_by": name,
+        "target": [
+            {
+                "type": "Alternative",
+                "alternatives": [
+                    {**ref(person), "edge_properties": {"percent": percent}}
+                    for person, percent in alternatives
+                ],
+            }
+        ],
+    }
+
+
+async def write_orders(
+    charlemagne, leo, wido_of_spoleto, wido_of_brittany, frankish_army, roman_church, paderborn, annales
+):
+    """The factoid of two orders (each `ordered_to` someone, who gives what is ordered: the `given_by` of the transfers
+    is left out, and comes from it)"""
     # An order holds another statement, said in a subjunctive space: it was wished (or
     # wished not), and not necessarily done. In the Transfer, the source says only
     # "Wido": `Identification` records that, and the `Alternative` it is identified with
     # holds both men, each with how likely it is that he is the one meant.
-    def identified(name: str, alternatives: list[tuple]) -> dict:
-        return {
-            "type": "Identification",
-            "identified_by": name,
-            "target": [
-                {
-                    "type": "Alternative",
-                    "alternatives": [
-                        {**ref(person), "edge_properties": {"percent": percent}}
-                        for person, percent in alternatives
-                    ],
-                }
-            ],
-        }
-
-    orders = await models.Factoid.Create(
+    return await models.Factoid.Create(
         label="Charlemagne orders gifts, and forbids a trade",
         source={"type": "AtPage", "page": "s.a. 802", "target": [ref(annales)]},
         statements=[
             {
                 "type": "Order",
                 "label": "Charlemagne orders a gift to Wido",
-                "text": "The emperor ordered that silver be given to Wido",
+                "text": "The emperor ordered the pope to give silver to Wido",
                 "date": date(802, 3),
                 "ordered_by": ref(charlemagne),
+                # (the one who gives what is ordered, unless it says: `given_by` is left out below)
+                "ordered_to": ref(leo),
                 "places": [ref(paderborn)],
                 "thing_ordered": {
                     "type": "PositiveSubjunctive",
@@ -309,7 +328,6 @@ async def populate() -> None:
                             "date": date(802, 3),
                             "item": "silver, in talents",
                             "quantity": "1",
-                            "given_by": ref(charlemagne),
                             "given_to": identified(
                                 "Wido", [(wido_of_spoleto, 70), (wido_of_brittany, 30)]
                             ),
@@ -324,6 +342,7 @@ async def populate() -> None:
                 "text": "He commanded that no arms be sold beyond the border",
                 "date": date(802, 10),
                 "ordered_by": identified("the lord", [(charlemagne, 90), (leo, 10)]),
+                "ordered_to": ref(frankish_army),
                 "places": [],
                 "thing_ordered": {
                     "type": "NegativeSubjunctive",
@@ -335,7 +354,6 @@ async def populate() -> None:
                             "date": date(802, 10),
                             "item": "swords",
                             "quantity": "40",
-                            "given_by": ref(frankish_army),
                             "given_to": ref(roman_church),
                             "places": [],
                         }
@@ -344,11 +362,6 @@ async def populate() -> None:
             },
         ],
     ).save()
-
-    print("Wrote 4 factoids:")
-    for factoid in (coronation, einhard_life, letter, orders):
-        print(f"  {factoid.id}  {factoid.label}")
-    await add_order_chain()
 
 
 def by_id(kind: str, name: str, type: str) -> dict:
@@ -435,6 +448,8 @@ async def add_order_chain() -> None:
                 "text": "The emperor ordered the count to have silver sent to the pope",
                 "date": date(803, 1),
                 "ordered_by": charlemagne,
+                # (each order passed on is given by the one who received the order above it)
+                "ordered_to": the_count,
                 "places": [],
                 "thing_ordered": {
                     "type": "PositiveSubjunctive",
@@ -444,7 +459,7 @@ async def add_order_chain() -> None:
                             "label": "The count orders Ansgar to see the silver carried to Rome",
                             "text": "The count told his messenger to have the silver carried to Rome",
                             "date": date(803, 2),
-                            "ordered_by": the_count,
+                            "ordered_to": ansgar,
                             "places": [],
                             "thing_ordered": {
                                 "type": "PositiveSubjunctive",
@@ -454,7 +469,7 @@ async def add_order_chain() -> None:
                                         "label": "Ansgar orders Wido to take the silver to Rome",
                                         "text": "Ansgar sent his deputy to take the silver to Rome",
                                         "date": date(803, 3),
-                                        "ordered_by": ansgar,
+                                        "ordered_to": wido,
                                         "places": [],
                                         "thing_ordered": {
                                             "type": "PositiveSubjunctive",
@@ -466,7 +481,6 @@ async def add_order_chain() -> None:
                                                     "date": date(803, 4),
                                                     "item": "silver, in talents",
                                                     "quantity": "2",
-                                                    "given_by": wido,
                                                     "given_to": leo,
                                                     "places": [],
                                                 }
