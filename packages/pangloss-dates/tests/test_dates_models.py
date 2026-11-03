@@ -336,6 +336,12 @@ def test_a_field_can_say_what_its_dates_sort_by():
     )
     assert ymd(person.born.sort_day) == (1500, 12, 31)
     assert SortDefault  # (the class is the one from the module)
+    # the interface is told, to show it as chosen
+    from pangloss_models.export import export_models
+
+    fields = {f["name"]: f for f in export_models()["models"]["Person"]["fields"]}
+    assert fields["born"]["markers"] == [{"name": "SortDefault", "sortBy": "earliest_fuzzy"}]
+    assert fields["died"]["markers"] == []
 
 
 def exact(year, month=None, day=None):

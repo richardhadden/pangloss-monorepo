@@ -3,7 +3,7 @@
  * provides for a model's page or card. (docs/interface-modules-implementation.md)
  */
 import type { Component } from "solid-js";
-import type { ModelDefinition } from "./models";
+import type { EmbeddedField, ModelDefinition } from "./models";
 import type { Search } from "./components";
 
 /** The four things a model can name a component for (`list_page` ... in Python) */
@@ -57,6 +57,8 @@ export interface EditCardProps {
   label: string;
   /** Where the value is in the form */
   path: (string | number)[];
+  /** The field the value is in (its markers say what the server does when the value does not say) */
+  field?: EmbeddedField;
   value: Record<string, unknown>;
   /**
    * Replaces the whole value (keep its `type`). To change one part, set it by its path instead: a

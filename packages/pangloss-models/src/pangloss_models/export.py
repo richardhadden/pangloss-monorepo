@@ -17,7 +17,8 @@ and each field has a `kind`:
     list            item (a type), validators, itemValidators
     annotatedValue  model, valueType
     typeVar         typeVar
-    embedded        model, types
+    embedded        model, types, markers (what the field is annotated with that the server applies to
+                    the value, `SortDefault(...)`: its name, and what it says of itself in `export()`)
     relation        many, reverseName, options, validators, subclasses (the names of the
                     fields of its ancestors that it stands for, directly or through another:
                     `RelationConfig(subclasses_parent_fields=...)`), defaultReifiedType
@@ -151,6 +152,15 @@ class Exporter:
             result.append(entry)
         return result
 
+    def markers(self, markers: tuple) -> list[dict[str, Any]]:
+        """What an embedded field is annotated with (`SortDefault(...)`), by name, with what the marker says of
+        itself (`export()`, if it has one) for an editor to show: the server applies them, the interface does not"""
+        return [
+            {"name": type(marker).__name__}
+            | (self.plain(marker.export()) if hasattr(marker, "export") else {})
+            for marker in markers
+        ]
+
     # --- fields ----------------------------------------------------------
 
     def export_field(self, name: str, definition: FieldDefinition) -> dict[str, Any]:
@@ -198,6 +208,7 @@ class Exporter:
                 "types": sorted(
                     o.annotated_type.__name__ for o in definition.type_options
                 ),
+                "markers": self.markers(definition.markers),
             }
         elif isinstance(definition, RelationFieldDefinition):
             entry |= {

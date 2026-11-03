@@ -217,6 +217,8 @@ export function ModelFields(props: {
   env: Env;
   skip?: string[];
   bare?: string;
+  /** What a field is taken to be when it is not set, by key: shown as chosen (a choice), not written */
+  defaults?: Record<string, unknown>;
 }) {
   const form = useItemForm();
   const { fieldName } = useTranslations();
@@ -243,6 +245,7 @@ export function ModelFields(props: {
                 path={() => [...props.path(), field.key]}
                 env={props.env}
                 bare={field.key === props.bare}
+                fallback={props.defaults?.[field.key]}
               />
             </Row>
           </Show>
@@ -411,6 +414,8 @@ function FieldEditor(props: {
   env: Env;
   /** Shown without its name: its buttons say only what they do */
   bare?: boolean;
+  /** What a literal is taken to be when it is not set */
+  fallback?: unknown;
 }) {
   const { fieldName } = useTranslations();
   const name = () => fieldName(props.modelName, props.field.name);
@@ -422,6 +427,7 @@ function FieldEditor(props: {
           validators={(props.field as Extract<FieldDefinition, { kind: "literal" }>).validators}
           path={props.path}
           label={name()}
+          fallback={props.fallback}
         />
       </Match>
       <Match when={props.field.kind === "list"}>
@@ -555,6 +561,7 @@ function EmbeddedEditor(props: { field: EmbeddedField; path: Accessor<Path>; lab
             props={{
               type: String(value()!.type),
               model: model()!,
+              field: props.field,
               label: props.label,
               get path() {
                 return props.path();

@@ -70,6 +70,14 @@ export interface EmbeddedField extends FieldBase {
   model: string | null;
   /** The (concrete) models that it can be */
   types: string[];
+  /** What the field is annotated with that the server applies to the value (`SortDefault`), and what each says of itself */
+  markers?: FieldMarker[];
+}
+
+/** A marker of an embedded field: its name, and what it says of itself (`SortDefault` has `sortBy`) */
+export interface FieldMarker {
+  name: string;
+  [argument: string]: unknown;
 }
 
 export interface ParameterOptions {

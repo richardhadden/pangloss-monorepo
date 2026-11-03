@@ -333,5 +333,9 @@ class SortDefault:
             type(date)._owner.fill_in(date)
             date.sort_by = None  # (what was said is kept as it was)
 
+    def export(self) -> dict:
+        """For the interface: the sort it shows as chosen when a date of the field does not say"""
+        return {"sortBy": self.sort_by.value}
+
     def __repr__(self) -> str:
         return f"SortDefault({self.sort_by.value!r})"
