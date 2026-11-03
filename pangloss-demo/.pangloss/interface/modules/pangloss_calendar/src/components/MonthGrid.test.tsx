@@ -2,8 +2,9 @@
 import { ModelsProvider } from "@pangloss/interface-core";
 import type { ModelDefinition, ModelDefinitions } from "@pangloss/interface-core";
 import { render } from "@solidjs/web";
-import { afterEach, expect, test } from "vitest";
+import { afterEach, expect, test, vi } from "vitest";
 import { day, feast, hit, month, ref } from "./fixtures";
+import type { DayName } from "../days";
 import { MonthGrid } from "./MonthGrid";
 
 const DEFINITIONS: ModelDefinitions = {
@@ -20,13 +21,13 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
-function show(report = month()) {
+function show(report = month(), onAdd?: (day: DayName) => void) {
   const container = document.createElement("div");
   document.body.append(container);
   dispose = render(
     () => (
       <ModelsProvider definitions={DEFINITIONS}>
-        <MonthGrid report={report} />
+        <MonthGrid report={report} onAdd={onAdd} />
       </ModelsProvider>
     ),
     container,
@@ -132,4 +133,18 @@ test("a single date known only within days of the month is a hollow dashed bar b
   expect(bars[0]!.textContent).toBe("born · Alcuin of York");
   expect(bars[0]!.getAttribute("title")).toBe("born · Alcuin of York: between 3 March 1500 and 12 March 1500");
   expect(bars[0]!.getAttribute("href")).toBe("/Person/b1");
+});
+
+test("each day has a + in its top right, given a way to add (someone logged in), that says which day", () => {
+  show();
+  expect(document.body.querySelector('button[aria-haspopup="dialog"]')).toBeNull();
+  dispose?.();
+  document.body.innerHTML = "";
+  const onAdd = vi.fn();
+  show(month(), onAdd);
+  const adds = [...document.body.querySelectorAll<HTMLButtonElement>('button[aria-haspopup="dialog"]')];
+  expect(adds.length).toBe(31);
+  expect(adds[1]!.getAttribute("aria-label")).toBe("Add to 2 March 1500");
+  adds[1]!.click();
+  expect(onAdd).toHaveBeenCalledWith({ calendar: "julian", year: 1500, month: 3, day: 2 });
 });

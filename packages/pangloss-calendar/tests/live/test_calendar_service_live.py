@@ -36,7 +36,9 @@ def models():
         importlib.reload(module)
 
     class FeastDay(calendar_models.DateCharacterisation):
-        pass
+        # (a project says what else it wants of one: the base has only `when`)
+        use: str | None = None
+        rank: str | None = None
 
     class Factoid(Document):
         when: julian.JulianDate
@@ -372,9 +374,7 @@ async def test_the_routes(clear_database, clear_calendar, monkeypatch):
     monkeypatch.setattr(calendar_settings, "first_year", lambda settings=None: None)
     assert (await client.get("/api/calendar/years/julian")).status_code == 422
     assert (await client.get("/api/calendar/settings")).json()["first_year"] is None
-    found = (
-        await client.get("/api/calendar/characterisations?use=sarum&q=pente")
-    ).json()
+    found = (await client.get("/api/calendar/characterisations?q=pente")).json()
     assert [c["label"] for c in found] == ["Pentecost"]
     days = (
         await client.get(

@@ -1044,32 +1044,6 @@ export const definitions: ModelDefinitions = {
       "useInSemanticSpaceLabel": true,
       "fields": [
         {
-          "name": "use",
-          "key": "use",
-          "description": null,
-          "dbField": false,
-          "required": false,
-          "nullable": true,
-          "kind": "literal",
-          "type": {
-            "type": "str"
-          },
-          "validators": []
-        },
-        {
-          "name": "rank",
-          "key": "rank",
-          "description": null,
-          "dbField": false,
-          "required": false,
-          "nullable": true,
-          "kind": "literal",
-          "type": {
-            "type": "str"
-          },
-          "validators": []
-        },
-        {
           "name": "when",
           "key": "when",
           "description": null,
@@ -1985,6 +1959,24 @@ export const definitions: ModelDefinitions = {
       "useInSemanticSpaceLabel": true,
       "fields": [
         {
+          "name": "when",
+          "key": "when",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "embedded",
+          "model": null,
+          "types": [
+            "DateRange",
+            "EDTFDate",
+            "ExactDate",
+            "NoRule",
+            "Period",
+            "Recurrence"
+          ]
+        },
+        {
           "name": "use",
           "key": "use",
           "description": null,
@@ -2009,24 +2001,6 @@ export const definitions: ModelDefinitions = {
             "type": "str"
           },
           "validators": []
-        },
-        {
-          "name": "when",
-          "key": "when",
-          "description": null,
-          "dbField": false,
-          "required": true,
-          "nullable": false,
-          "kind": "embedded",
-          "model": null,
-          "types": [
-            "DateRange",
-            "EDTFDate",
-            "ExactDate",
-            "NoRule",
-            "Period",
-            "Recurrence"
-          ]
         }
       ],
       "incoming": [],
@@ -3557,12 +3531,12 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Transfer",
               "field": "given_by",
-              "viaReified": false
+              "viaReified": true
             },
             {
               "model": "Transfer",
               "field": "given_by",
-              "viaReified": true
+              "viaReified": false
             }
           ]
         },
@@ -3584,12 +3558,12 @@ export const definitions: ModelDefinitions = {
             {
               "model": "MemberOf",
               "field": "member",
-              "viaReified": false
+              "viaReified": true
             },
             {
               "model": "MemberOf",
               "field": "member",
-              "viaReified": true
+              "viaReified": false
             }
           ]
         },
@@ -3600,12 +3574,12 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Order",
               "field": "ordered_by",
-              "viaReified": false
+              "viaReified": true
             },
             {
               "model": "Order",
               "field": "ordered_by",
-              "viaReified": true
+              "viaReified": false
             }
           ]
         },
@@ -3627,12 +3601,12 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Transfer",
               "field": "given_to",
-              "viaReified": false
+              "viaReified": true
             },
             {
               "model": "Transfer",
               "field": "given_to",
-              "viaReified": true
+              "viaReified": false
             }
           ]
         }
@@ -5327,18 +5301,6 @@ export const definitions: ModelDefinitions = {
     "DateCharacterisation": {
       "kind": "entity",
       "fields": {
-        "use": {
-          "operators": "text",
-          "value": {
-            "type": "str"
-          }
-        },
-        "rank": {
-          "operators": "text",
-          "value": {
-            "type": "str"
-          }
-        },
         "when": {
           "operators": "relation",
           "targets": [
@@ -5352,9 +5314,7 @@ export const definitions: ModelDefinitions = {
         }
       },
       "orderBy": [
-        "label",
-        "use",
-        "rank"
+        "label"
       ]
     },
     "DateRange": {
@@ -5636,6 +5596,17 @@ export const definitions: ModelDefinitions = {
     "Feast": {
       "kind": "entity",
       "fields": {
+        "when": {
+          "operators": "relation",
+          "targets": [
+            "DateRange",
+            "EDTFDate",
+            "ExactDate",
+            "NoRule",
+            "Period",
+            "Recurrence"
+          ]
+        },
         "use": {
           "operators": "text",
           "value": {
@@ -5647,17 +5618,6 @@ export const definitions: ModelDefinitions = {
           "value": {
             "type": "str"
           }
-        },
-        "when": {
-          "operators": "relation",
-          "targets": [
-            "DateRange",
-            "EDTFDate",
-            "ExactDate",
-            "NoRule",
-            "Period",
-            "Recurrence"
-          ]
         }
       },
       "orderBy": [
@@ -6572,8 +6532,6 @@ export type DateWhere = {
 export type DatePattern = { type: "Date"; where?: DateWhere };
 
 export type DateCharacterisationWhere = {
-  use?: TextCondition;
-  rank?: TextCondition;
   when?: RelationCondition | (RelationCondition & (DateRangePattern | EDTFDatePattern | ExactDatePattern | NoRulePattern | PeriodPattern | RecurrencePattern));
   $all?: DateCharacterisationWhere[];
   $any_of?: DateCharacterisationWhere[];
@@ -6667,9 +6625,9 @@ export type FactoidWhere = {
 export type FactoidPattern = { type: "Factoid"; where?: FactoidWhere };
 
 export type FeastWhere = {
+  when?: RelationCondition | (RelationCondition & (DateRangePattern | EDTFDatePattern | ExactDatePattern | NoRulePattern | PeriodPattern | RecurrencePattern));
   use?: TextCondition;
   rank?: TextCondition;
-  when?: RelationCondition | (RelationCondition & (DateRangePattern | EDTFDatePattern | ExactDatePattern | NoRulePattern | PeriodPattern | RecurrencePattern));
   $all?: FeastWhere[];
   $any_of?: FeastWhere[];
   $not?: FeastWhere;
@@ -6981,7 +6939,7 @@ export interface OrderFields {
   CreationOfArtwork: "label" | "text" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day" | "year";
   CreationOfPainting: "label" | "text" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day" | "year";
   CreationOfPhysicalObject: "label" | "text" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day" | "year";
-  DateCharacterisation: "label" | "use" | "rank";
+  DateCharacterisation: "label";
   Factoid: "label" | "year";
   Feast: "label" | "use" | "rank";
   Group: "label" | "name";

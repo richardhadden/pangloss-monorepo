@@ -14,7 +14,6 @@ are in [docs/calendar-implementation.md](../../docs/calendar-implementation.md).
    | `CALENDAR_FIRST_YEAR`, `CALENDAR_LAST_YEAR` | The span to make days for. No default: `seed` refuses to run without them |
    | `CALENDAR_DEFAULT` | `"julian"` or `"gregorian"`: the calendar a view is read in (default: `DATES_DEFAULT_CALENDAR`) |
    | `CALENDAR_EXTEND_MARGIN_YEARS` | How far beyond the span days are made when a rule or an attachment needs them (default 10; 0 for none) |
-   | `CALENDAR_USE` | Only the characterisations of this `use` (default: all) |
    | `CALENDAR_NARROW_DAYS` | A date that states a range of this many days or fewer is drawn on each of its days in a month; a wider one is listed apart (default 7) |
    | `CALENDAR_FIELDS` | `["Letter.sent", ...]`: look only in these date fields (default: every date field of every Document and Entity) |
    | `CALENDAR_AUTO_EXTEND` | Make the days of the graph that are asked for and are not there (default off; the answers do not need them) |
@@ -33,7 +32,8 @@ class FeastDay(DateCharacterisation):
     saint: list[Saint]       # anything else an entity can have
 ```
 
-A `FeastDay` has a `label`, a `use` (the liturgical use, or whatever you divide them by), a `rank`, and `when`, which says
+The base gives a characterisation only a `label` and `when`; anything else (a liturgical use, a rank, the saint) your subclass
+declares, as for any entity. `when` says
 **whether it repeats or not by its kind**: a `Recurrence` from [pangloss-dates](../dates/README.md) is the rule it falls by,
 every year (or week, or month), in the calendar it is written in; an `ExactDate`, a `DateRange` or an `EDTFDate` is **one day,
 once**, as roughly known as the date says (a council "in March 1500" is on every day of March once); a `Period` is **a span,
@@ -41,7 +41,7 @@ once** (Lent 1500); `NoRule` is for one attached to days by hand. The API says `
 rule:
 
 ```python
-FeastDay.Create(label="Benedict", use="sarum", rank="major", when={
+FeastDay.Create(label="Benedict", saint=[...], when={
     "type": "Recurrence", "calendar": "julian", "frequency": "yearly", "weekdays": [], "excluded_days": [],
     "month": 3, "month_day": 21,                                   # 21 March, Julian ...
     "start": {"type": "ExactDate", "calendar": "julian", "year": 1450},   # ... observed from 1450
@@ -99,9 +99,12 @@ and **Calendar** in the navigation bar leads to them:
   marked *possible* (with the days it could be on) when the date does not name the day: a single day known only to a month or
   a year, or a date whose allowance for doubt alone reaches the day. A period is stated on each of its days.
 
-Every page has **Julian** and **Gregorian** buttons in the console bar, which show the same thing read in the other
-calendar (a month is the month of that name in the other calendar; a day is the same day under its other name), and
-**Years**. Someone logged in can, on a day's page, **attach a characterisation** found by its name (and take away one attached
-by hand), and make a new one of any type the project has under `DateCharacterisation` ("New Feast" in the console of every
-calendar page). `DateCharacterisation` is abstract: a project that wants to make them needs a subclass (the demo has `Feast`);
-without one the buttons do not appear. The pages do not need `seed`: they are worked out from the dates.
+Every page has one button in the console bar that names the calendar it is read in (**Julian**) and shows the same thing
+read in the other (a month is the month of that name in the other calendar; a day is the same day under its other name),
+and **Years**. Above the heading of a day are its year and month, and above a month its year, as links (the year is its
+row in the list of years, marked). The list of years ends each row with how many events meet the year, the number in a
+circle. Someone logged in can make a characterisation from the **+** in the top right of any day of a month (a dialog: the
+types, if the project has several, then the form, with `when` already that day; make it a rule there if it repeats); and,
+on a day's page, find one by its name and **attach** it to the day, or make one with the **+** beside that search, as in
+any form. One attached by hand has a remove button on its chip. `DateCharacterisation` is abstract: a project that wants
+to make them needs a subclass (the demo has `Feast`); without one there is no **+**. The pages do not need `seed`: they are worked out from the dates.

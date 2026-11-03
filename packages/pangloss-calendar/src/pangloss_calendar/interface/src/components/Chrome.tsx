@@ -1,17 +1,9 @@
-import {
-  ConsoleButton,
-  getModel,
-  useComponent,
-  useModels,
-  useNavExpanded,
-  userIsLoggedIn,
-  useTranslations,
-} from "@pangloss/interface-core";
-import { createMemo, For, Loading, Show } from "solid-js";
+import { ConsoleButton, getModel, useComponent, useModels, useNavExpanded, useTranslations } from "@pangloss/interface-core";
+import { Loading, Show } from "solid-js";
 import type { ParentProps } from "solid-js";
-import { CALENDARS } from "../api";
 import type { CalendarName } from "../api";
-import { sayCalendar, yearsHref } from "../days";
+import { monthHref, sayCalendar, sayMonth, yearHref, yearsHref } from "../days";
+import type { DayName } from "../days";
 
 /** The `main` of a calendar page, inset as the other pages are */
 export function CalendarPage(props: ParentProps) {
@@ -24,11 +16,24 @@ export function CalendarPage(props: ParentProps) {
 /** The abstract entity of pangloss_calendar that feasts and the like are types of */
 export const CHARACTERISATION_MODEL = "DateCharacterisation";
 
+/** The types of characterisation the project has that can be made (none if it has no subclass of `DateCharacterisation`) */
+export function useCharacterisationTypes(): () => string[] {
+  const definitions = useModels();
+  return () => getModel(definitions, CHARACTERISATION_MODEL)?.concreteTypes ?? [];
+}
+
+/** What a new characterisation made on a day starts with: that day, as its `when` (it can be made a rule in the form) */
+export function onTheDay(name: DayName): () => Record<string, unknown> {
+  return () => ({
+    when: { type: "ExactDate", calendar: name.calendar, year: name.year, month: name.month, day: name.day },
+  });
+}
+
 /**
- * The console of a calendar page: "Calendar" and the page's `label` on the left; on the right, for someone logged in, a
- * button to make a new characterisation of each type the project has (feasts and the like); the way to the years; and
- * the two calendars, the one the page is read in pressed. `hrefOf` gives the same page in a calendar (it may read what
- * the page is still loading: the buttons wait for it, the rest of the console does not).
+ * The console of a calendar page: "Calendar" and the page's `label` on the left; on the right the way to the years,
+ * and one button with the calendar the page is read in, which shows the same page in the other. `hrefOf` gives the same
+ * page in a calendar (it may read what the page is still loading: the button waits for it, the rest of the console does
+ * not).
  */
 export function CalendarConsole(props: {
   label?: string;
@@ -36,41 +41,24 @@ export function CalendarConsole(props: {
   hrefOf: (calendar: CalendarName) => string | undefined;
 }) {
   const Console = useComponent("Console");
-  const definitions = useModels();
-  const { t, modelName } = useTranslations();
-  const loggedIn = createMemo(() => userIsLoggedIn());
-  const makeable = () => getModel(definitions, CHARACTERISATION_MODEL)?.concreteTypes ?? [];
-  const buttons = (hrefOf: (calendar: CalendarName) => string | undefined) => (
-    <For each={CALENDARS}>
-      {(each) => (
-        <ConsoleButton
-          label={sayCalendar(each, t)}
-          href={hrefOf(each)}
-          pressed={props.calendar === each}
-          disabled={hrefOf(each) === undefined}
-          text
-        />
-      )}
-    </For>
+  const { t } = useTranslations();
+  const other = (): CalendarName => (props.calendar === "julian" ? "gregorian" : "julian");
+  const toggle = (hrefOf: (calendar: CalendarName) => string | undefined) => (
+    <ConsoleButton label={sayCalendar(props.calendar, t)} href={hrefOf(other())} disabled={hrefOf(other()) === undefined} text>
+      {/* (two arrows: the button goes to the other calendar) */}
+      <svg
+        viewBox="0 0 24 24"
+        class="size-4 select-none fill-none stroke-current stroke-2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M4 8h14l-3-3M20 16H6l3 3" />
+      </svg>
+    </ConsoleButton>
   );
   return (
     <Console type={t("calendar", "Calendar")} label={props.label}>
-      <Show when={loggedIn()}>
-        <For each={makeable()}>
-          {(type) => (
-            <ConsoleButton label={t("new_item", "New {type}", { type: modelName(type) })} href={`/${type}/new`} tone="entity" text>
-              <svg
-                viewBox="0 0 24 24"
-                class="size-4 select-none fill-none stroke-current stroke-2"
-                stroke-linecap="round"
-                aria-hidden="true"
-              >
-                <path d="M12 5v14M5 12h14" />
-              </svg>
-            </ConsoleButton>
-          )}
-        </For>
-      </Show>
       <ConsoleButton label={t("calendar_years", "Years")} href={yearsHref(props.calendar)} text>
         <svg
           viewBox="0 0 24 24"
@@ -83,8 +71,33 @@ export function CalendarConsole(props: {
           <path d="M3 10h18M8 3v4M16 3v4" />
         </svg>
       </ConsoleButton>
-      <Loading fallback={buttons(() => undefined)}>{buttons(props.hrefOf)}</Loading>
+      <Loading fallback={toggle(() => undefined)}>{toggle(props.hrefOf)}</Loading>
     </Console>
+  );
+}
+
+/** Where a page is: the year (a link to it in the list of years), and the month, before the page's own heading */
+export function Breadcrumbs(props: { calendar: CalendarName; year: number; month?: number }) {
+  const { t, language } = useTranslations();
+  const link = "hover:underline";
+  return (
+    <nav aria-label={t("calendar_where", "Where in the calendar")} class="mb-2 flex items-center gap-2 text-sm text-slate-600">
+      <a href={yearHref(props.calendar, props.year)} class={link}>
+        {props.year}
+      </a>
+      <Show when={props.month}>
+        {(month) => (
+          <>
+            <span class="text-slate-400" aria-hidden="true">
+              ›
+            </span>
+            <a href={monthHref(props.calendar, props.year, month())} class={link}>
+              {sayMonth(props.year, month(), language(), t)}
+            </a>
+          </>
+        )}
+      </Show>
+    </nav>
   );
 }
 

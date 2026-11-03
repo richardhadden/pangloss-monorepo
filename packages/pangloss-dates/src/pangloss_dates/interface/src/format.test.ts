@@ -79,7 +79,15 @@ test("a recurrence", () => {
       start: exact(1500),
       end: { type: "OngoingDate" },
     }),
-  ).toBe("every Sunday, 1500 – ongoing");
+  ).toBe("every week on Sunday, 1500 – ongoing");
+  const yearly = (rule: Record<string, unknown>) =>
+    formatDate({ type: "Recurrence", calendar: "gregorian", frequency: "yearly", weekdays: [], start: exact(1450), end: exact(1530), ...rule });
+  expect(yearly({ month: 3, monthDay: 21 })).toBe("every year on 21 March, 1450 – 1530");
+  expect(yearly({ month: 3, nth: 3, weekdays: [0] })).toBe("every year on the third Sunday of March, 1450 – 1530");
+  expect(yearly({ month: 3, nth: -1, weekdays: [5], interval: 2 })).toBe("every 2 years on the last Friday of March, 1450 – 1530");
+  expect(yearly({ easterOffset: 49 })).toBe("every year on Easter + 49 days, 1450 – 1530");
+  expect(yearly({ easterOffset: 0 })).toBe("every year on Easter, 1450 – 1530");
+  expect(yearly({ frequency: "monthly", monthDay: 21 })).toBe("every month on the 21., 1450 – 1530");
 });
 
 test("something that is not a date is not said", () => {
@@ -89,8 +97,15 @@ test("something that is not a date is not said", () => {
 
 test("in another language: its month and weekday names, its order and words, and the names of the calendar and frequency", () => {
   const texts: Record<string, Record<string, string>> = {
-    de: { date_day_month_year: "{day}. {month} {year}", date_range: "{from} bis {to}", date_ongoing: "laufend", date_every: "jeden {what}" },
-    fr: { date_range: "de {from} à {to}", date_unknown: "inconnue", date_every_n: "tous les {n} {what}" },
+    de: {
+      date_day_month_year: "{day}. {month} {year}",
+      date_range: "{from} bis {to}",
+      date_ongoing: "laufend",
+      date_every: "jede {what}",
+      date_unit_week: "Woche",
+      date_every_on: "{every} am {on}",
+    },
+    fr: { date_range: "de {from} à {to}", date_unknown: "inconnue", date_every_n: "tous les {n} {what}", date_unit_weeks: "semaines" },
   };
   const words = (language: string) => ({
     language,
@@ -116,8 +131,8 @@ test("in another language: its month and weekday names, its order and words, and
     formatDate({ type: "Period", calendar: "gregorian", start: exact(1500), end: { type: "UnknownDate" } }, words("fr")),
   ).toBe("1500 – inconnue");
   const recurrence = { type: "Recurrence", calendar: "gregorian", start: exact(1500), end: exact(1510) };
-  expect(formatDate({ ...recurrence, weekdays: [0] }, words("de"))).toBe("jeden Sonntag, 1500 – 1510");
+  expect(formatDate({ ...recurrence, frequency: "weekly", weekdays: [0] }, words("de"))).toBe("jede Woche am Sonntag, 1500 – 1510");
   expect(formatDate({ ...recurrence, frequency: "weekly", interval: 2 }, words("fr"))).toBe(
-    "tous les 2 hebdomadaire, 1500 – 1510",
+    "tous les 2 semaines, 1500 – 1510",
   );
 });

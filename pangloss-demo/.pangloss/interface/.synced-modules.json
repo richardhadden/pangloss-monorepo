@@ -25,6 +25,8 @@
   "modules/pangloss_dates/src/components/DateCard.tsx",
   "modules/pangloss_dates/src/components/DateEditor.test.tsx",
   "modules/pangloss_dates/src/components/DateEditor.tsx",
+  "modules/pangloss_dates/src/components/ExactParts.tsx",
+  "modules/pangloss_dates/src/components/RecurrenceEditor.tsx",
   "modules/pangloss_dates/src/format.test.ts",
   "modules/pangloss_dates/src/format.ts",
   "modules/pangloss_dates/src/index.ts",

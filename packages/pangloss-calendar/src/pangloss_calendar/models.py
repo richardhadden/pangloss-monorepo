@@ -5,8 +5,9 @@
 
     class FeastDay(DateCharacterisation):
         saint: list[Saint]
+        use: str | None = None     # (anything else a project wants to say of one: a liturgical use, a rank...)
 
-    FeastDay.Create(label="Benedict", use="sarum", rank="major", when={
+    FeastDay.Create(label="Benedict", use="sarum", saint=[...], when={
         "type": "JulianRecurrence", "frequency": "yearly", "month": 3, "month_day": 21, ...})
 
 `when` says whether it repeats or not, by its kind: a `Recurrence` is the rule it falls by, every year (or week, or
@@ -29,10 +30,6 @@ class NoRule(Embedded):
 class DateCharacterisation(Entity):
     _meta = Entity.Meta(abstract=True)
 
-    use: str | None = None
-    """The liturgical use, or whatever a project divides its characterisations by (`CALENDAR_USE` shows one)"""
-    rank: str | None = None
-    """The project's own scale"""
     when: Recurrence | ExactDate | DateRange | EDTFDate | Period | NoRule
     """Repeated (a `Recurrence`: the rule it falls by), once on one day (an `ExactDate`, `DateRange` or `EDTFDate`), once over
     a span (a `Period`), or `NoRule` if it is attached by hand"""

@@ -256,7 +256,7 @@ def test_the_calendar(page: Page, dated, dev_url: str, errors: list[str]):
         page.get_by_role("heading", name=re.compile("^Tuesday 3 March 1500"))
     ).to_be_visible()
     page.get_by_role("banner", name="Console").get_by_role(
-        "link", name="Gregorian"
+        "link", name="Julian"
     ).click()
     expect(
         page.get_by_role("heading", name=re.compile("^Tuesday 13 March 1500"))

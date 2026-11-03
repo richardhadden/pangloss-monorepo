@@ -31,7 +31,7 @@ export const hit = (id: string, label: string, mark: "stated" | "possible" = "st
 });
 
 export const feast = (id: string, label: string, via: Characterised["via"] = "rule"): Characterised => ({
-  characterisation: { id, label, type: "FeastDay", use: "sarum", rank: null, repeated: via === "rule", kind: via === "rule" ? "Recurrence" : null },
+  characterisation: { id, label, type: "FeastDay", repeated: via === "rule", kind: via === "rule" ? "Recurrence" : null },
   origin: via === "rule" ? "rule" : "manual",
   via,
   ...(via === "month" || via === "year" || via === "span" ? { first: day(1), last: day(31) } : {}),

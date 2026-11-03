@@ -34,8 +34,6 @@ class Characterisation:
     id: UUID
     label: str
     type: str
-    use: str | None = None
-    rank: str | None = None
     rule: RecurrenceRule | None = None
     calendar: Calendar = Calendar.GREGORIAN
     first: int | None = None
@@ -108,8 +106,6 @@ def from_row(row: dict[str, Any], default: Calendar) -> Characterisation:
         id=UUID(str(row["id"])),
         label=row["label"],
         type=row["type"],
-        use=row.get("use"),
-        rank=row.get("rank"),
         rule=rule,
         calendar=Calendar(row["calendar"]) if row.get("calendar") else default,
         first=row.get("earliest_strict"),

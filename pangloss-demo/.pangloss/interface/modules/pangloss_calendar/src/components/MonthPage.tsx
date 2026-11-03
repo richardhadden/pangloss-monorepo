@@ -1,5 +1,5 @@
-import { useApi, useComponent, useTranslations } from "@pangloss/interface-core";
-import { createMemo, Errored, For, Loading, Show } from "solid-js";
+import { NewEntityDialog, ReferenceChip, useApi, useComponent, userIsLoggedIn, useTranslations } from "@pangloss/interface-core";
+import { createMemo, createSignal, Errored, For, Loading, Show } from "solid-js";
 import { getMonth } from "../api";
 import type { CalendarName, Characterised, MonthReport } from "../api";
 import {
@@ -13,9 +13,17 @@ import {
   sayCalendar,
   sayDate,
   sayMonth,
-  sayRef,
 } from "../days";
-import { Arrows, BadAddress, CalendarConsole, CalendarPage } from "./Chrome";
+import type { DayName } from "../days";
+import {
+  Arrows,
+  BadAddress,
+  Breadcrumbs,
+  CalendarConsole,
+  CalendarPage,
+  onTheDay,
+  useCharacterisationTypes,
+} from "./Chrome";
 import { MonthGrid } from "./MonthGrid";
 
 /**
@@ -36,14 +44,17 @@ export function MonthFoot(props: { report: MonthReport }) {
           <h2 id="calendar-roughly" class="mb-2 text-xs font-semibold text-slate-500 uppercase">
             {t("calendar_roughly", "Sometime in or around this month")}
           </h2>
-          <ul class="flex flex-col gap-1 text-sm">
+          <ul class="grid grid-cols-[max-content_fit-content(26rem)_minmax(0,1fr)] gap-x-4 gap-y-2">
             <For each={props.report.roughly}>
               {(item) => (
-                <li class="flex min-w-0 items-center gap-3" data-testid="calendar-roughly">
-                  <a href={itemHref(item.ref.type, item.ref.id)} class="truncate hover:underline">
-                    {sayRef(item.ref, fieldName)}
-                  </a>
-                  <span class="shrink-0 text-xs text-slate-500 italic">
+                <li class="col-span-3 grid min-w-0 grid-cols-subgrid items-center" data-testid="calendar-roughly">
+                  <span class="text-xs font-semibold text-slate-500 uppercase">
+                    {fieldName(item.ref.type, item.ref.field)}
+                  </span>
+                  <span class="flex min-w-0">
+                    <ReferenceChip type={item.ref.type} label={item.ref.label} href={itemHref(item.ref.type, item.ref.id)} />
+                  </span>
+                  <span class="truncate text-xs text-slate-500 italic">
                     {sayBetween(nameOf(item.first, props.report.calendar), nameOf(item.last, props.report.calendar), language(), t)}
                   </span>
                 </li>
@@ -57,17 +68,18 @@ export function MonthFoot(props: { report: MonthReport }) {
           <h2 id="calendar-over-month" class="mb-2 text-xs font-semibold text-slate-500 uppercase">
             {t("calendar_over_month", "Over the month")}
           </h2>
-          <ul class="flex flex-col gap-1 text-sm">
+          <ul class="grid grid-cols-[fit-content(26rem)_minmax(0,1fr)] gap-x-4 gap-y-2">
             <For each={props.report.characterised_spans}>
               {(on) => (
-                <li class="flex items-center gap-3">
-                  <a
-                    href={itemHref(on.characterisation.type, on.characterisation.id)}
-                    class="text-amber-800 italic hover:underline"
-                  >
-                    {on.characterisation.label}
-                  </a>
-                  <span class="text-xs text-slate-500">{range(on)}</span>
+                <li class="col-span-2 grid min-w-0 grid-cols-subgrid items-center">
+                  <span class="flex min-w-0">
+                    <ReferenceChip
+                      type={on.characterisation.type}
+                      label={on.characterisation.label}
+                      href={itemHref(on.characterisation.type, on.characterisation.id)}
+                    />
+                  </span>
+                  <span class="truncate text-xs text-slate-500">{range(on)}</span>
                 </li>
               )}
             </For>
@@ -87,7 +99,15 @@ function MonthOf(props: { calendar: CalendarName; year: number; month: number })
   const api = useApi();
   const ErrorMessage = useComponent("ErrorMessage");
   const { t, language } = useTranslations();
-  const report = createMemo(() => getMonth(api, props.calendar, props.year, props.month));
+  const loggedIn = createMemo(() => userIsLoggedIn());
+  const types = useCharacterisationTypes();
+  // (the day a new characterisation is being made on, from its +; the month is read again when one is made)
+  const [adding, setAdding] = createSignal<DayName>();
+  const [version, setVersion] = createSignal(0);
+  const report = createMemo(() => {
+    version();
+    return getMonth(api, props.calendar, props.year, props.month);
+  });
   const title = () => sayMonth(props.year, props.month, language(), t);
   const previous = () => previousMonth(props.year, props.month);
   const next = () => nextMonth(props.year, props.month);
@@ -98,6 +118,7 @@ function MonthOf(props: { calendar: CalendarName; year: number; month: number })
         label={title()}
         hrefOf={(calendar) => monthHref(calendar, props.year, props.month)}
       />
+      <Breadcrumbs calendar={props.calendar} year={props.year} />
       <div class="mb-4 flex items-center gap-4">
         <Arrows
           previous={monthHref(props.calendar, ...previous())}
@@ -112,10 +133,23 @@ function MonthOf(props: { calendar: CalendarName; year: number; month: number })
       </div>
       <Errored fallback={(error) => <ErrorMessage error={error()} />}>
         <Loading fallback={<p>{t("loading", "Loading…")}</p>}>
-          <MonthGrid report={report()} />
+          <MonthGrid report={report()} onAdd={loggedIn() && types().length > 0 ? setAdding : undefined} />
           <MonthFoot report={report()} />
         </Loading>
       </Errored>
+      <Show when={adding()}>
+        {(day) => (
+          <NewEntityDialog
+            types={types()}
+            initial={onTheDay(day())}
+            onClose={() => setAdding(undefined)}
+            onCreated={() => {
+              setAdding(undefined);
+              setVersion((n) => n + 1);
+            }}
+          />
+        )}
+      </Show>
     </CalendarPage>
   );
 }

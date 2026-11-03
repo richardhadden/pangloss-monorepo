@@ -1,6 +1,6 @@
 import { ApiError, useApi, useComponent, userIsLoggedIn, useToasts, useTranslations } from "@pangloss/interface-core";
 import { createMemo, createSignal, Errored, Loading, Show } from "solid-js";
-import { attachToDay, detachFromDay, findCharacterisations, getDay } from "../api";
+import { attachToDay, detachFromDay, getDay } from "../api";
 import type { CharacterisationOut } from "../api";
 import { dayHref, nameFromParams, nameOf, refOf, sayDate } from "../days";
 import type { DayName } from "../days";
@@ -22,7 +22,7 @@ function DayOf(props: { name: DayName }) {
     version();
     return getDay(api, refOf(props.name), props.name.calendar);
   });
-  const attach = async (characterisation: CharacterisationOut) => {
+  const attach = async (characterisation: { id: string; label: string }) => {
     try {
       await attachToDay(api, characterisation.id, refOf(props.name));
       toasts?.show(t("calendar_attached_done", "{label} attached", { label: characterisation.label }), "success");
@@ -66,8 +66,8 @@ function DayOf(props: { name: DayName }) {
             report={report()}
             calendar={props.name.calendar}
             loggedIn={loggedIn()}
-            find={(q) => findCharacterisations(api, q)}
             onAttach={attach}
+            onCreated={() => setVersion((n) => n + 1)}
             onDetach={detach}
           />
         </Loading>

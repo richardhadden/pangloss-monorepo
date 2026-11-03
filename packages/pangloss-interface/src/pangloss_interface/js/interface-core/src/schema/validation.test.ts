@@ -22,7 +22,7 @@ const model = (name: string, extra: Partial<ModelDefinition> = {}) =>
     ...extra,
   }) as ModelDefinition;
 
-const base = { description: null, dbField: true, required: false, nullable: false };
+const base = { description: null, dbField: false, required: false, nullable: false };
 const literal = (name: string, type: object, extra: object = {}) =>
   ({ ...base, name, key: name, kind: "literal", type, validators: [], ...extra }) as FieldDefinition;
 const list = (name: string, item: object, extra: object = {}) =>
@@ -284,4 +284,21 @@ test("valibot is given the messages of a language, and a check in that language 
     "too_short",
     "type_not_allowed",
   ]);
+});
+
+test("a field the server works out (a DBField) is not required of the form, whatever the model says", () => {
+  const worked = {
+    models: {
+      Recurrence: model("Recurrence", {
+        kind: "Embedded",
+        fields: [
+          literal("frequency", { type: "str" }, required),
+          list("patternKeys", { type: "str" }, { ...required, dbField: true }),
+        ],
+      }),
+    },
+    enums: {},
+  } as unknown as ModelDefinitions;
+  expect(validateItem(worked, { type: "Recurrence", frequency: "yearly" })).toEqual([]);
+  expect(validateItem(worked, { type: "Recurrence" }).map((problem) => problem.path.join("."))).toEqual(["frequency"]);
 });

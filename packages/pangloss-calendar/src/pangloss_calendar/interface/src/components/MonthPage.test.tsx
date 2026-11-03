@@ -1,8 +1,15 @@
 // @vitest-environment happy-dom
+import { ModelsProvider, ModulesProvider } from "@pangloss/interface-core";
+import type { ModelDefinition, ModelDefinitions } from "@pangloss/interface-core";
 import { render } from "@solidjs/web";
 import { afterEach, expect, test } from "vitest";
 import { day, month, ref } from "./fixtures";
 import { MonthFoot } from "./MonthPage";
+
+const DEFINITIONS: ModelDefinitions = {
+  models: { Person: { name: "Person", kind: "Entity", interfaceMeta: null } as unknown as ModelDefinition },
+  enums: {},
+};
 
 let dispose: (() => void) | undefined;
 afterEach(() => {
@@ -15,6 +22,8 @@ test("a date known only roughly, beyond the month, is listed under the grid as b
   document.body.append(container);
   dispose = render(
     () => (
+      <ModelsProvider definitions={DEFINITIONS}>
+        <ModulesProvider modules={[]}>
       <MonthFoot
         report={month(
           {},
@@ -29,12 +38,16 @@ test("a date known only roughly, beyond the month, is listed under the grid as b
           },
         )}
       />
+        </ModulesProvider>
+      </ModelsProvider>
     ),
     container,
   );
   const rows = [...document.body.querySelectorAll<HTMLElement>('[data-testid="calendar-roughly"]')];
   expect(rows.length).toBe(1);
-  expect(rows[0]!.querySelector("a")!.textContent).toBe("born · Alcuin of York");
+  // (the field, then a chip of the entity: its type and its label)
+  expect(rows[0]!.textContent).toContain("born");
+  expect(rows[0]!.querySelector("a")!.textContent).toBe("PersonAlcuin of York");
   expect(rows[0]!.querySelector("a")!.getAttribute("href")).toBe("/Person/b1");
   expect(rows[0]!.textContent).toContain("between 1 January 1500 and 31 December 1500");
   expect(document.body.textContent).toContain("Sometime in or around this month");

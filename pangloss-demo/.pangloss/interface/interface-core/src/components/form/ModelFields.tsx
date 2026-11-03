@@ -911,6 +911,8 @@ function EntityCreateDialog(props: {
   groups: MenuGroup[];
   onCreated: (entity: Summary) => void;
   onClose: () => void;
+  /** What the form of the type chosen starts with, over the blank item (a date filled in, say) */
+  initial?: (type: string) => Record<string, unknown>;
 }) {
   const Modal = useComponent("Modal");
   const { t, modelName } = useTranslations();
@@ -938,6 +940,7 @@ function EntityCreateDialog(props: {
         {(chosen) => (
           <EntityCreateForm
             type={chosen()}
+            initial={props.initial}
             onBack={choices().length > 1 ? () => setType(undefined) : undefined}
             onCreated={props.onCreated}
             onClose={props.onClose}
@@ -955,6 +958,7 @@ function EntityCreateDialog(props: {
  */
 function EntityCreateForm(props: {
   type: string;
+  initial?: (type: string) => Record<string, unknown>;
   onBack?: () => void;
   onCreated: (entity: Summary) => void;
   onClose: () => void;
@@ -963,7 +967,7 @@ function EntityCreateForm(props: {
   const definitions = useModels();
   const { t, modelName } = useTranslations();
   const type = untrack(() => props.type);
-  const state = createItemFormState(blankItem(definitions, type));
+  const state = createItemFormState({ ...blankItem(definitions, type), ...untrack(() => props.initial?.(type)) });
   const model = getModel(definitions, type);
   // (while it is being made: back to false when that is over, whatever the answer)
   const [saving, setSaving] = createOptimistic(false);
@@ -1029,11 +1033,17 @@ function EntityCreateForm(props: {
  * entity; the entity made is chosen as if it had been found. With `onRemove`, a remove button is
  * joined on after it (for a place in a list that has no entity yet).
  */
-function PickOrCreate(props: {
+export function PickOrCreate(props: {
   types: string[];
   onPick: (entity: Summary) => void;
   onRemove?: () => void;
   removeLabel?: string;
+  /** What the search box says before anything is typed (by default, the types it finds) */
+  placeholder?: string;
+  /** What the form of a new one starts with, over the blank item */
+  initial?: (type: string) => Record<string, unknown>;
+  /** Called with one that was made, instead of `onPick` (by default it is picked as if it had been found) */
+  onCreated?: (entity: Summary) => void;
 }) {
   const definitions = useModels();
   const { t } = useTranslations();
@@ -1041,7 +1051,7 @@ function PickOrCreate(props: {
   const groups = createMemo(() => menuGroups(definitions, typeOptions(props.types)));
   return (
     <div class="w-full min-w-0">
-      <EntityPicker types={props.types} onPick={props.onPick}>
+      <EntityPicker types={props.types} onPick={props.onPick} placeholder={props.placeholder}>
         <Show when={choicesOf(groups()).length > 0}>
           <button
             type="button"
@@ -1069,14 +1079,42 @@ function PickOrCreate(props: {
       <Show when={creating()}>
         <EntityCreateDialog
           groups={groups()}
+          initial={props.initial}
           onClose={() => setCreating(false)}
           onCreated={(entity) => {
             setCreating(false);
             rememberEntity(entity);
-            props.onPick(entity);
+            (props.onCreated ?? props.onPick)(entity);
           }}
         />
       </Show>
     </div>
+  );
+}
+
+/**
+ * A dialog that makes a new entity of one of `types` (Entities, or Documents that can be made on their own): the types
+ * first, when there are several (Back goes to them again), then the form of the one chosen, which starts with what
+ * `initial` gives for it; Save makes it and hands it to `onCreated`. For an interface module that offers to make one
+ * where there is no field to put it in (a day of a calendar, say).
+ */
+export function NewEntityDialog(props: {
+  types: string[];
+  onCreated: (entity: Summary) => void;
+  onClose: () => void;
+  initial?: (type: string) => Record<string, unknown>;
+}) {
+  const definitions = useModels();
+  const groups = createMemo(() => menuGroups(definitions, typeOptions(props.types)));
+  return (
+    <EntityCreateDialog
+      groups={groups()}
+      initial={props.initial}
+      onClose={props.onClose}
+      onCreated={(entity) => {
+        rememberEntity(entity);
+        props.onCreated(entity);
+      }}
+    />
   );
 }

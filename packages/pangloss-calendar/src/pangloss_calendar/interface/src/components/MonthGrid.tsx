@@ -2,6 +2,7 @@ import { getModel, kindTint, useModels, useTranslations } from "@pangloss/interf
 import { For, Show } from "solid-js";
 import type { CalendarName, Characterised, Hit, MonthDayOut, MonthReport, Spanning } from "../api";
 import { dayHref, itemHref, nameOf, sayBetween, sayDate, sayRef, weekHeadings } from "../days";
+import type { DayName } from "../days";
 import { weekBars, weekStart } from "../lanes";
 import type { Bar, Ranged } from "../lanes";
 
@@ -124,7 +125,12 @@ function SpanBar(props: { bar: Bar<BarItem>; calendar: CalendarName }) {
  * A week of the grid: seven columns. Behind, the cells (a rule between them; shaded outside the month). In front, a grid
  * of the same columns with the day numbers in its first row, a row for each lane of bars, and what is on each day last.
  */
-function WeekRow(props: { week: (number | null)[]; report: MonthReport; ranges: Ranged<BarItem>[] }) {
+function WeekRow(props: {
+  week: (number | null)[];
+  report: MonthReport;
+  ranges: Ranged<BarItem>[];
+  onAdd?: (day: DayName) => void;
+}) {
   const { t, language } = useTranslations();
   const bars = () => weekBars(props.ranges, weekStart(props.week));
   const lanes = () => bars().reduce((most, bar) => Math.max(most, bar.lane + 1), 0);
@@ -142,7 +148,10 @@ function WeekRow(props: { week: (number | null)[]; report: MonthReport; ranges: 
       <div class="relative grid grid-cols-7">
         <For each={props.week}>
           {(jdn, index) => (
-            <div style={{ "grid-row": "1", "grid-column": String(index() + 1) }} class="h-7 px-1.5 pt-1">
+            <div
+              style={{ "grid-row": "1", "grid-column": String(index() + 1) }}
+              class="flex h-7 items-start justify-between px-1.5 pt-1"
+            >
               <Show when={jdn !== null && entry(jdn!)}>
                 <a
                   href={dayHref(name(jdn!))}
@@ -151,6 +160,21 @@ function WeekRow(props: { week: (number | null)[]; report: MonthReport; ranges: 
                 >
                   {name(jdn!).day}
                 </a>
+                {/* (a new feast or other characterisation, starting on the day) */}
+                <Show when={props.onAdd}>
+                  {(add) => (
+                    <button
+                      type="button"
+                      aria-haspopup="dialog"
+                      aria-label={t("calendar_add_on", "Add to {date}", { date: sayDate(name(jdn!), language(), t) })}
+                      title={t("calendar_add_on", "Add to {date}", { date: sayDate(name(jdn!), language(), t) })}
+                      onClick={() => add()(name(jdn!))}
+                      class="inline-flex size-5 cursor-pointer items-center justify-center rounded-sm text-sm leading-none text-slate-400 select-none hover:bg-slate-200 hover:text-slate-800"
+                    >
+                      +
+                    </button>
+                  )}
+                </Show>
               </Show>
             </div>
           )}
@@ -180,7 +204,7 @@ function WeekRow(props: { week: (number | null)[]; report: MonthReport; ranges: 
  * across them (`between`); feasts and the like are named on their days. (What is known only to a range beyond the month,
  * `roughly`, is listed under the grid by `MonthFoot`.)
  */
-export function MonthGrid(props: { report: MonthReport }) {
+export function MonthGrid(props: { report: MonthReport; onAdd?: (day: DayName) => void }) {
   const { language } = useTranslations();
   const ranged = (span: Spanning, between: boolean): Ranged<BarItem> => ({
     item: { span, between },
@@ -200,7 +224,7 @@ export function MonthGrid(props: { report: MonthReport }) {
           {(day) => <div class="border-l border-slate-300 px-2 py-1.5 first:border-l-0">{day}</div>}
         </For>
       </div>
-      <For each={props.report.weeks}>{(week) => <WeekRow week={week} report={props.report} ranges={ranges()} />}</For>
+      <For each={props.report.weeks}>{(week) => <WeekRow week={week} report={props.report} ranges={ranges()} onAdd={props.onAdd} />}</For>
     </div>
   );
 }

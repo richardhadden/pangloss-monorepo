@@ -105,7 +105,7 @@ MODELS = textwrap.dedent(
 
     # (a feast, by rule or attached by hand: what the calendar's days are characterised by)
     class Feast(DateCharacterisation):
-        pass
+        use: str | None = None
     """
 )
 TYPES = (
@@ -619,8 +619,6 @@ def dated(types: Stack) -> SimpleNamespace:
             text="Traded",
             when=between(julian(1500, 3, 4), julian(1500, 3, 5)),
         ),
-        benedict=made("Feast", "Benedict", use="sarum", rank="major", when=rule),
-        market=made(
-            "Feast", "Market day", use=None, rank=None, when={"type": "NoRule"}
-        ),
+        benedict=made("Feast", "Benedict", use="sarum", when=rule),
+        market=made("Feast", "Market day", when={"type": "NoRule"}),
     )

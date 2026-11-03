@@ -57,6 +57,8 @@ export function monthFromParams(
 }
 
 export const yearsHref = (calendar: CalendarName) => `/calendar?calendar=${calendar}`;
+/** A year in the list of years: its row, which is marked when it is gone to */
+export const yearHref = (calendar: CalendarName, year: number) => `/calendar?calendar=${calendar}#year-${year}`;
 export const monthHref = (calendar: CalendarName, year: number, month: number) => `/calendar/${calendar}/${year}/${month}`;
 export const dayHref = (name: DayName) => `/calendar/${name.calendar}/${name.year}/${name.month}/${name.day}`;
 /** The page of what a date is in */

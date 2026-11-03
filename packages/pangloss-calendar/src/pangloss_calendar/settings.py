@@ -34,11 +34,6 @@ def narrow_days(settings: Any = None) -> int:
     return setting("CALENDAR_NARROW_DAYS", DEFAULT_NARROW_DAYS, settings)
 
 
-def use(settings: Any = None) -> str | None:
-    """`CALENDAR_USE`: the liturgical use a view shows (all if not set)"""
-    return setting("CALENDAR_USE", None, settings)
-
-
 DEFAULT_EXTEND_MARGIN_YEARS = 10
 
 

@@ -218,10 +218,10 @@ async def status() -> dict[str, Any]:
 def characterisations_query() -> str:
     return f"""
 MATCH (n:DateCharacterisation)
-WHERE {_fragments().not_deleted("n")} AND ($use IS NULL OR n.use = $use)
+WHERE {_fragments().not_deleted("n")}
 OPTIONAL MATCH (n)-[:`when`]->(d:Date)
 OPTIONAL MATCH (d)-[:start]->(s:Date)
-RETURN n.id AS id, n.label AS label, n.type AS type, n.use AS use, n.rank AS rank, d.type AS kind,
+RETURN n.id AS id, n.label AS label, n.type AS type, d.type AS kind,
        d.calendar AS calendar, d.earliest_strict AS earliest_strict, d.latest_strict AS latest_strict,
        d.frequency AS frequency, d.weekdays AS weekdays, d.nth AS nth, d.month AS month,
        d.month_day AS month_day, d.interval AS interval, d.excluded_days AS excluded_days,
@@ -230,13 +230,13 @@ ORDER BY n.label, n.id
 """
 
 
-async def read_characterisations(use: str | None = None) -> list[Characterisation]:
+async def read_characterisations() -> list[Characterisation]:
     """Every characterisation (not deleted), with its rule if it has one"""
     database = _database()
 
     @database.read_transaction
     async def read(tx: Transaction) -> list[dict[str, Any]]:
-        result = await tx.run(characterisations_query(), use=use)
+        result = await tx.run(characterisations_query())
         return [dict(record) async for record in result]
 
     default = default_calendar()
@@ -263,23 +263,21 @@ CALL {{
   RETURN c, t.first_jdn AS lo, t.last_jdn AS hi, 'span' AS via
 }}
 WITH c, lo, hi, via
-WHERE {_fragments().not_deleted("c")} AND ($use IS NULL OR c.use = $use)
+WHERE {_fragments().not_deleted("c")}
 OPTIONAL MATCH (c)-[:`when`]->(w:Date)
-RETURN c.id AS id, c.label AS label, c.type AS type, c.use AS use, c.rank AS rank, w.type AS kind, lo, hi, via
+RETURN c.id AS id, c.label AS label, c.type AS type, w.type AS kind, lo, hi, via
 ORDER BY c.label, c.id, lo
 """
 
 
-async def manual_between(
-    first: int, last: int, use: str | None = None
-) -> list[dict[str, Any]]:
+async def manual_between(first: int, last: int) -> list[dict[str, Any]]:
     """The characterisations attached by hand to a day, month, year or span that meets the days `first` to `last`,
     with the range of what each is attached to (`lo`, `hi`) and which kind it is (`via`)"""
     database = _database()
 
     @database.read_transaction
     async def read(tx: Transaction) -> list[dict[str, Any]]:
-        result = await tx.run(manual_between_query(), first=first, last=last, use=use)
+        result = await tx.run(manual_between_query(), first=first, last=last)
         return [{**record, "id": UUID(record["id"])} async for record in result]
 
     return await read()

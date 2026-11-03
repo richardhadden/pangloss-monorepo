@@ -22,8 +22,9 @@ def test_the_navigation_bar_links_to_the_years_of_the_calendar(page: Page, dated
     expect(rows).to_have_count(3)
     expect(rows.nth(0)).to_contain_text("1499")
     # (the four events are in 1500, and nothing in the other years)
-    expect(rows.nth(1).locator("td").first).to_have_text("4")
-    expect(rows.nth(0).locator("td").first).to_have_text("0")
+    # (at the end of each row: the number in a circle, then "events")
+    expect(rows.nth(1).get_by_test_id("calendar-year-count")).to_have_text("4events")
+    expect(rows.nth(0).get_by_test_id("calendar-year-count")).to_have_text("0events")
     # (each month is a link to its page)
     rows.nth(1).get_by_role("link", name="March 1500").click()
     page.wait_for_url("**/calendar/julian/1500/3")
@@ -62,7 +63,9 @@ def test_a_month_is_a_calendar_page_with_what_is_dated_on_its_days(page: Page, d
     )
     roughly = page.get_by_test_id("calendar-roughly")
     expect(roughly).to_have_count(1)
-    expect(roughly).to_contain_text("When · Birth of Alcuin")
+    # (the field, then a chip of what it is in: its type and its label)
+    expect(roughly).to_contain_text("When")
+    expect(roughly.get_by_role("link", name="Event Birth of Alcuin")).to_be_visible()
     expect(roughly).to_contain_text("between 1 January 1500 and 31 December 1500")
     # the feast by rule on the 21st
     expect(month.get_by_role("link", name="Benedict")).to_have_count(1)
@@ -75,8 +78,9 @@ def test_a_month_is_a_calendar_page_with_what_is_dated_on_its_days(page: Page, d
     page.get_by_role("link", name="Next month").click()
     page.wait_for_url("**/calendar/julian/1500/4")
     expect(page.get_by_role("heading", name=re.compile("^April 1500"))).to_be_visible()
+    # (one button: it names the calendar the page is read in, and goes to the other)
     page.get_by_role("banner", name="Console").get_by_role(
-        "link", name="Gregorian"
+        "link", name="Julian"
     ).click()
     page.wait_for_url("**/calendar/gregorian/1500/4")
     # (Gregorian 1500 is not a leap year, and its April starts on another weekday: still 30 days)
@@ -156,15 +160,15 @@ def test_someone_logged_in_attaches_a_feast_to_a_day_and_takes_it_away(
     hydrated(page)
     feasts = page.get_by_role("region", name="Feasts and characterisations")
     expect(feasts).to_contain_text("None on this day")
-    expect(feasts.get_by_role("link", name="New Feast")).to_be_visible()
-    # (and in the console of every calendar page)
+    # (no New buttons in the console any more: a + of a day, or of the search, makes one)
     expect(
         page.get_by_role("banner", name="Console").get_by_role("link", name="New Feast")
-    ).to_be_visible()
-    page.get_by_label("Attach a characterisation").fill("mark")
-    found = page.get_by_role("list", name="Characterisations found")
-    expect(found.get_by_role("button")).to_have_count(1)
-    found.get_by_role("button", name=re.compile("Market day")).click()
+    ).to_have_count(0)
+    # the search of the characterisations, as in a form: one found is attached to the day
+    feasts.get_by_placeholder("Find one to attach to this day, or + to make one").fill(
+        "mark"
+    )
+    feasts.get_by_role("option", name=re.compile("Market day")).click()
     expect(page.get_by_text("Market day attached")).to_be_visible()
     expect(feasts.get_by_role("link", name="Market day")).to_be_visible()
     expect(feasts).to_contain_text("attached to this day")
@@ -181,12 +185,71 @@ def test_someone_logged_in_attaches_a_feast_to_a_day_and_takes_it_away(
         page.get_by_test_id("calendar-month").get_by_role("link", name="Market day")
     ).to_have_count(1)
     page.goto("/calendar/julian/1500/3/5")
-    feasts.get_by_role("button", name="Detach").click()
+    # taken away by the remove button of its chip
+    feasts.get_by_role("button", name="Detach Market day").click()
     expect(page.get_by_text("Market day detached")).to_be_visible()
     expect(feasts).to_contain_text("None on this day")
     assert (
         dated.api.ok("GET", "/api/calendar/day/J1500-03-05")["characterisations"] == []
     )
+    # the + of the search makes a new one, on this day to start with
+    feasts.get_by_role("button", name="Make a new one").click()
+    dialog = page.get_by_role("dialog")
+    expect(dialog.get_by_label("When Year", exact=True)).to_have_value("1500")
+    expect(dialog.get_by_label("When Day", exact=True)).to_have_value("5")
+    dialog.get_by_label("Label", exact=True).fill("Fair day")
+    dialog.get_by_role("button", name="Save").click()
+    expect(dialog).to_have_count(0)
+    expect(feasts.get_by_role("link", name="Fair day")).to_be_visible()
+
+
+def test_a_feast_is_made_from_the_plus_of_a_day_in_the_month(logged_in: Page, dated):
+    """Each day of the month has a + (for someone logged in): it opens the form of a new characterisation that starts on
+    that day; saved, it is on the day"""
+    page = logged_in
+    page.goto("/calendar/julian/1500/3")
+    hydrated(page)
+    month = page.get_by_test_id("calendar-month")
+    month.get_by_role("button", name="Add to 7 March 1500").click()
+    dialog = page.get_by_role("dialog")
+    # (the project has one type of characterisation: its form at once)
+    expect(dialog.get_by_role("heading", name="New Feast")).to_be_visible()
+    expect(dialog.get_by_label("When Month", exact=True)).to_have_value("3")
+    expect(dialog.get_by_label("When Day", exact=True)).to_have_value("7")
+    dialog.get_by_label("Label", exact=True).fill("Thomas Aquinas")
+    dialog.get_by_role("button", name="Save").click()
+    expect(dialog).to_have_count(0)
+    expect(month.get_by_role("link", name="Thomas Aquinas")).to_have_count(1)
+    # (a reader not logged in has no +)
+    page.context.clear_cookies()
+    page.reload()
+    expect(
+        page.get_by_test_id("calendar-month").get_by_role(
+            "button", name=re.compile("^Add to")
+        )
+    ).to_have_count(0)
+
+
+def test_the_day_and_the_month_lead_to_their_year(page: Page, dated):
+    page.goto("/calendar/julian/1500/3/2")
+    hydrated(page)
+    where = page.get_by_role("navigation", name="Where in the calendar")
+    expect(where.get_by_role("link", name="March 1500")).to_have_attribute(
+        "href", "/calendar/julian/1500/3"
+    )
+    where.get_by_role("link", name="1500", exact=True).click()
+    page.wait_for_url("**/calendar?calendar=julian#year-1500")
+    # (the year's row is the one gone to)
+    row = page.locator("#year-1500")
+    expect(row).to_be_visible()
+    expect(row).to_have_attribute("aria-current", "true")
+    expect(page.locator("[aria-current='true'][data-testid='calendar-year']")).to_have_count(1)
+    page.goto("/calendar/julian/1500/3")
+    expect(
+        page.get_by_role("navigation", name="Where in the calendar").get_by_role(
+            "link", name="1500"
+        )
+    ).to_have_attribute("href", "/calendar?calendar=julian#year-1500")
 
 
 def test_an_address_that_is_not_a_day_is_explained(page: Page, dated):
@@ -213,3 +276,37 @@ def test_the_calendar_module_tests_pass_in_the_built_project(stack: Stack):
             timeout=300,
         )
         assert done.returncode == 0, (done.stdout + done.stderr)[-3000:]
+
+
+def test_a_feast_by_rule_is_made_in_the_form_as_a_person_says_it(
+    logged_in: Page, dated
+):
+    """The form of a Feast: a Recurrence is said as every year on a day of a month, from a year until a year (none of
+    the rule's raw fields), and it is saved and found on its day"""
+    page = logged_in
+    page.goto("/Feast/new")
+    hydrated(page)
+    page.get_by_label("Label", exact=True).fill("Gregory")
+    page.get_by_role("button", name="Add when").click()
+    page.get_by_role("button", name="Recurrence", exact=True).click()
+    editor = page.get_by_test_id("recurrence-editor")
+    expect(editor).to_be_visible()
+    for raw in ("Nth", "Month day", "Excluded days", "Easter offset", "Interval"):
+        expect(page.locator("main")).not_to_contain_text(raw)
+    page.get_by_role("radio", name="Every year").click()
+    page.get_by_role("radio", name="A day of a month").click()
+    page.get_by_label("When Day", exact=True).fill("12")
+    page.get_by_label("When Month", exact=True).select_option("3")
+    page.get_by_label("When From Year", exact=True).fill("1450")
+    page.get_by_label("When Until Year", exact=True).fill("1530")
+    expect(page.get_by_test_id("date-reads")).to_contain_text(
+        "every year on 12 March, 1450 – 1530"
+    )
+    page.get_by_role("button", name="Save").click()
+    page.wait_for_url(re.compile(r"/Feast/[^/]+$"))
+    expect(page.get_by_role("heading", name="Gregory")).to_be_visible()
+    # (it falls on 12 March 1500, by rule, and repeats)
+    page.goto("/calendar/julian/1500/3/12")
+    feasts = page.get_by_role("region", name="Feasts and characterisations")
+    expect(feasts.get_by_role("link", name="Gregory")).to_be_visible()
+    expect(feasts).to_contain_text("repeats")

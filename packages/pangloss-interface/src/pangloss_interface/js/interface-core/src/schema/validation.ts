@@ -226,7 +226,8 @@ export class ItemSchemas {
     if (!model) return v.unknown();
     const entries: Record<string, Schema> = {};
     if (labelled(model)) entries.label = this.entry(v.string(), true);
-    for (const field of model.fields) entries[field.key] = this.field(field, env);
+    // (a field the server works out, `DBField`, such as the bounds of a date, is never written by a client: not checked)
+    for (const field of model.fields) if (!field.dbField) entries[field.key] = this.field(field, env);
     return v.looseObject(entries);
   }
 

@@ -50,7 +50,7 @@ export function monthNames(language = "en"): string[] {
   }
 }
 
-function weekdayNames(language: string): string[] {
+export function weekdayNames(language: string): string[] {
   try {
     const format = new Intl.DateTimeFormat(language, { weekday: "long", timeZone: "UTC" });
     // (2 January 2000 was a Sunday)
@@ -84,21 +84,64 @@ function exact(date: Data, words: DateWords): string {
   return [day, monthName, year].filter((part) => part !== undefined).join(" ");
 }
 
+const NTH_SLOTS: Record<number, [string, string]> = {
+  1: ["date_nth_first", "first"],
+  2: ["date_nth_second", "second"],
+  3: ["date_nth_third", "third"],
+  4: ["date_nth_fourth", "fourth"],
+  5: ["date_nth_fifth", "fifth"],
+  [-1]: ["date_nth_last", "last"],
+};
+
+/**
+ * "every year on 21 March", "every 2 years on the third Sunday of March", "every year on Easter + 49 days",
+ * "every month on the 21st", "every week on Sunday, Monday"
+ */
 function recurrence(date: Data, words: DateWords): string {
   const names = weekdayNames(words.language);
-  const weekdays = (Array.isArray(date.weekdays) ? date.weekdays : []).map((w) => names[w as number] ?? w);
-  const what =
-    Array.isArray(date.weekdays) && weekdays.length > 0
-      ? weekdays.join(", ")
-      : typeof date.frequency === "string"
-        ? member(words, "Frequency", date.frequency)
-        : "";
-  const n = num(date.interval);
-  return (
-    n && n !== 1
-      ? words.t("date_every_n", "every {n} {what}", { n, what })
-      : words.t("date_every", "every {what}", { what })
-  ).trim();
+  const weekdays = (Array.isArray(date.weekdays) ? date.weekdays : []).map((w) => names[w as number] ?? String(w));
+  const month = num(date.month);
+  const monthName = month !== undefined ? (monthNames(words.language)[month - 1] ?? String(month)) : undefined;
+  const nth = num(date.nth);
+  const nthWord = nth !== undefined && NTH_SLOTS[nth] ? words.t(...NTH_SLOTS[nth]!) : undefined;
+  const monthDay = num(date.monthDay ?? date.month_day);
+  const easter = num(date.easterOffset ?? date.easter_offset);
+  const frequency = typeof date.frequency === "string" ? date.frequency : "";
+  const n = num(date.interval) ?? 1;
+  const unit =
+    frequency === "weekly"
+      ? [words.t("date_unit_week", "week"), words.t("date_unit_weeks", "weeks")]
+      : frequency === "monthly"
+        ? [words.t("date_unit_month", "month"), words.t("date_unit_months", "months")]
+        : [words.t("date_unit_year", "year"), words.t("date_unit_years", "years")];
+  let on: string | undefined;
+  if (easter !== undefined) {
+    on =
+      easter === 0
+        ? words.t("date_easter", "Easter")
+        : words.t("date_from_easter", "Easter {sign} {days} days", {
+            sign: easter > 0 ? "+" : "−",
+            days: Math.abs(easter),
+          });
+  } else if (nthWord !== undefined && weekdays.length > 0) {
+    on =
+      monthName !== undefined
+        ? words.t("date_nth_weekday_of", "the {nth} {weekday} of {month}", { nth: nthWord, weekday: weekdays[0]!, month: monthName })
+        : words.t("date_nth_weekday", "the {nth} {weekday}", { nth: nthWord, weekday: weekdays[0]! });
+  } else if (monthName !== undefined && monthDay !== undefined) {
+    on = words.t("date_day_month", "{day} {month}", { day: monthDay, month: monthName });
+  } else if (monthName !== undefined) {
+    on = monthName;
+  } else if (monthDay !== undefined) {
+    on = words.t("date_day_of_the_month", "the {day}.", { day: monthDay });
+  } else if (weekdays.length > 0) {
+    on = weekdays.join(", ");
+  }
+  const every =
+    n !== 1
+      ? words.t("date_every_n", "every {n} {what}", { n, what: unit[1]! })
+      : words.t("date_every", "every {what}", { what: unit[0]! });
+  return on === undefined ? every : words.t("date_every_on", "{every} on {on}", { every, on });
 }
 
 /**

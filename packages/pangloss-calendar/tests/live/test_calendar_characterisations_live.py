@@ -39,7 +39,9 @@ def models():
         importlib.reload(module)
 
     class FeastDay(calendar_models.DateCharacterisation):
-        pass
+        # (a project says what else it wants of one: the base has only `when`)
+        use: str | None = None
+        rank: str | None = None
 
     class Factoid(Document):
         when: julian.JulianDate

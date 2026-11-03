@@ -21,8 +21,6 @@ export interface CharacterisationOut {
   id: string;
   label: string;
   type: string;
-  use: string | null;
-  rank: string | null;
   easter_offset?: number | null;
   /** The kind of its `when` (`Recurrence`, `JulianExactDate`, `Period`, ...); null for one with no rule */
   kind?: string | null;
@@ -114,7 +112,6 @@ export interface CalendarSettings {
   first_year: number | null;
   last_year: number | null;
   narrow_days: number;
-  use: string | null;
   extend_margin_years: number;
 }
 
@@ -143,9 +140,6 @@ export const getMonth = (api: ApiClient, calendar: CalendarName, year: number, m
 /** A day by its name in a calendar (`J1500-03-02`), read in `calendar` */
 export const getDay = (api: ApiClient, ref: string, calendar: CalendarName): Promise<DayReport> =>
   api.get(`/calendar/day/${encodeURIComponent(ref)}`, { calendar });
-
-export const findCharacterisations = (api: ApiClient, q: string): Promise<CharacterisationOut[]> =>
-  api.get("/calendar/characterisations", { q });
 
 /** Attach a characterisation to a day by hand (logged in) */
 export const attachToDay = (api: ApiClient, characterisation: string, day: string): Promise<{ attached: boolean }> =>

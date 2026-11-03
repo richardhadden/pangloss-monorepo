@@ -66,8 +66,6 @@ class CharacterisationOut(BaseModel):
     id: UUID
     label: str
     type: str
-    use: str | None
-    rank: str | None
     easter_offset: int | None = None
     kind: str | None = None
     """The kind of its `when` (`Recurrence`, `JulianExactDate`, `Period`, ...); None for one with no rule"""
@@ -80,8 +78,6 @@ class CharacterisationOut(BaseModel):
             id=c.id,
             label=c.label,
             type=c.type,
-            use=c.use,
-            rank=c.rank,
             easter_offset=c.rule.easter_offset if c.rule else None,
             kind=c.kind,
             repeated=c.repeated,
@@ -202,7 +198,6 @@ class SettingsOut(BaseModel):
     last_year: int | None
     """`CALENDAR_FIRST_YEAR` and `CALENDAR_LAST_YEAR`: the span (None: not set)"""
     narrow_days: int
-    use: str | None
     extend_margin_years: int
 
 
@@ -212,7 +207,6 @@ def settings_report() -> SettingsOut:
         first_year=settings.first_year(),
         last_year=settings.last_year(),
         narrow_days=settings.narrow_days(),
-        use=settings.use(),
         extend_margin_years=settings.extend_margin_years(),
     )
 
@@ -327,8 +321,6 @@ def _manual(row: dict[str, Any]) -> Characterised:
             id=row["id"],
             label=row["label"],
             type=row["type"],
-            use=row["use"],
-            rank=row["rank"],
             kind=row.get("kind"),
             repeated=bool(row.get("kind") and str(row["kind"]).endswith("Recurrence")),
         ),
@@ -342,15 +334,13 @@ def _manual(row: dict[str, Any]) -> Characterised:
 async def day(
     jdn: int,
     calendar: Calendar,
-    use: str | None = None,
     fields: list[DateField] | None = None,
 ) -> DayReport:
     """What is on a day: the characterisations (by their rule, and by hand), and every document with a date that holds it
     (`stated` if the date says so, `possible` if only its allowance for doubt holds it), or a repeated event that falls
     on it"""
     await _ensure(jdn, jdn)
-    use = use if use is not None else settings.use()
-    chars = await graph.read_characterisations(use)
+    chars = await graph.read_characterisations()
     by_rule = rules.on_day(chars, jdn)
     extra = [c.feast_key for c in by_rule]
     keys = _both_calendars_keys(jdn, extra)
@@ -399,9 +389,7 @@ async def day(
         calendar=calendar,
         previous=DayOut.of(jdn - 1),
         next=DayOut.of(jdn + 1),
-        characterisations=_characterised(
-            by_rule, await graph.manual_between(jdn, jdn, use)
-        ),
+        characterisations=_characterised(by_rule, await graph.manual_between(jdn, jdn)),
         hits=ordered,
         truncated=truncated,
     )
@@ -454,14 +442,12 @@ async def month(
     calendar: Calendar,
     year: int,
     month_number: int,
-    use: str | None = None,
     fields: list[DateField] | None = None,
 ) -> MonthReport:
     """A month with, on each day, its characterisations and the dates on it; the dates that state a long range are apart"""
     first, last = month_span(calendar, year, month_number)
     await _ensure(first, last)
-    use = use if use is not None else settings.use()
-    chars = await graph.read_characterisations(use)
+    chars = await graph.read_characterisations()
     dated: list[Dated] = []
     truncated = False
     for field in fields if fields is not None else calendar_fields():
@@ -470,7 +456,7 @@ async def month(
         truncated = truncated or cut
     view = place(dated, first, last, settings.narrow_days())
     by_day = rules.days_of(chars, first, last)
-    manual = await graph.manual_between(first, last, use)
+    manual = await graph.manual_between(first, last)
     manual_on: dict[int, list[dict[str, Any]]] = {}
     wide: list[Characterised] = []
     for row in manual:
@@ -526,27 +512,22 @@ def _moveable(
     ]
 
 
-async def easter_report(
-    calendar: Calendar, year: int, use: str | None = None
-) -> EasterReport:
-    use = use if use is not None else settings.use()
+async def easter_report(calendar: Calendar, year: int) -> EasterReport:
     return EasterReport(
         calendar=calendar,
         year=year,
         easter=DayOut.of(easter(year, calendar)),
-        moveable=_moveable(await graph.read_characterisations(use), year, calendar),
+        moveable=_moveable(await graph.read_characterisations(), year, calendar),
     )
 
 
 async def year_report(
     calendar: Calendar,
     year: int,
-    use: str | None = None,
     fields: list[DateField] | None = None,
 ) -> YearReport:
     """The months of a year with how many dates meet each, Easter, and the characterisations that move with it"""
-    use = use if use is not None else settings.use()
-    chars = await graph.read_characterisations(use)
+    chars = await graph.read_characterisations()
     spans = [month_span(calendar, year, number) for number in range(1, 13)]
     seen: list[set[tuple[UUID, str]]] = [set() for _ in spans]
     truncated = False
@@ -580,7 +561,6 @@ async def years_report(
     calendar: Calendar,
     first_year: int,
     last_year: int,
-    use: str | None = None,
     fields: list[DateField] | None = None,
 ) -> YearsReport:
     """The years from `first_year` to `last_year` with how many dates meet each (for the list of years)"""
@@ -588,8 +568,7 @@ async def years_report(
         raise ValueError("the years go from the first to the last")
     if last_year - first_year + 1 > MAX_YEARS:
         raise ValueError(f"at most {MAX_YEARS} years can be counted at once")
-    use = use if use is not None else settings.use()
-    chars = await graph.read_characterisations(use)
+    chars = await graph.read_characterisations()
     first = year_span(calendar, first_year)[0]
     last = year_span(calendar, last_year)[1]
     dated: list[Dated] = []
@@ -613,10 +592,8 @@ async def years_report(
     )
 
 
-async def find_characterisations(
-    use: str | None = None, q: str | None = None
-) -> list[CharacterisationOut]:
-    found = await graph.read_characterisations(use)
+async def find_characterisations(q: str | None = None) -> list[CharacterisationOut]:
+    found = await graph.read_characterisations()
     if q:
         found = [c for c in found if q.lower() in c.label.lower()]
     return [CharacterisationOut.of(c) for c in rules.unique(found)]

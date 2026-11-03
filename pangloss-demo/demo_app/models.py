@@ -176,6 +176,12 @@ class Feast(DateCharacterisation):
     """A day of the calendar: a saint's day every year (`when` a Recurrence), a council that sat once (an ExactDate or
     a DateRange), a Lent (a Period), or one attached to days by hand (NoRule). Shown by `pangloss_calendar`"""
 
+    # (the base has only `when`: what else a feast is, a project says)
+    use: str | None = None
+    """The liturgical use it belongs to (Sarum, Roman...)"""
+    rank: str | None = None
+    """Its grade: double, semidouble, simple..."""
+
 
 class Source(Entity):
     """A text that makes claims: a chronicle, a letter, a charter"""

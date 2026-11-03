@@ -214,7 +214,7 @@ check the app label).
 
 Settings: `CALENDAR_DEFAULT` (default: `DATES_DEFAULT_CALENDAR`), `CALENDAR_FIRST_YEAR` / `CALENDAR_LAST_YEAR` (the span to browse and
 to seed; **no default**, decided 2026-10-29), `CALENDAR_AUTO_EXTEND` (make days outside the span when asked, default off),
-`CALENDAR_USE` (the liturgical use a view shows), `CALENDAR_NARROW_DAYS` (7), `CALENDAR_FIELDS` (default: all).
+`CALENDAR_NARROW_DAYS` (7), `CALENDAR_FIELDS` (default: all). (`CALENDAR_USE` was removed with `use`, 2026-11-03.)
 
 ## Phases
 
@@ -348,6 +348,18 @@ to seed; **no default**, decided 2026-10-29), `CALENDAR_AUTO_EXTEND` (make days 
    the days it could be on (`first`, `last` on `Hit`). (3) Chips and bars are named by their field ("Born · Alcuin of York").
    (4) `DateCharacterisation` stays abstract; the demo got `Feast` (migration `0008`), and "New <type>" is in the console of
    every calendar page for someone logged in. `CALENDAR_NARROW_DAYS` now governs periods only.
+   *Fourth round (2026-11-03):* (1) **`use` and `rank` are no longer fields of `DateCharacterisation`** (its only field is `when`): a
+   project declares what else it wants on its subclass (the demo's `Feast` has both). With them went `CALENDAR_USE` and every
+   `?use=` filter. Migration `0004` removes the fields from the schema and leaves the data alone (`absorbed`, set by hand: as
+   `makemigrations` wrote it, it would have set them to null on every `:DateCharacterisation` node, a subclass's own included).
+   (2) **Making one is the form's standard way**: core now exports `PickOrCreate` (a search with a joined +, as a relation's
+   field) and `NewEntityDialog` (the types, then the form), both with `initial` to start a form with values. Each day of the
+   month grid has a + (logged in) that opens the dialog with `when` that day; the day page has the search (pick: attach to
+   the day; +: make one on the day) and a remove button on the chip of one attached by hand. The "New <type>" buttons of the
+   console are gone. (3) One calendar button in the console (the calendar read in; it goes to the other). (4) A day's and a
+   month's year and month as links above the heading; the year goes to its row in the list of years (`#year-1500`, marked
+   from the router's hash, since a client navigation does not set `:target`). (5) The list of years ends each row with
+   "<n> events", the number in a circle.
 6. (Gate) Version 2.
 
 ## Tests, in short

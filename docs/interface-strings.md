@@ -196,10 +196,16 @@ These are not shown, but are read aloud, or appear when the pointer rests on the
 | `review_queue_type` / `_all_types` | Type / All types | `ReviewQueue` (the filter) | |
 | `review_queue_pages` / `_previous` / `_next` / `_page` | Pages / Previous / Next / Page {page} of {pages} | `ReviewQueue` (paging) | |
 | `nav_pangloss_review_review` | Review | the navigation bar (`interface_config.py` of `pangloss_review`) | |
+| `date_every_on` / `date_unit_year(s)` / `_month(s)` / `_week(s)` / `date_day_month` / `date_day_of_the_month` / `date_nth_weekday(_of)` / `date_nth_first` … `_last` / `date_easter` / `date_from_easter` | {every} on {on} / year, years… / {day} {month} / the {day}. / the {nth} {weekday} of {month} / first … last / Easter / Easter {sign} {days} days | `format.ts` (a recurrence as it reads: "every year on 21 March") | |
+| `date_repeats` / `date_every_year` / `_month` / `_week` / `date_on` / `date_way_*` / `date_of` / `date_of_the_month` / `date_weekday` / `date_no_weekday` / `date_weekdays` / `date_nth` / `date_leap_shift` / `date_easter_offset` / `date_days` / `date_easter_help` / `date_how_often` / `date_interval` / `date_from` / `date_until` | Repeats / Every year … / On / A day of a month … / of / of the month / Weekday / (weekday) / Weekdays / Which / A day later in a leap year … / Days from Easter / days / 0 is Easter Day … / How often / Every / From / Until | `RecurrenceEditor` (the form of a repeated event) | |
 | `calendar` | Calendar | the calendar module (`Chrome`: the console's name for its pages) | |
 | `calendar_years` | Years | `Chrome` (console button), `YearsPage` (heading) | |
-| `calendar_year` / `calendar_dated` / `calendar_months` | Year / Dated / Months | `YearsPage` (column headings) | |
-| `calendar_julian` / `calendar_gregorian` | Julian / Gregorian | `Chrome` (the calendar buttons), the headings of the pages | |
+| `calendar_year` / `calendar_months` / `calendar_events` | Year / Months / Events | `YearsPage` (column headings) | |
+| `calendar_event_word` / `calendar_events_word` | event / events | `YearsPage` (after the number in a circle: one, or any other number) | a language with more plural forms needs more slots |
+| `calendar_where` | Where in the calendar | `Breadcrumbs` (`aria-label` of the year and month links above a heading) | |
+| `calendar_add_on` | Add to {date} | `MonthGrid` (`aria-label` and tooltip of the + of a day) | |
+| `calendar_attach_placeholder` | Find one to attach to this day, or + to make one | `DayView` (the search of characterisations) | |
+| `calendar_julian` / `calendar_gregorian` | Julian / Gregorian | `Chrome` (the one button that shows the calendar a page is read in, and goes to the other), the headings of the pages | |
 | `calendar_month_year` | {month} {year} | `MonthPage`, `YearsPage` | the month name is from `Intl` in the language |
 | `calendar_weekday_date` | {weekday} {date} | `DayView` (heading) | the date is `date_day_month_year`; German puts a comma |
 | `calendar_other_name` | {date} ({calendar}) | `DayView` (the same day in the other calendar) | |
@@ -213,8 +219,7 @@ These are not shown, but are read aloud, or appear when the pointer rests on the
 | `calendar_on_this_day` / `calendar_nothing_on_day` | On this day / Nothing is dated on this day | `DayView` | |
 | `calendar_characterisations` / `calendar_no_characterisations` | Feasts and characterisations / None on this day | `DayView` | |
 | `calendar_by_rule` / `_attached_day` / `_attached_month` / `_attached_year` / `_attached_span` | by rule / attached to this day / attached to the month / attached to the year / attached to {first} – {last} | `DayView` (how a characterisation comes to be on the day) | |
-| `calendar_attach` / `_attach_search` / `_attach_found` / `_attach_none` | Attach a characterisation / Find one by its name / Characterisations found / None match | `DayView` (`AttachBox`, for someone logged in) | |
-| `calendar_attached_done` / `_attach_refused` / `calendar_detach` / `_detached_done` / `_detach_refused` | {label} attached / Not attached: {reason} / Detach / {label} detached / Not detached: {reason} | `DayPage` (toasts), `DayView` (button) | |
+| `calendar_attached_done` / `_attach_refused` / `calendar_detach` / `_detached_done` / `_detach_refused` | {label} attached / Not attached: {reason} / Detach {label} / {label} detached / Not detached: {reason} | `DayPage` (toasts), `DayView` (button) | |
 | `calendar_truncated` | More dates were found than are shown | `MonthPage`, `DayView`, `YearsPage` | |
 | `calendar_no_span` | Set CALENDAR_FIRST_YEAR and CALENDAR_LAST_YEAR … | `YearsPage` | |
 | `calendar_bad_address` | That is not a day of the calendar: … | `Chrome` (`BadAddress`) | |

@@ -19,7 +19,6 @@ router = APIRouter(prefix="/api/calendar", tags=["calendar"])
 
 Year = Annotated[int, Path(ge=MIN_YEAR, le=MAX_YEAR)]
 MonthNumber = Annotated[int, Path(ge=1, le=12)]
-Use = Annotated[str | None, Query(description="Only the characterisations of this use")]
 logged_in = [Depends(get_current_user)]
 
 
@@ -60,7 +59,6 @@ async def get_years(
             description="The last year (default: CALENDAR_LAST_YEAR)",
         ),
     ] = None,
-    use: Use = None,
 ):
     """The years with how many dates meet each: by default those of the span of the calendar"""
     first = first if first is not None else settings.first_year()
@@ -72,7 +70,7 @@ async def get_years(
             )
         )
     try:
-        return await service.years_report(calendar, first, to, use)
+        return await service.years_report(calendar, first, to)
     except (InvalidDate, ValueError) as error:
         raise refused(error) from error
 
@@ -83,35 +81,31 @@ async def get_day(
     calendar: Annotated[
         Calendar | None, Query(description="The calendar the answer is read in")
     ] = None,
-    use: Use = None,
 ):
     """`ref` is `J1500-03-02`, `G1500-03-12` or a day number: the same day under its names"""
-    return await service.day(day_of(ref), calendar or settings.calendar_default(), use)
+    return await service.day(day_of(ref), calendar or settings.calendar_default())
 
 
 @router.get("/month/{calendar}/{year}/{month}", response_model=service.MonthReport)
-async def get_month(
-    calendar: Calendar, year: Year, month: MonthNumber, use: Use = None
-):
-    return await service.month(calendar, year, month, use)
+async def get_month(calendar: Calendar, year: Year, month: MonthNumber):
+    return await service.month(calendar, year, month)
 
 
 @router.get("/year/{calendar}/{year}", response_model=service.YearReport)
-async def get_year(calendar: Calendar, year: Year, use: Use = None):
-    return await _worked(service.year_report(calendar, year, use))
+async def get_year(calendar: Calendar, year: Year):
+    return await _worked(service.year_report(calendar, year))
 
 
 @router.get("/easter/{calendar}/{year}", response_model=service.EasterReport)
-async def get_easter(calendar: Calendar, year: Year, use: Use = None):
-    return await _worked(service.easter_report(calendar, year, use))
+async def get_easter(calendar: Calendar, year: Year):
+    return await _worked(service.easter_report(calendar, year))
 
 
 @router.get("/characterisations", response_model=list[service.CharacterisationOut])
 async def list_characterisations(
-    use: Use = None,
     q: Annotated[str | None, Query(description="Part of the label")] = None,
 ):
-    return await service.find_characterisations(use, q)
+    return await service.find_characterisations(q)
 
 
 @router.get(

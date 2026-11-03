@@ -1,9 +1,9 @@
 // @vitest-environment happy-dom
-import { ModelsProvider, ModulesProvider } from "@pangloss/interface-core";
-import type { ModelDefinition, ModelDefinitions } from "@pangloss/interface-core";
+import { ApiProvider, ModelsProvider, ModulesProvider } from "@pangloss/interface-core";
+import type { ApiClient, ModelDefinition, ModelDefinitions } from "@pangloss/interface-core";
 import { render } from "@solidjs/web";
 import { afterEach, expect, test, vi } from "vitest";
-import type { CharacterisationOut, DayReport } from "../api";
+import type { DayReport } from "../api";
 import { day, feast, hit } from "./fixtures";
 import { DayView } from "./DayView";
 import type { DayViewProps } from "./DayView";
@@ -40,27 +40,40 @@ function report(more: Partial<DayReport> = {}): DayReport {
   };
 }
 
-const BENEDICT: CharacterisationOut = { id: "f1", label: "Benedict", type: "FeastDay", use: "sarum", rank: "major" };
+const BENEDICT = { id: "f1", label: "Benedict", type: "FeastDay" };
+
+// (the API's autocomplete finds Benedict; nothing else is asked)
+const api: ApiClient = {
+  baseUrl: "/api",
+  get: vi.fn(async () => ({ results: [BENEDICT], count: 1, page: 1, pageSize: 8, nextPage: null, previousPage: null })) as never,
+  post: vi.fn() as never,
+  put: vi.fn() as never,
+  patch: vi.fn() as never,
+  postForm: vi.fn() as never,
+  delete: vi.fn() as never,
+};
 
 function show(more: Partial<DayViewProps> = {}) {
   const props: DayViewProps = {
     report: report(),
     calendar: "julian",
     loggedIn: false,
-    find: vi.fn(async () => [BENEDICT]),
     onAttach: vi.fn(),
     onDetach: vi.fn(),
+    onCreated: vi.fn(),
     ...more,
   };
   const container = document.createElement("div");
   document.body.append(container);
   dispose = render(
     () => (
-      <ModelsProvider definitions={DEFINITIONS}>
-        <ModulesProvider modules={[]}>
-          <DayView {...props} />
-        </ModulesProvider>
-      </ModelsProvider>
+      <ApiProvider client={api}>
+        <ModelsProvider definitions={DEFINITIONS}>
+          <ModulesProvider modules={[]}>
+            <DayView {...props} />
+          </ModulesProvider>
+        </ModelsProvider>
+      </ApiProvider>
     ),
     container,
   );
@@ -79,6 +92,8 @@ test("the day is named with its weekday, in the other calendar too, with the day
   expect(other.getAttribute("href")).toBe("/calendar/gregorian/1500/3/12");
   expect(document.body.querySelector('a[aria-label="Previous day"]')!.getAttribute("href")).toBe("/calendar/julian/1500/3/1");
   expect(document.body.querySelector('a[aria-label="Next day"]')!.getAttribute("href")).toBe("/calendar/julian/1500/3/3");
+  // (where the day is: its year, in the list of years, and its month)
+  expect(link("/calendar?calendar=julian#year-1500")!.textContent).toBe("1500");
   expect(link("/calendar/julian/1500/3")!.textContent).toBe("March 1500");
   expect(text("section")).toContain("Nothing is dated on this day");
 });
@@ -120,21 +135,25 @@ test("someone logged in can take away a feast attached to the day by hand, and a
     loggedIn: true,
     report: report({ characterisations: [feast("f1", "Benedict"), feast("f3", "Market", "day")] }),
   });
-  const buttons = [...document.body.querySelectorAll<HTMLButtonElement>("button")];
-  expect(buttons.map((button) => button.textContent)).toEqual(["Detach"]);
-  buttons[0]!.click();
+  // (only the one attached to the day by hand has a remove button, as a chip in a form has)
+  const removes = [...document.body.querySelectorAll<HTMLButtonElement>('[data-testid="calendar-characterisation"] button')];
+  expect(removes.map((button) => button.getAttribute("aria-label"))).toEqual(["Detach Market"]);
+  removes[0]!.click();
   expect(props.onDetach).toHaveBeenCalledWith(expect.objectContaining({ id: "f3" }));
-  // (a new feast can be made: the concrete types of DateCharacterisation)
-  expect(link("/FeastDay/new")!.textContent).toBe("New FeastDay");
-  const box = document.body.querySelector<HTMLInputElement>('[data-testid="calendar-attach"] input')!;
+  // (the search of the types of DateCharacterisation, with a + joined on to make one, as in a form)
+  const attach = document.body.querySelector<HTMLElement>('[data-testid="calendar-attach"]')!;
+  expect(attach.querySelector('button[aria-label="Make a new one"]')).toBeTruthy();
+  const box = attach.querySelector<HTMLInputElement>("input")!;
+  expect(box.placeholder).toBe("Find one to attach to this day, or + to make one");
   box.value = "ben";
-  box.dispatchEvent(new Event("input", { bubbles: true }));
+  box.dispatchEvent(new InputEvent("input", { bubbles: true }));
+  box.dispatchEvent(new FocusEvent("focus"));
+  await new Promise((resolve) => setTimeout(resolve, 400));
   await settle();
-  expect(props.find).toHaveBeenCalledWith("ben");
-  const found = [...document.body.querySelectorAll<HTMLButtonElement>('[data-testid="calendar-attach"] li button')];
-  expect(found.map((button) => button.textContent)).toEqual(["BenedictFeastDay"]);
-  found[0]!.click();
+  expect(api.get).toHaveBeenCalledWith("/autocomplete", expect.objectContaining({ q: "ben", type: ["FeastDay"] }));
+  const option = [...attach.querySelectorAll<HTMLElement>('[role="option"]')].find((each) => each.textContent?.includes("Benedict"))!;
+  option.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+  option.click();
   await settle();
   expect(props.onAttach).toHaveBeenCalledWith(expect.objectContaining({ id: "f1" }));
-  expect(box.value).toBe("");
 });
