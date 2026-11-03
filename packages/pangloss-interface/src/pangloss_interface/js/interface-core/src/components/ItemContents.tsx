@@ -66,7 +66,8 @@ function Row(props: ParentProps<{ name: string; incoming?: boolean }>) {
           "flex min-w-0 flex-wrap gap-x-2",
           {
             "items-start": !props.incoming,
-            "gap-y-4": !props.incoming,
+            // (a row with a block in it has blocks as far apart as rows of what refers to the item: `data-block`)
+            "gap-y-4 has-[>[data-block]]:gap-y-6": !props.incoming,
             "items-center": props.incoming,
             "gap-y-6": props.incoming,
           },
@@ -312,7 +313,7 @@ function ObjectValue(props: {
         <Switch
           fallback={
             // (a block takes a line of its own, as far from what is above it as from what is below: the row's gap)
-            <div class="w-full min-w-0 scroll-mt-28" data-item-id={partId()}>
+            <div class="w-full min-w-0 scroll-mt-28" data-item-id={partId()} data-block>
               <SpaceBands
                 spaces={
                   props.asChip
@@ -338,7 +339,8 @@ function ObjectValue(props: {
                         : undefined
                     }
                   />
-                  <div class={["ml-2 pt-4", nestedClass, rule()]}>
+                  {/* (more room under the head than a reified relation has: its first row is a field's, text with no box, not a chip) */}
+                  <div class={["ml-2 pt-6", nestedClass, rule()]}>
                     <Fields
                       value={props.value}
                       model={model()}
@@ -408,6 +410,7 @@ function ObjectValue(props: {
             <div
               class="flex w-full min-w-0 scroll-mt-28 flex-col"
               data-item-id={partId()}
+              data-block
             >
               <Head
                 type={type() ?? ""}
