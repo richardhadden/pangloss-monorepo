@@ -14,6 +14,7 @@ import {
 import { kindRule, kindTint, spaceTint } from "../../primitives";
 import {
   blankItem,
+  createBinder,
   cleanForSave,
   choicesOf,
   choiceValue,
@@ -980,7 +981,7 @@ function EntityCreateForm(props: {
   const type = untrack(() => props.type);
   const fill = untrack(() => props.fill);
   const started = { ...blankItem(definitions, type), ...untrack(() => props.initial?.(type)) };
-  const state = createItemFormState(fill ? fill(started) : started, undefined, fill);
+  const state = createItemFormState(fill ? fill(started) : started, { fill, binder: createBinder(definitions) });
   const model = getModel(definitions, type);
   // (while it is being made: back to false when that is over, whatever the answer)
   const [saving, setSaving] = createOptimistic(false);

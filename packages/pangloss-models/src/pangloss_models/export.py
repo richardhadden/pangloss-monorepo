@@ -23,7 +23,8 @@ and each field has a `kind`:
                     fields of its ancestors that it stands for, directly or through another:
                     `RelationConfig(subclasses_parent_fields=...)`), defaultReifiedType
                     (the reified relation an entity found by searching is put in, or null:
-                    `RelationConfig(default_reified_type=...)`)
+                    `RelationConfig(default_reified_type=...)`), bindings (the fields of the model
+                    given to fields of what it holds: `RelationConfig(bind_to_child_field=...)`)
 
 A type is `{"type": "str"}` (also `int`, `float`, `bool`, `decimal`, `date`, `datetime`,
 `uuid`), `{"type": "enum", "enum": "Name"}` (the members are in `enums`), `{"type":
@@ -46,6 +47,7 @@ from pydantic.alias_generators import to_camel
 from pangloss_models.field_definitions import (
     AnnotatedValueFieldDefinition,
     EmbeddedFieldDefinition,
+    FieldBinding,
     FieldDefinition,
     IncomingRelationDefinition,
     ListFieldDefinition,
@@ -152,6 +154,18 @@ class Exporter:
             result.append(entry)
         return result
 
+    def binding(self, binding: FieldBinding) -> dict[str, Any]:
+        """A field of the model given to fields of what the relation holds (`bind_to_child_field`), by key: for the
+        interface to copy it as it is typed. `converted`: it is changed on the way (`converter`), which only the
+        server can do"""
+        return {
+            "boundField": to_camel(binding.bound_field),
+            "childFields": [to_camel(name) for name in binding.child_fields],
+            "allowedTypes": list(binding.allowed_type_names),
+            "excludedTypes": list(binding.excluded_type_names),
+            "converted": binding.converter is not None,
+        }
+
     def markers(self, markers: tuple) -> list[dict[str, Any]]:
         """What an embedded field is annotated with (`SortDefault(...)`), by name, with what the marker says of
         itself (`export()`, if it has one) for an editor to show: the server applies them, the interface does not"""
@@ -224,6 +238,9 @@ class Exporter:
                     }
                 ),
                 "defaultReifiedType": definition.default_reified_type,
+                "bindings": [
+                    self.binding(binding) for binding in definition.bind_to_child_field
+                ],
             }
         else:
             entry["kind"] = "unknown"

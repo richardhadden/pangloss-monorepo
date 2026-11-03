@@ -150,6 +150,19 @@ class Statement(Document):
 - A model validator on `Create`/`Update` copies the parent's value into children where the child field is unset.
 - The binding recurses through intermediate objects and the semantic-space wrappers.
 - `allowed_type_names` / `excluded_type_names` restrict which child types are bound; `converter` transforms the value on the way down.
+- The value is validated as the child field's own type: a relation bound into a child (`ordered_to` into `given_by`) is
+  a copy of its own, a new reified relation if it is one, not the parent's object.
+- The child's value, given or bound, is stored on the child like any other (the binding is not data: a migration does
+  not see it).
+
+In the interface (the export has each relation's `bindings`), the form copies the parent's field to the bound fields of
+what the relation holds as it is typed or chosen, and gives it to what is added under the relation. A child field that
+is changed is the child's own: changing the parent's field again leaves it, while one that is empty, or still the value
+copied to it, follows. Under a child that binds the same field itself (an order passed on, in an order), its own value
+is given. A binding with a `converter` is left to the server.
+
+The demo binds `Order.ordered_to` (who received the order) into the `given_by` of a transfer ordered, or the
+`ordered_by` of an order passed on.
 
 ## Fulfils
 

@@ -1,6 +1,8 @@
 import { createRoot, flush } from "solid-js";
 import { expect, test } from "vitest";
+import { createBinder } from "../schema";
 import type { FieldProblem, FormData } from "../schema";
+import type { ModelDefinitions } from "../types";
 import { createItemFormState } from "./form";
 
 const problem = (path: FieldProblem["path"]): FieldProblem => ({ path, code: "required", params: {}, message: "Required" });
@@ -73,7 +75,7 @@ const DAY = { type: "ExactDate", year: 1500, month: 3, day: 2 };
 const fill = (item: FormData): FormData => (item.type === "Activity" && !item.date ? { ...item, date: DAY } : item);
 
 test("a form with a fill fills what is added to it", () => {
-  const state = createItemFormState({ type: "Factoid", statements: [] }, undefined, fill);
+  const state = createItemFormState({ type: "Factoid", statements: [] }, { fill });
   state.set(["statements", 0], { type: "Activity" });
   expect(state.get(["statements", 0, "date"])).toEqual(DAY);
   // (a date taken away stays away; one changed is not filled)
@@ -82,4 +84,80 @@ test("a form with a fill fills what is added to it", () => {
   expect(state.get(["statements", 0, "date"])).toBeUndefined();
   state.set(["statements", 0, "date"], { type: "Period" });
   expect(state.get(["statements", 0, "date"])).toEqual({ type: "Period" });
+});
+
+// (who received an order is who gives, or who orders in turn, in what is ordered: `bind_to_child_field`)
+const binding = { boundField: "orderedTo", childFields: ["givenBy", "orderedBy"], allowedTypes: [], excludedTypes: [], converted: false };
+const relation = (key: string, more: object = {}) => ({ name: key, key, kind: "relation", many: false, options: [], ...more });
+const model = (name: string, kind: string, fields: object[] = []) => ({ name, kind, fields, concreteTypes: [name] });
+const bound = {
+  models: {
+    Order: model("Order", "Document", [
+      relation("orderedBy"),
+      relation("orderedTo"),
+      relation("thingOrdered", { bindings: [binding] }),
+    ]),
+    Wished: model("Wished", "SemanticSpace", [relation("contents", { many: true })]),
+    Transfer: model("Transfer", "Document", [relation("givenBy"), { name: "item", key: "item", kind: "literal" }]),
+    Named: model("Named", "ReifiedRelation", [relation("target", { many: true })]),
+    Person: model("Person", "Entity"),
+  },
+  enums: {},
+} as unknown as ModelDefinitions;
+const person = (id: string) => ({ type: "Person", id, label: id.toUpperCase() });
+
+test("a bound field is copied to what its relation holds, and follows it until that is changed", () => {
+  const state = createItemFormState({ type: "Order" }, { binder: createBinder(bound) });
+  state.set(["orderedTo"], person("a"));
+  // (what is added is given it)
+  state.set(["thingOrdered"], { type: "Wished", contents: [{ type: "Transfer" }] });
+  const givenBy = ["thingOrdered", "contents", 0, "givenBy"];
+  expect(state.get(givenBy)).toEqual(person("a"));
+  // (it follows the bound field)
+  state.set(["orderedTo"], person("b"));
+  expect(state.get(givenBy)).toEqual(person("b"));
+  // (typing elsewhere does not change it)
+  state.set(["thingOrdered", "contents", 0, "item"], "silver");
+  expect(state.get(givenBy)).toEqual(person("b"));
+  // (changed in the child, it is the child's own, and stays when the bound field changes)
+  state.set(givenBy, person("c"));
+  state.set(["orderedTo"], person("d"));
+  expect(state.get(givenBy)).toEqual(person("c"));
+  // (one added now has the bound field's value; and the bound field taken away takes it from what follows it)
+  state.set(["thingOrdered", "contents", 1], { type: "Transfer" });
+  expect(state.get(["thingOrdered", "contents", 1, "givenBy"])).toEqual(person("d"));
+  state.remove(["orderedTo"]);
+  expect(state.get(["thingOrdered", "contents", 1, "givenBy"])).toBeUndefined();
+  expect(state.get(givenBy)).toEqual(person("c"));
+});
+
+test("an order passed on: each is given by the one who received the order above it, the nearest binding", () => {
+  const state = createItemFormState({ type: "Order" }, { binder: createBinder(bound) });
+  state.set(["orderedTo"], person("count"));
+  state.set(["thingOrdered"], {
+    type: "Wished",
+    contents: [{ type: "Order", orderedTo: person("messenger"), thingOrdered: { type: "Wished", contents: [{ type: "Transfer" }] } }],
+  });
+  const inner = ["thingOrdered", "contents", 0];
+  const deep = [...inner, "thingOrdered", "contents", 0, "givenBy"];
+  expect(state.get([...inner, "orderedBy"])).toEqual(person("count"));
+  expect(state.get(deep)).toEqual(person("messenger"));
+  // (the outer changed: the inner order follows, what the inner order holds is its own)
+  state.set([...inner, "orderedTo"], person("count"));
+  expect(state.get(deep)).toEqual(person("count"));
+  state.set(["orderedTo"], person("bishop"));
+  expect(state.get([...inner, "orderedBy"])).toEqual(person("bishop"));
+  expect(state.get(deep)).toEqual(person("count"));
+});
+
+test("a reified relation is copied as a new one (without its id), and still follows", () => {
+  const state = createItemFormState(
+    { type: "Order", orderedTo: { type: "Named", id: "n1", target: [person("a")] }, thingOrdered: { type: "Wished", contents: [] } },
+    { binder: createBinder(bound) },
+  );
+  state.set(["thingOrdered", "contents", 0], { type: "Transfer" });
+  const givenBy = ["thingOrdered", "contents", 0, "givenBy"];
+  expect(state.get(givenBy)).toEqual({ type: "Named", target: [person("a")] });
+  state.set(["orderedTo", "target", 0], person("b"));
+  expect(state.get(givenBy)).toEqual({ type: "Named", target: [person("b")] });
 });

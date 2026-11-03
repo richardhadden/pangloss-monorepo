@@ -41,6 +41,7 @@ NOT_DATA_KEYS = {
     "incoming",  # follows from the fields of the other models
     "subclasses",  # the fields a relation stands for: in its `storage`, as their edges
     "defaultReifiedType",  # what the interface offers first
+    "bindings",  # a value given to the fields of what a relation holds when it is written (they are stored as given)
     "markers",  # what an embedded field's values are given when written (a sort day), shown by the interface
     "createDirectly",  # whether one can be made on its own, or only as part of another document
     "app",  # the app an index or constraint is for (which migration makes it)

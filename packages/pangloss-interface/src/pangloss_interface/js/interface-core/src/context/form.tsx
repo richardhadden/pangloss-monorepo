@@ -1,7 +1,7 @@
 import { createContext, createSignal, createStore, snapshot, useContext } from "solid-js";
 import type { Accessor, ParentProps } from "solid-js";
 import { getAt, removeAt, setAt } from "../schema";
-import type { FieldProblem, FormData, Path } from "../schema";
+import type { FieldProblem, FormBinder, FormData, Path } from "../schema";
 
 /** A problem, and the row of the form it is shown at (none: it is told elsewhere, in the toast) */
 export interface PlacedProblem {
@@ -39,16 +39,22 @@ export interface ItemFormState {
 const keyOf = (path: Path) => JSON.stringify(path);
 const startsWith = (path: Path, prefix: Path) => prefix.length <= path.length && prefix.every((key, at) => path[at] === key);
 
-/**
- * Starts from a copy of `initial`; `headId` for an item that exists. `fill` is given every object that is set (an item
- * added, a type chosen, what is pasted) and what it gives back is set instead: what a new item in this form starts with
- * (see `fillEmbedded`)
- */
-export function createItemFormState(
-  initial: FormData,
-  headId?: string,
-  fill?: (item: FormData) => FormData,
-): ItemFormState {
+/** What a form does beside keeping the item (see `createItemFormState`) */
+export interface ItemFormOptions {
+  /** The id of the item, if it is one that exists */
+  headId?: string;
+  /**
+   * Given every object that is set (an item added, a type chosen, what is pasted), and what it gives back is set
+   * instead: what a new item in this form starts with (see `fillEmbedded`)
+   */
+  fill?: (item: FormData) => FormData;
+  /** The bindings of the models: a field copied to the fields of what its relation holds, as it changes (`createBinder`) */
+  binder?: FormBinder;
+}
+
+/** Starts from a copy of `initial` */
+export function createItemFormState(initial: FormData, options: ItemFormOptions = {}): ItemFormState {
+  const { headId, fill, binder } = options;
   const [data, setData] = createStore<FormData>(structuredClone(initial));
   const [problems, setPlaced] = createSignal<PlacedProblem[]>([]);
   // (the rows on the page, by path: a plain count, read only when problems are placed)
@@ -70,14 +76,18 @@ export function createItemFormState(
     get: (path) => getAt(data, path),
     set: (path, value) => {
       const next = fill && typeof value === "object" && value !== null && !Array.isArray(value) ? fill(value as FormData) : value;
+      const pending = binder?.before(data, path, typeof next === "object" && next !== null) ?? [];
       setData((draft) => {
         setAt(draft, path, next);
+        binder?.after(draft, pending);
       });
       clearAt(path);
     },
     remove: (path) => {
+      const pending = binder?.before(data, path, false) ?? [];
       setData((draft) => {
         removeAt(draft, path);
+        binder?.after(draft, pending);
       });
       // (the places after it in a list move up: what was found in the list is no longer where it was)
       clearAt(typeof path.at(-1) === "number" ? path.slice(0, -1) : path);
