@@ -535,7 +535,7 @@ The property that makes it complete is tested on every case in the diff tests: *
 | `AlterEnumMemberValue` | every stored value of the old is set to the new, in every place the enum is kept: a field, a list, inside a `TypedDict` or an annotated value (with MAGE's `map.set_key`), and the properties of an edge. A value that is not the enum's (the text `"green"` in a `str` field) is not touched |
 | `RemoveEnumMember` | the values that have the member are moved to `replacement` (an answer; fails, saying where, if some have it and there is none) |
 | `AddField` | a required literal gets `default` on the nodes that exist (an answer that may be left out: it fails, saying so, only if the model has nodes); optional fields and relations need nothing |
-| `RemoveField` | the property, or the edges of the relation and the nodes it owned (the subtree below, not entering entities) |
+| `RemoveField` | the property, or the edges of the relation and the nodes it owned (the subtree below, not entering entities); not on the nodes of a model below it that still has the field at that point (`kept_below`: a subclass that declares it itself keeps its data; one that does not has a `RemoveField` of its own). `pangloss-history` upgrades stored versions by the same rule |
 | `RenameField` | the property moved, or the edge types (forward and reverse) replaced |
 | `AlterNullability` | to non-null: `default` where there is none |
 | `AlterLiteralType`, `AlterListItemType` | converted in place (`str`, `int`, `float`, `bool`, `decimal`, `date`; an enum from a string, or from another enum by the name of the member or a `mapping` of names); what does not convert fails unless `on_failure` is `null` or `default` |

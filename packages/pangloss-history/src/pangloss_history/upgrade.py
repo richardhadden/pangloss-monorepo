@@ -208,6 +208,12 @@ class Upgrader:
         if change.absorbed:
             return
         for path, node in self.nodes_of(change.model):
+            # (a node of a subclass that still has the field keeps it, as the database does: `kept_below`)
+            if (
+                node["type"] != change.model
+                and self.field_of(node, change.name) is not None
+            ):
+                continue
             if change.name in node:
                 old = node.pop(change.name)
                 self.problem(

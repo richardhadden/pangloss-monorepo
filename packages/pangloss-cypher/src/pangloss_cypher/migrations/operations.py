@@ -80,6 +80,27 @@ def field_of(state: dict, model: str, name: str) -> dict:
     raise PanglossMigrationError(f"There is no field {model}.{name} at this point")
 
 
+def kept_below(state: dict, model: str, name: str) -> list[str]:
+    """The models below `model` (with its label: subclasses, and models with it as a trait) that still have a field
+    `name` at this point: a subclass that declares the field itself, or one whose own removal of it is still to come.
+    Removing the field from `model` leaves their nodes alone (each subclass that loses it has a `RemoveField` of its
+    own), so that a field moved from a base class down to a subclass keeps its data."""
+    return sorted(
+        other
+        for other, entry in state["models"].items()
+        if other != model
+        and model in entry.get("labels", [])
+        and any(f["name"] == name for f in entry.get("fields", []))
+    )
+
+
+def not_of(models: list[str], node: str = "n") -> str:
+    """A condition that the node is of none of `models` ("" for none)"""
+    if not models:
+        return ""
+    return " AND NOT (" + " OR ".join(f"{node}:{ident(m)}" for m in models) + ")"
+
+
 def edge_pairs(field: dict) -> list[tuple[str, str]]:
     """The edge pairs written for a field: its own, then one for each parent field it narrows"""
     pairs = field.get("storage", {}).get("edges", [])
@@ -438,19 +459,21 @@ async def delete_relation(
     model: str,
     field: dict,
     only_pairs: list[tuple[str, str]] | None = None,
+    keep: list[str] | None = None,
 ) -> None:
-    """Delete the edges of a relation (and what the node owns through it)"""
+    """Delete the edges of a relation (and what the node owns through it), but not on nodes of the models `keep`"""
     pairs = only_pairs if only_pairs is not None else edge_pairs(field)
     forward = [f for f, _ in pairs]
     reverse = [r for _, r in pairs]
     label = ident(model)
+    skip = not_of(keep or [])
     if owns_nodes(field) and only_pairs is None:
         # the nodes below, without entering entities (which belong to no document)
         await run(
             tx,
             f"""
             MATCH (n:{label})-[e]->(t)
-            WHERE type(e) IN $forward AND NOT t:Entity AND NOT coalesce(e.reverse, false)
+            WHERE type(e) IN $forward AND NOT t:Entity AND NOT coalesce(e.reverse, false){skip}
             OPTIONAL MATCH (t){migration_dialect().owned("owned")}(d)
             WITH collect(DISTINCT t) + collect(DISTINCT d) AS owned
             UNWIND [x IN owned WHERE x IS NOT NULL] AS o
@@ -460,18 +483,18 @@ async def delete_relation(
         )
     await run(
         tx,
-        f"MATCH (n:{label})-[e]->() WHERE type(e) IN $forward AND NOT coalesce(e.reverse, false) DELETE e",
+        f"MATCH (n:{label})-[e]->() WHERE type(e) IN $forward AND NOT coalesce(e.reverse, false){skip} DELETE e",
         forward=forward,
     )
     await run(
         tx,
-        f"MATCH ()-[e]->(n:{label}) WHERE type(e) IN $reverse AND coalesce(e.reverse, false) DELETE e",
+        f"MATCH ()-[e]->(n:{label}) WHERE type(e) IN $reverse AND coalesce(e.reverse, false){skip} DELETE e",
         reverse=reverse,
     )
 
 
 async def delete_relation_batch(
-    tx: Transaction, model: str, field: dict, limit: int
+    tx: Transaction, model: str, field: dict, limit: int, keep: list[str] | None = None
 ) -> int:
     """`delete_relation`, `limit` at a time: the nodes that `limit` of the relations own (with what
     they own), then `limit` of the forward edges, then `limit` of the reverse. What is done is no
@@ -480,13 +503,14 @@ async def delete_relation_batch(
     forward = [f for f, _ in pairs]
     reverse = [r for _, r in pairs]
     label = ident(model)
+    skip = not_of(keep or [])
     done = 0
     if owns_nodes(field):
         rows = await run(
             tx,
             f"""
             MATCH (n:{label})-[e]->(t)
-            WHERE type(e) IN $forward AND NOT t:Entity AND NOT coalesce(e.reverse, false)
+            WHERE type(e) IN $forward AND NOT t:Entity AND NOT coalesce(e.reverse, false){skip}
             WITH t LIMIT {int(limit)}
             OPTIONAL MATCH (t){migration_dialect().owned("owned")}(d)
             WITH collect(DISTINCT t) AS tops, collect(DISTINCT d) AS below
@@ -502,14 +526,14 @@ async def delete_relation_batch(
             return done  # (more may be owned: the edges are for a later call)
     rows = await run(
         tx,
-        f"MATCH (n:{label})-[e]->() WHERE type(e) IN $forward AND NOT coalesce(e.reverse, false) "
+        f"MATCH (n:{label})-[e]->() WHERE type(e) IN $forward AND NOT coalesce(e.reverse, false){skip} "
         f"WITH e LIMIT {int(limit)} DELETE e RETURN count(e) AS n",
         forward=forward,
     )
     done = max(done, rows[0]["n"] if rows else 0)
     rows = await run(
         tx,
-        f"MATCH ()-[e]->(n:{label}) WHERE type(e) IN $reverse AND coalesce(e.reverse, false) "
+        f"MATCH ()-[e]->(n:{label}) WHERE type(e) IN $reverse AND coalesce(e.reverse, false){skip} "
         f"WITH e LIMIT {int(limit)} DELETE e RETURN count(e) AS n",
         reverse=reverse,
     )
@@ -529,7 +553,11 @@ async def apply_edges(
             return await add_embedded(tx, change, state, limit)
         case c.RemoveField():
             return await delete_relation_batch(
-                tx, change.model, field_of(state, change.model, change.name), limit
+                tx,
+                change.model,
+                field_of(state, change.model, change.name),
+                limit,
+                keep=kept_below(state, change.model, change.name),
             )
         case c.AlterReverseName():
             return await alter_reverse_name(tx, change, state, limit)
@@ -570,15 +598,19 @@ async def remove_field(
     if change.absorbed:
         return None  # (its edges are written by the field that narrows it now)
     field = field_of(state, change.model, change.name)
+    # (the nodes of a subclass that still has the field keep it: see `kept_below`)
+    keep = kept_below(state, change.model, change.name)
     if field["kind"] in SCALAR_PROPERTY_KINDS:
         prop = f"n.{ident(change.name)}"
         return await run_on_nodes(
             tx,
             window,
-            select_nodes(ident(change.model), f"{prop} IS NOT NULL", window)
+            select_nodes(
+                ident(change.model), f"{prop} IS NOT NULL{not_of(keep)}", window
+            )
             + f" SET {prop} = null",  # (not REMOVE: Memgraph does not count that in a dry run)
         )
-    await delete_relation(tx, change.model, field)
+    await delete_relation(tx, change.model, field, keep=keep)
     return None
 
 
