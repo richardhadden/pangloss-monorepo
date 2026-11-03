@@ -995,6 +995,56 @@ def test_create_model_with_field_binding_through_intermediate():
 
 
 @no_type_check
+def test_a_bound_relation_is_a_copy_of_the_child_field_s_own_type():
+    """A relation bound into a child (who received an order is who does what is ordered): the child is given its own
+    object, of its field's class, made from what the parent's holds, not the parent's object itself"""
+
+    class Person(Entity):
+        pass
+
+    class Named[T](ReifiedRelation[T]):
+        name: str
+
+    class Transfer(Document):
+        given_by: Person | Named[Person]
+
+    class Order(Document):
+        ordered_to: Person | Named[Person]
+        thing_ordered: Annotated[
+            Transfer,
+            RelationConfig(
+                bind_to_child_field=[
+                    FieldBinding(bound_field="ordered_to", child_fields=["given_by"])
+                ]
+            ),
+        ]
+
+    initialise()
+
+    person = {"type": "Person", "id": "https://example.org/person/a"}
+    order = Order.Create(
+        label="An order",
+        ordered_to={"type": "Named", "name": "the count", "target": [person]},
+        thing_ordered={"type": "Transfer", "label": "A transfer"},
+    )
+    given = order.thing_ordered.given_by
+    assert given is not order.ordered_to
+    assert isinstance(given, Named.Create)
+    assert given.model_dump() == order.ordered_to.model_dump()
+    # (and the child's own is kept)
+    order = Order.Create(
+        label="An order",
+        ordered_to=person,
+        thing_ordered={
+            "type": "Transfer",
+            "label": "A transfer",
+            "given_by": {"type": "Person", "id": "https://example.org/person/b"},
+        },
+    )
+    assert str(order.thing_ordered.given_by.id) == "https://example.org/person/b"
+
+
+@no_type_check
 def test_create_model_with_field_binding_through_intermediate_with_transform():
 
     class Action(Document):

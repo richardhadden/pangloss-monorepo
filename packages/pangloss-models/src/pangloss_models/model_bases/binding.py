@@ -19,6 +19,22 @@ def allow_bind_on_this_item(
     return item.type not in binding.excluded_type_names
 
 
+def give(item, field: str, value) -> None:
+    """Sets the bound `value` on a field of `item`, validated as that field's own type: a relation (a reference, a
+    reified relation) is made again from what it holds, so the child has an object of its own, of the class its
+    field has (the parent's is another class, for another field), and each is written as a node of its own"""
+    from pydantic import BaseModel
+
+    def plain(v):
+        if isinstance(v, BaseModel):
+            return v.model_dump()
+        if isinstance(v, list | tuple):
+            return [plain(each) for each in v]
+        return v
+
+    type(item).__pydantic_validator__.validate_assignment(item, field, plain(value))
+
+
 def recursively_add_bound_field_values(item, binding: FieldBinding, value=None) -> None:
     """Given an item, a FieldBinding instance and a value, try to bind values where rules are
     followed, and call itself to try on all nested items.
@@ -41,7 +57,7 @@ def recursively_add_bound_field_values(item, binding: FieldBinding, value=None) 
             if hasattr(item, child_bound_field) and not getattr(
                 item, child_bound_field, None
             ):
-                setattr(item, child_bound_field, value)
+                give(item, child_bound_field, value)
 
     for related_field_name in item._meta.fields.relation_fields:
         recursively_add_bound_field_values(
