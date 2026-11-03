@@ -90,3 +90,29 @@ def test_set_refuses_a_status_that_does_not_exist():
         cli, ["set", "7bd4b1c2-0c3e-4a56-9a39-6e0d6d1d9c11", "published", "-u", "x"]
     )
     assert result.exit_code != 0
+
+
+def test_the_reviewed_classes_are_listed_by_name():
+    from pangloss_review.service import reviewable_types
+
+    class Unreviewed(Document):
+        title: str
+
+    class Dossier(Document):
+        _review_meta = ReviewMeta(reviewable=True)
+        title: str
+
+    class SubDossier(Dossier):
+        pass
+
+    found = reviewable_types()
+    assert {"Dossier", "SubDossier"} <= set(found)
+    assert "Unreviewed" not in found
+    assert found == sorted(found)
+
+
+def test_the_interface_has_a_link_to_the_queue_for_someone_logged_in():
+    from pangloss_interface.config import NavLink
+    from pangloss_review.interface_config import config
+
+    assert config.nav == [NavLink("Review", href="/review", requires_login=True)]

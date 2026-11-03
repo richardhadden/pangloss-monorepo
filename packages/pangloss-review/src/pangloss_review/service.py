@@ -43,6 +43,15 @@ def _reviewable(state: dict | None, id: UUID) -> ReviewState:
     return ReviewState(**state)
 
 
+def reviewable_types() -> list[str]:
+    """The names of the classes whose documents are reviewed, sorted"""
+    return sorted(
+        name
+        for name, model in ModelRegistry._model_dict.items()
+        if is_reviewable(model)
+    )
+
+
 async def get_state(id: UUID) -> ReviewState:
     return _reviewable(await _backend().get_review_state_in_db(id), id)
 

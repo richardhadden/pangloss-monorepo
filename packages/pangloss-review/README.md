@@ -19,7 +19,8 @@ Settings (optional): `REVIEW_ALLOW_SELF_REVIEW` (default `True`; when false, a u
 created or last edited).
 
 With `pangloss_interface` installed, a reviewed document has a review button in its console, which opens a panel with
-the status and the comments, kept up to date while the page is open (`src/pangloss_review/interface/`, an interface
-module; [docs/review-interface.md](../../docs/review-interface.md)).
+the status and the comments, kept up to date while the page is open (`#` in a comment chooses a part of the
+document), and `/review` lists the documents to check (`src/pangloss_review/interface/`, an interface module;
+`interface_config.py` links it from the navigation bar; [docs/review-interface.md](../../docs/review-interface.md)).
 
 Guide: [guide/review](../../guide/review/README.md).

@@ -283,6 +283,10 @@ function ObjectValue(props: {
       : collapsedView(props.value, definitions, modules.collapseRule);
   const [whole, setWhole] = createSignal(false);
   const folded = () => collapsed() !== undefined && !whole();
+  // (a part of the item's own document is marked with its id, as in the form, for what points at it: a review comment;
+  // not something of another document that refers to it)
+  const partId = () =>
+    !props.asChip && typeof props.value.id === "string" ? props.value.id : undefined;
   const onFold = () => (collapsed() ? () => setWhole(false) : undefined);
   const plain = (value: unknown): string =>
     Array.isArray(value)
@@ -308,7 +312,7 @@ function ObjectValue(props: {
         <Switch
           fallback={
             // (a block takes a line of its own, with more space under it than chips have: where one ends is plain)
-            <div class="mb-4 w-full min-w-0 last:mb-0">
+            <div class="mb-4 w-full min-w-0 scroll-mt-28 last:mb-0" data-item-id={partId()}>
               <SpaceBands
                 spaces={
                   props.asChip
@@ -364,7 +368,10 @@ function ObjectValue(props: {
           </Match>
           <Match when={folded()}>
             {/* (folded: what it holds in its place, after a marker in the colour of its type that shows it whole, then its own filled fields, each with its name) */}
-            <span class="inline-flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+            <span
+              class="inline-flex min-w-0 scroll-mt-28 flex-wrap items-center gap-x-2 gap-y-1"
+              data-item-id={partId()}
+            >
               <Show when={!props.inFold}>
                 <button
                   type="button"
@@ -398,7 +405,10 @@ function ObjectValue(props: {
           </Match>
           <Match when={isReified()}>
             {/* (a reified relation: its type at the head, then what it holds, full width and without its field name, then its own fields, if it has any) */}
-            <div class="mb-4 flex w-full min-w-0 flex-col last:mb-0">
+            <div
+              class="mb-4 flex w-full min-w-0 scroll-mt-28 flex-col last:mb-0"
+              data-item-id={partId()}
+            >
               <Head
                 type={type() ?? ""}
                 tint={tint()}

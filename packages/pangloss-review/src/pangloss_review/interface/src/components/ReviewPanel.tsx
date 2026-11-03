@@ -3,8 +3,11 @@ import { Portal } from "@solidjs/web";
 import { createEffect, createMemo, createSignal, For, onSettled, Show } from "solid-js";
 import { STATUSES } from "../api";
 import type { ReviewStatus } from "../api";
+import { showPart } from "../parts";
+import type { Part } from "../parts";
 import { visibleComments } from "../state";
 import type { ReviewView, ShownComment } from "../state";
+import { Composer } from "./Composer";
 import { StatusFlag } from "./StatusFlag";
 
 export interface ReviewPanelProps {
@@ -14,8 +17,12 @@ export interface ReviewPanelProps {
   open: boolean;
   onClose: () => void;
   onStatus: (status: ReviewStatus) => void;
-  /** Sends a comment; rejects if it was not made (the text is put back) */
-  onComment: (text: string) => Promise<unknown>;
+  /** Sends a comment, about a part or not; rejects if it was not made (the text is put back) */
+  onComment: (text: string, part?: Part) => Promise<unknown>;
+  /** The parts of the document a comment can be about (undefined until they have been read) */
+  parts?: Part[];
+  /** Asks for the parts, when the list of them is first opened */
+  onWantParts?: () => void;
   onResolve: (commentId: string) => void;
 }
 
@@ -42,7 +49,12 @@ function when(value: string | null | undefined, language: string): string {
 }
 
 /** One comment, as a bubble: the reader's own on the right, others' on the left */
-function CommentBubble(props: { comment: ShownComment; mine: boolean; onResolve: (id: string) => void }) {
+function CommentBubble(props: {
+  comment: ShownComment;
+  mine: boolean;
+  onResolve: (id: string) => void;
+  parts?: Part[];
+}) {
   const { t, language } = useTranslations();
   return (
     <li
@@ -76,16 +88,38 @@ function CommentBubble(props: { comment: ShownComment; mine: boolean; onResolve:
           },
         ]}
       >
-        <Show when={props.comment.targetLabel}>
-          {(part) => (
-            <span
-              class={[
-                "mb-1 block text-[0.65rem] font-semibold uppercase",
-                { "text-sky-100": props.mine, "text-slate-500": !props.mine },
-              ]}
+        <Show when={props.comment.targetId}>
+          {(target) => (
+            // (about a part: a click shows it on the page; a part that is no longer in the document says so)
+            <Show
+              when={!props.parts || props.parts.some((p) => p.id === target())}
+              fallback={
+                <span
+                  class={[
+                    "mb-1 block text-[0.65rem] font-semibold uppercase line-through",
+                    { "text-sky-100": props.mine, "text-slate-500": !props.mine },
+                  ]}
+                  data-testid="review-target"
+                  data-gone="true"
+                >
+                  {t("review_about", "About: {part}", { part: props.comment.targetLabel ?? "" })}{" "}
+                  <span class="no-underline">{t("review_part_gone", "(no longer there)")}</span>
+                </span>
+              }
             >
-              {t("review_about", "About: {part}", { part: part() })}
-            </span>
+              <button
+                type="button"
+                class={[
+                  "mb-1 block cursor-pointer text-left text-[0.65rem] font-semibold uppercase hover:underline",
+                  { "text-sky-100": props.mine, "text-slate-500": !props.mine },
+                ]}
+                title={t("review_part_show", "Show it on the page")}
+                data-testid="review-target"
+                onClick={() => showPart(target())}
+              >
+                {t("review_about", "About: {part}", { part: props.comment.targetLabel ?? "" })}
+              </button>
+            </Show>
           )}
         </Show>
         {props.comment.text}
@@ -122,11 +156,9 @@ function CommentBubble(props: { comment: ShownComment; mine: boolean; onResolve:
 export function ReviewPanel(props: ReviewPanelProps) {
   const { t, language } = useTranslations();
   const [showResolved, setShowResolved] = createSignal(false);
-  const [draft, setDraft] = createSignal("");
   const shown = createMemo(() => visibleComments(props.review.comments, showResolved()));
   const resolvedCount = () => props.review.comments.filter((c) => c.resolved).length;
   let list: HTMLOListElement | undefined;
-  let box: HTMLTextAreaElement | undefined;
 
   // (the newest comment in view as one arrives, or as the panel opens)
   createEffect(
@@ -139,23 +171,12 @@ export function ReviewPanel(props: ReviewPanelProps) {
   // Escape closes it
   onSettled(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && props.open) props.onClose();
+      // (not an Escape that something in the panel has used: the list of parts)
+      if (event.key === "Escape" && props.open && !event.defaultPrevented) props.onClose();
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   });
-
-  function send() {
-    // (the box itself: a key pressed at once after typing comes before the signal has the text)
-    const text = (box?.value ?? draft()).trim();
-    if (!text) return;
-    setDraft("");
-    props.onComment(text).catch(() => {
-      // (put back what was written, unless something new has been)
-      if (draft() === "") setDraft(text);
-    });
-    box?.focus();
-  }
 
   return (
     <Portal>
@@ -263,42 +284,14 @@ export function ReviewPanel(props: ReviewPanelProps) {
                 comment={comment}
                 mine={props.me !== undefined && comment.username === props.me}
                 onResolve={props.onResolve}
+                parts={props.parts}
               />
             )}
           </For>
         </ol>
 
-        {/* A new comment: Send, or Ctrl/Cmd+Enter */}
-        <form
-          class="flex shrink-0 flex-col gap-2 border-t-[0.5px] border-slate-400/70 p-3"
-          onSubmit={(event) => {
-            event.preventDefault();
-            send();
-          }}
-        >
-          <textarea
-            ref={box}
-            rows={3}
-            value={draft()}
-            onInput={(event) => setDraft(event.currentTarget.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
-                event.preventDefault();
-                send();
-              }
-            }}
-            aria-label={t("review_comment_label", "Comment")}
-            placeholder={t("review_comment_placeholder", "Write a comment")}
-            class="w-full resize-none rounded-sm border-[0.5px] border-slate-400/70 bg-white px-2 py-1.5 text-sm focus:border-sky-500 focus:outline-none"
-          />
-          <button
-            type="submit"
-            disabled={draft().trim() === ""}
-            class="self-end rounded-sm bg-sky-600 px-4 py-1.5 text-xs font-semibold text-white uppercase select-none hover:bg-sky-700 disabled:cursor-default disabled:opacity-40 enabled:cursor-pointer"
-          >
-            {t("review_send", "Send")}
-          </button>
-        </form>
+        {/* A new comment: Send, or Ctrl/Cmd+Enter; # for a part */}
+        <Composer parts={props.parts} onWantParts={props.onWantParts} onSend={props.onComment} />
       </aside>
     </Portal>
   );

@@ -1,5 +1,12 @@
 // @vitest-environment happy-dom
-import { ApiError, ApiProvider, SessionProvider, ToastsProvider, useToasts } from "@pangloss/interface-core";
+import {
+  ApiError,
+  ApiProvider,
+  ModelsProvider,
+  SessionProvider,
+  ToastsProvider,
+  useToasts,
+} from "@pangloss/interface-core";
 import type { ApiClient, ConsoleActionProps, ModelDefinition, User } from "@pangloss/interface-core";
 import { render } from "@solidjs/web";
 import { For } from "solid-js";
@@ -68,7 +75,8 @@ const settle = async () => {
 function client(post: ApiClient["post"] = vi.fn(async () => ({})) as never): ApiClient {
   return {
     baseUrl: "/api",
-    get: vi.fn() as never,
+    // (the document, read for its parts when the panel opens)
+    get: vi.fn(async () => ({ id: "d1", type: "Letter", label: "A letter" })) as never,
     post,
     put: vi.fn() as never,
     patch: vi.fn() as never,
@@ -105,10 +113,12 @@ function show(props: Partial<ConsoleActionProps> = {}, user: User | null = me, a
     () => (
       <SessionProvider user={() => user ?? undefined}>
         <ApiProvider client={api}>
+          <ModelsProvider definitions={{ models: {}, enums: {} }}>
           <ToastsProvider>
             <ReviewAction type="Letter" id="d1" model={model("Document")} page="item" {...props} />
             <ShownToasts />
           </ToastsProvider>
+          </ModelsProvider>
         </ApiProvider>
       </SessionProvider>
     ),

@@ -1,6 +1,7 @@
 """`/api/review`: what to check, the state of a document, and changing it.
 
     GET  /api/review/queue?status=unchecked&type=Letter&page=1   the documents to check
+    GET  /api/review/types                                         the classes that are reviewed
     GET  /api/review/{id}                                          its state and comments (?resolved=true: all)
     POST /api/review/{id}/status        {"status": "checked", "comment": "..."}
     POST /api/review/{id}/comments      {"text": "...", "targetId": "<id of a part>"}
@@ -114,6 +115,12 @@ async def get_queue(
     page_size: Annotated[int, Query(ge=1, le=100)] = 25,
 ) -> Queue:
     return await service.queue(statuses, type, page, page_size)
+
+
+@router.get("/types", operation_id="review_types")
+async def get_types() -> list[str]:
+    """The names of the classes whose documents are reviewed (for a filter of the queue)"""
+    return service.reviewable_types()
 
 
 @router.get("/{id}", operation_id="review_detail")

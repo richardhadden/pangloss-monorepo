@@ -44,8 +44,44 @@ export const getReview = (api: ApiClient, id: string): Promise<ReviewDetail> =>
 export const setReviewStatus = (api: ApiClient, id: string, status: ReviewStatus): Promise<ReviewDetail> =>
   api.post(`${one(id)}/status`, { status });
 
-export const addComment = (api: ApiClient, id: string, text: string): Promise<Comment> =>
-  api.post(`${one(id)}/comments`, { text });
+/** A comment on the document, or (`targetId`) on a part of it */
+export const addComment = (api: ApiClient, id: string, text: string, targetId?: string): Promise<Comment> =>
+  api.post(`${one(id)}/comments`, targetId ? { text, targetId } : { text });
+
+/** The classes whose documents are reviewed */
+export const getReviewableTypes = (api: ApiClient): Promise<string[]> => api.get("/review/types");
+
+export interface QueueItem {
+  id: string;
+  type: string;
+  label: string | null;
+  status: ReviewStatus;
+  createdBy: string | null;
+  changedWhen: string | null;
+  reviewedBy?: string | null;
+  openComments: number;
+}
+
+export interface Queue {
+  results: QueueItem[];
+  count: number;
+  page: number;
+  pageSize: number;
+  nextPage: number | null;
+  previousPage: number | null;
+}
+
+/** The documents in a status (and of a class, and those below it), the oldest change first */
+export const getQueue = (
+  api: ApiClient,
+  options: { status: ReviewStatus; type?: string; page?: number; pageSize?: number },
+): Promise<Queue> =>
+  api.get("/review/queue", {
+    status: options.status,
+    type: options.type || undefined,
+    page: options.page,
+    page_size: options.pageSize,
+  });
 
 export const resolveComment = (api: ApiClient, id: string, commentId: string): Promise<Comment> =>
   api.post(`${one(id)}/comments/${encodeURIComponent(commentId)}/resolve`);

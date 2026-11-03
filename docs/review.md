@@ -1,6 +1,6 @@
 # Review: checking documents before they are published ✅
 
-**Status: built and tested: the `published` flag, the package, the API routes, the commands, the guide ([guide/review](../guide/review/README.md)), and (2026-11-03) the interface: a review button and panel in the console of a reviewed document, kept up to date while the page is open ([review-interface.md](review-interface.md)). Not built: a review queue page in the interface, and notices by email.** The package is `pangloss-review` (`INSTALLED_APPS = ["pangloss_review"]`). The
+**Status: built and tested: the `published` flag, the package, the API routes, the commands, the guide ([guide/review](../guide/review/README.md)), and (2026-11-03) the interface: a review button and panel in the console of a reviewed document, kept up to date while the page is open ([review-interface.md](review-interface.md)). The queue page (`/review`) and comments on a part (`#`) were added the same day. Not built: notices by email.** The package is `pangloss-review` (`INSTALLED_APPS = ["pangloss_review"]`). The
 decisions marked **(decided)** were made by the user; **(open)** ones are still to settle; the rest follow from how
 `deleted`, meta slots and `pangloss-history` already work.
 
@@ -82,6 +82,7 @@ marker in the queue, from the version number; not part of the first build.)
 | Route | |
 |-------|-|
 | `GET /api/review/queue?status=&type=` | Documents to check (unpublished, by status), newest first |
+| `GET /api/review/types` | The classes that are reviewed (for the interface's filter) |
 | `GET /api/review/{id}` | Status, who and when, and the comments |
 | `POST /api/review/{id}/status` | `{status, comment?}`; refused for the author unless allowed |
 | `POST /api/review/{id}/comments` | `{text, target_id?}` |
@@ -92,8 +93,8 @@ marks the reviewable documents there as `checked`).
 
 ## Not in this package
 
-The interface is the package's interface module ([review-interface.md](review-interface.md)); still not built there: a
-queue page, comments shown next to the parts they are about. Email or other notices.
+The interface is the package's interface module ([review-interface.md](review-interface.md)); still not built there:
+comments shown next to the parts they are about (they are in the panel, and a click shows the part). Email or other notices.
 
 ## Build order
 

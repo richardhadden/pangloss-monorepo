@@ -163,11 +163,25 @@ def test_a_typology(page: Page, types, dev_url: str, errors: list[str]):
 def test_the_review_panel(page: Page, types, dev_url: str, errors: list[str]):
     """The review button and panel (the module of pangloss_review), with its live feed from the dev server's own
     server functions: a comment by someone else arrives, and one is written, resolved and the status changed"""
-    from conftest import OTHER_PASSWORD, OTHER_USERNAME, PASSWORD, USERNAME, forget
+    from conftest import (
+        AUTHOR_PASSWORD,
+        AUTHOR_USERNAME,
+        OTHER_PASSWORD,
+        OTHER_USERNAME,
+        PASSWORD,
+        USERNAME,
+        forget,
+    )
 
-    forget("Report", "PGReviewComment")
-    made = types.admin().ok(
-        "POST", "/api/Report", {"label": "Dev report", "text": "Text"}
+    forget("Report", "ReportSection", "PGReviewComment")
+    made = types.client(AUTHOR_USERNAME, AUTHOR_PASSWORD).ok(
+        "POST",
+        "/api/Report",
+        {
+            "label": "Dev report",
+            "text": "Text",
+            "sections": [{"type": "ReportSection", "label": "A part", "body": "B"}],
+        },
     )
     response = page.request.post(
         f"{dev_url}/api/users/session",
@@ -183,7 +197,10 @@ def test_the_review_panel(page: Page, types, dev_url: str, errors: list[str]):
         "POST", f"/api/review/{made['id']}/comments", {"text": "From bob"}
     )
     expect(panel.get_by_text("From bob")).to_be_visible(timeout=10_000)
-    panel.get_by_role("textbox", name="Comment").fill("From me")
+    box = panel.get_by_role("combobox", name="Comment")
+    box.press_sequentially("From me about #a pa")
+    box.press("Enter")
+    expect(panel.get_by_test_id("review-about")).to_contain_text("A part")
     panel.get_by_role("button", name="Send").click()
     expect(
         panel.get_by_test_id("review-comment").filter(has_text="From me")
@@ -200,5 +217,11 @@ def test_the_review_panel(page: Page, types, dev_url: str, errors: list[str]):
     expect(
         console.get_by_role("button", name=re.compile("^Review: Checked"))
     ).to_be_visible()
+    expect(page.locator("main")).not_to_contain_text(SOLID_ERROR)
+    assert errors == []
+    # (the queue page: it was checked above)
+    page.goto(f"{dev_url}/review?status=checked")
+    expect(page.get_by_role("heading", name="Documents to review")).to_be_visible()
+    expect(page.get_by_test_id("review-queue-row").first).to_contain_text("Dev report")
     expect(page.locator("main")).not_to_contain_text(SOLID_ERROR)
     assert errors == []

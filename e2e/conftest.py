@@ -37,6 +37,8 @@ MEMGRAPH_AUTH = ("test", "test")
 USERNAME, PASSWORD = "e2e", "e2e-password"
 # (a second user, for what someone else does: comments in the review panel)
 OTHER_USERNAME, OTHER_PASSWORD = "bob", "bob-password"
+# (and a third, who makes the documents the review tests check: no one may check what they made themselves)
+AUTHOR_USERNAME, AUTHOR_PASSWORD = "ann", "ann-password"
 # (how often the review feed asks the API, on the interface's server: often, so the tests do not wait)
 REVIEW_POLL_MS = "300"
 
@@ -73,10 +75,15 @@ MODELS = textwrap.dedent(
         attendees: list[Person | Group]
 
 
+    class ReportSection(Document):
+        body: str
+
+
     class Report(Document):
         _review_meta = ReviewMeta(reviewable=True)
 
         text: str
+        sections: list[ReportSection]
     """
 )
 TYPES = (
@@ -93,8 +100,10 @@ class Client:
             urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar())
         )
 
-    def send(self, method: str, path: str, body=None, form=None) -> tuple[int, object]:
-        data, headers = None, {}
+    def send(
+        self, method: str, path: str, body=None, form=None, headers=None
+    ) -> tuple[int, object]:
+        data, more, headers = None, headers or {}, {}
         if body is not None:
             data, headers = (
                 json.dumps(body).encode(),
@@ -103,7 +112,9 @@ class Client:
         if form is not None:
             data = urllib.parse.urlencode(form).encode()
             headers = {"Content-Type": "application/x-www-form-urlencoded"}
-        request = urllib.request.Request(self.base + path, data, headers, method=method)
+        request = urllib.request.Request(
+            self.base + path, data, {**headers, **more}, method=method
+        )
         try:
             with self.opener.open(request) as response:
                 text = response.read()
@@ -215,6 +226,12 @@ def make_project(root: Path) -> Path:
     text = text.replace('DB_USERNAME="memgraph"', 'DB_USERNAME="test"')
     text = text.replace('DB_PASSWORD="memgraph"', 'DB_PASSWORD="test"')
     text = text.replace('["en"]', '["en", "de"]')
+    # (a user may not check what they made or last changed: the review tests make documents as another user)
+    text = text.replace(
+        "    INTERFACE_LANGUAGES:",
+        "    REVIEW_ALLOW_SELF_REVIEW: bool = False\n    INTERFACE_LANGUAGES:",
+        1,
+    )
     settings.write_text(text)
     (root / "types.json").write_text(TYPES)
     return root
@@ -329,20 +346,24 @@ def stack(tmp_path_factory) -> Iterator[Stack]:
         ],
         root,
     )
-    run(
-        [
-            "users",
-            "create",
-            "--username",
-            OTHER_USERNAME,
-            "--email",
-            "bob@example.com",
-            "--password",
-            OTHER_PASSWORD,
-            "--no-admin",
-        ],
-        root,
-    )
+    for username, password in (
+        (OTHER_USERNAME, OTHER_PASSWORD),
+        (AUTHOR_USERNAME, AUTHOR_PASSWORD),
+    ):
+        run(
+            [
+                "users",
+                "create",
+                "--username",
+                username,
+                "--email",
+                f"{username}@example.com",
+                "--password",
+                password,
+                "--no-admin",
+            ],
+            root,
+        )
     run(["typology", "load", "RoleType", "types.json", "--user", USERNAME], root)
     run(["interface", "build"], root)
 

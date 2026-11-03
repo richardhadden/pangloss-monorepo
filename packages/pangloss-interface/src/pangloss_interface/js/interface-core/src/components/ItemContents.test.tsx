@@ -199,6 +199,13 @@ test("what is nested is laid out the same way, inside a block with its type at t
   expect(date.textContent).toContain("0800-12-25");
 });
 
+test("a nested block is marked with its id (for what points at a part: a review comment); an entity is not", () => {
+  const host = show({ id: "f1", type: "Factoid", year: 800, statements: [activity] });
+  const marked = [...host.querySelectorAll<HTMLElement>("[data-item-id]")].map((e) => e.dataset.itemId);
+  expect(marked).toEqual(["a1"]);
+  expect(host.querySelector('[data-item-id="a1"]')?.textContent).toContain("A crowning");
+});
+
 test("a semantic space is a band round what is in it, in the colour of its model", () => {
   const host = show({
     id: "f1",

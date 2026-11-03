@@ -1,32 +1,54 @@
 """Review in the interface (the module of `pangloss_review`): the button in the console of a reviewed document, the panel
 that slides out with the status and the comments, and what another user does reaching an open page without a reload (the
-`live()` feed). The e2e project's `Report` is reviewed; `Statement` is not."""
+`live()` feed), comments about a part (`#`), and the queue page. The e2e project's `Report` is reviewed (with nested
+`ReportSection`s); `Statement` is not. No one may check what they made (`REVIEW_ALLOW_SELF_REVIEW = False`): the reports
+are made by `ann`."""
 
+import re
 import subprocess
 from types import SimpleNamespace
 
 import pytest
 from conftest import (
+    AUTHOR_PASSWORD,
+    AUTHOR_USERNAME,
     OTHER_PASSWORD,
     OTHER_USERNAME,
     Stack,
     environment,
     forget,
 )
-from helpers import hydrated
+from helpers import expand_nav, hydrated
 from playwright.sync_api import Page, expect
+
+
+SECTIONS = [
+    {"type": "ReportSection", "label": "Income in the first half", "body": "Rose"},
+    {"type": "ReportSection", "label": "Costs", "body": "Fell"},
+]
+
+
+def make_report(stack: Stack, label: str = "Annual report", sections=SECTIONS) -> str:
+    """A Report made by ann (so that the others may check it)"""
+    author = stack.client(AUTHOR_USERNAME, AUTHOR_PASSWORD)
+    made = author.ok(
+        "POST",
+        "/api/Report",
+        {"label": label, "text": "Things happened", "sections": sections},
+    )
+    return made["id"]
 
 
 @pytest.fixture
 def report(types: Stack) -> SimpleNamespace:
-    """A new Report (unchecked, no comments), made by the project's user; and a client for another user, bob"""
-    forget("Report", "PGReviewComment")
-    api = types.admin()
-    made = api.ok(
-        "POST", "/api/Report", {"label": "Annual report", "text": "Things happened"}
-    )
+    """A new Report (unchecked, no comments, two sections) made by ann; clients for the project's user (e2e, whose page
+    the tests use) and for bob"""
+    forget("Report", "ReportSection", "PGReviewComment")
     return SimpleNamespace(
-        id=made["id"], api=api, bob=types.client(OTHER_USERNAME, OTHER_PASSWORD)
+        id=make_report(types),
+        api=types.admin(),
+        bob=types.client(OTHER_USERNAME, OTHER_PASSWORD),
+        stack=types,
     )
 
 
@@ -111,7 +133,7 @@ def test_changing_the_status_publishes_it_and_goes_to_the_api(logged_in: Page, r
 def test_a_comment_is_mine_on_the_right_and_counted(logged_in: Page, report):
     page = logged_in
     open_panel(page, report.id)
-    box = panel(page).get_by_role("textbox", name="Comment")
+    box = panel(page).get_by_role("combobox", name="Comment")
     box.fill("The date in the second paragraph is wrong")
     panel(page).get_by_role("button", name="Send").click()
     expect(box).to_have_value("")
@@ -215,3 +237,163 @@ def test_the_module_tests_pass_in_the_built_project(stack: Stack):
             timeout=300,
         )
         assert done.returncode == 0, (done.stdout + done.stderr)[-3000:]
+
+
+def test_a_comment_about_a_part_is_chosen_with_a_hash(logged_in: Page, report):
+    page = logged_in
+    open_panel(page, report.id)
+    box = panel(page).get_by_role("combobox", name="Comment")
+    box.press_sequentially("The figure in #inco")
+    parts = panel(page).get_by_role("listbox", name="Parts of the document")
+    expect(parts.get_by_role("option")).to_have_count(1)
+    expect(parts.get_by_role("option")).to_contain_text("Income in the first half")
+    box.press("Enter")
+    expect(parts).to_have_count(0)
+    expect(box).to_have_value("The figure in ")
+    expect(panel(page).get_by_test_id("review-about")).to_contain_text(
+        "About: Report section · Income in the first half"
+    )
+    box.press_sequentially("is wrong")
+    panel(page).get_by_role("button", name="Send").click()
+    mine = panel(page).get_by_test_id("review-comment").filter(has_text="is wrong")
+    expect(mine.get_by_role("button", name="Resolve")).to_be_visible()
+    comment = report.api.ok("GET", f"/api/review/{report.id}")["comments"][0]
+    assert (comment["text"], comment["targetLabel"]) == (
+        "The figure in is wrong",
+        "Income in the first half",
+    )
+    # (the tag shows the part on the page)
+    section = page.locator(f'[data-item-id="{comment["targetId"]}"]')
+    expect(section).to_contain_text("Income in the first half")
+    page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+    mine.get_by_test_id("review-target").click()
+    expect(section).to_be_in_viewport()
+
+
+def test_the_button_opens_the_list_and_escape_closes_only_it(logged_in: Page, report):
+    page = logged_in
+    open_panel(page, report.id)
+    panel(page).get_by_role("button", name="About a part…").click()
+    parts = panel(page).get_by_role("listbox", name="Parts of the document")
+    expect(parts.get_by_role("option")).to_have_count(2)
+    page.keyboard.press("Escape")
+    expect(parts).to_have_count(0)
+    expect(panel(page)).to_have_attribute("data-open", "true")
+    parts_box = panel(page).get_by_role("combobox", name="Comment")
+    expect(parts_box).to_have_value("#")
+
+
+def test_a_comment_about_a_part_since_removed_says_so(logged_in: Page, report):
+    page = logged_in
+    section = report.api.ok("GET", f"/api/Report/{report.id}")["sections"][1]
+    report.bob.ok(
+        "POST",
+        f"/api/review/{report.id}/comments",
+        {"text": "Cut this", "targetId": section["id"]},
+    )
+    # (ann takes the section out)
+    author = report.stack.client(AUTHOR_USERNAME, AUTHOR_PASSWORD)
+    edit = author.ok("GET", f"/api/Report/{report.id}/edit")
+    status, result = author.send(
+        "PUT",
+        f"/api/Report/{report.id}",
+        {**edit, "sections": edit["sections"][:1]},
+        headers={"If-Match": "*"},
+    )
+    assert status < 300, result
+    open_panel(page, report.id)
+    target = panel(page).get_by_test_id("review-target")
+    expect(target).to_contain_text("About: Costs")
+    expect(target).to_contain_text("(no longer there)")
+
+
+def test_checking_what_one_made_is_refused_and_said(logged_in: Page, types):
+    """With REVIEW_ALLOW_SELF_REVIEW false, the change is undone and the API's reason shown in a red toast"""
+    forget("Report", "ReportSection", "PGReviewComment")
+    page = logged_in
+    mine = types.admin().ok(
+        "POST",
+        "/api/Report",
+        {"label": "My report", "text": "Mine", "sections": []},
+    )["id"]
+    open_panel(page, mine)
+    with page.expect_response(lambda r: r.url.endswith("/status")) as answer:
+        panel(page).get_by_role("button", name="Checked", exact=True).click()
+    assert answer.value.status == 403
+    expect(page.get_by_role("status", name="Notifications")).to_contain_text(
+        "The status was not changed: e2e created or last edited this document, and cannot check it"
+    )
+    expect(review_button(page)).to_have_attribute("aria-label", "Review: Unchecked")
+    assert types.admin().ok("GET", f"/api/review/{mine}")["status"] == "unchecked"
+
+
+def queue_rows(page: Page):
+    return page.get_by_test_id("review-queue-row")
+
+
+def test_the_queue_lists_what_is_to_be_checked_by_status(logged_in: Page, report):
+    page = logged_in
+    checked = make_report(report.stack, "Checked report", [])
+    report.bob.ok("POST", f"/api/review/{checked}/status", {"status": "checked"})
+    report.bob.ok("POST", f"/api/review/{report.id}/comments", {"text": "One thing"})
+    page.goto("/")
+    hydrated(page)
+    expand_nav(page)
+    page.get_by_role("navigation", name="Main").get_by_role(
+        "link", name="Review"
+    ).click()
+    expect(page.get_by_role("heading", name="Documents to review")).to_be_visible()
+    tabs = page.get_by_role("tablist", name="Status")
+    expect(tabs.get_by_role("tab", name="Unchecked", exact=True)).to_have_attribute(
+        "aria-selected", "true"
+    )
+    expect(queue_rows(page)).to_have_count(1)
+    row = queue_rows(page).first
+    expect(row).to_contain_text("Annual report")
+    expect(row).to_contain_text("ann")
+    expect(row).to_contain_text("1")
+    tabs.get_by_role("tab", name="Checked", exact=True).click()
+    expect(page).to_have_url(re.compile(r"status=checked"))
+    expect(queue_rows(page)).to_have_count(1)
+    expect(queue_rows(page).first).to_contain_text("Checked report")
+    expect(queue_rows(page).first).to_contain_text("bob")
+    # (the type filter offers the classes that are reviewed)
+    select = page.get_by_role("combobox", name="Type")
+    expect(select.locator("option")).to_have_text(["All types", "Report"])
+    select.select_option("Report")
+    expect(page).to_have_url(re.compile(r"type=Report"))
+    expect(queue_rows(page)).to_have_count(1)
+    # (back: the unchecked list again; and a row leads to its document)
+    page.go_back()
+    page.go_back()
+    expect(queue_rows(page).first).to_contain_text("Annual report")
+    queue_rows(page).first.get_by_role("link").click()
+    expect(page.get_by_role("heading", name="Annual report")).to_be_visible()
+
+
+def test_the_queue_goes_a_page_at_a_time(logged_in: Page, report):
+    page = logged_in
+    author = report.stack.client(AUTHOR_USERNAME, AUTHOR_PASSWORD)
+    for n in range(25):
+        author.ok(
+            "POST",
+            "/api/Report",
+            {"label": f"Report {n:02}", "text": "x", "sections": []},
+        )
+    page.goto("/review")
+    hydrated(page)
+    expect(page.get_by_test_id("review-queue-count")).to_have_text("Documents: 26")
+    expect(queue_rows(page)).to_have_count(25)
+    pages = page.get_by_role("navigation", name="Pages")
+    expect(pages).to_contain_text("Page 1 of 2")
+    pages.get_by_role("button", name="Next").click()
+    expect(page).to_have_url(re.compile(r"page=2"))
+    expect(queue_rows(page)).to_have_count(1)
+    expect(pages.get_by_role("button", name="Next")).to_be_disabled()
+
+
+def test_the_queue_needs_a_login(page: Page, types):
+    page.goto("/review")
+    hydrated(page)
+    expect(page.get_by_role("dialog", name="Log in")).to_be_visible()
+    expect(page.get_by_role("heading", name="Documents to review")).to_have_count(0)

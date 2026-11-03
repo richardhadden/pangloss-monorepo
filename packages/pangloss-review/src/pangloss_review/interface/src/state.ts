@@ -2,6 +2,7 @@ import type { ApiClient } from "@pangloss/interface-core";
 import { action, createOptimisticStore, onCleanup, until } from "solid-js";
 import { addComment, resolveComment, setReviewStatus } from "./api";
 import type { Comment, ReviewStatus } from "./api";
+import type { Part } from "./parts";
 import type { Snapshot } from "./poll";
 
 /** A comment as the panel shows it: `pending` while it is being sent (shown at once, before the feed brings it) */
@@ -120,7 +121,7 @@ export function createReview(options: {
     yield* acknowledged(() => review.status === status);
   });
 
-  const comment = action(function* (text: string) {
+  const comment = action(function* (text: string, part?: Part) {
     const pendingId = `pending-${Math.random().toString(36).slice(2)}`;
     setReview((draft) => {
       draft.comments.push({
@@ -128,12 +129,14 @@ export function createReview(options: {
         username: options.me() ?? "",
         at: new Date().toISOString(),
         text,
+        targetId: part?.id ?? null,
+        targetLabel: part ? (part.label ?? part.type) : null,
         resolved: false,
         pending: true,
       });
       draft.openComments += 1;
     });
-    const made = (yield addComment(api, id, text)) as Comment;
+    const made = (yield addComment(api, id, text, part?.id)) as Comment;
     yield* acknowledged(() => review.comments.some((c) => c.id === made.id));
     return made;
   });

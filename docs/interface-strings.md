@@ -179,11 +179,25 @@ These are not shown, but are read aloud, or appear when the pointer rests on the
 | `review_resolve` | Resolve | `ReviewPanel` (button) | |
 | `review_resolved_by` | Resolved by {user} | `ReviewPanel` | |
 | `review_comment_label` | Comment | `ReviewPanel` (`aria-label` of the box) | |
-| `review_comment_placeholder` | Write a comment | `ReviewPanel` (placeholder) | |
+| `review_comment_placeholder` | Write a comment (# for a part) | `Composer` (placeholder) | |
 | `review_send` | Send | `ReviewPanel` (button) | |
 | `review_status_refused` | The status was not changed: {reason} | `ReviewAction` (red toast) | `{reason}` is the API's message (English) |
 | `review_comment_refused` | The comment was not sent: {reason} | `ReviewAction` (red toast) | |
 | `review_resolve_refused` | The comment was not resolved: {reason} | `ReviewAction` (red toast) | |
+| `review_parts` | Parts of the document | `Composer` (`aria-label` of the list a `#` opens) | |
+| `review_part_choose` | About a part… | `Composer` (button that puts a `#` in the box) | |
+| `review_part_none` | No parts match | `Composer` | |
+| `review_part_clear` | Not about a part | `Composer` (the chip's ✕, label and tooltip) | |
+| `review_part_gone` | (no longer there) | `ReviewPanel` (a comment about a part since removed) | |
+| `review_part_show` | Show it on the page | `ReviewPanel` (tooltip of a comment's "About: …") | |
+| `review_queue` | Review | `ReviewQueue` (the console's name for the page) | |
+| `review_queue_title` | Documents to review | `ReviewQueue` (heading) | |
+| `review_queue_count` | Documents: {count} | `ReviewQueue` | worded to need no plural |
+| `review_queue_empty` | Nothing here | `ReviewQueue` | |
+| `review_queue_document` / `_created_by` / `_changed` / `_reviewed_by` / `_comments` | Document / Made by / Changed / Reviewed by / Open comments | `ReviewQueue` (column headings) | |
+| `review_queue_type` / `_all_types` | Type / All types | `ReviewQueue` (the filter) | |
+| `review_queue_pages` / `_previous` / `_next` / `_page` | Pages / Previous / Next / Page {page} of {pages} | `ReviewQueue` (paging) | |
+| `nav_pangloss_review_review` | Review | the navigation bar (`interface_config.py` of `pangloss_review`) | |
 
 ## Not translated by the interface's own file
 

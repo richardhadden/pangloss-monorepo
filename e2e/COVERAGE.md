@@ -103,19 +103,24 @@ about her "held court at Ghent") and Charles the Bold (no role); `types` has onl
 
 ## `pangloss_review` module
 
-The e2e project's `Report` is reviewed (`ReviewMeta(reviewable=True)`); a second user, `bob`, writes what someone else does.
+The e2e project's `Report` is reviewed (`ReviewMeta(reviewable=True)`), with nested `ReportSection`s; `ann` makes the reports, `bob` writes what someone else does, and self-review is not allowed.
 
 | Area | State | Where / notes |
 | --- | --- | --- |
 | Console of a reviewed document: a flag button coloured by status, labelled with it; opens and closes the panel (pressed; Escape) | ✅ | `test_review.py::test_a_reviewed_document_has_a_review_button_with_its_status`; Vitest (`ReviewAction.test.tsx`) |
 | No button for a document that is not reviewed, an entity, or a reader who is not logged in | ✅ | `test_a_document_that_is_not_reviewed_has_none`; the rest: Vitest |
 | Status buttons at the top of the panel; a change goes to the API at once (publishes with Checked), "Reviewed by" | ✅ | `test_changing_the_status_publishes_it_and_goes_to_the_api` |
-| A status the API refuses (self-review not allowed) is undone, with a red toast | 🚧 | Vitest (`ReviewAction.test.tsx`, `state.test.ts`); the e2e project allows self-review |
+| A status the API refuses (self-review not allowed) is undone, with a red toast | ✅ | `test_checking_what_one_made_is_refused_and_said` (the e2e project has `REVIEW_ALLOW_SELF_REVIEW = False`; reports are made by `ann`) |
 | A comment: shown at once on the right ("You", "Sending…"), confirmed by the feed, counted on the button | ✅ | `test_a_comment_is_mine_on_the_right_and_counted` |
 | What another user does (a comment, a status) reaches the open page and panel without a reload (`live()` feed) | ✅ | `test_what_someone_else_does_reaches_the_open_page_without_a_reload`; also in the dev build (`test_dev_mode.py::test_the_review_panel`) |
 | Resolve a comment; "Show resolved" shows it again, faded | ✅ | `test_a_comment_is_resolved_and_shown_again_on_asking` |
 | The edit page has the button and panel too, apart from saving | ✅ | `test_the_edit_page_has_it_too_apart_from_saving` |
-| A comment about a nested part shows its label | 🚧 | Vitest (`ReviewPanel.test.tsx`); choosing a part is not built |
+| A comment about a part: `#` in the box opens the list of parts (filtered by what follows), Enter chooses, a chip says it; the comment's tag shows the part on the page | ✅ | `test_a_comment_about_a_part_is_chosen_with_a_hash`; also in the dev build; details (arrows, multi-word, put back on failure): Vitest (`Composer.test.tsx`, `parts.test.ts`) |
+| The button "About a part…" opens the list; Escape closes the list, not the panel | ✅ | `test_the_button_opens_the_list_and_escape_closes_only_it` |
+| A comment about a part since removed says "(no longer there)" | ✅ | `test_a_comment_about_a_part_since_removed_says_so` |
+| Queue page `/review` (nav link, logged in): status tabs, type filter, rows lead to the document, back and forward keep the filters | ✅ | `test_the_queue_lists_what_is_to_be_checked_by_status`; also in the dev build |
+| Queue: 25 to a page, Previous / Next | ✅ | `test_the_queue_goes_a_page_at_a_time` |
+| Queue: needs a login | ✅ | `test_the_queue_needs_a_login` |
 | The feed closes when the page is left; reconnects (with a cookie refresh) after the access cookie ran out | 🚧 | Vitest (`ReviewAction.test.tsx`, `poll.test.ts`); the reconnect is not tested in a browser |
 | The module's own tests and type-check, in the built project | ✅ | `test_the_module_tests_pass_in_the_built_project` |
 

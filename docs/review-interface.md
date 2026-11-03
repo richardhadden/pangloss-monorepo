@@ -119,9 +119,38 @@ pressed; Escape and a close button shut it. From the top:
   through the API by another user appears in the open panel without a reload** (the live feed); and the module's
   own vitest run in the built project. The dev-mode test opens the panel too.
 
-## Not in this build
+## Not in the first build (built after it, below)
 
-Choosing a part to comment on, highlighting it; a review queue page; notices.
+Choosing a part to comment on, highlighting it; a review queue page. (Notices by email are not planned here.)
+
+## Second build (2026-11-03): comments on a part, the queue, self-review in the browser
+
+**Decisions (the user's).** A part is chosen by typing `#` in the comment box (the user's idea; a dropdown was the
+fallback): a list of the document's parts appears, type and label shortened. The queue is a page, `/review`, linked
+from the navigation bar, read when it is shown (not live: going back and forth reads it again).
+
+- **`#` in the box.** At the start or after a space, `#` opens a list over the box of the parts of the document: every
+  node with an id inside it that is not an entity, an embedded value or what refers to it from elsewhere (`partsOf`, from
+  the document as saved, read when the panel is first opened). Words typed after it filter (by label and type name, in
+  any language; spaces allowed while something still matches, so the list closes once the text has moved on). ↑/↓ and
+  Enter or Tab (or a click) choose; the `#words` are taken out of the text and the part becomes a chip, "About: Report
+  section · Costs", with ✕. A comment is about one part (the API's `targetId`), so a second `#` replaces the chip:
+  an inline token in a plain textarea could not be styled, and would suggest several. Escape closes the list and not the
+  panel. A button beside Send ("About a part…") puts a `#` at the caret, for those who do not know it.
+- **The part on the page.** The view page's nested blocks are now marked `data-item-id` as the form's are
+  (`ItemContents`); choosing a part, or clicking a comment's "About: …", scrolls to it and lights it up. A comment about
+  a part that is no longer in the document is struck through, "(no longer there)".
+- **The queue** (`ReviewQueue`, the module's route `/review`; `pangloss_review/interface_config.py` adds the link
+  "Review", for someone logged in). Status tabs (Unchecked first), a filter by type (the reviewed classes: a new route,
+  `GET /api/review/types`), a table (status flag, type, label linking to the document, who made it, when it changed, who
+  reviewed it, open comments), the oldest change first, 25 to a page with Previous / Next. Status, type and page are in
+  the address. Needs a login (the login dialog otherwise).
+- **Self-review in the browser.** The e2e project now has `REVIEW_ALLOW_SELF_REVIEW = False`; its reports are made by a
+  third user, `ann`, and a test checks that checking one's own report is refused, undone and said in a red toast.
+
+Tests: Vitest `parts.test.ts`, `Composer.test.tsx`, more in `ReviewPanel.test.tsx` (44 in the module), core
+`ItemContents.test.tsx` (the marks); Python `test_meta_and_status.py` (the types, the nav link); e2e `test_review.py`
+(15) and the dev-build test (the `#` list and the queue).
 
 ## As built (2026-11-03)
 

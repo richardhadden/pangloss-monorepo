@@ -25,7 +25,7 @@ const VIEW: ReviewView = {
   reviewedAt: "2026-11-01T10:00:00Z",
   openComments: 2,
   comments: [
-    comment("a", "bob", "2026-11-01T10:00:00Z", { targetLabel: "The second part" }),
+    comment("a", "bob", "2026-11-01T10:00:00Z", { targetId: "part2", targetLabel: "The second part" }),
     comment("b", "me", "2026-11-01T11:00:00Z"),
     comment("c", "bob", "2026-11-01T09:00:00Z", { resolved: true, resolvedBy: "me" }),
   ],
@@ -129,13 +129,13 @@ test("a comment is sent by the button or Ctrl+Enter, and the box is emptied", as
   await settle();
   send.click();
   await settle();
-  expect(props.onComment).toHaveBeenCalledWith("First");
+  expect(props.onComment).toHaveBeenCalledWith("First", undefined);
   expect(box.value).toBe("");
   box.value = "Second";
   box.dispatchEvent(new Event("input", { bubbles: true }));
   box.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", ctrlKey: true, bubbles: true }));
   await settle();
-  expect(props.onComment).toHaveBeenLastCalledWith("Second");
+  expect(props.onComment).toHaveBeenLastCalledWith("Second", undefined);
 });
 
 test("what was written is put back if the comment was not made", async () => {
@@ -197,4 +197,24 @@ test("no comments says so", async () => {
   await settle();
   expect(panel().textContent).toContain("No comments");
   expect(panel().querySelector('input[type="checkbox"]')).toBeNull();
+});
+
+test("a comment about a part shows it on the page when its tag is clicked; one about a part gone says so", async () => {
+  document.body.insertAdjacentHTML("beforeend", '<div data-item-id="part2">The second part</div>');
+  const block = document.querySelector<HTMLElement>('[data-item-id="part2"]')!;
+  const scrolled = vi.fn();
+  block.scrollIntoView = scrolled;
+  show({ parts: [{ id: "part2", type: "Statement", label: "The second part" }] });
+  await settle();
+  const tag = panel().querySelector<HTMLElement>('[data-testid="review-target"]')!;
+  expect(tag.tagName).toBe("BUTTON");
+  tag.click();
+  expect(scrolled).toHaveBeenCalled();
+  dispose?.();
+  document.body.innerHTML = "";
+  show({ parts: [] });
+  await settle();
+  const gone = panel().querySelector<HTMLElement>('[data-testid="review-target"]')!;
+  expect(gone.dataset.gone).toBe("true");
+  expect(gone.textContent).toContain("(no longer there)");
 });
