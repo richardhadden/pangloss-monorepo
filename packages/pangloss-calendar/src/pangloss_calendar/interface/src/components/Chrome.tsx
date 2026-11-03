@@ -1,8 +1,19 @@
-import { ConsoleButton, getModel, useComponent, useModels, useNavExpanded, useTranslations } from "@pangloss/interface-core";
+import {
+  canCreate,
+  ConsoleButton,
+  fillEmbedded,
+  getModel,
+  reachesEmbedded,
+  useComponent,
+  useModels,
+  useNavExpanded,
+  useTranslations,
+} from "@pangloss/interface-core";
+import type { EmbeddedField, FormData } from "@pangloss/interface-core";
 import { Loading, Show } from "solid-js";
 import type { ParentProps } from "solid-js";
-import type { CalendarName } from "../api";
-import { monthHref, sayCalendar, sayMonth, yearHref, yearsHref } from "../days";
+import type { CalendarName, DayOut } from "../api";
+import { monthHref, nameOf, sayCalendar, sayMonth, yearHref, yearsHref } from "../days";
 import type { DayName } from "../days";
 
 /** The `main` of a calendar page, inset as the other pages are */
@@ -27,6 +38,47 @@ export function onTheDay(name: DayName): () => Record<string, unknown> {
   return () => ({
     when: { type: "ExactDate", calendar: name.calendar, year: name.year, month: name.month, day: name.day },
   });
+}
+
+/** The dates of pangloss_dates that are one day, and the calendar each is fixed to (none: the date says) */
+const ONE_DAY: Record<string, CalendarName | undefined> = {
+  ExactDate: undefined,
+  JulianExactDate: "julian",
+  GregorianExactDate: "gregorian",
+};
+
+/** The type of exact date a field can hold, if it can hold one */
+const oneDayType = (field: EmbeddedField) => field.types.find((type) => type in ONE_DAY);
+
+/** The documents that can be made on their own and have, somewhere in them (a statement of a factoid), a date that can be one day */
+export function useDatedDocumentTypes(): () => string[] {
+  const definitions = useModels();
+  return () =>
+    Object.values(definitions.models)
+      .filter(
+        (model) =>
+          model.kind === "Document" &&
+          canCreate(model) &&
+          reachesEmbedded(definitions, model.name, (field) => oneDayType(field) !== undefined),
+      )
+      .map((model) => model.name)
+      .sort();
+}
+
+/**
+ * What everything made from a day starts with: every date in it that can be one day is that day (in the calendar of
+ * the page, or the one its type is fixed to), in the item and in each added to it (each statement of a factoid). A date
+ * taken away stays away, unless what it is in is made again.
+ */
+export function useOnTheDayFill(): (day: DayOut, calendar: CalendarName) => (item: FormData) => FormData {
+  const definitions = useModels();
+  return (day, calendar) => (item) =>
+    fillEmbedded(definitions, item, (field) => {
+      const type = oneDayType(field);
+      if (type === undefined) return undefined;
+      const name = nameOf(day, ONE_DAY[type] ?? calendar);
+      return { type, calendar: name.calendar, year: name.year, month: name.month, day: name.day };
+    });
 }
 
 /**

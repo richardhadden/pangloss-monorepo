@@ -1,6 +1,6 @@
 import { createRoot, flush } from "solid-js";
 import { expect, test } from "vitest";
-import type { FieldProblem } from "../schema";
+import type { FieldProblem, FormData } from "../schema";
 import { createItemFormState } from "./form";
 
 const problem = (path: FieldProblem["path"]): FieldProblem => ({ path, code: "required", params: {}, message: "Required" });
@@ -66,4 +66,20 @@ test("changing a value takes away the problems in it and of what it is in; remov
     flush();
     expect(state.problems().map(({ problem }) => problem.path)).toEqual([["year"]]);
   });
+});
+
+// (a fill that gives a statement a date: see `fillEmbedded` for the one the calendar gives)
+const DAY = { type: "ExactDate", year: 1500, month: 3, day: 2 };
+const fill = (item: FormData): FormData => (item.type === "Activity" && !item.date ? { ...item, date: DAY } : item);
+
+test("a form with a fill fills what is added to it", () => {
+  const state = createItemFormState({ type: "Factoid", statements: [] }, undefined, fill);
+  state.set(["statements", 0], { type: "Activity" });
+  expect(state.get(["statements", 0, "date"])).toEqual(DAY);
+  // (a date taken away stays away; one changed is not filled)
+  state.remove(["statements", 0, "date"]);
+  state.set(["statements", 0, "involves"], []);
+  expect(state.get(["statements", 0, "date"])).toBeUndefined();
+  state.set(["statements", 0, "date"], { type: "Period" });
+  expect(state.get(["statements", 0, "date"])).toEqual({ type: "Period" });
 });

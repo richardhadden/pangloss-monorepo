@@ -39,8 +39,16 @@ export interface ItemFormState {
 const keyOf = (path: Path) => JSON.stringify(path);
 const startsWith = (path: Path, prefix: Path) => prefix.length <= path.length && prefix.every((key, at) => path[at] === key);
 
-/** Starts from a copy of `initial`; `headId` for an item that exists */
-export function createItemFormState(initial: FormData, headId?: string): ItemFormState {
+/**
+ * Starts from a copy of `initial`; `headId` for an item that exists. `fill` is given every object that is set (an item
+ * added, a type chosen, what is pasted) and what it gives back is set instead: what a new item in this form starts with
+ * (see `fillEmbedded`)
+ */
+export function createItemFormState(
+  initial: FormData,
+  headId?: string,
+  fill?: (item: FormData) => FormData,
+): ItemFormState {
   const [data, setData] = createStore<FormData>(structuredClone(initial));
   const [problems, setPlaced] = createSignal<PlacedProblem[]>([]);
   // (the rows on the page, by path: a plain count, read only when problems are placed)
@@ -61,8 +69,9 @@ export function createItemFormState(initial: FormData, headId?: string): ItemFor
   return {
     get: (path) => getAt(data, path),
     set: (path, value) => {
+      const next = fill && typeof value === "object" && value !== null && !Array.isArray(value) ? fill(value as FormData) : value;
       setData((draft) => {
-        setAt(draft, path, value);
+        setAt(draft, path, next);
       });
       clearAt(path);
     },

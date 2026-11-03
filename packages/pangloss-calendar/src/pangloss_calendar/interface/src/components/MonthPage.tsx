@@ -1,7 +1,7 @@
 import { NewEntityDialog, ReferenceChip, useApi, useComponent, userIsLoggedIn, useTranslations } from "@pangloss/interface-core";
 import { createMemo, createSignal, Errored, For, Loading, Show } from "solid-js";
 import { getMonth } from "../api";
-import type { CalendarName, Characterised, MonthReport } from "../api";
+import type { CalendarName, Characterised, DayOut, MonthReport } from "../api";
 import {
   itemHref,
   monthFromParams,
@@ -14,15 +14,15 @@ import {
   sayDate,
   sayMonth,
 } from "../days";
-import type { DayName } from "../days";
 import {
   Arrows,
   BadAddress,
   Breadcrumbs,
   CalendarConsole,
   CalendarPage,
-  onTheDay,
   useCharacterisationTypes,
+  useDatedDocumentTypes,
+  useOnTheDayFill,
 } from "./Chrome";
 import { MonthGrid } from "./MonthGrid";
 
@@ -100,9 +100,13 @@ function MonthOf(props: { calendar: CalendarName; year: number; month: number })
   const ErrorMessage = useComponent("ErrorMessage");
   const { t, language } = useTranslations();
   const loggedIn = createMemo(() => userIsLoggedIn());
-  const types = useCharacterisationTypes();
-  // (the day a new characterisation is being made on, from its +; the month is read again when one is made)
-  const [adding, setAdding] = createSignal<DayName>();
+  const characterisations = useCharacterisationTypes();
+  const documents = useDatedDocumentTypes();
+  // (what a day's + makes: a feast or the like, or a document with a date that can be the day, a factoid)
+  const types = () => [...characterisations(), ...documents()];
+  const onTheDay = useOnTheDayFill();
+  // (the day something is being made on, from its +; the month is read again when it is made)
+  const [adding, setAdding] = createSignal<DayOut>();
   const [version, setVersion] = createSignal(0);
   const report = createMemo(() => {
     version();
@@ -141,7 +145,7 @@ function MonthOf(props: { calendar: CalendarName; year: number; month: number })
         {(day) => (
           <NewEntityDialog
             types={types()}
-            initial={onTheDay(day())}
+            fill={onTheDay(day(), props.calendar)}
             onClose={() => setAdding(undefined)}
             onCreated={() => {
               setAdding(undefined);

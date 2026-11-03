@@ -920,6 +920,8 @@ function EntityCreateDialog(props: {
   onClose: () => void;
   /** What the form of the type chosen starts with, over the blank item (a date filled in, say) */
   initial?: (type: string) => Record<string, unknown>;
+  /** What every item made in the form starts with, the item itself and each added to it (see `createItemFormState`) */
+  fill?: (item: FormData) => FormData;
 }) {
   const Modal = useComponent("Modal");
   const { t, modelName } = useTranslations();
@@ -948,6 +950,7 @@ function EntityCreateDialog(props: {
           <EntityCreateForm
             type={chosen()}
             initial={props.initial}
+            fill={props.fill}
             onBack={choices().length > 1 ? () => setType(undefined) : undefined}
             onCreated={props.onCreated}
             onClose={props.onClose}
@@ -966,6 +969,7 @@ function EntityCreateDialog(props: {
 function EntityCreateForm(props: {
   type: string;
   initial?: (type: string) => Record<string, unknown>;
+  fill?: (item: FormData) => FormData;
   onBack?: () => void;
   onCreated: (entity: Summary) => void;
   onClose: () => void;
@@ -974,7 +978,9 @@ function EntityCreateForm(props: {
   const definitions = useModels();
   const { t, modelName } = useTranslations();
   const type = untrack(() => props.type);
-  const state = createItemFormState({ ...blankItem(definitions, type), ...untrack(() => props.initial?.(type)) });
+  const fill = untrack(() => props.fill);
+  const started = { ...blankItem(definitions, type), ...untrack(() => props.initial?.(type)) };
+  const state = createItemFormState(fill ? fill(started) : started, undefined, fill);
   const model = getModel(definitions, type);
   // (while it is being made: back to false when that is over, whatever the answer)
   const [saving, setSaving] = createOptimistic(false);
@@ -1102,14 +1108,15 @@ export function PickOrCreate(props: {
 /**
  * A dialog that makes a new entity of one of `types` (Entities, or Documents that can be made on their own): the types
  * first, when there are several (Back goes to them again), then the form of the one chosen, which starts with what
- * `initial` gives for it; Save makes it and hands it to `onCreated`. For an interface module that offers to make one
- * where there is no field to put it in (a day of a calendar, say).
+ * `initial` gives for it (and `fill`, with every item added in it); Save makes it and hands it to `onCreated`. For an
+ * interface module that offers to make one where there is no field to put it in (a day of a calendar, say).
  */
 export function NewEntityDialog(props: {
   types: string[];
   onCreated: (entity: Summary) => void;
   onClose: () => void;
   initial?: (type: string) => Record<string, unknown>;
+  fill?: (item: FormData) => FormData;
 }) {
   const definitions = useModels();
   const groups = createMemo(() => menuGroups(definitions, typeOptions(props.types)));
@@ -1117,10 +1124,12 @@ export function NewEntityDialog(props: {
     <EntityCreateDialog
       groups={groups()}
       initial={props.initial}
+      fill={props.fill}
       onClose={props.onClose}
-      onCreated={(entity) => {
-        rememberEntity(entity);
-        props.onCreated(entity);
+      onCreated={(made) => {
+        // (an entity is offered again when one is searched for; a document is not searched for)
+        if (getModel(definitions, made.type)?.kind === "Entity") rememberEntity(made);
+        props.onCreated(made);
       }}
     />
   );

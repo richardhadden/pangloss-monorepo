@@ -4,7 +4,7 @@ import type { ModelDefinition, ModelDefinitions } from "@pangloss/interface-core
 import { render } from "@solidjs/web";
 import { afterEach, expect, test, vi } from "vitest";
 import { day, feast, hit, month, ref } from "./fixtures";
-import type { DayName } from "../days";
+import type { DayOut } from "../api";
 import { MonthGrid } from "./MonthGrid";
 
 const DEFINITIONS: ModelDefinitions = {
@@ -21,7 +21,7 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
-function show(report = month(), onAdd?: (day: DayName) => void) {
+function show(report = month(), onAdd?: (day: DayOut) => void) {
   const container = document.createElement("div");
   document.body.append(container);
   dispose = render(
@@ -146,5 +146,5 @@ test("each day has a + in its top right, given a way to add (someone logged in),
   expect(adds.length).toBe(31);
   expect(adds[1]!.getAttribute("aria-label")).toBe("Add to 2 March 1500");
   adds[1]!.click();
-  expect(onAdd).toHaveBeenCalledWith({ calendar: "julian", year: 1500, month: 3, day: 2 });
+  expect(onAdd).toHaveBeenCalledWith(day(2));
 });

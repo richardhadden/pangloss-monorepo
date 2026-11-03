@@ -204,15 +204,18 @@ def test_someone_logged_in_attaches_a_feast_to_a_day_and_takes_it_away(
 
 
 def test_a_feast_is_made_from_the_plus_of_a_day_in_the_month(logged_in: Page, dated):
-    """Each day of the month has a + (for someone logged in): it opens the form of a new characterisation that starts on
-    that day; saved, it is on the day"""
+    """Each day of the month has a + (for someone logged in): it opens the types that can be made on a day (the
+    characterisations, and the documents that can have a date), and the form of the one chosen starts on that day;
+    saved, it is on the day"""
     page = logged_in
     page.goto("/calendar/julian/1500/3")
     hydrated(page)
     month = page.get_by_test_id("calendar-month")
     month.get_by_role("button", name="Add to 7 March 1500").click()
     dialog = page.get_by_role("dialog")
-    # (the project has one type of characterisation: its form at once)
+    # (a feast, and an event, which has a date; not a report, which has none)
+    expect(dialog.locator("button[data-choice]")).to_have_text(["Feast", "Event"])
+    dialog.get_by_role("button", name="Feast", exact=True).click()
     expect(dialog.get_by_role("heading", name="New Feast")).to_be_visible()
     expect(dialog.get_by_label("When Month", exact=True)).to_have_value("3")
     expect(dialog.get_by_label("When Day", exact=True)).to_have_value("7")
@@ -228,6 +231,38 @@ def test_a_feast_is_made_from_the_plus_of_a_day_in_the_month(logged_in: Page, da
             "button", name=re.compile("^Add to")
         )
     ).to_have_count(0)
+
+
+def test_a_document_with_a_date_is_made_from_the_plus_of_a_day_in_the_month(
+    logged_in: Page, dated
+):
+    """A document that can have a date is made from a day's + in a dialog, the date that day (in the calendar of the
+    page), without leaving the month; saved, it is on the day"""
+    page = logged_in
+    page.goto("/calendar/gregorian/1500/3")
+    hydrated(page)
+    month = page.get_by_test_id("calendar-month")
+    month.get_by_role("button", name="Add to 20 March 1500").click()
+    dialog = page.get_by_role("dialog")
+    dialog.get_by_role("button", name="Event", exact=True).click()
+    expect(dialog.get_by_role("heading", name="New Event")).to_be_visible()
+    expect(dialog.get_by_label("When Year", exact=True)).to_have_value("1500")
+    expect(dialog.get_by_label("When Month", exact=True)).to_have_value("3")
+    expect(dialog.get_by_label("When Day", exact=True)).to_have_value("20")
+    expect(dialog.get_by_role("radio", name="Gregorian")).to_have_attribute(
+        "aria-checked", "true"
+    )
+    dialog.get_by_label("Label", exact=True).fill("The siege is lifted")
+    dialog.get_by_label("Text", exact=True).fill("The siege is lifted")
+    dialog.get_by_role("button", name="Save").click()
+    expect(dialog).to_have_count(0)
+    expect(page).to_have_url(re.compile(r"/calendar/gregorian/1500/3$"))
+    expect(
+        month.get_by_role("link", name=re.compile("The siege is lifted"))
+    ).to_have_count(1)
+    # (in the Julian calendar it is the 10th)
+    page.goto("/calendar/julian/1500/3/10")
+    expect(page.get_by_role("link", name=re.compile("The siege is lifted"))).to_be_visible()
 
 
 def test_the_day_and_the_month_lead_to_their_year(page: Page, dated):

@@ -2,7 +2,7 @@
  * The value an edit form works on: a plain tree of objects as the edit view of the API sends it,
  * read and changed by path, started blank, and cleaned for sending.
  */
-import type { ModelDefinitions, Validator } from "../types";
+import type { EmbeddedField, ModelDefinitions, RelationOption, Validator } from "../types";
 import { getModel } from "./lookup";
 import { choicesOf, choiceValue, envOf, menuGroups, optionFor, resolveOptions } from "./typeChoices";
 import type { Env } from "./typeChoices";
@@ -150,4 +150,57 @@ function cleanObject(definitions: ModelDefinitions, value: FormData, incoming: s
     if (cleaned !== undefined) out[key] = cleaned;
   }
   return out;
+}
+
+/**
+ * `item` with each embedded field that is not set given what `pick` says for it (nothing: it stays unset), in the item
+ * and in every item under it, through its relations: what a form made somewhere starts with (a date, from the day of a
+ * calendar it was made on). Not in an entity under it, which is only a reference, nor inside an embedded value (the
+ * start and the end of a period are not filled). A new object where something is set; the rest as it was.
+ */
+export function fillEmbedded(
+  definitions: ModelDefinitions,
+  item: FormData,
+  pick: (field: EmbeddedField) => unknown,
+  under = false,
+): FormData {
+  const model = typeof item.type === "string" ? getModel(definitions, item.type) : undefined;
+  if (!model || model.kind === "Embedded" || (under && model.kind === "Entity")) return item;
+  const deeper = (value: unknown): unknown =>
+    Array.isArray(value) ? value.map(deeper) : isObject(value) ? fillEmbedded(definitions, value, pick, true) : value;
+  let filled: FormData | undefined;
+  for (const field of model.fields) {
+    const value = item[field.key];
+    let next = value;
+    if (field.kind === "embedded" && (value === undefined || value === null)) next = pick(field) ?? value;
+    else if (field.kind === "relation") next = deeper(value);
+    if (next !== value) (filled ??= { ...item })[field.key] = next;
+  }
+  return filled ?? item;
+}
+
+/**
+ * Whether an item of `type`, or one that can be put somewhere under it through its relations (not an entity, which is
+ * only referred to), has an embedded field that `accepts` says yes to: a document whose statements can have a date
+ */
+export function reachesEmbedded(
+  definitions: ModelDefinitions,
+  type: string,
+  accepts: (field: EmbeddedField) => boolean,
+  seen: Set<string> = new Set(),
+): boolean {
+  if (seen.has(type)) return false;
+  seen.add(type);
+  const model = getModel(definitions, type);
+  if (!model || model.kind === "Entity") return false;
+  const reaches = (option: RelationOption): boolean => {
+    if (option.kind === "typeVar" || option.kind === "unknown" || option.kind === "entity") return false;
+    const types = [option.type, ...(getModel(definitions, option.type)?.concreteTypes ?? [])];
+    if (types.some((each) => reachesEmbedded(definitions, each, accepts, seen))) return true;
+    // (what a semantic space, a conjunction or a reified relation holds is in its parameters)
+    return "params" in option && Object.values(option.params).some((param) => param.options.some(reaches));
+  };
+  return model.fields.some((field) =>
+    field.kind === "embedded" ? accepts(field) : field.kind === "relation" && field.options.some(reaches),
+  );
 }
