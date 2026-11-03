@@ -116,7 +116,15 @@ const definitions = {
       kind: "ReifiedRelation",
       typeParameters: ["T"],
       fields: [
-        relation("target", [{ kind: "typeVar", name: "T", edgeModel: null }]),
+        // (one alternative, as in the demo: `Annotated[list[T], MinLen(1), MaxLen(1)]`)
+        {
+          ...relation("target", [{ kind: "typeVar", name: "T", edgeModel: null }]),
+          required: true,
+          validators: [
+            { name: "MinLen", min_length: 1 },
+            { name: "MaxLen", max_length: 1 },
+          ],
+        } as FieldDefinition,
         literal("identified_by", { type: "str" }),
       ],
     }),
@@ -721,6 +729,45 @@ test("a refused entity keeps the dialog open and says why, at its field; Cancel 
   expect(document.body.querySelector('[role="dialog"]')).toBeNull();
 });
 
+test("with several types of entity, + opens the dialog on the types; the one chosen has its form, and Back goes to the types", async () => {
+  const { client, sent } = fakeClient((call) =>
+    call.path === "/Group" ? { id: "g9", type: "Group", label: "Monks" } : { id: "m1", type: "Meeting", label: "M" },
+  );
+  show(client, { type: "Meeting", initial: { type: "Meeting" } });
+  await settle();
+  // (no menu: the button opens the dialog)
+  const plus = button("Make a new one")!;
+  expect(plus.textContent?.trim()).toBe("+");
+  click(plus);
+  await settle();
+  const dialog = () => document.body.querySelector('[role="dialog"]')!;
+  const inDialog = (name: string) =>
+    [...dialog().querySelectorAll("button")].find((b) => b.textContent?.trim() === name);
+  const choices = () => [...dialog().querySelectorAll<HTMLElement>("button[data-choice]")];
+  expect(choices().map((b) => b.textContent)).toEqual(["Group", "Person"]);
+  expect(dialog().querySelector('[aria-label="Label"]')).toBeNull();
+  expect(document.activeElement).toBe(choices()[0]);
+  click(inDialog("Person")!);
+  await settle();
+  expect(dialog().textContent).toContain("New Person");
+  expect(choices()).toHaveLength(0);
+  click(inDialog("‹ Back")!);
+  await settle();
+  expect(choices()).toHaveLength(2);
+  click(inDialog("Group")!);
+  await settle();
+  expect(dialog().textContent).toContain("New Group");
+  const label = dialog().querySelector<HTMLInputElement>('[aria-label="Label"]')!;
+  expect(document.activeElement).toBe(label);
+  label.value = "Monks";
+  label.dispatchEvent(new InputEvent("input", { bubbles: true }));
+  click(inDialog("Save")!);
+  await settle();
+  expect(sent.find((call) => call.method === "POST")).toMatchObject({ path: "/Group", body: { label: "Monks" } });
+  expect(document.body.querySelector('[role="dialog"]')).toBeNull();
+  expect(document.body.textContent).toContain("Monks");
+});
+
 const pasteSlots = () => [...document.body.querySelectorAll<HTMLElement>('[role="group"][aria-label="Paste here"]')];
 const clipboardCards = () =>
   [...document.body.querySelectorAll('aside[aria-label="Clipboard"] li.w-72')].map((card) => card.textContent);
@@ -796,7 +843,7 @@ test("pasted into another document, a statement is new; what is inside it fits o
   expect(JSON.stringify(sent[0]!.body.statements)).not.toContain('"id"');
 });
 
-test("the buttons of a block are fold, cut, copy, remove; the clipboard folds to its head line, and stays folded", async () => {
+test("the head bar of a block folds it, and its buttons are cut, copy, remove; the clipboard folds to its head line, and stays folded", async () => {
   const { client } = fakeClient(() => ({ id: "f1", type: "Factoid", label: "F" }));
   show(client, { initial: { id: "f1", type: "Factoid", label: "F", year: 476, statements: [meeting] }, version: 3 });
   await settle();
@@ -919,6 +966,15 @@ test("a relation to entities or a reified relation has the search at once, and a
   click(byLabel("Add Identification"));
   await settle();
   expect(byLabel("identified by")).toBeTruthy();
+  // (the one alternative it must have is there at once, with the search for who it might be; there is no
+  // adding a second, as it may have only one)
+  expect(byLabel("Remove Alternative")).toBeTruthy();
+  expect(byLabel("Find Person…")).toBeTruthy();
+  const adds = () => [...document.body.querySelectorAll("button")].filter((b) => b.textContent?.trim() === "Add");
+  expect(adds()).toHaveLength(0);
+  click(byLabel("Remove Alternative"));
+  await settle();
+  expect(adds()).toHaveLength(1);
   expect(added()).toBe(1);
 });
 

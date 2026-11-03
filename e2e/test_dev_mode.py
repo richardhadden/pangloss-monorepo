@@ -129,6 +129,22 @@ def test_making_and_editing(page: Page, data, dev_url: str, errors: list[str]):
         page.get_by_role("navigation", name="Main").get_by_role("link", name="Person")
     ).to_have_count(0)
     page.get_by_role("button", name="Clear the filter").click()
+    # (a new entity of one of several types: the dialog shows the types first, then the form of the one chosen)
+    page.goto(f"{dev_url}/Meeting/new")
+    hydrated(page)
+    page.get_by_role("button", name="Make a new one").click()
+    dialog = page.get_by_role("dialog", name="Select a type…")
+    dialog.get_by_role("button", name="Group", exact=True).click()
+    expect(page.get_by_role("dialog", name="New Group")).to_be_visible()
+    page.get_by_role("button", name="‹ Back").click()
+    dialog.get_by_role("button", name="Person", exact=True).click()
+    dialog = page.get_by_role("dialog", name="New Person")
+    expect(dialog.get_by_label("Label", exact=True)).to_be_focused()
+    dialog.get_by_label("Label", exact=True).fill("Bede")
+    dialog.get_by_role("button", name="Save").click()
+    expect(dialog).to_have_count(0)
+    expect(page.get_by_text("Bede", exact=True)).to_be_visible()
+    expect(page.locator("main")).not_to_contain_text(SOLID_ERROR)
     assert errors == []
 
 

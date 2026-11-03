@@ -183,6 +183,7 @@
   "loading": { "en": "Loading…", "de": "Wird geladen …", "fr": "Chargement…" },
   "save": { "en": "Save", "de": "Speichern", "fr": "Enregistrer" },
   "cancel": { "en": "Cancel", "de": "Abbrechen", "fr": "Annuler" },
+  "back": { "en": "Back", "de": "Zurück", "fr": "Retour" },
   "new": { "en": "New", "de": "Neu", "fr": "Nouveau" },
   "edit": { "en": "Edit", "de": "Bearbeiten", "fr": "Modifier" },
   "open": { "en": "Open", "de": "Öffnen", "fr": "Ouvrir" },

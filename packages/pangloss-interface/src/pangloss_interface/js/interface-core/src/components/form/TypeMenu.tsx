@@ -199,45 +199,40 @@ export function TypeMenu(props: {
   );
 }
 
-/**
- * The add button of a field (Add statements), which opens, in its place, a box of the types the field
- * can hold: under a title bar that names what is chosen (Select statement type…, by the type they
- * all come from), zones one under another: the types on their own at the top; then each semantic
- * space, on its colour, with the same types inside it, its name at the top left; then the
- * conjunctions, on slate. Each type is a button in the colour of its type, as its chip is; the
- * buttons of a list are joined into one block, the names inside indented to show the hierarchy (an
- * abstract class is a line of the block, not a button). Choosing one, Escape, the close button, a
- * click elsewhere or Tab out of it close the box. With only one thing to choose the button chooses it.
- * What is given as `children` (what can be pasted here) is under the button. In the box the types
- * are one stop for Tab; the arrow keys go through them (Home and End to the first and last).
- */
-export function TypeChooser(
-  props: ParentProps<{
-    groups: MenuGroup[];
-    /** What the button says (Add statements), and the name of the box for a screen reader */
-    label: string;
-    onChoose: (choice: Choice) => void;
-    /** The classes of the button */
-    buttonClass?: string;
-  }>,
-) {
+/** The type that all of `names` come from (the conjunctions left out), if they have one */
+export function commonType(definitions: ModelDefinitions, names: string[]): string | undefined {
+  const chains = [...new Set(names)]
+    .filter((name) => getModel(definitions, name)?.kind !== "Conjunction")
+    .map((name) => ancestry(definitions, name));
+  if (chains.length === 0) return undefined;
+  let at = 0;
+  while (chains.every((chain) => chain[at] !== undefined && chain[at] === chains[0]![at])) at++;
+  return at > 0 ? chains[0]![at - 1] : undefined;
+}
+
+/** What a box of types says it is for: Select Statement type…, by the type they all come from */
+export function useSelectTitle(groups: () => MenuGroup[]) {
   const definitions = useModels();
   const { t, modelName } = useTranslations();
-  const choices = () => choicesOf(props.groups);
-  // (the type that all the types, but the conjunctions, come from: what the title says is chosen)
-  const common = createMemo(() => {
-    const chains = [...new Set(choices().map((choice) => choice.type))]
-      .filter((name) => getModel(definitions, name)?.kind !== "Conjunction")
-      .map((name) => ancestry(definitions, name));
-    if (chains.length === 0) return undefined;
-    let at = 0;
-    while (chains.every((chain) => chain[at] !== undefined && chain[at] === chains[0]![at])) at++;
-    return at > 0 ? chains[0]![at - 1] : undefined;
-  });
-  const title = () =>
+  const common = createMemo(() => commonType(definitions, choicesOf(groups()).map((choice) => choice.type)));
+  return () =>
     common()
       ? t("select_type_of", "Select {name} type…", { name: modelName(common()!) })
       : t("select_type", "Select a type…");
+}
+
+/**
+ * The types of `groups` laid out open, in zones one under another: the types on their own at the
+ * top; then each semantic space, on its colour, with the same types inside it, its name at the top
+ * left; then the conjunctions, on slate. Each type is a button in the colour of its type, as its
+ * chip is; the buttons of a list are joined into one block, the names inside indented to show the
+ * hierarchy (an abstract class is a line of the block, not a button). The types are one stop for
+ * Tab; the arrow keys go through them (Home and End to the first and last). With `autofocus`, the
+ * cursor goes into them when they are drawn.
+ */
+export function TypeGrid(props: { groups: MenuGroup[]; onChoose: (choice: Choice) => void; autofocus?: boolean }) {
+  const definitions = useModels();
+  const { modelName } = useTranslations();
   const keyOf = (choice: Choice) => [...choice.spaces, choice.type].join("/");
   // (the one of the buttons that Tab goes to: the last one gone to, else the first)
   const [current, setCurrent] = createSignal<string>();
@@ -274,12 +269,6 @@ export function TypeChooser(
   });
   let root: HTMLDivElement | undefined;
   const onKeyDown = (event: KeyboardEvent) => {
-    if (event.key === "Escape") {
-      // (only the box: a dialog it is in stays open)
-      event.stopPropagation();
-      close(true);
-      return;
-    }
     const all = [...(root?.querySelectorAll<HTMLElement>("button[data-choice]") ?? [])];
     const at = all.indexOf(document.activeElement as HTMLElement);
     if (at < 0 || all.length === 0) return;
@@ -297,6 +286,9 @@ export function TypeChooser(
     event.preventDefault();
     all[next]!.focus();
   };
+  onSettled(() => {
+    if (props.autofocus) root?.querySelector<HTMLElement>('button[data-choice][tabindex="0"]')?.focus();
+  });
   const spaceName = (spaces: string[]) => spaces.map((space) => modelName(space)).join(" › ");
   // (a button is in the colour of its type, as its chip is; a type with none has the plain one)
   const tintOf = (name: string) => {
@@ -305,6 +297,99 @@ export function TypeChooser(
   };
   // (the name inside a button or an abstract class's line, indented by how deep it is)
   const indent = (row: TypeRow) => ({ "padding-left": `${0.75 + row.depth * 1}rem` });
+  return (
+    <div ref={root} class="flex flex-col" onKeyDown={onKeyDown}>
+      <For each={zones()}>
+        {(zone) => (
+          <section
+            class={[
+              "flex flex-col gap-2 px-3 pt-2 pb-3",
+              { "border-t-[0.5px] border-dashed border-slate-400/60": zone.class !== "" },
+              zone.class,
+            ]}
+          >
+            <Show when={zone.spaces.length > 0}>
+              <h3 class="text-xs font-semibold uppercase select-none">{spaceName(zone.spaces)}</h3>
+            </Show>
+            <div class="flex flex-wrap items-start gap-3">
+              <For each={zone.columns}>
+                {(column) => (
+                  <ul class="flex w-max flex-col divide-y-[0.5px] divide-slate-400/70 overflow-hidden rounded-sm border-[0.5px] border-slate-400/70 bg-white shadow-xs">
+                    <For each={column}>
+                      {(row) => (
+                        <li class="flex flex-col">
+                          <Show
+                            when={row.selectable}
+                            fallback={
+                              <span
+                                class="bg-slate-50 py-1 pr-4 text-xs text-slate-500 italic select-none"
+                                style={indent(row)}
+                                aria-disabled="true"
+                              >
+                                {modelName(row.name)}
+                              </span>
+                            }
+                          >
+                            <button
+                              type="button"
+                              data-choice
+                              tabindex={tabStop() === keyOf({ spaces: zone.spaces, type: row.name }) ? 0 : -1}
+                              autofocus={
+                                props.autofocus && tabStop() === keyOf({ spaces: zone.spaces, type: row.name })
+                              }
+                              class={[
+                                "min-w-28 cursor-pointer py-1.5 pr-4 text-left text-xs font-semibold whitespace-nowrap uppercase select-none hover:shadow-[inset_0_0_0_100vmax_rgb(15_23_42/0.08)] focus:shadow-[inset_0_0_0_100vmax_rgb(15_23_42/0.12)] focus:outline-none active:shadow-[inset_0_0_0_100vmax_rgb(15_23_42/0.16)]",
+                                tintOf(row.name),
+                              ]}
+                              style={indent(row)}
+                              onFocus={() => setCurrent(keyOf({ spaces: zone.spaces, type: row.name }))}
+                              onClick={() => props.onChoose({ spaces: zone.spaces, type: row.name })}
+                            >
+                              {modelName(row.name)}
+                            </button>
+                          </Show>
+                        </li>
+                      )}
+                    </For>
+                  </ul>
+                )}
+              </For>
+            </div>
+          </section>
+        )}
+      </For>
+    </div>
+  );
+}
+
+/**
+ * The add button of a field (Add statements), which opens, in its place, a box of the types the field
+ * can hold (a `TypeGrid`), under a title bar that names what is chosen (Select statement type…, by
+ * the type they all come from). Choosing one, Escape, the close button, a click elsewhere or Tab out
+ * of it close the box. With only one thing to choose the button chooses it. What is given as
+ * `children` (what can be pasted here) is under the button.
+ */
+export function TypeChooser(
+  props: ParentProps<{
+    groups: MenuGroup[];
+    /** What the button says (Add statements), and the name of the box for a screen reader */
+    label: string;
+    onChoose: (choice: Choice) => void;
+    /** The classes of the button */
+    buttonClass?: string;
+  }>,
+) {
+  const { t } = useTranslations();
+  const choices = () => choicesOf(props.groups);
+  const title = useSelectTitle(() => props.groups);
+  let root: HTMLDivElement | undefined;
+  const onKeyDown = (event: KeyboardEvent) => {
+    if (event.key === "Escape") {
+      // (only the box: a dialog it is in stays open)
+      event.stopPropagation();
+      close(true);
+    }
+  };
   const [open, setOpen] = createSignal(false);
   let wrapper: HTMLDivElement | undefined;
   const openBox = () => {
@@ -395,62 +480,7 @@ export function TypeChooser(
               ✕
             </button>
           </div>
-          <For each={zones()}>
-            {(zone) => (
-              <section
-                class={[
-                  "flex flex-col gap-2 px-3 pt-2 pb-3",
-                  { "border-t-[0.5px] border-dashed border-slate-400/60": zone.class !== "" },
-                  zone.class,
-                ]}
-              >
-                <Show when={zone.spaces.length > 0}>
-                  <h3 class="text-xs font-semibold uppercase select-none">{spaceName(zone.spaces)}</h3>
-                </Show>
-                <div class="flex flex-wrap items-start gap-3">
-                  <For each={zone.columns}>
-                    {(column) => (
-                      <ul class="flex w-max flex-col divide-y-[0.5px] divide-slate-400/70 overflow-hidden rounded-sm border-[0.5px] border-slate-400/70 bg-white shadow-xs">
-                        <For each={column}>
-                          {(row) => (
-                            <li class="flex flex-col">
-                              <Show
-                                when={row.selectable}
-                                fallback={
-                                  <span
-                                    class="bg-slate-50 py-1 pr-4 text-xs text-slate-500 italic select-none"
-                                    style={indent(row)}
-                                    aria-disabled="true"
-                                  >
-                                    {modelName(row.name)}
-                                  </span>
-                                }
-                              >
-                                <button
-                                  type="button"
-                                  data-choice
-                                  tabindex={tabStop() === keyOf({ spaces: zone.spaces, type: row.name }) ? 0 : -1}
-                                  class={[
-                                    "min-w-28 cursor-pointer py-1.5 pr-4 text-left text-xs font-semibold whitespace-nowrap uppercase select-none hover:shadow-[inset_0_0_0_100vmax_rgb(15_23_42/0.08)] focus:shadow-[inset_0_0_0_100vmax_rgb(15_23_42/0.12)] focus:outline-none active:shadow-[inset_0_0_0_100vmax_rgb(15_23_42/0.16)]",
-                                    tintOf(row.name),
-                                  ]}
-                                  style={indent(row)}
-                                  onFocus={() => setCurrent(keyOf({ spaces: zone.spaces, type: row.name }))}
-                                  onClick={() => choose({ spaces: zone.spaces, type: row.name })}
-                                >
-                                  {modelName(row.name)}
-                                </button>
-                              </Show>
-                            </li>
-                          )}
-                        </For>
-                      </ul>
-                    )}
-                  </For>
-                </div>
-              </section>
-            )}
-          </For>
+          <TypeGrid groups={props.groups} onChoose={choose} />
         </div>
         </Show>
         {props.children}

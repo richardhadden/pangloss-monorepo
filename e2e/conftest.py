@@ -58,6 +58,14 @@ MODELS = textwrap.dedent(
     class Statement(Document):
         text: str
         about: Person
+
+
+    class Group(Entity):
+        pass
+
+
+    class Meeting(Document):
+        attendees: list[Person | Group]
     """
 )
 TYPES = (

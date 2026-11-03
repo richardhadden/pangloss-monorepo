@@ -1,6 +1,6 @@
 import { createEffect, createSignal, For, onSettled, Show } from "solid-js";
 import { useClipboard, useModels, useNavExpanded, useTranslations } from "../context";
-import { outline } from "../schema";
+import { getModel, outline } from "../schema";
 import type { FormData } from "../schema";
 import { ClipLabel, CutIcon, CopyIcon } from "./form/Clip";
 
@@ -102,8 +102,9 @@ export function ClipboardBar() {
       >
         <For each={entries()}>
           {(entry) => (
-            <li class="flex w-72 shrink-0 flex-col gap-1 rounded-sm border-[0.5px] border-slate-400/70 bg-white/70 p-2">
-              <div class="flex min-w-0 items-center gap-1">
+            // (as tall as the row lets it be: what is inside it scrolls)
+            <li class="flex min-h-0 w-72 shrink-0 flex-col gap-1 rounded-sm border-[0.5px] border-slate-400/70 bg-white/70 p-2">
+              <div class="flex min-w-0 shrink-0 items-center gap-1">
                 <span
                   class="shrink-0 text-slate-500"
                   title={entry.cut ? t("clip_cut", "Cut") : t("clip_copied", "Copied")}
@@ -132,22 +133,42 @@ export function ClipboardBar() {
   );
 }
 
-/** What is inside something on the clipboard, a line for each thing, indented under what it is in */
+/**
+ * What is inside something on the clipboard, a line for each thing, indented under what it is in:
+ * an entity or a document as a chip, as the card's own head is; the rest (a reified relation, a
+ * conjunction, an embedded model) by the name of its type. Scrolls when it is taller than the card.
+ */
 function Outline(props: { value: FormData; depth: number }) {
   const definitions = useModels();
   const { modelName } = useTranslations();
   // (the top is the card's own head)
   const lines = () => outline(definitions, props.value, props.depth).slice(1);
+  const chipped = (type: string) => {
+    const kind = getModel(definitions, type)?.kind;
+    return kind === "Entity" || kind === "Document" || kind === "ReifiedRelationDocument";
+  };
   return (
     <Show when={lines().length > 0}>
-      <ul class="flex flex-col gap-0.5 text-xs text-slate-600">
+      <ul class="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto text-xs text-slate-600">
         <For each={lines()}>
           {(line) => (
-            <li class="truncate" style={{ "padding-left": `${(line.depth - 1) * 0.75}rem` }}>
-              <span class="text-slate-400">{line.field} · </span>
-              <span class="font-semibold uppercase">{modelName(line.type)}</span>
-              <Show when={line.label}>
-                <span> {line.label}</span>
+            <li
+              class="flex min-w-0 shrink-0 items-center gap-1 whitespace-nowrap"
+              style={{ "padding-left": `${(line.depth - 1) * 0.75}rem` }}
+            >
+              <span class="shrink-0 text-slate-400">{line.field} · </span>
+              <Show
+                when={chipped(line.type)}
+                fallback={
+                  <span class="min-w-0 truncate">
+                    <span class="font-semibold uppercase">{modelName(line.type)}</span>
+                    <Show when={line.label}>
+                      <span> {line.label}</span>
+                    </Show>
+                  </span>
+                }
+              >
+                <ClipLabel value={{ type: line.type, label: line.label }} />
               </Show>
             </li>
           )}

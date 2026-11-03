@@ -20,6 +20,7 @@ import {
   envOf,
   filled,
   getModel,
+  lengthBound,
   menuGroups,
   optionFor,
   reachFor,
@@ -27,7 +28,7 @@ import {
   resolveOptions,
   wrapEntity,
 } from "../../schema";
-import type { Choice, Env, FormData, Path } from "../../schema";
+import type { Choice, Env, FormData, MenuGroup, Path } from "../../schema";
 import type {
   AnnotatedValueField,
   EmbeddedField,
@@ -52,7 +53,6 @@ import {
   joinedRemoveClass,
   headBarClass,
   headButtonClass,
-  headLabelClass,
   headMenuButtonClass,
   headRestClass,
   headRestOpenClass,
@@ -63,7 +63,7 @@ import {
   spaceTypeClass,
   typeChipClass,
 } from "./styles";
-import { TypeChooser, TypeMenu } from "./TypeMenu";
+import { TypeChooser, TypeGrid, TypeMenu, useSelectTitle } from "./TypeMenu";
 import { revealAdded } from "./reveal";
 import { RetypeButtons } from "./Retype";
 import { ClipButtons, EmbeddedPasteSlot, RelationPasteSlot, useClipActions } from "./Clip";
@@ -75,7 +75,7 @@ const isObject = (value: unknown): value is FormData =>
 
 /**
  * Something nested: a head line with its type (a tinted chip), what it is called, any `buttons` of
- * its own (a document's, to change its type), a fold and a remove button; under it, its fields, indented, with a rule in the colour of its type down the left.
+ * its own (a document's, to change its type), and a remove button (the bar itself folds it); under it, its fields, indented, with a rule in the colour of its type down the left.
  */
 function Block(
   props: ParentProps<{
@@ -102,20 +102,24 @@ function Block(
           {modelName(props.type)}
         </span>
         <div class={props.buttons ? headRestOpenClass : headRestClass}>
-          <span class={headLabelClass}>{props.label}</span>
-          {props.buttons}
-          {/* (fold, cut, copy, remove) */}
+          {/* (the grey of the bar, with the label in it, folds it; folded, a ▸ says so) */}
           <button
             type="button"
-            class={[headButtonClass, "text-slate-500 hover:bg-slate-400/30"]}
+            class="flex min-w-0 flex-1 cursor-pointer items-center gap-2 px-3 py-1 text-left text-sm hover:bg-slate-400/20 focus-visible:bg-slate-400/20 focus-visible:outline-none"
             aria-expanded={folded() ? "false" : "true"}
             aria-label={t("fold", "Fold or unfold {name}", { name: modelName(props.type) })}
+            title={t("fold", "Fold or unfold {name}", { name: modelName(props.type) })}
             onClick={() => setFolded(!folded())}
           >
-            <Show when={folded()} fallback="▾">
-              ▸
+            <Show when={folded()}>
+              <span aria-hidden="true" class="shrink-0 text-xs text-slate-500">
+                ▸
+              </span>
             </Show>
+            <span class="min-w-0 truncate">{props.label}</span>
           </button>
+          {props.buttons}
+          {/* (cut, copy, remove) */}
           <Show when={props.clip}>
             <ClipButtons
               name={props.label || modelName(props.type)}
@@ -597,7 +601,9 @@ function RelationEditor(props: {
     return isObject(at) ? [at] : [];
   };
   const where = () => (props.field.many ? [...props.path(), items().length] : props.path());
-  const canAdd = () => props.field.many || items().length === 0;
+  // (a list as long as it may be, `MaxLen`, has no way to add more)
+  const canAdd = () =>
+    props.field.many ? items().length < (lengthBound(props.field.validators, "max") ?? Infinity) : items().length === 0;
   // (the items, side by side or a line each: the last is the one just added)
   let list: HTMLDivElement | undefined;
   const lastAdded = () => (props.field.many ? list?.lastElementChild : list);
@@ -773,7 +779,8 @@ function RelationItem(props: {
       <Match when={model()?.kind === "Entity"}>
         <div
           class={[
-            "flex min-w-0 flex-col items-start gap-3",
+            // (no gap: the rule of the properties hangs from the chip)
+            "flex min-w-0 flex-col items-start",
             // (a chip alone is as wide as itself, beside the others; a search, or a chip with properties, the whole line)
             { "w-full": !value()?.id || !!edgeModel() },
             { "max-w-full": !!value()?.id && !edgeModel() },
@@ -807,7 +814,7 @@ function RelationItem(props: {
             />
           </Show>
           <Show when={edgeModel() && value()?.id}>
-            <div class={["ml-2", nestedClass, kindRule("Entity", model()?.interfaceMeta?.colour)]}>
+            <div class={["ml-2 pt-3", nestedClass, kindRule("Entity", model()?.interfaceMeta?.colour)]}>
               <ModelFields
                 model={edgeModel()!}
                 path={() => [...props.path(), "edgeProperties"]}
@@ -896,20 +903,68 @@ function RelationItem(props: {
 }
 
 /**
- * A dialog to make an entity of `type` without leaving the form: its own form (a fresh state, so
- * nothing of the item behind it is touched), and Save makes the entity and hands it back.
+ * A dialog to make an entity of one of the types of `groups` without leaving the form. With several
+ * types it shows them first, laid out by the hierarchy (a `TypeGrid`); the one chosen opens its form,
+ * and Back goes to the types again. With one type the form is shown at once.
  */
 function EntityCreateDialog(props: {
-  type: string;
+  groups: MenuGroup[];
   onCreated: (entity: Summary) => void;
   onClose: () => void;
 }) {
   const Modal = useComponent("Modal");
+  const { t, modelName } = useTranslations();
+  const choices = () => choicesOf(props.groups);
+  const [type, setType] = createSignal(untrack(() => (choices().length === 1 ? choices()[0]!.type : undefined)));
+  const selectTitle = useSelectTitle(() => props.groups);
+  const title = () => (type() ? t("new_item", "New {type}", { type: modelName(type()!) }) : selectTitle());
+  return (
+    <Modal title={title()} onClose={props.onClose} size="lg">
+      <Show
+        when={type()}
+        fallback={
+          <div class="flex flex-col gap-6 p-6">
+            <div class="overflow-hidden rounded-sm border-[0.5px] border-dashed border-slate-400/80 bg-white/60">
+              <TypeGrid groups={props.groups} onChoose={(choice) => setType(choice.type)} autofocus />
+            </div>
+            <div class="flex justify-end gap-2">
+              <button type="button" class={smallButtonClass} onClick={props.onClose}>
+                {t("cancel", "Cancel")}
+              </button>
+            </div>
+          </div>
+        }
+      >
+        {(chosen) => (
+          <EntityCreateForm
+            type={chosen()}
+            onBack={choices().length > 1 ? () => setType(undefined) : undefined}
+            onCreated={props.onCreated}
+            onClose={props.onClose}
+          />
+        )}
+      </Show>
+    </Modal>
+  );
+}
+
+/**
+ * The form of an entity of `type` in the dialog: its own form (a fresh state, so nothing of the item
+ * behind it is touched), and Save makes the entity and hands it back. With `onBack` (it was chosen
+ * from the types) the cursor goes into the form, and Back goes to the types again.
+ */
+function EntityCreateForm(props: {
+  type: string;
+  onBack?: () => void;
+  onCreated: (entity: Summary) => void;
+  onClose: () => void;
+}) {
   const api = useApi();
   const definitions = useModels();
   const { t, modelName } = useTranslations();
-  const state = createItemFormState(blankItem(definitions, untrack(() => props.type)));
-  const model = () => getModel(definitions, props.type);
+  const type = untrack(() => props.type);
+  const state = createItemFormState(blankItem(definitions, type));
+  const model = getModel(definitions, type);
   // (while it is being made: back to false when that is over, whatever the answer)
   const [saving, setSaving] = createOptimistic(false);
   const toasts = useToasts();
@@ -918,7 +973,7 @@ function EntityCreateDialog(props: {
   // (what comes of it is `save`'s, once it is over)
   const make = action(function* (body: FormData) {
     setSaving(true);
-    return (yield createItem(api, props.type, body)) as Summary;
+    return (yield createItem(api, type, body)) as Summary;
   });
   async function save() {
     if (!checks.check()) return;
@@ -939,37 +994,40 @@ function EntityCreateDialog(props: {
     );
     props.onCreated(created);
   }
+  onSettled(() => {
+    // (the types it was chosen from are gone, and the cursor with them: into the form)
+    if (props.onBack) root?.querySelector<HTMLElement>("input, textarea, select")?.focus();
+  });
   return (
-    <Modal title={t("new_item", "New {type}", { type: modelName(props.type) })} onClose={props.onClose} size="lg">
-      <ItemFormProvider state={state}>
-        <div ref={root} class="flex flex-col gap-6 p-6">
-          <Show when={model()}>
-            <ItemFields model={model()!} path={() => []} creating title />
+    <ItemFormProvider state={state}>
+      <div ref={root} class="flex flex-col gap-6 p-6">
+        <Show when={model}>
+          <ItemFields model={model!} path={() => []} creating title />
+        </Show>
+        <div class="flex gap-2">
+          <Show when={props.onBack}>
+            <button type="button" class={smallButtonClass} onClick={() => props.onBack?.()}>
+              ‹ {t("back", "Back")}
+            </button>
           </Show>
-          <div class="flex justify-end gap-2">
-            <button type="button" class={smallButtonClass} onClick={props.onClose}>
-              {t("cancel", "Cancel")}
-            </button>
-            <button
-              type="button"
-              class={smallButtonClass}
-              disabled={saving()}
-              onClick={() => void save()}
-            >
-              {t("save", "Save")}
-            </button>
-          </div>
+          <span class="flex-1" />
+          <button type="button" class={smallButtonClass} onClick={props.onClose}>
+            {t("cancel", "Cancel")}
+          </button>
+          <button type="button" class={smallButtonClass} disabled={saving()} onClick={() => void save()}>
+            {t("save", "Save")}
+          </button>
         </div>
-      </ItemFormProvider>
-    </Modal>
+      </div>
+    </ItemFormProvider>
   );
 }
 
 /**
  * Finds an entity of one of `types`, or makes a new one: a + button joined on to the end of the
- * search (a menu of the types, when there are several) opens the form for the entity in a dialog;
- * the entity made is chosen as if it had been found. With `onRemove`, a remove button is joined
- * on after it (for a place in a list that has no entity yet).
+ * search opens a dialog that shows the types (when there are several) and then the form for the
+ * entity; the entity made is chosen as if it had been found. With `onRemove`, a remove button is
+ * joined on after it (for a place in a list that has no entity yet).
  */
 function PickOrCreate(props: {
   types: string[];
@@ -979,19 +1037,23 @@ function PickOrCreate(props: {
 }) {
   const definitions = useModels();
   const { t } = useTranslations();
-  const [creating, setCreating] = createSignal<string>();
+  const [creating, setCreating] = createSignal(false);
   const groups = createMemo(() => menuGroups(definitions, typeOptions(props.types)));
   return (
     <div class="w-full min-w-0">
       <EntityPicker types={props.types} onPick={props.onPick}>
-        <TypeMenu
-          groups={groups()}
-          label="+"
-          title={t("new_entity", "Make a new one")}
-          buttonClass={joinedButtonClass}
-          alignRight
-          onChoose={(choice) => setCreating(choice.type)}
-        />
+        <Show when={choicesOf(groups()).length > 0}>
+          <button
+            type="button"
+            class={joinedButtonClass}
+            aria-label={t("new_entity", "Make a new one")}
+            title={t("new_entity", "Make a new one")}
+            aria-haspopup="dialog"
+            onClick={() => setCreating(true)}
+          >
+            +
+          </button>
+        </Show>
         <Show when={props.onRemove}>
           <button
             type="button"
@@ -1005,17 +1067,15 @@ function PickOrCreate(props: {
         </Show>
       </EntityPicker>
       <Show when={creating()}>
-        {(type) => (
-          <EntityCreateDialog
-            type={type()}
-            onClose={() => setCreating(undefined)}
-            onCreated={(entity) => {
-              setCreating(undefined);
-              rememberEntity(entity);
-              props.onPick(entity);
-            }}
-          />
-        )}
+        <EntityCreateDialog
+          groups={groups()}
+          onClose={() => setCreating(false)}
+          onCreated={(entity) => {
+            setCreating(false);
+            rememberEntity(entity);
+            props.onPick(entity);
+          }}
+        />
       </Show>
     </div>
   );

@@ -2,7 +2,7 @@
  * The value an edit form works on: a plain tree of objects as the edit view of the API sends it,
  * read and changed by path, started blank, and cleaned for sending.
  */
-import type { ModelDefinitions } from "../types";
+import type { ModelDefinitions, Validator } from "../types";
 import { getModel } from "./lookup";
 import { choicesOf, choiceValue, envOf, menuGroups, optionFor, resolveOptions } from "./typeChoices";
 import type { Env } from "./typeChoices";
@@ -78,24 +78,38 @@ export function blankItem(
   if (!model || depth > 4) return item;
   for (const field of model.fields) {
     // (a required list is sent, empty, when nothing is added: the API does not take it as absent)
-    if (field.required && (field.kind === "list" || (field.kind === "relation" && field.many))) {
+    if (field.required && field.kind === "list") {
       item[field.key] = [];
       continue;
     }
-    if (field.kind !== "relation" || field.many || !field.required) continue;
+    if (field.kind !== "relation" || !field.required) continue;
+    // (as many as it must have, when there is only one thing, not an entity, they can be: the target of an
+    // identification, which is one alternative, has it at once; otherwise, a required list starts empty)
+    const least = field.many ? (lengthBound(field.validators, "min") ?? 0) : 1;
     // (one whose entities are searched for in a reified relation shows the search, not the relation)
-    if (field.defaultReifiedType) continue;
-    const options = resolveOptions(field.options, env);
+    const options = field.defaultReifiedType ? [] : resolveOptions(field.options, env);
     const choices = choicesOf(menuGroups(definitions, options));
     const only = choices.length === 1 ? choices[0]! : undefined;
-    if (!only || getModel(definitions, only.type)?.kind === "Entity") continue;
-    const option = optionFor(options, only.type);
-    item[field.key] =
-      only.spaces.length === 0 && option
-        ? blankItem(definitions, only.type, envOf(option, env), depth + 1)
-        : choiceValue(definitions, only);
+    const blank =
+      only && getModel(definitions, only.type)?.kind !== "Entity"
+        ? () => {
+            const option = optionFor(options, only.type);
+            return only.spaces.length === 0 && option
+              ? blankItem(definitions, only.type, envOf(option, env), depth + 1)
+              : choiceValue(definitions, only);
+          }
+        : undefined;
+    if (field.many) item[field.key] = blank ? Array.from({ length: least }, blank) : [];
+    else if (blank) item[field.key] = blank();
   }
   return item;
+}
+
+/** The least (`MinLen`) or the most (`MaxLen`) items a list may have, by the validators of its field */
+export function lengthBound(validators: Validator[] | undefined, bound: "min" | "max"): number | undefined {
+  const [name, key] = bound === "min" ? ["MinLen", "min_length"] : ["MaxLen", "max_length"];
+  const found = validators?.find((validator) => validator.name === name)?.[key];
+  return typeof found === "number" ? found : undefined;
 }
 
 /**
