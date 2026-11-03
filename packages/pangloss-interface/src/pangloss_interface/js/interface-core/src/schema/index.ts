@@ -17,6 +17,12 @@ export function headModels(definitions: ModelDefinitions): ModelDefinition[] {
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
+/** Whether a new one can be made on its own page (`/TYPE/new`): not an abstract class, nor a document
+ * that is only ever part of another (`create_directly=False`) */
+export function canCreate(model: ModelDefinition): boolean {
+  return !model.abstract && model.createDirectly;
+}
+
 export function isRelation(field: FieldDefinition): field is RelationField {
   return field.kind === "relation";
 }

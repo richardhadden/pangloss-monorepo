@@ -221,5 +221,28 @@ def test_a_relation_says_what_reified_relation_an_entity_found_is_put_in():
     assert meeting["host"]["defaultReifiedType"] is None
 
 
+def test_a_model_says_whether_it_can_be_made_on_its_own():
+    class Person(Entity):
+        pass
+
+    class Statement(Document):
+        _meta = Document.Meta(create_directly=False)
+        about: Person
+
+    class Gift(Statement):
+        pass
+
+    class Factoid(Document):
+        statements: list[Statement]
+
+    initialise()
+    models = export_models()["models"]
+
+    assert models["Person"]["createDirectly"] is True
+    assert models["Factoid"]["createDirectly"] is True
+    assert models["Statement"]["createDirectly"] is False
+    assert models["Gift"]["createDirectly"] is False
+
+
 def test_nothing_is_exported_before_there_are_models():
     assert export_models() == {"models": {}, "enums": {}}

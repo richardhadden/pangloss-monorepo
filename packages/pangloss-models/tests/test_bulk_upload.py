@@ -64,6 +64,27 @@ def test_a_record_must_name_a_model_that_can_be_written():
     assert type_name == "Note" and create.text == "t"
 
 
+def test_a_record_of_a_document_that_cannot_be_made_directly_is_refused():
+    class Statement(Document):
+        _meta = Document.Meta(create_directly=False)
+        text: str
+
+    class Factoid(Document):
+        statements: list[Statement]
+
+    initialise()
+
+    with pytest.raises(
+        PanglossBulkRecordError, match="line 2: A Statement cannot be made on its own"
+    ):
+        validate(
+            [
+                (1, {"type": "Factoid", "label": "f", "statements": []}),
+                (2, {"type": "Statement", "label": "s", "text": "t"}),
+            ]
+        )
+
+
 def test_an_invalid_record_says_which_field(tmp_path: Path):
     models()
 

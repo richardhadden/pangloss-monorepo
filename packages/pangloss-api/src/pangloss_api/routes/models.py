@@ -1,7 +1,7 @@
 """Routes for the Documents and Entities declared in the project.
 
 For each one, `NAME` being its class name (an abstract class has only the two that read, and
-they give the items of its subclasses):
+they give the items of its subclasses; a document with `create_directly=False` has no `POST`):
 
 | | | |
 |-|-|-|
@@ -232,6 +232,9 @@ def build_router(model: type[Document | Entity]) -> APIRouter:
     update_model = model.Update if writable else None
     edit_response = (model.EditView if is_entity else head_view) if writable else None  # type: ignore[attr-defined]
     protection = protection_of(model) if writable else None
+    # A document that is only ever part of another (`create_directly=False`) is not made here:
+    # what there is of it can still be edited, updated and deleted
+    creatable = writable and getattr(model._meta, "create_directly", True)
     # A read by a class gives a node of a subclass as that subclass: its view is of the subclass
     # (`type` says which), it is edited at the subclass's route, and it cannot be updated as this class
     has_subclasses = bool(get_concrete_types(model, include_abstract=True) - {model})
@@ -278,7 +281,7 @@ def build_router(model: type[Document | Entity]) -> APIRouter:
             )
         )
 
-    if writable:
+    if creatable:
 
         @router.post(
             "",
@@ -299,6 +302,8 @@ def build_router(model: type[Document | Entity]) -> APIRouter:
             created = await called(body.save(detail=detail))  # type: ignore[attr-defined]
             response.headers["ETag"] = etag(1)
             return created
+
+    if writable:
 
         @router.get(
             f"{item}/edit",

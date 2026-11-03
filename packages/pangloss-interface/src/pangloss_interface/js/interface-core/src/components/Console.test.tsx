@@ -26,6 +26,7 @@ const model = (
   concreteTypes: [],
   typeParameters: [],
   createWithId: false,
+  createDirectly: true,
   acceptUrlAsId: false,
   requireLabel: true,
   useInSemanticSpaceLabel: true,
@@ -38,6 +39,7 @@ const definitions: ModelDefinitions = {
   models: {
     Place: model("Place", "Entity"),
     Agent: model("Agent", "Entity", true),
+    Statement: { ...model("Statement", "Document"), createDirectly: false },
   },
   enums: {},
 };
@@ -132,6 +134,15 @@ test("an abstract type, or an item, has none even for someone logged in", async 
   document.body.innerHTML = "";
   show(() => demo, { type: "Place" });
   await settle();
+  expect(newLink()).toBeNull();
+});
+
+test("a document that cannot be made on its own (create_directly) has none either", async () => {
+  show(() => demo, { type: "Statement", list: true });
+  await settle();
+  expect(
+    document.body.querySelector('header[aria-label="Console"]')?.textContent,
+  ).toContain("Statements");
   expect(newLink()).toBeNull();
 });
 

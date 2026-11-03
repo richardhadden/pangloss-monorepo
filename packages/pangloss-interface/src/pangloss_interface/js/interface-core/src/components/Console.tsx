@@ -10,7 +10,7 @@ import {
 } from "../context";
 import { ConsoleButton, kindRule, kindTint, spaceTint } from "../primitives";
 import { ConsoleSearch } from "./ConsoleSearch";
-import { getModel } from "../schema";
+import { canCreate, getModel } from "../schema";
 import type { ConsoleProps } from "../types";
 
 // (what the name of a model is when the translations have no plural for it: an English stand-in)
@@ -246,7 +246,7 @@ export function Console(props: ConsoleProps) {
                   when={
                     props.list &&
                     model() &&
-                    !model()!.abstract &&
+                    canCreate(model()!) &&
                     userIsLoggedIn()
                   }
                 >

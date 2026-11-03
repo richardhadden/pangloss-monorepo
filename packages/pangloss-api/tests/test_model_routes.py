@@ -160,6 +160,32 @@ def test_an_abstract_class_can_be_read_but_not_changed(settings, monkeypatch):
     assert found.headers["Content-Location"] == f"/api/Poet/{poet_id}"
 
 
+def test_a_document_that_cannot_be_made_directly_has_no_create_route(settings):
+    from fastapi.testclient import TestClient
+
+    class Statement(Document):
+        _meta = Document.Meta(create_directly=False)
+
+    # (it is inherited: a kind of statement cannot be made on its own either)
+    class Activity(Statement):
+        pass
+
+    class Factoid(Document):
+        statements: list[Statement]
+
+    client = TestClient(create_app())
+    paths = client.get("/openapi.json").json()["paths"]
+    for name in ("Statement", "Activity"):
+        assert set(paths[f"/api/{name}"]) == {"get"}
+        # (what there is of it can still be read, edited, updated, deleted and undeleted)
+        assert set(paths[f"/api/{name}/{{id}}"]) == {"get", "put", "delete"}
+        assert f"/api/{name}/{{id}}/edit" in paths
+        assert f"/api/{name}/{{id}}/undelete" in paths
+    assert set(paths["/api/Factoid"]) == {"get", "post"}
+    headers = {"Authorization": "Bearer nothing"}
+    assert client.post("/api/Activity", json={}, headers=headers).status_code == 405
+
+
 def test_no_models_no_model_routes(settings):
     from fastapi.testclient import TestClient
 

@@ -5,6 +5,7 @@ from uuid import UUID
 
 from pydantic import AnyHttpUrl, ConfigDict, Field, field_validator, model_validator
 
+from pangloss_models.exceptions import PanglossNotCreatableError
 from pangloss_models.field_definitions import (
     FieldDefinition,
     ModelFieldDict,
@@ -36,6 +37,9 @@ class DocumentMeta(BaseMeta, DeclaredClassMeta):
     create_with_id: bool | InheritValue = False
     accept_url_as_id: bool | InheritValue = False
     require_label: bool | InheritValue = True
+    # Whether one can be made on its own, as a head document (`Create(...).save()`, `POST /api/NAME`, the
+    # interface's "New"); if not, it is only ever part of another document. Its subclasses inherit it
+    create_directly: bool = True
     # Fields of this class to keep an index of, for searching by them (see docs/structured-search.md). The
     # nodes of its subclasses are in it too, so it is not inherited
     indexes: Annotated[list[str], MetaRules.DO_NOT_INHERIT] = Field(
@@ -74,6 +78,16 @@ class _DocumentCreateBase(_CreateBase):
     )
 
     def save(self: Self) -> None: ...
+
+
+def refuse_unless_created_directly(model: type) -> None:
+    """Raise `PanglossNotCreatableError` if `model` is a Document that cannot be made on its own
+    (`create_directly=False`): it can only be part of another document"""
+    meta = getattr(model, "_meta", None)
+    if isinstance(meta, DocumentMeta) and not meta.create_directly:
+        raise PanglossNotCreatableError(
+            f"A {model.__name__} cannot be made on its own, only as part of another document"
+        )
 
 
 class _DocumentCreateDBBase(_CreateDBBase):

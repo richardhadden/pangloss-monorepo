@@ -3,7 +3,7 @@
 Keep this current: when a page or feature is added to the interface (or a test is added here), change its row.
 ✅ tested · 🚧 partly · ⬜ not yet · — not built, so nothing to test
 
-73 tests, about 110 s. The e2e project (`conftest.py`) has `Person` (`has_role: list[Role]`), `Role` (`has_type`), `RoleType` (a
+74 tests, about 110 s. The e2e project (`conftest.py`) has `Person` (`has_role: list[Role]`), `Role` (`has_type`), `RoleType` (a
 typology, also a `Role`) with Clerk > Secretary and Advisor, and `Statement` (a document: `text`, `about: Person`). The `data`
 fixture adds Maximilian (his secretary: a `Role` of the type Secretary), Marie of Burgundy (her advisor, and a statement
 about her "held court at Ghent") and Charles the Bold (no role); `types` has only the types; `stack` has one admin user.
@@ -32,6 +32,7 @@ about her "held court at Ghent") and Charles the Bold (no role); `types` has onl
 | Log out | ✅ | |
 | `RequireLogin`: `/Person/new` opens the dialog; giving up goes home; logging in shows the page | ✅ | |
 | "New Person" button only for someone logged in | ✅ | |
+| No "New" button, and `/TYPE/new` says why, for a document that cannot be made on its own (`create_directly=False`; `ReportSection` in the e2e project) | ✅ | `test_a_document_that_cannot_be_made_on_its_own_has_no_new_button_or_page`; Vitest (`Console.test.tsx`) |
 | List page: items, count, links | ✅ | `test_lists_and_items.py` |
 | List page: search (`?q=`), kept in the address, no result is a red 0, an address with a search shows it; typing is not held up or undone by the searches it makes | ✅ | `test_typing_is_not_held_up_or_undone_by_the_searches_it_makes`; Vitest (`ConsoleSearch.test.tsx`) |
 | List page: deep search toggle, typing makes none, Enter / run button make it, turning it off | ✅ | finds a person through a statement |

@@ -30,7 +30,11 @@ from typing import Any
 
 from pydantic import ValidationError
 
-from pangloss_models.exceptions import PanglossBulkRecordError
+from pangloss_models.exceptions import (
+    PanglossBulkRecordError,
+    PanglossNotCreatableError,
+)
+from pangloss_models.model_bases.document import refuse_unless_created_directly
 from pangloss_models.model_registry import ModelRegistry
 
 Record = tuple[int, dict[str, Any]]
@@ -63,6 +67,10 @@ def creator(number: int, record: dict[str, Any]) -> tuple[str, Any]:
         raise PanglossBulkRecordError(
             number, f"{type_name!r} is not a model that can be written"
         )
+    try:
+        refuse_unless_created_directly(model)
+    except PanglossNotCreatableError as error:
+        raise PanglossBulkRecordError(number, str(error)) from error
     try:
         return type_name, create(**fields)
     except ValidationError as error:

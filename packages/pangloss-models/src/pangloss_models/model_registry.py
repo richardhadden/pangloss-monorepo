@@ -1,3 +1,4 @@
+import functools
 import heapq
 from collections.abc import Callable
 import logging
@@ -66,6 +67,7 @@ lazy from pangloss_models.model_bases.document import (
     Document,
     _DocumentCreateBase,
     _DocumentUpdateBase,
+    refuse_unless_created_directly,
 )
 lazy from pangloss_models.model_bases.entity import (
     Entity,
@@ -111,6 +113,17 @@ RESERVED_PROPERTIES = frozenset(
         "marked_for_deletion",
     }
 )
+
+
+def refusing_unless_created_directly(create: Callable) -> Callable:
+    """`create` (sync or async), refusing first a document that cannot be made on its own"""
+
+    @functools.wraps(create)
+    def save(instance, *args, **kwargs):
+        refuse_unless_created_directly(instance._owner)
+        return create(instance, *args, **kwargs)
+
+    return save
 
 
 class ModelRegistry:
@@ -476,7 +489,8 @@ class ModelRegistry:
 
         The functions are assigned directly: sync and async functions both work as
         methods, so no wrapping is needed. They must take the class (or instance,
-        for `save`) as their first argument."""
+        for `save`) as their first argument. (The one exception: `save` of a document's
+        `Create` first refuses a class with `create_directly=False`, for every backend.)"""
 
         # (read when used: the settings are set when a project makes them)
         storage = storage_of()
@@ -501,7 +515,9 @@ class ModelRegistry:
         Document.search = classmethod(exposed_functions.search)  # type: ignore
         Entity.search = classmethod(exposed_functions.search)  # type: ignore
 
-        _DocumentCreateBase.save = exposed_functions.create_head_node
+        _DocumentCreateBase.save = refusing_unless_created_directly(  # ty: ignore[invalid-assignment]
+            exposed_functions.create_head_node
+        )
         _EntityCreateBase.save = exposed_functions.create_head_node
         _DocumentUpdateBase.save = exposed_functions.update_head_node
         _EntityUpdateBase.save = exposed_functions.update_head_node

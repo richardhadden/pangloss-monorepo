@@ -42,6 +42,7 @@ const model = (
   concreteTypes: [],
   typeParameters: [],
   createWithId: false,
+  createDirectly: true,
   acceptUrlAsId: false,
   requireLabel: true,
   useInSemanticSpaceLabel: true,

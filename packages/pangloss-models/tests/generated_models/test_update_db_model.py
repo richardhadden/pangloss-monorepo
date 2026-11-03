@@ -1223,4 +1223,41 @@ def test_save_is_bound_on_update_models():
 
     assert Statement.Update.save is exposed_functions.update_head_node
     assert Person.Update.save is exposed_functions.update_head_node
-    assert Statement.Create.save is exposed_functions.create_head_node
+    # (a document's, through the refusal of a class that cannot be made on its own)
+    assert Statement.Create.save.__wrapped__ is exposed_functions.create_head_node
+
+
+@no_type_check
+def test_save_refuses_a_document_that_cannot_be_made_on_its_own_and_nothing_else(
+    monkeypatch,
+):
+    from pangloss_models.exceptions import PanglossNotCreatableError
+    from pangloss_sdk.databases.api import exposed_functions
+
+    class Statement(Document):
+        _meta = Document.Meta(create_directly=False)
+        text: str
+
+    class Gift(Statement):
+        pass
+
+    class Factoid(Document):
+        statements: list[Statement]
+
+    saved = []
+    monkeypatch.setattr(
+        exposed_functions, "create_head_node", lambda instance: saved.append(instance)
+    )
+    initialise()
+
+    # (the Create is still made, to be part of a factoid; only saving it on its own is refused)
+    for model in (Statement, Gift):
+        with pytest.raises(
+            PanglossNotCreatableError, match=f"A {model.__name__} cannot"
+        ):
+            model.Create(label="s", text="t").save()
+    factoid = Factoid.Create(
+        label="f", statements=[{"type": "Gift", "label": "s", "text": "t"}]
+    )
+    factoid.save()
+    assert saved == [factoid]

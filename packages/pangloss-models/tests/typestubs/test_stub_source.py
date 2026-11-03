@@ -237,6 +237,32 @@ def test_save_of_a_document_can_say_what_review_status_to_write_and_save_of_an_e
     assert "published" not in entity and "review_status" not in entity
 
 
+def test_the_create_of_a_document_that_cannot_be_made_on_its_own_has_no_save_in_its_stub():
+    from pangloss_models import initialise
+    from pangloss_models.model_bases.document import Document
+    from pangloss_models.typestubs import nested_classes_of
+
+    class Statement(Document):
+        _meta = Document.Meta(create_directly=False)
+
+    class Factoid(Document):
+        statements: list[Statement]
+
+    initialise()
+
+    def save_in(model, nested: str) -> bool:
+        source = nested_classes_of(
+            TypeRenderer("here", {}), model, "async", model.__name__
+        )
+        block = source.split(f"class {nested}(", 1)[1].split("\nclass ", 1)[0]
+        return "def save(" in block
+
+    assert save_in(Factoid, "Create") and save_in(Factoid, "Update")
+    assert not save_in(Statement, "Create")
+    # (what there is of one can still be changed)
+    assert save_in(Statement, "Update")
+
+
 def test_a_model_with_operations_has_search_in_its_stub_taking_its_where_or_a_match():
     from pangloss_models import initialise
     from pangloss_models.model_bases.entity import Entity

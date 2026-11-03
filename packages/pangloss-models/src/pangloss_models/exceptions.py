@@ -92,6 +92,10 @@ class PanglossNotDeletableError(PanglossWriteError):
     """Only head documents can be deleted: this is part of another document"""
 
 
+class PanglossNotCreatableError(PanglossWriteError):
+    """A document of a class with `create_directly=False` can only be made as part of another document"""
+
+
 class PanglossNotDeletedError(PanglossWriteError):
     """An attempt to undelete something that has not been deleted"""
 

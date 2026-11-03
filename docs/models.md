@@ -41,6 +41,7 @@ class Statement(Document):
 | `create_with_id` | `False` | Allow a client-supplied `id` in `Create` (and an accompanying `create_new` flag) |
 | `accept_url_as_id` | `False` | Allow an `AnyHttpUrl` as `id` as well as a UUID |
 | `require_label` | `True` | Whether `label` is required |
+| `create_directly` | `True` | Whether one can be made on its own, as a head document. With `False` it is only ever part of another document (a statement in a factoid): `Create(...).save()` raises `PanglossNotCreatableError` (in every backend, the SDK too, and a bulk load refuses the record), the API has no `POST /api/NAME`, and the interface has no "New" button. Its `Create` is still made, for nesting it; what there is of one can still be read, edited and deleted. Inherited, so setting it on a base class covers all its kinds; a subclass can set `True` again |
 | `indexes` | `[]` (*not inherited*) | Fields (or `"label"`) of this class to keep a database index of, for searching by their values: each is a label-and-property index on the class (its subclasses' nodes have its label, so it covers them). Only a field with a value of its own (text, number, date, choice, a list of these); checked when the models are initialised. A change is a migration. See [Structured search](structured-search.md#step-5-measured) |
 | `view_extra_fields` | `[]` (*accumulates*) | Extra fields to include in the `View` model |
 | `reference_view_extra_fields` | `[]` (*accumulates*) | Extra fields to include in the `ReferenceView` model |

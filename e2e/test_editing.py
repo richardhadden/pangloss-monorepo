@@ -45,6 +45,22 @@ def test_a_new_item_is_made_with_an_entity_found_by_search(logged_in: Page, data
     expect(page.get_by_role("link", name="Marie of Burgundy")).to_be_visible()
 
 
+def test_a_document_that_cannot_be_made_on_its_own_has_no_new_button_or_page(logged_in: Page, types):
+    page = logged_in
+    # (`ReportSection` has `create_directly=False`: it is only ever part of a `Report`)
+    page.goto("/ReportSection")
+    hydrated(page)
+    expect(page.get_by_role("banner", name="Console")).to_contain_text("Report")
+    expect(page.get_by_role("link", name=re.compile("^New "))).to_have_count(0)
+    page.goto("/ReportSection/new")
+    expect(page.get_by_test_id("cannot-create")).to_contain_text("cannot be made on its own")
+    expect(page.get_by_role("button", name="Save")).to_have_count(0)
+    # (a report can)
+    page.goto("/Report")
+    hydrated(page)
+    expect(page.get_by_role("link", name=re.compile("^New "))).to_be_visible()
+
+
 def test_an_entity_field_offers_the_most_used_then_puts_those_picked_lately_first(
     logged_in: Page, data
 ):

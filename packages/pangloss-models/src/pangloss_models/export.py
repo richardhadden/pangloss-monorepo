@@ -323,6 +323,8 @@ class Exporter:
             "concreteTypes": concrete,
             "typeParameters": [p.__name__ for p in generic.get("parameters", ())],
             "createWithId": bool(getattr(meta, "create_with_id", False)),
+            # (a document that is only ever part of another; an entity always can be)
+            "createDirectly": bool(getattr(meta, "create_directly", True)),
             "acceptUrlAsId": bool(getattr(meta, "accept_url_as_id", False)),
             "requireLabel": bool(getattr(meta, "require_label", True)),
             "useInSemanticSpaceLabel": bool(

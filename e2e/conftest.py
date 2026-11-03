@@ -76,7 +76,10 @@ MODELS = textwrap.dedent(
         attendees: list[Person | Group]
 
 
+    # (only ever part of a report: it cannot be made on its own)
     class ReportSection(Document):
+        _meta = Document.Meta(create_directly=False)
+
         body: str
 
 

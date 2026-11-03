@@ -89,6 +89,16 @@
     "de": "{type} ist ein abstrakter Typ, und es gibt in diesem Projekt keinen Typ davon: Es gibt nichts aufzulisten.",
     "fr": "{type} est un type abstrait, et aucun de ses types n’existe dans ce projet : il n’y a rien à afficher."
   },
+  "cannot_create_abstract": {
+    "en": "{type} is an abstract type: a new one is made as one of its types.",
+    "de": "{type} ist ein abstrakter Typ: Ein neues Objekt wird als einer seiner Typen angelegt.",
+    "fr": "{type} est un type abstrait : un nouvel élément se crée comme l’un de ses types."
+  },
+  "cannot_create_directly": {
+    "en": "{type} cannot be made on its own, only as part of another document.",
+    "de": "{type} kann nicht für sich allein angelegt werden, nur als Teil eines anderen Dokuments.",
+    "fr": "{type} ne peut pas être créé seul, seulement comme partie d’un autre document."
+  },
 
   "close": { "en": "Close", "de": "Schließen", "fr": "Fermer" },
 

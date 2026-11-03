@@ -10,6 +10,7 @@ small, and between them use most of what Pangloss has:
 | Entities, referred to by documents | `Person`, `Group`, `Place`, `Source` |
 | Entity ids that are URLs, and entities written inline | `Source`, `Person` |
 | Subclassing a document; an abstract base | `Statement` -> `Activity`, `Transfer` |
+| A document that is only ever part of another (`create_directly=False`, inherited) | `Statement` |
 | A trait: "any of these entities" | `Agent` (`Person` or `Group`) |
 | Narrowing a field of the parent class | `Activity.carried_out_by` narrows `Statement.involves` |
 | A reified relation (a relation with fields) | `AtPage[Source]`, `InRole[Agent]` |
@@ -189,7 +190,8 @@ class Statement(Document):
     """Something that happened between agents and in places (abstract: a kind of
     statement is one of the classes below)"""
 
-    _meta = Document.Meta(abstract=True)
+    # A statement is only ever part of a factoid: none of its kinds can be made on its own
+    _meta = Document.Meta(abstract=True, create_directly=False)
 
     text: Annotated[str, MinLen(5)]
     date: Date

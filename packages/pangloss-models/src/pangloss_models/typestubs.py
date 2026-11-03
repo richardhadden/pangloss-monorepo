@@ -347,6 +347,7 @@ def stub_nested_class(
     operations: Operations | None = None,
     model_name: str = "",
     is_document: bool = False,
+    create_directly: bool = True,
 ) -> str:
     # (the class overrides the one of the base class of the model, which a type checker
     # takes for a mistake)
@@ -374,7 +375,8 @@ def stub_nested_class(
             continue
         ignore = "  # type: ignore" if inherited else ""
         lines.append(f"    {field_name}: {annotation}{default}{ignore}")
-    if operations and name in ("Create", "Update"):
+    # (no `save` of the `Create` of a document that cannot be made on its own: `create_directly`)
+    if operations and (name == "Update" or (name == "Create" and create_directly)):
         lines += [
             f"    {line}"
             for line in save_methods(model_name, name, operations, is_document)
@@ -405,6 +407,7 @@ def nested_classes_of(
             operations,
             qualified_name,
             issubclass(model, Document),
+            getattr(getattr(model, "_meta", None), "create_directly", True),
         )
         for name, cls in generated_classes(model).items()
         if is_for_users(name)

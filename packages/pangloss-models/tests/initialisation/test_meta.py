@@ -24,6 +24,30 @@ def test_meta_inheritance_of_abstract():
     assert CreationOfPainting._meta.abstract is False
 
 
+def test_create_directly_is_true_by_default_and_inherited_until_a_class_says_otherwise():
+    class Factoid(Document):
+        pass
+
+    class Statement(Document):
+        _meta = DocumentMeta(abstract=True, create_directly=False)
+
+    class Action(Statement):
+        pass
+
+    class Gift(Action):
+        _meta = DocumentMeta(indexes=["label"])
+
+    class Letter(Action):
+        _meta = DocumentMeta(create_directly=True)
+
+    assert Factoid._meta.create_directly is True
+    # (unlike `abstract`, a subclass has it from its parent, through a meta of its own that does not say)
+    assert Statement._meta.create_directly is False
+    assert Action._meta.create_directly is False
+    assert Gift._meta.create_directly is False
+    assert Letter._meta.create_directly is True
+
+
 def test_meta_inheritance_of_abstract_on_embedded():
     class Date(Embedded):
         _meta = EmbeddedMeta(abstract=True)

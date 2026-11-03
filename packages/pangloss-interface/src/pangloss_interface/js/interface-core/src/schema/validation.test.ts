@@ -12,6 +12,7 @@ const model = (name: string, extra: Partial<ModelDefinition> = {}) =>
     description: null,
     typeParameters: [],
     createWithId: false,
+    createDirectly: true,
     acceptUrlAsId: false,
     requireLabel: false,
     useInSemanticSpaceLabel: true,

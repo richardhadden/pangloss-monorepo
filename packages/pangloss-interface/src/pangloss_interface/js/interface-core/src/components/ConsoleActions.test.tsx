@@ -27,6 +27,7 @@ const model = (name: string): ModelDefinition => ({
   concreteTypes: [],
   typeParameters: [],
   createWithId: false,
+  createDirectly: true,
   acceptUrlAsId: false,
   requireLabel: true,
   useInSemanticSpaceLabel: true,
