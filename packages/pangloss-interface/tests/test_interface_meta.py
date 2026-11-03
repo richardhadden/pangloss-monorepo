@@ -24,6 +24,7 @@ def none(**given):
         "viewCard": None,
         "editCard": None,
         "collapse": None,
+        "headless": None,
         **given,
     }
 
@@ -288,4 +289,48 @@ def test_collapse_conditions_cannot_name_the_field_that_is_held(clear_registry):
 
     initialise()
     with pytest.raises(PanglossMetaError, match="Alternative.*alternatives"):
+        export_definitions()
+
+
+def test_headless_is_true_or_false():
+    assert InterfaceMeta(headless=True).headless is True
+    with pytest.raises(PanglossMetaError, match="headless"):
+        InterfaceMeta(headless="yes")  # ty: ignore[invalid-argument-type]
+
+
+@no_type_check
+def test_headless_is_inherited_exported_and_false_turns_it_off(clear_registry):
+    class Source(Entity):
+        pass
+
+    class AtPage[T](ReifiedRelation[T]):
+        _interface_meta = InterfaceMeta(headless=True)
+
+        page: str
+
+    class AtFolio[T](AtPage[T]):
+        pass
+
+    class AtLine[T](AtPage[T]):
+        _interface_meta = InterfaceMeta(headless=False)
+
+    class Statement(Entity):
+        page: AtPage[Source]
+        folio: AtFolio[Source]
+        line: AtLine[Source]
+
+    initialise()
+    models = export_definitions()["models"]
+    assert models["AtPage"]["interfaceMeta"] == none(headless=True)
+    assert models["AtFolio"]["interfaceMeta"] == none(headless=True)
+    assert models["AtLine"]["interfaceMeta"] == none()
+
+
+@no_type_check
+def test_only_a_reified_relation_can_be_headless(clear_registry):
+    class Person(Entity):
+        _interface_meta = InterfaceMeta(headless=True)
+
+    initialise()
+    with pytest.raises(PanglossMetaError, match="Person.*headless"):
         export_definitions()

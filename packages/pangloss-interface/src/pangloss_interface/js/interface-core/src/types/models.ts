@@ -201,6 +201,11 @@ export interface InterfaceMeta {
    * interface module (docs/interface-collapse.md)
    */
   collapse?: true | CollapseConditions | ComponentReference | null;
+  /**
+   * (a ReifiedRelation) Shown without its head bar, only what it holds and its own fields, where it is the only
+   * thing a field can hold, one of it, and must (`headlessIn`). In the view and the form
+   */
+  headless?: true | null;
 }
 
 /** `Collapse(...)` in Python: conditions on top of the built-in rule, by the keys of fields */

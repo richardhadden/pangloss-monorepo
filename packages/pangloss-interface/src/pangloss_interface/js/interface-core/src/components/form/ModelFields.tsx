@@ -21,6 +21,7 @@ import {
   envOf,
   filled,
   getModel,
+  headlessIn,
   lengthBound,
   menuGroups,
   optionFor,
@@ -653,6 +654,11 @@ function RelationEditor(props: {
                 options={options()}
                 env={props.env}
                 onRemove={() => form.remove(props.path())}
+                headless={headlessIn(
+                  definitions,
+                  { ...props.field, options: options() },
+                  String((items()[0] as FormData | undefined)?.type ?? ""),
+                )}
               />
             </div>
           </Show>
@@ -760,6 +766,8 @@ function RelationItem(props: {
   options: RelationOption[];
   env: Env;
   onRemove: () => void;
+  /** It is all its field can hold, and the field holds one, and must: no head (`InterfaceMeta(headless=True)`) */
+  headless?: boolean;
 }) {
   const form = useItemForm();
   const definitions = useModels();
@@ -893,6 +901,12 @@ function RelationItem(props: {
         >
           <ItemFields model={model()!} path={props.path} />
         </Block>
+      </Match>
+      <Match when={props.headless && model()}>
+        {/* (a reified relation with no head: what it holds, then its own fields, as if they were the field's) */}
+        <div class="flex w-full min-w-0 flex-col">
+          <ModelFields model={model()!} path={props.path} env={childEnv()} bare="target" />
+        </div>
       </Match>
       <Match when={model()}>
         {/* (a reified relation, a conjunction: its own fields, and what it holds without the name of the field) */}

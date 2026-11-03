@@ -48,6 +48,22 @@ class Person(Entity):
     _interface_meta = InterfaceMeta(colour="amber")
 ```
 
+**No head on a reified relation.** `InterfaceMeta(headless=True)` on a `ReifiedRelation` shows it without its head bar,
+as only what it holds and its own fields, on the item page and in the form, wherever it is the only type a field can hold,
+the field holds one of it (not a list) and it is required. There its type says nothing and it is never added or removed.
+Anywhere else it has its head as usual:
+
+```python
+class AtPage[T](ReifiedRelation[T]):
+    _interface_meta = InterfaceMeta(headless=True)
+
+    page: str
+
+
+class Factoid(Document):
+    source: AtPage[Source]  # the source, then its page: no "At page" bar
+```
+
 **Navigation.** An app puts links in the bar from `<app>/interface_config.py`:
 
 ```python

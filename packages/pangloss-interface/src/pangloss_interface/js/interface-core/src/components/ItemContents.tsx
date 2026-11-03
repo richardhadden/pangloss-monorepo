@@ -9,7 +9,7 @@ import {
 import { kindRule, kindTint, spaceTint } from "../primitives";
 import { contextTrail } from "../api";
 import type { ContextLabel } from "../api";
-import { collapsedView, getModel } from "../schema";
+import { collapsedView, getModel, headlessIn } from "../schema";
 import type {
   FieldDefinition,
   ItemContentsProps,
@@ -272,6 +272,9 @@ function ObjectValue(props: {
     model()?.kind === "ReifiedRelation" ||
     model()?.kind === "ReifiedRelationDocument";
   const isSpace = () => model()?.kind === "SemanticSpace";
+  // (a reified relation that is all its field can hold, and it holds one: no head, `InterfaceMeta(headless=True)`)
+  const headless = () =>
+    props.field?.kind === "relation" && headlessIn(definitions, props.field, type() ?? "");
   const tint = () => kindTint(model()?.kind, model()?.interfaceMeta?.colour);
   const rule = () => kindRule(model()?.kind, model()?.interfaceMeta?.colour);
   const isEmbedded = () => model()?.kind === "Embedded";
@@ -404,6 +407,15 @@ function ObjectValue(props: {
                 )}
               </For>
             </span>
+          </Match>
+          <Match when={isReified() && headless()}>
+            {/* (without its head: what it holds as the field's own, then its own fields under it, as an annotated value) */}
+            <div class="flex w-full min-w-0 scroll-mt-28 flex-col gap-3" data-item-id={partId()} data-block>
+              <div class="flex min-w-0 flex-wrap items-start gap-x-2 gap-y-4">
+                <Value value={props.value.target} depth={props.depth} />
+              </div>
+              <Fields value={props.value} model={model()} depth={props.depth} exclude="target" />
+            </div>
           </Match>
           <Match when={isReified()}>
             {/* (a reified relation: its type at the head, then what it holds, full width and without its field name, then its own fields, if it has any) */}

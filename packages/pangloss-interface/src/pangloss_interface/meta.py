@@ -164,6 +164,10 @@ class InterfaceMeta:
     # conditions on its fields, "<app>:<name>" by a rule (a TypeScript function) in `collapseRules` of an
     # interface module. View only (docs/interface-collapse.md)
     collapse: bool | Collapse | ComponentRef | None = None
+    # (a ReifiedRelation only) Shown without its head bar, as only what it holds and its own fields, where it
+    # is the only thing a field can hold and the field holds one of it, and must: its type says nothing
+    # there, and it is never added or removed. In the view and the form
+    headless: bool | None = None
 
     def __post_init__(self) -> None:
         if self.colour is not None and self.colour not in COLOURS:
@@ -185,6 +189,10 @@ class InterfaceMeta:
                     "(an installed app, and a key of 'components' in its interface module), or False "
                     "to turn off the parent's"
                 )
+        if self.headless is not None and not isinstance(self.headless, bool):
+            raise PanglossMetaError(
+                f"InterfaceMeta(headless={self.headless!r}): True, or False to turn off the parent's"
+            )
         if self.collapse is not None and not isinstance(
             self.collapse, (bool, Collapse)
         ):
@@ -237,6 +245,8 @@ def resolved_meta(model: type) -> dict[str, Any] | None:
         if isinstance(collapse, Collapse)
         else (True if collapse is True else None)
     )
+    headless = next((m.headless for m in metas if m.headless is not None), None)
+    resolved["headless"] = True if headless else None
     return resolved
 
 
@@ -281,6 +291,10 @@ def export_definitions() -> dict[str, Any]:
                 )
             if isinstance(meta["collapse"], Collapse):
                 meta["collapse"] = _export_collapse(name, definition, meta["collapse"])
+        if meta and meta["headless"] and definition["kind"] != "ReifiedRelation":
+            raise PanglossMetaError(
+                f"{name}: InterfaceMeta(headless=True) is for a ReifiedRelation, and this is a {definition['kind']}"
+            )
     return exported
 
 

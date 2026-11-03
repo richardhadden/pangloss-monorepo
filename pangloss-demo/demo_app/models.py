@@ -99,6 +99,9 @@ class WithCertainty[T](AnnotatedValue[T]):
 class AtPage[T](ReifiedRelation[T]):
     """A relation to something *at a page* of it"""
 
+    # (where it is all a field holds, as a factoid's source, its type says nothing: only the source and the page)
+    _interface_meta = InterfaceMeta(headless=True)
+
     page: str
 
 
