@@ -20,7 +20,9 @@ and each field has a `kind`:
     embedded        model, types
     relation        many, reverseName, options, validators, subclasses (the names of the
                     fields of its ancestors that it stands for, directly or through another:
-                    `RelationConfig(subclasses_parent_fields=...)`)
+                    `RelationConfig(subclasses_parent_fields=...)`), defaultReifiedType
+                    (the reified relation an entity found by searching is put in, or null:
+                    `RelationConfig(default_reified_type=...)`)
 
 A type is `{"type": "str"}` (also `int`, `float`, `bool`, `decimal`, `date`, `datetime`,
 `uuid`), `{"type": "enum", "enum": "Name"}` (the members are in `enums`), `{"type":
@@ -210,6 +212,7 @@ class Exporter:
                         for s in definition.subclasses_parent_fields
                     }
                 ),
+                "defaultReifiedType": definition.default_reified_type,
             }
         else:
             entry["kind"] = "unknown"

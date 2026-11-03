@@ -166,6 +166,8 @@ class RelationFieldDefinition(FieldDefinition):
     wrapper: type[list | tuple] | None = None
     validators: list[BaseMetadata] = dataclass_field(default_factory=list)
     bind_to_child_field: list[FieldBinding] = dataclass_field(default_factory=list)
+    # (the name of the reified relation an entity found in the interface is put in: `RelationConfig`)
+    default_reified_type: str | None = None
 
 
 @dataclass(frozen=True, kw_only=True)

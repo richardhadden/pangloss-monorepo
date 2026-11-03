@@ -2374,3 +2374,36 @@ def test_an_enum_with_values_that_cannot_be_stored_is_refused_wherever_it_is_use
 
     with pytest.raises(PanglossModelError, match="WHEN.*not a string or a number"):
         initialise()
+
+
+def test_a_default_reified_type_must_be_one_of_the_reified_relations_of_a_field_of_only_those():
+    class Person(Entity):
+        pass
+
+    class InRole[T](ReifiedRelation[T]):
+        role: str
+
+    class Mixed(Document):
+        who: Annotated[
+            Person | InRole[Person], RelationConfig(default_reified_type=InRole)
+        ]
+
+    with pytest.raises(PanglossModelError, match=r"Mixed\.who.*not all"):
+        initialise()
+
+
+def test_a_default_reified_type_that_the_field_cannot_hold_raises():
+    class Person(Entity):
+        pass
+
+    class InRole[T](ReifiedRelation[T]):
+        role: str
+
+    class AtPage[T](ReifiedRelation[T]):
+        page: str
+
+    class Elsewhere(Document):
+        who: Annotated[InRole[Person], RelationConfig(default_reified_type=AtPage)]
+
+    with pytest.raises(PanglossModelError, match=r"Elsewhere\.who.*AtPage"):
+        initialise()

@@ -36,6 +36,7 @@ export * from "./nav";
 export * from "./hierarchy";
 export * from "./typeChoices";
 export * from "./formValue";
+export * from "./relationLayout";
 export * from "./clipboard";
 export * from "./retype";
 export * from "./validation";

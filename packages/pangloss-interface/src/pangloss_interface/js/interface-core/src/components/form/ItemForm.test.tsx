@@ -64,6 +64,25 @@ const negative: RelationOption = {
   params: { T: { typeVar: "T", options: [doc("Activity"), doc("Transfer")] } },
 };
 
+const person: RelationOption = { kind: "entity", type: "Person", edgeModel: null };
+const inRole: RelationOption = {
+  kind: "reifiedRelation",
+  type: "InRole",
+  edgeModel: null,
+  params: { T: { typeVar: "T", options: [person] } },
+};
+const identification: RelationOption = {
+  kind: "reifiedRelation",
+  type: "Identification",
+  edgeModel: null,
+  params: {
+    T: {
+      typeVar: "T",
+      options: [{ kind: "conjunction", type: "Alternative", edgeModel: null, params: { T: { typeVar: "T", options: [person] } } }],
+    },
+  },
+};
+
 // Factoid has statements (Activity or Transfer, plain or Negative), and a source (a person, found by search)
 const definitions = {
   models: {
@@ -85,6 +104,34 @@ const definitions = {
     Person: model("Person", { kind: "Entity" }),
     Day: model("Day", { kind: "Embedded", fields: [literal("day", { type: "int" })] }),
     Span: model("Span", { kind: "Embedded", fields: [literal("days", { type: "int" })] }),
+    // (a meeting has a member, a person or a group, or an identification of who it might be; and its
+    // attendees, each in a role, or an identification)
+    Group: model("Group", { kind: "Entity" }),
+    InRole: model("InRole", {
+      kind: "ReifiedRelation",
+      typeParameters: ["T"],
+      fields: [relation("target", [{ kind: "typeVar", name: "T", edgeModel: null }]), literal("role", { type: "str" })],
+    }),
+    Identification: model("Identification", {
+      kind: "ReifiedRelation",
+      typeParameters: ["T"],
+      fields: [
+        relation("target", [{ kind: "typeVar", name: "T", edgeModel: null }]),
+        literal("identified_by", { type: "str" }),
+      ],
+    }),
+    Alternative: model("Alternative", {
+      kind: "Conjunction",
+      typeParameters: ["T"],
+      fields: [relation("alternatives", [{ kind: "typeVar", name: "T", edgeModel: null }])],
+    }),
+    Meeting: model("Meeting", {
+      requireLabel: false,
+      fields: [
+        relation("member", [{ kind: "entity", type: "Group", edgeModel: null }, { kind: "entity", type: "Person", edgeModel: null }, identification], false),
+        { ...(relation("attendees", [inRole, identification]) as object), defaultReifiedType: "InRole" } as FieldDefinition,
+      ],
+    }),
     Factoid: model("Factoid", {
       fields: [
         literal("year", { type: "int" }, { required: true }),
@@ -845,4 +892,51 @@ test("what is wrong is said in the language of the page, and again in another wh
   expect(row("year").textContent).not.toContain("Pflichtfeld");
   expect(byLabel("Label").parentElement?.textContent).toContain("Required");
   expect(row("item").className).not.toContain("text-red-700");
+});
+
+test("a relation to entities or a reified relation has the search at once, and a button for the reified relation under it", async () => {
+  const { client, sent } = fakeClient(() => ({ id: "m1", type: "Meeting", label: "M" }));
+  show(client, { type: "Meeting", initial: { type: "Meeting" } });
+  await settle();
+  // (no menu of the types first)
+  expect(document.body.textContent).not.toContain("Select a type");
+  expect(byLabel("Find Group, Person…")).toBeTruthy();
+  // (one for the member, one for the attendees)
+  const added = () => document.body.querySelectorAll('[aria-label="Add Identification"]').length;
+  expect(added()).toBe(2);
+  type("Find Group, Person…", "ali");
+  await settle(400);
+  click(document.body.querySelector('[role="option"]'));
+  await settle();
+  // (the one there is: no search, no button)
+  expect(byLabel("Find Group, Person…")).toBeNull();
+  expect(added()).toBe(1);
+  click(button("Save"));
+  await settle();
+  expect(sent.at(-1)!.body.member).toEqual({ type: "Person", id: "p1" });
+  click(byLabel("Remove Alice"));
+  await settle();
+  click(byLabel("Add Identification"));
+  await settle();
+  expect(byLabel("identified by")).toBeTruthy();
+  expect(added()).toBe(1);
+});
+
+test("with a default reified type, an entity found is put in it, and the other reified relations are buttons", async () => {
+  const { client, sent } = fakeClient(() => ({ id: "m1", type: "Meeting", label: "M" }));
+  show(client, { type: "Meeting", initial: { type: "Meeting" } });
+  await settle();
+  // (the attendees' search is for what InRole holds; InRole is not a button, Identification is)
+  expect(byLabel("Find Person…")).toBeTruthy();
+  expect(byLabel("Add InRole")).toBeNull();
+  expect(document.body.querySelectorAll('[aria-label="Add Identification"]')).toHaveLength(2);
+  type("Find Person…", "ali");
+  await settle(400);
+  click(document.body.querySelector('[role="option"]'));
+  await settle();
+  expect(byLabel("role")).toBeTruthy();
+  type("role", "chair");
+  click(button("Save"));
+  await settle();
+  expect(sent.at(-1)!.body.attendees).toEqual([{ type: "InRole", target: [{ type: "Person", id: "p1" }], role: "chair" }]);
 });

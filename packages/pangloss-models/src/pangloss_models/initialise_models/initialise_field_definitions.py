@@ -409,6 +409,9 @@ def build_relatable_field_definition(
         type_options = build_relation_options(model._depends_on_classes, annotation)
 
     fixed = fixed_relation_names(model, field_name, type_options)
+    default_reified_type = check_default_reified_type(
+        model, field_name, type_options, relation_config
+    )
     return RelationFieldDefinition(
         field_name=field_name,
         field_on_model=model,
@@ -435,7 +438,37 @@ def build_relatable_field_definition(
         else [],
         validators=extract_validators(field_info),
         description=extract_field_description(field_info),
+        default_reified_type=default_reified_type,
     )
+
+
+def check_default_reified_type(
+    model: type,
+    field_name: str,
+    type_options: set[RelationOption],
+    relation_config: RelationConfig | None,
+) -> str | None:
+    """The name of `RelationConfig(default_reified_type=...)`, which must be one of the reified
+    relations of the field, all of whose options must be reified relations"""
+    given = relation_config.default_reified_type if relation_config else None
+    if given is None:
+        return None
+    # (`InRole[Agent]` is the class `InRole` too)
+    origin = (getattr(given, "__pydantic_generic_metadata__", None) or {}).get("origin")
+    name = (origin or given).__name__
+    reified = (RelationToReifiedRelation, RelationToReifiedRelationDocument)
+    if not all(isinstance(option, reified) for option in type_options):
+        raise PanglossModelError(
+            f"{model.__name__}.{field_name} has a default_reified_type, but not all of what it "
+            "can hold is a reified relation"
+        )
+    held = {o.base_type.__name__ for o in type_options if isinstance(o, reified)}
+    if name not in held:
+        raise PanglossModelError(
+            f"{model.__name__}.{field_name}: its default_reified_type {name} is not one of the "
+            "reified relations it can hold"
+        )
+    return name
 
 
 def build_embedded_field_definition(

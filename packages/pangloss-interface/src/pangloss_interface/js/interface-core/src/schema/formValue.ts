@@ -64,7 +64,8 @@ export function removeAt(root: FormData, path: Path): void {
 /**
  * A new item of the model `type`: only what is certain. A required field that holds one thing
  * (not a list), and has just one thing to put there that is not an entity (which is searched for),
- * starts with it, so that the form shows what has to be filled in: an `AtPage` whose source is to be found.
+ * starts with it, so that the form shows what has to be filled in: an `AtPage` whose source is to be found
+ * (but not one with a `defaultReifiedType`, whose search is shown instead).
  */
 export function blankItem(
   definitions: ModelDefinitions,
@@ -82,6 +83,8 @@ export function blankItem(
       continue;
     }
     if (field.kind !== "relation" || field.many || !field.required) continue;
+    // (one whose entities are searched for in a reified relation shows the search, not the relation)
+    if (field.defaultReifiedType) continue;
     const options = resolveOptions(field.options, env);
     const choices = choicesOf(menuGroups(definitions, options));
     const only = choices.length === 1 ? choices[0]! : undefined;

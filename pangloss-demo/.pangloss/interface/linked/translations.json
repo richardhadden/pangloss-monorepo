@@ -43,6 +43,10 @@
       "date_year": "Year",
       "deep_search": "Deep search",
       "deep_search_run": "Run deep search (Enter)",
+      "derived_heading": "Derived",
+      "derived_more": "and {count} more",
+      "derived_qualified": "Only from statements with a context",
+      "derived_why": "Why ({count})",
       "edit": "Edit",
       "edit_form": "{type} form",
       "error_forbidden": "You are not allowed to do this.",
@@ -133,7 +137,63 @@
       "retype_title": "Change to {type}?",
       "save": "Save",
       "search": "Search",
+      "search_add_alternatives": "Add alternatives",
+      "search_add_referring": "Add what refers to it",
+      "search_add_somewhere": "Add a document it contains",
+      "search_alternative": "alternative {n}",
+      "search_alternatives_n": "Alternatives {n}",
+      "search_and": "and",
+      "search_and_condition": "And another condition on {name}",
+      "search_any_field": "any field",
+      "search_any_of": "Any of",
+      "search_ascending": "ascending",
+      "search_change_type": "Type",
+      "search_change_type_of": "Change the type of {name}",
+      "search_choose_type": "Choose a type",
+      "search_clear": "Clear",
+      "search_close": "Close",
+      "search_delete_saved": "Delete the saved search {name}",
+      "search_descending": "descending",
+      "search_direction": "Direction of {name}",
       "search_failed": "The search failed",
+      "search_find_any_entity": "Find an entity…",
+      "search_form": "Search by fields",
+      "search_form_in_use": "Search by fields (in use)",
+      "search_form_of": "Search {type} by fields",
+      "search_from": "from",
+      "search_in_spaces": "Inside",
+      "search_mentions": "Mentions",
+      "search_not": "not",
+      "search_not_named": "Not: {name}",
+      "search_not_title": "Find what does not match this",
+      "search_op_all_of": "is all of",
+      "search_op_any_of": "is any of",
+      "search_op_between": "between",
+      "search_op_contains": "contains",
+      "search_op_has_any": "has any",
+      "search_op_has_no_value": "has no value",
+      "search_op_has_none": "has none",
+      "search_op_has_value": "has a value",
+      "search_op_is": "is",
+      "search_op_matching": "is one matching",
+      "search_op_one_of": "is one of",
+      "search_op_starts_with": "starts with",
+      "search_operator": "Condition on {name}",
+      "search_or": "or",
+      "search_order_by": "Order by",
+      "search_order_n": "Order by, {n}",
+      "search_referred_to_by": "Referred to by",
+      "search_remove_condition": "Remove the condition on {name}",
+      "search_save": "Save",
+      "search_save_name": "Name of this search",
+      "search_saved": "Saved searches",
+      "search_saved_placeholder": "Saved searches…",
+      "search_somewhere": "Contains",
+      "search_source": "{type} · {field}",
+      "search_then_by": "then by",
+      "search_through": "through",
+      "search_through_named": "Through, for {name}",
+      "search_to": "to",
       "section_links": "Links",
       "select_type": "Select a type…",
       "select_type_of": "Select {name} type…",
@@ -212,6 +272,10 @@
       "date_year": "Jahr",
       "deep_search": "Tiefensuche",
       "deep_search_run": "Tiefensuche starten (Eingabe)",
+      "derived_heading": "Abgeleitet",
+      "derived_more": "und {count} weitere",
+      "derived_qualified": "Nur aus Aussagen mit einem Kontext",
+      "derived_why": "Warum ({count})",
       "edit": "Bearbeiten",
       "edit_form": "Formular: {type}",
       "error_forbidden": "Sie dürfen das nicht tun.",
@@ -302,7 +366,63 @@
       "retype_title": "In {type} ändern?",
       "save": "Speichern",
       "search": "Suchen",
+      "search_add_alternatives": "Alternativen hinzufügen",
+      "search_add_referring": "Hinzufügen, was darauf verweist",
+      "search_add_somewhere": "Ein enthaltenes Dokument hinzufügen",
+      "search_alternative": "Alternative {n}",
+      "search_alternatives_n": "Alternativen {n}",
+      "search_and": "und",
+      "search_and_condition": "Und eine weitere Bedingung für {name}",
+      "search_any_field": "beliebiges Feld",
+      "search_any_of": "Eines von",
+      "search_ascending": "aufsteigend",
+      "search_change_type": "Typ",
+      "search_change_type_of": "Typ von {name} ändern",
+      "search_choose_type": "Typ wählen",
+      "search_clear": "Leeren",
+      "search_close": "Schließen",
+      "search_delete_saved": "Gespeicherte Suche {name} löschen",
+      "search_descending": "absteigend",
+      "search_direction": "Richtung von {name}",
       "search_failed": "Die Suche ist fehlgeschlagen",
+      "search_find_any_entity": "Entität finden …",
+      "search_form": "Nach Feldern suchen",
+      "search_form_in_use": "Nach Feldern suchen (aktiv)",
+      "search_form_of": "{type} nach Feldern suchen",
+      "search_from": "von",
+      "search_in_spaces": "Innerhalb",
+      "search_mentions": "Erwähnt",
+      "search_not": "nicht",
+      "search_not_named": "Nicht: {name}",
+      "search_not_title": "Finden, was hierzu nicht passt",
+      "search_op_all_of": "ist alle von",
+      "search_op_any_of": "ist eines von",
+      "search_op_between": "zwischen",
+      "search_op_contains": "enthält",
+      "search_op_has_any": "hat welche",
+      "search_op_has_no_value": "hat keinen Wert",
+      "search_op_has_none": "hat keine",
+      "search_op_has_value": "hat einen Wert",
+      "search_op_is": "ist",
+      "search_op_matching": "ist eines, auf das passt",
+      "search_op_one_of": "ist eines von",
+      "search_op_starts_with": "beginnt mit",
+      "search_operator": "Bedingung für {name}",
+      "search_or": "oder",
+      "search_order_by": "Sortieren nach",
+      "search_order_n": "Sortieren nach, {n}",
+      "search_referred_to_by": "Verwiesen von",
+      "search_remove_condition": "Bedingung für {name} entfernen",
+      "search_save": "Speichern",
+      "search_save_name": "Name dieser Suche",
+      "search_saved": "Gespeicherte Suchen",
+      "search_saved_placeholder": "Gespeicherte Suchen …",
+      "search_somewhere": "Enthält",
+      "search_source": "{type} · {field}",
+      "search_then_by": "dann nach",
+      "search_through": "über",
+      "search_through_named": "Über, für {name}",
+      "search_to": "bis",
       "section_links": "Links",
       "select_type": "Typ auswählen …",
       "select_type_of": "{name}: Typ auswählen …",
@@ -381,6 +501,10 @@
       "date_year": "Année",
       "deep_search": "Recherche approfondie",
       "deep_search_run": "Lancer la recherche approfondie (Entrée)",
+      "derived_heading": "Déduit",
+      "derived_more": "et {count} de plus",
+      "derived_qualified": "Seulement d’énoncés avec un contexte",
+      "derived_why": "Pourquoi ({count})",
       "edit": "Modifier",
       "edit_form": "Formulaire : {type}",
       "error_forbidden": "Vous n’êtes pas autorisé à faire cela.",
@@ -471,7 +595,63 @@
       "retype_title": "Changer en {type} ?",
       "save": "Enregistrer",
       "search": "Rechercher",
+      "search_add_alternatives": "Ajouter des alternatives",
+      "search_add_referring": "Ajouter ce qui y fait référence",
+      "search_add_somewhere": "Ajouter un document qu’il contient",
+      "search_alternative": "alternative {n}",
+      "search_alternatives_n": "Alternatives {n}",
+      "search_and": "et",
+      "search_and_condition": "Et une autre condition sur {name}",
+      "search_any_field": "n’importe quel champ",
+      "search_any_of": "L’un de",
+      "search_ascending": "croissant",
+      "search_change_type": "Type",
+      "search_change_type_of": "Changer le type de {name}",
+      "search_choose_type": "Choisir un type",
+      "search_clear": "Effacer",
+      "search_close": "Fermer",
+      "search_delete_saved": "Supprimer la recherche enregistrée {name}",
+      "search_descending": "décroissant",
+      "search_direction": "Sens de {name}",
       "search_failed": "La recherche a échoué",
+      "search_find_any_entity": "Trouver une entité…",
+      "search_form": "Rechercher par champs",
+      "search_form_in_use": "Rechercher par champs (en cours)",
+      "search_form_of": "Rechercher : {type}, par champs",
+      "search_from": "de",
+      "search_in_spaces": "À l’intérieur de",
+      "search_mentions": "Mentionne",
+      "search_not": "non",
+      "search_not_named": "Non : {name}",
+      "search_not_title": "Trouver ce qui ne correspond pas à ceci",
+      "search_op_all_of": "est tous ceux-ci",
+      "search_op_any_of": "est l’un de",
+      "search_op_between": "entre",
+      "search_op_contains": "contient",
+      "search_op_has_any": "en a",
+      "search_op_has_no_value": "n’a pas de valeur",
+      "search_op_has_none": "n’en a pas",
+      "search_op_has_value": "a une valeur",
+      "search_op_is": "est",
+      "search_op_matching": "est un qui correspond à",
+      "search_op_one_of": "est l’un de",
+      "search_op_starts_with": "commence par",
+      "search_operator": "Condition sur {name}",
+      "search_or": "ou",
+      "search_order_by": "Trier par",
+      "search_order_n": "Trier par, {n}",
+      "search_referred_to_by": "Référencé par",
+      "search_remove_condition": "Retirer la condition sur {name}",
+      "search_save": "Enregistrer",
+      "search_save_name": "Nom de cette recherche",
+      "search_saved": "Recherches enregistrées",
+      "search_saved_placeholder": "Recherches enregistrées…",
+      "search_somewhere": "Contient",
+      "search_source": "{type} · {field}",
+      "search_then_by": "puis par",
+      "search_through": "via",
+      "search_through_named": "Via, pour {name}",
+      "search_to": "à",
       "section_links": "Liens",
       "select_type": "Choisir un type…",
       "select_type_of": "{name} : choisir un type…",
@@ -1115,9 +1295,19 @@
             "plural": "Gave",
             "help": ""
           },
+          "has_member": {
+            "name": "Has member",
+            "plural": "Has member",
+            "help": ""
+          },
           "involves_reverse": {
             "name": "Involved in",
             "plural": "Involved in",
+            "help": ""
+          },
+          "member_of": {
+            "name": "Member of",
+            "plural": "Member of",
             "help": ""
           },
           "ordered": {
@@ -1187,6 +1377,46 @@
           "role": {
             "name": "Role",
             "plural": "Role",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "MemberOf": {
+        "name": "Member of",
+        "plural": "Member of",
+        "help": "",
+        "description": "Someone was a member of a group: of a family, an order, an army. (Two factoids that say so of two people make\nthem members of the same group: see `derived.py`)",
+        "kind": "Document",
+        "fields": {
+          "text": {
+            "name": "Text",
+            "plural": "Text",
+            "help": ""
+          },
+          "date": {
+            "name": "Date",
+            "plural": "Date",
+            "help": ""
+          },
+          "year": {
+            "name": "Year",
+            "plural": "Year",
+            "help": ""
+          },
+          "places": {
+            "name": "Places",
+            "plural": "Places",
+            "help": ""
+          },
+          "member": {
+            "name": "Member",
+            "plural": "Member",
+            "help": ""
+          },
+          "group": {
+            "name": "Group",
+            "plural": "Group",
             "help": ""
           }
         },
@@ -1514,6 +1744,11 @@
           "involves_reverse": {
             "name": "Involved in",
             "plural": "Involved in",
+            "help": ""
+          },
+          "member_of": {
+            "name": "Member of",
+            "plural": "Member of",
             "help": ""
           },
           "ordered": {
@@ -2521,9 +2756,19 @@
             "plural": "Gab",
             "help": ""
           },
+          "has_member": {
+            "name": "Has member",
+            "plural": "Has member",
+            "help": ""
+          },
           "involves_reverse": {
             "name": "Einbezogen in",
             "plural": "Einbezogen in",
+            "help": ""
+          },
+          "member_of": {
+            "name": "Member of",
+            "plural": "Member of",
             "help": ""
           },
           "ordered": {
@@ -2593,6 +2838,46 @@
           "role": {
             "name": "Rolle",
             "plural": "Rollen",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "MemberOf": {
+        "name": "Member of",
+        "plural": "Member of",
+        "help": "",
+        "description": "Someone was a member of a group: of a family, an order, an army. (Two factoids that say so of two people make\nthem members of the same group: see `derived.py`)",
+        "kind": "Document",
+        "fields": {
+          "text": {
+            "name": "Text",
+            "plural": "Text",
+            "help": ""
+          },
+          "date": {
+            "name": "Datum",
+            "plural": "Datum",
+            "help": ""
+          },
+          "year": {
+            "name": "Jahr",
+            "plural": "Jahr",
+            "help": ""
+          },
+          "places": {
+            "name": "Orte",
+            "plural": "Orte",
+            "help": ""
+          },
+          "member": {
+            "name": "Member",
+            "plural": "Member",
+            "help": ""
+          },
+          "group": {
+            "name": "Group",
+            "plural": "Group",
             "help": ""
           }
         },
@@ -2920,6 +3205,11 @@
           "involves_reverse": {
             "name": "Einbezogen in",
             "plural": "Einbezogen in",
+            "help": ""
+          },
+          "member_of": {
+            "name": "Member of",
+            "plural": "Member of",
             "help": ""
           },
           "ordered": {
@@ -3927,9 +4217,19 @@
             "plural": "A donné",
             "help": ""
           },
+          "has_member": {
+            "name": "Has member",
+            "plural": "Has member",
+            "help": ""
+          },
           "involves_reverse": {
             "name": "Impliqué dans",
             "plural": "Impliqué dans",
+            "help": ""
+          },
+          "member_of": {
+            "name": "Member of",
+            "plural": "Member of",
             "help": ""
           },
           "ordered": {
@@ -3999,6 +4299,46 @@
           "role": {
             "name": "Rôle",
             "plural": "Rôle",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "MemberOf": {
+        "name": "Member of",
+        "plural": "Member of",
+        "help": "",
+        "description": "Someone was a member of a group: of a family, an order, an army. (Two factoids that say so of two people make\nthem members of the same group: see `derived.py`)",
+        "kind": "Document",
+        "fields": {
+          "text": {
+            "name": "Texte",
+            "plural": "Texte",
+            "help": ""
+          },
+          "date": {
+            "name": "Date",
+            "plural": "Date",
+            "help": ""
+          },
+          "year": {
+            "name": "Année",
+            "plural": "Année",
+            "help": ""
+          },
+          "places": {
+            "name": "Lieux",
+            "plural": "Lieux",
+            "help": ""
+          },
+          "member": {
+            "name": "Member",
+            "plural": "Member",
+            "help": ""
+          },
+          "group": {
+            "name": "Group",
+            "plural": "Group",
             "help": ""
           }
         },
@@ -4326,6 +4666,11 @@
           "involves_reverse": {
             "name": "Impliqué dans",
             "plural": "Impliqué dans",
+            "help": ""
+          },
+          "member_of": {
+            "name": "Member of",
+            "plural": "Member of",
             "help": ""
           },
           "ordered": {

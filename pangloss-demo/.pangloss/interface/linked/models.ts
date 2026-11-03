@@ -2,7 +2,7 @@
 // It is made again each time the interface is built.
 import type { AnyRelationCondition, ChoiceCondition, CompareCondition, ItemsCondition, ModelDefinitions, NodePattern, RelationCondition, SearchOrder, SearchPattern, TextCondition } from "@pangloss/interface-core";
 
-export type ModelName = "Activity" | "Alternative" | "Artwork" | "AtPage" | "Causes" | "Certainty" | "CreationOfArtwork" | "CreationOfPainting" | "CreationOfPhysicalObject" | "Date" | "DateCharacterisation" | "DateRange" | "EDTFDate" | "ExactDate" | "Factoid" | "Group" | "Hypothetical" | "Identification" | "InRole" | "Negative" | "NegativeSubjunctive" | "NoRule" | "OccupationType" | "OngoingDate" | "Order" | "Painting" | "Period" | "Person" | "PhysicalObject" | "Place" | "PositiveSubjunctive" | "Probability" | "Recurrence" | "Source" | "Statement" | "Transfer" | "UnknownDate" | "WithCertainty";
+export type ModelName = "Activity" | "Alternative" | "Artwork" | "AtPage" | "Causes" | "Certainty" | "CreationOfArtwork" | "CreationOfPainting" | "CreationOfPhysicalObject" | "Date" | "DateCharacterisation" | "DateRange" | "EDTFDate" | "ExactDate" | "Factoid" | "Group" | "Hypothetical" | "Identification" | "InRole" | "MemberOf" | "Negative" | "NegativeSubjunctive" | "NoRule" | "OccupationType" | "OngoingDate" | "Order" | "Painting" | "Period" | "Person" | "PhysicalObject" | "Place" | "PositiveSubjunctive" | "Probability" | "Recurrence" | "Source" | "Statement" | "Transfer" | "UnknownDate" | "WithCertainty";
 
 export const definitions: ModelDefinitions = {
   "models": {
@@ -89,7 +89,8 @@ export const definitions: ModelDefinitions = {
             }
           ],
           "validators": [],
-          "subclasses": []
+          "subclasses": [],
+          "defaultReifiedType": null
         },
         {
           "name": "activity_type",
@@ -130,7 +131,8 @@ export const definitions: ModelDefinitions = {
           "validators": [],
           "subclasses": [
             "involves"
-          ]
+          ],
+          "defaultReifiedType": null
         },
         {
           "name": "participants",
@@ -167,7 +169,8 @@ export const definitions: ModelDefinitions = {
             }
           ],
           "validators": [],
-          "subclasses": []
+          "subclasses": [],
+          "defaultReifiedType": "InRole"
         }
       ],
       "incoming": [],
@@ -208,7 +211,8 @@ export const definitions: ModelDefinitions = {
             }
           ],
           "validators": [],
-          "subclasses": []
+          "subclasses": [],
+          "defaultReifiedType": null
         }
       ],
       "incoming": [],
@@ -289,7 +293,8 @@ export const definitions: ModelDefinitions = {
             }
           ],
           "validators": [],
-          "subclasses": []
+          "subclasses": [],
+          "defaultReifiedType": null
         },
         {
           "name": "page",
@@ -344,7 +349,8 @@ export const definitions: ModelDefinitions = {
             }
           ],
           "validators": [],
-          "subclasses": []
+          "subclasses": [],
+          "defaultReifiedType": null
         },
         {
           "name": "result",
@@ -364,7 +370,8 @@ export const definitions: ModelDefinitions = {
             }
           ],
           "validators": [],
-          "subclasses": []
+          "subclasses": [],
+          "defaultReifiedType": null
         }
       ],
       "incoming": [],
@@ -489,7 +496,8 @@ export const definitions: ModelDefinitions = {
             }
           ],
           "validators": [],
-          "subclasses": []
+          "subclasses": [],
+          "defaultReifiedType": null
         },
         {
           "name": "created_by",
@@ -511,7 +519,8 @@ export const definitions: ModelDefinitions = {
           "validators": [],
           "subclasses": [
             "involves"
-          ]
+          ],
+          "defaultReifiedType": null
         },
         {
           "name": "artwork_created",
@@ -538,7 +547,8 @@ export const definitions: ModelDefinitions = {
           "validators": [],
           "subclasses": [
             "object_created"
-          ]
+          ],
+          "defaultReifiedType": null
         }
       ],
       "incoming": [],
@@ -627,7 +637,8 @@ export const definitions: ModelDefinitions = {
             }
           ],
           "validators": [],
-          "subclasses": []
+          "subclasses": [],
+          "defaultReifiedType": null
         },
         {
           "name": "created_by",
@@ -649,7 +660,8 @@ export const definitions: ModelDefinitions = {
           "validators": [],
           "subclasses": [
             "involves"
-          ]
+          ],
+          "defaultReifiedType": null
         },
         {
           "name": "painting_created",
@@ -672,7 +684,8 @@ export const definitions: ModelDefinitions = {
           "subclasses": [
             "artwork_created",
             "object_created"
-          ]
+          ],
+          "defaultReifiedType": null
         }
       ],
       "incoming": [],
@@ -763,7 +776,8 @@ export const definitions: ModelDefinitions = {
             }
           ],
           "validators": [],
-          "subclasses": []
+          "subclasses": [],
+          "defaultReifiedType": null
         },
         {
           "name": "created_by",
@@ -785,7 +799,8 @@ export const definitions: ModelDefinitions = {
           "validators": [],
           "subclasses": [
             "involves"
-          ]
+          ],
+          "defaultReifiedType": null
         },
         {
           "name": "object_created",
@@ -815,7 +830,8 @@ export const definitions: ModelDefinitions = {
             }
           ],
           "validators": [],
-          "subclasses": []
+          "subclasses": [],
+          "defaultReifiedType": null
         }
       ],
       "incoming": [],
@@ -1680,7 +1696,8 @@ export const definitions: ModelDefinitions = {
             }
           ],
           "validators": [],
-          "subclasses": []
+          "subclasses": [],
+          "defaultReifiedType": null
         },
         {
           "name": "statements",
@@ -1723,6 +1740,11 @@ export const definitions: ModelDefinitions = {
                     },
                     {
                       "kind": "document",
+                      "type": "MemberOf",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
                       "type": "Order",
                       "edgeModel": null
                     },
@@ -1754,6 +1776,11 @@ export const definitions: ModelDefinitions = {
                     {
                       "kind": "document",
                       "type": "CreationOfPhysicalObject",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "MemberOf",
                       "edgeModel": null
                     },
                     {
@@ -1792,6 +1819,11 @@ export const definitions: ModelDefinitions = {
             },
             {
               "kind": "document",
+              "type": "MemberOf",
+              "edgeModel": null
+            },
+            {
+              "kind": "document",
               "type": "Order",
               "edgeModel": null
             },
@@ -1826,6 +1858,11 @@ export const definitions: ModelDefinitions = {
                     {
                       "kind": "document",
                       "type": "CreationOfPhysicalObject",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "MemberOf",
                       "edgeModel": null
                     },
                     {
@@ -1872,6 +1909,11 @@ export const definitions: ModelDefinitions = {
                     },
                     {
                       "kind": "document",
+                      "type": "MemberOf",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
                       "type": "Order",
                       "edgeModel": null
                     },
@@ -1886,7 +1928,8 @@ export const definitions: ModelDefinitions = {
             }
           ],
           "validators": [],
-          "subclasses": []
+          "subclasses": [],
+          "defaultReifiedType": null
         }
       ],
       "incoming": [],
@@ -1954,12 +1997,34 @@ export const definitions: ModelDefinitions = {
           ]
         },
         {
+          "name": "has_member",
+          "key": "hasMember",
+          "sources": [
+            {
+              "model": "MemberOf",
+              "field": "group",
+              "viaReified": false
+            }
+          ]
+        },
+        {
           "name": "involves_reverse",
           "key": "involvesReverse",
           "sources": [
             {
               "model": "Statement",
               "field": "involves",
+              "viaReified": false
+            }
+          ]
+        },
+        {
+          "name": "member_of",
+          "key": "memberOf",
+          "sources": [
+            {
+              "model": "MemberOf",
+              "field": "member",
               "viaReified": false
             }
           ]
@@ -2035,7 +2100,8 @@ export const definitions: ModelDefinitions = {
             }
           ],
           "validators": [],
-          "subclasses": []
+          "subclasses": [],
+          "defaultReifiedType": null
         }
       ],
       "incoming": [],
@@ -2090,7 +2156,8 @@ export const definitions: ModelDefinitions = {
               "max_length": 1
             }
           ],
-          "subclasses": []
+          "subclasses": [],
+          "defaultReifiedType": null
         },
         {
           "name": "identified_by",
@@ -2142,7 +2209,8 @@ export const definitions: ModelDefinitions = {
             }
           ],
           "validators": [],
-          "subclasses": []
+          "subclasses": [],
+          "defaultReifiedType": null
         },
         {
           "name": "role",
@@ -2157,6 +2225,174 @@ export const definitions: ModelDefinitions = {
             "enum": "Role"
           },
           "validators": []
+        }
+      ],
+      "incoming": [],
+      "interfaceMeta": null
+    },
+    "MemberOf": {
+      "name": "MemberOf",
+      "kind": "Document",
+      "abstract": false,
+      "description": "Someone was a member of a group: of a family, an order, an army. (Two factoids that say so of two people make\nthem members of the same group: see `derived.py`)",
+      "parent": "Statement",
+      "concreteTypes": [
+        "MemberOf"
+      ],
+      "typeParameters": [],
+      "createWithId": false,
+      "acceptUrlAsId": false,
+      "requireLabel": true,
+      "useInSemanticSpaceLabel": true,
+      "fields": [
+        {
+          "name": "text",
+          "key": "text",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [
+            {
+              "name": "MinLen",
+              "min_length": 5
+            }
+          ]
+        },
+        {
+          "name": "date",
+          "key": "date",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "embedded",
+          "model": "Date",
+          "types": [
+            "DateRange",
+            "EDTFDate",
+            "ExactDate",
+            "OngoingDate",
+            "Period",
+            "Recurrence",
+            "UnknownDate"
+          ]
+        },
+        {
+          "name": "year",
+          "key": "year",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": []
+        },
+        {
+          "name": "places",
+          "key": "places",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "relation",
+          "many": true,
+          "reverseName": "places_reverse",
+          "options": [
+            {
+              "kind": "entity",
+              "type": "Place",
+              "edgeModel": null
+            }
+          ],
+          "validators": [],
+          "subclasses": [],
+          "defaultReifiedType": null
+        },
+        {
+          "name": "member",
+          "key": "member",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "relation",
+          "many": false,
+          "reverseName": "member_of",
+          "options": [
+            {
+              "kind": "entity",
+              "type": "Group",
+              "edgeModel": null
+            },
+            {
+              "kind": "entity",
+              "type": "Person",
+              "edgeModel": null
+            },
+            {
+              "kind": "reifiedRelation",
+              "type": "Identification",
+              "edgeModel": null,
+              "params": {
+                "T": {
+                  "typeVar": "T",
+                  "options": [
+                    {
+                      "kind": "conjunction",
+                      "type": "Alternative",
+                      "edgeModel": null,
+                      "params": {
+                        "T": {
+                          "typeVar": "T",
+                          "options": [
+                            {
+                              "kind": "entity",
+                              "type": "Person",
+                              "edgeModel": "Probability"
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          ],
+          "validators": [],
+          "subclasses": [
+            "involves"
+          ],
+          "defaultReifiedType": null
+        },
+        {
+          "name": "group",
+          "key": "group",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "relation",
+          "many": false,
+          "reverseName": "has_member",
+          "options": [
+            {
+              "kind": "entity",
+              "type": "Group",
+              "edgeModel": null
+            }
+          ],
+          "validators": [],
+          "subclasses": [],
+          "defaultReifiedType": null
         }
       ],
       "incoming": [],
@@ -2197,7 +2433,8 @@ export const definitions: ModelDefinitions = {
             }
           ],
           "validators": [],
-          "subclasses": []
+          "subclasses": [],
+          "defaultReifiedType": null
         }
       ],
       "incoming": [],
@@ -2245,7 +2482,8 @@ export const definitions: ModelDefinitions = {
             }
           ],
           "validators": [],
-          "subclasses": []
+          "subclasses": [],
+          "defaultReifiedType": null
         }
       ],
       "incoming": [],
@@ -2327,7 +2565,8 @@ export const definitions: ModelDefinitions = {
               "max_length": 1
             }
           ],
-          "subclasses": []
+          "subclasses": [],
+          "defaultReifiedType": null
         },
         {
           "name": "label_de",
@@ -2646,7 +2885,8 @@ export const definitions: ModelDefinitions = {
             }
           ],
           "validators": [],
-          "subclasses": []
+          "subclasses": [],
+          "defaultReifiedType": null
         },
         {
           "name": "ordered_by",
@@ -2702,7 +2942,8 @@ export const definitions: ModelDefinitions = {
           "validators": [],
           "subclasses": [
             "involves"
-          ]
+          ],
+          "defaultReifiedType": null
         },
         {
           "name": "thing_ordered",
@@ -2741,6 +2982,11 @@ export const definitions: ModelDefinitions = {
                     {
                       "kind": "document",
                       "type": "CreationOfPhysicalObject",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "MemberOf",
                       "edgeModel": null
                     },
                     {
@@ -2787,6 +3033,11 @@ export const definitions: ModelDefinitions = {
                     },
                     {
                       "kind": "document",
+                      "type": "MemberOf",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
                       "type": "Order",
                       "edgeModel": null
                     },
@@ -2801,7 +3052,8 @@ export const definitions: ModelDefinitions = {
             }
           ],
           "validators": [],
-          "subclasses": []
+          "subclasses": [],
+          "defaultReifiedType": null
         }
       ],
       "incoming": [],
@@ -3136,7 +3388,8 @@ export const definitions: ModelDefinitions = {
             }
           ],
           "validators": [],
-          "subclasses": []
+          "subclasses": [],
+          "defaultReifiedType": null
         }
       ],
       "incoming": [
@@ -3196,6 +3449,22 @@ export const definitions: ModelDefinitions = {
               "model": "Statement",
               "field": "involves",
               "viaReified": false
+            }
+          ]
+        },
+        {
+          "name": "member_of",
+          "key": "memberOf",
+          "sources": [
+            {
+              "model": "MemberOf",
+              "field": "member",
+              "viaReified": false
+            },
+            {
+              "model": "MemberOf",
+              "field": "member",
+              "viaReified": true
             }
           ]
         },
@@ -3340,6 +3609,11 @@ export const definitions: ModelDefinitions = {
               "viaReified": false
             },
             {
+              "model": "MemberOf",
+              "field": "places",
+              "viaReified": false
+            },
+            {
               "model": "Order",
               "field": "places",
               "viaReified": false
@@ -3394,7 +3668,8 @@ export const definitions: ModelDefinitions = {
             }
           ],
           "validators": [],
-          "subclasses": []
+          "subclasses": [],
+          "defaultReifiedType": null
         }
       ],
       "incoming": [],
@@ -3872,6 +4147,7 @@ export const definitions: ModelDefinitions = {
         "CreationOfArtwork",
         "CreationOfPainting",
         "CreationOfPhysicalObject",
+        "MemberOf",
         "Order",
         "Transfer"
       ],
@@ -3954,7 +4230,8 @@ export const definitions: ModelDefinitions = {
             }
           ],
           "validators": [],
-          "subclasses": []
+          "subclasses": [],
+          "defaultReifiedType": null
         },
         {
           "name": "places",
@@ -3974,7 +4251,8 @@ export const definitions: ModelDefinitions = {
             }
           ],
           "validators": [],
-          "subclasses": []
+          "subclasses": [],
+          "defaultReifiedType": null
         }
       ],
       "incoming": [],
@@ -4063,7 +4341,8 @@ export const definitions: ModelDefinitions = {
             }
           ],
           "validators": [],
-          "subclasses": []
+          "subclasses": [],
+          "defaultReifiedType": null
         },
         {
           "name": "item",
@@ -4145,7 +4424,8 @@ export const definitions: ModelDefinitions = {
           "validators": [],
           "subclasses": [
             "involves"
-          ]
+          ],
+          "defaultReifiedType": null
         },
         {
           "name": "given_to",
@@ -4199,7 +4479,8 @@ export const definitions: ModelDefinitions = {
             }
           ],
           "validators": [],
-          "subclasses": []
+          "subclasses": [],
+          "defaultReifiedType": null
         }
       ],
       "incoming": [],
@@ -5180,6 +5461,7 @@ export const definitions: ModelDefinitions = {
             "CreationOfArtwork",
             "CreationOfPainting",
             "CreationOfPhysicalObject",
+            "MemberOf",
             "Order",
             "Transfer"
           ]
@@ -5203,6 +5485,67 @@ export const definitions: ModelDefinitions = {
       "orderBy": [
         "label",
         "name"
+      ]
+    },
+    "MemberOf": {
+      "kind": "document",
+      "fields": {
+        "text": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "date": {
+          "operators": "relation",
+          "targets": [
+            "Date",
+            "DateRange",
+            "EDTFDate",
+            "ExactDate",
+            "OngoingDate",
+            "Period",
+            "Recurrence",
+            "UnknownDate"
+          ]
+        },
+        "year": {
+          "operators": "compare",
+          "value": {
+            "type": "int"
+          }
+        },
+        "places": {
+          "operators": "relation",
+          "targets": [
+            "Place"
+          ]
+        },
+        "member": {
+          "operators": "relation",
+          "targets": [
+            "Group",
+            "Person"
+          ]
+        },
+        "group": {
+          "operators": "relation",
+          "targets": [
+            "Group"
+          ]
+        }
+      },
+      "orderBy": [
+        "label",
+        "text",
+        "date.source_text",
+        "date.earliest_fuzzy",
+        "date.earliest_strict",
+        "date.latest_strict",
+        "date.latest_fuzzy",
+        "date.sort_day",
+        "date.end_sort_day",
+        "year"
       ]
     },
     "NoRule": {
@@ -5362,6 +5705,7 @@ export const definitions: ModelDefinitions = {
             "CreationOfArtwork",
             "CreationOfPainting",
             "CreationOfPhysicalObject",
+            "MemberOf",
             "Order",
             "Transfer"
           ]
@@ -6113,7 +6457,7 @@ export type ExactDatePattern = { type: "ExactDate"; where?: ExactDateWhere };
 export type FactoidWhere = {
   year?: CompareCondition<number>;
   source?: RelationCondition | (RelationCondition & (SourcePattern));
-  statements?: RelationCondition | (RelationCondition & (ActivityPattern | CreationOfArtworkPattern | CreationOfPaintingPattern | CreationOfPhysicalObjectPattern | OrderPattern | TransferPattern));
+  statements?: RelationCondition | (RelationCondition & (ActivityPattern | CreationOfArtworkPattern | CreationOfPaintingPattern | CreationOfPhysicalObjectPattern | MemberOfPattern | OrderPattern | TransferPattern));
   $all?: FactoidWhere[];
   $any_of?: FactoidWhere[];
   $not?: FactoidWhere;
@@ -6139,6 +6483,27 @@ export type GroupWhere = {
 };
 
 export type GroupPattern = { type: "Group"; where?: GroupWhere };
+
+export type MemberOfWhere = {
+  text?: TextCondition;
+  date?: RelationCondition | (RelationCondition & (DatePattern | DateRangePattern | EDTFDatePattern | ExactDatePattern | OngoingDatePattern | PeriodPattern | RecurrencePattern | UnknownDatePattern));
+  year?: CompareCondition<number>;
+  places?: RelationCondition | (RelationCondition & (PlacePattern));
+  member?: RelationCondition | (RelationCondition & (GroupPattern | PersonPattern));
+  group?: RelationCondition | (RelationCondition & (GroupPattern));
+  $all?: MemberOfWhere[];
+  $any_of?: MemberOfWhere[];
+  $not?: MemberOfWhere;
+  $any?: AnyRelationCondition;
+  label?: TextCondition;
+  published?: ChoiceCondition<boolean>;
+  review_status?: TextCondition;
+  $mentions?: AnyRelationCondition;
+  $somewhere?: NodePattern[];
+  $spaces?: string[];
+};
+
+export type MemberOfPattern = { type: "MemberOf"; where?: MemberOfWhere };
 
 export type NoRuleWhere = {
   $all?: NoRuleWhere[];
@@ -6189,7 +6554,7 @@ export type OrderWhere = {
   year?: CompareCondition<number>;
   places?: RelationCondition | (RelationCondition & (PlacePattern));
   ordered_by?: RelationCondition | (RelationCondition & (GroupPattern | PersonPattern));
-  thing_ordered?: RelationCondition | (RelationCondition & (ActivityPattern | CreationOfArtworkPattern | CreationOfPaintingPattern | CreationOfPhysicalObjectPattern | OrderPattern | TransferPattern));
+  thing_ordered?: RelationCondition | (RelationCondition & (ActivityPattern | CreationOfArtworkPattern | CreationOfPaintingPattern | CreationOfPhysicalObjectPattern | MemberOfPattern | OrderPattern | TransferPattern));
   $all?: OrderWhere[];
   $any_of?: OrderWhere[];
   $not?: OrderWhere;
@@ -6389,6 +6754,7 @@ export interface Wheres {
   DateCharacterisation: DateCharacterisationWhere;
   Factoid: FactoidWhere;
   Group: GroupWhere;
+  MemberOf: MemberOfWhere;
   OccupationType: OccupationTypeWhere;
   Order: OrderWhere;
   Painting: PaintingWhere;
@@ -6409,6 +6775,7 @@ export interface OrderFields {
   DateCharacterisation: "label" | "use" | "rank";
   Factoid: "label" | "year";
   Group: "label" | "name";
+  MemberOf: "label" | "text" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day" | "year";
   OccupationType: "label" | "description" | "label_de" | "label_fr";
   Order: "label" | "text" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day" | "year";
   Painting: "label";

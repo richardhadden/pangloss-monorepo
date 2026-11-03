@@ -98,6 +98,28 @@ class Statement(Document):
 | `bind_to_child_field` | Copy a value from this object into fields of nested objects (see [Field binding](#field-binding)) |
 | `validators` | Extra `annotated_types` validators |
 | `description` | Description for the generated model |
+| `default_reified_type` | For the interface, on a field whose options are all reified relations: the one (`InRole`, or `InRole[Agent]`) that an entity found by searching is put in (see below) |
+
+### What the interface offers to add
+
+The form shows the entities a relation can hold as a search at once, with a button under it for each of the
+rest: `Agent | Identification[Alternative[ViaEdge[Person, Probability]]]` is a search for a group or a person,
+and **+ Identification**. A relation with no entities to search for has a menu of its types.
+
+When every option is a reified relation, `default_reified_type` makes the search the one for what that
+reified relation holds (through a conjunction too: `Identification[Alternative[Person]]` searches for persons),
+and a person found is put in it (an `Identification` holding an `Alternative` holding the person). The other
+reified relations are buttons under it:
+
+```python
+class Activity(Statement):
+    participants: Annotated[
+        list[InRole[Agent]], RelationConfig(default_reified_type=InRole)
+    ]
+```
+
+It must be one of the field's reified relations, and the field must hold nothing else, or the models do not
+initialise. It is not part of the data (a migration does not see it).
 
 ## Field binding
 

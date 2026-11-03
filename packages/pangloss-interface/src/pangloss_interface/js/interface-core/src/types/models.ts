@@ -98,6 +98,8 @@ export interface RelationField extends FieldBase {
   validators: Validator[];
   /** The fields of its ancestors that it stands for (`subclasses_parent_fields`), directly or through another, by name */
   subclasses: string[];
+  /** The reified relation that an entity found by searching is put in (`default_reified_type`), if any */
+  defaultReifiedType?: string | null;
 }
 
 export interface UnknownField extends FieldBase {

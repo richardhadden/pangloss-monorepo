@@ -22,7 +22,10 @@ import {
   getModel,
   menuGroups,
   optionFor,
+  reachFor,
+  relationLayout,
   resolveOptions,
+  wrapEntity,
 } from "../../schema";
 import type { Choice, Env, FormData, Path } from "../../schema";
 import type {
@@ -40,6 +43,7 @@ import { rememberEntity } from "./recent";
 import { JsonEditor, LiteralEditor } from "./LiteralEditor";
 import {
   addSlotClass,
+  choiceButtonClass,
   fieldGridClass,
   fieldRowClass,
   fieldRuleClass,
@@ -565,9 +569,11 @@ function EmbeddedEditor(props: { field: EmbeddedField; path: Accessor<Path>; lab
 }
 
 /**
- * A relation: the things it holds (one, or a list), each its own editor, and a way to add one. A
- * relation to entities only is a search to find them; otherwise a menu of the types it can hold,
- * and the same inside each semantic space it can hold.
+ * A relation: the things it holds (one, or a list), each its own editor, and a way to add one. The
+ * entities it can hold are a search to find them, with a button under it for each of the rest (a
+ * reified relation, a conjunction...); with a `defaultReifiedType`, the search is for what that
+ * holds, and an entity found is put in one. A relation with no entities to search for has a menu of
+ * the types it can hold, and the same inside each semantic space it can hold.
  */
 function RelationEditor(props: {
   field: RelationField;
@@ -581,11 +587,10 @@ function RelationEditor(props: {
   const { t } = useTranslations();
   const options = createMemo(() => resolveOptions(props.field.options, props.env));
   const groups = createMemo(() => menuGroups(definitions, options()));
-  const entityTypes = createMemo(() =>
-    options().every((option) => option.kind === "entity")
-      ? options().flatMap((option) => ("type" in option ? [option.type] : []))
-      : [],
+  const layout = createMemo(() =>
+    relationLayout(definitions, options(), props.env, props.field.defaultReifiedType),
   );
+  const searched = () => layout().search.map((reach) => reach.type);
   const items = () => {
     const at = form.get(props.path());
     if (props.field.many) return Array.isArray(at) ? at : [];
@@ -652,7 +657,7 @@ function RelationEditor(props: {
       </Show>
       <Show when={canAdd()}>
         <Show
-          when={entityTypes().length > 0}
+          when={searched().length > 0}
           fallback={
             <Show
               when={only().length > 0}
@@ -676,18 +681,53 @@ function RelationEditor(props: {
             </Show>
           }
         >
-          <PickOrCreate
-            types={entityTypes()}
-            onPick={(entity) => {
-              form.set(where(), { type: entity.type, id: entity.id, label: entity.label });
-              // (the chip lights up, but the cursor stays in the search, for the next)
-              revealAdded(lastAdded, false);
-            }}
-          />
-          {pasteSlot()}
+          <div class="flex w-full min-w-0 flex-col gap-2">
+            <PickOrCreate
+              types={searched()}
+              onPick={(entity) => {
+                const found = { type: entity.type, id: entity.id, label: entity.label };
+                const reach = reachFor(definitions, layout().search, entity.type);
+                const wrapped = reach && reach.wrappers.length > 0;
+                form.set(where(), wrapped ? wrapEntity(definitions, reach, found) : found);
+                // (an entity alone: the chip lights up, but the cursor stays in the search, for the next; put in a
+                // reified relation, the cursor goes to the fields of that, to be filled in)
+                revealAdded(lastAdded, !wrapped);
+              }}
+            />
+            <Show when={layout().rest.length > 0}>
+              <div class="flex flex-wrap gap-2">
+                <For each={layout().rest}>
+                  {(choice) => <ChoiceButton choice={choice} onChoose={add} />}
+                </For>
+              </div>
+            </Show>
+            {pasteSlot()}
+          </div>
         </Show>
       </Show>
     </div>
+  );
+}
+
+/** A button that adds one of the types of a relation (inside its semantic spaces), in the colour of its type */
+function ChoiceButton(props: { choice: Choice; onChoose: (choice: Choice) => void }) {
+  const definitions = useModels();
+  const { t, modelName } = useTranslations();
+  const name = () => [...props.choice.spaces, props.choice.type].map((type) => modelName(type)).join(" › ");
+  const tint = () => {
+    const model = getModel(definitions, props.choice.type);
+    return kindTint(model?.kind, model?.interfaceMeta?.colour) || plainTint;
+  };
+  return (
+    <button
+      type="button"
+      class={[choiceButtonClass, tint()]}
+      aria-label={t("add_named", "Add {name}", { name: name() })}
+      onClick={() => props.onChoose(props.choice)}
+    >
+      <span aria-hidden="true">+</span>
+      {name()}
+    </button>
   );
 }
 

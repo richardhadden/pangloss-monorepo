@@ -7,6 +7,7 @@ from pangloss_models import initialise
 from pangloss_models.export import export_models
 from pangloss_models.model_bases.annotated_value import AnnotatedValue
 from pangloss_models.model_bases.configs import RelationConfig
+from pangloss_models.model_bases.conjunction import Conjunction
 from pangloss_models.model_bases.document import Document
 from pangloss_models.model_bases.embedded import Embedded
 from pangloss_models.model_bases.entity import Entity
@@ -186,6 +187,38 @@ def test_a_relation_says_which_fields_of_its_ancestors_it_stands_for():
     assert artwork["artwork_created"]["subclasses"] == ["object_created"]
     assert "object_created" not in artwork
     assert by_name(models["Statement"])["involves"]["subclasses"] == []
+
+
+def test_a_relation_says_what_reified_relation_an_entity_found_is_put_in():
+    class Person(Entity):
+        pass
+
+    class InRole[T](ReifiedRelation[T]):
+        role: str
+
+    class Alternative[T](Conjunction):
+        alternatives: list[T]
+
+    class Identification[T](ReifiedRelation[T]):
+        identified_by: str
+
+    class Meeting(Document):
+        # (the class, or the class as used: both are its name)
+        attendees: Annotated[
+            list[InRole[Person] | Identification[Alternative[Person]]],
+            RelationConfig(default_reified_type=InRole),
+        ]
+        chair: Annotated[
+            InRole[Person] | Identification[Alternative[Person]],
+            RelationConfig(default_reified_type=Identification[Alternative[Person]]),
+        ]
+        host: Person
+
+    initialise()
+    meeting = by_name(export_models()["models"]["Meeting"])
+    assert meeting["attendees"]["defaultReifiedType"] == "InRole"
+    assert meeting["chair"]["defaultReifiedType"] == "Identification"
+    assert meeting["host"]["defaultReifiedType"] is None
 
 
 def test_nothing_is_exported_before_there_are_models():

@@ -4,6 +4,7 @@
 import datetime
 import decimal
 import pangloss_dates.models
+import pangloss_derived.views
 import pangloss_models.model_bases.base_models
 import pangloss_models.model_bases.conjunction
 import pangloss_models.model_bases.document
@@ -186,9 +187,10 @@ class Person(Entity, Agent):
         any_of_: list[Person.Where] | None = ...  # type: ignore
         not_: Person.Where | None = ...  # type: ignore
         born: pangloss_dates.models.Date.Where | pangloss_dates.models.DateRange.Where | pangloss_dates.models.EDTFDate.Where | pangloss_dates.models.ExactDate.Where | pangloss_dates.models.OngoingDate.Where | pangloss_dates.models.Period.Where | pangloss_dates.models.Recurrence.Where | pangloss_dates.models.UnknownDate.Where | pangloss_models.search.Var[pangloss_dates.models.DateRange] | pangloss_models.search.Var[pangloss_dates.models.Date] | pangloss_models.search.Var[pangloss_dates.models.EDTFDate] | pangloss_models.search.Var[pangloss_dates.models.ExactDate] | pangloss_models.search.Var[pangloss_dates.models.OngoingDate] | pangloss_models.search.Var[pangloss_dates.models.Period] | pangloss_models.search.Var[pangloss_dates.models.Recurrence] | pangloss_models.search.Var[pangloss_dates.models.UnknownDate] | pangloss_models.search_where.Rel | None = ...
-        aliases: pangloss_models.search_where.Items[str] | None = ...
+        aliases: pangloss_models.search.Var[str] | pangloss_models.search_where.Items[str] | None = ...
         has_type: typing.Any = ...
-        def __init__(self, *, is_: pangloss_models.search.Var[Person] | None = ..., all_: list[Person.Where] | None = ..., any_of_: list[Person.Where] | None = ..., not_: Person.Where | None = ..., any_: pangloss_models.search_where.AnyRel | None = ..., label: pangloss_models.search_where.Text | None = ..., incoming_: list[pangloss_models.search_where.IncomingFrom | pangloss_models.search_where.Where] | None = ..., born: pangloss_dates.models.Date.Where | pangloss_dates.models.DateRange.Where | pangloss_dates.models.EDTFDate.Where | pangloss_dates.models.ExactDate.Where | pangloss_dates.models.OngoingDate.Where | pangloss_dates.models.Period.Where | pangloss_dates.models.Recurrence.Where | pangloss_dates.models.UnknownDate.Where | pangloss_models.search.Var[pangloss_dates.models.DateRange] | pangloss_models.search.Var[pangloss_dates.models.Date] | pangloss_models.search.Var[pangloss_dates.models.EDTFDate] | pangloss_models.search.Var[pangloss_dates.models.ExactDate] | pangloss_models.search.Var[pangloss_dates.models.OngoingDate] | pangloss_models.search.Var[pangloss_dates.models.Period] | pangloss_models.search.Var[pangloss_dates.models.Recurrence] | pangloss_models.search.Var[pangloss_dates.models.UnknownDate] | pangloss_models.search_where.Rel | None = ..., aliases: pangloss_models.search_where.Items[str] | None = ..., has_type: typing.Any = ...) -> None: ...  # type: ignore
+        derived_: dict | pangloss_derived.views.DerivedWhere | None = ...
+        def __init__(self, *, is_: pangloss_models.search.Var[Person] | None = ..., all_: list[Person.Where] | None = ..., any_of_: list[Person.Where] | None = ..., not_: Person.Where | None = ..., any_: pangloss_models.search_where.AnyRel | None = ..., label: pangloss_models.search_where.Text | None = ..., incoming_: list[pangloss_models.search_where.IncomingFrom | pangloss_models.search_where.Where] | None = ..., born: pangloss_dates.models.Date.Where | pangloss_dates.models.DateRange.Where | pangloss_dates.models.EDTFDate.Where | pangloss_dates.models.ExactDate.Where | pangloss_dates.models.OngoingDate.Where | pangloss_dates.models.Period.Where | pangloss_dates.models.Recurrence.Where | pangloss_dates.models.UnknownDate.Where | pangloss_models.search.Var[pangloss_dates.models.DateRange] | pangloss_models.search.Var[pangloss_dates.models.Date] | pangloss_models.search.Var[pangloss_dates.models.EDTFDate] | pangloss_models.search.Var[pangloss_dates.models.ExactDate] | pangloss_models.search.Var[pangloss_dates.models.OngoingDate] | pangloss_models.search.Var[pangloss_dates.models.Period] | pangloss_models.search.Var[pangloss_dates.models.Recurrence] | pangloss_models.search.Var[pangloss_dates.models.UnknownDate] | pangloss_models.search_where.Rel | None = ..., aliases: pangloss_models.search.Var[str] | pangloss_models.search_where.Items[str] | None = ..., has_type: typing.Any = ..., derived_: dict | pangloss_derived.views.DerivedWhere | None = ...) -> None: ...  # type: ignore
 
     class Order(pangloss_models.search.OrderBy):  # type: ignore
         field: typing.Literal['label', 'born.source_text', 'born.earliest_fuzzy', 'born.earliest_strict', 'born.latest_strict', 'born.latest_fuzzy', 'born.sort_day', 'born.end_sort_day']  # type: ignore
@@ -237,7 +239,8 @@ class Group(Entity, Agent):
         any_of_: list[Group.Where] | None = ...  # type: ignore
         not_: Group.Where | None = ...  # type: ignore
         name: pangloss_models.search.Var[str] | pangloss_models.search_where.Text | None = ...
-        def __init__(self, *, is_: pangloss_models.search.Var[Group] | None = ..., all_: list[Group.Where] | None = ..., any_of_: list[Group.Where] | None = ..., not_: Group.Where | None = ..., any_: pangloss_models.search_where.AnyRel | None = ..., label: pangloss_models.search_where.Text | None = ..., incoming_: list[pangloss_models.search_where.IncomingFrom | pangloss_models.search_where.Where] | None = ..., name: pangloss_models.search.Var[str] | pangloss_models.search_where.Text | None = ...) -> None: ...  # type: ignore
+        derived_: dict | pangloss_derived.views.DerivedWhere | None = ...
+        def __init__(self, *, is_: pangloss_models.search.Var[Group] | None = ..., all_: list[Group.Where] | None = ..., any_of_: list[Group.Where] | None = ..., not_: Group.Where | None = ..., any_: pangloss_models.search_where.AnyRel | None = ..., label: pangloss_models.search_where.Text | None = ..., incoming_: list[pangloss_models.search_where.IncomingFrom | pangloss_models.search_where.Where] | None = ..., name: pangloss_models.search.Var[str] | pangloss_models.search_where.Text | None = ..., derived_: dict | pangloss_derived.views.DerivedWhere | None = ...) -> None: ...  # type: ignore
 
     class Order(pangloss_models.search.OrderBy):  # type: ignore
         field: typing.Literal['label', 'name']  # type: ignore
@@ -278,7 +281,8 @@ class Place(Entity):
         all_: list[Place.Where] | None = ...  # type: ignore
         any_of_: list[Place.Where] | None = ...  # type: ignore
         not_: Place.Where | None = ...  # type: ignore
-        def __init__(self, *, is_: pangloss_models.search.Var[Place] | None = ..., all_: list[Place.Where] | None = ..., any_of_: list[Place.Where] | None = ..., not_: Place.Where | None = ..., any_: pangloss_models.search_where.AnyRel | None = ..., label: pangloss_models.search_where.Text | None = ..., incoming_: list[pangloss_models.search_where.IncomingFrom | pangloss_models.search_where.Where] | None = ...) -> None: ...  # type: ignore
+        derived_: dict | pangloss_derived.views.DerivedWhere | None = ...
+        def __init__(self, *, is_: pangloss_models.search.Var[Place] | None = ..., all_: list[Place.Where] | None = ..., any_of_: list[Place.Where] | None = ..., not_: Place.Where | None = ..., any_: pangloss_models.search_where.AnyRel | None = ..., label: pangloss_models.search_where.Text | None = ..., incoming_: list[pangloss_models.search_where.IncomingFrom | pangloss_models.search_where.Where] | None = ..., derived_: dict | pangloss_derived.views.DerivedWhere | None = ...) -> None: ...  # type: ignore
 
     class Order(pangloss_models.search.OrderBy):  # type: ignore
         field: typing.Literal['label']  # type: ignore
@@ -333,7 +337,8 @@ class Source(Entity):
         author: pangloss_models.search.Var[str] | pangloss_models.search_where.Text | None = ...
         written: pangloss_models.search.Var[datetime.date] | pangloss_models.search_where.Compare[datetime.date] | None = ...
         edition_price: pangloss_models.search.Var[decimal.Decimal] | pangloss_models.search_where.Compare[decimal.Decimal] | None = ...
-        def __init__(self, *, is_: pangloss_models.search.Var[Source] | None = ..., all_: list[Source.Where] | None = ..., any_of_: list[Source.Where] | None = ..., not_: Source.Where | None = ..., any_: pangloss_models.search_where.AnyRel | None = ..., label: pangloss_models.search_where.Text | None = ..., incoming_: list[pangloss_models.search_where.IncomingFrom | pangloss_models.search_where.Where] | None = ..., author: pangloss_models.search.Var[str] | pangloss_models.search_where.Text | None = ..., written: pangloss_models.search.Var[datetime.date] | pangloss_models.search_where.Compare[datetime.date] | None = ..., edition_price: pangloss_models.search.Var[decimal.Decimal] | pangloss_models.search_where.Compare[decimal.Decimal] | None = ...) -> None: ...  # type: ignore
+        derived_: dict | pangloss_derived.views.DerivedWhere | None = ...
+        def __init__(self, *, is_: pangloss_models.search.Var[Source] | None = ..., all_: list[Source.Where] | None = ..., any_of_: list[Source.Where] | None = ..., not_: Source.Where | None = ..., any_: pangloss_models.search_where.AnyRel | None = ..., label: pangloss_models.search_where.Text | None = ..., incoming_: list[pangloss_models.search_where.IncomingFrom | pangloss_models.search_where.Where] | None = ..., author: pangloss_models.search.Var[str] | pangloss_models.search_where.Text | None = ..., written: pangloss_models.search.Var[datetime.date] | pangloss_models.search_where.Compare[datetime.date] | None = ..., edition_price: pangloss_models.search.Var[decimal.Decimal] | pangloss_models.search_where.Compare[decimal.Decimal] | None = ..., derived_: dict | pangloss_derived.views.DerivedWhere | None = ...) -> None: ...  # type: ignore
 
     class Order(pangloss_models.search.OrderBy):  # type: ignore
         field: typing.Literal['label', 'author', 'written', 'edition_price']  # type: ignore
@@ -396,7 +401,7 @@ class Statement(Document):
 class Activity(Statement):
     activity_type: ActivityType
     carried_out_by: Annotated[ViaEdge[Agent, Certainty], RelationConfig(reverse_name='carried_out', subclasses_parent_fields=[FieldSubclassing('involves', field_on_model=Statement)])]
-    participants: list[InRole[Agent]]
+    participants: Annotated[list[InRole[Agent]], RelationConfig(default_reified_type=InRole)]
     class ReferenceView(pangloss_models.model_bases.document._DocumentReferenceViewBase):  # type: ignore
         type: typing.Literal['Activity'] = ...
 
@@ -716,7 +721,8 @@ class PhysicalObject(Entity):
         all_: list[PhysicalObject.Where] | None = ...  # type: ignore
         any_of_: list[PhysicalObject.Where] | None = ...  # type: ignore
         not_: PhysicalObject.Where | None = ...  # type: ignore
-        def __init__(self, *, is_: pangloss_models.search.Var[PhysicalObject] | None = ..., all_: list[PhysicalObject.Where] | None = ..., any_of_: list[PhysicalObject.Where] | None = ..., not_: PhysicalObject.Where | None = ..., any_: pangloss_models.search_where.AnyRel | None = ..., label: pangloss_models.search_where.Text | None = ..., incoming_: list[pangloss_models.search_where.IncomingFrom | pangloss_models.search_where.Where] | None = ...) -> None: ...  # type: ignore
+        derived_: dict | pangloss_derived.views.DerivedWhere | None = ...
+        def __init__(self, *, is_: pangloss_models.search.Var[PhysicalObject] | None = ..., all_: list[PhysicalObject.Where] | None = ..., any_of_: list[PhysicalObject.Where] | None = ..., not_: PhysicalObject.Where | None = ..., any_: pangloss_models.search_where.AnyRel | None = ..., label: pangloss_models.search_where.Text | None = ..., incoming_: list[pangloss_models.search_where.IncomingFrom | pangloss_models.search_where.Where] | None = ..., derived_: dict | pangloss_derived.views.DerivedWhere | None = ...) -> None: ...  # type: ignore
 
     class Order(pangloss_models.search.OrderBy):  # type: ignore
         field: typing.Literal['label']  # type: ignore
@@ -754,7 +760,8 @@ class Artwork(PhysicalObject):
         all_: list[Artwork.Where] | None = ...  # type: ignore
         any_of_: list[Artwork.Where] | None = ...  # type: ignore
         not_: Artwork.Where | None = ...  # type: ignore
-        def __init__(self, *, is_: pangloss_models.search.Var[Artwork] | None = ..., all_: list[Artwork.Where] | None = ..., any_of_: list[Artwork.Where] | None = ..., not_: Artwork.Where | None = ..., any_: pangloss_models.search_where.AnyRel | None = ..., label: pangloss_models.search_where.Text | None = ..., incoming_: list[pangloss_models.search_where.IncomingFrom | pangloss_models.search_where.Where] | None = ...) -> None: ...  # type: ignore
+        derived_: dict | pangloss_derived.views.DerivedWhere | None = ...
+        def __init__(self, *, is_: pangloss_models.search.Var[Artwork] | None = ..., all_: list[Artwork.Where] | None = ..., any_of_: list[Artwork.Where] | None = ..., not_: Artwork.Where | None = ..., any_: pangloss_models.search_where.AnyRel | None = ..., label: pangloss_models.search_where.Text | None = ..., incoming_: list[pangloss_models.search_where.IncomingFrom | pangloss_models.search_where.Where] | None = ..., derived_: dict | pangloss_derived.views.DerivedWhere | None = ...) -> None: ...  # type: ignore
 
     class Order(pangloss_models.search.OrderBy):  # type: ignore
         field: typing.Literal['label']  # type: ignore
@@ -793,7 +800,8 @@ class Painting(Artwork):
         all_: list[Painting.Where] | None = ...  # type: ignore
         any_of_: list[Painting.Where] | None = ...  # type: ignore
         not_: Painting.Where | None = ...  # type: ignore
-        def __init__(self, *, is_: pangloss_models.search.Var[Painting] | None = ..., all_: list[Painting.Where] | None = ..., any_of_: list[Painting.Where] | None = ..., not_: Painting.Where | None = ..., any_: pangloss_models.search_where.AnyRel | None = ..., label: pangloss_models.search_where.Text | None = ..., incoming_: list[pangloss_models.search_where.IncomingFrom | pangloss_models.search_where.Where] | None = ...) -> None: ...  # type: ignore
+        derived_: dict | pangloss_derived.views.DerivedWhere | None = ...
+        def __init__(self, *, is_: pangloss_models.search.Var[Painting] | None = ..., all_: list[Painting.Where] | None = ..., any_of_: list[Painting.Where] | None = ..., not_: Painting.Where | None = ..., any_: pangloss_models.search_where.AnyRel | None = ..., label: pangloss_models.search_where.Text | None = ..., incoming_: list[pangloss_models.search_where.IncomingFrom | pangloss_models.search_where.Where] | None = ..., derived_: dict | pangloss_derived.views.DerivedWhere | None = ...) -> None: ...  # type: ignore
 
     class Order(pangloss_models.search.OrderBy):  # type: ignore
         field: typing.Literal['label']  # type: ignore

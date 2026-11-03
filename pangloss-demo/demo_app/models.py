@@ -209,7 +209,10 @@ class Activity(Statement):
             ],
         ),
     ]
-    participants: list[InRole[Agent]]
+    # (in the interface, a person or a group is searched for, and put in a role: `default_reified_type`)
+    participants: Annotated[
+        list[InRole[Agent]], RelationConfig(default_reified_type=InRole)
+    ]
 
 
 class Transfer(Statement):

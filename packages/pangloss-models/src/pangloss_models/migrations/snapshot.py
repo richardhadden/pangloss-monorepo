@@ -40,6 +40,7 @@ NOT_DATA_KEYS = {
     "concreteTypes",  # follows from the models that exist
     "incoming",  # follows from the fields of the other models
     "subclasses",  # the fields a relation stands for: in its `storage`, as their edges
+    "defaultReifiedType",  # what the interface offers first
     "app",  # the app an index or constraint is for (which migration makes it)
 }
 
