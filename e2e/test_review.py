@@ -28,13 +28,30 @@ SECTIONS = [
 ]
 
 
-def make_report(stack: Stack, label: str = "Annual report", sections=SECTIONS) -> str:
+FINDINGS = [
+    {
+        "type": "Finding",
+        "label": "Overspend",
+        "note": "Found in the audit",
+        "target": [{"type": "ReportSection", "label": "Audit notes", "body": "Spent"}],
+    }
+]
+
+
+def make_report(
+    stack: Stack, label: str = "Annual report", sections=SECTIONS, findings=FINDINGS
+) -> str:
     """A Report made by ann (so that the others may check it)"""
     author = stack.client(AUTHOR_USERNAME, AUTHOR_PASSWORD)
     made = author.ok(
         "POST",
         "/api/Report",
-        {"label": label, "text": "Things happened", "sections": sections},
+        {
+            "label": label,
+            "text": "Things happened",
+            "sections": sections,
+            "findings": findings,
+        },
     )
     return made["id"]
 
@@ -239,8 +256,10 @@ def test_the_module_tests_pass_in_the_built_project(stack: Stack):
         assert done.returncode == 0, (done.stdout + done.stderr)[-3000:]
 
 
-def test_a_comment_about_a_part_is_chosen_with_a_hash(logged_in: Page, report):
+def test_parts_are_referred_to_with_a_hash_and_shown_inline(logged_in: Page, report):
     page = logged_in
+    sections = report.api.ok("GET", f"/api/Report/{report.id}")["sections"]
+    income, costs = sections[0]["id"], sections[1]["id"]
     open_panel(page, report.id)
     box = panel(page).get_by_role("combobox", name="Comment")
     box.press_sequentially("The figure in #inco")
@@ -249,33 +268,52 @@ def test_a_comment_about_a_part_is_chosen_with_a_hash(logged_in: Page, report):
     expect(parts.get_by_role("option")).to_contain_text("Income in the first half")
     box.press("Enter")
     expect(parts).to_have_count(0)
-    expect(box).to_have_value("The figure in ")
-    expect(panel(page).get_by_test_id("review-about")).to_contain_text(
-        "About: Report section · Income in the first half"
-    )
-    box.press_sequentially("is wrong")
+    # (the reference is in the text, as #<id>; a second one too)
+    expect(box).to_have_value(f"The figure in #{income} ")
+    box.press_sequentially("does not match #cos")
+    box.press("Enter")
+    expect(box).to_have_value(f"The figure in #{income} does not match #{costs} ")
     panel(page).get_by_role("button", name="Send").click()
-    mine = panel(page).get_by_test_id("review-comment").filter(has_text="is wrong")
+    mine = (
+        panel(page).get_by_test_id("review-comment").filter(has_text="does not match")
+    )
     expect(mine.get_by_role("button", name="Resolve")).to_be_visible()
+    # (read, the references are chips in their places)
+    chips = mine.get_by_test_id("review-ref")
+    expect(chips).to_have_text(
+        ["Report sectionIncome in the first half", "Report sectionCosts"]
+    )
+    expect(mine.locator("div.rounded-lg")).to_have_text(
+        "The figure in Report sectionIncome in the first half does not match Report sectionCosts"
+    )
     comment = report.api.ok("GET", f"/api/review/{report.id}")["comments"][0]
-    assert (comment["text"], comment["targetLabel"]) == (
-        "The figure in is wrong",
+    assert comment["text"] == f"The figure in #{income} does not match #{costs}"
+    # (the API keeps the first as the part it is about, with its label)
+    assert (comment["targetId"], comment["targetLabel"]) == (
+        income,
         "Income in the first half",
     )
-    # (the tag shows the part on the page)
-    section = page.locator(f'[data-item-id="{comment["targetId"]}"]')
-    expect(section).to_contain_text("Income in the first half")
+    # (a chip shows its part on the page)
+    section = page.locator(f'[data-item-id="{costs}"]')
     page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-    mine.get_by_test_id("review-target").click()
+    chips.nth(1).click()
     expect(section).to_be_in_viewport()
 
 
 def test_the_button_opens_the_list_and_escape_closes_only_it(logged_in: Page, report):
     page = logged_in
     open_panel(page, report.id)
-    panel(page).get_by_role("button", name="About a part…").click()
+    panel(page).get_by_role("button", name="Refer to a part…").click()
     parts = panel(page).get_by_role("listbox", name="Parts of the document")
-    expect(parts.get_by_role("option")).to_have_count(2)
+    # (the two sections, the finding (a reified relation that is a document) and the section inside it)
+    expect(parts.get_by_role("option")).to_have_text(
+        [
+            "Report sectionIncome in the first half",
+            "Report sectionCosts",
+            "FindingOverspend",
+            "Report sectionAudit notes",
+        ]
+    )
     page.keyboard.press("Escape")
     expect(parts).to_have_count(0)
     expect(panel(page)).to_have_attribute("data-open", "true")
@@ -289,7 +327,7 @@ def test_a_comment_about_a_part_since_removed_says_so(logged_in: Page, report):
     report.bob.ok(
         "POST",
         f"/api/review/{report.id}/comments",
-        {"text": "Cut this", "targetId": section["id"]},
+        {"text": f"Cut #{section['id']}", "targetId": section["id"]},
     )
     # (ann takes the section out)
     author = report.stack.client(AUTHOR_USERNAME, AUTHOR_PASSWORD)
@@ -302,9 +340,9 @@ def test_a_comment_about_a_part_since_removed_says_so(logged_in: Page, report):
     )
     assert status < 300, result
     open_panel(page, report.id)
-    target = panel(page).get_by_test_id("review-target")
-    expect(target).to_contain_text("About: Costs")
-    expect(target).to_contain_text("(no longer there)")
+    target = panel(page).get_by_test_id("review-ref")
+    expect(target).to_have_attribute("data-gone", "true")
+    expect(target).to_have_text("Costs(no longer there)")
 
 
 def test_checking_what_one_made_is_refused_and_said(logged_in: Page, types):
@@ -314,7 +352,7 @@ def test_checking_what_one_made_is_refused_and_said(logged_in: Page, types):
     mine = types.admin().ok(
         "POST",
         "/api/Report",
-        {"label": "My report", "text": "Mine", "sections": []},
+        {"label": "My report", "text": "Mine", "sections": [], "findings": []},
     )["id"]
     open_panel(page, mine)
     with page.expect_response(lambda r: r.url.endswith("/status")) as answer:
@@ -333,7 +371,7 @@ def queue_rows(page: Page):
 
 def test_the_queue_lists_what_is_to_be_checked_by_status(logged_in: Page, report):
     page = logged_in
-    checked = make_report(report.stack, "Checked report", [])
+    checked = make_report(report.stack, "Checked report", [], [])
     report.bob.ok("POST", f"/api/review/{checked}/status", {"status": "checked"})
     report.bob.ok("POST", f"/api/review/{report.id}/comments", {"text": "One thing"})
     page.goto("/")
@@ -378,7 +416,7 @@ def test_the_queue_goes_a_page_at_a_time(logged_in: Page, report):
         author.ok(
             "POST",
             "/api/Report",
-            {"label": f"Report {n:02}", "text": "x", "sections": []},
+            {"label": f"Report {n:02}", "text": "x", "sections": [], "findings": []},
         )
     page.goto("/review")
     hydrated(page)
@@ -397,3 +435,27 @@ def test_the_queue_needs_a_login(page: Page, types):
     hydrated(page)
     expect(page.get_by_role("dialog", name="Log in")).to_be_visible()
     expect(page.get_by_role("heading", name="Documents to review")).to_have_count(0)
+
+
+def test_a_reified_relation_document_can_be_referred_to(logged_in: Page, report):
+    page = logged_in
+    finding = report.api.ok("GET", f"/api/Report/{report.id}")["findings"][0]["id"]
+    open_panel(page, report.id)
+    box = panel(page).get_by_role("combobox", name="Comment")
+    box.press_sequentially("Is #oversp")
+    expect(
+        panel(page)
+        .get_by_role("listbox", name="Parts of the document")
+        .get_by_role("option")
+    ).to_have_text(["FindingOverspend"])
+    box.press("Enter")
+    expect(box).to_have_value(f"Is #{finding} ")
+    box.press_sequentially("right?")
+    panel(page).get_by_role("button", name="Send").click()
+    mine = panel(page).get_by_test_id("review-comment").filter(has_text="right?")
+    expect(mine.get_by_test_id("review-ref")).to_have_text("FindingOverspend")
+    expect(mine.get_by_role("button", name="Resolve")).to_be_visible()
+    comment = report.api.ok("GET", f"/api/review/{report.id}")["comments"][0]
+    assert (comment["targetId"], comment["targetLabel"]) == (finding, "Overspend")
+    # (its block on the page is marked, so the chip can show it)
+    expect(page.locator(f'[data-item-id="{finding}"]')).to_contain_text("Overspend")

@@ -175,7 +175,6 @@ These are not shown, but are read aloud, or appear when the pointer rests on the
 | `review_no_comments` | No comments | `ReviewPanel` | |
 | `review_you` | You | `ReviewPanel` (the reader's own comments) | |
 | `review_sending` | Sending… | `ReviewPanel` (a comment not yet confirmed) | |
-| `review_about` | About: {part} | `ReviewPanel` (a comment about a nested part) | |
 | `review_resolve` | Resolve | `ReviewPanel` (button) | |
 | `review_resolved_by` | Resolved by {user} | `ReviewPanel` | |
 | `review_comment_label` | Comment | `ReviewPanel` (`aria-label` of the box) | |
@@ -185,9 +184,8 @@ These are not shown, but are read aloud, or appear when the pointer rests on the
 | `review_comment_refused` | The comment was not sent: {reason} | `ReviewAction` (red toast) | |
 | `review_resolve_refused` | The comment was not resolved: {reason} | `ReviewAction` (red toast) | |
 | `review_parts` | Parts of the document | `Composer` (`aria-label` of the list a `#` opens) | |
-| `review_part_choose` | About a part… | `Composer` (button that puts a `#` in the box) | |
+| `review_part_choose` | Refer to a part… | `Composer` (button that puts a `#` in the box) | |
 | `review_part_none` | No parts match | `Composer` | |
-| `review_part_clear` | Not about a part | `Composer` (the chip's ✕, label and tooltip) | |
 | `review_part_gone` | (no longer there) | `ReviewPanel` (a comment about a part since removed) | |
 | `review_part_show` | Show it on the page | `ReviewPanel` (tooltip of a comment's "About: …") | |
 | `review_queue` | Review | `ReviewQueue` (the console's name for the page) | |

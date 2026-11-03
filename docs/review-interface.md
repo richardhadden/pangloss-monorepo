@@ -119,6 +119,27 @@ pressed; Escape and a close button shut it. From the top:
   through the API by another user appears in the open panel without a reload** (the live feed); and the module's
   own vitest run in the built project. The dev-mode test opens the panel too.
 
+## Third change (2026-11-03): references inline, documents only
+
+**Decided by the user:** a reference to a part stays where it is written, not in an "About: …" chip over the box; the
+text holds just `#<id>`, shown as a chip where the comment is read; and only documents can be referred to, reified
+relations that are documents (`ReifiedRelationDocument`) included.
+
+- Choosing in the `#` list replaces the `#words` with `#<id> ` (`withReference`); the box shows the raw id until it is
+  sent. A comment may refer to several parts. A finished `#<id>` is not taken for a `#` being typed.
+- Read, each `#<uuid>` in a comment's text is a chip in its place (`CommentText`, `PartChip`: the type, tinted as a
+  document, and the label, shortened; a click shows the part on the page). A part no longer in the document is struck
+  through, "(no longer there)". Before the parts are read, a chip shows the label the server kept (for the `targetId`)
+  or the start of the id.
+- The API still keeps one part per comment: the interface sends the **first** reference as `targetId`, so the server
+  keeps its label at the time. A comment made through the API with a `targetId` and no reference in its text has the
+  chip first.
+- The parts offered (`partsOf`) are only nodes whose model is a **Document** or a **ReifiedRelationDocument** (any depth,
+  through plain reified relations, conjunctions and spaces, which are not offered themselves). A chip is tinted by its
+  part's kind. While the parts are still being read, Enter in the open list waits rather than making a new line.
+- The chip over the box, and its strings `review_about` and `review_part_clear`, are gone; the button is "Refer to a
+  part…".
+
 ## Not in the first build (built after it, below)
 
 Choosing a part to comment on, highlighting it; a review queue page. (Notices by email are not planned here.)
@@ -136,7 +157,8 @@ from the navigation bar, read when it is shown (not live: going back and forth r
   Enter or Tab (or a click) choose; the `#words` are taken out of the text and the part becomes a chip, "About: Report
   section · Costs", with ✕. A comment is about one part (the API's `targetId`), so a second `#` replaces the chip:
   an inline token in a plain textarea could not be styled, and would suggest several. Escape closes the list and not the
-  panel. A button beside Send ("About a part…") puts a `#` at the caret, for those who do not know it.
+  panel. A button beside Send ("About a part…", now "Refer to a part…") puts a `#` at the caret, for those who do not
+  know it. (Superseded by the third change above: the reference is now inline.)
 - **The part on the page.** The view page's nested blocks are now marked `data-item-id` as the form's are
   (`ItemContents`); choosing a part, or clicking a comment's "About: …", scrolls to it and lights it up. A comment about
   a part that is no longer in the document is struck through, "(no longer there)".

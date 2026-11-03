@@ -46,6 +46,7 @@ MODELS = textwrap.dedent(
     """
     from pangloss_models.model_bases.document import Document
     from pangloss_models.model_bases.entity import Entity
+    from pangloss_models.model_bases.reified_relation import ReifiedRelationDocument
     from pangloss_review.meta import ReviewMeta
     from pangloss_typology import Typed, Typology, TypologyMeta
 
@@ -79,11 +80,16 @@ MODELS = textwrap.dedent(
         body: str
 
 
+    class Finding[T](ReifiedRelationDocument[T]):
+        note: str
+
+
     class Report(Document):
         _review_meta = ReviewMeta(reviewable=True)
 
         text: str
         sections: list[ReportSection]
+        findings: list[Finding[ReportSection]]
     """
 )
 TYPES = (

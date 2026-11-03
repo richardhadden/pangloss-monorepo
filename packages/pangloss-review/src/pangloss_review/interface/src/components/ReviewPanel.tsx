@@ -3,10 +3,10 @@ import { Portal } from "@solidjs/web";
 import { createEffect, createMemo, createSignal, For, onSettled, Show } from "solid-js";
 import { STATUSES } from "../api";
 import type { ReviewStatus } from "../api";
-import { showPart } from "../parts";
 import type { Part } from "../parts";
 import { visibleComments } from "../state";
 import type { ReviewView, ShownComment } from "../state";
+import { CommentText } from "./CommentText";
 import { Composer } from "./Composer";
 import { StatusFlag } from "./StatusFlag";
 
@@ -17,9 +17,9 @@ export interface ReviewPanelProps {
   open: boolean;
   onClose: () => void;
   onStatus: (status: ReviewStatus) => void;
-  /** Sends a comment, about a part or not; rejects if it was not made (the text is put back) */
-  onComment: (text: string, part?: Part) => Promise<unknown>;
-  /** The parts of the document a comment can be about (undefined until they have been read) */
+  /** Sends a comment (references to parts are `#<id>` in its text); rejects if it was not made (the text is put back) */
+  onComment: (text: string) => Promise<unknown>;
+  /** The parts of the document a comment can refer to (undefined until they have been read) */
   parts?: Part[];
   /** Asks for the parts, when the list of them is first opened */
   onWantParts?: () => void;
@@ -88,41 +88,12 @@ function CommentBubble(props: {
           },
         ]}
       >
-        <Show when={props.comment.targetId}>
-          {(target) => (
-            // (about a part: a click shows it on the page; a part that is no longer in the document says so)
-            <Show
-              when={!props.parts || props.parts.some((p) => p.id === target())}
-              fallback={
-                <span
-                  class={[
-                    "mb-1 block text-[0.65rem] font-semibold uppercase line-through",
-                    { "text-sky-100": props.mine, "text-slate-500": !props.mine },
-                  ]}
-                  data-testid="review-target"
-                  data-gone="true"
-                >
-                  {t("review_about", "About: {part}", { part: props.comment.targetLabel ?? "" })}{" "}
-                  <span class="no-underline">{t("review_part_gone", "(no longer there)")}</span>
-                </span>
-              }
-            >
-              <button
-                type="button"
-                class={[
-                  "mb-1 block cursor-pointer text-left text-[0.65rem] font-semibold uppercase hover:underline",
-                  { "text-sky-100": props.mine, "text-slate-500": !props.mine },
-                ]}
-                title={t("review_part_show", "Show it on the page")}
-                data-testid="review-target"
-                onClick={() => showPart(target())}
-              >
-                {t("review_about", "About: {part}", { part: props.comment.targetLabel ?? "" })}
-              </button>
-            </Show>
-          )}
-        </Show>
-        {props.comment.text}
+        <CommentText
+          text={props.comment.text}
+          parts={props.parts}
+          targetId={props.comment.targetId}
+          targetLabel={props.comment.targetLabel}
+        />
       </div>
       <div class="px-1 text-[0.65rem] text-slate-500">
         <Show
@@ -290,7 +261,7 @@ export function ReviewPanel(props: ReviewPanelProps) {
           </For>
         </ol>
 
-        {/* A new comment: Send, or Ctrl/Cmd+Enter; # for a part */}
+        {/* A new comment: Send, or Ctrl/Cmd+Enter; # refers to a part */}
         <Composer parts={props.parts} onWantParts={props.onWantParts} onSend={props.onComment} />
       </aside>
     </Portal>

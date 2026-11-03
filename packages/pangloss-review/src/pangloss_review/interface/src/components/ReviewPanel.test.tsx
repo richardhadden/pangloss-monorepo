@@ -1,4 +1,6 @@
 // @vitest-environment happy-dom
+import { ModelsProvider } from "@pangloss/interface-core";
+import type { ModelDefinition, ModelDefinitions } from "@pangloss/interface-core";
 import { render } from "@solidjs/web";
 import { createSignal } from "solid-js";
 import { afterEach, expect, test, vi } from "vitest";
@@ -16,6 +18,12 @@ const comment = (id: string, username: string, at: string, more: Partial<Comment
   ...more,
 });
 
+const PART = "01a1a11c-8979-71fc-8c48-000000000002";
+const DEFINITIONS: ModelDefinitions = {
+  models: { Statement: { name: "Statement", kind: "Document", interfaceMeta: null } as unknown as ModelDefinition },
+  enums: {},
+};
+
 const VIEW: ReviewView = {
   id: "d1",
   state: "ready",
@@ -25,7 +33,11 @@ const VIEW: ReviewView = {
   reviewedAt: "2026-11-01T10:00:00Z",
   openComments: 2,
   comments: [
-    comment("a", "bob", "2026-11-01T10:00:00Z", { targetId: "part2", targetLabel: "The second part" }),
+    comment("a", "bob", "2026-11-01T10:00:00Z", {
+      text: `Look at #${PART} please`,
+      targetId: PART,
+      targetLabel: "The second part",
+    }),
     comment("b", "me", "2026-11-01T11:00:00Z"),
     comment("c", "bob", "2026-11-01T09:00:00Z", { resolved: true, resolvedBy: "me" }),
   ],
@@ -54,7 +66,14 @@ function show(more: Partial<ReviewPanelProps> = {}) {
   };
   const container = document.createElement("div");
   document.body.append(container);
-  dispose = render(() => <ReviewPanel {...props} />, container);
+  dispose = render(
+    () => (
+      <ModelsProvider definitions={DEFINITIONS}>
+        <ReviewPanel {...props} />
+      </ModelsProvider>
+    ),
+    container,
+  );
   return props;
 }
 
@@ -83,7 +102,7 @@ test("the status buttons are at the top, the current one pressed; another is a c
 test("the open comments, oldest first: the reader's on the right, others' on the left", async () => {
   show();
   await settle();
-  expect(bubbles().map((b) => [b.textContent?.includes("text of a"), b.dataset.mine])).toEqual([
+  expect(bubbles().map((b) => [b.textContent?.includes("Look at"), b.dataset.mine])).toEqual([
     [true, "false"],
     [false, "true"],
   ]);
@@ -92,8 +111,9 @@ test("the open comments, oldest first: the reader's on the right, others' on the
   expect(mine!.className).toContain("self-end");
   expect(theirs!.textContent).toContain("bob");
   expect(mine!.textContent).toContain("You");
-  // (about a part of the document: its label as it was)
-  expect(theirs!.textContent).toContain("About: The second part");
+  // (a reference to a part, inline: before the parts are read, the label the server kept)
+  expect(theirs!.querySelector('[data-testid="review-ref"]')?.textContent).toBe("The second part");
+  expect(theirs!.textContent).toContain("Look at The second part please");
 });
 
 test("the resolved ones are shown, faded, when asked for", async () => {
@@ -129,13 +149,13 @@ test("a comment is sent by the button or Ctrl+Enter, and the box is emptied", as
   await settle();
   send.click();
   await settle();
-  expect(props.onComment).toHaveBeenCalledWith("First", undefined);
+  expect(props.onComment).toHaveBeenCalledWith("First");
   expect(box.value).toBe("");
   box.value = "Second";
   box.dispatchEvent(new Event("input", { bubbles: true }));
   box.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", ctrlKey: true, bubbles: true }));
   await settle();
-  expect(props.onComment).toHaveBeenLastCalledWith("Second", undefined);
+  expect(props.onComment).toHaveBeenLastCalledWith("Second");
 });
 
 test("what was written is put back if the comment was not made", async () => {
@@ -175,7 +195,14 @@ test("closed, it is off to the right and inert; Escape and the close button clos
   };
   const container = document.createElement("div");
   document.body.append(container);
-  dispose = render(() => <ReviewPanel {...props} />, container);
+  dispose = render(
+    () => (
+      <ModelsProvider definitions={DEFINITIONS}>
+        <ReviewPanel {...props} />
+      </ModelsProvider>
+    ),
+    container,
+  );
   await settle();
   expect(panel().className).toContain("translate-x-0");
   document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
@@ -199,22 +226,34 @@ test("no comments says so", async () => {
   expect(panel().querySelector('input[type="checkbox"]')).toBeNull();
 });
 
-test("a comment about a part shows it on the page when its tag is clicked; one about a part gone says so", async () => {
-  document.body.insertAdjacentHTML("beforeend", '<div data-item-id="part2">The second part</div>');
-  const block = document.querySelector<HTMLElement>('[data-item-id="part2"]')!;
+test("a reference to a part is an inline chip (type and label) that shows the part on the page; one gone says so", async () => {
+  document.body.insertAdjacentHTML("beforeend", `<div data-item-id="${PART}">The second part</div>`);
+  const block = document.querySelector<HTMLElement>(`[data-item-id="${PART}"]`)!;
   const scrolled = vi.fn();
   block.scrollIntoView = scrolled;
-  show({ parts: [{ id: "part2", type: "Statement", label: "The second part" }] });
+  show({ parts: [{ id: PART, type: "Statement", label: "The second part, now renamed" }] });
   await settle();
-  const tag = panel().querySelector<HTMLElement>('[data-testid="review-target"]')!;
-  expect(tag.tagName).toBe("BUTTON");
-  tag.click();
+  const chip = panel().querySelector<HTMLElement>('[data-testid="review-ref"]')!;
+  expect(chip.tagName).toBe("BUTTON");
+  expect(chip.textContent).toBe("StatementThe second part, now renamed");
+  chip.click();
   expect(scrolled).toHaveBeenCalled();
   dispose?.();
   document.body.innerHTML = "";
   show({ parts: [] });
   await settle();
-  const gone = panel().querySelector<HTMLElement>('[data-testid="review-target"]')!;
+  const gone = panel().querySelector<HTMLElement>('[data-testid="review-ref"]')!;
   expect(gone.dataset.gone).toBe("true");
-  expect(gone.textContent).toContain("(no longer there)");
+  expect(gone.textContent).toBe("The second part(no longer there)");
+});
+
+test("a comment made with a part but no reference to it in its text has the chip first", async () => {
+  show({
+    review: {
+      ...VIEW,
+      comments: [comment("x", "bob", "2026-11-01T10:00:00Z", { text: "Wrong", targetId: PART, targetLabel: "P" })],
+    },
+  });
+  await settle();
+  expect(bubbles()[0]!.querySelector("div.rounded-lg")?.textContent).toBe("P Wrong");
 });

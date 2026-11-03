@@ -1,15 +1,16 @@
 import { useTranslations } from "@pangloss/interface-core";
 import { createMemo, createSignal, For, Show } from "solid-js";
-import { matchParts, mentionAt, shorten, showPart, withoutMention } from "../parts";
+import { matchParts, mentionAt, shorten, showPart, withReference } from "../parts";
 import type { Part } from "../parts";
 
 export interface ComposerProps {
-  /** The parts of the document a comment can be about; undefined while they are being read */
+  /** The parts of the document a comment can refer to; undefined while they are being read */
   parts?: Part[];
   /** Asks for the parts (the first time the list is opened) */
   onWantParts?: () => void;
-  /** Sends a comment, about a part or not; rejects if it was not made (what was written is put back) */
-  onSend: (text: string, part?: Part) => Promise<unknown>;
+  /** Sends a comment (its references to parts are `#<id>` in the text); rejects if it was not made (the text is put
+   * back) */
+  onSend: (text: string) => Promise<unknown>;
 }
 
 // (the list of parts: open while a `#` before the caret, at `start`, is being typed)
@@ -19,15 +20,15 @@ interface Mention {
 }
 
 /**
- * The box to write a comment. Typing `#` (at the start, or after a space) opens a list of the parts of the document
- * (type and label, shortened), filtered by what is typed after it; ↑/↓ and Enter or Tab (or a click) choose one, which
- * takes the `#word` out of the text and becomes the chip "About: …" over the box (a comment is about one part: another
- * replaces it). The button beside Send opens the same list. Send, or Ctrl/Cmd+Enter, sends.
+ * The box to write a comment. Typing `#` (at the start, or after a space) opens a list of the documents inside the
+ * document (type and label, shortened), filtered by what is typed after it; ↑/↓ and Enter or Tab (or a click) choose
+ * one, which replaces the `#words` in the text with a reference to it, `#<id>` (shown as a chip where the comment is
+ * read); a comment may refer to several. The button beside Send puts a `#` at the caret. Send, or Ctrl/Cmd+Enter,
+ * sends.
  */
 export function Composer(props: ComposerProps) {
   const { t, modelName } = useTranslations();
   const [draft, setDraft] = createSignal("");
-  const [part, setPart] = createSignal<Part>();
   const [mention, setMention] = createSignal<Mention>();
   const [active, setActive] = createSignal(0);
   let box: HTMLTextAreaElement | undefined;
@@ -35,7 +36,6 @@ export function Composer(props: ComposerProps) {
     const open = mention();
     return open ? matchParts(props.parts ?? [], open.query, (type) => modelName(type)) : [];
   });
-  const partName = (p: Part) => `${modelName(p.type)} · ${shorten(p.label ?? p.id)}`;
 
   function follow() {
     if (!box) return;
@@ -55,12 +55,11 @@ export function Composer(props: ComposerProps) {
   function choose(chosen: Part) {
     const open = mention();
     if (box && open) {
-      const { text, caret } = withoutMention(box.value, box.selectionStart ?? box.value.length, open.start);
+      const { text, caret } = withReference(box.value, box.selectionStart ?? box.value.length, open.start, chosen.id);
       box.value = text;
       setDraft(text);
       box.setSelectionRange(caret, caret);
     }
-    setPart(chosen);
     setMention(undefined);
     showPart(chosen.id);
     box?.focus();
@@ -70,17 +69,14 @@ export function Composer(props: ComposerProps) {
     // (the box itself: a key pressed at once after typing comes before the signal has the text)
     const text = (box?.value ?? draft()).trim();
     if (!text) return;
-    const about = part();
     setDraft("");
     if (box) box.value = "";
-    setPart(undefined);
     setMention(undefined);
-    props.onSend(text, about).catch(() => {
+    props.onSend(text).catch(() => {
       // (put back what was written, unless something new has been)
       if (draft() === "") {
         setDraft(text);
         if (box) box.value = text;
-        setPart(about);
       }
     });
     box?.focus();
@@ -99,6 +95,11 @@ export function Composer(props: ComposerProps) {
         if (chosen) {
           event.preventDefault();
           choose(chosen);
+          return;
+        }
+        // (the parts are still being read: Enter is not a new line meanwhile)
+        if (props.parts === undefined) {
+          event.preventDefault();
           return;
         }
       }
@@ -164,32 +165,6 @@ export function Composer(props: ComposerProps) {
           </For>
         </ul>
       </Show>
-      <Show when={part()}>
-        {(about) => (
-          <span
-            class="flex items-center gap-1 self-start rounded-sm bg-slate-200 py-0.5 pr-0.5 pl-2 text-xs text-slate-700"
-            data-testid="review-about"
-          >
-            {t("review_about", "About: {part}", { part: partName(about()) })}
-            <button
-              type="button"
-              class="flex size-5 cursor-pointer items-center justify-center rounded-sm hover:bg-slate-300"
-              aria-label={t("review_part_clear", "Not about a part")}
-              title={t("review_part_clear", "Not about a part")}
-              onClick={() => setPart(undefined)}
-            >
-              <svg
-                viewBox="0 0 24 24"
-                class="size-3 select-none fill-none stroke-current stroke-2"
-                stroke-linecap="round"
-                aria-hidden="true"
-              >
-                <path d="M6 6l12 12M18 6L6 18" />
-              </svg>
-            </button>
-          </span>
-        )}
-      </Show>
       <textarea
         ref={box}
         rows={3}
@@ -214,7 +189,7 @@ export function Composer(props: ComposerProps) {
         <button
           type="button"
           class="flex h-7 cursor-pointer items-center gap-1 rounded-sm px-2 text-xs font-semibold text-slate-600 uppercase select-none hover:bg-slate-200"
-          title={t("review_part_choose", "About a part…")}
+          title={t("review_part_choose", "Refer to a part…")}
           onMouseDown={(event) => event.preventDefault()}
           onClick={() => {
             // (a `#` where the caret is, as if typed, so what is typed next filters the list)
@@ -230,7 +205,7 @@ export function Composer(props: ComposerProps) {
           }}
         >
           <span aria-hidden="true">#</span>
-          {t("review_part_choose", "About a part…")}
+          {t("review_part_choose", "Refer to a part…")}
         </button>
         <button
           type="submit"

@@ -1,15 +1,15 @@
 import { getModel } from "@pangloss/interface-core";
-import type { ModelDefinitions, ModelKind } from "@pangloss/interface-core";
+import type { ModelDefinitions } from "@pangloss/interface-core";
 
-/** A part of a document that a comment can be about: a node inside it (a document, a reified relation, ...) */
+/** A part of a document that a comment can refer to: a document inside it (a reified relation that is a document too) */
 export interface Part {
   id: string;
   type: string;
   label: string | null;
 }
 
-// (what is not a part of the document of its own: an entity is referred to, the others have no id of their own there)
-const NOT_PARTS: readonly ModelKind[] = ["Entity", "Embedded", "AnnotatedValue", "EdgeModel"];
+// (what can be referred to: documents, and reified relations that are documents)
+const DOCUMENT_KINDS = new Set(["Document", "ReifiedRelationDocument"]);
 // (keys that are not the document's content)
 const SKIPPED_KEYS = new Set(["meta", "_derived", "edgeProperties"]);
 
@@ -17,9 +17,10 @@ const isObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
 /**
- * The parts of the document `item` (as the API reads it), in the order they come in it: every node with an id that is
- * inside it, but not the document itself, an entity it refers to (nor what is inside that), or what refers to it from
- * elsewhere (`incoming`).
+ * The parts of the document `item` (as the API reads it), in the order they come in it: every document inside it and
+ * every reified relation that is a document, at any depth (through other reified relations, conjunctions, semantic
+ * spaces...), but not the document itself, what an entity it refers to holds, or what refers to it from elsewhere
+ * (`incoming`).
  */
 export function partsOf(item: Record<string, unknown>, definitions: ModelDefinitions): Part[] {
   const found: Part[] = [];
@@ -33,7 +34,7 @@ export function partsOf(item: Record<string, unknown>, definitions: ModelDefinit
     const type = typeof value.type === "string" ? value.type : undefined;
     const model = type ? getModel(definitions, type) : undefined;
     if (model?.kind === "Entity") return;
-    if (!isHead && model && !NOT_PARTS.includes(model.kind) && typeof value.id === "string" && !seen.has(value.id)) {
+    if (!isHead && model && DOCUMENT_KINDS.has(model.kind) && typeof value.id === "string" && !seen.has(value.id)) {
       seen.add(value.id);
       found.push({ id: value.id, type: type!, label: typeof value.label === "string" ? value.label : null });
     }
@@ -75,17 +76,46 @@ export function matchParts(
  */
 export function mentionAt(text: string, caret: number): { start: number; query: string } | undefined {
   const found = /(^|\s)#([^#\n]{0,40})$/.exec(text.slice(0, caret));
-  if (!found) return undefined;
+  // (not a reference already made: `#<id>`)
+  if (!found || /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i.test(found[2]!)) return undefined;
   return { start: found.index + found[1]!.length, query: found[2]! };
 }
 
-/** The text with the `#query` that `mentionAt` found taken out (and the caret where it was) */
-export function withoutMention(text: string, caret: number, start: number): { text: string; caret: number } {
+/** The text with the `#query` that `mentionAt` found replaced by a reference to the part, `#<id>`, and a space after it
+ * (unless one follows already); the caret after that */
+export function withReference(
+  text: string,
+  caret: number,
+  start: number,
+  id: string,
+): { text: string; caret: number } {
   const rest = text.slice(caret);
-  const before = text.slice(0, start);
-  // (one space between what was before and after, not two)
-  const joined = before.endsWith(" ") && rest.startsWith(" ") ? rest.slice(1) : rest;
-  return { text: before + joined, caret: before.length };
+  const reference = `#${id}${rest.startsWith(" ") ? "" : " "}`;
+  const before = text.slice(0, start) + reference;
+  return { text: before + rest, caret: before.length + (rest.startsWith(" ") ? 1 : 0) };
+}
+
+// (a reference to a part in the text of a comment: `#` and the part's id, a UUID)
+const REFERENCE = /#([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/gi;
+
+/** The text of a comment cut into what is plain and the references to parts in it (`#<id>`), in order */
+export function splitReferences(text: string): (string | { id: string })[] {
+  const pieces: (string | { id: string })[] = [];
+  let at = 0;
+  for (const found of text.matchAll(REFERENCE)) {
+    if (found.index > at) pieces.push(text.slice(at, found.index));
+    pieces.push({ id: found[1]!.toLowerCase() });
+    at = found.index + found[0].length;
+  }
+  if (at < text.length) pieces.push(text.slice(at));
+  return pieces;
+}
+
+/** The ids of the parts a comment refers to, in order, each once */
+export function referencedIds(text: string): string[] {
+  return [
+    ...new Set(splitReferences(text).flatMap((piece) => (typeof piece === "string" ? [] : [piece.id]))),
+  ];
 }
 
 /** Scrolls to the part on the page (`data-item-id`) and lights it up for a moment; false if it is not on the page */

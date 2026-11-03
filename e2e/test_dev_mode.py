@@ -181,6 +181,7 @@ def test_the_review_panel(page: Page, types, dev_url: str, errors: list[str]):
             "label": "Dev report",
             "text": "Text",
             "sections": [{"type": "ReportSection", "label": "A part", "body": "B"}],
+            "findings": [],
         },
     )
     response = page.request.post(
@@ -200,11 +201,16 @@ def test_the_review_panel(page: Page, types, dev_url: str, errors: list[str]):
     box = panel.get_by_role("combobox", name="Comment")
     box.press_sequentially("From me about #a pa")
     box.press("Enter")
-    expect(panel.get_by_test_id("review-about")).to_contain_text("A part")
+    expect(box).to_have_value(re.compile(r"^From me about #[0-9a-f-]{36} $"))
     panel.get_by_role("button", name="Send").click()
     expect(
         panel.get_by_test_id("review-comment").filter(has_text="From me")
     ).to_have_attribute("data-mine", "true")
+    expect(
+        panel.get_by_test_id("review-comment")
+        .filter(has_text="From me")
+        .get_by_test_id("review-ref")
+    ).to_have_text("Report sectionA part")
     panel.get_by_test_id("review-comment").filter(has_text="From bob").get_by_role(
         "button", name="Resolve"
     ).click()

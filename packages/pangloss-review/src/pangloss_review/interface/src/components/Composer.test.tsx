@@ -5,10 +5,13 @@ import { shorten } from "../parts";
 import type { Part } from "../parts";
 import { Composer } from "./Composer";
 
+const S1 = "01a1a11c-8979-71fc-8c48-000000000001";
+const S2 = "01a1a11c-8979-71fc-8c48-000000000002";
+const S3 = "01a1a11c-8979-71fc-8c48-000000000003";
 const PARTS: Part[] = [
-  { id: "s1", type: "Statement", label: "Charles was crowned in Aachen in the year 800, by the pope" },
-  { id: "s2", type: "Statement", label: "Another statement" },
-  { id: "m1", type: "MemberOf", label: null },
+  { id: S1, type: "Statement", label: "Charles was crowned in Aachen in the year 800, by the pope" },
+  { id: S2, type: "Statement", label: "Another statement" },
+  { id: S3, type: "Letter", label: null },
 ];
 
 const settle = async () => {
@@ -23,7 +26,7 @@ afterEach(() => {
 
 // (`parts: null`: not read yet)
 function show(parts: Part[] | null = PARTS) {
-  const onSend = vi.fn(async (_text: string, _part?: Part) => undefined);
+  const onSend = vi.fn(async (_text: string) => undefined);
   const onWantParts = vi.fn();
   const container = document.createElement("div");
   document.body.append(container);
@@ -47,7 +50,6 @@ async function key(box: HTMLTextAreaElement, name: string, more: KeyboardEventIn
 }
 
 const options = () => [...document.querySelectorAll<HTMLElement>('[role="option"]')];
-const chip = () => document.querySelector('[data-testid="review-about"]');
 
 test("# opens the list of parts, with type and shortened label, and asks for the parts", async () => {
   const { box, onWantParts } = show();
@@ -57,12 +59,12 @@ test("# opens the list of parts, with type and shortened label, and asks for the
   expect(options().map((o) => o.textContent)).toEqual([
     `Statement${shorten(PARTS[0]!.label!)}`,
     "StatementAnother statement",
-    "MemberOfm1",
+    `Letter${S3}`,
   ]);
   expect(options()[0]!.getAttribute("aria-selected")).toBe("true");
 });
 
-test("what is typed after # filters; arrows and Enter choose, the #word goes, and the chip says what it is about", async () => {
+test("what is typed after # filters; arrows and Enter choose, which puts #<id> in place of the #words", async () => {
   const { box, onSend } = show();
   await type(box, "Look at #stat");
   expect(options()).toHaveLength(2);
@@ -71,29 +73,26 @@ test("what is typed after # filters; arrows and Enter choose, the #word goes, an
   const enter = await key(box, "Enter");
   expect(enter.defaultPrevented).toBe(true);
   expect(options()).toHaveLength(0);
-  expect(box.value).toBe("Look at ");
-  expect(chip()?.textContent).toContain("About: Statement · Another statement");
-  await type(box, "Look at this");
+  expect(box.value).toBe(`Look at #${S2} `);
+  expect(box.selectionStart).toBe(box.value.length);
+  await type(box, `${box.value}and #charl`);
+  await key(box, "Enter");
+  expect(box.value).toBe(`Look at #${S2} and #${S1} `);
   await key(box, "Enter", { ctrlKey: true });
-  expect(onSend).toHaveBeenCalledWith("Look at this", PARTS[1]);
-  // (sent: the chip goes with the text)
-  expect(chip()).toBeNull();
+  expect(onSend).toHaveBeenCalledWith(`Look at #${S2} and #${S1}`);
   expect(box.value).toBe("");
 });
 
-test("a click chooses too; the chip's ✕ makes it not about a part", async () => {
+test("a click chooses too; a comment without # is plain", async () => {
   const { box, onSend } = show();
   await type(box, "#");
   options()[2]!.click();
   await settle();
-  expect(chip()?.textContent).toContain("MemberOf · m1");
-  chip()!.querySelector("button")!.click();
-  await settle();
-  expect(chip()).toBeNull();
+  expect(box.value).toBe(`#${S3} `);
   await type(box, "General remark");
   document.querySelector<HTMLButtonElement>('button[type="submit"]')!.click();
   await settle();
-  expect(onSend).toHaveBeenCalledWith("General remark", undefined);
+  expect(onSend).toHaveBeenCalledWith("General remark");
 });
 
 test("Escape closes the list and is used up (the panel stays open)", async () => {
@@ -124,18 +123,20 @@ test("a # in a word is not a mention; nothing matching says so; while the parts 
   const loading = show(null);
   await type(loading.box, "#");
   expect(document.querySelector('[role="listbox"]')?.textContent).toBe("Loading…");
+  // (Enter waits for them, rather than being a new line)
+  expect((await key(loading.box, "Enter")).defaultPrevented).toBe(true);
 });
 
 test("the button puts a # where the caret is, which opens the list", async () => {
   const { box } = show();
   await type(box, "See");
-  [...document.querySelectorAll("button")].find((b) => b.textContent?.includes("About a part"))!.click();
+  [...document.querySelectorAll("button")].find((b) => b.textContent?.includes("Refer to a part"))!.click();
   await settle();
   expect(box.value).toBe("See #");
   expect(options()).toHaveLength(3);
 });
 
-test("what was written, and the part, are put back if the comment was not made", async () => {
+test("what was written, references and all, is put back if the comment was not made", async () => {
   const container = document.createElement("div");
   document.body.append(container);
   dispose = render(
@@ -146,9 +147,8 @@ test("what was written, and the part, are put back if the comment was not made",
   await type(box, "#");
   options()[0]!.click();
   await settle();
-  await type(box, "Keep me");
+  await type(box, `${box.value}keep me`);
   await key(box, "Enter", { metaKey: true });
   await settle();
-  expect(box.value).toBe("Keep me");
-  expect(chip()).not.toBeNull();
+  expect(box.value).toBe(`#${S1} keep me`);
 });

@@ -12,7 +12,7 @@ import type { ConsoleActionProps } from "@pangloss/interface-core";
 import { invoke } from "@solidjs/web/server-functions";
 import { createMemo, createSignal, Show, untrack } from "solid-js";
 import { reviewFeed } from "../feed";
-import { partsOf } from "../parts";
+import { partsOf, referencedIds } from "../parts";
 import type { Part } from "../parts";
 import { createReview } from "../state";
 import { ReviewPanel, STATUS_WORDS, statusSlot } from "./ReviewPanel";
@@ -91,8 +91,10 @@ function Review(props: { type: string; id: string; me?: string }) {
         }}
         parts={parts()}
         onWantParts={wantParts}
-        onComment={(text, part) => {
-          const sent = comment(text, part);
+        onComment={(text) => {
+          // (the API keeps one part a comment is about, with its label as it is now: the first it refers to)
+          const first = referencedIds(text)[0];
+          const sent = comment(text, parts()?.find((part) => part.id === first));
           sent.catch(refused("review_comment_refused", "The comment was not sent: {reason}"));
           return sent;
         }}

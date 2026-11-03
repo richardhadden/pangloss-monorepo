@@ -66,6 +66,15 @@ const detail = (more: Partial<ReviewDetail> = {}): Snapshot => ({
 });
 
 const model = (kind: ModelDefinition["kind"]) => ({ name: "Letter", kind }) as ModelDefinition;
+const SECTION_1 = "01a1a11c-8979-71fc-8c48-000000000001";
+const SECTION_2 = "01a1a11c-8979-71fc-8c48-000000000002";
+const DEFINITIONS = {
+  models: {
+    Letter: { ...model("Document"), incoming: [] },
+    Section: { name: "Section", kind: "Document", incoming: [] } as unknown as ModelDefinition,
+  },
+  enums: {},
+};
 const me = { username: "me", email: "m@example.org", fullName: null, admin: false } as User;
 
 const settle = async () => {
@@ -76,7 +85,15 @@ function client(post: ApiClient["post"] = vi.fn(async () => ({})) as never): Api
   return {
     baseUrl: "/api",
     // (the document, read for its parts when the panel opens)
-    get: vi.fn(async () => ({ id: "d1", type: "Letter", label: "A letter" })) as never,
+    get: vi.fn(async () => ({
+      id: "d1",
+      type: "Letter",
+      label: "A letter",
+      sections: [
+        { id: SECTION_1, type: "Section", label: "First" },
+        { id: SECTION_2, type: "Section", label: "Second" },
+      ],
+    })) as never,
     post,
     put: vi.fn() as never,
     patch: vi.fn() as never,
@@ -113,7 +130,7 @@ function show(props: Partial<ConsoleActionProps> = {}, user: User | null = me, a
     () => (
       <SessionProvider user={() => user ?? undefined}>
         <ApiProvider client={api}>
-          <ModelsProvider definitions={{ models: {}, enums: {} }}>
+          <ModelsProvider definitions={DEFINITIONS}>
           <ToastsProvider>
             <ReviewAction type="Letter" id="d1" model={model("Document")} page="item" {...props} />
             <ShownToasts />
@@ -247,4 +264,25 @@ test("a comment sent from the panel is the reader's at once, and stays when the 
   expect(bubble()?.textContent).toContain("Resolve");
   expect(count()).toBe("1");
   expect(box.value).toBe("");
+});
+
+test("a comment that refers to parts is sent with the first as the part it is about, and shows them as chips", async () => {
+  const text = `Compare #${SECTION_2} with #${SECTION_1}`;
+  const made = { id: "c7", username: "me", at: "2026-11-03T12:00:00Z", text, resolved: false };
+  const post = vi.fn(async () => made);
+  show({}, me, client(post as never));
+  await settle();
+  feeds[0]!.push(detail());
+  await settle();
+  reviewButton()!.closest("button")!.click();
+  await settle();
+  const box = panel()!.querySelector("textarea")!;
+  box.value = text;
+  box.dispatchEvent(new Event("input", { bubbles: true }));
+  await settle();
+  [...panel()!.querySelectorAll("button")].find((b) => b.textContent === "Send")!.click();
+  await settle();
+  expect(post).toHaveBeenCalledWith("/review/d1/comments", { text, targetId: SECTION_2 });
+  const chips = [...panel()!.querySelectorAll<HTMLElement>('[data-testid="review-ref"]')];
+  expect(chips.map((c) => c.textContent)).toEqual(["SectionSecond", "SectionFirst"]);
 });
