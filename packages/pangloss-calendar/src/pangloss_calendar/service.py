@@ -10,7 +10,7 @@ they are made as they are asked for, within the reach of the calendar).
 from typing import Any, Literal
 from uuid import UUID
 
-from pangloss_dates.calendar import Calendar, Weekday
+from pangloss_dates.calendar import Calendar, Weekday, from_jdn
 from pangloss_dates.easter import easter
 from pangloss_dates.recurrence import day_keys, occurrences, occurs_on
 from pydantic import BaseModel
@@ -26,6 +26,7 @@ from pangloss_calendar.days import (
     next_month,
     previous_month,
     view_of,
+    year_span,
 )
 from pangloss_calendar.fields import DateField, calendar_fields
 from pangloss_calendar.views import Dated, place
@@ -107,6 +108,9 @@ class Hit(BaseModel):
 class DayReport(BaseModel):
     day: DayOut
     calendar: Calendar
+    previous: DayOut
+    next: DayOut
+    """The day before and the day after (for stepping through the days)"""
     characterisations: list[Characterised]
     hits: list[Hit]
     truncated: bool = False
@@ -171,6 +175,70 @@ class YearReport(BaseModel):
     """More dates were found than are counted (`MONTH_LIMIT`)"""
     easter: DayOut
     moveable: list[MoveableOut]
+
+
+class SettingsOut(BaseModel):
+    """What the interface needs to know of the project's calendar settings"""
+
+    calendar: Calendar
+    """`CALENDAR_DEFAULT`: the calendar a view opens in"""
+    first_year: int | None
+    last_year: int | None
+    """`CALENDAR_FIRST_YEAR` and `CALENDAR_LAST_YEAR`: the span (None: not set)"""
+    narrow_days: int
+    use: str | None
+    extend_margin_years: int
+
+
+def settings_report() -> SettingsOut:
+    return SettingsOut(
+        calendar=settings.calendar_default(),
+        first_year=settings.first_year(),
+        last_year=settings.last_year(),
+        narrow_days=settings.narrow_days(),
+        use=settings.use(),
+        extend_margin_years=settings.extend_margin_years(),
+    )
+
+
+class YearCount(BaseModel):
+    year: int
+    count: int
+    """How many dates state a range that meets the year (a repeated event once for each year it falls in)"""
+
+
+class YearsReport(BaseModel):
+    calendar: Calendar
+    first_year: int
+    last_year: int
+    years: list[YearCount]
+    truncated: bool = False
+    """More dates were found than are counted (`MONTH_LIMIT`)"""
+
+
+MAX_YEARS = 1000
+"""How many years a `years_report` counts at most"""
+
+
+def count_by_year(
+    dated: list[Dated], calendar: Calendar, first_year: int, last_year: int
+) -> list[int]:
+    """How many distinct dates meet each year from `first_year` to `last_year` (by their stated range, in the
+    calendar; a range is counted in every year it reaches)"""
+    seen: list[set[Any]] = [set() for _ in range(first_year, last_year + 1)]
+    first_day, last_day = (
+        year_span(calendar, first_year)[0],
+        year_span(calendar, last_year)[1],
+    )
+    for item in dated:
+        if item.latest_strict < first_day or item.earliest_strict > last_day:
+            continue
+        low = from_jdn(max(item.earliest_strict, first_day), calendar).year
+        high = from_jdn(min(item.latest_strict, last_day), calendar).year
+        key = (item.ref.id, item.ref.field)
+        for year in range(low, high + 1):
+            seen[year - first_year].add(key)
+    return [len(found) for found in seen]
 
 
 async def _ensure(first: int, last: int) -> None:
@@ -300,6 +368,8 @@ async def day(
     return DayReport(
         day=DayOut.of(jdn),
         calendar=calendar,
+        previous=DayOut.of(jdn - 1),
+        next=DayOut.of(jdn + 1),
         characterisations=_characterised(
             by_rule, await graph.manual_between(jdn, jdn, use)
         ),
@@ -461,6 +531,43 @@ async def year_report(
         truncated=truncated,
         easter=DayOut.of(easter(year, calendar)),
         moveable=_moveable(chars, year, calendar),
+    )
+
+
+async def years_report(
+    calendar: Calendar,
+    first_year: int,
+    last_year: int,
+    use: str | None = None,
+    fields: list[DateField] | None = None,
+) -> YearsReport:
+    """The years from `first_year` to `last_year` with how many dates meet each (for the list of years)"""
+    if first_year > last_year:
+        raise ValueError("the years go from the first to the last")
+    if last_year - first_year + 1 > MAX_YEARS:
+        raise ValueError(f"at most {MAX_YEARS} years can be counted at once")
+    use = use if use is not None else settings.use()
+    chars = await graph.read_characterisations(use)
+    first = year_span(calendar, first_year)[0]
+    last = year_span(calendar, last_year)[1]
+    dated: list[Dated] = []
+    truncated = False
+    for field in fields if fields is not None else calendar_fields():
+        part, cut = await _dated_in(field, first, last, calendar, chars)
+        dated.extend(part)
+        truncated = truncated or cut
+    counts = count_by_year(dated, calendar, first_year, last_year)
+    return YearsReport(
+        calendar=calendar,
+        first_year=first_year,
+        last_year=last_year,
+        years=[
+            YearCount(year=year, count=count)
+            for year, count in zip(
+                range(first_year, last_year + 1), counts, strict=True
+            )
+        ],
+        truncated=truncated,
     )
 
 

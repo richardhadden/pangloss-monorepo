@@ -2,7 +2,8 @@
 
 Optional. Days, months, years and spans in the Julian or the Gregorian calendar, and `DateCharacterisation` entities (feasts and
 the like, by rule or by hand), built on `pangloss-dates`: what is dated on a day, in a month, in a year, and when Easter falls.
-Routes under `/api/calendar`, commands `pangloss calendar …`. No interface yet.
+Routes under `/api/calendar`, commands `pangloss calendar …`, and, with `pangloss_interface`, pages of its own (`interface/`:
+the years, a month as a calendar page, a day; **Calendar** in the navigation bar).
 
 Add `"pangloss_calendar"` to `INSTALLED_APPS`. Runs on Memgraph and Neo4j.
 

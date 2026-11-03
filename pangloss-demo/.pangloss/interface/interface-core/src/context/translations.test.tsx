@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import { render } from "@solidjs/web";
+import { createSignal } from "solid-js";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import type { TranslationBundle } from "../types";
 import { interpolate, TranslationsProvider, useTranslations } from "./translations";
@@ -157,4 +158,42 @@ test("when another language is chosen while one is loading, the last choice is s
   finish(german);
   await first;
   expect(tr.language()).toBe("en");
+});
+
+test("while a language is being loaded the rest of the page goes on changing", async () => {
+  let finish!: (bundle: TranslationBundle) => void;
+  const [count, setCount] = createSignal(0);
+  const container = document.createElement("div");
+  document.body.append(container);
+  const dispose = render(
+    () => (
+      <TranslationsProvider initial={english} load={() => new Promise((resolve) => (finish = resolve))}>
+        {(() => {
+          tr = useTranslations();
+          return (
+            <p>
+              <span>{tr.t("log_in", "Log in")}</span> <input value={String(count())} />
+            </p>
+          );
+        })()}
+      </TranslationsProvider>
+    ),
+    container,
+  );
+  cleanup = () => {
+    dispose();
+    container.remove();
+  };
+  const choosing = tr.setLanguage("de");
+  await settle();
+  expect(tr.loading()).toBe(true);
+  setCount(1);
+  await settle();
+  expect(container.querySelector("input")!.value).toBe("1");
+  expect(container.querySelector("span")!.textContent).toBe("Log in");
+  finish(german);
+  await choosing;
+  await settle();
+  expect(container.querySelector("span")!.textContent).toBe("Anmelden");
+  expect(container.querySelector("input")!.value).toBe("1");
 });

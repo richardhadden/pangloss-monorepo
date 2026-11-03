@@ -64,6 +64,9 @@ export interface HeadView {
   [field: string]: unknown;
 }
 
+/** The body of a create or an update: the fields of the model, as the edit view has them */
+export type ItemBody = Record<string, unknown>;
+
 export interface ListParams {
   /** Searches the labels */
   q?: string;
@@ -74,17 +77,102 @@ export interface ListParams {
 }
 
 export interface AutocompleteParams {
-  q: string;
+  /** What was typed: without it, the entities of the types most used */
+  q?: string;
   /** The entity types to look in (all, if none) */
   types?: string[];
   page?: number;
   pageSize?: number;
 }
 
-/** A search pattern; see docs/structured-search.md */
+/** The keys of a `where` that are not fields (`SearchKey` in `pangloss_models.search`) */
+export type SearchKey =
+  | "$all"
+  | "$any_of"
+  | "$not"
+  | "$any"
+  | "$mentions"
+  | "$somewhere"
+  | "$incoming"
+  | "$spaces";
+
+/**
+ * The conditions of a field of a search pattern, one for each kind of field (the classes of
+ * `pangloss_models.search_where`: `Text`, `Compare`, `Choice`, `Items`, `Rel`, `AnyRel`). The project's
+ * own `LetterWhere` and the like, in the generated models, are made of these.
+ */
+export interface TextCondition {
+  eq?: string | null;
+  ne?: string | null;
+  in?: string[];
+  exists?: boolean;
+  contains?: string;
+  starts_with?: string;
+}
+
+/** A number, a `Decimal`, a date or a datetime (dates as ISO strings) */
+export interface CompareCondition<T> {
+  eq?: T | null;
+  ne?: T | null;
+  in?: T[];
+  exists?: boolean;
+  gt?: T;
+  gte?: T;
+  lt?: T;
+  lte?: T;
+  between?: [T, T];
+}
+
+/** A `bool`, or an enum (by its values) */
+export interface ChoiceCondition<T> {
+  eq?: T | null;
+  ne?: T | null;
+  in?: T[];
+  exists?: boolean;
+}
+
+/** A list of literals */
+export interface ItemsCondition<T> {
+  contains?: T;
+  contains_any?: T[];
+  contains_all?: T[];
+  exists?: boolean;
+}
+
+/** A relation, or an embedded object: by id, whether it has any, the wrappers it passes through */
+export interface RelationCondition {
+  is?: string;
+  is_any?: string[];
+  exists?: boolean;
+  through?: string[];
+}
+
+/** `$any` and `$mentions`: any relation (`contains` and `starts_with` are of the label), and a pattern */
+export interface AnyRelationCondition extends RelationCondition {
+  contains?: string;
+  starts_with?: string;
+  type?: string;
+  where?: Record<string, unknown>;
+}
+
+/** A pattern for a node of another type: in `$somewhere`, and (with `field`) in `$incoming` */
+export interface NodePattern {
+  type: string;
+  where?: Record<string, unknown>;
+  field?: string;
+  through?: string[];
+}
+
+export interface SearchOrder<F extends string = string> {
+  field: F;
+  direction?: "asc" | "desc";
+}
+
+/** A search pattern; see docs/structured-search.md. (`SearchOf<"Letter">`, in the generated models, is one typed by the model.) */
 export interface SearchPattern {
   type: string;
   where?: Record<string, unknown>;
+  orderBy?: SearchOrder[];
   page?: number;
   pageSize?: number;
 }

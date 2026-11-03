@@ -34,6 +34,49 @@ def day_of(text: str) -> int:
         raise refused(error) from error
 
 
+@router.get("/settings", response_model=service.SettingsOut)
+async def get_settings():
+    """The calendar the views open in, the span of years, and the other settings a view needs"""
+    return service.settings_report()
+
+
+@router.get("/years/{calendar}", response_model=service.YearsReport)
+async def get_years(
+    calendar: Calendar,
+    first: Annotated[
+        int | None,
+        Query(
+            alias="from",
+            ge=MIN_YEAR,
+            le=MAX_YEAR,
+            description="The first year (default: CALENDAR_FIRST_YEAR)",
+        ),
+    ] = None,
+    to: Annotated[
+        int | None,
+        Query(
+            ge=MIN_YEAR,
+            le=MAX_YEAR,
+            description="The last year (default: CALENDAR_LAST_YEAR)",
+        ),
+    ] = None,
+    use: Use = None,
+):
+    """The years with how many dates meet each: by default those of the span of the calendar"""
+    first = first if first is not None else settings.first_year()
+    to = to if to is not None else settings.last_year()
+    if first is None or to is None:
+        raise refused(
+            settings.NoSpan(
+                "Set CALENDAR_FIRST_YEAR and CALENDAR_LAST_YEAR, or give from and to"
+            )
+        )
+    try:
+        return await service.years_report(calendar, first, to, use)
+    except (InvalidDate, ValueError) as error:
+        raise refused(error) from error
+
+
 @router.get("/day/{ref}", response_model=service.DayReport)
 async def get_day(
     ref: str,

@@ -28,6 +28,14 @@ const sourcesCss =
   process.env.PANGLOSS_SOURCES_CSS ??
   fileURLToPath(new URL("./src/generated/sources.css", import.meta.url));
 
+// The interface modules' own folders: those copied beside the application when it is built in the project, and
+// those of apps that are checked out (`--link`). Their `"use server"` functions are compiled like the application's.
+const moduleRoots = [
+  fileURLToPath(new URL("../modules/*", import.meta.url)),
+  ...(process.env.PANGLOSS_MODULE_ROOTS?.split(":").filter(Boolean) ?? []),
+];
+const SOURCE_FILES = "*.{jsx,tsx,ts,js,mjs}";
+
 export default defineConfig({
   resolve: {
     alias: {
@@ -47,8 +55,14 @@ export default defineConfig({
       // `npm start` runs)
       ssr: true,
       start: { node: true },
-      // "use server" functions: the translations of a language are fetched with one (src/translations.ts)
-      serverFunctions: true,
+      // "use server" functions: the translations of a language are fetched with one (src/translations.ts), and an
+      // interface module may have its own (pangloss_review's live feed)
+      serverFunctions: {
+        filter: {
+          include: [`src/**/${SOURCE_FILES}`, ...moduleRoots.map((root) => `${root}/src/**/${SOURCE_FILES}`)],
+          exclude: [`**/node_modules/**`],
+        },
+      },
       extensions: [".jsx", ".tsx"],
     }),
     tailwindcss(),

@@ -72,3 +72,26 @@ A feast on 24 to 28 February may say `"leap_shift": true`: it falls a day later 
 Read only, under `/api/calendar` (see [the API](../../docs/api.md)): `day/J1500-03-02` (or `G1500-03-12`, or a day number: the same
 day), `month/julian/1500/3`, `year/julian/1500`, `easter/julian/1500`, `characterisations`. A date is **stated** on a day if the date says so,
 **possible** if only its allowance for doubt reaches it. Characterisations are listed on their own, with how each comes to be there (`rule`, or attached by hand to the `day`, `month`, `year` or `span`). Nothing deleted, and nothing unpublished for a reader who may not see it, is shown.
+
+## In the interface
+
+With `pangloss_interface` installed as well, the calendar has pages of its own (the module in `pangloss_calendar/interface/`),
+and **Calendar** in the navigation bar leads to them:
+
+- **`/calendar`**: the years of the span (`CALENDAR_FIRST_YEAR` to `CALENDAR_LAST_YEAR`), each with how many dates meet it and
+  its twelve months as links. Without a span the page says to set one.
+- **`/calendar/julian/1500/3`**: the month as a calendar page, Monday first. A date that states a day is a small chip on it
+  (one that states a few days, up to `CALENDAR_NARROW_DAYS`, is on each of them, fainter and dashed: it was on one of them); a
+  date that states a longer range is a bar across the days it covers, carried over the weeks, open at an end that goes on
+  beyond the month; feasts and other characterisations are named in amber on their days. A day with more than three dates says
+  "+N more". Under the grid, what is attached to the month, its year or a span.
+- **`/calendar/julian/1500/3/2`**: the day, with its weekday, its name in the other calendar (a link to the same day under that
+  name), the days either side and its month; the characterisations on it and how each comes to be there (by rule, or attached
+  to the day, the month, the year or a span); and everything dated on it with the field it is in, marked *possible* when only
+  the date's allowance for doubt reaches the day.
+
+Every page has **Julian** and **Gregorian** buttons in the console bar, which show the same thing read in the other
+calendar (a month is the month of that name in the other calendar; a day is the same day under its other name), and
+**Years**. Someone logged in can, on a day's page, **attach a characterisation** found by its name (and take away one attached
+by hand), and make a new one of any type the project has under `DateCharacterisation`. The pages do not need `seed`: they
+are worked out from the dates.

@@ -1,8 +1,10 @@
 import { expect, test } from "vitest";
-import { headOf, wrappingSpaces } from "./context";
-import { ApiError, createApiClient, queryString } from "./client";
+import { contextTrail, headOf, wrappingSpaces } from "./context";
+import { ApiError, createApiClient, problemsOf, queryString } from "./client";
 import {
   autocomplete,
+  createItem,
+  updateItem,
   getCurrentUser,
   getItem,
   listItems,
@@ -86,11 +88,17 @@ test("autocomplete repeats the types", async () => {
 
 test("a search is posted as JSON", async () => {
   const { client, calls } = clientAnswering(() => json({ results: [] }));
-  await searchItems(client, { type: "Factoid", where: { label: "x" }, pageSize: 10 });
+  await searchItems(client, {
+    type: "Factoid",
+    where: { label: { contains: "x" } },
+    orderBy: [{ field: "year", direction: "desc" }],
+    pageSize: 10,
+  });
   expect(calls[0]!.init.method).toBe("POST");
   expect(JSON.parse(String(calls[0]!.init.body))).toEqual({
     type: "Factoid",
-    where: { label: "x" },
+    where: { label: { contains: "x" } },
+    order_by: [{ field: "year", direction: "desc" }],
     page_size: 10,
   });
 });
@@ -178,4 +186,52 @@ test("only an item inside another has a head node to go to", () => {
     type: "Factoid",
     id: "1",
   });
+});
+
+test("the head of an item from its whole meta, which has no isHeadNode: a head node's head is itself", () => {
+  const meta = (headNodeType: string, headNodeId: string) =>
+    ({ version: 1, published: true, reviewStatus: null, createdBy: null, createdWhen: "", updatedBy: null, updatedWhen: null, headNodeType, headNodeId });
+  expect(headOf({ id: "1", meta: meta("Factoid", "1") })).toBeUndefined();
+  expect(headOf({ id: "2", meta: meta("Factoid", "1") })).toEqual({ type: "Factoid", id: "1" });
+});
+
+test("the trail has the spaces and the documents between them, but not the item itself", () => {
+  expect(contextTrail(undefined)).toEqual([]);
+  expect(
+    contextTrail(
+      [
+        { type: "Negative", contents: [{ type: "Order", id: "1" }, { type: "Action", id: "2" }] },
+        { type: "Hypothetical" },
+      ],
+      "2",
+    ),
+  ).toEqual(["Negative", "Order", "Hypothetical"]);
+  expect(contextTrail([{ type: "#rootcontext", contents: [{ type: "Order", id: "1" }] }])).toEqual(["Order"]);
+});
+
+test("an item is created by a POST of the body, and updated by a PUT that says which version it is based on", async () => {
+  const { client, calls } = clientAnswering(() => json({ id: "n1", type: "Place", label: "Rome" }, 201));
+  await createItem(client, "Place", { label: "Rome" });
+  expect(calls[0]!.url).toBe("http://api.test/api/Place");
+  expect(calls[0]!.init).toMatchObject({ method: "POST", body: '{"label":"Rome"}' });
+  await updateItem(client, "Place", "n1", { id: "n1", label: "Roma" }, 3);
+  expect(calls[1]!.url).toBe("http://api.test/api/Place/n1");
+  expect(calls[1]!.init.method).toBe("PUT");
+  expect(calls[1]!.init.headers).toMatchObject({ "If-Match": '"3"', "Content-Type": "application/json" });
+});
+
+test("a 412 keeps what else the API said, and a 422 is read as a line for each problem", async () => {
+  const stale = clientAnswering(() => json({ detail: "Stale", currentVersion: 4 }, 412));
+  const error = (await updateItem(stale.client, "Place", "n1", {}, 3).catch((e: unknown) => e)) as ApiError;
+  expect(error.status).toBe(412);
+  expect(error.body).toMatchObject({ currentVersion: 4 });
+  const invalid = new ApiError(
+    422,
+    JSON.stringify([
+      { loc: ["body", "statements", 0, "text"], msg: "too short" },
+      { loc: [], msg: "odd" },
+    ]),
+  );
+  expect(problemsOf(invalid)).toEqual(["statements › 0 › text: too short", "odd"]);
+  expect(problemsOf(new ApiError(409, "Id in use"))).toEqual(["Id in use"]);
 });

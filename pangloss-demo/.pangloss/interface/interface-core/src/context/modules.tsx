@@ -1,17 +1,33 @@
 import { createContext, lazy, useContext } from "solid-js";
 import type { Component, ParentProps } from "solid-js";
 import { findLoader, orderModules, slotOf } from "../schema";
-import type { CustomProps, CustomSlot, ModuleManifest } from "../types";
+import type {
+  CollapseRule,
+  ComponentReference,
+  ConsoleActionProps,
+  CustomProps,
+  CustomSlot,
+  ModuleManifest,
+} from "../types";
 import { useModels } from "./models";
 
 interface ModulesValue {
   modules: ModuleManifest[];
   /** The component a model names for a slot (lazy; the same one each time), or undefined */
   custom<S extends CustomSlot>(type: string, slot: S): Component<CustomProps[S]> | undefined;
+  /** The rule `InterfaceMeta(collapse="app:name")` names, or undefined */
+  collapseRule(reference: ComponentReference): CollapseRule | undefined;
+  /** What the modules add to the console of an item (`consoleActions`), in the order of the modules (lazy; the same each time) */
+  consoleActions(): Component<ConsoleActionProps>[];
 }
 
 // (without a provider there are no modules: a component of the library works in a test, or an application, that has none)
-const NONE: ModulesValue = { modules: [], custom: () => undefined };
+const NONE: ModulesValue = {
+  modules: [],
+  custom: () => undefined,
+  collapseRule: () => undefined,
+  consoleActions: () => [],
+};
 const ModulesContext = createContext<ModulesValue>(NONE);
 
 /** Makes the interface modules of the installed apps available below (without it, none are) */
@@ -19,6 +35,7 @@ export function ModulesProvider(props: ParentProps<{ modules: readonly ModuleMan
   const definitions = useModels();
   const modules = orderModules(props.modules);
   const made = new Map<string, Component<any>>();
+  let actions: Component<ConsoleActionProps>[] | undefined;
   const value: ModulesValue = {
     modules,
     custom(type, slot) {
@@ -36,6 +53,16 @@ export function ModulesProvider(props: ParentProps<{ modules: readonly ModuleMan
       const component = lazy(loader);
       made.set(key, component);
       return component as never;
+    },
+    collapseRule(reference) {
+      const rules = modules.find((m) => m.name === reference.module)?.collapseRules;
+      return rules && Object.hasOwn(rules, reference.name) ? rules[reference.name] : undefined;
+    },
+    consoleActions() {
+      actions ??= modules.flatMap((module) =>
+        Object.values(module.consoleActions ?? {}).map((loader) => lazy(loader) as Component<ConsoleActionProps>),
+      );
+      return actions;
     },
   };
   return <ModulesContext value={value}>{props.children}</ModulesContext>;

@@ -95,3 +95,13 @@ def test_months_step_over_the_year():
     assert next_month(J, 1500, 12) == (1501, 1)
     assert previous_month(J, 1500, 1) == (1499, 12)
     assert next_month(G, 1500, 5) == (1500, 6)
+
+
+def test_a_year_runs_from_1_january_to_31_december():
+    from pangloss_calendar.days import year_span
+
+    first, last = year_span(Calendar.JULIAN, 1500)
+    assert first == to_jdn(1500, 1, 1, Calendar.JULIAN)
+    assert last - first + 1 == 366  # (Julian 1500 is a leap year)
+    first, last = year_span(Calendar.GREGORIAN, 1500)
+    assert last - first + 1 == 365

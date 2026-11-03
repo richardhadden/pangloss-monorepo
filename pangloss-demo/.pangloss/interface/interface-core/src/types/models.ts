@@ -96,6 +96,10 @@ export interface RelationField extends FieldBase {
   /** What it can relate to */
   options: RelationOption[];
   validators: Validator[];
+  /** The fields of its ancestors that it stands for (`subclasses_parent_fields`), directly or through another, by name */
+  subclasses: string[];
+  /** The reified relation that an entity found by searching is put in (`default_reified_type`), if any */
+  defaultReifiedType?: string | null;
 }
 
 export interface UnknownField extends FieldBase {
@@ -170,6 +174,22 @@ export interface InterfaceMeta {
   /** A card that shows an item where it is part of something else */
   viewCard: ComponentReference | null;
   editCard: ComponentReference | null;
+  /**
+   * (a ReifiedRelation or a Conjunction) Whether the item page shows it folded into the one thing it holds:
+   * `true` by the built-in rule, the same with conditions (`Collapse(...)`), or a rule in `collapseRules` of an
+   * interface module (docs/interface-collapse.md)
+   */
+  collapse?: true | CollapseConditions | ComponentReference | null;
+}
+
+/** `Collapse(...)` in Python: conditions on top of the built-in rule, by the keys of fields */
+export interface CollapseConditions {
+  /** These, filled, show it whole */
+  blocking: string[];
+  /** These are not shown beside what it holds when it is folded (and do not stop it, whatever they hold) */
+  hidden: string[];
+  /** Each of these must hold one of its values */
+  when: Record<string, (string | number | boolean | null)[]>;
 }
 
 /** `"app:Name"` in Python: a key of `components` in the manifest of the interface module of an app */
@@ -217,6 +237,8 @@ export interface ModelDefinition {
   concreteTypes: string[];
   typeParameters: string[];
   createWithId: boolean;
+  /** Whether one can be made on its own (`create_directly`): if not, a document is only ever part of another */
+  createDirectly: boolean;
   acceptUrlAsId: boolean;
   requireLabel: boolean;
   /** Whether its label is used in the label of a semantic space that contains it */
@@ -232,9 +254,26 @@ export interface EnumDefinition {
   members: { name: string; value: string | number | boolean | null }[];
 }
 
+/** A field of a search pattern (`export_search_patterns`): the operators it takes, the type of its values, and
+ * for a relation the classes it can point at */
+export interface SearchFieldDefinition {
+  operators: "text" | "compare" | "choice" | "items" | "relation";
+  value?: FieldType;
+  targets?: string[];
+}
+
+/** The search pattern of a model: its fields, and what a search of it can be ordered by */
+export interface SearchPatternDefinition {
+  kind: "document" | "entity" | "embedded";
+  fields: Record<string, SearchFieldDefinition>;
+  orderBy: string[];
+}
+
 export interface ModelDefinitions {
   models: Record<string, ModelDefinition>;
   enums: Record<string, EnumDefinition>;
+  /** (absent: made before there were search patterns) */
+  searchPatterns?: Record<string, SearchPatternDefinition>;
   /** (absent: nothing configured) */
   nav?: NavConfig;
 }

@@ -1,12 +1,12 @@
-import { For, Show } from "solid-js";
+import { createSignal, For, Show } from "solid-js";
 import { useNavExpanded, useTranslations } from "../context";
 import { NavIconCell, NavRow, NavRowButton } from "../primitives";
 import { NavModelList } from "./NavModelList";
 import type { NavBarProps } from "../types";
 
 // (emoji for now) a language has a flag only where it is chosen here; the others show their code. English is shown
-// with the UK flag, German with the Austrian one
-const FLAGS: Record<string, string> = { en: "🇬🇧", de: "🇦🇹" };
+// with the UK flag, German with the Austrian one, French with the French one
+const FLAGS: Record<string, string> = { en: "🇬🇧", de: "🇦🇹", fr: "🇫🇷" };
 
 /** A language is named in itself ("Deutsch"), not in the language of the page */
 function languageName(code: string): string {
@@ -27,11 +27,15 @@ function languageName(code: string): string {
  * it pins the bar open, and the page moves across (`pl-72` rather than `pl-12`, from
  * `navPinned`) so that they do not overlap. The page is to be in an element with `pl-12`
  * to keep clear of the retracted bar.
+ *
+ * Above the types is a box that filters them (`NavModelList`'s `filter`); what is typed in it is
+ * kept while the bar is retracted.
  */
 export function NavBar(props: NavBarProps) {
   const { navExpanded, setNavExpanded, navPinned, setNavPinned } = useNavExpanded();
   const { t, language, languages, setLanguage } = useTranslations();
   const flag = (code: string) => FLAGS[code] ?? code.toUpperCase();
+  const [filter, setFilter] = createSignal("");
   return (
     <nav
       aria-label={t("nav_main", "Main")}
@@ -166,10 +170,72 @@ export function NavBar(props: NavBarProps) {
       {/* (not rendered while retracted: there is no room for it to be read) */}
       <Show when={navExpanded()}>
         <div class="min-h-0 flex-1 overflow-y-auto border-t border-slate-400/70">
-          <NavModelList loggedIn={props.user !== undefined} />
+          <NavFilter value={filter()} onInput={setFilter} />
+          <NavModelList loggedIn={props.user !== undefined} filter={filter()} />
           {props.children}
         </div>
       </Show>
     </nav>
+  );
+}
+
+/**
+ * The box that filters the types of the navigation bar, kept at the top as the list scrolls, with
+ * a button that clears it (as Escape does).
+ */
+function NavFilter(props: { value: string; onInput: (value: string) => void }) {
+  const { t } = useTranslations();
+  let input: HTMLInputElement | undefined;
+  const clear = () => {
+    props.onInput("");
+    input?.focus();
+  };
+  return (
+    <div class="sticky top-0 z-10 border-b border-slate-400/70 bg-slate-300/80 p-2 backdrop-blur-md">
+      <div class="flex h-8 items-center rounded-sm border-[0.5px] border-slate-400/70 bg-white/70 focus-within:border-slate-500 focus-within:bg-white">
+        <svg
+          viewBox="0 0 24 24"
+          class="ml-2 size-4 shrink-0 select-none fill-none stroke-slate-500 stroke-2"
+          stroke-linecap="round"
+          aria-hidden="true"
+        >
+          <circle cx="11" cy="11" r="6" />
+          <path d="M20 20l-4.5-4.5" />
+        </svg>
+        <input
+          ref={input}
+          type="search"
+          value={props.value}
+          onInput={(event) => props.onInput(event.currentTarget.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Escape" && props.value !== "") {
+              event.preventDefault();
+              props.onInput("");
+            }
+          }}
+          placeholder={t("nav_filter", "Filter types")}
+          aria-label={t("nav_filter", "Filter types")}
+          class="h-full min-w-0 flex-1 bg-transparent px-2 text-sm font-normal normal-case text-slate-800 outline-none placeholder:text-slate-500 [&::-webkit-search-cancel-button]:hidden"
+        />
+        <Show when={props.value !== ""}>
+          <button
+            type="button"
+            aria-label={t("nav_filter_clear", "Clear the filter")}
+            title={t("nav_filter_clear", "Clear the filter")}
+            onClick={clear}
+            class="flex h-full w-8 shrink-0 cursor-pointer items-center justify-center text-slate-500 hover:text-slate-800"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              class="size-4 select-none fill-none stroke-current stroke-2"
+              stroke-linecap="round"
+              aria-hidden="true"
+            >
+              <path d="M6 6l12 12M18 6L6 18" />
+            </svg>
+          </button>
+        </Show>
+      </div>
+    </div>
   );
 }

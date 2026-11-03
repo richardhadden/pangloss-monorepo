@@ -188,7 +188,9 @@ An installed `pangloss_calendar` adds read-only routes under `/api/calendar` (se
 
 | Route | Gives |
 |---|---|
-| `GET /api/calendar/day/{ref}?calendar=&use=` | the day by both names and its weekday, the characterisations on it (`origin` `rule` or `manual`; `via` says whether it is attached to the day, its month, its year or a span), and the documents dated on it, each `stated` (its strict bounds hold the day) or `possible` (only its allowance for doubt does), repeated events included; `truncated` if there were more than `MONTH_LIMIT` (20,000) dates in a field |
+| `GET /api/calendar/settings` | what the interface reads: `calendar` (`CALENDAR_DEFAULT`), `first_year` and `last_year` (the span; null if not set), `narrow_days`, `use`, `extend_margin_years` |
+| `GET /api/calendar/years/{calendar}?from=&to=&use=` | the years from `from` to `to` (default: the span; 422 without either) with how many dates state a range that meets each (`count`), at most 1000 years; `truncated` as for a month |
+| `GET /api/calendar/day/{ref}?calendar=&use=` | the day by both names and its weekday, with `previous` and `next` (the days either side), the characterisations on it (`origin` `rule` or `manual`; `via` says whether it is attached to the day, its month, its year or a span), and the documents dated on it, each `stated` (its strict bounds hold the day) or `possible` (only its allowance for doubt does), repeated events included; `truncated` if there were more than `MONTH_LIMIT` (20,000) dates in a field |
 | `GET /api/calendar/month/{calendar}/{year}/{month}?use=` | the weeks, the days with their characterisations and the dates on them, `characterised_spans` (those attached to the month, year or a span) (dates that state a range of `CALENDAR_NARROW_DAYS` days or fewer), and `spanning`: the wider ones; `truncated` if more dates were found than shown |
 | `GET /api/calendar/year/{calendar}/{year}` | the months, Easter, and the characterisations that move with it |
 | `GET /api/calendar/easter/{calendar}/{year}` | Easter in that calendar, and the characterisations that move with it |

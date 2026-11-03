@@ -2,21 +2,87 @@
   "default": "en",
   "languages": [
     "en",
-    "de"
+    "de",
+    "fr"
   ],
   "ui": {
     "en": {
       "abstract_no_types": "{type} is an abstract type, and no type of it exists in this project: there is nothing to list.",
+      "add": "Add",
+      "add_named": "Add {name}",
+      "add_to": "Add to {name}",
+      "back": "Back",
+      "cancel": "Cancel",
+      "cannot_create_abstract": "{type} is an abstract type: a new one is made as one of its types.",
+      "cannot_create_directly": "{type} cannot be made on its own, only as part of another document.",
+      "clip_copied": "Copied",
+      "clip_cut": "Cut",
+      "clip_remove": "Take off the clipboard",
+      "clipboard": "Clipboard",
+      "clipboard_clear": "Clear",
+      "clipboard_count": "Clipboard ({count})",
+      "clipboard_fold": "Fold or unfold the clipboard",
+      "clipboard_less": "Show less",
+      "clipboard_more": "Show all",
       "close": "Close",
+      "collapse_fold": "Fold {name}",
+      "collapse_show_whole": "Show the whole {name}",
+      "console": "Console",
+      "copy_item": "Copy {name}",
+      "created": "Created",
+      "cut_item": "Cut {name}",
+      "date_day": "Day",
+      "date_day_month_year": "{day} {month} {year}",
+      "date_earliest": "Earliest",
+      "date_edtf_help": "Extended Date/Time Format: 1500-03~ is about March 1500, 15XX some year of the 1500s, 1500/1510 from 1500 to 1510",
+      "date_every": "every {what}",
+      "date_every_n": "every {n} {what}",
+      "date_latest": "Latest",
+      "date_month": "Month",
+      "date_month_year": "{month} {year}",
+      "date_no_month": "(no month)",
+      "date_ongoing": "ongoing",
+      "date_range": "{from} to {to}",
+      "date_reads": "Reads",
+      "date_unknown": "unknown",
+      "date_year": "Year",
       "deep_search": "Deep search",
       "deep_search_run": "Run deep search (Enter)",
+      "derived_heading": "Derived",
+      "derived_more": "and {count} more",
+      "derived_qualified": "Only from statements with a context",
+      "derived_why": "Why ({count})",
+      "edit": "Edit",
+      "edit_form": "{type} form",
       "error_forbidden": "You are not allowed to do this.",
       "error_server": "Something went wrong on the server. Please try again in a moment.",
       "error_unauthorised": "You need to log in to do this.",
+      "find_entity": "Find {type}…",
+      "fold": "Fold or unfold {name}",
       "found": "Found",
       "found_more": "Found, and more: narrow the search",
       "go_to_head": "Go to the {type}",
       "home": "Home",
+      "id": "ID",
+      "invalid_json": "This is not valid JSON, so it is not changed",
+      "invalid_must_be_under": "Must be less than {n}",
+      "invalid_must_exceed": "Must be more than {n}",
+      "invalid_not_choice": "Not one of the choices",
+      "invalid_not_date": "Must be a date",
+      "invalid_not_datetime": "Must be a date and time",
+      "invalid_not_multiple": "Must be a multiple of {n}",
+      "invalid_not_number": "Must be a number",
+      "invalid_not_uuid": "Must be a UUID",
+      "invalid_not_whole": "Must be a whole number",
+      "invalid_required": "Required",
+      "invalid_too_few": "At least {n} needed",
+      "invalid_too_large": "Must be {n} or less",
+      "invalid_too_long": "At most {n} characters",
+      "invalid_too_many": "At most {n} allowed",
+      "invalid_too_short": "At least {n} characters",
+      "invalid_too_small": "Must be {n} or more",
+      "invalid_type_not_allowed": "This type is not allowed here",
+      "invalid_value": "Not a valid value",
       "item_not_found": "There is nothing here. It may not exist, or you may need to log in to see it.",
       "kind_annotated_value": "Annotated value",
       "kind_annotated_value_plural": "Annotated values",
@@ -36,43 +102,265 @@
       "kind_reified_relation_plural": "Relations with fields",
       "kind_semantic_space": "Semantic space",
       "kind_semantic_space_plural": "Semantic spaces",
+      "label": "Label",
       "language_current": "Language: {language}",
+      "loading": "Loading…",
       "log_in": "Log in",
       "log_out": "Log out",
       "log_out_user": "Log out {user}",
       "logging_in": "Logging in…",
       "login_failed": "That username and password do not match. Check them and try again.",
+      "modified": "Modified",
+      "narrow_type": "Narrow {name} to a type below it",
       "nav_expand": "Expand the navigation bar",
+      "nav_filter": "Filter types",
+      "nav_filter_clear": "Clear the filter",
+      "nav_filter_none": "No types match",
       "nav_main": "Main",
+      "nav_pangloss_calendar_calendar": "Calendar",
+      "nav_pangloss_review_review": "Review",
       "nav_pin": "Pin the navigation bar open",
       "nav_section_typologies": "Typologies",
       "nav_unpin": "Unpin the navigation bar",
+      "new": "New",
+      "new_entity": "Make a new one",
       "new_item": "New {type}",
       "no": "No",
+      "not_saved": "Not saved",
+      "not_saved_problem": "Not saved: a field has a problem, marked in red",
+      "not_saved_problems": "Not saved: {count} problems, marked in red",
+      "nothing_found": "Nothing found",
+      "open": "Open",
       "page_not_found": "Page not found",
       "password": "Password",
+      "paste_here": "Paste here",
+      "paste_item": "Paste {name}",
+      "picked_lately": "Used recently",
+      "reload": "Load the new version",
+      "remove": "Remove",
+      "remove_item": "Remove {name}",
+      "retype_confirm": "Change the type",
+      "retype_loses": "{type} has no room for what is in these fields of {from}, which will be lost:",
+      "retype_title": "Change to {type}?",
+      "review_button": "Review: {status}",
+      "review_button_comments": "Review: {status}, open comments: {count}",
+      "review_close": "Close the review",
+      "review_comment_label": "Comment",
+      "review_comment_placeholder": "Write a comment (# for a part)",
+      "review_comment_refused": "The comment was not sent: {reason}",
+      "review_comments": "Comments",
+      "review_no_comments": "No comments",
+      "review_panel": "Review",
+      "review_part_choose": "Refer to a part…",
+      "review_part_gone": "(no longer there)",
+      "review_part_none": "No parts match",
+      "review_part_show": "Show it on the page",
+      "review_parts": "Parts of the document",
+      "review_queue": "Review",
+      "review_queue_all_types": "All types",
+      "review_queue_changed": "Changed",
+      "review_queue_comments": "Open comments",
+      "review_queue_count": "Documents: {count}",
+      "review_queue_created_by": "Made by",
+      "review_queue_document": "Document",
+      "review_queue_empty": "Nothing here",
+      "review_queue_next": "Next",
+      "review_queue_page": "Page {page} of {pages}",
+      "review_queue_pages": "Pages",
+      "review_queue_previous": "Previous",
+      "review_queue_reviewed_by": "Reviewed by",
+      "review_queue_title": "Documents to review",
+      "review_queue_type": "Type",
+      "review_resolve": "Resolve",
+      "review_resolve_refused": "The comment was not resolved: {reason}",
+      "review_resolved_by": "Resolved by {user}",
+      "review_reviewed_by": "Reviewed by {user}, {when}",
+      "review_send": "Send",
+      "review_sending": "Sending…",
+      "review_show_resolved": "Show resolved ({count})",
+      "review_status": "Status",
+      "review_status_checked": "Checked",
+      "review_status_errors_found": "Errors found",
+      "review_status_refused": "The status was not changed: {reason}",
+      "review_status_unchecked": "Unchecked",
+      "review_you": "You",
+      "save": "Save",
       "search": "Search",
+      "search_add_alternatives": "Add alternatives",
+      "search_add_referring": "Add what refers to it",
+      "search_add_somewhere": "Add a document it contains",
+      "search_alternative": "alternative {n}",
+      "search_alternatives_n": "Alternatives {n}",
+      "search_and": "and",
+      "search_and_condition": "And another condition on {name}",
+      "search_any_field": "any field",
+      "search_any_of": "Any of",
+      "search_ascending": "ascending",
+      "search_change_type": "Type",
+      "search_change_type_of": "Change the type of {name}",
+      "search_choose_type": "Choose a type",
+      "search_clear": "Clear",
+      "search_close": "Close",
+      "search_delete_saved": "Delete the saved search {name}",
+      "search_descending": "descending",
+      "search_direction": "Direction of {name}",
+      "search_failed": "The search failed",
+      "search_find_any_entity": "Find an entity…",
+      "search_form": "Search by fields",
+      "search_form_in_use": "Search by fields (in use)",
+      "search_form_of": "Search {type} by fields",
+      "search_from": "from",
+      "search_in_spaces": "Inside",
+      "search_mentions": "Mentions",
+      "search_not": "not",
+      "search_not_named": "Not: {name}",
+      "search_not_title": "Find what does not match this",
+      "search_op_all_of": "is all of",
+      "search_op_any_of": "is any of",
+      "search_op_between": "between",
+      "search_op_contains": "contains",
+      "search_op_has_any": "has any",
+      "search_op_has_no_value": "has no value",
+      "search_op_has_none": "has none",
+      "search_op_has_value": "has a value",
+      "search_op_is": "is",
+      "search_op_matching": "is one matching",
+      "search_op_one_of": "is one of",
+      "search_op_starts_with": "starts with",
+      "search_operator": "Condition on {name}",
+      "search_or": "or",
+      "search_order_by": "Order by",
+      "search_order_n": "Order by, {n}",
+      "search_referred_to_by": "Referred to by",
+      "search_remove_condition": "Remove the condition on {name}",
+      "search_save": "Save",
+      "search_save_name": "Name of this search",
+      "search_saved": "Saved searches",
+      "search_saved_placeholder": "Saved searches…",
+      "search_somewhere": "Contains",
+      "search_source": "{type} · {field}",
+      "search_then_by": "then by",
+      "search_through": "through",
+      "search_through_named": "Through, for {name}",
+      "search_to": "to",
       "section_links": "Links",
+      "select_type": "Select a type…",
+      "select_type_of": "Select {name} type…",
+      "stale_version": "Someone has saved this item since you opened it. Nothing was overwritten: load the new version, and make your changes again.",
       "status_logged_in_as": "Logged in as {user}",
       "status_not_logged_in": "Not logged in",
+      "step_down": "Decrease {name}",
+      "step_up": "Increase {name}",
       "title": "Pangloss",
       "title_not_found": "Not found - Pangloss",
+      "toast_created": "{type} “{label}” created",
+      "toast_dismiss": "Dismiss: {message}",
+      "toast_saved": "{type} “{label}” saved",
+      "toasts": "Notifications",
       "type_marker": "type",
+      "typology_all": "All",
+      "typology_collapse": "Collapse",
+      "typology_concrete": "Also a concrete entity (a relation that takes the other class takes this type)",
+      "typology_counts": "{subtypes} subtypes · {entities} entities",
+      "typology_default_label": "default",
+      "typology_description": "description",
+      "typology_drop_top": "Drop here for the top level",
+      "typology_edit_labels": "Edit labels",
+      "typology_entities_with": "Entities with this type ({count})",
+      "typology_expand": "Expand",
+      "typology_including_subtypes": "including subtypes",
+      "typology_labels": "Labels",
+      "typology_move": "Move {name} to",
+      "typology_move_to": "Move to…",
+      "typology_no_types": "No types yet.",
+      "typology_none": "None.",
+      "typology_not_translated": "(not translated)",
+      "typology_not_translated_shown": "(not translated: the default is shown)",
+      "typology_path": "Path",
+      "typology_show_more": "Show more",
+      "typology_subtypes": "Subtypes",
+      "typology_top_level": "(top level)",
       "username": "Username",
+      "widen_type": "Widen {name} to a type above it",
       "yes": "Yes"
     },
     "de": {
       "abstract_no_types": "{type} ist ein abstrakter Typ, und es gibt in diesem Projekt keinen Typ davon: Es gibt nichts aufzulisten.",
+      "add": "Hinzufügen",
+      "add_named": "{name} hinzufügen",
+      "add_to": "Zu {name} hinzufügen",
+      "back": "Zurück",
+      "cancel": "Abbrechen",
+      "cannot_create_abstract": "{type} ist ein abstrakter Typ: Ein neues Objekt wird als einer seiner Typen angelegt.",
+      "cannot_create_directly": "{type} kann nicht für sich allein angelegt werden, nur als Teil eines anderen Dokuments.",
+      "clip_copied": "Kopiert",
+      "clip_cut": "Ausgeschnitten",
+      "clip_remove": "Aus der Zwischenablage entfernen",
+      "clipboard": "Zwischenablage",
+      "clipboard_clear": "Leeren",
+      "clipboard_count": "Zwischenablage ({count})",
+      "clipboard_fold": "Zwischenablage ein- oder ausklappen",
+      "clipboard_less": "Weniger anzeigen",
+      "clipboard_more": "Alle anzeigen",
       "close": "Schließen",
+      "collapse_fold": "{name} einklappen",
+      "collapse_show_whole": "{name} ganz zeigen",
+      "console": "Konsole",
+      "copy_item": "{name} kopieren",
+      "created": "Erstellt",
+      "cut_item": "{name} ausschneiden",
+      "date_day": "Tag",
+      "date_day_month_year": "{day}. {month} {year}",
+      "date_earliest": "Frühestens",
+      "date_edtf_help": "Extended Date/Time Format: 1500-03~ ist etwa März 1500, 15XX ein Jahr der 1500er, 1500/1510 von 1500 bis 1510",
+      "date_every": "jeden {what}",
+      "date_every_n": "alle {n} {what}",
+      "date_latest": "Spätestens",
+      "date_month": "Monat",
+      "date_month_year": "{month} {year}",
+      "date_no_month": "(kein Monat)",
+      "date_ongoing": "laufend",
+      "date_range": "{from} bis {to}",
+      "date_reads": "Lautet",
+      "date_unknown": "unbekannt",
+      "date_year": "Jahr",
       "deep_search": "Tiefensuche",
       "deep_search_run": "Tiefensuche starten (Eingabe)",
+      "derived_heading": "Abgeleitet",
+      "derived_more": "und {count} weitere",
+      "derived_qualified": "Nur aus Aussagen mit einem Kontext",
+      "derived_why": "Warum ({count})",
+      "edit": "Bearbeiten",
+      "edit_form": "Formular: {type}",
       "error_forbidden": "Sie dürfen das nicht tun.",
       "error_server": "Auf dem Server ist etwas schiefgegangen. Bitte versuchen Sie es gleich noch einmal.",
       "error_unauthorised": "Dafür müssen Sie sich anmelden.",
+      "find_entity": "{type} suchen …",
+      "fold": "{name} ein- oder ausklappen",
       "found": "Gefunden",
       "found_more": "Gefunden, und mehr: Suche eingrenzen",
       "go_to_head": "Zum Objekt: {type}",
       "home": "Startseite",
+      "id": "ID",
+      "invalid_json": "Das ist kein gültiges JSON und wird daher nicht übernommen",
+      "invalid_must_be_under": "Muss kleiner als {n} sein",
+      "invalid_must_exceed": "Muss größer als {n} sein",
+      "invalid_not_choice": "Keine der Auswahlmöglichkeiten",
+      "invalid_not_date": "Muss ein Datum sein",
+      "invalid_not_datetime": "Muss ein Datum mit Uhrzeit sein",
+      "invalid_not_multiple": "Muss ein Vielfaches von {n} sein",
+      "invalid_not_number": "Muss eine Zahl sein",
+      "invalid_not_uuid": "Muss eine UUID sein",
+      "invalid_not_whole": "Muss eine ganze Zahl sein",
+      "invalid_required": "Pflichtfeld",
+      "invalid_too_few": "Mindestens {n} erforderlich",
+      "invalid_too_large": "Darf höchstens {n} sein",
+      "invalid_too_long": "Höchstens {n} Zeichen",
+      "invalid_too_many": "Höchstens {n} erlaubt",
+      "invalid_too_short": "Mindestens {n} Zeichen",
+      "invalid_too_small": "Muss mindestens {n} sein",
+      "invalid_type_not_allowed": "Dieser Typ ist hier nicht erlaubt",
+      "invalid_value": "Kein gültiger Wert",
       "item_not_found": "Hier ist nichts. Es existiert vielleicht nicht, oder Sie müssen sich anmelden, um es zu sehen.",
       "kind_annotated_value": "Annotierter Wert",
       "kind_annotated_value_plural": "Annotierte Werte",
@@ -92,30 +380,465 @@
       "kind_reified_relation_plural": "Beziehungen mit Feldern",
       "kind_semantic_space": "Semantischer Raum",
       "kind_semantic_space_plural": "Semantische Räume",
+      "label": "Bezeichnung",
       "language_current": "Sprache: {language}",
+      "loading": "Wird geladen …",
       "log_in": "Anmelden",
       "log_out": "Abmelden",
       "log_out_user": "{user} abmelden",
       "logging_in": "Anmeldung läuft …",
       "login_failed": "Benutzername und Passwort passen nicht zusammen. Bitte prüfen Sie Ihre Eingaben und versuchen Sie es erneut.",
+      "modified": "Geändert",
+      "narrow_type": "{name} auf einen Untertyp einschränken",
       "nav_expand": "Navigationsleiste ausklappen",
+      "nav_filter": "Typen filtern",
+      "nav_filter_clear": "Filter löschen",
+      "nav_filter_none": "Keine passenden Typen",
       "nav_main": "Hauptnavigation",
+      "nav_pangloss_calendar_calendar": "Calendar",
+      "nav_pangloss_review_review": "Prüfung",
       "nav_pin": "Navigationsleiste angeheftet offen halten",
       "nav_section_typologies": "Typologien",
       "nav_unpin": "Navigationsleiste lösen",
+      "new": "Neu",
+      "new_entity": "Neu anlegen",
       "new_item": "{type} anlegen",
       "no": "Nein",
+      "not_saved": "Nicht gespeichert",
+      "not_saved_problem": "Nicht gespeichert: Ein Feld hat einen Fehler, rot markiert",
+      "not_saved_problems": "Nicht gespeichert: {count} Fehler, rot markiert",
+      "nothing_found": "Nichts gefunden",
+      "open": "Öffnen",
       "page_not_found": "Seite nicht gefunden",
       "password": "Passwort",
+      "paste_here": "Hier einfügen",
+      "paste_item": "{name} einfügen",
+      "picked_lately": "Kürzlich verwendet",
+      "reload": "Neue Version laden",
+      "remove": "Entfernen",
+      "remove_item": "{name} entfernen",
+      "retype_confirm": "Typ ändern",
+      "retype_loses": "{type} hat keinen Platz für den Inhalt dieser Felder von {from}; er geht verloren:",
+      "retype_title": "In {type} ändern?",
+      "review_button": "Prüfung: {status}",
+      "review_button_comments": "Prüfung: {status}, offene Kommentare: {count}",
+      "review_close": "Prüfung schließen",
+      "review_comment_label": "Kommentar",
+      "review_comment_placeholder": "Kommentar schreiben (# für einen Teil)",
+      "review_comment_refused": "Der Kommentar wurde nicht gesendet: {reason}",
+      "review_comments": "Kommentare",
+      "review_no_comments": "Keine Kommentare",
+      "review_panel": "Prüfung",
+      "review_part_choose": "Auf einen Teil verweisen…",
+      "review_part_gone": "(nicht mehr vorhanden)",
+      "review_part_none": "Kein Teil passt",
+      "review_part_show": "Auf der Seite zeigen",
+      "review_parts": "Teile des Dokuments",
+      "review_queue": "Prüfung",
+      "review_queue_all_types": "Alle Typen",
+      "review_queue_changed": "Geändert",
+      "review_queue_comments": "Offene Kommentare",
+      "review_queue_count": "Dokumente: {count}",
+      "review_queue_created_by": "Erstellt von",
+      "review_queue_document": "Dokument",
+      "review_queue_empty": "Nichts vorhanden",
+      "review_queue_next": "Weiter",
+      "review_queue_page": "Seite {page} von {pages}",
+      "review_queue_pages": "Seiten",
+      "review_queue_previous": "Zurück",
+      "review_queue_reviewed_by": "Geprüft von",
+      "review_queue_title": "Zu prüfende Dokumente",
+      "review_queue_type": "Typ",
+      "review_resolve": "Erledigt",
+      "review_resolve_refused": "Der Kommentar wurde nicht erledigt: {reason}",
+      "review_resolved_by": "Erledigt von {user}",
+      "review_reviewed_by": "Geprüft von {user}, {when}",
+      "review_send": "Senden",
+      "review_sending": "Wird gesendet…",
+      "review_show_resolved": "Erledigte zeigen ({count})",
+      "review_status": "Status",
+      "review_status_checked": "Geprüft",
+      "review_status_errors_found": "Fehler gefunden",
+      "review_status_refused": "Der Status wurde nicht geändert: {reason}",
+      "review_status_unchecked": "Ungeprüft",
+      "review_you": "Sie",
+      "save": "Speichern",
       "search": "Suchen",
+      "search_add_alternatives": "Alternativen hinzufügen",
+      "search_add_referring": "Hinzufügen, was darauf verweist",
+      "search_add_somewhere": "Ein enthaltenes Dokument hinzufügen",
+      "search_alternative": "Alternative {n}",
+      "search_alternatives_n": "Alternativen {n}",
+      "search_and": "und",
+      "search_and_condition": "Und eine weitere Bedingung für {name}",
+      "search_any_field": "beliebiges Feld",
+      "search_any_of": "Eines von",
+      "search_ascending": "aufsteigend",
+      "search_change_type": "Typ",
+      "search_change_type_of": "Typ von {name} ändern",
+      "search_choose_type": "Typ wählen",
+      "search_clear": "Leeren",
+      "search_close": "Schließen",
+      "search_delete_saved": "Gespeicherte Suche {name} löschen",
+      "search_descending": "absteigend",
+      "search_direction": "Richtung von {name}",
+      "search_failed": "Die Suche ist fehlgeschlagen",
+      "search_find_any_entity": "Entität finden …",
+      "search_form": "Nach Feldern suchen",
+      "search_form_in_use": "Nach Feldern suchen (aktiv)",
+      "search_form_of": "{type} nach Feldern suchen",
+      "search_from": "von",
+      "search_in_spaces": "Innerhalb",
+      "search_mentions": "Erwähnt",
+      "search_not": "nicht",
+      "search_not_named": "Nicht: {name}",
+      "search_not_title": "Finden, was hierzu nicht passt",
+      "search_op_all_of": "ist alle von",
+      "search_op_any_of": "ist eines von",
+      "search_op_between": "zwischen",
+      "search_op_contains": "enthält",
+      "search_op_has_any": "hat welche",
+      "search_op_has_no_value": "hat keinen Wert",
+      "search_op_has_none": "hat keine",
+      "search_op_has_value": "hat einen Wert",
+      "search_op_is": "ist",
+      "search_op_matching": "ist eines, auf das passt",
+      "search_op_one_of": "ist eines von",
+      "search_op_starts_with": "beginnt mit",
+      "search_operator": "Bedingung für {name}",
+      "search_or": "oder",
+      "search_order_by": "Sortieren nach",
+      "search_order_n": "Sortieren nach, {n}",
+      "search_referred_to_by": "Verwiesen von",
+      "search_remove_condition": "Bedingung für {name} entfernen",
+      "search_save": "Speichern",
+      "search_save_name": "Name dieser Suche",
+      "search_saved": "Gespeicherte Suchen",
+      "search_saved_placeholder": "Gespeicherte Suchen …",
+      "search_somewhere": "Enthält",
+      "search_source": "{type} · {field}",
+      "search_then_by": "dann nach",
+      "search_through": "über",
+      "search_through_named": "Über, für {name}",
+      "search_to": "bis",
       "section_links": "Links",
+      "select_type": "Typ auswählen …",
+      "select_type_of": "{name}: Typ auswählen …",
+      "stale_version": "Jemand hat dieses Objekt gespeichert, seit Sie es geöffnet haben. Nichts wurde überschrieben: Laden Sie die neue Version und nehmen Sie Ihre Änderungen erneut vor.",
       "status_logged_in_as": "Angemeldet als {user}",
       "status_not_logged_in": "Nicht angemeldet",
+      "step_down": "{name} verringern",
+      "step_up": "{name} erhöhen",
       "title": "Pangloss",
       "title_not_found": "Nicht gefunden - Pangloss",
+      "toast_created": "{type} „{label}“ angelegt",
+      "toast_dismiss": "Schließen: {message}",
+      "toast_saved": "{type} „{label}“ gespeichert",
+      "toasts": "Benachrichtigungen",
       "type_marker": "Typ",
+      "typology_all": "Alle",
+      "typology_collapse": "Einklappen",
+      "typology_concrete": "Auch eine konkrete Entität (eine Beziehung, die die andere Klasse annimmt, nimmt auch diesen Typ an)",
+      "typology_counts": "{subtypes} Untertypen · {entities} Entitäten",
+      "typology_default_label": "Standard",
+      "typology_description": "Beschreibung",
+      "typology_drop_top": "Hier ablegen für die oberste Ebene",
+      "typology_edit_labels": "Bezeichnungen bearbeiten",
+      "typology_entities_with": "Entitäten mit diesem Typ ({count})",
+      "typology_expand": "Ausklappen",
+      "typology_including_subtypes": "einschließlich Untertypen",
+      "typology_labels": "Bezeichnungen",
+      "typology_move": "{name} verschieben nach",
+      "typology_move_to": "Verschieben nach …",
+      "typology_no_types": "Noch keine Typen.",
+      "typology_none": "Keine.",
+      "typology_not_translated": "(nicht übersetzt)",
+      "typology_not_translated_shown": "(nicht übersetzt: der Standard wird angezeigt)",
+      "typology_path": "Pfad",
+      "typology_show_more": "Mehr anzeigen",
+      "typology_subtypes": "Untertypen",
+      "typology_top_level": "(oberste Ebene)",
       "username": "Benutzername",
+      "widen_type": "{name} auf einen Obertyp erweitern",
       "yes": "Ja"
+    },
+    "fr": {
+      "abstract_no_types": "{type} est un type abstrait, et aucun de ses types n’existe dans ce projet : il n’y a rien à afficher.",
+      "add": "Ajouter",
+      "add_named": "Ajouter : {name}",
+      "add_to": "Ajouter à {name}",
+      "back": "Retour",
+      "cancel": "Annuler",
+      "cannot_create_abstract": "{type} est un type abstrait : un nouvel élément se crée comme l’un de ses types.",
+      "cannot_create_directly": "{type} ne peut pas être créé seul, seulement comme partie d’un autre document.",
+      "clip_copied": "Copié",
+      "clip_cut": "Coupé",
+      "clip_remove": "Retirer du presse-papiers",
+      "clipboard": "Presse-papiers",
+      "clipboard_clear": "Vider",
+      "clipboard_count": "Presse-papiers ({count})",
+      "clipboard_fold": "Plier ou déplier le presse-papiers",
+      "clipboard_less": "Afficher moins",
+      "clipboard_more": "Tout afficher",
+      "close": "Fermer",
+      "collapse_fold": "Replier : {name}",
+      "collapse_show_whole": "Afficher en entier : {name}",
+      "console": "Console",
+      "copy_item": "Copier : {name}",
+      "created": "Créé",
+      "cut_item": "Couper : {name}",
+      "date_day": "Jour",
+      "date_day_month_year": "{day} {month} {year}",
+      "date_earliest": "Au plus tôt",
+      "date_edtf_help": "Extended Date/Time Format : 1500-03~ signifie vers mars 1500, 15XX une année des années 1500, 1500/1510 de 1500 à 1510",
+      "date_every": "chaque {what}",
+      "date_every_n": "tous les {n} {what}",
+      "date_latest": "Au plus tard",
+      "date_month": "Mois",
+      "date_month_year": "{month} {year}",
+      "date_no_month": "(pas de mois)",
+      "date_ongoing": "en cours",
+      "date_range": "de {from} à {to}",
+      "date_reads": "Se lit",
+      "date_unknown": "inconnue",
+      "date_year": "Année",
+      "deep_search": "Recherche approfondie",
+      "deep_search_run": "Lancer la recherche approfondie (Entrée)",
+      "derived_heading": "Déduit",
+      "derived_more": "et {count} de plus",
+      "derived_qualified": "Seulement d’énoncés avec un contexte",
+      "derived_why": "Pourquoi ({count})",
+      "edit": "Modifier",
+      "edit_form": "Formulaire : {type}",
+      "error_forbidden": "Vous n’êtes pas autorisé à faire cela.",
+      "error_server": "Une erreur s’est produite sur le serveur. Veuillez réessayer dans un instant.",
+      "error_unauthorised": "Vous devez vous connecter pour faire cela.",
+      "find_entity": "Rechercher : {type}…",
+      "fold": "Plier ou déplier : {name}",
+      "found": "Trouvés",
+      "found_more": "Trouvés, et d’autres encore : affinez la recherche",
+      "go_to_head": "Aller à l’objet : {type}",
+      "home": "Accueil",
+      "id": "ID",
+      "invalid_json": "Ce n’est pas du JSON valide : rien n’est modifié",
+      "invalid_must_be_under": "Doit être inférieur à {n}",
+      "invalid_must_exceed": "Doit être supérieur à {n}",
+      "invalid_not_choice": "Ne fait pas partie des choix",
+      "invalid_not_date": "Doit être une date",
+      "invalid_not_datetime": "Doit être une date et une heure",
+      "invalid_not_multiple": "Doit être un multiple de {n}",
+      "invalid_not_number": "Doit être un nombre",
+      "invalid_not_uuid": "Doit être un UUID",
+      "invalid_not_whole": "Doit être un nombre entier",
+      "invalid_required": "Obligatoire",
+      "invalid_too_few": "Au moins {n} requis",
+      "invalid_too_large": "Doit être inférieur ou égal à {n}",
+      "invalid_too_long": "Au plus {n} caractères",
+      "invalid_too_many": "Au plus {n} autorisés",
+      "invalid_too_short": "Au moins {n} caractères",
+      "invalid_too_small": "Doit être supérieur ou égal à {n}",
+      "invalid_type_not_allowed": "Ce type n’est pas autorisé ici",
+      "invalid_value": "Valeur non valide",
+      "item_not_found": "Il n’y a rien ici. Cet élément n’existe peut-être pas, ou il faut vous connecter pour le voir.",
+      "kind_annotated_value": "Valeur annotée",
+      "kind_annotated_value_plural": "Valeurs annotées",
+      "kind_conjunction": "Conjonction",
+      "kind_conjunction_plural": "Conjonctions",
+      "kind_document": "Document",
+      "kind_document_plural": "Documents",
+      "kind_edge_model": "Propriétés de la relation",
+      "kind_edge_model_plural": "Propriétés de la relation",
+      "kind_embedded": "Objet intégré",
+      "kind_embedded_plural": "Objets intégrés",
+      "kind_entity": "Entité",
+      "kind_entity_plural": "Entités",
+      "kind_reified_relation": "Relation avec champs",
+      "kind_reified_relation_document": "Document de relation",
+      "kind_reified_relation_document_plural": "Documents de relation",
+      "kind_reified_relation_plural": "Relations avec champs",
+      "kind_semantic_space": "Espace sémantique",
+      "kind_semantic_space_plural": "Espaces sémantiques",
+      "label": "Libellé",
+      "language_current": "Langue : {language}",
+      "loading": "Chargement…",
+      "log_in": "Se connecter",
+      "log_out": "Se déconnecter",
+      "log_out_user": "Déconnecter {user}",
+      "logging_in": "Connexion en cours…",
+      "login_failed": "Ce nom d’utilisateur et ce mot de passe ne correspondent pas. Vérifiez-les et réessayez.",
+      "modified": "Modifié",
+      "narrow_type": "Restreindre {name} à un sous-type",
+      "nav_expand": "Déplier la barre de navigation",
+      "nav_filter": "Filtrer les types",
+      "nav_filter_clear": "Effacer le filtre",
+      "nav_filter_none": "Aucun type ne correspond",
+      "nav_main": "Navigation principale",
+      "nav_pangloss_calendar_calendar": "Calendar",
+      "nav_pangloss_review_review": "Relecture",
+      "nav_pin": "Garder la barre de navigation ouverte",
+      "nav_section_typologies": "Typologies",
+      "nav_unpin": "Ne plus garder la barre de navigation ouverte",
+      "new": "Nouveau",
+      "new_entity": "En créer un nouveau",
+      "new_item": "Nouveau : {type}",
+      "no": "Non",
+      "not_saved": "Non enregistré",
+      "not_saved_problem": "Non enregistré : un champ comporte une erreur, signalée en rouge",
+      "not_saved_problems": "Non enregistré : {count} erreurs, signalées en rouge",
+      "nothing_found": "Aucun résultat",
+      "open": "Ouvrir",
+      "page_not_found": "Page introuvable",
+      "password": "Mot de passe",
+      "paste_here": "Coller ici",
+      "paste_item": "Coller : {name}",
+      "picked_lately": "Utilisé récemment",
+      "reload": "Charger la nouvelle version",
+      "remove": "Retirer",
+      "remove_item": "Retirer : {name}",
+      "retype_confirm": "Changer le type",
+      "retype_loses": "{type} n’a pas de place pour le contenu de ces champs de {from}, qui sera perdu :",
+      "retype_title": "Changer en {type} ?",
+      "review_button": "Relecture : {status}",
+      "review_button_comments": "Relecture : {status}, commentaires ouverts : {count}",
+      "review_close": "Fermer la relecture",
+      "review_comment_label": "Commentaire",
+      "review_comment_placeholder": "Écrire un commentaire (# pour une partie)",
+      "review_comment_refused": "Le commentaire n’a pas été envoyé : {reason}",
+      "review_comments": "Commentaires",
+      "review_no_comments": "Aucun commentaire",
+      "review_panel": "Relecture",
+      "review_part_choose": "Renvoyer à une partie…",
+      "review_part_gone": "(n’existe plus)",
+      "review_part_none": "Aucune partie ne correspond",
+      "review_part_show": "Le montrer sur la page",
+      "review_parts": "Parties du document",
+      "review_queue": "Relecture",
+      "review_queue_all_types": "Tous les types",
+      "review_queue_changed": "Modifié",
+      "review_queue_comments": "Commentaires ouverts",
+      "review_queue_count": "Documents : {count}",
+      "review_queue_created_by": "Créé par",
+      "review_queue_document": "Document",
+      "review_queue_empty": "Rien ici",
+      "review_queue_next": "Suivant",
+      "review_queue_page": "Page {page} sur {pages}",
+      "review_queue_pages": "Pages",
+      "review_queue_previous": "Précédent",
+      "review_queue_reviewed_by": "Relu par",
+      "review_queue_title": "Documents à relire",
+      "review_queue_type": "Type",
+      "review_resolve": "Résoudre",
+      "review_resolve_refused": "Le commentaire n’a pas été résolu : {reason}",
+      "review_resolved_by": "Résolu par {user}",
+      "review_reviewed_by": "Relu par {user}, {when}",
+      "review_send": "Envoyer",
+      "review_sending": "Envoi…",
+      "review_show_resolved": "Afficher les résolus ({count})",
+      "review_status": "Statut",
+      "review_status_checked": "Vérifié",
+      "review_status_errors_found": "Erreurs trouvées",
+      "review_status_refused": "Le statut n’a pas été modifié : {reason}",
+      "review_status_unchecked": "Non vérifié",
+      "review_you": "Vous",
+      "save": "Enregistrer",
+      "search": "Rechercher",
+      "search_add_alternatives": "Ajouter des alternatives",
+      "search_add_referring": "Ajouter ce qui y fait référence",
+      "search_add_somewhere": "Ajouter un document qu’il contient",
+      "search_alternative": "alternative {n}",
+      "search_alternatives_n": "Alternatives {n}",
+      "search_and": "et",
+      "search_and_condition": "Et une autre condition sur {name}",
+      "search_any_field": "n’importe quel champ",
+      "search_any_of": "L’un de",
+      "search_ascending": "croissant",
+      "search_change_type": "Type",
+      "search_change_type_of": "Changer le type de {name}",
+      "search_choose_type": "Choisir un type",
+      "search_clear": "Effacer",
+      "search_close": "Fermer",
+      "search_delete_saved": "Supprimer la recherche enregistrée {name}",
+      "search_descending": "décroissant",
+      "search_direction": "Sens de {name}",
+      "search_failed": "La recherche a échoué",
+      "search_find_any_entity": "Trouver une entité…",
+      "search_form": "Rechercher par champs",
+      "search_form_in_use": "Rechercher par champs (en cours)",
+      "search_form_of": "Rechercher : {type}, par champs",
+      "search_from": "de",
+      "search_in_spaces": "À l’intérieur de",
+      "search_mentions": "Mentionne",
+      "search_not": "non",
+      "search_not_named": "Non : {name}",
+      "search_not_title": "Trouver ce qui ne correspond pas à ceci",
+      "search_op_all_of": "est tous ceux-ci",
+      "search_op_any_of": "est l’un de",
+      "search_op_between": "entre",
+      "search_op_contains": "contient",
+      "search_op_has_any": "en a",
+      "search_op_has_no_value": "n’a pas de valeur",
+      "search_op_has_none": "n’en a pas",
+      "search_op_has_value": "a une valeur",
+      "search_op_is": "est",
+      "search_op_matching": "est un qui correspond à",
+      "search_op_one_of": "est l’un de",
+      "search_op_starts_with": "commence par",
+      "search_operator": "Condition sur {name}",
+      "search_or": "ou",
+      "search_order_by": "Trier par",
+      "search_order_n": "Trier par, {n}",
+      "search_referred_to_by": "Référencé par",
+      "search_remove_condition": "Retirer la condition sur {name}",
+      "search_save": "Enregistrer",
+      "search_save_name": "Nom de cette recherche",
+      "search_saved": "Recherches enregistrées",
+      "search_saved_placeholder": "Recherches enregistrées…",
+      "search_somewhere": "Contient",
+      "search_source": "{type} · {field}",
+      "search_then_by": "puis par",
+      "search_through": "via",
+      "search_through_named": "Via, pour {name}",
+      "search_to": "à",
+      "section_links": "Liens",
+      "select_type": "Choisir un type…",
+      "select_type_of": "{name} : choisir un type…",
+      "stale_version": "Quelqu’un a enregistré cet élément depuis que vous l’avez ouvert. Rien n’a été écrasé : chargez la nouvelle version, puis refaites vos modifications.",
+      "status_logged_in_as": "Connecté en tant que {user}",
+      "status_not_logged_in": "Non connecté",
+      "step_down": "Diminuer : {name}",
+      "step_up": "Augmenter : {name}",
+      "title": "Pangloss",
+      "title_not_found": "Introuvable - Pangloss",
+      "toast_created": "{type} « {label} » créé",
+      "toast_dismiss": "Fermer : {message}",
+      "toast_saved": "{type} « {label} » enregistré",
+      "toasts": "Notifications",
+      "type_marker": "type",
+      "typology_all": "Tous",
+      "typology_collapse": "Replier",
+      "typology_concrete": "Aussi une entité concrète (une relation qui accepte l’autre classe accepte ce type)",
+      "typology_counts": "{subtypes} sous-types · {entities} entités",
+      "typology_default_label": "par défaut",
+      "typology_description": "description",
+      "typology_drop_top": "Déposer ici pour le niveau supérieur",
+      "typology_edit_labels": "Modifier les libellés",
+      "typology_entities_with": "Entités de ce type ({count})",
+      "typology_expand": "Déplier",
+      "typology_including_subtypes": "y compris les sous-types",
+      "typology_labels": "Libellés",
+      "typology_move": "Déplacer {name} vers",
+      "typology_move_to": "Déplacer vers…",
+      "typology_no_types": "Aucun type pour l’instant.",
+      "typology_none": "Aucun.",
+      "typology_not_translated": "(non traduit)",
+      "typology_not_translated_shown": "(non traduit : le libellé par défaut est affiché)",
+      "typology_path": "Chemin",
+      "typology_show_more": "Afficher plus",
+      "typology_subtypes": "Sous-types",
+      "typology_top_level": "(niveau supérieur)",
+      "username": "Nom d’utilisateur",
+      "widen_type": "Élargir {name} à un type parent",
+      "yes": "Oui"
     }
   },
   "models": {
@@ -180,6 +903,26 @@
         },
         "incoming": {}
       },
+      "Artwork": {
+        "name": "Artwork",
+        "plural": "Artworks",
+        "help": "",
+        "description": "Any artwork object",
+        "kind": "Entity",
+        "fields": {},
+        "incoming": {
+          "artwork_created_reverse": {
+            "name": "Created in",
+            "plural": "Created in",
+            "help": ""
+          },
+          "object_created_reverse": {
+            "name": "Created in",
+            "plural": "Created in",
+            "help": ""
+          }
+        }
+      },
       "AtPage": {
         "name": "At page",
         "plural": "At pages",
@@ -230,6 +973,126 @@
           "level": {
             "name": "Level",
             "plural": "Level",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "CreationOfArtwork": {
+        "name": "Creation of artwork",
+        "plural": "Creation of artwork",
+        "help": "",
+        "description": "",
+        "kind": "Document",
+        "fields": {
+          "text": {
+            "name": "Text",
+            "plural": "Text",
+            "help": ""
+          },
+          "date": {
+            "name": "Date",
+            "plural": "Date",
+            "help": ""
+          },
+          "year": {
+            "name": "Year",
+            "plural": "Year",
+            "help": ""
+          },
+          "places": {
+            "name": "Places",
+            "plural": "Places",
+            "help": ""
+          },
+          "created_by": {
+            "name": "Created by",
+            "plural": "Created by",
+            "help": ""
+          },
+          "artwork_created": {
+            "name": "Artwork created",
+            "plural": "Artwork created",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "CreationOfPainting": {
+        "name": "Creation of painting",
+        "plural": "Creation of painting",
+        "help": "",
+        "description": "",
+        "kind": "Document",
+        "fields": {
+          "text": {
+            "name": "Text",
+            "plural": "Text",
+            "help": ""
+          },
+          "date": {
+            "name": "Date",
+            "plural": "Date",
+            "help": ""
+          },
+          "year": {
+            "name": "Year",
+            "plural": "Year",
+            "help": ""
+          },
+          "places": {
+            "name": "Places",
+            "plural": "Places",
+            "help": ""
+          },
+          "created_by": {
+            "name": "Created by",
+            "plural": "Created by",
+            "help": ""
+          },
+          "painting_created": {
+            "name": "Painting created",
+            "plural": "Painting created",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "CreationOfPhysicalObject": {
+        "name": "Creation of physical object",
+        "plural": "Creation of physical object",
+        "help": "",
+        "description": "",
+        "kind": "Document",
+        "fields": {
+          "text": {
+            "name": "Text",
+            "plural": "Text",
+            "help": ""
+          },
+          "date": {
+            "name": "Date",
+            "plural": "Date",
+            "help": ""
+          },
+          "year": {
+            "name": "Year",
+            "plural": "Year",
+            "help": ""
+          },
+          "places": {
+            "name": "Places",
+            "plural": "Places",
+            "help": ""
+          },
+          "created_by": {
+            "name": "Created by",
+            "plural": "Created by",
+            "help": ""
+          },
+          "object_created": {
+            "name": "Object created",
+            "plural": "Object created",
             "help": ""
           }
         },
@@ -579,9 +1442,19 @@
             "plural": "Gave",
             "help": ""
           },
+          "has_member": {
+            "name": "Has member",
+            "plural": "Has member",
+            "help": ""
+          },
           "involves_reverse": {
             "name": "Involved in",
             "plural": "Involved in",
+            "help": ""
+          },
+          "member_of": {
+            "name": "Member of",
+            "plural": "Member of",
             "help": ""
           },
           "ordered": {
@@ -656,6 +1529,46 @@
         },
         "incoming": {}
       },
+      "MemberOf": {
+        "name": "Member of",
+        "plural": "Memberships",
+        "help": "",
+        "description": "Someone was a member of a group: of a family, an order, an army. (Two factoids that say so of two people make\nthem members of the same group: see `derived.py`)",
+        "kind": "Document",
+        "fields": {
+          "text": {
+            "name": "Text",
+            "plural": "Text",
+            "help": ""
+          },
+          "date": {
+            "name": "Date",
+            "plural": "Date",
+            "help": ""
+          },
+          "year": {
+            "name": "Year",
+            "plural": "Year",
+            "help": ""
+          },
+          "places": {
+            "name": "Places",
+            "plural": "Places",
+            "help": ""
+          },
+          "member": {
+            "name": "Member",
+            "plural": "Member",
+            "help": ""
+          },
+          "group": {
+            "name": "Group",
+            "plural": "Group",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
       "Negative": {
         "name": "Negative",
         "plural": "Negatives",
@@ -715,6 +1628,11 @@
           "label_de": {
             "name": "Label (German)",
             "plural": "Label (German)",
+            "help": ""
+          },
+          "label_fr": {
+            "name": "Label (French)",
+            "plural": "Label (French)",
             "help": ""
           }
         },
@@ -831,6 +1749,31 @@
         },
         "incoming": {}
       },
+      "Painting": {
+        "name": "Painting",
+        "plural": "Paintings",
+        "help": "",
+        "description": "A painting",
+        "kind": "Entity",
+        "fields": {},
+        "incoming": {
+          "artwork_created_reverse": {
+            "name": "Created in",
+            "plural": "Created in",
+            "help": ""
+          },
+          "object_created_reverse": {
+            "name": "Created in",
+            "plural": "Created in",
+            "help": ""
+          },
+          "painting_created_reverse": {
+            "name": "Created in",
+            "plural": "Created in",
+            "help": ""
+          }
+        }
+      },
       "Period": {
         "name": "Period",
         "plural": "Periods",
@@ -935,6 +1878,11 @@
             "plural": "Carried out",
             "help": ""
           },
+          "created_by_reverse": {
+            "name": "Creator of",
+            "plural": "Creator of",
+            "help": ""
+          },
           "gave": {
             "name": "Gave",
             "plural": "Gave",
@@ -943,6 +1891,11 @@
           "involves_reverse": {
             "name": "Involved in",
             "plural": "Involved in",
+            "help": ""
+          },
+          "member_of": {
+            "name": "Member of",
+            "plural": "Member of",
             "help": ""
           },
           "ordered": {
@@ -958,6 +1911,21 @@
           "received": {
             "name": "Received",
             "plural": "Received",
+            "help": ""
+          }
+        }
+      },
+      "PhysicalObject": {
+        "name": "Physical object",
+        "plural": "Physical objects",
+        "help": "",
+        "description": "Any physical object",
+        "kind": "Entity",
+        "fields": {},
+        "incoming": {
+          "object_created_reverse": {
+            "name": "Created in",
+            "plural": "Created in",
             "help": ""
           }
         }
@@ -1333,6 +2301,61 @@
           }
         },
         "incoming": {}
+      },
+      "SameGroup": {
+        "name": "Same group",
+        "plural": "Same group",
+        "help": "",
+        "description": "Members of the same group (a family, an order, an army)",
+        "kind": "Derived",
+        "fields": {
+          "member": {
+            "name": "Member",
+            "plural": "Member",
+            "help": ""
+          },
+          "group": {
+            "name": "Group",
+            "plural": "Group",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "CoParticipants": {
+        "name": "Took part with",
+        "plural": "Took part with",
+        "help": "",
+        "description": "Took part in the same activity",
+        "kind": "Derived",
+        "fields": {
+          "participant": {
+            "name": "Participant",
+            "plural": "Participant",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "GaveTo": {
+        "name": "Gave to",
+        "plural": "Gave to",
+        "help": "",
+        "description": "Gave something to",
+        "kind": "Derived",
+        "fields": {
+          "giver": {
+            "name": "Giver",
+            "plural": "Giver",
+            "help": ""
+          },
+          "receiver": {
+            "name": "Receiver",
+            "plural": "Receiver",
+            "help": ""
+          }
+        },
+        "incoming": {}
       }
     },
     "de": {
@@ -1396,6 +2419,26 @@
         },
         "incoming": {}
       },
+      "Artwork": {
+        "name": "Kunstwerk",
+        "plural": "Kunstwerke",
+        "help": "",
+        "description": "Ein beliebiges Kunstwerk",
+        "kind": "Entity",
+        "fields": {},
+        "incoming": {
+          "artwork_created_reverse": {
+            "name": "Geschaffen in",
+            "plural": "Geschaffen in",
+            "help": ""
+          },
+          "object_created_reverse": {
+            "name": "Geschaffen in",
+            "plural": "Geschaffen in",
+            "help": ""
+          }
+        }
+      },
       "AtPage": {
         "name": "Auf Seite",
         "plural": "Auf Seite",
@@ -1446,6 +2489,126 @@
           "level": {
             "name": "Stufe",
             "plural": "Stufe",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "CreationOfArtwork": {
+        "name": "Schaffung eines Kunstwerks",
+        "plural": "Schaffung eines Kunstwerks",
+        "help": "",
+        "description": "",
+        "kind": "Document",
+        "fields": {
+          "text": {
+            "name": "Text",
+            "plural": "Text",
+            "help": ""
+          },
+          "date": {
+            "name": "Datum",
+            "plural": "Datum",
+            "help": ""
+          },
+          "year": {
+            "name": "Jahr",
+            "plural": "Jahr",
+            "help": ""
+          },
+          "places": {
+            "name": "Orte",
+            "plural": "Orte",
+            "help": ""
+          },
+          "created_by": {
+            "name": "Geschaffen von",
+            "plural": "Geschaffen von",
+            "help": ""
+          },
+          "artwork_created": {
+            "name": "Geschaffenes Kunstwerk",
+            "plural": "Geschaffenes Kunstwerk",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "CreationOfPainting": {
+        "name": "Schaffung eines Gemäldes",
+        "plural": "Schaffung eines Gemäldes",
+        "help": "",
+        "description": "",
+        "kind": "Document",
+        "fields": {
+          "text": {
+            "name": "Text",
+            "plural": "Text",
+            "help": ""
+          },
+          "date": {
+            "name": "Datum",
+            "plural": "Datum",
+            "help": ""
+          },
+          "year": {
+            "name": "Jahr",
+            "plural": "Jahr",
+            "help": ""
+          },
+          "places": {
+            "name": "Orte",
+            "plural": "Orte",
+            "help": ""
+          },
+          "created_by": {
+            "name": "Geschaffen von",
+            "plural": "Geschaffen von",
+            "help": ""
+          },
+          "painting_created": {
+            "name": "Geschaffenes Gemälde",
+            "plural": "Geschaffenes Gemälde",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "CreationOfPhysicalObject": {
+        "name": "Herstellung eines physischen Objekts",
+        "plural": "Herstellung eines physischen Objekts",
+        "help": "",
+        "description": "",
+        "kind": "Document",
+        "fields": {
+          "text": {
+            "name": "Text",
+            "plural": "Text",
+            "help": ""
+          },
+          "date": {
+            "name": "Datum",
+            "plural": "Datum",
+            "help": ""
+          },
+          "year": {
+            "name": "Jahr",
+            "plural": "Jahr",
+            "help": ""
+          },
+          "places": {
+            "name": "Orte",
+            "plural": "Orte",
+            "help": ""
+          },
+          "created_by": {
+            "name": "Geschaffen von",
+            "plural": "Geschaffen von",
+            "help": ""
+          },
+          "object_created": {
+            "name": "Geschaffenes Objekt",
+            "plural": "Geschaffenes Objekt",
             "help": ""
           }
         },
@@ -1795,9 +2958,19 @@
             "plural": "Gab",
             "help": ""
           },
+          "has_member": {
+            "name": "Hat Mitglied",
+            "plural": "Hat Mitglied",
+            "help": ""
+          },
           "involves_reverse": {
             "name": "Einbezogen in",
             "plural": "Einbezogen in",
+            "help": ""
+          },
+          "member_of": {
+            "name": "Mitglied von",
+            "plural": "Mitglied von",
             "help": ""
           },
           "ordered": {
@@ -1872,6 +3045,46 @@
         },
         "incoming": {}
       },
+      "MemberOf": {
+        "name": "Mitglied von",
+        "plural": "Mitgliedschaften",
+        "help": "",
+        "description": "Jemand war Mitglied einer Gruppe: einer Familie, eines Ordens, eines Heeres. (Zwei Faktoide, die das von zwei Personen sagen, machen sie zu Mitgliedern derselben Gruppe: siehe `derived.py`)",
+        "kind": "Document",
+        "fields": {
+          "text": {
+            "name": "Text",
+            "plural": "Text",
+            "help": ""
+          },
+          "date": {
+            "name": "Datum",
+            "plural": "Datum",
+            "help": ""
+          },
+          "year": {
+            "name": "Jahr",
+            "plural": "Jahr",
+            "help": ""
+          },
+          "places": {
+            "name": "Orte",
+            "plural": "Orte",
+            "help": ""
+          },
+          "member": {
+            "name": "Mitglied",
+            "plural": "Mitglied",
+            "help": ""
+          },
+          "group": {
+            "name": "Gruppe",
+            "plural": "Gruppe",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
       "Negative": {
         "name": "Negativ",
         "plural": "Negativ",
@@ -1931,6 +3144,11 @@
           "label_de": {
             "name": "Bezeichnung (Deutsch)",
             "plural": "Bezeichnung (Deutsch)",
+            "help": ""
+          },
+          "label_fr": {
+            "name": "Bezeichnung (Französisch)",
+            "plural": "Bezeichnung (Französisch)",
             "help": ""
           }
         },
@@ -2047,6 +3265,31 @@
         },
         "incoming": {}
       },
+      "Painting": {
+        "name": "Gemälde",
+        "plural": "Gemälde",
+        "help": "",
+        "description": "Ein Gemälde",
+        "kind": "Entity",
+        "fields": {},
+        "incoming": {
+          "artwork_created_reverse": {
+            "name": "Geschaffen in",
+            "plural": "Geschaffen in",
+            "help": ""
+          },
+          "object_created_reverse": {
+            "name": "Geschaffen in",
+            "plural": "Geschaffen in",
+            "help": ""
+          },
+          "painting_created_reverse": {
+            "name": "Geschaffen in",
+            "plural": "Geschaffen in",
+            "help": ""
+          }
+        }
+      },
       "Period": {
         "name": "Zeitraum",
         "plural": "Zeitraum",
@@ -2151,6 +3394,11 @@
             "plural": "Ausgeführt",
             "help": ""
           },
+          "created_by_reverse": {
+            "name": "Schöpfer von",
+            "plural": "Schöpfer von",
+            "help": ""
+          },
           "gave": {
             "name": "Gab",
             "plural": "Gab",
@@ -2159,6 +3407,11 @@
           "involves_reverse": {
             "name": "Einbezogen in",
             "plural": "Einbezogen in",
+            "help": ""
+          },
+          "member_of": {
+            "name": "Mitglied von",
+            "plural": "Mitglied von",
             "help": ""
           },
           "ordered": {
@@ -2174,6 +3427,21 @@
           "received": {
             "name": "Erhielt",
             "plural": "Erhielt",
+            "help": ""
+          }
+        }
+      },
+      "PhysicalObject": {
+        "name": "Physisches Objekt",
+        "plural": "Physische Objekte",
+        "help": "",
+        "description": "Ein beliebiges physisches Objekt",
+        "kind": "Entity",
+        "fields": {},
+        "incoming": {
+          "object_created_reverse": {
+            "name": "Geschaffen in",
+            "plural": "Geschaffen in",
             "help": ""
           }
         }
@@ -2549,6 +3817,1577 @@
           }
         },
         "incoming": {}
+      },
+      "SameGroup": {
+        "name": "Gleiche Gruppe",
+        "plural": "Gleiche Gruppe",
+        "help": "",
+        "description": "Mitglieder derselben Gruppe (einer Familie, eines Ordens, eines Heeres)",
+        "kind": "Derived",
+        "fields": {
+          "member": {
+            "name": "Mitglied",
+            "plural": "Mitglied",
+            "help": ""
+          },
+          "group": {
+            "name": "Gruppe",
+            "plural": "Gruppe",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "CoParticipants": {
+        "name": "Beteiligt mit",
+        "plural": "Beteiligt mit",
+        "help": "",
+        "description": "Nahmen an derselben Aktivität teil",
+        "kind": "Derived",
+        "fields": {
+          "participant": {
+            "name": "Teilnehmer",
+            "plural": "Teilnehmer",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "GaveTo": {
+        "name": "Gab an",
+        "plural": "Gab an",
+        "help": "",
+        "description": "Gab jemandem etwas",
+        "kind": "Derived",
+        "fields": {
+          "giver": {
+            "name": "Geber",
+            "plural": "Geber",
+            "help": ""
+          },
+          "receiver": {
+            "name": "Empfänger",
+            "plural": "Empfänger",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      }
+    },
+    "fr": {
+      "Activity": {
+        "name": "Activité",
+        "plural": "Activités",
+        "help": "",
+        "description": "Un agent a fait quelque chose, avec d’autres dans divers rôles",
+        "kind": "Document",
+        "fields": {
+          "text": {
+            "name": "Texte",
+            "plural": "Texte",
+            "help": ""
+          },
+          "date": {
+            "name": "Date",
+            "plural": "Date",
+            "help": ""
+          },
+          "year": {
+            "name": "Année",
+            "plural": "Année",
+            "help": ""
+          },
+          "places": {
+            "name": "Lieux",
+            "plural": "Lieux",
+            "help": ""
+          },
+          "activity_type": {
+            "name": "Type d’activité",
+            "plural": "Type d’activité",
+            "help": ""
+          },
+          "carried_out_by": {
+            "name": "Réalisée par",
+            "plural": "Réalisée par",
+            "help": ""
+          },
+          "participants": {
+            "name": "Participants",
+            "plural": "Participants",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "Alternative": {
+        "name": "Alternative",
+        "plural": "Alternatives",
+        "help": "",
+        "description": "L’une de plusieurs choses, sans savoir laquelle : un nombre quelconque d’énoncés ou d’entités. `Alternative[ViaEdge[Person, Probability]]` donne pour chaque personne la probabilité que ce soit elle",
+        "kind": "Conjunction",
+        "fields": {
+          "alternatives": {
+            "name": "Alternatives",
+            "plural": "Alternatives",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "Artwork": {
+        "name": "Œuvre d’art",
+        "plural": "Œuvres d’art",
+        "help": "",
+        "description": "Une œuvre d’art quelconque",
+        "kind": "Entity",
+        "fields": {},
+        "incoming": {
+          "artwork_created_reverse": {
+            "name": "Créé dans",
+            "plural": "Créé dans",
+            "help": ""
+          },
+          "object_created_reverse": {
+            "name": "Créé dans",
+            "plural": "Créé dans",
+            "help": ""
+          }
+        }
+      },
+      "AtPage": {
+        "name": "À la page",
+        "plural": "À la page",
+        "help": "",
+        "description": "Une relation à quelque chose, *à une page* de celui-ci",
+        "kind": "ReifiedRelation",
+        "fields": {
+          "target": {
+            "name": "Cible",
+            "plural": "Cible",
+            "help": ""
+          },
+          "page": {
+            "name": "Page",
+            "plural": "Page",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "Causes": {
+        "name": "Cause",
+        "plural": "Causes",
+        "help": "",
+        "description": "Une chose en a entraîné une autre",
+        "kind": "Conjunction",
+        "fields": {
+          "cause": {
+            "name": "Cause",
+            "plural": "Cause",
+            "help": ""
+          },
+          "result": {
+            "name": "Résultat",
+            "plural": "Résultat",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "Certainty": {
+        "name": "Certitude",
+        "plural": "Certitudes",
+        "help": "",
+        "description": "Le degré de certitude de la source sur une relation : une propriété de la relation elle-même",
+        "kind": "EdgeModel",
+        "fields": {
+          "level": {
+            "name": "Niveau",
+            "plural": "Niveau",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "CreationOfArtwork": {
+        "name": "Création d’une œuvre d’art",
+        "plural": "Création d’une œuvre d’art",
+        "help": "",
+        "description": "",
+        "kind": "Document",
+        "fields": {
+          "text": {
+            "name": "Texte",
+            "plural": "Texte",
+            "help": ""
+          },
+          "date": {
+            "name": "Date",
+            "plural": "Date",
+            "help": ""
+          },
+          "year": {
+            "name": "Année",
+            "plural": "Année",
+            "help": ""
+          },
+          "places": {
+            "name": "Lieux",
+            "plural": "Lieux",
+            "help": ""
+          },
+          "created_by": {
+            "name": "Créé par",
+            "plural": "Créé par",
+            "help": ""
+          },
+          "artwork_created": {
+            "name": "Œuvre créée",
+            "plural": "Œuvre créée",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "CreationOfPainting": {
+        "name": "Création d’une peinture",
+        "plural": "Création d’une peinture",
+        "help": "",
+        "description": "",
+        "kind": "Document",
+        "fields": {
+          "text": {
+            "name": "Texte",
+            "plural": "Texte",
+            "help": ""
+          },
+          "date": {
+            "name": "Date",
+            "plural": "Date",
+            "help": ""
+          },
+          "year": {
+            "name": "Année",
+            "plural": "Année",
+            "help": ""
+          },
+          "places": {
+            "name": "Lieux",
+            "plural": "Lieux",
+            "help": ""
+          },
+          "created_by": {
+            "name": "Créé par",
+            "plural": "Créé par",
+            "help": ""
+          },
+          "painting_created": {
+            "name": "Peinture créée",
+            "plural": "Peinture créée",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "CreationOfPhysicalObject": {
+        "name": "Création d’un objet physique",
+        "plural": "Création d’un objet physique",
+        "help": "",
+        "description": "",
+        "kind": "Document",
+        "fields": {
+          "text": {
+            "name": "Texte",
+            "plural": "Texte",
+            "help": ""
+          },
+          "date": {
+            "name": "Date",
+            "plural": "Date",
+            "help": ""
+          },
+          "year": {
+            "name": "Année",
+            "plural": "Année",
+            "help": ""
+          },
+          "places": {
+            "name": "Lieux",
+            "plural": "Lieux",
+            "help": ""
+          },
+          "created_by": {
+            "name": "Créé par",
+            "plural": "Créé par",
+            "help": ""
+          },
+          "object_created": {
+            "name": "Objet créé",
+            "plural": "Objet créé",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "Date": {
+        "name": "Date",
+        "plural": "Dates",
+        "help": "",
+        "description": "",
+        "kind": "Embedded",
+        "fields": {
+          "calendar": {
+            "name": "Calendrier",
+            "plural": "Calendrier",
+            "help": ""
+          },
+          "source_text": {
+            "name": "Texte de la source",
+            "plural": "Texte de la source",
+            "help": ""
+          },
+          "sort_by": {
+            "name": "Trier par",
+            "plural": "Trier par",
+            "help": ""
+          },
+          "precision": {
+            "name": "Précision",
+            "plural": "Précision",
+            "help": ""
+          },
+          "earliest_fuzzy": {
+            "name": "Au plus tôt (approximatif)",
+            "plural": "Au plus tôt (approximatif)",
+            "help": ""
+          },
+          "earliest_strict": {
+            "name": "Au plus tôt (strict)",
+            "plural": "Au plus tôt (strict)",
+            "help": ""
+          },
+          "latest_strict": {
+            "name": "Au plus tard (strict)",
+            "plural": "Au plus tard (strict)",
+            "help": ""
+          },
+          "latest_fuzzy": {
+            "name": "Au plus tard (approximatif)",
+            "plural": "Au plus tard (approximatif)",
+            "help": ""
+          },
+          "sort_day": {
+            "name": "Jour de tri",
+            "plural": "Jour de tri",
+            "help": ""
+          },
+          "end_sort_day": {
+            "name": "Jour de tri (fin)",
+            "plural": "Jour de tri (fin)",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "DateCharacterisation": {
+        "name": "Caractérisation de date",
+        "plural": "Caractérisations de date",
+        "help": "",
+        "description": "",
+        "kind": "Entity",
+        "fields": {
+          "use": {
+            "name": "Usage",
+            "plural": "Usage",
+            "help": ""
+          },
+          "rank": {
+            "name": "Rang",
+            "plural": "Rang",
+            "help": ""
+          },
+          "when": {
+            "name": "Quand",
+            "plural": "Quand",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "DateRange": {
+        "name": "Intervalle de dates",
+        "plural": "Intervalles de dates",
+        "help": "",
+        "description": "Une date dont le jour n’est pas connu : quelque part entre `earliest` et `latest`",
+        "kind": "Embedded",
+        "fields": {
+          "calendar": {
+            "name": "Calendrier",
+            "plural": "Calendrier",
+            "help": ""
+          },
+          "source_text": {
+            "name": "Texte de la source",
+            "plural": "Texte de la source",
+            "help": ""
+          },
+          "sort_by": {
+            "name": "Trier par",
+            "plural": "Trier par",
+            "help": ""
+          },
+          "precision": {
+            "name": "Précision",
+            "plural": "Précision",
+            "help": ""
+          },
+          "earliest_fuzzy": {
+            "name": "Au plus tôt (approximatif)",
+            "plural": "Au plus tôt (approximatif)",
+            "help": ""
+          },
+          "earliest_strict": {
+            "name": "Au plus tôt (strict)",
+            "plural": "Au plus tôt (strict)",
+            "help": ""
+          },
+          "latest_strict": {
+            "name": "Au plus tard (strict)",
+            "plural": "Au plus tard (strict)",
+            "help": ""
+          },
+          "latest_fuzzy": {
+            "name": "Au plus tard (approximatif)",
+            "plural": "Au plus tard (approximatif)",
+            "help": ""
+          },
+          "sort_day": {
+            "name": "Jour de tri",
+            "plural": "Jour de tri",
+            "help": ""
+          },
+          "end_sort_day": {
+            "name": "Jour de tri (fin)",
+            "plural": "Jour de tri (fin)",
+            "help": ""
+          },
+          "earliest": {
+            "name": "Au plus tôt",
+            "plural": "Au plus tôt",
+            "help": ""
+          },
+          "latest": {
+            "name": "Au plus tard",
+            "plural": "Au plus tard",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "EDTFDate": {
+        "name": "Date EDTF",
+        "plural": "Dates EDTF",
+        "help": "",
+        "description": "",
+        "kind": "Embedded",
+        "fields": {
+          "calendar": {
+            "name": "Calendrier",
+            "plural": "Calendrier",
+            "help": ""
+          },
+          "source_text": {
+            "name": "Texte de la source",
+            "plural": "Texte de la source",
+            "help": ""
+          },
+          "sort_by": {
+            "name": "Trier par",
+            "plural": "Trier par",
+            "help": ""
+          },
+          "precision": {
+            "name": "Précision",
+            "plural": "Précision",
+            "help": ""
+          },
+          "earliest_fuzzy": {
+            "name": "Au plus tôt (approximatif)",
+            "plural": "Au plus tôt (approximatif)",
+            "help": ""
+          },
+          "earliest_strict": {
+            "name": "Au plus tôt (strict)",
+            "plural": "Au plus tôt (strict)",
+            "help": ""
+          },
+          "latest_strict": {
+            "name": "Au plus tard (strict)",
+            "plural": "Au plus tard (strict)",
+            "help": ""
+          },
+          "latest_fuzzy": {
+            "name": "Au plus tard (approximatif)",
+            "plural": "Au plus tard (approximatif)",
+            "help": ""
+          },
+          "sort_day": {
+            "name": "Jour de tri",
+            "plural": "Jour de tri",
+            "help": ""
+          },
+          "end_sort_day": {
+            "name": "Jour de tri (fin)",
+            "plural": "Jour de tri (fin)",
+            "help": ""
+          },
+          "edtf": {
+            "name": "EDTF",
+            "plural": "EDTF",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "ExactDate": {
+        "name": "Date exacte",
+        "plural": "Dates exactes",
+        "help": "",
+        "description": "",
+        "kind": "Embedded",
+        "fields": {
+          "calendar": {
+            "name": "Calendrier",
+            "plural": "Calendrier",
+            "help": ""
+          },
+          "source_text": {
+            "name": "Texte de la source",
+            "plural": "Texte de la source",
+            "help": ""
+          },
+          "sort_by": {
+            "name": "Trier par",
+            "plural": "Trier par",
+            "help": ""
+          },
+          "precision": {
+            "name": "Précision",
+            "plural": "Précision",
+            "help": ""
+          },
+          "earliest_fuzzy": {
+            "name": "Au plus tôt (approximatif)",
+            "plural": "Au plus tôt (approximatif)",
+            "help": ""
+          },
+          "earliest_strict": {
+            "name": "Au plus tôt (strict)",
+            "plural": "Au plus tôt (strict)",
+            "help": ""
+          },
+          "latest_strict": {
+            "name": "Au plus tard (strict)",
+            "plural": "Au plus tard (strict)",
+            "help": ""
+          },
+          "latest_fuzzy": {
+            "name": "Au plus tard (approximatif)",
+            "plural": "Au plus tard (approximatif)",
+            "help": ""
+          },
+          "sort_day": {
+            "name": "Jour de tri",
+            "plural": "Jour de tri",
+            "help": ""
+          },
+          "end_sort_day": {
+            "name": "Jour de tri (fin)",
+            "plural": "Jour de tri (fin)",
+            "help": ""
+          },
+          "year": {
+            "name": "Année",
+            "plural": "Année",
+            "help": ""
+          },
+          "month": {
+            "name": "Mois",
+            "plural": "Mois",
+            "help": ""
+          },
+          "day": {
+            "name": "Jour",
+            "plural": "Jour",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "Factoid": {
+        "name": "Factoïde",
+        "plural": "Factoïdes",
+        "help": "",
+        "description": "Ce que dit une source, à une page : un ensemble d’énoncés",
+        "kind": "Document",
+        "fields": {
+          "year": {
+            "name": "Année",
+            "plural": "Année",
+            "help": ""
+          },
+          "source": {
+            "name": "Source",
+            "plural": "Source",
+            "help": ""
+          },
+          "statements": {
+            "name": "Énoncés",
+            "plural": "Énoncés",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "Group": {
+        "name": "Groupe",
+        "plural": "Groupes",
+        "help": "",
+        "description": "Une famille, un ordre, une armée…",
+        "kind": "Entity",
+        "fields": {
+          "name": {
+            "name": "Nom",
+            "plural": "Nom",
+            "help": ""
+          }
+        },
+        "incoming": {
+          "carried_out": {
+            "name": "A réalisé",
+            "plural": "A réalisé",
+            "help": ""
+          },
+          "gave": {
+            "name": "A donné",
+            "plural": "A donné",
+            "help": ""
+          },
+          "has_member": {
+            "name": "A pour membre",
+            "plural": "A pour membre",
+            "help": ""
+          },
+          "involves_reverse": {
+            "name": "Impliqué dans",
+            "plural": "Impliqué dans",
+            "help": ""
+          },
+          "member_of": {
+            "name": "Membre de",
+            "plural": "Membre de",
+            "help": ""
+          },
+          "ordered": {
+            "name": "A ordonné",
+            "plural": "A ordonné",
+            "help": ""
+          },
+          "participants_reverse": {
+            "name": "A participé à",
+            "plural": "A participé à",
+            "help": ""
+          },
+          "received": {
+            "name": "A reçu",
+            "plural": "A reçu",
+            "help": ""
+          }
+        }
+      },
+      "Hypothetical": {
+        "name": "Hypothétique",
+        "plural": "Hypothétiques",
+        "help": "",
+        "description": "La source dit qu’il se peut que ce soit le cas…",
+        "kind": "SemanticSpace",
+        "fields": {
+          "contents": {
+            "name": "Contenu",
+            "plural": "Contenu",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "Identification": {
+        "name": "Identification",
+        "plural": "Identifications",
+        "help": "",
+        "description": "Un nom de la source qui a été identifié : la source dit « Smith », et ceci dit quelles personnes cela pourrait être. La cible est une `Alternative`.",
+        "kind": "ReifiedRelation",
+        "fields": {
+          "target": {
+            "name": "Cible",
+            "plural": "Cible",
+            "help": ""
+          },
+          "identified_by": {
+            "name": "Identifié par",
+            "plural": "Identifié par",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "InRole": {
+        "name": "Dans un rôle",
+        "plural": "Dans des rôles",
+        "help": "",
+        "description": "Une relation à quelque chose, *dans un rôle*",
+        "kind": "ReifiedRelation",
+        "fields": {
+          "target": {
+            "name": "Cible",
+            "plural": "Cible",
+            "help": ""
+          },
+          "role": {
+            "name": "Rôle",
+            "plural": "Rôle",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "MemberOf": {
+        "name": "Membre de",
+        "plural": "Appartenances",
+        "help": "",
+        "description": "Quelqu’un était membre d’un groupe : une famille, un ordre, une armée. (Deux factoïdes qui le disent de deux personnes en font des membres du même groupe : voir `derived.py`)",
+        "kind": "Document",
+        "fields": {
+          "text": {
+            "name": "Texte",
+            "plural": "Texte",
+            "help": ""
+          },
+          "date": {
+            "name": "Date",
+            "plural": "Date",
+            "help": ""
+          },
+          "year": {
+            "name": "Année",
+            "plural": "Année",
+            "help": ""
+          },
+          "places": {
+            "name": "Lieux",
+            "plural": "Lieux",
+            "help": ""
+          },
+          "member": {
+            "name": "Membre",
+            "plural": "Membre",
+            "help": ""
+          },
+          "group": {
+            "name": "Groupe",
+            "plural": "Groupe",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "Negative": {
+        "name": "Négation",
+        "plural": "Négations",
+        "help": "",
+        "description": "Il n’est *pas* vrai que…",
+        "kind": "SemanticSpace",
+        "fields": {
+          "contents": {
+            "name": "Contenu",
+            "plural": "Contenu",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "NegativeSubjunctive": {
+        "name": "Subjonctif négatif",
+        "plural": "Subjonctifs négatifs",
+        "help": "",
+        "description": "On souhaitait que cela n’arrive *pas* (et cela n’a pas forcément été évité)",
+        "kind": "SemanticSpace",
+        "fields": {
+          "contents": {
+            "name": "Contenu",
+            "plural": "Contenu",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "NoRule": {
+        "name": "Sans règle",
+        "plural": "Sans règle",
+        "help": "",
+        "description": "Une caractérisation sans règle : elle est rattachée à la main à des jours, des mois, des années ou des périodes",
+        "kind": "Embedded",
+        "fields": {},
+        "incoming": {}
+      },
+      "OccupationType": {
+        "name": "Type de profession",
+        "plural": "Types de profession",
+        "help": "",
+        "description": "Un type de la typologie des professions",
+        "kind": "Entity",
+        "fields": {
+          "description": {
+            "name": "Description",
+            "plural": "Description",
+            "help": ""
+          },
+          "is_subtype_of": {
+            "name": "Sous-type de",
+            "plural": "Sous-type de",
+            "help": ""
+          },
+          "label_de": {
+            "name": "Libellé (allemand)",
+            "plural": "Libellé (allemand)",
+            "help": ""
+          },
+          "label_fr": {
+            "name": "Libellé (français)",
+            "plural": "Libellé (français)",
+            "help": ""
+          }
+        },
+        "incoming": {
+          "is_supertype_of": {
+            "name": "Super-type de",
+            "plural": "Super-type de",
+            "help": ""
+          },
+          "type_of": {
+            "name": "Type de",
+            "plural": "Type de",
+            "help": ""
+          }
+        }
+      },
+      "OngoingDate": {
+        "name": "Date en cours",
+        "plural": "Dates en cours",
+        "help": "",
+        "description": "La fin d’une période qui n’est pas terminée (elle est réputée s’arrêter à la fin de `DATES_OPEN_END_YEAR`)",
+        "kind": "Embedded",
+        "fields": {
+          "calendar": {
+            "name": "Calendrier",
+            "plural": "Calendrier",
+            "help": ""
+          },
+          "source_text": {
+            "name": "Texte de la source",
+            "plural": "Texte de la source",
+            "help": ""
+          },
+          "sort_by": {
+            "name": "Trier par",
+            "plural": "Trier par",
+            "help": ""
+          },
+          "precision": {
+            "name": "Précision",
+            "plural": "Précision",
+            "help": ""
+          },
+          "earliest_fuzzy": {
+            "name": "Au plus tôt (approximatif)",
+            "plural": "Au plus tôt (approximatif)",
+            "help": ""
+          },
+          "earliest_strict": {
+            "name": "Au plus tôt (strict)",
+            "plural": "Au plus tôt (strict)",
+            "help": ""
+          },
+          "latest_strict": {
+            "name": "Au plus tard (strict)",
+            "plural": "Au plus tard (strict)",
+            "help": ""
+          },
+          "latest_fuzzy": {
+            "name": "Au plus tard (approximatif)",
+            "plural": "Au plus tard (approximatif)",
+            "help": ""
+          },
+          "sort_day": {
+            "name": "Jour de tri",
+            "plural": "Jour de tri",
+            "help": ""
+          },
+          "end_sort_day": {
+            "name": "Jour de tri (fin)",
+            "plural": "Jour de tri (fin)",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "Order": {
+        "name": "Ordre",
+        "plural": "Ordres",
+        "help": "",
+        "description": "Quelqu’un a ordonné que quelque chose soit fait : *autre chose*, qui est un énoncé à part entière, dit dans un espace subjonctif, car c’était souhaité, et pas forcément fait",
+        "kind": "Document",
+        "fields": {
+          "text": {
+            "name": "Texte",
+            "plural": "Texte",
+            "help": ""
+          },
+          "date": {
+            "name": "Date",
+            "plural": "Date",
+            "help": ""
+          },
+          "year": {
+            "name": "Année",
+            "plural": "Année",
+            "help": ""
+          },
+          "places": {
+            "name": "Lieux",
+            "plural": "Lieux",
+            "help": ""
+          },
+          "ordered_by": {
+            "name": "Ordonné par",
+            "plural": "Ordonné par",
+            "help": ""
+          },
+          "thing_ordered": {
+            "name": "Chose ordonnée",
+            "plural": "Chose ordonnée",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "Painting": {
+        "name": "Peinture",
+        "plural": "Peintures",
+        "help": "",
+        "description": "Une peinture",
+        "kind": "Entity",
+        "fields": {},
+        "incoming": {
+          "artwork_created_reverse": {
+            "name": "Créé dans",
+            "plural": "Créé dans",
+            "help": ""
+          },
+          "object_created_reverse": {
+            "name": "Créé dans",
+            "plural": "Créé dans",
+            "help": ""
+          },
+          "painting_created_reverse": {
+            "name": "Créé dans",
+            "plural": "Créé dans",
+            "help": ""
+          }
+        }
+      },
+      "Period": {
+        "name": "Période",
+        "plural": "Périodes",
+        "help": "",
+        "description": "De `start` à `end` : une profession, un rôle, une résidence. Triée selon son début",
+        "kind": "Embedded",
+        "fields": {
+          "calendar": {
+            "name": "Calendrier",
+            "plural": "Calendrier",
+            "help": ""
+          },
+          "source_text": {
+            "name": "Texte de la source",
+            "plural": "Texte de la source",
+            "help": ""
+          },
+          "sort_by": {
+            "name": "Trier par",
+            "plural": "Trier par",
+            "help": ""
+          },
+          "precision": {
+            "name": "Précision",
+            "plural": "Précision",
+            "help": ""
+          },
+          "earliest_fuzzy": {
+            "name": "Au plus tôt (approximatif)",
+            "plural": "Au plus tôt (approximatif)",
+            "help": ""
+          },
+          "earliest_strict": {
+            "name": "Au plus tôt (strict)",
+            "plural": "Au plus tôt (strict)",
+            "help": ""
+          },
+          "latest_strict": {
+            "name": "Au plus tard (strict)",
+            "plural": "Au plus tard (strict)",
+            "help": ""
+          },
+          "latest_fuzzy": {
+            "name": "Au plus tard (approximatif)",
+            "plural": "Au plus tard (approximatif)",
+            "help": ""
+          },
+          "sort_day": {
+            "name": "Jour de tri",
+            "plural": "Jour de tri",
+            "help": ""
+          },
+          "end_sort_day": {
+            "name": "Jour de tri (fin)",
+            "plural": "Jour de tri (fin)",
+            "help": ""
+          },
+          "start": {
+            "name": "Début",
+            "plural": "Début",
+            "help": ""
+          },
+          "end": {
+            "name": "Fin",
+            "plural": "Fin",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "Person": {
+        "name": "Personne",
+        "plural": "Personnes",
+        "help": "",
+        "description": "Une personne",
+        "kind": "Entity",
+        "fields": {
+          "known_as": {
+            "name": "Connu sous le nom de",
+            "plural": "Connu sous le nom de",
+            "help": ""
+          },
+          "born": {
+            "name": "Naissance",
+            "plural": "Naissance",
+            "help": ""
+          },
+          "aliases": {
+            "name": "Autres noms",
+            "plural": "Autres noms",
+            "help": ""
+          },
+          "has_type": {
+            "name": "A pour type",
+            "plural": "A pour type",
+            "help": ""
+          }
+        },
+        "incoming": {
+          "carried_out": {
+            "name": "A réalisé",
+            "plural": "A réalisé",
+            "help": ""
+          },
+          "created_by_reverse": {
+            "name": "Créateur de",
+            "plural": "Créateur de",
+            "help": ""
+          },
+          "gave": {
+            "name": "A donné",
+            "plural": "A donné",
+            "help": ""
+          },
+          "involves_reverse": {
+            "name": "Impliqué dans",
+            "plural": "Impliqué dans",
+            "help": ""
+          },
+          "member_of": {
+            "name": "Membre de",
+            "plural": "Membre de",
+            "help": ""
+          },
+          "ordered": {
+            "name": "A ordonné",
+            "plural": "A ordonné",
+            "help": ""
+          },
+          "participants_reverse": {
+            "name": "A participé à",
+            "plural": "A participé à",
+            "help": ""
+          },
+          "received": {
+            "name": "A reçu",
+            "plural": "A reçu",
+            "help": ""
+          }
+        }
+      },
+      "PhysicalObject": {
+        "name": "Objet physique",
+        "plural": "Objets physiques",
+        "help": "",
+        "description": "Un objet physique quelconque",
+        "kind": "Entity",
+        "fields": {},
+        "incoming": {
+          "object_created_reverse": {
+            "name": "Créé dans",
+            "plural": "Créé dans",
+            "help": ""
+          }
+        }
+      },
+      "Place": {
+        "name": "Lieu",
+        "plural": "Lieux",
+        "help": "",
+        "description": "",
+        "kind": "Entity",
+        "fields": {
+          "coordinates": {
+            "name": "Coordonnées",
+            "plural": "Coordonnées",
+            "help": ""
+          }
+        },
+        "incoming": {
+          "places_reverse": {
+            "name": "Lieu de",
+            "plural": "Lieu de",
+            "help": ""
+          }
+        }
+      },
+      "PositiveSubjunctive": {
+        "name": "Subjonctif positif",
+        "plural": "Subjonctifs positifs",
+        "help": "",
+        "description": "On souhaitait que cela arrive (ce n’est pas forcément arrivé)",
+        "kind": "SemanticSpace",
+        "fields": {
+          "contents": {
+            "name": "Contenu",
+            "plural": "Contenu",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "Probability": {
+        "name": "Probabilité",
+        "plural": "Probabilités",
+        "help": "",
+        "description": "La probabilité que ce soit celui-ci qui soit désigné, parmi les alternatives (de 1 à 100, en pour cent)",
+        "kind": "EdgeModel",
+        "fields": {
+          "percent": {
+            "name": "Pourcentage",
+            "plural": "Pourcentage",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "Recurrence": {
+        "name": "Récurrence",
+        "plural": "Récurrences",
+        "help": "",
+        "description": "Quelque chose qui se répète au cours d’une vie (de `start` à `end`) : « chaque dimanche », « le troisième dimanche de mars », « le 21 de chaque mois ». Les jours ne sont jamais enregistrés ; `pattern_keys` retrouvent les règles qui pourraient tomber un jour donné (voir `pangloss_dates.recurrence`)",
+        "kind": "Embedded",
+        "fields": {
+          "calendar": {
+            "name": "Calendrier",
+            "plural": "Calendrier",
+            "help": ""
+          },
+          "source_text": {
+            "name": "Texte de la source",
+            "plural": "Texte de la source",
+            "help": ""
+          },
+          "sort_by": {
+            "name": "Trier par",
+            "plural": "Trier par",
+            "help": ""
+          },
+          "precision": {
+            "name": "Précision",
+            "plural": "Précision",
+            "help": ""
+          },
+          "earliest_fuzzy": {
+            "name": "Au plus tôt (approximatif)",
+            "plural": "Au plus tôt (approximatif)",
+            "help": ""
+          },
+          "earliest_strict": {
+            "name": "Au plus tôt (strict)",
+            "plural": "Au plus tôt (strict)",
+            "help": ""
+          },
+          "latest_strict": {
+            "name": "Au plus tard (strict)",
+            "plural": "Au plus tard (strict)",
+            "help": ""
+          },
+          "latest_fuzzy": {
+            "name": "Au plus tard (approximatif)",
+            "plural": "Au plus tard (approximatif)",
+            "help": ""
+          },
+          "sort_day": {
+            "name": "Jour de tri",
+            "plural": "Jour de tri",
+            "help": ""
+          },
+          "end_sort_day": {
+            "name": "Jour de tri (fin)",
+            "plural": "Jour de tri (fin)",
+            "help": ""
+          },
+          "frequency": {
+            "name": "Fréquence",
+            "plural": "Fréquence",
+            "help": ""
+          },
+          "weekdays": {
+            "name": "Jours de la semaine",
+            "plural": "Jours de la semaine",
+            "help": ""
+          },
+          "nth": {
+            "name": "N-ième",
+            "plural": "N-ième",
+            "help": ""
+          },
+          "month": {
+            "name": "Mois",
+            "plural": "Mois",
+            "help": ""
+          },
+          "month_day": {
+            "name": "Jour du mois",
+            "plural": "Jour du mois",
+            "help": ""
+          },
+          "interval": {
+            "name": "Intervalle",
+            "plural": "Intervalle",
+            "help": ""
+          },
+          "excluded_days": {
+            "name": "Jours exclus",
+            "plural": "Jours exclus",
+            "help": ""
+          },
+          "leap_shift": {
+            "name": "Décalage bissextile",
+            "plural": "Décalage bissextile",
+            "help": ""
+          },
+          "easter_offset": {
+            "name": "Décalage par rapport à Pâques",
+            "plural": "Décalage par rapport à Pâques",
+            "help": ""
+          },
+          "feast": {
+            "name": "Fête",
+            "plural": "Fête",
+            "help": ""
+          },
+          "start": {
+            "name": "Début",
+            "plural": "Début",
+            "help": ""
+          },
+          "end": {
+            "name": "Fin",
+            "plural": "Fin",
+            "help": ""
+          },
+          "pattern_keys": {
+            "name": "Clés de motif",
+            "plural": "Clés de motif",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "Source": {
+        "name": "Source",
+        "plural": "Sources",
+        "help": "",
+        "description": "Un texte qui affirme des choses : une chronique, une lettre, une charte",
+        "kind": "Entity",
+        "fields": {
+          "author": {
+            "name": "Auteur",
+            "plural": "Auteur",
+            "help": ""
+          },
+          "written": {
+            "name": "Rédigé",
+            "plural": "Rédigé",
+            "help": ""
+          },
+          "edition_price": {
+            "name": "Prix de l’édition",
+            "plural": "Prix de l’édition",
+            "help": ""
+          }
+        },
+        "incoming": {
+          "source_reverse": {
+            "name": "Source de",
+            "plural": "Source de",
+            "help": ""
+          }
+        }
+      },
+      "Statement": {
+        "name": "Énoncé",
+        "plural": "Énoncés",
+        "help": "",
+        "description": "Quelque chose qui s’est passé entre des agents et en des lieux (abstrait : un genre d’énoncé est l’une des classes ci-dessous)",
+        "kind": "Document",
+        "fields": {
+          "text": {
+            "name": "Texte",
+            "plural": "Texte",
+            "help": ""
+          },
+          "date": {
+            "name": "Date",
+            "plural": "Date",
+            "help": ""
+          },
+          "year": {
+            "name": "Année",
+            "plural": "Année",
+            "help": ""
+          },
+          "involves": {
+            "name": "Implique",
+            "plural": "Implique",
+            "help": ""
+          },
+          "places": {
+            "name": "Lieux",
+            "plural": "Lieux",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "Transfer": {
+        "name": "Transfert",
+        "plural": "Transferts",
+        "help": "",
+        "description": "Quelque chose est passé d’un agent à un autre",
+        "kind": "Document",
+        "fields": {
+          "text": {
+            "name": "Texte",
+            "plural": "Texte",
+            "help": ""
+          },
+          "date": {
+            "name": "Date",
+            "plural": "Date",
+            "help": ""
+          },
+          "year": {
+            "name": "Année",
+            "plural": "Année",
+            "help": ""
+          },
+          "places": {
+            "name": "Lieux",
+            "plural": "Lieux",
+            "help": ""
+          },
+          "item": {
+            "name": "Objet",
+            "plural": "Objet",
+            "help": ""
+          },
+          "quantity": {
+            "name": "Quantité",
+            "plural": "Quantité",
+            "help": ""
+          },
+          "given_by": {
+            "name": "Donné par",
+            "plural": "Donné par",
+            "help": ""
+          },
+          "given_to": {
+            "name": "Donné à",
+            "plural": "Donné à",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "UnknownDate": {
+        "name": "Date inconnue",
+        "plural": "Dates inconnues",
+        "help": "",
+        "description": "Le début ou la fin d’une période que personne ne connaît. Elle est ouverte de `DATES_EARLIEST_YEAR` à `DATES_OPEN_END_YEAR`, de sorte que la période est tout de même trouvée par une date qu’elle pourrait inclure. Dites ce qui est connu, si quelque chose l’est : un intervalle avec une estimation raisonnable (`DateRange` ou EDTF `1500~`) en dit plus, une date inconnue dit seulement que rien n’est connu. Les deux bouts d’une période ne peuvent pas être inconnus.",
+        "kind": "Embedded",
+        "fields": {
+          "calendar": {
+            "name": "Calendrier",
+            "plural": "Calendrier",
+            "help": ""
+          },
+          "source_text": {
+            "name": "Texte de la source",
+            "plural": "Texte de la source",
+            "help": ""
+          },
+          "sort_by": {
+            "name": "Trier par",
+            "plural": "Trier par",
+            "help": ""
+          },
+          "precision": {
+            "name": "Précision",
+            "plural": "Précision",
+            "help": ""
+          },
+          "earliest_fuzzy": {
+            "name": "Au plus tôt (approximatif)",
+            "plural": "Au plus tôt (approximatif)",
+            "help": ""
+          },
+          "earliest_strict": {
+            "name": "Au plus tôt (strict)",
+            "plural": "Au plus tôt (strict)",
+            "help": ""
+          },
+          "latest_strict": {
+            "name": "Au plus tard (strict)",
+            "plural": "Au plus tard (strict)",
+            "help": ""
+          },
+          "latest_fuzzy": {
+            "name": "Au plus tard (approximatif)",
+            "plural": "Au plus tard (approximatif)",
+            "help": ""
+          },
+          "sort_day": {
+            "name": "Jour de tri",
+            "plural": "Jour de tri",
+            "help": ""
+          },
+          "end_sort_day": {
+            "name": "Jour de tri (fin)",
+            "plural": "Jour de tri (fin)",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "WithCertainty": {
+        "name": "Avec certitude",
+        "plural": "Avec certitudes",
+        "help": "",
+        "description": "Une valeur, avec son degré de certitude (de 1 à 5)",
+        "kind": "AnnotatedValue",
+        "fields": {
+          "value": {
+            "name": "Valeur",
+            "plural": "Valeur",
+            "help": ""
+          },
+          "certainty": {
+            "name": "Certitude",
+            "plural": "Certitude",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "SameGroup": {
+        "name": "Même groupe",
+        "plural": "Même groupe",
+        "help": "",
+        "description": "Membres du même groupe (une famille, un ordre, une armée)",
+        "kind": "Derived",
+        "fields": {
+          "member": {
+            "name": "Membre",
+            "plural": "Membre",
+            "help": ""
+          },
+          "group": {
+            "name": "Groupe",
+            "plural": "Groupe",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "CoParticipants": {
+        "name": "A participé avec",
+        "plural": "A participé avec",
+        "help": "",
+        "description": "Ont pris part à la même activité",
+        "kind": "Derived",
+        "fields": {
+          "participant": {
+            "name": "Participant",
+            "plural": "Participant",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "GaveTo": {
+        "name": "A donné à",
+        "plural": "A donné à",
+        "help": "",
+        "description": "A donné quelque chose à",
+        "kind": "Derived",
+        "fields": {
+          "giver": {
+            "name": "Donateur",
+            "plural": "Donateur",
+            "help": ""
+          },
+          "receiver": {
+            "name": "Destinataire",
+            "plural": "Destinataire",
+            "help": ""
+          }
+        },
+        "incoming": {}
       }
     }
   },
@@ -2805,6 +5644,134 @@
           },
           "MIDPOINT_FUZZY": {
             "name": "Mittelpunkt (unscharf)"
+          }
+        }
+      }
+    },
+    "fr": {
+      "ActivityType": {
+        "name": "Type d’activité",
+        "plural": "Types d’activité",
+        "help": "",
+        "description": "",
+        "members": {
+          "BATTLE": {
+            "name": "Bataille"
+          },
+          "CEREMONY": {
+            "name": "Cérémonie"
+          },
+          "CORRESPONDENCE": {
+            "name": "Correspondance"
+          },
+          "JOURNEY": {
+            "name": "Voyage"
+          },
+          "MEETING": {
+            "name": "Rencontre"
+          }
+        }
+      },
+      "Calendar": {
+        "name": "Calendrier",
+        "plural": "Calendriers",
+        "help": "",
+        "description": "",
+        "members": {
+          "GREGORIAN": {
+            "name": "Grégorien"
+          },
+          "JULIAN": {
+            "name": "Julien"
+          }
+        }
+      },
+      "Frequency": {
+        "name": "Fréquence",
+        "plural": "Fréquences",
+        "help": "",
+        "description": "",
+        "members": {
+          "MONTHLY": {
+            "name": "Mensuelle"
+          },
+          "WEEKLY": {
+            "name": "Hebdomadaire"
+          },
+          "YEARLY": {
+            "name": "Annuelle"
+          }
+        }
+      },
+      "Precision": {
+        "name": "Précision",
+        "plural": "Précisions",
+        "help": "",
+        "description": "",
+        "members": {
+          "DAY": {
+            "name": "Jour"
+          },
+          "MONTH": {
+            "name": "Mois"
+          },
+          "ONGOING": {
+            "name": "En cours"
+          },
+          "RANGE": {
+            "name": "Intervalle"
+          },
+          "UNKNOWN": {
+            "name": "Inconnue"
+          },
+          "YEAR": {
+            "name": "Année"
+          }
+        }
+      },
+      "Role": {
+        "name": "Rôle",
+        "plural": "Rôles",
+        "help": "",
+        "description": "",
+        "members": {
+          "LEADER": {
+            "name": "Chef"
+          },
+          "MESSENGER": {
+            "name": "Messager"
+          },
+          "PARTICIPANT": {
+            "name": "Participant"
+          },
+          "WITNESS": {
+            "name": "Témoin"
+          }
+        }
+      },
+      "SortBy": {
+        "name": "Trier par",
+        "plural": "Critères de tri",
+        "help": "",
+        "description": "Le jour selon lequel une date est classée",
+        "members": {
+          "EARLIEST_FUZZY": {
+            "name": "Au plus tôt (approximatif)"
+          },
+          "EARLIEST_STRICT": {
+            "name": "Au plus tôt (strict)"
+          },
+          "LATEST_FUZZY": {
+            "name": "Au plus tard (approximatif)"
+          },
+          "LATEST_STRICT": {
+            "name": "Au plus tard (strict)"
+          },
+          "MIDPOINT": {
+            "name": "Milieu"
+          },
+          "MIDPOINT_FUZZY": {
+            "name": "Milieu (approximatif)"
           }
         }
       }

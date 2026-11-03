@@ -16,6 +16,7 @@ function model(name: string, kind: ModelDefinition["kind"], parent: string | nul
     concreteTypes: [],
     typeParameters: [],
     createWithId: false,
+    createDirectly: true,
     acceptUrlAsId: false,
     requireLabel: true,
     useInSemanticSpaceLabel: true,

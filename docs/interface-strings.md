@@ -196,6 +196,26 @@ These are not shown, but are read aloud, or appear when the pointer rests on the
 | `review_queue_type` / `_all_types` | Type / All types | `ReviewQueue` (the filter) | |
 | `review_queue_pages` / `_previous` / `_next` / `_page` | Pages / Previous / Next / Page {page} of {pages} | `ReviewQueue` (paging) | |
 | `nav_pangloss_review_review` | Review | the navigation bar (`interface_config.py` of `pangloss_review`) | |
+| `calendar` | Calendar | the calendar module (`Chrome`: the console's name for its pages) | |
+| `calendar_years` | Years | `Chrome` (console button), `YearsPage` (heading) | |
+| `calendar_year` / `calendar_dated` / `calendar_months` | Year / Dated / Months | `YearsPage` (column headings) | |
+| `calendar_julian` / `calendar_gregorian` | Julian / Gregorian | `Chrome` (the calendar buttons), the headings of the pages | |
+| `calendar_month_year` | {month} {year} | `MonthPage`, `YearsPage` | the month name is from `Intl` in the language |
+| `calendar_weekday_date` | {weekday} {date} | `DayView` (heading) | the date is `date_day_month_year`; German puts a comma |
+| `calendar_other_name` | {date} ({calendar}) | `DayView` (the same day in the other calendar) | |
+| `calendar_previous_month` / `_next_month` / `_previous_day` / `_next_day` | Previous month / Next month / Previous day / Next day | `Arrows` (`aria-label` and tooltip) | |
+| `calendar_more` | +{count} more | `MonthGrid` (a day with more dates than it shows) | |
+| `calendar_possible` | possible | `DayView` (a date whose doubt reaches the day) | |
+| `calendar_over_month` | Over the month | `MonthPage` (characterisations attached to the month, year or a span) | |
+| `calendar_on_this_day` / `calendar_nothing_on_day` | On this day / Nothing is dated on this day | `DayView` | |
+| `calendar_characterisations` / `calendar_no_characterisations` | Feasts and characterisations / None on this day | `DayView` | |
+| `calendar_by_rule` / `_attached_day` / `_attached_month` / `_attached_year` / `_attached_span` | by rule / attached to this day / attached to the month / attached to the year / attached to {first} – {last} | `DayView` (how a characterisation comes to be on the day) | |
+| `calendar_attach` / `_attach_search` / `_attach_found` / `_attach_none` | Attach a characterisation / Find one by its name / Characterisations found / None match | `DayView` (`AttachBox`, for someone logged in) | |
+| `calendar_attached_done` / `_attach_refused` / `calendar_detach` / `_detached_done` / `_detach_refused` | {label} attached / Not attached: {reason} / Detach / {label} detached / Not detached: {reason} | `DayPage` (toasts), `DayView` (button) | |
+| `calendar_truncated` | More dates were found than are shown | `MonthPage`, `DayView`, `YearsPage` | |
+| `calendar_no_span` | Set CALENDAR_FIRST_YEAR and CALENDAR_LAST_YEAR … | `YearsPage` | |
+| `calendar_bad_address` | That is not a day of the calendar: … | `Chrome` (`BadAddress`) | |
+| `nav_pangloss_calendar_calendar` | Calendar | the navigation bar (`interface_config.py` of `pangloss_calendar`) | |
 
 ## Not translated by the interface's own file
 

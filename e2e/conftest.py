@@ -47,6 +47,8 @@ MODELS = textwrap.dedent(
     from pangloss_models.model_bases.document import Document
     from pangloss_models.model_bases.entity import Entity
     from pangloss_models.model_bases.reified_relation import ReifiedRelationDocument
+    from pangloss_calendar.models import DateCharacterisation
+    from pangloss_dates.models import Date
     from pangloss_review.meta import ReviewMeta
     from pangloss_typology import Typed, Typology, TypologyMeta
 
@@ -93,6 +95,17 @@ MODELS = textwrap.dedent(
         text: str
         sections: list[ReportSection]
         findings: list[Finding[ReportSection]]
+
+
+    # (dated: what the calendar shows)
+    class Event(Document):
+        text: str
+        when: Date
+
+
+    # (a feast, by rule or attached by hand: what the calendar's days are characterised by)
+    class Feast(DateCharacterisation):
+        pass
     """
 )
 TYPES = (
@@ -229,16 +242,23 @@ def make_project(root: Path) -> Path:
     text = settings.read_text()
     text = text.replace(
         '"pangloss_memgraph",',
-        '"pangloss_memgraph",\n        "pangloss_interface",\n        "pangloss_typology",\n        "pangloss_review",',
+        '"pangloss_memgraph",\n        "pangloss_interface",\n        "pangloss_typology",\n        "pangloss_dates",\n'
+        '        "pangloss_calendar",\n        "pangloss_review",',
         1,
     )
     text = text.replace('DB_USERNAME="memgraph"', 'DB_USERNAME="test"')
     text = text.replace('DB_PASSWORD="memgraph"', 'DB_PASSWORD="test"')
     text = text.replace('["en"]', '["en", "de"]')
     # (a user may not check what they made or last changed: the review tests make documents as another user)
+    # (the calendar: Julian, three years, and only the events' dates are counted, not the feasts' rules)
     text = text.replace(
         "    INTERFACE_LANGUAGES:",
-        "    REVIEW_ALLOW_SELF_REVIEW: bool = False\n    INTERFACE_LANGUAGES:",
+        "    REVIEW_ALLOW_SELF_REVIEW: bool = False\n"
+        '    DATES_DEFAULT_CALENDAR: str = "julian"\n'
+        "    CALENDAR_FIRST_YEAR: int = 1499\n"
+        "    CALENDAR_LAST_YEAR: int = 1501\n"
+        '    CALENDAR_FIELDS: list[str] = ["Event.when"]\n'
+        "    INTERFACE_LANGUAGES:",
         1,
     )
     settings.write_text(text)
@@ -533,3 +553,66 @@ def logged_in(page, types: Stack):
     )
     assert response.ok, response.text()
     return page
+
+
+def julian(year: int, month: int | None = None, day: int | None = None) -> dict:
+    return {
+        "type": "ExactDate",
+        "calendar": "julian",
+        "year": year,
+        "month": month,
+        "day": day,
+    }
+
+
+def between(first: dict, last: dict) -> dict:
+    return {
+        "type": "DateRange",
+        "calendar": "julian",
+        "earliest": first,
+        "latest": last,
+    }
+
+
+@pytest.fixture
+def dated(types: Stack) -> SimpleNamespace:
+    """Events in March 1500 (Julian): a coronation on the 2nd, a siege from the 3rd to the 10th (over several days: a bar
+    in the month), a fair on the 4th or the 5th (possible on each); a feast by rule (Benedict, 21 March) and one with no
+    rule (Market), to attach by hand"""
+    forget("Event", "Feast")
+    api = types.admin()
+
+    def made(kind: str, label: str, **fields) -> str:
+        return api.ok("POST", f"/api/{kind}", {"label": label, **fields})["id"]
+
+    rule = {
+        "type": "Recurrence",
+        "calendar": "julian",
+        "frequency": "yearly",
+        "weekdays": [],
+        "excluded_days": [],
+        "month": 3,
+        "month_day": 21,
+        "start": julian(1450),
+        "end": julian(1530, 12, 31),
+    }
+    return SimpleNamespace(
+        api=api,
+        coronation=made("Event", "Coronation", text="Crowned", when=julian(1500, 3, 2)),
+        siege=made(
+            "Event",
+            "Siege of the town",
+            text="Besieged",
+            when=between(julian(1500, 3, 3), julian(1500, 3, 10)),
+        ),
+        fair=made(
+            "Event",
+            "The fair",
+            text="Traded",
+            when=between(julian(1500, 3, 4), julian(1500, 3, 5)),
+        ),
+        benedict=made("Feast", "Benedict", use="sarum", rank="major", when=rule),
+        market=made(
+            "Feast", "Market day", use=None, rank=None, when={"type": "NoRule"}
+        ),
+    )

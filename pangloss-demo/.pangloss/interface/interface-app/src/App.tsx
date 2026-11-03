@@ -1,5 +1,6 @@
 import {
   ApiProvider,
+  ClipboardProvider,
   ComponentsProvider,
   ConsoleMountProvider,
   ModelsProvider,
@@ -11,7 +12,10 @@ import {
   useNavExpanded,
   TranslationsProvider,
   SessionProvider,
+  ToastsProvider,
+  useClipboard,
   useComponent,
+  useTranslations,
 } from "@pangloss/interface-core";
 import { Title } from "@solidjs/meta";
 import { createMemo, Loading } from "solid-js";
@@ -29,8 +33,11 @@ import { loadTranslations } from "./translations";
 function Frame(props: ParentProps) {
   const NavBar = useComponent("NavBar");
   const ConsoleBar = useComponent("ConsoleBar");
+  const ClipboardBar = useComponent("ClipboardBar");
+  const Toasts = useComponent("Toasts");
   const { openLogin } = useLoginDialog();
   const { navPinned } = useNavExpanded();
+  const { t } = useTranslations();
   // Who is logged in (an async memo: what reads `user()` waits for it, inside a `Loading`).
   // The server holds back the first part of the page until it is known, so the bar is not
   // sent as "not logged in" and then changed.
@@ -41,26 +48,50 @@ function Frame(props: ParentProps) {
   }
   return (
     <SessionProvider user={user}>
-      {/* (the bar reads the user, so it waits for it: until then, one with no one logged in) */}
-      <Loading fallback={<NavBar homeHref={paths()} onLogin={openLogin} />}>
-        <NavBar
-          homeHref={paths()}
-          user={user()?.username}
-          onLogin={openLogin}
-          onLogout={logOutHere}
-        />
-      </Loading>
-      <ConsoleBar />
-      <div
-        class={[
-          "min-h-screen pt-12 transition-[padding] duration-150",
-          { "pl-72": navPinned(), "pl-12": !navPinned() },
-        ]}
-      >
-        <Loading fallback={<main>Loading…</main>}>{props.children}</Loading>
-      </div>
-      <LoginDialog />
+      {/* (each user has their own clipboard) */}
+      <ClipboardProvider owner={() => user()?.username}>
+        {/* (the frame outlives the pages, so a toast stays when a save goes to another page) */}
+        <ToastsProvider>
+          {/* (the bar reads the user, so it waits for it: until then, one with no one logged in) */}
+          <Loading fallback={<NavBar homeHref={paths()} onLogin={openLogin} />}>
+            <NavBar
+              homeHref={paths()}
+              user={user()?.username}
+              onLogin={openLogin}
+              onLogout={logOutHere}
+            />
+          </Loading>
+          <ConsoleBar />
+          <Padded navPinned={navPinned()}>
+            <Loading fallback={<main>{t("loading", "Loading…")}</main>}>{props.children}</Loading>
+          </Padded>
+          <ClipboardBar />
+          <Toasts />
+          <LoginDialog />
+        </ToastsProvider>
+      </ClipboardProvider>
     </SessionProvider>
+  );
+}
+
+// The page beside the nav bar, clear of the console bar, and of the clipboard bar when it is showing
+function Padded(props: ParentProps<{ navPinned: boolean }>) {
+  const clipboard = useClipboard();
+  const barShown = () => (clipboard?.entries().length ?? 0) > 0 && !!clipboard?.formShown();
+  return (
+    <div
+      class={[
+        "min-h-screen pt-12 transition-[padding] duration-150",
+        {
+          "pl-72": props.navPinned,
+          "pl-12": !props.navPinned,
+          "pb-48": barShown() && !clipboard?.collapsed(),
+          "pb-12": barShown() && !!clipboard?.collapsed(),
+        },
+      ]}
+    >
+      {props.children}
+    </div>
   );
 }
 

@@ -1,4 +1,12 @@
-import { createEffect, createSignal, Errored, Loading, onCleanup, Show, untrack } from "solid-js";
+import {
+  createEffect,
+  createSignal,
+  Errored,
+  Loading,
+  onCleanup,
+  Show,
+  untrack,
+} from "solid-js";
 import { useTranslations } from "../context";
 import { ConsoleButton, Spinner } from "../primitives";
 import type { ConsoleSearchProps } from "../types";
@@ -13,39 +21,46 @@ const DEBOUNCE_MS = 250;
  * the address. An ordinary search is made a moment after the last key, or at once on Enter. A
  * Deep Search is slow, so turning it on makes none: it is made on Enter, or by the run
  * button that appears with it. With `count`, it says how many were found: in red if none.
+ *
+ * The box's value is never bound to `query`: what is typed is the box's own, and a search the
+ * page is answering (the address changed, and the list is being asked again) cannot hold it up or
+ * put back what it was when that search was made. Only a `query` that is not the last one asked
+ * for (the address changed otherwise, as by going back) is written into it.
  */
 export function ConsoleSearch(props: ConsoleSearchProps) {
   const { t } = useTranslations();
-  // What is typed, which is ahead of `props.query` until the search is made (starting from it:
-  // a snapshot, which the effect below keeps up to date when the address changes)
-  const [draft, setDraft] = createSignal(untrack(() => props.query ?? ""));
-  // Whether Deep Search is on: ahead of `props.deep` until a deep search is made
-  const [deepOn, setDeepOn] = createSignal(untrack(() => props.deep ?? false));
+  // What the page was opened with (in the box from the server's render on, not followed)
+  const initial = untrack(() => props.query ?? "");
+  // What is typed, which is ahead of `props.query` until the search is made (for the run button)
+  const [draft, setDraft] = createSignal(initial);
+  // (the last search asked for: `props.query` coming back as it is not a change to show)
+  let asked = initial;
+  let box: HTMLInputElement | undefined;
+  // Whether Deep Search is on: ahead of `props.deep` until a deep search is made (and `props.deep` again when it changes)
+  const [deepOn, setDeepOn] = createSignal(() => props.deep ?? false);
   let timer: ReturnType<typeof setTimeout> | undefined;
   onCleanup(() => clearTimeout(timer));
   // (the address changed otherwise, such as by going back: show it)
   createEffect(
     () => props.query ?? "",
     (query) => {
-      // (what is typed is read as it is, not followed: only the address changing comes here)
-      if (query !== untrack(draft)) setDraft(query);
-    },
-  );
-  createEffect(
-    () => props.deep ?? false,
-    (deep) => {
-      setDeepOn(deep);
+      if (query === asked) return;
+      asked = query;
+      setDraft(query);
+      if (box) box.value = query;
     },
   );
   const search = (deep: boolean) => {
     clearTimeout(timer);
-    props.onSearch?.({ query: draft(), deep });
+    // (the box, not `draft`: a write is not read back until the next flush)
+    asked = box?.value ?? untrack(draft);
+    props.onSearch?.({ query: asked, deep });
   };
   const typed = (text: string) => {
     setDraft(text);
     clearTimeout(timer);
     // (not a deep one: that waits to be asked for)
-    if (!deepOn()) timer = setTimeout(() => search(false), DEBOUNCE_MS);
+    if (!deepOn() || props.structured) timer = setTimeout(() => search(false), DEBOUNCE_MS);
   };
   const toggleDeep = () => {
     const on = !deepOn();
@@ -54,10 +69,12 @@ export function ConsoleSearch(props: ConsoleSearchProps) {
     if (!on) search(false);
   };
   // Run only changes anything if it is not what is on show already
-  const upToDate = () => draft() === (props.query ?? "") && (props.deep ?? false) === deepOn();
+  const upToDate = () =>
+    draft() === (props.query ?? "") && (props.deep ?? false) === deepOn();
   // (a count that is not all there is says so: the search has to be narrowed)
   const foundTitle = () => {
-    if (props.truncated) return t("found_more", "Found, and more: narrow the search");
+    if (props.truncated)
+      return t("found_more", "Found, and more: narrow the search");
     return t("found", "Found");
   };
 
@@ -76,10 +93,11 @@ export function ConsoleSearch(props: ConsoleSearchProps) {
         type="search"
         aria-label={t("search", "Search")}
         placeholder={t("search", "Search")}
-        value={draft()}
+        ref={box}
+        value={initial}
         onInput={(event) => typed(event.currentTarget.value)}
         onKeyDown={(event) => {
-          if (event.key === "Enter") search(deepOn());
+          if (event.key === "Enter") search(deepOn() && !props.structured);
         }}
         class="h-full min-w-0 flex-1 bg-transparent px-3 text-sm font-normal normal-case outline-none placeholder:text-xs placeholder:font-semibold placeholder:text-slate-500 placeholder:uppercase"
       />
@@ -89,7 +107,10 @@ export function ConsoleSearch(props: ConsoleSearchProps) {
         <Show when={!props.pending} fallback={<Spinner />}>
           <Errored fallback="–">
             <Loading fallback={<Spinner />}>
-              <span title={foundTitle()} class={{ "text-red-800": props.count === 0 }}>
+              <span
+                title={foundTitle()}
+                class={{ "text-red-800": props.count === 0 }}
+              >
                 {props.count}
                 <Show when={props.truncated}>+</Show>
               </span>
@@ -97,14 +118,55 @@ export function ConsoleSearch(props: ConsoleSearchProps) {
           </Errored>
         </Show>
       </span>
-      <Show when={deepOn()}>
-        <ConsoleButton label={t("deep_search_run", "Run deep search (Enter)")} disabled={upToDate()} onClick={() => search(true)}>
-          <svg viewBox="0 0 24 24" class="size-5 select-none fill-current" aria-hidden="true">
+      <Show when={deepOn() && !props.structured}>
+        <ConsoleButton
+          label={t("deep_search_run", "Run deep search (Enter)")}
+          disabled={upToDate()}
+          onClick={() => search(true)}
+        >
+          <svg
+            viewBox="0 0 24 24"
+            class="size-5 select-none fill-current"
+            aria-hidden="true"
+          >
             <path d="M8 5.5v13l11-6.5z" />
           </svg>
         </ConsoleButton>
       </Show>
-      <ConsoleButton label={t("deep_search", "Deep search")} pressed={deepOn()} onClick={toggleDeep}>
+      <Show when={props.onToggleForm}>
+        <ConsoleButton
+          label={
+            props.structured
+              ? t("search_form_in_use", "Search by fields (in use)")
+              : t("search_form", "Search by fields")
+          }
+          pressed={!!props.formOpen}
+          onClick={() => props.onToggleForm?.()}
+        >
+          {/* (a form: names, and the boxes beside them; a dot while it is in use) */}
+          <svg
+            viewBox="0 0 24 24"
+            class="size-5 select-none fill-none stroke-current stroke-2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M4 7.5h3M4 14.5h3" />
+            <rect x="10" y="5" width="10" height="5" rx="1" />
+            <rect x="10" y="12" width="10" height="5" rx="1" />
+            <path d="M4 20.5h16" />
+            <Show when={props.structured}>
+              <circle cx="20.5" cy="3.5" r="2.5" class="fill-current stroke-none" data-in-use="" />
+            </Show>
+          </svg>
+        </ConsoleButton>
+      </Show>
+      <ConsoleButton
+        label={t("deep_search", "Deep search")}
+        pressed={deepOn() && !props.structured}
+        disabled={props.structured}
+        onClick={toggleDeep}
+      >
         <svg
           viewBox="0 0 24 24"
           class="size-5 select-none fill-none stroke-current stroke-2"

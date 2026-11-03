@@ -43,15 +43,26 @@ export interface ViewCardProps {
   context: "result" | "reference" | "embedded" | "page";
 }
 
-/** Provisional: fixed when the forms are built */
+/**
+ * An embedded value in a form (a date, ...), under the menu of its types: what the model's own editor is
+ * given instead of the rows of its fields. `value` and `onChange` are the whole value; for its parts,
+ * `path` is where it is in the form (`useItemForm().get/set`), and `ModelFields` (with `skip`) edits
+ * any of its fields as the form would, an embedded one with its own editor again.
+ */
 export interface EditCardProps {
-  /** undefined: a new one */
-  item?: Record<string, unknown>;
+  /** The type of the value (chosen in the menu above the card) */
+  type: string;
   model: ModelDefinition;
-  value: unknown;
-  onChange: (value: unknown) => void;
-  errors?: { path: string[]; message: string }[];
-  disabled?: boolean;
+  /** The name of the field, for the labels of inputs */
+  label: string;
+  /** Where the value is in the form */
+  path: (string | number)[];
+  value: Record<string, unknown>;
+  /**
+   * Replaces the whole value (keep its `type`). To change one part, set it by its path instead: a
+   * copy of `value` taken before an earlier change has been applied would undo that change.
+   */
+  onChange: (value: Record<string, unknown>) => void;
 }
 
 export interface CustomProps {
@@ -59,6 +70,25 @@ export interface CustomProps {
   itemPage: ItemPageProps;
   viewCard: ViewCardProps;
   editCard: EditCardProps;
+}
+
+/**
+ * Whether a reified relation or a conjunction is shown folded into the one thing it holds (`InterfaceMeta(collapse=
+ * "app:name")`): given the item as the API sends it, and its model. It is only asked when it holds exactly one.
+ */
+export type CollapseRule = (item: Record<string, unknown>, model: ModelDefinition) => boolean;
+
+/**
+ * What a component a module adds to the console of an item (`consoleActions`) is given. It decides itself whether
+ * to show anything (a button, usually a `ConsoleButton`).
+ */
+export interface ConsoleActionProps {
+  /** The item's own type */
+  type: string;
+  id: string;
+  model: ModelDefinition;
+  /** The item's page, or the form that edits it */
+  page: "item" | "edit";
 }
 
 /** What a loader gives: a module with a component as its default export */
@@ -82,4 +112,11 @@ export interface ModuleManifest {
   /** Every component a model or a route can name: each loaded when a page that uses it is */
   components: Record<string, ComponentLoader>;
   routes?: ModuleRoute[];
+  /** The rules a model can name with `InterfaceMeta(collapse="app:name")` (not loaded lazily: they are small) */
+  collapseRules?: Record<string, CollapseRule>;
+  /**
+   * Components for the console of every item page and of the form that edits an item, at its right, before the page's
+   * own buttons (each loaded when the console is first shown)
+   */
+  consoleActions?: Record<string, ComponentLoader>;
 }

@@ -2,6 +2,7 @@
  * Questions of the definitions of the models, that need no components: what can be
  * shown or related to.
  */
+export { getModel } from "./lookup";
 import type {
   FieldDefinition,
   ModelDefinition,
@@ -16,8 +17,10 @@ export function headModels(definitions: ModelDefinitions): ModelDefinition[] {
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
-export function getModel(definitions: ModelDefinitions, name: string): ModelDefinition | undefined {
-  return Object.hasOwn(definitions.models, name) ? definitions.models[name] : undefined;
+/** Whether a new one can be made on its own page (`/TYPE/new`): not an abstract class, nor a document
+ * that is only ever part of another (`create_directly=False`) */
+export function canCreate(model: ModelDefinition): boolean {
+  return !model.abstract && model.createDirectly;
 }
 
 export function isRelation(field: FieldDefinition): field is RelationField {
@@ -37,3 +40,11 @@ export function relatedModelNames(field: RelationField): string[] {
 export * from "./modules";
 export * from "./nav";
 export * from "./hierarchy";
+export * from "./typeChoices";
+export * from "./formValue";
+export * from "./relationLayout";
+export * from "./clipboard";
+export * from "./retype";
+export * from "./validation";
+export * from "./collapse";
+export * from "./searchForm";

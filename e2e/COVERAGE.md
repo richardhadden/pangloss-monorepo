@@ -3,7 +3,7 @@
 Keep this current: when a page or feature is added to the interface (or a test is added here), change its row.
 ✅ tested · 🚧 partly · ⬜ not yet · — not built, so nothing to test
 
-74 tests, about 110 s. The e2e project (`conftest.py`) has `Person` (`has_role: list[Role]`), `Role` (`has_type`), `RoleType` (a
+112 tests, about 210 s. The e2e project (`conftest.py`) has `Person` (`has_role: list[Role]`), `Role` (`has_type`), `RoleType` (a
 typology, also a `Role`) with Clerk > Secretary and Advisor, and `Statement` (a document: `text`, `about: Person`). The `data`
 fixture adds Maximilian (his secretary: a `Role` of the type Secretary), Marie of Burgundy (her advisor, and a statement
 about her "held court at Ghent") and Charles the Bold (no role); `types` has only the types; `stack` has one admin user.
@@ -124,6 +124,23 @@ The e2e project's `Report` is reviewed (`ReviewMeta(reviewable=True)`), with nes
 | Queue: needs a login | ✅ | `test_the_queue_needs_a_login` |
 | The feed closes when the page is left; reconnects (with a cookie refresh) after the access cookie ran out | 🚧 | Vitest (`ReviewAction.test.tsx`, `poll.test.ts`); the reconnect is not tested in a browser |
 | The module's own tests and type-check, in the built project | ✅ | `test_the_module_tests_pass_in_the_built_project` |
+
+## `pangloss_calendar` module
+
+The e2e project installs `pangloss_dates` and `pangloss_calendar` (Julian, span 1499 to 1501, `CALENDAR_FIELDS = ["Event.when"]`); `Event` has a date, `Feast` is a `DateCharacterisation`. The `dated` fixture makes three events in March 1500 (a day, a range of eight days, a range of two), a feast by rule (Benedict, 21 March) and one with no rule (Market day).
+
+| Area | State | Where / notes |
+| --- | --- | --- |
+| Nav link "Calendar" (Links section) to `/calendar`: the years of the span, each with its count and its months as links | ✅ | `test_calendar.py::test_the_navigation_bar_links_to_the_years_of_the_calendar`; Vitest (`YearsPage.test.tsx`) |
+| Years page without a span says to set one | 🚧 | the e2e project has a span; not tested |
+| Month page: 31 day links, six rows, the 1st on the right weekday; a date as a chip on its day; a two-day range on both days as `possible`; a longer range as bars across two weeks (cut to the week, open where it goes on); a feast by rule on its day; a chip leads to the document; Next month; the same month in the Gregorian calendar (30 days of April) | ✅ | `test_a_month_is_a_calendar_page_with_what_is_dated_on_its_days`; lanes, open ends, overlapping bars, "+N more": Vitest (`MonthGrid.test.tsx`, `lanes.test.ts`) |
+| Day page: weekday and date, the same day under its Gregorian name (a link), what is dated on it with `stated` / `possible`, Next day, a feast by rule says so | ✅ | `test_a_day_names_itself_in_both_calendars_and_lists_what_is_dated_on_it`; the `possible` tag and the wording of how a feast is there: Vitest (`DayView.test.tsx`) |
+| Logged in: attach a feast found by its name (toast, listed as attached to the day, in the month too, in the API as `manual`), Detach, "New Feast" | ✅ | `test_someone_logged_in_attaches_a_feast_to_a_day_and_takes_it_away` |
+| Not logged in: no attach box or buttons | ✅ | in the day test; Vitest |
+| An address that is not a day or a month is explained | ✅ | `test_an_address_that_is_not_a_day_is_explained` |
+| The pages in the dev build (years, month, day, next day, Gregorian, Years) with no Solid error | ✅ | `test_dev_mode.py::test_the_calendar` |
+| The module's own tests and type-check, in the built project | ✅ | `test_the_calendar_module_tests_pass_in_the_built_project` |
+| A truncated month or day (more than `MONTH_LIMIT` dates) | ⬜ | |
 
 ## Findings of this suite (for the interface, not yet changed)
 

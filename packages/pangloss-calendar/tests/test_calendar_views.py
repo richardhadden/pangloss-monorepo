@@ -67,3 +67,24 @@ def test_a_narrow_range_across_the_edge_of_the_month_is_placed_on_the_days_in_it
 def test_a_wide_range_that_only_touches_the_month_is_still_listed():
     wide = Dated("x", to_jdn(1499, 1, 1, J), FIRST)
     assert [d.ref for d in place([wide], FIRST, LAST).spanning] == ["x"]
+
+
+def test_dates_are_counted_in_every_year_they_reach():
+    from types import SimpleNamespace
+
+    from pangloss_calendar.service import count_by_year
+    from pangloss_dates.calendar import Calendar, to_jdn
+
+    J = Calendar.JULIAN
+    ref = lambda n: SimpleNamespace(id=n, field="when")  # noqa: E731
+    dated = [
+        Dated(ref(1), to_jdn(1500, 3, 2, J), to_jdn(1500, 3, 2, J)),
+        # (a range over the turn of the year is in both years)
+        Dated(ref(2), to_jdn(1500, 12, 30, J), to_jdn(1501, 1, 2, J)),
+        # (a long period: in every year it reaches, cut at the span)
+        Dated(ref(3), to_jdn(1400, 1, 1, J), to_jdn(1600, 1, 1, J)),
+        # (the same date in the same field twice is one; before the span: not counted)
+        Dated(ref(1), to_jdn(1500, 3, 2, J), to_jdn(1500, 3, 2, J)),
+        Dated(ref(4), to_jdn(1498, 1, 1, J), to_jdn(1498, 12, 31, J)),
+    ]
+    assert count_by_year(dated, J, 1499, 1502) == [1, 3, 2, 1]

@@ -231,3 +231,34 @@ def test_the_review_panel(page: Page, types, dev_url: str, errors: list[str]):
     expect(page.get_by_test_id("review-queue-row").first).to_contain_text("Dev report")
     expect(page.locator("main")).not_to_contain_text(SOLID_ERROR)
     assert errors == []
+
+
+def test_the_calendar(page: Page, dated, dev_url: str, errors: list[str]):
+    """The years, a month and a day, by following the links, without an error of the development build"""
+    page.goto(f"{dev_url}/calendar")
+    hydrated(page)
+    page.get_by_test_id("calendar-year").nth(1).get_by_role(
+        "link", name="March 1500"
+    ).click()
+    expect(
+        page.get_by_test_id("calendar-month").get_by_role("link", name="Coronation")
+    ).to_be_visible()
+    page.get_by_test_id("calendar-month").get_by_role(
+        "link", name="2 March 1500", exact=True
+    ).click()
+    expect(
+        page.get_by_role("heading", name=re.compile("^Monday 2 March 1500"))
+    ).to_be_visible()
+    page.get_by_role("link", name="Next day").click()
+    expect(
+        page.get_by_role("heading", name=re.compile("^Tuesday 3 March 1500"))
+    ).to_be_visible()
+    page.get_by_role("banner", name="Console").get_by_role(
+        "link", name="Gregorian"
+    ).click()
+    expect(
+        page.get_by_role("heading", name=re.compile("^Tuesday 13 March 1500"))
+    ).to_be_visible()
+    page.get_by_role("banner", name="Console").get_by_role("link", name="Years").click()
+    expect(page.get_by_role("heading", name=re.compile("^Years"))).to_be_visible()
+    assert errors == []

@@ -280,6 +280,8 @@ async def test_the_routes(clear_database, clear_calendar, monkeypatch):
     assert got.status_code == 200
     body = got.json()
     assert body["day"]["gregorian"] == "G1500-03-12"
+    assert body["previous"]["julian"] == "J1500-03-01"
+    assert body["next"]["gregorian"] == "G1500-03-13"
     assert {h["ref"]["label"] for h in body["hits"]} >= {"exact", "range"}
     assert [c["characterisation"]["label"] for c in body["characterisations"]] == [
         "Second of March"
@@ -296,6 +298,26 @@ async def test_the_routes(clear_database, clear_calendar, monkeypatch):
     assert (await client.get("/api/calendar/easter/gregorian/2000")).json()["easter"][
         "gregorian"
     ] == "G2000-04-23"
+    # the settings the interface reads, and the years of the span with their counts
+    monkeypatch.setattr(calendar_settings, "first_year", lambda settings=None: 1499)
+    monkeypatch.setattr(calendar_settings, "last_year", lambda settings=None: 1501)
+    read = (await client.get("/api/calendar/settings")).json()
+    assert read["first_year"] == 1499 and read["last_year"] == 1501
+    assert read["calendar"] in ("julian", "gregorian") and read["narrow_days"] == 7
+    years = (await client.get("/api/calendar/years/julian")).json()
+    assert [y["year"] for y in years["years"]] == [1499, 1500, 1501]
+    assert years["years"][1]["count"] >= 5 and not years["truncated"]
+    asked = (await client.get("/api/calendar/years/julian?from=1500&to=1500")).json()
+    assert [y["year"] for y in asked["years"]] == [1500]
+    assert (
+        await client.get("/api/calendar/years/julian?from=1501&to=1500")
+    ).status_code == 422
+    assert (
+        await client.get("/api/calendar/years/julian?from=1&to=1500")
+    ).status_code == 422
+    monkeypatch.setattr(calendar_settings, "first_year", lambda settings=None: None)
+    assert (await client.get("/api/calendar/years/julian")).status_code == 422
+    assert (await client.get("/api/calendar/settings")).json()["first_year"] is None
     found = (
         await client.get("/api/calendar/characterisations?use=sarum&q=pente")
     ).json()

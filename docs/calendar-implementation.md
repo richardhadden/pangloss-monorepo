@@ -321,6 +321,22 @@ to seed; **no default**, decided 2026-10-29), `CALENDAR_AUTO_EXTEND` (make days 
    too (written by `makemigrations`, applied by `migrate`, `makemigrations --check` clean, and a server starts).*
 5. **Interface** (only when you ask for it): a month page, a day page, "new document on this day" with the date filled in. The
    interface has no way yet for an installed app to add pages (its routes are in `interface-app`): deferred (decision 4 below).
+   *As built (2026-11-03):* an interface module, `pangloss_calendar/interface/` (routes `/calendar`, `/calendar/:calendar/:year/:month`,
+   `/calendar/:calendar/:year/:month/:day`; `YearsPage`, `MonthPage`, `DayPage`), and `interface_config.py` with the nav link
+   **Calendar**. Decided with the owner: the years page lists each year of the span with a count and its months as links (so a
+   route `GET /api/calendar/years/{calendar}?from=&to=` was added, `service.years_report`, counting a date in every year its
+   stated range reaches, at most 1000 years); dates over several days are **bars across the week rows** (`lanes.ts` lays them in
+   lanes, the longest first; a bar is open at the end that goes on into another week or beyond the month); the nav button is a
+   `NavLink` in the Links section (no core change); "new document on this day" is **not** built, but a logged-in user can attach
+   a characterisation to a day (and detach one attached by hand) from the day page, and is offered "New <type>" for each concrete
+   `DateCharacterisation`. Also added for the pages: `GET /api/calendar/settings` (the default calendar and the span: the interface
+   has no other way to read settings) and `previous`/`next` in the day report (so the pages do no day arithmetic of their own: a
+   day's name in each calendar comes from the API). The month grid is Monday-first (as `month_grid`). Strings: `calendar_*` in
+   `ui.jsonc` (en, de, fr). Tests: 18 Vitest tests in the module (run in a built project), e2e in `e2e/test_calendar.py` (the e2e
+   project now installs `pangloss_dates` and `pangloss_calendar`, with `Event.when: Date` and `Feast(DateCharacterisation)`),
+   and the dev build in `test_dev_mode.py::test_the_calendar`. Not done: a year page of twelve small months; `use` chosen in the
+   interface (the pages use `CALENDAR_USE`); Easter and the moveable feasts of a year (the API has them, the pages do not show
+   them); a route `preload` for the pages.
 6. (Gate) Version 2.
 
 ## Tests, in short

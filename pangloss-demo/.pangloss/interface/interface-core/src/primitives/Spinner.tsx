@@ -1,9 +1,12 @@
+import { useTranslations } from "../context";
+
 /** A small spinner, in the colour of the text around it, for something that is loading */
 export function Spinner() {
+  const { t } = useTranslations();
   return (
     <svg
       role="status"
-      aria-label="Loading"
+      aria-label={t("loading", "Loading…")}
       viewBox="0 0 24 24"
       class="size-3.5 animate-spin select-none fill-none stroke-current stroke-[3]"
       stroke-linecap="round"

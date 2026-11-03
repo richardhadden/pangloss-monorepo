@@ -35,5 +35,9 @@
     "solid-js": "^2.0.0-rc.19",
     "typescript": "^5.9.2",
     "vitest": "^5.0.5"
+  },
+  "dependencies": {
+    "@tanstack/virtual-core": "^3.19.10",
+    "valibot": "^1.5.0"
   }
 }

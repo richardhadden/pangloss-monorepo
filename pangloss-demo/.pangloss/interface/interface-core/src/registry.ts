@@ -4,14 +4,17 @@
  */
 import {
   Console,
+  ClipboardBar,
   ConsoleBar,
   EntityCard,
   FieldList,
   ItemContents,
+  ItemForm,
   LoginForm,
   NavBar,
   ReferenceChip,
   ResultButton,
+  Toasts,
 } from "./components";
 import { Button, ErrorMessage, Modal } from "./primitives";
 import type { ComponentMap } from "./types";
@@ -25,9 +28,12 @@ export const defaultComponents: ComponentMap = {
   ResultButton,
   ReferenceChip,
   ItemContents,
+  ItemForm,
   LoginForm,
   Modal,
   ConsoleBar,
+  ClipboardBar,
+  Toasts,
   Console,
 };
 

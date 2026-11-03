@@ -72,6 +72,11 @@ def month_span(calendar: Calendar, year: int, month: int) -> tuple[int, int]:
     return first, first + month_length(year, month, calendar) - 1
 
 
+def year_span(calendar: Calendar, year: int) -> tuple[int, int]:
+    """The first and last day number of a year"""
+    return to_jdn(year, 1, 1, calendar), to_jdn(year, 12, 31, calendar)
+
+
 def next_month(calendar: Calendar, year: int, month: int) -> tuple[int, int]:
     return (year + 1, 1) if month == 12 else (year, month + 1)
 
