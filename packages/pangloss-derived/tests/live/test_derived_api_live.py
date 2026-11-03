@@ -108,6 +108,7 @@ async def test_the_routes_and_the_derived_section_of_a_view(clear_database):
         assert person["label"] == "A"
         (item,) = person["_derived"]["SameFamily"]["items"]
         assert item["other"]["label"] == "B"
+        assert item["otherField"] in ("first", "second")
         assert item["fields"]["family"]["label"] == "G"
 
         factoid = (await client.get(f"/api/Factoid/{f.id}")).json()

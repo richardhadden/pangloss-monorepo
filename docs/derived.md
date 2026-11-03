@@ -129,7 +129,7 @@ plain ("only from a negated statement"). Nothing is filtered by default.
 | `GET /api/derived/{Class}/{id}` | one, with "why" |
 | `GET /api/derived/graph/{type}?plain=true` | the graph of a type |
 | `GET /api/derived/status` | what is pending, the state of each rule, what the worker did |
-| `GET /api/Person/{id}` | has `_derived`: for each class, a count and a first page (the other end, the other fields) |
+| `GET /api/Person/{id}` | has `_derived`: for each class, a count and a first page (the other end and the field it is in, `otherField`; the other fields) |
 | `GET /api/Factoid/{id}` | has `_derived` too: what the document is evidence of |
 
 The same functions work through the SDK (they ask the API; blocking with `connect(sync=True)`, as the models' own

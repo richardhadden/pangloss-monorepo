@@ -1,7 +1,7 @@
 import { createMemo, createSignal, For, Loading, Show } from "solid-js";
 import { useApi, useTranslations } from "../context";
 import { ReferenceChip } from "./ReferenceChip";
-import { fieldGridClass, fieldRowClass } from "./form/styles";
+import { fieldGridClass, fieldRowClass, smallButtonClass } from "./form/styles";
 
 /** A thing a derived fact names: an entity, or a head document */
 interface DerivedRef {
@@ -16,6 +16,8 @@ interface DerivedItem {
   type: string;
   /** (of an entity) the other end of the relation */
   other?: DerivedRef | null;
+  /** (of an entity) the field the other end is in */
+  otherField?: string | null;
   /** (of an entity) the other fields: entities, or values */
   fields?: Record<string, DerivedRef | string | number | boolean | null>;
   /** (of a document) the fields, as the fact's view has them */
@@ -53,7 +55,47 @@ interface Justification {
 const isRef = (value: unknown): value is DerivedRef =>
   typeof value === "object" && value !== null && "id" in value && "type" in value;
 
+/** A derived class's name: its translation, or its own name in words (`SameGroup`, "Same group") */
+const className = (modelName: (model: string) => string, name: string) => {
+  const shown = modelName(name);
+  return shown !== name ? shown : name.replace(/(?<=[a-z0-9])(?=[A-Z])/g, " ").replace(/ [A-Z](?=[a-z])/g, (c) => c.toLowerCase());
+};
+
 const href = (ref: DerivedRef) => `/${ref.type}/${encodeURIComponent(ref.id)}`;
+
+/** What a fact's view has besides its fields */
+const notFields = new Set([
+  "id",
+  "type",
+  "as",
+  "contextLabels",
+  "qualifiedOnly",
+  "types",
+  "justifications",
+  "justificationCount",
+  "derived",
+  "rules",
+  "nodes",
+]);
+
+type FieldValue = DerivedRef | string | number | boolean | null | undefined;
+
+/**
+ * The fields of a fact to show, by name, in the order of its class: for the first page of an entity, the other end
+ * and the other fields; for a fact's whole view (a document's, or a later page), every field but those that are the
+ * item itself
+ */
+function shownFields(item: DerivedItem, itemId: string): [string, FieldValue][] {
+  if (item.other !== undefined || item.fields !== undefined) {
+    return [
+      ...(item.otherField && item.other ? [[item.otherField, item.other] as [string, FieldValue]] : []),
+      ...Object.entries(item.fields ?? {}),
+    ];
+  }
+  return Object.entries(item)
+    .filter(([name]) => !notFields.has(name))
+    .filter(([, value]) => !(isRef(value) && value.id === itemId)) as [string, FieldValue][];
+}
 
 /** The rules and documents a fact rests on: read when it is asked for */
 function Why(props: { type: string; id: string }) {
@@ -61,12 +103,12 @@ function Why(props: { type: string; id: string }) {
   const { t } = useTranslations();
   const fact = createMemo(() =>
     api.get<{ justifications: Justification[] }>(
-      `/api/derived/${encodeURIComponent(props.type)}/${encodeURIComponent(props.id)}`,
+      `/derived/${encodeURIComponent(props.type)}/${encodeURIComponent(props.id)}`,
     ),
   );
   return (
     <Loading fallback={<p class="text-xs text-slate-500">{t("loading", "Loading…")}</p>}>
-      <ul class="mt-2 flex w-full flex-col gap-2 border-l-2 border-violet-200 pl-3">
+      <ul class="mt-2 flex w-full flex-col gap-2 border-l-2 border-slate-300 pl-3">
         <For each={fact().justifications}>
           {(justification) => (
             <li class="flex flex-col gap-1 text-sm">
@@ -98,26 +140,25 @@ function Why(props: { type: string; id: string }) {
 }
 
 function Fact(props: { item: DerivedItem; itemId: string }) {
-  const { t } = useTranslations();
+  const { t, fieldName } = useTranslations();
   const [why, setWhy] = createSignal(false);
-  // (what to show of it: for an entity, the other end and the other fields; for a document, every end)
-  const refs = createMemo(() => {
-    const item = props.item;
-    if (item.other !== undefined || item.fields !== undefined) {
-      return [
-        ...(isRef(item.other) ? [item.other] : []),
-        ...Object.values(item.fields ?? {}).filter(isRef),
-      ];
-    }
-    return Object.values(item).filter(isRef).filter((ref) => ref.id !== props.itemId);
-  });
+  const fields = createMemo(() =>
+    shownFields(props.item, props.itemId).filter(([, value]) => value !== null && value !== undefined),
+  );
   const count = () => props.item.justifications ?? props.item.justificationCount ?? 0;
   return (
     <li class="flex flex-col">
-      <span class="flex flex-wrap items-center gap-2">
-        <For each={refs()}>
-          {(ref) => (
-            <ReferenceChip type={ref.type} label={ref.label ?? ref.id} href={href(ref)} />
+      <span class="flex flex-wrap items-center gap-x-5 gap-y-2">
+        <For each={fields()}>
+          {([name, value]) => (
+            <span class="flex items-center gap-2">
+              <span class="text-xs font-semibold text-slate-500 uppercase select-none">
+                {fieldName(props.item.type, name)}
+              </span>
+              <Show when={isRef(value) && value} fallback={<span class="text-sm">{String(value)}</span>}>
+                {(ref) => <ReferenceChip type={ref().type} label={ref().label ?? ref().id} href={href(ref())} />}
+              </Show>
+            </span>
           )}
         </For>
         <Show when={props.item.qualifiedOnly}>
@@ -130,7 +171,7 @@ function Fact(props: { item: DerivedItem; itemId: string }) {
         </Show>
         <button
           type="button"
-          class="text-xs font-semibold text-violet-700 uppercase select-none hover:underline"
+          class={[smallButtonClass, "text-slate-600"]}
           aria-expanded={why() ? "true" : "false"}
           onClick={() => setWhy((open) => !open)}
         >
@@ -162,7 +203,7 @@ function ClassSection(props: {
   const load = async () => {
     setLoading(true);
     try {
-      const page = await api.get<DerivedPage>(`/api/derived/${encodeURIComponent(props.name)}`, {
+      const page = await api.get<DerivedPage>(`/derived/${encodeURIComponent(props.name)}`, {
         [props.kind]: props.itemId,
         page: nextPage(),
       });
@@ -176,7 +217,7 @@ function ClassSection(props: {
   return (
     <div class={fieldRowClass}>
       <dt class="pt-1 text-xs font-semibold text-slate-500 uppercase">
-        {modelName(props.name)}
+        {className(modelName, props.name)}
         <span class="ml-1 font-normal normal-case">({props.count})</span>
       </dt>
       <dd class="flex min-w-0 flex-col gap-3">
@@ -186,7 +227,7 @@ function ClassSection(props: {
         <Show when={left() > 0}>
           <button
             type="button"
-            class="self-start text-xs font-semibold text-violet-700 uppercase select-none hover:underline disabled:text-slate-400"
+            class={[smallButtonClass, "self-start text-slate-600 disabled:text-slate-400"]}
             disabled={loading()}
             onClick={() => void load()}
           >
@@ -208,7 +249,7 @@ export function DerivedSection(props: DerivedSectionProps) {
   return (
     <Show when={classes().length > 0}>
       <section class="mt-10 border-t-[0.5px] border-slate-400/70 pt-4">
-        <h2 class="mb-4 text-xs font-semibold text-violet-700 uppercase">
+        <h2 class="mb-4 text-xs font-semibold text-slate-500 uppercase">
           {t("derived_heading", "Derived")}
         </h2>
         <dl class={fieldGridClass}>

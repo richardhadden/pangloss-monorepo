@@ -383,6 +383,7 @@ async def test_derived_section_of_a_person_and_of_a_factoid(clear_database):
     assert family["count"] == 1
     (item,) = family["items"]
     assert item["other"]["label"] == "B"
+    assert item["otherField"] in ("first", "second")
     assert item["fields"]["family"]["label"] == "G"
     section = await read.derived_section(Factoid, await Factoid.get(f1.id))
     assert section["_derived"]["SameFamily"]["count"] == 1

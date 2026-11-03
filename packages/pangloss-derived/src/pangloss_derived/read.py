@@ -410,6 +410,7 @@ async def derived_of_entity(owner: type, id: Any) -> dict[str, Any]:
                 "type": model.__name__,
                 "as": own,
                 "other": data.get(other_field) if other_field else None,
+                "otherField": other_field,
                 "fields": {
                     k: data[k]
                     for k in model._fields

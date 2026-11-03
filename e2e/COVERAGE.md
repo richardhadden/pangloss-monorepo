@@ -45,7 +45,7 @@ about her "held court at Ghent") and Charles the Bold (no role); `types` has onl
 | Item page: reified relations without a "target" key; the full trail (spaces and documents) round a chip; reverse through a reified relation shows the field in its document | 🚧 | unit tests in `ItemContents.test.tsx`; the e2e project has no reified relation or semantic space |
 | Dates (`pangloss_dates` module): a date is said as a person would, not listed by field | 🚧 | unit tests in the module (`format.test.ts`, `DateCard.test.tsx`); the e2e project has no dates |
 | Item page: a type in a field leads to the page of the type (module page) | ✅ | |
-| Item page: "Derived" section (`_derived` of `pangloss-derived`): each class with the other end and its fields, the context of a qualified fact, "and N more" reading the next page, "Why" fetching the justifications | 🚧 | unit tests in `DerivedSection.test.tsx`; the e2e project does not install `pangloss_derived` |
+| Item page: "Derived" section (`_derived` of `pangloss-derived`): each class with the other end and its fields (each by its field name in the derived class), the context of a qualified fact, "and N more" reading the next page, "Why" fetching the justifications | 🚧 | unit tests in `DerivedSection.test.tsx`; the e2e project does not install `pangloss_derived` |
 | Item page of a subtype (308 to its own route) | ✅ | through `/Role/<concrete type id>` in `test_typology_item.py` |
 | Not-found page, with a 404 status | ✅ | `test_navigation.py` |
 | An item that is not there is explained (`role="alert"`) | ✅ | |

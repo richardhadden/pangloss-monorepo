@@ -27,6 +27,7 @@ const derived = {
         type: "SameGroup",
         as: ["first"],
         other: { id: "p2", type: "Person", label: "Bertha" },
+        otherField: "second",
         fields: { group: { id: "g1", type: "Group", label: "The Carolingians" } },
         contextLabels: ["Negative"],
         qualifiedOnly: true,
@@ -66,6 +67,9 @@ describe("DerivedSection", () => {
     expect(root.textContent).toContain("Derived");
     expect(root.textContent).toContain("Bertha");
     expect(root.textContent).toContain("The Carolingians");
+    // (each by the name of its field in the derived class)
+    expect(root.textContent).toContain("second");
+    expect(root.textContent).toContain("group");
     expect(root.textContent).toContain("Negative");
     expect(root.textContent).toContain("and 2 more");
     expect(get).not.toHaveBeenCalled();
@@ -75,7 +79,7 @@ describe("DerivedSection", () => {
     flush();
     await tick();
     flush();
-    expect(get).toHaveBeenCalledWith("/api/derived/SameGroup/f1");
+    expect(get).toHaveBeenCalledWith("/derived/SameGroup/f1");
     expect(root.textContent).toContain("Two people said to be members of one group");
     expect(root.textContent).toContain("Annals, 800");
   });
@@ -115,10 +119,11 @@ describe("DerivedSection", () => {
     flush();
     await tick();
     flush();
-    expect(get).toHaveBeenCalledWith("/api/derived/SameGroup", { entity: "p1", page: 2 });
+    expect(get).toHaveBeenCalledWith("/derived/SameGroup", { entity: "p1", page: 2 });
     // (the fact's view names every end: the item itself is left out)
     expect(root.textContent).toContain("Einhard");
     expect(root.textContent).not.toContain("Alcuin");
+    expect(root.textContent).not.toContain("first");
     expect(root.textContent).toContain("and 1 more");
   });
 
