@@ -66,7 +66,6 @@ async def main() -> None:
     # %% A document that refers to them, with a statement inside it
     factoid = await Factoid.Create(
         label="Charlemagne is in Rome (SDK demo)",
-        year=800,
         source={"type": "AtPage", "page": "s.a. 800", "target": [ref(annales)]},
         statements=[
             {

@@ -232,7 +232,7 @@ def factoid_values(i, agents, places, sources):
         else:
             statements.append(s)
     return dict(
-        label=f"Factoid {i}", year=year, statements=statements,
+        label=f"Factoid {i}", statements=statements,
         source={"type": "AtPage", "page": f"p. {i % 400}", "target": [ref(rng.choice(sources))]},
     )  # fmt: skip
 
@@ -593,11 +593,7 @@ async def main() -> dict:
                     Case("autocomplete", "Person 'Person 12'", get("/api/autocomplete", q="Person 12", type="Person")),
                     Case("autocomplete", "Person and Group", get("/api/autocomplete", q="Gro", type=["Person", "Group"])),
                     # structured search
-                    Case("search", "Factoid year = 800", search({"year": {"eq": 800}})),
-                    Case("search", "Factoid year between", search({"year": {"between": [700, 705]}})),
                     Case("search", "Factoid label = ", search({"label": {"eq": "Factoid 1234"}})),
-                    Case("search", "Factoid not year 800", search({"$not": {"year": {"eq": 800}}})),
-                    Case("search", "Factoid year = or year =", search({"$any_of": [{"year": {"eq": 800}}, {"year": {"eq": 801}}]})),
                     Case("search", "Factoid source is", search({"source": {"is": str(source.id)}})),
                     Case("search", "Factoid source pattern", search({"source": {"type": "Source", "where": {"author": {"eq": "Author 7"}}}})),
                     Case("search", "Factoid: activity by person", search({"statements": {"type": "Activity", "where": {"carried_out_by": {"is": str(agents[0].id)}}}})),
@@ -606,7 +602,6 @@ async def main() -> dict:
                     Case("search", "Factoid mentions place", search({"$mentions": {"is": str(place.id)}})),
                     Case("search", "Factoid somewhere a transfer of silver", search({"$somewhere": [{"type": "Transfer", "where": {"item": {"eq": "silver"}}}]})),
                     Case("search", "Person incoming activity", search({"$incoming": [{"type": "Activity", "field": "carried_out_by"}]}, "Person")),
-                    Case("search", "Person incoming statement of year 800", search({"$incoming": [{"type": "Statement", "where": {"year": {"eq": 800}}}]}, "Person")),
                     Case("search", "Person label contains", search({"label": {"contains": "person 4242"}}, "Person")),
                     Case("search", "Person: all", search({}, "Person")),
                     # writes
@@ -699,7 +694,6 @@ async def main() -> dict:
                 await burst("GET Factoid x 300", 300, lambda: get(factoid_url)())
                 await burst("GET list Person?q= x 200", 200, lambda: get("/api/Person", q=f"Person {pick.randint(1, 9999)}")())
                 await burst("autocomplete x 300", 300, lambda: get("/api/autocomplete", q=f"Pers{pick.randint(1, 99)}", type="Person")())
-                await burst("POST search (year) x 150", 150, lambda: search({"year": {"eq": pick.randint(700, 900)}})())
                 await burst("POST Person x 300", 300, create_person)
                 await burst("PUT Person x 150", 150, put_person)
                 await burst("mixed (80% reads, 20% writes) x 400", 400, lambda: create_person() if pick.random() < 0.2 else get(person_url)())

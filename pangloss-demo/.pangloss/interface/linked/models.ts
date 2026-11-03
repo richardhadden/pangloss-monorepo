@@ -57,7 +57,8 @@ export const definitions: ModelDefinitions = {
             "Period",
             "Recurrence",
             "UnknownDate"
-          ]
+          ],
+          "markers": []
         },
         {
           "name": "year",
@@ -478,7 +479,8 @@ export const definitions: ModelDefinitions = {
             "Period",
             "Recurrence",
             "UnknownDate"
-          ]
+          ],
+          "markers": []
         },
         {
           "name": "year",
@@ -620,7 +622,8 @@ export const definitions: ModelDefinitions = {
             "Period",
             "Recurrence",
             "UnknownDate"
-          ]
+          ],
+          "markers": []
         },
         {
           "name": "year",
@@ -760,7 +763,8 @@ export const definitions: ModelDefinitions = {
             "Period",
             "Recurrence",
             "UnknownDate"
-          ]
+          ],
+          "markers": []
         },
         {
           "name": "year",
@@ -1059,7 +1063,8 @@ export const definitions: ModelDefinitions = {
             "NoRule",
             "Period",
             "Recurrence"
-          ]
+          ],
+          "markers": []
         }
       ],
       "incoming": [],
@@ -1225,7 +1230,8 @@ export const definitions: ModelDefinitions = {
           "model": "ExactDate",
           "types": [
             "ExactDate"
-          ]
+          ],
+          "markers": []
         },
         {
           "name": "latest",
@@ -1238,7 +1244,8 @@ export const definitions: ModelDefinitions = {
           "model": "ExactDate",
           "types": [
             "ExactDate"
-          ]
+          ],
+          "markers": []
         }
       ],
       "incoming": [],
@@ -1974,7 +1981,8 @@ export const definitions: ModelDefinitions = {
             "NoRule",
             "Period",
             "Recurrence"
-          ]
+          ],
+          "markers": []
         },
         {
           "name": "use",
@@ -2365,7 +2373,8 @@ export const definitions: ModelDefinitions = {
             "Period",
             "Recurrence",
             "UnknownDate"
-          ]
+          ],
+          "markers": []
         },
         {
           "name": "year",
@@ -2947,7 +2956,8 @@ export const definitions: ModelDefinitions = {
             "Period",
             "Recurrence",
             "UnknownDate"
-          ]
+          ],
+          "markers": []
         },
         {
           "name": "year",
@@ -3370,7 +3380,8 @@ export const definitions: ModelDefinitions = {
             "EDTFDate",
             "ExactDate",
             "UnknownDate"
-          ]
+          ],
+          "markers": []
         },
         {
           "name": "end",
@@ -3387,7 +3398,8 @@ export const definitions: ModelDefinitions = {
             "ExactDate",
             "OngoingDate",
             "UnknownDate"
-          ]
+          ],
+          "markers": []
         }
       ],
       "incoming": [],
@@ -3453,6 +3465,12 @@ export const definitions: ModelDefinitions = {
             "Period",
             "Recurrence",
             "UnknownDate"
+          ],
+          "markers": [
+            {
+              "name": "SortDefault",
+              "sortBy": "earliest_fuzzy"
+            }
           ]
         },
         {
@@ -3531,12 +3549,12 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Transfer",
               "field": "given_by",
-              "viaReified": true
+              "viaReified": false
             },
             {
               "model": "Transfer",
               "field": "given_by",
-              "viaReified": false
+              "viaReified": true
             }
           ]
         },
@@ -3558,12 +3576,12 @@ export const definitions: ModelDefinitions = {
             {
               "model": "MemberOf",
               "field": "member",
-              "viaReified": true
+              "viaReified": false
             },
             {
               "model": "MemberOf",
               "field": "member",
-              "viaReified": false
+              "viaReified": true
             }
           ]
         },
@@ -3574,12 +3592,12 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Order",
               "field": "ordered_by",
-              "viaReified": true
+              "viaReified": false
             },
             {
               "model": "Order",
               "field": "ordered_by",
-              "viaReified": false
+              "viaReified": true
             }
           ]
         },
@@ -3601,12 +3619,12 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Transfer",
               "field": "given_to",
-              "viaReified": true
+              "viaReified": false
             },
             {
               "model": "Transfer",
               "field": "given_to",
-              "viaReified": false
+              "viaReified": true
             }
           ]
         }
@@ -4121,7 +4139,8 @@ export const definitions: ModelDefinitions = {
             "EDTFDate",
             "ExactDate",
             "UnknownDate"
-          ]
+          ],
+          "markers": []
         },
         {
           "name": "end",
@@ -4138,7 +4157,8 @@ export const definitions: ModelDefinitions = {
             "ExactDate",
             "OngoingDate",
             "UnknownDate"
-          ]
+          ],
+          "markers": []
         },
         {
           "name": "pattern_keys",
@@ -4300,7 +4320,8 @@ export const definitions: ModelDefinitions = {
             "Period",
             "Recurrence",
             "UnknownDate"
-          ]
+          ],
+          "markers": []
         },
         {
           "name": "year",
@@ -4417,7 +4438,8 @@ export const definitions: ModelDefinitions = {
             "Period",
             "Recurrence",
             "UnknownDate"
-          ]
+          ],
+          "markers": []
         },
         {
           "name": "year",

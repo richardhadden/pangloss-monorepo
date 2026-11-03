@@ -157,7 +157,6 @@ own `.gitignore` leaves out `node_modules` and `dist`).
 | Identifications | `Identification[Alternative[ViaEdge[Person, Probability]]]` where a statement points to a person (`Order.ordered_by`, `Transfer.given_by` and `given_to`): the source says "Wido" (`identified_by`), and the one `Alternative` holds the men it could be, each with a `Probability` (percent) |
 | Dates, types, review | `Date` (Julian by setting) for `Statement.date` and `Person.born`; `OccupationTypology` for `Person.has_type`; `Factoid` is reviewable |
 | Values | an embedded `Date`, an annotated `WithCertainty[str]`, enums, a `TypedDict`, `Decimal`, lists, validators |
-| Binding | `Factoid.year` is given to the statements that have none |
 
 ## Found while making it
 

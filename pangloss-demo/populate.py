@@ -126,11 +126,9 @@ async def populate() -> None:
     ).save()
 
     # --- A factoid: the coronation -------------------------------------------------
-    # `year` is given once, on the factoid: the statements get it too. A statement can
-    # be a Negative or Hypothetical one, or two that cause one another.
+    # A statement can be a Negative or Hypothetical one, or two that cause one another.
     coronation = await models.Factoid.Create(
         label="Charlemagne is crowned emperor",
-        year=800,
         source={"type": "AtPage", "page": "s.a. 800", "target": [ref(annales)]},
         statements=[
             {
@@ -192,7 +190,6 @@ async def populate() -> None:
     # (the source, and the person, are made by the same request that makes the factoid)
     einhard_life = await models.Factoid.Create(
         label="Charlemagne did not expect to be crowned",
-        year=800,
         source={
             "type": "AtPage",
             "page": "ch. 28",
@@ -216,7 +213,6 @@ async def populate() -> None:
                         "type": "Activity",
                         "label": "Charlemagne knew of the coronation",
                         "text": "Charlemagne would not have entered the church, had he known",
-                        # (no `year`: it is Factoid.year)
                         "date": date(800, 12, 25),
                         "activity_type": "ceremony",
                         "carried_out_by": via(charlemagne, certainty=4),
@@ -243,7 +239,6 @@ async def populate() -> None:
     # properties of its own, as `carried_out_by` does)
     letter = await models.Factoid.Create(
         label="Alcuin sends Charlemagne a letter",
-        year=799,
         source={
             "type": "AtPage",
             "page": "letter 174",
@@ -255,7 +250,6 @@ async def populate() -> None:
                 "label": "Alcuin's letter",
                 "text": "Alcuin sent the king a letter about the dangers to the church",
                 "date": date(799, 6),
-                "year": 799,  # (the factoid's year is not used where there is one)
                 "item": "letter",
                 "quantity": "1",
                 "given_by": {
@@ -296,7 +290,6 @@ async def populate() -> None:
 
     orders = await models.Factoid.Create(
         label="Charlemagne orders gifts, and forbids a trade",
-        year=802,
         source={"type": "AtPage", "page": "s.a. 802", "target": [ref(annales)]},
         statements=[
             {
@@ -434,7 +427,6 @@ async def add_order_chain() -> None:
     }
     chain = await models.Factoid.Create(
         label="Silver for the pope, by four hands",
-        year=803,
         source={"type": "AtPage", "page": "s.a. 803", "target": [annales]},
         statements=[
             {

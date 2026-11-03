@@ -23,7 +23,6 @@ small, and between them use most of what Pangloss has:
 | A statement that holds another statement | `Order.thing_ordered` |
 | A conjunction (a join of several things) | `Causes`, `Alternative` (any number) |
 | A reified relation to a conjunction, with edge properties on its members | `Identification[Alternative[ViaEdge[Person, Probability]]]` |
-| Binding a value of the parent into its children | `Factoid.year` into `Statement.year` |
 | Literals: enums, dates, decimals, a TypedDict, lists, validators | throughout |
 | What a space or a conjunction does to a derived relation (`pangloss-derived`; the rules are in `derived.py`) | `Alternative`, `InRole` |
 """
@@ -39,7 +38,7 @@ from pangloss_dates.bounds import SortBy
 from pangloss_dates.models import Date, SortDefault
 from pangloss_derived import DerivedMeta
 from pangloss_interface import InterfaceMeta
-from pangloss_models.field_definitions import FieldBinding, FieldSubclassing
+from pangloss_models.field_definitions import FieldSubclassing
 from pangloss_models.model_bases.annotated_value import AnnotatedValue
 from pangloss_models.model_bases.configs import RelationConfig
 from pangloss_models.model_bases.conjunction import Conjunction
@@ -207,8 +206,6 @@ class Statement(Document):
 
     text: Annotated[str, MinLen(5)]
     date: Date
-    # (filled by the children below; see `year` on `Factoid`)
-    year: int
     involves: list[Agent]
     places: list[Place]
 
@@ -370,24 +367,13 @@ class CreationOfPainting(CreationOfArtwork):
 class Factoid(Document):
     """What a source says, at a page: a set of statements"""
 
-    # Factoids are searched by year, so it has an index (and the label of every class has one already)
-    _meta = Document.Meta(indexes=["year"])
     # (checked by another user before it is published)
     _review_meta = ReviewMeta(reviewable=True)
 
-    year: int
     source: AtPage[Source]
-    statements: Annotated[
-        list[
-            Statement
-            | Negative[Statement]
-            | Hypothetical[Statement]
-            | Causes[Statement, Statement]
-        ],
-        # The year is entered once, and given to every statement that does not have one
-        RelationConfig(
-            bind_to_child_field=[
-                FieldBinding(bound_field="year", child_fields=["year"])
-            ]
-        ),
+    statements: list[
+        Statement
+        | Negative[Statement]
+        | Hypothetical[Statement]
+        | Causes[Statement, Statement]
     ]

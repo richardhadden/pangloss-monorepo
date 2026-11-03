@@ -185,7 +185,7 @@ def factoid_values(i, agents, places, sources):
         else:
             statements.append(s)
     return dict(
-        label=f"Factoid {i}", year=year, statements=statements,
+        label=f"Factoid {i}", statements=statements,
         source={"type": "AtPage", "page": f"p. {i % 400}", "target": [ref(rng.choice(sources))]},
     )  # fmt: skip
 

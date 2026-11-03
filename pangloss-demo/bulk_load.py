@@ -150,7 +150,6 @@ def factoid(i, agents, places, sources):
             statements.append(s)
     return lambda: models.Factoid.Create(
         label=f"Factoid {i}",
-        year=year,
         source={
             "type": "AtPage",
             "page": f"p. {i % 400}",

@@ -42,7 +42,7 @@ CLASS_LABELS = [
     "Entity", "Document", "Agent",
 ]  # fmt: skip
 FIELD_PROPERTIES = [
-    ("Factoid", "year"), ("Statement", "year"), ("Person", "label"), ("Group", "name"),
+    ("Person", "label"), ("Group", "name"),
     ("Source", "author"), ("Factoid", "label"), ("Transfer", "item"),
     ("Activity", "activity_type"),
 ]  # fmt: skip
@@ -145,12 +145,8 @@ def searches(busy, ordinary, place, source, busy_label):
         "source author eq (100 sources)": (S, {"author": {"eq": "Author 7"}}),
         "person: all": (P, {}),
         # documents by a literal
-        "factoid year eq (~150)": (F, {"year": {"eq": 800}}),
-        "factoid year between (~1000)": (F, {"year": {"between": [700, 705]}}),
         "factoid label eq": (F, {"label": {"eq": "Factoid 12345"}}),
         "factoid: all": (F, {}),
-        "factoid: not year 800": (F, {"$not": {"year": {"eq": 800}}}),
-        "factoid year eq or year eq": (F, {"$any_of": [{"year": {"eq": 800}}, {"year": {"eq": 801}}]}),
         # through relations
         "factoid source is": (F, {"source": {"is": source}}),
         "factoid source pattern": (F, {"source": {"type": "Source", "where": {"author": {"eq": "Author 7"}}}}),
@@ -169,10 +165,8 @@ def searches(busy, ordinary, place, source, busy_label):
         # entities by what refers to them
         "person incoming activity, specific": (P, {"label": {"eq": "Person 4242"}, "$incoming": [{"type": "Activity"}]}),
         "hub incoming activity": (P, {"label": {"eq": busy_label}, "$incoming": [{"type": "Activity"}]}),
-        "hub incoming activity of year 800": (P, {"label": {"eq": busy_label}, "$incoming": [{"type": "Activity", "where": {"year": {"eq": 800}}}]}),
         "hub incoming transfer (none)": (P, {"label": {"eq": busy_label}, "$incoming": [{"type": "Transfer"}]}),
         "person incoming activity (any person)": (P, {"$incoming": [{"type": "Activity", "field": "carried_out_by"}]}),
-        "person incoming statement of year 800": (P, {"$incoming": [{"type": "Statement", "where": {"year": {"eq": 800}}}]}),
         "place incoming statement": (E, {"$incoming": [{"type": "Statement"}]}),
     }  # fmt: skip
 
