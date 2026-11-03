@@ -13,7 +13,7 @@ import contextvars
 import dataclasses
 import datetime
 import logging
-from collections.abc import Callable, Generator
+from collections.abc import Awaitable, Callable, Generator, Iterable
 from typing import Any, Literal
 from uuid import UUID
 
@@ -102,6 +102,35 @@ def properties_for_updated_head(model: type) -> dict[str, Any]:
     for function in updated_head_properties:
         properties.update(function(model))
     return properties
+
+
+# Work that an installed app does later, in the background, after a write (`pangloss-derived` works out again what
+# the rules derive from a document). Each function is given the class of a head node that is written (a `Document` or
+# `Entity` subclass) and gives the kinds of work its writes need (`["derive"]`), or none. The database marks the head
+# node as pending for each kind, in the transaction of the write (create, update, delete, undelete), so that a write
+# that is committed is never forgotten, however the server stops; the app's worker claims the pending heads and does
+# the work (see `pangloss_cypher.pending`). With no function, or none that gives a kind, a write marks nothing.
+type PendingWorkFor = Callable[[type], Iterable[str]]
+
+pending_work: list[PendingWorkFor] = []
+
+
+def pending_kinds(model: type) -> list[str]:
+    """The kinds of work a write of a head node of the class leaves pending"""
+    kinds: list[str] = []
+    for function in pending_work:
+        for kind in function(model):
+            if kind not in kinds:
+                kinds.append(kind)
+    return kinds
+
+
+# What an installed app adds to the JSON of a head node read by the API (`GET /api/Person/{id}`): each function is
+# given the class and the view, and gives a dict of keys to add (`pangloss-derived` gives `_derived`, what the rules
+# derive about it), or none. Awaited. Only the API's response has them: a view read in Python (`Person.get`) does not.
+type HeadViewExtras = Callable[[type, Any], Awaitable[dict[str, Any]]]
+
+head_view_extras: list[HeadViewExtras] = []
 
 
 # The review status that a write asks for (`save(review_status="checked")`, or `?review_status=` of the API),

@@ -45,6 +45,8 @@ UNIQUE_CONSTRAINTS = [
     ("PGAccessToken", "token_hash"),
     ("PGRevokedSession", "jti"),
     ("PGLock", "key"),
+    # (the work a write leaves for an installed app to do: `pangloss_cypher.pending`)
+    ("PGPending", "key"),
 ]
 
 # (label, properties). Each unique property is indexed, for finding a node; and an id

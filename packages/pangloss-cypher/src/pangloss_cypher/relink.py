@@ -28,6 +28,7 @@ from pangloss_models.model_registry import ModelRegistry
 from pangloss_users import current_request_username
 from pydantic import ValidationError
 
+from pangloss_cypher import pending
 from pangloss_cypher.build_tree import POSITION
 from pangloss_cypher.checks import check_user_exists
 from pangloss_cypher.fragments import field_edge
@@ -206,10 +207,17 @@ async def relink_batch(
         """,
         heads=heads,
     )
-    return [
+    relinked = [
         RelinkedHead(id=row["id"], type=row["type"], version=row["version"])
         for row in await versions.data()
     ]
+    # (what the installed apps do after a write of each, as after an update: see `pending`)
+    models = ModelRegistry.all_models()
+    for head in relinked:
+        model = models.get(head.type)
+        if model is not None:
+            await pending.mark_written(tx, model, head.id)
+    return relinked
 
 
 async def relink(

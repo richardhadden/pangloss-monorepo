@@ -120,6 +120,12 @@ def test_a_search_with_a_wrong_field_operator_or_order_does_not_type_check(packa
         "Statement.search(Person.Where())\n"
         "Statement.search(order_by=['text', Statement.Order(field='label', direction='desc')])\n"
         "Statement.search(order_by=['about'])\n"
+        "from pangloss_models.search import Var\n"
+        "def rule(a: Var[Person], s: Var[str], n: Var[int]) -> None:\n"
+        "    Statement.Where(about=a, text=s)\n"
+        "    Statement.Where(about=s)\n"
+        "    Statement.Where(text=n)\n"
+        "    Statement.Where(is_=a)\n"
     )
     sync = directory / "shop_sdk" / SYNC_STUBS
 
@@ -137,4 +143,5 @@ def test_a_search_with_a_wrong_field_operator_or_order_does_not_type_check(packa
             if "usage.py:" in line
         }
     )
-    assert lines == ["4", "5", "6", "8"], problems
+    # (and a variable: of what the field holds, or not)
+    assert sorted(lines, key=int) == ["4", "5", "6", "8", "12", "13", "14"], problems

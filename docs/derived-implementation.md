@@ -1,6 +1,10 @@
-# Derived relations: rules that make new facts from documents ⏳
+# Derived relations: rules that make new facts from documents ✅
 
-A plan (2026-11-02). Nothing here is built. It is a design for declaring **rules** of the form "if documents say
+**Built 2026-11-02** (steps 0 to 8), in `packages/pangloss-derived` and the core; see [Built](#built-2026-11-02) for what
+differs from the plan and what is left, and [Measured](#measured) for speed and memory on 642,000 nodes. How to use it:
+[derived.md](derived.md).
+
+A plan (2026-11-02). It is a design for declaring **rules** of the form "if documents say
 *this* and *that*, then there is a derived relation between these things", and for keeping what the rules derive up to
 date as documents are written, in the background. The questions were answered on 2026-11-02, in two rounds (see
 [Decisions](#decisions-answered-2026-11-02)), and the plan below follows the answers. No question is open.
@@ -678,6 +682,221 @@ rule records what the stored facts were made with. On start:
    step by step, the safeguards on fan-out, and how to collapse the facts into a network.
 
 Later, each its own plan: recursion, aggregates, a lens, rules written in the interface.
+
+## Second plan: what was decided while building (2026-11-02)
+
+The plan above left some things open that only show when the code is written. These are the answers taken, with why.
+
+### Rule types: a tag on rules, for extracting a graph (asked 2026-11-02)
+
+A rule has **types**: `@rule(types=[social])`, where `social = RuleType("social", "Social ties between people")` is
+declared in `derived.py`. A type is independent of the `Derived` class: one type can be on rules of many classes
+(`SameFamily` and `SameOrganisation` are both `social`), and the rules of one class can have different types. A
+justification records its rule, so the facts of a type are those with a justification of a rule of that type; the
+graph of a type is those facts, collapsed into edges between their two **ends**:
+
+- `Derived.Meta(ends=("first", "second"))` names the two fields that are the edge; by default the two symmetric
+  fields, or else the first two relation fields. The other fields (the family, a year) are attributes of the edge.
+- `pangloss derive graph social` (and `GET /api/derived/graph/social`) gives the edge list: the two ends, the class,
+  the other fields, how many justifications, whether it is plain, the context labels. `--plain-only`.
+- A justification stores `types` too (`j.types`), so that a reader can filter without the rules loaded; the query
+  uses the names of the rules of the type (`j.rule IN $rules`, indexed).
+
+### The pending mechanism is a queue of nodes, not a property of the head node
+
+The plan put `pg_derive_pending` on the head node. Two things in the core make that awkward: an update replaces every
+property of the head node that is not in `KEPT_PROPERTIES` (`build_replace_head_query`), and the version of a head node
+is a count of its updates (`VERSION_OF_HEAD`), which a delete or an undelete does not change, so it cannot be the
+compare-and-set. So:
+
+- **`(:PGPending {key, kind, head_id, token, at, claimed_until})`**, one per kind of work and head node
+  (`key = kind + ":" + head_id`, unique), `MERGE`d by the write in its own transaction with a **new random token** each
+  time. Create, update, delete and undelete all do it (and a merge of entities for the documents it moves, `relink`).
+- **Generic:** `pangloss_models.hooks.pending_work` is a list of functions `(model class) -> kinds`; the kit asks them
+  and marks the head (and the entities made in the write) for each kind given. With none, nothing is written: a write
+  costs what it did.
+- **Claim:** `SET claimed_until = now + lease` on up to N that are not claimed (or whose lease has run out), giving
+  `(head_id, token)`. **Complete:** delete the node *only if its token is the one claimed*: a head written again while
+  it was being worked on keeps its node, and is done again.
+- **One worker at a time.** A lease on a `PGLock`-like node (`PGWorkerLease {kind}`): a second worker (another server
+  process) waits. Why: with one worker the work is exact (below); with two, a justification read by one before a
+  document changed could be written after the other had already removed it. One worker is also what the measurements
+  say is enough (see [Measured](#measured)).
+
+**Why one sequential worker converges:** every justification depends on the heads of its evidence. Each head is
+processed after its last write (its token changed, so it stays pending until a processing that started after the
+write). The processing of a head reads the current data and replaces the justifications that have evidence in it. So
+once the writes stop, the last processing of each head has seen the final data of all the heads it involves; a
+justification that was wrong involves a head that changed after it was found, which was processed later and removed
+it; one that is right is found by the last processing of any of its heads.
+
+### Derived classes are not models of the registry
+
+`Derived` classes are kept by the package (`DerivedRegistry`), not by `ModelRegistry`: they have no `Create`, are not
+migrated, exported or listed as models, and the interface's model list does not see them. `initialise()` calls the
+package after the models are made (`ModelRegistry.after_finalise`, new, like `before_finalise`), which imports
+`<app>/derived.py` of each installed app, makes the generated classes and checks the rules. Tests declare them after
+the models and call `initialise()` as usual.
+
+### Variables in the search patterns
+
+- `Var[T]` is in `pangloss_models.search` (the plan: variables are part of patterns). A `Where` field takes a `Var`
+  where it takes a value (relation fields: `Var` of a class the field can reach; literal fields: `Var` of its type);
+  every `Where` has `is_` (`$is`), the node itself. The JSON form is `{"$var": "a"}`.
+- `check_match` refuses a variable (a search has no variables); `check_rule` allows them, but not inside `any_of_` or
+  `not_` (a variable bound in only one branch of an `or` is not bound: Datalog would need two rules).
+
+### How a pattern is compiled
+
+- A pattern is a node variable, named after its `is_` variable if it has one, so that two patterns with the same `is_`
+  are one node.
+- A relation that binds a variable is one path, `(s)-[:field]->(x0) <wrappers> (v)`, where every edge after the first
+  goes out of a wrapper (`Dialect.from_wrappers`): this is the relation directly (no wrapper) and through any number of
+  wrappers in one pattern, so there is no `UNION`. The wrappers passed through are the `type`s of the inner nodes of the
+  path; the edge properties are those of its last edge.
+- What a pattern says that is not a variable (a value, a nested pattern that binds nothing) is compiled by the search
+  `Compiler` (`EXISTS`, as a search).
+- Not deleted: an entity bound by a variable, and the head node of each matched document (walking up the reverse edges,
+  which Memgraph does from the node; a lookup by `head_node_id` would scan).
+- Symmetric classes: `WHERE a.id < b.id`, so each unordered pair is found once for each proof.
+- The order: the seeded pattern first, then repeatedly the pattern that shares the most bound variables, preferring one
+  reached from a bound document by its own relation (one edge) over one reached backwards from an entity.
+
+### Context and `DerivedMeta`
+
+The query returns, for each pattern, the semantic spaces of the node (`meta.semantic_spaces`) and the wrappers of each
+binding relation with the properties of its last edge. Python applies `DerivedMeta`: `block` names are also in the
+query (a path through one, or a node in one, is not matched), `transparent` ones are dropped from the context, the rest
+are kept. A rule's `block=` / `allow=` override the class's.
+
+### Facts and justifications
+
+As the plan says (`PGDerived` with its class as a label and edges to its entities; `PGJustification` with
+`justifies` and `evidence` edges), and:
+
+- `j.types`, `j.rule`, `j.rule_hash`, `j.nodes` (the matched node of each pattern), `j.context` (JSON text),
+  `j.context_labels`; `d.context_labels`, `d.qualified_only` and `d.types` (summed over its justifications) are written
+  again whenever its justifications change.
+- The writes of a batch in short transactions (500 justifications each: the facts and justifications found that are
+  not there are created, the justifications with evidence in the batch's heads that were not found are deleted, and the
+  facts they leave with none), then the pending nodes whose token is unchanged are deleted. Each is safe to run again, so
+  a batch need not be one transaction; one transaction per batch was tried first, and was too long (see
+  [Measured](#measured)).
+- `max_per_seed`: the rows of a seed are counted as they are read; past the limit that seed's rows are dropped, its
+  head's existing justifications are kept as they were, and the overflow is logged and counted in `status`.
+
+### Reading
+
+`_derived` on a head view is filled by the API (a hook on the route that reads a head, `pangloss_api` asks
+`hooks.head_view_extras`), not by the models: a view made in Python (`Person.get`) does not carry it, and nothing is
+added to the generated `HeadView` classes or the TypeScript types of the models. The interface reads it from the JSON of
+the page.
+
+## Built (2026-11-02)
+
+All eight steps, with the second plan above. Tests: `packages/pangloss-derived/tests` (31: the checks of a rule and
+their messages, the stubs with `ty`, and live tests on Memgraph and Neo4j of every case of step 0, four patterns, a node
+shared by patterns, literals in the head, constraints, a transparent and a blocked space, an exclusive alternative,
+`max_per_seed`, a changed and a removed rule, a rebuild that finds what was not marked and removes what is wrong, a head
+written while it is worked on, a crash between claim and write, the background worker woken by a write, the routes, the
+`_derived` of a person and of a factoid, the SDK reading what the database reads), `DerivedSection.test.tsx`, and the
+core tests changed for the variables (`test_search_where_models.py`, `test_typecheck.py`).
+
+| Step | Where | Notes |
+|---|---|---|
+| 0 | demo `MemberOf`, `derived.py`; test models in the tests | the demo's rules: `same_group` (family, social), `co_participants` (social), `gave_to` (exchange, social); `Alternative` is exclusive, `InRole` transparent; demo migration 0007 |
+| 1 | `search.py` (`Var`, `RuleKey`, `checking_rule`), `search_where.py`, `declare.py`, `check.py` | `Var` is validated as any `Var` and typed `Var[X]` only in the stubs (`StubAnnotation`): `Var[X]` in every union cost 440 MB at `initialise()` of the demo (below). `Where` stubs have their `__init__` written out: with a non-model class in a union, `ty` took any argument |
+| 2 | `compile.py`, `store.py`, `worker.rebuild`, `cli.py` | the queries are joined in the order chosen, with `WITH *` between clauses (below) |
+| 3 | `read.py`, `access.py`, `api.py`, `views.py` | `derived_visible` in `pangloss_cypher.fragments`; the SDK asks the API |
+| 4 | `pangloss_cypher/pending.py`, `write_functions.py`, `relink.py`, `hooks.pending_work`; migrations memgraph 0007, neo4j 0005 | a queue of nodes, not a property (second plan) |
+| 5 | `worker.py` | chunked writes (500 justifications a transaction), back-off and smaller batches on failure, a 30 s lease given up on stopping |
+| 6 | `PGDeriveRule`, `Worker.sync_rules` | |
+| 7 | [Measured](#measured) | the symmetric optimisation was not needed |
+| 8 | `_derived` (API, `hooks.head_view_extras`), `DerivedSection` in the interface, docs, guide | |
+
+**Added later the same day** (after the first report): `Var[Date]` and `pangloss_dates.rules` (`overlaps`, `before`,
+`after`, `during`, `within`, on the fuzzy or the strict bounds; `Constraint.check` for an add-on to refuse a variable of
+the wrong class); a variable of a list field (an item of it: `UNWIND` after the node's `MATCH`); a derived class's `Where`
+in a search, `derived_` / `$derived` on an entity's pattern (`pangloss_models.search.Extension`, a key an optional package
+checks and compiles itself, and `search_where.where_extensions`, a field it adds to the `Where` of a kind of model); the
+blocking SDK (`Derived.list`/`get` and `graph` are bound to the storage in use at `initialise`, as the models' functions
+are); `evidence=` on the list (what a document is evidence of) and paging in the interface's section; and the detection
+of whether a symmetric class's body is symmetric (below).
+
+**Not done:** a derived class in the body of another rule (recursion: strata and a fixpoint); aggregates; the reverse
+names under `_derived` take a class's `reverse_names`, nothing more; `$derived` is not in the interface's search form
+(the form knows the keys of `SearchKey`; an extension's key is for the API and Python).
+
+**A symmetric class with an asymmetric body.** The first build matched each pair once with `a.id < b.id`, which is
+right only if the body is the same with `a` and `b` swapped. `before(d1, d2)` between the two ends is not: the pair
+whose first-by-id held office *second* was never found. Now `initialise()` compares the body with the two swapped (the
+patterns as a set, each by its class, relations, values and conditions; the constraints with the names swapped). If it
+is the same, `a.id < b.id` (half the rows); if not, `a <> b` (both orders, twice the rows), the fact is written with its
+ends in order of id, and the two rows that are one proof with the ends swapped are one justification (keyed on the set
+of its nodes).
+
+## Measured
+
+On the scratch Memgraph (3.14.0, `--experimental-enabled=commit-lock-narrowing`), 642,551 nodes (60,000 people, 15,000
+groups, 30,000 factoids with 55,035 activities and 23,605 transfers), from Python through the models (no HTTP), one
+process, on a laptop. The script was `/tmp/derived-bench/bench.py`; everything it wrote was removed afterwards.
+
+**Saves.** A factoid with one `MemberOf`, saved one at a time, alternately with and without the pending mark: median
+11.7 vs 11.6 ms in one run, 9.8 vs 8.9 ms in another (p95 14.3 vs 14.0, 12.3 vs 10.5). The mark is one `MERGE` in the
+write's transaction: 0.1 to 0.9 ms. A write of a class no rule is about writes nothing.
+
+**The worker.** 5,000 factoids (about 8,000 memberships in 3,000 groups of 2 to 40) written with the worker stopped, then
+drained: 902 heads/s (200 a batch, median 189 ms a batch: claim 15 ms, the trees 30 ms, the seeded queries 8 to 100 ms,
+the writes the rest). Later, with the groups fuller, 381 heads/s for a batch that made 67,000 justifications: about
+5,000 justifications/s. What a write costs the worker is the pairs it makes.
+
+**Eventual consistency.** Four writers saving 3,000 factoids with the worker running in the same process, as in the
+server: from a save to its derivations being written, median 291 ms, p95 444 ms, max 963 ms; never more than 23 heads
+pending; caught up 0.4 s after the last save. The saves were slower with the worker running: median 40.7 vs 36.2 ms,
+p95 72 vs 50 ms.
+
+**Exactness.** Four writers making 1,610 creates, 933 updates, 317 deletes and 140 undeletes into 150 shared groups,
+with the worker running; then every rule built again from scratch: nothing new, nothing removed (twice). Without the
+worker, the same churn took 30.7 s with 53 retried conflicts and 53 saves over half a second; with it, 37.0 s, 83 and 61.
+The conflicts are mostly the writers' own (they share groups); in Memgraph an edge changes the nodes at both ends.
+
+**Rebuilds.** `gave_to`: 23,605 facts in 3.2 s; `co_participants`: 55,035 activities, 18,372 facts, 5.5 s; a rebuild that
+changes nothing, 2.5 s; `same_group` with 37,651 memberships (261,000 rows), 21 s.
+
+**Fan-out.** A group of 400 built 20 members at a time: 115 ms for the first 20, rising linearly to 1,364 ms for the
+last (79,800 pairs in all). One more member: 108 ms (400 pairs); twenty more: 1.5 s.
+
+**Memory, Python.** Over 25 batches the worker's RSS went from 1,324.2 to 1,324.4 MB. Over 12 rounds of 500 writes and a
+drain, the live Python memory (tracemalloc, after a collection) stayed at 0.2 to 0.3 MB: nothing grows. The RSS rises to
+the largest batch's high-water (37 MB for a batch of 67,000 justifications) and stays there. A rebuild holds the ids of
+one class (60,000 ids: a few MB). The process itself is large: `initialise()` of the demo's models takes 1.32 GB (before
+this work too).
+
+
+**Memory, database.** 209,380 facts, 301,246 justifications and 1,443,930 edges took 0.53 GiB of Memgraph's tracked
+memory: about 2.6 KB a fact, 1 KB a node with its edges.
+
+**Neo4j** (2026.10.1, heap 2 GB, page cache 1 GB; 118,173 nodes of the same kind of data: 12,012 people, 6,006 factoids
+with 11,566 activities and 4,944 transfers; the same script, `BENCH_BACKEND=neo4j`): the mark on a save +0.4 ms (median
+7.0 vs 6.6 ms); rebuilds `gave_to` 4,944 facts in 4.2 s, `co_participants` 4.9 s, a rebuild that changes nothing 0.6 s;
+5,000 factoids drained at 626 heads/s (median 265 ms a batch of 200); four writers and the worker together: saves median
+21 ms (p95 59), lag from a save to its derivations median 308 ms, p95 1.0 s, max 1.5 s, at most 189 pending, caught up
+0.6 s after the last save. Everything the worker did was right on Neo4j too (the live tests run on both). One oddity, not
+Pangloss's: on the first run the first save after the rebuilds hung for 15 minutes on a connection the Neo4j container
+had dropped ("Response write failure" in its log); the second run had none.
+
+**What measuring found and changed:**
+
+- The delete of stale justifications, written with `j.key IN $found`, was planned from every justification for each
+  head: a batch's write took 4.1 s. Read the keys from the head, compare in Python, delete by key: 0.12 s.
+- Memgraph planned a seeded query's `MATCH`es as one pattern and began with every `MemberOf` for each seed (358,801 rows
+  for 300 seeds, 354 ms). `WITH *` between clauses keeps the order chosen: 8 ms.
+- A batch written in one transaction (15 s at its worst) met saves of the same people and groups, made them wait about
+  a second, and was itself run again until the driver gave up, which stopped the worker. Writes of 500 justifications a
+  transaction, and a worker that backs off and halves its batch, ended both.
+- A lease of 120 s left by a process that stopped held a new worker back that long. 30 s, and given up on stopping.
+- `Var[X]` in the unions of every `Where` field: +440 MB at `initialise()` of the demo (1.32 to 1.76 GB). A bare `Var` is
+  validated, `Var[X]` is only in the stubs: 1.32 GB.
 
 ## Decisions (answered 2026-11-02)
 

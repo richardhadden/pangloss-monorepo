@@ -39,6 +39,8 @@ UNIQUE_CONSTRAINTS = [
     ("PGAccessToken", "token_hash"),
     ("PGRevokedSession", "jti"),
     ("PGLock", "key"),
+    # (the work a write leaves for an installed app to do: `pangloss_cypher.pending`)
+    ("PGPending", "key"),
 ]
 
 # (label, properties). Each unique property is indexed, for finding a node; and an id
@@ -57,7 +59,7 @@ INDEXES = [
 # thing every write does, the users and a user's tokens are listed, and the review queue starts from `HeadNode`. Without a
 # label index Memgraph reads every node of the database for each (12 ms for the lock at 600,000 nodes; 0.3 ms with one).
 # (A label+property index does not serve a scan by label alone.)
-LABEL_INDEXES = ["PGMigrationLock", "PGUser", "PGAccessToken", "HeadNode"]
+LABEL_INDEXES = ["PGMigrationLock", "PGUser", "PGAccessToken", "HeadNode", "PGPending"]
 
 # (on the label folded, `label_folded`: the index does not fold accents itself. See `pangloss_models.text`)
 TEXT_INDEX = (TEXT_INDEX_NAME, "PGIndexableNode", "label_folded")

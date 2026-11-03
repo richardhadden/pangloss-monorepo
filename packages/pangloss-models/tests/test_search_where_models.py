@@ -13,7 +13,8 @@ from pangloss_models.model_bases.document import Document
 from pangloss_models.model_bases.embedded import Embedded
 from pangloss_models.model_bases.entity import Entity
 from pangloss_models.model_registry import ModelRegistry
-from pangloss_models.search import OPERATORS, Match, check_match, field_kind
+from pangloss_models.search import OPERATORS, Match, Var, check_match, field_kind
+from pangloss_models.typestubs import stub_annotation
 from pangloss_models.search_where import (
     Choice,
     Compare,
@@ -91,7 +92,15 @@ def test_every_where_has_a_field_of_the_kind_check_match_finds_for_each_field_th
                 assert name not in where.model_fields, (model, name)
                 continue
             kind, reach = found
-            annotation = members(where.model_fields[name].annotation)
+            # (a field also takes a variable of what it holds, for the body of a rule: any `Var` when it is
+            # validated, and a `Var` of what it holds in the stubs)
+            field = where.model_fields[name]
+            annotation = [a for a in members(field.annotation) if a is not Var]
+            variables = [
+                a
+                for a in members(stub_annotation(field))
+                if typing.get_origin(a) is Var
+            ]
             if kind == "relation":
                 assert annotation[0] is Rel
                 targets = {w._model for w in annotation[1:] if w is not Where}
@@ -99,7 +108,13 @@ def test_every_where_has_a_field_of_the_kind_check_match_finds_for_each_field_th
                     model,
                     name,
                 )
+                assert {typing.get_args(v)[0] for v in variables} == set(reach.options)
+            elif kind == "list":
+                # (a variable of a list field is one of its items)
+                (cls,) = annotation
+                assert [typing.get_args(v)[0] for v in variables] == [reach]
             else:
+                assert [typing.get_args(v)[0] for v in variables] == [reach]
                 (cls,) = annotation
                 assert kind in kind_of_operators(cls), (model, name, kind, cls)
                 assert (cls.__pydantic_generic_metadata__ or {}).get("args", ()) in (

@@ -31,7 +31,7 @@ from pangloss_users import current_request_username
 from pangloss_users.models import AccessTokenRecord, UserInDB
 from pydantic import AnyHttpUrl
 
-from pangloss_cypher import review, users
+from pangloss_cypher import pending, review, users
 from pangloss_cypher.build_update_query import build_replace_head_query
 from pangloss_cypher.delete_node import DeletionResult, soft_delete, undelete
 from pangloss_cypher.read_functions import get_document, get_entity
@@ -78,7 +78,10 @@ async def run_write_query(tx: Transaction, query: str, params: dict) -> list:
 async def soft_delete_node(
     tx: Transaction, cls: type[Document | Entity], id: UUID | AnyHttpUrl
 ) -> DeletionResult:
-    return await soft_delete(tx, cls, id)
+    result = await soft_delete(tx, cls, id)
+    if result.deleted and result.id is not None:
+        await pending.mark_written(tx, cls, result.id)
+    return result
 
 
 def announce(
@@ -136,7 +139,9 @@ async def delete_entity(cls: type[Entity], id: UUID | AnyHttpUrl) -> None:
 async def undelete_node(
     tx: Transaction, cls: type[Document | Entity], id: UUID | AnyHttpUrl
 ) -> tuple[UUID, int]:
-    return await undelete(tx, cls, id)
+    node_id, version = await undelete(tx, cls, id)
+    await pending.mark_written(tx, cls, node_id)
+    return node_id, version
 
 
 async def undelete_document(cls: type[Document], id: UUID) -> None:
@@ -174,7 +179,9 @@ async def write_head_node(
     # transaction, so every MATCH of the query finds its node. A guard, if one ever does not)
     if not result:
         raise PanglossWriteError("Nothing was written")
-    return plan.created_entities(existing)
+    created = plan.created_entities(existing)
+    await pending.mark_written(tx, db_instance._owner, db_instance.id, created)
+    return created
 
 
 async def checked_plan(
@@ -310,7 +317,9 @@ async def replace_head_node(
     ):
         raise PanglossWriteError("Nothing was written")
 
-    return existing_head, plan.created_entities(existing)
+    created = plan.created_entities(existing)
+    await pending.mark_written(tx, db_instance._owner, db_instance.id, created)
+    return existing_head, created
 
 
 async def update_head_node(

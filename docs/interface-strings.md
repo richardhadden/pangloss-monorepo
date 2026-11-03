@@ -41,6 +41,9 @@ tree and in reference chips (the typology API sends the default label only), and
 | `logging_in` | Logging in… | `LoginForm` (the button while a try is made) | |
 | `yes` | Yes | `ItemContents` (a true value) | |
 | `no` | No | `ItemContents` (a false value) | |
+| `derived_heading` | Derived | `DerivedSection` (the heading of what the rules derive about an item, `pangloss-derived`) | in `ui.jsonc` (en, de, fr) |
+| `derived_why` | Why ({count}) | `DerivedSection` (the button that shows the justifications of a fact; `count` is how many) | in `ui.jsonc` |
+| `derived_more` | and {count} more | `DerivedSection` (a button under the facts shown of a derived class: reads the next page) | in `ui.jsonc` |
 | `home_heading` | Pangloss Yo! | `pages/Home.tsx` (`<h1>`) | a placeholder from a commit of the owner's; will go |
 | *(the plural)* | {Type}s, {Type}es, {Type}ies | `Console` (`pluralOf`) | **not a string to translate: code.** A stand-in that makes an English plural of the type; it goes when the plural names of models come from `models.jsonc` |
 | *(field names)* | activity type, carried out by... | `ItemContents` (the keys) | **not strings of the interface**: the name of the field in Python with `_` as a space. They should come from the models' translations (`models.jsonc`); incoming relations likewise (`participants reverse`) |
@@ -52,6 +55,7 @@ These are not shown, but are read aloud, or appear when the pointer rests on the
 
 | Slot | English | Where | Notes |
 |------|---------|-------|-------|
+| `derived_qualified` | Only from statements with a context | `DerivedSection` (the tooltip of the context labels of a fact that is `qualifiedOnly`) | in `ui.jsonc` |
 | `nav_main` | Main | `NavBar` (`aria-label`) | the name of the navigation landmark |
 | `nav_expand` | Expand the navigation bar | `NavBar` (the toggle) | |
 | `nav_retract` | Retract the navigation bar | `NavBar` (the toggle) | |

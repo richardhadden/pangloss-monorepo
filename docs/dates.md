@@ -196,6 +196,15 @@ Small and general; none is specific to dates.
 4. Possibly an **option to leave out the reverse field** of an entity or an Embedded relation: not needed if the
    calendar nodes are not entities (the head view lists every incoming relation, unpaged).
 
+## Dates in derived rules
+
+`pangloss_dates.rules` gives the rules of [`pangloss-derived`](derived.md) constraints on two dates' bounds (`Var[Date]`
+stands for the date of a field): `overlaps(d1, d2)`, `before(d1, d2)`, `after`, `during(d1, d2)` and
+`within(d1, d2, days=365)` ("within a year of each other": the gap between the two ranges, none if they overlap). Each
+compares the fuzzy bounds unless `strict=True`, so `overlaps` and `within` are generous (the dates might overlap) and
+`before` and `during` cautious (before even allowing for doubt). The bounds are day numbers, so the two dates may be in
+different calendars.
+
 ## Interactions
 
 - **[Migrations](migrations.md)**: the Embedded types are ordinary models, so changing a field is an ordinary migration.

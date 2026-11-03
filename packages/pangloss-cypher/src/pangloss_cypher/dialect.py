@@ -207,6 +207,13 @@ class Dialect(Protocol):
         variables in it start with `name`)"""
         ...
 
+    def from_wrappers(self, name: str) -> str:
+        """A path between two node patterns: any number of forward edges (none too), each going out of a wrapper (a semantic
+        space, a conjunction, a reified relation). After the first edge of a relation, `(s)-[:field]->(x) {from_wrappers}
+        (v)` is the relation to `v` directly (`x` is `v`) or through wrappers, in one pattern; `v` is the first node that
+        is not a wrapper. (The variables in it start with `name`)"""
+        ...
+
     @property
     def search_compiler(self) -> type:
         """The class that makes a structured search into Cypher: `pangloss_cypher.search_query.Compiler`, or a subclass that

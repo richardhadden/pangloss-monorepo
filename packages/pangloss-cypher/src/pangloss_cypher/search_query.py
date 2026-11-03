@@ -78,6 +78,9 @@ class Compiler:
             )
         if c.kind == "incoming":
             return self.incoming(c, var)
+        if c.kind == "extension":
+            # (a key an optional package added: it compiles its own condition; see `pangloss_models.search.Extension`)
+            return c.value.cypher(self, var)
         if c.kind == "spaces":
             # (the spaces a node is inside are kept in its `meta`)
             return f"all(s IN {self.param(c.value)} WHERE s IN coalesce({dialect().meta_property(var, 'semantic_spaces')}, []))"

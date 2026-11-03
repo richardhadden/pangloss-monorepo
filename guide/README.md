@@ -19,6 +19,7 @@ Tutorials and how-tos. The reference, with the design of each part and what is b
 | [Dates](dates/README.md) | Uncertain dates, ranges, periods and repeated events in the Julian or Gregorian calendar (`pangloss-dates`) |
 | [Calendar](calendar/README.md) | What is dated on a day, in a month, in a year; feasts and Easter (`pangloss-calendar`) |
 | [Typology](typology/README.md) | Vocabularies of types in a hierarchy (`pangloss-typology`) |
+| [Derived relations](derived/README.md) | Rules that derive a network of relations from documents, kept up to date in the background (`pangloss-derived`) |
 | [Zotero](zotero/README.md) | A Zotero library kept in the database as sources and subjects (`pangloss-zotero`) |
 | [The interface](interface/README.md) | The web interface: running it, colours, navigation, your own components, languages |
 

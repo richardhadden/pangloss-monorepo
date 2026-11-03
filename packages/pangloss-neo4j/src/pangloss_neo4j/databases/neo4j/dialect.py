@@ -8,6 +8,7 @@ from uuid import UUID
 import neo4j
 from neo4j.exceptions import ConstraintError
 
+from pangloss_cypher.search_query import wrapper
 from pangloss_cypher.transaction import Transaction
 from pangloss_neo4j.databases.neo4j.properties import (
     ALWAYS_JSON,
@@ -20,7 +21,7 @@ from pangloss_neo4j.databases.neo4j.properties import (
 from pangloss_neo4j.databases.neo4j.queries import QUERIES
 from pangloss_neo4j.databases.neo4j.schema import search_patterns
 from pangloss_neo4j.databases.neo4j.search import Neo4jCompiler, through
-from pangloss_neo4j.databases.neo4j.traversal import below, up
+from pangloss_neo4j.databases.neo4j.traversal import below, hops, up
 
 
 class DecodedResult:
@@ -191,6 +192,10 @@ class Neo4jDialect:
 
     def through_wrappers(self, name: str, *, backwards: bool = False) -> str:
         return f" {through(name, backwards)} "
+
+    def from_wrappers(self, name: str) -> str:
+        edge, start = f"{name}_edge", f"{name}_from"
+        return f" {hops(name, f'NOT coalesce({edge}.reverse, false) AND {wrapper(start)}', minimum=0)} "
 
     search_compiler = Neo4jCompiler
 

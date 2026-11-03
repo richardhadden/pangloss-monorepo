@@ -40,7 +40,8 @@ from fastapi import (
     Response,
     status,
 )
-from fastapi.responses import RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse
+from pangloss_models import hooks
 from pangloss_models.exceptions import PanglossInitialisationError
 from pangloss_models.model_bases.base_models import _ListItems
 from pangloss_models.model_bases.document import Document
@@ -207,6 +208,14 @@ def list_response_model(model: type[Document | Entity]) -> Any:
     return _ListItems[Union[*reference_views]]  # type: ignore[valid-type]
 
 
+def with_extras(found: Any, extras: dict[str, Any], response: Response) -> JSONResponse:
+    """The view, as the response would have been, with what installed apps add to it (`hooks.head_view_extras`:
+    `_derived` of `pangloss-derived`)"""
+    content = TypeAdapter(type(found)).dump_python(found, mode="json", by_alias=True)
+    content.update(extras)
+    return JSONResponse(content, headers=dict(response.headers))
+
+
 def build_router(model: type[Document | Entity]) -> APIRouter:
     is_entity = issubclass(model, Entity)
     name = model.__name__
@@ -332,6 +341,11 @@ def build_router(model: type[Document | Entity]) -> APIRouter:
             raise not_found(model, id)
         if found.type != name:
             response.headers["Content-Location"] = f"/api/{found.type}/{found.id}"
+        extras: dict[str, Any] = {}
+        for extra in hooks.head_view_extras:
+            extras.update(await extra(found._owner, found))
+        if extras:
+            return with_extras(found, extras, response)
         return found
 
     if writable:

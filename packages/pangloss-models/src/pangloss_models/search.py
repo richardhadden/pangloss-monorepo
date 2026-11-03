@@ -7,12 +7,16 @@ operator has to fit the type of its field, and every value is made the type of t
 (`CheckedCondition`) is all a backend needs to build its query; nothing in it is text from the request.
 """
 
+import contextlib
+import contextvars
 import datetime
 import enum
 import types as pytypes
 import typing
+from collections.abc import Callable
 from dataclasses import dataclass
 from decimal import Decimal
+from collections.abc import Generator
 from typing import Any, Literal, cast
 from uuid import UUID
 
@@ -20,11 +24,14 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
+    GetCoreSchemaHandler,
     StrictBool,
     TypeAdapter,
     ValidationError,
     field_validator,
+    model_validator,
 )
+from pydantic_core import core_schema
 
 from pangloss_models.exceptions import PanglossSearchError, PanglossUnknownTypeError
 from pangloss_models.field_definitions import (
@@ -71,6 +78,123 @@ class SearchKey(enum.StrEnum):
     SPACES = "$spaces"
 
 
+class RuleKey(enum.StrEnum):
+    """The keys of a `where` that are only in the body of a rule (`pangloss-derived`), never in a search: a variable
+    (`{"$var": "a"}`), and the node itself as one (`"$is"`). (Apart from `SearchKey`, which the interface's
+    TypeScript has too)"""
+
+    IS = "$is"
+    VAR = "$var"
+
+
+class Var[T]:
+    """A variable of a rule (`pangloss-derived`): a node of the class `model` (an entity, a document, an embedded
+    object), or a value of a literal type (`Var[int]`). Where a search pattern takes a value or an entity, the body of
+    a rule can take a variable, and a variable used twice joins what the two places hold. A search has none.
+
+    `@rule` makes them from the parameters of the rule's function; `Var("a", Person)` makes one by hand. Its JSON is
+    `{"$var": "a"}`."""
+
+    __slots__ = ("_model", "_name")
+
+    def __init__(self, name: str, model: type[T]):
+        self._name = name
+        self._model = model
+
+    # (read only: so that a type checker takes `Var` as covariant, and a `Var[Person]` is a `Var[Agent]`)
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @property
+    def model(self) -> type[T]:
+        return self._model
+
+    def __repr__(self) -> str:
+        return f"Var({self.name!r}, {getattr(self.model, '__name__', self.model)})"
+
+    def to_json(self) -> dict[str, str]:
+        return {RuleKey.VAR.value: self.name}
+
+    # (a comparison of two variables, or of one and a value, is a constraint of the rule: `y1 < y2`. Not `==`: a
+    # variable must stay usable in a set and as the key of a dict)
+    def __lt__(self, other: Any) -> "VarComparison":
+        return VarComparison("lt", self, other)
+
+    def __le__(self, other: Any) -> "VarComparison":
+        return VarComparison("lte", self, other)
+
+    def __gt__(self, other: Any) -> "VarComparison":
+        return VarComparison("gt", self, other)
+
+    def __ge__(self, other: Any) -> "VarComparison":
+        return VarComparison("gte", self, other)
+
+    @classmethod
+    def __get_pydantic_core_schema__(
+        cls, source: Any, handler: GetCoreSchemaHandler
+    ) -> core_schema.CoreSchema:
+        # (the class it is of is checked by `check_rule`, which can say which rule and pattern it is in)
+        return core_schema.is_instance_schema(Var)
+
+
+@dataclass(frozen=True)
+class VarComparison:
+    """`a < b` of two variables (or of one and a value): a constraint of a rule"""
+
+    operator: str
+    left: Var
+    right: Any
+
+
+@dataclass(frozen=True)
+class Checked:
+    """What an extension's key checked to: compiled by its own `cypher(compiler, var)`, given the search compiler
+    (for `param`, `name`, `all_of`) and the variable of the node tested"""
+
+    cypher: Callable[[Any, str], str]
+    description: str = ""
+
+
+@dataclass(frozen=True)
+class Extension:
+    """A key of a `where` that an optional package adds (`pangloss-derived` adds `$derived`: the entity has a derived
+    fact of a class, fitting a filter). `check(model, value, top, path)` gives a `Checked`, or raises
+    `PanglossSearchError`; `kind` says which nodes take it (`entity`, `document`, or both)"""
+
+    key: str
+    check: Callable[[type, Any, bool, str], Checked]
+    kinds: tuple[str, ...] = ("entity", "document")
+
+
+extensions: dict[str, Extension] = {}
+
+
+def register_extension(extension: Extension) -> None:
+    if not extension.key.startswith("$"):
+        raise ValueError(
+            f"The key of an extension begins with '$': not {extension.key!r}"
+        )
+    extensions[extension.key] = extension
+
+
+# The variables of the rule whose body is being checked (`check_rule` of `pangloss-derived`), by name: a pattern may
+# have them only then
+rule_variables: contextvars.ContextVar[dict[str, Var] | None] = contextvars.ContextVar(
+    "rule_variables", default=None
+)
+
+
+@contextlib.contextmanager
+def checking_rule(variables: dict[str, Var]) -> Generator[None]:
+    """Patterns checked inside the block may have these variables"""
+    token = rule_variables.set(variables)
+    try:
+        yield
+    finally:
+        rule_variables.reset(token)
+
+
 def parse_where(raw: Any, depth: int = 0) -> dict[str, Any]:
     """A `where`: a field's key to its `Condition`, and the combinators (`$all` and `$any_of`: lists of
     `where`s; `$not`: a `where`), each made into the same. A `Where` (or the classes of `search_where`, in the
@@ -114,6 +238,12 @@ def parse_where(raw: Any, depth: int = 0) -> dict[str, Any]:
                 v if isinstance(v, Incoming) else Incoming.model_validate(v)
                 for v in items
             ]
+        elif key == RuleKey.IS:
+            parsed[key] = (
+                value
+                if isinstance(value, Condition)
+                else Condition.model_validate(value)
+            )
         elif key == SearchKey.SPACES:
             if (
                 not isinstance(value, list)
@@ -122,6 +252,8 @@ def parse_where(raw: Any, depth: int = 0) -> dict[str, Any]:
             ):
                 raise ValueError("$spaces needs a list of the names of semantic spaces")
             parsed[key] = value
+        elif key in extensions:
+            parsed[key] = value.to_json() if hasattr(value, "to_json") else value
         elif key.startswith("$"):
             raise ValueError(f"'{key}' is not supported")
         elif isinstance(value, Condition):
@@ -155,6 +287,21 @@ class Condition(BaseModel):
     through: list[str] | None = None
     type: str | None = None
     where: dict[str, Any] | None = None
+    # (a variable: only in the body of a rule. `{"$var": "a"}` and `{"is": {"$var": "a"}, "through": [...]}`)
+    var: str | None = Field(default=None, alias="$var")
+
+    @model_validator(mode="before")
+    @classmethod
+    def _variable(cls, raw: Any) -> Any:
+        if isinstance(raw, Var):
+            return {RuleKey.VAR.value: raw.name}
+        if isinstance(raw, dict):
+            given = raw.get("is", raw.get("is_"))
+            if isinstance(given, Var):
+                given = given.to_json()
+            if isinstance(given, dict) and set(given) == {RuleKey.VAR.value}:
+                raw = {k: v for k, v in raw.items() if k not in ("is", "is_")} | given
+        return raw
 
     @field_validator("where", mode="before")
     @classmethod
@@ -167,7 +314,7 @@ class Condition(BaseModel):
         return [
             names.get(name, name)
             for name in self.model_fields_set
-            if name not in ("type", "where", "through")
+            if name not in ("type", "where", "through", "var")
         ]
 
     @property
@@ -264,6 +411,8 @@ class SearchRequest(Match):
 
 
 Kind = Literal[
+    "self",
+    "extension",
     "text",
     "number",
     "decimal",
@@ -345,6 +494,8 @@ OPERATORS: dict[str, set[str]] = {
     "spaces": set(),
     "somewhere": set(),
     "incoming": set(),
+    "self": set(),
+    "extension": set(),
 }
 
 
@@ -547,14 +698,27 @@ def check_where(
                 checked.extend(check_where(model, each, budget, path, top))
             continue
         if name == SearchKey.ANY_OF:
-            checked.append(
-                AnyOf(
-                    [check_where(model, each, budget, path, top) for each in condition]
+            with no_variables(f"{path}{SearchKey.ANY_OF}"):
+                checked.append(
+                    AnyOf(
+                        [
+                            check_where(model, each, budget, path, top)
+                            for each in condition
+                        ]
+                    )
                 )
-            )
             continue
         if name == SearchKey.NOT:
-            checked.append(Not(check_where(model, condition, budget, path, top)))
+            with no_variables(f"{path}{SearchKey.NOT}"):
+                checked.append(Not(check_where(model, condition, budget, path, top)))
+            continue
+        if name == RuleKey.IS:
+            checked.append(check_is(model, condition, path))
+            continue
+        if name in extensions:
+            checked.append(
+                check_extension(model, extensions[name], condition, top, path)
+            )
             continue
         if name == SearchKey.SPACES:
             checked.append(check_spaces(model, condition, top, path))
@@ -572,7 +736,12 @@ def check_where(
             continue
         field = f"{path}{name}"
         given = condition.operators()
-        if not given and not condition.is_pattern and condition.through is None:
+        if (
+            not given
+            and not condition.is_pattern
+            and condition.through is None
+            and condition.var is None
+        ):
             raise PanglossSearchError(f"{field}: no condition is given")
         if (
             name == "label"
@@ -597,9 +766,119 @@ def check_where(
             raise PanglossSearchError(
                 f"{field}: 'type', 'where' and 'through' are for relations only"
             )
+        if condition.var is not None:
+            checked.append(check_value_variable(name, field, kind, base, condition))
         for operator in given:
             checked.append(check_operator(name, field, kind, base, condition, operator))
     return checked
+
+
+# (inside `$any_of` or `$not` of a rule: where it is, for the error)
+variables_refused: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "variables_refused", default=None
+)
+
+
+@contextlib.contextmanager
+def no_variables(where: str) -> Generator[None]:
+    """Inside `$any_of` and `$not` there are no variables: a variable bound in one branch of an "or" only is not bound,
+    and one in a "not" binds nothing (a rule with them would be two rules, or one with negation)"""
+    token = variables_refused.set(variables_refused.get() or where)
+    try:
+        yield
+    finally:
+        variables_refused.reset(token)
+
+
+def variable_named(field: str, name: str) -> Var:
+    """The variable of the rule called `name`"""
+    variables = rule_variables.get()
+    if variables is None:
+        raise PanglossSearchError(
+            f"{field}: a variable ({name!r}) is only in a rule, not in a search"
+        )
+    refused = variables_refused.get()
+    if refused is not None:
+        raise PanglossSearchError(
+            f"{field}: a variable ({name!r}) cannot be inside '{refused}' (it would be bound in one branch only)"
+        )
+    variable = variables.get(name)
+    if variable is None:
+        raise PanglossSearchError(
+            f"{field}: {name!r} is not a variable of this rule"
+            + (f" (it has {', '.join(sorted(variables))})" if variables else "")
+        )
+    return variable
+
+
+def class_name(model: Any) -> str:
+    return getattr(model, "__name__", str(model))
+
+
+def check_variable_class(field: str, variable: Var, options: list[type]) -> None:
+    """Whether the variable can stand for what the field holds: its class is one of them, or a subclass or a parent of
+    one (a `Var[Person]` where the field is an `Agent`; a `Var[Agent]` where it is a `Person`, which binds only the
+    people). A class that can never be what the field holds is an error"""
+    model = variable.model
+    if not isinstance(model, type) or not any(
+        issubclass(model, o) or issubclass(o, model) for o in options
+    ):
+        allowed = ", ".join(sorted(o.__name__ for o in options))
+        raise PanglossSearchError(
+            f"{field}: a Var[{class_name(model)}] ({variable.name!r}) cannot be what this field holds ({allowed})"
+        )
+
+
+def check_value_variable(
+    name: str, field: str, kind: Kind, base: Any, condition: Condition
+) -> CheckedCondition:
+    """A variable of a field of one value: it is the value (bound here, or compared, if it is bound already)"""
+    assert condition.var is not None
+    variable = variable_named(field, condition.var)
+    model = variable.model
+    numbers = (int, float)
+    fits = model is base or (
+        isinstance(model, type)
+        and isinstance(base, type)
+        and (issubclass(model, base) or (model in numbers and base in numbers))
+    )
+    if not fits:
+        raise PanglossSearchError(
+            f"{field}: a Var[{class_name(model)}] ({variable.name!r}) cannot be a value of this field "
+            f"({class_name(base)})"
+        )
+    # (of a list field: the variable is one of its items)
+    return CheckedCondition(name, kind, "var", variable)
+
+
+def check_extension(
+    model: type, extension: Extension, value: Any, top: bool, path: str
+) -> CheckedCondition:
+    field = f"{path}{extension.key}"
+    kind = (
+        "entity"
+        if issubclass(model, Entity)
+        else "document"
+        if issubclass(model, Document)
+        else "embedded"
+    )
+    if kind not in extension.kinds:
+        raise PanglossSearchError(
+            f"{field}: only for {' and '.join(extension.kinds)} patterns, not one of {model.__name__}"
+        )
+    return CheckedCondition(
+        extension.key, "extension", "match", extension.check(model, value, top, path)
+    )
+
+
+def check_is(model: type, condition: Condition, path: str) -> CheckedCondition:
+    """`$is`: the node is the variable's (two patterns of the same node, or the node used in a constraint)"""
+    field = f"{path}{RuleKey.IS}"
+    if condition.var is None or condition.model_fields_set - {"var"}:
+        raise PanglossSearchError(f"{field}: needs a variable, and nothing else")
+    variable = variable_named(field, condition.var)
+    check_variable_class(field, variable, [model])
+    return CheckedCondition(RuleKey.IS, "self", "var", variable)
 
 
 def check_operator(
@@ -641,6 +920,21 @@ def check_relation(
     wrapped = True if reach is None else reach.wrapped
     through = check_through(field, condition.through, wrapped)
     checked: list[CheckedCondition] = []
+    if condition.var is not None:
+        if reach is None:
+            raise PanglossSearchError(
+                f"{field}: a variable is given to a relation field, not to '$any' or '$mentions'"
+            )
+        if condition.is_pattern:
+            raise PanglossSearchError(
+                f"{field}: a variable, or a pattern for what the relation points at, not both (give the pattern "
+                "an `is_` of the variable)"
+            )
+        variable = variable_named(field, condition.var)
+        check_variable_class(field, variable, reach.options)
+        checked.append(
+            CheckedCondition(name, "relation", "var", variable, wrapped, through)
+        )
     if condition.is_pattern:
         pattern = check_pattern(
             field, None if reach is None else reach.options, condition, budget

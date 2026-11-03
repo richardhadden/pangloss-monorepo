@@ -24,6 +24,7 @@ routes, commands or interface pages. Python 3.15 is required throughout.
 | `pangloss-dates` | (import its types) | Uncertain dates, ranges, periods, recurrence; Julian and Gregorian | [Dates](dates/README.md) |
 | `pangloss-calendar` | `pangloss_calendar` | What is on a day, a month, a year; feasts and Easter | [Calendar](calendar/README.md) |
 | `pangloss-typology` | `pangloss_typology` | Vocabularies of types in a hierarchy | [Typology](typology/README.md) |
+| `pangloss-derived` | `pangloss_derived` | Rules that derive relations (person-to-person networks) from documents, kept up to date in the background | [Derived relations](derived/README.md) |
 | `pangloss-zotero` | `pangloss_zotero` | A Zotero library kept as sources and subjects | [Zotero](zotero/README.md) |
 | `pangloss-interface` | `pangloss_interface` | The web interface | [The interface](interface/README.md) |
 

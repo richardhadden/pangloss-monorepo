@@ -102,3 +102,15 @@ def label(name: str) -> str:
 def field_edge(field: str) -> str:
     """The type of the edge of a field, for a pattern (`-[:{field_edge(field)}]->`), if `field` can be the name of one"""
     return _checked(field, "the name of a field")
+
+
+def derived_visible(fact: str) -> str:
+    """A condition: the reader sees the derived fact `fact` (`pangloss-derived`): one of its justifications rests only on
+    head nodes the reader sees (`visible`), and none of the entities it relates is deleted. So a deleted or unpublished
+    document hides what it alone justifies at once, before the derivations have been worked out again. The query must
+    give `$see_unpublished`"""
+    return (
+        f"any(j IN [({fact})<-[:justifies]-(j:PGJustification) | j] "
+        f"WHERE all(h IN [(j)-[:evidence]->(h) | h] WHERE {visible('h')})) "
+        f"AND all(e IN [({fact})-[]->(e:Entity) | e] WHERE {not_deleted('e')})"
+    )

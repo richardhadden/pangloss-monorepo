@@ -1,6 +1,7 @@
 import {
   ApiError,
   Customised,
+  DerivedSection,
   getModel,
   useComponent,
   useModels,
@@ -8,7 +9,11 @@ import {
   useTranslations,
   wrappingSpaces,
 } from "@pangloss/interface-core";
-import type { ContextLabel, ItemMeta } from "@pangloss/interface-core";
+import type {
+  ContextLabel,
+  DerivedSectionProps,
+  ItemMeta,
+} from "@pangloss/interface-core";
 import type { Accessor } from "solid-js";
 import type { RouteProps } from "@solidjs/router";
 import {
@@ -155,6 +160,11 @@ export default function EntityPage(props: RouteProps<"/:type/:id">) {
                   {item().label ?? item().id}
                 </h1>
                 <ItemContents item={item()} />
+                <DerivedSection
+                  derived={item()._derived as DerivedSectionProps["derived"]}
+                  itemId={String(item().id)}
+                  kind={model()?.kind === "Document" ? "document" : "entity"}
+                />
               </>
             }
           />

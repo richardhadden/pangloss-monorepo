@@ -306,6 +306,40 @@ def operations_source(model: type, qualified_name: str, mode: Operations) -> str
     return "\n".join(lines)
 
 
+def stub_annotation(field: typing.Any) -> typing.Any:
+    """The annotation of a field as a type checker is to see it: a `StubAnnotation` of its metadata, if it has one (a
+    `Where` field takes any `Var` when validated, and a `Var` of what it holds in the stubs)"""
+    from pangloss_models.search_where import StubAnnotation
+
+    for item in field.metadata:
+        if isinstance(item, StubAnnotation):
+            return item.annotation
+    return field.annotation
+
+
+def keyword_init(cls: type) -> bool:
+    """Whether the stub of a class has its `__init__` written out: a search pattern (`Person.Where`), and a class that
+    asks for it (`_stub_init`, as the head of a rule of `pangloss-derived` does). A type checker is lenient with the
+    arguments of a pydantic class whose fields can be of a class that is not a model (a `Var`): it takes any value. With
+    an `__init__`, it checks each argument as it checks a call of a function"""
+    from pangloss_models.search_where import Where
+
+    return issubclass(cls, Where) or bool(getattr(cls, "_stub_init", False))
+
+
+def init_source(renderer: TypeRenderer, cls: type[BaseModel]) -> str:
+    """`def __init__(self, *, a: ..., b: ... = ...) -> None: ...`, of the fields of the class by their Python names"""
+    parameters = [
+        f"{field_name}: {renderer.render(stub_annotation(field))}"
+        + ("" if field.is_required() else " = ...")
+        for field_name, field in cls.model_fields.items()
+    ]
+    # (those without a default first, as Python wants)
+    parameters.sort(key=lambda p: p.endswith(" = ..."))
+    joined = ", ".join(["self", "*", *parameters]) if parameters else "self"
+    return f"def __init__({joined}) -> None: ...  # type: ignore"
+
+
 def stub_nested_class(
     renderer: TypeRenderer,
     name: str,
@@ -319,7 +353,7 @@ def stub_nested_class(
     bases = ", ".join(renderer.base_names(cls))
     lines = [f"class {name}({bases}):  # type: ignore"]
     for field_name, field in cls.model_fields.items():
-        annotation = renderer.render(field.annotation)
+        annotation = renderer.render(stub_annotation(field))
         default = "" if field.is_required() else " = ..."
 
         # A field the class has from a base class is left out, unless it is changed
@@ -333,7 +367,7 @@ def stub_nested_class(
         same = [
             f
             for f in inherited
-            if renderer.render(f.annotation) == annotation
+            if renderer.render(stub_annotation(f)) == annotation
             and f.is_required() == field.is_required()
         ]
         if same:
@@ -345,6 +379,8 @@ def stub_nested_class(
             f"    {line}"
             for line in save_methods(model_name, name, operations, is_document)
         ]
+    if keyword_init(cls):
+        lines.append(f"    {init_source(renderer, cls)}")
     if len(lines) == 1:
         lines.append("    ...")
     return "\n".join(lines)
@@ -576,12 +612,19 @@ def is_in_environment(root: Path, path: Path) -> bool:
     )
 
 
+# Functions an optional package adds, each giving classes of its own that have classes made for them at runtime, as
+# models do, and so are stubbed as models are (`pangloss-derived`: its `Derived` classes, with `Derive`, `View` and
+# `Where`). Not cleared by `ModelRegistry._reset`.
+stub_classes: list[typing.Callable[[], Iterable[type]]] = []
+
+
 def modules_with_models(root: Path) -> dict[str, list[type]]:
-    """The modules under `root` that declare registered models, with the models of each.
+    """The modules under `root` that declare registered models (or classes of `stub_classes`), with the models of each.
     (Models made inside a function cannot be named, and are left out.)"""
     root = root.resolve()
     modules: dict[str, list[type]] = {}
-    for model in ModelRegistry._models:
+    extra = [cls for provider in stub_classes for cls in provider()]
+    for model in [*ModelRegistry._models, *extra]:
         if "<locals>" in model.__qualname__:
             continue
         module = sys.modules.get(model.__module__)

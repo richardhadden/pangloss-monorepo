@@ -141,6 +141,8 @@ class ModelRegistry:
         cls._model_set = set()
         cls._model_dict = {}
         cls._action_classes = []
+        for reset in cls.on_reset:
+            reset()
 
         # (the models made for bindings and generics refer to the classes that were registered)
         from pangloss_models.initialise_models.builder import clear_caches
@@ -157,6 +159,15 @@ class ModelRegistry:
     """Functions an optional package adds, called at the start of `finalise` (the settings are loaded and the models
     are declared, but nothing is initialised): to complete the models it made (`pangloss-typology` adds the label
     fields of the languages). Not cleared by `_reset`."""
+
+    on_reset: ClassVar[list[Callable[[], None]]] = []
+    """Functions an optional package adds, called by `_reset` (the tests' fresh start), to forget what it keeps of the
+    models (`pangloss-derived`: the classes and rules declared). Not cleared by `_reset`."""
+
+    after_finalise: ClassVar[list[Callable[[], None]]] = []
+    """Functions an optional package adds, called at the end of `finalise`, when every model and its classes are made
+    (`pangloss-derived` loads the `derived.py` of the apps, and checks the rules against the models). Not cleared by
+    `_reset`."""
 
     # ----------------------------
     # Registration
@@ -346,6 +357,9 @@ class ModelRegistry:
         if bind_database:
             cls._bind_database_functions()
             logger.debug("Database functions bound to the models")
+
+        for after in cls.after_finalise:
+            after()
 
     # ----------------------------
     # Model initialisation

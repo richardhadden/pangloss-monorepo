@@ -103,6 +103,13 @@ Optional: uncertain dates, periods and recurrence in the Julian and Gregorian ca
 
 Optional: a vocabulary of types in a hierarchy. See [Typology](typology-implementation.md).
 
+## pangloss-derived ✅
+
+Optional: rules in `<app>/derived.py` that derive relations between entities from what documents say (person-to-person
+networks from factoids that speak of one person each), each fact with its justifications ("why"), kept up to date by a
+worker in the background from a queue of pending work that writes leave in their own transaction (`pangloss_cypher.pending`,
+generic). See [Derived relations](derived.md) and [the plan](derived-implementation.md).
+
 ## pangloss-testing
 
 Fixtures for the tests that need a live database, on Memgraph or Neo4j (`PANGLOSS_TEST_BACKEND`), and the **conformance suite** (`pangloss_testing/conformance/`): the tests every backend passes, written once and run on each by `run_tests.sh`. See [Backend-neutral add-ons](backend-neutral-addons.md) and [the plan, phase 9](database-abstraction-plan.md).

@@ -122,6 +122,10 @@ class MemgraphDialect:
         walk = f"[* 0.. ({edge}, {to} | {wrapper(to)})]"
         return f"<-{walk}-" if backwards else f"-{walk}->"
 
+    def from_wrappers(self, name: str) -> str:
+        edge, to = f"{name}_edge", f"{name}_to"
+        return f"-[* 0.. ({edge}, {to} | NOT coalesce({edge}.reverse, false) AND {wrapper(f'startNode({edge})')})]->"
+
     search_compiler = Compiler
 
     @functools.cached_property

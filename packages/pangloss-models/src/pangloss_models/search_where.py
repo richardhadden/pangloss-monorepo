@@ -17,6 +17,7 @@ name of the parameter.
 """
 
 import datetime
+from dataclasses import dataclass
 from decimal import Decimal
 import operator
 from collections.abc import Iterable
@@ -40,7 +41,9 @@ from pangloss_models.model_bases.model_tools import forget_schema, set_field
 from pangloss_models.search import (
     OrderBy,
     Reach,
+    RuleKey,
     SearchKey,
+    Var,
     field_kind,
     orderable_fields,
 )
@@ -89,7 +92,7 @@ class Written(BaseModel):
 
 
 def plain(value: Any) -> Any:
-    if isinstance(value, Written):
+    if isinstance(value, (Written, Var)):
         return value.to_json()
     if isinstance(value, list):
         return [plain(item) for item in value]
@@ -151,7 +154,7 @@ class Rel(Written):
     whether it has any (`exists`), the wrappers it has to pass through (`through`: the classes, or their names), and
     a pattern for what it points at (`match`; a `Where` can also be given for the field itself, without `Rel`)"""
 
-    is_: Identified | None = aliased("is_", "is")
+    is_: Identified | Var | None = aliased("is_", "is")
     is_any: list[Identified] | None = None
     exists: StrictBool | None = None
     through: list[Named] | None = None
@@ -185,6 +188,10 @@ class Where(Written):
     as what a relation points at (or one of `$somewhere`, `$incoming`) it is also its `type` (`to_pattern()`)."""
 
     _model: ClassVar[type | None] = None
+
+    # (the node itself, as a variable: only in the body of a rule. Each model's `Where` has it typed as a
+    # variable of the model)
+    is_: Var | None = aliased("is_", RuleKey.IS)
 
     # (combinators: patterns for the same node)
     all_: "list[Where] | None" = aliased("all_", SearchKey.ALL)
@@ -317,6 +324,21 @@ class EmbeddedWhere(Where):
 WHERE_KINDS = ("Document", "Entity", "Embedded")
 
 
+@dataclass(frozen=True)
+class WhereExtension:
+    """A field that an optional package adds to the `Where` of every model of some kinds (`pangloss-derived` adds
+    `derived_`, `$derived`, to the `Where` of entities): the models' `Where` classes are made at `initialise`, so it is
+    given before, and put on each as they are made"""
+
+    name: str
+    alias: str
+    annotation: Any
+    kinds: tuple[str, ...] = ("Entity",)
+
+
+where_extensions: list[WhereExtension] = []
+
+
 def where_base(model: type) -> type[Where]:
     from pangloss_models.model_bases.document import Document
     from pangloss_models.model_bases.entity import Entity
@@ -343,7 +365,8 @@ def can_have_where(model: Any) -> bool:
 
 
 def operators_for(kind: str, base: Any, made: dict[type, type[Where]]) -> Any:
-    """The annotation of a field of a `Where` (without `None`)"""
+    """The annotation of a field of a `Where` (without `None`). A field of one value, and a relation, also take a
+    variable (`Var`) of what they hold, for the body of a rule (see `with_variables`)"""
     if kind == "text":
         return Text
     if kind in ("number", "decimal", "temporal"):
@@ -356,6 +379,40 @@ def operators_for(kind: str, base: Any, made: dict[type, type[Where]]) -> Any:
     reach: Reach = base
     targets = [made[option] for option in reach.options if option in made]
     return reduce(operator.or_, [Rel, *(targets or [Where])])
+
+
+@dataclass(frozen=True)
+class StubAnnotation:
+    """What a type checker is to see of a field (`pangloss make-stubs`), where it is finer than what is validated"""
+
+    annotation: Any
+
+
+def variables_for(kind: str, base: Any) -> list[Any]:
+    """The variables a field takes, as the stubs say them: `Var[str]` for a text, `Var[Person]` for a relation to a
+    person, and for a list a variable of one of its items. (When the fields are validated, any `Var` is taken:
+    `check_rule` checks its class, and says where. A `Var[Person]` in each place it can go, for every field of every
+    model, made pydantic's schemas of the demo's models a third larger)"""
+    if kind == "relation":
+        return [var_of(option) for option in base.options]
+    return [var_of(base)]
+
+
+def with_variables(kind: str, base: Any, made: dict[type, type[Where]]) -> FieldInfo:
+    """The field of a `Where`: its operators, or a variable"""
+    annotation = operators_for(kind, base, made)
+    variables = variables_for(kind, base)
+    if variables:
+        field = FieldInfo(annotation=annotation | Var | None, default=None)
+        field.metadata.append(
+            StubAnnotation(reduce(operator.or_, [annotation, *variables, type(None)]))
+        )
+        return field
+    return FieldInfo(annotation=annotation | None, default=None)
+
+
+def var_of(model: Any) -> Any:
+    return Var[model]  # (made at runtime: the class is one of the models)
 
 
 def initialise_where_models(models: Iterable[Any]) -> None:
@@ -378,7 +435,7 @@ def initialise_where_models(models: Iterable[Any]) -> None:
 
     for model, where in made.items():
         # (the fields of the base classes, and the methods of a pattern)
-        reserved = set(where.model_fields) | {"to_json", "to_pattern"}
+        reserved = set(where.model_fields) | {"to_json", "to_pattern", "is_"}
         for name, definition in model._meta.fields.items():
             found = field_kind(definition)
             # (`label` is searched as text whether it is declared or not: the base class has it)
@@ -390,13 +447,18 @@ def initialise_where_models(models: Iterable[Any]) -> None:
                     f"({where.__name__}): call it something else"
                 )
             kind, base = found
-            set_field(
-                where,
-                name,
-                FieldInfo(
-                    annotation=operators_for(kind, base, made) | None, default=None
-                ),
-            )
+            set_field(where, name, with_variables(kind, base, made))
+        for extension in where_extensions:
+            if model.__metatype__ in extension.kinds:
+                set_field(
+                    where,
+                    extension.name,
+                    combinator(extension.name, extension.alias, extension.annotation),
+                )
+        # (the node itself, as a variable of a rule)
+        is_ = combinator("is_", RuleKey.IS, Var)
+        is_.metadata.append(StubAnnotation(var_of(model) | None))
+        set_field(where, "is_", is_)
         # (the combinators are patterns of the same class)
         set_field(where, "all_", combinator("all_", SearchKey.ALL, list_of(where)))
         set_field(

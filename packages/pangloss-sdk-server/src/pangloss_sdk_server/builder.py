@@ -239,6 +239,27 @@ def content_fingerprint(files: dict[str, bytes], extra: dict[str, Any]) -> str:
     return digest.hexdigest()
 
 
+# The modules of an app that are shipped (with what they import): its models, and what `pangloss-derived` derives from
+# them (`derived.py`: the classes of the derived facts are needed to read them)
+SHIPPED_MODULES = ("models", "derived")
+
+
+def shipped_modules(apps: list[str]) -> list[str]:
+    import importlib.util
+
+    found = []
+    for app in apps:
+        for name in SHIPPED_MODULES:
+            module = f"{app}.{name}"
+            try:
+                spec = importlib.util.find_spec(module)
+            except ImportError, ValueError:
+                spec = None
+            if spec is not None or name == "models":
+                found.append(module)
+    return found
+
+
 def build_package(
     root: Path,
     settings: Any,
@@ -255,7 +276,7 @@ def build_package(
         raise SdkBuildError(
             "There is nothing to ship: no installed app of the project has a models module"
         )
-    closure = closure_of(root, [f"{app}.models" for app in apps])
+    closure = closure_of(root, shipped_modules(apps))
     if closure.problems:
         raise SdkBuildError(
             "The models cannot be shipped as they are", closure.problems

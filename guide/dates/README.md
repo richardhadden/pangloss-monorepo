@@ -101,3 +101,23 @@ found = await on_day(Factoid, "when", sunday, Calendar.JULIAN, family="Julian")
 | `DATES_EARLIEST_YEAR` | `1` | A start that is not known is taken to be no earlier than the start of this year. Set it near your sources (`1400`) so an unknown start does not reach back to the first century |
 
 Changing a padding does not change what is stored: a date is worked out again when it is next saved.
+
+## Dates in derived rules
+
+With [`pangloss-derived`](../derived/README.md), a rule can compare the dates of two statements: who held office at the
+same time, who came before whom, what happened within a year of what:
+
+```python
+from pangloss_dates.rules import overlaps
+
+@rule
+def contemporaries(a: Var[Person], b: Var[Person], d1: Var[Date], d2: Var[Date]):
+    return Contemporaries.Derive(first=a, second=b).when(
+        HoldsOffice.Where(person=a, when=d1),
+        HoldsOffice.Where(person=b, when=d2),
+        overlaps(d1, d2),
+    )
+```
+
+`overlaps`, `before`, `after`, `during` and `within(d1, d2, days=...)` compare the dates' bounds allowing for doubt
+(`strict=True` compares them as stated).

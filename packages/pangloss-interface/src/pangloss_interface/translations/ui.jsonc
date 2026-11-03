@@ -111,6 +111,12 @@
 
   // Values and links in the results
   "yes": { "en": "Yes", "de": "Ja", "fr": "Oui" },
+
+  // What the rules derive about an item (pangloss-derived), under its contents
+  "derived_heading": { "en": "Derived", "de": "Abgeleitet", "fr": "Déduit" },
+  "derived_why": { "en": "Why ({count})", "de": "Warum ({count})", "fr": "Pourquoi ({count})" },
+  "derived_qualified": { "en": "Only from statements with a context", "de": "Nur aus Aussagen mit einem Kontext", "fr": "Seulement d’énoncés avec un contexte" },
+  "derived_more": { "en": "and {count} more", "de": "und {count} weitere", "fr": "et {count} de plus" },
   "no": { "en": "No", "de": "Nein", "fr": "Non" },
   "go_to_head": { "en": "Go to the {type}", "de": "Zum Objekt: {type}", "fr": "Aller à l’objet : {type}" },
   "type_marker": { "en": "type", "de": "Typ", "fr": "type" },
