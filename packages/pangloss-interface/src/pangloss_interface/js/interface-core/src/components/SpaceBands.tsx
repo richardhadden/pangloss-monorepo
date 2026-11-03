@@ -43,13 +43,13 @@ export function SpaceBands(
 
 // (on white, so that the colours of the spaces round it do not show through: only at its rounded corners; nor
 // their text colour, which would tint the label of a chip in them)
-const opaqueClass = "flex min-w-0 items-stretch rounded-sm bg-white text-black";
+const opaqueClass = "flex min-w-0 items-stretch rounded-xs bg-white text-black";
 
 // (hairlines top, bottom and left, drawn over a box's own edges but under what is in it, so that they
 // take no room: what is inside is on the same edges, and its own hairlines on the same lines, and it
 // hides these but at its rounded corners, where they go on behind it with no gap)
 const tabLinesClass =
-  "after:pointer-events-none after:absolute after:inset-0 after:-z-10 after:rounded-sm after:border-y-[0.5px] after:border-l-[0.5px] after:border-slate-400/70";
+  "after:pointer-events-none after:absolute after:inset-0 after:-z-10 after:rounded-xs after:border-y-[0.5px] after:border-l-[0.5px] after:border-slate-400/70";
 
 /**
  * The first of `spaces` as a box of its colour, rounded as a chip is, with no borders or padding of
@@ -67,10 +67,10 @@ function SpaceTabs(props: ParentProps<{ spaces: string[]; depth: number; fill?: 
       <div class={[opaqueClass, { "flex-1": props.fill }]}>
         <div
           class={[
-            "relative isolate flex min-w-0 flex-1 items-stretch rounded-sm",
+            "relative isolate flex min-w-0 flex-1 items-stretch rounded-xs",
             tabLinesClass,
             // (quieter than the chip: a veil over the tint, under what is in it)
-            "before:pointer-events-none before:absolute before:inset-0 before:-z-10 before:rounded-sm before:bg-white/30",
+            "before:pointer-events-none before:absolute before:inset-0 before:-z-10 before:rounded-xs before:bg-white/30",
             spaceTint(getModel(definitions, props.spaces[0] ?? "")?.interfaceMeta?.colour, props.depth),
           ]}
         >
@@ -94,7 +94,7 @@ function StackedBands(props: ParentProps<{ spaces: string[]; depth: number }>) {
     <Show when={props.spaces.length > 0} fallback={props.children}>
       <div
         class={[
-          "flex w-full min-w-0 flex-col rounded-sm border-[0.5px] border-slate-400/70",
+          "flex w-full min-w-0 flex-col rounded-xs",
           spaceTint(getModel(definitions, props.spaces[0] ?? "")?.interfaceMeta?.colour, props.depth),
         ]}
       >

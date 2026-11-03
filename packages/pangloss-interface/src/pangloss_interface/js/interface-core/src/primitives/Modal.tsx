@@ -61,7 +61,7 @@ export function Modal(props: ModalProps) {
           aria-modal="true"
           aria-labelledby={titleId}
           class={[
-            "flex max-h-full w-full flex-col overflow-hidden rounded-sm border-[0.5px] border-slate-400/70 bg-slate-100",
+            "flex max-h-full w-full flex-col overflow-hidden rounded-xs border-[0.5px] border-slate-400/70 bg-slate-100",
             { "max-w-sm": props.size !== "lg", "max-w-4xl": props.size === "lg" },
           ]}
         >

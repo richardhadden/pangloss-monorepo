@@ -376,7 +376,7 @@ function ObjectValue(props: {
                 <button
                   type="button"
                   class={[
-                    "flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-sm border-[0.5px] border-slate-400/70 text-xs select-none hover:brightness-90",
+                    "flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-xs border-[0.5px] border-slate-400/70 text-xs select-none hover:brightness-90",
                     tint() || plainTint,
                   ]}
                   aria-label={t("collapse_show_whole", "Show the whole {name}", {
@@ -453,7 +453,7 @@ function ObjectValue(props: {
           <Match when={isSpace()}>
             <div
               class={[
-                "flex w-full min-w-0 flex-col rounded-sm border-[0.5px] border-slate-400/70",
+                "flex w-full min-w-0 flex-col rounded-xs",
                 spaceTint(model()?.interfaceMeta?.colour, props.depth),
               ]}
             >

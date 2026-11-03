@@ -213,7 +213,7 @@ test("a semantic space is a band round what is in it, in the colour of its model
     type: "Factoid",
     statements: [{ id: "n1", type: "Negative", contents: [activity] }],
   });
-  const band = host.querySelector(".bg-rose-400\\/25")!;
+  const band = host.querySelector(".bg-rose-400\\/15")!;
   expect(band.textContent).toContain("Negative");
   expect(band.textContent).toContain("A crowning");
   // (the name is above what is in the band, not beside it)

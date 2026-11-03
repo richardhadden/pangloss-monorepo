@@ -56,7 +56,7 @@ function HitRow(props: { hit: Hit; calendar: CalendarName }) {
       </span>
       <span class="flex min-w-0 items-center gap-3">
         <Show when={props.hit.mark === "possible"}>
-          <span class="shrink-0 rounded-sm bg-amber-400/25 px-1.5 py-0.5 text-[0.65rem] font-semibold text-amber-950 uppercase">
+          <span class="shrink-0 rounded-xs bg-amber-400/25 px-1.5 py-0.5 text-[0.65rem] font-semibold text-amber-950 uppercase">
             {t("calendar_possible", "possible")}
           </span>
           <Show when={range()}>
@@ -140,7 +140,7 @@ export function DayView(props: DayViewProps) {
                     <span class="flex min-w-0 items-center gap-3">
                       <span class="text-xs text-slate-500 italic">{how(on, props.calendar, language(), t)}</span>
                       <Show when={on.characterisation.repeated}>
-                        <span class="shrink-0 rounded-sm bg-slate-400/25 px-1.5 py-0.5 text-[0.65rem] font-semibold text-slate-700 uppercase">
+                        <span class="shrink-0 rounded-xs bg-slate-400/25 px-1.5 py-0.5 text-[0.65rem] font-semibold text-slate-700 uppercase">
                           {t("calendar_repeats", "repeats")}
                         </span>
                       </Show>

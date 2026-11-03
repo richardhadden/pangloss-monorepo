@@ -63,11 +63,11 @@ const compactClass = `${inputClass.replace("w-full ", "")} w-auto shrink-0`;
 
 // (the button that adds another condition on the same field: quiet, under what is there)
 const addConditionClass =
-  "inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-sm border-[0.5px] border-dashed border-slate-400/80 px-2 py-0.5 text-xs font-semibold text-slate-500 uppercase select-none hover:border-slate-600 hover:bg-slate-100/60 hover:text-slate-800";
+  "inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-xs border-[0.5px] border-dashed border-slate-400/80 px-2 py-0.5 text-xs font-semibold text-slate-500 uppercase select-none hover:border-slate-600 hover:bg-slate-100/60 hover:text-slate-800";
 
 // (the button that takes a condition out: as tall as the boxes of the row, however tall the row grows)
 const removeConditionClass =
-  "inline-flex shrink-0 cursor-pointer items-center self-start rounded-sm border-[0.5px] border-slate-400/70 bg-slate-100/60 px-2 py-1.5 text-xs leading-5 text-red-800 select-none hover:bg-red-400/30";
+  "inline-flex shrink-0 cursor-pointer items-center self-start rounded-xs border-[0.5px] border-slate-400/70 bg-slate-100/60 px-2 py-1.5 text-xs leading-5 text-red-800 select-none hover:bg-red-400/30";
 
 interface SearchFormContext {
   form: ItemFormState;
@@ -162,7 +162,7 @@ export function SearchPanel(props: {
           }}
         >
           <div class={["min-h-0", { "overflow-hidden": !settled() || !props.open }]}>
-            <div class="rounded-b-sm border-[0.5px] border-t-0 border-slate-400/70 bg-slate-200/40">
+            <div class="rounded-b-xs border-[0.5px] border-t-0 border-slate-400/70 bg-slate-200/40">
               <div class="px-6 pt-6 pb-5">
                 <NodeFields type={props.type} path={() => []} root />
               </div>
@@ -260,7 +260,7 @@ function NotToggle(props: { name: string; pressed: boolean; onToggle: () => void
       aria-label={t("search_not_named", "Not: {name}", { name: props.name })}
       title={t("search_not_title", "Find what does not match this")}
       class={[
-        "shrink-0 cursor-pointer self-start rounded-sm border-[0.5px] px-2 py-1.5 text-xs leading-5 font-semibold uppercase select-none",
+        "shrink-0 cursor-pointer self-start rounded-xs border-[0.5px] px-2 py-1.5 text-xs leading-5 font-semibold uppercase select-none",
         { "border-red-800 bg-red-800 text-white hover:bg-red-700": props.pressed },
         { "border-slate-400/70 bg-white/80 text-slate-500 hover:bg-slate-200/70": !props.pressed },
       ]}
@@ -1138,7 +1138,7 @@ function AnyOfRow(props: { type: string; path: Accessor<Path>; root?: boolean })
           <div
             role="group"
             aria-label={t("search_alternatives_n", "Alternatives {n}", { n: g() + 1 })}
-            class="flex w-full min-w-0 flex-col items-start gap-3 rounded-sm border-[0.5px] border-dashed border-slate-400/80 p-3"
+            class="flex w-full min-w-0 flex-col items-start gap-3 rounded-xs border-[0.5px] border-dashed border-slate-400/80 p-3"
           >
             <For each={group}>
               {(_, a) => (

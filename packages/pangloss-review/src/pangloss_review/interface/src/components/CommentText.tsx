@@ -19,7 +19,7 @@ export function PartChip(props: { id: string; parts?: Part[]; label?: string | n
       when={!gone()}
       fallback={
         <span
-          class="mx-0.5 inline-flex items-center gap-1 rounded-sm border-[0.5px] border-slate-400/70 bg-white/80 px-1 py-px align-middle text-xs leading-4 text-slate-500"
+          class="mx-0.5 inline-flex items-center gap-1 rounded-xs border-[0.5px] border-slate-400/70 bg-white/80 px-1 py-px align-middle text-xs leading-4 text-slate-500"
           data-testid="review-ref"
           data-gone="true"
         >
@@ -30,7 +30,7 @@ export function PartChip(props: { id: string; parts?: Part[]; label?: string | n
     >
       <button
         type="button"
-        class="mx-0.5 inline-flex cursor-pointer items-stretch overflow-hidden rounded-sm border-[0.5px] border-slate-400/70 bg-white align-middle text-xs leading-4 text-slate-800 hover:brightness-95"
+        class="mx-0.5 inline-flex cursor-pointer items-stretch overflow-hidden rounded-xs border-[0.5px] border-slate-400/70 bg-white align-middle text-xs leading-4 text-slate-800 hover:brightness-95"
         title={t("review_part_show", "Show it on the page")}
         data-testid="review-ref"
         data-ref={props.id}

@@ -41,11 +41,11 @@ function DefaultResultButton(props: ResultButtonProps) {
     // spaces are in each other: the button's colour is the whole row's, under the rounded corners of what is next)
     <div
       class={[
-        "flex items-stretch rounded-sm",
+        "flex items-stretch rounded-xs",
         // (its hairlines too, top, bottom and left, as the tab of a space has them: drawn over its edges, under
         // what is next, which hides them but at its rounded corners)
         {
-          "relative isolate bg-slate-100/70 after:pointer-events-none after:absolute after:inset-0 after:-z-10 after:rounded-sm after:border-y-[0.5px] after:border-l-[0.5px] after:border-slate-400/70":
+          "relative isolate bg-slate-100/70 after:pointer-events-none after:absolute after:inset-0 after:-z-10 after:rounded-xs after:border-y-[0.5px] after:border-l-[0.5px] after:border-slate-400/70":
             !!props.head,
         },
       ]}
@@ -60,7 +60,7 @@ function DefaultResultButton(props: ResultButtonProps) {
             title={t("go_to_head", "Go to the {type}", {
               type: modelName(head().type),
             })}
-            class="flex w-10 shrink-0 items-center justify-center rounded-l-sm text-slate-500 select-none hover:bg-slate-200/70 active:bg-slate-300/70"
+            class="flex w-10 shrink-0 items-center justify-center rounded-l-xs text-slate-500 select-none hover:bg-slate-200/70 active:bg-slate-300/70"
           >
             {/* (layers: the context the item is in) */}
             <svg
@@ -80,19 +80,19 @@ function DefaultResultButton(props: ResultButtonProps) {
           </a>
         )}
       </Show>
-      <div class="min-w-0 flex-1 rounded-sm bg-white">
+      <div class="min-w-0 flex-1 rounded-xs bg-white">
         <SpaceBands spaces={props.spaces ?? []} depth={0} fill>
           <a
             href={props.href}
             class={[
               // (framed on its right only: its type has a frame in its own colour, as a chip's has, and the label top and bottom)
-              "flex w-full items-stretch overflow-hidden rounded-sm border-r-[0.5px] border-slate-400/70 bg-slate-100/70 hover:bg-slate-200/70 active:bg-slate-300/70",
+              "flex w-full items-stretch overflow-hidden rounded-xs border-r-[0.5px] border-slate-400/70 bg-slate-100/70 hover:bg-slate-200/70 active:bg-slate-300/70",
             ]}
           >
             <span
               class={[
                 "flex shrink-0 items-center border-[0.5px] px-4 py-3 text-xs font-semibold uppercase select-none",
-                "rounded-l-sm",
+                "rounded-l-xs",
                 kindTint(model()?.kind, model()?.interfaceMeta?.colour),
                 kindRule(model()?.kind, model()?.interfaceMeta?.colour),
               ]}

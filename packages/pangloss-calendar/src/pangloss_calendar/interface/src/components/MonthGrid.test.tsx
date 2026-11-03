@@ -98,17 +98,17 @@ test("a date over several days is a bar across them in each week, open where it 
   const siege = of("The siege");
   expect(siege.length).toBe(2);
   expect(siege[0]!.style.gridColumn).toBe("2 / span 6");
-  expect(siege[0]!.className).toContain("rounded-l-sm");
-  expect(siege[0]!.className).not.toContain("rounded-r-sm");
+  expect(siege[0]!.className).toContain("rounded-l-xs");
+  expect(siege[0]!.className).not.toContain("rounded-r-xs");
   expect(siege[1]!.style.gridColumn).toBe("1 / span 2");
-  expect(siege[1]!.className).toContain("rounded-r-sm");
-  expect(siege[1]!.className).not.toContain("rounded-l-sm");
+  expect(siege[1]!.className).toContain("rounded-r-xs");
+  expect(siege[1]!.className).not.toContain("rounded-l-xs");
   // the war is in every week, open at both ends, and in the first lane (it starts first); the siege under it
   const war = of("The war");
   expect(war.length).toBe(6);
   expect(war.every((bar) => bar.dataset.lane === "0")).toBe(true);
-  expect(war[0]!.className).not.toContain("rounded-l-sm");
-  expect(war[5]!.className).not.toContain("rounded-r-sm");
+  expect(war[0]!.className).not.toContain("rounded-l-xs");
+  expect(war[5]!.className).not.toContain("rounded-r-xs");
   expect(siege[0]!.dataset.lane).toBe("1");
   // the fair overlaps the siege: a third lane
   expect(of("The fair")[0]!.dataset.lane).toBe("2");

@@ -148,7 +148,7 @@ export function Breadcrumbs(props: { calendar: CalendarName; year: number; month
 /** The buttons that step back and forward (a month, a day): links, or disabled while where they go is not known */
 export function Arrows(props: { previous?: string; next?: string; previousLabel: string; nextLabel: string }) {
   const classes = (href: string | undefined) => [
-    "flex size-8 shrink-0 items-center justify-center rounded-sm border-[0.5px] border-slate-400/70 bg-white select-none",
+    "flex size-8 shrink-0 items-center justify-center rounded-xs border-[0.5px] border-slate-400/70 bg-white select-none",
     { "cursor-pointer": href !== undefined, "hover:bg-slate-100": href !== undefined, "opacity-40": href === undefined },
   ];
   return (

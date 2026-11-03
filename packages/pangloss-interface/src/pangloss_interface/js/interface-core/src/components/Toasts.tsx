@@ -32,7 +32,7 @@ export function Toasts() {
             aria-label={t("toast_dismiss", "Dismiss: {message}", { message: toast.message })}
             onClick={() => toasts?.dismiss(toast.key)}
             class={[
-              "pointer-events-auto transition-[opacity,translate] duration-300 starting:translate-y-2 starting:opacity-0 flex max-w-full cursor-pointer items-center gap-2 rounded-sm border-[0.5px] px-3 py-2 text-left text-sm shadow-md backdrop-blur-md",
+              "pointer-events-auto transition-[opacity,translate] duration-300 starting:translate-y-2 starting:opacity-0 flex max-w-full cursor-pointer items-center gap-2 rounded-xs border-[0.5px] px-3 py-2 text-left text-sm shadow-md backdrop-blur-md",
               {
                 "border-emerald-700/50": toast.tone === "success",
                 "bg-emerald-100/80": toast.tone === "success",

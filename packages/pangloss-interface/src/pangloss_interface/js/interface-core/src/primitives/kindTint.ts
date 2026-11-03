@@ -51,21 +51,46 @@ export function kindTint(kind: string | undefined, colour?: Colour | null): stri
   return "";
 }
 
+// (the same colours, lighter, for a semantic space: a box with no line round it)
+const SPACE_TINTS: Record<Colour, string> = {
+  slate: "bg-slate-400/15 text-slate-950",
+  gray: "bg-gray-400/15 text-gray-950",
+  zinc: "bg-zinc-400/15 text-zinc-950",
+  neutral: "bg-neutral-400/15 text-neutral-950",
+  stone: "bg-stone-400/15 text-stone-950",
+  mauve: "bg-mauve-400/15 text-mauve-950",
+  olive: "bg-olive-400/15 text-olive-950",
+  mist: "bg-mist-400/15 text-mist-950",
+  taupe: "bg-taupe-400/15 text-taupe-950",
+  red: "bg-red-400/15 text-red-950",
+  orange: "bg-orange-400/15 text-orange-950",
+  amber: "bg-amber-400/15 text-amber-950",
+  yellow: "bg-yellow-400/15 text-yellow-950",
+  lime: "bg-lime-400/15 text-lime-950",
+  green: "bg-green-400/15 text-green-950",
+  emerald: "bg-emerald-400/15 text-emerald-950",
+  teal: "bg-teal-400/15 text-teal-950",
+  cyan: "bg-cyan-400/15 text-cyan-950",
+  sky: "bg-sky-400/15 text-sky-950",
+  blue: "bg-blue-400/15 text-blue-950",
+  indigo: "bg-indigo-400/15 text-indigo-950",
+  violet: "bg-violet-400/15 text-violet-950",
+  purple: "bg-purple-400/15 text-purple-950",
+  fuchsia: "bg-fuchsia-400/15 text-fuchsia-950",
+  pink: "bg-pink-400/15 text-pink-950",
+  rose: "bg-rose-400/15 text-rose-950",
+};
+
 // (for a semantic space that has no colour of its own, by how deep it is)
-const DEPTH_TINTS = [
-  "bg-amber-400/25 text-amber-950",
-  "bg-violet-400/25 text-violet-950",
-  "bg-rose-400/25 text-rose-950",
-  "bg-teal-400/25 text-teal-950",
-];
+const DEPTH_TINTS = [SPACE_TINTS.amber, SPACE_TINTS.violet, SPACE_TINTS.rose, SPACE_TINTS.teal];
 
 /**
  * The tint of a semantic space round an item: the colour its model chose, else one by how
- * deep it is (`depth` 0 is the outermost). Wherever the spaces of an item are shown, they
- * use this, so they look alike.
+ * deep it is (`depth` 0 is the outermost), lighter than the tint of a type. Wherever the spaces
+ * of an item are shown, they use this, so they look alike.
  */
 export function spaceTint(colour: Colour | null | undefined, depth: number): string {
-  return colourTint(colour) || DEPTH_TINTS[depth % DEPTH_TINTS.length];
+  return colour ? SPACE_TINTS[colour] : DEPTH_TINTS[depth % DEPTH_TINTS.length]!;
 }
 
 // (the same colours as a rule: the line down the side of what is nested in a form)

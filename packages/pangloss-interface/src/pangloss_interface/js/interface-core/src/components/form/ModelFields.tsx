@@ -525,11 +525,11 @@ function EmbeddedEditor(props: { field: EmbeddedField; path: Accessor<Path>; lab
       >
         {/* (the type chosen, which its menu changes, with the remove button joined on; the corners are
             the parts', not clipped by the frame, which would hide the menu that opens below) */}
-        <div class="inline-flex self-start rounded-sm border-[0.5px] border-slate-400/70 bg-slate-100/60">
+        <div class="inline-flex self-start rounded-xs border-[0.5px] border-slate-400/70 bg-slate-100/60">
           <TypeMenu
             groups={groups()}
             label={modelName(String(value()!.type))}
-            buttonClass="flex cursor-pointer items-center gap-1 rounded-sm px-2 py-1 text-xs font-semibold uppercase select-none hover:bg-slate-300/50 focus:bg-slate-300/50 focus:outline-none"
+            buttonClass="flex cursor-pointer items-center gap-1 rounded-xs px-2 py-1 text-xs font-semibold uppercase select-none hover:bg-slate-300/50 focus:bg-slate-300/50 focus:outline-none"
             onChoose={choose}
           />
           <Show when={clip}>
@@ -543,7 +543,7 @@ function EmbeddedEditor(props: { field: EmbeddedField; path: Accessor<Path>; lab
           <Show when={!props.field.required}>
             <button
               type="button"
-              class={[joinedRemoveClass, "rounded-r-sm"]}
+              class={[joinedRemoveClass, "rounded-r-xs"]}
               aria-label={t("remove_item", "Remove {name}", { name: props.label })}
               title={t("remove_item", "Remove {name}", { name: props.label })}
               onClick={() => form.remove(props.path())}
@@ -836,7 +836,7 @@ function RelationItem(props: {
         <div
           data-tint
           class={[
-            "flex w-full min-w-0 flex-col rounded-sm border-[0.5px] border-slate-400/70",
+            "flex w-full min-w-0 flex-col rounded-xs",
             spaceTint(model()?.interfaceMeta?.colour, Math.floor(props.path().length / 2)),
           ]}
         >
@@ -936,7 +936,7 @@ function EntityCreateDialog(props: {
         when={type()}
         fallback={
           <div class="flex flex-col gap-6 p-6">
-            <div class="overflow-hidden rounded-sm border-[0.5px] border-dashed border-slate-400/80 bg-white/60">
+            <div class="overflow-hidden rounded-xs border-[0.5px] border-dashed border-slate-400/80 bg-white/60">
               <TypeGrid groups={props.groups} onChoose={(choice) => setType(choice.type)} autofocus />
             </div>
             <div class="flex justify-end gap-2">

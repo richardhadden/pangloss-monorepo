@@ -104,7 +104,7 @@ export function ClipLabel(props: { value: FormData; class?: string }) {
   const type = () => String(props.value.type ?? "");
   const model = () => getModel(definitions, type());
   return (
-    <span class={["inline-flex min-w-0 items-stretch overflow-hidden rounded-sm", props.class]}>
+    <span class={["inline-flex min-w-0 items-stretch overflow-hidden rounded-xs", props.class]}>
       <span
         class={[
           "flex shrink-0 items-center px-1.5 py-0.5 text-[0.65rem] font-semibold uppercase select-none",
@@ -146,14 +146,14 @@ function PasteSlot(props: {
       <div
         role="group"
         aria-label={t("paste_here", "Paste here")}
-        class="flex w-full flex-wrap items-center gap-2 rounded-sm border-[0.5px] border-dashed border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-400 uppercase select-none"
+        class="flex w-full flex-wrap items-center gap-2 rounded-xs border-[0.5px] border-dashed border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-400 uppercase select-none"
       >
         <span>{t("paste_here", "Paste here")}</span>
         <For each={fitting()}>
           {(entry) => (
             <button
               type="button"
-              class="flex max-w-full min-w-0 cursor-pointer items-center gap-1 rounded-sm border-[0.5px] border-slate-300 opacity-60 hover:border-slate-500 hover:opacity-100 focus:border-slate-500 focus:opacity-100 focus:outline-none"
+              class="flex max-w-full min-w-0 cursor-pointer items-center gap-1 rounded-xs border-[0.5px] border-slate-300 opacity-60 hover:border-slate-500 hover:opacity-100 focus:border-slate-500 focus:opacity-100 focus:outline-none"
               title={t("paste_item", "Paste {name}", {
                 name: typeof entry.value.label === "string" ? String(entry.value.label) : String(entry.value.type),
               })}

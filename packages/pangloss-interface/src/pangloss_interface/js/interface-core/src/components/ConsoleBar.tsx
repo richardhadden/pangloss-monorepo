@@ -18,7 +18,7 @@ export function ConsoleBar() {
       aria-label={t("console", "Console")}
       aria-hidden={active() ? undefined : "true"}
       class={[
-        "fixed top-0 z-30 flex h-12 items-center overflow-hidden rounded-b-sm border-[0.5px] border-t-0 border-slate-400/70 bg-slate-200/60 text-xs font-semibold text-slate-700 uppercase backdrop-blur-md transition-[opacity,translate] duration-300",
+        "fixed top-0 z-30 flex h-12 items-center overflow-hidden rounded-b-xs border-[0.5px] border-t-0 border-slate-400/70 bg-slate-200/60 text-xs font-semibold text-slate-700 uppercase backdrop-blur-md transition-[opacity,translate] duration-300",
         {
           "right-8 left-80": navPinned(),
           "right-20 left-32": !navPinned(),

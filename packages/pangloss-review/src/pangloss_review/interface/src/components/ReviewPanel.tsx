@@ -82,8 +82,8 @@ function CommentBubble(props: {
         class={[
           "rounded-lg px-3 py-2 text-sm whitespace-pre-wrap break-words",
           {
-            "rounded-br-sm bg-sky-600 text-white": props.mine,
-            "rounded-bl-sm border-[0.5px] border-slate-400/70 bg-white text-slate-800": !props.mine,
+            "rounded-br-xs bg-sky-600 text-white": props.mine,
+            "rounded-bl-xs border-[0.5px] border-slate-400/70 bg-white text-slate-800": !props.mine,
             "opacity-50": props.comment.resolved || props.comment.pending,
           },
         ]}
@@ -158,7 +158,7 @@ export function ReviewPanel(props: ReviewPanelProps) {
         data-testid="review-panel"
         data-open={props.open ? "true" : "false"}
         class={[
-          "fixed top-14 right-0 bottom-0 z-20 flex w-96 max-w-full flex-col rounded-tl-sm border-[0.5px] border-r-0 border-slate-400/70 bg-slate-100/95 text-slate-800 shadow-lg backdrop-blur-md transition-transform duration-200",
+          "fixed top-14 right-0 bottom-0 z-20 flex w-96 max-w-full flex-col rounded-tl-xs border-[0.5px] border-r-0 border-slate-400/70 bg-slate-100/95 text-slate-800 shadow-lg backdrop-blur-md transition-transform duration-200",
           { "translate-x-0": props.open, "translate-x-full": !props.open },
         ]}
       >
@@ -169,7 +169,7 @@ export function ReviewPanel(props: ReviewPanelProps) {
           </span>
           <button
             type="button"
-            class="flex size-8 cursor-pointer items-center justify-center rounded-sm hover:bg-slate-400/40"
+            class="flex size-8 cursor-pointer items-center justify-center rounded-xs hover:bg-slate-400/40"
             aria-label={t("review_close", "Close the review")}
             title={t("review_close", "Close the review")}
             onClick={() => props.onClose()}
@@ -190,7 +190,7 @@ export function ReviewPanel(props: ReviewPanelProps) {
           <div
             role="group"
             aria-label={t("review_status", "Status")}
-            class="grid grid-cols-3 overflow-hidden rounded-sm border-[0.5px] border-slate-400/70 bg-white text-xs font-semibold uppercase"
+            class="grid grid-cols-3 overflow-hidden rounded-xs border-[0.5px] border-slate-400/70 bg-white text-xs font-semibold uppercase"
           >
             <For each={STATUSES}>
               {(status) => (

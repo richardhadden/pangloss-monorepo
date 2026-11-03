@@ -57,7 +57,7 @@ export function YearsTable(props: { report: YearsReport; current?: number }) {
                     {(name, index) => (
                       <a
                         href={monthHref(props.report.calendar, year.year, index() + 1)}
-                        class="rounded-sm px-1 text-xs hover:bg-slate-200"
+                        class="rounded-xs px-1 text-xs hover:bg-slate-200"
                         aria-label={t("calendar_month_year", "{month} {year}", {
                           month: monthNames(language())[index()] ?? name,
                           year: year.year,

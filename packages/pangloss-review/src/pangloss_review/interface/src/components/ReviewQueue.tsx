@@ -75,7 +75,7 @@ function QueueTable(props: { status: ReviewStatus; type: string; page: number; o
                       <StatusFlag status={item.status} />
                       <span
                         class={[
-                          "shrink-0 rounded-sm px-1.5 py-0.5 text-[0.65rem] font-semibold uppercase",
+                          "shrink-0 rounded-xs px-1.5 py-0.5 text-[0.65rem] font-semibold uppercase",
                           kindTint("Document", getModel(definitions, item.type)?.interfaceMeta?.colour),
                         ]}
                       >
@@ -106,7 +106,7 @@ function QueueTable(props: { status: ReviewStatus; type: string; page: number; o
           >
             <button
               type="button"
-              class="cursor-pointer rounded-sm px-3 py-1.5 hover:bg-slate-200 disabled:cursor-default disabled:opacity-40"
+              class="cursor-pointer rounded-xs px-3 py-1.5 hover:bg-slate-200 disabled:cursor-default disabled:opacity-40"
               disabled={queue().previousPage === null}
               onClick={() => props.onPage(props.page - 1)}
             >
@@ -115,7 +115,7 @@ function QueueTable(props: { status: ReviewStatus; type: string; page: number; o
             <span>{t("review_queue_page", "Page {page} of {pages}", { page: String(props.page), pages: String(pages()) })}</span>
             <button
               type="button"
-              class="cursor-pointer rounded-sm px-3 py-1.5 hover:bg-slate-200 disabled:cursor-default disabled:opacity-40"
+              class="cursor-pointer rounded-xs px-3 py-1.5 hover:bg-slate-200 disabled:cursor-default disabled:opacity-40"
               disabled={queue().nextPage === null}
               onClick={() => props.onPage(props.page + 1)}
             >
@@ -160,7 +160,7 @@ export default function ReviewQueue() {
           <div
             role="tablist"
             aria-label={t("review_status", "Status")}
-            class="grid grid-cols-3 overflow-hidden rounded-sm border-[0.5px] border-slate-400/70 bg-white text-xs font-semibold uppercase"
+            class="grid grid-cols-3 overflow-hidden rounded-xs border-[0.5px] border-slate-400/70 bg-white text-xs font-semibold uppercase"
           >
             <For each={STATUSES}>
               {(each) => (
@@ -182,7 +182,7 @@ export default function ReviewQueue() {
           <label class="flex items-center gap-2 text-xs font-semibold text-slate-600 uppercase">
             {t("review_queue_type", "Type")}
             <select
-              class="rounded-sm border-[0.5px] border-slate-400/70 bg-white px-2 py-1.5 text-sm font-normal normal-case"
+              class="rounded-xs border-[0.5px] border-slate-400/70 bg-white px-2 py-1.5 text-sm font-normal normal-case"
               value={type()}
               onChange={(event) => setSearch({ type: event.currentTarget.value || undefined, page: undefined })}
             >

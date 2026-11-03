@@ -50,7 +50,7 @@ export default function TypeItem(props: ItemPageProps) {
         <Loading fallback={<p>{t("loading", "Loading…")}</p>}>
           <Show when={refused()}>
             {(reason) => (
-              <p role="alert" class="rounded-sm border-[0.5px] border-red-400 bg-red-50 px-3 py-2 text-sm text-red-800">
+              <p role="alert" class="rounded-xs border-[0.5px] border-red-400 bg-red-50 px-3 py-2 text-sm text-red-800">
                 {reason()}
               </p>
             )}
@@ -137,7 +137,7 @@ export default function TypeItem(props: ItemPageProps) {
               <ul class="flex flex-col gap-1">
                 <For each={view().subtypes}>
                   {(subtype) => (
-                    <li class="flex items-center gap-3 rounded-sm border-[0.5px] border-slate-400/70 bg-slate-100/70 px-3 py-2 text-sm">
+                    <li class="flex items-center gap-3 rounded-xs border-[0.5px] border-slate-400/70 bg-slate-100/70 px-3 py-2 text-sm">
                       <a href={`/${props.type}/${subtype.id}`} class="min-w-0 grow truncate hover:underline">
                         {subtype.label}
                       </a>
@@ -178,7 +178,7 @@ export default function TypeItem(props: ItemPageProps) {
               <ul class="flex flex-col gap-1">
                 <For each={view().entities.items}>
                   {(entity) => (
-                    <li class="flex items-center gap-3 rounded-sm border-[0.5px] border-slate-400/70 bg-slate-100/70 px-3 py-2 text-sm">
+                    <li class="flex items-center gap-3 rounded-xs border-[0.5px] border-slate-400/70 bg-slate-100/70 px-3 py-2 text-sm">
                       <span class="text-xs font-semibold uppercase">{modelName(entity.type)}</span>
                       <a href={`/${entity.type}/${entity.id}`} class="min-w-0 truncate hover:underline">
                         {entity.label}
@@ -229,7 +229,7 @@ function LabelsForm(props: {
     >
       <label class="flex flex-col gap-1">
         {t("typology_default_label", "default")}
-        <input name="label" required value={props.view.label} class="rounded-sm border-[0.5px] border-slate-400/70 px-2 py-1" />
+        <input name="label" required value={props.view.label} class="rounded-xs border-[0.5px] border-slate-400/70 px-2 py-1" />
       </label>
       <For each={props.languages}>
         {(code) => (
@@ -239,14 +239,14 @@ function LabelsForm(props: {
               name={`label_${code}`}
               value={props.view.labels[code] ?? ""}
               placeholder={t("typology_not_translated", "(not translated)")}
-              class="rounded-sm border-[0.5px] border-slate-400/70 px-2 py-1"
+              class="rounded-xs border-[0.5px] border-slate-400/70 px-2 py-1"
             />
           </label>
         )}
       </For>
       <label class="flex flex-col gap-1">
         {t("typology_description", "description")}
-        <textarea name="description" class="rounded-sm border-[0.5px] border-slate-400/70 px-2 py-1">
+        <textarea name="description" class="rounded-xs border-[0.5px] border-slate-400/70 px-2 py-1">
           {props.view.description ?? ""}
         </textarea>
       </label>

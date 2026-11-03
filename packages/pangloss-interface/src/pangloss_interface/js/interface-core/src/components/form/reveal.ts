@@ -18,7 +18,7 @@ export function revealAdded(find: () => Element | null | undefined, focus = true
     const out = `0 0 0 3px ${shade(0)}, inset 0 0 0 100vmax ${shade(0)}`;
     // (the shadow follows the corners: what has square ones has them rounded while it flashes)
     const radius = getComputedStyle(added).borderRadius;
-    const borderRadius = radius === "" || /^0(px)?$/.test(radius) ? "6px" : radius;
+    const borderRadius = radius === "" || /^0(px)?$/.test(radius) ? "2px" : radius;
     // (not where there is no animation, as in the tests)
     added.animate?.(
       [

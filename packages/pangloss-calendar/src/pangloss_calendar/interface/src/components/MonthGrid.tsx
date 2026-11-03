@@ -26,7 +26,7 @@ function HitChip(props: { hit: Hit }) {
       href={itemHref(props.hit.ref.type, props.hit.ref.id)}
       title={sayRef(props.hit.ref, fieldName)}
       data-mark={props.hit.mark}
-      class={["block min-w-0 truncate rounded-sm px-1 text-[0.7rem] leading-5", tint(props.hit.ref.type)]}
+      class={["block min-w-0 truncate rounded-xs px-1 text-[0.7rem] leading-5", tint(props.hit.ref.type)]}
     >
       <span class="font-semibold uppercase opacity-70">{fieldName(props.hit.ref.type, props.hit.ref.field)}</span>
       <span class="opacity-50"> · </span>
@@ -107,9 +107,9 @@ function SpanBar(props: { bar: Bar<BarItem>; calendar: CalendarName }) {
         props.bar.item.between ? "" : tint(ref().type),
         {
           "ml-0.5": props.bar.startsHere,
-          "rounded-l-sm": props.bar.startsHere,
+          "rounded-l-xs": props.bar.startsHere,
           "mr-0.5": props.bar.endsHere,
-          "rounded-r-sm": props.bar.endsHere,
+          "rounded-r-xs": props.bar.endsHere,
         },
       ]}
     >
@@ -168,7 +168,7 @@ function WeekRow(props: {
                       aria-label={t("calendar_add_on", "Add to {date}", { date: sayDate(name(jdn!), language(), t) })}
                       title={t("calendar_add_on", "Add to {date}", { date: sayDate(name(jdn!), language(), t) })}
                       onClick={() => add()(entry(jdn!)!.day)}
-                      class="inline-flex size-5 cursor-pointer items-center justify-center rounded-sm text-slate-400 select-none hover:bg-slate-200 hover:text-slate-800"
+                      class="inline-flex size-5 cursor-pointer items-center justify-center rounded-xs text-slate-400 select-none hover:bg-slate-200 hover:text-slate-800"
                     >
                       {/* (drawn, not the character: a + of the font sits on its baseline, off the middle of the box) */}
                       <svg viewBox="0 0 12 12" class="size-3 fill-none stroke-current stroke-[1.5]" stroke-linecap="round" aria-hidden="true">
@@ -220,7 +220,7 @@ export function MonthGrid(props: { report: MonthReport; onAdd?: (day: DayOut) =>
     ...props.report.between.map((span) => ranged(span, true)),
   ];
   return (
-    <div class="overflow-hidden rounded-sm border border-slate-300 bg-white" data-testid="calendar-month">
+    <div class="overflow-hidden rounded-xs border border-slate-300 bg-white" data-testid="calendar-month">
       <div class="grid grid-cols-7 bg-slate-100/80 text-xs font-semibold text-slate-500 uppercase">
         <For each={weekHeadings(language())}>
           {(day) => <div class="border-l border-slate-300 px-2 py-1.5 first:border-l-0">{day}</div>}
