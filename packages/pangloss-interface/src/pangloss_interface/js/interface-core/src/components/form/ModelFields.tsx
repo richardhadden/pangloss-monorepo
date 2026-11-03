@@ -609,6 +609,11 @@ function RelationEditor(props: {
     return isObject(at) ? [at] : [];
   };
   const where = () => (props.field.many ? [...props.path(), items().length] : props.path());
+  // (the last item is a block, not a chip: what adds is as far below it as the items are from each other)
+  const endsInBlock = () => {
+    const last = items().at(-1);
+    return isObject(last) && getModel(definitions, String(last.type ?? ""))?.kind !== "Entity";
+  };
   // (a list as long as it may be, `MaxLen`, has no way to add more)
   const canAdd = () =>
     props.field.many ? items().length < (lengthBound(props.field.validators, "max") ?? Infinity) : items().length === 0;
@@ -637,7 +642,7 @@ function RelationEditor(props: {
     />
   );
   return (
-    <div class="flex w-full min-w-0 flex-col gap-4">
+    <div class={["flex w-full min-w-0 flex-col", endsInBlock() ? "gap-6" : "gap-4"]}>
       <Show
         when={props.field.many}
         fallback={

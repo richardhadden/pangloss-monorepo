@@ -1,4 +1,4 @@
-import { allowOnly, inputClass, ModelFields, useItemForm, useTranslations } from "@pangloss/interface-core";
+import { allowOnly, fieldRuleClass, inputClass, ModelFields, useItemForm, useTranslations } from "@pangloss/interface-core";
 import type { EditCardProps } from "@pangloss/interface-core";
 import { Match, Show, Switch } from "solid-js";
 import { formatDate } from "../format";
@@ -29,8 +29,8 @@ const SORT_DEFAULT = "midpoint";
  * only what a person says of a date, never the bounds and sort days the server works out. An exact
  * date is its year, month and day on one line; a range, its earliest and latest; an EDTF date, the
  * text. A recurrence is said as a person would (`RecurrenceParts`: every year on 21 March, from... until...). A
- * period is its fields, with its start and end each a date again (and so this editor again). Then the
- * calendar, what to sort by and what the source said, and the date as it reads. What it sorts by
+ * period is its fields, with its start and end each a date again (and so this editor again). Under it,
+ * the date as it reads; then the calendar, what the source said and what to sort by. What it sorts by
  * when it does not say (the midpoint, or the field's `SortDefault`) is shown as chosen. The start and
  * end of a period have no Sort by: the period's says how it sorts.
  */
@@ -56,90 +56,95 @@ export default function DateEditor(props: EditCardProps) {
   };
   return (
     <div class="flex min-w-0 flex-col gap-5">
-      <Switch
-        fallback={
-          <ModelFields
-            model={props.model}
-            path={() => props.path}
-            env={{}}
-            skip={[...WORKED_OUT, ...COMMON]}
-          />
-        }
-      >
-        <Match when={props.type === "ExactDate"}>
-          <ExactParts path={props.path} label={props.label} />
-        </Match>
-        <Match when={props.type === "DateRange"}>
-          <div class="grid grid-cols-[10rem_minmax(0,1fr)] items-center gap-x-6 gap-y-3">
-            <span class="text-xs font-semibold text-slate-500 uppercase">
-              {t("date_earliest", "Earliest")}
-            </span>
-            <ExactParts
-              path={[...props.path, "earliest"]}
-              label={`${props.label} ${t("date_earliest", "Earliest")}`}
+      {/* (the date, then how it reads, under it: the rest are rows, each with a rule above it) */}
+      <div class="flex min-w-0 flex-col gap-3">
+        <Switch
+          fallback={
+            <ModelFields
+              model={props.model}
+              path={() => props.path}
+              env={{}}
+              skip={[...WORKED_OUT, ...COMMON]}
             />
-            <span class="text-xs font-semibold text-slate-500 uppercase">
-              {t("date_latest", "Latest")}
-            </span>
-            <ExactParts
-              path={[...props.path, "latest"]}
-              label={`${props.label} ${t("date_latest", "Latest")}`}
-            />
-          </div>
-        </Match>
-        <Match when={props.type === "Recurrence"}>
-          <RecurrenceParts path={props.path} label={props.label} />
-        </Match>
-        <Match when={props.type === "EDTFDate"}>
-          <div class="flex flex-col gap-1">
-            <input
-              type="text"
-              class={[inputClass, "max-w-sm font-mono"]}
-              aria-label={`${props.label} EDTF`}
-              placeholder="1500-03~"
-              value={
-                typeof props.value.edtf === "string" ? props.value.edtf : ""
-              }
-              onBeforeInput={allowOnly(EDTF_CHARACTERS)}
-              onInput={(event) => {
-                // (an unspecified digit is a capital X in EDTF: a small one is made one, where it is)
-                const box = event.currentTarget;
-                if (box.value.includes("x")) {
-                  const at = box.selectionStart;
-                  box.value = box.value.replaceAll("x", "X");
-                  box.setSelectionRange(at, at);
+          }
+        >
+          <Match when={props.type === "ExactDate"}>
+            <ExactParts path={props.path} label={props.label} />
+          </Match>
+          <Match when={props.type === "DateRange"}>
+            <div class="grid grid-cols-[10rem_minmax(0,1fr)] items-center gap-x-6 gap-y-3">
+              <span class="text-xs font-semibold text-slate-500 uppercase">
+                {t("date_earliest", "Earliest")}
+              </span>
+              <ExactParts
+                path={[...props.path, "earliest"]}
+                label={`${props.label} ${t("date_earliest", "Earliest")}`}
+              />
+              <span class="text-xs font-semibold text-slate-500 uppercase">
+                {t("date_latest", "Latest")}
+              </span>
+              <ExactParts
+                path={[...props.path, "latest"]}
+                label={`${props.label} ${t("date_latest", "Latest")}`}
+              />
+            </div>
+          </Match>
+          <Match when={props.type === "Recurrence"}>
+            <RecurrenceParts path={props.path} label={props.label} />
+          </Match>
+          <Match when={props.type === "EDTFDate"}>
+            <div class="flex flex-col gap-1">
+              <input
+                type="text"
+                class={[inputClass, "max-w-sm font-mono"]}
+                aria-label={`${props.label} EDTF`}
+                placeholder="1500-03~"
+                value={
+                  typeof props.value.edtf === "string" ? props.value.edtf : ""
                 }
-                form.set([...props.path, "edtf"], box.value);
-              }}
-            />
-            <p class="text-xs text-slate-500">
-              {t(
-                "date_edtf_help",
-                "Extended Date/Time Format: 1500-03~ is about March 1500, 15XX some year of the 1500s, 1500/1510 from 1500 to 1510",
-              )}
-            </p>
-          </div>
-        </Match>
-      </Switch>
-      <ModelFields
-        model={props.model}
-        path={() => props.path}
-        env={{}}
-        skip={[
-          ...props.model.fields.map((field) => field.key).filter((key) => !COMMON.includes(key)),
-          // (a whole day sorts the same whichever bound it sorts by: nothing to choose)
-          ...(wholeDay() || endOfPeriod() ? ["sortBy"] : []),
-        ]}
-        defaults={{ sortBy: sortDefault() }}
-      />
-      <Show when={reads()}>
-        <p class="text-sm text-slate-600" data-testid="date-reads">
-          <span class="mr-2 text-xs font-semibold text-slate-500 uppercase select-none">
-            {t("date_reads", "Reads")}
-          </span>
-          {reads()}
-        </p>
-      </Show>
+                onBeforeInput={allowOnly(EDTF_CHARACTERS)}
+                onInput={(event) => {
+                  // (an unspecified digit is a capital X in EDTF: a small one is made one, where it is)
+                  const box = event.currentTarget;
+                  if (box.value.includes("x")) {
+                    const at = box.selectionStart;
+                    box.value = box.value.replaceAll("x", "X");
+                    box.setSelectionRange(at, at);
+                  }
+                  form.set([...props.path, "edtf"], box.value);
+                }}
+              />
+              <p class="text-xs text-slate-500">
+                {t(
+                  "date_edtf_help",
+                  "Extended Date/Time Format: 1500-03~ is about March 1500, 15XX some year of the 1500s, 1500/1510 from 1500 to 1510",
+                )}
+              </p>
+            </div>
+          </Match>
+        </Switch>
+        <Show when={reads()}>
+          <p class="text-sm text-slate-600" data-testid="date-reads">
+            <span class="mr-2 text-xs font-semibold text-slate-500 uppercase select-none">
+              {t("date_reads", "Reads")}
+            </span>
+            {reads()}
+          </p>
+        </Show>
+      </div>
+      <div class={["border-t pt-5", fieldRuleClass]}>
+        <ModelFields
+          model={props.model}
+          path={() => props.path}
+          env={{}}
+          skip={[
+            ...props.model.fields.map((field) => field.key).filter((key) => !COMMON.includes(key)),
+            // (a whole day sorts the same whichever bound it sorts by: nothing to choose)
+            ...(wholeDay() || endOfPeriod() ? ["sortBy"] : []),
+          ]}
+          defaults={{ sortBy: sortDefault() }}
+        />
+      </div>
     </div>
   );
 }

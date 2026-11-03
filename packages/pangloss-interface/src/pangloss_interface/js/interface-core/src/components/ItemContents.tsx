@@ -55,7 +55,7 @@ function Row(props: ParentProps<{ name: string; incoming?: boolean }>) {
       class={[
         fieldRowClass,
         // (more room above what refers to the item from elsewhere)
-        { "pt-7": props.incoming, "first:pt-0": props.incoming },
+        { "pt-6": props.incoming, "first:pt-0": props.incoming },
       ]}
     >
       <dt class="pt-1 text-xs font-semibold text-slate-500 uppercase">
@@ -311,8 +311,8 @@ function ObjectValue(props: {
       fallback={
         <Switch
           fallback={
-            // (a block takes a line of its own, with more space under it than chips have: where one ends is plain)
-            <div class="mb-4 w-full min-w-0 scroll-mt-28 last:mb-0" data-item-id={partId()}>
+            // (a block takes a line of its own, as far from what is above it as from what is below: the row's gap)
+            <div class="w-full min-w-0 scroll-mt-28" data-item-id={partId()}>
               <SpaceBands
                 spaces={
                   props.asChip
@@ -406,7 +406,7 @@ function ObjectValue(props: {
           <Match when={isReified()}>
             {/* (a reified relation: its type at the head, then what it holds, full width and without its field name, then its own fields, if it has any) */}
             <div
-              class="mb-4 flex w-full min-w-0 scroll-mt-28 flex-col last:mb-0"
+              class="flex w-full min-w-0 scroll-mt-28 flex-col"
               data-item-id={partId()}
             >
               <Head
@@ -432,7 +432,7 @@ function ObjectValue(props: {
           </Match>
           <Match when={isAnnotated()}>
             {/* (an annotated value: the value as the field's own, then what is said of it, as in the form) */}
-            <div class="flex w-full min-w-0 flex-col gap-2">
+            <div class="flex w-full min-w-0 flex-col gap-3">
               <div class="flex min-w-0 flex-wrap items-start gap-x-2 gap-y-4">
                 <Value value={props.value.value} depth={props.depth} />
               </div>
