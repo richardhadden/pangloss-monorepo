@@ -118,6 +118,12 @@ export interface ConsoleProps extends ConsoleSearchProps {
   };
   /** Where the item can be edited: an Edit button, for someone who is logged in */
   editHref?: string;
+  /**
+   * The item the page is about (its own type and id), and which page it is: the `consoleActions` of the interface
+   * modules are shown for it. Without it (a list, a new item) there are none.
+   */
+  item?: { type: string; id: string };
+  page?: "item" | "edit";
   /** The actions that can be taken, shown on the right */
   children?: JSX.Element;
 }

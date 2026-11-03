@@ -65,6 +65,7 @@ class Manifest:
     routes: tuple[Mapping[str, Any], ...] = ()
     requires: tuple[str, ...] = ()
     collapse_rules: tuple[str, ...] = ()
+    console_actions: tuple[str, ...] = ()
 
     @classmethod
     def from_data(cls, data: Mapping[str, Any]) -> Manifest:
@@ -74,6 +75,7 @@ class Manifest:
             routes=tuple(data.get("routes", [])),
             requires=tuple(data.get("requires", [])),
             collapse_rules=tuple(data.get("collapseRules", [])),
+            console_actions=tuple(data.get("consoleActions", [])),
         )
 
 

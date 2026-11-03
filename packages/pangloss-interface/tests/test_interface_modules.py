@@ -259,6 +259,15 @@ def test_the_manifests_are_read_through_vite_in_node(apps, tmp_path):
     assert found["withmod"].name == "withmod"
     assert found["withmod"].components == ("ExampleCard",)
     assert found["withmod"].collapse_rules == ()
+    assert found["withmod"].console_actions == ()
+
+
+def test_a_manifest_keeps_the_names_of_its_console_actions():
+    from pangloss_interface.modules import Manifest
+
+    read = Manifest.from_data({"name": "m", "consoleActions": ["Review", "Share"]})
+    assert read.console_actions == ("Review", "Share")
+    assert Manifest.from_data({"name": "m"}).console_actions == ()
 
 
 def test_npm_ranges_as_peer_dependencies_are_understood():

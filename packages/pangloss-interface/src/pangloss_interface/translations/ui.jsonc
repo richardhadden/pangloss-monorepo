@@ -285,5 +285,30 @@
   "typology_move_to": { "en": "Move to…", "de": "Verschieben nach …", "fr": "Déplacer vers…" },
   "typology_top_level": { "en": "(top level)", "de": "(oberste Ebene)", "fr": "(niveau supérieur)" },
   "typology_drop_top": { "en": "Drop here for the top level", "de": "Hier ablegen für die oberste Ebene", "fr": "Déposer ici pour le niveau supérieur" },
-  "typology_no_types": { "en": "No types yet.", "de": "Noch keine Typen.", "fr": "Aucun type pour l’instant." }
+  "typology_no_types": { "en": "No types yet.", "de": "Noch keine Typen.", "fr": "Aucun type pour l’instant." },
+
+  // Review (the module of pangloss_review: docs/review-interface.md)
+  "review_status_unchecked": { "en": "Unchecked", "de": "Ungeprüft", "fr": "Non vérifié" },
+  "review_status_errors_found": { "en": "Errors found", "de": "Fehler gefunden", "fr": "Erreurs trouvées" },
+  "review_status_checked": { "en": "Checked", "de": "Geprüft", "fr": "Vérifié" },
+  "review_button": { "en": "Review: {status}", "de": "Prüfung: {status}", "fr": "Relecture : {status}" },
+  "review_button_comments": { "en": "Review: {status}, open comments: {count}", "de": "Prüfung: {status}, offene Kommentare: {count}", "fr": "Relecture : {status}, commentaires ouverts : {count}" },
+  "review_panel": { "en": "Review", "de": "Prüfung", "fr": "Relecture" },
+  "review_close": { "en": "Close the review", "de": "Prüfung schließen", "fr": "Fermer la relecture" },
+  "review_status": { "en": "Status", "de": "Status", "fr": "Statut" },
+  "review_reviewed_by": { "en": "Reviewed by {user}, {when}", "de": "Geprüft von {user}, {when}", "fr": "Relu par {user}, {when}" },
+  "review_comments": { "en": "Comments", "de": "Kommentare", "fr": "Commentaires" },
+  "review_show_resolved": { "en": "Show resolved ({count})", "de": "Erledigte zeigen ({count})", "fr": "Afficher les résolus ({count})" },
+  "review_no_comments": { "en": "No comments", "de": "Keine Kommentare", "fr": "Aucun commentaire" },
+  "review_you": { "en": "You", "de": "Sie", "fr": "Vous" },
+  "review_sending": { "en": "Sending…", "de": "Wird gesendet…", "fr": "Envoi…" },
+  "review_about": { "en": "About: {part}", "de": "Zu: {part}", "fr": "À propos de : {part}" },
+  "review_resolve": { "en": "Resolve", "de": "Erledigt", "fr": "Résoudre" },
+  "review_resolved_by": { "en": "Resolved by {user}", "de": "Erledigt von {user}", "fr": "Résolu par {user}" },
+  "review_comment_label": { "en": "Comment", "de": "Kommentar", "fr": "Commentaire" },
+  "review_comment_placeholder": { "en": "Write a comment", "de": "Kommentar schreiben", "fr": "Écrire un commentaire" },
+  "review_send": { "en": "Send", "de": "Senden", "fr": "Envoyer" },
+  "review_status_refused": { "en": "The status was not changed: {reason}", "de": "Der Status wurde nicht geändert: {reason}", "fr": "Le statut n’a pas été modifié : {reason}" },
+  "review_comment_refused": { "en": "The comment was not sent: {reason}", "de": "Der Kommentar wurde nicht gesendet: {reason}", "fr": "Le commentaire n’a pas été envoyé : {reason}" },
+  "review_resolve_refused": { "en": "The comment was not resolved: {reason}", "de": "Der Kommentar wurde nicht erledigt: {reason}", "fr": "Le commentaire n’a pas été résolu : {reason}" }
 }

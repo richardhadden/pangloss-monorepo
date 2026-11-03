@@ -35,11 +35,16 @@ BIN = Path(sys.executable).parent
 MEMGRAPH_URI = "bolt://localhost:7687"
 MEMGRAPH_AUTH = ("test", "test")
 USERNAME, PASSWORD = "e2e", "e2e-password"
+# (a second user, for what someone else does: comments in the review panel)
+OTHER_USERNAME, OTHER_PASSWORD = "bob", "bob-password"
+# (how often the review feed asks the API, on the interface's server: often, so the tests do not wait)
+REVIEW_POLL_MS = "300"
 
 MODELS = textwrap.dedent(
     """
     from pangloss_models.model_bases.document import Document
     from pangloss_models.model_bases.entity import Entity
+    from pangloss_review.meta import ReviewMeta
     from pangloss_typology import Typed, Typology, TypologyMeta
 
 
@@ -66,6 +71,12 @@ MODELS = textwrap.dedent(
 
     class Meeting(Document):
         attendees: list[Person | Group]
+
+
+    class Report(Document):
+        _review_meta = ReviewMeta(reviewable=True)
+
+        text: str
     """
 )
 TYPES = (
@@ -126,11 +137,15 @@ class Stack:
 
     def admin(self) -> Client:
         """A client logged in as the user of the project"""
+        return self.client(USERNAME, PASSWORD)
+
+    def client(self, username: str, password: str) -> Client:
+        """A client logged in as that user"""
         client = Client(self.api)
         status, result = client.send(
             "POST",
             "/api/users/session",
-            form={"username": USERNAME, "password": PASSWORD},
+            form={"username": username, "password": password},
         )
         assert status == 200, result
         return client
@@ -194,7 +209,7 @@ def make_project(root: Path) -> Path:
     text = settings.read_text()
     text = text.replace(
         '"pangloss_memgraph",',
-        '"pangloss_memgraph",\n        "pangloss_interface",\n        "pangloss_typology",',
+        '"pangloss_memgraph",\n        "pangloss_interface",\n        "pangloss_typology",\n        "pangloss_review",',
         1,
     )
     text = text.replace('DB_USERNAME="memgraph"', 'DB_USERNAME="test"')
@@ -242,7 +257,7 @@ class Proxy(BaseHTTPRequestHandler):
     def handle_any(self) -> None:
         port = self.api_port if self.path.startswith("/api") else self.ui_port
         body = self.rfile.read(int(self.headers.get("Content-Length") or 0))
-        connection = http.client.HTTPConnection("127.0.0.1", port, timeout=60)
+        connection = http.client.HTTPConnection("127.0.0.1", port, timeout=300)
         headers = {
             k: v
             for k, v in self.headers.items()
@@ -250,7 +265,6 @@ class Proxy(BaseHTTPRequestHandler):
         }
         connection.request(self.command, self.path, body or None, headers)
         response = connection.getresponse()
-        content = response.read()
         self.send_response(response.status)
         for name, value in response.getheaders():
             if name.lower() not in (
@@ -259,9 +273,27 @@ class Proxy(BaseHTTPRequestHandler):
                 "content-length",
             ):
                 self.send_header(name, value)
-        self.send_header("Content-Length", str(len(content)))
-        self.end_headers()
-        self.wfile.write(content)
+        if (
+            response.getheader("Content-Length") is not None
+            or self.command == "HEAD"
+            or response.status in (204, 304)
+        ):
+            content = response.read()
+            self.send_header("Content-Length", str(len(content)))
+            self.end_headers()
+            self.wfile.write(content)
+        else:
+            # (a stream, such as a live server function's: passed on as it comes, not when it ends)
+            self.send_header("Transfer-Encoding", "chunked")
+            self.end_headers()
+            try:
+                while chunk := response.read1(65536):
+                    self.wfile.write(b"%x\r\n%s\r\n" % (len(chunk), chunk))
+                    self.wfile.flush()
+                self.wfile.write(b"0\r\n\r\n")
+            except OSError:
+                # (the browser went away, or the stream stopped: the connection is not reused)
+                self.close_connection = True
         connection.close()
 
     do_GET = do_POST = do_PUT = do_PATCH = do_DELETE = do_HEAD = handle_any
@@ -297,6 +329,20 @@ def stack(tmp_path_factory) -> Iterator[Stack]:
         ],
         root,
     )
+    run(
+        [
+            "users",
+            "create",
+            "--username",
+            OTHER_USERNAME,
+            "--email",
+            "bob@example.com",
+            "--password",
+            OTHER_PASSWORD,
+            "--no-admin",
+        ],
+        root,
+    )
     run(["typology", "load", "RoleType", "types.json", "--user", USERNAME], root)
     run(["interface", "build"], root)
 
@@ -305,7 +351,10 @@ def stack(tmp_path_factory) -> Iterator[Stack]:
         "api": ([str(BIN / "pangloss"), "run", "--port", str(api_port)], {}),
         "interface": (
             [str(BIN / "pangloss"), "interface", "serve", "--port", str(ui_port)],
-            {"PANGLOSS_API_URL": f"http://127.0.0.1:{api_port}"},
+            {
+                "PANGLOSS_API_URL": f"http://127.0.0.1:{api_port}",
+                "PANGLOSS_REVIEW_POLL_MS": REVIEW_POLL_MS,
+            },
         ),
     }
     processes = [
@@ -359,7 +408,7 @@ def dev_url(stack: Stack) -> Iterator[str]:
             stack.api,
         ],
         cwd=stack.project,
-        env=environment(),
+        env=environment(PANGLOSS_REVIEW_POLL_MS=REVIEW_POLL_MS),
         stdout=open(stack.project / "dev.log", "w"),  # noqa: SIM115 (closed with the process)
         stderr=subprocess.STDOUT,
         start_new_session=True,

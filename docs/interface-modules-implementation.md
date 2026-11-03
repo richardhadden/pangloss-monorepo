@@ -552,6 +552,14 @@ Done afterwards (2026-10-29):
 - **One component asks the modules: `Customised`** (`components/Customised.tsx`: `slot`, `type`, `props`, `fallback`, `skip`). `ResultButton`,
   `ReferenceChip`, `ItemContents` (embedded items and blocks), and the `List` and `Item` pages use it instead of each repeating the lookup.
 
+- **`consoleActions` (2026-11-03, for [review](review-interface.md)).** A manifest may name components for the console of every item
+  page and of the form that edits an item (`consoleActions: { Review: () => import(...) }`), given `ConsoleActionProps` (`type`, `id`,
+  `model`, `page`: `"item"` or `"edit"`); each decides itself whether to show anything. They are drawn by `Console` (new props `item`
+  and `page`) before the page's own buttons, each lazily, in a `Loading` and an `Errored` of its own (a failure is logged in the browser's
+  console and shows nothing). `useModules().consoleActions()`; `Manifest.console_actions` in Python.
+- **A module may have `"use server"` functions** (2026-11-03): the Solid plugin compiles only `src/**` of the Vite root by default, so
+  `vite.config.ts` adds the modules' folders (`../modules/*/src`, and `PANGLOSS_MODULE_ROOTS` for `--link`) to `serverFunctions.filter`.
+  The review module's live feed is one.
 - **`dev --link` uses the modules where they are.** `prepare_linked` writes `linked/modules.ts` (imports of each module's `src/index` by
   absolute path), `linked/sources.css` (`@source` of each module folder) and the app is given `PANGLOSS_MODULES_MODULE`,
   `PANGLOSS_SOURCES_CSS` and `PANGLOSS_MODULE_ROOTS` (`@generated/modules` and `@generated/sources.css` are aliases beside

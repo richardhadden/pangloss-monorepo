@@ -90,6 +90,8 @@ export function ItemForm(props: ItemFormProps) {
         type={props.type}
         label={label() ?? (creating() ? t("new", "New") : undefined)}
         meta={props.meta}
+        item={creating() ? undefined : { type: props.type, id: String(props.initial.id) }}
+        page="edit"
       >
         <ConsoleButton label={t("cancel", "Cancel")} onClick={props.onCancel} tone="danger">
           <svg

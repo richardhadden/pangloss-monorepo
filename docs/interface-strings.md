@@ -159,6 +159,32 @@ These are not shown, but are read aloud, or appear when the pointer rests on the
 | `invalid_type_not_allowed` | This type is not allowed here | `useProblemText` | a pasted or edited value of a type the field does not hold |
 | `invalid_value` | Not a valid value | `useProblemText` | a value of the wrong type, or not matching a pattern |
 
+**Review (2026-11-03).** The module of `pangloss_review` (`ReviewAction`, `ReviewPanel`: [review-interface.md](review-interface.md)), in `ui.jsonc` in English, German and French:
+
+| Slot | English | Where | Notes |
+|------|---------|-------|-------|
+| `review_status_unchecked` / `_errors_found` / `_checked` | Unchecked / Errors found / Checked | `ReviewPanel` (the status buttons), the button's label | `review_status_<status>` |
+| `review_button` | Review: {status} | `ReviewAction` (the console button's label and tooltip) | |
+| `review_button_comments` | Review: {status}, open comments: {count} | `ReviewAction` | with open comments; worded to need no plural |
+| `review_panel` | Review | `ReviewPanel` (heading, `aria-label`) | |
+| `review_close` | Close the review | `ReviewPanel` (close button label and tooltip) | |
+| `review_status` | Status | `ReviewPanel` (`aria-label` of the status buttons) | |
+| `review_reviewed_by` | Reviewed by {user}, {when} | `ReviewPanel` | `{when}` in the language of the page |
+| `review_comments` | Comments | `ReviewPanel` (heading, `aria-label` of the list) | |
+| `review_show_resolved` | Show resolved ({count}) | `ReviewPanel` (checkbox) | |
+| `review_no_comments` | No comments | `ReviewPanel` | |
+| `review_you` | You | `ReviewPanel` (the reader's own comments) | |
+| `review_sending` | Sending… | `ReviewPanel` (a comment not yet confirmed) | |
+| `review_about` | About: {part} | `ReviewPanel` (a comment about a nested part) | |
+| `review_resolve` | Resolve | `ReviewPanel` (button) | |
+| `review_resolved_by` | Resolved by {user} | `ReviewPanel` | |
+| `review_comment_label` | Comment | `ReviewPanel` (`aria-label` of the box) | |
+| `review_comment_placeholder` | Write a comment | `ReviewPanel` (placeholder) | |
+| `review_send` | Send | `ReviewPanel` (button) | |
+| `review_status_refused` | The status was not changed: {reason} | `ReviewAction` (red toast) | `{reason}` is the API's message (English) |
+| `review_comment_refused` | The comment was not sent: {reason} | `ReviewAction` (red toast) | |
+| `review_resolve_refused` | The comment was not resolved: {reason} | `ReviewAction` (red toast) | |
+
 ## Not translated by the interface's own file
 
 - **Names of languages.** `English` and `Deutsch` in `NavBar` (`LANGUAGES`) are each in its own language, and stay so (they are

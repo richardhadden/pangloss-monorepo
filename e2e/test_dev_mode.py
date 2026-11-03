@@ -158,3 +158,47 @@ def test_a_typology(page: Page, types, dev_url: str, errors: list[str]):
     path.get_by_role("link", name="Clerk").click()
     expect(page.get_by_role("navigation", name="Path")).to_have_text("All›Clerk")
     assert errors == []
+
+
+def test_the_review_panel(page: Page, types, dev_url: str, errors: list[str]):
+    """The review button and panel (the module of pangloss_review), with its live feed from the dev server's own
+    server functions: a comment by someone else arrives, and one is written, resolved and the status changed"""
+    from conftest import OTHER_PASSWORD, OTHER_USERNAME, PASSWORD, USERNAME, forget
+
+    forget("Report", "PGReviewComment")
+    made = types.admin().ok(
+        "POST", "/api/Report", {"label": "Dev report", "text": "Text"}
+    )
+    response = page.request.post(
+        f"{dev_url}/api/users/session",
+        form={"username": USERNAME, "password": PASSWORD},
+    )
+    assert response.ok, response.text()
+    page.goto(f"{dev_url}/Report/{made['id']}")
+    hydrated(page)
+    console = page.get_by_role("banner", name="Console")
+    console.get_by_role("button", name="Review: Unchecked").click()
+    panel = page.get_by_role("complementary", name="Review")
+    types.client(OTHER_USERNAME, OTHER_PASSWORD).ok(
+        "POST", f"/api/review/{made['id']}/comments", {"text": "From bob"}
+    )
+    expect(panel.get_by_text("From bob")).to_be_visible(timeout=10_000)
+    panel.get_by_role("textbox", name="Comment").fill("From me")
+    panel.get_by_role("button", name="Send").click()
+    expect(
+        panel.get_by_test_id("review-comment").filter(has_text="From me")
+    ).to_have_attribute("data-mine", "true")
+    panel.get_by_test_id("review-comment").filter(has_text="From bob").get_by_role(
+        "button", name="Resolve"
+    ).click()
+    panel.get_by_role("button", name="Checked", exact=True).click()
+    expect(
+        console.get_by_role("button", name="Review: Checked, open comments: 1")
+    ).to_be_visible()
+    page.get_by_role("link", name=re.compile("^Edit")).click()
+    page.wait_for_url(re.compile(r"/edit$"))
+    expect(
+        console.get_by_role("button", name=re.compile("^Review: Checked"))
+    ).to_be_visible()
+    expect(page.locator("main")).not_to_contain_text(SOLID_ERROR)
+    assert errors == []

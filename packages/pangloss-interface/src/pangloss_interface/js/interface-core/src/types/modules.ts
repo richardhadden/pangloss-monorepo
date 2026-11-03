@@ -78,6 +78,19 @@ export interface CustomProps {
  */
 export type CollapseRule = (item: Record<string, unknown>, model: ModelDefinition) => boolean;
 
+/**
+ * What a component a module adds to the console of an item (`consoleActions`) is given. It decides itself whether
+ * to show anything (a button, usually a `ConsoleButton`).
+ */
+export interface ConsoleActionProps {
+  /** The item's own type */
+  type: string;
+  id: string;
+  model: ModelDefinition;
+  /** The item's page, or the form that edits it */
+  page: "item" | "edit";
+}
+
 /** What a loader gives: a module with a component as its default export */
 export type ComponentLoader = () => Promise<{ default: Component<any> }>;
 
@@ -101,4 +114,9 @@ export interface ModuleManifest {
   routes?: ModuleRoute[];
   /** The rules a model can name with `InterfaceMeta(collapse="app:name")` (not loaded lazily: they are small) */
   collapseRules?: Record<string, CollapseRule>;
+  /**
+   * Components for the console of every item page and of the form that edits an item, at its right, before the page's
+   * own buttons (each loaded when the console is first shown)
+   */
+  consoleActions?: Record<string, ComponentLoader>;
 }

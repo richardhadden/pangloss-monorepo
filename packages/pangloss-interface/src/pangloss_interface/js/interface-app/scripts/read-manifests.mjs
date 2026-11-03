@@ -23,6 +23,7 @@ try {
       requires: manifest.requires ?? [],
       components: Object.keys(manifest.components ?? {}),
       collapseRules: Object.keys(manifest.collapseRules ?? {}),
+      consoleActions: Object.keys(manifest.consoleActions ?? {}),
       routes: (manifest.routes ?? []).map(({ path, component }) => ({ path, component })),
     });
   }

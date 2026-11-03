@@ -73,6 +73,8 @@ delete it here, when it is written up.
       the list (`opacity-50`) and passes `pending` to the console, which shows a `Spinner` (primitive) in place of the count; the count also
       has the spinner as its first-load fallback.
 - [ ] **`Frame`** in `App.tsx`: how the bar and the page are put together.
+- [ ] **Console actions of modules** (`consoleActions` in a manifest; [interface-modules-implementation.md](interface-modules-implementation.md)): an item page's console and an edit form's console show what the modules add, before the page's own buttons. Each is given the item (`type`, `id`, `model`, `page`) and decides whether to show anything.
+- [ ] **Review** (the module of `pangloss_review`, [review-interface.md](review-interface.md)): a reviewed document's console has a flag button (outline: unchecked; red: errors found; green: checked) with an amber count of open comments; it opens a panel that slides from the right, under the console bar (`top-14`, `w-96`, glassy like the bars, off to the right and `inert` while closed; Escape or ✕ closes it). At the top three status buttons (the current one filled: slate, red, green); then the comments as a conversation (the reader's in blue bubbles on the right, others' in white on the left, with name and time; resolved ones hidden unless "Show resolved"), then a box and Send (Ctrl/Cmd+Enter). The status and comments go to the review API at once (not through Save) and are shown optimistically; the panel follows the server through a `live()` server function (`reviewFeed`) that polls the API on the interface's server.
 
 ## Development
 

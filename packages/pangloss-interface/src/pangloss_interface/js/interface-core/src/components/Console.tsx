@@ -1,9 +1,10 @@
 import { Portal } from "@solidjs/web";
-import { Loading, onSettled, Show } from "solid-js";
+import { Errored, For, Loading, onSettled, Show } from "solid-js";
 import type { ParentProps } from "solid-js";
 import {
   useConsoleMount,
   useModels,
+  useModules,
   useTranslations,
   userIsLoggedIn,
 } from "../context";
@@ -91,6 +92,40 @@ function HistoryRow(
       </Show>
       <span>· {when(props.when, language())}</span>
     </span>
+  );
+}
+
+/**
+ * What the interface modules add to the console of an item (their `consoleActions`), each given the item. One that
+ * fails, or is still loading, shows nothing, and the rest of the console is unaffected.
+ */
+function ModuleActions(props: { item: ConsoleProps["item"]; page: "item" | "edit" }) {
+  const definitions = useModels();
+  const actions = useModules().consoleActions();
+  return (
+    <Show when={actions.length > 0 && props.item}>
+      {(item) => (
+        <Show when={getModel(definitions, item().type)}>
+          {(model) => (
+            <For each={actions}>
+              {(Action) => (
+                <Errored
+                  fallback={(error) => {
+                    // (said in the browser's console, so that a module's author sees why there is nothing)
+                    console.error("A console action of an interface module failed:", error());
+                    return null;
+                  }}
+                >
+                  <Loading fallback={null}>
+                    <Action type={item().type} id={item().id} model={model()} page={props.page} />
+                  </Loading>
+                </Errored>
+              )}
+            </For>
+          )}
+        </Show>
+      )}
+    </Show>
   );
 }
 
@@ -186,6 +221,7 @@ export function Console(props: ConsoleProps) {
                   </Show>
                 </div>
               </Show>
+              <ModuleActions item={props.item} page={props.page ?? "item"} />
               {props.children}
               {/* An item can be edited by someone who is logged in */}
               <Loading fallback={null}>

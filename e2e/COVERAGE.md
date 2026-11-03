@@ -101,6 +101,24 @@ about her "held court at Ghent") and Charles the Bold (no role); `types` has onl
 | Card (`TypeCard`) | ⬜ | where a type is shown as part of something else: no model uses it yet (a chip is used for references) |
 | Other languages than `de` | ⬜ | |
 
+## `pangloss_review` module
+
+The e2e project's `Report` is reviewed (`ReviewMeta(reviewable=True)`); a second user, `bob`, writes what someone else does.
+
+| Area | State | Where / notes |
+| --- | --- | --- |
+| Console of a reviewed document: a flag button coloured by status, labelled with it; opens and closes the panel (pressed; Escape) | ✅ | `test_review.py::test_a_reviewed_document_has_a_review_button_with_its_status`; Vitest (`ReviewAction.test.tsx`) |
+| No button for a document that is not reviewed, an entity, or a reader who is not logged in | ✅ | `test_a_document_that_is_not_reviewed_has_none`; the rest: Vitest |
+| Status buttons at the top of the panel; a change goes to the API at once (publishes with Checked), "Reviewed by" | ✅ | `test_changing_the_status_publishes_it_and_goes_to_the_api` |
+| A status the API refuses (self-review not allowed) is undone, with a red toast | 🚧 | Vitest (`ReviewAction.test.tsx`, `state.test.ts`); the e2e project allows self-review |
+| A comment: shown at once on the right ("You", "Sending…"), confirmed by the feed, counted on the button | ✅ | `test_a_comment_is_mine_on_the_right_and_counted` |
+| What another user does (a comment, a status) reaches the open page and panel without a reload (`live()` feed) | ✅ | `test_what_someone_else_does_reaches_the_open_page_without_a_reload`; also in the dev build (`test_dev_mode.py::test_the_review_panel`) |
+| Resolve a comment; "Show resolved" shows it again, faded | ✅ | `test_a_comment_is_resolved_and_shown_again_on_asking` |
+| The edit page has the button and panel too, apart from saving | ✅ | `test_the_edit_page_has_it_too_apart_from_saving` |
+| A comment about a nested part shows its label | 🚧 | Vitest (`ReviewPanel.test.tsx`); choosing a part is not built |
+| The feed closes when the page is left; reconnects (with a cookie refresh) after the access cookie ran out | 🚧 | Vitest (`ReviewAction.test.tsx`, `poll.test.ts`); the reconnect is not tested in a browser |
+| The module's own tests and type-check, in the built project | ✅ | `test_the_module_tests_pass_in_the_built_project` |
+
 ## Findings of this suite (for the interface, not yet changed)
 
 - The home page is unstyled.

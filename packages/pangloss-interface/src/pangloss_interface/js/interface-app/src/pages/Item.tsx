@@ -95,6 +95,11 @@ function editHref(shown: Shown | undefined): string | undefined {
     : `/${shown.type}/${encodeURIComponent(shown.id)}/edit`;
 }
 
+// The item the console's module actions are for (its own type and id)
+function consoleItem(shown: Shown | undefined): { type: string; id: string } | undefined {
+  return shown && { type: shown.type, id: shown.id };
+}
+
 // One Document or Entity: /Person/<id>
 export default function EntityPage(props: RouteProps<"/:type/:id">) {
   const Console = useComponent("Console");
@@ -124,6 +129,8 @@ export default function EntityPage(props: RouteProps<"/:type/:id">) {
         spaces={wrappingSpaces(shown()?.spaces)}
         meta={shown()?.meta}
         editHref={editHref(shown())}
+        item={consoleItem(shown())}
+        page="item"
       />
       <Errored
         fallback={(error) => (

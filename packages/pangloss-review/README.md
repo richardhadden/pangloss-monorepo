@@ -18,4 +18,8 @@ of it. The design is in [docs/review.md](../../docs/review.md).
 Settings (optional): `REVIEW_ALLOW_SELF_REVIEW` (default `True`; when false, a user cannot check a document they
 created or last edited).
 
+With `pangloss_interface` installed, a reviewed document has a review button in its console, which opens a panel with
+the status and the comments, kept up to date while the page is open (`src/pangloss_review/interface/`, an interface
+module; [docs/review-interface.md](../../docs/review-interface.md)).
+
 Guide: [guide/review](../../guide/review/README.md).
