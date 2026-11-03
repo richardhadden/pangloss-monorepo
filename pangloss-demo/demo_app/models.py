@@ -103,6 +103,7 @@ class AtPage[T](ReifiedRelation[T]):
     _interface_meta = InterfaceMeta(headless=True)
 
     page: str
+    target: Annotated[list[T], MinLen(1), MaxLen(1)]
 
 
 class InRole[T](ReifiedRelation[T]):
