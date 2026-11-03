@@ -2,6 +2,7 @@
   "modules/pangloss_calendar/README.md",
   "modules/pangloss_calendar/package.json",
   "modules/pangloss_calendar/src/api.ts",
+  "modules/pangloss_calendar/src/components/Chrome.test.tsx",
   "modules/pangloss_calendar/src/components/Chrome.tsx",
   "modules/pangloss_calendar/src/components/DayPage.tsx",
   "modules/pangloss_calendar/src/components/DayView.test.tsx",

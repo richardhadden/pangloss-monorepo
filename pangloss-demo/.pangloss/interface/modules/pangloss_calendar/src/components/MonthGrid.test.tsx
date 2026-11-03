@@ -4,7 +4,7 @@ import type { ModelDefinition, ModelDefinitions } from "@pangloss/interface-core
 import { render } from "@solidjs/web";
 import { afterEach, expect, test, vi } from "vitest";
 import { day, feast, hit, month, ref } from "./fixtures";
-import type { DayName } from "../days";
+import type { DayOut } from "../api";
 import { MonthGrid } from "./MonthGrid";
 
 const DEFINITIONS: ModelDefinitions = {
@@ -21,7 +21,7 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
-function show(report = month(), onAdd?: (day: DayName) => void) {
+function show(report = month(), onAdd?: (day: DayOut) => void) {
   const container = document.createElement("div");
   document.body.append(container);
   dispose = render(
@@ -98,17 +98,17 @@ test("a date over several days is a bar across them in each week, open where it 
   const siege = of("The siege");
   expect(siege.length).toBe(2);
   expect(siege[0]!.style.gridColumn).toBe("2 / span 6");
-  expect(siege[0]!.className).toContain("rounded-l-sm");
-  expect(siege[0]!.className).not.toContain("rounded-r-sm");
+  expect(siege[0]!.className).toContain("rounded-l-xs");
+  expect(siege[0]!.className).not.toContain("rounded-r-xs");
   expect(siege[1]!.style.gridColumn).toBe("1 / span 2");
-  expect(siege[1]!.className).toContain("rounded-r-sm");
-  expect(siege[1]!.className).not.toContain("rounded-l-sm");
+  expect(siege[1]!.className).toContain("rounded-r-xs");
+  expect(siege[1]!.className).not.toContain("rounded-l-xs");
   // the war is in every week, open at both ends, and in the first lane (it starts first); the siege under it
   const war = of("The war");
   expect(war.length).toBe(6);
   expect(war.every((bar) => bar.dataset.lane === "0")).toBe(true);
-  expect(war[0]!.className).not.toContain("rounded-l-sm");
-  expect(war[5]!.className).not.toContain("rounded-r-sm");
+  expect(war[0]!.className).not.toContain("rounded-l-xs");
+  expect(war[5]!.className).not.toContain("rounded-r-xs");
   expect(siege[0]!.dataset.lane).toBe("1");
   // the fair overlaps the siege: a third lane
   expect(of("The fair")[0]!.dataset.lane).toBe("2");
@@ -146,5 +146,5 @@ test("each day has a + in its top right, given a way to add (someone logged in),
   expect(adds.length).toBe(31);
   expect(adds[1]!.getAttribute("aria-label")).toBe("Add to 2 March 1500");
   adds[1]!.click();
-  expect(onAdd).toHaveBeenCalledWith({ calendar: "julian", year: 1500, month: 3, day: 2 });
+  expect(onAdd).toHaveBeenCalledWith(day(2));
 });

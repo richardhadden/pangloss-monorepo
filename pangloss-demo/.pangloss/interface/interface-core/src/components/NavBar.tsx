@@ -192,7 +192,7 @@ function NavFilter(props: { value: string; onInput: (value: string) => void }) {
   };
   return (
     <div class="sticky top-0 z-10 border-b border-slate-400/70 bg-slate-300/80 p-2 backdrop-blur-md">
-      <div class="flex h-8 items-center rounded-sm border-[0.5px] border-slate-400/70 bg-white/70 focus-within:border-slate-500 focus-within:bg-white">
+      <div class="flex h-8 items-center rounded-xs border-[0.5px] border-slate-400/70 bg-white/70 focus-within:border-slate-500 focus-within:bg-white">
         <svg
           viewBox="0 0 24 24"
           class="ml-2 size-4 shrink-0 select-none fill-none stroke-slate-500 stroke-2"

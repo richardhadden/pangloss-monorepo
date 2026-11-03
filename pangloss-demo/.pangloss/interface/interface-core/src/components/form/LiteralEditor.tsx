@@ -38,6 +38,7 @@ const MAX_PILLS = 8;
 /**
  * One of a few values, as pills side by side, the chosen one filled; clicking it again chooses none
  * (a field that must have one says so when the form is saved). A radio group to a screen reader.
+ * With none chosen, the one the field is taken to be (`value` is then that) is filled as well.
  */
 function ChoicePills(props: {
   label: string;
@@ -192,12 +193,15 @@ export function LiteralEditor(props: {
   /** The name of the input for a screen reader */
   label: string;
   validators?: Validator[];
+  /** What it is taken to be when it is not set: a choice shows it as chosen (it is not written) */
+  fallback?: unknown;
 }) {
   const form = useItemForm();
   const definitions = useModels();
   const { memberName, fieldName } = useTranslations();
   const value = () => form.get(props.path());
   const text = () => (value() === null || value() === undefined ? "" : String(value()));
+  const chosen = () => text() || (props.fallback === null || props.fallback === undefined ? "" : String(props.fallback));
   const write = (next: unknown) => form.set(props.path(), next);
   const members = () => definitions.enums[(props.type as Typed<"enum">).enum]?.members ?? [];
   return (
@@ -264,7 +268,7 @@ export function LiteralEditor(props: {
             value: String(member.value),
             name: memberName((props.type as Typed<"enum">).enum, member.name),
           }))}
-          value={text()}
+          value={chosen()}
           onChoose={write}
         />
       </Match>
@@ -280,7 +284,7 @@ export function LiteralEditor(props: {
             value: String(option),
             name: String(option),
           }))}
-          value={text()}
+          value={chosen()}
           onChoose={write}
         />
       </Match>
@@ -288,13 +292,13 @@ export function LiteralEditor(props: {
         <select
           class={inputClass}
           aria-label={props.label}
-          value={text()}
+          value={chosen()}
           onChange={(event) => write(event.currentTarget.value)}
         >
           <option value=""></option>
           <For each={members()}>
             {(member) => (
-              <option value={String(member.value)} selected={text() === String(member.value)}>
+              <option value={String(member.value)} selected={chosen() === String(member.value)}>
                 {memberName((props.type as Typed<"enum">).enum, member.name)}
               </option>
             )}
@@ -305,13 +309,13 @@ export function LiteralEditor(props: {
         <select
           class={inputClass}
           aria-label={props.label}
-          value={text()}
+          value={chosen()}
           onChange={(event) => write(event.currentTarget.value)}
         >
           <option value=""></option>
           <For each={(props.type as Typed<"literal">).values}>
             {(option) => (
-              <option value={String(option)} selected={text() === String(option)}>
+              <option value={String(option)} selected={chosen() === String(option)}>
                 {String(option)}
               </option>
             )}

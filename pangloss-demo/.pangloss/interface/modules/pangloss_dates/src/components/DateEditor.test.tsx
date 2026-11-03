@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { createItemFormState, ItemFormProvider, ModelsProvider } from "@pangloss/interface-core";
-import type { FieldDefinition, ModelDefinition, ModelDefinitions } from "@pangloss/interface-core";
+import type { EditCardProps, FieldDefinition, ModelDefinition, ModelDefinitions } from "@pangloss/interface-core";
 import { render } from "@solidjs/web";
 import { afterEach, expect, test } from "vitest";
 import DateEditor from "./DateEditor";
@@ -80,8 +80,12 @@ const definitions = {
 
 const settle = () => new Promise((resolve) => setTimeout(resolve));
 
-function show(value: Record<string, unknown>) {
-  const state = createItemFormState({ type: "Statement", date: value });
+function show(
+  value: Record<string, unknown>,
+  options: { path?: string[]; item?: Record<string, unknown>; field?: EditCardProps["field"] } = {},
+) {
+  const path = options.path ?? ["date"];
+  const state = createItemFormState(options.item ?? { type: "Statement", date: value });
   const host = document.createElement("div");
   document.body.append(host);
   dispose = render(
@@ -92,9 +96,10 @@ function show(value: Record<string, unknown>) {
             type={String(value.type)}
             model={definitions.models[String(value.type)]!}
             label="Date"
-            path={["date"]}
+            path={path}
+            field={options.field}
             value={value}
-            onChange={(next) => state.set(["date"], next)}
+            onChange={(next) => state.set(path, next)}
           />
         </ItemFormProvider>
       </ModelsProvider>
@@ -297,4 +302,50 @@ test("an exact date has no Sort by once its year, month and day are all there", 
   // (what is said of any date is still there)
   expect(byLabel("calendar")).toBeTruthy();
   expect(byLabel("sourceText")).toBeTruthy();
+});
+
+const checked = (group: string) =>
+  [...document.body.querySelectorAll(`[aria-label="${group}"] [aria-checked="true"]`)].map(
+    (pill) => pill.textContent,
+  );
+
+test("a date that does not say what it sorts by shows the midpoint chosen, or its field's SortDefault, without writing it", async () => {
+  const { state } = show({ type: "ExactDate", year: 800 });
+  await settle();
+  expect(checked("sortBy")).toEqual(["MIDPOINT"]);
+  expect(state.get(["date", "sortBy"])).toBeUndefined();
+  dispose?.();
+  document.body.innerHTML = "";
+  show(
+    { type: "ExactDate", year: 800 },
+    {
+      field: {
+        name: "born", key: "born", description: null, dbField: false, required: false, nullable: true,
+        kind: "embedded", model: "Date", types: ["ExactDate"],
+        markers: [{ name: "SortDefault", sortBy: "earliest_fuzzy" }],
+      },
+    },
+  );
+  await settle();
+  expect(checked("sortBy")).toEqual(["EARLIEST_FUZZY"]);
+  // (what is chosen is shown instead)
+  dispose?.();
+  document.body.innerHTML = "";
+  show({ type: "ExactDate", year: 800, sortBy: "earliest_fuzzy" });
+  await settle();
+  expect(checked("sortBy")).toEqual(["EARLIEST_FUZZY"]);
+});
+
+test("the start and end of a period have no Sort by (the period's says how it sorts)", async () => {
+  const start = { type: "ExactDate", year: 800 };
+  show(start, { path: ["date", "start"], item: { type: "Statement", date: { type: "Period", start } } });
+  await settle();
+  expect(byLabel("sortBy")).toBeNull();
+  expect(byLabel("calendar")).toBeTruthy();
+  dispose?.();
+  document.body.innerHTML = "";
+  // (a date named start in something else is any date)
+  show(start, { path: ["date", "start"], item: { type: "Statement", date: { type: "Other", start } } });
+  await settle();
+  expect(byLabel("sortBy")).toBeTruthy();
 });

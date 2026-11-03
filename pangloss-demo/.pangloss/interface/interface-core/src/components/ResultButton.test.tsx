@@ -51,7 +51,7 @@ test("a space with a colour of its model is that colour, whatever its depth", ()
     ),
     host,
   );
-  expect(host.querySelector(".bg-teal-400\\/25")?.textContent).toContain("Negative");
+  expect(host.querySelector(".bg-teal-400\\/15")?.textContent).toContain("Negative");
 });
 
 test("an item inside a document has a button to it, at the far left, not in the bands", () => {

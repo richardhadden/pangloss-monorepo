@@ -12,7 +12,7 @@ import {
   useTranslations,
 } from "../../context";
 import { ConsoleButton } from "../../primitives";
-import { cleanForSave, getModel } from "../../schema";
+import { cleanForSave, createBinder, getModel } from "../../schema";
 import type { FormData } from "../../schema";
 import type { ItemFormProps } from "../../types";
 import { ItemFields } from "./ModelFields";
@@ -32,10 +32,10 @@ export function ItemForm(props: ItemFormProps) {
   const api = useApi();
   const definitions = useModels();
   const { t, modelName } = useTranslations();
-  const state = createItemFormState(
-    untrack(() => props.initial),
-    untrack(() => (props.version === undefined ? undefined : String(props.initial.id))),
-  );
+  const state = createItemFormState(untrack(() => props.initial), {
+    headId: untrack(() => (props.version === undefined ? undefined : String(props.initial.id))),
+    binder: createBinder(definitions),
+  });
   const model = () => getModel(definitions, props.type);
   // (while a save is being sent: it goes back to false when the save is over, whatever the answer)
   const [saving, setSaving] = createOptimistic(false);
@@ -133,7 +133,7 @@ export function ItemForm(props: ItemFormProps) {
         <Show when={stale()}>
           <div
             role="alert"
-            class="flex items-center gap-4 rounded-sm border-[0.5px] border-amber-700/60 bg-amber-100/70 p-3 text-sm"
+            class="flex items-center gap-4 rounded-xs border-[0.5px] border-amber-700/60 bg-amber-100/70 p-3 text-sm"
           >
             <span>
               {t(
@@ -143,7 +143,7 @@ export function ItemForm(props: ItemFormProps) {
             </span>
             <button
               type="button"
-              class="shrink-0 cursor-pointer rounded-sm border-[0.5px] border-slate-500 px-2 py-1 text-xs font-semibold uppercase hover:bg-slate-300/50"
+              class="shrink-0 cursor-pointer rounded-xs border-[0.5px] border-slate-500 px-2 py-1 text-xs font-semibold uppercase hover:bg-slate-300/50"
               onClick={() => props.onReload?.()}
             >
               {t("reload", "Load the new version")}

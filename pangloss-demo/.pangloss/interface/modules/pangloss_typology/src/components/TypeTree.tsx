@@ -64,7 +64,7 @@ export default function TypeTree(props: ListPageProps) {
             if (id !== undefined && mayDrop(row.node.id)) move(id, row.node.id);
           }}
           class={[
-            "flex items-center gap-2 rounded-sm border-[0.5px] border-slate-400/70 bg-slate-100/70 px-3 py-2 text-sm",
+            "flex items-center gap-2 rounded-xs border-[0.5px] border-slate-400/70 bg-slate-100/70 px-3 py-2 text-sm",
             { "cursor-grab": draggable(), "opacity-50": dragging() === row.node.id },
           ]}
           style={{ "margin-left": `${row.depth * 1.5}rem` }}
@@ -90,7 +90,7 @@ export default function TypeTree(props: ListPageProps) {
           <Show when={draggable()}>
             <select
               aria-label={t("typology_move", "Move {name} to", { name: row.node.label })}
-              class="max-w-40 rounded-sm border-[0.5px] border-slate-400/70 bg-white px-1 text-xs"
+              class="max-w-40 rounded-xs border-[0.5px] border-slate-400/70 bg-white px-1 text-xs"
               onChange={(event) => {
                 const value = event.currentTarget.value;
                 event.currentTarget.value = "";
@@ -121,7 +121,7 @@ export default function TypeTree(props: ListPageProps) {
       <Console type={props.type} list />
       <Show when={refused()}>
         {(reason) => (
-          <p role="alert" class="mb-3 rounded-sm border-[0.5px] border-red-400 bg-red-50 px-3 py-2 text-sm text-red-800">
+          <p role="alert" class="mb-3 rounded-xs border-[0.5px] border-red-400 bg-red-50 px-3 py-2 text-sm text-red-800">
             {reason()}
           </p>
         )}
@@ -141,7 +141,7 @@ export default function TypeTree(props: ListPageProps) {
                 if (id !== undefined && mayDrop(null)) move(id, null);
               }}
               class={[
-                "mb-2 rounded-sm border border-dashed border-slate-400 px-3 py-2 text-center text-xs text-slate-600",
+                "mb-2 rounded-xs border border-dashed border-slate-400 px-3 py-2 text-center text-xs text-slate-600",
                 { invisible: dragging() === undefined },
               ]}
             >

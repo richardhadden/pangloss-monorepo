@@ -57,20 +57,8 @@ export const definitions: ModelDefinitions = {
             "Period",
             "Recurrence",
             "UnknownDate"
-          ]
-        },
-        {
-          "name": "year",
-          "key": "year",
-          "description": null,
-          "dbField": false,
-          "required": true,
-          "nullable": false,
-          "kind": "literal",
-          "type": {
-            "type": "int"
-          },
-          "validators": []
+          ],
+          "markers": []
         },
         {
           "name": "places",
@@ -91,7 +79,8 @@ export const definitions: ModelDefinitions = {
           ],
           "validators": [],
           "subclasses": [],
-          "defaultReifiedType": null
+          "defaultReifiedType": null,
+          "bindings": []
         },
         {
           "name": "activity_type",
@@ -133,7 +122,8 @@ export const definitions: ModelDefinitions = {
           "subclasses": [
             "involves"
           ],
-          "defaultReifiedType": null
+          "defaultReifiedType": null,
+          "bindings": []
         },
         {
           "name": "participants",
@@ -171,7 +161,8 @@ export const definitions: ModelDefinitions = {
           ],
           "validators": [],
           "subclasses": [],
-          "defaultReifiedType": "InRole"
+          "defaultReifiedType": "InRole",
+          "bindings": []
         }
       ],
       "incoming": [],
@@ -214,7 +205,8 @@ export const definitions: ModelDefinitions = {
           ],
           "validators": [],
           "subclasses": [],
-          "defaultReifiedType": null
+          "defaultReifiedType": null,
+          "bindings": []
         }
       ],
       "incoming": [],
@@ -225,7 +217,8 @@ export const definitions: ModelDefinitions = {
         "itemPage": null,
         "viewCard": null,
         "editCard": null,
-        "collapse": true
+        "collapse": true,
+        "headless": null
       }
     },
     "Artwork": {
@@ -306,7 +299,8 @@ export const definitions: ModelDefinitions = {
           ],
           "validators": [],
           "subclasses": [],
-          "defaultReifiedType": null
+          "defaultReifiedType": null,
+          "bindings": []
         },
         {
           "name": "page",
@@ -323,7 +317,16 @@ export const definitions: ModelDefinitions = {
         }
       ],
       "incoming": [],
-      "interfaceMeta": null
+      "interfaceMeta": {
+        "colour": null,
+        "navSection": null,
+        "listPage": null,
+        "itemPage": null,
+        "viewCard": null,
+        "editCard": null,
+        "collapse": null,
+        "headless": true
+      }
     },
     "Causes": {
       "name": "Causes",
@@ -363,7 +366,8 @@ export const definitions: ModelDefinitions = {
           ],
           "validators": [],
           "subclasses": [],
-          "defaultReifiedType": null
+          "defaultReifiedType": null,
+          "bindings": []
         },
         {
           "name": "result",
@@ -384,7 +388,8 @@ export const definitions: ModelDefinitions = {
           ],
           "validators": [],
           "subclasses": [],
-          "defaultReifiedType": null
+          "defaultReifiedType": null,
+          "bindings": []
         }
       ],
       "incoming": [],
@@ -478,20 +483,8 @@ export const definitions: ModelDefinitions = {
             "Period",
             "Recurrence",
             "UnknownDate"
-          ]
-        },
-        {
-          "name": "year",
-          "key": "year",
-          "description": null,
-          "dbField": false,
-          "required": true,
-          "nullable": false,
-          "kind": "literal",
-          "type": {
-            "type": "int"
-          },
-          "validators": []
+          ],
+          "markers": []
         },
         {
           "name": "places",
@@ -512,7 +505,8 @@ export const definitions: ModelDefinitions = {
           ],
           "validators": [],
           "subclasses": [],
-          "defaultReifiedType": null
+          "defaultReifiedType": null,
+          "bindings": []
         },
         {
           "name": "created_by",
@@ -535,7 +529,8 @@ export const definitions: ModelDefinitions = {
           "subclasses": [
             "involves"
           ],
-          "defaultReifiedType": null
+          "defaultReifiedType": null,
+          "bindings": []
         },
         {
           "name": "artwork_created",
@@ -563,7 +558,8 @@ export const definitions: ModelDefinitions = {
           "subclasses": [
             "object_created"
           ],
-          "defaultReifiedType": null
+          "defaultReifiedType": null,
+          "bindings": []
         }
       ],
       "incoming": [],
@@ -620,20 +616,8 @@ export const definitions: ModelDefinitions = {
             "Period",
             "Recurrence",
             "UnknownDate"
-          ]
-        },
-        {
-          "name": "year",
-          "key": "year",
-          "description": null,
-          "dbField": false,
-          "required": true,
-          "nullable": false,
-          "kind": "literal",
-          "type": {
-            "type": "int"
-          },
-          "validators": []
+          ],
+          "markers": []
         },
         {
           "name": "places",
@@ -654,7 +638,8 @@ export const definitions: ModelDefinitions = {
           ],
           "validators": [],
           "subclasses": [],
-          "defaultReifiedType": null
+          "defaultReifiedType": null,
+          "bindings": []
         },
         {
           "name": "created_by",
@@ -677,7 +662,8 @@ export const definitions: ModelDefinitions = {
           "subclasses": [
             "involves"
           ],
-          "defaultReifiedType": null
+          "defaultReifiedType": null,
+          "bindings": []
         },
         {
           "name": "painting_created",
@@ -701,7 +687,8 @@ export const definitions: ModelDefinitions = {
             "artwork_created",
             "object_created"
           ],
-          "defaultReifiedType": null
+          "defaultReifiedType": null,
+          "bindings": []
         }
       ],
       "incoming": [],
@@ -760,20 +747,8 @@ export const definitions: ModelDefinitions = {
             "Period",
             "Recurrence",
             "UnknownDate"
-          ]
-        },
-        {
-          "name": "year",
-          "key": "year",
-          "description": null,
-          "dbField": false,
-          "required": true,
-          "nullable": false,
-          "kind": "literal",
-          "type": {
-            "type": "int"
-          },
-          "validators": []
+          ],
+          "markers": []
         },
         {
           "name": "places",
@@ -794,7 +769,8 @@ export const definitions: ModelDefinitions = {
           ],
           "validators": [],
           "subclasses": [],
-          "defaultReifiedType": null
+          "defaultReifiedType": null,
+          "bindings": []
         },
         {
           "name": "created_by",
@@ -817,7 +793,8 @@ export const definitions: ModelDefinitions = {
           "subclasses": [
             "involves"
           ],
-          "defaultReifiedType": null
+          "defaultReifiedType": null,
+          "bindings": []
         },
         {
           "name": "object_created",
@@ -848,7 +825,8 @@ export const definitions: ModelDefinitions = {
           ],
           "validators": [],
           "subclasses": [],
-          "defaultReifiedType": null
+          "defaultReifiedType": null,
+          "bindings": []
         }
       ],
       "incoming": [],
@@ -1024,7 +1002,8 @@ export const definitions: ModelDefinitions = {
           "module": "pangloss_dates",
           "name": "DateEditor"
         },
-        "collapse": null
+        "collapse": null,
+        "headless": null
       }
     },
     "DateCharacterisation": {
@@ -1059,7 +1038,8 @@ export const definitions: ModelDefinitions = {
             "NoRule",
             "Period",
             "Recurrence"
-          ]
+          ],
+          "markers": []
         }
       ],
       "incoming": [],
@@ -1225,7 +1205,8 @@ export const definitions: ModelDefinitions = {
           "model": "ExactDate",
           "types": [
             "ExactDate"
-          ]
+          ],
+          "markers": []
         },
         {
           "name": "latest",
@@ -1238,7 +1219,8 @@ export const definitions: ModelDefinitions = {
           "model": "ExactDate",
           "types": [
             "ExactDate"
-          ]
+          ],
+          "markers": []
         }
       ],
       "incoming": [],
@@ -1255,7 +1237,8 @@ export const definitions: ModelDefinitions = {
           "module": "pangloss_dates",
           "name": "DateEditor"
         },
-        "collapse": null
+        "collapse": null,
+        "headless": null
       }
     },
     "EDTFDate": {
@@ -1435,7 +1418,8 @@ export const definitions: ModelDefinitions = {
           "module": "pangloss_dates",
           "name": "DateEditor"
         },
-        "collapse": null
+        "collapse": null,
+        "headless": null
       }
     },
     "ExactDate": {
@@ -1641,7 +1625,8 @@ export const definitions: ModelDefinitions = {
           "module": "pangloss_dates",
           "name": "DateEditor"
         },
-        "collapse": null
+        "collapse": null,
+        "headless": null
       }
     },
     "Factoid": {
@@ -1660,19 +1645,6 @@ export const definitions: ModelDefinitions = {
       "requireLabel": true,
       "useInSemanticSpaceLabel": true,
       "fields": [
-        {
-          "name": "year",
-          "key": "year",
-          "description": null,
-          "dbField": false,
-          "required": true,
-          "nullable": false,
-          "kind": "literal",
-          "type": {
-            "type": "int"
-          },
-          "validators": []
-        },
         {
           "name": "source",
           "key": "source",
@@ -1704,7 +1676,8 @@ export const definitions: ModelDefinitions = {
           ],
           "validators": [],
           "subclasses": [],
-          "defaultReifiedType": null
+          "defaultReifiedType": null,
+          "bindings": []
         },
         {
           "name": "statements",
@@ -1936,7 +1909,8 @@ export const definitions: ModelDefinitions = {
           ],
           "validators": [],
           "subclasses": [],
-          "defaultReifiedType": null
+          "defaultReifiedType": null,
+          "bindings": []
         }
       ],
       "incoming": [],
@@ -1974,7 +1948,8 @@ export const definitions: ModelDefinitions = {
             "NoRule",
             "Period",
             "Recurrence"
-          ]
+          ],
+          "markers": []
         },
         {
           "name": "use",
@@ -2133,6 +2108,17 @@ export const definitions: ModelDefinitions = {
               "viaReified": false
             }
           ]
+        },
+        {
+          "name": "received_order",
+          "key": "receivedOrder",
+          "sources": [
+            {
+              "model": "Order",
+              "field": "ordered_to",
+              "viaReified": false
+            }
+          ]
         }
       ],
       "interfaceMeta": null
@@ -2174,7 +2160,8 @@ export const definitions: ModelDefinitions = {
           ],
           "validators": [],
           "subclasses": [],
-          "defaultReifiedType": null
+          "defaultReifiedType": null,
+          "bindings": []
         }
       ],
       "incoming": [],
@@ -2185,7 +2172,8 @@ export const definitions: ModelDefinitions = {
         "itemPage": null,
         "viewCard": null,
         "editCard": null,
-        "collapse": null
+        "collapse": null,
+        "headless": null
       }
     },
     "Identification": {
@@ -2232,7 +2220,8 @@ export const definitions: ModelDefinitions = {
             }
           ],
           "subclasses": [],
-          "defaultReifiedType": null
+          "defaultReifiedType": null,
+          "bindings": []
         },
         {
           "name": "identified_by",
@@ -2256,7 +2245,8 @@ export const definitions: ModelDefinitions = {
         "itemPage": null,
         "viewCard": null,
         "editCard": null,
-        "collapse": true
+        "collapse": true,
+        "headless": null
       }
     },
     "InRole": {
@@ -2294,7 +2284,8 @@ export const definitions: ModelDefinitions = {
           ],
           "validators": [],
           "subclasses": [],
-          "defaultReifiedType": null
+          "defaultReifiedType": null,
+          "bindings": []
         },
         {
           "name": "role",
@@ -2365,20 +2356,8 @@ export const definitions: ModelDefinitions = {
             "Period",
             "Recurrence",
             "UnknownDate"
-          ]
-        },
-        {
-          "name": "year",
-          "key": "year",
-          "description": null,
-          "dbField": false,
-          "required": true,
-          "nullable": false,
-          "kind": "literal",
-          "type": {
-            "type": "int"
-          },
-          "validators": []
+          ],
+          "markers": []
         },
         {
           "name": "places",
@@ -2399,7 +2378,8 @@ export const definitions: ModelDefinitions = {
           ],
           "validators": [],
           "subclasses": [],
-          "defaultReifiedType": null
+          "defaultReifiedType": null,
+          "bindings": []
         },
         {
           "name": "member",
@@ -2456,7 +2436,8 @@ export const definitions: ModelDefinitions = {
           "subclasses": [
             "involves"
           ],
-          "defaultReifiedType": null
+          "defaultReifiedType": null,
+          "bindings": []
         },
         {
           "name": "group",
@@ -2477,7 +2458,8 @@ export const definitions: ModelDefinitions = {
           ],
           "validators": [],
           "subclasses": [],
-          "defaultReifiedType": null
+          "defaultReifiedType": null,
+          "bindings": []
         }
       ],
       "incoming": [],
@@ -2520,7 +2502,8 @@ export const definitions: ModelDefinitions = {
           ],
           "validators": [],
           "subclasses": [],
-          "defaultReifiedType": null
+          "defaultReifiedType": null,
+          "bindings": []
         }
       ],
       "incoming": [],
@@ -2531,7 +2514,8 @@ export const definitions: ModelDefinitions = {
         "itemPage": null,
         "viewCard": null,
         "editCard": null,
-        "collapse": null
+        "collapse": null,
+        "headless": null
       }
     },
     "NegativeSubjunctive": {
@@ -2571,7 +2555,8 @@ export const definitions: ModelDefinitions = {
           ],
           "validators": [],
           "subclasses": [],
-          "defaultReifiedType": null
+          "defaultReifiedType": null,
+          "bindings": []
         }
       ],
       "incoming": [],
@@ -2582,7 +2567,8 @@ export const definitions: ModelDefinitions = {
         "itemPage": null,
         "viewCard": null,
         "editCard": null,
-        "collapse": null
+        "collapse": null,
+        "headless": null
       }
     },
     "NoRule": {
@@ -2657,7 +2643,8 @@ export const definitions: ModelDefinitions = {
             }
           ],
           "subclasses": [],
-          "defaultReifiedType": null
+          "defaultReifiedType": null,
+          "bindings": []
         },
         {
           "name": "label_de",
@@ -2726,7 +2713,8 @@ export const definitions: ModelDefinitions = {
           "name": "TypeCard"
         },
         "editCard": null,
-        "collapse": null
+        "collapse": null,
+        "headless": null
       }
     },
     "OngoingDate": {
@@ -2893,7 +2881,8 @@ export const definitions: ModelDefinitions = {
           "module": "pangloss_dates",
           "name": "DateEditor"
         },
-        "collapse": null
+        "collapse": null,
+        "headless": null
       }
     },
     "Order": {
@@ -2947,20 +2936,8 @@ export const definitions: ModelDefinitions = {
             "Period",
             "Recurrence",
             "UnknownDate"
-          ]
-        },
-        {
-          "name": "year",
-          "key": "year",
-          "description": null,
-          "dbField": false,
-          "required": true,
-          "nullable": false,
-          "kind": "literal",
-          "type": {
-            "type": "int"
-          },
-          "validators": []
+          ],
+          "markers": []
         },
         {
           "name": "places",
@@ -2981,7 +2958,8 @@ export const definitions: ModelDefinitions = {
           ],
           "validators": [],
           "subclasses": [],
-          "defaultReifiedType": null
+          "defaultReifiedType": null,
+          "bindings": []
         },
         {
           "name": "ordered_by",
@@ -3038,7 +3016,64 @@ export const definitions: ModelDefinitions = {
           "subclasses": [
             "involves"
           ],
-          "defaultReifiedType": null
+          "defaultReifiedType": null,
+          "bindings": []
+        },
+        {
+          "name": "ordered_to",
+          "key": "orderedTo",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "relation",
+          "many": false,
+          "reverseName": "received_order",
+          "options": [
+            {
+              "kind": "entity",
+              "type": "Group",
+              "edgeModel": null
+            },
+            {
+              "kind": "entity",
+              "type": "Person",
+              "edgeModel": null
+            },
+            {
+              "kind": "reifiedRelation",
+              "type": "Identification",
+              "edgeModel": null,
+              "params": {
+                "T": {
+                  "typeVar": "T",
+                  "options": [
+                    {
+                      "kind": "conjunction",
+                      "type": "Alternative",
+                      "edgeModel": null,
+                      "params": {
+                        "T": {
+                          "typeVar": "T",
+                          "options": [
+                            {
+                              "kind": "entity",
+                              "type": "Person",
+                              "edgeModel": "Probability"
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          ],
+          "validators": [],
+          "subclasses": [],
+          "defaultReifiedType": null,
+          "bindings": []
         },
         {
           "name": "thing_ordered",
@@ -3148,7 +3183,19 @@ export const definitions: ModelDefinitions = {
           ],
           "validators": [],
           "subclasses": [],
-          "defaultReifiedType": null
+          "defaultReifiedType": null,
+          "bindings": [
+            {
+              "boundField": "orderedTo",
+              "childFields": [
+                "givenBy",
+                "orderedBy"
+              ],
+              "allowedTypes": [],
+              "excludedTypes": [],
+              "converted": false
+            }
+          ]
         }
       ],
       "incoming": [],
@@ -3370,7 +3417,8 @@ export const definitions: ModelDefinitions = {
             "EDTFDate",
             "ExactDate",
             "UnknownDate"
-          ]
+          ],
+          "markers": []
         },
         {
           "name": "end",
@@ -3387,7 +3435,8 @@ export const definitions: ModelDefinitions = {
             "ExactDate",
             "OngoingDate",
             "UnknownDate"
-          ]
+          ],
+          "markers": []
         }
       ],
       "incoming": [],
@@ -3404,7 +3453,8 @@ export const definitions: ModelDefinitions = {
           "module": "pangloss_dates",
           "name": "DateEditor"
         },
-        "collapse": null
+        "collapse": null,
+        "headless": null
       }
     },
     "Person": {
@@ -3453,6 +3503,12 @@ export const definitions: ModelDefinitions = {
             "Period",
             "Recurrence",
             "UnknownDate"
+          ],
+          "markers": [
+            {
+              "name": "SortDefault",
+              "sortBy": "earliest_fuzzy"
+            }
           ]
         },
         {
@@ -3488,7 +3544,8 @@ export const definitions: ModelDefinitions = {
           ],
           "validators": [],
           "subclasses": [],
-          "defaultReifiedType": null
+          "defaultReifiedType": null,
+          "bindings": []
         }
       ],
       "incoming": [
@@ -3531,12 +3588,12 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Transfer",
               "field": "given_by",
-              "viaReified": true
+              "viaReified": false
             },
             {
               "model": "Transfer",
               "field": "given_by",
-              "viaReified": false
+              "viaReified": true
             }
           ]
         },
@@ -3558,12 +3615,12 @@ export const definitions: ModelDefinitions = {
             {
               "model": "MemberOf",
               "field": "member",
-              "viaReified": true
+              "viaReified": false
             },
             {
               "model": "MemberOf",
               "field": "member",
-              "viaReified": false
+              "viaReified": true
             }
           ]
         },
@@ -3574,12 +3631,12 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Order",
               "field": "ordered_by",
-              "viaReified": true
+              "viaReified": false
             },
             {
               "model": "Order",
               "field": "ordered_by",
-              "viaReified": false
+              "viaReified": true
             }
           ]
         },
@@ -3601,12 +3658,28 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Transfer",
               "field": "given_to",
-              "viaReified": true
+              "viaReified": false
             },
             {
               "model": "Transfer",
               "field": "given_to",
+              "viaReified": true
+            }
+          ]
+        },
+        {
+          "name": "received_order",
+          "key": "receivedOrder",
+          "sources": [
+            {
+              "model": "Order",
+              "field": "ordered_to",
               "viaReified": false
+            },
+            {
+              "model": "Order",
+              "field": "ordered_to",
+              "viaReified": true
             }
           ]
         }
@@ -3771,7 +3844,8 @@ export const definitions: ModelDefinitions = {
           ],
           "validators": [],
           "subclasses": [],
-          "defaultReifiedType": null
+          "defaultReifiedType": null,
+          "bindings": []
         }
       ],
       "incoming": [],
@@ -3782,7 +3856,8 @@ export const definitions: ModelDefinitions = {
         "itemPage": null,
         "viewCard": null,
         "editCard": null,
-        "collapse": null
+        "collapse": null,
+        "headless": null
       }
     },
     "Probability": {
@@ -4121,7 +4196,8 @@ export const definitions: ModelDefinitions = {
             "EDTFDate",
             "ExactDate",
             "UnknownDate"
-          ]
+          ],
+          "markers": []
         },
         {
           "name": "end",
@@ -4138,7 +4214,8 @@ export const definitions: ModelDefinitions = {
             "ExactDate",
             "OngoingDate",
             "UnknownDate"
-          ]
+          ],
+          "markers": []
         },
         {
           "name": "pattern_keys",
@@ -4169,7 +4246,8 @@ export const definitions: ModelDefinitions = {
           "module": "pangloss_dates",
           "name": "DateEditor"
         },
-        "collapse": null
+        "collapse": null,
+        "headless": null
       }
     },
     "Source": {
@@ -4300,20 +4378,8 @@ export const definitions: ModelDefinitions = {
             "Period",
             "Recurrence",
             "UnknownDate"
-          ]
-        },
-        {
-          "name": "year",
-          "key": "year",
-          "description": null,
-          "dbField": false,
-          "required": true,
-          "nullable": false,
-          "kind": "literal",
-          "type": {
-            "type": "int"
-          },
-          "validators": []
+          ],
+          "markers": []
         },
         {
           "name": "involves",
@@ -4339,7 +4405,8 @@ export const definitions: ModelDefinitions = {
           ],
           "validators": [],
           "subclasses": [],
-          "defaultReifiedType": null
+          "defaultReifiedType": null,
+          "bindings": []
         },
         {
           "name": "places",
@@ -4360,7 +4427,8 @@ export const definitions: ModelDefinitions = {
           ],
           "validators": [],
           "subclasses": [],
-          "defaultReifiedType": null
+          "defaultReifiedType": null,
+          "bindings": []
         }
       ],
       "incoming": [],
@@ -4417,20 +4485,8 @@ export const definitions: ModelDefinitions = {
             "Period",
             "Recurrence",
             "UnknownDate"
-          ]
-        },
-        {
-          "name": "year",
-          "key": "year",
-          "description": null,
-          "dbField": false,
-          "required": true,
-          "nullable": false,
-          "kind": "literal",
-          "type": {
-            "type": "int"
-          },
-          "validators": []
+          ],
+          "markers": []
         },
         {
           "name": "places",
@@ -4451,7 +4507,8 @@ export const definitions: ModelDefinitions = {
           ],
           "validators": [],
           "subclasses": [],
-          "defaultReifiedType": null
+          "defaultReifiedType": null,
+          "bindings": []
         },
         {
           "name": "item",
@@ -4534,7 +4591,8 @@ export const definitions: ModelDefinitions = {
           "subclasses": [
             "involves"
           ],
-          "defaultReifiedType": null
+          "defaultReifiedType": null,
+          "bindings": []
         },
         {
           "name": "given_to",
@@ -4589,7 +4647,8 @@ export const definitions: ModelDefinitions = {
           ],
           "validators": [],
           "subclasses": [],
-          "defaultReifiedType": null
+          "defaultReifiedType": null,
+          "bindings": []
         }
       ],
       "incoming": [],
@@ -4759,7 +4818,8 @@ export const definitions: ModelDefinitions = {
           "module": "pangloss_dates",
           "name": "DateEditor"
         },
-        "collapse": null
+        "collapse": null,
+        "headless": null
       }
     },
     "WithCertainty": {
@@ -4992,12 +5052,6 @@ export const definitions: ModelDefinitions = {
             "UnknownDate"
           ]
         },
-        "year": {
-          "operators": "compare",
-          "value": {
-            "type": "int"
-          }
-        },
         "places": {
           "operators": "relation",
           "targets": [
@@ -5035,8 +5089,7 @@ export const definitions: ModelDefinitions = {
         "date.latest_strict",
         "date.latest_fuzzy",
         "date.sort_day",
-        "date.end_sort_day",
-        "year"
+        "date.end_sort_day"
       ]
     },
     "Artwork": {
@@ -5068,12 +5121,6 @@ export const definitions: ModelDefinitions = {
             "UnknownDate"
           ]
         },
-        "year": {
-          "operators": "compare",
-          "value": {
-            "type": "int"
-          }
-        },
         "places": {
           "operators": "relation",
           "targets": [
@@ -5103,8 +5150,7 @@ export const definitions: ModelDefinitions = {
         "date.latest_strict",
         "date.latest_fuzzy",
         "date.sort_day",
-        "date.end_sort_day",
-        "year"
+        "date.end_sort_day"
       ]
     },
     "CreationOfPainting": {
@@ -5128,12 +5174,6 @@ export const definitions: ModelDefinitions = {
             "Recurrence",
             "UnknownDate"
           ]
-        },
-        "year": {
-          "operators": "compare",
-          "value": {
-            "type": "int"
-          }
         },
         "places": {
           "operators": "relation",
@@ -5163,8 +5203,7 @@ export const definitions: ModelDefinitions = {
         "date.latest_strict",
         "date.latest_fuzzy",
         "date.sort_day",
-        "date.end_sort_day",
-        "year"
+        "date.end_sort_day"
       ]
     },
     "CreationOfPhysicalObject": {
@@ -5188,12 +5227,6 @@ export const definitions: ModelDefinitions = {
             "Recurrence",
             "UnknownDate"
           ]
-        },
-        "year": {
-          "operators": "compare",
-          "value": {
-            "type": "int"
-          }
         },
         "places": {
           "operators": "relation",
@@ -5225,8 +5258,7 @@ export const definitions: ModelDefinitions = {
         "date.latest_strict",
         "date.latest_fuzzy",
         "date.sort_day",
-        "date.end_sort_day",
-        "year"
+        "date.end_sort_day"
       ]
     },
     "Date": {
@@ -5563,12 +5595,6 @@ export const definitions: ModelDefinitions = {
     "Factoid": {
       "kind": "document",
       "fields": {
-        "year": {
-          "operators": "compare",
-          "value": {
-            "type": "int"
-          }
-        },
         "source": {
           "operators": "relation",
           "targets": [
@@ -5589,8 +5615,7 @@ export const definitions: ModelDefinitions = {
         }
       },
       "orderBy": [
-        "label",
-        "year"
+        "label"
       ]
     },
     "Feast": {
@@ -5663,12 +5688,6 @@ export const definitions: ModelDefinitions = {
             "UnknownDate"
           ]
         },
-        "year": {
-          "operators": "compare",
-          "value": {
-            "type": "int"
-          }
-        },
         "places": {
           "operators": "relation",
           "targets": [
@@ -5698,8 +5717,7 @@ export const definitions: ModelDefinitions = {
         "date.latest_strict",
         "date.latest_fuzzy",
         "date.sort_day",
-        "date.end_sort_day",
-        "year"
+        "date.end_sort_day"
       ]
     },
     "NoRule": {
@@ -5833,12 +5851,6 @@ export const definitions: ModelDefinitions = {
             "UnknownDate"
           ]
         },
-        "year": {
-          "operators": "compare",
-          "value": {
-            "type": "int"
-          }
-        },
         "places": {
           "operators": "relation",
           "targets": [
@@ -5846,6 +5858,13 @@ export const definitions: ModelDefinitions = {
           ]
         },
         "ordered_by": {
+          "operators": "relation",
+          "targets": [
+            "Group",
+            "Person"
+          ]
+        },
+        "ordered_to": {
           "operators": "relation",
           "targets": [
             "Group",
@@ -5874,8 +5893,7 @@ export const definitions: ModelDefinitions = {
         "date.latest_strict",
         "date.latest_fuzzy",
         "date.sort_day",
-        "date.end_sort_day",
-        "year"
+        "date.end_sort_day"
       ]
     },
     "Painting": {
@@ -6233,12 +6251,6 @@ export const definitions: ModelDefinitions = {
             "UnknownDate"
           ]
         },
-        "year": {
-          "operators": "compare",
-          "value": {
-            "type": "int"
-          }
-        },
         "involves": {
           "operators": "relation",
           "targets": [
@@ -6262,8 +6274,7 @@ export const definitions: ModelDefinitions = {
         "date.latest_strict",
         "date.latest_fuzzy",
         "date.sort_day",
-        "date.end_sort_day",
-        "year"
+        "date.end_sort_day"
       ]
     },
     "Transfer": {
@@ -6287,12 +6298,6 @@ export const definitions: ModelDefinitions = {
             "Recurrence",
             "UnknownDate"
           ]
-        },
-        "year": {
-          "operators": "compare",
-          "value": {
-            "type": "int"
-          }
         },
         "places": {
           "operators": "relation",
@@ -6337,7 +6342,6 @@ export const definitions: ModelDefinitions = {
         "date.latest_fuzzy",
         "date.sort_day",
         "date.end_sort_day",
-        "year",
         "item",
         "quantity"
       ]
@@ -6419,7 +6423,6 @@ export const definitions: ModelDefinitions = {
 export type ActivityWhere = {
   text?: TextCondition;
   date?: RelationCondition | (RelationCondition & (DatePattern | DateRangePattern | EDTFDatePattern | ExactDatePattern | OngoingDatePattern | PeriodPattern | RecurrencePattern | UnknownDatePattern));
-  year?: CompareCondition<number>;
   places?: RelationCondition | (RelationCondition & (PlacePattern));
   activity_type?: ChoiceCondition<"meeting" | "journey" | "battle" | "ceremony" | "correspondence">;
   carried_out_by?: RelationCondition | (RelationCondition & (GroupPattern | PersonPattern));
@@ -6452,7 +6455,6 @@ export type ArtworkPattern = { type: "Artwork"; where?: ArtworkWhere };
 export type CreationOfArtworkWhere = {
   text?: TextCondition;
   date?: RelationCondition | (RelationCondition & (DatePattern | DateRangePattern | EDTFDatePattern | ExactDatePattern | OngoingDatePattern | PeriodPattern | RecurrencePattern | UnknownDatePattern));
-  year?: CompareCondition<number>;
   places?: RelationCondition | (RelationCondition & (PlacePattern));
   created_by?: RelationCondition | (RelationCondition & (PersonPattern));
   artwork_created?: RelationCondition | (RelationCondition & (ArtworkPattern | PaintingPattern));
@@ -6473,7 +6475,6 @@ export type CreationOfArtworkPattern = { type: "CreationOfArtwork"; where?: Crea
 export type CreationOfPaintingWhere = {
   text?: TextCondition;
   date?: RelationCondition | (RelationCondition & (DatePattern | DateRangePattern | EDTFDatePattern | ExactDatePattern | OngoingDatePattern | PeriodPattern | RecurrencePattern | UnknownDatePattern));
-  year?: CompareCondition<number>;
   places?: RelationCondition | (RelationCondition & (PlacePattern));
   created_by?: RelationCondition | (RelationCondition & (PersonPattern));
   painting_created?: RelationCondition | (RelationCondition & (PaintingPattern));
@@ -6494,7 +6495,6 @@ export type CreationOfPaintingPattern = { type: "CreationOfPainting"; where?: Cr
 export type CreationOfPhysicalObjectWhere = {
   text?: TextCondition;
   date?: RelationCondition | (RelationCondition & (DatePattern | DateRangePattern | EDTFDatePattern | ExactDatePattern | OngoingDatePattern | PeriodPattern | RecurrencePattern | UnknownDatePattern));
-  year?: CompareCondition<number>;
   places?: RelationCondition | (RelationCondition & (PlacePattern));
   created_by?: RelationCondition | (RelationCondition & (PersonPattern));
   object_created?: RelationCondition | (RelationCondition & (ArtworkPattern | PaintingPattern | PhysicalObjectPattern));
@@ -6607,7 +6607,6 @@ export type ExactDateWhere = {
 export type ExactDatePattern = { type: "ExactDate"; where?: ExactDateWhere };
 
 export type FactoidWhere = {
-  year?: CompareCondition<number>;
   source?: RelationCondition | (RelationCondition & (SourcePattern));
   statements?: RelationCondition | (RelationCondition & (ActivityPattern | CreationOfArtworkPattern | CreationOfPaintingPattern | CreationOfPhysicalObjectPattern | MemberOfPattern | OrderPattern | TransferPattern));
   $all?: FactoidWhere[];
@@ -6653,7 +6652,6 @@ export type GroupPattern = { type: "Group"; where?: GroupWhere };
 export type MemberOfWhere = {
   text?: TextCondition;
   date?: RelationCondition | (RelationCondition & (DatePattern | DateRangePattern | EDTFDatePattern | ExactDatePattern | OngoingDatePattern | PeriodPattern | RecurrencePattern | UnknownDatePattern));
-  year?: CompareCondition<number>;
   places?: RelationCondition | (RelationCondition & (PlacePattern));
   member?: RelationCondition | (RelationCondition & (GroupPattern | PersonPattern));
   group?: RelationCondition | (RelationCondition & (GroupPattern));
@@ -6717,9 +6715,9 @@ export type OngoingDatePattern = { type: "OngoingDate"; where?: OngoingDateWhere
 export type OrderWhere = {
   text?: TextCondition;
   date?: RelationCondition | (RelationCondition & (DatePattern | DateRangePattern | EDTFDatePattern | ExactDatePattern | OngoingDatePattern | PeriodPattern | RecurrencePattern | UnknownDatePattern));
-  year?: CompareCondition<number>;
   places?: RelationCondition | (RelationCondition & (PlacePattern));
   ordered_by?: RelationCondition | (RelationCondition & (GroupPattern | PersonPattern));
+  ordered_to?: RelationCondition | (RelationCondition & (GroupPattern | PersonPattern));
   thing_ordered?: RelationCondition | (RelationCondition & (ActivityPattern | CreationOfArtworkPattern | CreationOfPaintingPattern | CreationOfPhysicalObjectPattern | MemberOfPattern | OrderPattern | TransferPattern));
   $all?: OrderWhere[];
   $any_of?: OrderWhere[];
@@ -6852,7 +6850,6 @@ export type SourcePattern = { type: "Source"; where?: SourceWhere };
 export type StatementWhere = {
   text?: TextCondition;
   date?: RelationCondition | (RelationCondition & (DatePattern | DateRangePattern | EDTFDatePattern | ExactDatePattern | OngoingDatePattern | PeriodPattern | RecurrencePattern | UnknownDatePattern));
-  year?: CompareCondition<number>;
   involves?: RelationCondition | (RelationCondition & (GroupPattern | PersonPattern));
   places?: RelationCondition | (RelationCondition & (PlacePattern));
   $all?: StatementWhere[];
@@ -6872,7 +6869,6 @@ export type StatementPattern = { type: "Statement"; where?: StatementWhere };
 export type TransferWhere = {
   text?: TextCondition;
   date?: RelationCondition | (RelationCondition & (DatePattern | DateRangePattern | EDTFDatePattern | ExactDatePattern | OngoingDatePattern | PeriodPattern | RecurrencePattern | UnknownDatePattern));
-  year?: CompareCondition<number>;
   places?: RelationCondition | (RelationCondition & (PlacePattern));
   item?: TextCondition;
   quantity?: CompareCondition<number | string>;
@@ -6934,25 +6930,25 @@ export interface Wheres {
 }
 
 export interface OrderFields {
-  Activity: "label" | "text" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day" | "year";
+  Activity: "label" | "text" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day";
   Artwork: "label";
-  CreationOfArtwork: "label" | "text" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day" | "year";
-  CreationOfPainting: "label" | "text" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day" | "year";
-  CreationOfPhysicalObject: "label" | "text" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day" | "year";
+  CreationOfArtwork: "label" | "text" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day";
+  CreationOfPainting: "label" | "text" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day";
+  CreationOfPhysicalObject: "label" | "text" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day";
   DateCharacterisation: "label";
-  Factoid: "label" | "year";
+  Factoid: "label";
   Feast: "label" | "use" | "rank";
   Group: "label" | "name";
-  MemberOf: "label" | "text" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day" | "year";
+  MemberOf: "label" | "text" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day";
   OccupationType: "label" | "description" | "label_de" | "label_fr";
-  Order: "label" | "text" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day" | "year";
+  Order: "label" | "text" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day";
   Painting: "label";
   Person: "label" | "born.source_text" | "born.earliest_fuzzy" | "born.earliest_strict" | "born.latest_strict" | "born.latest_fuzzy" | "born.sort_day" | "born.end_sort_day";
   PhysicalObject: "label";
   Place: "label";
   Source: "label" | "author" | "written" | "edition_price";
-  Statement: "label" | "text" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day" | "year";
-  Transfer: "label" | "text" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day" | "year" | "item" | "quantity";
+  Statement: "label" | "text" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day";
+  Transfer: "label" | "text" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day" | "item" | "quantity";
 }
 
 /** A search of one model, typed by it: `searchItems(client, search)` takes it */

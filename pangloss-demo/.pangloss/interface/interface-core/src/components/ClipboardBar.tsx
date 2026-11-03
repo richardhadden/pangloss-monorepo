@@ -52,7 +52,7 @@ export function ClipboardBar() {
       aria-label={t("clipboard", "Clipboard")}
       aria-hidden={shown() ? undefined : "true"}
       class={[
-        "fixed bottom-0 z-30 flex flex-col overflow-hidden rounded-t-sm border-[0.5px] border-b-0 border-slate-400/70 bg-slate-200/60 text-slate-700 backdrop-blur-md transition-[opacity,translate] duration-300",
+        "fixed bottom-0 z-30 flex flex-col overflow-hidden rounded-t-xs border-[0.5px] border-b-0 border-slate-400/70 bg-slate-200/60 text-slate-700 backdrop-blur-md transition-[opacity,translate] duration-300",
         {
           "right-8 left-80": navPinned(),
           "right-20 left-32": !navPinned(),
@@ -103,7 +103,7 @@ export function ClipboardBar() {
         <For each={entries()}>
           {(entry) => (
             // (as tall as the row lets it be: what is inside it scrolls)
-            <li class="flex min-h-0 w-72 shrink-0 flex-col gap-1 rounded-sm border-[0.5px] border-slate-400/70 bg-white/70 p-2">
+            <li class="flex min-h-0 w-72 shrink-0 flex-col gap-1 rounded-xs border-[0.5px] border-slate-400/70 bg-white/70 p-2">
               <div class="flex min-w-0 shrink-0 items-center gap-1">
                 <span
                   class="shrink-0 text-slate-500"
@@ -116,7 +116,7 @@ export function ClipboardBar() {
                 <ClipLabel value={entry.value} class="flex-1" />
                 <button
                   type="button"
-                  class="shrink-0 cursor-pointer rounded-sm px-1.5 text-xs text-red-800 select-none hover:bg-red-400/30"
+                  class="shrink-0 cursor-pointer rounded-xs px-1.5 text-xs text-red-800 select-none hover:bg-red-400/30"
                   aria-label={t("clip_remove", "Take off the clipboard")}
                   title={t("clip_remove", "Take off the clipboard")}
                   onClick={() => clipboard?.remove(entry.key)}

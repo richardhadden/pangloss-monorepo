@@ -140,7 +140,7 @@ export function TypeMenu(props: {
             <div
               role="menu"
               class={[
-                "absolute top-full z-30 mt-1 flex min-w-max flex-col gap-2 rounded-sm border-[0.5px] border-slate-400/70 bg-white p-2 shadow-lg",
+                "absolute top-full z-30 mt-1 flex min-w-max flex-col gap-2 rounded-xs border-[0.5px] border-slate-400/70 bg-white p-2 shadow-lg",
                 { "left-0": !props.alignRight },
                 { "right-0": props.alignRight },
               ]}
@@ -148,7 +148,7 @@ export function TypeMenu(props: {
               <For each={props.groups}>
                 {(group) => (
                   <section
-                    class={["rounded-sm border-[0.5px] border-slate-400/50 p-2", tintOf(group)]}
+                    class={["rounded-xs border-[0.5px] border-slate-400/50 p-2", tintOf(group)]}
                   >
                     <Show when={group.spaces.length > 0}>
                       <h3 class="mb-1 text-xs font-semibold uppercase select-none">{spaceName(group)}</h3>
@@ -175,7 +175,7 @@ export function TypeMenu(props: {
                                       type="button"
                                       role="menuitem"
                                       tabindex="-1"
-                                      class="block w-full cursor-pointer rounded-sm px-2 py-1 text-left text-sm hover:bg-slate-400/30 focus:bg-slate-400/30 focus:outline-none"
+                                      class="block w-full cursor-pointer rounded-xs px-2 py-1 text-left text-sm hover:bg-slate-400/30 focus:bg-slate-400/30 focus:outline-none"
                                       onClick={() => choose({ spaces: group.spaces, type: row.name })}
                                     >
                                       {modelName(row.name)}
@@ -314,7 +314,7 @@ export function TypeGrid(props: { groups: MenuGroup[]; onChoose: (choice: Choice
             <div class="flex flex-wrap items-start gap-3">
               <For each={zone.columns}>
                 {(column) => (
-                  <ul class="flex w-max flex-col divide-y-[0.5px] divide-slate-400/70 overflow-hidden rounded-sm border-[0.5px] border-slate-400/70 bg-white shadow-xs">
+                  <ul class="flex w-max flex-col divide-y-[0.5px] divide-slate-400/70 overflow-hidden rounded-xs border-[0.5px] border-slate-400/70 bg-white shadow-xs">
                     <For each={column}>
                       {(row) => (
                         <li class="flex flex-col">
@@ -455,7 +455,7 @@ export function TypeChooser(
           ref={root}
           role="group"
           aria-label={props.label}
-          class="flex w-full flex-col overflow-hidden rounded-sm border-[0.5px] border-dashed border-slate-400/80 bg-white/60"
+          class="flex w-full flex-col overflow-hidden rounded-xs border-[0.5px] border-dashed border-slate-400/80 bg-white/60"
           onKeyDown={onKeyDown}
           onFocusOut={(event) => {
             // (Tab out of it closes it)

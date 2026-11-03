@@ -14,12 +14,14 @@ import {
 import { kindRule, kindTint, spaceTint } from "../../primitives";
 import {
   blankItem,
+  createBinder,
   cleanForSave,
   choicesOf,
   choiceValue,
   envOf,
   filled,
   getModel,
+  headlessIn,
   lengthBound,
   menuGroups,
   optionFor,
@@ -217,6 +219,8 @@ export function ModelFields(props: {
   env: Env;
   skip?: string[];
   bare?: string;
+  /** What a field is taken to be when it is not set, by key: shown as chosen (a choice), not written */
+  defaults?: Record<string, unknown>;
 }) {
   const form = useItemForm();
   const { fieldName } = useTranslations();
@@ -243,6 +247,7 @@ export function ModelFields(props: {
                 path={() => [...props.path(), field.key]}
                 env={props.env}
                 bare={field.key === props.bare}
+                fallback={props.defaults?.[field.key]}
               />
             </Row>
           </Show>
@@ -411,6 +416,8 @@ function FieldEditor(props: {
   env: Env;
   /** Shown without its name: its buttons say only what they do */
   bare?: boolean;
+  /** What a literal is taken to be when it is not set */
+  fallback?: unknown;
 }) {
   const { fieldName } = useTranslations();
   const name = () => fieldName(props.modelName, props.field.name);
@@ -422,6 +429,7 @@ function FieldEditor(props: {
           validators={(props.field as Extract<FieldDefinition, { kind: "literal" }>).validators}
           path={props.path}
           label={name()}
+          fallback={props.fallback}
         />
       </Match>
       <Match when={props.field.kind === "list"}>
@@ -518,11 +526,11 @@ function EmbeddedEditor(props: { field: EmbeddedField; path: Accessor<Path>; lab
       >
         {/* (the type chosen, which its menu changes, with the remove button joined on; the corners are
             the parts', not clipped by the frame, which would hide the menu that opens below) */}
-        <div class="inline-flex self-start rounded-sm border-[0.5px] border-slate-400/70 bg-slate-100/60">
+        <div class="inline-flex self-start rounded-xs border-[0.5px] border-slate-400/70 bg-slate-100/60">
           <TypeMenu
             groups={groups()}
             label={modelName(String(value()!.type))}
-            buttonClass="flex cursor-pointer items-center gap-1 rounded-sm px-2 py-1 text-xs font-semibold uppercase select-none hover:bg-slate-300/50 focus:bg-slate-300/50 focus:outline-none"
+            buttonClass="flex cursor-pointer items-center gap-1 rounded-xs px-2 py-1 text-xs font-semibold uppercase select-none hover:bg-slate-300/50 focus:bg-slate-300/50 focus:outline-none"
             onChoose={choose}
           />
           <Show when={clip}>
@@ -536,7 +544,7 @@ function EmbeddedEditor(props: { field: EmbeddedField; path: Accessor<Path>; lab
           <Show when={!props.field.required}>
             <button
               type="button"
-              class={[joinedRemoveClass, "rounded-r-sm"]}
+              class={[joinedRemoveClass, "rounded-r-xs"]}
               aria-label={t("remove_item", "Remove {name}", { name: props.label })}
               title={t("remove_item", "Remove {name}", { name: props.label })}
               onClick={() => form.remove(props.path())}
@@ -555,6 +563,7 @@ function EmbeddedEditor(props: { field: EmbeddedField; path: Accessor<Path>; lab
             props={{
               type: String(value()!.type),
               model: model()!,
+              field: props.field,
               label: props.label,
               get path() {
                 return props.path();
@@ -601,6 +610,11 @@ function RelationEditor(props: {
     return isObject(at) ? [at] : [];
   };
   const where = () => (props.field.many ? [...props.path(), items().length] : props.path());
+  // (the last item is a block, not a chip: what adds is as far below it as the items are from each other)
+  const endsInBlock = () => {
+    const last = items().at(-1);
+    return isObject(last) && getModel(definitions, String(last.type ?? ""))?.kind !== "Entity";
+  };
   // (a list as long as it may be, `MaxLen`, has no way to add more)
   const canAdd = () =>
     props.field.many ? items().length < (lengthBound(props.field.validators, "max") ?? Infinity) : items().length === 0;
@@ -629,7 +643,7 @@ function RelationEditor(props: {
     />
   );
   return (
-    <div class="flex w-full min-w-0 flex-col gap-4">
+    <div class={["flex w-full min-w-0 flex-col", endsInBlock() ? "gap-6" : "gap-4"]}>
       <Show
         when={props.field.many}
         fallback={
@@ -640,6 +654,11 @@ function RelationEditor(props: {
                 options={options()}
                 env={props.env}
                 onRemove={() => form.remove(props.path())}
+                headless={headlessIn(
+                  definitions,
+                  { ...props.field, options: options() },
+                  String((items()[0] as FormData | undefined)?.type ?? ""),
+                )}
               />
             </div>
           </Show>
@@ -747,6 +766,8 @@ function RelationItem(props: {
   options: RelationOption[];
   env: Env;
   onRemove: () => void;
+  /** It is all its field can hold, and the field holds one, and must: no head (`InterfaceMeta(headless=True)`) */
+  headless?: boolean;
 }) {
   const form = useItemForm();
   const definitions = useModels();
@@ -828,7 +849,7 @@ function RelationItem(props: {
         <div
           data-tint
           class={[
-            "flex w-full min-w-0 flex-col rounded-sm border-[0.5px] border-slate-400/70",
+            "flex w-full min-w-0 flex-col rounded-xs",
             spaceTint(model()?.interfaceMeta?.colour, Math.floor(props.path().length / 2)),
           ]}
         >
@@ -881,6 +902,12 @@ function RelationItem(props: {
           <ItemFields model={model()!} path={props.path} />
         </Block>
       </Match>
+      <Match when={props.headless && model()}>
+        {/* (a reified relation with no head: what it holds, then its own fields, as if they were the field's) */}
+        <div class="flex w-full min-w-0 flex-col">
+          <ModelFields model={model()!} path={props.path} env={childEnv()} bare="target" />
+        </div>
+      </Match>
       <Match when={model()}>
         {/* (a reified relation, a conjunction: its own fields, and what it holds without the name of the field) */}
         <Block
@@ -913,6 +940,8 @@ function EntityCreateDialog(props: {
   onClose: () => void;
   /** What the form of the type chosen starts with, over the blank item (a date filled in, say) */
   initial?: (type: string) => Record<string, unknown>;
+  /** What every item made in the form starts with, the item itself and each added to it (see `createItemFormState`) */
+  fill?: (item: FormData) => FormData;
 }) {
   const Modal = useComponent("Modal");
   const { t, modelName } = useTranslations();
@@ -926,7 +955,7 @@ function EntityCreateDialog(props: {
         when={type()}
         fallback={
           <div class="flex flex-col gap-6 p-6">
-            <div class="overflow-hidden rounded-sm border-[0.5px] border-dashed border-slate-400/80 bg-white/60">
+            <div class="overflow-hidden rounded-xs border-[0.5px] border-dashed border-slate-400/80 bg-white/60">
               <TypeGrid groups={props.groups} onChoose={(choice) => setType(choice.type)} autofocus />
             </div>
             <div class="flex justify-end gap-2">
@@ -941,6 +970,7 @@ function EntityCreateDialog(props: {
           <EntityCreateForm
             type={chosen()}
             initial={props.initial}
+            fill={props.fill}
             onBack={choices().length > 1 ? () => setType(undefined) : undefined}
             onCreated={props.onCreated}
             onClose={props.onClose}
@@ -959,6 +989,7 @@ function EntityCreateDialog(props: {
 function EntityCreateForm(props: {
   type: string;
   initial?: (type: string) => Record<string, unknown>;
+  fill?: (item: FormData) => FormData;
   onBack?: () => void;
   onCreated: (entity: Summary) => void;
   onClose: () => void;
@@ -967,7 +998,9 @@ function EntityCreateForm(props: {
   const definitions = useModels();
   const { t, modelName } = useTranslations();
   const type = untrack(() => props.type);
-  const state = createItemFormState({ ...blankItem(definitions, type), ...untrack(() => props.initial?.(type)) });
+  const fill = untrack(() => props.fill);
+  const started = { ...blankItem(definitions, type), ...untrack(() => props.initial?.(type)) };
+  const state = createItemFormState(fill ? fill(started) : started, { fill, binder: createBinder(definitions) });
   const model = getModel(definitions, type);
   // (while it is being made: back to false when that is over, whatever the answer)
   const [saving, setSaving] = createOptimistic(false);
@@ -1031,7 +1064,8 @@ function EntityCreateForm(props: {
  * Finds an entity of one of `types`, or makes a new one: a + button joined on to the end of the
  * search opens a dialog that shows the types (when there are several) and then the form for the
  * entity; the entity made is chosen as if it had been found. With `onRemove`, a remove button is
- * joined on after it (for a place in a list that has no entity yet).
+ * joined on after it (for a place in a list that has no entity yet). With `createTypes`, the + makes those instead
+ * (more than are searched for: documents too, with `onCreated`).
  */
 export function PickOrCreate(props: {
   types: string[];
@@ -1042,13 +1076,17 @@ export function PickOrCreate(props: {
   placeholder?: string;
   /** What the form of a new one starts with, over the blank item */
   initial?: (type: string) => Record<string, unknown>;
+  /** What every item made in its form starts with (see `createItemFormState`) */
+  fill?: (item: FormData) => FormData;
+  /** The types the + makes, if not those searched for */
+  createTypes?: string[];
   /** Called with one that was made, instead of `onPick` (by default it is picked as if it had been found) */
   onCreated?: (entity: Summary) => void;
 }) {
   const definitions = useModels();
   const { t } = useTranslations();
   const [creating, setCreating] = createSignal(false);
-  const groups = createMemo(() => menuGroups(definitions, typeOptions(props.types)));
+  const groups = createMemo(() => menuGroups(definitions, typeOptions(props.createTypes ?? props.types)));
   return (
     <div class="w-full min-w-0">
       <EntityPicker types={props.types} onPick={props.onPick} placeholder={props.placeholder}>
@@ -1080,11 +1118,12 @@ export function PickOrCreate(props: {
         <EntityCreateDialog
           groups={groups()}
           initial={props.initial}
+          fill={props.fill}
           onClose={() => setCreating(false)}
-          onCreated={(entity) => {
+          onCreated={(made) => {
             setCreating(false);
-            rememberEntity(entity);
-            (props.onCreated ?? props.onPick)(entity);
+            if (getModel(definitions, made.type)?.kind === "Entity") rememberEntity(made);
+            (props.onCreated ?? props.onPick)(made);
           }}
         />
       </Show>
@@ -1095,14 +1134,15 @@ export function PickOrCreate(props: {
 /**
  * A dialog that makes a new entity of one of `types` (Entities, or Documents that can be made on their own): the types
  * first, when there are several (Back goes to them again), then the form of the one chosen, which starts with what
- * `initial` gives for it; Save makes it and hands it to `onCreated`. For an interface module that offers to make one
- * where there is no field to put it in (a day of a calendar, say).
+ * `initial` gives for it (and `fill`, with every item added in it); Save makes it and hands it to `onCreated`. For an
+ * interface module that offers to make one where there is no field to put it in (a day of a calendar, say).
  */
 export function NewEntityDialog(props: {
   types: string[];
   onCreated: (entity: Summary) => void;
   onClose: () => void;
   initial?: (type: string) => Record<string, unknown>;
+  fill?: (item: FormData) => FormData;
 }) {
   const definitions = useModels();
   const groups = createMemo(() => menuGroups(definitions, typeOptions(props.types)));
@@ -1110,10 +1150,12 @@ export function NewEntityDialog(props: {
     <EntityCreateDialog
       groups={groups()}
       initial={props.initial}
+      fill={props.fill}
       onClose={props.onClose}
-      onCreated={(entity) => {
-        rememberEntity(entity);
-        props.onCreated(entity);
+      onCreated={(made) => {
+        // (an entity is offered again when one is searched for; a document is not searched for)
+        if (getModel(definitions, made.type)?.kind === "Entity") rememberEntity(made);
+        props.onCreated(made);
       }}
     />
   );

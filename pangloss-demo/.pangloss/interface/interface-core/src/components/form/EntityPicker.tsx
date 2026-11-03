@@ -167,8 +167,8 @@ export function EntityPicker(props: {
       <div
         class={[
           "flex w-full items-stretch border-[0.5px] border-slate-400/70 bg-white/80 focus-within:border-slate-600",
-          { "rounded-sm": !panel() },
-          { "rounded-t-sm": panel() },
+          { "rounded-xs": !panel() },
+          { "rounded-t-xs": panel() },
         ]}
       >
         <span class="flex shrink-0 items-center pl-2.5 text-slate-400 select-none" aria-hidden="true">
@@ -198,7 +198,7 @@ export function EntityPicker(props: {
         {props.children}
       </div>
       <Show when={panel()}>
-        <div class="absolute inset-x-0 top-full z-20 -mt-px overflow-hidden rounded-b-sm border-[0.5px] border-slate-600 bg-white shadow-lg">
+        <div class="absolute inset-x-0 top-full z-20 -mt-px overflow-hidden rounded-b-xs border-[0.5px] border-slate-600 bg-white shadow-lg">
           <Show when={failed()}>
             <p class="px-3 py-2 text-sm text-red-800" role="alert">
               {t("search_failed", "The search failed")}
@@ -226,7 +226,7 @@ export function EntityPicker(props: {
                   >
                     <span
                       class={[
-                        "shrink-0 rounded-sm px-1.5 py-0.5 text-xs font-semibold uppercase select-none",
+                        "shrink-0 rounded-xs px-1.5 py-0.5 text-xs font-semibold uppercase select-none",
                         tintOf(result.type),
                       ]}
                     >

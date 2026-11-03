@@ -286,7 +286,7 @@ function Results(props: {
               fallback={
                 <div
                   aria-label={t("loading", "Loading…")}
-                  class="animate-pulse rounded-sm border-[0.5px] border-slate-300/70 bg-slate-100/50"
+                  class="animate-pulse rounded-xs border-[0.5px] border-slate-300/70 bg-slate-100/50"
                   style={{ height: `${ROW_HEIGHT}px` }}
                 />
               }

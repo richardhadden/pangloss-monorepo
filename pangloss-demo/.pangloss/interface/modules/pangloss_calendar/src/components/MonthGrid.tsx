@@ -1,8 +1,7 @@
 import { getModel, kindTint, useModels, useTranslations } from "@pangloss/interface-core";
 import { For, Show } from "solid-js";
-import type { CalendarName, Characterised, Hit, MonthDayOut, MonthReport, Spanning } from "../api";
+import type { CalendarName, Characterised, DayOut, Hit, MonthDayOut, MonthReport, Spanning } from "../api";
 import { dayHref, itemHref, nameOf, sayBetween, sayDate, sayRef, weekHeadings } from "../days";
-import type { DayName } from "../days";
 import { weekBars, weekStart } from "../lanes";
 import type { Bar, Ranged } from "../lanes";
 
@@ -27,7 +26,7 @@ function HitChip(props: { hit: Hit }) {
       href={itemHref(props.hit.ref.type, props.hit.ref.id)}
       title={sayRef(props.hit.ref, fieldName)}
       data-mark={props.hit.mark}
-      class={["block min-w-0 truncate rounded-sm px-1 text-[0.7rem] leading-5", tint(props.hit.ref.type)]}
+      class={["block min-w-0 truncate rounded-xs px-1 text-[0.7rem] leading-5", tint(props.hit.ref.type)]}
     >
       <span class="font-semibold uppercase opacity-70">{fieldName(props.hit.ref.type, props.hit.ref.field)}</span>
       <span class="opacity-50"> · </span>
@@ -108,9 +107,9 @@ function SpanBar(props: { bar: Bar<BarItem>; calendar: CalendarName }) {
         props.bar.item.between ? "" : tint(ref().type),
         {
           "ml-0.5": props.bar.startsHere,
-          "rounded-l-sm": props.bar.startsHere,
+          "rounded-l-xs": props.bar.startsHere,
           "mr-0.5": props.bar.endsHere,
-          "rounded-r-sm": props.bar.endsHere,
+          "rounded-r-xs": props.bar.endsHere,
         },
       ]}
     >
@@ -129,7 +128,7 @@ function WeekRow(props: {
   week: (number | null)[];
   report: MonthReport;
   ranges: Ranged<BarItem>[];
-  onAdd?: (day: DayName) => void;
+  onAdd?: (day: DayOut) => void;
 }) {
   const { t, language } = useTranslations();
   const bars = () => weekBars(props.ranges, weekStart(props.week));
@@ -160,7 +159,7 @@ function WeekRow(props: {
                 >
                   {name(jdn!).day}
                 </a>
-                {/* (a new feast or other characterisation, starting on the day) */}
+                {/* (a new feast or other characterisation, or a document dated on the day) */}
                 <Show when={props.onAdd}>
                   {(add) => (
                     <button
@@ -168,10 +167,13 @@ function WeekRow(props: {
                       aria-haspopup="dialog"
                       aria-label={t("calendar_add_on", "Add to {date}", { date: sayDate(name(jdn!), language(), t) })}
                       title={t("calendar_add_on", "Add to {date}", { date: sayDate(name(jdn!), language(), t) })}
-                      onClick={() => add()(name(jdn!))}
-                      class="inline-flex size-5 cursor-pointer items-center justify-center rounded-sm text-sm leading-none text-slate-400 select-none hover:bg-slate-200 hover:text-slate-800"
+                      onClick={() => add()(entry(jdn!)!.day)}
+                      class="inline-flex size-5 cursor-pointer items-center justify-center rounded-xs text-slate-400 select-none hover:bg-slate-200 hover:text-slate-800"
                     >
-                      +
+                      {/* (drawn, not the character: a + of the font sits on its baseline, off the middle of the box) */}
+                      <svg viewBox="0 0 12 12" class="size-3 fill-none stroke-current stroke-[1.5]" stroke-linecap="round" aria-hidden="true">
+                        <path d="M6 2v8M2 6h8" />
+                      </svg>
                     </button>
                   )}
                 </Show>
@@ -204,7 +206,7 @@ function WeekRow(props: {
  * across them (`between`); feasts and the like are named on their days. (What is known only to a range beyond the month,
  * `roughly`, is listed under the grid by `MonthFoot`.)
  */
-export function MonthGrid(props: { report: MonthReport; onAdd?: (day: DayName) => void }) {
+export function MonthGrid(props: { report: MonthReport; onAdd?: (day: DayOut) => void }) {
   const { language } = useTranslations();
   const ranged = (span: Spanning, between: boolean): Ranged<BarItem> => ({
     item: { span, between },
@@ -218,7 +220,7 @@ export function MonthGrid(props: { report: MonthReport; onAdd?: (day: DayName) =
     ...props.report.between.map((span) => ranged(span, true)),
   ];
   return (
-    <div class="overflow-hidden rounded-sm border border-slate-300 bg-white" data-testid="calendar-month">
+    <div class="overflow-hidden rounded-xs border border-slate-300 bg-white" data-testid="calendar-month">
       <div class="grid grid-cols-7 bg-slate-100/80 text-xs font-semibold text-slate-500 uppercase">
         <For each={weekHeadings(language())}>
           {(day) => <div class="border-l border-slate-300 px-2 py-1.5 first:border-l-0">{day}</div>}

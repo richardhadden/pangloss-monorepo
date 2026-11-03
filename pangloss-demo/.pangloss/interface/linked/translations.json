@@ -1115,11 +1115,6 @@
             "plural": "Date",
             "help": ""
           },
-          "year": {
-            "name": "Year",
-            "plural": "Year",
-            "help": ""
-          },
           "places": {
             "name": "Places",
             "plural": "Places",
@@ -1250,11 +1245,6 @@
             "plural": "Date",
             "help": ""
           },
-          "year": {
-            "name": "Year",
-            "plural": "Year",
-            "help": ""
-          },
           "places": {
             "name": "Places",
             "plural": "Places",
@@ -1290,11 +1280,6 @@
             "plural": "Date",
             "help": ""
           },
-          "year": {
-            "name": "Year",
-            "plural": "Year",
-            "help": ""
-          },
           "places": {
             "name": "Places",
             "plural": "Places",
@@ -1328,11 +1313,6 @@
           "date": {
             "name": "Date",
             "plural": "Date",
-            "help": ""
-          },
-          "year": {
-            "name": "Year",
-            "plural": "Year",
             "help": ""
           },
           "places": {
@@ -1645,11 +1625,6 @@
         "description": "What a source says, at a page: a set of statements",
         "kind": "Document",
         "fields": {
-          "year": {
-            "name": "Year",
-            "plural": "Year",
-            "help": ""
-          },
           "source": {
             "name": "Source",
             "plural": "Source",
@@ -1741,6 +1716,11 @@
             "name": "Received",
             "plural": "Received",
             "help": ""
+          },
+          "received_order": {
+            "name": "Received order",
+            "plural": "Received order",
+            "help": ""
           }
         }
       },
@@ -1814,11 +1794,6 @@
           "date": {
             "name": "Date",
             "plural": "Date",
-            "help": ""
-          },
-          "year": {
-            "name": "Year",
-            "plural": "Year",
             "help": ""
           },
           "places": {
@@ -1996,11 +1971,6 @@
             "plural": "Date",
             "help": ""
           },
-          "year": {
-            "name": "Year",
-            "plural": "Year",
-            "help": ""
-          },
           "places": {
             "name": "Places",
             "plural": "Places",
@@ -2009,6 +1979,11 @@
           "ordered_by": {
             "name": "Ordered by",
             "plural": "Ordered by",
+            "help": ""
+          },
+          "ordered_to": {
+            "name": "Ordered to",
+            "plural": "Ordered to",
             "help": ""
           },
           "thing_ordered": {
@@ -2181,6 +2156,11 @@
           "received": {
             "name": "Received",
             "plural": "Received",
+            "help": ""
+          },
+          "received_order": {
+            "name": "Received order",
+            "plural": "Received order",
             "help": ""
           }
         }
@@ -2424,11 +2404,6 @@
             "plural": "Date",
             "help": ""
           },
-          "year": {
-            "name": "Year",
-            "plural": "Year",
-            "help": ""
-          },
           "involves": {
             "name": "Involves",
             "plural": "Involves",
@@ -2457,11 +2432,6 @@
           "date": {
             "name": "Date",
             "plural": "Date",
-            "help": ""
-          },
-          "year": {
-            "name": "Year",
-            "plural": "Year",
             "help": ""
           },
           "places": {
@@ -2646,11 +2616,6 @@
             "plural": "Datum",
             "help": ""
           },
-          "year": {
-            "name": "Jahr",
-            "plural": "Jahr",
-            "help": ""
-          },
           "places": {
             "name": "Orte",
             "plural": "Orte",
@@ -2781,11 +2746,6 @@
             "plural": "Datum",
             "help": ""
           },
-          "year": {
-            "name": "Jahr",
-            "plural": "Jahr",
-            "help": ""
-          },
           "places": {
             "name": "Orte",
             "plural": "Orte",
@@ -2821,11 +2781,6 @@
             "plural": "Datum",
             "help": ""
           },
-          "year": {
-            "name": "Jahr",
-            "plural": "Jahr",
-            "help": ""
-          },
           "places": {
             "name": "Orte",
             "plural": "Orte",
@@ -2859,11 +2814,6 @@
           "date": {
             "name": "Datum",
             "plural": "Datum",
-            "help": ""
-          },
-          "year": {
-            "name": "Jahr",
-            "plural": "Jahr",
             "help": ""
           },
           "places": {
@@ -3176,11 +3126,6 @@
         "description": "Was eine Quelle auf einer Seite sagt: eine Menge von Aussagen",
         "kind": "Document",
         "fields": {
-          "year": {
-            "name": "Jahr",
-            "plural": "Jahr",
-            "help": ""
-          },
           "source": {
             "name": "Quelle",
             "plural": "Quellen",
@@ -3272,6 +3217,11 @@
             "name": "Erhielt",
             "plural": "Erhielt",
             "help": ""
+          },
+          "received_order": {
+            "name": "Received order",
+            "plural": "Received order",
+            "help": ""
           }
         }
       },
@@ -3345,11 +3295,6 @@
           "date": {
             "name": "Datum",
             "plural": "Datum",
-            "help": ""
-          },
-          "year": {
-            "name": "Jahr",
-            "plural": "Jahr",
             "help": ""
           },
           "places": {
@@ -3527,11 +3472,6 @@
             "plural": "Datum",
             "help": ""
           },
-          "year": {
-            "name": "Jahr",
-            "plural": "Jahr",
-            "help": ""
-          },
           "places": {
             "name": "Orte",
             "plural": "Orte",
@@ -3540,6 +3480,11 @@
           "ordered_by": {
             "name": "Befohlen von",
             "plural": "Befohlen von",
+            "help": ""
+          },
+          "ordered_to": {
+            "name": "Ordered to",
+            "plural": "Ordered to",
             "help": ""
           },
           "thing_ordered": {
@@ -3712,6 +3657,11 @@
           "received": {
             "name": "Erhielt",
             "plural": "Erhielt",
+            "help": ""
+          },
+          "received_order": {
+            "name": "Received order",
+            "plural": "Received order",
             "help": ""
           }
         }
@@ -3955,11 +3905,6 @@
             "plural": "Datum",
             "help": ""
           },
-          "year": {
-            "name": "Jahr",
-            "plural": "Jahr",
-            "help": ""
-          },
           "involves": {
             "name": "Betrifft",
             "plural": "Betrifft",
@@ -3988,11 +3933,6 @@
           "date": {
             "name": "Datum",
             "plural": "Datum",
-            "help": ""
-          },
-          "year": {
-            "name": "Jahr",
-            "plural": "Jahr",
             "help": ""
           },
           "places": {
@@ -4177,11 +4117,6 @@
             "plural": "Date",
             "help": ""
           },
-          "year": {
-            "name": "Année",
-            "plural": "Année",
-            "help": ""
-          },
           "places": {
             "name": "Lieux",
             "plural": "Lieux",
@@ -4312,11 +4247,6 @@
             "plural": "Date",
             "help": ""
           },
-          "year": {
-            "name": "Année",
-            "plural": "Année",
-            "help": ""
-          },
           "places": {
             "name": "Lieux",
             "plural": "Lieux",
@@ -4352,11 +4282,6 @@
             "plural": "Date",
             "help": ""
           },
-          "year": {
-            "name": "Année",
-            "plural": "Année",
-            "help": ""
-          },
           "places": {
             "name": "Lieux",
             "plural": "Lieux",
@@ -4390,11 +4315,6 @@
           "date": {
             "name": "Date",
             "plural": "Date",
-            "help": ""
-          },
-          "year": {
-            "name": "Année",
-            "plural": "Année",
             "help": ""
           },
           "places": {
@@ -4707,11 +4627,6 @@
         "description": "Ce que dit une source, à une page : un ensemble d’énoncés",
         "kind": "Document",
         "fields": {
-          "year": {
-            "name": "Année",
-            "plural": "Année",
-            "help": ""
-          },
           "source": {
             "name": "Source",
             "plural": "Source",
@@ -4803,6 +4718,11 @@
             "name": "A reçu",
             "plural": "A reçu",
             "help": ""
+          },
+          "received_order": {
+            "name": "Received order",
+            "plural": "Received order",
+            "help": ""
           }
         }
       },
@@ -4876,11 +4796,6 @@
           "date": {
             "name": "Date",
             "plural": "Date",
-            "help": ""
-          },
-          "year": {
-            "name": "Année",
-            "plural": "Année",
             "help": ""
           },
           "places": {
@@ -5058,11 +4973,6 @@
             "plural": "Date",
             "help": ""
           },
-          "year": {
-            "name": "Année",
-            "plural": "Année",
-            "help": ""
-          },
           "places": {
             "name": "Lieux",
             "plural": "Lieux",
@@ -5071,6 +4981,11 @@
           "ordered_by": {
             "name": "Ordonné par",
             "plural": "Ordonné par",
+            "help": ""
+          },
+          "ordered_to": {
+            "name": "Ordered to",
+            "plural": "Ordered to",
             "help": ""
           },
           "thing_ordered": {
@@ -5243,6 +5158,11 @@
           "received": {
             "name": "A reçu",
             "plural": "A reçu",
+            "help": ""
+          },
+          "received_order": {
+            "name": "Received order",
+            "plural": "Received order",
             "help": ""
           }
         }
@@ -5486,11 +5406,6 @@
             "plural": "Date",
             "help": ""
           },
-          "year": {
-            "name": "Année",
-            "plural": "Année",
-            "help": ""
-          },
           "involves": {
             "name": "Implique",
             "plural": "Implique",
@@ -5519,11 +5434,6 @@
           "date": {
             "name": "Date",
             "plural": "Date",
-            "help": ""
-          },
-          "year": {
-            "name": "Année",
-            "plural": "Année",
             "help": ""
           },
           "places": {

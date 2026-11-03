@@ -70,6 +70,14 @@ export interface EmbeddedField extends FieldBase {
   model: string | null;
   /** The (concrete) models that it can be */
   types: string[];
+  /** What the field is annotated with that the server applies to the value (`SortDefault`), and what each says of itself */
+  markers?: FieldMarker[];
+}
+
+/** A marker of an embedded field: its name, and what it says of itself (`SortDefault` has `sortBy`) */
+export interface FieldMarker {
+  name: string;
+  [argument: string]: unknown;
 }
 
 export interface ParameterOptions {
@@ -100,6 +108,19 @@ export interface RelationField extends FieldBase {
   subclasses: string[];
   /** The reified relation that an entity found by searching is put in (`default_reified_type`), if any */
   defaultReifiedType?: string | null;
+  /** The fields of the model given to fields of what it holds, where they are not set (`bind_to_child_field`) */
+  bindings?: FieldBindingDefinition[];
+}
+
+/** A field of a model given to fields of what one of its relations holds (`FieldBinding`), by key */
+export interface FieldBindingDefinition {
+  boundField: string;
+  childFields: string[];
+  /** Only items of these types are given it (none: any) */
+  allowedTypes: string[];
+  excludedTypes: string[];
+  /** It is changed on the way (a converter), which only the server can do: the interface does not copy it */
+  converted: boolean;
 }
 
 export interface UnknownField extends FieldBase {
@@ -180,6 +201,11 @@ export interface InterfaceMeta {
    * interface module (docs/interface-collapse.md)
    */
   collapse?: true | CollapseConditions | ComponentReference | null;
+  /**
+   * (a ReifiedRelation) Shown without its head bar, only what it holds and its own fields, where it is the only
+   * thing a field can hold, one of it, and must (`headlessIn`). In the view and the form
+   */
+  headless?: true | null;
 }
 
 /** `Collapse(...)` in Python: conditions on top of the built-in rule, by the keys of fields */

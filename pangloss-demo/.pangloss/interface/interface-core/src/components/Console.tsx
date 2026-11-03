@@ -38,14 +38,14 @@ function Wrapped(props: ParentProps<{ spaces: string[]; depth: number }>) {
           // (quieter than the type: a veil over the tint, under what is in it)
           "before:pointer-events-none before:absolute before:inset-0 before:-z-10 before:bg-white/30",
           // (the outermost is at the left end of the bar; the others are in the one before)
-          { "rounded-l-sm border-l-[0.5px] border-slate-400/70 before:rounded-l-sm": props.depth > 0 },
+          { "rounded-l-xs border-l-[0.5px] border-slate-400/70 before:rounded-l-xs": props.depth > 0 },
           spaceTint(getModel(definitions, props.spaces[0] ?? "")?.interfaceMeta?.colour, props.depth),
         ]}
       >
         <span class="flex items-center px-2.5 font-medium select-none">
           <span class="opacity-70">{modelName(props.spaces[0] ?? "")}</span>
         </span>
-        <div class="flex items-stretch rounded-l-sm bg-slate-100 text-slate-700">
+        <div class="flex items-stretch rounded-l-xs bg-slate-100 text-slate-700">
           <Wrapped spaces={props.spaces.slice(1)} depth={props.depth + 1}>
             {props.children}
           </Wrapped>
@@ -163,7 +163,7 @@ export function Console(props: ConsoleProps) {
                 <span
                   class={[
                     "flex shrink-0 items-center self-stretch border-r-[0.5px] px-4",
-                    { "rounded-l-sm border-l-[0.5px]": wrapped() },
+                    { "rounded-l-xs border-l-[0.5px]": wrapped() },
                     kindTint(kind(), model()?.interfaceMeta?.colour),
                     kindRule(kind(), model()?.interfaceMeta?.colour),
                   ]}

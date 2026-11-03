@@ -59,7 +59,7 @@ export function DefaultReferenceChip(props: ReferenceChipProps) {
   );
   const frame =
     // (only its right side: the type has a frame of its own colour, and the label and buttons are framed top and bottom)
-    "inline-flex max-w-full min-w-0 items-stretch overflow-hidden rounded-sm border-r-[0.5px] border-slate-400/70 bg-slate-100/70";
+    "inline-flex max-w-full min-w-0 items-stretch overflow-hidden rounded-xs border-r-[0.5px] border-slate-400/70 bg-slate-100/70";
   return (
     <SpaceBands spaces={props.spaces ?? []} depth={0}>
       <span class="inline-flex max-w-full min-w-0 items-center gap-2">

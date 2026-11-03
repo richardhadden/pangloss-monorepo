@@ -176,7 +176,7 @@ function Fact(props: { item: DerivedItem; itemId: string; symmetricLabel?: Symme
         </For>
         <Show when={props.item.qualifiedOnly}>
           <span
-            class="rounded-sm bg-amber-50 px-1.5 text-xs text-amber-800"
+            class="rounded-xs bg-amber-50 px-1.5 text-xs text-amber-800"
             title={t("derived_qualified", "Only from statements with a context")}
           >
             {props.item.contextLabels.join(", ")}
@@ -184,7 +184,7 @@ function Fact(props: { item: DerivedItem; itemId: string; symmetricLabel?: Symme
         </Show>
         <button
           type="button"
-          class="inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-sm px-1.5 py-1 text-xs font-semibold text-slate-500 uppercase select-none hover:bg-slate-200/70 hover:text-slate-700"
+          class="inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-xs px-1.5 py-1 text-xs font-semibold text-slate-500 uppercase select-none hover:bg-slate-200/70 hover:text-slate-700"
           aria-expanded={why() ? "true" : "false"}
           onClick={() => setWhy((open) => !open)}
         >

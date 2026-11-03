@@ -2,32 +2,32 @@ import type { Colour } from "../types";
 
 // (whole class names, so that Tailwind finds them)
 const TINTS: Record<Colour, string> = {
-  slate: "bg-slate-400/25 text-slate-950",
-  gray: "bg-gray-400/25 text-gray-950",
-  zinc: "bg-zinc-400/25 text-zinc-950",
-  neutral: "bg-neutral-400/25 text-neutral-950",
-  stone: "bg-stone-400/25 text-stone-950",
-  mauve: "bg-mauve-400/25 text-mauve-950",
-  olive: "bg-olive-400/25 text-olive-950",
-  mist: "bg-mist-400/25 text-mist-950",
-  taupe: "bg-taupe-400/25 text-taupe-950",
-  red: "bg-red-400/25 text-red-950",
-  orange: "bg-orange-400/25 text-orange-950",
-  amber: "bg-amber-400/25 text-amber-950",
-  yellow: "bg-yellow-400/25 text-yellow-950",
-  lime: "bg-lime-400/25 text-lime-950",
-  green: "bg-green-400/25 text-green-950",
-  emerald: "bg-emerald-400/25 text-emerald-950",
-  teal: "bg-teal-400/25 text-teal-950",
-  cyan: "bg-cyan-400/25 text-cyan-950",
-  sky: "bg-sky-400/25 text-sky-950",
-  blue: "bg-blue-400/25 text-blue-950",
-  indigo: "bg-indigo-400/25 text-indigo-950",
-  violet: "bg-violet-400/25 text-violet-950",
-  purple: "bg-purple-400/25 text-purple-950",
-  fuchsia: "bg-fuchsia-400/25 text-fuchsia-950",
-  pink: "bg-pink-400/25 text-pink-950",
-  rose: "bg-rose-400/25 text-rose-950",
+  slate: "bg-slate-200 text-slate-950",
+  gray: "bg-gray-200 text-gray-950",
+  zinc: "bg-zinc-200 text-zinc-950",
+  neutral: "bg-neutral-200 text-neutral-950",
+  stone: "bg-stone-200 text-stone-950",
+  mauve: "bg-mauve-200 text-mauve-950",
+  olive: "bg-olive-200 text-olive-950",
+  mist: "bg-mist-200 text-mist-950",
+  taupe: "bg-taupe-200 text-taupe-950",
+  red: "bg-red-200 text-red-950",
+  orange: "bg-orange-200 text-orange-950",
+  amber: "bg-amber-200 text-amber-950",
+  yellow: "bg-yellow-200 text-yellow-950",
+  lime: "bg-lime-200 text-lime-950",
+  green: "bg-green-200 text-green-950",
+  emerald: "bg-emerald-200 text-emerald-950",
+  teal: "bg-teal-200 text-teal-950",
+  cyan: "bg-cyan-200 text-cyan-950",
+  sky: "bg-sky-200 text-sky-950",
+  blue: "bg-blue-200 text-blue-950",
+  indigo: "bg-indigo-200 text-indigo-950",
+  violet: "bg-violet-200 text-violet-950",
+  purple: "bg-purple-200 text-purple-950",
+  fuchsia: "bg-fuchsia-200 text-fuchsia-950",
+  pink: "bg-pink-200 text-pink-950",
+  rose: "bg-rose-200 text-rose-950",
 };
 
 /** The tint of a colour a model chose (`InterfaceMeta(colour=...)`), or "" if it chose none */
@@ -46,56 +46,81 @@ const isDocument = (kind: string | undefined) => kind === "Document" || kind ===
  */
 export function kindTint(kind: string | undefined, colour?: Colour | null): string {
   if (colour) return TINTS[colour];
-  if (kind === "Entity") return "bg-sky-400/25 text-sky-950";
-  if (isDocument(kind)) return "bg-green-400/25 text-green-950";
+  if (kind === "Entity") return "bg-sky-200 text-sky-950";
+  if (isDocument(kind)) return "bg-green-200 text-green-950";
   return "";
 }
 
+// (the same colours, lighter, for a semantic space: a box with no line round it)
+const SPACE_TINTS: Record<Colour, string> = {
+  slate: "bg-slate-400/15 text-slate-950",
+  gray: "bg-gray-400/15 text-gray-950",
+  zinc: "bg-zinc-400/15 text-zinc-950",
+  neutral: "bg-neutral-400/15 text-neutral-950",
+  stone: "bg-stone-400/15 text-stone-950",
+  mauve: "bg-mauve-400/15 text-mauve-950",
+  olive: "bg-olive-400/15 text-olive-950",
+  mist: "bg-mist-400/15 text-mist-950",
+  taupe: "bg-taupe-400/15 text-taupe-950",
+  red: "bg-red-400/15 text-red-950",
+  orange: "bg-orange-400/15 text-orange-950",
+  amber: "bg-amber-400/15 text-amber-950",
+  yellow: "bg-yellow-400/15 text-yellow-950",
+  lime: "bg-lime-400/15 text-lime-950",
+  green: "bg-green-400/15 text-green-950",
+  emerald: "bg-emerald-400/15 text-emerald-950",
+  teal: "bg-teal-400/15 text-teal-950",
+  cyan: "bg-cyan-400/15 text-cyan-950",
+  sky: "bg-sky-400/15 text-sky-950",
+  blue: "bg-blue-400/15 text-blue-950",
+  indigo: "bg-indigo-400/15 text-indigo-950",
+  violet: "bg-violet-400/15 text-violet-950",
+  purple: "bg-purple-400/15 text-purple-950",
+  fuchsia: "bg-fuchsia-400/15 text-fuchsia-950",
+  pink: "bg-pink-400/15 text-pink-950",
+  rose: "bg-rose-400/15 text-rose-950",
+};
+
 // (for a semantic space that has no colour of its own, by how deep it is)
-const DEPTH_TINTS = [
-  "bg-amber-400/25 text-amber-950",
-  "bg-violet-400/25 text-violet-950",
-  "bg-rose-400/25 text-rose-950",
-  "bg-teal-400/25 text-teal-950",
-];
+const DEPTH_TINTS = [SPACE_TINTS.amber, SPACE_TINTS.violet, SPACE_TINTS.rose, SPACE_TINTS.teal];
 
 /**
  * The tint of a semantic space round an item: the colour its model chose, else one by how
- * deep it is (`depth` 0 is the outermost). Wherever the spaces of an item are shown, they
- * use this, so they look alike.
+ * deep it is (`depth` 0 is the outermost), lighter than the tint of a type. Wherever the spaces
+ * of an item are shown, they use this, so they look alike.
  */
 export function spaceTint(colour: Colour | null | undefined, depth: number): string {
-  return colourTint(colour) || DEPTH_TINTS[depth % DEPTH_TINTS.length];
+  return colour ? SPACE_TINTS[colour] : DEPTH_TINTS[depth % DEPTH_TINTS.length]!;
 }
 
 // (the same colours as a rule: the line down the side of what is nested in a form)
 const RULES: Record<Colour, string> = {
   slate: "border-slate-400/60",
-  gray: "border-gray-400/60",
-  zinc: "border-zinc-400/60",
-  neutral: "border-neutral-400/60",
-  stone: "border-stone-400/60",
-  mauve: "border-mauve-400/60",
-  olive: "border-olive-400/60",
-  mist: "border-mist-400/60",
-  taupe: "border-taupe-400/60",
-  red: "border-red-400/60",
-  orange: "border-orange-400/60",
-  amber: "border-amber-400/60",
-  yellow: "border-yellow-400/60",
-  lime: "border-lime-400/60",
-  green: "border-green-400/60",
-  emerald: "border-emerald-400/60",
-  teal: "border-teal-400/60",
-  cyan: "border-cyan-400/60",
-  sky: "border-sky-400/60",
-  blue: "border-blue-400/60",
-  indigo: "border-indigo-400/60",
-  violet: "border-violet-400/60",
-  purple: "border-purple-400/60",
-  fuchsia: "border-fuchsia-400/60",
-  pink: "border-pink-400/60",
-  rose: "border-rose-400/60",
+  gray: "border-gray-600/40",
+  zinc: "border-zinc-600/40",
+  neutral: "border-neutral-600/40",
+  stone: "border-stone-600/40",
+  mauve: "border-mauve-600/40",
+  olive: "border-olive-600/40",
+  mist: "border-mist-600/40",
+  taupe: "border-taupe-600/40",
+  red: "border-red-600/40",
+  orange: "border-orange-600/40",
+  amber: "border-amber-600/40",
+  yellow: "border-yellow-600/40",
+  lime: "border-lime-600/40",
+  green: "border-green-600/40",
+  emerald: "border-emerald-600/40",
+  teal: "border-teal-600/40",
+  cyan: "border-cyan-600/40",
+  sky: "border-sky-600/40",
+  blue: "border-blue-600/40",
+  indigo: "border-indigo-600/40",
+  violet: "border-violet-600/40",
+  purple: "border-purple-600/40",
+  fuchsia: "border-fuchsia-600/40",
+  pink: "border-pink-600/40",
+  rose: "border-rose-600/40",
 };
 
 /**

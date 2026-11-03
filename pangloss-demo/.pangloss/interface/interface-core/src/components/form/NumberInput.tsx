@@ -54,7 +54,7 @@ export function NumberInput(props: {
   return (
     <div
       class={[
-        "flex min-w-0 items-stretch overflow-hidden rounded-sm border-[0.5px] border-slate-400/70 bg-white/80 focus-within:border-slate-600",
+        "flex min-w-0 items-stretch overflow-hidden rounded-xs border-[0.5px] border-slate-400/70 bg-white/80 focus-within:border-slate-600",
         props.class ?? "w-full",
       ]}
     >

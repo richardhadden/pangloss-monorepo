@@ -9,7 +9,7 @@ import {
 import { kindRule, kindTint, spaceTint } from "../primitives";
 import { contextTrail } from "../api";
 import type { ContextLabel } from "../api";
-import { collapsedView, getModel } from "../schema";
+import { collapsedView, getModel, headlessIn } from "../schema";
 import type {
   FieldDefinition,
   ItemContentsProps,
@@ -55,7 +55,7 @@ function Row(props: ParentProps<{ name: string; incoming?: boolean }>) {
       class={[
         fieldRowClass,
         // (more room above what refers to the item from elsewhere)
-        { "pt-7": props.incoming, "first:pt-0": props.incoming },
+        { "pt-6": props.incoming, "first:pt-0": props.incoming },
       ]}
     >
       <dt class="pt-1 text-xs font-semibold text-slate-500 uppercase">
@@ -66,7 +66,8 @@ function Row(props: ParentProps<{ name: string; incoming?: boolean }>) {
           "flex min-w-0 flex-wrap gap-x-2",
           {
             "items-start": !props.incoming,
-            "gap-y-4": !props.incoming,
+            // (a row with a block in it has blocks as far apart as rows of what refers to the item: `data-block`)
+            "gap-y-4 has-[>[data-block]]:gap-y-6": !props.incoming,
             "items-center": props.incoming,
             "gap-y-6": props.incoming,
           },
@@ -271,6 +272,9 @@ function ObjectValue(props: {
     model()?.kind === "ReifiedRelation" ||
     model()?.kind === "ReifiedRelationDocument";
   const isSpace = () => model()?.kind === "SemanticSpace";
+  // (a reified relation that is all its field can hold, and it holds one: no head, `InterfaceMeta(headless=True)`)
+  const headless = () =>
+    props.field?.kind === "relation" && headlessIn(definitions, props.field, type() ?? "");
   const tint = () => kindTint(model()?.kind, model()?.interfaceMeta?.colour);
   const rule = () => kindRule(model()?.kind, model()?.interfaceMeta?.colour);
   const isEmbedded = () => model()?.kind === "Embedded";
@@ -311,8 +315,8 @@ function ObjectValue(props: {
       fallback={
         <Switch
           fallback={
-            // (a block takes a line of its own, with more space under it than chips have: where one ends is plain)
-            <div class="mb-4 w-full min-w-0 scroll-mt-28 last:mb-0" data-item-id={partId()}>
+            // (a block takes a line of its own, as far from what is above it as from what is below: the row's gap)
+            <div class="w-full min-w-0 scroll-mt-28" data-item-id={partId()} data-block>
               <SpaceBands
                 spaces={
                   props.asChip
@@ -338,7 +342,8 @@ function ObjectValue(props: {
                         : undefined
                     }
                   />
-                  <div class={["ml-2 pt-4", nestedClass, rule()]}>
+                  {/* (more room under the head than a reified relation has: its first row is a field's, text with no box, not a chip) */}
+                  <div class={["ml-2 pt-6", nestedClass, rule()]}>
                     <Fields
                       value={props.value}
                       model={model()}
@@ -376,7 +381,7 @@ function ObjectValue(props: {
                 <button
                   type="button"
                   class={[
-                    "flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-sm border-[0.5px] border-slate-400/70 text-xs select-none hover:brightness-90",
+                    "flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-xs border-[0.5px] border-slate-400/70 text-xs select-none hover:brightness-90",
                     tint() || plainTint,
                   ]}
                   aria-label={t("collapse_show_whole", "Show the whole {name}", {
@@ -403,11 +408,21 @@ function ObjectValue(props: {
               </For>
             </span>
           </Match>
+          <Match when={isReified() && headless()}>
+            {/* (without its head: what it holds as the field's own, then its own fields under it, as an annotated value) */}
+            <div class="flex w-full min-w-0 scroll-mt-28 flex-col gap-3" data-item-id={partId()} data-block>
+              <div class="flex min-w-0 flex-wrap items-start gap-x-2 gap-y-4">
+                <Value value={props.value.target} depth={props.depth} />
+              </div>
+              <Fields value={props.value} model={model()} depth={props.depth} exclude="target" />
+            </div>
+          </Match>
           <Match when={isReified()}>
             {/* (a reified relation: its type at the head, then what it holds, full width and without its field name, then its own fields, if it has any) */}
             <div
-              class="mb-4 flex w-full min-w-0 scroll-mt-28 flex-col last:mb-0"
+              class="flex w-full min-w-0 scroll-mt-28 flex-col"
               data-item-id={partId()}
+              data-block
             >
               <Head
                 type={type() ?? ""}
@@ -432,7 +447,7 @@ function ObjectValue(props: {
           </Match>
           <Match when={isAnnotated()}>
             {/* (an annotated value: the value as the field's own, then what is said of it, as in the form) */}
-            <div class="flex w-full min-w-0 flex-col gap-2">
+            <div class="flex w-full min-w-0 flex-col gap-3">
               <div class="flex min-w-0 flex-wrap items-start gap-x-2 gap-y-4">
                 <Value value={props.value.value} depth={props.depth} />
               </div>
@@ -453,7 +468,7 @@ function ObjectValue(props: {
           <Match when={isSpace()}>
             <div
               class={[
-                "flex w-full min-w-0 flex-col rounded-sm border-[0.5px] border-slate-400/70",
+                "flex w-full min-w-0 flex-col rounded-xs",
                 spaceTint(model()?.interfaceMeta?.colour, props.depth),
               ]}
             >
