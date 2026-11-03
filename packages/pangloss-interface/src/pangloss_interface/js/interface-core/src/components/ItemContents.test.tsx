@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import { render } from "@solidjs/web";
+import { flush } from "solid-js";
 import { afterEach, expect, test } from "vitest";
 import { ComponentsProvider, ModelsProvider } from "../context";
 import type {
@@ -80,6 +81,21 @@ const definitions: ModelDefinitions = {
       field("target", "target", "relation"),
     ]),
     Date: model("Date", "Embedded", [field("when", "when")]),
+    Person: model("Person", "Entity"),
+    Alternative: model(
+      "Alternative",
+      "Conjunction",
+      [field("alternatives", "alternatives", "relation")],
+      [],
+      { colour: null, listPage: null, itemPage: null, viewCard: null, editCard: null, collapse: true },
+    ),
+    Identification: model(
+      "Identification",
+      "ReifiedRelation",
+      [field("identified_by", "identifiedBy"), field("target", "target", "relation")],
+      [],
+      { colour: "violet", listPage: null, itemPage: null, viewCard: null, editCard: null, collapse: true },
+    ),
     Place: model(
       "Place",
       "Entity",
@@ -374,4 +390,79 @@ test("an annotated value is its value, as the field's own, without its type or a
   const value = [...host.querySelectorAll("span")].find((span) => span.textContent === "Karolus Magnus")!;
   const certainty = [...host.querySelectorAll("dt")].find((dt) => dt.textContent === "certainty")!;
   expect(value.compareDocumentPosition(certainty) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+});
+
+const smith = { id: "p1", type: "Person", label: "Smith", edgeProperties: { probability: 0.9 } };
+const jones = { id: "p2", type: "Person", label: "Jones" };
+const identified = (people: object[], identifiedBy = "") => ({
+  id: "f1",
+  type: "Factoid",
+  involves: [
+    {
+      id: "i1",
+      type: "Identification",
+      identifiedBy,
+      target: [{ id: "a1", type: "Alternative", alternatives: people }],
+    },
+  ],
+});
+
+test("a relation that collapses is only the chip of the one it holds, with a marker in its colour", () => {
+  const host = show(identified([smith]));
+  expect(host.querySelector('a[href="/Person/p1"]')).toBeTruthy();
+  expect(host.textContent).toContain("0.9");
+  // (no blocks: no head bars, no rows of their own)
+  expect(host.querySelectorAll("dl").length).toBe(1);
+  expect(host.textContent).not.toContain("Alternative");
+  const marker = host.querySelector("button[aria-label='Show the whole Identification']")!;
+  expect(marker.className).toContain("bg-violet-400/25");
+  // (the marker of the outer one only: the Alternative inside it is folded into it)
+  expect(host.querySelectorAll("button").length).toBe(1);
+});
+
+test("its own filled plain fields follow the chip, each with its name", () => {
+  const host = show(identified([smith], "Smyth"));
+  const chip = host.querySelector('a[href="/Person/p1"]')!;
+  const name = [...host.querySelectorAll("span")].find((s) => s.textContent === "identified by")!;
+  const text = [...host.querySelectorAll("span")].find((s) => s.textContent === "Smyth")!;
+  expect(name.className).toContain("uppercase");
+  expect(chip.compareDocumentPosition(name) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(name.compareDocumentPosition(text) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(host.querySelectorAll("dl").length).toBe(1);
+});
+
+test("with two alternatives nothing collapses", () => {
+  const host = show(identified([smith, jones]));
+  expect(host.querySelector("button[aria-label='Show the whole Identification']")).toBeNull();
+  expect(host.textContent).toContain("Identification");
+  expect(host.textContent).toContain("Alternative");
+});
+
+test("the marker shows the whole of it in place, and the fold button on its head collapses it again", () => {
+  const host = show(identified([smith], "Smyth"));
+  (host.querySelector("button[aria-label='Show the whole Identification']") as HTMLButtonElement).click();
+  flush();
+  expect(host.textContent).toContain("Identification");
+  expect(host.querySelector("button[aria-label='Show the whole Identification']")).toBeNull();
+  // (what is inside keeps its own rule: the Alternative stays collapsed, with its own marker)
+  expect(host.querySelector("button[aria-label='Show the whole Alternative']")).toBeTruthy();
+  expect([...host.querySelectorAll("dt")].map((dt) => dt.textContent)).toEqual(["involves", "identified by"]);
+  (host.querySelector("button[aria-label='Fold Identification']") as HTMLButtonElement).click();
+  flush();
+  expect(host.querySelector("button[aria-label='Show the whole Identification']")).toBeTruthy();
+  expect(host.querySelectorAll("dl").length).toBe(1);
+});
+
+test("a conjunction that is shown whole can be folded from its head too", () => {
+  const host = show({
+    id: "f1",
+    type: "Factoid",
+    involves: [{ id: "a1", type: "Alternative", alternatives: [smith] }],
+  });
+  (host.querySelector("button[aria-label='Show the whole Alternative']") as HTMLButtonElement).click();
+  flush();
+  expect(host.textContent).toContain("Alternative");
+  (host.querySelector("button[aria-label='Fold Alternative']") as HTMLButtonElement).click();
+  flush();
+  expect(host.textContent).not.toContain("Alternative");
 });

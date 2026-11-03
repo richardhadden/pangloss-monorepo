@@ -85,6 +85,7 @@ def exported(**meta):
                     "itemPage": None,
                     "viewCard": None,
                     "editCard": None,
+                    "collapse": None,
                     **meta,
                 }
             }
@@ -115,6 +116,22 @@ def test_a_reference_to_an_app_without_a_module_or_a_missing_key_says_so(module)
         [module], manifests(), exported(viewCard={"module": "withmod", "name": "Cardd"})
     )
     assert "'Cardd' is not in the components of withmod (Page, Card)" in wrong_key[0]
+
+
+def test_a_named_collapse_rule_must_be_in_the_collapse_rules_of_the_module(module):
+    rule = {"module": "withmod", "name": "oneLikely"}
+    given = manifests(collapse_rules=("oneLikely",))
+    assert problems([module], given, exported(collapse=rule)) == []
+    assert problems([module], given, exported(collapse=True)) == []
+    conditions = {"blocking": [], "hidden": ["note"], "when": {}}
+    assert problems([module], manifests(), exported(collapse=conditions)) == []
+    missing = problems([module], manifests(), exported(collapse=rule))
+    assert "Manuscript.collapse 'withmod:oneLikely'" in missing[0]
+    assert "not in the collapseRules of withmod (none)" in missing[0]
+    no_app = problems(
+        [module], manifests(), exported(collapse={"module": "plain", "name": "x"})
+    )
+    assert "no installed app 'plain'" in no_app[0]
 
 
 def test_a_manifest_must_carry_its_apps_name_and_be_readable(module):
@@ -241,6 +258,7 @@ def test_the_manifests_are_read_through_vite_in_node(apps, tmp_path):
     found = read_manifests(find_runtime(), directory, modules)
     assert found["withmod"].name == "withmod"
     assert found["withmod"].components == ("ExampleCard",)
+    assert found["withmod"].collapse_rules == ()
 
 
 def test_npm_ranges_as_peer_dependencies_are_understood():

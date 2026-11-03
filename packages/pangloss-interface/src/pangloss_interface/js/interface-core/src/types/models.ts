@@ -174,6 +174,22 @@ export interface InterfaceMeta {
   /** A card that shows an item where it is part of something else */
   viewCard: ComponentReference | null;
   editCard: ComponentReference | null;
+  /**
+   * (a ReifiedRelation or a Conjunction) Whether the item page shows it folded into the one thing it holds:
+   * `true` by the built-in rule, the same with conditions (`Collapse(...)`), or a rule in `collapseRules` of an
+   * interface module (docs/interface-collapse.md)
+   */
+  collapse?: true | CollapseConditions | ComponentReference | null;
+}
+
+/** `Collapse(...)` in Python: conditions on top of the built-in rule, by the keys of fields */
+export interface CollapseConditions {
+  /** These, filled, show it whole */
+  blocking: string[];
+  /** These are not shown beside what it holds when it is folded (and do not stop it, whatever they hold) */
+  hidden: string[];
+  /** Each of these must hold one of its values */
+  when: Record<string, (string | number | boolean | null)[]>;
 }
 
 /** `"app:Name"` in Python: a key of `components` in the manifest of the interface module of an app */

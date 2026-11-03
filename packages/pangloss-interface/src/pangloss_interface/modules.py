@@ -64,6 +64,7 @@ class Manifest:
     components: tuple[str, ...] = ()
     routes: tuple[Mapping[str, Any], ...] = ()
     requires: tuple[str, ...] = ()
+    collapse_rules: tuple[str, ...] = ()
 
     @classmethod
     def from_data(cls, data: Mapping[str, Any]) -> Manifest:
@@ -72,6 +73,7 @@ class Manifest:
             components=tuple(data.get("components", [])),
             routes=tuple(data.get("routes", [])),
             requires=tuple(data.get("requires", [])),
+            collapse_rules=tuple(data.get("collapseRules", [])),
         )
 
 
@@ -202,6 +204,21 @@ def problems(
             elif (manifest := manifests.get(app)) and key not in manifest.components:
                 found.append(
                     f"{where}: {key!r} is not in the components of {app} ({', '.join(manifest.components) or 'none'})"
+                )
+        rule = meta.get("collapse")
+        # (a rule named "app:name"; `Collapse(...)` conditions are a dict without a module)
+        if isinstance(rule, dict) and "module" in rule:
+            app, key = rule["module"], rule["name"]
+            where = f"{name}.collapse '{app}:{key}'"
+            if app not in by_app:
+                found.append(
+                    f"{where}: no installed app {app!r} has an interface module (pangloss interface new-module {app})"
+                )
+            elif (
+                manifest := manifests.get(app)
+            ) and key not in manifest.collapse_rules:
+                found.append(
+                    f"{where}: {key!r} is not in the collapseRules of {app} ({', '.join(manifest.collapse_rules) or 'none'})"
                 )
     return found
 

@@ -216,7 +216,15 @@ export const definitions: ModelDefinitions = {
         }
       ],
       "incoming": [],
-      "interfaceMeta": null
+      "interfaceMeta": {
+        "colour": null,
+        "navSection": null,
+        "listPage": null,
+        "itemPage": null,
+        "viewCard": null,
+        "editCard": null,
+        "collapse": true
+      }
     },
     "Artwork": {
       "name": "Artwork",
@@ -1005,7 +1013,8 @@ export const definitions: ModelDefinitions = {
         "editCard": {
           "module": "pangloss_dates",
           "name": "DateEditor"
-        }
+        },
+        "collapse": null
       }
     },
     "DateCharacterisation": {
@@ -1253,7 +1262,8 @@ export const definitions: ModelDefinitions = {
         "editCard": {
           "module": "pangloss_dates",
           "name": "DateEditor"
-        }
+        },
+        "collapse": null
       }
     },
     "EDTFDate": {
@@ -1431,7 +1441,8 @@ export const definitions: ModelDefinitions = {
         "editCard": {
           "module": "pangloss_dates",
           "name": "DateEditor"
-        }
+        },
+        "collapse": null
       }
     },
     "ExactDate": {
@@ -1635,7 +1646,8 @@ export const definitions: ModelDefinitions = {
         "editCard": {
           "module": "pangloss_dates",
           "name": "DateEditor"
-        }
+        },
+        "collapse": null
       }
     },
     "Factoid": {
@@ -2111,7 +2123,8 @@ export const definitions: ModelDefinitions = {
         "listPage": null,
         "itemPage": null,
         "viewCard": null,
-        "editCard": null
+        "editCard": null,
+        "collapse": null
       }
     },
     "Identification": {
@@ -2174,7 +2187,15 @@ export const definitions: ModelDefinitions = {
         }
       ],
       "incoming": [],
-      "interfaceMeta": null
+      "interfaceMeta": {
+        "colour": null,
+        "navSection": null,
+        "listPage": null,
+        "itemPage": null,
+        "viewCard": null,
+        "editCard": null,
+        "collapse": true
+      }
     },
     "InRole": {
       "name": "InRole",
@@ -2444,7 +2465,8 @@ export const definitions: ModelDefinitions = {
         "listPage": null,
         "itemPage": null,
         "viewCard": null,
-        "editCard": null
+        "editCard": null,
+        "collapse": null
       }
     },
     "NegativeSubjunctive": {
@@ -2493,7 +2515,8 @@ export const definitions: ModelDefinitions = {
         "listPage": null,
         "itemPage": null,
         "viewCard": null,
-        "editCard": null
+        "editCard": null,
+        "collapse": null
       }
     },
     "NoRule": {
@@ -2634,7 +2657,8 @@ export const definitions: ModelDefinitions = {
           "module": "pangloss_typology",
           "name": "TypeCard"
         },
-        "editCard": null
+        "editCard": null,
+        "collapse": null
       }
     },
     "OngoingDate": {
@@ -2799,7 +2823,8 @@ export const definitions: ModelDefinitions = {
         "editCard": {
           "module": "pangloss_dates",
           "name": "DateEditor"
-        }
+        },
+        "collapse": null
       }
     },
     "Order": {
@@ -3306,7 +3331,8 @@ export const definitions: ModelDefinitions = {
         "editCard": {
           "module": "pangloss_dates",
           "name": "DateEditor"
-        }
+        },
+        "collapse": null
       }
     },
     "Person": {
@@ -3679,7 +3705,8 @@ export const definitions: ModelDefinitions = {
         "listPage": null,
         "itemPage": null,
         "viewCard": null,
-        "editCard": null
+        "editCard": null,
+        "collapse": null
       }
     },
     "Probability": {
@@ -4063,7 +4090,8 @@ export const definitions: ModelDefinitions = {
         "editCard": {
           "module": "pangloss_dates",
           "name": "DateEditor"
-        }
+        },
+        "collapse": null
       }
     },
     "Source": {
@@ -4648,7 +4676,8 @@ export const definitions: ModelDefinitions = {
         "editCard": {
           "module": "pangloss_dates",
           "name": "DateEditor"
-        }
+        },
+        "collapse": null
       }
     },
     "WithCertainty": {

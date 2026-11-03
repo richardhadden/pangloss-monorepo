@@ -8,7 +8,9 @@ A subclass that sets none has its parent's.
 """
 
 import re
-from dataclasses import dataclass
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass, field
+from enum import Enum
 from typing import Any, Literal, get_args
 
 from pangloss_models.exceptions import PanglossMetaError
@@ -53,6 +55,86 @@ COMPONENT_REF = re.compile(r"^([A-Za-z_]\w*):([A-Za-z_]\w*)$")
 # (`False` turns off one that a parent model names: the generic page or card is used again)
 Slot = ComponentRef | Literal[False] | None
 SLOTS = ("list_page", "item_page", "view_card", "edit_card")
+# (the kinds of model that can be shown folded into what they hold)
+COLLAPSIBLE_KINDS = ("ReifiedRelation", "Conjunction")
+
+
+# (what `Collapse(when=...)` can compare a field with: a plain value, or a member of an enum, by its value)
+CollapseValue = str | int | float | bool | Enum | None
+IDENTIFIER = re.compile(r"^[A-Za-z_]\w*$")
+
+
+def _listed(
+    values: CollapseValue | Sequence[CollapseValue],
+) -> tuple[CollapseValue, ...]:
+    # (a single value is a list of one)
+    if isinstance(values, Sequence) and not isinstance(values, str):
+        return tuple(values)
+    return (values,)
+
+
+@dataclass(frozen=True)
+class Collapse:
+    """Conditions on top of the built-in rule of `InterfaceMeta(collapse=True)`, by the names of the
+    model's fields (docs/interface-collapse.md):
+
+        _interface_meta = InterfaceMeta(
+            collapse=Collapse(blocking=["certainty"], hidden=["note"], when={"role": ["author"]})
+        )
+    """
+
+    # These, filled, show it whole
+    blocking: Sequence[str] = ()
+    # These are not shown beside what it holds when it is folded (and do not stop it, whatever they hold)
+    hidden: Sequence[str] = ()
+    # Each of these must hold one of its values (a single value is a list of one; None for an empty field)
+    when: Mapping[str, CollapseValue | Sequence[CollapseValue]] = field(
+        default_factory=dict
+    )
+
+    def __post_init__(self) -> None:
+        for name in ("blocking", "hidden"):
+            given = getattr(self, name)
+            if isinstance(given, str) or not all(
+                isinstance(key, str) and IDENTIFIER.match(key) for key in given
+            ):
+                raise PanglossMetaError(
+                    f"Collapse({name}={given!r}): a list of the names of fields"
+                )
+            object.__setattr__(self, name, tuple(given))
+        when: dict[str, tuple[CollapseValue, ...]] = {}
+        for key, values in dict(self.when).items():
+            if not isinstance(key, str) or not IDENTIFIER.match(key):
+                raise PanglossMetaError(
+                    f"Collapse(when=...): {key!r} is not the name of a field"
+                )
+            listed = _listed(values)
+            if not listed or not all(
+                value is None or isinstance(value, (str, int, float, bool, Enum))
+                for value in listed
+            ):
+                raise PanglossMetaError(
+                    f"Collapse(when={{{key!r}: {values!r}}}): one or more values (text, numbers, yes/no, "
+                    "members of an enum, None)"
+                )
+            when[key] = listed
+        object.__setattr__(self, "when", when)
+
+    def names(self) -> set[str]:
+        return {*self.blocking, *self.hidden, *self.when}
+
+    def export(self, keys: Mapping[str, str]) -> dict[str, Any]:
+        """By the keys of the fields (`keys`: name to key), enum members by their values"""
+        return {
+            "blocking": [keys[name] for name in self.blocking],
+            "hidden": [keys[name] for name in self.hidden],
+            "when": {
+                keys[name]: [
+                    v.value if isinstance(v, Enum) else v for v in _listed(values)
+                ]
+                for name, values in self.when.items()
+            },
+        }
 
 
 @dataclass(frozen=True)
@@ -77,6 +159,11 @@ class InterfaceMeta:
     view_card: Slot = None
     # ... for a card (a form) that edits an item
     edit_card: Slot = None
+    # (a ReifiedRelation or a Conjunction only) Whether the item page shows it folded into the one thing it
+    # holds, when it holds only one: `True` by the built-in rule, `Collapse(...)` by the built-in rule with
+    # conditions on its fields, "<app>:<name>" by a rule (a TypeScript function) in `collapseRules` of an
+    # interface module. View only (docs/interface-collapse.md)
+    collapse: bool | Collapse | ComponentRef | None = None
 
     def __post_init__(self) -> None:
         if self.colour is not None and self.colour not in COLOURS:
@@ -97,6 +184,17 @@ class InterfaceMeta:
                     f"InterfaceMeta({slot}={value!r}): a component is named '<app>:<Name>' "
                     "(an installed app, and a key of 'components' in its interface module), or False "
                     "to turn off the parent's"
+                )
+        if self.collapse is not None and not isinstance(
+            self.collapse, (bool, Collapse)
+        ):
+            if not isinstance(self.collapse, str) or not COMPONENT_REF.match(
+                self.collapse
+            ):
+                raise PanglossMetaError(
+                    f"InterfaceMeta(collapse={self.collapse!r}): True for the built-in rule, Collapse(...) for it "
+                    "with conditions, '<app>:<name>' "
+                    "for a rule in 'collapseRules' of an app's interface module, or False to turn off the parent's"
                 )
 
 
@@ -130,6 +228,15 @@ def resolved_meta(model: type) -> dict[str, Any] | None:
         resolved[_camel(slot)] = (
             split_reference(value) if isinstance(value, str) else None
         )
+    collapse = next((m.collapse for m in metas if m.collapse is not None), None)
+    # (`Collapse(...)` is exported by `export_definitions`, which knows the keys of the fields)
+    resolved["collapse"] = (
+        split_reference(collapse)
+        if isinstance(collapse, str)
+        else collapse
+        if isinstance(collapse, Collapse)
+        else (True if collapse is True else None)
+    )
     return resolved
 
 
@@ -165,5 +272,33 @@ def export_definitions() -> dict[str, Any]:
     exported["searchPatterns"] = export_search_patterns(classes.values())
     for name, definition in exported["models"].items():
         cls = classes.get(name)
-        definition["interfaceMeta"] = None if cls is None else resolved_meta(cls)
+        meta = definition["interfaceMeta"] = None if cls is None else resolved_meta(cls)
+        if meta and meta["collapse"]:
+            if definition["kind"] not in COLLAPSIBLE_KINDS:
+                raise PanglossMetaError(
+                    f"{name}: InterfaceMeta(collapse=...) is for a ReifiedRelation or a Conjunction, and this is "
+                    f"a {definition['kind']}"
+                )
+            if isinstance(meta["collapse"], Collapse):
+                meta["collapse"] = _export_collapse(name, definition, meta["collapse"])
     return exported
+
+
+def _export_collapse(
+    name: str, definition: dict[str, Any], rule: Collapse
+) -> dict[str, Any]:
+    """`Collapse(...)` by the keys of the fields; raises if it names a field the model does not have, or the
+    one that holds what it folds into"""
+    fields = definition["fields"]
+    if definition["kind"] == "ReifiedRelation":
+        held = {"target"}
+    else:
+        held = {f["name"] for f in fields if f["kind"] == "relation"}
+    keys = {f["name"]: f["key"] for f in fields if f["name"] not in held}
+    wrong = sorted(rule.names() - set(keys))
+    if wrong:
+        raise PanglossMetaError(
+            f"{name}: Collapse(...) names {', '.join(wrong)}, which is not one of its own fields "
+            f"({', '.join(keys) or 'none'}; not what it holds)"
+        )
+    return rule.export(keys)

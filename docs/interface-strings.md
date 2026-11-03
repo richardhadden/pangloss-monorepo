@@ -105,6 +105,8 @@ These are not shown, but are read aloud, or appear when the pointer rests on the
 | `add_named` | Add {name} | `ModelFields` (the button of the menu of a relation or embedded field) | `{name}` is the name of the field |
 | `remove_item` | Remove {name} | `LiteralEditor`, `ModelFields` (`aria-label` of the ✕ buttons) | |
 | `fold` | Fold or unfold {name} | `ModelFields` (`Block`: `aria-label` of the fold button) | |
+| `collapse_show_whole` | Show the whole {name} | `ItemContents` (`aria-label` and tooltip of the marker of a collapsed relation) | |
+| `collapse_fold` | Fold {name} | `ItemContents` (`aria-label` and tooltip of the fold button on the head of a relation that can collapse) | |
 | `narrow_type` | Narrow {name} to a type below it | `RetypeButtons` (`aria-label` and tooltip of ↧) | |
 | `widen_type` | Widen {name} to a type above it | `RetypeButtons` (`aria-label` and tooltip of ↥) | |
 | `retype_title` | Change to {type}? | `RetypeButtons` (the dialog's heading) | |

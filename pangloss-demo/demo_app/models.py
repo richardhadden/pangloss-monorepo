@@ -115,6 +115,8 @@ class Alternative[T](Conjunction):
 
     # (one of them, not known which: a derived relation takes one alternative at a time, never two together)
     _derived_meta = DerivedMeta(exclusive=True)
+    # (on the item page, one alternative is shown as that one alone: docs/interface-collapse.md)
+    _interface_meta = InterfaceMeta(collapse=True)
 
     alternatives: list[T]
 
@@ -122,6 +124,9 @@ class Alternative[T](Conjunction):
 class Identification[T](ReifiedRelation[T]):
     """A name in the source that has been identified: the source says "Smith", and
     this says which people that could be. The target is one `Alternative`."""
+
+    # (on the item page, one person is shown as their chip, then `identified by`)
+    _interface_meta = InterfaceMeta(collapse=True)
 
     identified_by: str
     target: Annotated[list[T], MinLen(1), MaxLen(1)]

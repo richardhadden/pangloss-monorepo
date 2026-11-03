@@ -1,10 +1,15 @@
-import { For, Match, Show, Switch } from "solid-js";
+import { createSignal, For, Match, Show, Switch } from "solid-js";
 import type { ParentProps } from "solid-js";
-import { useComponent, useModels, useTranslations } from "../context";
+import {
+  useComponent,
+  useModels,
+  useModules,
+  useTranslations,
+} from "../context";
 import { kindRule, kindTint, spaceTint } from "../primitives";
 import { contextTrail } from "../api";
 import type { ContextLabel } from "../api";
-import { getModel } from "../schema";
+import { collapsedView, getModel } from "../schema";
 import type {
   FieldDefinition,
   ItemContentsProps,
@@ -16,6 +21,7 @@ import {
   fieldGridClass,
   fieldRowClass,
   headBarClass,
+  headButtonClass,
   headBarLinkClass,
   headLabelClass,
   headRestClass,
@@ -83,8 +89,10 @@ function Head(props: {
   rule: string;
   label?: string;
   href?: string;
+  /** Gives the bar a button at its right end that folds it (what is shown whole that can be collapsed) */
+  onFold?: () => void;
 }) {
-  const { modelName } = useTranslations();
+  const { t, modelName } = useTranslations();
   const contents = () => (
     <>
       <span class={[typeChipClass, props.tint || plainTint, props.rule]}>
@@ -93,6 +101,17 @@ function Head(props: {
       <span class={headRestClass}>
         <Show when={props.label}>
           <span class={headLabelClass}>{props.label}</span>
+        </Show>
+        <Show when={props.onFold}>
+          <button
+            type="button"
+            class={[headButtonClass, "ml-auto text-slate-500 hover:bg-slate-400/30"]}
+            aria-label={t("collapse_fold", "Fold {name}", { name: modelName(props.type) })}
+            title={t("collapse_fold", "Fold {name}", { name: modelName(props.type) })}
+            onClick={() => props.onFold!()}
+          >
+            ▾
+          </button>
         </Show>
       </span>
     </>
@@ -165,6 +184,8 @@ function Value(props: {
   field?: FieldDefinition;
   depth: number;
   asChip?: boolean;
+  /** It is shown in the place of something folded into it: if it folds too, it has no marker of its own */
+  inFold?: boolean;
 }) {
   const { t } = useTranslations();
   return (
@@ -183,6 +204,7 @@ function Value(props: {
               field={props.field}
               depth={props.depth}
               asChip={props.asChip}
+              inFold={props.inFold}
             />
           )}
         </For>
@@ -193,6 +215,7 @@ function Value(props: {
           field={props.field}
           depth={props.depth}
           asChip={props.asChip}
+          inFold={props.inFold}
         />
       </Match>
       <Match when={typeof props.value === "boolean"}>
@@ -217,10 +240,12 @@ function ObjectValue(props: {
   field?: FieldDefinition;
   depth: number;
   asChip?: boolean;
+  inFold?: boolean;
 }) {
   const ReferenceChip = useComponent("ReferenceChip");
   const definitions = useModels();
-  const { modelName } = useTranslations();
+  const modules = useModules();
+  const { t, modelName, fieldName } = useTranslations();
   const type = () =>
     typeof props.value.type === "string" ? props.value.type : undefined;
   // (an annotated value has no type of its own in the JSON: the field says which it is)
@@ -251,6 +276,22 @@ function ObjectValue(props: {
   const isEmbedded = () => model()?.kind === "Embedded";
   const isAnnotated = () =>
     type() === undefined && props.field?.kind === "annotatedValue";
+  // (a reified relation or a conjunction that holds one thing can be shown folded into it: view only)
+  const collapsed = () =>
+    isChip() || props.asChip
+      ? undefined
+      : collapsedView(props.value, definitions, modules.collapseRule);
+  const [whole, setWhole] = createSignal(false);
+  const folded = () => collapsed() !== undefined && !whole();
+  const onFold = () => (collapsed() ? () => setWhole(false) : undefined);
+  const plain = (value: unknown): string =>
+    Array.isArray(value)
+      ? value.map(plain).join(", ")
+      : typeof value === "boolean"
+        ? value
+          ? t("yes", "Yes")
+          : t("no", "No")
+        : String(value);
   return (
     // (a card that the model names for itself shows an embedded item or a block; a chip is the reference's card)
     <Customised
@@ -286,6 +327,7 @@ function ObjectValue(props: {
                     tint={tint()}
                     rule={rule()}
                     label={label()}
+                    onFold={onFold()}
                     href={
                       props.asChip && props.value.id
                         ? `/${type()}/${props.value.id}`
@@ -320,10 +362,50 @@ function ObjectValue(props: {
               }
             />
           </Match>
+          <Match when={folded()}>
+            {/* (folded: what it holds in its place, after a marker in the colour of its type that shows it whole, then its own filled fields, each with its name) */}
+            <span class="inline-flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+              <Show when={!props.inFold}>
+                <button
+                  type="button"
+                  class={[
+                    "flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-sm border-[0.5px] border-slate-400/70 text-xs select-none hover:brightness-90",
+                    tint() || plainTint,
+                  ]}
+                  aria-label={t("collapse_show_whole", "Show the whole {name}", {
+                    name: modelName(type() ?? ""),
+                  })}
+                  title={t("collapse_show_whole", "Show the whole {name}", {
+                    name: modelName(type() ?? ""),
+                  })}
+                  onClick={() => setWhole(true)}
+                >
+                  ▸
+                </button>
+              </Show>
+              <Value value={collapsed()!.held} depth={props.depth} inFold />
+              <For each={collapsed()!.extras}>
+                {(extra) => (
+                  <span class="inline-flex min-w-0 items-baseline gap-1.5">
+                    <span class="text-xs font-semibold text-slate-500 uppercase">
+                      {fieldName(model()!.name, extra.field.name)}
+                    </span>
+                    <span class="text-sm break-words">{plain(extra.value)}</span>
+                  </span>
+                )}
+              </For>
+            </span>
+          </Match>
           <Match when={isReified()}>
             {/* (a reified relation: its type at the head, then what it holds, full width and without its field name, then its own fields, if it has any) */}
             <div class="mb-4 flex w-full min-w-0 flex-col last:mb-0">
-              <Head type={type() ?? ""} tint={tint()} rule={rule()} label={label()} />
+              <Head
+                type={type() ?? ""}
+                tint={tint()}
+                rule={rule()}
+                label={label()}
+                onFold={onFold()}
+              />
               <div class={["ml-2 pt-4", nestedClass, rule()]}>
                 {/* (what it holds first, then what is said of the relation) */}
                 <div class="flex min-w-0 flex-wrap items-start gap-x-2 gap-y-4">

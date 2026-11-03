@@ -201,6 +201,8 @@
   "add_to": { "en": "Add to {name}", "de": "Zu {name} hinzufügen", "fr": "Ajouter à {name}" },
   "remove_item": { "en": "Remove {name}", "de": "{name} entfernen", "fr": "Retirer : {name}" },
   "fold": { "en": "Fold or unfold {name}", "de": "{name} ein- oder ausklappen", "fr": "Plier ou déplier : {name}" },
+  "collapse_show_whole": { "en": "Show the whole {name}", "de": "{name} ganz zeigen", "fr": "Afficher en entier : {name}" },
+  "collapse_fold": { "en": "Fold {name}", "de": "{name} einklappen", "fr": "Replier : {name}" },
   "narrow_type": { "en": "Narrow {name} to a type below it", "de": "{name} auf einen Untertyp einschränken", "fr": "Restreindre {name} à un sous-type" },
   "widen_type": { "en": "Widen {name} to a type above it", "de": "{name} auf einen Obertyp erweitern", "fr": "Élargir {name} à un type parent" },
   "retype_title": { "en": "Change to {type}?", "de": "In {type} ändern?", "fr": "Changer en {type} ?" },

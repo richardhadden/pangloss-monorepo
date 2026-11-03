@@ -40,4 +40,5 @@ export * from "./relationLayout";
 export * from "./clipboard";
 export * from "./retype";
 export * from "./validation";
+export * from "./collapse";
 export * from "./searchForm";

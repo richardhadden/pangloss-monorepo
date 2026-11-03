@@ -72,6 +72,12 @@ export interface CustomProps {
   editCard: EditCardProps;
 }
 
+/**
+ * Whether a reified relation or a conjunction is shown folded into the one thing it holds (`InterfaceMeta(collapse=
+ * "app:name")`): given the item as the API sends it, and its model. It is only asked when it holds exactly one.
+ */
+export type CollapseRule = (item: Record<string, unknown>, model: ModelDefinition) => boolean;
+
 /** What a loader gives: a module with a component as its default export */
 export type ComponentLoader = () => Promise<{ default: Component<any> }>;
 
@@ -93,4 +99,6 @@ export interface ModuleManifest {
   /** Every component a model or a route can name: each loaded when a page that uses it is */
   components: Record<string, ComponentLoader>;
   routes?: ModuleRoute[];
+  /** The rules a model can name with `InterfaceMeta(collapse="app:name")` (not loaded lazily: they are small) */
+  collapseRules?: Record<string, CollapseRule>;
 }

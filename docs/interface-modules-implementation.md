@@ -24,6 +24,7 @@ model goes in `InterfaceMeta`, and what does not (a page for the calendar, a lin
 | A whole page for one item of a type | `InterfaceMeta(item_page=...)` |
 | A card to *view* an item (where it is shown in a list, or referred to, or inside another item) | `InterfaceMeta(view_card=...)` |
 | A card to *edit* an item | `InterfaceMeta(edit_card=...)` |
+| A rule for when a reified relation or conjunction is shown folded into the one thing it holds (view only) | `InterfaceMeta(collapse="app:name")`, a function in `collapseRules` of the manifest ([interface-collapse.md](interface-collapse.md)) |
 | Links in the navigation bar (to a type, or to anything else) | the app's `InterfaceConfig` (`nav`), §4.4 |
 | A page that is not about one type (a month, a map, a dashboard) | the module's manifest (`routes`) |
 | A command that makes the library for an app | `pangloss interface new-module <app>` |
