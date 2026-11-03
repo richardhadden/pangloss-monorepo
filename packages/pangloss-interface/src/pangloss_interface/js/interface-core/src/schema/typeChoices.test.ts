@@ -132,6 +132,15 @@ test("a semantic space inside a semantic space is a group of its own, and type v
   expect(resolveOptions([{ kind: "typeVar", name: "T", edgeModel: null }], env)).toHaveLength(2);
 });
 
+test("a type variable with an edge model gives it to what it stands for (`list[ViaEdge[T, Probability]]`)", () => {
+  const env = { T: [{ kind: "entity", type: "Person", edgeModel: null }, doc("Note")] as RelationOption[] };
+  const edgeModels = (options: RelationOption[]) => options.map((option) => ("edgeModel" in option ? option.edgeModel : undefined));
+  const resolved = resolveOptions([{ kind: "typeVar", name: "T", edgeModel: "Probability" }], env);
+  expect(edgeModels(resolved)).toEqual(["Probability", "Probability"]);
+  // (what it is bound to is not changed)
+  expect(edgeModels(env.T)).toEqual([null, null]);
+});
+
 test("a path reads and writes into a tree, making what is not there, and takes things out", () => {
   const root: Record<string, unknown> = {};
   setAt(root, ["a", "b", 1, "c"], "x");

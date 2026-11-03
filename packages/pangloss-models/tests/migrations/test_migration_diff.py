@@ -43,6 +43,7 @@ from pangloss_models.migrations.changes import (
 )
 from pangloss_models.model_bases.annotated_value import AnnotatedValue
 from pangloss_models.model_bases.configs import RelationConfig
+from pangloss_models.model_bases.conjunction import Conjunction
 from pangloss_models.model_bases.document import Document
 from pangloss_models.model_bases.edge_model import EdgeModel
 from pangloss_models.model_bases.embedded import Embedded
@@ -816,6 +817,48 @@ def test_properties_on_an_edge():
     assert (change.old, change.new) == ([], ["Certainty"])
     assert change.safety == "additive"
     assert one(result, CreateModel).model == "Certainty"
+
+
+@no_type_check
+def test_an_edge_model_moved_from_where_a_wrapper_is_used_into_the_wrapper():
+    """`Alternative[ViaEdge[Person, Certainty]]` to `Alternative[Person]`, with the edge model on
+    `Alternative.alternatives`: the edges are the same, and the field that uses the wrapper is
+    written differently (nothing to do to its own edges)"""
+
+    def before():
+        class Certainty(EdgeModel):
+            level: int
+
+        class Person(Entity):
+            pass
+
+        class Alternative[T](Conjunction):
+            alternatives: list[T]
+
+        class Statement(Document):
+            about: Alternative[ViaEdge[Person, Certainty]]
+
+    def after():
+        class Certainty(EdgeModel):
+            level: int
+
+        class Person(Entity):
+            pass
+
+        class Alternative[T](Conjunction):
+            alternatives: list[ViaEdge[T, Certainty]]
+
+        class Statement(Document):
+            about: Alternative[Person]
+
+    result = changes(before, after)
+    moved = one(result, AlterEdgeModel)
+    assert (moved.model, moved.name) == ("Alternative", "alternatives")
+    assert (moved.old, moved.new) == ([], ["Certainty"])
+    rewritten = one(result, AlterRelationTarget)
+    assert (rewritten.model, rewritten.name) == ("Statement", "about")
+    assert (rewritten.added, rewritten.removed) == ([], [])
+    assert rewritten.safety == "safe"
 
 
 @no_type_check

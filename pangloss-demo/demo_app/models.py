@@ -23,7 +23,7 @@ small, and between them use most of what Pangloss has:
 | A statement that holds another statement | `Order.thing_ordered` |
 | Binding a value of the parent into its children | `Order.ordered_to` into the `given_by` or `ordered_by` of what is ordered |
 | A conjunction (a join of several things) | `Causes`, `Alternative` (any number) |
-| A reified relation to a conjunction, with edge properties on its members | `Identification[Alternative[ViaEdge[Person, Probability]]]` |
+| A reified relation to a conjunction, with edge properties on its members | `Identification[Alternative[Person]]` (the edge is in `Alternative`) |
 | Literals: enums, dates, decimals, a TypedDict, lists, validators | throughout |
 | What a space or a conjunction does to a derived relation (`pangloss-derived`; the rules are in `derived.py`) | `Alternative`, `InRole` |
 """
@@ -116,15 +116,15 @@ class InRole[T](ReifiedRelation[T]):
 
 
 class Alternative[T](Conjunction):
-    """One of several things, not known which: any number of statements or entities.
-    `Alternative[ViaEdge[Person, Probability]]` gives each person how likely it is the one meant"""
+    """One of several things, not known which: any number of statements or entities,
+    each with how likely it is the one meant (`Alternative[Person]`)"""
 
     # (one of them, not known which: a derived relation takes one alternative at a time, never two together)
     _derived_meta = DerivedMeta(exclusive=True)
     # (on the item page, one alternative is shown as that one alone: docs/interface-collapse.md)
     _interface_meta = InterfaceMeta(collapse=True)
 
-    alternatives: list[T]
+    alternatives: list[ViaEdge[T, Probability]]
 
 
 class Identification[T](ReifiedRelation[T]):
@@ -242,7 +242,7 @@ class Transfer(Statement):
     item: str
     quantity: Decimal
     given_by: Annotated[
-        Agent | Identification[Alternative[ViaEdge[Person, Probability]]],
+        Agent | Identification[Alternative[Person]],
         RelationConfig(
             reverse_name="gave",
             subclasses_parent_fields=[
@@ -251,7 +251,7 @@ class Transfer(Statement):
         ),
     ]
     given_to: Annotated[
-        Agent | Identification[Alternative[ViaEdge[Person, Probability]]],
+        Agent | Identification[Alternative[Person]],
         RelationConfig(reverse_name="received"),
     ]
 
@@ -261,7 +261,7 @@ class MemberOf(Statement):
     them members of the same group: see `derived.py`)"""
 
     member: Annotated[
-        Agent | Identification[Alternative[ViaEdge[Person, Probability]]],
+        Agent | Identification[Alternative[Person]],
         RelationConfig(
             reverse_name="member_of",
             subclasses_parent_fields=[
@@ -277,7 +277,7 @@ class Order(Statement):
     its own, said in a subjunctive space, because it was wished, and not necessarily done"""
 
     ordered_by: Annotated[
-        Agent | Identification[Alternative[ViaEdge[Person, Probability]]],
+        Agent | Identification[Alternative[Person]],
         RelationConfig(
             reverse_name="ordered",
             subclasses_parent_fields=[
@@ -288,7 +288,7 @@ class Order(Statement):
     # Who received the order: the one who is to do what is ordered, so it is given to what is ordered (in the
     # subjunctive space) that does not say otherwise: who gives, in a transfer, or who orders, in an order passed on
     ordered_to: Annotated[
-        Agent | Identification[Alternative[ViaEdge[Person, Probability]]],
+        Agent | Identification[Alternative[Person]],
         RelationConfig(reverse_name="received_order"),
     ]
     thing_ordered: Annotated[

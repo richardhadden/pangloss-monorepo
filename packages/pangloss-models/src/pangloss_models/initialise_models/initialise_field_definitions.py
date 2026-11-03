@@ -46,7 +46,7 @@ from pangloss_models.model_bases.document import Document
 from pangloss_models.model_bases.edge_model import EdgeModel
 from pangloss_models.model_bases.embedded import Embedded
 from pangloss_models.model_bases.entity import Entity
-from pangloss_models.model_bases.helpers import DBField, Fulfils
+from pangloss_models.model_bases.helpers import DBField, Fulfils, ViaEdge
 from pangloss_models.model_bases.reified_relation import (
     ReifiedRelation,
     ReifiedRelationDocument,
@@ -342,6 +342,31 @@ def fixed_relation_names(
     return names
 
 
+def type_var_relation(
+    annotation: Any,
+) -> tuple[type[list] | None, TypeVar, type[EdgeModel] | None] | None:
+    """If `annotation` is a relation to a type variable, its wrapper, the variable and the edge
+    model: `T`, `list[T]`, `ViaEdge[T, Edge]`, `list[ViaEdge[T, Edge]]` (the edge model is then that
+    of every relation to what `T` stands for, wherever the generic wrapper is used)"""
+    wrapper = None
+    if get_origin(annotation) is list:
+        wrapper = list
+        annotation = get_args(annotation)[0]
+    edge_model = None
+    metadata = getattr(annotation, "__pydantic_generic_metadata__", None)
+    if metadata and metadata["origin"] is ViaEdge:
+        annotation, edge_model = metadata["args"]
+        if isinstance(annotation, TypeVar) and not (
+            isclass(edge_model) and issubclass(edge_model, EdgeModel)
+        ):
+            raise PanglossModelError(
+                f"ViaEdge[{annotation}, ...] must have an EdgeModel as its second argument"
+            )
+    if isinstance(annotation, TypeVar):
+        return wrapper, annotation, edge_model
+    return None
+
+
 def build_relatable_field_definition(
     field_name: str,
     field_info: FieldInfo,
@@ -365,21 +390,13 @@ def build_relatable_field_definition(
     relation_config = get_relation_config(field_info)
     annotation = field_info.annotation
 
-    if (
-        is_parameterized_generic(annotation)
-        and isinstance((type_var := get_args(annotation)[0]), TypeVar)
-        and get_origin(annotation) is list
-    ):
-        wrapper = list
+    if held := type_var_relation(annotation):
+        wrapper, type_var, edge_model = held
         type_options: set[RelationOption] = {
-            RelationToTypeVar(annotated_type=type_var, type_var_name=type_var.__name__)
-        }
-
-    elif isinstance(annotation, TypeVar):
-        wrapper = None
-        type_options = {
             RelationToTypeVar(
-                annotated_type=annotation, type_var_name=annotation.__name__
+                annotated_type=type_var,
+                type_var_name=type_var.__name__,
+                edge_model=edge_model,
             )
         }
 
@@ -877,8 +894,8 @@ def define_wrapper_field(
             found = True
 
     if issubclass(model, (ReifiedRelation, ReifiedRelationDocument)):
-        if get_origin(field_info.annotation) and isinstance(
-            get_args(field_info.annotation)[0], TypeVar
+        if get_origin(field_info.annotation) and type_var_relation(
+            field_info.annotation
         ):
             definition = build_relatable_field_definition(
                 field_name, field_info, model, is_db_field=is_db_field

@@ -443,7 +443,7 @@ def _build_generic_model(
                 stands_for = type_option.parameter_type_options[
                     generic_option.type_var_name
                 ]
-                for option in stands_for.type_options:
+                for option in generic_option.stand_in(stands_for.type_options):
                     if isinstance(option, RelationToEntity):
                         types.extend(entity_types(kind, option, "typevar"))
                     elif isinstance(option, RelationToDocument):

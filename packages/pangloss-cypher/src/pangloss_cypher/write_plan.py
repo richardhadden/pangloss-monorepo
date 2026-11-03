@@ -352,7 +352,9 @@ def substitute_type_vars(
             isinstance(type_option, RelationToTypeVar)
             and type_option.type_var_name in type_var_options
         ):
-            result.update(type_var_options[type_option.type_var_name])
+            result.update(
+                type_option.stand_in(type_var_options[type_option.type_var_name])
+            )
         else:
             result.add(type_option)
     return result

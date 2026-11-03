@@ -1,6 +1,6 @@
 from collections import defaultdict
-from collections.abc import Callable
-from dataclasses import dataclass
+from collections.abc import Callable, Iterable
+from dataclasses import dataclass, replace
 from dataclasses import field as dataclass_field
 from typing import TYPE_CHECKING, Any, Protocol, TypeVar, runtime_checkable
 
@@ -233,6 +233,22 @@ class RelationToReifiedRelationDocument(RelationOption):
 class RelationToTypeVar(RelationOption):
     type_var_name: str
     annotated_type: TypeVar  # ty: ignore[invalid-attribute-override]
+
+    def stand_in(self, options: "Iterable[RelationOption]") -> list[RelationOption]:
+        """`options` (what the type variable stands for where the wrapper is used) with the edge
+        model of this relation to it (`list[ViaEdge[T, Edge]]`), if it has one"""
+        if self.edge_model is None:
+            return list(options)
+        stood_in = []
+        for option in options:
+            if option.edge_model not in (None, self.edge_model):
+                raise PanglossInitialisationError(
+                    f"{option.annotated_type} is given the edge model "
+                    f"{option.edge_model.__name__}, but where it stands for {self.type_var_name} "
+                    f"it has {self.edge_model.__name__} already"
+                )
+            stood_in.append(replace(option, edge_model=self.edge_model))
+        return stood_in
 
 
 @dataclass(frozen=True, kw_only=True)

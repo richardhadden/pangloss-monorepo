@@ -459,6 +459,8 @@ class AlterRelationTarget(Change):
             f"now also {', '.join(self.added)}" if self.added else "",
             f"no longer {', '.join(self.removed)}" if self.removed else "",
         ]
+        if not self.added and not self.removed:
+            return f"{self.model}.{self.name}: the edge models of what it holds"
         return f"{self.model}.{self.name}: " + "; ".join(p for p in parts if p)
 
 

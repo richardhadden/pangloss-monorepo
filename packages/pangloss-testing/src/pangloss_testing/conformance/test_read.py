@@ -3,7 +3,9 @@ from typing import TypedDict, no_type_check
 
 import pytest
 from pangloss_models import initialise
+from pangloss_models.exceptions import PanglossInitialisationError
 from pangloss_models.model_bases.annotated_value import AnnotatedValue
+from pangloss_models.model_bases.conjunction import Conjunction
 from pangloss_models.model_bases.document import Document
 from pangloss_models.model_bases.edge_model import EdgeModel
 from pangloss_models.model_bases.embedded import Embedded
@@ -713,6 +715,78 @@ async def test_read_edge_properties(clear_database):
     assert read.concerns.edge_properties.number == 1
     assert read.action.edge_properties.number == 2
     assert sorted(a.edge_properties.number for a in read.actions) == [10, 11]
+
+
+@no_type_check
+async def test_read_edge_properties_given_by_a_conjunction(clear_database):
+    """`list[ViaEdge[T, Edge]]` on the wrapper: every use of it has the edge model, without saying so"""
+
+    class Certainty(EdgeModel):
+        number: int
+
+    class Person(Entity):
+        pass
+
+    class Alternative[T](Conjunction):
+        alternatives: list[ViaEdge[T, Certainty]]
+
+    class Identification[T](ReifiedRelation[T]):
+        pass
+
+    class Statement(Document):
+        concerns: Identification[Alternative[Person]]
+
+    initialise()
+
+    people = [await Person.Create(label=f"Person {i}").save() for i in range(2)]
+    saved = await Statement.Create(
+        label="A Statement",
+        concerns={
+            "type": "Identification",
+            "target": [
+                {
+                    "type": "Alternative",
+                    "alternatives": [
+                        {
+                            "type": "Person",
+                            "id": person.id,
+                            "edge_properties": {"number": i},
+                        }
+                        for i, person in enumerate(people)
+                    ],
+                }
+            ],
+        },
+    ).save()
+
+    read = await Statement.get(id=saved.id)
+    alternatives = read.concerns.target[0].alternatives
+    assert {a.id: a.edge_properties.number for a in alternatives} == {
+        person.id: i for i, person in enumerate(people)
+    }
+
+
+@no_type_check
+async def test_an_edge_model_given_by_the_wrapper_and_where_it_is_used_is_refused(
+    clear_database,
+):
+    class Certainty(EdgeModel):
+        number: int
+
+    class Other(EdgeModel):
+        other: int
+
+    class Person(Entity):
+        pass
+
+    class Alternative[T](Conjunction):
+        alternatives: list[ViaEdge[T, Certainty]]
+
+    class Statement(Document):
+        concerns: Alternative[ViaEdge[Person, Other]]
+
+    with pytest.raises(PanglossInitialisationError, match="Certainty already"):
+        initialise()
 
 
 @no_type_check

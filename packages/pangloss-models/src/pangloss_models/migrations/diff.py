@@ -576,6 +576,25 @@ def option_key(option: dict) -> str:
     return f"{option['kind']}:{option.get('type')}[{params}]"
 
 
+def option_key_with_edges(option: dict) -> str:
+    """`option_key`, with the edge models of what is in its parameters (`Alternative[ViaEdge[Person,
+    Probability]]`): the edges of those are another field's (the wrapper's), so a change to them
+    is nothing to the edges of this field"""
+    if option["kind"] == "typeVar" or option["kind"] in DIRECT_OPTION_KINDS:
+        return option_key(option)
+    params = ", ".join(
+        f"{name}="
+        + "|".join(
+            sorted(
+                f"{option_key_with_edges(o)}~{o.get('edgeModel')}"
+                for o in parameter["options"]
+            )
+        )
+        for name, parameter in sorted(option.get("params", {}).items())
+    )
+    return f"{option['kind']}:{option.get('type')}[{params}]"
+
+
 def edge_models(entry: dict) -> list[str]:
     return sorted({o["edgeModel"] for o in entry["options"] if o.get("edgeModel")})
 
@@ -618,7 +637,10 @@ def diff_relation(model: str, old: dict, new: dict, result: DiffResult) -> None:
     else:
         old_keys = {option_key(o) for o in old_options}
         new_keys = {option_key(o) for o in new_options}
-        if old_keys != new_keys:
+        if old_keys != new_keys or {option_key_with_edges(o) for o in old_options} != {
+            option_key_with_edges(o) for o in new_options
+        }:
+            # (with nothing added or removed, only the edge models of what it holds have changed)
             result.changes.append(
                 AlterRelationTarget(
                     model=model,
