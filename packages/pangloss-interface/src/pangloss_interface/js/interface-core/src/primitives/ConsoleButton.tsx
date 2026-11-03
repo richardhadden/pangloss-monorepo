@@ -4,8 +4,8 @@ import type { ConsoleButtonProps, ConsoleButtonTone } from "../types";
 // (whole class names, so that Tailwind finds them)
 const TONES: Record<ConsoleButtonTone, string> = {
   neutral: "hover:bg-slate-400/40 active:bg-slate-400/60",
-  entity: "bg-sky-400/25 text-sky-950 hover:bg-sky-400/40 active:bg-sky-400/60",
-  document: "bg-green-400/25 text-green-950 hover:bg-green-400/40 active:bg-green-400/60",
+  entity: "bg-sky-200 text-sky-950 hover:bg-sky-300 active:bg-sky-400",
+  document: "bg-green-200 text-green-950 hover:bg-green-300 active:bg-green-400",
   danger: "text-red-800 hover:bg-red-400/30 active:bg-red-400/50",
 };
 

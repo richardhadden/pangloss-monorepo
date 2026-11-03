@@ -423,7 +423,7 @@ test("a relation that collapses is only the chip of the one it holds, with a mar
   expect(host.querySelectorAll("dl").length).toBe(1);
   expect(host.textContent).not.toContain("Alternative");
   const marker = host.querySelector("button[aria-label='Show the whole Identification']")!;
-  expect(marker.className).toContain("bg-violet-400/25");
+  expect(marker.className).toContain("bg-violet-200");
   // (the marker of the outer one only: the Alternative inside it is folded into it)
   expect(host.querySelectorAll("button").length).toBe(1);
 });
