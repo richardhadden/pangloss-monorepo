@@ -10,17 +10,17 @@ interface DerivedRef {
   label?: string | null;
 }
 
-/** One fact of `_derived` (pangloss-derived), as the view of an entity or a head document has it */
+/** One fact of `_derived` (pangloss-derived), as the view of an item has it, or of a later page */
 interface DerivedItem {
   id: string;
   type: string;
-  /** (of an entity) the other end of the relation */
+  /** (of the first page) the other end of the relation */
   other?: DerivedRef | null;
-  /** (of an entity) the field the other end is in */
+  /** (of the first page) the field the other end is in */
   otherField?: string | null;
-  /** (of an entity) the other fields: entities, or values */
+  /** (of the first page) the other fields: entities, or values */
   fields?: Record<string, DerivedRef | string | number | boolean | null>;
-  /** (of a document) the fields, as the fact's view has them */
+  /** (of a later page) the fields, as the fact's view has them */
   [field: string]: unknown;
   contextLabels: string[];
   qualifiedOnly: boolean;
@@ -28,13 +28,25 @@ interface DerivedItem {
   justificationCount?: number;
 }
 
+/** The `SymmetricLabel` of a derived class: the name its two symmetric fields share */
+interface SymmetricLabel {
+  name: string;
+  fields: [string, string];
+}
+
+/** One class of `_derived`: by its name, or its reverse name (the key) */
+interface DerivedClass {
+  type?: string;
+  symmetricLabel?: SymmetricLabel | null;
+  count: number;
+  items: DerivedItem[];
+}
+
 export interface DerivedSectionProps {
-  /** `_derived` of the item: for each derived class, a count and a first page */
-  derived: Record<string, { count: number; items: DerivedItem[] }>;
-  /** The item: a document's facts show all their ends, an entity's leave itself out */
+  /** `_derived` of the item: for each derived class (by its name, or a reverse name), a count and a first page */
+  derived: Record<string, DerivedClass>;
+  /** The item (an entity, or a head document a fact points at): its facts leave it out */
   itemId: string;
-  /** Whether the item is a document (the rest of its facts are those it is `evidence` of) or an entity (`entity`) */
-  kind?: "entity" | "document";
 }
 
 /** A page of `/api/derived/{Class}`: the facts as their views (every end a field) */
@@ -74,15 +86,13 @@ const notFields = new Set([
   "justifications",
   "justificationCount",
   "derived",
-  "rules",
-  "nodes",
 ]);
 
 type FieldValue = DerivedRef | string | number | boolean | null | undefined;
 
 /**
  * The fields of a fact to show, by name, in the order of its class: for the first page of an entity, the other end
- * and the other fields; for a fact's whole view (a document's, or a later page), every field but those that are the
+ * and the other fields; for a fact's whole view (a later page), every field but those that are the
  * item itself
  */
 function shownFields(item: DerivedItem, itemId: string): [string, FieldValue][] {
@@ -139,7 +149,7 @@ function Why(props: { type: string; id: string }) {
   );
 }
 
-function Fact(props: { item: DerivedItem; itemId: string }) {
+function Fact(props: { item: DerivedItem; itemId: string; symmetricLabel?: SymmetricLabel | null }) {
   const { t, fieldName } = useTranslations();
   const [why, setWhy] = createSignal(false);
   const fields = createMemo(() =>
@@ -153,7 +163,10 @@ function Fact(props: { item: DerivedItem; itemId: string }) {
           {([name, value]) => (
             <span class="flex items-center gap-2">
               <span class="text-xs font-semibold text-slate-500 uppercase select-none">
-                {fieldName(props.item.type, name)}
+                {fieldName(
+                  props.item.type,
+                  props.symmetricLabel?.fields.includes(name) ? props.symmetricLabel.name : name,
+                )}
               </span>
               <Show when={isRef(value) && value} fallback={<span class="text-sm">{String(value)}</span>}>
                 {(ref) => <ReferenceChip type={ref().type} label={ref().label ?? ref().id} href={href(ref())} />}
@@ -171,10 +184,13 @@ function Fact(props: { item: DerivedItem; itemId: string }) {
         </Show>
         <button
           type="button"
-          class={[smallButtonClass, "text-slate-600"]}
+          class="inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-sm px-1.5 py-1 text-xs font-semibold text-slate-500 uppercase select-none hover:bg-slate-200/70 hover:text-slate-700"
           aria-expanded={why() ? "true" : "false"}
           onClick={() => setWhy((open) => !open)}
         >
+          <span aria-hidden="true" class={["inline-block transition-transform", why() && "rotate-90"]}>
+            ▸
+          </span>
           {t("derived_why", "Why ({count})", { count: count() })}
         </button>
       </span>
@@ -186,14 +202,16 @@ function Fact(props: { item: DerivedItem; itemId: string }) {
 }
 
 function ClassSection(props: {
+  /** The key of `_derived`: the class's name, or a reverse name */
   name: string;
+  type: string;
+  symmetricLabel?: SymmetricLabel | null;
   count: number;
   first: DerivedItem[];
   itemId: string;
-  kind: "entity" | "document";
 }) {
   const api = useApi();
-  const { t, modelName } = useTranslations();
+  const { t, modelName, incomingName } = useTranslations();
   // (the pages read so far, after the first the item came with; the pages are 25 as the first is)
   const [more, setMore] = createSignal<DerivedItem[]>([]);
   const [nextPage, setNextPage] = createSignal(2);
@@ -203,11 +221,10 @@ function ClassSection(props: {
   const load = async () => {
     setLoading(true);
     try {
-      const page = await api.get<DerivedPage>(`/derived/${encodeURIComponent(props.name)}`, {
-        [props.kind]: props.itemId,
+      const page = await api.get<DerivedPage>(`/derived/${encodeURIComponent(props.type)}`, {
+        entity: props.itemId,
         page: nextPage(),
       });
-      // (the `_derived` of an entity names the class by a reverse name at times; the items are the class's)
       setMore((shown) => [...shown, ...page.results]);
       setNextPage((page) => page + 1);
     } finally {
@@ -217,12 +234,14 @@ function ClassSection(props: {
   return (
     <div class={fieldRowClass}>
       <dt class="pt-1 text-xs font-semibold text-slate-500 uppercase">
-        {className(modelName, props.name)}
+        {props.name === props.type ? className(modelName, props.type) : incomingName(props.type, props.name)}
         <span class="ml-1 font-normal normal-case">({props.count})</span>
       </dt>
       <dd class="flex min-w-0 flex-col gap-3">
         <ul class="flex flex-col gap-3">
-          <For each={items()}>{(item) => <Fact item={item} itemId={props.itemId} />}</For>
+          <For each={items()}>
+            {(item) => <Fact item={item} itemId={props.itemId} symmetricLabel={props.symmetricLabel} />}
+          </For>
         </ul>
         <Show when={left() > 0}>
           <button
@@ -257,10 +276,11 @@ export function DerivedSection(props: DerivedSectionProps) {
             {([name, section]) => (
               <ClassSection
                 name={name}
+                type={section.type ?? name}
+                symmetricLabel={section.symmetricLabel}
                 count={section.count}
                 first={section.items}
                 itemId={props.itemId}
-                kind={props.kind ?? "entity"}
               />
             )}
           </For>

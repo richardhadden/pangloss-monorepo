@@ -488,11 +488,11 @@ def co_participants(a: Var[Agent], b: Var[Agent], act: Var[Activity]):
   symmetric class the entity's own end is left out and the other is `other`. The field is `derived` in Python, with
   the alias `_derived` (pydantic does not allow a field whose name begins with `_`), and the interface shows it as its
   own section, marked derived, each with its "why" on demand (`GET /api/derived/SameFamily/<id>`).
-- **A head document's view has `_derived` too** (decided): what it is evidence of, found by the `evidence` edges into
-  it. The same shape (per derived class, a count and a first page), each item with the statements of the document that
-  the justification used (from its `nodes`), so that the page can say "this statement, with that one in another
-  factoid, gives: X and Y of the same family". For a nested document the field is not given (the evidence edge is to
-  the head); the head's view says which of its statements was used.
+- **A head document's view does not show what it is evidence of** (decided 2026-11-03, reversing an earlier decision
+  to show it): that is what the document says itself, so the page repeated it. A head document's `_derived` is found as
+  an entity's is, by the facts with a field that points at it; none can now (the fields are relations to entities), so
+  it is empty, but a document reached by a fact would show it. What a document is evidence of stays readable with
+  `list(evidence=...)` / `?evidence=`.
 - In a search: a derived class's `Where` can be used where a relation pattern is (`Person.Where(derived_=
   SameOrganisation.Where(organisation=z))`), later.
 - **What is seen:** a fact is visible if one of its justifications has all its evidence visible to the reader (by
@@ -820,7 +820,7 @@ the wrong class); a variable of a list field (an item of it: `UNWIND` after the 
 in a search, `derived_` / `$derived` on an entity's pattern (`pangloss_models.search.Extension`, a key an optional package
 checks and compiles itself, and `search_where.where_extensions`, a field it adds to the `Where` of a kind of model); the
 blocking SDK (`Derived.list`/`get` and `graph` are bound to the storage in use at `initialise`, as the models' functions
-are); `evidence=` on the list (what a document is evidence of) and paging in the interface's section; and the detection
+are); `evidence=` on the list (what a document is evidence of); paging in the interface's section; and the detection
 of whether a symmetric class's body is symmetric (below).
 
 **Not done:** a derived class in the body of another rule (recursion: strata and a fixpoint); aggregates; the reverse

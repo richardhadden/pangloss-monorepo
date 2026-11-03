@@ -139,6 +139,72 @@
         }
       }
     },
+    "Artwork": {
+      "en": {
+        "name": "Artwork",
+        "plural": "Artworks",
+        "description": "Any artwork object",
+        "help": "",
+        "incoming": {
+          "artwork_created_reverse": {
+            "name": "Created in",
+            "plural": "",
+            "help": ""
+          },
+          "object_created_reverse": {
+            "name": "Created in",
+            "plural": "",
+            "help": ""
+          }
+        }
+      },
+      "de": {
+        // en: Artwork
+        "name": "Kunstwerk",
+        // en: Artworks
+        "plural": "Kunstwerke",
+        // en: Any artwork object
+        "description": "Ein beliebiges Kunstwerk",
+        "help": "",
+        "incoming": {
+          "artwork_created_reverse": {
+            // en: Created in
+            "name": "Geschaffen in",
+            "plural": "",
+            "help": ""
+          },
+          "object_created_reverse": {
+            // en: Created in
+            "name": "Geschaffen in",
+            "plural": "",
+            "help": ""
+          }
+        }
+      },
+      "fr": {
+        // en: Artwork
+        "name": "Œuvre d’art",
+        // en: Artworks
+        "plural": "Œuvres d’art",
+        // en: Any artwork object
+        "description": "Une œuvre d’art quelconque",
+        "help": "",
+        "incoming": {
+          "artwork_created_reverse": {
+            // en: Created in
+            "name": "Créé dans",
+            "plural": "",
+            "help": ""
+          },
+          "object_created_reverse": {
+            // en: Created in
+            "name": "Créé dans",
+            "plural": "",
+            "help": ""
+          }
+        }
+      }
+    },
     "AtPage": {
       "en": {
         "name": "At page",
@@ -321,6 +387,158 @@
         }
       }
     },
+    "CreationOfArtwork": {
+      "en": {
+        "name": "Creation of artwork",
+        "plural": "",
+        "description": "",
+        "help": "",
+        "fields": {
+          "artwork_created": {
+            "name": "Artwork created",
+            "plural": "",
+            "help": ""
+          }
+        }
+      },
+      "de": {
+        // en: Creation of artwork
+        "name": "Schaffung eines Kunstwerks",
+        "plural": "",
+        "description": "",
+        "help": "",
+        "fields": {
+          "artwork_created": {
+            // en: Artwork created
+            "name": "Geschaffenes Kunstwerk",
+            "plural": "",
+            "help": ""
+          }
+        }
+      },
+      "fr": {
+        // en: Creation of artwork
+        "name": "Création d’une œuvre d’art",
+        "plural": "",
+        "description": "",
+        "help": "",
+        "fields": {
+          "artwork_created": {
+            // en: Artwork created
+            "name": "Œuvre créée",
+            "plural": "",
+            "help": ""
+          }
+        }
+      }
+    },
+    "CreationOfPainting": {
+      "en": {
+        "name": "Creation of painting",
+        "plural": "",
+        "description": "",
+        "help": "",
+        "fields": {
+          "painting_created": {
+            "name": "Painting created",
+            "plural": "",
+            "help": ""
+          }
+        }
+      },
+      "de": {
+        // en: Creation of painting
+        "name": "Schaffung eines Gemäldes",
+        "plural": "",
+        "description": "",
+        "help": "",
+        "fields": {
+          "painting_created": {
+            // en: Painting created
+            "name": "Geschaffenes Gemälde",
+            "plural": "",
+            "help": ""
+          }
+        }
+      },
+      "fr": {
+        // en: Creation of painting
+        "name": "Création d’une peinture",
+        "plural": "",
+        "description": "",
+        "help": "",
+        "fields": {
+          "painting_created": {
+            // en: Painting created
+            "name": "Peinture créée",
+            "plural": "",
+            "help": ""
+          }
+        }
+      }
+    },
+    "CreationOfPhysicalObject": {
+      "en": {
+        "name": "Creation of physical object",
+        "plural": "",
+        "description": "",
+        "help": "",
+        "fields": {
+          "created_by": {
+            "name": "Created by",
+            "plural": "",
+            "help": ""
+          },
+          "object_created": {
+            "name": "Object created",
+            "plural": "",
+            "help": ""
+          }
+        }
+      },
+      "de": {
+        // en: Creation of physical object
+        "name": "Herstellung eines physischen Objekts",
+        "plural": "",
+        "description": "",
+        "help": "",
+        "fields": {
+          "created_by": {
+            // en: Created by
+            "name": "Geschaffen von",
+            "plural": "",
+            "help": ""
+          },
+          "object_created": {
+            // en: Object created
+            "name": "Geschaffenes Objekt",
+            "plural": "",
+            "help": ""
+          }
+        }
+      },
+      "fr": {
+        // en: Creation of physical object
+        "name": "Création d’un objet physique",
+        "plural": "",
+        "description": "",
+        "help": "",
+        "fields": {
+          "created_by": {
+            // en: Created by
+            "name": "Créé par",
+            "plural": "",
+            "help": ""
+          },
+          "object_created": {
+            // en: Object created
+            "name": "Objet créé",
+            "plural": "",
+            "help": ""
+          }
+        }
+      }
+    },
     "Factoid": {
       "en": {
         "name": "Factoid",
@@ -429,8 +647,18 @@
             "plural": "",
             "help": ""
           },
+          "has_member": {
+            "name": "Has member",
+            "plural": "",
+            "help": ""
+          },
           "involves_reverse": {
             "name": "Involved in",
+            "plural": "",
+            "help": ""
+          },
+          "member_of": {
+            "name": "Member of",
             "plural": "",
             "help": ""
           },
@@ -481,10 +709,22 @@
             "plural": "",
             "help": ""
           },
+          "has_member": {
+            // en: Has member
+            "name": "Hat Mitglied",
+            "plural": "",
+            "help": ""
+          },
           "involves_reverse": {
             // en: Involved in
             // NEEDS REVIEW: the en text has changed since this was translated
             "name": "Einbezogen in",
+            "plural": "",
+            "help": ""
+          },
+          "member_of": {
+            // en: Member of
+            "name": "Mitglied von",
             "plural": "",
             "help": ""
           },
@@ -538,9 +778,21 @@
             "plural": "",
             "help": ""
           },
+          "has_member": {
+            // en: Has member
+            "name": "A pour membre",
+            "plural": "",
+            "help": ""
+          },
           "involves_reverse": {
             // en: Involved in
             "name": "Impliqué dans",
+            "plural": "",
+            "help": ""
+          },
+          "member_of": {
+            // en: Member of
+            "name": "Membre de",
             "plural": "",
             "help": ""
           },
@@ -750,6 +1002,74 @@
         }
       }
     },
+    "MemberOf": {
+      "en": {
+        "name": "Member of",
+        "plural": "Memberships",
+        "description": "Someone was a member of a group: of a family, an order, an army. (Two factoids that say so of two people make\nthem members of the same group: see `derived.py`)",
+        "help": "",
+        "fields": {
+          "member": {
+            "name": "Member",
+            "plural": "",
+            "help": ""
+          },
+          "group": {
+            "name": "Group",
+            "plural": "",
+            "help": ""
+          }
+        }
+      },
+      "de": {
+        // en: Member of
+        "name": "Mitglied von",
+        // en: Memberships
+        "plural": "Mitgliedschaften",
+        // en: Someone was a member of a group: of a family, an order, an army. (Two factoids that say so of two people make
+        //     them members of the same group: see `derived.py`)
+        "description": "Jemand war Mitglied einer Gruppe: einer Familie, eines Ordens, eines Heeres. (Zwei Faktoide, die das von zwei Personen sagen, machen sie zu Mitgliedern derselben Gruppe: siehe `derived.py`)",
+        "help": "",
+        "fields": {
+          "member": {
+            // en: Member
+            "name": "Mitglied",
+            "plural": "",
+            "help": ""
+          },
+          "group": {
+            // en: Group
+            "name": "Gruppe",
+            "plural": "",
+            "help": ""
+          }
+        }
+      },
+      "fr": {
+        // en: Member of
+        "name": "Membre de",
+        // en: Memberships
+        "plural": "Appartenances",
+        // en: Someone was a member of a group: of a family, an order, an army. (Two factoids that say so of two people make
+        //     them members of the same group: see `derived.py`)
+        "description": "Quelqu’un était membre d’un groupe : une famille, un ordre, une armée. (Deux factoïdes qui le disent de deux personnes en font des membres du même groupe : voir `derived.py`)",
+        "help": "",
+        "fields": {
+          "member": {
+            // en: Member
+            "name": "Membre",
+            "plural": "",
+            "help": ""
+          },
+          "group": {
+            // en: Group
+            "name": "Groupe",
+            "plural": "",
+            "help": ""
+          }
+        }
+      }
+    },
     "Negative": {
       "en": {
         "name": "Negative",
@@ -921,7 +1241,8 @@
             "help": ""
           },
           "label_fr": {
-            // en: Label fr
+            // en: Label (French)
+            // NEEDS REVIEW: the en text has changed since this was translated
             "name": "Bezeichnung (Französisch)",
             "plural": "",
             "help": ""
@@ -970,7 +1291,8 @@
             "help": ""
           },
           "label_fr": {
-            // en: Label fr
+            // en: Label (French)
+            // NEEDS REVIEW: the en text has changed since this was translated
             "name": "Libellé (français)",
             "plural": "",
             "help": ""
@@ -1061,6 +1383,89 @@
         }
       }
     },
+    "Painting": {
+      "en": {
+        "name": "Painting",
+        "plural": "Paintings",
+        "description": "A painting",
+        "help": "",
+        "incoming": {
+          "artwork_created_reverse": {
+            "name": "Created in",
+            "plural": "",
+            "help": ""
+          },
+          "object_created_reverse": {
+            "name": "Created in",
+            "plural": "",
+            "help": ""
+          },
+          "painting_created_reverse": {
+            "name": "Created in",
+            "plural": "",
+            "help": ""
+          }
+        }
+      },
+      "de": {
+        // en: Painting
+        "name": "Gemälde",
+        // en: Paintings
+        "plural": "Gemälde",
+        // en: A painting
+        "description": "Ein Gemälde",
+        "help": "",
+        "incoming": {
+          "artwork_created_reverse": {
+            // en: Created in
+            "name": "Geschaffen in",
+            "plural": "",
+            "help": ""
+          },
+          "object_created_reverse": {
+            // en: Created in
+            "name": "Geschaffen in",
+            "plural": "",
+            "help": ""
+          },
+          "painting_created_reverse": {
+            // en: Created in
+            "name": "Geschaffen in",
+            "plural": "",
+            "help": ""
+          }
+        }
+      },
+      "fr": {
+        // en: Painting
+        "name": "Peinture",
+        // en: Paintings
+        "plural": "Peintures",
+        // en: A painting
+        "description": "Une peinture",
+        "help": "",
+        "incoming": {
+          "artwork_created_reverse": {
+            // en: Created in
+            "name": "Créé dans",
+            "plural": "",
+            "help": ""
+          },
+          "object_created_reverse": {
+            // en: Created in
+            "name": "Créé dans",
+            "plural": "",
+            "help": ""
+          },
+          "painting_created_reverse": {
+            // en: Created in
+            "name": "Créé dans",
+            "plural": "",
+            "help": ""
+          }
+        }
+      }
+    },
     "Person": {
       "en": {
         "name": "Person",
@@ -1095,6 +1500,11 @@
             "plural": "",
             "help": ""
           },
+          "created_by_reverse": {
+            "name": "Creator of",
+            "plural": "",
+            "help": ""
+          },
           "gave": {
             "name": "Gave",
             "plural": "",
@@ -1102,6 +1512,11 @@
           },
           "involves_reverse": {
             "name": "Involved in",
+            "plural": "",
+            "help": ""
+          },
+          "member_of": {
+            "name": "Member of",
             "plural": "",
             "help": ""
           },
@@ -1164,6 +1579,12 @@
             "plural": "",
             "help": ""
           },
+          "created_by_reverse": {
+            // en: Creator of
+            "name": "Schöpfer von",
+            "plural": "",
+            "help": ""
+          },
           "gave": {
             // en: Gave
             "name": "Gab",
@@ -1174,6 +1595,12 @@
             // en: Involved in
             // NEEDS REVIEW: the en text has changed since this was translated
             "name": "Einbezogen in",
+            "plural": "",
+            "help": ""
+          },
+          "member_of": {
+            // en: Member of
+            "name": "Mitglied von",
             "plural": "",
             "help": ""
           },
@@ -1239,6 +1666,12 @@
             "plural": "",
             "help": ""
           },
+          "created_by_reverse": {
+            // en: Creator of
+            "name": "Créateur de",
+            "plural": "",
+            "help": ""
+          },
           "gave": {
             // en: Gave
             "name": "A donné",
@@ -1248,6 +1681,12 @@
           "involves_reverse": {
             // en: Involved in
             "name": "Impliqué dans",
+            "plural": "",
+            "help": ""
+          },
+          "member_of": {
+            // en: Member of
+            "name": "Membre de",
             "plural": "",
             "help": ""
           },
@@ -1266,6 +1705,55 @@
           "received": {
             // en: Received
             "name": "A reçu",
+            "plural": "",
+            "help": ""
+          }
+        }
+      }
+    },
+    "PhysicalObject": {
+      "en": {
+        "name": "Physical object",
+        "plural": "Physical objects",
+        "description": "Any physical object",
+        "help": "",
+        "incoming": {
+          "object_created_reverse": {
+            "name": "Created in",
+            "plural": "",
+            "help": ""
+          }
+        }
+      },
+      "de": {
+        // en: Physical object
+        "name": "Physisches Objekt",
+        // en: Physical objects
+        "plural": "Physische Objekte",
+        // en: Any physical object
+        "description": "Ein beliebiges physisches Objekt",
+        "help": "",
+        "incoming": {
+          "object_created_reverse": {
+            // en: Created in
+            "name": "Geschaffen in",
+            "plural": "",
+            "help": ""
+          }
+        }
+      },
+      "fr": {
+        // en: Physical object
+        "name": "Objet physique",
+        // en: Physical objects
+        "plural": "Objets physiques",
+        // en: Any physical object
+        "description": "Un objet physique quelconque",
+        "help": "",
+        "incoming": {
+          "object_created_reverse": {
+            // en: Created in
+            "name": "Créé dans",
             "plural": "",
             "help": ""
           }
@@ -1832,6 +2320,181 @@
           "certainty": {
             // en: Certainty
             "name": "Certitude",
+            "plural": "",
+            "help": ""
+          }
+        }
+      }
+    },
+    "SameGroup": {
+      "en": {
+        "name": "Same group",
+        "plural": "",
+        "description": "Members of the same group (a family, an order, an army)",
+        "help": "",
+        "fields": {
+          "member": {
+            "name": "Member",
+            "plural": "",
+            "help": ""
+          },
+          "group": {
+            "name": "Group",
+            "plural": "",
+            "help": ""
+          }
+        }
+      },
+      "de": {
+        // en: Same group
+        "name": "Gleiche Gruppe",
+        "plural": "",
+        // en: Members of the same group (a family, an order, an army)
+        "description": "Mitglieder derselben Gruppe (einer Familie, eines Ordens, eines Heeres)",
+        "help": "",
+        "fields": {
+          "member": {
+            // en: Member
+            "name": "Mitglied",
+            "plural": "",
+            "help": ""
+          },
+          "group": {
+            // en: Group
+            "name": "Gruppe",
+            "plural": "",
+            "help": ""
+          }
+        }
+      },
+      "fr": {
+        // en: Same group
+        "name": "Même groupe",
+        "plural": "",
+        // en: Members of the same group (a family, an order, an army)
+        "description": "Membres du même groupe (une famille, un ordre, une armée)",
+        "help": "",
+        "fields": {
+          "member": {
+            // en: Member
+            "name": "Membre",
+            "plural": "",
+            "help": ""
+          },
+          "group": {
+            // en: Group
+            "name": "Groupe",
+            "plural": "",
+            "help": ""
+          }
+        }
+      }
+    },
+    "CoParticipants": {
+      "en": {
+        "name": "Took part with",
+        "plural": "",
+        "description": "Took part in the same activity",
+        "help": "",
+        "fields": {
+          "participant": {
+            "name": "Participant",
+            "plural": "",
+            "help": ""
+          }
+        }
+      },
+      "de": {
+        // en: Took part with
+        "name": "Beteiligt mit",
+        "plural": "",
+        // en: Took part in the same activity
+        "description": "Nahmen an derselben Aktivität teil",
+        "help": "",
+        "fields": {
+          "participant": {
+            // en: Participant
+            "name": "Teilnehmer",
+            "plural": "",
+            "help": ""
+          }
+        }
+      },
+      "fr": {
+        // en: Took part with
+        "name": "A participé avec",
+        "plural": "",
+        // en: Took part in the same activity
+        "description": "Ont pris part à la même activité",
+        "help": "",
+        "fields": {
+          "participant": {
+            // en: Participant
+            "name": "Participant",
+            "plural": "",
+            "help": ""
+          }
+        }
+      }
+    },
+    "GaveTo": {
+      "en": {
+        "name": "Gave to",
+        "plural": "",
+        "description": "Gave something to",
+        "help": "",
+        "fields": {
+          "giver": {
+            "name": "Giver",
+            "plural": "",
+            "help": ""
+          },
+          "receiver": {
+            "name": "Receiver",
+            "plural": "",
+            "help": ""
+          }
+        }
+      },
+      "de": {
+        // en: Gave to
+        "name": "Gab an",
+        "plural": "",
+        // en: Gave something to
+        "description": "Gab jemandem etwas",
+        "help": "",
+        "fields": {
+          "giver": {
+            // en: Giver
+            "name": "Geber",
+            "plural": "",
+            "help": ""
+          },
+          "receiver": {
+            // en: Receiver
+            "name": "Empfänger",
+            "plural": "",
+            "help": ""
+          }
+        }
+      },
+      "fr": {
+        // en: Gave to
+        "name": "A donné à",
+        "plural": "",
+        // en: Gave something to
+        "description": "A donné quelque chose à",
+        "help": "",
+        "fields": {
+          "giver": {
+            // en: Giver
+            "name": "Donateur",
+            "plural": "",
+            "help": ""
+          },
+          "receiver": {
+            // en: Receiver
+            "name": "Destinataire",
             "plural": "",
             "help": ""
           }

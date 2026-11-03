@@ -87,6 +87,8 @@ where a model's entry is written.
 ### `models.jsonc`
 
 One file per app, holding every language. The shape you described: model name, then language, then the texts.
+An installed app can add models of its own (`hooks.translatable_models`): `pangloss-derived` adds its derived
+classes, with `"kind": "Derived"`.
 A translator opens one file and sees English beside German; the cost is that a file grows with
 models × languages, and two people translating different languages in it can conflict in git (the keys
 are sorted and a text is on its own lines, so a conflict is small).

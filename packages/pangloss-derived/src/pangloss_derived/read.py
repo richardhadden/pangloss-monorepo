@@ -18,7 +18,7 @@ from pangloss_cypher import fragments
 from pangloss_core.backend import Transaction
 from pangloss_cypher.values import native_datetime
 
-from pangloss_derived.check import ends_of
+from pangloss_derived.check import ends_of, symmetric_fields
 from pangloss_derived.registry import DerivedRegistry, PanglossDerivedError
 from pangloss_derived.store import FACT, JUSTIFICATION
 from pangloss_derived.views import JustificationView, ids
@@ -385,9 +385,18 @@ def key_of(model: type[Derived], fields: list[str]) -> str:
     return model.__name__
 
 
+def symmetric_label_of(model: type[Derived]) -> dict[str, Any] | None:
+    """The `SymmetricLabel` of a class, with the two fields it names"""
+    pair = symmetric_fields(model)
+    if not model._symmetric_label or pair is None:
+        return None
+    return {"name": model._symmetric_label, "fields": list(pair)}
+
+
 async def derived_of_entity(owner: type, id: Any) -> dict[str, Any]:
-    """For each derived class that can point at the entity: the count of its facts about it, and a first page, each with
-    the other end (`other`, for a symmetric class or one of two ends) and the other fields"""
+    """For each derived class that can point at the entity (by its reverse name, if it has one): its name (`type`), the
+    `SymmetricLabel` of its symmetric fields, the count of its facts about it, and a first page, each with the other end
+    (`other`, for a symmetric class or one of two ends) and the other fields"""
     section: dict[str, Any] = {}
     for model, fields in classes_pointing_at(owner):
         page = await list_facts(model, entity=id, page_size=FIRST_PAGE)
@@ -422,62 +431,23 @@ async def derived_of_entity(owner: type, id: Any) -> dict[str, Any]:
                 "justifications": data["justificationCount"],
             }
             items.append(item)
-        section[key_of(model, fields)] = {"count": page["count"], "items": items}
-    return section
-
-
-async def derived_of_document(owner: type, id: Any) -> dict[str, Any]:
-    """For each derived class: the facts that this head document is evidence of (a count, and a first page), each with
-    the nodes of the document that the justification used"""
-    params = {"id": str(id), "see_unpublished": see_unpublished(), "limit": FIRST_PAGE}
-    db = database()
-
-    @db.read_transaction
-    async def read(tx: Transaction) -> list[dict[str, Any]]:
-        result = await tx.run(
-            f"""
-            MATCH (:HeadNode {{id: $id}})<-[:evidence]-(j:{JUSTIFICATION})-[:justifies]->(d:{FACT})
-            WHERE {fragments.derived_visible("d")}
-            WITH d, collect(j.rule) AS rules, collect(j.nodes) AS nodes
-            WITH d, rules, nodes, {FACT_FIELDS}
-            ORDER BY d.key
-            WITH d.type AS type, collect({{fact: fact, rules: rules, nodes: nodes}}) AS found
-            RETURN type, size(found) AS count, found[..$limit] AS items
-            """,
-            params,
-        )
-        return [dict(r) async for r in result]
-
-    section: dict[str, Any] = {}
-    for row in await read():
-        model = DerivedRegistry.classes.get(row["type"])
-        if model is None:
-            continue
-        items = []
-        for item in row["items"]:
-            view = view_of(model, item["fact"])
-            data = view.model_dump(
-                by_alias=True, mode="json", exclude={"justifications"}
-            )
-            data["rules"] = sorted(set(item["rules"]))
-            data["nodes"] = sorted({n for nodes in item["nodes"] for n in nodes})
-            items.append(data)
-        section[model.__name__] = {"count": row["count"], "items": items}
+        section[key_of(model, fields)] = {
+            "type": model.__name__,
+            "symmetricLabel": symmetric_label_of(model),
+            "count": page["count"],
+            "items": items,
+        }
     return section
 
 
 async def derived_section(owner: type, view: Any) -> dict[str, Any]:
-    """(`hooks.head_view_extras`) `_derived` of the view of a head node: what the rules derive about an entity, or what
-    a head document is evidence of. Not given when there is nothing"""
+    """(`hooks.head_view_extras`) `_derived` of the view of a head node: what the rules derive about it, an entity or a
+    head document (the facts with a field that points at it). Not what a document is evidence of: that is what it says
+    itself. Not given when there is nothing"""
     from pangloss_models.model_bases.document import Document
     from pangloss_models.model_bases.entity import Entity
 
-    if not DerivedRegistry.checked:
+    if not DerivedRegistry.checked or not issubclass(owner, (Entity, Document)):
         return {}
-    if issubclass(owner, Entity):
-        section = await derived_of_entity(owner, view.id)
-    elif issubclass(owner, Document):
-        section = await derived_of_document(owner, view.id)
-    else:
-        return {}
+    section = await derived_of_entity(owner, view.id)
     return {"_derived": section} if section else {}

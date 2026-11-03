@@ -143,6 +143,15 @@ class DerivedConfig:
     reverse_names: dict[str, str] = dataclasses.field(default_factory=dict)
 
 
+@dataclasses.dataclass(frozen=True)
+class SymmetricLabel:
+    """The one name, in the interface, of the two symmetric fields of a `Derived` class, whose own names (`first`,
+    `second`) mean nothing: `first: Annotated[Person, SymmetricLabel("member")]`. A name in code: it is written as words
+    ("Member") and translated as a field's name is. On either field, or on both (the same)"""
+
+    name: str
+
+
 class Derived:
     """The base of what can be derived: a relation between entities, with values. Its fields are relations to entities
     (`first: Person`) and literals (`year: int`); no documents, embedded objects or lists. Nobody writes one: rules
@@ -156,6 +165,8 @@ class Derived:
     View: ClassVar[Any]
     Where: ClassVar[Any]
     _fields: ClassVar[dict[str, "DerivedField"]]
+    # (the `SymmetricLabel` of its symmetric fields, if it has one)
+    _symmetric_label: ClassVar[str | None] = None
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)

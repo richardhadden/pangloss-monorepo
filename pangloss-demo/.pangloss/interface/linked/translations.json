@@ -902,20 +902,20 @@
       },
       "Artwork": {
         "name": "Artwork",
-        "plural": "Artwork",
+        "plural": "Artworks",
         "help": "",
         "description": "Any artwork object",
         "kind": "Entity",
         "fields": {},
         "incoming": {
           "artwork_created_reverse": {
-            "name": "Artwork created reverse",
-            "plural": "Artwork created reverse",
+            "name": "Created in",
+            "plural": "Created in",
             "help": ""
           },
           "object_created_reverse": {
-            "name": "Object created reverse",
-            "plural": "Object created reverse",
+            "name": "Created in",
+            "plural": "Created in",
             "help": ""
           }
         }
@@ -1528,7 +1528,7 @@
       },
       "MemberOf": {
         "name": "Member of",
-        "plural": "Member of",
+        "plural": "Memberships",
         "help": "",
         "description": "Someone was a member of a group: of a family, an order, an army. (Two factoids that say so of two people make\nthem members of the same group: see `derived.py`)",
         "kind": "Document",
@@ -1748,25 +1748,25 @@
       },
       "Painting": {
         "name": "Painting",
-        "plural": "Painting",
+        "plural": "Paintings",
         "help": "",
         "description": "A painting",
         "kind": "Entity",
         "fields": {},
         "incoming": {
           "artwork_created_reverse": {
-            "name": "Artwork created reverse",
-            "plural": "Artwork created reverse",
+            "name": "Created in",
+            "plural": "Created in",
             "help": ""
           },
           "object_created_reverse": {
-            "name": "Object created reverse",
-            "plural": "Object created reverse",
+            "name": "Created in",
+            "plural": "Created in",
             "help": ""
           },
           "painting_created_reverse": {
-            "name": "Painting created reverse",
-            "plural": "Painting created reverse",
+            "name": "Created in",
+            "plural": "Created in",
             "help": ""
           }
         }
@@ -1876,8 +1876,8 @@
             "help": ""
           },
           "created_by_reverse": {
-            "name": "Created by reverse",
-            "plural": "Created by reverse",
+            "name": "Creator of",
+            "plural": "Creator of",
             "help": ""
           },
           "gave": {
@@ -1914,15 +1914,15 @@
       },
       "PhysicalObject": {
         "name": "Physical object",
-        "plural": "Physical object",
+        "plural": "Physical objects",
         "help": "",
         "description": "Any physical object",
         "kind": "Entity",
         "fields": {},
         "incoming": {
           "object_created_reverse": {
-            "name": "Object created reverse",
-            "plural": "Object created reverse",
+            "name": "Created in",
+            "plural": "Created in",
             "help": ""
           }
         }
@@ -2298,6 +2298,61 @@
           }
         },
         "incoming": {}
+      },
+      "SameGroup": {
+        "name": "Same group",
+        "plural": "Same group",
+        "help": "",
+        "description": "Members of the same group (a family, an order, an army)",
+        "kind": "Derived",
+        "fields": {
+          "member": {
+            "name": "Member",
+            "plural": "Member",
+            "help": ""
+          },
+          "group": {
+            "name": "Group",
+            "plural": "Group",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "CoParticipants": {
+        "name": "Took part with",
+        "plural": "Took part with",
+        "help": "",
+        "description": "Took part in the same activity",
+        "kind": "Derived",
+        "fields": {
+          "participant": {
+            "name": "Participant",
+            "plural": "Participant",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "GaveTo": {
+        "name": "Gave to",
+        "plural": "Gave to",
+        "help": "",
+        "description": "Gave something to",
+        "kind": "Derived",
+        "fields": {
+          "giver": {
+            "name": "Giver",
+            "plural": "Giver",
+            "help": ""
+          },
+          "receiver": {
+            "name": "Receiver",
+            "plural": "Receiver",
+            "help": ""
+          }
+        },
+        "incoming": {}
       }
     },
     "de": {
@@ -2362,21 +2417,21 @@
         "incoming": {}
       },
       "Artwork": {
-        "name": "Artwork",
-        "plural": "Artwork",
+        "name": "Kunstwerk",
+        "plural": "Kunstwerke",
         "help": "",
-        "description": "Any artwork object",
+        "description": "Ein beliebiges Kunstwerk",
         "kind": "Entity",
         "fields": {},
         "incoming": {
           "artwork_created_reverse": {
-            "name": "Artwork created reverse",
-            "plural": "Artwork created reverse",
+            "name": "Geschaffen in",
+            "plural": "Geschaffen in",
             "help": ""
           },
           "object_created_reverse": {
-            "name": "Object created reverse",
-            "plural": "Object created reverse",
+            "name": "Geschaffen in",
+            "plural": "Geschaffen in",
             "help": ""
           }
         }
@@ -2437,8 +2492,8 @@
         "incoming": {}
       },
       "CreationOfArtwork": {
-        "name": "Creation of artwork",
-        "plural": "Creation of artwork",
+        "name": "Schaffung eines Kunstwerks",
+        "plural": "Schaffung eines Kunstwerks",
         "help": "",
         "description": "",
         "kind": "Document",
@@ -2464,21 +2519,21 @@
             "help": ""
           },
           "created_by": {
-            "name": "Created by",
-            "plural": "Created by",
+            "name": "Geschaffen von",
+            "plural": "Geschaffen von",
             "help": ""
           },
           "artwork_created": {
-            "name": "Artwork created",
-            "plural": "Artwork created",
+            "name": "Geschaffenes Kunstwerk",
+            "plural": "Geschaffenes Kunstwerk",
             "help": ""
           }
         },
         "incoming": {}
       },
       "CreationOfPainting": {
-        "name": "Creation of painting",
-        "plural": "Creation of painting",
+        "name": "Schaffung eines Gemäldes",
+        "plural": "Schaffung eines Gemäldes",
         "help": "",
         "description": "",
         "kind": "Document",
@@ -2504,21 +2559,21 @@
             "help": ""
           },
           "created_by": {
-            "name": "Created by",
-            "plural": "Created by",
+            "name": "Geschaffen von",
+            "plural": "Geschaffen von",
             "help": ""
           },
           "painting_created": {
-            "name": "Painting created",
-            "plural": "Painting created",
+            "name": "Geschaffenes Gemälde",
+            "plural": "Geschaffenes Gemälde",
             "help": ""
           }
         },
         "incoming": {}
       },
       "CreationOfPhysicalObject": {
-        "name": "Creation of physical object",
-        "plural": "Creation of physical object",
+        "name": "Herstellung eines physischen Objekts",
+        "plural": "Herstellung eines physischen Objekts",
         "help": "",
         "description": "",
         "kind": "Document",
@@ -2544,13 +2599,13 @@
             "help": ""
           },
           "created_by": {
-            "name": "Created by",
-            "plural": "Created by",
+            "name": "Geschaffen von",
+            "plural": "Geschaffen von",
             "help": ""
           },
           "object_created": {
-            "name": "Object created",
-            "plural": "Object created",
+            "name": "Geschaffenes Objekt",
+            "plural": "Geschaffenes Objekt",
             "help": ""
           }
         },
@@ -2901,8 +2956,8 @@
             "help": ""
           },
           "has_member": {
-            "name": "Has member",
-            "plural": "Has member",
+            "name": "Hat Mitglied",
+            "plural": "Hat Mitglied",
             "help": ""
           },
           "involves_reverse": {
@@ -2911,8 +2966,8 @@
             "help": ""
           },
           "member_of": {
-            "name": "Member of",
-            "plural": "Member of",
+            "name": "Mitglied von",
+            "plural": "Mitglied von",
             "help": ""
           },
           "ordered": {
@@ -2988,10 +3043,10 @@
         "incoming": {}
       },
       "MemberOf": {
-        "name": "Member of",
-        "plural": "Member of",
+        "name": "Mitglied von",
+        "plural": "Mitgliedschaften",
         "help": "",
-        "description": "Someone was a member of a group: of a family, an order, an army. (Two factoids that say so of two people make\nthem members of the same group: see `derived.py`)",
+        "description": "Jemand war Mitglied einer Gruppe: einer Familie, eines Ordens, eines Heeres. (Zwei Faktoide, die das von zwei Personen sagen, machen sie zu Mitgliedern derselben Gruppe: siehe `derived.py`)",
         "kind": "Document",
         "fields": {
           "text": {
@@ -3015,13 +3070,13 @@
             "help": ""
           },
           "member": {
-            "name": "Member",
-            "plural": "Member",
+            "name": "Mitglied",
+            "plural": "Mitglied",
             "help": ""
           },
           "group": {
-            "name": "Group",
-            "plural": "Group",
+            "name": "Gruppe",
+            "plural": "Gruppe",
             "help": ""
           }
         },
@@ -3208,26 +3263,26 @@
         "incoming": {}
       },
       "Painting": {
-        "name": "Painting",
-        "plural": "Painting",
+        "name": "Gemälde",
+        "plural": "Gemälde",
         "help": "",
-        "description": "A painting",
+        "description": "Ein Gemälde",
         "kind": "Entity",
         "fields": {},
         "incoming": {
           "artwork_created_reverse": {
-            "name": "Artwork created reverse",
-            "plural": "Artwork created reverse",
+            "name": "Geschaffen in",
+            "plural": "Geschaffen in",
             "help": ""
           },
           "object_created_reverse": {
-            "name": "Object created reverse",
-            "plural": "Object created reverse",
+            "name": "Geschaffen in",
+            "plural": "Geschaffen in",
             "help": ""
           },
           "painting_created_reverse": {
-            "name": "Painting created reverse",
-            "plural": "Painting created reverse",
+            "name": "Geschaffen in",
+            "plural": "Geschaffen in",
             "help": ""
           }
         }
@@ -3337,8 +3392,8 @@
             "help": ""
           },
           "created_by_reverse": {
-            "name": "Created by reverse",
-            "plural": "Created by reverse",
+            "name": "Schöpfer von",
+            "plural": "Schöpfer von",
             "help": ""
           },
           "gave": {
@@ -3352,8 +3407,8 @@
             "help": ""
           },
           "member_of": {
-            "name": "Member of",
-            "plural": "Member of",
+            "name": "Mitglied von",
+            "plural": "Mitglied von",
             "help": ""
           },
           "ordered": {
@@ -3374,16 +3429,16 @@
         }
       },
       "PhysicalObject": {
-        "name": "Physical object",
-        "plural": "Physical object",
+        "name": "Physisches Objekt",
+        "plural": "Physische Objekte",
         "help": "",
-        "description": "Any physical object",
+        "description": "Ein beliebiges physisches Objekt",
         "kind": "Entity",
         "fields": {},
         "incoming": {
           "object_created_reverse": {
-            "name": "Object created reverse",
-            "plural": "Object created reverse",
+            "name": "Geschaffen in",
+            "plural": "Geschaffen in",
             "help": ""
           }
         }
@@ -3759,6 +3814,61 @@
           }
         },
         "incoming": {}
+      },
+      "SameGroup": {
+        "name": "Gleiche Gruppe",
+        "plural": "Gleiche Gruppe",
+        "help": "",
+        "description": "Mitglieder derselben Gruppe (einer Familie, eines Ordens, eines Heeres)",
+        "kind": "Derived",
+        "fields": {
+          "member": {
+            "name": "Mitglied",
+            "plural": "Mitglied",
+            "help": ""
+          },
+          "group": {
+            "name": "Gruppe",
+            "plural": "Gruppe",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "CoParticipants": {
+        "name": "Beteiligt mit",
+        "plural": "Beteiligt mit",
+        "help": "",
+        "description": "Nahmen an derselben Aktivität teil",
+        "kind": "Derived",
+        "fields": {
+          "participant": {
+            "name": "Teilnehmer",
+            "plural": "Teilnehmer",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "GaveTo": {
+        "name": "Gab an",
+        "plural": "Gab an",
+        "help": "",
+        "description": "Gab jemandem etwas",
+        "kind": "Derived",
+        "fields": {
+          "giver": {
+            "name": "Geber",
+            "plural": "Geber",
+            "help": ""
+          },
+          "receiver": {
+            "name": "Empfänger",
+            "plural": "Empfänger",
+            "help": ""
+          }
+        },
+        "incoming": {}
       }
     },
     "fr": {
@@ -3823,21 +3933,21 @@
         "incoming": {}
       },
       "Artwork": {
-        "name": "Artwork",
-        "plural": "Artwork",
+        "name": "Œuvre d’art",
+        "plural": "Œuvres d’art",
         "help": "",
-        "description": "Any artwork object",
+        "description": "Une œuvre d’art quelconque",
         "kind": "Entity",
         "fields": {},
         "incoming": {
           "artwork_created_reverse": {
-            "name": "Artwork created reverse",
-            "plural": "Artwork created reverse",
+            "name": "Créé dans",
+            "plural": "Créé dans",
             "help": ""
           },
           "object_created_reverse": {
-            "name": "Object created reverse",
-            "plural": "Object created reverse",
+            "name": "Créé dans",
+            "plural": "Créé dans",
             "help": ""
           }
         }
@@ -3898,8 +4008,8 @@
         "incoming": {}
       },
       "CreationOfArtwork": {
-        "name": "Creation of artwork",
-        "plural": "Creation of artwork",
+        "name": "Création d’une œuvre d’art",
+        "plural": "Création d’une œuvre d’art",
         "help": "",
         "description": "",
         "kind": "Document",
@@ -3925,21 +4035,21 @@
             "help": ""
           },
           "created_by": {
-            "name": "Created by",
-            "plural": "Created by",
+            "name": "Créé par",
+            "plural": "Créé par",
             "help": ""
           },
           "artwork_created": {
-            "name": "Artwork created",
-            "plural": "Artwork created",
+            "name": "Œuvre créée",
+            "plural": "Œuvre créée",
             "help": ""
           }
         },
         "incoming": {}
       },
       "CreationOfPainting": {
-        "name": "Creation of painting",
-        "plural": "Creation of painting",
+        "name": "Création d’une peinture",
+        "plural": "Création d’une peinture",
         "help": "",
         "description": "",
         "kind": "Document",
@@ -3965,21 +4075,21 @@
             "help": ""
           },
           "created_by": {
-            "name": "Created by",
-            "plural": "Created by",
+            "name": "Créé par",
+            "plural": "Créé par",
             "help": ""
           },
           "painting_created": {
-            "name": "Painting created",
-            "plural": "Painting created",
+            "name": "Peinture créée",
+            "plural": "Peinture créée",
             "help": ""
           }
         },
         "incoming": {}
       },
       "CreationOfPhysicalObject": {
-        "name": "Creation of physical object",
-        "plural": "Creation of physical object",
+        "name": "Création d’un objet physique",
+        "plural": "Création d’un objet physique",
         "help": "",
         "description": "",
         "kind": "Document",
@@ -4005,13 +4115,13 @@
             "help": ""
           },
           "created_by": {
-            "name": "Created by",
-            "plural": "Created by",
+            "name": "Créé par",
+            "plural": "Créé par",
             "help": ""
           },
           "object_created": {
-            "name": "Object created",
-            "plural": "Object created",
+            "name": "Objet créé",
+            "plural": "Objet créé",
             "help": ""
           }
         },
@@ -4362,8 +4472,8 @@
             "help": ""
           },
           "has_member": {
-            "name": "Has member",
-            "plural": "Has member",
+            "name": "A pour membre",
+            "plural": "A pour membre",
             "help": ""
           },
           "involves_reverse": {
@@ -4372,8 +4482,8 @@
             "help": ""
           },
           "member_of": {
-            "name": "Member of",
-            "plural": "Member of",
+            "name": "Membre de",
+            "plural": "Membre de",
             "help": ""
           },
           "ordered": {
@@ -4449,10 +4559,10 @@
         "incoming": {}
       },
       "MemberOf": {
-        "name": "Member of",
-        "plural": "Member of",
+        "name": "Membre de",
+        "plural": "Appartenances",
         "help": "",
-        "description": "Someone was a member of a group: of a family, an order, an army. (Two factoids that say so of two people make\nthem members of the same group: see `derived.py`)",
+        "description": "Quelqu’un était membre d’un groupe : une famille, un ordre, une armée. (Deux factoïdes qui le disent de deux personnes en font des membres du même groupe : voir `derived.py`)",
         "kind": "Document",
         "fields": {
           "text": {
@@ -4476,13 +4586,13 @@
             "help": ""
           },
           "member": {
-            "name": "Member",
-            "plural": "Member",
+            "name": "Membre",
+            "plural": "Membre",
             "help": ""
           },
           "group": {
-            "name": "Group",
-            "plural": "Group",
+            "name": "Groupe",
+            "plural": "Groupe",
             "help": ""
           }
         },
@@ -4669,26 +4779,26 @@
         "incoming": {}
       },
       "Painting": {
-        "name": "Painting",
-        "plural": "Painting",
+        "name": "Peinture",
+        "plural": "Peintures",
         "help": "",
-        "description": "A painting",
+        "description": "Une peinture",
         "kind": "Entity",
         "fields": {},
         "incoming": {
           "artwork_created_reverse": {
-            "name": "Artwork created reverse",
-            "plural": "Artwork created reverse",
+            "name": "Créé dans",
+            "plural": "Créé dans",
             "help": ""
           },
           "object_created_reverse": {
-            "name": "Object created reverse",
-            "plural": "Object created reverse",
+            "name": "Créé dans",
+            "plural": "Créé dans",
             "help": ""
           },
           "painting_created_reverse": {
-            "name": "Painting created reverse",
-            "plural": "Painting created reverse",
+            "name": "Créé dans",
+            "plural": "Créé dans",
             "help": ""
           }
         }
@@ -4798,8 +4908,8 @@
             "help": ""
           },
           "created_by_reverse": {
-            "name": "Created by reverse",
-            "plural": "Created by reverse",
+            "name": "Créateur de",
+            "plural": "Créateur de",
             "help": ""
           },
           "gave": {
@@ -4813,8 +4923,8 @@
             "help": ""
           },
           "member_of": {
-            "name": "Member of",
-            "plural": "Member of",
+            "name": "Membre de",
+            "plural": "Membre de",
             "help": ""
           },
           "ordered": {
@@ -4835,16 +4945,16 @@
         }
       },
       "PhysicalObject": {
-        "name": "Physical object",
-        "plural": "Physical object",
+        "name": "Objet physique",
+        "plural": "Objets physiques",
         "help": "",
-        "description": "Any physical object",
+        "description": "Un objet physique quelconque",
         "kind": "Entity",
         "fields": {},
         "incoming": {
           "object_created_reverse": {
-            "name": "Object created reverse",
-            "plural": "Object created reverse",
+            "name": "Créé dans",
+            "plural": "Créé dans",
             "help": ""
           }
         }
@@ -5216,6 +5326,61 @@
           "certainty": {
             "name": "Certitude",
             "plural": "Certitude",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "SameGroup": {
+        "name": "Même groupe",
+        "plural": "Même groupe",
+        "help": "",
+        "description": "Membres du même groupe (une famille, un ordre, une armée)",
+        "kind": "Derived",
+        "fields": {
+          "member": {
+            "name": "Membre",
+            "plural": "Membre",
+            "help": ""
+          },
+          "group": {
+            "name": "Groupe",
+            "plural": "Groupe",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "CoParticipants": {
+        "name": "A participé avec",
+        "plural": "A participé avec",
+        "help": "",
+        "description": "Ont pris part à la même activité",
+        "kind": "Derived",
+        "fields": {
+          "participant": {
+            "name": "Participant",
+            "plural": "Participant",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "GaveTo": {
+        "name": "A donné à",
+        "plural": "A donné à",
+        "help": "",
+        "description": "A donné quelque chose à",
+        "kind": "Derived",
+        "fields": {
+          "giver": {
+            "name": "Donateur",
+            "plural": "Donateur",
+            "help": ""
+          },
+          "receiver": {
+            "name": "Destinataire",
+            "plural": "Destinataire",
             "help": ""
           }
         },

@@ -341,3 +341,95 @@ def test_a_variable_of_a_list_field_is_checked_against_its_items():
     assert "tags: a Var[int] ('t') cannot be a value of this field (str)" in refused(
         make
     )
+
+
+@no_type_check
+def test_a_symmetric_label_names_both_symmetric_fields():
+    from typing import Annotated
+
+    from pangloss_models import hooks
+
+    from pangloss_derived import SymmetricLabel, translatable_models
+    from pangloss_derived.read import symmetric_label_of
+
+    def make(m):
+        Person, Group = m["Person"], m["Group"]
+
+        class InGroup(Derived):
+            """In one group"""
+
+            _meta = Derived.Meta(
+                symmetric=True, reverse_names={"first": "in_group_with"}
+            )
+            first: Annotated[Person, SymmetricLabel("member")]
+            second: Person
+            group: Group
+
+    m = checked_with(make)
+    model = DerivedRegistry.classes["InGroup"]
+    assert symmetric_label_of(model) == {
+        "name": "member",
+        "fields": ["first", "second"],
+    }
+    assert symmetric_label_of(m["SameFamily"]) is None
+    # (the interface's translations: the two ends as one field, and the reverse names)
+    (texts,) = [t for t in translatable_models() if t.name == "InGroup"]
+    assert texts == hooks.TranslatableModel(
+        name="InGroup",
+        module=model.__module__,
+        kind="Derived",
+        description="In one group",
+        fields={"member": ("", ""), "group": ("", "")},
+        incoming=("in_group_with",),
+    )
+
+
+@no_type_check
+def test_a_symmetric_label_is_refused_on_a_class_that_is_not_symmetric():
+    from typing import Annotated
+
+    from pangloss_derived import SymmetricLabel
+
+    def make(m):
+        Person = m["Person"]
+
+        class GaveTo(Derived):
+            giver: Annotated[Person, SymmetricLabel("party")]
+            receiver: Person
+
+    assert "a SymmetricLabel is for the fields of a symmetric class" in refused(make)
+
+
+@no_type_check
+def test_a_symmetric_label_is_refused_on_another_field():
+    from typing import Annotated
+
+    from pangloss_derived import SymmetricLabel
+
+    def make(m):
+        Person, Group = m["Person"], m["Group"]
+
+        class InGroup(Derived):
+            _meta = Derived.Meta(symmetric=True)
+            first: Person
+            second: Person
+            group: Annotated[Group, SymmetricLabel("group")]
+
+    assert "not another" in refused(make)
+
+
+@no_type_check
+def test_two_symmetric_labels_that_disagree_are_refused():
+    from typing import Annotated
+
+    from pangloss_derived import SymmetricLabel
+
+    def make(m):
+        Person = m["Person"]
+
+        class InGroup(Derived):
+            _meta = Derived.Meta(symmetric=True)
+            first: Annotated[Person, SymmetricLabel("member")]
+            second: Annotated[Person, SymmetricLabel("fellow")]
+
+    assert "different SymmetricLabels: ['fellow', 'member']" in refused(make)

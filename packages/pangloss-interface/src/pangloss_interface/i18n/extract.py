@@ -13,6 +13,8 @@ Where a text comes from: the name is the verbose name (`Field(title=...)`) if th
 name in the code, written as words ("BirthRecord" is "Birth record"); the description is the
 docstring; the help of a field is `Field(description=...)`; a plural and the help of a model are empty
 (an empty plural means: use the singular).
+
+An installed app can add models of its own (`hooks.translatable_models`: `pangloss-derived` adds its derived classes).
 """
 
 import annotationlib
@@ -21,6 +23,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Any
 
+from pangloss_models import hooks
 from pangloss_models.exceptions import PanglossInitialisationError
 from pangloss_models.migrations.planner import app_of_module
 from pangloss_models.model_registry import ModelRegistry
@@ -175,6 +178,29 @@ def extract(exported: dict[str, Any], apps: list[str]) -> Extracted:
         for incoming in entry["incoming"]:
             item = (*key, "incoming", incoming["name"])
             result.texts[(*item, "name")] = words(incoming["name"])
+            result.texts[(*item, "plural")] = ""
+            result.texts[(*item, "help")] = ""
+
+    for extra in (m for function in hooks.translatable_models for m in function()):
+        app = app_of_module(extra.module, apps)
+        if app is None or ("models", extra.name) in result.apps:
+            continue
+        key = ("models", extra.name)
+        result.apps[key] = app
+        result.kinds[extra.name] = extra.kind
+        result.texts[(*key, "name")] = words(extra.name)
+        result.texts[(*key, "plural")] = ""
+        result.texts[(*key, "description")] = extra.description
+        result.texts[(*key, "help")] = ""
+        for field_name, (name, help) in extra.fields.items():
+            item = (*key, "fields", field_name)
+            result.texts[(*item, "name")] = name or words(field_name)
+            result.texts[(*item, "plural")] = ""
+            result.texts[(*item, "help")] = help
+        result.field_chain[extra.name] = {f: [extra.name] for f in extra.fields}
+        for incoming in extra.incoming:
+            item = (*key, "incoming", incoming)
+            result.texts[(*item, "name")] = words(incoming)
             result.texts[(*item, "plural")] = ""
             result.texts[(*item, "help")] = ""
 

@@ -133,6 +133,24 @@ type HeadViewExtras = Callable[[type, Any], Awaitable[dict[str, Any]]]
 head_view_extras: list[HeadViewExtras] = []
 
 
+# What an installed app gives the interface's translation files besides the models and enums (`pangloss-derived`
+# gives its derived classes): each function gives a list of `TranslatableModel`, put under "models" as a model is, in
+# the file of the app whose module it is.
+@dataclasses.dataclass(frozen=True)
+class TranslatableModel:
+    name: str
+    module: str
+    kind: str
+    description: str = ""
+    # field name -> (name, help) in the default language
+    fields: dict[str, tuple[str, str]] = dataclasses.field(default_factory=dict)
+    # names of the things others call it, as a model's incoming relations are
+    incoming: tuple[str, ...] = ()
+
+
+translatable_models: list[Callable[[], Iterable[TranslatableModel]]] = []
+
+
 # The review status that a write asks for (`save(review_status="checked")`, or `?review_status=` of the API),
 # for data that is known to be right when it is loaded. The core does not know what it means: `pangloss-review`
 # reads it in its functions above, for documents of the classes it reviews. None: nothing asked.

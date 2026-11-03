@@ -6,7 +6,9 @@ factoids, perhaps from two sources, say it between them. Each derived fact keeps
 factoids, and what they passed through (a negation, an uncertain identification).
 """
 
-from pangloss_derived import Derived, RuleType, Var, rule
+from typing import Annotated
+
+from pangloss_derived import Derived, RuleType, SymmetricLabel, Var, rule
 
 from demo_app.models import Activity, Agent, Group, MemberOf, Person, Transfer
 
@@ -20,8 +22,8 @@ class SameGroup(Derived):
 
     _meta = Derived.Meta(symmetric=True)
 
-    first: Person
-    second: Person
+    first: Annotated[Person, SymmetricLabel("member")]
+    second: Annotated[Person, SymmetricLabel("member")]
     group: Group
 
 
@@ -39,8 +41,8 @@ class CoParticipants(Derived):
 
     _meta = Derived.Meta(symmetric=True)
 
-    first: Agent
-    second: Agent
+    first: Annotated[Agent, SymmetricLabel("participant")]
+    second: Annotated[Agent, SymmetricLabel("participant")]
 
 
 @rule(types=[social])

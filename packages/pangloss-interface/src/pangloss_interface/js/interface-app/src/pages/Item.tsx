@@ -170,7 +170,6 @@ export default function EntityPage(props: RouteProps<"/:type/:id">) {
                 <DerivedSection
                   derived={item()._derived as DerivedSectionProps["derived"]}
                   itemId={String(item().id)}
-                  kind={model()?.kind === "Document" ? "document" : "entity"}
                 />
               </>
             }

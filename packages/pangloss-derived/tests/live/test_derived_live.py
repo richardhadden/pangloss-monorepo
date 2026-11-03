@@ -372,7 +372,7 @@ async def test_a_rule_type_gives_a_graph(clear_database):
 
 
 @no_type_check
-async def test_derived_section_of_a_person_and_of_a_factoid(clear_database):
+async def test_derived_section_of_a_person_and_not_of_its_evidence(clear_database):
     Person, Group, Factoid, SameFamily, p, g = await make(clear_database)
     f1 = await Factoid.Create(
         label="F1", statements=[member(p["A"], g), member(p["B"], g)]
@@ -381,12 +381,13 @@ async def test_derived_section_of_a_person_and_of_a_factoid(clear_database):
     section = await read.derived_section(Person, await Person.get(p["A"].id))
     family = section["_derived"]["SameFamily"]
     assert family["count"] == 1
+    assert family["type"] == "SameFamily" and family["symmetricLabel"] is None
     (item,) = family["items"]
     assert item["other"]["label"] == "B"
     assert item["otherField"] in ("first", "second")
     assert item["fields"]["family"]["label"] == "G"
-    section = await read.derived_section(Factoid, await Factoid.get(f1.id))
-    assert section["_derived"]["SameFamily"]["count"] == 1
+    # (a document does not show what it is evidence of: that is what it says itself)
+    assert await read.derived_section(Factoid, await Factoid.get(f1.id)) == {}
 
 
 @no_type_check

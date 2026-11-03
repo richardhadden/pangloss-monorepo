@@ -105,37 +105,37 @@
     "enums/ActivityType/fr/members/BATTLE/name": {
       "base": "",
       "source": "Battle",
-      "seen": ""
+      "seen": "Bataille"
     },
     "enums/ActivityType/fr/members/CEREMONY/name": {
       "base": "",
       "source": "Ceremony",
-      "seen": ""
+      "seen": "Cérémonie"
     },
     "enums/ActivityType/fr/members/CORRESPONDENCE/name": {
       "base": "",
       "source": "Correspondence",
-      "seen": ""
+      "seen": "Correspondance"
     },
     "enums/ActivityType/fr/members/JOURNEY/name": {
       "base": "",
       "source": "Journey",
-      "seen": ""
+      "seen": "Voyage"
     },
     "enums/ActivityType/fr/members/MEETING/name": {
       "base": "",
       "source": "Meeting",
-      "seen": ""
+      "seen": "Rencontre"
     },
     "enums/ActivityType/fr/name": {
       "base": "",
       "source": "Activity type",
-      "seen": ""
+      "seen": "Type d’activité"
     },
     "enums/ActivityType/fr/plural": {
       "base": "",
       "source": "Activity types",
-      "seen": ""
+      "seen": "Types d’activité"
     },
     "enums/Role/de/description": {
       "base": "",
@@ -231,32 +231,32 @@
     "enums/Role/fr/members/LEADER/name": {
       "base": "",
       "source": "Leader",
-      "seen": ""
+      "seen": "Chef"
     },
     "enums/Role/fr/members/MESSENGER/name": {
       "base": "",
       "source": "Messenger",
-      "seen": ""
+      "seen": "Messager"
     },
     "enums/Role/fr/members/PARTICIPANT/name": {
       "base": "",
       "source": "Participant",
-      "seen": ""
+      "seen": "Participant"
     },
     "enums/Role/fr/members/WITNESS/name": {
       "base": "",
       "source": "Witness",
-      "seen": ""
+      "seen": "Témoin"
     },
     "enums/Role/fr/name": {
       "base": "",
       "source": "Role",
-      "seen": ""
+      "seen": "Rôle"
     },
     "enums/Role/fr/plural": {
       "base": "",
       "source": "Roles",
-      "seen": ""
+      "seen": "Rôles"
     },
     "models/Activity/de/description": {
       "base": "",
@@ -392,7 +392,7 @@
     "models/Activity/fr/description": {
       "base": "",
       "source": "An agent did something, with others in different roles",
-      "seen": ""
+      "seen": "Un agent a fait quelque chose, avec d’autres dans divers rôles"
     },
     "models/Activity/fr/fields/activity_type/help": {
       "base": "",
@@ -402,7 +402,7 @@
     "models/Activity/fr/fields/activity_type/name": {
       "base": "",
       "source": "Activity type",
-      "seen": ""
+      "seen": "Type d’activité"
     },
     "models/Activity/fr/fields/activity_type/plural": {
       "base": "",
@@ -417,7 +417,7 @@
     "models/Activity/fr/fields/carried_out_by/name": {
       "base": "",
       "source": "Carried out by",
-      "seen": ""
+      "seen": "Réalisée par"
     },
     "models/Activity/fr/fields/carried_out_by/plural": {
       "base": "",
@@ -432,7 +432,7 @@
     "models/Activity/fr/fields/participants/name": {
       "base": "",
       "source": "Participants",
-      "seen": ""
+      "seen": "Participants"
     },
     "models/Activity/fr/fields/participants/plural": {
       "base": "",
@@ -447,12 +447,12 @@
     "models/Activity/fr/name": {
       "base": "",
       "source": "Activity",
-      "seen": ""
+      "seen": "Activité"
     },
     "models/Activity/fr/plural": {
       "base": "",
       "source": "Activities",
-      "seen": ""
+      "seen": "Activités"
     },
     "models/Alternative/de/description": {
       "base": "",
@@ -528,7 +528,7 @@
     "models/Alternative/fr/description": {
       "base": "",
       "source": "One of several things, not known which: any number of statements or entities.\n`Alternative[ViaEdge[Person, Probability]]` gives each person how likely it is the one meant",
-      "seen": ""
+      "seen": "L’une de plusieurs choses, sans savoir laquelle : un nombre quelconque d’énoncés ou d’entités. `Alternative[ViaEdge[Person, Probability]]` donne pour chaque personne la probabilité que ce soit elle"
     },
     "models/Alternative/fr/fields/alternatives/help": {
       "base": "",
@@ -538,7 +538,7 @@
     "models/Alternative/fr/fields/alternatives/name": {
       "base": "",
       "source": "Alternatives",
-      "seen": ""
+      "seen": "Alternatives"
     },
     "models/Alternative/fr/fields/alternatives/plural": {
       "base": "",
@@ -553,12 +553,162 @@
     "models/Alternative/fr/name": {
       "base": "",
       "source": "Alternative",
-      "seen": ""
+      "seen": "Alternative"
     },
     "models/Alternative/fr/plural": {
       "base": "",
       "source": "Alternatives",
+      "seen": "Alternatives"
+    },
+    "models/Artwork/de/description": {
+      "base": "",
+      "source": "Any artwork object",
+      "seen": "Ein beliebiges Kunstwerk"
+    },
+    "models/Artwork/de/help": {
+      "base": "",
+      "source": "",
       "seen": ""
+    },
+    "models/Artwork/de/incoming/artwork_created_reverse/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Artwork/de/incoming/artwork_created_reverse/name": {
+      "base": "",
+      "source": "Created in",
+      "seen": "Geschaffen in"
+    },
+    "models/Artwork/de/incoming/artwork_created_reverse/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Artwork/de/incoming/object_created_reverse/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Artwork/de/incoming/object_created_reverse/name": {
+      "base": "",
+      "source": "Created in",
+      "seen": "Geschaffen in"
+    },
+    "models/Artwork/de/incoming/object_created_reverse/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Artwork/de/name": {
+      "base": "",
+      "source": "Artwork",
+      "seen": "Kunstwerk"
+    },
+    "models/Artwork/de/plural": {
+      "base": "",
+      "source": "Artworks",
+      "seen": "Kunstwerke"
+    },
+    "models/Artwork/en/description": {
+      "base": "Any artwork object",
+      "source": "Any artwork object",
+      "seen": "Any artwork object"
+    },
+    "models/Artwork/en/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Artwork/en/incoming/artwork_created_reverse/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Artwork/en/incoming/artwork_created_reverse/name": {
+      "base": "Artwork created reverse",
+      "source": "Artwork created reverse",
+      "seen": "Created in"
+    },
+    "models/Artwork/en/incoming/artwork_created_reverse/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Artwork/en/incoming/object_created_reverse/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Artwork/en/incoming/object_created_reverse/name": {
+      "base": "Object created reverse",
+      "source": "Object created reverse",
+      "seen": "Created in"
+    },
+    "models/Artwork/en/incoming/object_created_reverse/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Artwork/en/name": {
+      "base": "Artwork",
+      "source": "Artwork",
+      "seen": "Artwork"
+    },
+    "models/Artwork/en/plural": {
+      "base": "",
+      "source": "",
+      "seen": "Artworks"
+    },
+    "models/Artwork/fr/description": {
+      "base": "",
+      "source": "Any artwork object",
+      "seen": "Une œuvre d’art quelconque"
+    },
+    "models/Artwork/fr/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Artwork/fr/incoming/artwork_created_reverse/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Artwork/fr/incoming/artwork_created_reverse/name": {
+      "base": "",
+      "source": "Created in",
+      "seen": "Créé dans"
+    },
+    "models/Artwork/fr/incoming/artwork_created_reverse/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Artwork/fr/incoming/object_created_reverse/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Artwork/fr/incoming/object_created_reverse/name": {
+      "base": "",
+      "source": "Created in",
+      "seen": "Créé dans"
+    },
+    "models/Artwork/fr/incoming/object_created_reverse/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Artwork/fr/name": {
+      "base": "",
+      "source": "Artwork",
+      "seen": "Œuvre d’art"
+    },
+    "models/Artwork/fr/plural": {
+      "base": "",
+      "source": "Artworks",
+      "seen": "Œuvres d’art"
     },
     "models/AtPage/de/description": {
       "base": "",
@@ -663,7 +813,7 @@
     "models/AtPage/fr/description": {
       "base": "",
       "source": "A relation to something *at a page* of it",
-      "seen": ""
+      "seen": "Une relation à quelque chose, *à une page* de celui-ci"
     },
     "models/AtPage/fr/fields/page/help": {
       "base": "",
@@ -673,7 +823,7 @@
     "models/AtPage/fr/fields/page/name": {
       "base": "",
       "source": "Page",
-      "seen": ""
+      "seen": "Page"
     },
     "models/AtPage/fr/fields/page/plural": {
       "base": "",
@@ -688,7 +838,7 @@
     "models/AtPage/fr/fields/target/name": {
       "base": "",
       "source": "Target",
-      "seen": ""
+      "seen": "Cible"
     },
     "models/AtPage/fr/fields/target/plural": {
       "base": "",
@@ -703,12 +853,12 @@
     "models/AtPage/fr/name": {
       "base": "",
       "source": "At page",
-      "seen": ""
+      "seen": "À la page"
     },
     "models/AtPage/fr/plural": {
       "base": "",
       "source": "At pages",
-      "seen": ""
+      "seen": "À la page"
     },
     "models/Causes/de/description": {
       "base": "",
@@ -813,7 +963,7 @@
     "models/Causes/fr/description": {
       "base": "",
       "source": "One thing led to another",
-      "seen": ""
+      "seen": "Une chose en a entraîné une autre"
     },
     "models/Causes/fr/fields/cause/help": {
       "base": "",
@@ -823,7 +973,7 @@
     "models/Causes/fr/fields/cause/name": {
       "base": "",
       "source": "Cause",
-      "seen": ""
+      "seen": "Cause"
     },
     "models/Causes/fr/fields/cause/plural": {
       "base": "",
@@ -838,7 +988,7 @@
     "models/Causes/fr/fields/result/name": {
       "base": "",
       "source": "Result",
-      "seen": ""
+      "seen": "Résultat"
     },
     "models/Causes/fr/fields/result/plural": {
       "base": "",
@@ -853,12 +1003,12 @@
     "models/Causes/fr/name": {
       "base": "",
       "source": "Causes",
-      "seen": ""
+      "seen": "Cause"
     },
     "models/Causes/fr/plural": {
       "base": "",
       "source": "Causes",
-      "seen": ""
+      "seen": "Causes"
     },
     "models/Certainty/de/description": {
       "base": "",
@@ -934,7 +1084,7 @@
     "models/Certainty/fr/description": {
       "base": "",
       "source": "How sure the source is of a relation: a property of the relation itself",
-      "seen": ""
+      "seen": "Le degré de certitude de la source sur une relation : une propriété de la relation elle-même"
     },
     "models/Certainty/fr/fields/level/help": {
       "base": "",
@@ -944,7 +1094,7 @@
     "models/Certainty/fr/fields/level/name": {
       "base": "",
       "source": "Level",
-      "seen": ""
+      "seen": "Niveau"
     },
     "models/Certainty/fr/fields/level/plural": {
       "base": "",
@@ -959,11 +1109,476 @@
     "models/Certainty/fr/name": {
       "base": "",
       "source": "Certainty",
-      "seen": ""
+      "seen": "Certitude"
     },
     "models/Certainty/fr/plural": {
       "base": "",
       "source": "Certainties",
+      "seen": "Certitudes"
+    },
+    "models/CoParticipants/de/description": {
+      "base": "",
+      "source": "Took part in the same activity",
+      "seen": "Nahmen an derselben Aktivität teil"
+    },
+    "models/CoParticipants/de/fields/participant/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/CoParticipants/de/fields/participant/name": {
+      "base": "",
+      "source": "Participant",
+      "seen": "Teilnehmer"
+    },
+    "models/CoParticipants/de/fields/participant/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/CoParticipants/de/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/CoParticipants/de/name": {
+      "base": "",
+      "source": "Took part with",
+      "seen": "Beteiligt mit"
+    },
+    "models/CoParticipants/de/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/CoParticipants/en/description": {
+      "base": "Took part in the same activity",
+      "source": "Took part in the same activity",
+      "seen": "Took part in the same activity"
+    },
+    "models/CoParticipants/en/fields/participant/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/CoParticipants/en/fields/participant/name": {
+      "base": "Participant",
+      "source": "Participant",
+      "seen": "Participant"
+    },
+    "models/CoParticipants/en/fields/participant/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/CoParticipants/en/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/CoParticipants/en/name": {
+      "base": "Co participants",
+      "source": "Co participants",
+      "seen": "Took part with"
+    },
+    "models/CoParticipants/en/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/CoParticipants/fr/description": {
+      "base": "",
+      "source": "Took part in the same activity",
+      "seen": "Ont pris part à la même activité"
+    },
+    "models/CoParticipants/fr/fields/participant/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/CoParticipants/fr/fields/participant/name": {
+      "base": "",
+      "source": "Participant",
+      "seen": "Participant"
+    },
+    "models/CoParticipants/fr/fields/participant/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/CoParticipants/fr/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/CoParticipants/fr/name": {
+      "base": "",
+      "source": "Took part with",
+      "seen": "A participé avec"
+    },
+    "models/CoParticipants/fr/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/CreationOfArtwork/de/description": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/CreationOfArtwork/de/fields/artwork_created/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/CreationOfArtwork/de/fields/artwork_created/name": {
+      "base": "",
+      "source": "Artwork created",
+      "seen": "Geschaffenes Kunstwerk"
+    },
+    "models/CreationOfArtwork/de/fields/artwork_created/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/CreationOfArtwork/de/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/CreationOfArtwork/de/name": {
+      "base": "",
+      "source": "Creation of artwork",
+      "seen": "Schaffung eines Kunstwerks"
+    },
+    "models/CreationOfArtwork/de/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/CreationOfArtwork/en/description": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/CreationOfArtwork/en/fields/artwork_created/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/CreationOfArtwork/en/fields/artwork_created/name": {
+      "base": "Artwork created",
+      "source": "Artwork created",
+      "seen": "Artwork created"
+    },
+    "models/CreationOfArtwork/en/fields/artwork_created/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/CreationOfArtwork/en/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/CreationOfArtwork/en/name": {
+      "base": "Creation of artwork",
+      "source": "Creation of artwork",
+      "seen": "Creation of artwork"
+    },
+    "models/CreationOfArtwork/en/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/CreationOfArtwork/fr/description": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/CreationOfArtwork/fr/fields/artwork_created/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/CreationOfArtwork/fr/fields/artwork_created/name": {
+      "base": "",
+      "source": "Artwork created",
+      "seen": "Œuvre créée"
+    },
+    "models/CreationOfArtwork/fr/fields/artwork_created/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/CreationOfArtwork/fr/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/CreationOfArtwork/fr/name": {
+      "base": "",
+      "source": "Creation of artwork",
+      "seen": "Création d’une œuvre d’art"
+    },
+    "models/CreationOfArtwork/fr/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/CreationOfPainting/de/description": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/CreationOfPainting/de/fields/painting_created/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/CreationOfPainting/de/fields/painting_created/name": {
+      "base": "",
+      "source": "Painting created",
+      "seen": "Geschaffenes Gemälde"
+    },
+    "models/CreationOfPainting/de/fields/painting_created/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/CreationOfPainting/de/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/CreationOfPainting/de/name": {
+      "base": "",
+      "source": "Creation of painting",
+      "seen": "Schaffung eines Gemäldes"
+    },
+    "models/CreationOfPainting/de/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/CreationOfPainting/en/description": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/CreationOfPainting/en/fields/painting_created/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/CreationOfPainting/en/fields/painting_created/name": {
+      "base": "Painting created",
+      "source": "Painting created",
+      "seen": "Painting created"
+    },
+    "models/CreationOfPainting/en/fields/painting_created/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/CreationOfPainting/en/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/CreationOfPainting/en/name": {
+      "base": "Creation of painting",
+      "source": "Creation of painting",
+      "seen": "Creation of painting"
+    },
+    "models/CreationOfPainting/en/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/CreationOfPainting/fr/description": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/CreationOfPainting/fr/fields/painting_created/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/CreationOfPainting/fr/fields/painting_created/name": {
+      "base": "",
+      "source": "Painting created",
+      "seen": "Peinture créée"
+    },
+    "models/CreationOfPainting/fr/fields/painting_created/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/CreationOfPainting/fr/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/CreationOfPainting/fr/name": {
+      "base": "",
+      "source": "Creation of painting",
+      "seen": "Création d’une peinture"
+    },
+    "models/CreationOfPainting/fr/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/CreationOfPhysicalObject/de/description": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/CreationOfPhysicalObject/de/fields/created_by/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/CreationOfPhysicalObject/de/fields/created_by/name": {
+      "base": "",
+      "source": "Created by",
+      "seen": "Geschaffen von"
+    },
+    "models/CreationOfPhysicalObject/de/fields/created_by/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/CreationOfPhysicalObject/de/fields/object_created/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/CreationOfPhysicalObject/de/fields/object_created/name": {
+      "base": "",
+      "source": "Object created",
+      "seen": "Geschaffenes Objekt"
+    },
+    "models/CreationOfPhysicalObject/de/fields/object_created/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/CreationOfPhysicalObject/de/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/CreationOfPhysicalObject/de/name": {
+      "base": "",
+      "source": "Creation of physical object",
+      "seen": "Herstellung eines physischen Objekts"
+    },
+    "models/CreationOfPhysicalObject/de/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/CreationOfPhysicalObject/en/description": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/CreationOfPhysicalObject/en/fields/created_by/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/CreationOfPhysicalObject/en/fields/created_by/name": {
+      "base": "Created by",
+      "source": "Created by",
+      "seen": "Created by"
+    },
+    "models/CreationOfPhysicalObject/en/fields/created_by/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/CreationOfPhysicalObject/en/fields/object_created/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/CreationOfPhysicalObject/en/fields/object_created/name": {
+      "base": "Object created",
+      "source": "Object created",
+      "seen": "Object created"
+    },
+    "models/CreationOfPhysicalObject/en/fields/object_created/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/CreationOfPhysicalObject/en/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/CreationOfPhysicalObject/en/name": {
+      "base": "Creation of physical object",
+      "source": "Creation of physical object",
+      "seen": "Creation of physical object"
+    },
+    "models/CreationOfPhysicalObject/en/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/CreationOfPhysicalObject/fr/description": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/CreationOfPhysicalObject/fr/fields/created_by/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/CreationOfPhysicalObject/fr/fields/created_by/name": {
+      "base": "",
+      "source": "Created by",
+      "seen": "Créé par"
+    },
+    "models/CreationOfPhysicalObject/fr/fields/created_by/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/CreationOfPhysicalObject/fr/fields/object_created/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/CreationOfPhysicalObject/fr/fields/object_created/name": {
+      "base": "",
+      "source": "Object created",
+      "seen": "Objet créé"
+    },
+    "models/CreationOfPhysicalObject/fr/fields/object_created/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/CreationOfPhysicalObject/fr/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/CreationOfPhysicalObject/fr/name": {
+      "base": "",
+      "source": "Creation of physical object",
+      "seen": "Création d’un objet physique"
+    },
+    "models/CreationOfPhysicalObject/fr/plural": {
+      "base": "",
+      "source": "",
       "seen": ""
     },
     "models/Factoid/de/description": {
@@ -1100,7 +1715,7 @@
     "models/Factoid/fr/description": {
       "base": "",
       "source": "What a source says, at a page: a set of statements",
-      "seen": ""
+      "seen": "Ce que dit une source, à une page : un ensemble d’énoncés"
     },
     "models/Factoid/fr/fields/source/help": {
       "base": "",
@@ -1110,7 +1725,7 @@
     "models/Factoid/fr/fields/source/name": {
       "base": "",
       "source": "Source",
-      "seen": ""
+      "seen": "Source"
     },
     "models/Factoid/fr/fields/source/plural": {
       "base": "",
@@ -1125,7 +1740,7 @@
     "models/Factoid/fr/fields/statements/name": {
       "base": "",
       "source": "Statements",
-      "seen": ""
+      "seen": "Énoncés"
     },
     "models/Factoid/fr/fields/statements/plural": {
       "base": "",
@@ -1140,7 +1755,7 @@
     "models/Factoid/fr/fields/year/name": {
       "base": "",
       "source": "Year",
-      "seen": ""
+      "seen": "Année"
     },
     "models/Factoid/fr/fields/year/plural": {
       "base": "",
@@ -1155,11 +1770,161 @@
     "models/Factoid/fr/name": {
       "base": "",
       "source": "Factoid",
-      "seen": ""
+      "seen": "Factoïde"
     },
     "models/Factoid/fr/plural": {
       "base": "",
       "source": "Factoids",
+      "seen": "Factoïdes"
+    },
+    "models/GaveTo/de/description": {
+      "base": "",
+      "source": "Gave something to",
+      "seen": "Gab jemandem etwas"
+    },
+    "models/GaveTo/de/fields/giver/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/GaveTo/de/fields/giver/name": {
+      "base": "",
+      "source": "Giver",
+      "seen": "Geber"
+    },
+    "models/GaveTo/de/fields/giver/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/GaveTo/de/fields/receiver/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/GaveTo/de/fields/receiver/name": {
+      "base": "",
+      "source": "Receiver",
+      "seen": "Empfänger"
+    },
+    "models/GaveTo/de/fields/receiver/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/GaveTo/de/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/GaveTo/de/name": {
+      "base": "",
+      "source": "Gave to",
+      "seen": "Gab an"
+    },
+    "models/GaveTo/de/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/GaveTo/en/description": {
+      "base": "Gave something to",
+      "source": "Gave something to",
+      "seen": "Gave something to"
+    },
+    "models/GaveTo/en/fields/giver/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/GaveTo/en/fields/giver/name": {
+      "base": "Giver",
+      "source": "Giver",
+      "seen": "Giver"
+    },
+    "models/GaveTo/en/fields/giver/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/GaveTo/en/fields/receiver/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/GaveTo/en/fields/receiver/name": {
+      "base": "Receiver",
+      "source": "Receiver",
+      "seen": "Receiver"
+    },
+    "models/GaveTo/en/fields/receiver/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/GaveTo/en/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/GaveTo/en/name": {
+      "base": "Gave to",
+      "source": "Gave to",
+      "seen": "Gave to"
+    },
+    "models/GaveTo/en/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/GaveTo/fr/description": {
+      "base": "",
+      "source": "Gave something to",
+      "seen": "A donné quelque chose à"
+    },
+    "models/GaveTo/fr/fields/giver/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/GaveTo/fr/fields/giver/name": {
+      "base": "",
+      "source": "Giver",
+      "seen": "Donateur"
+    },
+    "models/GaveTo/fr/fields/giver/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/GaveTo/fr/fields/receiver/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/GaveTo/fr/fields/receiver/name": {
+      "base": "",
+      "source": "Receiver",
+      "seen": "Destinataire"
+    },
+    "models/GaveTo/fr/fields/receiver/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/GaveTo/fr/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/GaveTo/fr/name": {
+      "base": "",
+      "source": "Gave to",
+      "seen": "A donné à"
+    },
+    "models/GaveTo/fr/plural": {
+      "base": "",
+      "source": "",
       "seen": ""
     },
     "models/Group/de/description": {
@@ -1217,6 +1982,21 @@
       "source": "",
       "seen": ""
     },
+    "models/Group/de/incoming/has_member/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Group/de/incoming/has_member/name": {
+      "base": "",
+      "source": "Has member",
+      "seen": "Hat Mitglied"
+    },
+    "models/Group/de/incoming/has_member/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
     "models/Group/de/incoming/involves_reverse/help": {
       "base": "",
       "source": "",
@@ -1229,6 +2009,21 @@
       "review": true
     },
     "models/Group/de/incoming/involves_reverse/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Group/de/incoming/member_of/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Group/de/incoming/member_of/name": {
+      "base": "",
+      "source": "Member of",
+      "seen": "Mitglied von"
+    },
+    "models/Group/de/incoming/member_of/plural": {
       "base": "",
       "source": "",
       "seen": ""
@@ -1345,6 +2140,21 @@
       "source": "",
       "seen": ""
     },
+    "models/Group/en/incoming/has_member/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Group/en/incoming/has_member/name": {
+      "base": "Has member",
+      "source": "Has member",
+      "seen": "Has member"
+    },
+    "models/Group/en/incoming/has_member/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
     "models/Group/en/incoming/involves_reverse/help": {
       "base": "",
       "source": "",
@@ -1356,6 +2166,21 @@
       "seen": "Involved in"
     },
     "models/Group/en/incoming/involves_reverse/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Group/en/incoming/member_of/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Group/en/incoming/member_of/name": {
+      "base": "Member of",
+      "source": "Member of",
+      "seen": "Member of"
+    },
+    "models/Group/en/incoming/member_of/plural": {
       "base": "",
       "source": "",
       "seen": ""
@@ -1418,7 +2243,7 @@
     "models/Group/fr/description": {
       "base": "",
       "source": "A family, an order, an army...",
-      "seen": ""
+      "seen": "Une famille, un ordre, une armée…"
     },
     "models/Group/fr/fields/name/help": {
       "base": "",
@@ -1428,7 +2253,7 @@
     "models/Group/fr/fields/name/name": {
       "base": "",
       "source": "Name",
-      "seen": ""
+      "seen": "Nom"
     },
     "models/Group/fr/fields/name/plural": {
       "base": "",
@@ -1448,7 +2273,7 @@
     "models/Group/fr/incoming/carried_out/name": {
       "base": "",
       "source": "Carried out",
-      "seen": ""
+      "seen": "A réalisé"
     },
     "models/Group/fr/incoming/carried_out/plural": {
       "base": "",
@@ -1463,9 +2288,24 @@
     "models/Group/fr/incoming/gave/name": {
       "base": "",
       "source": "Gave",
-      "seen": ""
+      "seen": "A donné"
     },
     "models/Group/fr/incoming/gave/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Group/fr/incoming/has_member/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Group/fr/incoming/has_member/name": {
+      "base": "",
+      "source": "Has member",
+      "seen": "A pour membre"
+    },
+    "models/Group/fr/incoming/has_member/plural": {
       "base": "",
       "source": "",
       "seen": ""
@@ -1478,9 +2318,24 @@
     "models/Group/fr/incoming/involves_reverse/name": {
       "base": "",
       "source": "Involved in",
-      "seen": ""
+      "seen": "Impliqué dans"
     },
     "models/Group/fr/incoming/involves_reverse/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Group/fr/incoming/member_of/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Group/fr/incoming/member_of/name": {
+      "base": "",
+      "source": "Member of",
+      "seen": "Membre de"
+    },
+    "models/Group/fr/incoming/member_of/plural": {
       "base": "",
       "source": "",
       "seen": ""
@@ -1493,7 +2348,7 @@
     "models/Group/fr/incoming/ordered/name": {
       "base": "",
       "source": "Ordered",
-      "seen": ""
+      "seen": "A ordonné"
     },
     "models/Group/fr/incoming/ordered/plural": {
       "base": "",
@@ -1508,7 +2363,7 @@
     "models/Group/fr/incoming/participants_reverse/name": {
       "base": "",
       "source": "Participated in",
-      "seen": ""
+      "seen": "A participé à"
     },
     "models/Group/fr/incoming/participants_reverse/plural": {
       "base": "",
@@ -1523,7 +2378,7 @@
     "models/Group/fr/incoming/received/name": {
       "base": "",
       "source": "Received",
-      "seen": ""
+      "seen": "A reçu"
     },
     "models/Group/fr/incoming/received/plural": {
       "base": "",
@@ -1533,12 +2388,12 @@
     "models/Group/fr/name": {
       "base": "",
       "source": "Group",
-      "seen": ""
+      "seen": "Groupe"
     },
     "models/Group/fr/plural": {
       "base": "",
       "source": "Groups",
-      "seen": ""
+      "seen": "Groupes"
     },
     "models/Hypothetical/de/description": {
       "base": "",
@@ -1614,7 +2469,7 @@
     "models/Hypothetical/fr/description": {
       "base": "",
       "source": "The source says it might have been so...",
-      "seen": ""
+      "seen": "La source dit qu’il se peut que ce soit le cas…"
     },
     "models/Hypothetical/fr/fields/contents/help": {
       "base": "",
@@ -1624,7 +2479,7 @@
     "models/Hypothetical/fr/fields/contents/name": {
       "base": "",
       "source": "Contents",
-      "seen": ""
+      "seen": "Contenu"
     },
     "models/Hypothetical/fr/fields/contents/plural": {
       "base": "",
@@ -1639,12 +2494,12 @@
     "models/Hypothetical/fr/name": {
       "base": "",
       "source": "Hypothetical",
-      "seen": ""
+      "seen": "Hypothétique"
     },
     "models/Hypothetical/fr/plural": {
       "base": "",
       "source": "Hypotheticals",
-      "seen": ""
+      "seen": "Hypothétiques"
     },
     "models/Identification/de/description": {
       "base": "",
@@ -1750,7 +2605,7 @@
     "models/Identification/fr/description": {
       "base": "",
       "source": "A name in the source that has been identified: the source says \"Smith\", and\nthis says which people that could be. The target is one `Alternative`.",
-      "seen": ""
+      "seen": "Un nom de la source qui a été identifié : la source dit « Smith », et ceci dit quelles personnes cela pourrait être. La cible est une `Alternative`."
     },
     "models/Identification/fr/fields/identified_by/help": {
       "base": "",
@@ -1760,7 +2615,7 @@
     "models/Identification/fr/fields/identified_by/name": {
       "base": "",
       "source": "Identified by",
-      "seen": ""
+      "seen": "Identifié par"
     },
     "models/Identification/fr/fields/identified_by/plural": {
       "base": "",
@@ -1775,7 +2630,7 @@
     "models/Identification/fr/fields/target/name": {
       "base": "",
       "source": "Target",
-      "seen": ""
+      "seen": "Cible"
     },
     "models/Identification/fr/fields/target/plural": {
       "base": "",
@@ -1790,12 +2645,12 @@
     "models/Identification/fr/name": {
       "base": "",
       "source": "Identification",
-      "seen": ""
+      "seen": "Identification"
     },
     "models/Identification/fr/plural": {
       "base": "",
       "source": "Identifications",
-      "seen": ""
+      "seen": "Identifications"
     },
     "models/InRole/de/description": {
       "base": "",
@@ -1900,7 +2755,7 @@
     "models/InRole/fr/description": {
       "base": "",
       "source": "A relation to something *in a role*",
-      "seen": ""
+      "seen": "Une relation à quelque chose, *dans un rôle*"
     },
     "models/InRole/fr/fields/role/help": {
       "base": "",
@@ -1910,7 +2765,7 @@
     "models/InRole/fr/fields/role/name": {
       "base": "",
       "source": "Role",
-      "seen": ""
+      "seen": "Rôle"
     },
     "models/InRole/fr/fields/role/plural": {
       "base": "",
@@ -1925,7 +2780,7 @@
     "models/InRole/fr/fields/target/name": {
       "base": "",
       "source": "Target",
-      "seen": ""
+      "seen": "Cible"
     },
     "models/InRole/fr/fields/target/plural": {
       "base": "",
@@ -1940,12 +2795,162 @@
     "models/InRole/fr/name": {
       "base": "",
       "source": "In role",
-      "seen": ""
+      "seen": "Dans un rôle"
     },
     "models/InRole/fr/plural": {
       "base": "",
       "source": "In roles",
+      "seen": "Dans des rôles"
+    },
+    "models/MemberOf/de/description": {
+      "base": "",
+      "source": "Someone was a member of a group: of a family, an order, an army. (Two factoids that say so of two people make\nthem members of the same group: see `derived.py`)",
+      "seen": "Jemand war Mitglied einer Gruppe: einer Familie, eines Ordens, eines Heeres. (Zwei Faktoide, die das von zwei Personen sagen, machen sie zu Mitgliedern derselben Gruppe: siehe `derived.py`)"
+    },
+    "models/MemberOf/de/fields/group/help": {
+      "base": "",
+      "source": "",
       "seen": ""
+    },
+    "models/MemberOf/de/fields/group/name": {
+      "base": "",
+      "source": "Group",
+      "seen": "Gruppe"
+    },
+    "models/MemberOf/de/fields/group/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/MemberOf/de/fields/member/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/MemberOf/de/fields/member/name": {
+      "base": "",
+      "source": "Member",
+      "seen": "Mitglied"
+    },
+    "models/MemberOf/de/fields/member/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/MemberOf/de/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/MemberOf/de/name": {
+      "base": "",
+      "source": "Member of",
+      "seen": "Mitglied von"
+    },
+    "models/MemberOf/de/plural": {
+      "base": "",
+      "source": "Memberships",
+      "seen": "Mitgliedschaften"
+    },
+    "models/MemberOf/en/description": {
+      "base": "Someone was a member of a group: of a family, an order, an army. (Two factoids that say so of two people make\nthem members of the same group: see `derived.py`)",
+      "source": "Someone was a member of a group: of a family, an order, an army. (Two factoids that say so of two people make\nthem members of the same group: see `derived.py`)",
+      "seen": "Someone was a member of a group: of a family, an order, an army. (Two factoids that say so of two people make\nthem members of the same group: see `derived.py`)"
+    },
+    "models/MemberOf/en/fields/group/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/MemberOf/en/fields/group/name": {
+      "base": "Group",
+      "source": "Group",
+      "seen": "Group"
+    },
+    "models/MemberOf/en/fields/group/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/MemberOf/en/fields/member/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/MemberOf/en/fields/member/name": {
+      "base": "Member",
+      "source": "Member",
+      "seen": "Member"
+    },
+    "models/MemberOf/en/fields/member/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/MemberOf/en/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/MemberOf/en/name": {
+      "base": "Member of",
+      "source": "Member of",
+      "seen": "Member of"
+    },
+    "models/MemberOf/en/plural": {
+      "base": "",
+      "source": "",
+      "seen": "Memberships"
+    },
+    "models/MemberOf/fr/description": {
+      "base": "",
+      "source": "Someone was a member of a group: of a family, an order, an army. (Two factoids that say so of two people make\nthem members of the same group: see `derived.py`)",
+      "seen": "Quelqu’un était membre d’un groupe : une famille, un ordre, une armée. (Deux factoïdes qui le disent de deux personnes en font des membres du même groupe : voir `derived.py`)"
+    },
+    "models/MemberOf/fr/fields/group/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/MemberOf/fr/fields/group/name": {
+      "base": "",
+      "source": "Group",
+      "seen": "Groupe"
+    },
+    "models/MemberOf/fr/fields/group/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/MemberOf/fr/fields/member/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/MemberOf/fr/fields/member/name": {
+      "base": "",
+      "source": "Member",
+      "seen": "Membre"
+    },
+    "models/MemberOf/fr/fields/member/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/MemberOf/fr/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/MemberOf/fr/name": {
+      "base": "",
+      "source": "Member of",
+      "seen": "Membre de"
+    },
+    "models/MemberOf/fr/plural": {
+      "base": "",
+      "source": "Memberships",
+      "seen": "Appartenances"
     },
     "models/Negative/de/description": {
       "base": "",
@@ -2020,7 +3025,7 @@
     "models/Negative/fr/description": {
       "base": "",
       "source": "It is *not* the case that...",
-      "seen": ""
+      "seen": "Il n’est *pas* vrai que…"
     },
     "models/Negative/fr/fields/contents/help": {
       "base": "",
@@ -2030,7 +3035,7 @@
     "models/Negative/fr/fields/contents/name": {
       "base": "",
       "source": "Contents",
-      "seen": ""
+      "seen": "Contenu"
     },
     "models/Negative/fr/fields/contents/plural": {
       "base": "",
@@ -2045,12 +3050,12 @@
     "models/Negative/fr/name": {
       "base": "",
       "source": "Negative",
-      "seen": ""
+      "seen": "Négation"
     },
     "models/Negative/fr/plural": {
       "base": "",
       "source": "Negatives",
-      "seen": ""
+      "seen": "Négations"
     },
     "models/NegativeSubjunctive/de/description": {
       "base": "",
@@ -2125,7 +3130,7 @@
     "models/NegativeSubjunctive/fr/description": {
       "base": "",
       "source": "It was wished that this should *not* happen (and it did not necessarily not)",
-      "seen": ""
+      "seen": "On souhaitait que cela n’arrive *pas* (et cela n’a pas forcément été évité)"
     },
     "models/NegativeSubjunctive/fr/fields/contents/help": {
       "base": "",
@@ -2135,7 +3140,7 @@
     "models/NegativeSubjunctive/fr/fields/contents/name": {
       "base": "",
       "source": "Contents",
-      "seen": ""
+      "seen": "Contenu"
     },
     "models/NegativeSubjunctive/fr/fields/contents/plural": {
       "base": "",
@@ -2150,12 +3155,12 @@
     "models/NegativeSubjunctive/fr/name": {
       "base": "",
       "source": "Negative subjunctive",
-      "seen": ""
+      "seen": "Subjonctif négatif"
     },
     "models/NegativeSubjunctive/fr/plural": {
       "base": "",
       "source": "Negative subjunctives",
-      "seen": ""
+      "seen": "Subjonctifs négatifs"
     },
     "models/OccupationType/de/description": {
       "base": "",
@@ -2215,8 +3220,9 @@
     },
     "models/OccupationType/de/fields/label_fr/name": {
       "base": "",
-      "source": "Label fr",
-      "seen": ""
+      "source": "Label (French)",
+      "seen": "Bezeichnung (Französisch)",
+      "review": true
     },
     "models/OccupationType/de/fields/label_fr/plural": {
       "base": "",
@@ -2327,7 +3333,7 @@
     "models/OccupationType/en/fields/label_fr/name": {
       "base": "Label fr",
       "source": "Label fr",
-      "seen": "Label fr"
+      "seen": "Label (French)"
     },
     "models/OccupationType/en/fields/label_fr/plural": {
       "base": "",
@@ -2382,7 +3388,7 @@
     "models/OccupationType/fr/description": {
       "base": "",
       "source": "A type of OccupationTypology",
-      "seen": ""
+      "seen": "Un type de la typologie des professions"
     },
     "models/OccupationType/fr/fields/description/help": {
       "base": "",
@@ -2392,7 +3398,7 @@
     "models/OccupationType/fr/fields/description/name": {
       "base": "",
       "source": "Description",
-      "seen": ""
+      "seen": "Description"
     },
     "models/OccupationType/fr/fields/description/plural": {
       "base": "",
@@ -2407,7 +3413,7 @@
     "models/OccupationType/fr/fields/is_subtype_of/name": {
       "base": "",
       "source": "Is subtype of",
-      "seen": ""
+      "seen": "Sous-type de"
     },
     "models/OccupationType/fr/fields/is_subtype_of/plural": {
       "base": "",
@@ -2422,7 +3428,7 @@
     "models/OccupationType/fr/fields/label_de/name": {
       "base": "",
       "source": "Label (German)",
-      "seen": ""
+      "seen": "Libellé (allemand)"
     },
     "models/OccupationType/fr/fields/label_de/plural": {
       "base": "",
@@ -2436,8 +3442,9 @@
     },
     "models/OccupationType/fr/fields/label_fr/name": {
       "base": "",
-      "source": "Label fr",
-      "seen": ""
+      "source": "Label (French)",
+      "seen": "Libellé (français)",
+      "review": true
     },
     "models/OccupationType/fr/fields/label_fr/plural": {
       "base": "",
@@ -2457,7 +3464,7 @@
     "models/OccupationType/fr/incoming/is_supertype_of/name": {
       "base": "",
       "source": "Is supertype of",
-      "seen": ""
+      "seen": "Super-type de"
     },
     "models/OccupationType/fr/incoming/is_supertype_of/plural": {
       "base": "",
@@ -2472,7 +3479,7 @@
     "models/OccupationType/fr/incoming/type_of/name": {
       "base": "",
       "source": "Type of",
-      "seen": ""
+      "seen": "Type de"
     },
     "models/OccupationType/fr/incoming/type_of/plural": {
       "base": "",
@@ -2482,12 +3489,12 @@
     "models/OccupationType/fr/name": {
       "base": "",
       "source": "Occupation type",
-      "seen": ""
+      "seen": "Type de profession"
     },
     "models/OccupationType/fr/plural": {
       "base": "",
       "source": "Occupation types",
-      "seen": ""
+      "seen": "Types de profession"
     },
     "models/Order/de/description": {
       "base": "",
@@ -2593,7 +3600,7 @@
     "models/Order/fr/description": {
       "base": "",
       "source": "Someone ordered something to be done: *something else*, which is a statement of\nits own, said in a subjunctive space, because it was wished, and not necessarily done",
-      "seen": ""
+      "seen": "Quelqu’un a ordonné que quelque chose soit fait : *autre chose*, qui est un énoncé à part entière, dit dans un espace subjonctif, car c’était souhaité, et pas forcément fait"
     },
     "models/Order/fr/fields/ordered_by/help": {
       "base": "",
@@ -2603,7 +3610,7 @@
     "models/Order/fr/fields/ordered_by/name": {
       "base": "",
       "source": "Ordered by",
-      "seen": ""
+      "seen": "Ordonné par"
     },
     "models/Order/fr/fields/ordered_by/plural": {
       "base": "",
@@ -2618,7 +3625,7 @@
     "models/Order/fr/fields/thing_ordered/name": {
       "base": "",
       "source": "Thing ordered",
-      "seen": ""
+      "seen": "Chose ordonnée"
     },
     "models/Order/fr/fields/thing_ordered/plural": {
       "base": "",
@@ -2633,12 +3640,207 @@
     "models/Order/fr/name": {
       "base": "",
       "source": "Order",
-      "seen": ""
+      "seen": "Ordre"
     },
     "models/Order/fr/plural": {
       "base": "",
       "source": "Orders",
+      "seen": "Ordres"
+    },
+    "models/Painting/de/description": {
+      "base": "",
+      "source": "A painting",
+      "seen": "Ein Gemälde"
+    },
+    "models/Painting/de/help": {
+      "base": "",
+      "source": "",
       "seen": ""
+    },
+    "models/Painting/de/incoming/artwork_created_reverse/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Painting/de/incoming/artwork_created_reverse/name": {
+      "base": "",
+      "source": "Created in",
+      "seen": "Geschaffen in"
+    },
+    "models/Painting/de/incoming/artwork_created_reverse/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Painting/de/incoming/object_created_reverse/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Painting/de/incoming/object_created_reverse/name": {
+      "base": "",
+      "source": "Created in",
+      "seen": "Geschaffen in"
+    },
+    "models/Painting/de/incoming/object_created_reverse/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Painting/de/incoming/painting_created_reverse/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Painting/de/incoming/painting_created_reverse/name": {
+      "base": "",
+      "source": "Created in",
+      "seen": "Geschaffen in"
+    },
+    "models/Painting/de/incoming/painting_created_reverse/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Painting/de/name": {
+      "base": "",
+      "source": "Painting",
+      "seen": "Gemälde"
+    },
+    "models/Painting/de/plural": {
+      "base": "",
+      "source": "Paintings",
+      "seen": "Gemälde"
+    },
+    "models/Painting/en/description": {
+      "base": "A painting",
+      "source": "A painting",
+      "seen": "A painting"
+    },
+    "models/Painting/en/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Painting/en/incoming/artwork_created_reverse/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Painting/en/incoming/artwork_created_reverse/name": {
+      "base": "Artwork created reverse",
+      "source": "Artwork created reverse",
+      "seen": "Created in"
+    },
+    "models/Painting/en/incoming/artwork_created_reverse/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Painting/en/incoming/object_created_reverse/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Painting/en/incoming/object_created_reverse/name": {
+      "base": "Object created reverse",
+      "source": "Object created reverse",
+      "seen": "Created in"
+    },
+    "models/Painting/en/incoming/object_created_reverse/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Painting/en/incoming/painting_created_reverse/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Painting/en/incoming/painting_created_reverse/name": {
+      "base": "Painting created reverse",
+      "source": "Painting created reverse",
+      "seen": "Created in"
+    },
+    "models/Painting/en/incoming/painting_created_reverse/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Painting/en/name": {
+      "base": "Painting",
+      "source": "Painting",
+      "seen": "Painting"
+    },
+    "models/Painting/en/plural": {
+      "base": "",
+      "source": "",
+      "seen": "Paintings"
+    },
+    "models/Painting/fr/description": {
+      "base": "",
+      "source": "A painting",
+      "seen": "Une peinture"
+    },
+    "models/Painting/fr/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Painting/fr/incoming/artwork_created_reverse/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Painting/fr/incoming/artwork_created_reverse/name": {
+      "base": "",
+      "source": "Created in",
+      "seen": "Créé dans"
+    },
+    "models/Painting/fr/incoming/artwork_created_reverse/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Painting/fr/incoming/object_created_reverse/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Painting/fr/incoming/object_created_reverse/name": {
+      "base": "",
+      "source": "Created in",
+      "seen": "Créé dans"
+    },
+    "models/Painting/fr/incoming/object_created_reverse/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Painting/fr/incoming/painting_created_reverse/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Painting/fr/incoming/painting_created_reverse/name": {
+      "base": "",
+      "source": "Created in",
+      "seen": "Créé dans"
+    },
+    "models/Painting/fr/incoming/painting_created_reverse/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Painting/fr/name": {
+      "base": "",
+      "source": "Painting",
+      "seen": "Peinture"
+    },
+    "models/Painting/fr/plural": {
+      "base": "",
+      "source": "Paintings",
+      "seen": "Peintures"
     },
     "models/Person/de/description": {
       "base": "",
@@ -2725,6 +3927,21 @@
       "source": "",
       "seen": ""
     },
+    "models/Person/de/incoming/created_by_reverse/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Person/de/incoming/created_by_reverse/name": {
+      "base": "",
+      "source": "Creator of",
+      "seen": "Schöpfer von"
+    },
+    "models/Person/de/incoming/created_by_reverse/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
     "models/Person/de/incoming/gave/help": {
       "base": "",
       "source": "",
@@ -2752,6 +3969,21 @@
       "review": true
     },
     "models/Person/de/incoming/involves_reverse/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Person/de/incoming/member_of/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Person/de/incoming/member_of/name": {
+      "base": "",
+      "source": "Member of",
+      "seen": "Mitglied von"
+    },
+    "models/Person/de/incoming/member_of/plural": {
       "base": "",
       "source": "",
       "seen": ""
@@ -2898,6 +4130,21 @@
       "source": "",
       "seen": ""
     },
+    "models/Person/en/incoming/created_by_reverse/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Person/en/incoming/created_by_reverse/name": {
+      "base": "Created by reverse",
+      "source": "Created by reverse",
+      "seen": "Creator of"
+    },
+    "models/Person/en/incoming/created_by_reverse/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
     "models/Person/en/incoming/gave/help": {
       "base": "",
       "source": "",
@@ -2924,6 +4171,21 @@
       "seen": "Involved in"
     },
     "models/Person/en/incoming/involves_reverse/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Person/en/incoming/member_of/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Person/en/incoming/member_of/name": {
+      "base": "Member of",
+      "source": "Member of",
+      "seen": "Member of"
+    },
+    "models/Person/en/incoming/member_of/plural": {
       "base": "",
       "source": "",
       "seen": ""
@@ -2986,7 +4248,7 @@
     "models/Person/fr/description": {
       "base": "",
       "source": "A person",
-      "seen": ""
+      "seen": "Une personne"
     },
     "models/Person/fr/fields/aliases/help": {
       "base": "",
@@ -2996,7 +4258,7 @@
     "models/Person/fr/fields/aliases/name": {
       "base": "",
       "source": "Aliases",
-      "seen": ""
+      "seen": "Autres noms"
     },
     "models/Person/fr/fields/aliases/plural": {
       "base": "",
@@ -3011,7 +4273,7 @@
     "models/Person/fr/fields/born/name": {
       "base": "",
       "source": "Born",
-      "seen": ""
+      "seen": "Naissance"
     },
     "models/Person/fr/fields/born/plural": {
       "base": "",
@@ -3026,7 +4288,7 @@
     "models/Person/fr/fields/has_type/name": {
       "base": "",
       "source": "Has type",
-      "seen": ""
+      "seen": "A pour type"
     },
     "models/Person/fr/fields/has_type/plural": {
       "base": "",
@@ -3041,7 +4303,7 @@
     "models/Person/fr/fields/known_as/name": {
       "base": "",
       "source": "Known as",
-      "seen": ""
+      "seen": "Connu sous le nom de"
     },
     "models/Person/fr/fields/known_as/plural": {
       "base": "",
@@ -3061,9 +4323,24 @@
     "models/Person/fr/incoming/carried_out/name": {
       "base": "",
       "source": "Carried out",
-      "seen": ""
+      "seen": "A réalisé"
     },
     "models/Person/fr/incoming/carried_out/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Person/fr/incoming/created_by_reverse/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Person/fr/incoming/created_by_reverse/name": {
+      "base": "",
+      "source": "Creator of",
+      "seen": "Créateur de"
+    },
+    "models/Person/fr/incoming/created_by_reverse/plural": {
       "base": "",
       "source": "",
       "seen": ""
@@ -3076,7 +4353,7 @@
     "models/Person/fr/incoming/gave/name": {
       "base": "",
       "source": "Gave",
-      "seen": ""
+      "seen": "A donné"
     },
     "models/Person/fr/incoming/gave/plural": {
       "base": "",
@@ -3091,9 +4368,24 @@
     "models/Person/fr/incoming/involves_reverse/name": {
       "base": "",
       "source": "Involved in",
-      "seen": ""
+      "seen": "Impliqué dans"
     },
     "models/Person/fr/incoming/involves_reverse/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Person/fr/incoming/member_of/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Person/fr/incoming/member_of/name": {
+      "base": "",
+      "source": "Member of",
+      "seen": "Membre de"
+    },
+    "models/Person/fr/incoming/member_of/plural": {
       "base": "",
       "source": "",
       "seen": ""
@@ -3106,7 +4398,7 @@
     "models/Person/fr/incoming/ordered/name": {
       "base": "",
       "source": "Ordered",
-      "seen": ""
+      "seen": "A ordonné"
     },
     "models/Person/fr/incoming/ordered/plural": {
       "base": "",
@@ -3121,7 +4413,7 @@
     "models/Person/fr/incoming/participants_reverse/name": {
       "base": "",
       "source": "Participated in",
-      "seen": ""
+      "seen": "A participé à"
     },
     "models/Person/fr/incoming/participants_reverse/plural": {
       "base": "",
@@ -3136,7 +4428,7 @@
     "models/Person/fr/incoming/received/name": {
       "base": "",
       "source": "Received",
-      "seen": ""
+      "seen": "A reçu"
     },
     "models/Person/fr/incoming/received/plural": {
       "base": "",
@@ -3146,12 +4438,117 @@
     "models/Person/fr/name": {
       "base": "",
       "source": "Person",
-      "seen": ""
+      "seen": "Personne"
     },
     "models/Person/fr/plural": {
       "base": "",
       "source": "People",
+      "seen": "Personnes"
+    },
+    "models/PhysicalObject/de/description": {
+      "base": "",
+      "source": "Any physical object",
+      "seen": "Ein beliebiges physisches Objekt"
+    },
+    "models/PhysicalObject/de/help": {
+      "base": "",
+      "source": "",
       "seen": ""
+    },
+    "models/PhysicalObject/de/incoming/object_created_reverse/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/PhysicalObject/de/incoming/object_created_reverse/name": {
+      "base": "",
+      "source": "Created in",
+      "seen": "Geschaffen in"
+    },
+    "models/PhysicalObject/de/incoming/object_created_reverse/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/PhysicalObject/de/name": {
+      "base": "",
+      "source": "Physical object",
+      "seen": "Physisches Objekt"
+    },
+    "models/PhysicalObject/de/plural": {
+      "base": "",
+      "source": "Physical objects",
+      "seen": "Physische Objekte"
+    },
+    "models/PhysicalObject/en/description": {
+      "base": "Any physical object",
+      "source": "Any physical object",
+      "seen": "Any physical object"
+    },
+    "models/PhysicalObject/en/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/PhysicalObject/en/incoming/object_created_reverse/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/PhysicalObject/en/incoming/object_created_reverse/name": {
+      "base": "Object created reverse",
+      "source": "Object created reverse",
+      "seen": "Created in"
+    },
+    "models/PhysicalObject/en/incoming/object_created_reverse/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/PhysicalObject/en/name": {
+      "base": "Physical object",
+      "source": "Physical object",
+      "seen": "Physical object"
+    },
+    "models/PhysicalObject/en/plural": {
+      "base": "",
+      "source": "",
+      "seen": "Physical objects"
+    },
+    "models/PhysicalObject/fr/description": {
+      "base": "",
+      "source": "Any physical object",
+      "seen": "Un objet physique quelconque"
+    },
+    "models/PhysicalObject/fr/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/PhysicalObject/fr/incoming/object_created_reverse/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/PhysicalObject/fr/incoming/object_created_reverse/name": {
+      "base": "",
+      "source": "Created in",
+      "seen": "Créé dans"
+    },
+    "models/PhysicalObject/fr/incoming/object_created_reverse/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/PhysicalObject/fr/name": {
+      "base": "",
+      "source": "Physical object",
+      "seen": "Objet physique"
+    },
+    "models/PhysicalObject/fr/plural": {
+      "base": "",
+      "source": "Physical objects",
+      "seen": "Objets physiques"
     },
     "models/Place/de/description": {
       "base": "",
@@ -3268,7 +4665,7 @@
     "models/Place/fr/fields/coordinates/name": {
       "base": "",
       "source": "Coordinates",
-      "seen": ""
+      "seen": "Coordonnées"
     },
     "models/Place/fr/fields/coordinates/plural": {
       "base": "",
@@ -3288,7 +4685,7 @@
     "models/Place/fr/incoming/places_reverse/name": {
       "base": "",
       "source": "Place of",
-      "seen": ""
+      "seen": "Lieu de"
     },
     "models/Place/fr/incoming/places_reverse/plural": {
       "base": "",
@@ -3298,12 +4695,12 @@
     "models/Place/fr/name": {
       "base": "",
       "source": "Place",
-      "seen": ""
+      "seen": "Lieu"
     },
     "models/Place/fr/plural": {
       "base": "",
       "source": "Places",
-      "seen": ""
+      "seen": "Lieux"
     },
     "models/PositiveSubjunctive/de/description": {
       "base": "",
@@ -3378,7 +4775,7 @@
     "models/PositiveSubjunctive/fr/description": {
       "base": "",
       "source": "It was wished that this should happen (it did not necessarily)",
-      "seen": ""
+      "seen": "On souhaitait que cela arrive (ce n’est pas forcément arrivé)"
     },
     "models/PositiveSubjunctive/fr/fields/contents/help": {
       "base": "",
@@ -3388,7 +4785,7 @@
     "models/PositiveSubjunctive/fr/fields/contents/name": {
       "base": "",
       "source": "Contents",
-      "seen": ""
+      "seen": "Contenu"
     },
     "models/PositiveSubjunctive/fr/fields/contents/plural": {
       "base": "",
@@ -3403,12 +4800,12 @@
     "models/PositiveSubjunctive/fr/name": {
       "base": "",
       "source": "Positive subjunctive",
-      "seen": ""
+      "seen": "Subjonctif positif"
     },
     "models/PositiveSubjunctive/fr/plural": {
       "base": "",
       "source": "Positive subjunctives",
-      "seen": ""
+      "seen": "Subjonctifs positifs"
     },
     "models/Probability/de/description": {
       "base": "",
@@ -3484,7 +4881,7 @@
     "models/Probability/fr/description": {
       "base": "",
       "source": "How likely it is that this is the one meant, out of the alternatives (1 to 100, in per cent)",
-      "seen": ""
+      "seen": "La probabilité que ce soit celui-ci qui soit désigné, parmi les alternatives (de 1 à 100, en pour cent)"
     },
     "models/Probability/fr/fields/percent/help": {
       "base": "",
@@ -3494,7 +4891,7 @@
     "models/Probability/fr/fields/percent/name": {
       "base": "",
       "source": "Percent",
-      "seen": ""
+      "seen": "Pourcentage"
     },
     "models/Probability/fr/fields/percent/plural": {
       "base": "",
@@ -3509,11 +4906,161 @@
     "models/Probability/fr/name": {
       "base": "",
       "source": "Probability",
-      "seen": ""
+      "seen": "Probabilité"
     },
     "models/Probability/fr/plural": {
       "base": "",
       "source": "Probabilities",
+      "seen": "Probabilités"
+    },
+    "models/SameGroup/de/description": {
+      "base": "",
+      "source": "Members of the same group (a family, an order, an army)",
+      "seen": "Mitglieder derselben Gruppe (einer Familie, eines Ordens, eines Heeres)"
+    },
+    "models/SameGroup/de/fields/group/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/SameGroup/de/fields/group/name": {
+      "base": "",
+      "source": "Group",
+      "seen": "Gruppe"
+    },
+    "models/SameGroup/de/fields/group/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/SameGroup/de/fields/member/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/SameGroup/de/fields/member/name": {
+      "base": "",
+      "source": "Member",
+      "seen": "Mitglied"
+    },
+    "models/SameGroup/de/fields/member/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/SameGroup/de/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/SameGroup/de/name": {
+      "base": "",
+      "source": "Same group",
+      "seen": "Gleiche Gruppe"
+    },
+    "models/SameGroup/de/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/SameGroup/en/description": {
+      "base": "Members of the same group (a family, an order, an army)",
+      "source": "Members of the same group (a family, an order, an army)",
+      "seen": "Members of the same group (a family, an order, an army)"
+    },
+    "models/SameGroup/en/fields/group/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/SameGroup/en/fields/group/name": {
+      "base": "Group",
+      "source": "Group",
+      "seen": "Group"
+    },
+    "models/SameGroup/en/fields/group/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/SameGroup/en/fields/member/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/SameGroup/en/fields/member/name": {
+      "base": "Member",
+      "source": "Member",
+      "seen": "Member"
+    },
+    "models/SameGroup/en/fields/member/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/SameGroup/en/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/SameGroup/en/name": {
+      "base": "Same group",
+      "source": "Same group",
+      "seen": "Same group"
+    },
+    "models/SameGroup/en/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/SameGroup/fr/description": {
+      "base": "",
+      "source": "Members of the same group (a family, an order, an army)",
+      "seen": "Membres du même groupe (une famille, un ordre, une armée)"
+    },
+    "models/SameGroup/fr/fields/group/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/SameGroup/fr/fields/group/name": {
+      "base": "",
+      "source": "Group",
+      "seen": "Groupe"
+    },
+    "models/SameGroup/fr/fields/group/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/SameGroup/fr/fields/member/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/SameGroup/fr/fields/member/name": {
+      "base": "",
+      "source": "Member",
+      "seen": "Membre"
+    },
+    "models/SameGroup/fr/fields/member/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/SameGroup/fr/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/SameGroup/fr/name": {
+      "base": "",
+      "source": "Same group",
+      "seen": "Même groupe"
+    },
+    "models/SameGroup/fr/plural": {
+      "base": "",
+      "source": "",
       "seen": ""
     },
     "models/Source/de/description": {
@@ -3681,7 +5228,7 @@
     "models/Source/fr/description": {
       "base": "",
       "source": "A text that makes claims: a chronicle, a letter, a charter",
-      "seen": ""
+      "seen": "Un texte qui affirme des choses : une chronique, une lettre, une charte"
     },
     "models/Source/fr/fields/author/help": {
       "base": "",
@@ -3691,7 +5238,7 @@
     "models/Source/fr/fields/author/name": {
       "base": "",
       "source": "Author",
-      "seen": ""
+      "seen": "Auteur"
     },
     "models/Source/fr/fields/author/plural": {
       "base": "",
@@ -3706,7 +5253,7 @@
     "models/Source/fr/fields/edition_price/name": {
       "base": "",
       "source": "Edition price",
-      "seen": ""
+      "seen": "Prix de l’édition"
     },
     "models/Source/fr/fields/edition_price/plural": {
       "base": "",
@@ -3721,7 +5268,7 @@
     "models/Source/fr/fields/written/name": {
       "base": "",
       "source": "Written",
-      "seen": ""
+      "seen": "Rédigé"
     },
     "models/Source/fr/fields/written/plural": {
       "base": "",
@@ -3741,7 +5288,7 @@
     "models/Source/fr/incoming/source_reverse/name": {
       "base": "",
       "source": "Source of",
-      "seen": ""
+      "seen": "Source de"
     },
     "models/Source/fr/incoming/source_reverse/plural": {
       "base": "",
@@ -3751,12 +5298,12 @@
     "models/Source/fr/name": {
       "base": "",
       "source": "Source",
-      "seen": ""
+      "seen": "Source"
     },
     "models/Source/fr/plural": {
       "base": "",
       "source": "Sources",
-      "seen": ""
+      "seen": "Sources"
     },
     "models/Statement/de/description": {
       "base": "",
@@ -3952,7 +5499,7 @@
     "models/Statement/fr/description": {
       "base": "",
       "source": "Something that happened between agents and in places (abstract: a kind of\nstatement is one of the classes below)",
-      "seen": ""
+      "seen": "Quelque chose qui s’est passé entre des agents et en des lieux (abstrait : un genre d’énoncé est l’une des classes ci-dessous)"
     },
     "models/Statement/fr/fields/date/help": {
       "base": "",
@@ -3962,7 +5509,7 @@
     "models/Statement/fr/fields/date/name": {
       "base": "",
       "source": "Date",
-      "seen": ""
+      "seen": "Date"
     },
     "models/Statement/fr/fields/date/plural": {
       "base": "",
@@ -3977,7 +5524,7 @@
     "models/Statement/fr/fields/involves/name": {
       "base": "",
       "source": "Involves",
-      "seen": ""
+      "seen": "Implique"
     },
     "models/Statement/fr/fields/involves/plural": {
       "base": "",
@@ -3992,7 +5539,7 @@
     "models/Statement/fr/fields/places/name": {
       "base": "",
       "source": "Places",
-      "seen": ""
+      "seen": "Lieux"
     },
     "models/Statement/fr/fields/places/plural": {
       "base": "",
@@ -4007,7 +5554,7 @@
     "models/Statement/fr/fields/text/name": {
       "base": "",
       "source": "Text",
-      "seen": ""
+      "seen": "Texte"
     },
     "models/Statement/fr/fields/text/plural": {
       "base": "",
@@ -4022,7 +5569,7 @@
     "models/Statement/fr/fields/year/name": {
       "base": "",
       "source": "Year",
-      "seen": ""
+      "seen": "Année"
     },
     "models/Statement/fr/fields/year/plural": {
       "base": "",
@@ -4037,12 +5584,12 @@
     "models/Statement/fr/name": {
       "base": "",
       "source": "Statement",
-      "seen": ""
+      "seen": "Énoncé"
     },
     "models/Statement/fr/plural": {
       "base": "",
       "source": "Statements",
-      "seen": ""
+      "seen": "Énoncés"
     },
     "models/Transfer/de/description": {
       "base": "",
@@ -4208,7 +5755,7 @@
     "models/Transfer/fr/description": {
       "base": "",
       "source": "Something passed from one agent to another",
-      "seen": ""
+      "seen": "Quelque chose est passé d’un agent à un autre"
     },
     "models/Transfer/fr/fields/given_by/help": {
       "base": "",
@@ -4218,7 +5765,7 @@
     "models/Transfer/fr/fields/given_by/name": {
       "base": "",
       "source": "Given by",
-      "seen": ""
+      "seen": "Donné par"
     },
     "models/Transfer/fr/fields/given_by/plural": {
       "base": "",
@@ -4233,7 +5780,7 @@
     "models/Transfer/fr/fields/given_to/name": {
       "base": "",
       "source": "Given to",
-      "seen": ""
+      "seen": "Donné à"
     },
     "models/Transfer/fr/fields/given_to/plural": {
       "base": "",
@@ -4248,7 +5795,7 @@
     "models/Transfer/fr/fields/item/name": {
       "base": "",
       "source": "Item",
-      "seen": ""
+      "seen": "Objet"
     },
     "models/Transfer/fr/fields/item/plural": {
       "base": "",
@@ -4263,7 +5810,7 @@
     "models/Transfer/fr/fields/quantity/name": {
       "base": "",
       "source": "Quantity",
-      "seen": ""
+      "seen": "Quantité"
     },
     "models/Transfer/fr/fields/quantity/plural": {
       "base": "",
@@ -4278,12 +5825,12 @@
     "models/Transfer/fr/name": {
       "base": "",
       "source": "Transfer",
-      "seen": ""
+      "seen": "Transfert"
     },
     "models/Transfer/fr/plural": {
       "base": "",
       "source": "Transfers",
-      "seen": ""
+      "seen": "Transferts"
     },
     "models/WithCertainty/de/description": {
       "base": "",
@@ -4388,7 +5935,7 @@
     "models/WithCertainty/fr/description": {
       "base": "",
       "source": "A value, with how certain it is (1 to 5)",
-      "seen": ""
+      "seen": "Une valeur, avec son degré de certitude (de 1 à 5)"
     },
     "models/WithCertainty/fr/fields/certainty/help": {
       "base": "",
@@ -4398,7 +5945,7 @@
     "models/WithCertainty/fr/fields/certainty/name": {
       "base": "",
       "source": "Certainty",
-      "seen": ""
+      "seen": "Certitude"
     },
     "models/WithCertainty/fr/fields/certainty/plural": {
       "base": "",
@@ -4413,7 +5960,7 @@
     "models/WithCertainty/fr/fields/value/name": {
       "base": "",
       "source": "Value",
-      "seen": ""
+      "seen": "Valeur"
     },
     "models/WithCertainty/fr/fields/value/plural": {
       "base": "",
@@ -4428,12 +5975,12 @@
     "models/WithCertainty/fr/name": {
       "base": "",
       "source": "With certainty",
-      "seen": ""
+      "seen": "Avec certitude"
     },
     "models/WithCertainty/fr/plural": {
       "base": "",
       "source": "With certainties",
-      "seen": ""
+      "seen": "Avec certitudes"
     }
   }
 }

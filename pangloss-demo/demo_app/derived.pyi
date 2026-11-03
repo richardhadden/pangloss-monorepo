@@ -7,7 +7,8 @@ import pangloss_derived.views
 import pangloss_models.search
 import typing
 
-from pangloss_derived import Derived, RuleType, Var, rule
+from typing import Annotated
+from pangloss_derived import Derived, RuleType, SymmetricLabel, Var, rule
 from demo_app.models import Activity, Agent, Group, MemberOf, Person, Transfer
 family = ...
 social = ...
@@ -15,7 +16,7 @@ exchange = ...
 
 class SameGroup(Derived):
     _meta = ...
-    first: Person
+    first: Annotated[Person, SymmetricLabel('member')]
     second: Person
     group: Group
     class Derive(pangloss_derived.check.DeriveBase):  # type: ignore
@@ -41,7 +42,7 @@ def same_group(a: Var[Person], b: Var[Person], group: Var[Group]):
 
 class CoParticipants(Derived):
     _meta = ...
-    first: Agent
+    first: Annotated[Agent, SymmetricLabel('participant')]
     second: Agent
     class Derive(pangloss_derived.check.DeriveBase):  # type: ignore
         first: pangloss_models.search.Var[demo_app.models.Agent]

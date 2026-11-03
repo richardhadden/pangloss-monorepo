@@ -249,6 +249,38 @@ def symmetric_fields(model: type[Derived]) -> tuple[str, str] | None:
     return pair  # type: ignore[return-value]
 
 
+def symmetric_label(model: type[Derived]) -> str | None:
+    """The name its symmetric fields share in the interface (`Annotated[Person, SymmetricLabel("member")]`), if any"""
+    from pangloss_derived.declare import SymmetricLabel
+
+    hints = typing.get_type_hints(model, include_extras=True)
+    labels = {
+        name: [
+            m.name
+            for m in getattr(hints[name], "__metadata__", ())
+            if isinstance(m, SymmetricLabel)
+        ]
+        for name in hints
+    }
+    pair = symmetric_fields(model)
+    if pair is None:
+        if any(labels.values()):
+            raise PanglossDerivedError(
+                f"{model.__name__}: a SymmetricLabel is for the fields of a symmetric class"
+            )
+        return None
+    if any(found for name, found in labels.items() if name not in pair):
+        raise PanglossDerivedError(
+            f"{model.__name__}: a SymmetricLabel is for the symmetric fields {pair}, not another"
+        )
+    found = {label for name in pair for label in labels[name]}
+    if len(found) > 1:
+        raise PanglossDerivedError(
+            f"{model.__name__}: the symmetric fields {pair} have different SymmetricLabels: {sorted(found)}"
+        )
+    return found.pop() if found else None
+
+
 def ends_of(model: type[Derived]) -> tuple[str, str]:
     """The two fields that are an edge, when the facts are made a graph"""
     if model._meta.ends:
@@ -306,7 +338,7 @@ def initialise_classes() -> None:
     for model in DerivedRegistry.classes.values():
         model._fields = derived_fields(model)
     for model in DerivedRegistry.classes.values():
-        symmetric_fields(model)
+        model._symmetric_label = symmetric_label(model)
         if not model._meta.abstract:
             ends_of(model)
         make_derive(model)

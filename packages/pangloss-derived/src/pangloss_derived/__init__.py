@@ -21,6 +21,7 @@ from pangloss_derived.declare import (
     DerivedMeta,
     Rule,
     RuleType,
+    SymmetricLabel,
     between,
     distinct,
     gt,
@@ -40,6 +41,7 @@ __all__ = [
     "PanglossDerivedError",
     "Rule",
     "RuleType",
+    "SymmetricLabel",
     "Var",
     "between",
     "distinct",
@@ -122,6 +124,34 @@ async def derived_section(owner: type, view: object) -> dict:
     return await section(owner, view)
 
 
+def translatable_models() -> list[hooks.TranslatableModel]:
+    """(`hooks.translatable_models`) the derived classes, for the interface's translation files: their names, the
+    names of their fields (the two symmetric ones as one, by their `SymmetricLabel`), and their `reverse_names`"""
+    from pangloss_derived.check import symmetric_fields
+
+    found = []
+    for name, model in DerivedRegistry.concrete_classes().items():
+        label = model._symmetric_label
+        pair = symmetric_fields(model) if label else None
+        fields: dict[str, tuple[str, str]] = {}
+        for field in model._fields:
+            if label and pair and field in pair:
+                fields.setdefault(label, ("", ""))
+            else:
+                fields[field] = ("", "")
+        found.append(
+            hooks.TranslatableModel(
+                name=name,
+                module=model.__module__,
+                kind="Derived",
+                description=(model.__doc__ or "").strip(),
+                fields=fields,
+                incoming=tuple(sorted(set(model._meta.reverse_names.values()))),
+            )
+        )
+    return found
+
+
 def _install() -> None:
     # (nothing of the database is imported here: a client of the SDK imports this package with the models)
     if initialise in ModelRegistry.after_finalise:
@@ -137,6 +167,7 @@ def _install() -> None:
     hooks.pending_work.append(pending_work_of)
     hooks.after_write.append(wake_worker)
     hooks.head_view_extras.append(derived_section)
+    hooks.translatable_models.append(translatable_models)
 
 
 _install()

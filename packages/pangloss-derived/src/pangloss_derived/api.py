@@ -61,6 +61,7 @@ async def schema() -> dict[str, Any]:
                 for f in model._fields.values()
             },
             "symmetric": bool(model._meta.symmetric),
+            "symmetricLabel": read.symmetric_label_of(model),
             "ends": list(ends_of(model)),
         }
     rules = {

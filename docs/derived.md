@@ -46,7 +46,12 @@ def same_group(a: Var[Person], b: Var[Person], group: Var[Group]):
   `symmetric` (two fields whose order does not matter: stored once, in order of id, never a thing with itself), `ends`
   (the two fields that are the edge in a graph; by default the symmetric two, or the first two relations),
   `max_per_seed` (10,000: the most justifications one written document may give; past it none of them is written, and
-  it is counted), `abstract`, `reverse_names`.
+  it is counted), `abstract`, `reverse_names`. The two symmetric fields need names (`first`, `second`), but they mean
+  nothing to a reader: give them one name for the interface with `SymmetricLabel`, on either field
+  (`first: Annotated[Person, SymmetricLabel("member")]`). It is translated as a field's name is.
+- **Translations:** each concrete derived class goes in its app's `translations/models.jsonc` as a model does (`pangloss
+  interface translations generate`): its name, its description (the docstring), its fields (the two symmetric ones as
+  the one `SymmetricLabel`), and its `reverse_names` as incoming names.
 - **A rule** is a function whose parameters are its variables (`a: Var[Person]`), giving `Class.Derive(...)` (the head)
   `.when(...)` (the body). The body is patterns, each a model's `Where`, with a variable where a value or an entity would
   be: a variable used twice joins. Every `Where` has `is_` (the node itself), so two patterns can be about one node:
@@ -130,7 +135,7 @@ plain ("only from a negated statement"). Nothing is filtered by default.
 | `GET /api/derived/graph/{type}?plain=true` | the graph of a type |
 | `GET /api/derived/status` | what is pending, the state of each rule, what the worker did |
 | `GET /api/Person/{id}` | has `_derived`: for each class, a count and a first page (the other end and the field it is in, `otherField`; the other fields) |
-| `GET /api/Factoid/{id}` | has `_derived` too: what the document is evidence of |
+| `GET /api/Factoid/{id}` | has `_derived` only of facts with a field that points at the document, not what it is evidence of (that is what it says itself; `list(evidence=...)` gives it) |
 
 The same functions work through the SDK (they ask the API; blocking with `connect(sync=True)`, as the models' own
 are). The interface shows `_derived` under an item's contents, a page at a time, with "why" on demand.
