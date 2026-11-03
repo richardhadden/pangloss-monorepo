@@ -1,7 +1,7 @@
 import { createContext, createSignal, createStore, snapshot, useContext } from "solid-js";
 import type { Accessor, ParentProps } from "solid-js";
 import { getAt, removeAt, setAt } from "../schema";
-import type { FieldProblem, FormBinder, FormData, Path } from "../schema";
+import type { FieldProblem, FormData, FormHook, Path } from "../schema";
 
 /** A problem, and the row of the form it is shown at (none: it is told elsewhere, in the toast) */
 export interface PlacedProblem {
@@ -48,8 +48,11 @@ export interface ItemFormOptions {
    * instead: what a new item in this form starts with (see `fillEmbedded`)
    */
   fill?: (item: FormData) => FormData;
-  /** The bindings of the models: a field copied to the fields of what its relation holds, as it changes (`createBinder`) */
-  binder?: FormBinder;
+  /**
+   * What is done around each change: the bindings of the models (a field copied to the fields of what its relation
+   * holds, as it changes: `createBinder`) and their shares (`createSharer`), as one (`composeHooks`)
+   */
+  binder?: FormHook<unknown>;
 }
 
 /** Starts from a copy of `initial` */

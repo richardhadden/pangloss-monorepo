@@ -1,6 +1,6 @@
 import { createRoot, flush } from "solid-js";
 import { expect, test } from "vitest";
-import { createBinder } from "../schema";
+import { createBinder, createFormHooks } from "../schema";
 import type { FieldProblem, FormData } from "../schema";
 import type { ModelDefinitions } from "../types";
 import { createItemFormState } from "./form";
@@ -160,4 +160,88 @@ test("a reified relation is copied as a new one (without its id), and still foll
   expect(state.get(givenBy)).toEqual({ type: "Named", target: [person("a")] });
   state.set(["orderedTo", "target", 0], person("b"));
   expect(state.get(givenBy)).toEqual({ type: "Named", target: [person("b")] });
+});
+
+// (the alternatives' percentages add up to 100: `SumsTo("percent")`, each at least 1)
+const shared = {
+  models: {
+    Identification: model("Identification", "ReifiedRelation", [relation("target", { many: true })]),
+    Alternative: model("Alternative", "Conjunction", [
+      relation("alternatives", {
+        many: true,
+        options: [{ kind: "typeVar", name: "T", edgeModel: "Probability" }],
+        validators: [{ name: "SumsTo", field: "percent", total: 100 }],
+      }),
+    ]),
+    Probability: model("Probability", "EdgeModel", [
+      { name: "percent", key: "percent", kind: "literal", validators: [{ name: "Ge", ge: 1 }, { name: "Le", le: 100 }] },
+    ]),
+    Person: model("Person", "Entity"),
+  },
+  enums: {},
+} as unknown as ModelDefinitions;
+const alternatives = ["alternatives"];
+const percents = (state: ReturnType<typeof createItemFormState>) =>
+  ((state.get(alternatives) as FormData[] | undefined) ?? []).map(
+    (each) => (each.edgeProperties as FormData | undefined)?.percent,
+  );
+
+test("alternatives added share the whole evenly, and the others give way in proportion", () => {
+  const state = createItemFormState({ type: "Alternative" }, { binder: createFormHooks(shared) });
+  state.set([...alternatives, 0], { type: "Person" });
+  expect(percents(state)).toEqual([100]);
+  state.set([...alternatives, 1], { type: "Person" });
+  expect(percents(state)).toEqual([50, 50]);
+  state.set([...alternatives, 0, "edgeProperties", "percent"], 80);
+  expect(percents(state)).toEqual([80, 20]);
+  state.set([...alternatives, 2], { type: "Person" });
+  expect(percents(state)).toEqual([53, 14, 33]);
+});
+
+test("dragging one, the others give way in proportion; taking one away, the others share the whole", () => {
+  const start = [60, 30, 10].map((percent, at) => ({ ...person(`p${at}`), edgeProperties: { percent } }));
+  const state = createItemFormState({ type: "Alternative", alternatives: start }, { binder: createFormHooks(shared) });
+  state.set([...alternatives, 0, "edgeProperties", "percent"], 80);
+  expect(percents(state)).toEqual([80, 15, 5]);
+  // (not more than leaves each of the others 1)
+  state.set([...alternatives, 1, "edgeProperties", "percent"], 100);
+  expect(percents(state)).toEqual([1, 98, 1]);
+  state.remove([...alternatives, 1]);
+  expect(percents(state)).toEqual([50, 50]);
+  // (the edge properties set as a whole: the same)
+  state.set([...alternatives, 1, "edgeProperties"], { percent: 30 });
+  expect(percents(state)).toEqual([70, 30]);
+});
+
+test("an entity chosen for an alternative keeps its share, and a number being typed waits", () => {
+  const state = createItemFormState(
+    { type: "Alternative", alternatives: [{ type: "Person", edgeProperties: { percent: 70 } }, { type: "Person", edgeProperties: { percent: 30 } }] },
+    { binder: createFormHooks(shared) },
+  );
+  state.set([...alternatives, 0], person("a"));
+  expect(percents(state)).toEqual([70, 30]);
+  expect(state.get([...alternatives, 0, "id"])).toBe("a");
+  state.set([...alternatives, 1, "edgeProperties", "percent"], "");
+  expect(percents(state)).toEqual([70, ""]);
+});
+
+test("an alternative there from the start, with no share, is given one when its entity is chosen", () => {
+  const state = createItemFormState({ type: "Alternative", alternatives: [{ type: "Person" }] }, { binder: createFormHooks(shared) });
+  state.set([...alternatives, 0], person("a"));
+  expect(percents(state)).toEqual([100]);
+  state.set([...alternatives, 1], { type: "Person" });
+  state.set([...alternatives, 1], person("b"));
+  expect(percents(state)).toEqual([50, 50]);
+});
+
+test("the shares are kept where the conjunction is deep in the item", () => {
+  const state = createItemFormState(
+    { type: "Identification", target: [{ type: "Alternative", alternatives: [] }] },
+    { binder: createFormHooks(shared) },
+  );
+  const deep = ["target", 0, "alternatives"];
+  state.set([...deep, 0], { type: "Person" });
+  state.set([...deep, 1], { type: "Person" });
+  state.set([...deep, 1, "edgeProperties", "percent"], 25);
+  expect((state.get(deep) as FormData[]).map((each) => (each.edgeProperties as FormData).percent)).toEqual([75, 25]);
 });

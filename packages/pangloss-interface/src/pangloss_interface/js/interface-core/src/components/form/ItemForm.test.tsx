@@ -141,6 +141,25 @@ const definitions = {
         { ...(relation("attendees", [inRole, identification]) as object), defaultReifiedType: "InRole" } as FieldDefinition,
       ],
     }),
+    // (who it was, each with how likely: `SumsTo("percent")`, edited with sliders, `Slider()`)
+    Probability: model("Probability", {
+      kind: "EdgeModel",
+      fields: [
+        literal("percent", { type: "int" }, {
+          required: true,
+          validators: [{ name: "Ge", ge: 1 }, { name: "Le", le: 100 }],
+          markers: [{ name: "Slider" }],
+        }),
+      ],
+    }),
+    Suspicion: model("Suspicion", {
+      fields: [
+        {
+          ...relation("suspects", [{ kind: "entity", type: "Person", edgeModel: "Probability" }]),
+          validators: [{ name: "SumsTo", field: "percent", total: 100 }],
+        } as FieldDefinition,
+      ],
+    }),
     Factoid: model("Factoid", {
       fields: [
         literal("year", { type: "int" }, { required: true }),
@@ -996,4 +1015,31 @@ test("with a default reified type, an entity found is put in it, and the other r
   click(button("Save"));
   await settle();
   expect(sent.at(-1)!.body.attendees).toEqual([{ type: "InRole", target: [{ type: "Person", id: "p1" }], role: "chair" }]);
+});
+
+test("shares are edited with sliders that give way to each other, and are sent as they are", async () => {
+  const { client, sent } = fakeClient(() => ({ id: "s1", type: "Suspicion", label: "S" }));
+  const suspect = (id: string, label: string, percent: number) => ({ type: "Person", id, label, edgeProperties: { percent } });
+  show(client, {
+    type: "Suspicion",
+    initial: { type: "Suspicion", label: "Who", suspects: [suspect("p1", "Alice", 50), suspect("p2", "Bob", 50)] },
+  });
+  await settle();
+  const sliders = () => [...document.body.querySelectorAll<HTMLInputElement>('input[type="range"]')];
+  expect(sliders().map((slider) => [slider.min, slider.max, slider.step, slider.value])).toEqual([
+    ["1", "100", "1", "50"],
+    ["1", "100", "1", "50"],
+  ]);
+  sliders()[0]!.value = "70";
+  sliders()[0]!.dispatchEvent(new InputEvent("input", { bubbles: true }));
+  await settle();
+  expect(sliders().map((slider) => slider.value)).toEqual(["70", "30"]);
+  // (the box beside each says the same)
+  expect([...document.body.querySelectorAll<HTMLInputElement>('input[type="number"]')].map((box) => box.value)).toEqual(["70", "30"]);
+  click(button("Save"));
+  await settle();
+  expect(sent[0]!.body.suspects).toEqual([
+    { type: "Person", id: "p1", edgeProperties: { percent: 70 } },
+    { type: "Person", id: "p2", edgeProperties: { percent: 30 } },
+  ]);
 });

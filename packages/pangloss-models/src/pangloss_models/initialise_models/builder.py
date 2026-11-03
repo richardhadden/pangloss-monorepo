@@ -463,7 +463,8 @@ def _build_generic_model(
                 FieldInfo(
                     annotation=wrap_in_union(kind, definition, types),
                     validation_alias=to_camel(name),
-                    metadata=definition.validators,  # type: ignore[arg-type]
+                    # (as for the fields of any model: `metadata=` would not be applied)
+                    **map_validators_to_kwargs(definition.validators),
                     discriminator="type"
                     if kind.discriminated and not definition.wrapper
                     else None,

@@ -12,7 +12,7 @@ import {
   useTranslations,
 } from "../../context";
 import { ConsoleButton } from "../../primitives";
-import { cleanForSave, createBinder, getModel } from "../../schema";
+import { cleanForSave, createFormHooks, getModel } from "../../schema";
 import type { FormData } from "../../schema";
 import type { ItemFormProps } from "../../types";
 import { ItemFields } from "./ModelFields";
@@ -34,7 +34,7 @@ export function ItemForm(props: ItemFormProps) {
   const { t, modelName } = useTranslations();
   const state = createItemFormState(untrack(() => props.initial), {
     headId: untrack(() => (props.version === undefined ? undefined : String(props.initial.id))),
-    binder: createBinder(definitions),
+    binder: createFormHooks(definitions),
   });
   const model = () => getModel(definitions, props.type);
   // (while a save is being sent: it goes back to false when the save is over, whatever the answer)

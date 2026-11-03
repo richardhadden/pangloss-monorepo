@@ -23,6 +23,7 @@ from pangloss_models.model_bases.reified_relation import (
     ReifiedRelationDocument,
 )
 from pangloss_models.model_bases.semantic_space import SemanticSpace
+from pangloss_models.validators import SumsTo
 
 # The kinds of declared model that have the models made from them (`Create`, `View`, ...)
 MODEL_KINDS_WITH_ACTION_MODELS = (
@@ -95,7 +96,41 @@ def get_model_validators(model, ids: bool, declared: bool) -> dict[str, Any]:
                 _apply_markers(markers)
             )
 
+        shares = {
+            name: found
+            for name, definition in model._meta.fields.relation_fields.items()
+            if (found := [v for v in definition.validators if isinstance(v, SumsTo)])
+        }
+        if shares:
+            validators["check_shares"] = model_validator(mode="after")(
+                _check_shares(shares)
+            )
+
     return validators
+
+
+def _check_shares(shares: dict[str, list[SumsTo]]):
+    def check_shares(self):
+        for name, found in shares.items():
+            items = getattr(self, name, None) or []
+            for sums_to in found:
+                given = [
+                    getattr(getattr(item, "edge_properties", None), sums_to.field, None)
+                    for item in items
+                ]
+                if not items:
+                    continue
+                if any(value is None for value in given):
+                    raise ValueError(
+                        f"every one of {name} needs its {sums_to.field} (they add up to {sums_to.total})"
+                    )
+                if sum(given) != sums_to.total:
+                    raise ValueError(
+                        f"the {sums_to.field} of {name} add up to {sum(given)}, not {sums_to.total}"
+                    )
+        return self
+
+    return check_shares
 
 
 def _apply_markers(markers: dict[str, tuple[Any, ...]]):

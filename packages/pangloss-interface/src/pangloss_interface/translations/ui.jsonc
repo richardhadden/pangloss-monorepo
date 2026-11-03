@@ -155,6 +155,7 @@
   "invalid_too_long": { "en": "At most {n} characters", "de": "Höchstens {n} Zeichen", "fr": "Au plus {n} caractères" },
   "invalid_too_few": { "en": "At least {n} needed", "de": "Mindestens {n} erforderlich", "fr": "Au moins {n} requis" },
   "invalid_too_many": { "en": "At most {n} allowed", "de": "Höchstens {n} erlaubt", "fr": "Au plus {n} autorisés" },
+  "invalid_shares_total": { "en": "Must add up to {n} (now {sum})", "de": "Muss zusammen {n} ergeben (jetzt {sum})", "fr": "Le total doit être {n} (actuellement {sum})" },
   "invalid_too_small": { "en": "Must be {n} or more", "de": "Muss mindestens {n} sein", "fr": "Doit être supérieur ou égal à {n}" },
   "invalid_must_exceed": { "en": "Must be more than {n}", "de": "Muss größer als {n} sein", "fr": "Doit être supérieur à {n}" },
   "invalid_too_large": { "en": "Must be {n} or less", "de": "Darf höchstens {n} sein", "fr": "Doit être inférieur ou égal à {n}" },

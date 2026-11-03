@@ -20,6 +20,7 @@ SHIPPED = {
     "pangloss_calendar": ["0001_initial", "0002", "0003", "0004"],
     "pangloss_zotero": ["0001_initial"],
     "pangloss_derived": ["0001_initial"],
+    "pangloss_library": ["0001_initial"],
 }
 
 # (run alone: the models of this test session are not those of a project)
@@ -33,7 +34,7 @@ CHECK = textwrap.dedent(
     from pangloss_models.migrations.planner import plan
     from pangloss_models.migrations.startup import structure_of
     from pangloss_memgraph.databases.memgraph import migration_backend
-    import pangloss_calendar.models, pangloss_zotero.models
+    import pangloss_calendar.models, pangloss_zotero.models, pangloss_library.models
 
     from pangloss_core.settings import BaseSettings
     from pangloss_memgraph.databases.memgraph.settings import MemgraphDatabaseSettings

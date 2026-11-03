@@ -302,3 +302,31 @@ test("a field the server works out (a DBField) is not required of the form, what
   expect(validateItem(worked, { type: "Recurrence", frequency: "yearly" })).toEqual([]);
   expect(validateItem(worked, { type: "Recurrence" }).map((problem) => problem.path.join("."))).toEqual(["frequency"]);
 });
+
+test("the shares of a relation's items add up to its total (`SumsTo`): at the list, as the server refuses it", () => {
+  const shared = {
+    models: {
+      Suspicion: model("Suspicion", {
+        fields: [
+          relation("suspects", [entity("Person", "Probability")], {
+            validators: [{ name: "SumsTo", field: "percent", total: 100 }],
+          }),
+        ],
+      }),
+      Person: model("Person", { kind: "Entity", requireLabel: true }),
+      Probability: model("Probability", {
+        kind: "EdgeModel",
+        fields: [literal("percent", { type: "int" }, { ...required, validators: [{ name: "Ge", ge: 1 }, { name: "Le", le: 100 }] })],
+      }),
+    },
+    enums: {},
+  } as unknown as ModelDefinitions;
+  const suspect = (id: string, percent: number) => ({ type: "Person", id, edgeProperties: { percent } });
+  const check = (suspects: unknown[]) =>
+    validateItem(shared, { type: "Suspicion", suspects }).map((problem) => [problem.path.join("."), problem.code, problem.params]);
+  expect(check([suspect("a", 60), suspect("b", 40)])).toEqual([]);
+  expect(check([])).toEqual([]);
+  expect(check([suspect("a", 60), suspect("b", 30)])).toEqual([["suspects", "shares_total", { n: 100, sum: 90 }]]);
+  // (one not chosen yet is not sent, and not counted)
+  expect(check([suspect("a", 100), { type: "Person", edgeProperties: { percent: 20 } }])).toEqual([]);
+});

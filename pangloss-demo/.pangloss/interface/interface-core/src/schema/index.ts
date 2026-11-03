@@ -43,6 +43,8 @@ export * from "./hierarchy";
 export * from "./typeChoices";
 export * from "./formValue";
 export * from "./binding";
+export * from "./share";
+export * from "./sharing";
 export * from "./relationLayout";
 export * from "./clipboard";
 export * from "./retype";

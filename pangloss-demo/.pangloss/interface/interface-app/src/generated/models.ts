@@ -38,7 +38,8 @@ export const definitions: ModelDefinitions = {
               "name": "MinLen",
               "min_length": 5
             }
-          ]
+          ],
+          "markers": []
         },
         {
           "name": "date",
@@ -94,7 +95,8 @@ export const definitions: ModelDefinitions = {
             "type": "enum",
             "enum": "ActivityType"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "carried_out_by",
@@ -172,7 +174,7 @@ export const definitions: ModelDefinitions = {
       "name": "Alternative",
       "kind": "Conjunction",
       "abstract": false,
-      "description": "One of several things, not known which: any number of statements or entities.\n`Alternative[ViaEdge[Person, Probability]]` gives each person how likely it is the one meant",
+      "description": "One of several things, not known which: any number of statements or entities,\neach with how likely it is the one meant (`Alternative[Person]`)",
       "parent": null,
       "concreteTypes": [
         "Alternative"
@@ -200,10 +202,16 @@ export const definitions: ModelDefinitions = {
             {
               "kind": "typeVar",
               "name": "T",
-              "edgeModel": null
+              "edgeModel": "Probability"
             }
           ],
-          "validators": [],
+          "validators": [
+            {
+              "name": "SumsTo",
+              "field": "percent",
+              "total": 100
+            }
+          ],
           "subclasses": [],
           "defaultReifiedType": null,
           "bindings": []
@@ -297,7 +305,16 @@ export const definitions: ModelDefinitions = {
               "edgeModel": null
             }
           ],
-          "validators": [],
+          "validators": [
+            {
+              "name": "MinLen",
+              "min_length": 1
+            },
+            {
+              "name": "MaxLen",
+              "max_length": 1
+            }
+          ],
           "subclasses": [],
           "defaultReifiedType": null,
           "bindings": []
@@ -313,7 +330,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "str"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         }
       ],
       "incoming": [],
@@ -425,7 +443,8 @@ export const definitions: ModelDefinitions = {
               "name": "Ge",
               "ge": 1
             }
-          ]
+          ],
+          "markers": []
         }
       ],
       "incoming": [],
@@ -464,7 +483,8 @@ export const definitions: ModelDefinitions = {
               "name": "MinLen",
               "min_length": 5
             }
-          ]
+          ],
+          "markers": []
         },
         {
           "name": "date",
@@ -597,7 +617,8 @@ export const definitions: ModelDefinitions = {
               "name": "MinLen",
               "min_length": 5
             }
-          ]
+          ],
+          "markers": []
         },
         {
           "name": "date",
@@ -728,7 +749,8 @@ export const definitions: ModelDefinitions = {
               "name": "MinLen",
               "min_length": 5
             }
-          ]
+          ],
+          "markers": []
         },
         {
           "name": "date",
@@ -866,7 +888,8 @@ export const definitions: ModelDefinitions = {
             "type": "enum",
             "enum": "Calendar"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "source_text",
@@ -879,7 +902,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "str"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "sort_by",
@@ -893,7 +917,8 @@ export const definitions: ModelDefinitions = {
             "type": "enum",
             "enum": "SortBy"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "precision",
@@ -907,7 +932,8 @@ export const definitions: ModelDefinitions = {
             "type": "enum",
             "enum": "Precision"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "earliest_fuzzy",
@@ -920,7 +946,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "int"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "earliest_strict",
@@ -933,7 +960,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "int"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "latest_strict",
@@ -946,7 +974,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "int"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "latest_fuzzy",
@@ -959,7 +988,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "int"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "sort_day",
@@ -972,7 +1002,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "int"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "end_sort_day",
@@ -985,7 +1016,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "int"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         }
       ],
       "incoming": [],
@@ -1073,7 +1105,8 @@ export const definitions: ModelDefinitions = {
             "type": "enum",
             "enum": "Calendar"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "source_text",
@@ -1086,7 +1119,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "str"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "sort_by",
@@ -1100,7 +1134,8 @@ export const definitions: ModelDefinitions = {
             "type": "enum",
             "enum": "SortBy"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "precision",
@@ -1114,7 +1149,8 @@ export const definitions: ModelDefinitions = {
             "type": "enum",
             "enum": "Precision"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "earliest_fuzzy",
@@ -1127,7 +1163,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "int"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "earliest_strict",
@@ -1140,7 +1177,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "int"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "latest_strict",
@@ -1153,7 +1191,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "int"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "latest_fuzzy",
@@ -1166,7 +1205,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "int"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "sort_day",
@@ -1179,7 +1219,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "int"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "end_sort_day",
@@ -1192,7 +1233,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "int"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "earliest",
@@ -1269,7 +1311,8 @@ export const definitions: ModelDefinitions = {
             "type": "enum",
             "enum": "Calendar"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "source_text",
@@ -1282,7 +1325,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "str"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "sort_by",
@@ -1296,7 +1340,8 @@ export const definitions: ModelDefinitions = {
             "type": "enum",
             "enum": "SortBy"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "precision",
@@ -1310,7 +1355,8 @@ export const definitions: ModelDefinitions = {
             "type": "enum",
             "enum": "Precision"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "earliest_fuzzy",
@@ -1323,7 +1369,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "int"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "earliest_strict",
@@ -1336,7 +1383,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "int"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "latest_strict",
@@ -1349,7 +1397,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "int"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "latest_fuzzy",
@@ -1362,7 +1411,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "int"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "sort_day",
@@ -1375,7 +1425,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "int"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "end_sort_day",
@@ -1388,7 +1439,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "int"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "edtf",
@@ -1401,7 +1453,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "str"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         }
       ],
       "incoming": [],
@@ -1450,7 +1503,8 @@ export const definitions: ModelDefinitions = {
             "type": "enum",
             "enum": "Calendar"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "source_text",
@@ -1463,7 +1517,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "str"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "sort_by",
@@ -1477,7 +1532,8 @@ export const definitions: ModelDefinitions = {
             "type": "enum",
             "enum": "SortBy"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "precision",
@@ -1491,7 +1547,8 @@ export const definitions: ModelDefinitions = {
             "type": "enum",
             "enum": "Precision"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "earliest_fuzzy",
@@ -1504,7 +1561,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "int"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "earliest_strict",
@@ -1517,7 +1575,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "int"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "latest_strict",
@@ -1530,7 +1589,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "int"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "latest_fuzzy",
@@ -1543,7 +1603,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "int"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "sort_day",
@@ -1556,7 +1617,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "int"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "end_sort_day",
@@ -1569,7 +1631,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "int"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "year",
@@ -1582,7 +1645,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "int"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "month",
@@ -1595,7 +1659,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "int"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "day",
@@ -1608,7 +1673,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "int"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         }
       ],
       "incoming": [],
@@ -1962,7 +2028,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "str"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "rank",
@@ -1975,7 +2042,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "str"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         }
       ],
       "incoming": [],
@@ -2017,7 +2085,8 @@ export const definitions: ModelDefinitions = {
               "name": "MaxLen",
               "max_length": 100
             }
-          ]
+          ],
+          "markers": []
         }
       ],
       "incoming": [
@@ -2234,7 +2303,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "str"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         }
       ],
       "incoming": [],
@@ -2299,7 +2369,8 @@ export const definitions: ModelDefinitions = {
             "type": "enum",
             "enum": "Role"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         }
       ],
       "incoming": [],
@@ -2337,7 +2408,8 @@ export const definitions: ModelDefinitions = {
               "name": "MinLen",
               "min_length": 5
             }
-          ]
+          ],
+          "markers": []
         },
         {
           "name": "date",
@@ -2421,7 +2493,7 @@ export const definitions: ModelDefinitions = {
                             {
                               "kind": "entity",
                               "type": "Person",
-                              "edgeModel": "Probability"
+                              "edgeModel": null
                             }
                           ]
                         }
@@ -2617,7 +2689,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "str"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "is_subtype_of",
@@ -2657,7 +2730,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "str"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "label_fr",
@@ -2670,7 +2744,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "str"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         }
       ],
       "incoming": [
@@ -2745,7 +2820,8 @@ export const definitions: ModelDefinitions = {
             "type": "enum",
             "enum": "Calendar"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "source_text",
@@ -2758,7 +2834,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "str"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "sort_by",
@@ -2772,7 +2849,8 @@ export const definitions: ModelDefinitions = {
             "type": "enum",
             "enum": "SortBy"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "precision",
@@ -2786,7 +2864,8 @@ export const definitions: ModelDefinitions = {
             "type": "enum",
             "enum": "Precision"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "earliest_fuzzy",
@@ -2799,7 +2878,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "int"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "earliest_strict",
@@ -2812,7 +2892,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "int"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "latest_strict",
@@ -2825,7 +2906,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "int"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "latest_fuzzy",
@@ -2838,7 +2920,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "int"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "sort_day",
@@ -2851,7 +2934,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "int"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "end_sort_day",
@@ -2864,7 +2948,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "int"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         }
       ],
       "incoming": [],
@@ -2917,7 +3002,8 @@ export const definitions: ModelDefinitions = {
               "name": "MinLen",
               "min_length": 5
             }
-          ]
+          ],
+          "markers": []
         },
         {
           "name": "date",
@@ -3001,7 +3087,7 @@ export const definitions: ModelDefinitions = {
                             {
                               "kind": "entity",
                               "type": "Person",
-                              "edgeModel": "Probability"
+                              "edgeModel": null
                             }
                           ]
                         }
@@ -3059,7 +3145,7 @@ export const definitions: ModelDefinitions = {
                             {
                               "kind": "entity",
                               "type": "Person",
-                              "edgeModel": "Probability"
+                              "edgeModel": null
                             }
                           ]
                         }
@@ -3282,7 +3368,8 @@ export const definitions: ModelDefinitions = {
             "type": "enum",
             "enum": "Calendar"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "source_text",
@@ -3295,7 +3382,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "str"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "sort_by",
@@ -3309,7 +3397,8 @@ export const definitions: ModelDefinitions = {
             "type": "enum",
             "enum": "SortBy"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "precision",
@@ -3323,7 +3412,8 @@ export const definitions: ModelDefinitions = {
             "type": "enum",
             "enum": "Precision"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "earliest_fuzzy",
@@ -3336,7 +3426,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "int"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "earliest_strict",
@@ -3349,7 +3440,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "int"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "latest_strict",
@@ -3362,7 +3454,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "int"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "latest_fuzzy",
@@ -3375,7 +3468,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "int"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "sort_day",
@@ -3388,7 +3482,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "int"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "end_sort_day",
@@ -3401,7 +3496,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "int"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "start",
@@ -3588,12 +3684,12 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Transfer",
               "field": "given_by",
-              "viaReified": false
+              "viaReified": true
             },
             {
               "model": "Transfer",
               "field": "given_by",
-              "viaReified": true
+              "viaReified": false
             }
           ]
         },
@@ -3615,12 +3711,12 @@ export const definitions: ModelDefinitions = {
             {
               "model": "MemberOf",
               "field": "member",
-              "viaReified": false
+              "viaReified": true
             },
             {
               "model": "MemberOf",
               "field": "member",
-              "viaReified": true
+              "viaReified": false
             }
           ]
         },
@@ -3631,12 +3727,12 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Order",
               "field": "ordered_by",
-              "viaReified": false
+              "viaReified": true
             },
             {
               "model": "Order",
               "field": "ordered_by",
-              "viaReified": true
+              "viaReified": false
             }
           ]
         },
@@ -3658,12 +3754,12 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Transfer",
               "field": "given_to",
-              "viaReified": false
+              "viaReified": true
             },
             {
               "model": "Transfer",
               "field": "given_to",
-              "viaReified": true
+              "viaReified": false
             }
           ]
         },
@@ -3674,12 +3770,12 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Order",
               "field": "ordered_to",
-              "viaReified": false
+              "viaReified": true
             },
             {
               "model": "Order",
               "field": "ordered_to",
-              "viaReified": true
+              "viaReified": false
             }
           ]
         }
@@ -3754,7 +3850,8 @@ export const definitions: ModelDefinitions = {
               }
             }
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         }
       ],
       "incoming": [
@@ -3894,6 +3991,11 @@ export const definitions: ModelDefinitions = {
               "name": "Le",
               "le": 100
             }
+          ],
+          "markers": [
+            {
+              "name": "Slider"
+            }
           ]
         }
       ],
@@ -3928,7 +4030,8 @@ export const definitions: ModelDefinitions = {
             "type": "enum",
             "enum": "Calendar"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "source_text",
@@ -3941,7 +4044,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "str"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "sort_by",
@@ -3955,7 +4059,8 @@ export const definitions: ModelDefinitions = {
             "type": "enum",
             "enum": "SortBy"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "precision",
@@ -3969,7 +4074,8 @@ export const definitions: ModelDefinitions = {
             "type": "enum",
             "enum": "Precision"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "earliest_fuzzy",
@@ -3982,7 +4088,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "int"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "earliest_strict",
@@ -3995,7 +4102,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "int"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "latest_strict",
@@ -4008,7 +4116,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "int"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "latest_fuzzy",
@@ -4021,7 +4130,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "int"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "sort_day",
@@ -4034,7 +4144,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "int"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "end_sort_day",
@@ -4047,7 +4158,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "int"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "frequency",
@@ -4061,7 +4173,8 @@ export const definitions: ModelDefinitions = {
             "type": "enum",
             "enum": "Frequency"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "weekdays",
@@ -4088,7 +4201,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "int"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "month",
@@ -4101,7 +4215,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "int"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "month_day",
@@ -4114,7 +4229,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "int"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "interval",
@@ -4127,7 +4243,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "int"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "excluded_days",
@@ -4154,7 +4271,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "bool"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "easter_offset",
@@ -4167,7 +4285,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "int"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "feast",
@@ -4180,7 +4299,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "str"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "start",
@@ -4277,7 +4397,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "str"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "written",
@@ -4290,7 +4411,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "date"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "edition_price",
@@ -4303,7 +4425,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "decimal"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         }
       ],
       "incoming": [
@@ -4359,7 +4482,8 @@ export const definitions: ModelDefinitions = {
               "name": "MinLen",
               "min_length": 5
             }
-          ]
+          ],
+          "markers": []
         },
         {
           "name": "date",
@@ -4466,7 +4590,8 @@ export const definitions: ModelDefinitions = {
               "name": "MinLen",
               "min_length": 5
             }
-          ]
+          ],
+          "markers": []
         },
         {
           "name": "date",
@@ -4521,7 +4646,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "str"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "quantity",
@@ -4534,7 +4660,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "decimal"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "given_by",
@@ -4576,7 +4703,7 @@ export const definitions: ModelDefinitions = {
                             {
                               "kind": "entity",
                               "type": "Person",
-                              "edgeModel": "Probability"
+                              "edgeModel": null
                             }
                           ]
                         }
@@ -4634,7 +4761,7 @@ export const definitions: ModelDefinitions = {
                             {
                               "kind": "entity",
                               "type": "Person",
-                              "edgeModel": "Probability"
+                              "edgeModel": null
                             }
                           ]
                         }
@@ -4682,7 +4809,8 @@ export const definitions: ModelDefinitions = {
             "type": "enum",
             "enum": "Calendar"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "source_text",
@@ -4695,7 +4823,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "str"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "sort_by",
@@ -4709,7 +4838,8 @@ export const definitions: ModelDefinitions = {
             "type": "enum",
             "enum": "SortBy"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "precision",
@@ -4723,7 +4853,8 @@ export const definitions: ModelDefinitions = {
             "type": "enum",
             "enum": "Precision"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "earliest_fuzzy",
@@ -4736,7 +4867,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "int"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "earliest_strict",
@@ -4749,7 +4881,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "int"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "latest_strict",
@@ -4762,7 +4895,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "int"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "latest_fuzzy",
@@ -4775,7 +4909,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "int"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "sort_day",
@@ -4788,7 +4923,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "int"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         },
         {
           "name": "end_sort_day",
@@ -4801,7 +4937,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "int"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         }
       ],
       "incoming": [],
@@ -4859,7 +4996,8 @@ export const definitions: ModelDefinitions = {
           "type": {
             "type": "int"
           },
-          "validators": []
+          "validators": [],
+          "markers": []
         }
       ],
       "incoming": [],

@@ -198,7 +198,10 @@ class Exporter:
                 "kind": "literal",
                 "type": self.describe_type(definition.annotated_type),
                 "validators": self.validators(definition.validators),
+                "markers": self.markers(definition.markers),
             }
+            for marker in definition.markers:
+                marker.check(definition.field_on_model.__name__, entry)
         elif isinstance(definition, LiteralTypeVarFieldDefinition):
             entry |= {"kind": "typeVar", "typeVar": definition.type_var_name}
         elif isinstance(definition, AnnotatedValueFieldDefinition):

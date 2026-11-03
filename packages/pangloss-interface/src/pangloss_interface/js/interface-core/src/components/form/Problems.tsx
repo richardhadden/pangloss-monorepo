@@ -32,6 +32,8 @@ export function useSayProblem(): SayProblem {
         return t("invalid_too_few", "At least {n} needed", params);
       case "too_many":
         return t("invalid_too_many", "At most {n} allowed", params);
+      case "shares_total":
+        return t("invalid_shares_total", "Must add up to {n} (now {sum})", params);
       case "too_small":
         return t("invalid_too_small", "Must be {n} or more", params);
       case "must_exceed":

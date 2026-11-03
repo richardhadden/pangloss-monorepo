@@ -16,6 +16,7 @@ from frozendict import frozendict
 from pydantic.fields import FieldInfo
 
 from pangloss_models.exceptions import PanglossModelError
+from pangloss_models.markers import FieldMarker
 from pangloss_models.field_definitions import (
     AnnotatedValueFieldDefinition,
     EmbeddedFieldDefinition,
@@ -73,6 +74,7 @@ from pangloss_models.utils import (
     is_via_edge,
     model_is_trait,
 )
+from pangloss_models.validators import SumsTo
 
 # The names of fields that the models made from a declared model have for themselves.
 # (`label` is not here: a model may say `label: str` for itself, and the model made from it
@@ -124,6 +126,7 @@ def build_list_field_definition(
         ]
     if not is_literal(list_inner_type):
         raise invalid
+    refuse_shares(model, field_name, field_info)
 
     return ListFieldDefinition(
         field_on_model=model,
@@ -425,6 +428,7 @@ def build_relatable_field_definition(
 
         type_options = build_relation_options(model._depends_on_classes, annotation)
 
+    check_shares(model, field_name, field_info, wrapper, type_options)
     fixed = fixed_relation_names(model, field_name, type_options)
     default_reified_type = check_default_reified_type(
         model, field_name, type_options, relation_config
@@ -457,6 +461,45 @@ def build_relatable_field_definition(
         description=extract_field_description(field_info),
         default_reified_type=default_reified_type,
     )
+
+
+def sums_to(field_info: FieldInfo) -> list[SumsTo]:
+    return [md for md in field_info.metadata if isinstance(md, SumsTo)]
+
+
+def refuse_shares(model: type, field_name: str, field_info: FieldInfo) -> None:
+    """`SumsTo` is for the edges of a list relation, not a literal field"""
+    if sums_to(field_info):
+        raise PanglossModelError(
+            f"{model.__name__}.{field_name}: SumsTo is only for a list relation whose items have an edge "
+            "model (`list[ViaEdge[Person, Probability]]`)"
+        )
+
+
+def check_shares(
+    model: type,
+    field_name: str,
+    field_info: FieldInfo,
+    wrapper: type[list] | None,
+    type_options: set[RelationOption],
+) -> None:
+    """`SumsTo(field)` is on a list relation, all of whose options have an edge model with an `int` `field`"""
+    for shares in sums_to(field_info):
+        where = f"{model.__name__}.{field_name}: SumsTo({shares.field!r})"
+        if wrapper is None:
+            raise PanglossModelError(f"{where} is only for a list relation")
+        for option in type_options:
+            edge_model = option.edge_model
+            if edge_model is None:
+                raise PanglossModelError(
+                    f"{where}: {getattr(option.annotated_type, '__name__', option.annotated_type)} "
+                    "has no edge model, so nothing to share (`ViaEdge[..., EdgeModel]`)"
+                )
+            found = edge_model.model_fields.get(shares.field)
+            if found is None or found.annotation is not int:
+                raise PanglossModelError(
+                    f"{where}: the edge model {edge_model.__name__} has no int field {shares.field!r}"
+                )
 
 
 def check_default_reified_type(
@@ -951,6 +994,7 @@ def define_field(
 
     if is_literal(annotation):
         check_enum_values_in(annotation)
+        refuse_shares(model, field_name, field_info)
         return LiteralFieldDefinition(
             field_on_model=model,
             field_name=field_name,
@@ -958,6 +1002,9 @@ def define_field(
             validators=[
                 md for md in field_info.metadata if isinstance(md, BaseMetadata)
             ],
+            markers=tuple(
+                md for md in field_info.metadata if isinstance(md, FieldMarker)
+            ),
             db_field=is_db_field,
             description=extract_field_description(field_info),
         )

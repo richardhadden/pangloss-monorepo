@@ -64,6 +64,8 @@ class FieldDefinition:
 class LiteralFieldDefinition(FieldDefinition):
     annotated_type: type[BaseTypes]
     validators: list[BaseMetadata] = dataclass_field(default_factory=list)
+    markers: tuple[Any, ...] = ()
+    """What the field is annotated with that is a `FieldMarker` (`Annotated[int, Slider()]`): for the interface"""
 
 
 @dataclass(frozen=True, kw_only=True)

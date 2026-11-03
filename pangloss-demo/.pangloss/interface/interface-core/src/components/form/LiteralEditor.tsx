@@ -1,7 +1,7 @@
 import { createSignal, For, Match, Show, Switch, untrack } from "solid-js";
 import type { Accessor } from "solid-js";
 import { useItemForm, useModels, useTranslations } from "../../context";
-import type { FieldType, Validator } from "../../types";
+import type { FieldMarker, FieldType, Validator } from "../../types";
 import type { Path } from "../../schema";
 import {
   addSlotClass,
@@ -193,6 +193,8 @@ export function LiteralEditor(props: {
   /** The name of the input for a screen reader */
   label: string;
   validators?: Validator[];
+  /** How it is edited (`Slider`) */
+  markers?: FieldMarker[];
   /** What it is taken to be when it is not set: a choice shows it as chosen (it is not written) */
   fallback?: unknown;
 }) {
@@ -204,6 +206,15 @@ export function LiteralEditor(props: {
   const chosen = () => text() || (props.fallback === null || props.fallback === undefined ? "" : String(props.fallback));
   const write = (next: unknown) => form.set(props.path(), next);
   const members = () => definitions.enums[(props.type as Typed<"enum">).enum]?.members ?? [];
+  // (`Slider()` on a number with both bounds: a range, with the box beside it)
+  const slider = () => {
+    const marker = props.markers?.find((each) => each.name === "Slider");
+    const min = limit(props.validators, "Ge", "ge") ?? limit(props.validators, "Gt", "gt");
+    const max = limit(props.validators, "Le", "le") ?? limit(props.validators, "Lt", "lt");
+    if (!marker || min === undefined || max === undefined) return undefined;
+    const step = typeof marker.step === "number" ? marker.step : props.type.type === "int" ? 1 : (max - min) / 100;
+    return { min, max, step };
+  };
   return (
     <Switch
       fallback={
@@ -218,6 +229,31 @@ export function LiteralEditor(props: {
           checked={value() === true}
           onChange={(event) => write(event.currentTarget.checked)}
         />
+      </Match>
+      <Match when={(props.type.type === "int" || props.type.type === "float") && slider()}>
+        {(found) => (
+          <div class="flex w-full items-center gap-3">
+            <input
+              type="range"
+              class="h-1.5 min-w-0 flex-1 cursor-pointer accent-slate-600"
+              aria-label={props.label}
+              min={found().min}
+              max={found().max}
+              step={found().step}
+              value={text() === "" ? found().min : text()}
+              onInput={(event) => write(Number(event.currentTarget.value))}
+            />
+            <NumberInput
+              class={["shrink-0", numberWidthClass].join(" ")}
+              label={props.label}
+              step={found().step}
+              min={found().min}
+              max={found().max}
+              value={text()}
+              onInput={(typed) => write(typed === "" ? "" : Number(typed))}
+            />
+          </div>
+        )}
       </Match>
       <Match when={props.type.type === "int" || props.type.type === "float"}>
         <NumberInput

@@ -27,7 +27,7 @@ from pangloss_calendar.models import DateCharacterisation
 from pangloss_dates.bounds import SortBy
 from pangloss_dates.models import Date, SortDefault
 from pangloss_derived import DerivedMeta
-from pangloss_interface import InterfaceMeta
+from pangloss_interface import InterfaceMeta, Slider
 from pangloss_models.field_definitions import FieldBinding, FieldSubclassing
 from pangloss_models.model_bases.annotated_value import AnnotatedValue
 from pangloss_models.model_bases.configs import RelationConfig
@@ -39,6 +39,7 @@ from pangloss_models.model_bases.helpers import ViaEdge
 from pangloss_models.model_bases.reified_relation import ReifiedRelation
 from pangloss_models.model_bases.semantic_space import SemanticSpace
 from pangloss_models.model_bases.trait import Trait
+from pangloss_models.validators import SumsTo
 from pangloss_review.meta import ReviewMeta
 from pangloss_typology import Typed, Typology, TypologyMeta
 
@@ -63,7 +64,7 @@ class Certainty(EdgeModel):
     level: Annotated[int, Ge(1)]
 
 class Probability(EdgeModel):
-    percent: Annotated[int, Ge(1), Le(100)]
+    percent: Annotated[int, Ge(1), Le(100), Slider()]
 
 class WithCertainty[T](AnnotatedValue[T]):
     certainty: int
@@ -102,7 +103,7 @@ class InRole[T](ReifiedRelation[T]):
 class Alternative[T](Conjunction):
     _derived_meta = ...
     _interface_meta = ...
-    alternatives: list[ViaEdge[T, Probability]]
+    alternatives: Annotated[list[ViaEdge[T, Probability]], SumsTo('percent')]
     class Create(pangloss_models.model_bases.conjunction._ConjunctionCreateBase):  # type: ignore
         type: typing.Literal['Alternative'] = ...
 

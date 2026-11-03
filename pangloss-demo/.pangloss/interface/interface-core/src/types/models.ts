@@ -44,6 +44,8 @@ export interface LiteralField extends FieldBase {
   kind: "literal";
   type: FieldType;
   validators: Validator[];
+  /** How the interface edits it (`Slider`, with its `step`) */
+  markers?: FieldMarker[];
 }
 
 export interface ListField extends FieldBase {
@@ -74,7 +76,7 @@ export interface EmbeddedField extends FieldBase {
   markers?: FieldMarker[];
 }
 
-/** A marker of an embedded field: its name, and what it says of itself (`SortDefault` has `sortBy`) */
+/** A marker of a field: its name, and what it says of itself (`SortDefault` has `sortBy`, `Slider` may have `step`) */
 export interface FieldMarker {
   name: string;
   [argument: string]: unknown;

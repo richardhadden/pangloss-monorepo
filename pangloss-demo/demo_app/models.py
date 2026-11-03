@@ -23,6 +23,7 @@ small, and between them use most of what Pangloss has:
 | A statement that holds another statement | `Order.thing_ordered` |
 | Binding a value of the parent into its children | `Order.ordered_to` into the `given_by` or `ordered_by` of what is ordered |
 | A conjunction (a join of several things) | `Causes`, `Alternative` (any number) |
+| Shares that add up to 100, edited with sliders (`SumsTo`, `Slider`) | `Alternative.alternatives` |
 | A reified relation to a conjunction, with edge properties on its members | `Identification[Alternative[Person]]` (the edge is in `Alternative`) |
 | Literals: enums, dates, decimals, a TypedDict, lists, validators | throughout |
 | What a space or a conjunction does to a derived relation (`pangloss-derived`; the rules are in `derived.py`) | `Alternative`, `InRole` |
@@ -38,7 +39,7 @@ from pangloss_calendar.models import DateCharacterisation
 from pangloss_dates.bounds import SortBy
 from pangloss_dates.models import Date, SortDefault
 from pangloss_derived import DerivedMeta
-from pangloss_interface import InterfaceMeta
+from pangloss_interface import InterfaceMeta, Slider
 from pangloss_models.field_definitions import FieldBinding, FieldSubclassing
 from pangloss_models.model_bases.annotated_value import AnnotatedValue
 from pangloss_models.model_bases.configs import RelationConfig
@@ -50,6 +51,7 @@ from pangloss_models.model_bases.helpers import ViaEdge
 from pangloss_models.model_bases.reified_relation import ReifiedRelation
 from pangloss_models.model_bases.semantic_space import SemanticSpace
 from pangloss_models.model_bases.trait import Trait
+from pangloss_models.validators import SumsTo
 from pangloss_review.meta import ReviewMeta
 from pangloss_typology import Typed, Typology, TypologyMeta
 
@@ -87,7 +89,7 @@ class Certainty(EdgeModel):
 class Probability(EdgeModel):
     """How likely it is that this is the one meant, out of the alternatives (1 to 100, in per cent)"""
 
-    percent: Annotated[int, Ge(1), Le(100)]
+    percent: Annotated[int, Ge(1), Le(100), Slider()]
 
 
 class WithCertainty[T](AnnotatedValue[T]):
@@ -124,7 +126,8 @@ class Alternative[T](Conjunction):
     # (on the item page, one alternative is shown as that one alone: docs/interface-collapse.md)
     _interface_meta = InterfaceMeta(collapse=True)
 
-    alternatives: list[ViaEdge[T, Probability]]
+    # (the percentages add up to 100: the interface keeps them to it, and the server refuses what does not)
+    alternatives: Annotated[list[ViaEdge[T, Probability]], SumsTo("percent")]
 
 
 class Identification[T](ReifiedRelation[T]):

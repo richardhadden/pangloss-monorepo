@@ -15,12 +15,15 @@ const hasParams = (option: RelationOption): option is Parametrised => "params" i
 
 /**
  * `options` with each type variable replaced by what `env` binds it to (a variable that is not
- * bound is kept, and nothing will be offered for it).
+ * bound is kept, and nothing will be offered for it). A variable with an edge model
+ * (`list[ViaEdge[T, Probability]]`) gives it to each of what it stands for.
  */
 export function resolveOptions(options: RelationOption[], env: Env): RelationOption[] {
-  return options.flatMap((option) =>
-    option.kind === "typeVar" && env[option.name] ? env[option.name]! : [option],
-  );
+  return options.flatMap((option) => {
+    if (option.kind !== "typeVar" || !env[option.name]) return [option];
+    const edgeModel = option.edgeModel;
+    return edgeModel ? env[option.name]!.map((bound) => ({ ...bound, edgeModel })) : env[option.name]!;
+  });
 }
 
 /** The variables of the model of `option` (a semantic space, a conjunction, a reified relation), bound as the option says */

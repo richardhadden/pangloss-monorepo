@@ -8,6 +8,8 @@ import * as v from "valibot";
 import type { FieldDefinition, FieldType, ModelDefinition, ModelDefinitions, RelationOption, Validator } from "../types";
 import type { FormData, Path } from "./formValue";
 import { getModel } from "./lookup";
+import { sharesOf } from "./sharing";
+import type { Shares } from "./sharing";
 import { envOf, optionFor, resolveOptions } from "./typeChoices";
 import type { Env } from "./typeChoices";
 
@@ -31,6 +33,7 @@ export type ProblemCode =
   | "not_datetime"
   | "not_uuid"
   | "not_choice"
+  | "shares_total"
   | "wrong_type"
   | "type_not_allowed"
   | "invalid"
@@ -180,14 +183,30 @@ const choice = (values: (string | number | boolean | null)[]): Schema =>
   v.picklist([...new Set(values.flatMap((value) => [value, String(value)]))] as string[]);
 
 /** A list whose empty items are not checked, and whose length (`MinLen`, `MaxLen`) is of the rest */
-function listOf(definitions: ModelDefinitions, item: Schema, validators: Validator[]): Schema {
+function listOf(definitions: ModelDefinitions, item: Schema, validators: Validator[], shares?: Shares): Schema {
   return piped(
     v.pipe(
       v.array(present(definitions, item, false)),
       v.transform((items: unknown[]) => items.filter((inner) => !isBlank(definitions, inner))),
     ),
-    checks(validators, "list"),
+    [...checks(validators, "list"), ...(shares ? [sharesCheck(shares)] : [])],
   );
+}
+
+// (what each shares check is of: for its problem's text)
+const SHARES = new WeakMap<object, Shares>();
+
+const shareSum = (items: unknown[], key: string) =>
+  items.reduce<number>((sum, inner) => {
+    const edge = isObject(inner) && isObject(inner.edgeProperties) ? Number(inner.edgeProperties[key]) : NaN;
+    return sum + (Number.isFinite(edge) ? edge : 0);
+  }, 0);
+
+/** The shares of the items add up to their total (`SumsTo`), as the server checks (an empty list has none) */
+function sharesCheck(shares: Shares): v.PipeItem<any, any, v.BaseIssue<unknown>> {
+  const requirement = (items: unknown[]) => items.length === 0 || shareSum(items, shares.key) === shares.total;
+  SHARES.set(requirement, shares);
+  return v.check(requirement);
 }
 
 // (the only custom check: a value that is not there)
@@ -253,7 +272,10 @@ export class ItemSchemas {
         return this.entry(this.oneOf(field.types.map((type) => [type, () => this.model(type, {})])), required);
       case "relation": {
         const item = this.relationItem(resolveOptions(field.options, env), env);
-        return this.entry(field.many ? listOf(this.definitions, item, field.validators) : item, required);
+        return this.entry(
+          field.many ? listOf(this.definitions, item, field.validators, sharesOf(this.definitions, field)) : item,
+          required,
+        );
       }
       default:
         // (a type variable of a literal, something the export does not know: the API checks it)
@@ -351,6 +373,13 @@ export function problemOf(issue: v.BaseIssue<unknown>): Omit<FieldProblem, "mess
   switch (issue.type) {
     case "custom":
       return { path, code: "required", params: {} };
+    case "check": {
+      const shares = SHARES.get(issue.requirement as object);
+      if (shares && Array.isArray(issue.input)) {
+        return { path, code: "shares_total", params: { n: shares.total, sum: shareSum(issue.input, shares.key) } };
+      }
+      return { path, code: "invalid", params: {} };
+    }
     case "never":
       return { path, code: "type_not_allowed", params: {} };
     case "regex":

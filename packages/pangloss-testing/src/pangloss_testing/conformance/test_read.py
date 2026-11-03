@@ -1,5 +1,5 @@
 import datetime
-from typing import TypedDict, no_type_check
+from typing import Annotated, TypedDict, no_type_check
 
 import pytest
 from pangloss_models import initialise
@@ -16,6 +16,8 @@ from pangloss_models.model_bases.reified_relation import (
     ReifiedRelationDocument,
 )
 from pangloss_models.model_bases.semantic_space import SemanticSpace
+from pangloss_models.validators import SumsTo
+from pydantic import ValidationError
 from pangloss_testing.under_test.initialise_database import (
     initialise_database,
 )
@@ -764,6 +766,48 @@ async def test_read_edge_properties_given_by_a_conjunction(clear_database):
     assert {a.id: a.edge_properties.number for a in alternatives} == {
         person.id: i for i, person in enumerate(people)
     }
+
+
+@no_type_check
+async def test_shares_that_add_up_are_written_and_those_that_do_not_are_refused(
+    clear_database,
+):
+    class Certainty(EdgeModel):
+        percent: int
+
+    class Person(Entity):
+        pass
+
+    class Alternative[T](Conjunction):
+        alternatives: Annotated[list[ViaEdge[T, Certainty]], SumsTo("percent")]
+
+    class Statement(Document):
+        concerns: Alternative[Person]
+
+    initialise()
+
+    people = [await Person.Create(label=f"Person {i}").save() for i in range(2)]
+
+    def statement(percents):
+        return Statement.Create(
+            label="A Statement",
+            concerns={
+                "type": "Alternative",
+                "alternatives": [
+                    {"type": "Person", "id": p.id, "edge_properties": {"percent": n}}
+                    for p, n in zip(people, percents, strict=True)
+                ],
+            },
+        )
+
+    with pytest.raises(ValidationError, match="add up to 90, not 100"):
+        statement([60, 30])
+    saved = await statement([70, 30]).save()
+    read = await Statement.get(id=saved.id)
+    assert sorted(a.edge_properties.percent for a in read.concerns.alternatives) == [
+        30,
+        70,
+    ]
 
 
 @no_type_check

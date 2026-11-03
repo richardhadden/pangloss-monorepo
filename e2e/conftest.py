@@ -49,6 +49,7 @@ MODELS = textwrap.dedent(
     from pangloss_models.model_bases.reified_relation import ReifiedRelationDocument
     from pangloss_calendar.models import DateCharacterisation
     from pangloss_dates.models import Date
+    from pangloss_library.models import WeightedAlternative
     from pangloss_review.meta import ReviewMeta
     from pangloss_typology import Typed, Typology, TypologyMeta
 
@@ -95,6 +96,11 @@ MODELS = textwrap.dedent(
         text: str
         sections: list[ReportSection]
         findings: list[Finding[ReportSection]]
+
+
+    # (who it might be, each with how likely: the percentages add up to 100, edited with sliders)
+    class Suspicion(Document):
+        suspects: WeightedAlternative[Person]
 
 
     # (dated: what the calendar shows)
@@ -243,7 +249,7 @@ def make_project(root: Path) -> Path:
     text = text.replace(
         '"pangloss_memgraph",',
         '"pangloss_memgraph",\n        "pangloss_interface",\n        "pangloss_typology",\n        "pangloss_dates",\n'
-        '        "pangloss_calendar",\n        "pangloss_review",',
+        '        "pangloss_calendar",\n        "pangloss_review",\n        "pangloss_library",',
         1,
     )
     text = text.replace('DB_USERNAME="memgraph"', 'DB_USERNAME="test"')

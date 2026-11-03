@@ -26,10 +26,24 @@ export interface PendingBinding {
   added: boolean;
 }
 
-/** What is done to the item of a form around each change: what the bindings over `path` are, before; and then */
-export interface FormBinder {
-  before: (root: unknown, path: Path, adding: boolean) => PendingBinding[];
-  after: (root: FormData, pending: PendingBinding[]) => void;
+/**
+ * What is done to the item of a form around each change: what is to be done for a change at `path`, found before it
+ * (`adding`: an object is set); and then done, to the item as it is after it (in the store's draft)
+ */
+export interface FormHook<Pending> {
+  before(root: unknown, path: Path, adding: boolean): Pending[];
+  after(root: FormData, pending: Pending[]): void;
+}
+
+/** What the bindings over a change are (`createBinder`) */
+export type FormBinder = FormHook<PendingBinding>;
+
+/** Several hooks as one: each finds what it does before the change, and does it after, in this order */
+export function composeHooks(...hooks: FormHook<unknown>[]): FormHook<unknown[]> {
+  return {
+    before: (root, path, adding) => hooks.map((hook) => hook.before(root, path, adding)),
+    after: (root, pending) => hooks.forEach((hook, at) => hook.after(root, pending[at] as unknown[])),
+  };
 }
 
 /** The relations of the item that bind (and whose value can be copied: not one with a converter, which only the server can do) */

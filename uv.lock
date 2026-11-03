@@ -14,6 +14,7 @@ members = [
     "pangloss-derived",
     "pangloss-history",
     "pangloss-interface",
+    "pangloss-library",
     "pangloss-memgraph",
     "pangloss-models",
     "pangloss-neo4j",
@@ -974,6 +975,23 @@ dev = [
     { name = "httpx2", specifier = ">=2.15" },
     { name = "pangloss-api", editable = "packages/pangloss-api" },
     { name = "pangloss-cli", editable = "packages/pangloss-cli" },
+]
+
+[[package]]
+name = "pangloss-library"
+version = "0.1.0"
+source = { editable = "packages/pangloss-library" }
+dependencies = [
+    { name = "annotated-types" },
+    { name = "pangloss-interface" },
+    { name = "pangloss-models" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "annotated-types", specifier = ">=0.7" },
+    { name = "pangloss-interface", editable = "packages/pangloss-interface" },
+    { name = "pangloss-models", editable = "packages/pangloss-models" },
 ]
 
 [[package]]
