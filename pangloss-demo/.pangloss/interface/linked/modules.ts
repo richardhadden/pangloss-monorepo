@@ -2,5 +2,6 @@
 import type { ModuleManifest } from "@pangloss/interface-core";
 import module0 from "/Users/rhadden/Development/pangloss-monorepo/packages/pangloss-dates/src/pangloss_dates/interface/src/index";
 import module1 from "/Users/rhadden/Development/pangloss-monorepo/packages/pangloss-typology/src/pangloss_typology/interface/src/index";
+import module2 from "/Users/rhadden/Development/pangloss-monorepo/packages/pangloss-review/src/pangloss_review/interface/src/index";
 
-export const modules: ModuleManifest[] = [module0, module1];
+export const modules: ModuleManifest[] = [module0, module1, module2];
