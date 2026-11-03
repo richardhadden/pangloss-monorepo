@@ -1,5 +1,13 @@
-import { ConsoleButton, useComponent, useNavExpanded, useTranslations } from "@pangloss/interface-core";
-import { For, Loading } from "solid-js";
+import {
+  ConsoleButton,
+  getModel,
+  useComponent,
+  useModels,
+  useNavExpanded,
+  userIsLoggedIn,
+  useTranslations,
+} from "@pangloss/interface-core";
+import { createMemo, For, Loading, Show } from "solid-js";
 import type { ParentProps } from "solid-js";
 import { CALENDARS } from "../api";
 import type { CalendarName } from "../api";
@@ -13,8 +21,12 @@ export function CalendarPage(props: ParentProps) {
   );
 }
 
+/** The abstract entity of pangloss_calendar that feasts and the like are types of */
+export const CHARACTERISATION_MODEL = "DateCharacterisation";
+
 /**
- * The console of a calendar page: "Calendar" and the page's `label` on the left; on the right the way to the years, and
+ * The console of a calendar page: "Calendar" and the page's `label` on the left; on the right, for someone logged in, a
+ * button to make a new characterisation of each type the project has (feasts and the like); the way to the years; and
  * the two calendars, the one the page is read in pressed. `hrefOf` gives the same page in a calendar (it may read what
  * the page is still loading: the buttons wait for it, the rest of the console does not).
  */
@@ -24,7 +36,10 @@ export function CalendarConsole(props: {
   hrefOf: (calendar: CalendarName) => string | undefined;
 }) {
   const Console = useComponent("Console");
-  const { t } = useTranslations();
+  const definitions = useModels();
+  const { t, modelName } = useTranslations();
+  const loggedIn = createMemo(() => userIsLoggedIn());
+  const makeable = () => getModel(definitions, CHARACTERISATION_MODEL)?.concreteTypes ?? [];
   const buttons = (hrefOf: (calendar: CalendarName) => string | undefined) => (
     <For each={CALENDARS}>
       {(each) => (
@@ -40,6 +55,22 @@ export function CalendarConsole(props: {
   );
   return (
     <Console type={t("calendar", "Calendar")} label={props.label}>
+      <Show when={loggedIn()}>
+        <For each={makeable()}>
+          {(type) => (
+            <ConsoleButton label={t("new_item", "New {type}", { type: modelName(type) })} href={`/${type}/new`} tone="entity" text>
+              <svg
+                viewBox="0 0 24 24"
+                class="size-4 select-none fill-none stroke-current stroke-2"
+                stroke-linecap="round"
+                aria-hidden="true"
+              >
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+            </ConsoleButton>
+          )}
+        </For>
+      </Show>
       <ConsoleButton label={t("calendar_years", "Years")} href={yearsHref(props.calendar)} text>
         <svg
           viewBox="0 0 24 24"

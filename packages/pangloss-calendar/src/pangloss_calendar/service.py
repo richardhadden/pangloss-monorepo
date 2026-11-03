@@ -17,7 +17,7 @@ from pydantic import BaseModel
 
 from pangloss_calendar import characterisations as rules
 from pangloss_calendar import graph, settings
-from pangloss_calendar.characterisations import Characterisation
+from pangloss_calendar.characterisations import Characterisation, is_single
 from pangloss_calendar.days import (
     DayView,
     format_day,
@@ -69,6 +69,10 @@ class CharacterisationOut(BaseModel):
     use: str | None
     rank: str | None
     easter_offset: int | None = None
+    kind: str | None = None
+    """The kind of its `when` (`Recurrence`, `JulianExactDate`, `Period`, ...); None for one with no rule"""
+    repeated: bool = False
+    """Whether it falls again and again (a `Recurrence`), rather than once"""
 
     @classmethod
     def of(cls, c: Characterisation) -> CharacterisationOut:
@@ -79,6 +83,8 @@ class CharacterisationOut(BaseModel):
             use=c.use,
             rank=c.rank,
             easter_offset=c.rule.easter_offset if c.rule else None,
+            kind=c.kind,
+            repeated=c.repeated,
         )
 
 
@@ -103,6 +109,11 @@ class Ref(BaseModel):
 class Hit(BaseModel):
     ref: Ref
     mark: Mark
+    single: bool = True
+    """One day (an exact date, a range, an EDTF date, a day of a repeated event), as against a period over its days"""
+    first: DayOut | None = None
+    last: DayOut | None = None
+    """The range the date states (for a single date: the days it could be on)"""
 
 
 class DayReport(BaseModel):
@@ -141,6 +152,11 @@ class MonthReport(BaseModel):
     """Day numbers, seven to a row (None outside the month); the days are in `days`"""
     days: list[MonthDayOut]
     spanning: list[Spanning]
+    """Periods wider than `CALENDAR_NARROW_DAYS`: drawn across their days"""
+    between: list[Spanning]
+    """Single dates known only within a range that lies in the month ("between these days")"""
+    roughly: list[Spanning]
+    """Single dates known only within a range that reaches beyond the month: listed, not drawn"""
     characterised_spans: list[Characterised]
     """Characterisations attached to the month, its year or a span, not to a day"""
     truncated: bool
@@ -313,6 +329,8 @@ def _manual(row: dict[str, Any]) -> Characterised:
             type=row["type"],
             use=row["use"],
             rank=row["rank"],
+            kind=row.get("kind"),
+            repeated=bool(row.get("kind") and str(row["kind"]).endswith("Recurrence")),
         ),
         origin="manual",
         via=row["via"],
@@ -358,9 +376,20 @@ async def day(
                 extra,
             ):
                 continue
-            stated = row["earliest_strict"] <= jdn <= row["latest_strict"]
+            repeated = _is_repeated(row)
+            single = repeated or is_single(row["kind"])
+            # (a single date is stated on the day only if it says that day; a period, on each of its days)
+            stated = repeated or (
+                row["earliest_strict"] == row["latest_strict"] == jdn
+                if single
+                else row["earliest_strict"] <= jdn <= row["latest_strict"]
+            )
             hits[(row["id"], field.name)] = Hit(
-                ref=_ref(row, field), mark="stated" if stated else "possible"
+                ref=_ref(row, field),
+                mark="stated" if stated else "possible",
+                single=single,
+                first=DayOut.of(jdn if repeated else row["earliest_strict"]),
+                last=DayOut.of(jdn if repeated else row["latest_strict"]),
             )
     ordered = sorted(
         hits.values(), key=lambda h: (h.ref.label.lower(), str(h.ref.id), h.ref.field)
@@ -408,9 +437,16 @@ async def _dated_in(
                 _anchor(row),
                 lambda d: rules.feast_keys(chars, d),
             )
-            found.extend(Dated(ref, d, d) for d in days)
+            found.extend(Dated(ref, d, d, single=True) for d in days)
         else:
-            found.append(Dated(ref, row["earliest_strict"], row["latest_strict"]))
+            found.append(
+                Dated(
+                    ref,
+                    row["earliest_strict"],
+                    row["latest_strict"],
+                    single=is_single(row["kind"]),
+                )
+            )
     return found, truncated
 
 
@@ -462,17 +498,23 @@ async def month(
         next=next_month(calendar, year, month_number),
         weeks=month_grid(calendar, year, month_number),
         days=days,
-        spanning=[
-            Spanning(
-                ref=d.ref,
-                first=DayOut.of(d.earliest_strict),
-                last=DayOut.of(d.latest_strict),
-            )
-            for d in view.spanning
-        ],
+        spanning=_spanning(view.spanning),
+        between=_spanning(view.between),
+        roughly=_spanning(view.roughly),
         characterised_spans=wide,
         truncated=truncated,
     )
+
+
+def _spanning(items: list[Dated]) -> list[Spanning]:
+    return [
+        Spanning(
+            ref=d.ref,
+            first=DayOut.of(d.earliest_strict),
+            last=DayOut.of(d.latest_strict),
+        )
+        for d in items
+    ]
 
 
 def _moveable(

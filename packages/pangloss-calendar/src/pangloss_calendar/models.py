@@ -9,12 +9,15 @@
     FeastDay.Create(label="Benedict", use="sarum", rank="major", when={
         "type": "JulianRecurrence", "frequency": "yearly", "month": 3, "month_day": 21, ...})
 
-`when` is a `Recurrence`, the rule it falls by: the days it falls on, in the rule's own calendar (`easter_offset` for
-the days that move with Easter), within its lifetime. Or it is `NoRule`, and the characterisation is attached by hand to days, months, years or spans (`/api/calendar/attach`). A repeated event of another model can
-fall on a characterisation's days with `feast = "<id of the characterisation>"` in its rule.
+`when` says whether it repeats or not, by its kind: a `Recurrence` is the rule it falls by, every year (or week, or
+month), in the rule's own calendar (`easter_offset` for the days that move with Easter), within its lifetime; an
+`ExactDate`, a `DateRange` or an `EDTFDate` is one day (as roughly known as the date says: a year, a month, a range),
+once; a `Period` is a span of days, once (Lent 735; the plague). Or it is `NoRule`, and the characterisation is attached
+by hand to days, months, years or spans (`/api/calendar/attach`). A repeated event of another model can fall on a
+characterisation's days with `feast = "<id of the characterisation>"` in its rule.
 """
 
-from pangloss_dates.models import Recurrence
+from pangloss_dates.models import DateRange, EDTFDate, ExactDate, Period, Recurrence
 from pangloss_models.model_bases.embedded import Embedded
 from pangloss_models.model_bases.entity import Entity
 
@@ -30,5 +33,6 @@ class DateCharacterisation(Entity):
     """The liturgical use, or whatever a project divides its characterisations by (`CALENDAR_USE` shows one)"""
     rank: str | None = None
     """The project's own scale"""
-    when: Recurrence | NoRule
-    """The rule it falls by, or `NoRule` if it is attached by hand"""
+    when: Recurrence | ExactDate | DateRange | EDTFDate | Period | NoRule
+    """Repeated (a `Recurrence`: the rule it falls by), once on one day (an `ExactDate`, `DateRange` or `EDTFDate`), once over
+    a span (a `Period`), or `NoRule` if it is attached by hand"""

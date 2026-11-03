@@ -133,3 +133,16 @@ export const previousMonth = (year: number, month: number): [number, number] =>
   month === 1 ? [year - 1, 12] : [year, month - 1];
 export const nextMonth = (year: number, month: number): [number, number] =>
   month === 12 ? [year + 1, 1] : [year, month + 1];
+
+/** "Born · Alcuin of York": what a date is, then what it is in (a person's name alone says nothing of why it is here) */
+export function sayRef(ref: { label: string; type: string; field: string }, fieldName: (model: string, field: string) => string): string {
+  return `${fieldName(ref.type, ref.field)} · ${ref.label}`;
+}
+
+/** "between 2 March 1500 and 4 March 1500" */
+export function sayBetween(first: DayName, last: DayName, language: string, t: Say): string {
+  return t("calendar_between", "between {first} and {last}", {
+    first: sayDate(first, language, t),
+    last: sayDate(last, language, t),
+  });
+}

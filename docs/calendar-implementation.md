@@ -337,6 +337,17 @@ to seed; **no default**, decided 2026-10-29), `CALENDAR_AUTO_EXTEND` (make days 
    and the dev build in `test_dev_mode.py::test_the_calendar`. Not done: a year page of twelve small months; `use` chosen in the
    interface (the pages use `CALENDAR_USE`); Easter and the moveable feasts of a year (the API has them, the pages do not show
    them); a route `preload` for the pages.
+   *Second round (2026-11-03), decided with the owner:* (1) **`when` says whether a characterisation repeats by its kind**:
+   `Recurrence | ExactDate | DateRange | EDTFDate | Period | NoRule` (migration `0003`); a single date is on its days once, a
+   period on each day of its span once; `Characterisation.has_days`/`days_between`/`falls_on_day` work them out, and the API
+   says `repeated` and `kind` (no boolean field: it could disagree with the rule). (2) **A date is drawn by what kind of thing
+   it is**, not by its range alone (no Trait classes: the date kinds already say it): a single-day kind (exact, range, EDTF)
+   known only within a range is never drawn as if it lasted: `between` (a hollow dashed bar) if the range lies in the month,
+   `roughly` (a list under the grid, "between these days") if it reaches beyond it; a period is a filled bar (or chips on each
+   day if narrow, now `stated`); on a day page a single date is `stated` only if it names the day, and a `possible` hit says
+   the days it could be on (`first`, `last` on `Hit`). (3) Chips and bars are named by their field ("Born · Alcuin of York").
+   (4) `DateCharacterisation` stays abstract; the demo got `Feast` (migration `0008`), and "New <type>" is in the console of
+   every calendar page for someone logged in. `CALENDAR_NARROW_DAYS` now governs periods only.
 6. (Gate) Version 2.
 
 ## Tests, in short

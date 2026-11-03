@@ -80,6 +80,22 @@ async def make_feasts(FeastDay):
         "by hand": await FeastDay.Create(
             label="Term day", when={"type": "NoRule"}
         ).save(),
+        "once": await FeastDay.Create(
+            label="Council",
+            when={
+                "type": "JulianDateRange",
+                "earliest": exact(1500, 3, 4),
+                "latest": exact(1500, 3, 5),
+            },
+        ).save(),
+        "lent": await FeastDay.Create(
+            label="Lent 1500",
+            when={
+                "type": "JulianPeriod",
+                "start": exact(1500, 2, 5),
+                "end": exact(1500, 3, 21),
+            },
+        ).save(),
     }
 
 
@@ -145,18 +161,42 @@ async def test_a_day_finds_every_kind_of_date_and_the_feast(
     report = await service.day(parse_day("J1500-03-02"), J)
     assert report.day.julian == "J1500-03-02" and report.day.gregorian == "G1500-03-12"
     assert [(c.characterisation.label, c.origin) for c in report.characterisations] == [
-        ("Second of March", "rule")
+        ("Lent 1500", "rule"),
+        ("Second of March", "rule"),
+    ]
+    by_char = {
+        c.characterisation.label: c.characterisation for c in report.characterisations
+    }
+    assert by_char["Second of March"].repeated and by_char[
+        "Second of March"
+    ].kind.endswith("Recurrence")
+    assert not by_char["Lent 1500"].repeated and by_char["Lent 1500"].kind.endswith(
+        "Period"
+    )
+    # (the council, one day on the 4th or the 5th, is on both days once and not on the 2nd)
+    fourth = await service.day(parse_day("J1500-03-04"), J)
+    assert [c.characterisation.label for c in fourth.characterisations] == [
+        "Council",
+        "Lent 1500",
     ]
     assert labels(report.hits, "stated") == [
         "exact",
         "period",
-        "range",
         "weekly",
         "yearly",
     ]
-    assert labels(report.hits, "possible") == [
-        "about"
-    ]  # (a week either side of the 6th allows the 2nd)
+    # (the range says one day from the 1st to the 3rd; a week either side of the 6th allows the 2nd)
+    assert labels(report.hits, "possible") == ["about", "range"]
+    by_label = {h.ref.label: h for h in report.hits}
+    assert by_label["range"].single and by_label["range"].first.julian == "J1500-03-01"
+    assert by_label["range"].last.julian == "J1500-03-03"
+    assert (
+        not by_label["period"].single
+        and by_label["period"].last.julian == "J1500-12-31"
+    )
+    assert (
+        by_label["weekly"].single and by_label["weekly"].first.julian == "J1500-03-02"
+    )
     assert "other day" not in labels(report.hits) and "other year" not in labels(
         report.hits
     )
@@ -208,21 +248,30 @@ async def test_a_month_puts_narrow_dates_on_days_and_wide_ones_apart(
     Factoid, Mass, FeastDay = models()
     await initialise_database()
     await make_documents(Factoid)
+    await Factoid.Create(
+        label="sometime in 1500", when={"type": "JulianExactDate", "year": 1500}
+    ).save()
+    await Factoid.Create(
+        label="fortnight",
+        when={
+            "type": "JulianPeriod",
+            "start": exact(1500, 3, 10),
+            "end": exact(1500, 3, 23),
+        },
+    ).save()
     report = await service.month(J, 1500, 3)
     by_day = {d.day.julian: labels(d.hits) for d in report.days if d.hits}
-    assert by_day["J1500-03-01"] == ["range"]
-    assert by_day["J1500-03-02"] == ["exact", "range"]
+    # (a single date known within a range is not on the days: it is between them)
+    assert "J1500-03-01" not in by_day
+    assert by_day["J1500-03-02"] == ["exact"]
     assert by_day["J1500-03-20"] == ["other day"]
-    assert [s.ref.label for s in report.spanning] == ["period"]
+    assert [s.ref.label for s in report.between] == ["range"]
+    assert report.between[0].first.julian == "J1500-03-01"
+    # (the year-long period is a bar; the single date known only to the year is listed)
+    assert [s.ref.label for s in report.spanning] == ["period", "fortnight"]
+    assert [s.ref.label for s in report.roughly] == ["sometime in 1500"]
     assert report.weeks[0][0] is None or report.weeks[0][0] == report.first.jdn
     assert report.previous == (1500, 2) and report.next == (1500, 4)
-    marks = {
-        h.ref.label: h.mark
-        for d in report.days
-        for h in d.hits
-        if d.day.julian == "J1500-03-02"
-    }
-    assert marks["exact"] == "stated" and marks["range"] == "possible"
     assert not report.truncated
 
 
@@ -284,7 +333,12 @@ async def test_the_routes(clear_database, clear_calendar, monkeypatch):
     assert body["next"]["gregorian"] == "G1500-03-13"
     assert {h["ref"]["label"] for h in body["hits"]} >= {"exact", "range"}
     assert [c["characterisation"]["label"] for c in body["characterisations"]] == [
-        "Second of March"
+        "Lent 1500",
+        "Second of March",
+    ]
+    assert [c["characterisation"]["repeated"] for c in body["characterisations"]] == [
+        False,
+        True,
     ]
     assert (await client.get("/api/calendar/day/nonsense")).status_code == 422
     assert (await client.get("/api/calendar/day/J1500-02-30")).status_code == 422
@@ -350,7 +404,11 @@ async def test_the_routes(clear_database, clear_calendar, monkeypatch):
     assert [
         (c["characterisation"]["label"], c["origin"], c["via"])
         for c in on_day["characterisations"]
-    ] == [("Term day", "manual", "day")]
+    ] == [
+        ("Council", "rule", "rule"),
+        ("Lent 1500", "rule", "rule"),
+        ("Term day", "manual", "day"),
+    ]
     month = {
         "characterisation": str(made["by hand"].id),
         "calendar": "julian",

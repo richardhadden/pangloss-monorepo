@@ -123,3 +123,29 @@ def test_days_between_applies_the_leap_shift():
     assert [from_jdn(d, J).day for d in days] == [
         25 if is_leap_year(y, J) else 24 for y in range(1496, 1505)
     ]
+
+
+def test_a_single_date_or_a_period_is_on_its_days_once_and_says_it_does_not_repeat():
+    first, last = to_jdn(1500, 3, 2, J), to_jdn(1500, 3, 4, J)
+    council = make(None, first=first, last=last, label="council")
+    council = Characterisation(**{**council.__dict__, "kind": "JulianDateRange"})
+    assert council.has_days and not council.repeated and council.single
+    assert days_between(council, to_jdn(1500, 1, 1, J), to_jdn(1500, 12, 31, J)) == [
+        first,
+        first + 1,
+        last,
+    ]
+    assert days_between(council, first + 1, to_jdn(1500, 12, 31, J)) == [
+        first + 1,
+        last,
+    ]
+    assert falls_on_day(council, first) and not falls_on_day(council, last + 1)
+    lent = Characterisation(
+        **{**council.__dict__, "id": uuid4(), "kind": "JulianPeriod"}
+    )
+    assert lent.has_days and not lent.repeated and not lent.single
+    assert on_day([council, lent], first) == [council, lent]
+    benedict = make(yearly(3, 21))
+    assert benedict.repeated and not benedict.single
+    # (one attached by hand has no days of its own)
+    assert not make(None).has_days and not make(None).repeated

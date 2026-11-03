@@ -221,7 +221,7 @@ MATCH (n:DateCharacterisation)
 WHERE {_fragments().not_deleted("n")} AND ($use IS NULL OR n.use = $use)
 OPTIONAL MATCH (n)-[:`when`]->(d:Date)
 OPTIONAL MATCH (d)-[:start]->(s:Date)
-RETURN n.id AS id, n.label AS label, n.type AS type, n.use AS use, n.rank AS rank,
+RETURN n.id AS id, n.label AS label, n.type AS type, n.use AS use, n.rank AS rank, d.type AS kind,
        d.calendar AS calendar, d.earliest_strict AS earliest_strict, d.latest_strict AS latest_strict,
        d.frequency AS frequency, d.weekdays AS weekdays, d.nth AS nth, d.month AS month,
        d.month_day AS month_day, d.interval AS interval, d.excluded_days AS excluded_days,
@@ -264,7 +264,8 @@ CALL {{
 }}
 WITH c, lo, hi, via
 WHERE {_fragments().not_deleted("c")} AND ($use IS NULL OR c.use = $use)
-RETURN c.id AS id, c.label AS label, c.type AS type, c.use AS use, c.rank AS rank, lo, hi, via
+OPTIONAL MATCH (c)-[:`when`]->(w:Date)
+RETURN c.id AS id, c.label AS label, c.type AS type, c.use AS use, c.rank AS rank, w.type AS kind, lo, hi, via
 ORDER BY c.label, c.id, lo
 """
 

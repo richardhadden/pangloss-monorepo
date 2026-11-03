@@ -17,7 +17,7 @@ exchange = ...
 class SameGroup(Derived):
     _meta = ...
     first: Annotated[Person, SymmetricLabel('member')]
-    second: Person
+    second: Annotated[Person, SymmetricLabel('member')]
     group: Group
     class Derive(pangloss_derived.check.DeriveBase):  # type: ignore
         first: pangloss_models.search.Var[demo_app.models.Person]
@@ -43,7 +43,7 @@ def same_group(a: Var[Person], b: Var[Person], group: Var[Group]):
 class CoParticipants(Derived):
     _meta = ...
     first: Annotated[Agent, SymmetricLabel('participant')]
-    second: Agent
+    second: Annotated[Agent, SymmetricLabel('participant')]
     class Derive(pangloss_derived.check.DeriveBase):  # type: ignore
         first: pangloss_models.search.Var[demo_app.models.Agent]
         second: pangloss_models.search.Var[demo_app.models.Agent]

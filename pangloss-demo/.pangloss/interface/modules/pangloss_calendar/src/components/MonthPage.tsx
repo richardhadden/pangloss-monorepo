@@ -2,19 +2,56 @@ import { useApi, useComponent, useTranslations } from "@pangloss/interface-core"
 import { createMemo, Errored, For, Loading, Show } from "solid-js";
 import { getMonth } from "../api";
 import type { CalendarName, Characterised, MonthReport } from "../api";
-import { itemHref, monthFromParams, monthHref, nameOf, nextMonth, previousMonth, sayCalendar, sayDate, sayMonth } from "../days";
+import {
+  itemHref,
+  monthFromParams,
+  monthHref,
+  nameOf,
+  nextMonth,
+  previousMonth,
+  sayBetween,
+  sayCalendar,
+  sayDate,
+  sayMonth,
+  sayRef,
+} from "../days";
 import { Arrows, BadAddress, CalendarConsole, CalendarPage } from "./Chrome";
 import { MonthGrid } from "./MonthGrid";
 
-/** Under the grid: the characterisations attached to the month, its year or a span (not to a day), and a note if the month was cut */
+/**
+ * Under the grid: the dates known only roughly, within a range that reaches beyond the month (a birth "in 735": said as
+ * "between these days", not drawn on every day); the characterisations attached to the month, its year or a span (not
+ * to a day); and a note if the month was cut
+ */
 export function MonthFoot(props: { report: MonthReport }) {
-  const { t, language } = useTranslations();
+  const { t, language, fieldName } = useTranslations();
   const range = (on: Characterised) =>
     on.first && on.last
       ? `${sayDate(nameOf(on.first, props.report.calendar), language(), t)} – ${sayDate(nameOf(on.last, props.report.calendar), language(), t)}`
       : "";
   return (
     <>
+      <Show when={props.report.roughly.length > 0}>
+        <section class="mt-6" aria-labelledby="calendar-roughly">
+          <h2 id="calendar-roughly" class="mb-2 text-xs font-semibold text-slate-500 uppercase">
+            {t("calendar_roughly", "Sometime in or around this month")}
+          </h2>
+          <ul class="flex flex-col gap-1 text-sm">
+            <For each={props.report.roughly}>
+              {(item) => (
+                <li class="flex min-w-0 items-center gap-3" data-testid="calendar-roughly">
+                  <a href={itemHref(item.ref.type, item.ref.id)} class="truncate hover:underline">
+                    {sayRef(item.ref, fieldName)}
+                  </a>
+                  <span class="shrink-0 text-xs text-slate-500 italic">
+                    {sayBetween(nameOf(item.first, props.report.calendar), nameOf(item.last, props.report.calendar), language(), t)}
+                  </span>
+                </li>
+              )}
+            </For>
+          </ul>
+        </section>
+      </Show>
       <Show when={props.report.characterised_spans.length > 0}>
         <section class="mt-6" aria-labelledby="calendar-over-month">
           <h2 id="calendar-over-month" class="mb-2 text-xs font-semibold text-slate-500 uppercase">

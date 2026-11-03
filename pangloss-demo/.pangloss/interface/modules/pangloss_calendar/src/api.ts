@@ -24,6 +24,10 @@ export interface CharacterisationOut {
   use: string | null;
   rank: string | null;
   easter_offset?: number | null;
+  /** The kind of its `when` (`Recurrence`, `JulianExactDate`, `Period`, ...); null for one with no rule */
+  kind?: string | null;
+  /** Whether it falls again and again (a rule), rather than once */
+  repeated?: boolean;
 }
 
 export type Via = "rule" | "day" | "month" | "year" | "span";
@@ -51,6 +55,11 @@ export type Mark = "stated" | "possible";
 export interface Hit {
   ref: Ref;
   mark: Mark;
+  /** One day (an exact date, a range, an EDTF date, a day of a repeated event), as against a period over its days */
+  single?: boolean;
+  /** The range the date states (for a single date: the days it could be on) */
+  first?: DayOut | null;
+  last?: DayOut | null;
 }
 
 export interface DayReport {
@@ -87,7 +96,12 @@ export interface MonthReport {
   /** Day numbers, seven to a row, Monday first (null outside the month); the days are in `days` */
   weeks: (number | null)[][];
   days: MonthDayOut[];
+  /** Periods wider than `CALENDAR_NARROW_DAYS`: a bar across their days */
   spanning: Spanning[];
+  /** Single dates known only within a range that lies in the month: "between these days", a hollow bar */
+  between: Spanning[];
+  /** Single dates known only within a range that reaches beyond the month: listed, not drawn */
+  roughly: Spanning[];
   /** Characterisations attached to the month, its year or a span, not to a day */
   characterised_spans: Characterised[];
   truncated: boolean;

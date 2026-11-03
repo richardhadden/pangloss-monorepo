@@ -83,14 +83,22 @@ test("the day is named with its weekday, in the other calendar too, with the day
   expect(text("section")).toContain("Nothing is dated on this day");
 });
 
-test("what is dated on the day is listed with its field, a possible one marked", () => {
-  show({ report: report({ hits: [hit("a", "Letter to the abbot"), hit("b", "A grant", "possible")] }) });
+test("what is dated on the day is listed with its field; a possible one is marked, with the days it could be on", () => {
+  show({
+    report: report({
+      hits: [
+        hit("a", "Letter to the abbot"),
+        { ...hit("b", "A grant", "possible"), single: true, first: day(1), last: day(10) },
+      ],
+    }),
+  });
   const rows = [...document.body.querySelectorAll<HTMLElement>("li[data-mark]")];
   expect(rows.length).toBe(2);
   expect(rows[0]!.querySelector("a")!.getAttribute("href")).toBe("/Statement/a");
   expect(rows[0]!.textContent).toContain("date");
   expect(rows[0]!.textContent).not.toContain("possible");
   expect(rows[1]!.textContent).toContain("possible");
+  expect(rows[1]!.textContent).toContain("between 1 March 1500 and 10 March 1500");
 });
 
 test("feasts say how they come to be on the day; no one not logged in can attach or detach", () => {
@@ -98,6 +106,9 @@ test("feasts say how they come to be on the day; no one not logged in can attach
   const rows = [...document.body.querySelectorAll<HTMLElement>('[data-testid="calendar-characterisation"]')];
   expect(rows.map((row) => row.dataset.via)).toEqual(["rule", "span", "day"]);
   expect(rows[0]!.textContent).toContain("by rule");
+  // (a feast by rule repeats; what is attached by hand does not)
+  expect(rows[0]!.textContent).toContain("repeats");
+  expect(rows[2]!.textContent).not.toContain("repeats");
   expect(rows[1]!.textContent).toContain("attached to 1 March 1500 – 31 March 1500");
   expect(rows[2]!.textContent).toContain("attached to this day");
   expect(document.body.querySelector("button")).toBeNull();

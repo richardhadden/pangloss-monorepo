@@ -1,7 +1,7 @@
 import { getModel, kindTint, useModels, useTranslations } from "@pangloss/interface-core";
 import { For, Show } from "solid-js";
 import type { CalendarName, Characterised, Hit, MonthDayOut, MonthReport, Spanning } from "../api";
-import { dayHref, itemHref, nameOf, sayDate, weekHeadings } from "../days";
+import { dayHref, itemHref, nameOf, sayBetween, sayDate, sayRef, weekHeadings } from "../days";
 import { weekBars, weekStart } from "../lanes";
 import type { Bar, Ranged } from "../lanes";
 
@@ -17,21 +17,19 @@ function useTint() {
   };
 }
 
-/** A date on a day: a small chip, a link to what it is in; one that is only `possible` is fainter and dashed */
+/** A date on a day: a small chip, a link to what it is in, named by its field ("Born · Alcuin of York") */
 function HitChip(props: { hit: Hit }) {
   const tint = useTint();
-  const possible = () => props.hit.mark === "possible";
+  const { fieldName } = useTranslations();
   return (
     <a
       href={itemHref(props.hit.ref.type, props.hit.ref.id)}
-      title={props.hit.ref.label}
+      title={sayRef(props.hit.ref, fieldName)}
       data-mark={props.hit.mark}
-      class={[
-        "block min-w-0 truncate rounded-sm px-1 text-[0.7rem] leading-5",
-        tint(props.hit.ref.type),
-        { "opacity-70": possible(), border: possible(), "border-dashed": possible(), "border-slate-500/60": possible() },
-      ]}
+      class={["block min-w-0 truncate rounded-sm px-1 text-[0.7rem] leading-5", tint(props.hit.ref.type)]}
     >
+      <span class="font-semibold uppercase opacity-70">{fieldName(props.hit.ref.type, props.hit.ref.field)}</span>
+      <span class="opacity-50"> · </span>
       {props.hit.ref.label}
     </a>
   );
@@ -70,22 +68,43 @@ function DayContents(props: { entry: MonthDayOut; calendar: CalendarName }) {
   );
 }
 
-/** A bar across the days a date covers in a week: open at the end where it goes on into another week */
-function SpanBar(props: { bar: Bar<Spanning> }) {
+/** What a bar is for: a period over its days (filled), or one day somewhere between them (hollow, dashed) */
+type BarItem = { span: Spanning; between: boolean };
+
+/**
+ * A bar across the days a date covers in a week: open at the end where it goes on into another week. A period is
+ * filled; a single date known only within the days is hollow and dashed ("between these days"), named as such.
+ */
+function SpanBar(props: { bar: Bar<BarItem>; calendar: CalendarName }) {
   const tint = useTint();
+  const { t, language, fieldName } = useTranslations();
+  const ref = () => props.bar.item.span.ref;
+  const name = () => sayRef(ref(), fieldName);
+  const title = () =>
+    props.bar.item.between
+      ? `${name()}: ${sayBetween(nameOf(props.bar.item.span.first, props.calendar), nameOf(props.bar.item.span.last, props.calendar), language(), t)}`
+      : name();
   return (
     <a
-      href={itemHref(props.bar.item.ref.type, props.bar.item.ref.id)}
-      title={props.bar.item.ref.label}
+      href={itemHref(ref().type, ref().id)}
+      title={title()}
       data-testid="calendar-bar"
       data-lane={props.bar.lane}
+      data-between={props.bar.item.between ? "true" : undefined}
       style={{
         "grid-row": String(props.bar.lane + 2),
         "grid-column": `${props.bar.start + 1} / span ${props.bar.end - props.bar.start + 1}`,
       }}
       class={[
         "mb-0.5 min-w-0 truncate px-1.5 text-[0.7rem] leading-5 font-medium",
-        tint(props.bar.item.ref.type),
+        {
+          border: props.bar.item.between,
+          "border-dashed": props.bar.item.between,
+          "border-slate-500/70": props.bar.item.between,
+          "bg-white/60": props.bar.item.between,
+          italic: props.bar.item.between,
+        },
+        props.bar.item.between ? "" : tint(ref().type),
         {
           "ml-0.5": props.bar.startsHere,
           "rounded-l-sm": props.bar.startsHere,
@@ -94,7 +113,9 @@ function SpanBar(props: { bar: Bar<Spanning> }) {
         },
       ]}
     >
-      {props.bar.item.ref.label}
+      <span class="font-semibold uppercase not-italic opacity-70">{fieldName(ref().type, ref().field)}</span>
+      <span class="opacity-50"> · </span>
+      {ref().label}
     </a>
   );
 }
@@ -103,7 +124,7 @@ function SpanBar(props: { bar: Bar<Spanning> }) {
  * A week of the grid: seven columns. Behind, the cells (a rule between them; shaded outside the month). In front, a grid
  * of the same columns with the day numbers in its first row, a row for each lane of bars, and what is on each day last.
  */
-function WeekRow(props: { week: (number | null)[]; report: MonthReport; ranges: Ranged<Spanning>[] }) {
+function WeekRow(props: { week: (number | null)[]; report: MonthReport; ranges: Ranged<BarItem>[] }) {
   const { t, language } = useTranslations();
   const bars = () => weekBars(props.ranges, weekStart(props.week));
   const lanes = () => bars().reduce((most, bar) => Math.max(most, bar.lane + 1), 0);
@@ -134,7 +155,7 @@ function WeekRow(props: { week: (number | null)[]; report: MonthReport; ranges: 
             </div>
           )}
         </For>
-        <For each={bars()}>{(bar) => <SpanBar bar={bar} />}</For>
+        <For each={bars()}>{(bar) => <SpanBar bar={bar} calendar={props.report.calendar} />}</For>
         <For each={props.week}>
           {(jdn, index) => (
             <div
@@ -154,19 +175,24 @@ function WeekRow(props: { week: (number | null)[]; report: MonthReport; ranges: 
 
 /**
  * A month as a calendar page: the weekdays across the top (Monday first), a row for each week. A date that states a
- * day is a chip on it (one that states a few days, on each of them, fainter: it was on one of them); a date that
- * states a longer range is a bar across the days it covers (`spanning`); feasts and the like are named on their days.
+ * day is a chip on it (a short period, up to `CALENDAR_NARROW_DAYS`, on each of its days); a longer period is a filled
+ * bar across the days it covers (`spanning`); a single date known only within days of the month is a hollow, dashed bar
+ * across them (`between`); feasts and the like are named on their days. (What is known only to a range beyond the month,
+ * `roughly`, is listed under the grid by `MonthFoot`.)
  */
 export function MonthGrid(props: { report: MonthReport }) {
   const { language } = useTranslations();
-  const ranges = (): Ranged<Spanning>[] =>
-    props.report.spanning.map((item) => ({
-      item,
-      first: Math.max(item.first.jdn, props.report.first.jdn),
-      last: Math.min(item.last.jdn, props.report.last.jdn),
-      trueFirst: item.first.jdn,
-      trueLast: item.last.jdn,
-    }));
+  const ranged = (span: Spanning, between: boolean): Ranged<BarItem> => ({
+    item: { span, between },
+    first: Math.max(span.first.jdn, props.report.first.jdn),
+    last: Math.min(span.last.jdn, props.report.last.jdn),
+    trueFirst: span.first.jdn,
+    trueLast: span.last.jdn,
+  });
+  const ranges = (): Ranged<BarItem>[] => [
+    ...props.report.spanning.map((span) => ranged(span, false)),
+    ...props.report.between.map((span) => ranged(span, true)),
+  ];
   return (
     <div class="overflow-hidden rounded-sm border border-slate-300 bg-white" data-testid="calendar-month">
       <div class="grid grid-cols-7 bg-slate-100/80 text-xs font-semibold text-slate-500 uppercase">

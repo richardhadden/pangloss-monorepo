@@ -3,6 +3,7 @@
 # mypy: ignore-errors
 import datetime
 import decimal
+import pangloss_calendar.models
 import pangloss_dates.models
 import pangloss_derived.views
 import pangloss_models.model_bases.base_models
@@ -22,6 +23,7 @@ from decimal import Decimal
 from enum import Enum
 from typing import Annotated, TypedDict
 from annotated_types import Ge, Le, MaxLen, MinLen
+from pangloss_calendar.models import DateCharacterisation
 from pangloss_dates.bounds import SortBy
 from pangloss_dates.models import Date, SortDefault
 from pangloss_derived import DerivedMeta
@@ -288,6 +290,56 @@ class Place(Entity):
 
     class Order(pangloss_models.search.OrderBy):  # type: ignore
         field: typing.Literal['label']  # type: ignore
+
+class Feast(DateCharacterisation):
+    class ReferenceSet(pangloss_models.model_bases.entity._EntityReferenceSetBase):  # type: ignore
+        id: pydantic.networks.AnyHttpUrl | uuid.UUID  # type: ignore
+        type: typing.Literal['Feast'] = ...
+        label: str | None = ...
+
+    class ReferenceView(pangloss_models.model_bases.entity._EntityReferenceViewBase):  # type: ignore
+        type: typing.Literal['Feast'] = ...
+
+    class Create(pangloss_models.model_bases.entity._EntityCreateBase):  # type: ignore
+        type: typing.Literal['Feast'] = ...
+        label: str
+        use: str | None = ...
+        rank: str | None = ...
+        when: pangloss_calendar.models.NoRule.Create | pangloss_dates.models.DateRange.Create | pangloss_dates.models.EDTFDate.Create | pangloss_dates.models.ExactDate.Create | pangloss_dates.models.Period.Create | pangloss_dates.models.Recurrence.Create
+
+    class Update(pangloss_models.model_bases.entity._EntityUpdateBase):  # type: ignore
+        type: typing.Literal['Feast'] = ...
+        label: str
+        use: str | None = ...
+        rank: str | None = ...
+        when: pangloss_calendar.models.NoRule.Create | pangloss_calendar.models.NoRule.Update | pangloss_dates.models.DateRange.Create | pangloss_dates.models.DateRange.Update | pangloss_dates.models.EDTFDate.Create | pangloss_dates.models.EDTFDate.Update | pangloss_dates.models.ExactDate.Create | pangloss_dates.models.ExactDate.Update | pangloss_dates.models.Period.Create | pangloss_dates.models.Period.Update | pangloss_dates.models.Recurrence.Create | pangloss_dates.models.Recurrence.Update
+
+    class View(pangloss_models.model_bases.entity._EntityViewBase):  # type: ignore
+        type: typing.Literal['Feast'] = ...
+        label: str
+        use: str | None = ...
+        rank: str | None = ...
+        when: pangloss_calendar.models.NoRule.View | pangloss_dates.models.DateRange.View | pangloss_dates.models.EDTFDate.View | pangloss_dates.models.ExactDate.View | pangloss_dates.models.Period.View | pangloss_dates.models.Recurrence.View
+
+    class HeadView(pangloss_models.model_bases.entity._EntityHeadViewBase, Feast.View):  # type: ignore
+        ...
+
+    class EditView(pangloss_models.model_bases.entity._EntityEditViewBase, Feast.View):  # type: ignore
+        ...
+
+    class Where(pangloss_models.search_where.EntityWhere):  # type: ignore
+        is_: pangloss_models.search.Var[Feast] | None = ...  # type: ignore
+        all_: list[Feast.Where] | None = ...  # type: ignore
+        any_of_: list[Feast.Where] | None = ...  # type: ignore
+        not_: Feast.Where | None = ...  # type: ignore
+        use: pangloss_models.search.Var[str] | pangloss_models.search_where.Text | None = ...
+        rank: pangloss_models.search.Var[str] | pangloss_models.search_where.Text | None = ...
+        when: pangloss_calendar.models.NoRule.Where | pangloss_dates.models.DateRange.Where | pangloss_dates.models.EDTFDate.Where | pangloss_dates.models.ExactDate.Where | pangloss_dates.models.Period.Where | pangloss_dates.models.Recurrence.Where | pangloss_models.search.Var[pangloss_calendar.models.NoRule] | pangloss_models.search.Var[pangloss_dates.models.DateRange] | pangloss_models.search.Var[pangloss_dates.models.EDTFDate] | pangloss_models.search.Var[pangloss_dates.models.ExactDate] | pangloss_models.search.Var[pangloss_dates.models.Period] | pangloss_models.search.Var[pangloss_dates.models.Recurrence] | pangloss_models.search_where.Rel | None = ...
+        derived_: dict | pangloss_derived.views.DerivedWhere | None = ...
+        def __init__(self, *, is_: pangloss_models.search.Var[Feast] | None = ..., all_: list[Feast.Where] | None = ..., any_of_: list[Feast.Where] | None = ..., not_: Feast.Where | None = ..., any_: pangloss_models.search_where.AnyRel | None = ..., label: pangloss_models.search_where.Text | None = ..., incoming_: list[pangloss_models.search_where.IncomingFrom | pangloss_models.search_where.Where] | None = ..., use: pangloss_models.search.Var[str] | pangloss_models.search_where.Text | None = ..., rank: pangloss_models.search.Var[str] | pangloss_models.search_where.Text | None = ..., when: pangloss_calendar.models.NoRule.Where | pangloss_dates.models.DateRange.Where | pangloss_dates.models.EDTFDate.Where | pangloss_dates.models.ExactDate.Where | pangloss_dates.models.Period.Where | pangloss_dates.models.Recurrence.Where | pangloss_models.search.Var[pangloss_calendar.models.NoRule] | pangloss_models.search.Var[pangloss_dates.models.DateRange] | pangloss_models.search.Var[pangloss_dates.models.EDTFDate] | pangloss_models.search.Var[pangloss_dates.models.ExactDate] | pangloss_models.search.Var[pangloss_dates.models.Period] | pangloss_models.search.Var[pangloss_dates.models.Recurrence] | pangloss_models.search_where.Rel | None = ..., derived_: dict | pangloss_derived.views.DerivedWhere | None = ...) -> None: ...  # type: ignore
+
+    class Order(pangloss_models.search.OrderBy):  # type: ignore
+        field: typing.Literal['label', 'use', 'rank']  # type: ignore
 
 class Source(Entity):
     _meta = ...

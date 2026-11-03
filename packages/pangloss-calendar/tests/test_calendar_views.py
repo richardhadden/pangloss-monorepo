@@ -23,11 +23,43 @@ def test_an_exact_day_is_stated_on_that_day():
     assert view.spanning == []
 
 
-def test_between_2_and_4_march_is_possible_on_each_of_three_days():
+def test_a_period_of_2_to_4_march_is_stated_on_each_of_three_days():
     view = place([dated("a", 2, 4)], FIRST, LAST)
     for d in (2, 3, 4):
-        assert [p.mark for p in view.days[to_jdn(1500, 3, d, J)]] == ["possible"]
+        assert [p.mark for p in view.days[to_jdn(1500, 3, d, J)]] == ["stated"]
     assert sum(len(v) for v in view.days.values()) == 3
+
+
+def test_a_single_date_known_within_the_month_is_between_its_days_and_not_on_them():
+    view = place(
+        [Dated("a", to_jdn(1500, 3, 2, J), to_jdn(1500, 3, 4, J), single=True)],
+        FIRST,
+        LAST,
+    )
+    assert sum(len(v) for v in view.days.values()) == 0
+    assert (
+        [d.ref for d in view.between] == ["a"]
+        and view.roughly == []
+        and view.spanning == []
+    )
+
+
+def test_a_single_date_known_only_beyond_the_month_is_listed_roughly():
+    born = Dated("born", to_jdn(1500, 1, 1, J), to_jdn(1500, 12, 31, J), single=True)
+    sometime = Dated(
+        "sometime", to_jdn(1500, 3, 20, J), to_jdn(1500, 4, 2, J), single=True
+    )
+    view = place([born, sometime], FIRST, LAST)
+    assert [d.ref for d in view.roughly] == ["born", "sometime"]
+    assert view.between == [] and view.spanning == []
+    assert sum(len(v) for v in view.days.values()) == 0
+    # (a single day is still on its day, whatever its kind)
+    one = place(
+        [Dated("one", to_jdn(1500, 3, 2, J), to_jdn(1500, 3, 2, J), single=True)],
+        FIRST,
+        LAST,
+    )
+    assert [p.mark for p in one.days[to_jdn(1500, 3, 2, J)]] == ["stated"]
 
 
 def test_a_range_of_exactly_the_limit_is_narrow_and_one_more_is_wide():

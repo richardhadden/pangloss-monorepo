@@ -576,9 +576,10 @@ def between(first: dict, last: dict) -> dict:
 
 @pytest.fixture
 def dated(types: Stack) -> SimpleNamespace:
-    """Events in March 1500 (Julian): a coronation on the 2nd, a siege from the 3rd to the 10th (over several days: a bar
-    in the month), a fair on the 4th or the 5th (possible on each); a feast by rule (Benedict, 21 March) and one with no
-    rule (Market), to attach by hand"""
+    """Events in March 1500 (Julian): a coronation on the 2nd, a siege from the 3rd to the 10th (a period: a bar in the
+    month), a fair on the 4th or the 5th (one day, known only within two: a hollow bar between them), a birth sometime
+    in 1500 (listed under the month); a feast by rule (Benedict, 21 March) and one with no rule (Market), to attach by
+    hand"""
     forget("Event", "Feast")
     api = types.admin()
 
@@ -599,11 +600,18 @@ def dated(types: Stack) -> SimpleNamespace:
     return SimpleNamespace(
         api=api,
         coronation=made("Event", "Coronation", text="Crowned", when=julian(1500, 3, 2)),
+        # (one day, known only to the year: listed under a month, not drawn)
+        birth=made("Event", "Birth of Alcuin", text="Born", when=julian(1500)),
         siege=made(
             "Event",
             "Siege of the town",
             text="Besieged",
-            when=between(julian(1500, 3, 3), julian(1500, 3, 10)),
+            when={
+                "type": "Period",
+                "calendar": "julian",
+                "start": julian(1500, 3, 3),
+                "end": julian(1500, 3, 10),
+            },
         ),
         fair=made(
             "Event",

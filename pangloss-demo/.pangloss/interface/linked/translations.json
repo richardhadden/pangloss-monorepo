@@ -24,6 +24,7 @@
       "calendar_attached_span": "attached to {first} – {last}",
       "calendar_attached_year": "attached to the year",
       "calendar_bad_address": "That is not a day of the calendar: the address is /calendar/julian/1500/3/2 (or gregorian).",
+      "calendar_between": "between {first} and {last}",
       "calendar_by_rule": "by rule",
       "calendar_characterisations": "Feasts and characterisations",
       "calendar_dated": "Dated",
@@ -46,6 +47,8 @@
       "calendar_possible": "possible",
       "calendar_previous_day": "Previous day",
       "calendar_previous_month": "Previous month",
+      "calendar_repeats": "repeats",
+      "calendar_roughly": "Sometime in or around this month",
       "calendar_truncated": "More dates were found than are shown",
       "calendar_weekday_date": "{weekday} {date}",
       "calendar_year": "Year",
@@ -340,6 +343,7 @@
       "calendar_attached_span": "zugeordnet: {first} – {last}",
       "calendar_attached_year": "dem Jahr zugeordnet",
       "calendar_bad_address": "Das ist kein Tag des Kalenders: die Adresse lautet /calendar/julian/1500/3/2 (oder gregorian).",
+      "calendar_between": "zwischen {first} und {last}",
       "calendar_by_rule": "nach Regel",
       "calendar_characterisations": "Feste und Charakterisierungen",
       "calendar_dated": "Datiert",
@@ -362,6 +366,8 @@
       "calendar_possible": "möglich",
       "calendar_previous_day": "Voriger Tag",
       "calendar_previous_month": "Voriger Monat",
+      "calendar_repeats": "wiederkehrend",
+      "calendar_roughly": "Irgendwann in oder um diesen Monat",
       "calendar_truncated": "Es wurden mehr Daten gefunden als gezeigt werden",
       "calendar_weekday_date": "{weekday}, {date}",
       "calendar_year": "Jahr",
@@ -656,6 +662,7 @@
       "calendar_attached_span": "attachée du {first} au {last}",
       "calendar_attached_year": "attachée à l’année",
       "calendar_bad_address": "Ce n’est pas un jour du calendrier : l’adresse est /calendar/julian/1500/3/2 (ou gregorian).",
+      "calendar_between": "entre le {first} et le {last}",
       "calendar_by_rule": "par règle",
       "calendar_characterisations": "Fêtes et caractérisations",
       "calendar_dated": "Datés",
@@ -678,6 +685,8 @@
       "calendar_possible": "possible",
       "calendar_previous_day": "Jour précédent",
       "calendar_previous_month": "Mois précédent",
+      "calendar_repeats": "récurrent",
+      "calendar_roughly": "À un moment dans ce mois ou autour",
       "calendar_truncated": "Plus de dates ont été trouvées qu’il n’en est montré",
       "calendar_weekday_date": "{weekday} {date}",
       "calendar_year": "Année",
@@ -1527,6 +1536,31 @@
           "statements": {
             "name": "Statements",
             "plural": "Statements",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "Feast": {
+        "name": "Feast",
+        "plural": "Feast",
+        "help": "",
+        "description": "A day of the calendar: a saint's day every year (`when` a Recurrence), a council that sat once (an ExactDate or\na DateRange), a Lent (a Period), or one attached to days by hand (NoRule). Shown by `pangloss_calendar`",
+        "kind": "Entity",
+        "fields": {
+          "use": {
+            "name": "Use",
+            "plural": "Use",
+            "help": ""
+          },
+          "rank": {
+            "name": "Rank",
+            "plural": "Rank",
+            "help": ""
+          },
+          "when": {
+            "name": "When",
+            "plural": "When",
             "help": ""
           }
         },
@@ -3048,6 +3082,31 @@
         },
         "incoming": {}
       },
+      "Feast": {
+        "name": "Feast",
+        "plural": "Feast",
+        "help": "",
+        "description": "A day of the calendar: a saint's day every year (`when` a Recurrence), a council that sat once (an ExactDate or\na DateRange), a Lent (a Period), or one attached to days by hand (NoRule). Shown by `pangloss_calendar`",
+        "kind": "Entity",
+        "fields": {
+          "use": {
+            "name": "Verwendung",
+            "plural": "Verwendung",
+            "help": ""
+          },
+          "rank": {
+            "name": "Rang",
+            "plural": "Rang",
+            "help": ""
+          },
+          "when": {
+            "name": "Wann",
+            "plural": "Wann",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
       "Group": {
         "name": "Gruppe",
         "plural": "Gruppen",
@@ -4559,6 +4618,31 @@
           "statements": {
             "name": "Énoncés",
             "plural": "Énoncés",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "Feast": {
+        "name": "Feast",
+        "plural": "Feast",
+        "help": "",
+        "description": "A day of the calendar: a saint's day every year (`when` a Recurrence), a council that sat once (an ExactDate or\na DateRange), a Lent (a Period), or one attached to days by hand (NoRule). Shown by `pangloss_calendar`",
+        "kind": "Entity",
+        "fields": {
+          "use": {
+            "name": "Usage",
+            "plural": "Usage",
+            "help": ""
+          },
+          "rank": {
+            "name": "Rang",
+            "plural": "Rang",
+            "help": ""
+          },
+          "when": {
+            "name": "Quand",
+            "plural": "Quand",
             "help": ""
           }
         },

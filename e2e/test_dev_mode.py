@@ -241,7 +241,9 @@ def test_the_calendar(page: Page, dated, dev_url: str, errors: list[str]):
         "link", name="March 1500"
     ).click()
     expect(
-        page.get_by_test_id("calendar-month").get_by_role("link", name="Coronation")
+        page.get_by_test_id("calendar-month").get_by_role(
+            "link", name="When · Coronation"
+        )
     ).to_be_visible()
     page.get_by_test_id("calendar-month").get_by_role(
         "link", name="2 March 1500", exact=True

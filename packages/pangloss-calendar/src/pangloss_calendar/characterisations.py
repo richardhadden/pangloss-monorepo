@@ -1,8 +1,9 @@
 """A characterisation as the calendar sees it, and the days its rule falls on (pure: no database, no models).
 
-A characterisation (`pangloss_calendar.models.DateCharacterisation`) has an optional yearly or weekly rule over a
-lifetime, in a calendar. `Characterisation` is that, read from the database (`pangloss_calendar.graph`) or built by
-hand in a test.
+A characterisation (`pangloss_calendar.models.DateCharacterisation`) says when it is by the kind of its `when`: a rule
+(yearly or weekly, over a lifetime, in a calendar: it repeats), one day known as roughly as the date says (an exact
+date, a range, an EDTF date: once), a span (a period: once), or nothing (attached by hand). `Characterisation` is that,
+read from the database (`pangloss_calendar.graph`) or built by hand in a test.
 """
 
 from dataclasses import dataclass
@@ -38,9 +39,21 @@ class Characterisation:
     rule: RecurrenceRule | None = None
     calendar: Calendar = Calendar.GREGORIAN
     first: int | None = None
-    """The first day of its lifetime (strict), or None without a rule"""
+    """The first day of its lifetime (a rule), or of the days it is on (a single date, a period); None without a date"""
     last: int | None = None
     anchor: int | None = None
+    kind: str | None = None
+    """The type of its `when` as stored (`Recurrence`, `JulianExactDate`, `Period`, ...); None for `NoRule`"""
+
+    @property
+    def repeated(self) -> bool:
+        """Whether it falls again and again (a rule), rather than once"""
+        return self.rule is not None
+
+    @property
+    def single(self) -> bool:
+        """Whether it is one day, known as roughly as its date says (not a period, not a rule)"""
+        return is_single(self.kind)
 
     @property
     def key(self) -> str:
@@ -57,8 +70,20 @@ class Characterisation:
 
     @property
     def has_days(self) -> bool:
-        """A rule that can be worked out here (one on another characterisation's feast cannot)"""
-        return self.rule is not None and self.rule.feast is None
+        """Whether its days can be worked out here: a rule (not one on another characterisation's feast), or a date with
+        its days (a single date, a period)"""
+        if self.rule is not None:
+            return self.rule.feast is None
+        return self.first is not None and self.last is not None
+
+
+SINGLE_KINDS = ("ExactDate", "DateRange", "EDTFDate")
+
+
+def is_single(kind: str | None) -> bool:
+    """Whether a stored date kind (`JulianExactDate`, `DateRange`, ...) is one day known within its range, as against a
+    period (a span of days) or a recurrence"""
+    return kind is not None and kind.endswith(SINGLE_KINDS)
 
 
 def from_row(row: dict[str, Any], default: Calendar) -> Characterisation:
@@ -87,8 +112,9 @@ def from_row(row: dict[str, Any], default: Calendar) -> Characterisation:
         rank=row.get("rank"),
         rule=rule,
         calendar=Calendar(row["calendar"]) if row.get("calendar") else default,
-        first=row.get("earliest_strict") if rule else None,
-        last=row.get("latest_strict") if rule else None,
+        first=row.get("earliest_strict"),
+        last=row.get("latest_strict"),
+        kind=row.get("kind"),
         anchor=row["anchor"]
         if row.get("anchor") is not None
         else row.get("earliest_strict"),
@@ -96,24 +122,27 @@ def from_row(row: dict[str, Any], default: Calendar) -> Characterisation:
 
 
 def falls_on_day(c: Characterisation, day: int) -> bool:
-    """Whether the rule falls on the day, in the rule's own calendar and within its lifetime"""
-    if not c.has_days or c.rule is None:
+    """Whether it is on the day: its rule falls on it (in the rule's own calendar, within its lifetime), or the day is
+    one of those of its single date or period"""
+    if not c.has_days:
         return False
     if (c.first is not None and day < c.first) or (c.last is not None and day > c.last):
         return False
-    return occurs_on(c.rule, day, c.calendar, c.anchor)
+    return c.rule is None or occurs_on(c.rule, day, c.calendar, c.anchor)
 
 
 def days_between(c: Characterisation, first: int, last: int) -> list[int]:
-    """The days from `first` to `last` (inclusive) that the rule falls on, in order. A yearly rule is worked out for each year
-    (not tried on every day)"""
-    if not c.has_days or c.rule is None:
+    """The days from `first` to `last` (inclusive) that it is on, in order: those its rule falls on (a yearly rule is
+    worked out for each year, not tried on every day), or every day of its single date's range or its period"""
+    if not c.has_days:
         return []
     lo = max(first, c.first) if c.first is not None else first
     hi = min(last, c.last) if c.last is not None else last
     if lo > hi:
         return []
     rule = c.rule
+    if rule is None:
+        return list(range(lo, hi + 1))
     if rule.frequency != Frequency.YEARLY:
         return occurrences(rule, lo, hi, c.calendar, c.anchor)
     found = []

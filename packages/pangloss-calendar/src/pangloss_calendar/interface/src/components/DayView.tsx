@@ -1,12 +1,10 @@
 import { getModel, inputClass, ReferenceChip, smallButtonClass, useModels, useTranslations } from "@pangloss/interface-core";
 import { createMemo, createSignal, For, Loading, Show } from "solid-js";
 import type { CalendarName, Characterised, CharacterisationOut, DayReport, Hit } from "../api";
-import { dayHref, itemHref, monthHref, nameOf, sayCalendar, sayDate, sayMonth, weekdayNames } from "../days";
+import { dayHref, itemHref, monthHref, nameOf, sayBetween, sayCalendar, sayDate, sayMonth, weekdayNames } from "../days";
 import type { Say } from "../days";
-import { Arrows } from "./Chrome";
+import { Arrows, CHARACTERISATION_MODEL } from "./Chrome";
 
-/** The abstract entity of pangloss_calendar that feasts and the like are types of */
-export const CHARACTERISATION_MODEL = "DateCharacterisation";
 
 export interface DayViewProps {
   report: DayReport;
@@ -91,16 +89,24 @@ function AttachBox(props: { find: DayViewProps["find"]; onAttach: DayViewProps["
   );
 }
 
-function HitRow(props: { hit: Hit }) {
-  const { t, fieldName } = useTranslations();
+/** A date on the day: what it is (its field) and what it is in; one only `possible` says the days it could be on */
+function HitRow(props: { hit: Hit; calendar: CalendarName }) {
+  const { t, language, fieldName } = useTranslations();
+  const range = () =>
+    props.hit.first && props.hit.last && props.hit.first.jdn !== props.hit.last.jdn
+      ? sayBetween(nameOf(props.hit.first, props.calendar), nameOf(props.hit.last, props.calendar), language(), t)
+      : "";
   return (
     <li class="flex min-w-0 items-center gap-3" data-mark={props.hit.mark}>
+      <span class="shrink-0 text-xs font-semibold text-slate-500 uppercase">{fieldName(props.hit.ref.type, props.hit.ref.field)}</span>
       <ReferenceChip type={props.hit.ref.type} label={props.hit.ref.label} href={itemHref(props.hit.ref.type, props.hit.ref.id)} />
-      <span class="text-xs font-semibold text-slate-500 uppercase">{fieldName(props.hit.ref.type, props.hit.ref.field)}</span>
       <Show when={props.hit.mark === "possible"}>
-        <span class="rounded-sm bg-amber-400/25 px-1.5 py-0.5 text-[0.65rem] font-semibold text-amber-950 uppercase">
+        <span class="shrink-0 rounded-sm bg-amber-400/25 px-1.5 py-0.5 text-[0.65rem] font-semibold text-amber-950 uppercase">
           {t("calendar_possible", "possible")}
         </span>
+        <Show when={range()}>
+          <span class="truncate text-xs text-slate-500 italic">{range()}</span>
+        </Show>
       </Show>
     </li>
   );
@@ -166,6 +172,11 @@ export function DayView(props: DayViewProps) {
                     <Show when={on.characterisation.use}>
                       <span class="text-xs text-slate-500">{on.characterisation.use}</span>
                     </Show>
+                    <Show when={on.characterisation.repeated}>
+                      <span class="rounded-sm bg-slate-400/25 px-1.5 py-0.5 text-[0.65rem] font-semibold text-slate-700 uppercase">
+                        {t("calendar_repeats", "repeats")}
+                      </span>
+                    </Show>
                     <span class="text-xs text-slate-500 italic">{how(on, props.calendar, language(), t)}</span>
                     <Show when={props.loggedIn && on.origin === "manual" && on.via === "day"}>
                       <button
@@ -206,7 +217,7 @@ export function DayView(props: DayViewProps) {
           fallback={<p class="text-sm text-slate-500">{t("calendar_nothing_on_day", "Nothing is dated on this day")}</p>}
         >
           <ul class="flex flex-col gap-2">
-            <For each={props.report.hits}>{(hit) => <HitRow hit={hit} />}</For>
+            <For each={props.report.hits}>{(hit) => <HitRow hit={hit} calendar={props.calendar} />}</For>
           </ul>
         </Show>
         <Show when={props.report.truncated}>

@@ -2,7 +2,7 @@
 // It is made again each time the interface is built.
 import type { AnyRelationCondition, ChoiceCondition, CompareCondition, ItemsCondition, ModelDefinitions, NodePattern, RelationCondition, SearchOrder, SearchPattern, TextCondition } from "@pangloss/interface-core";
 
-export type ModelName = "Activity" | "Alternative" | "Artwork" | "AtPage" | "Causes" | "Certainty" | "CreationOfArtwork" | "CreationOfPainting" | "CreationOfPhysicalObject" | "Date" | "DateCharacterisation" | "DateRange" | "EDTFDate" | "ExactDate" | "Factoid" | "Group" | "Hypothetical" | "Identification" | "InRole" | "MemberOf" | "Negative" | "NegativeSubjunctive" | "NoRule" | "OccupationType" | "OngoingDate" | "Order" | "Painting" | "Period" | "Person" | "PhysicalObject" | "Place" | "PositiveSubjunctive" | "Probability" | "Recurrence" | "Source" | "Statement" | "Transfer" | "UnknownDate" | "WithCertainty";
+export type ModelName = "Activity" | "Alternative" | "Artwork" | "AtPage" | "Causes" | "Certainty" | "CreationOfArtwork" | "CreationOfPainting" | "CreationOfPhysicalObject" | "Date" | "DateCharacterisation" | "DateRange" | "EDTFDate" | "ExactDate" | "Factoid" | "Feast" | "Group" | "Hypothetical" | "Identification" | "InRole" | "MemberOf" | "Negative" | "NegativeSubjunctive" | "NoRule" | "OccupationType" | "OngoingDate" | "Order" | "Painting" | "Period" | "Person" | "PhysicalObject" | "Place" | "PositiveSubjunctive" | "Probability" | "Recurrence" | "Source" | "Statement" | "Transfer" | "UnknownDate" | "WithCertainty";
 
 export const definitions: ModelDefinitions = {
   "models": {
@@ -1033,7 +1033,9 @@ export const definitions: ModelDefinitions = {
       "abstract": true,
       "description": null,
       "parent": null,
-      "concreteTypes": [],
+      "concreteTypes": [
+        "Feast"
+      ],
       "typeParameters": [],
       "createWithId": false,
       "createDirectly": true,
@@ -1077,7 +1079,11 @@ export const definitions: ModelDefinitions = {
           "kind": "embedded",
           "model": null,
           "types": [
+            "DateRange",
+            "EDTFDate",
+            "ExactDate",
             "NoRule",
+            "Period",
             "Recurrence"
           ]
         }
@@ -1957,6 +1963,70 @@ export const definitions: ModelDefinitions = {
           "validators": [],
           "subclasses": [],
           "defaultReifiedType": null
+        }
+      ],
+      "incoming": [],
+      "interfaceMeta": null
+    },
+    "Feast": {
+      "name": "Feast",
+      "kind": "Entity",
+      "abstract": false,
+      "description": "A day of the calendar: a saint's day every year (`when` a Recurrence), a council that sat once (an ExactDate or\na DateRange), a Lent (a Period), or one attached to days by hand (NoRule). Shown by `pangloss_calendar`",
+      "parent": "DateCharacterisation",
+      "concreteTypes": [
+        "Feast"
+      ],
+      "typeParameters": [],
+      "createWithId": false,
+      "createDirectly": true,
+      "acceptUrlAsId": true,
+      "requireLabel": true,
+      "useInSemanticSpaceLabel": true,
+      "fields": [
+        {
+          "name": "use",
+          "key": "use",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": []
+        },
+        {
+          "name": "rank",
+          "key": "rank",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": []
+        },
+        {
+          "name": "when",
+          "key": "when",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "embedded",
+          "model": null,
+          "types": [
+            "DateRange",
+            "EDTFDate",
+            "ExactDate",
+            "NoRule",
+            "Period",
+            "Recurrence"
+          ]
         }
       ],
       "incoming": [],
@@ -5272,7 +5342,11 @@ export const definitions: ModelDefinitions = {
         "when": {
           "operators": "relation",
           "targets": [
+            "DateRange",
+            "EDTFDate",
+            "ExactDate",
             "NoRule",
+            "Period",
             "Recurrence"
           ]
         }
@@ -5557,6 +5631,39 @@ export const definitions: ModelDefinitions = {
       "orderBy": [
         "label",
         "year"
+      ]
+    },
+    "Feast": {
+      "kind": "entity",
+      "fields": {
+        "use": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "rank": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "when": {
+          "operators": "relation",
+          "targets": [
+            "DateRange",
+            "EDTFDate",
+            "ExactDate",
+            "NoRule",
+            "Period",
+            "Recurrence"
+          ]
+        }
+      },
+      "orderBy": [
+        "label",
+        "use",
+        "rank"
       ]
     },
     "Group": {
@@ -6467,7 +6574,7 @@ export type DatePattern = { type: "Date"; where?: DateWhere };
 export type DateCharacterisationWhere = {
   use?: TextCondition;
   rank?: TextCondition;
-  when?: RelationCondition | (RelationCondition & (NoRulePattern | RecurrencePattern));
+  when?: RelationCondition | (RelationCondition & (DateRangePattern | EDTFDatePattern | ExactDatePattern | NoRulePattern | PeriodPattern | RecurrencePattern));
   $all?: DateCharacterisationWhere[];
   $any_of?: DateCharacterisationWhere[];
   $not?: DateCharacterisationWhere;
@@ -6558,6 +6665,20 @@ export type FactoidWhere = {
 };
 
 export type FactoidPattern = { type: "Factoid"; where?: FactoidWhere };
+
+export type FeastWhere = {
+  use?: TextCondition;
+  rank?: TextCondition;
+  when?: RelationCondition | (RelationCondition & (DateRangePattern | EDTFDatePattern | ExactDatePattern | NoRulePattern | PeriodPattern | RecurrencePattern));
+  $all?: FeastWhere[];
+  $any_of?: FeastWhere[];
+  $not?: FeastWhere;
+  $any?: AnyRelationCondition;
+  label?: TextCondition;
+  $incoming?: NodePattern | NodePattern[];
+};
+
+export type FeastPattern = { type: "Feast"; where?: FeastWhere };
 
 export type GroupWhere = {
   name?: TextCondition;
@@ -6840,6 +6961,7 @@ export interface Wheres {
   CreationOfPhysicalObject: CreationOfPhysicalObjectWhere;
   DateCharacterisation: DateCharacterisationWhere;
   Factoid: FactoidWhere;
+  Feast: FeastWhere;
   Group: GroupWhere;
   MemberOf: MemberOfWhere;
   OccupationType: OccupationTypeWhere;
@@ -6861,6 +6983,7 @@ export interface OrderFields {
   CreationOfPhysicalObject: "label" | "text" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day" | "year";
   DateCharacterisation: "label" | "use" | "rank";
   Factoid: "label" | "year";
+  Feast: "label" | "use" | "rank";
   Group: "label" | "name";
   MemberOf: "label" | "text" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day" | "year";
   OccupationType: "label" | "description" | "label_de" | "label_fr";

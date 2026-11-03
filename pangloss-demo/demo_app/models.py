@@ -34,6 +34,7 @@ from enum import Enum
 from typing import Annotated, TypedDict
 
 from annotated_types import Ge, Le, MaxLen, MinLen
+from pangloss_calendar.models import DateCharacterisation
 from pangloss_dates.bounds import SortBy
 from pangloss_dates.models import Date, SortDefault
 from pangloss_derived import DerivedMeta
@@ -169,6 +170,11 @@ class Group(Entity, Agent):
 
 class Place(Entity):
     coordinates: Coordinates | None = None
+
+
+class Feast(DateCharacterisation):
+    """A day of the calendar: a saint's day every year (`when` a Recurrence), a council that sat once (an ExactDate or
+    a DateRange), a Lent (a Period), or one attached to days by hand (NoRule). Shown by `pangloss_calendar`"""
 
 
 class Source(Entity):

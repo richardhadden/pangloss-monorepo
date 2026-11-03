@@ -33,8 +33,12 @@ class FeastDay(DateCharacterisation):
     saint: list[Saint]       # anything else an entity can have
 ```
 
-A `FeastDay` has a `label`, a `use` (the liturgical use, or whatever you divide them by), a `rank`, and `when`, the rule it falls by.
-`when` is a `Recurrence` from [pangloss-dates](../dates/README.md), in the calendar it is written in:
+A `FeastDay` has a `label`, a `use` (the liturgical use, or whatever you divide them by), a `rank`, and `when`, which says
+**whether it repeats or not by its kind**: a `Recurrence` from [pangloss-dates](../dates/README.md) is the rule it falls by,
+every year (or week, or month), in the calendar it is written in; an `ExactDate`, a `DateRange` or an `EDTFDate` is **one day,
+once**, as roughly known as the date says (a council "in March 1500" is on every day of March once); a `Period` is **a span,
+once** (Lent 1500); `NoRule` is for one attached to days by hand. The API says `repeated` and the `kind` for each. A yearly
+rule:
 
 ```python
 FeastDay.Create(label="Benedict", use="sarum", rank="major", when={
@@ -80,18 +84,24 @@ and **Calendar** in the navigation bar leads to them:
 
 - **`/calendar`**: the years of the span (`CALENDAR_FIRST_YEAR` to `CALENDAR_LAST_YEAR`), each with how many dates meet it and
   its twelve months as links. Without a span the page says to set one.
-- **`/calendar/julian/1500/3`**: the month as a calendar page, Monday first. A date that states a day is a small chip on it
-  (one that states a few days, up to `CALENDAR_NARROW_DAYS`, is on each of them, fainter and dashed: it was on one of them); a
-  date that states a longer range is a bar across the days it covers, carried over the weeks, open at an end that goes on
-  beyond the month; feasts and other characterisations are named in amber on their days. A day with more than three dates says
-  "+N more". Under the grid, what is attached to the month, its year or a span.
+- **`/calendar/julian/1500/3`**: the month as a calendar page, Monday first. What a date is drawn as depends on **what kind of
+  date it is**, not only on its range. A date that names a day is a chip on it, named by its field ("Born · Alcuin of York").
+  A **period** (`Period`: an office held, a siege) is on each of its days: a short one (up to `CALENDAR_NARROW_DAYS`) as a chip on
+  each, a longer one as a filled bar across them, carried over the weeks, open at an end that goes on beyond the month. A
+  **single day known only roughly** (an `ExactDate` with no day, a `DateRange`, an EDTF date: a birth "in 735") is never
+  drawn as if it lasted: if its range of days lies in the month it is a hollow, dashed bar *between* them; if it reaches beyond
+  the month it is listed under the grid, "Sometime in or around this month", with the days it could be on. Feasts and other
+  characterisations are named in amber on their days. A day with more than three dates says "+N more". Under the grid, too,
+  what is attached to the month, its year or a span.
 - **`/calendar/julian/1500/3/2`**: the day, with its weekday, its name in the other calendar (a link to the same day under that
   name), the days either side and its month; the characterisations on it and how each comes to be there (by rule, or attached
-  to the day, the month, the year or a span); and everything dated on it with the field it is in, marked *possible* when only
-  the date's allowance for doubt reaches the day.
+  to the day, the month, the year or a span; "repeats" on one with a rule); and everything dated on it with the field it is in,
+  marked *possible* (with the days it could be on) when the date does not name the day: a single day known only to a month or
+  a year, or a date whose allowance for doubt alone reaches the day. A period is stated on each of its days.
 
 Every page has **Julian** and **Gregorian** buttons in the console bar, which show the same thing read in the other
 calendar (a month is the month of that name in the other calendar; a day is the same day under its other name), and
 **Years**. Someone logged in can, on a day's page, **attach a characterisation** found by its name (and take away one attached
-by hand), and make a new one of any type the project has under `DateCharacterisation`. The pages do not need `seed`: they
-are worked out from the dates.
+by hand), and make a new one of any type the project has under `DateCharacterisation` ("New Feast" in the console of every
+calendar page). `DateCharacterisation` is abstract: a project that wants to make them needs a subclass (the demo has `Feast`);
+without one the buttons do not appear. The pages do not need `seed`: they are worked out from the dates.

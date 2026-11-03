@@ -205,7 +205,10 @@ These are not shown, but are read aloud, or appear when the pointer rests on the
 | `calendar_other_name` | {date} ({calendar}) | `DayView` (the same day in the other calendar) | |
 | `calendar_previous_month` / `_next_month` / `_previous_day` / `_next_day` | Previous month / Next month / Previous day / Next day | `Arrows` (`aria-label` and tooltip) | |
 | `calendar_more` | +{count} more | `MonthGrid` (a day with more dates than it shows) | |
-| `calendar_possible` | possible | `DayView` (a date whose doubt reaches the day) | |
+| `calendar_possible` | possible | `DayView` (a single date whose range of days holds the day without naming it) | |
+| `calendar_between` | between {first} and {last} | `MonthGrid` (tooltip of a hollow bar), `MonthFoot`, `DayView` (the days a single date could be on) | |
+| `calendar_roughly` | Sometime in or around this month | `MonthFoot` (single dates known only to a range beyond the month) | |
+| `calendar_repeats` | repeats | `DayView` (a characterisation with a rule) | |
 | `calendar_over_month` | Over the month | `MonthPage` (characterisations attached to the month, year or a span) | |
 | `calendar_on_this_day` / `calendar_nothing_on_day` | On this day / Nothing is dated on this day | `DayView` | |
 | `calendar_characterisations` / `calendar_no_characterisations` | Feasts and characterisations / None on this day | `DayView` | |
