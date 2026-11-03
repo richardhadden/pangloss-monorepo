@@ -195,12 +195,31 @@ def test_someone_logged_in_attaches_a_feast_to_a_day_and_takes_it_away(
     # the + of the search makes a new one, on this day to start with
     feasts.get_by_role("button", name="Make a new one").click()
     dialog = page.get_by_role("dialog")
+    # (a feast, or a document that can have a date; the search finds only feasts)
+    expect(dialog.locator("button[data-choice]")).to_have_text(["Feast", "Event"])
+    dialog.get_by_role("button", name="Feast", exact=True).click()
     expect(dialog.get_by_label("When Year", exact=True)).to_have_value("1500")
     expect(dialog.get_by_label("When Day", exact=True)).to_have_value("5")
     dialog.get_by_label("Label", exact=True).fill("Fair day")
     dialog.get_by_role("button", name="Save").click()
     expect(dialog).to_have_count(0)
     expect(feasts.get_by_role("link", name="Fair day")).to_be_visible()
+    # and a document, in the same dialog, its date the day; saved, it is on the day, and not attached
+    feasts.get_by_role("button", name="Make a new one").click()
+    dialog.get_by_role("button", name="Event", exact=True).click()
+    expect(dialog.get_by_role("heading", name="New Event")).to_be_visible()
+    expect(dialog.get_by_label("When Day", exact=True)).to_have_value("5")
+    dialog.get_by_label("Label", exact=True).fill("The bridge falls")
+    dialog.get_by_label("Text", exact=True).fill("The bridge falls")
+    dialog.get_by_role("button", name="Save").click()
+    expect(dialog).to_have_count(0)
+    expect(page).to_have_url(re.compile(r"/calendar/julian/1500/3/5$"))
+    expect(
+        page.get_by_role("region", name="On this day").get_by_role(
+            "link", name=re.compile("The bridge falls")
+        )
+    ).to_be_visible()
+    expect(feasts.get_by_role("link", name=re.compile("The bridge falls"))).to_have_count(0)
 
 
 def test_a_feast_is_made_from_the_plus_of_a_day_in_the_month(logged_in: Page, dated):

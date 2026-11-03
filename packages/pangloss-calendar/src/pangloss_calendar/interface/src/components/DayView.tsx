@@ -1,9 +1,9 @@
-import { PickOrCreate, ReferenceChip, useTranslations } from "@pangloss/interface-core";
-import { For, Show } from "solid-js";
+import { NewEntityDialog, PickOrCreate, ReferenceChip, smallButtonClass, useTranslations } from "@pangloss/interface-core";
+import { createSignal, For, Show } from "solid-js";
 import type { CalendarName, Characterised, CharacterisationOut, DayReport, Hit } from "../api";
 import { dayHref, itemHref, nameOf, sayBetween, sayCalendar, sayDate, weekdayNames } from "../days";
 import type { Say } from "../days";
-import { Arrows, Breadcrumbs, onTheDay, useCharacterisationTypes } from "./Chrome";
+import { Arrows, Breadcrumbs, useCharacterisationTypes, useDatedDocumentTypes, useOnTheDayFill } from "./Chrome";
 
 
 export interface DayViewProps {
@@ -17,7 +17,7 @@ export interface DayViewProps {
   loggedIn: boolean;
   onAttach: (characterisation: { id: string; label: string }) => void | Promise<void>;
   onDetach: (characterisation: CharacterisationOut) => void | Promise<void>;
-  /** A new characterisation was made (on the day, unless its form was changed): the day is to be read again */
+  /** A characterisation or a document was made (on the day, unless its form was changed): the day is to be read again */
   onCreated: () => void;
 }
 
@@ -72,12 +72,18 @@ function HitRow(props: { hit: Hit; calendar: CalendarName }) {
  * A day: where it is (its year and month, links), its weekday and its name in both calendars, the way to the days
  * before and after; the feasts and other characterisations on it as chips, with how each comes to be there (for someone
  * logged in, one attached by hand has a remove button, and under them is the search that finds one to attach, with a +
- * that makes a new one starting on the day, as in a form); and everything dated on it, `stated` by its date or only
- * `possible`.
+ * that makes a new one, or a document with a date, in a dialog: every date in it that can be one day starts as the day);
+ * and everything dated on it, `stated` by its date or only `possible`.
  */
 export function DayView(props: DayViewProps) {
   const { t, language } = useTranslations();
   const types = useCharacterisationTypes();
+  const documents = useDatedDocumentTypes();
+  const onTheDay = useOnTheDayFill();
+  // (what the + makes: a characterisation, or a document with a date that can be the day, a factoid)
+  const makes = () => [...types(), ...documents()];
+  // (with no characterisations to find, the + is on its own, and opens this)
+  const [making, setMaking] = createSignal(false);
   const name = () => nameOf(props.report.day, props.calendar);
   const other = (): CalendarName => (props.calendar === "julian" ? "gregorian" : "julian");
   const weekday = () => weekdayNames(language())[props.report.day.weekday] ?? props.report.day.weekday_name;
@@ -148,12 +154,35 @@ export function DayView(props: DayViewProps) {
             <div class="mt-3 max-w-xl" data-testid="calendar-attach">
               <PickOrCreate
                 types={types()}
+                createTypes={makes()}
                 placeholder={t("calendar_attach_placeholder", "Find one to attach to this day, or + to make one")}
-                initial={onTheDay(name())}
+                fill={onTheDay(props.report.day, props.calendar)}
                 onPick={(found) => void props.onAttach(found)}
                 onCreated={() => props.onCreated()}
               />
             </div>
+          </Show>
+          <Show when={props.loggedIn && types().length === 0 && documents().length > 0}>
+            <button
+              type="button"
+              class={["mt-3", smallButtonClass]}
+              aria-haspopup="dialog"
+              aria-label={t("calendar_add_on", "Add to {date}", { date: sayDate(name(), language(), t) })}
+              onClick={() => setMaking(true)}
+            >
+              +
+            </button>
+          </Show>
+          <Show when={making()}>
+            <NewEntityDialog
+              types={documents()}
+              fill={onTheDay(props.report.day, props.calendar)}
+              onClose={() => setMaking(false)}
+              onCreated={() => {
+                setMaking(false);
+                props.onCreated();
+              }}
+            />
           </Show>
         </section>
       </Show>

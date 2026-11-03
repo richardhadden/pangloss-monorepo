@@ -1044,7 +1044,8 @@ function EntityCreateForm(props: {
  * Finds an entity of one of `types`, or makes a new one: a + button joined on to the end of the
  * search opens a dialog that shows the types (when there are several) and then the form for the
  * entity; the entity made is chosen as if it had been found. With `onRemove`, a remove button is
- * joined on after it (for a place in a list that has no entity yet).
+ * joined on after it (for a place in a list that has no entity yet). With `createTypes`, the + makes those instead
+ * (more than are searched for: documents too, with `onCreated`).
  */
 export function PickOrCreate(props: {
   types: string[];
@@ -1055,13 +1056,17 @@ export function PickOrCreate(props: {
   placeholder?: string;
   /** What the form of a new one starts with, over the blank item */
   initial?: (type: string) => Record<string, unknown>;
+  /** What every item made in its form starts with (see `createItemFormState`) */
+  fill?: (item: FormData) => FormData;
+  /** The types the + makes, if not those searched for */
+  createTypes?: string[];
   /** Called with one that was made, instead of `onPick` (by default it is picked as if it had been found) */
   onCreated?: (entity: Summary) => void;
 }) {
   const definitions = useModels();
   const { t } = useTranslations();
   const [creating, setCreating] = createSignal(false);
-  const groups = createMemo(() => menuGroups(definitions, typeOptions(props.types)));
+  const groups = createMemo(() => menuGroups(definitions, typeOptions(props.createTypes ?? props.types)));
   return (
     <div class="w-full min-w-0">
       <EntityPicker types={props.types} onPick={props.onPick} placeholder={props.placeholder}>
@@ -1093,11 +1098,12 @@ export function PickOrCreate(props: {
         <EntityCreateDialog
           groups={groups()}
           initial={props.initial}
+          fill={props.fill}
           onClose={() => setCreating(false)}
-          onCreated={(entity) => {
+          onCreated={(made) => {
             setCreating(false);
-            rememberEntity(entity);
-            (props.onCreated ?? props.onPick)(entity);
+            if (getModel(definitions, made.type)?.kind === "Entity") rememberEntity(made);
+            (props.onCreated ?? props.onPick)(made);
           }}
         />
       </Show>

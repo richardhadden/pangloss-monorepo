@@ -14,7 +14,6 @@ import { Loading, Show } from "solid-js";
 import type { ParentProps } from "solid-js";
 import type { CalendarName, DayOut } from "../api";
 import { monthHref, nameOf, sayCalendar, sayMonth, yearHref, yearsHref } from "../days";
-import type { DayName } from "../days";
 
 /** The `main` of a calendar page, inset as the other pages are */
 export function CalendarPage(props: ParentProps) {
@@ -31,13 +30,6 @@ export const CHARACTERISATION_MODEL = "DateCharacterisation";
 export function useCharacterisationTypes(): () => string[] {
   const definitions = useModels();
   return () => getModel(definitions, CHARACTERISATION_MODEL)?.concreteTypes ?? [];
-}
-
-/** What a new characterisation made on a day starts with: that day, as its `when` (it can be made a rule in the form) */
-export function onTheDay(name: DayName): () => Record<string, unknown> {
-  return () => ({
-    when: { type: "ExactDate", calendar: name.calendar, year: name.year, month: name.month, day: name.day },
-  });
 }
 
 /** The dates of pangloss_dates that are one day, and the calendar each is fixed to (none: the date says) */

@@ -109,9 +109,11 @@ on a day's page, find one by its name and **attach** it to the day, or make one 
 any form. One attached by hand has a remove button on its chip. `DateCharacterisation` is abstract: a project that wants
 to make them needs a subclass (the demo has `Feast`).
 
-The same **+** makes a document too: any that can be made on its own and has, somewhere in it, a date that can be one
-day (in the demo, a `Factoid`, whose statements have a `date`). Its form opens in the dialog, over the month, and every
+The same **+**, and the **+** of the search on a day's page, make a document too: any that can be made on its own and
+has, somewhere in it, a date that can be one day (in the demo, a `Factoid`, whose statements have a `date`). The search
+still finds only characterisations, to attach; a document made from it is not attached, it is on the day by its date.
+Its form opens in the dialog, over the page, and every
 date that can be an exact date starts as that day: the document's own, and each of every statement (or other item) added
 to it, in the calendar of the page (or the one a `JulianExactDate` or `GregorianExactDate` is fixed to). A date taken
 away stays away; the dates of the entities it refers to, and the start and end of a period, are not touched. Saved, the
-month is read again. Without a characterisation type or such a document there is no **+**. The pages do not need `seed`: they are worked out from the dates.
+page is read again. Without a characterisation type or such a document there is no **+**. The pages do not need `seed`: they are worked out from the dates.
