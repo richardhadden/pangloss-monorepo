@@ -17,7 +17,14 @@ from pangloss_history.diff import diff
 from pangloss_history.draft import make_draft
 from pangloss_history.gaps import find_gaps
 from pangloss_history.restore import restore
-from pangloss_history.store import HistoryRecord, HistoryStore, SqliteStore
+from pangloss_history.store import (
+    CONTENT_OPERATIONS,
+    HistoryRecord,
+    HistoryStore,
+    SqliteStore,
+)
+from pangloss_history.summary import summarise
+from pangloss_history.view import view_of, views_of
 
 router = APIRouter(
     prefix="/api",
@@ -81,17 +88,67 @@ def records_of_model(store: HistoryStore, model: type, id: UUID) -> list[History
 
 
 @router.get("/{model_name}/{id}/history")
-async def list_versions(model_name: str, id: UUID, store: Store) -> dict[str, Any]:
+async def list_versions(
+    model_name: str,
+    id: UUID,
+    store: Store,
+    summary: Annotated[
+        bool,
+        Query(
+            description="Each version's label, and the fields that differ from the version recorded before it"
+        ),
+    ] = False,
+) -> dict[str, Any]:
     """The versions of a head node: version, operation, who, when, and any that were not recorded"""
     model = find_model(model_name)
     records = records_of_model(store, model, id)
     current = await current_version(model, id)
+    described = [describe(r) for r in records]
+    if summary:
+        summaries = summarise(records, lambda r: content_at(store, r))
+        for body, record in zip(described, records, strict=True):
+            body.update(summaries.get(record.seq or 0, {"label": None, "changes": []}))
     return {
         "id": str(id),
         "model": model_name,
-        "versions": [describe(r) for r in records],
+        "versions": described,
         "currentVersion": current,
         "missing": find_gaps(records, current) if current is not None else [],
+    }
+
+
+def content_at(store: HistoryStore, record: HistoryRecord) -> Any:
+    found = store.get(record.head_id, record.version)
+    return found.data() if found is not None else None
+
+
+@router.get("/{model_name}/{id}/history/contents")
+async def get_contents(model_name: str, id: UUID, store: Store) -> dict[str, Any]:
+    """Every version that has content, upgraded to the models of now, in the read form (as `?view=true` gives one):
+    for comparing them side by side. (Declared before `/history/{version}`, which would take the path.)"""
+    model = find_model(model_name)
+    records = [
+        r for r in records_of_model(store, model, id) if r.op in CONTENT_OPERATIONS
+    ]
+    drafts = []
+    for record in records:
+        full = store.get(record.head_id, record.version)
+        if full is not None:
+            drafts.append((full, make_draft(full, model)))
+    views = await views_of([draft.data for _, draft in drafts])
+    return {
+        "id": str(id),
+        "model": model_name,
+        "currentVersion": await current_version(model, id),
+        "versions": [
+            {
+                **describe(record),
+                "content": view,
+                "upgraded": draft.upgraded,
+                "problems": [p.to_dict() for p in draft.problems],
+            }
+            for (record, draft), view in zip(drafts, views, strict=True)
+        ],
     }
 
 
@@ -118,6 +175,13 @@ async def get_version(
         bool,
         Query(description="Upgrade it to the models of now (false: as it was written)"),
     ] = True,
+    view: Annotated[
+        bool,
+        Query(
+            description="In the read form (camelCase, without the write form's bookkeeping, the entities it refers to "
+            "with their labels now), as the interface shows it"
+        ),
+    ] = False,
 ) -> dict[str, Any]:
     """A version, upgraded to the models of now (with what could not be upgraded in `problems`)"""
     model = find_model(model_name)
@@ -127,11 +191,17 @@ async def get_version(
         draft = make_draft(record, model)
         return {
             **body,
-            "content": draft.data,
+            "content": await view_of(draft.data) if view else draft.data,
             "upgraded": draft.upgraded,
             "problems": [p.to_dict() for p in draft.problems],
         }
-    return {**body, "content": record.data(), "upgraded": False, "problems": []}
+    data = record.data()
+    return {
+        **body,
+        "content": await view_of(data) if view else data,
+        "upgraded": False,
+        "problems": [],
+    }
 
 
 @router.get("/{model_name}/{id}/history/{version}/draft")

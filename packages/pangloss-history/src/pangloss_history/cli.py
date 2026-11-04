@@ -126,3 +126,64 @@ def restore_version(
         typer.secho(f"Not restored: {error}", fg="red", err=True)
         raise typer.Exit(1) from error
     typer.echo(f"Version {version} is now version {new_version}")
+
+
+@cli.command("baseline")
+def record_baseline(
+    ctx: typer.Context,
+    model: list[str] = typer.Option(
+        [],
+        "--model",
+        help="Only these models (as many as are given); all with history if none",
+    ),
+    dry_run: bool = typer.Option(
+        False, "--dry-run", help="Count what would be recorded, and record nothing"
+    ),
+) -> None:
+    """Record what each document and entity is now, if history has no record of its version (as for data written
+    before pangloss_history was installed). Safe to run again: what has a record is left alone."""
+    from pangloss_models import initialise
+    from pangloss_models.model_registry import ModelRegistry
+
+    from pangloss_history.baseline import make_baseline, models_with_history
+    from pangloss_history.draft import installed_apps
+    from pangloss_history.schema_position import schema_position
+
+    project = ctx.obj
+    settings = getattr(project, "settings", None)
+    path = config.db_path(settings)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    store = SqliteStore(path)
+    backend = project.require_database()
+    project.import_models()
+    initialise()
+    chosen = models_with_history()
+    if model:
+        unknown = [name for name in model if name not in ModelRegistry.all_models()]
+        if unknown:
+            typer.secho(f"There is no model {', '.join(unknown)}", fg="red", err=True)
+            raise typer.Exit(1)
+        chosen = [m for m in chosen if m.__name__ in model]
+
+    async def main():
+        await backend.connect()
+        try:
+            return await make_baseline(
+                store, schema_position(installed_apps()), chosen, dry_run=dry_run
+            )
+        finally:
+            await backend.disconnect()
+
+    result = asyncio.run(main())
+    for name, id, why in result.failed:
+        typer.secho(f"{name} {id}: not recorded ({why})", fg="yellow", err=True)
+    verb = "would be recorded" if dry_run else "recorded"
+    typer.echo(
+        f"{result.looked_at} looked at: {result.recorded} {verb}, "
+        f"{result.up_to_date} had a record of their version already"
+        + (
+            f", {len(result.failed)} could not be read as their model"
+            if result.failed
+            else ""
+        )
+    )

@@ -19,9 +19,11 @@ from uuid import UUID
 
 import zstandard
 
-OPERATIONS = ("create", "update", "delete", "undelete", "restore")
+# (`baseline`: what a head node was when `pangloss history baseline` found it with no record of its version, as when
+# it was written before history was installed)
+OPERATIONS = ("create", "update", "delete", "undelete", "restore", "baseline")
 # The operations that have a version of their own (and content)
-CONTENT_OPERATIONS = ("create", "update", "restore")
+CONTENT_OPERATIONS = ("create", "update", "restore", "baseline")
 
 
 @dataclasses.dataclass(frozen=True)

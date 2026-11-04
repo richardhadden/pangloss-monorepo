@@ -1,6 +1,7 @@
 # History: tracking changes and restoring earlier versions ✅
 
-**Status: built (phases 0 to 4; see the "As built" sections and [the guide](../guide/history/README.md)).** The sections down to "Phases" are the design as first written, and "What exists now" describes the code before it was built. Not built: the interface's form for a draft, upgrading across wrap/unwrap, annotated-value and embedded changes, enum values inside annotated values and edge properties, and a purge command with an erasure policy. Not yet run against a long-lived project. Numbers marked *measured* come from a throwaway
+**Status: built (phases 0 to 4; see the "As built" sections and [the guide](../guide/history/README.md)); the interface,
+and `pangloss history baseline` for data from before it was installed, are in [history-interface.md](history-interface.md) (2026-11-04).** The sections down to "Phases" are the design as first written, and "What exists now" describes the code before it was built. Not built: the interface's form for a draft (the interface shows and restores versions, but does not reconcile a draft), upgrading across wrap/unwrap, annotated-value and embedded changes, enum values inside annotated values and edge properties, and a purge command with an erasure policy. Not yet run against a long-lived project. Numbers marked *measured* come from a throwaway
 benchmark on a laptop (2026-10-21); *to check* marks a fact about the existing code that the design depends on and
 that has not been verified.
 

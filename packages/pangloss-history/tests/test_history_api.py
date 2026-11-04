@@ -191,3 +191,55 @@ def test_a_version_and_its_draft_are_upgraded_with_the_problems(client, monkeypa
     assert body["problems"][0]["kind"] == "removed-field"
 
     assert client.get(f"/api/Statement/{id}/history/9/draft").status_code == 404
+
+
+def test_the_list_can_say_what_changed_in_each_version(client):
+    id = seed(client)
+    versions = client.get(
+        f"/api/Statement/{id}/history", params={"summary": True}
+    ).json()["versions"]
+    assert [(v["version"], v["changes"]) for v in versions] == [
+        (1, []),
+        (
+            3,
+            [
+                {"key": "parts", "kind": "changed", "count": 1},
+                {"key": "text", "kind": "changed", "count": 1},
+            ],
+        ),
+        (3, []),  # (a delete changes no content)
+    ]
+    assert (
+        "changes"
+        not in client.get(f"/api/Statement/{id}/history").json()["versions"][0]
+    )
+
+
+def test_a_version_in_the_read_form(client):
+    id = uuid7()
+    client.store.append(
+        [record(id, 1, content={"text": "one", "page_number": 3, "context_labels": []})]
+    )
+    body = client.get(
+        f"/api/Statement/{id}/history/1", params={"view": True, "upgrade": False}
+    ).json()
+    assert body["content"] == {"text": "one", "pageNumber": 3}
+
+
+def test_every_version_with_its_content_in_the_read_form(client, monkeypatch):
+    from pangloss_history.draft import Draft
+
+    # (the models of the test have no `Update` to check the content against)
+    monkeypatch.setattr(
+        api, "make_draft", lambda record, model: Draft(record.data(), [], False)
+    )
+    id = seed(client)
+    body = client.get(f"/api/Statement/{id}/history/contents").json()
+    assert body["currentVersion"] == 3
+    assert [
+        (v["version"], v["op"], v["content"]["text"]) for v in body["versions"]
+    ] == [
+        (1, "create", "one"),
+        (3, "update", "three"),
+    ]
+    assert client.get(f"/api/Statement/{uuid7()}/history/contents").status_code == 404

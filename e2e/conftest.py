@@ -251,7 +251,7 @@ def make_project(root: Path) -> Path:
     text = text.replace(
         '"pangloss_memgraph",',
         '"pangloss_memgraph",\n        "pangloss_interface",\n        "pangloss_typology",\n        "pangloss_dates",\n'
-        '        "pangloss_calendar",\n        "pangloss_review",\n        "pangloss_library",',
+        '        "pangloss_calendar",\n        "pangloss_review",\n        "pangloss_library",\n        "pangloss_history",',
         1,
     )
     text = text.replace('DB_USERNAME="memgraph"', 'DB_USERNAME="test"')

@@ -133,6 +133,25 @@ The e2e project's `Report` is reviewed (`ReviewMeta(reviewable=True)`), with nes
 | The feed closes when the page is left; reconnects (with a cookie refresh) after the access cookie ran out | 🚧 | Vitest (`ReviewAction.test.tsx`, `poll.test.ts`); the reconnect is not tested in a browser |
 | The module's own tests and type-check, in the built project | ✅ | `test_the_module_tests_pass_in_the_built_project` |
 
+## `pangloss_history` module
+
+The e2e project installs `pangloss_history`. The `statement` fixture makes a `Statement` with three versions (made about
+Marie at Ghent; moved to Bruges; about Mary and renamed); a `Report` has parts inside it (`ReportSection`s) and review.
+
+| Area | State | Where / notes |
+| --- | --- | --- |
+| Console of an item: a History button (logged in, item page only); the panel of versions, newest first: version, what happened, who, when, a new label, the fields changed as tags, Current | ✅ | `test_history.py::test_the_panel_lists_the_versions_and_one_slides_out_beside_it`; not logged in, the edit page, gaps: Vitest (`HistoryAction.test.tsx`, `timeline.test.ts`) |
+| A version clicked slides out from under the panel, as the item's page shows it; Escape puts it back, then closes the panel | ✅ | `test_the_panel_lists_the_versions_and_one_slides_out_beside_it`; clicked again: Vitest |
+| Restore to this point: a dialog with the versions undone and the changes (trail, words), Cancel; Restore makes a new version, the page and the panel are read again, a toast | ✅ | `test_restoring_asks_first_listing_what_is_undone_and_then_changes_the_item`; also in the dev build (`test_dev_mode.py::test_the_history_panel_and_page`, with parts inside) |
+| A restore after someone else saved is refused (412), in a red toast | ✅ | `test_a_restore_after_someone_else_changed_it_is_refused` |
+| The current version has no Restore; a version with a blocking problem cannot be restored | 🚧 | the first: Vitest; the second is not tested in the interface (the API's restore is: `test_history_restore.py`) |
+| Compare page `/:type/:id/history` (from "Compare all"): a column per version, the rows lined up, each cell marked against the one before it, words of a text, parts matched by id; scrolled to the newest | ✅ | `test_the_compare_page_shows_every_version_side_by_side`; the alignment: Vitest (`align.test.ts`, `words.test.ts`, `HistoryPage.test.tsx`) |
+| A column "Not recorded" when the graph is ahead of the history | 🚧 | Vitest (`HistoryPage.test.tsx::columnsOf`) |
+| One panel on the right at a time: opening history closes review's, and the other way round (`useSidePanel` in core) | ✅ | `test_one_panel_on_the_right_at_a_time`; Vitest (`sidePanel.test.tsx` in core, `HistoryAction.test.tsx`) |
+| An item from before history was installed: the panel says so and names `pangloss history baseline`; after it, a "Recorded as it was" version | ✅ | `test_an_item_from_before_history_has_none_until_a_baseline_is_recorded` |
+| An upgraded version (models changed since) is shown with the notice and its problems | ⬜ | the API's upgrade is tested (`test_history_upgrade*.py`); the drawer's notice is not |
+| The module's own tests and type-check, in the built project | ✅ | `test_history.py::test_the_module_tests_pass_in_the_built_project` |
+
 ## `pangloss_calendar` module
 
 The e2e project installs `pangloss_dates` and `pangloss_calendar` (Julian, span 1499 to 1501, `CALENDAR_FIELDS = ["Event.when"]`); `Event` has a date, `Feast` is a `DateCharacterisation`. The `dated` fixture makes three events in March 1500 (a day, a range of eight days, a range of two), a feast by rule (Benedict, 21 March) and one with no rule (Market day).

@@ -18,7 +18,7 @@ def record(
     who: str = "john",
     **fields,
 ) -> HistoryRecord:
-    has_content = op in ("create", "update", "restore")
+    has_content = op in ("create", "update", "restore", "baseline")
     if content is None and has_content:
         content = {"text": f"version {version}"}
     return HistoryRecord(

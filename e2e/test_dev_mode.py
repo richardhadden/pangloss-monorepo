@@ -289,3 +289,62 @@ def test_the_calendar(page: Page, dated, dev_url: str, errors: list[str]):
     page.get_by_role("banner", name="Console").get_by_role("link", name="Years").click()
     expect(page.get_by_role("heading", name=re.compile("^Years"))).to_be_visible()
     assert errors == []
+
+
+def test_the_history_panel_and_page(page: Page, types, dev_url: str, errors: list[str]):
+    """The history button, panel and drawer (the module of pangloss_history), a restore, and the page of every version,
+    reached by its link, on a document with parts inside it"""
+    import time
+
+    from conftest import PASSWORD, USERNAME, forget
+
+    forget("Report", "ReportSection")
+    api = types.admin()
+    made = api.ok(
+        "POST",
+        "/api/Report",
+        {
+            "label": "Dev history",
+            "text": "First text",
+            "sections": [{"type": "ReportSection", "label": "A part", "body": "B"}],
+            "findings": [],
+        },
+    )
+    edit = api.ok("GET", f"/api/Report/{made['id']}/edit")
+    status, result = api.send(
+        "PUT",
+        f"/api/Report/{made['id']}",
+        {**edit, "text": "Second text", "sections": []},
+        headers={"If-Match": "*"},
+    )
+    assert status < 300, result
+    # (the versions are recorded just after the writes)
+    deadline = time.monotonic() + 10
+    while True:
+        status, listing = api.send("GET", f"/api/Report/{made['id']}/history")
+        if status == 200 and len(listing["versions"]) >= 2:
+            break
+        assert time.monotonic() < deadline, (status, listing)
+        time.sleep(0.1)
+    response = page.request.post(
+        f"{dev_url}/api/users/session",
+        form={"username": USERNAME, "password": PASSWORD},
+    )
+    assert response.ok, response.text()
+    page.goto(f"{dev_url}/Report/{made['id']}")
+    hydrated(page)
+    page.get_by_role("button", name="History", exact=True).click()
+    panel = page.get_by_test_id("history-panel")
+    expect(panel).to_have_attribute("data-open", "true")
+    panel.locator('[data-testid="history-version"][data-version="1"]').click()
+    expect(page.get_by_test_id("history-drawer")).to_contain_text("A part")
+    page.get_by_test_id("history-restore").click()
+    expect(page.get_by_test_id("history-change-row")).to_have_count(2)
+    page.get_by_test_id("history-restore-confirm").click()
+    expect(page.get_by_text("Restored version 1 as version 3")).to_be_visible()
+    expect(page.locator("main")).to_contain_text("First text")
+    panel.get_by_test_id("history-compare").click()
+    page.wait_for_url(re.compile(r"/history$"))
+    expect(page.get_by_test_id("history-column")).to_have_count(3)
+    expect(page.locator("main")).not_to_contain_text(SOLID_ERROR)
+    assert errors == []

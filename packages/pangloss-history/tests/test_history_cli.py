@@ -106,3 +106,44 @@ def test_restore_runs_with_the_database_connected_and_says_what_it_made(
         cli, ["restore", "Statement", id, "2", "--user", "j"], obj=project
     )
     assert refused.exit_code == 1 and "Not restored" in refused.output
+
+
+def test_baseline_records_what_the_database_has_with_no_record_and_says_how_many(
+    tmp_path, monkeypatch
+):
+    from pangloss_history import baseline
+
+    path = tmp_path / "h.sqlite3"
+    calls = []
+
+    async def fake(store, position, models, dry_run=False):
+        calls.append((models, dry_run))
+        result = baseline.Baseline(looked_at=3, recorded=2, up_to_date=1)
+        result.failed.append(("Statement", "x", "does not fit"))
+        return result
+
+    connected = []
+    backend = SimpleNamespace(
+        connect=lambda: _done(connected.append("connect")),
+        disconnect=lambda: _done(connected.append("disconnect")),
+    )
+    obj = SimpleNamespace(
+        settings=SimpleNamespace(HISTORY_DB_PATH=str(path)),
+        require_database=lambda: backend,
+        import_models=lambda: None,
+    )
+    monkeypatch.setattr(baseline, "make_baseline", fake)
+    monkeypatch.setattr(baseline, "models_with_history", lambda: ["M"])
+    monkeypatch.setattr("pangloss_models.initialise", lambda: None)
+
+    result = CliRunner().invoke(cli, ["baseline", "--dry-run"], obj=obj)
+
+    assert result.exit_code == 0, result.output
+    assert "3 looked at: 2 would be recorded, 1 had a record" in result.output
+    assert "Statement x: not recorded (does not fit)" in result.output
+    assert calls == [(["M"], True)] and connected == ["connect", "disconnect"]
+    assert path.parent.exists()
+
+
+async def _done(_):
+    return None
