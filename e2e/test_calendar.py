@@ -40,13 +40,13 @@ def test_a_month_is_a_calendar_page_with_what_is_dated_on_its_days(page: Page, d
         month.get_by_role("link", name=re.compile(r"^\d+ March 1500$"))
     ).to_have_count(31)
     expect(month.get_by_test_id("calendar-week")).to_have_count(6)
-    # the coronation on the 2nd, named by its field; the fair, one day on the 4th or the 5th, as a hollow bar between
+    # the coronation on the 2nd, a chip of its type and label; the fair, one day on the 4th or the 5th, as a hollow bar between
     # them, not on either
-    expect(month.get_by_role("link", name="When · Coronation")).to_have_count(1)
+    expect(month.get_by_role("link", name="Event Coronation")).to_have_count(1)
     expect(month.locator("a[data-mark]", has_text="The fair")).to_have_count(0)
     fair = month.locator("[data-testid='calendar-bar'][data-between='true']")
     expect(fair).to_have_count(1)
-    expect(fair).to_have_text("When · The fair")
+    expect(fair).to_have_text(re.compile(r"^Event\s*The fair$"))
     assert fair.evaluate("e => e.style.gridColumn") == "3 / span 2"
     expect(fair).to_have_attribute(
         "title", re.compile("between 4 March 1500 and 5 March 1500")
@@ -54,7 +54,7 @@ def test_a_month_is_a_calendar_page_with_what_is_dated_on_its_days(page: Page, d
     # the siege, a period of eight days, as a filled bar across two weeks
     bars = month.locator("[data-testid='calendar-bar']:not([data-between])")
     expect(bars).to_have_count(2)
-    expect(bars.first).to_have_text("When · Siege of the town")
+    expect(bars.first).to_have_text(re.compile(r"^Event\s*Siege of the town$"))
     assert bars.first.evaluate("e => e.style.gridColumn") == "2 / span 6"
     assert bars.nth(1).evaluate("e => e.style.gridColumn") == "1 / span 2"
     # the birth, sometime in 1500, is not drawn on the days but listed under the grid
@@ -70,7 +70,7 @@ def test_a_month_is_a_calendar_page_with_what_is_dated_on_its_days(page: Page, d
     # the feast by rule on the 21st
     expect(month.get_by_role("link", name="Benedict")).to_have_count(1)
     # a date leads to what it is in
-    month.get_by_role("link", name="When · Coronation").click()
+    month.get_by_role("link", name="Event Coronation").click()
     page.wait_for_url(f"**/Event/{dated.coronation}")
     expect(page.get_by_role("heading", name="Coronation")).to_be_visible()
     page.go_back()

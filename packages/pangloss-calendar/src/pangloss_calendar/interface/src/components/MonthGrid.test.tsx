@@ -53,7 +53,7 @@ test("every day of the month is a link to its page, in six rows under the weekda
   expect(first.closest("div")!.style.gridColumn).toBe("7");
 });
 
-test("what is dated on a day is a chip on it, named by its field, and more than three say how many more", () => {
+test("what is dated on a day is a chip on it, of its type, and more than three say how many more", () => {
   show(
     month({
       2: { hits: [hit("a", "Letter to the abbot"), hit("b", "A grant", "possible", "Person")] },
@@ -63,9 +63,10 @@ test("what is dated on a day is a chip on it, named by its field, and more than 
   const chips = links("a[data-mark]");
   expect(chips.length).toBe(5);
   expect(chips[0]!.getAttribute("href")).toBe("/Statement/a");
-  // (named by its field first: a person's name alone says nothing of why it is on the day)
-  expect(chips[0]!.textContent).toBe("date · Letter to the abbot");
-  expect(chips[1]!.className).toContain("sky");
+  // (its type, then its label; its field, which says why it is on the day, in its title)
+  expect(chips[0]!.textContent).toBe("StatementLetter to the abbot");
+  expect(chips[0]!.getAttribute("title")).toBe("date · Letter to the abbot");
+  expect(chips[1]!.firstElementChild!.className).toContain("sky");
   const more = links('a[href="/calendar/julian/1500/3/5"]').find((a) => a.textContent?.includes("more"));
   expect(more?.textContent).toBe("+2 more");
 });
@@ -92,8 +93,8 @@ test("a date over several days is a bar across them in each week, open where it 
     ),
   );
   const bars = links('[data-testid="calendar-bar"]');
-  // (a bar is named by its field first: "date · The siege")
-  const of = (label: string) => bars.filter((bar) => bar.textContent === `date · ${label}`);
+  // (a bar is a chip: its type, then its label; its field in its title)
+  const of = (label: string) => bars.filter((bar) => bar.textContent === `Statement${label}`);
   // the siege: Tuesday 3 to Sunday 8 in the second week, Monday 9 to Tuesday 10 in the third
   const siege = of("The siege");
   expect(siege.length).toBe(2);
@@ -130,7 +131,7 @@ test("a single date known only within days of the month is a hollow dashed bar b
   expect(bars.every((bar) => bar.dataset.between === "true")).toBe(true);
   expect(bars[0]!.className).toContain("border-dashed");
   expect(bars[0]!.className).not.toContain("sky");
-  expect(bars[0]!.textContent).toBe("born · Alcuin of York");
+  expect(bars[0]!.textContent).toBe("PersonAlcuin of York");
   expect(bars[0]!.getAttribute("title")).toBe("born · Alcuin of York: between 3 March 1500 and 12 March 1500");
   expect(bars[0]!.getAttribute("href")).toBe("/Person/b1");
 });

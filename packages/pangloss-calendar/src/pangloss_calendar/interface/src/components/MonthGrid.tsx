@@ -1,4 +1,4 @@
-import { getModel, kindTint, useModels, useTranslations } from "@pangloss/interface-core";
+import { getModel, kindRule, kindTint, useModels, useTranslations } from "@pangloss/interface-core";
 import { For, Show } from "solid-js";
 import type { CalendarName, Characterised, DayOut, Hit, MonthDayOut, MonthReport, Spanning } from "../api";
 import { dayHref, itemHref, nameOf, sayBetween, sayDate, sayRef, weekHeadings } from "../days";
@@ -8,29 +8,31 @@ import type { Bar, Ranged } from "../lanes";
 /** How many dates a day of the grid shows before "+N more" (the day's page has them all) */
 export const HITS_SHOWN = 3;
 
-/** The tint of what a date is in: by the kind of its model, or the colour the model chose */
-function useTint() {
-  const definitions = useModels();
-  return (type: string) => {
-    const model = getModel(definitions, type);
-    return kindTint(model?.kind, model?.interfaceMeta?.colour);
-  };
-}
-
-/** A date on a day: a small chip, a link to what it is in, named by its field ("Born · Alcuin of York") */
+/**
+ * A date on a day: a small chip (as `ReferenceChip`, smaller), a link to what it is in: its type, then its label. Its
+ * field is in its title ("Born · Alcuin of York")
+ */
 function HitChip(props: { hit: Hit }) {
-  const tint = useTint();
-  const { fieldName } = useTranslations();
+  const definitions = useModels();
+  const { fieldName, modelName } = useTranslations();
+  const model = () => getModel(definitions, props.hit.ref.type);
   return (
     <a
       href={itemHref(props.hit.ref.type, props.hit.ref.id)}
       title={sayRef(props.hit.ref, fieldName)}
       data-mark={props.hit.mark}
-      class={["block min-w-0 truncate rounded-xs px-1 text-[0.7rem] leading-5", tint(props.hit.ref.type)]}
+      class="mb-0.5 flex min-w-0 items-stretch overflow-hidden rounded-xs border-r-[0.5px] border-slate-400/70 bg-slate-100/70 text-[0.7rem] leading-4 hover:bg-slate-200/70"
     >
-      <span class="font-semibold uppercase opacity-70">{fieldName(props.hit.ref.type, props.hit.ref.field)}</span>
-      <span class="opacity-50"> · </span>
-      {props.hit.ref.label}
+      <span
+        class={[
+          "flex shrink-0 items-center rounded-l-xs border-[0.5px] px-1 text-[0.6rem] font-semibold uppercase select-none",
+          kindTint(model()?.kind, model()?.interfaceMeta?.colour),
+          kindRule(model()?.kind, model()?.interfaceMeta?.colour),
+        ]}
+      >
+        {modelName(props.hit.ref.type)}
+      </span>
+      <span class="min-w-0 truncate border-y-[0.5px] border-slate-400/70 px-1">{props.hit.ref.label}</span>
     </a>
   );
 }
@@ -72,13 +74,15 @@ function DayContents(props: { entry: MonthDayOut; calendar: CalendarName }) {
 type BarItem = { span: Spanning; between: boolean };
 
 /**
- * A bar across the days a date covers in a week: open at the end where it goes on into another week. A period is
- * filled; a single date known only within the days is hollow and dashed ("between these days"), named as such.
+ * A bar across the days a date covers in a week, as a chip stretched across them (`HitChip`): its type, then its label;
+ * open at the end where it goes on into another week. A period is solid; a single date known only within the days is
+ * hollow and dashed ("between these days"), named as such. Its field is in its title.
  */
 function SpanBar(props: { bar: Bar<BarItem>; calendar: CalendarName }) {
-  const tint = useTint();
-  const { t, language, fieldName } = useTranslations();
+  const definitions = useModels();
+  const { t, language, fieldName, modelName } = useTranslations();
   const ref = () => props.bar.item.span.ref;
+  const model = () => getModel(definitions, ref().type);
   const name = () => sayRef(ref(), fieldName);
   const title = () =>
     props.bar.item.between
@@ -96,26 +100,37 @@ function SpanBar(props: { bar: Bar<BarItem>; calendar: CalendarName }) {
         "grid-column": `${props.bar.start + 1} / span ${props.bar.end - props.bar.start + 1}`,
       }}
       class={[
-        "mb-0.5 min-w-0 truncate px-1.5 text-[0.7rem] leading-5 font-medium",
-        {
-          border: props.bar.item.between,
-          "border-dashed": props.bar.item.between,
-          "border-slate-500/70": props.bar.item.between,
-          "bg-white/60": props.bar.item.between,
-          italic: props.bar.item.between,
-        },
-        props.bar.item.between ? "" : tint(ref().type),
+        "mb-0.5 flex min-w-0 items-stretch overflow-hidden text-[0.7rem] leading-4",
+        props.bar.item.between
+          ? "border-dashed border-slate-500/70 bg-white/60 italic hover:bg-white/90"
+          : "border-slate-400/70 bg-slate-100/70 hover:bg-slate-200/70",
         {
           "ml-0.5": props.bar.startsHere,
           "rounded-l-xs": props.bar.startsHere,
           "mr-0.5": props.bar.endsHere,
           "rounded-r-xs": props.bar.endsHere,
+          "border-r-[0.5px]": props.bar.endsHere,
         },
       ]}
     >
-      <span class="font-semibold uppercase not-italic opacity-70">{fieldName(ref().type, ref().field)}</span>
-      <span class="opacity-50"> · </span>
-      {ref().label}
+      <span
+        class={[
+          "flex shrink-0 items-center border-[0.5px] px-1 text-[0.6rem] font-semibold not-italic uppercase select-none",
+          kindTint(model()?.kind, model()?.interfaceMeta?.colour),
+          kindRule(model()?.kind, model()?.interfaceMeta?.colour),
+          { "rounded-l-xs": props.bar.startsHere },
+        ]}
+      >
+        {modelName(ref().type)}
+      </span>
+      <span
+        class={[
+          "min-w-0 flex-1 truncate border-y-[0.5px] px-1",
+          props.bar.item.between ? "border-dashed border-slate-500/70" : "border-slate-400/70",
+        ]}
+      >
+        {ref().label}
+      </span>
     </a>
   );
 }

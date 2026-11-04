@@ -242,7 +242,7 @@ def test_the_calendar(page: Page, dated, dev_url: str, errors: list[str]):
     ).click()
     expect(
         page.get_by_test_id("calendar-month").get_by_role(
-            "link", name="When · Coronation"
+            "link", name="Event Coronation"
         )
     ).to_be_visible()
     page.get_by_test_id("calendar-month").get_by_role(
