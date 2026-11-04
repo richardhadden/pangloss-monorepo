@@ -254,7 +254,8 @@ export function Console(props: ConsoleProps) {
                     label={t("new_item", "New {type}", {
                       type: modelName(props.type),
                     })}
-                    href={`/${props.type}/new`}
+                    href={props.onNew ? undefined : `/${props.type}/new`}
+                    onClick={props.onNew ? () => props.onNew?.() : undefined}
                   >
                     <svg
                       viewBox="0 0 24 24"

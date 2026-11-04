@@ -118,6 +118,8 @@ export interface ConsoleProps extends ConsoleSearchProps {
   };
   /** Where the item can be edited: an Edit button, for someone who is logged in */
   editHref?: string;
+  /** A list whose page makes a new item itself (a dialog): the New button calls this, and is no link to `/<type>/new` */
+  onNew?: () => void;
   /**
    * The item the page is about (its own type and id), and which page it is: the `consoleActions` of the interface
    * modules are shown for it. Without it (a list, a new item) there are none.

@@ -250,11 +250,19 @@ Decided: one supertype (no DAG); the field is written `Typed[RoleTypology]`; the
 - **The switch** is done with `__labels_unmanaged__` on the generated class (its `Create` and `Update` never put or take away the labels of `also`; `service.set_concrete` does) and `has_allowed_label` in `pangloss_models/model_bases/labels.py`, used by the reference checks of `validate_write.py`: a relation that accepts `Role` accepts a `RoleType` node only if it has the label `Role`. `is_subtype_of` and `is_concrete` are protected from the API (`_protect_meta`), so only the typology endpoints change them.
 - **A moved type takes a lock.** Edges made by different transactions do not conflict in Memgraph, and three racing moves did make a loop (found by `test_racing_moves_never_make_a_loop`), so `move` and `merge` first write a node of their own per typology (`:TypologyLock`); one of two racing moves waits (about a second) and is then refused by its own check.
 - **The card** marks a type with "type" but does not show the path: a card in a list has no cheap way to get it.
+- **2026-11-04, the interface** ([typology-interface-dnd.md](typology-interface-dnd.md)): the tree follows the server
+  through a `live()` server function (`treeFeed`, polling the tree every `PANGLOSS_TYPOLOGY_POLL_MS`, 3000 ms); a type is
+  moved only by dragging (onto the middle of a row: below it; onto its top or bottom edge: beside it), with no "Move to…"
+  list and no top-level strip; a pencil on each row edits the label in place; moves and labels are shown at once and
+  undone if the server refuses. Both pages restyled. Types are made in a dialog (each chip's "add a subtype", "Add a
+  top-level type", the console's New), through the new `POST /api/typology/{name}`.
 - **Added**: `PATCH /api/typology/{name}/{id}` (label, description, labels in other languages, as a new version of the entity), `PUT .../concrete`, `pangloss typology tree`; `load` needs `--user` (the user the types are made as, which must exist); `service.update`. `ModelRegistry.before_finalise` (functions called at the start of `initialise()`, used to add the `label_<code>` fields once the settings are known). The module template has a `vitest.config.ts` (a module's component tests need the Solid plugin), and `ApiClient` has `put` and `patch`.
 
 **Not built**
 
 - The tree picker for relation fields (the autocomplete works, since types are entities).
+- No way to move a type without a mouse since 2026-11-04: the "Move to…" list on each row went when the tree became drag
+  and drop only ([typology-interface-dnd.md](typology-interface-dnd.md)).
 - The `$under` operator of the structured search, and `concrete_only` on `Role.list`.
 - API endpoints for creating, merging and deleting a type (the SDK and the entity's own `/RoleType` endpoints do these).
 - SKOS and other formats for loading.

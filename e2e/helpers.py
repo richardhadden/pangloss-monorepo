@@ -9,39 +9,29 @@ def hydrated(page: Page) -> None:
 
 
 def row(page: Page, label: str):
-    """A row of the typology tree, by its link (the select of every row has the names of the other types)"""
+    """A row of the typology tree, by its link"""
     return page.locator("[data-type-id]").filter(
         has=page.get_by_role("link", name=label, exact=True)
     )
 
 
-def drag_to_box(page: Page, label: str, target) -> None:
-    """Drag a row by its edge (not by the link in it) with the mouse as a person moves it: in steps, because the browser
-    starts a drag only when the mouse has moved. `target` is called when the drag has started, and gives the box to move to
-    (the page may change when a drag starts)"""
+def drag(page: Page, label: str, onto: str, where: str = "middle") -> None:
+    """Drag a row onto another with the mouse as a person moves it: in steps, because the browser starts a drag only
+    when the mouse has moved. `where` on the other row: its `middle` (below that type), or its `top` or `bottom` edge
+    (beside it)"""
     hydrated(page)
     source = row(page, label).bounding_box()
-    page.mouse.move(source["x"] + 4, source["y"] + 4)
+    page.mouse.move(source["x"] + 40, source["y"] + 4)
     page.mouse.down()
-    page.mouse.move(source["x"] + 10, source["y"] + 10, steps=3)
-    expect(page.get_by_text("Drop here for the top level")).to_be_visible()
-    box = target()
-    page.mouse.move(box["x"] + 4, box["y"] + 4, steps=10)
+    page.mouse.move(source["x"] + 46, source["y"] + 10, steps=3)
+    box = row(page, onto).bounding_box()
+    y = {
+        "middle": box["height"] / 2,
+        "top": 2,
+        "bottom": box["height"] - 2,
+    }[where]
+    page.mouse.move(box["x"] + 60, box["y"] + y, steps=10)
     page.mouse.up()
-
-
-def drag(page: Page, label: str, onto: str) -> None:
-    """Drag a row onto another"""
-    drag_to_box(page, label, lambda: row(page, onto).bounding_box())
-
-
-def drag_to_top(page: Page, label: str) -> None:
-    """Drag a row onto the strip for the top level"""
-    drag_to_box(
-        page,
-        label,
-        lambda: page.get_by_text("Drop here for the top level").bounding_box(),
-    )
 
 
 def expand_nav(page: Page) -> None:

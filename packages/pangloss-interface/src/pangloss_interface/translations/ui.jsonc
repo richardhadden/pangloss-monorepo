@@ -335,10 +335,14 @@
   "typology_show_more": { "en": "Show more", "de": "Mehr anzeigen", "fr": "Afficher plus" },
   "typology_collapse": { "en": "Collapse", "de": "Einklappen", "fr": "Replier" },
   "typology_expand": { "en": "Expand", "de": "Ausklappen", "fr": "Déplier" },
-  "typology_move": { "en": "Move {name} to", "de": "{name} verschieben nach", "fr": "Déplacer {name} vers" },
-  "typology_move_to": { "en": "Move to…", "de": "Verschieben nach …", "fr": "Déplacer vers…" },
-  "typology_top_level": { "en": "(top level)", "de": "(oberste Ebene)", "fr": "(niveau supérieur)" },
-  "typology_drop_top": { "en": "Drop here for the top level", "de": "Hier ablegen für die oberste Ebene", "fr": "Déposer ici pour le niveau supérieur" },
+  "typology_edit_label": { "en": "Edit the label of {name}", "de": "Bezeichnung von {name} bearbeiten", "fr": "Modifier le libellé de {name}" },
+  "typology_subtype_count": { "en": "{count} subtypes", "de": "{count} Untertypen", "fr": "{count} sous-types" },
+  "typology_add_subtype": { "en": "Add a subtype of {name}", "de": "Untertyp von {name} hinzufügen", "fr": "Ajouter un sous-type de {name}" },
+  "typology_add_top": { "en": "Add a top-level type", "de": "Typ der obersten Ebene hinzufügen", "fr": "Ajouter un type de premier niveau" },
+  "typology_new_top": { "en": "New top-level {type}", "de": "Neuer {type} der obersten Ebene", "fr": "Nouveau {type} de premier niveau" },
+  "typology_new_subtype": { "en": "New subtype of {name}", "de": "Neuer Untertyp von {name}", "fr": "Nouveau sous-type de {name}" },
+  "typology_add": { "en": "Add", "de": "Hinzufügen", "fr": "Ajouter" },
+  "typology_label_of": { "en": "Label of {name}", "de": "Bezeichnung von {name}", "fr": "Libellé de {name}" },
   "typology_no_types": { "en": "No types yet.", "de": "Noch keine Typen.", "fr": "Aucun type pour l’instant." },
 
   // Review (the module of pangloss_review: docs/review-interface.md)

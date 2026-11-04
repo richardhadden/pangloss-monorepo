@@ -11,7 +11,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pangloss_api.dependencies import get_current_user
-from pydantic import BaseModel
+from pydantic import BaseModel, StringConstraints
 
 from pangloss_typology import service
 from pangloss_typology.typology import Typology
@@ -58,6 +58,16 @@ class Switch(BaseModel):
     on: bool
 
 
+class New(BaseModel):
+    """A new type: below `supertype`, or at the top level without one"""
+
+    label: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+    supertype: UUID | None = None
+    description: str | None = None
+    labels: dict[str, str] | None = None
+    """By language code: `{"de": "Sekretär"}`"""
+
+
 @router.get("/{name}/tree")
 async def get_tree(typology: Named):
     """The whole hierarchy, nested, each level by label: `[{id, label, children}]`"""
@@ -101,6 +111,27 @@ async def get_path(typology: Named, id: UUID):
     try:
         return await service.path(typology, id)
     except service.NotFound as error:
+        raise failed(error) from error
+
+
+@router.post(
+    "/{name}",
+    response_model=service.TypeOut,
+    status_code=201,
+    dependencies=logged_in,
+)
+async def post_type(typology: Named, body: New):
+    """Make a type, below another or at the top level (404 if the supertype is not there, 409 for a label in a language
+    the typology does not have)"""
+    try:
+        return await service.create(
+            typology,
+            body.label,
+            supertype=body.supertype,
+            description=body.description,
+            labels=body.labels,
+        )
+    except (service.NotFound, service.Refused) as error:
         raise failed(error) from error
 
 

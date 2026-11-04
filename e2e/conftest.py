@@ -41,6 +41,8 @@ OTHER_USERNAME, OTHER_PASSWORD = "bob", "bob-password"
 AUTHOR_USERNAME, AUTHOR_PASSWORD = "ann", "ann-password"
 # (how often the review feed asks the API, on the interface's server: often, so the tests do not wait)
 REVIEW_POLL_MS = "300"
+# (and the typology tree's feed)
+TYPOLOGY_POLL_MS = "300"
 
 MODELS = textwrap.dedent(
     """
@@ -410,6 +412,7 @@ def stack(tmp_path_factory) -> Iterator[Stack]:
             {
                 "PANGLOSS_API_URL": f"http://127.0.0.1:{api_port}",
                 "PANGLOSS_REVIEW_POLL_MS": REVIEW_POLL_MS,
+                "PANGLOSS_TYPOLOGY_POLL_MS": TYPOLOGY_POLL_MS,
             },
         ),
     }
@@ -464,7 +467,10 @@ def dev_url(stack: Stack) -> Iterator[str]:
             stack.api,
         ],
         cwd=stack.project,
-        env=environment(PANGLOSS_REVIEW_POLL_MS=REVIEW_POLL_MS),
+        env=environment(
+            PANGLOSS_REVIEW_POLL_MS=REVIEW_POLL_MS,
+            PANGLOSS_TYPOLOGY_POLL_MS=TYPOLOGY_POLL_MS,
+        ),
         stdout=open(stack.project / "dev.log", "w"),  # noqa: SIM115 (closed with the process)
         stderr=subprocess.STDOUT,
         start_new_session=True,

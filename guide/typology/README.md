@@ -96,6 +96,7 @@ Loading is repeatable: a type already there (the same label under the same super
 | `GET /api/typology/RoleType/tree` | The whole hierarchy in one query |
 | `GET /api/typology/RoleType/{id}` | A type viewed: parents, subtypes with counts, entities (`include_subtypes`, `entity_type`, `limit`, `after`) |
 | `GET /api/typology/RoleType/{id}/path` | The ancestors, for breadcrumbs |
+| `POST /api/typology/RoleType` | A new type: `{"label", "supertype": id or null, "description", "labels"}` (201) |
 | `PATCH /api/typology/RoleType/{id}` | Label, description, labels in other languages |
 | `POST /api/typology/RoleType/{id}/move` | `{"to": id or null}` |
 | `PUT /api/typology/RoleType/{id}/concrete` | Switch the concrete entity on or off |

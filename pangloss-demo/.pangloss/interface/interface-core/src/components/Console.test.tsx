@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { render } from "@solidjs/web";
 import { createSignal } from "solid-js";
-import { afterEach, expect, test } from "vitest";
+import { afterEach, expect, test, vi } from "vitest";
 import type { User } from "../api";
 import {
   ConsoleMountProvider,
@@ -74,6 +74,7 @@ function show(
     count?: number;
     truncated?: boolean;
     editHref?: string;
+    onNew?: () => void;
   },
 ) {
   const container = document.createElement("div");
@@ -102,6 +103,16 @@ test("a list has a new button for someone logged in", async () => {
   show(() => demo, { type: "Place", list: true });
   await settle();
   expect(newLink()?.getAttribute("href")).toBe("/Place/new");
+});
+
+test("a list that makes its new items itself (onNew) has a button that calls it, not a link", async () => {
+  const onNew = vi.fn();
+  show(() => demo, { type: "Place", list: true, onNew });
+  await settle();
+  expect(newLink()).toBeNull();
+  const button = document.body.querySelector<HTMLButtonElement>('button[aria-label^="New "]')!;
+  button.click();
+  expect(onNew).toHaveBeenCalledOnce();
 });
 
 test("and none for no one", async () => {

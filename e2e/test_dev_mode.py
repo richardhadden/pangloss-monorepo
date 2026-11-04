@@ -6,7 +6,7 @@ rendered in the browser, not on the server), and fails on any error in the page.
 import re
 
 import pytest
-from helpers import expand_nav, hydrated
+from helpers import drag, expand_nav, hydrated, row
 from playwright.sync_api import Page, expect
 
 
@@ -157,6 +157,31 @@ def test_a_typology(page: Page, types, dev_url: str, errors: list[str]):
     expect(path).to_have_text("All›Clerk›Secretary")
     path.get_by_role("link", name="Clerk").click()
     expect(page.get_by_role("navigation", name="Path")).to_have_text("All›Clerk")
+    assert errors == []
+
+
+def test_a_typology_changed_in_the_tree(
+    page: Page, types, dev_url: str, errors: list[str]
+):
+    """The tree's live feed from the dev server's own server functions, a drag and a label edited in place"""
+    from conftest import PASSWORD, USERNAME
+
+    response = page.request.post(
+        f"{dev_url}/api/users/session",
+        form={"username": USERNAME, "password": PASSWORD},
+    )
+    assert response.ok, response.text()
+    page.goto(f"{dev_url}/RoleType")
+    hydrated(page)
+    drag(page, "Advisor", "Clerk")
+    expect(row(page, "Advisor")).to_have_attribute("data-depth", "1")
+    row(page, "Secretary").hover()
+    page.get_by_role("button", name="Edit the label of Secretary").click()
+    field = page.get_by_role("textbox", name="Label of Secretary")
+    field.fill("Scribe")
+    field.press("Enter")
+    expect(row(page, "Scribe")).to_be_visible()
+    expect(page.locator("main")).not_to_contain_text(SOLID_ERROR)
     assert errors == []
 
 

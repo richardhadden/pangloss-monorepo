@@ -1,8 +1,17 @@
-import { ApiError, useApi, useComponent, userIsLoggedIn, useTranslations } from "@pangloss/interface-core";
+import {
+  ApiError,
+  kindTint,
+  smallButtonClass,
+  useApi,
+  useComponent,
+  userIsLoggedIn,
+  useTranslations,
+} from "@pangloss/interface-core";
 import type { ItemPageProps } from "@pangloss/interface-core";
 import { action, createMemo, createSignal, Errored, For, Loading, refresh, Show } from "solid-js";
 import { editType, getView, setConcrete } from "../api";
-import type { Edit, TypeView } from "../api";
+import { LabelsForm, termClass } from "./LabelsForm";
+import { TypeTag } from "./TypeTag";
 
 const PAGE = 50;
 
@@ -45,7 +54,7 @@ export default function TypeItem(props: ItemPageProps) {
   }
 
   return (
-    <div class="flex flex-col gap-6">
+    <div class="flex flex-col gap-8">
       <Errored fallback={(error) => <ErrorMessage error={error()} />}>
         <Loading fallback={<p>{t("loading", "Loading…")}</p>}>
           <Show when={refused()}>
@@ -56,35 +65,42 @@ export default function TypeItem(props: ItemPageProps) {
             )}
           </Show>
 
-          <nav aria-label={t("typology_path", "Path")} class="flex flex-wrap items-center gap-1 text-sm text-slate-600">
-            <a href={`/${props.type}`} class="hover:underline">
+          <nav aria-label={t("typology_path", "Path")} class="-mt-2 flex flex-wrap items-center gap-1.5 text-sm text-slate-500">
+            <a href={`/${props.type}`} class="hover:text-slate-900 hover:underline">
               {t("typology_all", "All")}
             </a>
             <For each={[...view().parents].reverse()}>
               {(parent) => (
                 <>
-                  <span aria-hidden="true">›</span>
-                  <a href={`/${props.type}/${parent.id}`} class="hover:underline">
+                  <span aria-hidden="true" class="text-slate-400 select-none">›</span>
+                  <a href={`/${props.type}/${parent.id}`} class="hover:text-slate-900 hover:underline">
                     {parent.label}
                   </a>
                 </>
               )}
             </For>
-            <span aria-hidden="true">›</span>
+            <span aria-hidden="true" class="text-slate-400 select-none">›</span>
             <span class="font-semibold text-slate-900">{view().label}</span>
           </nav>
 
-          <section class="flex flex-col gap-2">
-            <h2 class="text-sm font-semibold uppercase text-slate-600">{t("typology_labels", "Labels")}</h2>
+          <section class="flex flex-col gap-3">
+            <div class={sectionHead}>
+              <h2 class={headingClass}>{t("typology_labels", "Labels")}</h2>
+              <Show when={userIsLoggedIn() && !editing()}>
+                <button type="button" class={smallButtonClass} onClick={() => setEditing(true)}>
+                  {t("typology_edit_labels", "Edit labels")}
+                </button>
+              </Show>
+            </div>
             <Show when={!editing()}>
-              <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
-                <dt class="text-slate-500">{t("typology_default_label", "default")}</dt>
+              <dl class="grid grid-cols-[minmax(4rem,auto)_1fr] items-baseline gap-x-6 gap-y-1.5 text-sm">
+                <dt class={termClass}>{t("typology_default_label", "default")}</dt>
                 <dd>{view().label}</dd>
                 <For each={languages()}>
                   {(code) => (
                     <>
-                      <dt class="text-slate-500">{code}</dt>
-                      <dd class={{ "text-slate-400": !view().labels[code] }}>
+                      <dt class={termClass}>{code}</dt>
+                      <dd class={{ "text-slate-400": !view().labels[code], italic: !view().labels[code] }}>
                         {view().labels[code] ?? t("typology_not_translated_shown", "(not translated: the default is shown)")}
                       </dd>
                     </>
@@ -92,17 +108,12 @@ export default function TypeItem(props: ItemPageProps) {
                 </For>
               </dl>
               <Show when={view().description}>
-                <p class="text-sm">{view().description}</p>
-              </Show>
-              <Show when={userIsLoggedIn()}>
-                <button type="button" class="pg-button w-fit" onClick={() => setEditing(true)}>
-                  {t("typology_edit_labels", "Edit labels")}
-                </button>
+                <p class="max-w-prose text-sm text-slate-700">{view().description}</p>
               </Show>
             </Show>
             <Show when={editing()}>
               <LabelsForm
-                view={view()}
+                initial={view()}
                 languages={languages()}
                 onCancel={() => setEditing(false)}
                 onSave={async (edit) => {
@@ -113,9 +124,10 @@ export default function TypeItem(props: ItemPageProps) {
           </section>
 
           <Show when={switchable()}>
-            <label class="flex items-center gap-2 text-sm">
+            <label class="flex w-fit items-center gap-2 text-sm text-slate-700">
               <input
                 type="checkbox"
+                class="accent-sky-600"
                 checked={view().is_concrete}
                 disabled={!userIsLoggedIn()}
                 onChange={(event) => {
@@ -128,20 +140,27 @@ export default function TypeItem(props: ItemPageProps) {
             </label>
           </Show>
 
-          <section class="flex flex-col gap-2">
-            <h2 class="text-sm font-semibold uppercase text-slate-600">{t("typology_subtypes", "Subtypes")}</h2>
+          <section class="flex flex-col gap-3">
+            <div class={sectionHead}>
+              <h2 class={headingClass}>{t("typology_subtypes", "Subtypes")}</h2>
+            </div>
             <Show
               when={view().subtypes.length > 0}
               fallback={<p class="text-sm text-slate-500">{t("typology_none", "None.")}</p>}
             >
-              <ul class="flex flex-col gap-1">
+              {/* (each a chip, as in the tree: the type, the label, and what is below it) */}
+              <ul class="flex flex-wrap gap-2">
                 <For each={view().subtypes}>
                   {(subtype) => (
-                    <li class="flex items-center gap-3 rounded-xs border-[0.5px] border-slate-400/70 bg-slate-100/70 px-3 py-2 text-sm">
-                      <a href={`/${props.type}/${subtype.id}`} class="min-w-0 grow truncate hover:underline">
+                    <li class="inline-flex max-w-full min-w-0 items-stretch overflow-hidden rounded-xs border-[0.5px] border-slate-400/70 bg-slate-100/70 text-sm">
+                      <TypeTag model={props.model} />
+                      <a
+                        href={`/${props.type}/${subtype.id}`}
+                        class="min-w-0 truncate px-2 py-1 hover:bg-slate-200/70 active:bg-slate-300/70"
+                      >
                         {subtype.label}
                       </a>
-                      <span class="text-xs text-slate-500">
+                      <span class="flex shrink-0 items-center border-l-[0.5px] border-slate-400/70 bg-white/70 px-2 text-xs text-slate-600 tabular-nums">
                         {t("typology_counts", "{subtypes} subtypes · {entities} entities", {
                           subtypes: subtype.subtype_count,
                           entities: subtype.entity_count,
@@ -154,20 +173,41 @@ export default function TypeItem(props: ItemPageProps) {
             </Show>
           </section>
 
-          <section class="flex flex-col gap-2">
-            <div class="flex items-center gap-4">
-              <h2 class="text-sm font-semibold uppercase text-slate-600">
+          <section class="flex flex-col gap-3">
+            <div class={sectionHead}>
+              <h2 class={headingClass}>
                 {t("typology_entities_with", "Entities with this type ({count})", { count: view().entities.total })}
               </h2>
-              <label class="flex items-center gap-2 text-sm">
+              {/* (a toggle as the interface's are, a pill pressed in or not; an unseen checkbox over all of it, for
+                  the pointer, the keyboard and a screen reader) */}
+              <label
+                class={[
+                  "relative flex cursor-pointer items-center gap-1.5 rounded-xs border-[0.5px] px-2 py-1 text-xs font-semibold uppercase select-none has-focus-visible:ring-1 has-focus-visible:ring-sky-400/60",
+                  { "border-slate-500 bg-slate-400/50 text-slate-900 hover:bg-slate-400/60": includeSubtypes() },
+                  { "border-slate-400/70 bg-white/80 text-slate-500 hover:bg-slate-200/70": !includeSubtypes() },
+                ]}
+              >
                 <input
                   type="checkbox"
+                  class="absolute inset-0 cursor-pointer appearance-none opacity-0"
                   checked={includeSubtypes()}
                   onChange={(event) => {
                     setIncludeSubtypes(event.currentTarget.checked);
                     setLimit(PAGE);
                   }}
                 />
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="3"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  class={["size-3 select-none", { invisible: !includeSubtypes() }]}
+                  aria-hidden="true"
+                >
+                  <polyline points="5 12 10 17 19 7" />
+                </svg>
                 {t("typology_including_subtypes", "including subtypes")}
               </label>
             </div>
@@ -175,13 +215,20 @@ export default function TypeItem(props: ItemPageProps) {
               when={view().entities.items.length > 0}
               fallback={<p class="text-sm text-slate-500">{t("typology_none", "None.")}</p>}
             >
-              <ul class="flex flex-col gap-1">
+              <ul class="flex flex-col gap-1.5">
                 <For each={view().entities.items}>
                   {(entity) => (
-                    <li class="flex items-center gap-3 rounded-xs border-[0.5px] border-slate-400/70 bg-slate-100/70 px-3 py-2 text-sm">
-                      <span class="text-xs font-semibold uppercase">{modelName(entity.type)}</span>
-                      <a href={`/${entity.type}/${entity.id}`} class="min-w-0 truncate hover:underline">
-                        {entity.label}
+                    <li class="flex items-stretch overflow-hidden rounded-xs border-[0.5px] border-slate-400/70 bg-slate-100/70">
+                      <span
+                        class={[
+                          "flex shrink-0 items-center px-3 text-xs font-semibold uppercase select-none",
+                          kindTint("Entity"),
+                        ]}
+                      >
+                        {modelName(entity.type)}
+                      </span>
+                      <a href={`/${entity.type}/${entity.id}`} class={[rowClass, "grow"]}>
+                        <span class="min-w-0 truncate">{entity.label}</span>
                       </a>
                     </li>
                   )}
@@ -189,7 +236,7 @@ export default function TypeItem(props: ItemPageProps) {
               </ul>
             </Show>
             <Show when={view().entities.next}>
-              <button type="button" class="pg-button w-fit" onClick={() => setLimit(limit() + PAGE)}>
+              <button type="button" class={[smallButtonClass, "w-fit"]} onClick={() => setLimit(limit() + PAGE)}>
                 {t("typology_show_more", "Show more")}
               </button>
             </Show>
@@ -200,64 +247,7 @@ export default function TypeItem(props: ItemPageProps) {
   );
 }
 
-function LabelsForm(props: {
-  view: TypeView;
-  languages: string[];
-  onCancel: () => void;
-  onSave: (edit: Edit) => void;
-}) {
-  const { t } = useTranslations();
-  let form!: HTMLFormElement;
-  return (
-    <form
-      ref={form}
-      class="flex flex-col gap-2 text-sm"
-      onSubmit={(event) => {
-        event.preventDefault();
-        const data = new FormData(form);
-        const labels: Record<string, string> = {};
-        for (const code of props.languages) {
-          const text = String(data.get(`label_${code}`) ?? "").trim();
-          if (text !== "") labels[code] = text;
-        }
-        props.onSave({
-          label: String(data.get("label") ?? ""),
-          description: String(data.get("description") ?? ""),
-          labels,
-        });
-      }}
-    >
-      <label class="flex flex-col gap-1">
-        {t("typology_default_label", "default")}
-        <input name="label" required value={props.view.label} class="rounded-xs border-[0.5px] border-slate-400/70 px-2 py-1" />
-      </label>
-      <For each={props.languages}>
-        {(code) => (
-          <label class="flex flex-col gap-1">
-            {code}
-            <input
-              name={`label_${code}`}
-              value={props.view.labels[code] ?? ""}
-              placeholder={t("typology_not_translated", "(not translated)")}
-              class="rounded-xs border-[0.5px] border-slate-400/70 px-2 py-1"
-            />
-          </label>
-        )}
-      </For>
-      <label class="flex flex-col gap-1">
-        {t("typology_description", "description")}
-        <textarea name="description" class="rounded-xs border-[0.5px] border-slate-400/70 px-2 py-1">
-          {props.view.description ?? ""}
-        </textarea>
-      </label>
-      <div class="flex gap-2">
-        <button type="submit" class="pg-button">
-          {t("save", "Save")}
-        </button>
-        <button type="button" class="pg-button" onClick={props.onCancel}>
-          {t("cancel", "Cancel")}
-        </button>
-      </div>
-    </form>
-  );
-}
+// (a section's heading, on a hairline, with what it has to do at its right end)
+const sectionHead = "flex min-h-7 items-center justify-between gap-4 border-b-[0.5px] border-slate-400/70 pb-1";
+const headingClass = "text-xs font-semibold text-slate-600 uppercase";
+const rowClass = "flex min-w-0 items-center gap-3 px-3 py-2 text-sm hover:bg-slate-200/60";

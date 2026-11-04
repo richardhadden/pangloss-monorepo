@@ -85,13 +85,17 @@ about her "held court at Ghent") and Charles the Bold (no role); `types` has onl
 | Area | State | Where / notes |
 | --- | --- | --- |
 | Tree page lists the types, nested and indented | ✅ | `test_typology.py` |
-| Not logged in: no dragging, no select | ✅ | |
-| Drag a type onto another moves it (API and reload) | ✅ | |
-| Drag to the top-level strip | ✅ | |
-| Rows do not move when a drag starts | ✅ | a bug this suite found and fixed |
+| Not logged in: not draggable, no pencil | ✅ | |
+| Drag onto the middle of a row moves the type below it (API and reload) | ✅ | |
+| Drag onto the top or bottom edge of a row puts the type beside it (the top level beside a top-level type) | ✅ | |
+| Drop marks (`data-drop` into / above / below), none where a drop is not allowed; rows do not move when a drag starts | ✅ | |
 | A type cannot be dropped below its own subtype | ✅ | |
-| Server refusal is shown (`role="alert"`) | ✅ | a move another user made first |
-| "Move to…" select moves a type; it offers only allowed places | ✅ | |
+| Live feed: a move made by someone else shows without a reload | ✅ | `PANGLOSS_TYPOLOGY_POLL_MS=300` in the stack |
+| Server refusal is shown (`role="alert"`) and the move undone | ✅ | the move request answered 409 by `page.route` |
+| Pencil edits the label in place (Enter saves, Escape leaves it) | ✅ | blur and an empty label in Vitest |
+| A subtype is added in a dialog from its chip (no new page) | ✅ | |
+| A top-level type is added from the console's New and from the buttons above and below the tree | ✅ | |
+| Dev build: drag and label edit with the dev server's own server functions | ✅ | `test_dev_mode.py` |
 | Collapse / expand | ✅ | |
 | A type links to its page | ✅ | |
 | Item page: path (breadcrumb) | ✅ | `test_typology_item.py` |
@@ -174,4 +178,4 @@ fields. Here only what needs a real browser: events, hydration, the built chunks
 - Open the navigation bar by hovering (`helpers.expand_nav`); it closes when the mouse leaves, e.g. for a dialog.
 - A chip's accessible name has its type in front (`RoleType type Secretary`): match with a regex, not `exact`.
 - A checkbox the page sets from the server's answer does not stay checked at once: use `click()` and then `expect`.
-- The select of every typology row names the other types: find a row by its link, not by its text.
+- The typology tree shows a move or a label before the API has it: wait for the API (`server_has` in `test_typology.py`).

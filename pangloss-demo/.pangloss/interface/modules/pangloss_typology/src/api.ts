@@ -70,3 +70,12 @@ export interface Edit {
 
 export const editType = (api: ApiClient, type: string, id: string, edit: Edit): Promise<TypeOut> =>
   api.patch(one(type, id), edit);
+
+export interface NewType extends Edit {
+  label: string;
+  /** Below which type; at the top level without one */
+  supertype?: string | null;
+}
+
+export const createType = (api: ApiClient, type: string, made: NewType): Promise<TypeOut> =>
+  api.post(base(type), made);

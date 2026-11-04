@@ -49,7 +49,12 @@ function client(): ApiClient {
 
 const field = (name: string) => ({ name }) as never;
 const PROPS = (fields: string[]) =>
-  ({ type: "RoleType", id: "secretary", item: {}, model: { fields: fields.map(field) } }) as unknown as ItemPageProps;
+  ({
+    type: "RoleType",
+    id: "secretary",
+    item: {},
+    model: { name: "RoleType", kind: "Entity", interfaceMeta: null, fields: fields.map(field) },
+  }) as unknown as ItemPageProps;
 
 async function show(api: ApiClient, user: { username: string } | undefined, fields = ["label", "label_de", "is_concrete"]) {
   const container = document.createElement("div");
@@ -80,6 +85,10 @@ test("the path runs from the root to the type, and the type, subtypes and entiti
   expect(path.textContent).toContain("Secretary");
   expect(document.body.textContent).toContain("Private secretary");
   expect(document.body.textContent).toContain("0 subtypes · 2 entities");
+  // (a subtype is a chip with the type in front, and its link is named by its label alone)
+  const chip = document.body.querySelector('a[href="/RoleType/private"]')!.parentElement!;
+  expect(chip.querySelector("[data-type-tag]")!.textContent).toBe("RoleType");
+  expect(document.body.querySelector('a[href="/RoleType/private"]')!.textContent).toBe("Private secretary");
   expect(document.body.querySelector('a[href="/Post/p1"]')!.textContent).toBe("Maximilian's secretary");
   expect(document.body.textContent).toContain("Entities with this type (3)");
 });

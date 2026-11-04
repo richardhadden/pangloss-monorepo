@@ -703,3 +703,71 @@ async def test_a_merge_keeps_the_properties_of_the_edges(clear_database, db_driv
         id=str(secretary.id),
     )
     assert [row["p"] for row in reverse] == [{"level": 2, "reverse": True}]
+
+
+@no_type_check
+async def test_a_type_is_made_through_the_api(clear_database):
+    from types import SimpleNamespace
+
+    import httpx2 as httpx
+    from fastapi import FastAPI
+    from pangloss_api.dependencies import get_current_user
+    from pangloss_typology.api import router
+
+    _, RoleTypology = vocabulary()
+    official, secretary, private, chancellor, bard = await build(RoleTypology)
+    app = FastAPI()
+    app.include_router(router)
+    client = httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    )
+    assert (
+        await client.post("/api/typology/RoleType", json={"label": "Herald"})
+    ).status_code in (401, 403)
+    app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(
+        username="someone"
+    )
+
+    top = await client.post("/api/typology/RoleType", json={"label": "Herald"})
+    assert top.status_code == 201
+    assert top.json()["supertype"] is None
+    assert top.json()["label"] == "Herald"
+
+    below = await client.post(
+        "/api/typology/RoleType",
+        json={
+            "label": "Scribe",
+            "supertype": str(official.id),
+            "description": "Copies",
+            "labels": {"de": "Schreiber"},
+        },
+    )
+    assert below.status_code == 201
+    made = below.json()
+    assert (made["supertype"], made["description"], made["labels"]) == (
+        str(official.id),
+        "Copies",
+        {"de": "Schreiber"},
+    )
+    tree = (await client.get("/api/typology/RoleType/tree")).json()
+    assert [n["label"] for n in tree] == ["Bard", "Herald", "Official"]
+    assert [c["label"] for c in tree[2]["children"]] == [
+        "Chancellor",
+        "Scribe",
+        "Secretary",
+    ]
+
+    missing = "0198cfd0-0000-7000-8000-000000000000"
+    assert (
+        await client.post(
+            "/api/typology/RoleType", json={"label": "X", "supertype": missing}
+        )
+    ).status_code == 404
+    assert (
+        await client.post(
+            "/api/typology/RoleType", json={"label": "X", "labels": {"fr": "X"}}
+        )
+    ).status_code == 409
+    assert (
+        await client.post("/api/typology/RoleType", json={"label": "  "})
+    ).status_code == 422
