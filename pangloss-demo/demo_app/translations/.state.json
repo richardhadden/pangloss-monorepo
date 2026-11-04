@@ -454,112 +454,6 @@
       "source": "Activities",
       "seen": "Activités"
     },
-    "models/Alternative/de/description": {
-      "base": "",
-      "source": "One of several things, not known which: any number of statements or entities.\n`Alternative[ViaEdge[Person, Probability]]` gives each person how likely it is the one meant",
-      "seen": "Eines von mehreren Dingen, unbekannt welches: beliebig viele Aussagen oder Entitäten. `Alternative[ViaEdge[Person, Probability]]` gibt jeder Person an, wie wahrscheinlich sie die gemeinte ist"
-    },
-    "models/Alternative/de/fields/alternatives/help": {
-      "base": "",
-      "source": "",
-      "seen": ""
-    },
-    "models/Alternative/de/fields/alternatives/name": {
-      "base": "",
-      "source": "Alternatives",
-      "seen": "Alternativen"
-    },
-    "models/Alternative/de/fields/alternatives/plural": {
-      "base": "",
-      "source": "",
-      "seen": ""
-    },
-    "models/Alternative/de/help": {
-      "base": "",
-      "source": "",
-      "seen": ""
-    },
-    "models/Alternative/de/name": {
-      "base": "",
-      "source": "Alternative",
-      "seen": "Alternative"
-    },
-    "models/Alternative/de/plural": {
-      "base": "",
-      "source": "Alternatives",
-      "seen": "Alternativen",
-      "review": true
-    },
-    "models/Alternative/en/description": {
-      "base": "One of several things, not known which: any number of statements or entities.\n`Alternative[ViaEdge[Person, Probability]]` gives each person how likely it is the one meant",
-      "source": "One of several things, not known which: any number of statements or entities.\n`Alternative[ViaEdge[Person, Probability]]` gives each person how likely it is the one meant",
-      "seen": "One of several things, not known which: any number of statements or entities.\n`Alternative[ViaEdge[Person, Probability]]` gives each person how likely it is the one meant"
-    },
-    "models/Alternative/en/fields/alternatives/help": {
-      "base": "",
-      "source": "",
-      "seen": ""
-    },
-    "models/Alternative/en/fields/alternatives/name": {
-      "base": "Alternatives",
-      "source": "Alternatives",
-      "seen": "Alternatives"
-    },
-    "models/Alternative/en/fields/alternatives/plural": {
-      "base": "",
-      "source": "",
-      "seen": ""
-    },
-    "models/Alternative/en/help": {
-      "base": "",
-      "source": "",
-      "seen": ""
-    },
-    "models/Alternative/en/name": {
-      "base": "Alternative",
-      "source": "Alternative",
-      "seen": "Alternative"
-    },
-    "models/Alternative/en/plural": {
-      "base": "",
-      "source": "",
-      "seen": "Alternatives"
-    },
-    "models/Alternative/fr/description": {
-      "base": "",
-      "source": "One of several things, not known which: any number of statements or entities.\n`Alternative[ViaEdge[Person, Probability]]` gives each person how likely it is the one meant",
-      "seen": "L’une de plusieurs choses, sans savoir laquelle : un nombre quelconque d’énoncés ou d’entités. `Alternative[ViaEdge[Person, Probability]]` donne pour chaque personne la probabilité que ce soit elle"
-    },
-    "models/Alternative/fr/fields/alternatives/help": {
-      "base": "",
-      "source": "",
-      "seen": ""
-    },
-    "models/Alternative/fr/fields/alternatives/name": {
-      "base": "",
-      "source": "Alternatives",
-      "seen": "Alternatives"
-    },
-    "models/Alternative/fr/fields/alternatives/plural": {
-      "base": "",
-      "source": "",
-      "seen": ""
-    },
-    "models/Alternative/fr/help": {
-      "base": "",
-      "source": "",
-      "seen": ""
-    },
-    "models/Alternative/fr/name": {
-      "base": "",
-      "source": "Alternative",
-      "seen": "Alternative"
-    },
-    "models/Alternative/fr/plural": {
-      "base": "",
-      "source": "Alternatives",
-      "seen": "Alternatives"
-    },
     "models/Artwork/de/description": {
       "base": "",
       "source": "Any artwork object",
@@ -1616,21 +1510,6 @@
       "source": "",
       "seen": ""
     },
-    "models/Factoid/de/fields/year/help": {
-      "base": "",
-      "source": "",
-      "seen": ""
-    },
-    "models/Factoid/de/fields/year/name": {
-      "base": "",
-      "source": "Year",
-      "seen": "Jahr"
-    },
-    "models/Factoid/de/fields/year/plural": {
-      "base": "",
-      "source": "",
-      "seen": ""
-    },
     "models/Factoid/de/help": {
       "base": "",
       "source": "",
@@ -1678,21 +1557,6 @@
       "seen": "Statements"
     },
     "models/Factoid/en/fields/statements/plural": {
-      "base": "",
-      "source": "",
-      "seen": ""
-    },
-    "models/Factoid/en/fields/year/help": {
-      "base": "",
-      "source": "",
-      "seen": ""
-    },
-    "models/Factoid/en/fields/year/name": {
-      "base": "Year",
-      "source": "Year",
-      "seen": "Year"
-    },
-    "models/Factoid/en/fields/year/plural": {
       "base": "",
       "source": "",
       "seen": ""
@@ -1747,21 +1611,6 @@
       "source": "",
       "seen": ""
     },
-    "models/Factoid/fr/fields/year/help": {
-      "base": "",
-      "source": "",
-      "seen": ""
-    },
-    "models/Factoid/fr/fields/year/name": {
-      "base": "",
-      "source": "Year",
-      "seen": "Année"
-    },
-    "models/Factoid/fr/fields/year/plural": {
-      "base": "",
-      "source": "",
-      "seen": ""
-    },
     "models/Factoid/fr/help": {
       "base": "",
       "source": "",
@@ -1776,6 +1625,156 @@
       "base": "",
       "source": "Factoids",
       "seen": "Factoïdes"
+    },
+    "models/Feast/de/description": {
+      "base": "",
+      "source": "A day of the calendar: a saint's day every year (`when` a Recurrence), a council that sat once (an ExactDate or\na DateRange), a Lent (a Period), or one attached to days by hand (NoRule). Shown by `pangloss_calendar`",
+      "seen": ""
+    },
+    "models/Feast/de/fields/rank/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Feast/de/fields/rank/name": {
+      "base": "",
+      "source": "Rank",
+      "seen": ""
+    },
+    "models/Feast/de/fields/rank/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Feast/de/fields/use/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Feast/de/fields/use/name": {
+      "base": "",
+      "source": "Use",
+      "seen": ""
+    },
+    "models/Feast/de/fields/use/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Feast/de/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Feast/de/name": {
+      "base": "",
+      "source": "Feast",
+      "seen": ""
+    },
+    "models/Feast/de/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Feast/en/description": {
+      "base": "A day of the calendar: a saint's day every year (`when` a Recurrence), a council that sat once (an ExactDate or\na DateRange), a Lent (a Period), or one attached to days by hand (NoRule). Shown by `pangloss_calendar`",
+      "source": "A day of the calendar: a saint's day every year (`when` a Recurrence), a council that sat once (an ExactDate or\na DateRange), a Lent (a Period), or one attached to days by hand (NoRule). Shown by `pangloss_calendar`",
+      "seen": "A day of the calendar: a saint's day every year (`when` a Recurrence), a council that sat once (an ExactDate or\na DateRange), a Lent (a Period), or one attached to days by hand (NoRule). Shown by `pangloss_calendar`"
+    },
+    "models/Feast/en/fields/rank/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Feast/en/fields/rank/name": {
+      "base": "Rank",
+      "source": "Rank",
+      "seen": "Rank"
+    },
+    "models/Feast/en/fields/rank/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Feast/en/fields/use/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Feast/en/fields/use/name": {
+      "base": "Use",
+      "source": "Use",
+      "seen": "Use"
+    },
+    "models/Feast/en/fields/use/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Feast/en/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Feast/en/name": {
+      "base": "Feast",
+      "source": "Feast",
+      "seen": "Feast"
+    },
+    "models/Feast/en/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Feast/fr/description": {
+      "base": "",
+      "source": "A day of the calendar: a saint's day every year (`when` a Recurrence), a council that sat once (an ExactDate or\na DateRange), a Lent (a Period), or one attached to days by hand (NoRule). Shown by `pangloss_calendar`",
+      "seen": ""
+    },
+    "models/Feast/fr/fields/rank/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Feast/fr/fields/rank/name": {
+      "base": "",
+      "source": "Rank",
+      "seen": ""
+    },
+    "models/Feast/fr/fields/rank/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Feast/fr/fields/use/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Feast/fr/fields/use/name": {
+      "base": "",
+      "source": "Use",
+      "seen": ""
+    },
+    "models/Feast/fr/fields/use/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Feast/fr/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Feast/fr/name": {
+      "base": "",
+      "source": "Feast",
+      "seen": ""
+    },
+    "models/Feast/fr/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
     },
     "models/GaveTo/de/description": {
       "base": "",
@@ -2074,6 +2073,21 @@
       "source": "",
       "seen": ""
     },
+    "models/Group/de/incoming/received_order/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Group/de/incoming/received_order/name": {
+      "base": "",
+      "source": "Received order",
+      "seen": ""
+    },
+    "models/Group/de/incoming/received_order/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
     "models/Group/de/name": {
       "base": "",
       "source": "Group",
@@ -2226,6 +2240,21 @@
       "seen": "Received"
     },
     "models/Group/en/incoming/received/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Group/en/incoming/received_order/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Group/en/incoming/received_order/name": {
+      "base": "Received order",
+      "source": "Received order",
+      "seen": "Received order"
+    },
+    "models/Group/en/incoming/received_order/plural": {
       "base": "",
       "source": "",
       "seen": ""
@@ -2385,6 +2414,21 @@
       "source": "",
       "seen": ""
     },
+    "models/Group/fr/incoming/received_order/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Group/fr/incoming/received_order/name": {
+      "base": "",
+      "source": "Received order",
+      "seen": ""
+    },
+    "models/Group/fr/incoming/received_order/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
     "models/Group/fr/name": {
       "base": "",
       "source": "Group",
@@ -2503,8 +2547,9 @@
     },
     "models/Identification/de/description": {
       "base": "",
-      "source": "A name in the source that has been identified: the source says \"Smith\", and\nthis says which people that could be. The target is one `Alternative`.",
-      "seen": "Ein Name in der Quelle, der identifiziert wurde: Die Quelle sagt „Smith“, und dies besagt, welche Personen gemeint sein könnten. Das Ziel ist eine einzelne `Alternative`."
+      "source": "A name in the source that has been identified: the source says \"Smith\", and\nthis says which people that could be. The target is one `WeightedAlternative`.",
+      "seen": "Ein Name in der Quelle, der identifiziert wurde: Die Quelle sagt „Smith“, und dies besagt, welche Personen gemeint sein könnten. Das Ziel ist eine einzelne `Alternative`.",
+      "review": true
     },
     "models/Identification/de/fields/identified_by/help": {
       "base": "",
@@ -2553,9 +2598,9 @@
       "review": true
     },
     "models/Identification/en/description": {
-      "base": "A name in the source that has been identified: the source says \"Smith\", and\nthis says which people that could be. The target is one `Alternative`.",
-      "source": "A name in the source that has been identified: the source says \"Smith\", and\nthis says which people that could be. The target is one `Alternative`.",
-      "seen": "A name in the source that has been identified: the source says \"Smith\", and\nthis says which people that could be. The target is one `Alternative`."
+      "base": "A name in the source that has been identified: the source says \"Smith\", and\nthis says which people that could be. The target is one `WeightedAlternative`.",
+      "source": "A name in the source that has been identified: the source says \"Smith\", and\nthis says which people that could be. The target is one `WeightedAlternative`.",
+      "seen": "A name in the source that has been identified: the source says \"Smith\", and\nthis says which people that could be. The target is one `WeightedAlternative`."
     },
     "models/Identification/en/fields/identified_by/help": {
       "base": "",
@@ -2604,8 +2649,9 @@
     },
     "models/Identification/fr/description": {
       "base": "",
-      "source": "A name in the source that has been identified: the source says \"Smith\", and\nthis says which people that could be. The target is one `Alternative`.",
-      "seen": "Un nom de la source qui a été identifié : la source dit « Smith », et ceci dit quelles personnes cela pourrait être. La cible est une `Alternative`."
+      "source": "A name in the source that has been identified: the source says \"Smith\", and\nthis says which people that could be. The target is one `WeightedAlternative`.",
+      "seen": "Un nom de la source qui a été identifié : la source dit « Smith », et ceci dit quelles personnes cela pourrait être. La cible est une `Alternative`.",
+      "review": true
     },
     "models/Identification/fr/fields/identified_by/help": {
       "base": "",
@@ -3516,6 +3562,21 @@
       "source": "",
       "seen": ""
     },
+    "models/Order/de/fields/ordered_to/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Order/de/fields/ordered_to/name": {
+      "base": "",
+      "source": "Ordered to",
+      "seen": ""
+    },
+    "models/Order/de/fields/ordered_to/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
     "models/Order/de/fields/thing_ordered/help": {
       "base": "",
       "source": "",
@@ -3567,6 +3628,21 @@
       "source": "",
       "seen": ""
     },
+    "models/Order/en/fields/ordered_to/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Order/en/fields/ordered_to/name": {
+      "base": "Ordered to",
+      "source": "Ordered to",
+      "seen": "Ordered to"
+    },
+    "models/Order/en/fields/ordered_to/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
     "models/Order/en/fields/thing_ordered/help": {
       "base": "",
       "source": "",
@@ -3613,6 +3689,21 @@
       "seen": "Ordonné par"
     },
     "models/Order/fr/fields/ordered_by/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Order/fr/fields/ordered_to/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Order/fr/fields/ordered_to/name": {
+      "base": "",
+      "source": "Ordered to",
+      "seen": ""
+    },
+    "models/Order/fr/fields/ordered_to/plural": {
       "base": "",
       "source": "",
       "seen": ""
@@ -4034,6 +4125,21 @@
       "source": "",
       "seen": ""
     },
+    "models/Person/de/incoming/received_order/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Person/de/incoming/received_order/name": {
+      "base": "",
+      "source": "Received order",
+      "seen": ""
+    },
+    "models/Person/de/incoming/received_order/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
     "models/Person/de/name": {
       "base": "",
       "source": "Person",
@@ -4235,6 +4341,21 @@
       "source": "",
       "seen": ""
     },
+    "models/Person/en/incoming/received_order/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Person/en/incoming/received_order/name": {
+      "base": "Received order",
+      "source": "Received order",
+      "seen": "Received order"
+    },
+    "models/Person/en/incoming/received_order/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
     "models/Person/en/name": {
       "base": "Person",
       "source": "Person",
@@ -4431,6 +4552,21 @@
       "seen": "A reçu"
     },
     "models/Person/fr/incoming/received/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Person/fr/incoming/received_order/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Person/fr/incoming/received_order/name": {
+      "base": "",
+      "source": "Received order",
+      "seen": ""
+    },
+    "models/Person/fr/incoming/received_order/plural": {
       "base": "",
       "source": "",
       "seen": ""
@@ -4806,112 +4942,6 @@
       "base": "",
       "source": "Positive subjunctives",
       "seen": "Subjonctifs positifs"
-    },
-    "models/Probability/de/description": {
-      "base": "",
-      "source": "How likely it is that this is the one meant, out of the alternatives (1 to 100, in per cent)",
-      "seen": "Wie wahrscheinlich es ist, dass dies die gemeinte Person unter den Alternativen ist (1 bis 100, in Prozent)"
-    },
-    "models/Probability/de/fields/percent/help": {
-      "base": "",
-      "source": "",
-      "seen": ""
-    },
-    "models/Probability/de/fields/percent/name": {
-      "base": "",
-      "source": "Percent",
-      "seen": "Prozent"
-    },
-    "models/Probability/de/fields/percent/plural": {
-      "base": "",
-      "source": "",
-      "seen": ""
-    },
-    "models/Probability/de/help": {
-      "base": "",
-      "source": "",
-      "seen": ""
-    },
-    "models/Probability/de/name": {
-      "base": "",
-      "source": "Probability",
-      "seen": "Wahrscheinlichkeit"
-    },
-    "models/Probability/de/plural": {
-      "base": "",
-      "source": "Probabilities",
-      "seen": "Wahrscheinlichkeiten",
-      "review": true
-    },
-    "models/Probability/en/description": {
-      "base": "How likely it is that this is the one meant, out of the alternatives (1 to 100, in per cent)",
-      "source": "How likely it is that this is the one meant, out of the alternatives (1 to 100, in per cent)",
-      "seen": "How likely it is that this is the one meant, out of the alternatives (1 to 100, in per cent)"
-    },
-    "models/Probability/en/fields/percent/help": {
-      "base": "",
-      "source": "",
-      "seen": ""
-    },
-    "models/Probability/en/fields/percent/name": {
-      "base": "Percent",
-      "source": "Percent",
-      "seen": "Percent"
-    },
-    "models/Probability/en/fields/percent/plural": {
-      "base": "",
-      "source": "",
-      "seen": ""
-    },
-    "models/Probability/en/help": {
-      "base": "",
-      "source": "",
-      "seen": ""
-    },
-    "models/Probability/en/name": {
-      "base": "Probability",
-      "source": "Probability",
-      "seen": "Probability"
-    },
-    "models/Probability/en/plural": {
-      "base": "",
-      "source": "",
-      "seen": "Probabilities"
-    },
-    "models/Probability/fr/description": {
-      "base": "",
-      "source": "How likely it is that this is the one meant, out of the alternatives (1 to 100, in per cent)",
-      "seen": "La probabilité que ce soit celui-ci qui soit désigné, parmi les alternatives (de 1 à 100, en pour cent)"
-    },
-    "models/Probability/fr/fields/percent/help": {
-      "base": "",
-      "source": "",
-      "seen": ""
-    },
-    "models/Probability/fr/fields/percent/name": {
-      "base": "",
-      "source": "Percent",
-      "seen": "Pourcentage"
-    },
-    "models/Probability/fr/fields/percent/plural": {
-      "base": "",
-      "source": "",
-      "seen": ""
-    },
-    "models/Probability/fr/help": {
-      "base": "",
-      "source": "",
-      "seen": ""
-    },
-    "models/Probability/fr/name": {
-      "base": "",
-      "source": "Probability",
-      "seen": "Probabilité"
-    },
-    "models/Probability/fr/plural": {
-      "base": "",
-      "source": "Probabilities",
-      "seen": "Probabilités"
     },
     "models/SameGroup/de/description": {
       "base": "",
@@ -5370,21 +5400,6 @@
       "source": "",
       "seen": ""
     },
-    "models/Statement/de/fields/year/help": {
-      "base": "",
-      "source": "",
-      "seen": ""
-    },
-    "models/Statement/de/fields/year/name": {
-      "base": "",
-      "source": "Year",
-      "seen": "Jahr"
-    },
-    "models/Statement/de/fields/year/plural": {
-      "base": "",
-      "source": "",
-      "seen": ""
-    },
     "models/Statement/de/help": {
       "base": "",
       "source": "",
@@ -5466,21 +5481,6 @@
       "source": "",
       "seen": ""
     },
-    "models/Statement/en/fields/year/help": {
-      "base": "",
-      "source": "",
-      "seen": ""
-    },
-    "models/Statement/en/fields/year/name": {
-      "base": "Year",
-      "source": "Year",
-      "seen": "Year"
-    },
-    "models/Statement/en/fields/year/plural": {
-      "base": "",
-      "source": "",
-      "seen": ""
-    },
     "models/Statement/en/help": {
       "base": "",
       "source": "",
@@ -5557,21 +5557,6 @@
       "seen": "Texte"
     },
     "models/Statement/fr/fields/text/plural": {
-      "base": "",
-      "source": "",
-      "seen": ""
-    },
-    "models/Statement/fr/fields/year/help": {
-      "base": "",
-      "source": "",
-      "seen": ""
-    },
-    "models/Statement/fr/fields/year/name": {
-      "base": "",
-      "source": "Year",
-      "seen": "Année"
-    },
-    "models/Statement/fr/fields/year/plural": {
       "base": "",
       "source": "",
       "seen": ""

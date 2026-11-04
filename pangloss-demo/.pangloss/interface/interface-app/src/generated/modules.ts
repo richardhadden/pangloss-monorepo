@@ -4,5 +4,6 @@ import module0 from "../../../modules/pangloss_dates/src/index";
 import module1 from "../../../modules/pangloss_calendar/src/index";
 import module2 from "../../../modules/pangloss_typology/src/index";
 import module3 from "../../../modules/pangloss_review/src/index";
+import module4 from "../../../modules/pangloss_library/src/index";
 
-export const modules: ModuleManifest[] = [module0, module1, module2, module3];
+export const modules: ModuleManifest[] = [module0, module1, module2, module3, module4];

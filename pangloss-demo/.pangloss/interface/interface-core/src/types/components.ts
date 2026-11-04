@@ -183,8 +183,10 @@ export interface ReferenceChipProps {
   label: string;
   /** Where it goes (if it is not given, the chip is not a link) */
   href?: string;
-  /** The properties of the edge to it (`{ level: 3 }`), shown after the label */
+  /** The properties of the edge to it (`{ level: 3 }`), shown at the end of the chip */
   edgeProperties?: Record<string, unknown>;
+  /** The model of those properties: their names, and how each is written (`Slider(unit="%")`: "19%") */
+  edgeModel?: string | null;
   /** The semantic spaces what is referred to is in, outermost first: the chip is wrapped in a band for each */
   spaces?: string[];
   /** Gives the chip a remove button at its end (a form's): the chip is then always the default one */

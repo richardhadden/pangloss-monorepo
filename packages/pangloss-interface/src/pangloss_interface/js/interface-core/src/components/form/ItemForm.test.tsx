@@ -148,7 +148,7 @@ const definitions = {
         literal("percent", { type: "int" }, {
           required: true,
           validators: [{ name: "Ge", ge: 1 }, { name: "Le", le: 100 }],
-          markers: [{ name: "Slider" }],
+          markers: [{ name: "Slider", unit: "%" }],
         }),
       ],
     }),
@@ -1034,8 +1034,10 @@ test("shares are edited with sliders that give way to each other, and are sent a
   sliders()[0]!.dispatchEvent(new InputEvent("input", { bubbles: true }));
   await settle();
   expect(sliders().map((slider) => slider.value)).toEqual(["70", "30"]);
-  // (the box beside each says the same)
-  expect([...document.body.querySelectorAll<HTMLInputElement>('input[type="number"]')].map((box) => box.value)).toEqual(["70", "30"]);
+  // (beside each, the number as text with its unit: no box to type in)
+  expect([...document.body.querySelectorAll("[data-slider-value]")].map((shown) => shown.textContent)).toEqual(["70%", "30%"]);
+  expect(document.body.querySelectorAll('input[type="number"]')).toHaveLength(0);
+  expect(sliders().map((slider) => slider.getAttribute("aria-valuetext"))).toEqual(["70%", "30%"]);
   click(button("Save"));
   await settle();
   expect(sent[0]!.body.suspects).toEqual([

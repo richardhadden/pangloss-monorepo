@@ -22,11 +22,11 @@ small, and between them use most of what Pangloss has:
 | Semantic spaces (a context for statements) | `Negative`, `Hypothetical`, `PositiveSubjunctive`, `NegativeSubjunctive` |
 | A statement that holds another statement | `Order.thing_ordered` |
 | Binding a value of the parent into its children | `Order.ordered_to` into the `given_by` or `ordered_by` of what is ordered |
-| A conjunction (a join of several things) | `Causes`, `Alternative` (any number) |
-| Shares that add up to 100, edited with sliders (`SumsTo`, `Slider`) | `Alternative.alternatives` |
-| A reified relation to a conjunction, with edge properties on its members | `Identification[Alternative[Person]]` (the edge is in `Alternative`) |
+| A conjunction (a join of several things) | `Causes` (and the library's `WeightedAlternative`, any number) |
+| Shares that add up to 100, edited with sliders (`SumsTo`, `Slider`; `pangloss-library`) | `WeightedAlternative.alternatives` |
+| A reified relation to a conjunction, with edge properties on its members | `Identification[WeightedAlternative[Person]]` (the edge is in `WeightedAlternative`) |
 | Literals: enums, dates, decimals, a TypedDict, lists, validators | throughout |
-| What a space or a conjunction does to a derived relation (`pangloss-derived`; the rules are in `derived.py`) | `Alternative`, `InRole` |
+| What a space or a conjunction does to a derived relation (`pangloss-derived`; the rules are in `derived.py`) | `WeightedAlternative` (exclusive), `InRole` |
 """
 
 import datetime
@@ -34,12 +34,13 @@ from decimal import Decimal
 from enum import Enum
 from typing import Annotated, TypedDict
 
-from annotated_types import Ge, Le, MaxLen, MinLen
+from annotated_types import Ge, MaxLen, MinLen
 from pangloss_calendar.models import DateCharacterisation
 from pangloss_dates.bounds import SortBy
 from pangloss_dates.models import Date, SortDefault
 from pangloss_derived import DerivedMeta
-from pangloss_interface import InterfaceMeta, Slider
+from pangloss_interface import InterfaceMeta
+from pangloss_library.models import WeightedAlternative
 from pangloss_models.field_definitions import FieldBinding, FieldSubclassing
 from pangloss_models.model_bases.annotated_value import AnnotatedValue
 from pangloss_models.model_bases.configs import RelationConfig
@@ -51,7 +52,6 @@ from pangloss_models.model_bases.helpers import ViaEdge
 from pangloss_models.model_bases.reified_relation import ReifiedRelation
 from pangloss_models.model_bases.semantic_space import SemanticSpace
 from pangloss_models.model_bases.trait import Trait
-from pangloss_models.validators import SumsTo
 from pangloss_review.meta import ReviewMeta
 from pangloss_typology import Typed, Typology, TypologyMeta
 
@@ -86,12 +86,6 @@ class Certainty(EdgeModel):
     level: Annotated[int, Ge(1)]
 
 
-class Probability(EdgeModel):
-    """How likely it is that this is the one meant, out of the alternatives (1 to 100, in per cent)"""
-
-    percent: Annotated[int, Ge(1), Le(100), Slider()]
-
-
 class WithCertainty[T](AnnotatedValue[T]):
     """A value, with how certain it is (1 to 5)"""
 
@@ -117,22 +111,9 @@ class InRole[T](ReifiedRelation[T]):
     role: Role
 
 
-class Alternative[T](Conjunction):
-    """One of several things, not known which: any number of statements or entities,
-    each with how likely it is the one meant (`Alternative[Person]`)"""
-
-    # (one of them, not known which: a derived relation takes one alternative at a time, never two together)
-    _derived_meta = DerivedMeta(exclusive=True)
-    # (on the item page, one alternative is shown as that one alone: docs/interface-collapse.md)
-    _interface_meta = InterfaceMeta(collapse=True)
-
-    # (the percentages add up to 100: the interface keeps them to it, and the server refuses what does not)
-    alternatives: Annotated[list[ViaEdge[T, Probability]], SumsTo("percent")]
-
-
 class Identification[T](ReifiedRelation[T]):
     """A name in the source that has been identified: the source says "Smith", and
-    this says which people that could be. The target is one `Alternative`."""
+    this says which people that could be. The target is one `WeightedAlternative`."""
 
     # (on the item page, one person is shown as their chip, then `identified by`)
     _interface_meta = InterfaceMeta(collapse=True)
@@ -245,7 +226,7 @@ class Transfer(Statement):
     item: str
     quantity: Decimal
     given_by: Annotated[
-        Agent | Identification[Alternative[Person]],
+        Agent | Identification[WeightedAlternative[Person]],
         RelationConfig(
             reverse_name="gave",
             subclasses_parent_fields=[
@@ -254,7 +235,7 @@ class Transfer(Statement):
         ),
     ]
     given_to: Annotated[
-        Agent | Identification[Alternative[Person]],
+        Agent | Identification[WeightedAlternative[Person]],
         RelationConfig(reverse_name="received"),
     ]
 
@@ -264,7 +245,7 @@ class MemberOf(Statement):
     them members of the same group: see `derived.py`)"""
 
     member: Annotated[
-        Agent | Identification[Alternative[Person]],
+        Agent | Identification[WeightedAlternative[Person]],
         RelationConfig(
             reverse_name="member_of",
             subclasses_parent_fields=[
@@ -280,7 +261,7 @@ class Order(Statement):
     its own, said in a subjunctive space, because it was wished, and not necessarily done"""
 
     ordered_by: Annotated[
-        Agent | Identification[Alternative[Person]],
+        Agent | Identification[WeightedAlternative[Person]],
         RelationConfig(
             reverse_name="ordered",
             subclasses_parent_fields=[
@@ -291,7 +272,7 @@ class Order(Statement):
     # Who received the order: the one who is to do what is ordered, so it is given to what is ordered (in the
     # subjunctive space) that does not say otherwise: who gives, in a transfer, or who orders, in an order passed on
     ordered_to: Annotated[
-        Agent | Identification[Alternative[Person]],
+        Agent | Identification[WeightedAlternative[Person]],
         RelationConfig(reverse_name="received_order"),
     ]
     thing_ordered: Annotated[

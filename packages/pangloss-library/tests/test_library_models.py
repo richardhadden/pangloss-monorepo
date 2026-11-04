@@ -72,7 +72,7 @@ def test_the_percentages_are_edited_with_sliders():
     make_models()
     models = export_models()["models"]
     (percent,) = models["Likelihood"]["fields"]
-    assert percent["markers"] == [{"name": "Slider"}]
+    assert percent["markers"] == [{"name": "Slider", "unit": "%"}]
     (alternatives,) = models["WeightedAlternative"]["fields"]
     assert {"name": "SumsTo", "field": "percent", "total": 100} in alternatives[
         "validators"

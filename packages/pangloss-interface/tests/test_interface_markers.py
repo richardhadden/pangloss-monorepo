@@ -39,6 +39,7 @@ def test_a_slider_is_exported_as_a_marker_of_the_field():
     class Reading(Document):
         percent: Annotated[int, Ge(1), Le(100), Slider()]
         weight: Annotated[float, Ge(0), Lt(1), Slider(step=0.05)]
+        share: Annotated[int, Ge(0), Le(100), Slider(unit="%")]
         plain: int
 
     initialise()
@@ -46,6 +47,7 @@ def test_a_slider_is_exported_as_a_marker_of_the_field():
     assert field_of("Reading", "weight")["markers"] == [
         {"name": "Slider", "step": 0.05}
     ]
+    assert field_of("Reading", "share")["markers"] == [{"name": "Slider", "unit": "%"}]
     assert field_of("Reading", "plain")["markers"] == []
 
 

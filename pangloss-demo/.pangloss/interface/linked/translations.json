@@ -160,6 +160,7 @@
       "invalid_not_uuid": "Must be a UUID",
       "invalid_not_whole": "Must be a whole number",
       "invalid_required": "Required",
+      "invalid_shares_total": "Must add up to {n} (now {sum})",
       "invalid_too_few": "At least {n} needed",
       "invalid_too_large": "Must be {n} or less",
       "invalid_too_long": "At most {n} characters",
@@ -523,6 +524,7 @@
       "invalid_not_uuid": "Muss eine UUID sein",
       "invalid_not_whole": "Muss eine ganze Zahl sein",
       "invalid_required": "Pflichtfeld",
+      "invalid_shares_total": "Muss zusammen {n} ergeben (jetzt {sum})",
       "invalid_too_few": "Mindestens {n} erforderlich",
       "invalid_too_large": "Darf höchstens {n} sein",
       "invalid_too_long": "Höchstens {n} Zeichen",
@@ -886,6 +888,7 @@
       "invalid_not_uuid": "Doit être un UUID",
       "invalid_not_whole": "Doit être un nombre entier",
       "invalid_required": "Obligatoire",
+      "invalid_shares_total": "Le total doit être {n} (actuellement {sum})",
       "invalid_too_few": "Au moins {n} requis",
       "invalid_too_large": "Doit être inférieur ou égal à {n}",
       "invalid_too_long": "Au plus {n} caractères",
@@ -1133,21 +1136,6 @@
           "participants": {
             "name": "Participants",
             "plural": "Participants",
-            "help": ""
-          }
-        },
-        "incoming": {}
-      },
-      "Alternative": {
-        "name": "Alternative",
-        "plural": "Alternatives",
-        "help": "",
-        "description": "One of several things, not known which: any number of statements or entities.\n`Alternative[ViaEdge[Person, Probability]]` gives each person how likely it is the one meant",
-        "kind": "Conjunction",
-        "fields": {
-          "alternatives": {
-            "name": "Alternatives",
-            "plural": "Alternatives",
             "help": ""
           }
         },
@@ -1743,7 +1731,7 @@
         "name": "Identification",
         "plural": "Identifications",
         "help": "",
-        "description": "A name in the source that has been identified: the source says \"Smith\", and\nthis says which people that could be. The target is one `Alternative`.",
+        "description": "A name in the source that has been identified: the source says \"Smith\", and\nthis says which people that could be. The target is one `WeightedAlternative`.",
         "kind": "ReifiedRelation",
         "fields": {
           "target": {
@@ -1774,6 +1762,21 @@
           "role": {
             "name": "Role",
             "plural": "Role",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "Likelihood": {
+        "name": "Likelihood",
+        "plural": "Likelihoods",
+        "help": "",
+        "description": "How likely it is that this is the one meant, out of the alternatives (1 to 100, in per cent)",
+        "kind": "EdgeModel",
+        "fields": {
+          "percent": {
+            "name": "% likelihood",
+            "plural": "% likelihood",
             "help": ""
           }
         },
@@ -2216,21 +2219,6 @@
         },
         "incoming": {}
       },
-      "Probability": {
-        "name": "Probability",
-        "plural": "Probabilities",
-        "help": "",
-        "description": "How likely it is that this is the one meant, out of the alternatives (1 to 100, in per cent)",
-        "kind": "EdgeModel",
-        "fields": {
-          "percent": {
-            "name": "Percent",
-            "plural": "Percent",
-            "help": ""
-          }
-        },
-        "incoming": {}
-      },
       "Recurrence": {
         "name": "Recurrence",
         "plural": "Recurrences",
@@ -2522,6 +2510,21 @@
         },
         "incoming": {}
       },
+      "WeightedAlternative": {
+        "name": "Weighted alternative",
+        "plural": "Weighted alternatives",
+        "help": "",
+        "description": "One of several things, not known which, each with how likely it is the one meant: the percentages add up to 100",
+        "kind": "Conjunction",
+        "fields": {
+          "alternatives": {
+            "name": "Alternatives",
+            "plural": "Alternatives",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
       "WithCertainty": {
         "name": "With certainty",
         "plural": "With certainties",
@@ -2634,21 +2637,6 @@
           "participants": {
             "name": "Teilnehmer",
             "plural": "Teilnehmer",
-            "help": ""
-          }
-        },
-        "incoming": {}
-      },
-      "Alternative": {
-        "name": "Alternative",
-        "plural": "Alternativen",
-        "help": "",
-        "description": "Eines von mehreren Dingen, unbekannt welches: beliebig viele Aussagen oder Entitäten. `Alternative[ViaEdge[Person, Probability]]` gibt jeder Person an, wie wahrscheinlich sie die gemeinte ist",
-        "kind": "Conjunction",
-        "fields": {
-          "alternatives": {
-            "name": "Alternativen",
-            "plural": "Alternativen",
             "help": ""
           }
         },
@@ -3280,6 +3268,21 @@
         },
         "incoming": {}
       },
+      "Likelihood": {
+        "name": "Wahrscheinlichkeit",
+        "plural": "Wahrscheinlichkeiten",
+        "help": "",
+        "description": "Wie wahrscheinlich es ist, dass dies das Gemeinte unter den Alternativen ist (1 bis 100, in Prozent)",
+        "kind": "EdgeModel",
+        "fields": {
+          "percent": {
+            "name": "% Wahrscheinlichkeit",
+            "plural": "% Wahrscheinlichkeit",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
       "MemberOf": {
         "name": "Mitglied von",
         "plural": "Mitgliedschaften",
@@ -3717,21 +3720,6 @@
         },
         "incoming": {}
       },
-      "Probability": {
-        "name": "Wahrscheinlichkeit",
-        "plural": "Wahrscheinlichkeiten",
-        "help": "",
-        "description": "Wie wahrscheinlich es ist, dass dies die gemeinte Person unter den Alternativen ist (1 bis 100, in Prozent)",
-        "kind": "EdgeModel",
-        "fields": {
-          "percent": {
-            "name": "Prozent",
-            "plural": "Prozent",
-            "help": ""
-          }
-        },
-        "incoming": {}
-      },
       "Recurrence": {
         "name": "Wiederkehr",
         "plural": "Wiederkehr",
@@ -4023,6 +4011,21 @@
         },
         "incoming": {}
       },
+      "WeightedAlternative": {
+        "name": "Gewichtete Alternative",
+        "plural": "Gewichtete Alternativen",
+        "help": "",
+        "description": "Eines von mehreren Dingen, unbekannt welches, jedes mit seiner Wahrscheinlichkeit: die Prozente ergeben zusammen 100",
+        "kind": "Conjunction",
+        "fields": {
+          "alternatives": {
+            "name": "Alternativen",
+            "plural": "Alternativen",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
       "WithCertainty": {
         "name": "Mit Gewissheit",
         "plural": "Mit Gewissheit",
@@ -4135,21 +4138,6 @@
           "participants": {
             "name": "Participants",
             "plural": "Participants",
-            "help": ""
-          }
-        },
-        "incoming": {}
-      },
-      "Alternative": {
-        "name": "Alternative",
-        "plural": "Alternatives",
-        "help": "",
-        "description": "L’une de plusieurs choses, sans savoir laquelle : un nombre quelconque d’énoncés ou d’entités. `Alternative[ViaEdge[Person, Probability]]` donne pour chaque personne la probabilité que ce soit elle",
-        "kind": "Conjunction",
-        "fields": {
-          "alternatives": {
-            "name": "Alternatives",
-            "plural": "Alternatives",
             "help": ""
           }
         },
@@ -4781,6 +4769,21 @@
         },
         "incoming": {}
       },
+      "Likelihood": {
+        "name": "Vraisemblance",
+        "plural": "Vraisemblances",
+        "help": "",
+        "description": "La probabilité que ce soit celui-ci qui est visé, parmi les alternatives (de 1 à 100, en pourcentage)",
+        "kind": "EdgeModel",
+        "fields": {
+          "percent": {
+            "name": "% de vraisemblance",
+            "plural": "% de vraisemblance",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
       "MemberOf": {
         "name": "Membre de",
         "plural": "Appartenances",
@@ -5218,21 +5221,6 @@
         },
         "incoming": {}
       },
-      "Probability": {
-        "name": "Probabilité",
-        "plural": "Probabilités",
-        "help": "",
-        "description": "La probabilité que ce soit celui-ci qui soit désigné, parmi les alternatives (de 1 à 100, en pour cent)",
-        "kind": "EdgeModel",
-        "fields": {
-          "percent": {
-            "name": "Pourcentage",
-            "plural": "Pourcentage",
-            "help": ""
-          }
-        },
-        "incoming": {}
-      },
       "Recurrence": {
         "name": "Récurrence",
         "plural": "Récurrences",
@@ -5519,6 +5507,21 @@
           "end_sort_day": {
             "name": "Jour de tri (fin)",
             "plural": "Jour de tri (fin)",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "WeightedAlternative": {
+        "name": "Alternative pondérée",
+        "plural": "Alternatives pondérées",
+        "help": "",
+        "description": "L’une de plusieurs choses, sans savoir laquelle, chacune avec sa vraisemblance : les pourcentages font 100 au total",
+        "kind": "Conjunction",
+        "fields": {
+          "alternatives": {
+            "name": "Alternatives",
+            "plural": "Alternatives",
             "help": ""
           }
         },

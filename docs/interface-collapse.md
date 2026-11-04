@@ -67,7 +67,7 @@ shown labelled after the held item.
 | `context/modules.tsx` | `collapseRule(reference)` lookup (`useModules()`) |
 | `schema/collapse.ts` | `collapsedView(value, definitions, findRule)`: `{ held, extras }` or undefined, pure |
 | `components/ItemContents.tsx` | the collapsed form, the expand marker, and the fold button on the head when expanded |
-| demo `models.py` | `Identification` and `Alternative` get `collapse=True` |
+| demo `models.py`, `pangloss-library` | `Identification` (demo) and `WeightedAlternative` (library) get `collapse=True` |
 | `ui.jsonc`, `interface-strings.md` | `collapse_show_whole`, `collapse_fold` |
 
 ## Tests

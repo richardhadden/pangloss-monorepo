@@ -152,9 +152,9 @@ own `.gitignore` leaves out `node_modules` and `dist`).
 | Entities | `Person` and `Group` (both an `Agent`), `Place`, `Source`: with URLs as ids, and created from the payload of the factoid that mentions them (by their URL, if they do not exist yet; they are still separate entities) |
 | Documents | `Factoid` contains `Statement`s (abstract), which are `Activity`, `Transfer` or `Order` |
 | Relations | `AtPage[Source]` and `InRole[Agent]` (reified: a relation with fields), `ViaEdge[Agent, Certainty]` (fields on the edge), a field narrowed by a subclass (`carried_out_by` narrows `involves`) |
-| Wrappers | `Negative`, `Hypothetical`, `PositiveSubjunctive` and `NegativeSubjunctive` (semantic spaces), `Causes` and `Alternative` (conjunctions) |
+| Wrappers | `Negative`, `Hypothetical`, `PositiveSubjunctive` and `NegativeSubjunctive` (semantic spaces), `Causes` (a conjunction), and the library's `WeightedAlternative` (`pangloss-library`) |
 | Orders | `Order` is a `Statement` whose `thing_ordered` is any other statement, in a `PositiveSubjunctive` or `NegativeSubjunctive` space: wished to happen (or not to), not necessarily done |
-| Identifications | `Identification[Alternative[ViaEdge[Person, Probability]]]` where a statement points to a person (`Order.ordered_by`, `Transfer.given_by` and `given_to`): the source says "Wido" (`identified_by`), and the one `Alternative` holds the men it could be, each with a `Probability` (percent) |
+| Identifications | `Identification[WeightedAlternative[Person]]` where a statement points to a person (`Order.ordered_by`, `Transfer.given_by` and `given_to`): the source says "Wido" (`identified_by`), and the one `WeightedAlternative` holds the men it could be, each with a `Likelihood` (percent, a slider; they add up to 100) |
 | Dates, types, review | `Date` (Julian by setting) for `Statement.date` and `Person.born`; `OccupationTypology` for `Person.has_type`; `Factoid` is reviewable |
 | Values | an embedded `Date`, an annotated `WithCertainty[str]`, enums, a `TypedDict`, `Decimal`, lists, validators |
 

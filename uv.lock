@@ -983,6 +983,7 @@ version = "0.1.0"
 source = { editable = "packages/pangloss-library" }
 dependencies = [
     { name = "annotated-types" },
+    { name = "pangloss-derived" },
     { name = "pangloss-interface" },
     { name = "pangloss-models" },
 ]
@@ -990,6 +991,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "annotated-types", specifier = ">=0.7" },
+    { name = "pangloss-derived", editable = "packages/pangloss-derived" },
     { name = "pangloss-interface", editable = "packages/pangloss-interface" },
     { name = "pangloss-models", editable = "packages/pangloss-models" },
 ]

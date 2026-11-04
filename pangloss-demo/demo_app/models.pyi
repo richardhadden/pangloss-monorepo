@@ -22,12 +22,13 @@ import datetime
 from decimal import Decimal
 from enum import Enum
 from typing import Annotated, TypedDict
-from annotated_types import Ge, Le, MaxLen, MinLen
+from annotated_types import Ge, MaxLen, MinLen
 from pangloss_calendar.models import DateCharacterisation
 from pangloss_dates.bounds import SortBy
 from pangloss_dates.models import Date, SortDefault
 from pangloss_derived import DerivedMeta
-from pangloss_interface import InterfaceMeta, Slider
+from pangloss_interface import InterfaceMeta
+from pangloss_library.models import WeightedAlternative
 from pangloss_models.field_definitions import FieldBinding, FieldSubclassing
 from pangloss_models.model_bases.annotated_value import AnnotatedValue
 from pangloss_models.model_bases.configs import RelationConfig
@@ -39,7 +40,6 @@ from pangloss_models.model_bases.helpers import ViaEdge
 from pangloss_models.model_bases.reified_relation import ReifiedRelation
 from pangloss_models.model_bases.semantic_space import SemanticSpace
 from pangloss_models.model_bases.trait import Trait
-from pangloss_models.validators import SumsTo
 from pangloss_review.meta import ReviewMeta
 from pangloss_typology import Typed, Typology, TypologyMeta
 
@@ -62,9 +62,6 @@ class Coordinates(TypedDict):
 
 class Certainty(EdgeModel):
     level: Annotated[int, Ge(1)]
-
-class Probability(EdgeModel):
-    percent: Annotated[int, Ge(1), Le(100), Slider()]
 
 class WithCertainty[T](AnnotatedValue[T]):
     certainty: int
@@ -99,19 +96,6 @@ class InRole[T](ReifiedRelation[T]):
     class View(pangloss_models.model_bases.reified_relation._ReifiedRelationViewBase):  # type: ignore
         type: typing.Literal['InRole'] = ...
         role: Role
-
-class Alternative[T](Conjunction):
-    _derived_meta = ...
-    _interface_meta = ...
-    alternatives: Annotated[list[ViaEdge[T, Probability]], SumsTo('percent')]
-    class Create(pangloss_models.model_bases.conjunction._ConjunctionCreateBase):  # type: ignore
-        type: typing.Literal['Alternative'] = ...
-
-    class Update(pangloss_models.model_bases.conjunction._ConjunctionUpdateBase):  # type: ignore
-        type: typing.Literal['Alternative'] = ...
-
-    class View(pangloss_models.model_bases.conjunction._ConjunctionViewBase):  # type: ignore
-        type: typing.Literal['Alternative'] = ...
 
 class Identification[T](ReifiedRelation[T]):
     _interface_meta = ...
@@ -513,8 +497,8 @@ class Activity(Statement):
 class Transfer(Statement):
     item: str
     quantity: Decimal
-    given_by: Annotated[Agent | Identification[Alternative[Person]], RelationConfig(reverse_name='gave', subclasses_parent_fields=[FieldSubclassing('involves', field_on_model=Statement)])]
-    given_to: Annotated[Agent | Identification[Alternative[Person]], RelationConfig(reverse_name='received')]
+    given_by: Annotated[Agent | Identification[WeightedAlternative[Person]], RelationConfig(reverse_name='gave', subclasses_parent_fields=[FieldSubclassing('involves', field_on_model=Statement)])]
+    given_to: Annotated[Agent | Identification[WeightedAlternative[Person]], RelationConfig(reverse_name='received')]
     class ReferenceView(pangloss_models.model_bases.document._DocumentReferenceViewBase):  # type: ignore
         type: typing.Literal['Transfer'] = ...
 
@@ -572,7 +556,7 @@ class Transfer(Statement):
         field: typing.Literal['label', 'text', 'date.source_text', 'date.earliest_fuzzy', 'date.earliest_strict', 'date.latest_strict', 'date.latest_fuzzy', 'date.sort_day', 'date.end_sort_day', 'item', 'quantity']  # type: ignore
 
 class MemberOf(Statement):
-    member: Annotated[Agent | Identification[Alternative[Person]], RelationConfig(reverse_name='member_of', subclasses_parent_fields=[FieldSubclassing('involves', field_on_model=Statement)])]
+    member: Annotated[Agent | Identification[WeightedAlternative[Person]], RelationConfig(reverse_name='member_of', subclasses_parent_fields=[FieldSubclassing('involves', field_on_model=Statement)])]
     group: Annotated[Group, RelationConfig(reverse_name='has_member')]
     class ReferenceView(pangloss_models.model_bases.document._DocumentReferenceViewBase):  # type: ignore
         type: typing.Literal['MemberOf'] = ...
@@ -623,8 +607,8 @@ class MemberOf(Statement):
         field: typing.Literal['label', 'text', 'date.source_text', 'date.earliest_fuzzy', 'date.earliest_strict', 'date.latest_strict', 'date.latest_fuzzy', 'date.sort_day', 'date.end_sort_day']  # type: ignore
 
 class Order(Statement):
-    ordered_by: Annotated[Agent | Identification[Alternative[Person]], RelationConfig(reverse_name='ordered', subclasses_parent_fields=[FieldSubclassing('involves', field_on_model=Statement)])]
-    ordered_to: Annotated[Agent | Identification[Alternative[Person]], RelationConfig(reverse_name='received_order')]
+    ordered_by: Annotated[Agent | Identification[WeightedAlternative[Person]], RelationConfig(reverse_name='ordered', subclasses_parent_fields=[FieldSubclassing('involves', field_on_model=Statement)])]
+    ordered_to: Annotated[Agent | Identification[WeightedAlternative[Person]], RelationConfig(reverse_name='received_order')]
     thing_ordered: Annotated[PositiveSubjunctive[Statement] | NegativeSubjunctive[Statement], RelationConfig(bind_to_child_field=[FieldBinding(bound_field='ordered_to', child_fields=['given_by', 'ordered_by'])])]
     class ReferenceView(pangloss_models.model_bases.document._DocumentReferenceViewBase):  # type: ignore
         type: typing.Literal['Order'] = ...

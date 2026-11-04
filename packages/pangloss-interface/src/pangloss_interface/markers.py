@@ -8,10 +8,12 @@ from pangloss_models.markers import FieldMarker
 
 class Slider(FieldMarker):
     """An `int` or `float` field edited with a slider, from its lower bound to its upper (`Ge`/`Gt` and `Le`/`Lt`,
-    which it must have), with the number beside it. `step`: how far one move of it goes (1, if not given)."""
+    which it must have), with the number beside it as text. `step`: how far one move of it goes (1, if not given).
+    `unit`: what is written after the number (`Slider(unit="%")`: "40%")."""
 
-    def __init__(self, step: int | float | None = None):
+    def __init__(self, step: int | float | None = None, unit: str | None = None):
         self.step = step
+        self.unit = unit
 
     def check(self, owner: str, field: dict[str, Any]) -> None:
         where = f"{owner}.{field['name']}: Slider()"
@@ -24,4 +26,5 @@ class Slider(FieldMarker):
             )
 
     def export(self) -> dict[str, Any]:
-        return {} if self.step is None else {"step": self.step}
+        given = {"step": self.step, "unit": self.unit}
+        return {key: value for key, value in given.items() if value is not None}

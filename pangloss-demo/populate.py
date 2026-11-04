@@ -286,7 +286,7 @@ def identified(name: str, alternatives: list[tuple]) -> dict:
         "identified_by": name,
         "target": [
             {
-                "type": "Alternative",
+                "type": "WeightedAlternative",
                 "alternatives": [
                     {**ref(person), "edge_properties": {"percent": percent}}
                     for person, percent in alternatives
@@ -303,7 +303,7 @@ async def write_orders(
     is left out, and comes from it)"""
     # An order holds another statement, said in a subjunctive space: it was wished (or
     # wished not), and not necessarily done. In the Transfer, the source says only
-    # "Wido": `Identification` records that, and the `Alternative` it is identified with
+    # "Wido": `Identification` records that, and the `WeightedAlternative` it is identified with
     # holds both men, each with how likely it is that he is the one meant.
     return await models.Factoid.Create(
         label="Charlemagne orders gifts, and forbids a trade",
@@ -430,7 +430,7 @@ async def add_order_chain() -> None:
         "identified_by": "the count",
         "target": [
             {
-                "type": "Alternative",
+                "type": "WeightedAlternative",
                 "alternatives": [
                     {**person, "edge_properties": {"percent": percent}}
                     for person, percent in ((gerold, 60), (eric, 40))

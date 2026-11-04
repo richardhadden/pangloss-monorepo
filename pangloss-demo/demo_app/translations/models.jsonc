@@ -87,58 +87,6 @@
         }
       }
     },
-    "Alternative": {
-      "en": {
-        "name": "Alternative",
-        "plural": "Alternatives",
-        "description": "One of several things, not known which: any number of statements or entities.\n`Alternative[ViaEdge[Person, Probability]]` gives each person how likely it is the one meant",
-        "help": "",
-        "fields": {
-          "alternatives": {
-            "name": "Alternatives",
-            "plural": "",
-            "help": ""
-          }
-        }
-      },
-      "de": {
-        // en: Alternative
-        "name": "Alternative",
-        // en: Alternatives
-        // NEEDS REVIEW: the en text has changed since this was translated
-        "plural": "Alternativen",
-        // en: One of several things, not known which: any number of statements or entities.
-        //     `Alternative[ViaEdge[Person, Probability]]` gives each person how likely it is the one meant
-        "description": "Eines von mehreren Dingen, unbekannt welches: beliebig viele Aussagen oder Entitäten. `Alternative[ViaEdge[Person, Probability]]` gibt jeder Person an, wie wahrscheinlich sie die gemeinte ist",
-        "help": "",
-        "fields": {
-          "alternatives": {
-            // en: Alternatives
-            "name": "Alternativen",
-            "plural": "",
-            "help": ""
-          }
-        }
-      },
-      "fr": {
-        // en: Alternative
-        "name": "Alternative",
-        // en: Alternatives
-        "plural": "Alternatives",
-        // en: One of several things, not known which: any number of statements or entities.
-        //     `Alternative[ViaEdge[Person, Probability]]` gives each person how likely it is the one meant
-        "description": "L’une de plusieurs choses, sans savoir laquelle : un nombre quelconque d’énoncés ou d’entités. `Alternative[ViaEdge[Person, Probability]]` donne pour chaque personne la probabilité que ce soit elle",
-        "help": "",
-        "fields": {
-          "alternatives": {
-            // en: Alternatives
-            "name": "Alternatives",
-            "plural": "",
-            "help": ""
-          }
-        }
-      }
-    },
     "Artwork": {
       "en": {
         "name": "Artwork",
@@ -546,11 +494,6 @@
         "description": "What a source says, at a page: a set of statements",
         "help": "",
         "fields": {
-          "year": {
-            "name": "Year",
-            "plural": "",
-            "help": ""
-          },
           "source": {
             "name": "Source",
             "plural": "",
@@ -573,12 +516,6 @@
         "description": "Was eine Quelle auf einer Seite sagt: eine Menge von Aussagen",
         "help": "",
         "fields": {
-          "year": {
-            // en: Year
-            "name": "Jahr",
-            "plural": "",
-            "help": ""
-          },
           "source": {
             // en: Source
             "name": "Quelle",
@@ -602,12 +539,6 @@
         "description": "Ce que dit une source, à une page : un ensemble d’énoncés",
         "help": "",
         "fields": {
-          "year": {
-            // en: Year
-            "name": "Année",
-            "plural": "",
-            "help": ""
-          },
           "source": {
             // en: Source
             "name": "Source",
@@ -617,6 +548,72 @@
           "statements": {
             // en: Statements
             "name": "Énoncés",
+            "plural": "",
+            "help": ""
+          }
+        }
+      }
+    },
+    "Feast": {
+      "en": {
+        "name": "Feast",
+        "plural": "",
+        "description": "A day of the calendar: a saint's day every year (`when` a Recurrence), a council that sat once (an ExactDate or\na DateRange), a Lent (a Period), or one attached to days by hand (NoRule). Shown by `pangloss_calendar`",
+        "help": "",
+        "fields": {
+          "use": {
+            "name": "Use",
+            "plural": "",
+            "help": ""
+          },
+          "rank": {
+            "name": "Rank",
+            "plural": "",
+            "help": ""
+          }
+        }
+      },
+      "de": {
+        // en: Feast
+        "name": "",
+        "plural": "",
+        // en: A day of the calendar: a saint's day every year (`when` a Recurrence), a council that sat once (an ExactDate or
+        //     a DateRange), a Lent (a Period), or one attached to days by hand (NoRule). Shown by `pangloss_calendar`
+        "description": "",
+        "help": "",
+        "fields": {
+          "use": {
+            // en: Use
+            "name": "",
+            "plural": "",
+            "help": ""
+          },
+          "rank": {
+            // en: Rank
+            "name": "",
+            "plural": "",
+            "help": ""
+          }
+        }
+      },
+      "fr": {
+        // en: Feast
+        "name": "",
+        "plural": "",
+        // en: A day of the calendar: a saint's day every year (`when` a Recurrence), a council that sat once (an ExactDate or
+        //     a DateRange), a Lent (a Period), or one attached to days by hand (NoRule). Shown by `pangloss_calendar`
+        "description": "",
+        "help": "",
+        "fields": {
+          "use": {
+            // en: Use
+            "name": "",
+            "plural": "",
+            "help": ""
+          },
+          "rank": {
+            // en: Rank
+            "name": "",
             "plural": "",
             "help": ""
           }
@@ -674,6 +671,11 @@
           },
           "received": {
             "name": "Received",
+            "plural": "",
+            "help": ""
+          },
+          "received_order": {
+            "name": "Received order",
             "plural": "",
             "help": ""
           }
@@ -746,6 +748,12 @@
             "name": "Erhielt",
             "plural": "",
             "help": ""
+          },
+          "received_order": {
+            // en: Received order
+            "name": "",
+            "plural": "",
+            "help": ""
           }
         }
       },
@@ -813,6 +821,12 @@
             "name": "A reçu",
             "plural": "",
             "help": ""
+          },
+          "received_order": {
+            // en: Received order
+            "name": "",
+            "plural": "",
+            "help": ""
           }
         }
       }
@@ -871,7 +885,7 @@
       "en": {
         "name": "Identification",
         "plural": "Identifications",
-        "description": "A name in the source that has been identified: the source says \"Smith\", and\nthis says which people that could be. The target is one `Alternative`.",
+        "description": "A name in the source that has been identified: the source says \"Smith\", and\nthis says which people that could be. The target is one `WeightedAlternative`.",
         "help": "",
         "fields": {
           "target": {
@@ -893,7 +907,8 @@
         // NEEDS REVIEW: the en text has changed since this was translated
         "plural": "Identifikationen",
         // en: A name in the source that has been identified: the source says "Smith", and
-        //     this says which people that could be. The target is one `Alternative`.
+        //     this says which people that could be. The target is one `WeightedAlternative`.
+        // NEEDS REVIEW: the en text has changed since this was translated
         "description": "Ein Name in der Quelle, der identifiziert wurde: Die Quelle sagt „Smith“, und dies besagt, welche Personen gemeint sein könnten. Das Ziel ist eine einzelne `Alternative`.",
         "help": "",
         "fields": {
@@ -917,7 +932,8 @@
         // en: Identifications
         "plural": "Identifications",
         // en: A name in the source that has been identified: the source says "Smith", and
-        //     this says which people that could be. The target is one `Alternative`.
+        //     this says which people that could be. The target is one `WeightedAlternative`.
+        // NEEDS REVIEW: the en text has changed since this was translated
         "description": "Un nom de la source qui a été identifié : la source dit « Smith », et ceci dit quelles personnes cela pourrait être. La cible est une `Alternative`.",
         "help": "",
         "fields": {
@@ -1326,6 +1342,11 @@
             "plural": "",
             "help": ""
           },
+          "ordered_to": {
+            "name": "Ordered to",
+            "plural": "",
+            "help": ""
+          },
           "thing_ordered": {
             "name": "Thing ordered",
             "plural": "",
@@ -1350,6 +1371,12 @@
             "plural": "",
             "help": ""
           },
+          "ordered_to": {
+            // en: Ordered to
+            "name": "",
+            "plural": "",
+            "help": ""
+          },
           "thing_ordered": {
             // en: Thing ordered
             "name": "Befohlene Sache",
@@ -1371,6 +1398,12 @@
           "ordered_by": {
             // en: Ordered by
             "name": "Ordonné par",
+            "plural": "",
+            "help": ""
+          },
+          "ordered_to": {
+            // en: Ordered to
+            "name": "",
             "plural": "",
             "help": ""
           },
@@ -1534,6 +1567,11 @@
             "name": "Received",
             "plural": "",
             "help": ""
+          },
+          "received_order": {
+            "name": "Received order",
+            "plural": "",
+            "help": ""
           }
         }
       },
@@ -1622,6 +1660,12 @@
             "name": "Erhielt",
             "plural": "",
             "help": ""
+          },
+          "received_order": {
+            // en: Received order
+            "name": "",
+            "plural": "",
+            "help": ""
           }
         }
       },
@@ -1705,6 +1749,12 @@
           "received": {
             // en: Received
             "name": "A reçu",
+            "plural": "",
+            "help": ""
+          },
+          "received_order": {
+            // en: Received order
+            "name": "",
             "plural": "",
             "help": ""
           }
@@ -1881,56 +1931,6 @@
         }
       }
     },
-    "Probability": {
-      "en": {
-        "name": "Probability",
-        "plural": "Probabilities",
-        "description": "How likely it is that this is the one meant, out of the alternatives (1 to 100, in per cent)",
-        "help": "",
-        "fields": {
-          "percent": {
-            "name": "Percent",
-            "plural": "",
-            "help": ""
-          }
-        }
-      },
-      "de": {
-        // en: Probability
-        "name": "Wahrscheinlichkeit",
-        // en: Probabilities
-        // NEEDS REVIEW: the en text has changed since this was translated
-        "plural": "Wahrscheinlichkeiten",
-        // en: How likely it is that this is the one meant, out of the alternatives (1 to 100, in per cent)
-        "description": "Wie wahrscheinlich es ist, dass dies die gemeinte Person unter den Alternativen ist (1 bis 100, in Prozent)",
-        "help": "",
-        "fields": {
-          "percent": {
-            // en: Percent
-            "name": "Prozent",
-            "plural": "",
-            "help": ""
-          }
-        }
-      },
-      "fr": {
-        // en: Probability
-        "name": "Probabilité",
-        // en: Probabilities
-        "plural": "Probabilités",
-        // en: How likely it is that this is the one meant, out of the alternatives (1 to 100, in per cent)
-        "description": "La probabilité que ce soit celui-ci qui soit désigné, parmi les alternatives (de 1 à 100, en pour cent)",
-        "help": "",
-        "fields": {
-          "percent": {
-            // en: Percent
-            "name": "Pourcentage",
-            "plural": "",
-            "help": ""
-          }
-        }
-      }
-    },
     "Source": {
       "en": {
         "name": "Source",
@@ -2056,11 +2056,6 @@
             "plural": "",
             "help": ""
           },
-          "year": {
-            "name": "Year",
-            "plural": "",
-            "help": ""
-          },
           "involves": {
             "name": "Involves",
             "plural": "",
@@ -2093,12 +2088,6 @@
           "date": {
             // en: Date
             "name": "Datum",
-            "plural": "",
-            "help": ""
-          },
-          "year": {
-            // en: Year
-            "name": "Jahr",
             "plural": "",
             "help": ""
           },
@@ -2135,12 +2124,6 @@
           "date": {
             // en: Date
             "name": "Date",
-            "plural": "",
-            "help": ""
-          },
-          "year": {
-            // en: Year
-            "name": "Année",
             "plural": "",
             "help": ""
           },

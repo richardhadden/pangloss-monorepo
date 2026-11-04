@@ -1,0 +1,88 @@
+// Translations of the library's models. A project changes them in its own `translations/models.jsonc`
+// (its overrides), not here: `pangloss interface translations generate` does not write into a package.
+{
+  "models": {
+    "Likelihood": {
+      "en": {
+        "name": "Likelihood",
+        "plural": "Likelihoods",
+        "description": "How likely it is that this is the one meant, out of the alternatives (1 to 100, in per cent)",
+        "help": "",
+        "fields": {
+          "percent": {
+            "name": "% likelihood",
+            "plural": "",
+            "help": ""
+          }
+        }
+      },
+      "de": {
+        "name": "Wahrscheinlichkeit",
+        "plural": "Wahrscheinlichkeiten",
+        "description": "Wie wahrscheinlich es ist, dass dies das Gemeinte unter den Alternativen ist (1 bis 100, in Prozent)",
+        "help": "",
+        "fields": {
+          "percent": {
+            "name": "% Wahrscheinlichkeit",
+            "plural": "",
+            "help": ""
+          }
+        }
+      },
+      "fr": {
+        "name": "Vraisemblance",
+        "plural": "Vraisemblances",
+        "description": "La probabilité que ce soit celui-ci qui est visé, parmi les alternatives (de 1 à 100, en pourcentage)",
+        "help": "",
+        "fields": {
+          "percent": {
+            "name": "% de vraisemblance",
+            "plural": "",
+            "help": ""
+          }
+        }
+      }
+    },
+    "WeightedAlternative": {
+      "en": {
+        "name": "Weighted alternative",
+        "plural": "Weighted alternatives",
+        "description": "One of several things, not known which, each with how likely it is the one meant: the percentages add up to 100",
+        "help": "",
+        "fields": {
+          "alternatives": {
+            "name": "Alternatives",
+            "plural": "",
+            "help": ""
+          }
+        }
+      },
+      "de": {
+        "name": "Gewichtete Alternative",
+        "plural": "Gewichtete Alternativen",
+        "description": "Eines von mehreren Dingen, unbekannt welches, jedes mit seiner Wahrscheinlichkeit: die Prozente ergeben zusammen 100",
+        "help": "",
+        "fields": {
+          "alternatives": {
+            "name": "Alternativen",
+            "plural": "",
+            "help": ""
+          }
+        }
+      },
+      "fr": {
+        "name": "Alternative pondérée",
+        "plural": "Alternatives pondérées",
+        "description": "L’une de plusieurs choses, sans savoir laquelle, chacune avec sa vraisemblance : les pourcentages font 100 au total",
+        "help": "",
+        "fields": {
+          "alternatives": {
+            "name": "Alternatives",
+            "plural": "",
+            "help": ""
+          }
+        }
+      }
+    }
+  }
+}

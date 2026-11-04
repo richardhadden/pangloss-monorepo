@@ -12,7 +12,7 @@ import { typeChipClass } from "./form/styles";
  * A small chip for something that is referred to: its type on the left (tinted by its kind or
  * the colour of its model, and framed in it, as the type at the head of a block is) and its label
  * on the right, as tall as the head of a block. A link if it has an `href`. The
- * properties of the edge to it, if any, follow as a small pill each (for now).
+ * properties of the edge to it, if any, are its end: each a part of the chip, as its edge model writes it.
  */
 export function ReferenceChip(props: ReferenceChipProps) {
   // (a card of an interface module that the model names is used instead)
@@ -40,7 +40,20 @@ export function DefaultReferenceChip(props: ReferenceChipProps) {
   const definitions = useModels();
   const { t, modelName } = useTranslations();
   const model = () => getModel(definitions, props.type);
-  const properties = () => Object.entries(props.edgeProperties ?? {});
+  const { fieldName } = useTranslations();
+  // (a value with a unit is the value and the unit, `19%`; another, its field's name and the value)
+  const properties = () => {
+    const edge = props.edgeModel ? getModel(definitions, props.edgeModel) : undefined;
+    return Object.entries(props.edgeProperties ?? {})
+      .filter(([, value]) => value !== null && value !== undefined && value !== "")
+      .map(([key, value]) => {
+        const field = (edge?.fields ?? []).find((each) => each.key === key);
+        const marker = field?.kind === "literal" ? field.markers?.find((each) => each.name === "Slider") : undefined;
+        if (typeof marker?.unit === "string") return { key, text: `${String(value)}${marker.unit}` };
+        const name = field && edge ? fieldName(edge.name, field.name) : key;
+        return { key, text: `${name} ${String(value)}` };
+      });
+  };
   const body = () => (
     <>
       {/* (`data-tint`: what was just added flashes in its colour: `revealAdded`) */}
@@ -76,6 +89,16 @@ export function DefaultReferenceChip(props: ReferenceChipProps) {
               {body()}
             </a>
           </Show>
+          <For each={properties()}>
+            {(property) => (
+              <span
+                class="flex shrink-0 items-center border-y-[0.5px] border-l-[0.5px] border-slate-400/70 bg-white/70 px-2 text-sm text-slate-600 tabular-nums"
+                data-edge-property={property.key}
+              >
+                {property.text}
+              </span>
+            )}
+          </For>
           <Show when={props.onCopy}>
             <ClipButtons
               name={props.label}
@@ -96,13 +119,6 @@ export function DefaultReferenceChip(props: ReferenceChipProps) {
             </button>
           </Show>
         </span>
-        <For each={properties()}>
-          {([name, value]) => (
-            <span class="shrink-0 rounded-full border-[0.5px] border-slate-400/70 bg-slate-200/70 px-2 py-0.5 text-xs text-slate-600">
-              {name} {String(value)}
-            </span>
-          )}
-        </For>
       </span>
     </SpaceBands>
   );

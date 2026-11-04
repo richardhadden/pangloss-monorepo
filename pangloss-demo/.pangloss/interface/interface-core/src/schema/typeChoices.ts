@@ -159,3 +159,14 @@ export function choiceValue(definitions: ModelDefinitions, choice: Choice): Reco
   }
   return value;
 }
+
+/**
+ * The edge model of the relation `options` to something of `type`: that of its option, or that of a type variable
+ * (`list[ViaEdge[T, Likelihood]]`), which every type it stands for has
+ */
+export function edgeModelFor(options: RelationOption[], type: string): string | null {
+  const own = optionFor(options, type);
+  if (own && "edgeModel" in own && own.edgeModel) return own.edgeModel;
+  const variable = options.find((option) => option.kind === "typeVar" && option.edgeModel);
+  return variable && "edgeModel" in variable ? variable.edgeModel : null;
+}

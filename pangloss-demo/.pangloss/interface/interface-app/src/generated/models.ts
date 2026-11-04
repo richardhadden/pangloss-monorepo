@@ -2,7 +2,7 @@
 // It is made again each time the interface is built.
 import type { AnyRelationCondition, ChoiceCondition, CompareCondition, ItemsCondition, ModelDefinitions, NodePattern, RelationCondition, SearchOrder, SearchPattern, TextCondition } from "@pangloss/interface-core";
 
-export type ModelName = "Activity" | "Alternative" | "Artwork" | "AtPage" | "Causes" | "Certainty" | "CreationOfArtwork" | "CreationOfPainting" | "CreationOfPhysicalObject" | "Date" | "DateCharacterisation" | "DateRange" | "EDTFDate" | "ExactDate" | "Factoid" | "Feast" | "Group" | "Hypothetical" | "Identification" | "InRole" | "MemberOf" | "Negative" | "NegativeSubjunctive" | "NoRule" | "OccupationType" | "OngoingDate" | "Order" | "Painting" | "Period" | "Person" | "PhysicalObject" | "Place" | "PositiveSubjunctive" | "Probability" | "Recurrence" | "Source" | "Statement" | "Transfer" | "UnknownDate" | "WithCertainty";
+export type ModelName = "Activity" | "Artwork" | "AtPage" | "Causes" | "Certainty" | "CreationOfArtwork" | "CreationOfPainting" | "CreationOfPhysicalObject" | "Date" | "DateCharacterisation" | "DateRange" | "EDTFDate" | "ExactDate" | "Factoid" | "Feast" | "Group" | "Hypothetical" | "Identification" | "InRole" | "Likelihood" | "MemberOf" | "Negative" | "NegativeSubjunctive" | "NoRule" | "OccupationType" | "OngoingDate" | "Order" | "Painting" | "Period" | "Person" | "PhysicalObject" | "Place" | "PositiveSubjunctive" | "Recurrence" | "Source" | "Statement" | "Transfer" | "UnknownDate" | "WeightedAlternative" | "WithCertainty";
 
 export const definitions: ModelDefinitions = {
   "models": {
@@ -169,65 +169,6 @@ export const definitions: ModelDefinitions = {
       ],
       "incoming": [],
       "interfaceMeta": null
-    },
-    "Alternative": {
-      "name": "Alternative",
-      "kind": "Conjunction",
-      "abstract": false,
-      "description": "One of several things, not known which: any number of statements or entities,\neach with how likely it is the one meant (`Alternative[Person]`)",
-      "parent": null,
-      "concreteTypes": [
-        "Alternative"
-      ],
-      "typeParameters": [
-        "T"
-      ],
-      "createWithId": false,
-      "createDirectly": true,
-      "acceptUrlAsId": false,
-      "requireLabel": false,
-      "useInSemanticSpaceLabel": true,
-      "fields": [
-        {
-          "name": "alternatives",
-          "key": "alternatives",
-          "description": null,
-          "dbField": false,
-          "required": true,
-          "nullable": false,
-          "kind": "relation",
-          "many": true,
-          "reverseName": "alternatives_reverse",
-          "options": [
-            {
-              "kind": "typeVar",
-              "name": "T",
-              "edgeModel": "Probability"
-            }
-          ],
-          "validators": [
-            {
-              "name": "SumsTo",
-              "field": "percent",
-              "total": 100
-            }
-          ],
-          "subclasses": [],
-          "defaultReifiedType": null,
-          "bindings": []
-        }
-      ],
-      "incoming": [],
-      "interfaceMeta": {
-        "colour": null,
-        "navSection": null,
-        "listPage": null,
-        "itemPage": null,
-        "viewCard": null,
-        "editCard": null,
-        "collapse": true,
-        "headless": null
-      }
     },
     "Artwork": {
       "name": "Artwork",
@@ -2249,7 +2190,7 @@ export const definitions: ModelDefinitions = {
       "name": "Identification",
       "kind": "ReifiedRelation",
       "abstract": false,
-      "description": "A name in the source that has been identified: the source says \"Smith\", and\nthis says which people that could be. The target is one `Alternative`.",
+      "description": "A name in the source that has been identified: the source says \"Smith\", and\nthis says which people that could be. The target is one `WeightedAlternative`.",
       "parent": null,
       "concreteTypes": [],
       "typeParameters": [
@@ -2376,6 +2317,52 @@ export const definitions: ModelDefinitions = {
       "incoming": [],
       "interfaceMeta": null
     },
+    "Likelihood": {
+      "name": "Likelihood",
+      "kind": "EdgeModel",
+      "abstract": false,
+      "description": "How likely it is that this is the one meant, out of the alternatives (1 to 100, in per cent)",
+      "parent": null,
+      "concreteTypes": [],
+      "typeParameters": [],
+      "createWithId": false,
+      "createDirectly": true,
+      "acceptUrlAsId": false,
+      "requireLabel": true,
+      "useInSemanticSpaceLabel": true,
+      "fields": [
+        {
+          "name": "percent",
+          "key": "percent",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": [
+            {
+              "name": "Ge",
+              "ge": 1
+            },
+            {
+              "name": "Le",
+              "le": 100
+            }
+          ],
+          "markers": [
+            {
+              "name": "Slider",
+              "unit": "%"
+            }
+          ]
+        }
+      ],
+      "incoming": [],
+      "interfaceMeta": null
+    },
     "MemberOf": {
       "name": "MemberOf",
       "kind": "Document",
@@ -2484,7 +2471,7 @@ export const definitions: ModelDefinitions = {
                   "options": [
                     {
                       "kind": "conjunction",
-                      "type": "Alternative",
+                      "type": "WeightedAlternative",
                       "edgeModel": null,
                       "params": {
                         "T": {
@@ -3078,7 +3065,7 @@ export const definitions: ModelDefinitions = {
                   "options": [
                     {
                       "kind": "conjunction",
-                      "type": "Alternative",
+                      "type": "WeightedAlternative",
                       "edgeModel": null,
                       "params": {
                         "T": {
@@ -3136,7 +3123,7 @@ export const definitions: ModelDefinitions = {
                   "options": [
                     {
                       "kind": "conjunction",
-                      "type": "Alternative",
+                      "type": "WeightedAlternative",
                       "edgeModel": null,
                       "params": {
                         "T": {
@@ -3957,51 +3944,6 @@ export const definitions: ModelDefinitions = {
         "headless": null
       }
     },
-    "Probability": {
-      "name": "Probability",
-      "kind": "EdgeModel",
-      "abstract": false,
-      "description": "How likely it is that this is the one meant, out of the alternatives (1 to 100, in per cent)",
-      "parent": null,
-      "concreteTypes": [],
-      "typeParameters": [],
-      "createWithId": false,
-      "createDirectly": true,
-      "acceptUrlAsId": false,
-      "requireLabel": true,
-      "useInSemanticSpaceLabel": true,
-      "fields": [
-        {
-          "name": "percent",
-          "key": "percent",
-          "description": null,
-          "dbField": false,
-          "required": true,
-          "nullable": false,
-          "kind": "literal",
-          "type": {
-            "type": "int"
-          },
-          "validators": [
-            {
-              "name": "Ge",
-              "ge": 1
-            },
-            {
-              "name": "Le",
-              "le": 100
-            }
-          ],
-          "markers": [
-            {
-              "name": "Slider"
-            }
-          ]
-        }
-      ],
-      "incoming": [],
-      "interfaceMeta": null
-    },
     "Recurrence": {
       "name": "Recurrence",
       "kind": "Embedded",
@@ -4694,7 +4636,7 @@ export const definitions: ModelDefinitions = {
                   "options": [
                     {
                       "kind": "conjunction",
-                      "type": "Alternative",
+                      "type": "WeightedAlternative",
                       "edgeModel": null,
                       "params": {
                         "T": {
@@ -4752,7 +4694,7 @@ export const definitions: ModelDefinitions = {
                   "options": [
                     {
                       "kind": "conjunction",
-                      "type": "Alternative",
+                      "type": "WeightedAlternative",
                       "edgeModel": null,
                       "params": {
                         "T": {
@@ -4956,6 +4898,72 @@ export const definitions: ModelDefinitions = {
           "name": "DateEditor"
         },
         "collapse": null,
+        "headless": null
+      }
+    },
+    "WeightedAlternative": {
+      "name": "WeightedAlternative",
+      "kind": "Conjunction",
+      "abstract": false,
+      "description": "One of several things, not known which, each with how likely it is the one meant: the percentages add up\nto 100",
+      "parent": null,
+      "concreteTypes": [
+        "WeightedAlternative"
+      ],
+      "typeParameters": [
+        "T"
+      ],
+      "createWithId": false,
+      "createDirectly": true,
+      "acceptUrlAsId": false,
+      "requireLabel": false,
+      "useInSemanticSpaceLabel": true,
+      "fields": [
+        {
+          "name": "alternatives",
+          "key": "alternatives",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "relation",
+          "many": true,
+          "reverseName": "alternatives_reverse",
+          "options": [
+            {
+              "kind": "typeVar",
+              "name": "T",
+              "edgeModel": "Likelihood"
+            }
+          ],
+          "validators": [
+            {
+              "name": "MinLen",
+              "min_length": 1
+            },
+            {
+              "name": "SumsTo",
+              "field": "percent",
+              "total": 100
+            }
+          ],
+          "subclasses": [],
+          "defaultReifiedType": null,
+          "bindings": []
+        }
+      ],
+      "incoming": [],
+      "interfaceMeta": {
+        "colour": null,
+        "navSection": null,
+        "listPage": null,
+        "itemPage": null,
+        "viewCard": {
+          "module": "pangloss_library",
+          "name": "WeightedAlternativeCard"
+        },
+        "editCard": null,
+        "collapse": true,
         "headless": null
       }
     },

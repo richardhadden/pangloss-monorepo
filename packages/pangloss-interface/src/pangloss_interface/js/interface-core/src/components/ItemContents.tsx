@@ -9,7 +9,7 @@ import {
 import { kindRule, kindTint, spaceTint } from "../primitives";
 import { contextTrail } from "../api";
 import type { ContextLabel } from "../api";
-import { collapsedView, getModel, headlessIn } from "../schema";
+import { collapsedView, edgeModelFor, getModel, headlessIn } from "../schema";
 import type {
   FieldDefinition,
   ItemContentsProps,
@@ -369,6 +369,11 @@ function ObjectValue(props: {
                   ? props.value.edgeProperties
                   : undefined
               }
+              edgeModel={
+                props.field?.kind === "relation"
+                  ? edgeModelFor(props.field.options ?? [], type() ?? "")
+                  : undefined
+              }
             />
           </Match>
           <Match when={folded()}>
@@ -488,6 +493,14 @@ function ObjectValue(props: {
  * The contents of one Document or Entity, laid out by its model: keys on the left, contents
  * on the right, and what is nested inside nested the same way, to any depth.
  */
+/**
+ * A value of a field as the item's page shows it (a chip, a block, a band, text): for an interface module's card
+ * that shows what a model holds in its own way. `field`: the field it is the value of (its edge model, its type)
+ */
+export function ItemValue(props: { value: unknown; field?: FieldDefinition; depth?: number }) {
+  return <Value value={props.value} field={props.field} depth={props.depth ?? 1} />;
+}
+
 export function ItemContents(props: ItemContentsProps) {
   const definitions = useModels();
   const model = () =>

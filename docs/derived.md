@@ -97,7 +97,7 @@ class Alternative[T](Conjunction):
 
 `qualify` (the default) derives and keeps the wrapper's name in the context. A rule can override: `.when(...,
 block=[Negative], allow=[Hypothetical])`. **`exclusive`** is for an "or": without it, "Smith, who is B or C, was of
-family G" would make B and C of one family. The demo's `Alternative` is exclusive.
+family G" would make B and C of one family. The library's `WeightedAlternative`, which the demo uses, is exclusive.
 
 A fact's `contextLabels` are the names over all its justifications, and `qualifiedOnly` is true when none of them is
 plain ("only from a negated statement"). Nothing is filtered by default.
