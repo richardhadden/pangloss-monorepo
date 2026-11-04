@@ -26,7 +26,8 @@ import {
   onSettled,
   Show,
 } from "solid-js";
-import { itemQuery } from "../queries";
+import { useNavigate } from "@solidjs/router";
+import { itemQuery, revalidateAll } from "../queries";
 import { Page } from "../Page";
 
 // An item that is not there for this reader: it does not exist, or (as an unpublished document is to
@@ -106,6 +107,7 @@ export default function EntityPage(props: RouteProps<"/:type/:id">) {
   const ItemContents = useComponent("ItemContents");
   const ErrorMessage = useComponent("ErrorMessage");
   const { t } = useTranslations();
+  const navigate = useNavigate();
   const item = createMemo(() => itemQuery(props.params.type, props.params.id));
   // (a model may name a page of an interface module for its items: it replaces the rest of this one)
   // What the console says of the item, kept in a signal of its own (set by `Track`, which is inside the error
@@ -130,6 +132,16 @@ export default function EntityPage(props: RouteProps<"/:type/:id">) {
         meta={shown()?.meta}
         editHref={editHref(shown())}
         item={consoleItem(shown())}
+        // (a document inside another is deleted only by taking it out of the one it is in)
+        onDeleted={
+          shown() && !headOf(shown()!)
+            ? () => {
+                const type = shown()!.type;
+                void revalidateAll();
+                navigate(`/${type}`, { replace: true });
+              }
+            : undefined
+        }
         page="item"
       />
       <Errored

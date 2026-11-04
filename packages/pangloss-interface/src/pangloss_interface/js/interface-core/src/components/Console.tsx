@@ -8,6 +8,7 @@ import {
   useTranslations,
   userIsLoggedIn,
 } from "../context";
+import { DeleteButton } from "./form/DeleteButton";
 import { ConsoleButton, kindRule, kindTint, spaceTint } from "../primitives";
 import { ConsoleSearch } from "./ConsoleSearch";
 import { canCreate, getModel } from "../schema";
@@ -223,8 +224,16 @@ export function Console(props: ConsoleProps) {
               </Show>
               <ModuleActions item={props.item} page={props.page ?? "item"} />
               {props.children}
-              {/* An item can be edited by someone who is logged in */}
+              {/* An item can be deleted and edited by someone who is logged in */}
               <Loading fallback={null}>
+                <Show when={props.item && props.onDeleted && userIsLoggedIn()}>
+                  <DeleteButton
+                    type={props.item!.type}
+                    id={props.item!.id}
+                    label={props.label}
+                    onDeleted={() => props.onDeleted?.()}
+                  />
+                </Show>
                 <Show when={props.editHref && userIsLoggedIn()}>
                   <ConsoleButton label={t("edit", "Edit")} href={props.editHref}>
                     <svg

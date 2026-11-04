@@ -15,7 +15,7 @@ import { ConsoleButton } from "../../primitives";
 import { cleanForSave, createFormHooks, getModel } from "../../schema";
 import type { FormData } from "../../schema";
 import type { ItemFormProps } from "../../types";
-import { DeleteDialog } from "./DeleteDialog";
+import { DeleteButton } from "./DeleteButton";
 import { ItemFields } from "./ModelFields";
 import { useSaveChecks } from "./Problems";
 
@@ -42,7 +42,6 @@ export function ItemForm(props: ItemFormProps) {
   // (while a save is being sent: it goes back to false when the save is over, whatever the answer)
   const [saving, setSaving] = createOptimistic(false);
   const [stale, setStale] = createSignal(false);
-  const [askingToDelete, setAskingToDelete] = createSignal(false);
   let formElement: HTMLFormElement | undefined;
   const checks = useSaveChecks(state, () => formElement);
   const creating = () => props.version === undefined;
@@ -97,17 +96,12 @@ export function ItemForm(props: ItemFormProps) {
         page="edit"
       >
         <Show when={!creating() && props.onDeleted}>
-          <ConsoleButton label={t("delete", "Delete")} onClick={() => setAskingToDelete(true)} tone="danger">
-            <svg
-              viewBox="0 0 24 24"
-              class="size-5 select-none fill-none stroke-current stroke-2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M4 7h16M10 11v6M14 11v6M5.5 7l1 12.5h11l1-12.5M9 7V4.5h6V7" />
-            </svg>
-          </ConsoleButton>
+          <DeleteButton
+            type={props.type}
+            id={String(props.initial.id)}
+            label={label()}
+            onDeleted={() => props.onDeleted?.()}
+          />
         </Show>
         <ConsoleButton label={t("cancel", "Cancel")} onClick={props.onCancel} tone="danger">
           <svg
@@ -137,18 +131,6 @@ export function ItemForm(props: ItemFormProps) {
           </svg>
         </ConsoleButton>
       </Console>
-      <Show when={askingToDelete()}>
-        <DeleteDialog
-          type={props.type}
-          id={String(props.initial.id)}
-          label={label()}
-          onDeleted={() => {
-            setAskingToDelete(false);
-            props.onDeleted?.();
-          }}
-          onClose={() => setAskingToDelete(false)}
-        />
-      </Show>
       <form
         ref={formElement}
         class="flex flex-col gap-6"

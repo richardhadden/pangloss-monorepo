@@ -10,6 +10,7 @@ def test_an_item_page_has_an_edit_button_only_when_logged_in(page: Page, data):
     page.goto(f"/Statement/{data.statement}")
     expect(page.get_by_role("heading", name="Court at Ghent")).to_be_visible()
     expect(page.get_by_role("link", name="Edit")).to_have_count(0)
+    expect(page.get_by_role("button", name="Delete")).to_have_count(0)
 
 
 def test_editing_an_item_saves_a_change(logged_in: Page, data):
@@ -159,6 +160,18 @@ def test_delete_asks_first_then_deletes_and_goes_to_the_list(logged_in: Page, da
     page.wait_for_url(re.compile(r".*/Statement$"))
     expect(page.get_by_role("status", name="Notifications")).to_contain_text("Statement “Court at Ghent” deleted")
     expect(page.get_by_role("link", name="Court at Ghent")).to_have_count(0)
+
+
+def test_an_item_is_deleted_from_its_own_page(logged_in: Page, data):
+    page = logged_in
+    page.goto(f"/Statement/{data.statement}")
+    hydrated(page)
+    page.get_by_role("button", name="Delete").click()
+    dialog = page.get_by_role("dialog", name="Delete Statement")
+    expect(dialog).to_contain_text("Are you sure you want to delete the Statement “Court at Ghent”?")
+    dialog.get_by_role("button", name="Delete", exact=True).click()
+    page.wait_for_url(re.compile(r".*/Statement$"))
+    expect(page.get_by_role("status", name="Notifications")).to_contain_text("Statement “Court at Ghent” deleted")
 
 
 def test_what_is_referred_to_cannot_be_deleted_and_says_by_what(logged_in: Page, data):
