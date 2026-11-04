@@ -1,4 +1,4 @@
-import { NewEntityDialog, ReferenceChip, useApi, useComponent, userIsLoggedIn, useTranslations } from "@pangloss/interface-core";
+import { NewEntityDialog, ReferenceChip, useApi, useComponent, userIsLoggedIn, useSessionKey, useTranslations } from "@pangloss/interface-core";
 import { createMemo, createSignal, Errored, For, Loading, Show } from "solid-js";
 import { getMonth } from "../api";
 import type { CalendarName, Characterised, DayOut, MonthReport } from "../api";
@@ -108,8 +108,11 @@ function MonthOf(props: { calendar: CalendarName; year: number; month: number })
   // (the day something is being made on, from its +; the month is read again when it is made)
   const [adding, setAdding] = createSignal<DayOut>();
   const [version, setVersion] = createSignal(0);
+  // (and when someone logs in or out: what is dated may be more, or less)
+  const session = useSessionKey();
   const report = createMemo(() => {
     version();
+    session();
     return getMonth(api, props.calendar, props.year, props.month);
   });
   const title = () => sayMonth(props.year, props.month, language(), t);

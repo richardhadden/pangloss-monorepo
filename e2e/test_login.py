@@ -135,6 +135,24 @@ def test_a_list_is_asked_for_again_after_logging_in_and_out(page: Page, data):
     assert len(lists) > before
 
 
+def test_an_item_not_found_before_logging_in_is_shown_once_logged_in(page: Page, data):
+    # (an unpublished document is a 404 to someone not logged in; it is simulated here, as the e2e project has no review of
+    # documents, in the browser only: so the item is reached by a link, not rendered on the server)
+    item = f"**/api/Person/{data.maximilian}*"
+    page.route(
+        item,
+        lambda route: route.fulfill(status=404, content_type="application/json", body='{"detail":"Not found"}'),
+    )
+    page.goto("/Person")
+    hydrated(page)
+    page.get_by_role("link", name="Maximilian").click()
+    expect(page.get_by_role("heading", name="Page not found")).to_be_visible()
+    page.unroute(item)
+    log_in_through_the_dialog(page)
+    expect(page.get_by_role("heading", name="Maximilian")).to_be_visible()
+    expect(page.get_by_role("banner", name="Console")).to_contain_text("Maximilian")
+
+
 def test_a_wrong_password_is_explained_in_german_too(page: Page, types):
     page.goto("/")
     expand_nav(page)

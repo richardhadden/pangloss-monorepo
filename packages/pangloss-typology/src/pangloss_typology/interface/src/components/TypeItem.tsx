@@ -5,6 +5,7 @@ import {
   useApi,
   useComponent,
   userIsLoggedIn,
+  useSessionKey,
   useTranslations,
 } from "@pangloss/interface-core";
 import type { ItemPageProps } from "@pangloss/interface-core";
@@ -26,10 +27,12 @@ export default function TypeItem(props: ItemPageProps) {
   const [limit, setLimit] = createSignal(PAGE);
   const [refused, setRefused] = createSignal<string | undefined>();
   const [editing, setEditing] = createSignal(false);
-  // (read again after a change: `refresh(view)`)
-  const view = createMemo(() =>
-    getView(api, props.type, props.id, { includeSubtypes: includeSubtypes(), limit: limit() }),
-  );
+  // (read again after a change: `refresh(view)`; and when someone logs in or out, as what they may see changes)
+  const session = useSessionKey();
+  const view = createMemo(() => {
+    session();
+    return getView(api, props.type, props.id, { includeSubtypes: includeSubtypes(), limit: limit() });
+  });
   // The other languages a label can be given in, and whether the type can also be another class,
   // are what its model has as fields
   const languages = () =>

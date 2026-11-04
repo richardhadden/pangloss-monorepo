@@ -1,4 +1,4 @@
-import { ApiError, useApi, useComponent, userIsLoggedIn, useToasts, useTranslations } from "@pangloss/interface-core";
+import { ApiError, useApi, useComponent, userIsLoggedIn, useSessionKey, useToasts, useTranslations } from "@pangloss/interface-core";
 import { createMemo, createSignal, Errored, Loading, Show } from "solid-js";
 import { attachToDay, detachFromDay, getDay } from "../api";
 import type { CharacterisationOut } from "../api";
@@ -16,10 +16,12 @@ function DayOf(props: { name: DayName }) {
   const ErrorMessage = useComponent("ErrorMessage");
   const { t, language } = useTranslations();
   const loggedIn = createMemo(() => userIsLoggedIn());
-  // (asked again after something is attached or taken away)
+  // (asked again after something is attached or taken away, and when someone logs in or out)
   const [version, setVersion] = createSignal(0);
+  const session = useSessionKey();
   const report = createMemo(() => {
     version();
+    session();
     return getDay(api, refOf(props.name), props.name.calendar);
   });
   const attach = async (characterisation: { id: string; label: string }) => {

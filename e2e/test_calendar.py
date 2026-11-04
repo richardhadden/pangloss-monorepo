@@ -5,9 +5,10 @@ The e2e project's `Event` has a date (`when`), `Feast` is a `DateCharacterisatio
 import re
 import subprocess
 
-from conftest import Stack, environment
+from conftest import USERNAME, Stack, environment
 from helpers import expand_nav, hydrated
 from playwright.sync_api import Page, expect
+from test_login import log_in_through_the_dialog
 
 
 def test_the_navigation_bar_links_to_the_years_of_the_calendar(page: Page, dated):
@@ -282,6 +283,24 @@ def test_a_document_with_a_date_is_made_from_the_plus_of_a_day_in_the_month(
     # (in the Julian calendar it is the 10th)
     page.goto("/calendar/julian/1500/3/10")
     expect(page.get_by_role("link", name=re.compile("The siege is lifted"))).to_be_visible()
+
+
+def test_the_month_is_asked_for_again_after_logging_in_and_out(page: Page, dated):
+    # (what is dated on it may be more for someone logged in: a document not yet published. The calendar reads it outside
+    # the router's queries, which are asked for again anyway; that it is asked for again is what is seen)
+    def month(request):
+        return "/api/calendar/month/" in request.url
+
+    page.goto("/calendar/julian/1500/3")
+    hydrated(page)
+    expect(page.get_by_test_id("calendar-month")).to_be_visible()
+    with page.expect_request(month):
+        log_in_through_the_dialog(page)
+    expect(page.get_by_role("button", name="Add to 7 March 1500")).to_be_visible()
+    expand_nav(page)
+    with page.expect_request(month):
+        page.get_by_role("button", name=f"Log out {USERNAME}").click()
+    expect(page.get_by_role("button", name="Add to 7 March 1500")).to_have_count(0)
 
 
 def test_the_day_and_the_month_lead_to_their_year(page: Page, dated):

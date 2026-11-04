@@ -105,6 +105,11 @@ delete it here, when it is written up.
 - [ ] **`userIsLoggedIn()`** and **`useCurrentUser()`** (`SessionProvider`, given the user by the app): for deciding what to show, such as
       `<Show when={userIsLoggedIn()}>`. For display only: the API refuses what needs a login anyway. Reading the user may wait, so read it inside a `<Loading>`
       (the console's *new* button has one). Used so far: the console's *new* button (only for someone logged in).
+- [ ] **`useSessionKey()`** (`SessionProvider`): who is logged in, by username, as an accessor that changes only on logging in or out. After either, the app
+      `revalidate`s its router queries (an item page that was a 404 before logging in then shows the item, and its `Errored` boundary clears itself), but
+      what a module reads in a `createMemo` of its own is not a router query: such a memo reads the key first, so it is asked for again
+      (`const session = useSessionKey(); createMemo(() => { session(); return getMonth(api, ...); })`). Used by the calendar's years, month and day,
+      and the typology's type page.
 - [ ] **Tests of components** run in a DOM: a `*.test.tsx` file starts `// @vitest-environment happy-dom` and renders with `render` from `@solidjs/web` (`vitest.config.ts` gives Solid its browser build). Done for `Modal`, `LoginForm`, the session helper and the console's new button.
 - [ ] **`RequireLogin`** (component): wrap a page (or part of one) that needs a login. No one logged in: none of it is shown, and the log in dialog opens over the page (`openLogin(onCancel)`); logging in shows it; giving up (Escape, the close button: `cancelLogin()`) calls `onCancel`, which goes home (`navigate("/", { replace: true })`, so Back does not return to the page). Logging out while on the page asks again; leaving the page closes the dialog. The server renders none of the page for an anonymous visitor (and the dialog appears after hydration). Reads the user, so it needs a `<Loading>` above (the frame has one). First used by `/:type/new` (a placeholder with only the console; the form is not built), which the console's *new* button links to.
 - [ ] **Not done**: a 401 status for a restricted page rendered on the server (it is a 200 with nothing in it), what a 401 in the middle of a session shows, CSRF (only `SameSite` protects the cookies),
