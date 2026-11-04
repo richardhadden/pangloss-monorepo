@@ -76,7 +76,7 @@ export function RestoreDialog(props: RestoreDialogProps) {
               <p class="mt-2 text-xs text-amber-800">
                 {t(
                   "history_restore_unrecorded",
-                  "The item is at version {version}, which was not recorded: what changed in it cannot be listed, and will be undone too.",
+                  "The latest version ({version}) wasn't recorded in the history, so its changes can't be listed here. They will be undone too.",
                   { version: String(version()) },
                 )}
               </p>

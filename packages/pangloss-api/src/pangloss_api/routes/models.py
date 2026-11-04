@@ -12,6 +12,7 @@ they give the items of its subclasses; a document with `create_directly=False` h
 | `PUT`    | `/api/NAME/{id}`         | update (`Update`); login required, and `If-Match` |
 | `DELETE` | `/api/NAME/{id}`         | delete; login required |
 | `POST`   | `/api/NAME/{id}/undelete`| undelete; login required |
+| `GET`    | `/api/NAME/{id}/deletable`| whether it can be deleted, and if not why; login required |
 
 For an entity, `{id}` can also be one of its URLs, as it is, to get it:
 `/api/Person/https://example.com/people/john`. Everything else (`/edit`, and
@@ -49,9 +50,24 @@ from pangloss_models.model_bases.entity import Entity
 from pangloss_models.model_registry import ModelRegistry
 from pangloss_models.protection import changed_fields, protection_of
 from pangloss_models.utils import get_concrete_types
-from pydantic import AnyHttpUrl, TypeAdapter, ValidationError
+from pangloss_core.storage import storage_of
+from pydantic import AnyHttpUrl, BaseModel, ConfigDict, TypeAdapter, ValidationError
+from pydantic.alias_generators import to_camel
 
 from pangloss_api.dependencies import get_current_user
+
+
+class Deletable(BaseModel):
+    """Whether something can be deleted (`GET /api/NAME/{id}/deletable`), and if not why"""
+
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    deletable: bool
+    reason: str | None = None
+    # (an entity that is referred to) up to ten of what refers to it: `id`, `type` and `label`
+    referenced_by: list[dict[str, str]] = []
+    reference_count: int = 0
+
 
 # The most items a page of a list may have
 MAX_PAGE_SIZE = 500
@@ -242,7 +258,7 @@ def build_router(model: type[Document | Entity]) -> APIRouter:
     get_response = Union[*head_views] if len(head_views) > 1 else head_view  # type: ignore[valid-type]
 
     # The entity in a path is its id, or, to get it, one of its URLs (which has slashes
-    # in it, so the path continues to the end, or to `/edit` or `/undelete`: those
+    # in it, so the path continues to the end, or to `/edit`, `/undelete` or `/deletable`: those
     # routes come first). Anything else is only at an id. A document is only found
     # by its id.
     if is_entity:
@@ -336,6 +352,36 @@ def build_router(model: type[Document | Entity]) -> APIRouter:
         async def undelete_item(id: ChangeId):  # type: ignore[valid-type]
             await called(model.undelete(id))  # type: ignore[attr-defined]
             return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+        @router.get(
+            f"{item}/deletable",
+            response_model=Deletable,
+            dependencies=logged_in,
+            operation_id=f"deletable_{name}",
+        )
+        async def deletable_item(id: ChangeId):  # type: ignore[valid-type]
+            """Whether a delete would go through, and if not why (to ask before deleting). Nothing is changed: an
+            entity that is referred to is not marked for deletion, as a delete would mark it"""
+            if protection.delete_only_if:
+                found = await called(model.get(id))  # type: ignore[arg-type]
+                if found is not None and not getattr(
+                    found, protection.delete_only_if, False
+                ):
+                    return Deletable(
+                        deletable=False,
+                        reason="This is kept in step with something outside Pangloss, so it cannot be deleted "
+                        f"here until '{protection.delete_only_if}' is true.",
+                    )
+            check = await called(storage_of().operations.check_deletable(model, id))
+            return Deletable(
+                deletable=check.deletable,
+                reason=check.reason,
+                referenced_by=[
+                    {key: str(value) for key, value in reference.items()}
+                    for reference in check.referenced_by
+                ],
+                reference_count=check.reference_count,
+            )
 
     @router.get(item, response_model=get_response, operation_id=f"get_{name}")
     async def get_item(id: ItemId, response: Response):  # type: ignore[valid-type]

@@ -144,6 +144,40 @@ def test_cancel_goes_back_without_saving(logged_in: Page, data):
     expect(page.get_by_role("heading", name="Court at Ghent")).to_be_visible()
 
 
+def test_delete_asks_first_then_deletes_and_goes_to_the_list(logged_in: Page, data):
+    page = logged_in
+    page.goto(f"/Statement/{data.statement}/edit")
+    hydrated(page)
+    page.get_by_role("button", name="Delete").click()
+    dialog = page.get_by_role("dialog", name="Delete Statement")
+    expect(dialog).to_contain_text("Are you sure you want to delete the Statement “Court at Ghent”?")
+    # (Cancel changes nothing)
+    dialog.get_by_role("button", name="Cancel").click()
+    expect(dialog).to_have_count(0)
+    page.get_by_role("button", name="Delete").click()
+    dialog.get_by_role("button", name="Delete", exact=True).click()
+    page.wait_for_url(re.compile(r".*/Statement$"))
+    expect(page.get_by_role("status", name="Notifications")).to_contain_text("Statement “Court at Ghent” deleted")
+    expect(page.get_by_role("link", name="Court at Ghent")).to_have_count(0)
+
+
+def test_what_is_referred_to_cannot_be_deleted_and_says_by_what(logged_in: Page, data):
+    page = logged_in
+    page.goto(f"/Person/{data.marie}/edit")
+    hydrated(page)
+    page.get_by_role("button", name="Delete").click()
+    dialog = page.get_by_role("dialog", name="Delete Person")
+    expect(dialog).to_contain_text("“Marie of Burgundy” cannot be deleted. One thing still refers to this.")
+    expect(dialog.get_by_role("link", name=re.compile("Court at Ghent"))).to_have_attribute(
+        "href", f"/Statement/{data.statement}"
+    )
+    expect(dialog.get_by_role("button", name="Delete", exact=True)).to_have_count(0)
+    dialog.get_by_role("button", name="Close", exact=True).first.click()
+    expect(dialog).to_have_count(0)
+    # (asking marked nothing: she is still there, not marked for deletion)
+    assert data.api.ok("GET", f"/api/Person/{data.marie}")["meta"]["markedForDeletion"] is False
+
+
 def test_an_entity_is_made_from_the_form_and_chosen(logged_in: Page, data):
     page = logged_in
     page.goto("/Statement/new")

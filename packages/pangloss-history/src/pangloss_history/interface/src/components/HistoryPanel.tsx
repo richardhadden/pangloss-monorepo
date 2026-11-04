@@ -153,7 +153,7 @@ export function HistoryPanel(props: HistoryPanelProps) {
         data-testid="history-panel"
         data-open={props.open ? "true" : "false"}
         class={[
-          "fixed top-14 right-0 bottom-0 z-20 flex w-96 max-w-full flex-col rounded-tl-xs border-[0.5px] border-r-0 border-slate-400/70 bg-slate-100/95 text-slate-800 shadow-lg backdrop-blur-md transition-transform duration-200",
+          "fixed top-14 right-0 bottom-0 z-20 flex w-[32rem] max-w-full flex-col rounded-tl-xs border-[0.5px] border-r-0 border-slate-400/70 bg-slate-100/95 text-slate-800 shadow-lg backdrop-blur-md transition-transform duration-200",
           { "translate-x-0": props.open, "translate-x-full": !props.open },
         ]}
       >

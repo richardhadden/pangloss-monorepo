@@ -37,6 +37,9 @@ class Problem:
     path: str | None = None
     old_value: Any = None
     migration: str | None = None
+    # The model and field it is about, by their names in Python (for the interface to name them as the form does)
+    model: str | None = None
+    field: str | None = None
     # Whether it stops the version being restored without someone's decision
     blocking: bool = True
 
@@ -52,6 +55,10 @@ class Problem:
             out["oldValue"] = self.old_value
         if self.migration is not None:
             out["migration"] = self.migration
+        if self.model is not None:
+            out["model"] = self.model
+        if self.field is not None:
+            out["field"] = self.field
         return out
 
 
@@ -174,10 +181,15 @@ class Upgrader:
     def apply(self, change: c.Change) -> None:
         handler = HANDLERS.get(type(change))
         if handler is None:
-            self.problem(
-                "unsupported-change",
-                f"{change.describe()}: this cannot be applied to a stored version (yet)",
-            )
+            model = getattr(change, "model", None)
+            # (a change to a model this version has nothing of cannot have changed it)
+            if not isinstance(model, str) or self.nodes_of(model):
+                self.problem(
+                    "unsupported-change",
+                    f"{change.describe()}: this cannot be applied to a stored version (yet)",
+                    model=model if isinstance(model, str) else None,
+                    field=getattr(change, "name", None),
+                )
         elif handler is not nothing:
             handler(self, change)
         self.state = apply_change(self.state, change)
@@ -201,6 +213,8 @@ class Upgrader:
                 self.problem(
                     "missing-required",
                     f"{change.model}.{change.name} was added after this version, and has no value",
+                    model=change.model,
+                    field=change.name,
                     path=self.at(path, change.name),
                 )
 
@@ -219,6 +233,8 @@ class Upgrader:
                 self.problem(
                     "removed-field",
                     f"{change.model}.{change.name} no longer exists (the value is in history)",
+                    model=change.model,
+                    field=change.name,
                     path=self.at(path, change.name),
                     old_value=old,
                     blocking=False,
@@ -248,6 +264,7 @@ class Upgrader:
                 self.problem(
                     "model-removed",
                     f"{change.model} no longer exists: there is nothing to restore it as",
+                    model=change.model,
                     path=path or None,
                 )
 
@@ -279,6 +296,8 @@ class Upgrader:
             self.problem(
                 "type-changed",
                 f"{change.model}.{change.name} changed type, and {value!r} cannot be converted: {error}",
+                model=change.model,
+                field=change.name,
                 path=path,
                 old_value=value,
             )
@@ -295,6 +314,8 @@ class Upgrader:
                     self.problem(
                         "missing-required",
                         f"{change.model}.{change.name} may no longer be empty, and this version has no value",
+                        model=change.model,
+                        field=change.name,
                         path=self.at(path, change.name),
                     )
 
@@ -361,6 +382,8 @@ class Upgrader:
                         self.problem(
                             "removed-field",
                             f"{change.model}.{change.name} can no longer be to a {item['type']}: removed",
+                            model=change.model,
+                            field=change.name,
                             path=self.at(path, change.name),
                             old_value=item,
                             blocking=False,
@@ -369,6 +392,8 @@ class Upgrader:
                     self.problem(
                         "reference-not-allowed",
                         f"{change.model}.{change.name} can no longer be to a {item['type']}",
+                        model=change.model,
+                        field=change.name,
                         path=self.at(path, change.name),
                         old_value=item,
                     )
@@ -391,6 +416,8 @@ class Upgrader:
                     self.problem(
                         "cardinality-changed",
                         f"{change.model}.{change.name} is now a single value, and this version has {len(value)}",
+                        model=change.model,
+                        field=change.name,
                         path=self.at(path, change.name),
                         old_value=value,
                     )

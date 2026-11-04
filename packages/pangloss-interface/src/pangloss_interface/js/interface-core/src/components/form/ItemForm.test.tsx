@@ -695,6 +695,80 @@ test("an item saved by someone else meanwhile is not overwritten: the form says 
   expect(reloaded).toBe(1);
 });
 
+test("Delete asks first, then deletes; a new item has no Delete, nor one without onDeleted", async () => {
+  const { client } = fakeClient(() => ({}));
+  const deleted: string[] = [];
+  const asking = {
+    ...client,
+    get: async (path: string) =>
+      path.endsWith("/deletable") ? { deletable: true, reason: null, referencedBy: [], referenceCount: 0 } : client.get(path),
+    delete: async (path: string) => void deleted.push(path),
+  } as unknown as ApiClient;
+  let gone = 0;
+  show(asking, {
+    initial: { id: "f1", type: "Factoid", label: "Fall of Rome", year: 476, meta: { version: 3 } },
+    version: 3,
+    onDeleted: () => (gone += 1),
+  });
+  await settle();
+  click(button("Delete"));
+  await settle();
+  const dialog = document.body.querySelector('[role="dialog"]')!;
+  expect(dialog.textContent).toContain("Are you sure you want to delete the Factoid “Fall of Rome”?");
+  click([...dialog.querySelectorAll("button")].find((b) => b.textContent === "Delete"));
+  await settle();
+  expect(deleted).toEqual(["/Factoid/f1"]);
+  expect(gone).toBe(1);
+  expect(toastText()).toContain("Factoid “Fall of Rome” deleted");
+
+  dispose?.();
+  document.body.innerHTML = "";
+  show(asking, { onDeleted: () => {} });
+  await settle();
+  expect(button("Delete")).toBeUndefined();
+  dispose?.();
+  document.body.innerHTML = "";
+  show(asking, { initial: { id: "f1", type: "Factoid", label: "F", meta: { version: 3 } }, version: 3 });
+  await settle();
+  expect(button("Delete")).toBeUndefined();
+});
+
+test("what cannot be deleted says why, with what refers to it, and only Close", async () => {
+  const { client } = fakeClient(() => ({}));
+  const deleted: string[] = [];
+  const asking = {
+    ...client,
+    get: async (path: string) =>
+      path.endsWith("/deletable")
+        ? {
+            deletable: false,
+            reason: "12 things still refer to this.",
+            referencedBy: [{ id: "s1", type: "Factoid", label: "A statement" }],
+            referenceCount: 12,
+          }
+        : client.get(path),
+    delete: async (path: string) => void deleted.push(path),
+  } as unknown as ApiClient;
+  show(asking, {
+    initial: { id: "f1", type: "Factoid", label: "Fall of Rome", year: 476, meta: { version: 3 } },
+    version: 3,
+    onDeleted: () => {},
+  });
+  await settle();
+  click(button("Delete"));
+  await settle();
+  const dialog = document.body.querySelector('[role="dialog"]')!;
+  expect(dialog.textContent).toContain("“Fall of Rome” cannot be deleted. 12 things still refer to this.");
+  expect(dialog.querySelector<HTMLAnchorElement>('a[href="/Factoid/s1"]')?.textContent).toContain("A statement");
+  expect(dialog.textContent).toContain("and 11 more");
+  const buttons = [...dialog.querySelectorAll("button")].map((b) => b.textContent || b.getAttribute("aria-label"));
+  expect(buttons).not.toContain("Delete");
+  click([...dialog.querySelectorAll("button")].find((b) => b.textContent === "Close"));
+  await settle();
+  expect(document.body.querySelector('[role="dialog"]')).toBeNull();
+  expect(deleted).toEqual([]);
+});
+
 test("an entity can be made from the form: a dialog with its own form, and what is made is chosen", async () => {
   const { client, sent } = fakeClient((call) =>
     call.path === "/Person" ? { id: "p9", type: "Person", label: "Bede" } : { id: "f1", type: "Factoid", label: "F" },

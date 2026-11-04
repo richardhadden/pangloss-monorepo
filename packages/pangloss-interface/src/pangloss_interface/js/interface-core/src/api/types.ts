@@ -26,6 +26,16 @@ export interface ContextLabel {
   contents?: ContextLabel[];
 }
 
+/** Whether an item can be deleted (`checkDeletable`), and if not why */
+export interface Deletable {
+  deletable: boolean;
+  /** (if not) why, in a sentence */
+  reason: string | null;
+  /** (an entity that is referred to) up to ten of what refers to it */
+  referencedBy: { id: string; type: string; label: string }[];
+  referenceCount: number;
+}
+
 export interface Summary {
   id: string;
   type: string;

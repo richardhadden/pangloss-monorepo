@@ -110,6 +110,56 @@ async def version_of(tx: Transaction, node_id: str) -> int:
     return records[0][0] if records else 1
 
 
+@dataclasses.dataclass
+class DeletionCheck:
+    deletable: bool
+    # (if not) why, in a sentence for a person
+    reason: str | None = None
+    # (if it is an entity that is referred to) what refers to it: dicts with `id`, `type` and `label`
+    referenced_by: list[dict[str, typing.Any]] = dataclasses.field(default_factory=list)
+    reference_count: int = 0
+
+
+async def check_deletion(
+    tx: Transaction, cls: type[Document | Entity], id: UUID | AnyHttpUrl
+) -> DeletionCheck:
+    """Whether a delete of this would go through, and if not why: the checks of `soft_delete`, writing nothing (an
+    entity that is referred to is not marked)"""
+
+    is_entity = cls.__metatype__ == "Entity"
+    resolved_id = await resolve_id(tx, id) if is_entity else id
+    if resolved_id is None:
+        raise PanglossNotFoundError(f"There is no {cls.__name__} with id {id}")
+    node_id = str(resolved_id)
+
+    result = await tx.run(FIND_QUERY, id=node_id, type=cls.__name__)  # ty: ignore[invalid-argument-type]
+    found = await result.data()
+    if not found or found[0]["deleted"] or (not is_entity and found[0]["head_deleted"]):
+        raise PanglossNotFoundError(f"There is no {cls.__name__} with id {id}")
+
+    if not is_entity and not found[0]["is_head_node"]:
+        return DeletionCheck(
+            deletable=False,
+            reason="This is part of another document, so it can only be deleted by removing it from that document.",
+        )
+
+    if is_entity:
+        result = await tx.run(REFERENCES_QUERY, id=node_id)  # ty: ignore[invalid-argument-type]
+        references = await result.data()
+        if references:
+            count = len(references)
+            return DeletionCheck(
+                deletable=False,
+                reason="One thing still refers to this. Remove that reference first, then it can be deleted."
+                if count == 1
+                else f"{count} things still refer to this. Remove those references first, then it can be deleted.",
+                referenced_by=references[:MAX_REFERENCES_REPORTED],
+                reference_count=count,
+            )
+
+    return DeletionCheck(deletable=True)
+
+
 async def soft_delete(
     tx: Transaction, cls: type[Document | Entity], id: UUID | AnyHttpUrl
 ) -> DeletionResult:

@@ -142,6 +142,8 @@ export interface ItemFormProps {
   /** Called with the summary the API answers when the item is saved */
   onSaved: (saved: { id: string; type: string; label: string }) => void;
   onCancel: () => void;
+  /** Called once the item has been deleted; with it, an item being edited has a Delete button */
+  onDeleted?: () => void;
   /** Called to load the item again, after it was found to have been changed by someone else */
   onReload?: () => void;
 }

@@ -18,6 +18,7 @@ from pangloss_cypher.relink import relink as relink
 from pangloss_cypher.write_functions import (
     run_write_query as run_write_query,
     soft_delete_node as soft_delete_node,
+    check_deletable as check_deletable,
     announce as announce,
     delete_document as delete_document,
     delete_entity as delete_entity,
@@ -65,6 +66,7 @@ __all__ = [
     "get_entity_for_edit",
     "run_write_query",
     "soft_delete_node",
+    "check_deletable",
     "announce",
     "delete_document",
     "delete_entity",

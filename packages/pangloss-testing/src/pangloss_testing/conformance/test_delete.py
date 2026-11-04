@@ -743,3 +743,58 @@ async def test_undelete_missing_or_nested(db_driver, clear_database):
     assert await Action.get(id=nested_id) is None
     await Statement.undelete(saved.id)
     assert await Action.get(id=nested_id) is not None
+
+
+# ---------------------------------------------------------------------------
+# Asking first (`check_deletable`)
+# ---------------------------------------------------------------------------
+
+
+@no_type_check
+async def test_check_deletable_says_why_and_writes_nothing(db_driver, clear_database):
+    from pangloss_core.storage import storage_of
+
+    check_deletable = storage_of().operations.check_deletable
+
+    class Person(Entity):
+        pass
+
+    class Action(Document):
+        pass
+
+    class Statement(Document):
+        concerns_person: Person
+        action: Action
+
+    initialise()
+
+    person = await Person.Create(label="John Smith").save()
+    lonely = await Person.Create(label="Nobody").save()
+    statement = await Statement.Create(
+        label="A Statement",
+        concerns_person={"type": "Person", "id": person.id},
+        action={"type": "Action", "label": "An Action"},
+    ).save()
+    nested_id = run(db_driver, "MATCH (a:Action) RETURN a.id AS id")[0]["id"]
+
+    assert (await check_deletable(Statement, statement.id)).deletable
+    assert (await check_deletable(Person, lonely.id)).deletable
+
+    in_use = await check_deletable(Person, person.id)
+    assert not in_use.deletable
+    assert "refers" in in_use.reason
+    assert in_use.reference_count == 1
+    assert [r["id"] for r in in_use.referenced_by] == [str(statement.id)]
+    # (not marked, as a delete would mark it)
+    assert "marked_for_deletion" not in node(db_driver, person.id)
+
+    nested = await check_deletable(Action, nested_id)
+    assert not nested.deletable
+    assert "part of another document" in nested.reason
+
+    assert deletions(db_driver) == []
+    await Statement.delete(statement.id)
+    with pytest.raises(PanglossNotFoundError):
+        await check_deletable(Statement, statement.id)
+    # (once the document is gone, nothing refers to the person)
+    assert (await check_deletable(Person, person.id)).deletable

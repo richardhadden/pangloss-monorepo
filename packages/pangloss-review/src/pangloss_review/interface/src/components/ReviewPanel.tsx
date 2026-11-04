@@ -187,6 +187,9 @@ export function ReviewPanel(props: ReviewPanelProps) {
 
         {/* The status: the current one is pressed; another is a change at once (its own API, not the form's Save) */}
         <section class="shrink-0 border-b-[0.5px] border-slate-400/70 p-3">
+          <p class="mb-2 text-xs font-semibold text-slate-700 uppercase" aria-hidden="true">
+            {t("review_set_status", "Set review status")}
+          </p>
           <div
             role="group"
             aria-label={t("review_status", "Status")}

@@ -33,7 +33,13 @@ from pydantic import AnyHttpUrl
 
 from pangloss_cypher import pending, review, users
 from pangloss_cypher.build_update_query import build_replace_head_query
-from pangloss_cypher.delete_node import DeletionResult, soft_delete, undelete
+from pangloss_cypher.delete_node import (
+    DeletionCheck,
+    DeletionResult,
+    check_deletion,
+    soft_delete,
+    undelete,
+)
 from pangloss_cypher.read_functions import get_document, get_entity
 from pangloss_cypher.render_write import render
 from pangloss_cypher.transactions import (
@@ -82,6 +88,14 @@ async def soft_delete_node(
     if result.deleted and result.id is not None:
         await pending.mark_written(tx, cls, result.id)
     return result
+
+
+@read_transaction
+async def check_deletable(
+    tx: Transaction, cls: type[Document | Entity], id: UUID | AnyHttpUrl
+) -> DeletionCheck:
+    """Whether a delete of this would go through, and if not why (nothing is written)"""
+    return await check_deletion(tx, cls, id)
 
 
 def announce(

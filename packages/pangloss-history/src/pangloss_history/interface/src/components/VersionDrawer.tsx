@@ -3,6 +3,7 @@ import { Portal } from "@solidjs/web";
 import { For, Match, Show, Switch } from "solid-js";
 import type { Version, VersionRecord } from "../api";
 import { when } from "../format";
+import { useProblemLines } from "../problems";
 import { OpIcon, useOpWords } from "./OpIcon";
 
 export interface VersionDrawerProps {
@@ -27,6 +28,7 @@ export function VersionDrawer(props: VersionDrawerProps) {
   const ItemContents = useComponent("ItemContents");
   const { t, language } = useTranslations();
   const opWords = useOpWords();
+  const problemLines = useProblemLines();
   const shown = () => (props.open ? props.record : undefined);
   return (
     <Portal>
@@ -38,9 +40,9 @@ export function VersionDrawer(props: VersionDrawerProps) {
         data-open={props.open ? "true" : "false"}
         data-version={props.record?.version}
         class={[
-          // (beside the panel, which is w-96; under it, z-10, so that it comes out from beneath it)
-          "fixed top-14 right-96 bottom-0 z-10 flex w-[36rem] max-w-[calc(100vw-27rem)] flex-col rounded-tl-xs border-[0.5px] border-r-0 border-slate-400/70 bg-white text-slate-800 shadow-lg transition-transform duration-300 ease-out",
-          { "translate-x-0": props.open, "translate-x-[calc(100%+24rem)]": !props.open },
+          // (beside the panel, which is 32rem wide; under it, z-10, so that it comes out from beneath it)
+          "fixed top-14 right-[32rem] bottom-0 z-10 flex w-[44rem] max-w-[calc(100vw-35rem)] flex-col rounded-tl-xs border-[0.5px] border-r-0 border-slate-400/70 bg-white text-slate-800 shadow-lg transition-transform duration-300 ease-out",
+          { "translate-x-0": props.open, "translate-x-[calc(100%+32rem)]": !props.open },
         ]}
       >
         <header class="flex h-10 shrink-0 items-center justify-between gap-2 border-b-[0.5px] border-slate-400/70 bg-slate-50 pr-1 pl-3 text-xs">
@@ -81,20 +83,32 @@ export function VersionDrawer(props: VersionDrawerProps) {
               {(version) => (
                 <>
                   <Show when={version().upgraded || version().problems.length > 0}>
-                    <div class="mb-4 rounded-xs border-[0.5px] border-amber-500/50 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-                      <Show when={version().upgraded}>
-                        <p>{t("history_upgraded", "Shown as the models are now: they have changed since it was written.")}</p>
-                      </Show>
-                      <ul class="mt-1 list-disc pl-4" data-testid="history-problems">
-                        <For each={version().problems}>
-                          {(problem) => (
-                            <li class={{ "font-semibold": problem.blocking }}>
-                              {problem.message}
-                              <Show when={problem.blocking}> ({t("history_problem_blocking", "it cannot be restored")})</Show>
-                            </li>
+                    <div class="mb-4 rounded-xs border-[0.5px] border-amber-500/50 bg-amber-50 px-3 py-2 text-xs text-amber-950">
+                      <p>
+                        <Show
+                          when={version().problems.some((problem) => problem.blocking)}
+                          fallback={t(
+                            "history_upgraded",
+                            "This version was saved before some fields were changed. It's shown as it would look today.",
                           )}
-                        </For>
-                      </ul>
+                        >
+                          <span class="font-semibold">
+                            {t("history_cannot_restore", "This version can't be restored as it is.")}
+                          </span>{" "}
+                          {t("history_cannot_restore_why", "Some things have changed since it was saved:")}
+                        </Show>
+                      </p>
+                      <Show when={version().problems.length > 0}>
+                        <ul class="mt-1.5 flex flex-col gap-1 pl-4 list-disc" data-testid="history-problems">
+                          <For each={problemLines(version().problems, String(version().content.type ?? ""))}>
+                            {(line) => (
+                              <li title={line.details.join("\n")} class={{ "text-amber-800": !line.blocking }}>
+                                {line.text}
+                              </li>
+                            )}
+                          </For>
+                        </ul>
+                      </Show>
                     </div>
                   </Show>
                   <h2 class="mb-6 border-b-[0.5px] border-slate-400/70 pb-2 text-xl font-semibold">

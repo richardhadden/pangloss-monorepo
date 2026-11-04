@@ -157,6 +157,36 @@ def test_a_deleted_model_and_a_change_that_cannot_be_applied_are_problems():
         ],
     )
     assert [p.kind for p in result.problems] == ["unsupported-change", "model-removed"]
+    assert (result.problems[0].model, result.problems[0].field) == ("Person", "name")
+
+
+def test_a_change_that_cannot_be_applied_to_a_model_the_version_has_none_of_is_no_problem():
+    state = module.migrations_after(GRAPH, {"letters": "0001_initial"})[1]
+    result = apply_migrations(
+        VERSION_ONE,
+        state,
+        [
+            migration(
+                "0004",
+                c.CreateModel(
+                    model="Place",
+                    model_kind="Entity",
+                    definition={
+                        **person(literal("name")),
+                        "name": "Place",
+                        "labels": ["Place", "Entity"],
+                    },
+                ),
+                c.WrapRelation(
+                    model="Place",
+                    name="name",
+                    wrapper="W",
+                    wrapper_kind="ReifiedRelation",
+                ),
+            )
+        ],
+    )
+    assert result.problems == []
 
 
 def test_nested_nodes_and_models_that_inherit_the_field_are_upgraded_too():

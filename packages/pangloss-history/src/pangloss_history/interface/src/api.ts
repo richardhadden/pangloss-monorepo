@@ -47,6 +47,9 @@ export interface Problem {
   path?: string | null;
   oldValue?: unknown;
   migration?: string | null;
+  /** The model and field it is about (their names in Python), where there is one */
+  model?: string | null;
+  field?: string | null;
   blocking: boolean;
 }
 

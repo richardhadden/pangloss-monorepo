@@ -112,6 +112,7 @@ For every Document and Entity of the project, `NAME` being the class name (so `P
 | `PUT /api/NAME/{id}` | yes | Update, with the body of `NAME.Update`: a full replacement, which what `/edit` returns can be sent back as. The `id` in the body must be the one in the path (400); the item must be a `NAME` and not a subclass of it (409, naming the route to use); and the header `If-Match` says which version it is based on (see below). Returns a summary, or with `?detail=true` the `HeadView` |
 | `DELETE /api/NAME/{id}` | yes | Delete. 204 |
 | `POST /api/NAME/{id}/undelete` | yes | Undelete. 204 |
+| `GET /api/NAME/{id}/deletable` | yes | Whether a delete would go through, and if not why, without changing anything (a delete of an entity that is referred to marks it for deletion; this does not): `deletable`, `reason` (a sentence), and for an entity in use `referencedBy` (up to ten: `id`, `type`, `label`) and `referenceCount`. A document inside another, and a model whose `delete_only_if` field is not true, are not deletable. The interface asks this before its Delete |
 
 **Versions: editing without overwriting.** Each Document and Entity has a `meta.version`: 1 when it is made, and 1 more for each update. An update replaces the whole thing, so if two people load it, and both save, the second would silently undo the first. To prevent that, an update says which version it is based on:
 
@@ -144,7 +145,7 @@ GET /api/Person/https://example.com/people/john-smith
 
 The response has the entity's `id`. **Everything else is only ever at an id**: loading it to edit (`/edit`), and update, delete and undelete, are refused at a URL with 400 ("this is done at the id of an entity"), so get the entity at its URL first to find the id. Documents are found by id only. A URL can also refer to an entity in the body of a request (`{"type": "Person", "id": "http://..."}`). Details:
 
-- The rest of the path is the URL, so one that ends in `/edit` or `/undelete` is taken for the route of that name.
+- The rest of the path is the URL, so one that ends in `/edit`, `/undelete` or `/deletable` is taken for the route of that name.
 - `http:/` is read as `http://`, as servers and proxies often merge slashes.
 - The query string of the request is the URL's (`.../Place/http://example.com/p?id=5` is the URL with `?id=5`).
 - Percent-encoded characters are decoded in the path, and the URL is then normalised as when it was stored. A URL that has an encoded `/`, `?` or `#` in it cannot be told apart this way.

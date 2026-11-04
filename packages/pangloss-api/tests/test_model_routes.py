@@ -477,6 +477,41 @@ def test_an_entity_in_use_says_what_refers_to_it(settings, monkeypatch):
     }
 
 
+def test_deletable_says_whether_and_why_not(settings, monkeypatch):
+    from fastapi.testclient import TestClient
+    from pangloss_cypher.delete_node import DeletionCheck
+
+    from fake_api_db import exposed_functions
+
+    _, Person, _ = make_models()
+    client = TestClient(create_app())
+    headers = login(client)
+    referrer = uuid7()
+    asked = []
+
+    async def check_deletable(cls, id):
+        asked.append((cls.__name__, id))
+        return DeletionCheck(
+            deletable=False,
+            reason="in use",
+            referenced_by=[{"id": referrer, "type": "Statement", "label": "S"}],
+            reference_count=1,
+        )
+
+    monkeypatch.setattr(exposed_functions, "check_deletable", check_deletable)
+    person_id = uuid7()
+    assert client.get(f"/api/Person/{person_id}/deletable").status_code == 401
+    response = client.get(f"/api/Person/{person_id}/deletable", headers=headers)
+    assert response.status_code == 200
+    assert response.json() == {
+        "deletable": False,
+        "reason": "in use",
+        "referencedBy": [{"id": str(referrer), "type": "Statement", "label": "S"}],
+        "referenceCount": 1,
+    }
+    assert asked == [("Person", person_id)]
+
+
 def test_delete_and_undelete_give_no_content(settings, monkeypatch):
     from fastapi.testclient import TestClient
 

@@ -7,6 +7,7 @@ import { ApiError } from "./client";
 import type { ApiClient } from "./client";
 import type {
   AutocompleteParams,
+  Deletable,
   HeadView,
   ItemBody,
   ListParams,
@@ -63,6 +64,19 @@ export function updateItem(
   return client.put(`/${segment(type)}/${segment(id)}`, body, {
     headers: { "If-Match": `"${version}"` },
   });
+}
+
+/** Whether a delete of the item would go through, and if not why (nothing is changed). Needs a login */
+export function checkDeletable(client: ApiClient, type: string, id: string): Promise<Deletable> {
+  return client.get(`/${segment(type)}/${segment(id)}/deletable`);
+}
+
+/**
+ * Delete a document (that is not inside another) or an entity that nothing refers to. An entity that is referred
+ * to is not deleted, but marked for deletion, and the answer is an `ApiError` with status 409. Needs a login
+ */
+export function deleteItem(client: ApiClient, type: string, id: string): Promise<void> {
+  return client.delete(`/${segment(type)}/${segment(id)}`);
 }
 
 /** Entities whose label has every word of `q` (without it, those most used) */

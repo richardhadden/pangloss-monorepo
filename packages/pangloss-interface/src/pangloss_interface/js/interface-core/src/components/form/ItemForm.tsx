@@ -15,6 +15,7 @@ import { ConsoleButton } from "../../primitives";
 import { cleanForSave, createFormHooks, getModel } from "../../schema";
 import type { FormData } from "../../schema";
 import type { ItemFormProps } from "../../types";
+import { DeleteDialog } from "./DeleteDialog";
 import { ItemFields } from "./ModelFields";
 import { useSaveChecks } from "./Problems";
 
@@ -25,7 +26,8 @@ import { useSaveChecks } from "./Problems";
  * checked first, by the schemas of the models (`useSaveChecks`): what is wrong is not sent, but
  * shown at its fields, red, with a red toast; so is what the API refuses. An item someone else saved
  * meanwhile (a 412) is not overwritten, and the form offers to load the new version. A save that
- * worked is told in a toast (`useToasts`).
+ * worked is told in a toast (`useToasts`). With `onDeleted`, an item being edited has Delete too, which asks first
+ * (`DeleteDialog`), or says why it cannot be deleted.
  */
 export function ItemForm(props: ItemFormProps) {
   const Console = useComponent("Console");
@@ -40,6 +42,7 @@ export function ItemForm(props: ItemFormProps) {
   // (while a save is being sent: it goes back to false when the save is over, whatever the answer)
   const [saving, setSaving] = createOptimistic(false);
   const [stale, setStale] = createSignal(false);
+  const [askingToDelete, setAskingToDelete] = createSignal(false);
   let formElement: HTMLFormElement | undefined;
   const checks = useSaveChecks(state, () => formElement);
   const creating = () => props.version === undefined;
@@ -93,6 +96,19 @@ export function ItemForm(props: ItemFormProps) {
         item={creating() ? undefined : { type: props.type, id: String(props.initial.id) }}
         page="edit"
       >
+        <Show when={!creating() && props.onDeleted}>
+          <ConsoleButton label={t("delete", "Delete")} onClick={() => setAskingToDelete(true)} tone="danger">
+            <svg
+              viewBox="0 0 24 24"
+              class="size-5 select-none fill-none stroke-current stroke-2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M4 7h16M10 11v6M14 11v6M5.5 7l1 12.5h11l1-12.5M9 7V4.5h6V7" />
+            </svg>
+          </ConsoleButton>
+        </Show>
         <ConsoleButton label={t("cancel", "Cancel")} onClick={props.onCancel} tone="danger">
           <svg
             viewBox="0 0 24 24"
@@ -121,6 +137,18 @@ export function ItemForm(props: ItemFormProps) {
           </svg>
         </ConsoleButton>
       </Console>
+      <Show when={askingToDelete()}>
+        <DeleteDialog
+          type={props.type}
+          id={String(props.initial.id)}
+          label={label()}
+          onDeleted={() => {
+            setAskingToDelete(false);
+            props.onDeleted?.();
+          }}
+          onClose={() => setAskingToDelete(false)}
+        />
+      </Show>
       <form
         ref={formElement}
         class="flex flex-col gap-6"

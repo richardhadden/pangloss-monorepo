@@ -404,4 +404,6 @@ def test_problems_say_which_migration_and_can_be_written_as_json():
         "blocking": True,
         "path": "title",
         "migration": "letters.0002",
+        "model": "Note",
+        "field": "title",
     }
