@@ -16,7 +16,7 @@ const DEBOUNCE_MS = 250;
 
 /**
  * The text search of a list, for the middle of the console: it fills the height of the bar,
- * with a toggle for Deep Search at its right. It does not search: it says what to search for
+ * with a toggle for Deep Search at its right (and the search form's beyond it). It does not search: it says what to search for
  * (`onSearch`), and shows what it is given (`query`, `deep`), so the page can keep them in
  * the address. An ordinary search is made a moment after the last key, or at once on Enter. A
  * Deep Search is slow, so turning it on makes none: it is made on Enter, or by the run
@@ -133,6 +133,22 @@ export function ConsoleSearch(props: ConsoleSearchProps) {
           </svg>
         </ConsoleButton>
       </Show>
+      <ConsoleButton
+        label={t("deep_search", "Deep search")}
+        pressed={deepOn() && !props.structured}
+        disabled={props.structured}
+        onClick={toggleDeep}
+      >
+        <svg
+          viewBox="0 0 24 24"
+          class="size-5 select-none fill-none stroke-current stroke-2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M12 3l9 5-9 5-9-5 9-5zM3 13l9 5 9-5M3 17.5l9 5 9-5" />
+        </svg>
+      </ConsoleButton>
       <Show when={props.onToggleForm}>
         <ConsoleButton
           label={
@@ -161,22 +177,6 @@ export function ConsoleSearch(props: ConsoleSearchProps) {
           </svg>
         </ConsoleButton>
       </Show>
-      <ConsoleButton
-        label={t("deep_search", "Deep search")}
-        pressed={deepOn() && !props.structured}
-        disabled={props.structured}
-        onClick={toggleDeep}
-      >
-        <svg
-          viewBox="0 0 24 24"
-          class="size-5 select-none fill-none stroke-current stroke-2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          aria-hidden="true"
-        >
-          <path d="M12 3l9 5-9 5-9-5 9-5zM3 13l9 5 9-5M3 17.5l9 5 9-5" />
-        </svg>
-      </ConsoleButton>
     </div>
   );
 }

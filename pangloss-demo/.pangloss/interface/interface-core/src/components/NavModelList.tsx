@@ -5,7 +5,7 @@ import { navSections } from "../schema";
 import type { NavEntry } from "../schema";
 
 /**
- * The sections of the bar (`navSections`): by default the Entities and the Documents of the
+ * The sections of the bar (`navSections`): by default the Documents and the Entities of the
  * project, each type a link to its list page, in the order of the type hierarchy; and what the
  * installed apps' `InterfaceConfig`s change. Every button is as wide as the bar, and the text of
  * a type is indented a step more than that of its parent. Links that need a login are shown to someone logged in (`loggedIn`).

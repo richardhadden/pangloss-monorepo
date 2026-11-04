@@ -28,7 +28,7 @@ from typing import Any
 from pangloss_models.exceptions import PanglossMetaError
 
 # (the sections the bar has without any configuration, first and in this order)
-DEFAULT_SECTIONS = ("Entities", "Documents")
+DEFAULT_SECTIONS = ("Documents", "Entities")
 CONFIG_MODULE = "interface_config"
 
 
@@ -38,7 +38,7 @@ class NavModel:
 
     model: str
     label: str | None = None  # (default: the model's name)
-    section: str | None = None  # (default: Entities or Documents, by kind)
+    section: str | None = None  # (default: Documents or Entities, by kind)
     order: int | None = (
         None  # (entries with an order come first, by it; the rest in the order of the hierarchy)
     )

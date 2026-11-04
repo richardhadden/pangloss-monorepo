@@ -5150,8 +5150,8 @@ export const definitions: ModelDefinitions = {
   },
   "nav": {
     "sections": [
-      "Entities",
-      "Documents"
+      "Documents",
+      "Entities"
     ],
     "models": {},
     "links": [

@@ -15,7 +15,7 @@ from pangloss_models.exceptions import PanglossMetaError
 
 def test_without_any_config_the_bar_is_as_it_was():
     assert merge([]) == {
-        "sections": ["Entities", "Documents"],
+        "sections": ["Documents", "Entities"],
         "models": {},
         "links": [],
     }
@@ -33,7 +33,7 @@ def test_sections_come_in_the_order_they_are_met_after_the_two_defaults():
             ),
         ]
     )
-    assert nav["sections"] == ["Entities", "Documents", "Maps", "Sources"]
+    assert nav["sections"] == ["Documents", "Entities", "Maps", "Sources"]
 
 
 def test_the_later_app_wins_for_a_type_and_can_hide_it():

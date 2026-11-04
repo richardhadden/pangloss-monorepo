@@ -18,17 +18,17 @@ export interface NavSection {
 }
 
 const KIND_SECTIONS = [
-  { title: "Entities", kind: "Entity" },
   { title: "Documents", kind: "Document" },
+  { title: "Entities", kind: "Entity" },
 ] as const;
 const LINKS_SECTION = "Links";
 
 /**
- * The sections of the navigation bar: the Entities and the Documents in the order of the type
+ * The sections of the navigation bar: the Documents and the Entities in the order of the type
  * hierarchy, as ever, then what the apps' `InterfaceConfig`s (`definitions.nav`) change: a type
  * moved to another section, given a label or an order, or hidden; and their other links. A type
  * is listed under, in order of precedence: the section an app's `NavModel` gives it, the section
- * its `InterfaceMeta(nav_section=...)` gives it (its parents' too), and Entities or Documents by its
+ * its `InterfaceMeta(nav_section=...)` gives it (its parents' too), and Documents or Entities by its
  * kind. A type is indented below its parent only when the parent is in the same section. In a
  * section, entries with an `order` come first, by it; the rest follow in the order they were met
  * (the hierarchy, then the links). A section with nothing in it is left out.

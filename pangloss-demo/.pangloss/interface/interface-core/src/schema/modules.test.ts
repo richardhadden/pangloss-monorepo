@@ -67,10 +67,10 @@ test("the component a model names for a slot", () => {
   expect(slotOf(definitions, "Nobody", "itemPage")).toBeNull();
 });
 
-test("without a config the bar is the Entities then the Documents, in the order of the hierarchy", () => {
+test("without a config the bar is the Documents then the Entities, in the order of the hierarchy", () => {
   const sections = navSections(definitions);
-  expect(sections.map((s) => s.title)).toEqual(["Entities", "Documents"]);
-  expect(sections[0]!.entries.map((e) => [e.label, e.depth])).toEqual([
+  expect(sections.map((s) => s.title)).toEqual(["Documents", "Entities"]);
+  expect(sections[1]!.entries.map((e) => [e.label, e.depth])).toEqual([
     ["Folio", 0],
     ["Person", 0],
     ["Poet", 1],

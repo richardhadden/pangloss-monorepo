@@ -1,4 +1,4 @@
-import { createSignal, For, Show } from "solid-js";
+import { createSignal, For, onCleanup, Show } from "solid-js";
 import { useNavExpanded, useTranslations } from "../context";
 import { NavIconCell, NavRow, NavRowButton } from "../primitives";
 import { NavModelList } from "./NavModelList";
@@ -36,6 +36,15 @@ export function NavBar(props: NavBarProps) {
   const { t, language, languages, setLanguage } = useTranslations();
   const flag = (code: string) => FLAGS[code] ?? code.toUpperCase();
   const [filter, setFilter] = createSignal("");
+  // The scrollbar of the list is shown only while it is scrolled, and for a moment after
+  const [scrolling, setScrolling] = createSignal(false);
+  let scrollTimer: ReturnType<typeof setTimeout> | undefined;
+  const showScrollbar = () => {
+    setScrolling(true);
+    clearTimeout(scrollTimer);
+    scrollTimer = setTimeout(() => setScrolling(false), 800);
+  };
+  onCleanup(() => clearTimeout(scrollTimer));
   return (
     <nav
       aria-label={t("nav_main", "Main")}
@@ -169,8 +178,15 @@ export function NavBar(props: NavBarProps) {
       </NavRow>
       {/* (not rendered while retracted: there is no room for it to be read) */}
       <Show when={navExpanded()}>
-        <div class="min-h-0 flex-1 overflow-y-auto border-t border-slate-400/70">
-          <NavFilter value={filter()} onInput={setFilter} />
+        <NavFilter value={filter()} onInput={setFilter} />
+        {/* (room at the bottom so that the last item is not under the browser's preview of a hovered link) */}
+        <div
+          onScroll={showScrollbar}
+          class={[
+            "min-h-0 flex-1 overflow-y-auto pb-12 [scrollbar-width:thin]",
+            { "[scrollbar-color:transparent_transparent]": !scrolling() },
+          ]}
+        >
           <NavModelList loggedIn={props.user !== undefined} filter={filter()} />
           {props.children}
         </div>
@@ -180,7 +196,7 @@ export function NavBar(props: NavBarProps) {
 }
 
 /**
- * The box that filters the types of the navigation bar, kept at the top as the list scrolls, with
+ * The box that filters the types of the navigation bar, above the list (which scrolls under it), with
  * a button that clears it (as Escape does).
  */
 function NavFilter(props: { value: string; onInput: (value: string) => void }) {
@@ -191,7 +207,7 @@ function NavFilter(props: { value: string; onInput: (value: string) => void }) {
     input?.focus();
   };
   return (
-    <div class="sticky top-0 z-10 border-b border-slate-400/70 bg-slate-300/80 p-2 backdrop-blur-md">
+    <div class="border-y border-slate-400/70 bg-slate-300/80 p-2">
       <div class="flex h-8 items-center rounded-xs border-[0.5px] border-slate-400/70 bg-white/70 focus-within:border-slate-500 focus-within:bg-white">
         <svg
           viewBox="0 0 24 24"
