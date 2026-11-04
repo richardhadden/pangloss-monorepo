@@ -2557,6 +2557,246 @@
         },
         "incoming": {}
       },
+      "ZoteroBacked": {
+        "name": "Zotero backed",
+        "plural": "Zotero backed",
+        "help": "",
+        "description": "A text that is (or may be) an item in a Zotero library. Everything is optional, so one made by hand has\nnone of it. Build your class on this: `class TextObject(ZoteroBacked)`.",
+        "kind": "Entity",
+        "fields": {
+          "zotero_url": {
+            "name": "Zotero url",
+            "plural": "Zotero url",
+            "help": ""
+          },
+          "zotero_library": {
+            "name": "Zotero library",
+            "plural": "Zotero library",
+            "help": ""
+          },
+          "zotero_key": {
+            "name": "Zotero key",
+            "plural": "Zotero key",
+            "help": ""
+          },
+          "zotero_version": {
+            "name": "Zotero version",
+            "plural": "Zotero version",
+            "help": ""
+          },
+          "zotero_synced_entity_version": {
+            "name": "Zotero synced entity version",
+            "plural": "Zotero synced entity version",
+            "help": ""
+          },
+          "item_type": {
+            "name": "Item type",
+            "plural": "Item type",
+            "help": ""
+          },
+          "title": {
+            "name": "Title",
+            "plural": "Title",
+            "help": ""
+          },
+          "short_title": {
+            "name": "Short title",
+            "plural": "Short title",
+            "help": ""
+          },
+          "creators": {
+            "name": "Creators",
+            "plural": "Creators",
+            "help": ""
+          },
+          "date": {
+            "name": "Date",
+            "plural": "Date",
+            "help": ""
+          },
+          "language": {
+            "name": "Language",
+            "plural": "Language",
+            "help": ""
+          },
+          "abstract": {
+            "name": "Abstract",
+            "plural": "Abstract",
+            "help": ""
+          },
+          "zotero_data": {
+            "name": "Zotero data",
+            "plural": "Zotero data",
+            "help": ""
+          },
+          "citation": {
+            "name": "Citation",
+            "plural": "Citation",
+            "help": ""
+          },
+          "bibliography": {
+            "name": "Bibliography",
+            "plural": "Bibliography",
+            "help": ""
+          },
+          "csl_json": {
+            "name": "Csl json",
+            "plural": "Csl json",
+            "help": ""
+          },
+          "removed_from_zotero": {
+            "name": "Removed from zotero",
+            "plural": "Removed from zotero",
+            "help": ""
+          },
+          "synced_when": {
+            "name": "Synced when",
+            "plural": "Synced when",
+            "help": ""
+          },
+          "item_type_override": {
+            "name": "Item type override",
+            "plural": "Item type override",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "ZoteroLibrary": {
+        "name": "Zotero library",
+        "plural": "Zotero library",
+        "help": "",
+        "description": "How far a library has been synced. The id is its URL (`https://www.zotero.org/groups/2556736`).",
+        "kind": "Entity",
+        "fields": {
+          "library": {
+            "name": "Library",
+            "plural": "Library",
+            "help": ""
+          },
+          "synced_version": {
+            "name": "Synced version",
+            "plural": "Synced version",
+            "help": ""
+          },
+          "last_sync": {
+            "name": "Last sync",
+            "plural": "Last sync",
+            "help": ""
+          },
+          "last_error": {
+            "name": "Last error",
+            "plural": "Last error",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "ZoteroObject": {
+        "name": "Zotero object",
+        "plural": "Zotero object",
+        "help": "",
+        "description": "A Zotero item that no class of the project stands for",
+        "kind": "Entity",
+        "fields": {
+          "zotero_url": {
+            "name": "Zotero url",
+            "plural": "Zotero url",
+            "help": ""
+          },
+          "zotero_library": {
+            "name": "Zotero library",
+            "plural": "Zotero library",
+            "help": ""
+          },
+          "zotero_key": {
+            "name": "Zotero key",
+            "plural": "Zotero key",
+            "help": ""
+          },
+          "zotero_version": {
+            "name": "Zotero version",
+            "plural": "Zotero version",
+            "help": ""
+          },
+          "zotero_synced_entity_version": {
+            "name": "Zotero synced entity version",
+            "plural": "Zotero synced entity version",
+            "help": ""
+          },
+          "item_type": {
+            "name": "Item type",
+            "plural": "Item type",
+            "help": ""
+          },
+          "title": {
+            "name": "Title",
+            "plural": "Title",
+            "help": ""
+          },
+          "short_title": {
+            "name": "Short title",
+            "plural": "Short title",
+            "help": ""
+          },
+          "creators": {
+            "name": "Creators",
+            "plural": "Creators",
+            "help": ""
+          },
+          "date": {
+            "name": "Date",
+            "plural": "Date",
+            "help": ""
+          },
+          "language": {
+            "name": "Language",
+            "plural": "Language",
+            "help": ""
+          },
+          "abstract": {
+            "name": "Abstract",
+            "plural": "Abstract",
+            "help": ""
+          },
+          "zotero_data": {
+            "name": "Zotero data",
+            "plural": "Zotero data",
+            "help": ""
+          },
+          "citation": {
+            "name": "Citation",
+            "plural": "Citation",
+            "help": ""
+          },
+          "bibliography": {
+            "name": "Bibliography",
+            "plural": "Bibliography",
+            "help": ""
+          },
+          "csl_json": {
+            "name": "Csl json",
+            "plural": "Csl json",
+            "help": ""
+          },
+          "removed_from_zotero": {
+            "name": "Removed from zotero",
+            "plural": "Removed from zotero",
+            "help": ""
+          },
+          "synced_when": {
+            "name": "Synced when",
+            "plural": "Synced when",
+            "help": ""
+          },
+          "item_type_override": {
+            "name": "Item type override",
+            "plural": "Item type override",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
       "SameGroup": {
         "name": "Same group",
         "plural": "Same group",
@@ -4058,6 +4298,246 @@
         },
         "incoming": {}
       },
+      "ZoteroBacked": {
+        "name": "Zotero backed",
+        "plural": "Zotero backed",
+        "help": "",
+        "description": "A text that is (or may be) an item in a Zotero library. Everything is optional, so one made by hand has\nnone of it. Build your class on this: `class TextObject(ZoteroBacked)`.",
+        "kind": "Entity",
+        "fields": {
+          "zotero_url": {
+            "name": "Zotero url",
+            "plural": "Zotero url",
+            "help": ""
+          },
+          "zotero_library": {
+            "name": "Zotero library",
+            "plural": "Zotero library",
+            "help": ""
+          },
+          "zotero_key": {
+            "name": "Zotero key",
+            "plural": "Zotero key",
+            "help": ""
+          },
+          "zotero_version": {
+            "name": "Zotero version",
+            "plural": "Zotero version",
+            "help": ""
+          },
+          "zotero_synced_entity_version": {
+            "name": "Zotero synced entity version",
+            "plural": "Zotero synced entity version",
+            "help": ""
+          },
+          "item_type": {
+            "name": "Item type",
+            "plural": "Item type",
+            "help": ""
+          },
+          "title": {
+            "name": "Title",
+            "plural": "Title",
+            "help": ""
+          },
+          "short_title": {
+            "name": "Short title",
+            "plural": "Short title",
+            "help": ""
+          },
+          "creators": {
+            "name": "Creators",
+            "plural": "Creators",
+            "help": ""
+          },
+          "date": {
+            "name": "Date",
+            "plural": "Date",
+            "help": ""
+          },
+          "language": {
+            "name": "Language",
+            "plural": "Language",
+            "help": ""
+          },
+          "abstract": {
+            "name": "Abstract",
+            "plural": "Abstract",
+            "help": ""
+          },
+          "zotero_data": {
+            "name": "Zotero data",
+            "plural": "Zotero data",
+            "help": ""
+          },
+          "citation": {
+            "name": "Citation",
+            "plural": "Citation",
+            "help": ""
+          },
+          "bibliography": {
+            "name": "Bibliography",
+            "plural": "Bibliography",
+            "help": ""
+          },
+          "csl_json": {
+            "name": "Csl json",
+            "plural": "Csl json",
+            "help": ""
+          },
+          "removed_from_zotero": {
+            "name": "Removed from zotero",
+            "plural": "Removed from zotero",
+            "help": ""
+          },
+          "synced_when": {
+            "name": "Synced when",
+            "plural": "Synced when",
+            "help": ""
+          },
+          "item_type_override": {
+            "name": "Item type override",
+            "plural": "Item type override",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "ZoteroLibrary": {
+        "name": "Zotero library",
+        "plural": "Zotero library",
+        "help": "",
+        "description": "How far a library has been synced. The id is its URL (`https://www.zotero.org/groups/2556736`).",
+        "kind": "Entity",
+        "fields": {
+          "library": {
+            "name": "Library",
+            "plural": "Library",
+            "help": ""
+          },
+          "synced_version": {
+            "name": "Synced version",
+            "plural": "Synced version",
+            "help": ""
+          },
+          "last_sync": {
+            "name": "Last sync",
+            "plural": "Last sync",
+            "help": ""
+          },
+          "last_error": {
+            "name": "Last error",
+            "plural": "Last error",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "ZoteroObject": {
+        "name": "Zotero object",
+        "plural": "Zotero object",
+        "help": "",
+        "description": "A Zotero item that no class of the project stands for",
+        "kind": "Entity",
+        "fields": {
+          "zotero_url": {
+            "name": "Zotero url",
+            "plural": "Zotero url",
+            "help": ""
+          },
+          "zotero_library": {
+            "name": "Zotero library",
+            "plural": "Zotero library",
+            "help": ""
+          },
+          "zotero_key": {
+            "name": "Zotero key",
+            "plural": "Zotero key",
+            "help": ""
+          },
+          "zotero_version": {
+            "name": "Zotero version",
+            "plural": "Zotero version",
+            "help": ""
+          },
+          "zotero_synced_entity_version": {
+            "name": "Zotero synced entity version",
+            "plural": "Zotero synced entity version",
+            "help": ""
+          },
+          "item_type": {
+            "name": "Item type",
+            "plural": "Item type",
+            "help": ""
+          },
+          "title": {
+            "name": "Title",
+            "plural": "Title",
+            "help": ""
+          },
+          "short_title": {
+            "name": "Short title",
+            "plural": "Short title",
+            "help": ""
+          },
+          "creators": {
+            "name": "Creators",
+            "plural": "Creators",
+            "help": ""
+          },
+          "date": {
+            "name": "Date",
+            "plural": "Date",
+            "help": ""
+          },
+          "language": {
+            "name": "Language",
+            "plural": "Language",
+            "help": ""
+          },
+          "abstract": {
+            "name": "Abstract",
+            "plural": "Abstract",
+            "help": ""
+          },
+          "zotero_data": {
+            "name": "Zotero data",
+            "plural": "Zotero data",
+            "help": ""
+          },
+          "citation": {
+            "name": "Citation",
+            "plural": "Citation",
+            "help": ""
+          },
+          "bibliography": {
+            "name": "Bibliography",
+            "plural": "Bibliography",
+            "help": ""
+          },
+          "csl_json": {
+            "name": "Csl json",
+            "plural": "Csl json",
+            "help": ""
+          },
+          "removed_from_zotero": {
+            "name": "Removed from zotero",
+            "plural": "Removed from zotero",
+            "help": ""
+          },
+          "synced_when": {
+            "name": "Synced when",
+            "plural": "Synced when",
+            "help": ""
+          },
+          "item_type_override": {
+            "name": "Item type override",
+            "plural": "Item type override",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
       "SameGroup": {
         "name": "Gleiche Gruppe",
         "plural": "Gleiche Gruppe",
@@ -5554,6 +6034,246 @@
           "certainty": {
             "name": "Certitude",
             "plural": "Certitude",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "ZoteroBacked": {
+        "name": "Zotero backed",
+        "plural": "Zotero backed",
+        "help": "",
+        "description": "A text that is (or may be) an item in a Zotero library. Everything is optional, so one made by hand has\nnone of it. Build your class on this: `class TextObject(ZoteroBacked)`.",
+        "kind": "Entity",
+        "fields": {
+          "zotero_url": {
+            "name": "Zotero url",
+            "plural": "Zotero url",
+            "help": ""
+          },
+          "zotero_library": {
+            "name": "Zotero library",
+            "plural": "Zotero library",
+            "help": ""
+          },
+          "zotero_key": {
+            "name": "Zotero key",
+            "plural": "Zotero key",
+            "help": ""
+          },
+          "zotero_version": {
+            "name": "Zotero version",
+            "plural": "Zotero version",
+            "help": ""
+          },
+          "zotero_synced_entity_version": {
+            "name": "Zotero synced entity version",
+            "plural": "Zotero synced entity version",
+            "help": ""
+          },
+          "item_type": {
+            "name": "Item type",
+            "plural": "Item type",
+            "help": ""
+          },
+          "title": {
+            "name": "Title",
+            "plural": "Title",
+            "help": ""
+          },
+          "short_title": {
+            "name": "Short title",
+            "plural": "Short title",
+            "help": ""
+          },
+          "creators": {
+            "name": "Creators",
+            "plural": "Creators",
+            "help": ""
+          },
+          "date": {
+            "name": "Date",
+            "plural": "Date",
+            "help": ""
+          },
+          "language": {
+            "name": "Language",
+            "plural": "Language",
+            "help": ""
+          },
+          "abstract": {
+            "name": "Abstract",
+            "plural": "Abstract",
+            "help": ""
+          },
+          "zotero_data": {
+            "name": "Zotero data",
+            "plural": "Zotero data",
+            "help": ""
+          },
+          "citation": {
+            "name": "Citation",
+            "plural": "Citation",
+            "help": ""
+          },
+          "bibliography": {
+            "name": "Bibliography",
+            "plural": "Bibliography",
+            "help": ""
+          },
+          "csl_json": {
+            "name": "Csl json",
+            "plural": "Csl json",
+            "help": ""
+          },
+          "removed_from_zotero": {
+            "name": "Removed from zotero",
+            "plural": "Removed from zotero",
+            "help": ""
+          },
+          "synced_when": {
+            "name": "Synced when",
+            "plural": "Synced when",
+            "help": ""
+          },
+          "item_type_override": {
+            "name": "Item type override",
+            "plural": "Item type override",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "ZoteroLibrary": {
+        "name": "Zotero library",
+        "plural": "Zotero library",
+        "help": "",
+        "description": "How far a library has been synced. The id is its URL (`https://www.zotero.org/groups/2556736`).",
+        "kind": "Entity",
+        "fields": {
+          "library": {
+            "name": "Library",
+            "plural": "Library",
+            "help": ""
+          },
+          "synced_version": {
+            "name": "Synced version",
+            "plural": "Synced version",
+            "help": ""
+          },
+          "last_sync": {
+            "name": "Last sync",
+            "plural": "Last sync",
+            "help": ""
+          },
+          "last_error": {
+            "name": "Last error",
+            "plural": "Last error",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "ZoteroObject": {
+        "name": "Zotero object",
+        "plural": "Zotero object",
+        "help": "",
+        "description": "A Zotero item that no class of the project stands for",
+        "kind": "Entity",
+        "fields": {
+          "zotero_url": {
+            "name": "Zotero url",
+            "plural": "Zotero url",
+            "help": ""
+          },
+          "zotero_library": {
+            "name": "Zotero library",
+            "plural": "Zotero library",
+            "help": ""
+          },
+          "zotero_key": {
+            "name": "Zotero key",
+            "plural": "Zotero key",
+            "help": ""
+          },
+          "zotero_version": {
+            "name": "Zotero version",
+            "plural": "Zotero version",
+            "help": ""
+          },
+          "zotero_synced_entity_version": {
+            "name": "Zotero synced entity version",
+            "plural": "Zotero synced entity version",
+            "help": ""
+          },
+          "item_type": {
+            "name": "Item type",
+            "plural": "Item type",
+            "help": ""
+          },
+          "title": {
+            "name": "Title",
+            "plural": "Title",
+            "help": ""
+          },
+          "short_title": {
+            "name": "Short title",
+            "plural": "Short title",
+            "help": ""
+          },
+          "creators": {
+            "name": "Creators",
+            "plural": "Creators",
+            "help": ""
+          },
+          "date": {
+            "name": "Date",
+            "plural": "Date",
+            "help": ""
+          },
+          "language": {
+            "name": "Language",
+            "plural": "Language",
+            "help": ""
+          },
+          "abstract": {
+            "name": "Abstract",
+            "plural": "Abstract",
+            "help": ""
+          },
+          "zotero_data": {
+            "name": "Zotero data",
+            "plural": "Zotero data",
+            "help": ""
+          },
+          "citation": {
+            "name": "Citation",
+            "plural": "Citation",
+            "help": ""
+          },
+          "bibliography": {
+            "name": "Bibliography",
+            "plural": "Bibliography",
+            "help": ""
+          },
+          "csl_json": {
+            "name": "Csl json",
+            "plural": "Csl json",
+            "help": ""
+          },
+          "removed_from_zotero": {
+            "name": "Removed from zotero",
+            "plural": "Removed from zotero",
+            "help": ""
+          },
+          "synced_when": {
+            "name": "Synced when",
+            "plural": "Synced when",
+            "help": ""
+          },
+          "item_type_override": {
+            "name": "Item type override",
+            "plural": "Item type override",
             "help": ""
           }
         },

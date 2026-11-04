@@ -2,7 +2,7 @@
 // It is made again each time the interface is built.
 import type { AnyRelationCondition, ChoiceCondition, CompareCondition, ItemsCondition, ModelDefinitions, NodePattern, RelationCondition, SearchOrder, SearchPattern, TextCondition } from "@pangloss/interface-core";
 
-export type ModelName = "Activity" | "Artwork" | "AtPage" | "Causes" | "Certainty" | "CreationOfArtwork" | "CreationOfPainting" | "CreationOfPhysicalObject" | "Date" | "DateCharacterisation" | "DateRange" | "EDTFDate" | "ExactDate" | "Factoid" | "Feast" | "Group" | "Hypothetical" | "Identification" | "InRole" | "Likelihood" | "MemberOf" | "Negative" | "NegativeSubjunctive" | "NoRule" | "OccupationType" | "OngoingDate" | "Order" | "Painting" | "Period" | "Person" | "PhysicalObject" | "Place" | "PositiveSubjunctive" | "Recurrence" | "Source" | "Statement" | "Transfer" | "UnknownDate" | "WeightedAlternative" | "WithCertainty";
+export type ModelName = "Activity" | "Artwork" | "AtPage" | "Causes" | "Certainty" | "CreationOfArtwork" | "CreationOfPainting" | "CreationOfPhysicalObject" | "Date" | "DateCharacterisation" | "DateRange" | "EDTFDate" | "ExactDate" | "Factoid" | "Feast" | "Group" | "Hypothetical" | "Identification" | "InRole" | "Likelihood" | "MemberOf" | "Negative" | "NegativeSubjunctive" | "NoRule" | "OccupationType" | "OngoingDate" | "Order" | "Painting" | "Period" | "Person" | "PhysicalObject" | "Place" | "PositiveSubjunctive" | "Recurrence" | "Source" | "Statement" | "Transfer" | "UnknownDate" | "WeightedAlternative" | "WithCertainty" | "ZoteroBacked" | "ZoteroLibrary" | "ZoteroObject";
 
 export const definitions: ModelDefinitions = {
   "models": {
@@ -3671,12 +3671,12 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Transfer",
               "field": "given_by",
-              "viaReified": false
+              "viaReified": true
             },
             {
               "model": "Transfer",
               "field": "given_by",
-              "viaReified": true
+              "viaReified": false
             }
           ]
         },
@@ -3698,12 +3698,12 @@ export const definitions: ModelDefinitions = {
             {
               "model": "MemberOf",
               "field": "member",
-              "viaReified": false
+              "viaReified": true
             },
             {
               "model": "MemberOf",
               "field": "member",
-              "viaReified": true
+              "viaReified": false
             }
           ]
         },
@@ -3714,12 +3714,12 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Order",
               "field": "ordered_by",
-              "viaReified": false
+              "viaReified": true
             },
             {
               "model": "Order",
               "field": "ordered_by",
-              "viaReified": true
+              "viaReified": false
             }
           ]
         },
@@ -3741,12 +3741,12 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Transfer",
               "field": "given_to",
-              "viaReified": false
+              "viaReified": true
             },
             {
               "model": "Transfer",
               "field": "given_to",
-              "viaReified": true
+              "viaReified": false
             }
           ]
         },
@@ -3757,12 +3757,12 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Order",
               "field": "ordered_to",
-              "viaReified": false
+              "viaReified": true
             },
             {
               "model": "Order",
               "field": "ordered_to",
-              "viaReified": true
+              "viaReified": false
             }
           ]
         }
@@ -5003,6 +5003,654 @@ export const definitions: ModelDefinitions = {
           "kind": "literal",
           "type": {
             "type": "int"
+          },
+          "validators": [],
+          "markers": []
+        }
+      ],
+      "incoming": [],
+      "interfaceMeta": null
+    },
+    "ZoteroBacked": {
+      "name": "ZoteroBacked",
+      "kind": "Entity",
+      "abstract": true,
+      "description": "A text that is (or may be) an item in a Zotero library. Everything is optional, so one made by hand has\nnone of it. Build your class on this: `class TextObject(ZoteroBacked)`.",
+      "parent": null,
+      "concreteTypes": [
+        "ZoteroObject"
+      ],
+      "typeParameters": [],
+      "createWithId": true,
+      "createDirectly": true,
+      "acceptUrlAsId": true,
+      "requireLabel": true,
+      "useInSemanticSpaceLabel": true,
+      "fields": [
+        {
+          "name": "zotero_url",
+          "key": "zoteroUrl",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": []
+        },
+        {
+          "name": "zotero_library",
+          "key": "zoteroLibrary",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": []
+        },
+        {
+          "name": "zotero_key",
+          "key": "zoteroKey",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": []
+        },
+        {
+          "name": "zotero_version",
+          "key": "zoteroVersion",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": [],
+          "markers": []
+        },
+        {
+          "name": "zotero_synced_entity_version",
+          "key": "zoteroSyncedEntityVersion",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": [],
+          "markers": []
+        },
+        {
+          "name": "item_type",
+          "key": "itemType",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": []
+        },
+        {
+          "name": "title",
+          "key": "title",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": []
+        },
+        {
+          "name": "short_title",
+          "key": "shortTitle",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": []
+        },
+        {
+          "name": "creators",
+          "key": "creators",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": []
+        },
+        {
+          "name": "date",
+          "key": "date",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": []
+        },
+        {
+          "name": "language",
+          "key": "language",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": []
+        },
+        {
+          "name": "abstract",
+          "key": "abstract",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": []
+        },
+        {
+          "name": "zotero_data",
+          "key": "zoteroData",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": []
+        },
+        {
+          "name": "citation",
+          "key": "citation",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": []
+        },
+        {
+          "name": "bibliography",
+          "key": "bibliography",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": []
+        },
+        {
+          "name": "csl_json",
+          "key": "cslJson",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": []
+        },
+        {
+          "name": "removed_from_zotero",
+          "key": "removedFromZotero",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "bool"
+          },
+          "validators": [],
+          "markers": []
+        },
+        {
+          "name": "synced_when",
+          "key": "syncedWhen",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "datetime"
+          },
+          "validators": [],
+          "markers": []
+        },
+        {
+          "name": "item_type_override",
+          "key": "itemTypeOverride",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": []
+        }
+      ],
+      "incoming": [],
+      "interfaceMeta": null
+    },
+    "ZoteroLibrary": {
+      "name": "ZoteroLibrary",
+      "kind": "Entity",
+      "abstract": false,
+      "description": "How far a library has been synced. The id is its URL (`https://www.zotero.org/groups/2556736`).",
+      "parent": null,
+      "concreteTypes": [
+        "ZoteroLibrary"
+      ],
+      "typeParameters": [],
+      "createWithId": true,
+      "createDirectly": true,
+      "acceptUrlAsId": true,
+      "requireLabel": true,
+      "useInSemanticSpaceLabel": true,
+      "fields": [
+        {
+          "name": "library",
+          "key": "library",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": []
+        },
+        {
+          "name": "synced_version",
+          "key": "syncedVersion",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": [],
+          "markers": []
+        },
+        {
+          "name": "last_sync",
+          "key": "lastSync",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "datetime"
+          },
+          "validators": [],
+          "markers": []
+        },
+        {
+          "name": "last_error",
+          "key": "lastError",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": []
+        }
+      ],
+      "incoming": [],
+      "interfaceMeta": null
+    },
+    "ZoteroObject": {
+      "name": "ZoteroObject",
+      "kind": "Entity",
+      "abstract": false,
+      "description": "A Zotero item that no class of the project stands for",
+      "parent": "ZoteroBacked",
+      "concreteTypes": [
+        "ZoteroObject"
+      ],
+      "typeParameters": [],
+      "createWithId": true,
+      "createDirectly": true,
+      "acceptUrlAsId": true,
+      "requireLabel": true,
+      "useInSemanticSpaceLabel": true,
+      "fields": [
+        {
+          "name": "zotero_url",
+          "key": "zoteroUrl",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": []
+        },
+        {
+          "name": "zotero_library",
+          "key": "zoteroLibrary",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": []
+        },
+        {
+          "name": "zotero_key",
+          "key": "zoteroKey",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": []
+        },
+        {
+          "name": "zotero_version",
+          "key": "zoteroVersion",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": [],
+          "markers": []
+        },
+        {
+          "name": "zotero_synced_entity_version",
+          "key": "zoteroSyncedEntityVersion",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": [],
+          "markers": []
+        },
+        {
+          "name": "item_type",
+          "key": "itemType",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": []
+        },
+        {
+          "name": "title",
+          "key": "title",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": []
+        },
+        {
+          "name": "short_title",
+          "key": "shortTitle",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": []
+        },
+        {
+          "name": "creators",
+          "key": "creators",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": []
+        },
+        {
+          "name": "date",
+          "key": "date",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": []
+        },
+        {
+          "name": "language",
+          "key": "language",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": []
+        },
+        {
+          "name": "abstract",
+          "key": "abstract",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": []
+        },
+        {
+          "name": "zotero_data",
+          "key": "zoteroData",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": []
+        },
+        {
+          "name": "citation",
+          "key": "citation",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": []
+        },
+        {
+          "name": "bibliography",
+          "key": "bibliography",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": []
+        },
+        {
+          "name": "csl_json",
+          "key": "cslJson",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": []
+        },
+        {
+          "name": "removed_from_zotero",
+          "key": "removedFromZotero",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "bool"
+          },
+          "validators": [],
+          "markers": []
+        },
+        {
+          "name": "synced_when",
+          "key": "syncedWhen",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "datetime"
+          },
+          "validators": [],
+          "markers": []
+        },
+        {
+          "name": "item_type_override",
+          "key": "itemTypeOverride",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
           },
           "validators": [],
           "markers": []
@@ -6560,6 +7208,322 @@ export const definitions: ModelDefinitions = {
         }
       },
       "orderBy": []
+    },
+    "ZoteroBacked": {
+      "kind": "entity",
+      "fields": {
+        "zotero_url": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "zotero_library": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "zotero_key": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "zotero_version": {
+          "operators": "compare",
+          "value": {
+            "type": "int"
+          }
+        },
+        "zotero_synced_entity_version": {
+          "operators": "compare",
+          "value": {
+            "type": "int"
+          }
+        },
+        "item_type": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "title": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "short_title": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "creators": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "date": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "language": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "abstract": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "zotero_data": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "citation": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "bibliography": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "csl_json": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "removed_from_zotero": {
+          "operators": "choice",
+          "value": {
+            "type": "bool"
+          }
+        },
+        "synced_when": {
+          "operators": "compare",
+          "value": {
+            "type": "datetime"
+          }
+        },
+        "item_type_override": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        }
+      },
+      "orderBy": [
+        "label",
+        "zotero_url",
+        "zotero_library",
+        "zotero_key",
+        "zotero_version",
+        "zotero_synced_entity_version",
+        "item_type",
+        "title",
+        "short_title",
+        "creators",
+        "date",
+        "language",
+        "abstract",
+        "zotero_data",
+        "citation",
+        "bibliography",
+        "csl_json",
+        "synced_when",
+        "item_type_override"
+      ]
+    },
+    "ZoteroLibrary": {
+      "kind": "entity",
+      "fields": {
+        "library": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "synced_version": {
+          "operators": "compare",
+          "value": {
+            "type": "int"
+          }
+        },
+        "last_sync": {
+          "operators": "compare",
+          "value": {
+            "type": "datetime"
+          }
+        },
+        "last_error": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        }
+      },
+      "orderBy": [
+        "label",
+        "library",
+        "synced_version",
+        "last_sync",
+        "last_error"
+      ]
+    },
+    "ZoteroObject": {
+      "kind": "entity",
+      "fields": {
+        "zotero_url": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "zotero_library": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "zotero_key": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "zotero_version": {
+          "operators": "compare",
+          "value": {
+            "type": "int"
+          }
+        },
+        "zotero_synced_entity_version": {
+          "operators": "compare",
+          "value": {
+            "type": "int"
+          }
+        },
+        "item_type": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "title": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "short_title": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "creators": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "date": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "language": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "abstract": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "zotero_data": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "citation": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "bibliography": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "csl_json": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "removed_from_zotero": {
+          "operators": "choice",
+          "value": {
+            "type": "bool"
+          }
+        },
+        "synced_when": {
+          "operators": "compare",
+          "value": {
+            "type": "datetime"
+          }
+        },
+        "item_type_override": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        }
+      },
+      "orderBy": [
+        "label",
+        "zotero_url",
+        "zotero_library",
+        "zotero_key",
+        "zotero_version",
+        "zotero_synced_entity_version",
+        "item_type",
+        "title",
+        "short_title",
+        "creators",
+        "date",
+        "language",
+        "abstract",
+        "zotero_data",
+        "citation",
+        "bibliography",
+        "csl_json",
+        "synced_when",
+        "item_type_override"
+      ]
     }
   }
 };
@@ -7053,6 +8017,81 @@ export type UnknownDateWhere = {
 
 export type UnknownDatePattern = { type: "UnknownDate"; where?: UnknownDateWhere };
 
+export type ZoteroBackedWhere = {
+  zotero_url?: TextCondition;
+  zotero_library?: TextCondition;
+  zotero_key?: TextCondition;
+  zotero_version?: CompareCondition<number>;
+  zotero_synced_entity_version?: CompareCondition<number>;
+  item_type?: TextCondition;
+  title?: TextCondition;
+  short_title?: TextCondition;
+  creators?: TextCondition;
+  date?: TextCondition;
+  language?: TextCondition;
+  abstract?: TextCondition;
+  zotero_data?: TextCondition;
+  citation?: TextCondition;
+  bibliography?: TextCondition;
+  csl_json?: TextCondition;
+  removed_from_zotero?: ChoiceCondition<boolean>;
+  synced_when?: CompareCondition<string>;
+  item_type_override?: TextCondition;
+  $all?: ZoteroBackedWhere[];
+  $any_of?: ZoteroBackedWhere[];
+  $not?: ZoteroBackedWhere;
+  $any?: AnyRelationCondition;
+  label?: TextCondition;
+  $incoming?: NodePattern | NodePattern[];
+};
+
+export type ZoteroBackedPattern = { type: "ZoteroBacked"; where?: ZoteroBackedWhere };
+
+export type ZoteroLibraryWhere = {
+  library?: TextCondition;
+  synced_version?: CompareCondition<number>;
+  last_sync?: CompareCondition<string>;
+  last_error?: TextCondition;
+  $all?: ZoteroLibraryWhere[];
+  $any_of?: ZoteroLibraryWhere[];
+  $not?: ZoteroLibraryWhere;
+  $any?: AnyRelationCondition;
+  label?: TextCondition;
+  $incoming?: NodePattern | NodePattern[];
+};
+
+export type ZoteroLibraryPattern = { type: "ZoteroLibrary"; where?: ZoteroLibraryWhere };
+
+export type ZoteroObjectWhere = {
+  zotero_url?: TextCondition;
+  zotero_library?: TextCondition;
+  zotero_key?: TextCondition;
+  zotero_version?: CompareCondition<number>;
+  zotero_synced_entity_version?: CompareCondition<number>;
+  item_type?: TextCondition;
+  title?: TextCondition;
+  short_title?: TextCondition;
+  creators?: TextCondition;
+  date?: TextCondition;
+  language?: TextCondition;
+  abstract?: TextCondition;
+  zotero_data?: TextCondition;
+  citation?: TextCondition;
+  bibliography?: TextCondition;
+  csl_json?: TextCondition;
+  removed_from_zotero?: ChoiceCondition<boolean>;
+  synced_when?: CompareCondition<string>;
+  item_type_override?: TextCondition;
+  $all?: ZoteroObjectWhere[];
+  $any_of?: ZoteroObjectWhere[];
+  $not?: ZoteroObjectWhere;
+  $any?: AnyRelationCondition;
+  label?: TextCondition;
+  $incoming?: NodePattern | NodePattern[];
+};
+
+export type ZoteroObjectPattern = { type: "ZoteroObject"; where?: ZoteroObjectWhere };
+
 export interface Wheres {
   Activity: ActivityWhere;
   Artwork: ArtworkWhere;
@@ -7073,6 +8112,9 @@ export interface Wheres {
   Source: SourceWhere;
   Statement: StatementWhere;
   Transfer: TransferWhere;
+  ZoteroBacked: ZoteroBackedWhere;
+  ZoteroLibrary: ZoteroLibraryWhere;
+  ZoteroObject: ZoteroObjectWhere;
 }
 
 export interface OrderFields {
@@ -7095,6 +8137,9 @@ export interface OrderFields {
   Source: "label" | "author" | "written" | "edition_price";
   Statement: "label" | "text" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day";
   Transfer: "label" | "text" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day" | "item" | "quantity";
+  ZoteroBacked: "label" | "zotero_url" | "zotero_library" | "zotero_key" | "zotero_version" | "zotero_synced_entity_version" | "item_type" | "title" | "short_title" | "creators" | "date" | "language" | "abstract" | "zotero_data" | "citation" | "bibliography" | "csl_json" | "synced_when" | "item_type_override";
+  ZoteroLibrary: "label" | "library" | "synced_version" | "last_sync" | "last_error";
+  ZoteroObject: "label" | "zotero_url" | "zotero_library" | "zotero_key" | "zotero_version" | "zotero_synced_entity_version" | "item_type" | "title" | "short_title" | "creators" | "date" | "language" | "abstract" | "zotero_data" | "citation" | "bibliography" | "csl_json" | "synced_when" | "item_type_override";
 }
 
 /** A search of one model, typed by it: `searchItems(client, search)` takes it */

@@ -32,6 +32,7 @@ class Settings(BaseSettings[MemgraphDatabaseSettings]):
         "pangloss_interface",
         "pangloss_history",
         "pangloss_sdk_server",
+        "pangloss_zotero",
     ]
 
     STORAGE: str | None = "pangloss_memgraph:storage"
@@ -56,6 +57,12 @@ class Settings(BaseSettings[MemgraphDatabaseSettings]):
 
     # (no default: it is read from the environment or `.env`)
     AUTHJWT_SECRET_KEY: str
+
+    # Zotero (`pangloss_zotero`): an API key from https://www.zotero.org/settings/keys, read
+    # from the environment or `.env`, and the libraries to keep, as "users/N" or "groups/N".
+    # With no key or no library the server does not watch Zotero
+    ZOTERO_API_KEY: str | None = None
+    ZOTERO_LIBRARIES: list[str] = []
 
 
 Settings()
