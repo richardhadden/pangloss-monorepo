@@ -53,6 +53,15 @@ The tests of `pangloss-models` are in `tests/initialisation/` (declaring and ini
 └── run_tests.sh
 ```
 
+## For agents: the Pangloss skill
+
+`.claude/skills/pangloss/` is a skill for Claude (an "Agent skill"): what Pangloss is, the design principles, a map of
+the repository, and references on modelling, the architecture, the interface and working here. Claude Code finds it
+by itself in this repository. It is kept as the code is: **a change that makes it wrong corrects it in the same
+commit** (its last section says when, and what not to put in it). `./run_tests.sh` runs
+`.claude/skills/pangloss/scripts/check_skill.py`, which fails if the skill names a path, module or name that is no
+longer there, or does not mention a package of `packages/`.
+
 ## Tips
 
 - Tests call `ModelRegistry._reset()` before each test, so classes defined inside a test function do not leak into others. Do the same in scratch scripts if you re-define classes.

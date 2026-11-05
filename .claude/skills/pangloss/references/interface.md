@@ -1,0 +1,199 @@
+# The interface
+
+What is particular to Pangloss's web interface: where things are, the rules of its code and its look, how a package
+adds to it, and how it is tested. For the Solid 2.0 API itself use the `solidjs-v2` skills; for Tailwind, `tailwind-ops`.
+The reference is `docs/interface.md` (architecture), `docs/interface-modules-implementation.md` (modules),
+`docs/interface-to-document.md` (what is built, feature by feature) and `docs/translations.md`.
+
+## Contents
+
+- Where things are
+- The stack, and what it rules out
+- How the interface knows the models
+- The layers of `interface-core`
+- Rules of the code
+- Rules of the look
+- Text: every fixed string is a slot
+- Interface modules: how a package adds pages and parts
+- Running it
+- Tests
+
+## Where things are
+
+```
+packages/pangloss-interface/src/pangloss_interface/
+  cli.py, api.py, meta.py, config.py, modules.py, workspace.py, typescript.py   the Python side
+  translations/ui.jsonc                                                          the words of core and app
+  js/                                                                            an npm workspace
+    interface-core/src/    the library (@pangloss/interface-core)
+      types/ schema/ api/ context/ primitives/ components/ registry.ts
+    interface-app/src/     the application: App.tsx, routes.ts, pages/, queries.ts, styles.css
+
+<app>/interface/           an interface module of an installed app (pangloss_dates, pangloss_review, …)
+<project>/.pangloss/interface/   the copy that is built and run. Written over by every command: never edit it
+```
+
+## The stack, and what it rules out
+
+- **Solid 2.0** (release candidates; `solid-js`, `@solidjs/web`, `@solidjs/router`, `@solidjs/vite-plugin`, released in
+  lockstep). Not Solid 1.x, not SolidStart, never React. Most examples on the web, and much of what a model
+  remembers, are 1.x: check the API in the `solidjs-v2` skill or at v2.solidjs.com before using it.
+- **Tailwind v4 for all CSS.** Utility classes only; `interface-app/src/styles.css` holds the theme.
+- **Server-rendered** (streaming SSR, then hydration) by the Solid Vite plugin. Node is the default runtime; Bun is
+  allowed.
+- **The browser talks only to the interface's server**, which passes `/api` to the Pangloss API. One origin: no CORS,
+  first-party cookies. Login is the API's cookie session, through a dialog (`useLoginDialog().openLogin()`); there is
+  no `/login` page. A server render passes the request's cookies on, so the page is rendered for the user.
+
+## How the interface knows the models
+
+`pangloss_models.export.export_models()` turns the initialised models into plain data: every model's kind, fields
+(with the JSON `key`, validators, markers, bindings), the types a relation can hold, incoming relations, traits,
+subclasses, and what other packages add through `InterfaceMeta`. `typescript.py` writes it as `generated/models.ts`.
+Pages, forms and the search form are all made from it, read through `useModels()` / `useModel(name)` and the pure
+functions of `schema/`.
+
+So a new thing the interface must know about a model is **exported from Python**, typed in
+`interface-core/src/types/models.ts`, and guarded by `test_models_match_typescript.py`. The interface does not keep
+its own description of a model. The models are exported when a command starts: restart `pangloss interface dev`
+after changing them.
+
+## The layers of `interface-core`
+
+```
+types  <  schema  <  api  <  context  <  primitives  <  components  <  registry  <  index
+```
+
+A layer imports only from layers below it; the library never imports the application or a module. `npm run
+check:layers` (and `pangloss interface check`) fails otherwise. `schema/` is pure functions over the definitions, and
+is where logic goes so that it can be tested without a DOM.
+
+**A component that could be replaced is never imported by another**: it is taken from the map,
+`useComponent("ReferenceChip")`. The application builds the map (`createComponentMap`), so a project's replacement is
+used everywhere, inside the library's own components too.
+
+## Rules of the code
+
+Components run on the server as well as in the browser, and Solid 2.0's development build stops on mistakes its
+production build lets through.
+
+- Never destructure props; read `props.x` where it is used. A snapshot of a prop in a component body needs `untrack`.
+- No `window`, `document` or `localStorage` outside an effect or `onSettled`. No per-request state at module level.
+- Choose between elements with `<Show when fallback>`, never a ternary or `&&` in JSX. Conditional classes use the
+  object form, one class per key; a ternary is only for a plain attribute value.
+- Effects are split: `createEffect(() => tracked, (value) => { … })`. A signal read in the second function needs
+  `untrack`.
+- **Never write a signal while rendering** (in a component body, an `Errored` fallback, a `ref` that sets state). The
+  dev build halts the whole application. Writes go in event handlers, the second function of an effect, `onSettled`
+  or a microtask.
+- **Make no reactive primitive inside `onSettled`**, and do not read the router's `useSearchParams()` there (it makes
+  some lazily): read it in the component body.
+- An async read is a `createMemo` shown inside `<Loading>`; errors in `<Errored>` (whose fallback gets an accessor,
+  `err()`). Saves are actions. Setters are batched: a read straight after a write is the old value.
+- `For` gives the item as a plain value and the index as an accessor.
+- A module-level memo that depends on who is logged in reads `useSessionKey()`, so it is fetched again on login and
+  logout.
+- Decide what a logged-in user sees with `userIsLoggedIn()`.
+
+Known traps of the current release candidate are listed in `docs/interface-refactoring.md`.
+
+## Rules of the look
+
+- **An item shown as a reference is a `ReferenceChip`** (`useComponent("ReferenceChip")`, with `type`, `label`,
+  `href`): in lists of what refers to something, dialogs, panels, toasts, search results. Never a plain link, never
+  "TYPE label" as text. The user asked for this to hold everywhere unless they say otherwise for a case.
+- Text of the frame (not content) is `uppercase font-semibold`. Every icon has `select-none`.
+- Colours of types come from `InterfaceMeta(colour=...)`: blue for entities and green for documents by default.
+- Extract a repeated piece into a component, but ask the user before adding a new shared one.
+- The user works on a retina screen and sees half-pixel faults. `border-[0.5px]` draws a full CSS pixel in Chrome,
+  so nested boxes must not rely on a half-pixel negative margin to overlap: draw the outer hairline as an
+  `after:absolute after:inset-0` overlay. Check thickness in a screenshot's pixels, not by eye. Vertical rhythm was
+  reviewed in `notes/vertical-rhythm-2026-11-03.md`.
+- Look at what you built. Take a screenshot of the page with real data (the demo's models) before saying a visual
+  change is done.
+
+## Text: every fixed string is a slot
+
+No English in a component. A string a person reads or hears (labels, placeholders, tooltips, `aria-label`s) is
+`t("slot_name")` from `useTranslations()`, with its texts in a `ui.jsonc`:
+
+- core and the application: `packages/pangloss-interface/src/pangloss_interface/translations/ui.jsonc`;
+- an interface module: **its own app's** `translations/ui.jsonc` (`review_*` in `pangloss_review`, and so on);
+- a project's own words and overrides: `<project>/translations/ui.jsonc`.
+
+Give each new slot its text in every language the file has (English, German and French at present);
+`pangloss interface translations check` reports a slot without one. Names of models, fields and enum members come
+from `models.jsonc`, which `pangloss interface translations generate` keeps in step with the models while keeping
+manual edits. See `docs/translations.md`.
+
+## Interface modules: how a package adds pages and parts
+
+An installed app ships a small Solid library in `<app>/interface/` (`pangloss interface new-module <app>`). Its
+`src/index.ts` is a manifest:
+
+```ts
+export default defineModule({
+  name: "pangloss_calendar",              // the app's name
+  requires: [],                           // other modules it uses
+  components: { MonthPage: () => import("./components/MonthPage") },   // lazy
+  routes: [{ path: "/calendar/:calendar/:year/:month", component: "MonthPage" }],
+  // also: collapseRules, consoleActions, newItemActions, itemSections, incomingViews
+});
+```
+
+| The package wants | It uses |
+|---|---|
+| Its own list page, item page, view card or edit card for a model | `InterfaceMeta(list_page="app:Name", item_page=…, view_card=…, edit_card=…)` on the model |
+| A page not about one type (a month, a tree, a queue) | `routes` in the manifest |
+| Links and sections in the navigation bar | `<app>/interface_config.py`: `config = InterfaceConfig(nav=[NavModel(...), NavLink(...)], sections=[...])` |
+| A button or panel in the console of a page | `consoleActions` |
+| A button on the form of a new item that fills it in, or sends it another way | `newItemActions` (`NewItemForm`: `get`, `set`, `sendBy`) |
+| A section after an item's own contents | `itemSections` |
+| Another way to show what refers to an item (a timeline) | `incomingViews` (`takes` chooses the items; the rest stay by field) |
+| A rule for folding a wrapper into the one thing it holds | `collapseRules`, named from `InterfaceMeta(collapse="app:rule")` |
+
+Other `InterfaceMeta` options: `colour`, `nav_section`, `collapse=True | Collapse(...)`, `headless=True` (a reified
+relation shown without its head bar where it is a field's only, single, required type). `InterfaceMeta` is resolved
+field by field through the parents: a subclass that sets only `colour` keeps its parent's `item_page`.
+
+A project turns off what a module adds with `InterfaceConfig(disabled=["app:key"])`.
+
+The rule that matters: **`interface-core` has only generic hooks.** What belongs to a package (the timeline to dates,
+the Derived section to derived, the review panel to review) lives in that package's module, with its strings and its
+tests. If core would have to know a package's trait, field names or API to do something, add or use a hook instead.
+
+A module may import `@pangloss/interface-core`, Solid, the router and its own dependencies; not the application, not
+another module's files. `pangloss interface check` type-checks the modules, checks the layers, and reports a model
+that names a component no manifest has. `pangloss interface modules` lists what is installed.
+
+## Running it
+
+```sh
+pangloss dev                       # the API, port 8000
+pangloss interface dev             # the interface with hot reload, port 3000; passes /api on
+pangloss interface dev --link      # the same, run from the package's source: for working on the interface itself
+pangloss interface build && pangloss interface serve
+pangloss interface check           # types with the project's models, layers, modules
+```
+
+Run them in a project (the demo: from `pangloss-demo/`, as `../.venv/bin/pangloss …`). The user may have their own
+dev servers on 3000 and 8000: use them if they are up, and do not stop them. The demo's password is not known to
+you: to see pages that need a login, use the e2e stack with its own user, not a guess.
+
+## Tests
+
+| What | Where | Run |
+|---|---|---|
+| Logic and components of core and the application | `*.test.ts(x)` beside the source (Vitest; components start `// @vitest-environment happy-dom` and use `render` from `@solidjs/web`) | `npm test` in `packages/pangloss-interface/src/pangloss_interface/js`; also run by pytest (`test_javascript.py`, with `typecheck` and `check:layers`) |
+| A module's own tests | `<app>/interface/src/**.test.ts(x)` | They have no `node_modules` in the source: run them in a prepared workspace (a project's `.pangloss/interface`, `npx vitest run --root modules/<app>`) whose `interface-core` is a fresh copy |
+| The Python side (export, meta, config, modules, translations) | `packages/pangloss-interface/tests/` | `uv run pytest packages/pangloss-interface` |
+| The built interface in a browser | `e2e/` (Playwright; a real project, API and the test Memgraph) | `uv run pytest e2e` |
+
+- **`e2e/COVERAGE.md` is kept current**: a new page or feature gets a row; a new test changes its row and names the
+  test.
+- **The e2e stack is a production build**, which does not show Solid's development-only errors. Any new page is also
+  loaded in `e2e/test_dev_mode.py` (the `dev_url` fixture), which looks for errors in the page as well as thrown ones.
+  All tests passing has, before now, coexisted with a dev server that would not render.
+- Keep e2e tests few: what only a browser shows (drag and drop, hydration, built chunks). Logic belongs in Vitest and
+  API tests. Notes on writing them are in `e2e/README.md`.
+- In a module's Vitest, a lazy view needs `vi.waitFor`, not one tick.

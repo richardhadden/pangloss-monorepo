@@ -50,6 +50,9 @@ if [ -z "$args" ]; then
     run "ruff (format, pyflakes, bugbear)" sh -c 'uv run ruff format --check packages && uv run ruff check --select F,B packages'
     # (the static types, of the whole repository: what is relaxed, and where, is in `pyproject.toml`, `[tool.ty]`)
     run "ty" uv run ty check
+    # (the skill that tells an agent how Pangloss works, `.claude/skills/pangloss`: the paths, modules and packages
+    # it names are still there. What it says is kept true by hand, with the change that makes it untrue)
+    run "the Pangloss skill" uv run python .claude/skills/pangloss/scripts/check_skill.py
     # (everything: the Neo4j package has a run of its own)
     run "packages (Memgraph)" uv run pytest --dist=loadgroup -n auto --ignore=packages/pangloss-neo4j
 else
