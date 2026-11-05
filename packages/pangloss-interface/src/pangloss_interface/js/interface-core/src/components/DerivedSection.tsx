@@ -1,5 +1,6 @@
 import { createMemo, createSignal, For, Loading, Show } from "solid-js";
 import { useApi, useTranslations } from "../context";
+import { SectionBar } from "../primitives";
 import { ReferenceChip } from "./ReferenceChip";
 import { fieldGridClass, fieldRowClass, smallButtonClass } from "./form/styles";
 
@@ -267,10 +268,8 @@ export function DerivedSection(props: DerivedSectionProps) {
   const classes = createMemo(() => Object.entries(props.derived ?? {}));
   return (
     <Show when={classes().length > 0}>
-      <section class="mt-10 border-t-[0.5px] border-slate-400/70 pt-4">
-        <h2 class="mb-4 text-xs font-semibold text-slate-500 uppercase">
-          {t("derived_heading", "Derived")}
-        </h2>
+      <section>
+        <SectionBar>{t("derived_heading", "Derived")}</SectionBar>
         <dl class={fieldGridClass}>
           <For each={classes()}>
             {([name, section]) => (

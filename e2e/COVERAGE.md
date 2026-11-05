@@ -3,7 +3,7 @@
 Keep this current: when a page or feature is added to the interface (or a test is added here), change its row.
 ✅ tested · 🚧 partly · ⬜ not yet · — not built, so nothing to test
 
-139 tests, about 307 s. The e2e project (`conftest.py`) has `Person` (`has_role: list[Role]`), `Role` (`has_type`), `RoleType` (a
+140 tests, about 310 s. The e2e project (`conftest.py`) has `Person` (`has_role: list[Role]`), `Role` (`has_type`), `RoleType` (a
 typology, also a `Role`) with Clerk > Secretary and Advisor, and `Statement` (a document: `text`, `about: Person`). The `data`
 fixture adds Maximilian (his secretary: a `Role` of the type Secretary), Marie of Burgundy (her advisor, and a statement
 about her "held court at Ghent") and Charles the Bold (no role); `types` has only the types; `stack` has one admin user.
@@ -185,7 +185,7 @@ bishop's appointment in 1510, a notary's not before 1490 (`notAfter` not known),
 
 | Area | State | Where / notes |
 | --- | --- | --- |
-| Entity page: "By field / By date" (only when something that refers to it is dateable); by date, one row each in order, the date (`dateText`) and the field on the left, the chip on the right; "Date unknown"; "Not dated" by field; the choice kept in `localStorage` | ✅ | `test_dateable.py::test_what_refers_to_a_person_is_shown_by_date`; dev build: `test_dev_mode.py::test_what_refers_to_a_person_by_date`; order, periods, unknown: Vitest (`ItemContents.test.tsx`, `dating.test.ts`) |
+| Entity page, what refers to it: a "Sort by date" toggle in the console (only when something that refers to it is dateable; kept in `localStorage`); sorted, the item's values and what cannot have a date (no heading), then a "Timeline" section under a bar: under each year, the date in words (from `dateText`) and the field on the left, the chip on the right, "Date unknown" last; a sticky vertical timeline with a bar per year that scrolls to a year (keys, drag on a track that moves as the page scrolls) and follows the page | ✅ | `test_dateable.py::test_what_refers_to_a_person_is_shown_by_date`, `::test_the_timeline_is_dragged_to_a_year_and_follows_the_page`; dev build: `test_dev_mode.py::test_what_refers_to_a_person_by_date`; order, words, keys: Vitest (`ItemContents.test.tsx`, `Console.test.tsx`, `dating.test.ts`) |
 | Entity page: the slider of years (From / To) narrows the dated rows ("1 of 2"); a period is in the years if any of it is | ✅ | the same tests |
 | A reference with fields only in the database (a dateable document's copy of its date) is still a chip; the form does not offer them | ✅ | `test_dateable.py` (both tests); Vitest (`ItemContents.test.tsx`, `ItemForm.test.tsx`) |
 | Date editor: a range's ends are "Not before" and "Not after", each with a "Not known" button (pressed: an `UnknownDate`, the parts gone; again: a date); the other end's button is disabled while one is pressed; it reads "not before 1490" | ✅ | `test_dateable.py::test_an_end_of_a_range_that_is_not_known_is_a_button`; Vitest in the module (`DateEditor.test.tsx`, `format.test.ts`) |

@@ -1,21 +1,23 @@
-import { createMemo, createSignal, For, Match, onSettled, Show, Switch } from "solid-js";
+import { createEffect, createMemo, createSignal, For, Match, onCleanup, Show, Switch } from "solid-js";
 import type { ParentProps } from "solid-js";
 import {
   useComponent,
+  useIncomingOrder,
   useModels,
   useModules,
   useTranslations,
 } from "../context";
-import { kindRule, kindTint, spaceTint } from "../primitives";
+import { kindRule, kindTint, SectionBar, spaceTint } from "../primitives";
 import { contextTrail } from "../api";
 import type { ContextLabel } from "../api";
 import {
   arrangeByDate,
+  byYear,
   collapsedView,
+  dateInWords,
   edgeModelFor,
   getModel,
   headlessIn,
-  inYears,
   isDateable,
   yearSpan,
 } from "../schema";
@@ -27,6 +29,7 @@ import type {
 } from "../types";
 import { Customised } from "./Customised";
 import { SpaceBands } from "./SpaceBands";
+import { Timeline } from "./Timeline";
 import {
   fieldGridClass,
   fieldRowClass,
@@ -170,263 +173,196 @@ function Fields(props: {
   // (only on the item's own page, and only if something that refers to it can have a date)
   const canDate = () =>
     props.depth === 0 && entries().some((entry) => isDateable(definitions, entry.item.type));
-  const order = useIncomingOrder();
-  return (
-    <dl class={fieldGridClass}>
-      <For each={props.model?.fields ?? []}>
-        {(field) => (
-          <Show
-            when={
-              field.key !== props.exclude &&
-              !field.dbField &&
-              !isEmpty(props.value[field.key])
-            }
-          >
-            <Row name={fieldName(props.model!.name, field.name)}>
-              <Value
-                value={props.value[field.key]}
-                field={field}
-                depth={props.depth}
-              />
-            </Row>
-          </Show>
-        )}
-      </For>
-      <Show when={canDate()}>
-        <IncomingOrderSwitch order={order.order()} onChange={order.setOrder} />
-      </Show>
-      <Show
-        when={canDate() && order.order() === "date"}
-        fallback={
-          <For each={props.model?.incoming ?? []}>
-            {(incoming) => (
-              <Show when={!isEmpty(props.value[incoming.key])}>
-                <Row name={incomingName(props.model!.name, incoming.name)} incoming>
-                  <Value
-                    value={props.value[incoming.key]}
-                    depth={props.depth}
-                    asChip
-                  />
-                </Row>
-              </Show>
-            )}
-          </For>
-        }
-      >
-        <IncomingByDate entries={entries()} depth={props.depth} />
-      </Show>
-    </dl>
-  );
-}
-
-type IncomingOrder = "field" | "date";
-const INCOMING_ORDER_KEY = "pangloss.incomingOrder";
-
-/** How what refers to an item is shown, remembered from one page to the next (read once settled, so that the
- * server-side render and the first client render agree) */
-function useIncomingOrder() {
-  const [order, setOrderSignal] = createSignal<IncomingOrder>("field");
-  onSettled(() => {
-    try {
-      if (localStorage.getItem(INCOMING_ORDER_KEY) === "date") setOrderSignal("date");
-    } catch {
-      // (storage unavailable: the choice is just not remembered)
-    }
-  });
-  const setOrder = (next: IncomingOrder) => {
-    setOrderSignal(next);
-    try {
-      localStorage.setItem(INCOMING_ORDER_KEY, next);
-    } catch {
-      // (as above)
-    }
-  };
-  return { order, setOrder };
-}
-
-/** Two buttons, one pressed: what refers to the item by the field it is in, or by date */
-function IncomingOrderSwitch(props: { order: IncomingOrder; onChange: (order: IncomingOrder) => void }) {
-  const { t } = useTranslations();
-  const button = (order: IncomingOrder, text: string) => (
-    <button
-      type="button"
-      class={[
-        "px-2.5 py-1 text-xs first:rounded-l-sm last:rounded-r-sm",
-        props.order === order
-          ? "bg-slate-600 text-white"
-          : "bg-white text-slate-600 hover:bg-slate-100",
-      ]}
-      aria-pressed={props.order === order ? "true" : "false"}
-      onClick={() => props.onChange(order)}
-    >
-      {text}
-    </button>
-  );
-  return (
-    <div class={["col-span-2 flex items-center gap-3 border-t pt-6", fieldRuleClass]}>
-      <span class="text-xs font-semibold text-slate-500 uppercase">
-        {t("incoming_order", "What refers to it")}
-      </span>
-      <div
-        role="group"
-        aria-label={t("incoming_order", "What refers to it")}
-        class="inline-flex divide-x divide-slate-300 rounded-sm border border-slate-300"
-      >
-        {button("field", t("incoming_by_field", "By field"))}
-        {button("date", t("incoming_by_date", "By date"))}
-      </div>
-    </div>
-  );
-}
-
-/**
- * What refers to the item, by date: each dated one on a row of its own, in order, with its date and
- * the field it is in on the left (where a field's name is) and its chip on the right; a slider of
- * years beside them, which narrows the rows to a span of years. Then those whose date is not known,
- * and last those of a kind that has no date, by field as they are otherwise.
- */
-function IncomingByDate(props: { entries: IncomingEntry[]; depth: number }) {
-  const { t } = useTranslations();
-  const definitions = useModels();
-  const arranged = createMemo(() => arrangeByDate(props.entries, definitions));
-  const span = createMemo(() => yearSpan(arranged().dated));
-  // (the years chosen; none chosen is the whole span, which follows the items)
-  const [from, setFrom] = createSignal<number>();
-  const [to, setTo] = createSignal<number>();
-  const first = () => Math.max(from() ?? span()?.[0] ?? 0, span()?.[0] ?? 0);
-  const last = () => Math.min(to() ?? span()?.[1] ?? 0, span()?.[1] ?? 0);
-  const shown = createMemo(() =>
-    arranged().dated.filter((entry) => inYears(entry, first(), last())),
-  );
+  const incoming = useIncomingOrder();
+  // (the console offers to sort by date for as long as there is something to sort)
+  createEffect(canDate, (can) => (can ? incoming.offer() : undefined));
+  const byDate = () => canDate() && incoming.order() === "date";
+  const arranged = createMemo(() => arrangeByDate(entries(), definitions));
+  // (what cannot have a date, by the relation it is in)
   const undatedByField = createMemo(() => {
     const groups = new Map<string, IncomingEntry[]>();
-    for (const entry of arranged().undated)
-      groups.set(entry.name, [...(groups.get(entry.name) ?? []), entry]);
+    for (const entry of arranged().undated) groups.set(entry.name, [...(groups.get(entry.name) ?? []), entry]);
     return [...groups.entries()];
   });
   return (
     <>
-      <Show when={arranged().dated.length > 0}>
-        <div class="col-span-2 flex items-start gap-6 pt-1">
-          <div class={["grid min-w-0 flex-1 grid-cols-[10rem_minmax(0,1fr)] gap-x-6"]} data-testid="incoming-by-date">
-            <For each={shown()}>
-              {(entry) => <DatedRow entry={entry} depth={props.depth} />}
-            </For>
-            <Show when={shown().length === 0}>
-              <p class="col-span-2 py-3 text-sm text-slate-500">
-                {t("incoming_none_in_years", "Nothing in these years")}
-              </p>
-            </Show>
-          </div>
-          <Show when={span() && span()![0] < span()![1]}>
-            <aside
-              class="sticky top-28 flex w-40 shrink-0 flex-col gap-3 rounded-sm border border-slate-300 p-3"
-              aria-label={t("incoming_years", "Years")}
+      <dl class={fieldGridClass}>
+        <For each={props.model?.fields ?? []}>
+          {(field) => (
+            <Show
+              when={
+                field.key !== props.exclude &&
+                !field.dbField &&
+                !isEmpty(props.value[field.key])
+              }
             >
-              <YearSlider
-                label={t("incoming_from_year", "From")}
-                min={span()![0]}
-                max={span()![1]}
-                value={first()}
-                onInput={(year) => {
-                  setFrom(year);
-                  if (year > last()) setTo(year);
-                }}
-              />
-              <YearSlider
-                label={t("incoming_to_year", "To")}
-                min={span()![0]}
-                max={span()![1]}
-                value={last()}
-                onInput={(year) => {
-                  setTo(year);
-                  if (year < first()) setFrom(year);
-                }}
-              />
-              <p class="text-xs text-slate-500" data-testid="incoming-shown">
-                {t("incoming_shown", "{shown} of {total}", {
-                  shown: shown().length,
-                  total: arranged().dated.length,
-                })}
-              </p>
-            </aside>
-          </Show>
-        </div>
-      </Show>
-      <Show when={arranged().unknown.length > 0}>
-        <Row name={t("incoming_date_unknown", "Date unknown")} incoming>
-          <div class="grid w-full grid-cols-[10rem_minmax(0,1fr)] gap-x-6 gap-y-3" data-testid="incoming-date-unknown">
-            <For each={arranged().unknown}>
-              {(entry) => (
-                <>
-                  <span class="pt-1 text-xs font-semibold text-slate-500 uppercase">{entry.name}</span>
-                  <div class="flex min-w-0 flex-wrap items-center gap-2">
-                    <Value value={entry.item} depth={props.depth} asChip />
-                  </div>
-                </>
-              )}
-            </For>
-          </div>
-        </Row>
-      </Show>
-      <Show when={undatedByField().length > 0}>
-        <div class={["col-span-2 border-t pt-6 text-xs font-semibold text-slate-500 uppercase", fieldRuleClass]}>
-          {t("incoming_not_dated", "Not dated")}
-        </div>
-        <For each={undatedByField()}>
-          {([name, group]) => (
-            <Row name={name} incoming>
-              <Value value={group.map((entry) => entry.item)} depth={props.depth} asChip />
-            </Row>
+              <Row name={fieldName(props.model!.name, field.name)}>
+                <Value
+                  value={props.value[field.key]}
+                  field={field}
+                  depth={props.depth}
+                />
+              </Row>
+            </Show>
           )}
         </For>
+        <Show
+          when={byDate()}
+          fallback={
+            <For each={props.model?.incoming ?? []}>
+              {(incoming) => (
+                <Show when={!isEmpty(props.value[incoming.key])}>
+                  <Row name={incomingName(props.model!.name, incoming.name)} incoming>
+                    <Value
+                      value={props.value[incoming.key]}
+                      depth={props.depth}
+                      asChip
+                    />
+                  </Row>
+                </Show>
+              )}
+            </For>
+          }
+        >
+          <For each={undatedByField()}>
+            {([name, group]) => (
+              <Row name={name} incoming>
+                <Value value={group.map((entry) => entry.item)} depth={props.depth} asChip />
+              </Row>
+            )}
+          </For>
+        </Show>
+      </dl>
+      <Show when={byDate()}>
+        <IncomingTimeline dated={arranged().dated} unknown={arranged().unknown} depth={props.depth} />
       </Show>
     </>
   );
 }
 
-/** A dated item: its date and the field it is in on the left, its chip on the right */
-function DatedRow(props: { entry: IncomingEntry; depth: number }) {
+// (the band near the top of the page in which a year's heading is the one the timeline is at: below the bars)
+const READING_BAND = "-112px 0px -60% 0px";
+
+/**
+ * What refers to the item and has a date, a section of its own after the item's facts (and what cannot have a date): in
+ * order of date under the year it is in, each with its date in words and its field on the left and its chip on the
+ * right, and last those whose date is not known. A timeline beside them, with a bar for how many each year has, scrolls
+ * to a year (and follows the page as it is scrolled).
+ */
+function IncomingTimeline(props: { dated: IncomingEntry[]; unknown: IncomingEntry[]; depth: number }) {
+  const { t, language } = useTranslations();
+  const span = createMemo(() => yearSpan(props.dated));
+  const years = createMemo(() => byYear(props.dated));
+  const counts = createMemo(() => years().map(([year, group]): [number, number] => [year, group.length]));
+
+  // The timeline: the year it is at, and the headings of the years it scrolls to
+  const [at, setAt] = createSignal<number>();
+  const position = () => at() ?? years()[0]?.[0] ?? 0;
+  const headings = new Map<number, HTMLElement>();
+  let dragging = false;
+  let observer: IntersectionObserver | undefined;
+  const heading = (year: number) => (element: HTMLElement) => {
+    headings.set(year, element);
+    if (typeof IntersectionObserver === "undefined") return;
+    // (the page scrolled: the timeline is at the year whose heading is near the top, unless it is being dragged)
+    observer ??= new IntersectionObserver(
+      (seen) => {
+        if (dragging) return;
+        const year = seen.find((entry) => entry.isIntersecting)?.target.getAttribute("data-year");
+        if (year) setAt(Number(year));
+      },
+      { rootMargin: READING_BAND },
+    );
+    observer.observe(element);
+  };
+  onCleanup(() => observer?.disconnect());
+  // (the first year from `year` on that has something; the last, if none has)
+  const yearWithItems = (year: number) => years().find(([some]) => some >= year)?.[0] ?? years().at(-1)?.[0];
+  const goTo = (year: number) => {
+    setAt(year);
+    const target = yearWithItems(year);
+    if (target !== undefined) headings.get(target)?.scrollIntoView?.({ block: "start" });
+  };
+  // (a drag that ends on a year with nothing in it: the thumb goes to the year the page went to)
+  const onDrag = (now: boolean) => {
+    dragging = now;
+    if (!now) setAt(yearWithItems(position()));
+  };
+
+  return (
+    <section>
+      <SectionBar>{t("incoming_timeline", "Timeline")}</SectionBar>
+      <div class="flex items-start gap-8">
+        <div class="grid min-w-0 flex-1 grid-cols-[10rem_minmax(0,1fr)] gap-x-6" data-testid="incoming-by-date">
+          <For each={years()}>
+            {([year, group]) => (
+              <>
+                <div
+                  ref={heading(year)}
+                  data-year={year}
+                  class="col-span-2 scroll-mt-28 pt-5 pb-1 text-xs font-semibold text-slate-400 tabular-nums first:pt-0"
+                >
+                  {year}
+                </div>
+                <For each={group}>
+                  {(entry) => (
+                    <DatedRow
+                      entry={entry}
+                      date={dateInWords(String(entry.item.dateText ?? ""), { language: language(), t })}
+                      depth={props.depth}
+                    />
+                  )}
+                </For>
+              </>
+            )}
+          </For>
+          <Show when={props.unknown.length > 0}>
+            <div class="col-span-2 grid grid-cols-subgrid" data-testid="incoming-date-unknown">
+              <div class="col-span-2 pt-5 pb-1 text-xs font-semibold text-slate-400">
+                {t("incoming_date_unknown", "Date unknown")}
+              </div>
+              <For each={props.unknown}>{(entry) => <DatedRow entry={entry} depth={props.depth} />}</For>
+            </div>
+          </Show>
+        </div>
+        <Show when={span() && span()![0] < span()![1]}>
+          {/* (as tall as the list, but no taller than the window, in which it stays while the list scrolls) */}
+          <div class="shrink-0 self-stretch">
+            <div class="sticky top-28 h-full max-h-[calc(100vh-10rem)] min-h-40 py-2">
+              <Timeline
+                from={span()![0]}
+                to={span()![1]}
+                value={position()}
+                onChange={goTo}
+                onDrag={onDrag}
+                counts={counts()}
+                label={t("incoming_go_to_year", "Go to year")}
+              />
+            </div>
+          </div>
+        </Show>
+      </div>
+    </section>
+  );
+}
+
+/** What refers to the item, dated: the field it is in and, under it, its date (in words) on the left, its chip on the right */
+function DatedRow(props: { entry: IncomingEntry; date?: string; depth: number }) {
   return (
     <div
-      class={["col-span-2 grid grid-cols-subgrid items-center border-t py-3 first:border-t-0", fieldRuleClass]}
+      class={["col-span-2 grid grid-cols-subgrid items-center border-t py-2.5", fieldRuleClass]}
       data-testid="dated-item"
     >
-      <div class="flex flex-col">
-        <span class="text-sm text-slate-800 tabular-nums">{String(props.entry.item.dateText)}</span>
+      <div class="flex flex-col gap-0.5">
         <span class="text-xs font-semibold text-slate-500 uppercase">{props.entry.name}</span>
+        <Show when={props.date}>
+          <span class="text-[0.7rem] text-slate-500">{props.date}</span>
+        </Show>
       </div>
       <div class="flex min-w-0 flex-wrap items-center gap-2">
         <Value value={props.entry.item} depth={props.depth} asChip />
       </div>
     </div>
-  );
-}
-
-function YearSlider(props: {
-  label: string;
-  min: number;
-  max: number;
-  value: number;
-  onInput: (year: number) => void;
-}) {
-  return (
-    <label class="flex flex-col gap-1">
-      <span class="flex items-baseline justify-between text-xs font-semibold text-slate-500 uppercase">
-        {props.label}
-        <span class="text-sm font-normal text-slate-800 tabular-nums normal-case">{props.value}</span>
-      </span>
-      <input
-        type="range"
-        class="w-full accent-slate-600"
-        min={props.min}
-        max={props.max}
-        step={1}
-        value={props.value}
-        aria-label={props.label}
-        onInput={(event) => props.onInput(Number(event.currentTarget.value))}
-      />
-    </label>
   );
 }
 

@@ -95,3 +95,38 @@ Plan written 2026-11-05 on branch `refactor-dates`. The decisions were made with
 - The demo's `Statement` is `Dateable` (migration `demo_app` `0013`, with `fill_in_dateables`). The demo database has **not** been migrated:
   run `pangloss migrate` in `pangloss-demo`. That applies `pangloss_dates` `0002` (it renames the ends of the ranges) and `demo_app` `0013`.
 
+
+## Second round: the order in the console, a timeline (2026-11-05)
+
+The owner did not like the "By field | By date" switch in the page. Changes asked:
+
+- **The choice goes in the console**: one toggle, *Sort by date* (pressed: sorted by date; not: grouped by relation; the
+  owner asked for a toggle rather than two buttons), shown on an item's page when something that refers to it is dateable. The state is shared by the console and the page
+  through the console context (`useIncomingOrder`): the page's `ItemContents` *offers* the choice while it has dateable
+  items (as a `Console` registers itself), and the console shows the buttons while it is offered. Still kept in
+  `localStorage`.
+- **Sorted by date**, the page is: (1) the item's own values, with no header; (2) what refers to it that is not dateable,
+  under the header **Undated**, grouped by field; (3) the dateable items in date order, the date **in words** on the left
+  (with the field under it) and the chip on the right. Those whose date is not known come last, as "Date unknown".
+- **Date in words**: what is stored (`date_text`) has no words, but is made to be read back: `1500-03-02`, `≥ 1490`,
+  `1500–1502`, `1500–…`, `↻ …`. `dateInWords(text, words)` in interface-core says it with the `date_*` texts that are
+  already in the core translations ("2 March 1500", "not before 1490", "1500 to 1502"). Nothing new is stored.
+- **One range slider**: the two "From" / "To" sliders become one slider with two thumbs (two native range inputs on one
+  track, so the keyboard, screen readers and Playwright's `fill` work as they did; still named "From" and "To").
+- **A vertical timeline** (adapted from manmax-frontend's `VerticalTimeline`), sticky beside the dated items: a track of
+  the years in the span the range slider chose, a thumb with the year beside it, and for each year with items a bar as long
+  as its count (scaled to the year with most). Dragging the thumb (or the keys) scrolls the list to the top of that year:
+  the dated items have a small heading per year (as in manmax), the scroll target. Scrolling the page moves the thumb
+  (an `IntersectionObserver` on the headings, as in manmax), but not while it is being dragged.
+- Styling: the project's slate colours, hairlines and `scroll-mt-28`, not manmax's greens; no CSS files.
+- Cleared up: `IncomingOrderSwitch`, `YearSlider` and the `incoming_order` / `incoming_by_*` texts go.
+
+Tests: vitest for `dateInWords`, the year groups, the range slider and the timeline (keys move it, a change asks to scroll),
+and the console buttons; `ItemContents` tests for the three parts in order; e2e (`test_dateable.py`, `test_dev_mode.py`).
+
+## Third round: sections as bars, no filter of years (2026-11-05)
+
+- An item's page sorted by date has three sections, well apart: the item's **facts** (its own values and what refers to it
+  that cannot have a date, with no heading), the **Timeline** (what has a date) and **Derived** (pangloss-derived). The
+  last two have a heading that is a bar across the page, as the console is (`SectionBar` in `primitives`).
+- The slider of years is gone: the timeline is enough to move about the years. It spans all the dated items.

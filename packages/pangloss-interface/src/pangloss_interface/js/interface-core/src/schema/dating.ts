@@ -53,7 +53,7 @@ export function arrangeByDate(entries: IncomingEntry[], definitions: ModelDefini
   return arranged;
 }
 
-/** The (proleptic Gregorian) year of a day number: for the year slider, which needs no more than the year */
+/** The (proleptic Gregorian) year of a day number: for the timeline, which needs no more than the year */
 export function yearOfDay(day: number): number {
   // (Richards' algorithm, as in pangloss_dates.calendar)
   const f = day + 1401 + Math.floor((Math.floor((4 * day + 274277) / 146097) * 3) / 4) - 38;
@@ -63,7 +63,7 @@ export function yearOfDay(day: number): number {
   return Math.floor(e / 1461) - 4716 + Math.floor((12 + 2 - month) / 12);
 }
 
-/** The first and the last year of the dated entries (a period to the year its end sorts by) */
+/** The first and the last year of the dated entries (a period to the year its end sorts by): the span of the timeline */
 export function yearSpan(dated: IncomingEntry[]): [number, number] | undefined {
   if (dated.length === 0) return undefined;
   const firsts = dated.map((entry) => yearOfDay(sortDay(entry)));
@@ -71,7 +71,67 @@ export function yearSpan(dated: IncomingEntry[]): [number, number] | undefined {
   return [Math.min(...firsts), Math.max(...lasts)];
 }
 
-/** Whether an entry falls in the years from `from` to `to` (a period, if any of it does) */
-export function inYears(entry: IncomingEntry, from: number, to: number): boolean {
-  return yearOfDay(sortDay(entry)) <= to && yearOfDay(endDay(entry)) >= from;
+/** The year an entry is put under in the list (the year of the day it sorts by) */
+export function yearOf(entry: IncomingEntry): number {
+  return yearOfDay(sortDay(entry));
+}
+
+/** The dated entries under their years, in the order they are in */
+export function byYear(dated: IncomingEntry[]): [number, IncomingEntry[]][] {
+  const years: [number, IncomingEntry[]][] = [];
+  for (const entry of dated) {
+    const year = yearOf(entry);
+    const last = years.at(-1);
+    if (last && last[0] === year) last[1].push(entry);
+    else years.push([year, [entry]]);
+  }
+  return years;
+}
+
+/** The words `dateInWords` says a date in: the language (for the names of the months) and the interface's `date_*` texts */
+export interface DateWords {
+  language: string;
+  t: (key: string, english: string, params?: Record<string, string | number>) => string;
+}
+
+function monthName(month: number, language: string): string {
+  try {
+    return new Intl.DateTimeFormat(language, { month: "long", timeZone: "UTC" }).format(Date.UTC(2000, month - 1, 1));
+  } catch {
+    return String(month);
+  }
+}
+
+const EXACT = /^(-?\d+)(?:-(\d{2}))?(?:-(\d{2}))?$/;
+
+/** The two ends of `a–b`, where `a` may be a range in brackets (`[a–b]–c`, the start of a period) */
+function ends(text: string): [string, string] | undefined {
+  const at = text.startsWith("[") ? text.indexOf("]–") + 1 : text.indexOf("–");
+  return at > 0 ? [text.slice(0, at), text.slice(at + 1)] : undefined;
+}
+
+/**
+ * The date a `Dateable` item carries with no words (its `dateText`: `1500-03-02`, `≥ 1490`, `1500–1502`, `1500–…`,
+ * `↻ 1500–1520`, `?`) said in words: "2 March 1500", "not before 1490", "1500 to 1502". What it does not know (an
+ * EDTF date) is left as it is.
+ */
+export function dateInWords(text: string, words: DateWords): string {
+  const { t } = words;
+  if (text === "?") return t("date_unknown", "unknown");
+  if (text === "…") return t("date_ongoing", "ongoing");
+  if (text.startsWith("↻ ")) return `↻ ${dateInWords(text.slice(2), words)}`;
+  if (text.startsWith("[") && text.endsWith("]") && ends(text) === undefined)
+    return `(${dateInWords(text.slice(1, -1), words)})`;
+  if (text.startsWith("≥ ")) return t("date_not_before_reads", "not before {date}", { date: dateInWords(text.slice(2), words) });
+  if (text.startsWith("≤ ")) return t("date_not_after_reads", "not after {date}", { date: dateInWords(text.slice(2), words) });
+  const exact = EXACT.exec(text);
+  if (exact) {
+    const [, year, month, day] = exact;
+    if (day) return t("date_day_month_year", "{day} {month} {year}", { day: Number(day), month: monthName(Number(month), words.language), year: year! });
+    if (month) return t("date_month_year", "{month} {year}", { month: monthName(Number(month), words.language), year: year! });
+    return year!;
+  }
+  const both = ends(text);
+  if (both) return t("date_range", "{from} to {to}", { from: dateInWords(both[0], words), to: dateInWords(both[1], words) });
+  return text;
 }

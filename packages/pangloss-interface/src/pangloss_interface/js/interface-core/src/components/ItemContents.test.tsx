@@ -2,7 +2,8 @@
 import { render } from "@solidjs/web";
 import { flush } from "solid-js";
 import { afterEach, expect, test } from "vitest";
-import { ComponentsProvider, ModelsProvider } from "../context";
+import { ComponentsProvider, ConsoleMountProvider, ModelsProvider, useIncomingOrder } from "../context";
+import type { IncomingOrderState } from "../context";
 import type {
   ComponentMap,
   FieldDefinition,
@@ -150,16 +151,26 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
+// (the order of what refers to the item, as the console has it: its buttons are tested with the console)
+let incoming: IncomingOrderState;
+function Probe() {
+  incoming = useIncomingOrder();
+  return null;
+}
+
 function show(item: Record<string, unknown>) {
   const container = document.createElement("div");
   document.body.append(container);
   dispose = render(
     () => (
-      <ComponentsProvider components={{ ReferenceChip } as ComponentMap}>
-        <ModelsProvider definitions={definitions}>
-          <ItemContents item={item} />
-        </ModelsProvider>
-      </ComponentsProvider>
+      <ConsoleMountProvider>
+        <Probe />
+        <ComponentsProvider components={{ ReferenceChip } as ComponentMap}>
+          <ModelsProvider definitions={definitions}>
+            <ItemContents item={item} />
+          </ModelsProvider>
+        </ComponentsProvider>
+      </ConsoleMountProvider>
     ),
     container,
   );
@@ -521,60 +532,66 @@ const witness = {
   aboutReverse: [{ id: "n1", type: "Note", label: "A note" }],
 };
 
-test("what refers to an item by field, until it is asked for by date (only if something of it is dateable)", () => {
+test("what refers to an item by field, until the console sorts it by date (offered only if some of it is dateable)", () => {
   localStorage.clear();
   let host = show(witness);
-  const byDate = [...host.querySelectorAll("button")].find((b) => b.textContent === "By date")!;
-  expect(byDate.getAttribute("aria-pressed")).toBe("false");
+  flush();
+  expect(incoming.offered()).toBe(true);
+  expect(incoming.order()).toBe("field");
   expect(host.querySelector("[data-testid=incoming-by-date]")).toBeNull();
   expect(host.textContent).toContain("born reverse");
 
-  byDate.click();
+  incoming.setOrder("date");
   flush();
+  // (the item's own values and what cannot have a date, with no heading; then the timeline, a section of its own)
+  expect([...host.querySelectorAll("h2")].map((h) => h.textContent)).toEqual(["Timeline"]);
+  const facts = host.querySelector("dl")!;
+  expect(facts.querySelector('a[href="/Note/n1"]')).toBeTruthy();
+  expect(facts.querySelector("[data-testid=dated-item]")).toBeNull();
+  expect(host.querySelector("section")!.querySelector("[data-testid=dated-item]")).toBeTruthy();
   const rows = [...host.querySelectorAll("[data-testid=dated-item]")];
-  // (in order of date, each with its date and the field it is in, on the left)
+  // (in order of date, under their years, each with its date in words and the field it is in, on the left)
   expect(rows.map((row) => row.querySelector("a")?.textContent)).toEqual([
     "OfficeNotary",
     "BirthBorn in Rome",
     "OfficeBishop",
+    "OfficeAbbot",
   ]);
-  expect(rows[0].textContent).toContain("1490");
-  expect(rows[0].textContent).toContain("held reverse");
+  expect([...host.querySelectorAll("[data-year]")].map((h) => h.textContent)).toEqual(["1490", "1500", "1510"]);
+  expect(rows[2]!.textContent).toContain("1510 to 1520");
+  expect(rows[0]!.textContent).toContain("held reverse");
+  // (last, those whose date is not known)
   expect(host.querySelector("[data-testid=incoming-date-unknown]")!.textContent).toContain("Abbot");
-  expect(host.textContent).toContain("Not dated");
-  expect(host.textContent).toContain("A note");
   // (the choice is remembered from one page to the next)
   expect(localStorage.getItem("pangloss.incomingOrder")).toBe("date");
   dispose?.();
   document.body.innerHTML = "";
 
   host = show({ ...witness, heldReverse: [], bornReverse: [] });
-  expect(host.textContent).not.toContain("By date");
+  flush();
+  expect(incoming.offered()).toBe(false);
   localStorage.clear();
 });
 
-test("the year slider narrows the dated rows to a span of years", () => {
+test("the timeline goes to the heading of a year (the next that has something), by the keys too", () => {
   localStorage.setItem("pangloss.incomingOrder", "date");
   const host = show(witness);
   flush();
-  const shown = () => host.querySelectorAll("[data-testid=dated-item]").length;
-  expect(shown()).toBe(3);
-  const from = host.querySelector<HTMLInputElement>('input[aria-label="From"]')!;
-  expect([from.min, from.max]).toEqual(["1490", "1520"]);
-  from.value = "1505";
-  from.dispatchEvent(new InputEvent("input", { bubbles: true }));
+  const scrolled: string[] = [];
+  for (const heading of host.querySelectorAll<HTMLElement>("[data-year]"))
+    heading.scrollIntoView = () => scrolled.push(heading.textContent ?? "");
+  const timeline = host.querySelector<HTMLElement>("[role=slider][aria-orientation=vertical]")!;
+  expect(timeline.getAttribute("aria-valuenow")).toBe("1490");
+  timeline.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
   flush();
-  // (the office from 1510 to 1520 is in them; the birth in 1500 and the notary in 1490 are not)
-  expect(shown()).toBe(1);
-  expect(host.querySelector("[data-testid=incoming-shown]")!.textContent).toBe("1 of 3");
-  const to = host.querySelector<HTMLInputElement>('input[aria-label="To"]')!;
-  to.value = "1500";
-  to.dispatchEvent(new InputEvent("input", { bubbles: true }));
+  expect(timeline.getAttribute("aria-valuenow")).toBe("1500");
+  timeline.dispatchEvent(new KeyboardEvent("keydown", { key: "End", bubbles: true }));
   flush();
-  // (the start follows the end back)
-  expect(from.value).toBe("1500");
-  expect(shown()).toBe(1);
-  expect(host.querySelector("[data-testid=dated-item]")!.textContent).toContain("Born in Rome");
+  expect(timeline.getAttribute("aria-valuenow")).toBe("1510");
+  expect(scrolled).toEqual(["1500", "1510"]);
+  // (a bar for each year, the longest for the year with most)
+  const bars = [...host.querySelectorAll<HTMLElement>("[data-bar]")];
+  expect(bars.map((bar) => bar.style.width)).toEqual(["100%", "100%", "100%"]);
   localStorage.clear();
 });
 
