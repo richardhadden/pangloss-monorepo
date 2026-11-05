@@ -377,3 +377,14 @@ Embedded
 ### UnknownDate (2026-10-27)
 
 A period or recurrence whose start or end is not known: `UnknownDate` (`JulianUnknownDate`, ...) is allowed as either end (not both: a validation error), separate from `OngoingDate` (kept; end only). It is open from `DATES_EARLIEST_YEAR` (default 1) to `DATES_OPEN_END_YEAR`, `precision` is `unknown`, so searches by a date it could include find it. A period with an unknown start sorts by its end; with an unknown end, `end_sort_day` is its start. The guide says to prefer a range or an approximate date (a reasonable guess) to "unknown".
+
+### The worked-out fields are database fields (2026-11-05)
+
+`precision`, the four bounds, `sort_day` and `end_sort_day` are now `Annotated[X | None, DBField] = None`, like `pattern_keys`: the models a client
+writes and reads (`Create`, `Update`, `View`) do not have them (what a client sends for them is dropped); `CreateDB` and `UpdateDB` always have them
+set. (`| None = None` only so that a `CreateDB` can be made before the validator fills them in.) The validator still runs on every model that is
+written, so a date that cannot be is refused on `Create`; it keeps what it works out only on the database models. The bounds of the ends of a range,
+period or recurrence are worked out again from what the end says (`models.worked_out`), not read from the end, as a client's end has none.
+Searching and ordering by them is unchanged (the search takes the fields of `_meta`, which has the database fields). No migration: a snapshot does
+not record `dbField`, and nothing stored changes. A `to_db` hook was not used: it is given the data before it is validated, so the nested ends
+would still be dicts without bounds; the `after` validator runs on the ends first.

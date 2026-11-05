@@ -47,7 +47,7 @@ A date also takes `source_text`, what the source said, kept as written.
 
 ## What is stored
 
-Whatever the kind, every date has these, worked out when it is saved (anything you send for them is replaced):
+Whatever the kind, every date has these in the database, worked out when it is saved. They are only in the database: a date you send or read back has none of them (anything you send for them is dropped), but you can search and order by them.
 
 - `earliest_strict` and `latest_strict`: the range as stated. `1500-03` is 1 to 31 March.
 - `earliest_fuzzy` and `latest_fuzzy`: the same allowing for doubt. `1500-03~` ("about March 1500") is fuzzy from 1 February to 30 April. *Fuzzy* here means "allowing for doubt", not vague.

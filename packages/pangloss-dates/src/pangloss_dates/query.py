@@ -14,6 +14,7 @@ from typing import Any
 from pangloss_models.search import Match, SearchKey
 
 from pangloss_dates.calendar import Calendar
+from pangloss_dates.models import worked_out
 from pangloss_dates.recurrence import day_keys, occurs_on
 
 PAGE_SIZE = 100
@@ -111,7 +112,9 @@ async def on_day(
         date = getattr(document, field)
         recurrence_class = type(date)._owner
         rule = recurrence_class.rule_of(date)
-        anchor = date.start.earliest_strict
+        anchor = worked_out(date.start)[
+            0
+        ].earliest_strict  # (the bounds are not on a view)
         if occurs_on(rule, day, calendar, anchor, extra_keys):
             found[item.id] = item
     return sorted(found.values(), key=lambda item: (item.label.lower(), str(item.id)))

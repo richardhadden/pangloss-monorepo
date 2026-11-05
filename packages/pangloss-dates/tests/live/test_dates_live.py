@@ -8,11 +8,13 @@ from pangloss_dates.calendar import Calendar, from_jdn, to_jdn
 from pangloss_models import initialise
 from pangloss_models.model_bases.document import Document
 from pangloss_models.search import Match
-from pangloss_testing.live import initialise_database
+from pangloss_testing.live import initialise_database, run
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
 J = Calendar.JULIAN
+
+STORED_DATE = "MATCH (n {id: $id})-[:`when`]->(d) RETURN properties(d) AS d"
 
 
 def day(y, m, d):
@@ -37,8 +39,14 @@ def exact(year, month=None, day=None, **more):
 
 
 @no_type_check
-async def test_every_kind_is_stored_and_read_back_with_its_bounds(clear_database):
+async def test_every_kind_is_stored_and_read_back_with_its_bounds(
+    clear_database, db_driver
+):
     Factoid = models()
+
+    def stored_date(id):
+        return run(db_driver, STORED_DATE, id=str(id))[0]["d"]
+
     await initialise_database()
     made = {
         "exact": exact(1500, 3, 2),
@@ -74,18 +82,42 @@ async def test_every_kind_is_stored_and_read_back_with_its_bounds(clear_database
         got = await Factoid.get(item.id)
         assert got.when.type == made[name]["type"]
         assert got.when.calendar == "julian"
+        # (the bounds are only in the database: a view has none)
+        assert not hasattr(got.when, "earliest_fuzzy")
+        stored = stored_date(item.id)
         assert (
-            got.when.earliest_fuzzy
-            <= got.when.earliest_strict
-            <= got.when.latest_strict
-            <= got.when.latest_fuzzy
+            stored["earliest_fuzzy"]
+            <= stored["earliest_strict"]
+            <= stored["latest_strict"]
+            <= stored["latest_fuzzy"]
         )
-    assert (await Factoid.get(saved["exact"].id)).when.sort_day == day(1500, 3, 2)
-    assert (await Factoid.get(saved["edtf"].id)).when.earliest_fuzzy < day(1500, 2, 1)
-    assert (await Factoid.get(saved["period"].id)).when.latest_strict == day(
-        1600, 12, 31
-    )
+    assert stored_date(saved["exact"].id)["sort_day"] == day(1500, 3, 2)
+    assert stored_date(saved["edtf"].id)["earliest_fuzzy"] < day(1500, 2, 1)
+    assert stored_date(saved["period"].id)["latest_strict"] == day(1600, 12, 31)
     assert (await Factoid.get(saved["range"].id)).when.earliest.year == 1500
+
+
+@no_type_check
+async def test_an_updated_date_has_its_bounds_worked_out_again(
+    clear_database, db_driver
+):
+    Factoid = models()
+    await initialise_database()
+    saved = await Factoid.Create(label="x", when=exact(1500, 3, 2)).save()
+    await Factoid.Update(
+        id=saved.id,
+        label="x",
+        when={
+            "type": "JulianPeriod",
+            "start": exact(1510),
+            "end": {"type": "JulianOngoingDate"},
+        },
+    ).save()
+    stored = run(db_driver, STORED_DATE, id=str(saved.id))[0]["d"]
+    assert stored["type"] == "JulianPeriod"
+    assert stored["earliest_strict"] == day(1510, 1, 1)
+    assert stored["latest_strict"] == day(1600, 12, 31)
+    assert stored["sort_day"] == (day(1510, 1, 1) + day(1510, 12, 31)) // 2
 
 
 @no_type_check

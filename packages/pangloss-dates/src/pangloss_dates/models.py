@@ -1,8 +1,9 @@
 """The date types, as Embedded models.
 
 A field is typed with the base of a family and takes any member of it (`when: Date`); each member is told apart by
-`type`. The bounds, the sort day and the pattern keys are worked out by a validator that always overwrites them, so
-they are `int | None = None` on the models a client writes (it can leave them out), and always set when stored.
+`type`. The precision, the bounds, the sort days and the pattern keys are worked out by a validator, and are database
+fields (`DBField`): the models a client writes and reads do not have them, and those written to the database always have
+them set. (They are `X | None = None` so that a `CreateDB` can be made without them, before the validator fills them in.)
 
     Date                      the base (never used on its own)
     ├── ExactDate             year, and optionally month and day
@@ -38,11 +39,15 @@ from pangloss_dates.calendar import Calendar, Weekday
 from pangloss_dates.recurrence import Frequency, RecurrenceRule, pattern_keys
 
 
-def bounds_of(date) -> Bounds:
-    """The bounds stored on a date that has been filled in"""
-    return Bounds(
-        date.earliest_fuzzy, date.earliest_strict, date.latest_strict, date.latest_fuzzy
-    )
+def worked_out(date) -> tuple[Bounds, Precision]:
+    """The bounds and the precision of a date, worked out from what it says (on any model of it: they are not stored on
+    the models a client has)"""
+    return type(date)._owner.work_out(date)
+
+
+def _stored(date) -> bool:
+    """Whether the date is a model written to the database, which keeps what is worked out (`DBField`s)"""
+    return "sort_day" in type(date).model_fields
 
 
 def interface_meta() -> dict:
@@ -76,29 +81,34 @@ class Date(Embedded):
     sort_by: SortBy | None = None
     """Which day to order by (the midpoint of the strict range if not said)"""
 
-    # worked out, whatever a client sends
-    precision: Precision | None = None
-    earliest_fuzzy: int | None = None
-    earliest_strict: int | None = None
-    latest_strict: int | None = None
-    latest_fuzzy: int | None = None
-    sort_day: int | None = None
-    end_sort_day: int | None = None
+    # worked out, and only in the database
+    precision: Annotated[Precision | None, DBField] = None
+    earliest_fuzzy: Annotated[int | None, DBField] = None
+    earliest_strict: Annotated[int | None, DBField] = None
+    latest_strict: Annotated[int | None, DBField] = None
+    latest_fuzzy: Annotated[int | None, DBField] = None
+    sort_day: Annotated[int | None, DBField] = None
+    end_sort_day: Annotated[int | None, DBField] = None
     """For a period or a recurrence the day its end sorts by; for any other date, the same as `sort_day`"""
 
     @model_validator(mode="after")
     def work_out_the_bounds(self):
-        # (self is the model made for writing; `_owner` is the class declared)
+        # (self is a model made for writing; `_owner` is the class declared)
         type(self)._owner.fill_in(self)  # ty: ignore[unresolved-attribute]
         return self
 
     @classmethod
     def fill_in(cls, date) -> None:
+        """Works out the date, which refuses one that cannot be on every model a client writes, and keeps what is
+        worked out on those written to the database"""
         fixed = cls.default_calendar
         if fixed is not None and date.calendar not in (None, fixed):
             raise ValueError(f"{cls.__name__} is in the {fixed} calendar")
         date.calendar = date.calendar or fixed or config.default_calendar()
         bounds, precision = cls.work_out(date)
+        sort_day, end_sort_day = cls.sort_days(date, bounds)
+        if not _stored(date):
+            return
         date.precision = precision
         (
             date.earliest_fuzzy,
@@ -111,8 +121,13 @@ class Date(Embedded):
             bounds.latest_strict,
             bounds.latest_fuzzy,
         )
-        date.sort_day = bounds.sort_day(date.sort_by or SortBy.MIDPOINT)
-        date.end_sort_day = date.sort_day
+        date.sort_day, date.end_sort_day = sort_day, end_sort_day
+
+    @classmethod
+    def sort_days(cls, date, bounds: Bounds) -> tuple[int, int]:
+        """The day the date sorts by, and the day its end sorts by"""
+        sort_day = bounds.sort_day(date.sort_by or SortBy.MIDPOINT)
+        return sort_day, sort_day
 
     @classmethod
     def work_out(cls, date) -> tuple[Bounds, Precision]:
@@ -162,7 +177,7 @@ class DateRange(Date):
     def work_out(cls, date) -> tuple[Bounds, Precision]:
         _check_ends_in_calendar(date, date.earliest, date.latest)
         return (
-            spanning_bounds(bounds_of(date.earliest), bounds_of(date.latest)),
+            spanning_bounds(worked_out(date.earliest)[0], worked_out(date.latest)[0]),
             Precision.RANGE,
         )
 
@@ -195,30 +210,32 @@ class UnknownDate(Date):
         )
 
 
-def _is_unknown(date) -> bool:
-    return date.precision == Precision.UNKNOWN
-
-
 def _span_of_lifetime(date) -> Bounds:
     """The bounds of something from `start` to `end`, one of which may be unknown (not both)"""
     _check_ends_in_calendar(date, date.start, date.end)
-    if _is_unknown(date.start) and _is_unknown(date.end):
+    (start, start_precision), (end, end_precision) = (
+        worked_out(date.start),
+        worked_out(date.end),
+    )
+    if start_precision == end_precision == Precision.UNKNOWN:
         raise ValueError(
             "the start and the end cannot both be unknown: say what is known of one of them"
         )
-    return spanning_bounds(bounds_of(date.start), bounds_of(date.end))
+    return spanning_bounds(start, end)
 
 
-def _sort_a_lifetime(date) -> None:
+def _sort_a_lifetime(cls, date, bounds: Bounds) -> tuple[int, int]:
     """A period or a recurrence is ordered by its start (by its end if the start is not known), and has the day
     its end sorts by (its start if the end is not known)"""
     sort_by = date.sort_by or SortBy.MIDPOINT
-    start, end = bounds_of(date.start), bounds_of(date.end)
-    if _is_unknown(date.start):
-        date.sort_day = end.sort_day(sort_by)
-    else:
-        date.sort_day = start.sort_day(sort_by)
-    date.end_sort_day = start.sort_day() if _is_unknown(date.end) else end.sort_day()
+    (start, start_precision), (end, end_precision) = (
+        worked_out(date.start),
+        worked_out(date.end),
+    )
+    start_unknown = start_precision == Precision.UNKNOWN
+    sort_day = end.sort_day(sort_by) if start_unknown else start.sort_day(sort_by)
+    end_unknown = end_precision == Precision.UNKNOWN
+    return sort_day, start.sort_day() if end_unknown else end.sort_day()
 
 
 class Period(Date):
@@ -227,14 +244,11 @@ class Period(Date):
     start: ExactDate | DateRange | EDTFDate | UnknownDate
     end: ExactDate | DateRange | EDTFDate | OngoingDate | UnknownDate
 
+    sort_days = classmethod(_sort_a_lifetime)
+
     @classmethod
     def work_out(cls, date) -> tuple[Bounds, Precision]:
         return _span_of_lifetime(date), Precision.RANGE
-
-    @classmethod
-    def fill_in(cls, date) -> None:
-        super().fill_in(date)
-        _sort_a_lifetime(date)
 
 
 def _check_feast(feast: str) -> None:
@@ -299,22 +313,21 @@ class Recurrence(Date):
             feast=date.feast,
         )
 
+    sort_days = classmethod(_sort_a_lifetime)
+
     @classmethod
     def work_out(cls, date) -> tuple[Bounds, Precision]:
-        date.interval = date.interval or 1
         if date.feast is not None:
             _check_feast(date.feast)
-        rule = cls.rule_of(date)  # (refuses a rule that says no day)
-        if (
-            "pattern_keys" in type(date).model_fields
-        ):  # (not on the models a client writes)
-            date.pattern_keys = pattern_keys(rule)
+        cls.rule_of(date)  # (refuses a rule that says no day)
         return _span_of_lifetime(date), Precision.RANGE
 
     @classmethod
     def fill_in(cls, date) -> None:
+        date.interval = date.interval or 1
         super().fill_in(date)
-        _sort_a_lifetime(date)
+        if _stored(date):
+            date.pattern_keys = pattern_keys(cls.rule_of(date))
 
 
 class SortDefault:
@@ -328,7 +341,7 @@ class SortDefault:
         self.sort_by = sort_by
 
     def apply_to_embedded(self, date) -> None:
-        if getattr(date, "sort_by", None) is None and hasattr(date, "sort_day"):
+        if getattr(date, "sort_by", None) is None and _stored(date):
             date.sort_by = self.sort_by
             type(date)._owner.fill_in(date)
             date.sort_by = None  # (what was said is kept as it was)

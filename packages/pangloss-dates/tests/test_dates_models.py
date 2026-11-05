@@ -38,7 +38,8 @@ def models():
 
 
 def make(model, when, **extra):
-    return model.Create(label="x", when=when, **extra).when
+    """The date as it is written to the database (the worked-out fields are only there)"""
+    return model.Create(label="x", when=when, **extra)._to_db_model().when
 
 
 def test_an_exact_date_has_its_bounds_and_sort_day(models):
@@ -51,7 +52,7 @@ def test_an_exact_date_has_its_bounds_and_sort_day(models):
     assert when.sort_day == (when.earliest_strict + when.latest_strict) // 2
 
 
-def test_what_a_client_sends_for_the_worked_out_fields_is_overwritten(models):
+def test_what_a_client_sends_for_the_worked_out_fields_is_not_taken(models):
     _, JulianEvent, _ = models
     when = make(
         JulianEvent,
@@ -65,6 +66,25 @@ def test_what_a_client_sends_for_the_worked_out_fields_is_overwritten(models):
         },
     )
     assert when.sort_day == when.earliest_strict == to_jdn(1500, 3, 2, J)
+
+
+def test_the_worked_out_fields_are_only_on_the_models_written_to_the_database(models):
+    from pangloss_dates import julian
+
+    worked_out = {
+        "precision",
+        "earliest_fuzzy",
+        "earliest_strict",
+        "latest_strict",
+        "latest_fuzzy",
+        "sort_day",
+        "end_sort_day",
+    }
+    for date in (julian.JulianExactDate, julian.JulianPeriod, julian.JulianRecurrence):
+        for kind in ("Create", "Update", "View"):
+            assert not worked_out & set(getattr(date, kind).model_fields), (date, kind)
+        for kind in ("CreateDB", "UpdateDB"):
+            assert worked_out <= set(getattr(date, kind).model_fields), (date, kind)
 
 
 def test_a_day_that_does_not_exist_is_refused(models):
@@ -178,22 +198,18 @@ def test_a_period_cannot_start_ongoing(models):
 
 def test_a_recurrence_has_its_pattern_keys_and_a_lifetime(models):
     _, JulianEvent, _ = models
-    when = make(
-        JulianEvent,
-        {
-            "type": "JulianRecurrence",
-            "frequency": "weekly",
-            "weekdays": [Weekday.SUNDAY],
-            "excluded_days": [],
-            "start": {"type": "JulianExactDate", "year": 1505, "month": 3, "day": 2},
-            "end": {"type": "JulianOngoingDate"},
-        },
-    )
-    assert not hasattr(when, "pattern_keys")  # (written to the database only)
-    db = JulianEvent.CreateDB.model_validate(
-        JulianEvent.Create(label="x", when=when).model_dump(by_alias=False)
-    )
-    assert db.when.pattern_keys == ["weekday:0"]
+    given = {
+        "type": "JulianRecurrence",
+        "frequency": "weekly",
+        "weekdays": [Weekday.SUNDAY],
+        "excluded_days": [],
+        "start": {"type": "JulianExactDate", "year": 1505, "month": 3, "day": 2},
+        "end": {"type": "JulianOngoingDate"},
+    }
+    # (written to the database only)
+    assert not hasattr(JulianEvent.Create(label="x", when=given).when, "pattern_keys")
+    when = make(JulianEvent, given)
+    assert when.pattern_keys == ["weekday:0"]
     assert when.interval == 1
     assert when.sort_day == to_jdn(1505, 3, 2, J)
     assert ymd(when.earliest_strict) == (1505, 3, 2)
@@ -225,10 +241,7 @@ def test_a_recurrence_on_easter_or_a_feast_has_its_key(models):
                 **extra,
             },
         )
-        db = JulianEvent.CreateDB.model_validate(
-            JulianEvent.Create(label="x", when=when).model_dump(by_alias=False)
-        )
-        assert db.when.pattern_keys == [key]
+        assert when.pattern_keys == [key]
 
 
 def test_a_recurrence_with_easter_and_a_month_is_refused(models):
@@ -325,7 +338,7 @@ def test_a_field_can_say_what_its_dates_sort_by():
         label="x",
         born={"type": "JulianExactDate", "year": 1500},
         died={"type": "JulianExactDate", "year": 1500},
-    )
+    )._to_db_model()
     assert ymd(person.born.sort_day) == (1500, 1, 1)
     assert ymd(person.died.sort_day) == (1500, 7, 1)
     # the date's own say wins
@@ -333,14 +346,16 @@ def test_a_field_can_say_what_its_dates_sort_by():
         label="x",
         born={"type": "JulianExactDate", "year": 1500, "sort_by": "latest_strict"},
         died={"type": "JulianExactDate", "year": 1500},
-    )
+    )._to_db_model()
     assert ymd(person.born.sort_day) == (1500, 12, 31)
     assert SortDefault  # (the class is the one from the module)
     # the interface is told, to show it as chosen
     from pangloss_models.export import export_models
 
     fields = {f["name"]: f for f in export_models()["models"]["Person"]["fields"]}
-    assert fields["born"]["markers"] == [{"name": "SortDefault", "sortBy": "earliest_fuzzy"}]
+    assert fields["born"]["markers"] == [
+        {"name": "SortDefault", "sortBy": "earliest_fuzzy"}
+    ]
     assert fields["died"]["markers"] == []
 
 
