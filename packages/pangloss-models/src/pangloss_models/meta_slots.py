@@ -68,8 +68,10 @@ def _own_value(cls: type, name: str) -> tuple[bool, Any]:
 
 
 def _inherited_value(cls: type, name: str) -> Any:
+    # (every class has the slot, None where nothing is set: with two parents, one that has none must not hide
+    # the other's, as `class Book(PhysicalObject, ZoteroBacked)` would lose `ZoteroBacked`'s)
     for parent in cls.__mro__[1:]:
-        if name in parent.__dict__:
+        if parent.__dict__.get(name) is not None:
             return parent.__dict__[name]
     return None
 

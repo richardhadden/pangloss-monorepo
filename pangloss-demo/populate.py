@@ -8,13 +8,13 @@ run twice, as the entities have fixed URLs.
 """
 
 import asyncio
-import datetime
 import sys
 
 from demo_app import models
 from pangloss_cli.project import load_project
 from pangloss_models import initialise
 from pangloss_users import current_request_username
+from pangloss_zotero.models import ZoteroObject
 from pydantic import AnyHttpUrl
 
 USERNAME = "demo"
@@ -52,7 +52,7 @@ def in_role(entity, role: str) -> dict:
 
 async def already_populated() -> bool:
     return (
-        await models.Source.get(id=url("source", "annales-regni-francorum")) is not None
+        await ZoteroObject.get(id=url("source", "annales-regni-francorum")) is not None
     )
 
 
@@ -118,11 +118,14 @@ async def populate() -> None:
     ).save()
     paderborn = await models.Place.Create(label="Paderborn").save()
 
-    annales = await models.Source.Create(
+    # (a source is a Zotero item; these two are made here, as if they were, with no library)
+    annales = await ZoteroObject.Create(
         id=url("source", "annales-regni-francorum"),
         create_new=True,
         label="Annales regni Francorum",
-        written=datetime.date(829, 1, 1),
+        item_type="book",
+        title="Annales regni Francorum",
+        date="829",
     ).save()
 
     # --- A factoid: the coronation -------------------------------------------------
@@ -195,13 +198,14 @@ async def populate() -> None:
             "page": "ch. 28",
             "target": [
                 {
-                    "type": "Source",
+                    "type": "ZoteroObject",
                     "id": url("source", "vita-karoli"),
                     "create_new": True,
                     "label": "Vita Karoli Magni",
-                    "author": "Einhard",
-                    "written": datetime.date(828, 1, 1),
-                    "edition_price": "12.50",
+                    "item_type": "book",
+                    "title": "Vita Karoli Magni",
+                    "creators": "Einhard",
+                    "date": "828",
                 }
             ],
         },
@@ -242,7 +246,7 @@ async def populate() -> None:
         source={
             "type": "AtPage",
             "page": "letter 174",
-            "target": [ref(await models.Source.get(id=url("source", "vita-karoli")))],
+            "target": [ref(await ZoteroObject.get(id=url("source", "vita-karoli")))],
         },
         statements=[
             {
@@ -420,7 +424,7 @@ async def add_order_chain() -> None:
     )
     charlemagne = by_id("person", "charlemagne", "Person")
     leo = by_id("person", "leo-iii", "Person")
-    annales = by_id("source", "annales-regni-francorum", "Source")
+    annales = by_id("source", "annales-regni-francorum", "ZoteroObject")
 
     def reference(person: dict) -> dict:
         return {"type": "Person", "id": person["id"]}

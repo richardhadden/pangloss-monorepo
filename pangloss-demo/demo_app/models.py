@@ -1,6 +1,6 @@
 """Models of the demo: a factoid database.
 
-A **Factoid** is a claim made by a **Source** (at a page of it), and contains a list of
+A **Factoid** is a claim made by a source (a Zotero item, `ZoteroBacked`, at a page of it), and contains a list of
 **Statements**: things that happened between people, groups and places. The models are
 small, and between them use most of what Pangloss has:
 
@@ -13,7 +13,8 @@ small, and between them use most of what Pangloss has:
 | A document that is only ever part of another (`create_directly=False`, inherited) | `Statement` |
 | A trait: "any of these entities" | `Agent` (`Person` or `Group`) |
 | Narrowing a field of the parent class | `Activity.carried_out_by` narrows `Statement.involves` |
-| A reified relation (a relation with fields) | `AtPage[Source]`, `InRole[Agent]` |
+| A reified relation (a relation with fields) | `AtPage[ZoteroBacked]`, `InRole[Agent]` |
+| Sources from a Zotero library (`pangloss-zotero`), and an item made a project class by hand | `Factoid.source`, `Book` |
 | Properties on an edge | `ViaEdge[Agent, Certainty]` |
 | Dates (in the Julian calendar by setting, with doubt and ranges) | `Statement.date`, `Person.born` (`pangloss-dates`) |
 | A vocabulary of types in a hierarchy | `OccupationTypology` (`pangloss-typology`) |
@@ -55,6 +56,7 @@ from pangloss_models.model_bases.semantic_space import SemanticSpace
 from pangloss_models.model_bases.trait import Trait
 from pangloss_review.meta import ReviewMeta
 from pangloss_typology import Typed, Typology, TypologyMeta
+from pangloss_zotero.models import ZoteroBacked
 
 # ---------------------------------------------------------------------------
 # Literals, and the small models that carry them
@@ -323,6 +325,13 @@ class PhysicalObject(Entity):
     """Any physical object"""
 
 
+class Book(PhysicalObject, ZoteroBacked):
+    """A book. It may be a Zotero item: no Zotero type is claimed, so an item comes in as a `ZoteroObject`, and a
+    person makes it a `Book` by hand (or makes a `Book` and links it to an item)"""
+
+    _meta = Entity.Meta(create_with_id=True, create_inline=True, accept_url_as_id=True)
+
+
 class Artwork(PhysicalObject):
     """Any artwork object"""
 
@@ -375,7 +384,7 @@ class Factoid(Document):
     # (checked by another user before it is published)
     _review_meta = ReviewMeta(reviewable=True)
 
-    source: AtPage[Source]
+    source: AtPage[ZoteroBacked]
     statements: list[
         Statement
         | Negative[Statement]

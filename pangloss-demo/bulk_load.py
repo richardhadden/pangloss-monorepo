@@ -18,6 +18,7 @@ from demo_app import models
 from pangloss_cli.project import load_project
 from pangloss_models import initialise
 from pangloss_users import current_request_username
+from pangloss_zotero.models import ZoteroObject
 
 N_ENTITIES = int(sys.argv[1]) if len(sys.argv) > 1 else 100_000
 N_FACTOIDS = int(sys.argv[2]) if len(sys.argv) > 2 else 30_000
@@ -79,12 +80,14 @@ def place(i):
 
 
 def source(i):
-    return lambda: models.Source.Create(
+    return lambda: ZoteroObject.Create(
         id=f"https://example.org/smoke/source/{i}",
         create_new=True,
         label=f"Source {i}",
-        author=f"Author {i % 50}",
-        written=datetime.date(800 + i % 200, 1, 1),
+        item_type="book",
+        title=f"Source {i}",
+        creators=f"Author {i % 50}",
+        date=str(800 + i % 200),
     ).save()
 
 

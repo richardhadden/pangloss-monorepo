@@ -73,6 +73,23 @@ def test_a_subclass_inherits_the_nearest_parents_and_may_replace_it():
     assert declared_slots(Governor) == frozenset()
 
 
+def test_a_parent_with_no_value_does_not_hide_another_parents():
+    register_meta_slot("_colour_meta", ColourMeta)
+
+    class PhysicalObject(Entity):
+        pass
+
+    class Text(Entity):
+        _meta = Entity.Meta(abstract=True)
+        _colour_meta = ColourMeta("red")
+
+    class Book(PhysicalObject, Text):
+        pass
+
+    assert Book._colour_meta == ColourMeta("red")
+    assert declared_slots(Book) == frozenset()
+
+
 def test_a_class_with_no_value_anywhere_has_none():
     register_meta_slot("_colour_meta", ColourMeta)
 
