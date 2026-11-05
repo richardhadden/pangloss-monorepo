@@ -299,7 +299,8 @@ text in a language.
 **An interface module's slots are in its own app's file**, not the interface's (2026-11-05): `pangloss_dates`
 (`date_*`, and the timeline's `incoming_*`; the calendar uses some of these, and it needs `pangloss_dates`),
 `pangloss_calendar` (`calendar_*`), `pangloss_review` (`review_*`), `pangloss_typology` (`typology_*`) and
-`pangloss_derived` (`derived_*`), each with the label of its navigation link (`nav_<app>_<label>`) or section. The
+`pangloss_derived` (`derived_*`) and `pangloss_history` (`history_*`, in English, German and French since 2026-11-05;
+before, it had none), each with the label of its navigation link (`nav_<app>_<label>`) or section. The
 interface's own file has only what `interface-core` and `interface-app` use. A label an app gives a link or a type in
 the bar (`NavLink`, `NavModel(label=...)`) is looked up by its slot on the page (it was exported but not used before).
 

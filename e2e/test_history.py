@@ -10,7 +10,7 @@ from types import SimpleNamespace
 
 import pytest
 from conftest import AUTHOR_PASSWORD, AUTHOR_USERNAME, Stack, environment
-from helpers import hydrated
+from helpers import expand_nav, hydrated
 from playwright.sync_api import Page, expect
 
 
@@ -109,6 +109,25 @@ def test_the_panel_lists_the_versions_and_one_slides_out_beside_it(logged_in: Pa
     expect(drawer(page)).to_have_attribute("data-open", "false")
     page.keyboard.press("Escape")
     expect(panel(page)).to_have_attribute("data-open", "false")
+
+
+def test_the_history_follows_the_language(logged_in: Page, statement):
+    # (its words are in pangloss_history's own translations/ui.jsonc)
+    page = logged_in
+    page.goto(f"/Statement/{statement.id}")
+    expand_nav(page)
+    page.get_by_role("button", name="Deutsch").click()
+    expect(page.locator("html")).to_have_attribute("lang", "de")
+    page.mouse.move(600, 400)
+    page.get_by_role("button", name="Verlauf", exact=True).click()
+    expect(panel(page)).to_have_attribute("data-open", "true")
+    expect(panel(page)).to_contain_text("Alle vergleichen")
+    expect(card(page, 3)).to_contain_text("Bearbeitet")
+    expect(card(page, 3).get_by_test_id("history-current")).to_have_text("Aktuell")
+    expect(card(page, 1)).to_contain_text("Erstellt")
+    card(page, 1).click()
+    expect(drawer(page)).to_contain_text("Nichts wird gelöscht")
+    expect(drawer(page).get_by_role("button", name="Bis hierhin wiederherstellen")).to_be_visible()
 
 
 def test_restoring_asks_first_listing_what_is_undone_and_then_changes_the_item(logged_in: Page, statement):

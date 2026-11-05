@@ -3,7 +3,7 @@
 Keep this current: when a page or feature is added to the interface (or a test is added here), change its row.
 ✅ tested · 🚧 partly · ⬜ not yet · — not built, so nothing to test
 
-146 tests, about 320 s. The e2e project (`conftest.py`) has `Person` (`has_role: list[Role]`), `Role` (`has_type`), `RoleType` (a
+147 tests, about 320 s. The e2e project (`conftest.py`) has `Person` (`has_role: list[Role]`), `Role` (`has_type`), `RoleType` (a
 typology, also a `Role`) with Clerk > Secretary and Advisor, and `Statement` (a document: `text`, `about: Person`). The `data`
 fixture adds Maximilian (his secretary: a `Role` of the type Secretary), Marie of Burgundy (her advisor, and a statement
 about her "held court at Ghent") and Charles the Bold (no role); `types` has only the types; `stack` has one admin user.
@@ -19,7 +19,7 @@ about her "held court at Ghent") and Charles the Bold (no role); `types` has onl
 | Navigation bar: pinned, the page and the console move across (console still centred) | ✅ | `test_the_page_and_the_console_move_across_for_a_pinned_bar` |
 | Language: another language is fetched (server function) only when chosen, once; the words change; `<html lang>` follows | ✅ | `test_another_language_is_fetched_only_when_it_is_chosen` |
 | Language: the choice is kept in `localStorage` over a reload | ✅ | `test_the_language_chosen_is_kept_over_a_reload` |
-| Language: the interface modules' words come from their own apps' `translations/ui.jsonc` (derived, timeline, calendar link, typologies section), and a label an app gives a link in the bar is translated by its slot | ✅ | `test_derived.py::test_the_words_of_the_modules_are_their_own_and_follow_the_language`; Vitest `NavModelList.test.tsx` |
+| Language: the interface modules' words come from their own apps' `translations/ui.jsonc` (derived, timeline, calendar link, typologies section, history), and a label an app gives a link in the bar is translated by its slot | ✅ | `test_derived.py::test_the_words_of_the_modules_are_their_own_and_follow_the_language`, `test_history.py::test_the_history_follows_the_language`; Vitest `NavModelList.test.tsx` |
 | Language: the fade while it loads | ⬜ | (CSS on `html[data-translating]`; checked by hand) |
 | Navigation bar: the pin is kept in `localStorage` over a reload | ✅ | `test_the_pin_is_remembered` |
 | Navigation bar: sections and links to the lists of the models | ✅ | `test_the_navigation_bar_links_to_the_lists` |
