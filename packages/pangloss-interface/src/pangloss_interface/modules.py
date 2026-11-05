@@ -66,6 +66,7 @@ class Manifest:
     requires: tuple[str, ...] = ()
     collapse_rules: tuple[str, ...] = ()
     console_actions: tuple[str, ...] = ()
+    new_item_actions: tuple[str, ...] = ()
     item_sections: tuple[str, ...] = ()
     incoming_views: tuple[str, ...] = ()
 
@@ -78,14 +79,20 @@ class Manifest:
             requires=tuple(data.get("requires", [])),
             collapse_rules=tuple(data.get("collapseRules", [])),
             console_actions=tuple(data.get("consoleActions", [])),
+            new_item_actions=tuple(data.get("newItemActions", [])),
             item_sections=tuple(data.get("itemSections", [])),
             incoming_views=tuple(data.get("incomingViews", [])),
         )
 
     @property
     def contributions(self) -> tuple[str, ...]:
-        """What it adds to every item page, which a project can disable (`InterfaceConfig(disabled=...)`)"""
-        return self.console_actions + self.item_sections + self.incoming_views
+        """What it adds to every item page and form, which a project can disable (`InterfaceConfig(disabled=...)`)"""
+        return (
+            self.console_actions
+            + self.new_item_actions
+            + self.item_sections
+            + self.incoming_views
+        )
 
 
 def core_version() -> str:
@@ -284,8 +291,8 @@ def _nav_links(
 def _disabled(
     manifests: Mapping[str, Manifest], exported: Mapping[str, Any]
 ) -> list[str]:
-    """What a project disables is something a module adds: `app:key`, a key of its `consoleActions`, `itemSections` or
-    `incomingViews`"""
+    """What a project disables is something a module adds: `app:key`, a key of its `consoleActions`, `newItemActions`,
+    `itemSections` or `incomingViews`"""
     found = []
     for name in exported.get("disabled") or []:
         app, _, key = name.partition(":")
@@ -296,8 +303,8 @@ def _disabled(
             )
         elif key not in manifest.contributions:
             found.append(
-                f"InterfaceConfig(disabled=...) {name!r}: {key!r} is not in the consoleActions, itemSections or "
-                f"incomingViews of {app} ({', '.join(manifest.contributions) or 'none'})"
+                f"InterfaceConfig(disabled=...) {name!r}: {key!r} is not in the consoleActions, newItemActions, "
+                f"itemSections or incomingViews of {app} ({', '.join(manifest.contributions) or 'none'})"
             )
     return found
 

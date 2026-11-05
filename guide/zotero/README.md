@@ -40,6 +40,25 @@ class Atlas(TextObject):
 An item whose type no class claims becomes a `ZoteroObject`, the package's own plain class. Run `pangloss makemigrations`
 and `migrate` as for any model.
 
+### Or decide by hand
+
+Zotero's type cannot always be trusted, and a book that is only a secondary source should not look like a historical
+object. Then claim no types: every item comes in as a `ZoteroObject`, and a person decides which ones are a `Book`.
+
+```python
+class Book(ZoteroBacked):
+    pages: int | None = None
+```
+
+In the interface, with `pangloss_zotero` installed:
+
+- **From Zotero**, on the form of a new `Book`: pick an item; the form is filled in from it; Save makes that item the
+  `Book`. It is the same entity (its id, its address, and whatever already cited it), and it stays an item of the
+  library: the sync keeps its Zotero fields up to date.
+- **Link to Zotero**, on a `Book` made by hand: pick an item. If the item is already an entry, the two become one,
+  keeping the one that something refers to; if both are referred to, it is refused and says what refers to each.
+- **Unlink from Zotero**: the `Book` keeps its own fields and what refers to it; the item is a `ZoteroObject` again.
+
 ## Run
 
 ```bash
@@ -57,7 +76,7 @@ Or just run the server: it watches. The sync is idempotent and runs by version, 
 `zotero_key`, `zotero_version`, `item_type`, `title`, `short_title`, `language`, `abstract`, `date` (as Zotero has it, text),
 `creators` (`Last, First; …`) and `zotero_data` (every field of its type, as JSON). **These fields are read-only in the
 API**: a person cannot edit what the sync owns; your own extra fields stay editable. A text object made by hand can be
-linked to an item afterwards.
+linked to an item afterwards (above).
 
 Then use it as any entity: `Factoid.source` can point at an `Atlas`, a statement can be about one, and the SDK and search
 find it.
@@ -66,5 +85,6 @@ find it.
 
 A `check` that finds duplicates or items that left the library; a lease so that several server workers do not all sync;
 merging two entities; a bulk first import (each item is written one at a time: measure on a real library); attachments and
-notes; parsing Zotero's text dates; the interface (a library search, a "link to Zotero" action).
+notes; parsing Zotero's text dates; a search of the library in a source field of a form; the Zotero fields shown read-only
+on a form.
 [Zotero](../../docs/zotero.md) and [Zotero items as sources and subjects](../../docs/zotero-sources.md) have the design.

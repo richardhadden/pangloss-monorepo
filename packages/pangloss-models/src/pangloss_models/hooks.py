@@ -43,6 +43,8 @@ class WriteEvent:
     created_entities: tuple[Any, ...] = ()
     # For an update that put an earlier version back (`history`): the version it came from
     restored_from: int | None = None
+    # For an update that changed the class of an entity (`changing_class_from`): the class it was
+    changed_class_from: type | None = None
 
 
 type WriteListener = Callable[[WriteEvent], None]

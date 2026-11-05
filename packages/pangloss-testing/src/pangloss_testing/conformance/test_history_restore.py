@@ -204,3 +204,30 @@ async def test_what_cannot_be_restored_is_refused(db_driver, clear_database, his
     with pytest.raises(PanglossRestoreError) as error:
         await restore(store, Statement, s.id, 1)
     assert error.value.problems[0]["kind"] == "unknown-position"
+
+
+@no_type_check
+async def test_a_version_from_before_a_class_change_is_not_restored(
+    db_driver, clear_database, history
+):
+    class Plain(Entity):
+        pass
+
+    class Book(Entity):
+        pages: int | None = None
+
+    initialise()
+    store = history()
+    plain = await Plain.Create(label="A text").save()
+    await Book.Update(id=plain.id, label="A book", pages=3).save(
+        changing_class_from=Plain
+    )
+    listener.get_recorder().drain()
+
+    assert [(r.version, r.model) for r in store.versions(plain.id)] == [
+        (1, "Plain"),
+        (2, "Book"),
+    ]
+    with pytest.raises(PanglossRestoreError, match="was a Plain"):
+        await restore(store, Book, plain.id, 1)
+    assert (await Book.get(plain.id)).meta.version == 2

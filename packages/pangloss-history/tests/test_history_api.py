@@ -243,3 +243,22 @@ def test_every_version_with_its_content_in_the_read_form(client, monkeypatch):
         (3, "update", "three"),
     ]
     assert client.get(f"/api/Statement/{uuid7()}/history/contents").status_code == 404
+
+
+def test_a_node_that_changed_class_has_the_versions_from_before(client):
+    id = uuid7()
+    client.store.append(
+        [
+            record(id, 1, model="Person", content={"text": "one"}),
+            record(id, 2, "update", model="Statement", content={"text": "two"}),
+        ]
+    )
+    client.versions["now"] = 2
+    body = client.get(f"/api/Statement/{id}/history").json()
+    assert [(v["version"], v["model"]) for v in body["versions"]] == [
+        (1, "Person"),
+        (2, "Statement"),
+    ]
+    assert body["missing"] == []
+    # (a node is found by the class it is now: one it was before has no history of it)
+    assert client.get(f"/api/Person/{id}/history").status_code == 404

@@ -25,6 +25,8 @@ export interface VersionRecord {
   at: string;
   schemaPosition: Record<string, string>;
   restoredFrom: number | null;
+  /** The class it was then (an entity's class can be changed; absent from an older API) */
+  model?: string;
   /** With `summary`: the label then, and what differs from the version recorded before it */
   label?: string | null;
   changes?: FieldChange[];

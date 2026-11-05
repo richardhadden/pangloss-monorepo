@@ -308,7 +308,7 @@ export interface ModelDefinitions {
   nav?: NavConfig;
   /**
    * What the interface modules add that the project does not use (`InterfaceConfig(disabled=...)`), as `app:key`: a
-   * key of `consoleActions`, `itemSections` or `incomingViews` (absent: none)
+   * key of `consoleActions`, `newItemActions`, `itemSections` or `incomingViews` (absent: none)
    */
   disabled?: string[];
 }

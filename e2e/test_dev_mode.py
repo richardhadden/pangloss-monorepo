@@ -369,3 +369,34 @@ def test_what_refers_to_a_person_by_date(
     expect(page.get_by_test_id("dated-item")).to_have_count(0)
     expect(page.locator("main")).not_to_contain_text(SOLID_ERROR)
     assert errors == []
+
+
+def test_a_book_from_zotero_and_unlinked(
+    page: Page, types, dev_url: str, errors: list[str]
+):
+    """The module of pangloss_zotero: *From Zotero* on the form of a new Book, its picker, Save, and *Unlink* in the
+    console of the Book"""
+    from conftest import PASSWORD, USERNAME
+    from test_zotero import forget_items, pick, seed
+
+    forget_items()
+    made = seed(types, "DEVONE")
+    response = page.request.post(
+        f"{dev_url}/api/users/session",
+        form={"username": USERNAME, "password": PASSWORD},
+    )
+    assert response.ok, response.text()
+    page.goto(f"{dev_url}/Book/new")
+    hydrated(page)
+    page.get_by_role("button", name="From Zotero").click()
+    pick(page, "Smith, DEVONE")
+    expect(page.get_by_test_id("zotero-based-on")).to_contain_text("Smith, DEVONE")
+    page.get_by_role("button", name="Save").click()
+    page.wait_for_url(re.compile(rf"/Book/{made['DEVONE']}$"))
+    page.get_by_role("button", name="Unlink from Zotero").click()
+    page.get_by_test_id("zotero-unlink-dialog").get_by_role(
+        "button", name="Unlink from Zotero"
+    ).click()
+    expect(page.get_by_role("button", name="Link to Zotero")).to_be_visible()
+    expect(page.locator("main")).not_to_contain_text(SOLID_ERROR)
+    assert errors == []

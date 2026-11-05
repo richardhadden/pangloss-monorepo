@@ -100,6 +100,11 @@ class PanglossNotDeletedError(PanglossWriteError):
     """An attempt to undelete something that has not been deleted"""
 
 
+class PanglossClassChangeError(PanglossWriteError):
+    """A change of an entity's class (`changing_class_from`) that cannot be made: the node is not of the class it is
+    said to be changed from, or something refers to it by a relation that cannot hold the new class"""
+
+
 class PanglossEntityInUseError(PanglossWriteError):
     """An entity that documents (or other entities) refer to cannot be deleted. It
     has been marked for deletion instead (`meta.marked_for_deletion`)."""

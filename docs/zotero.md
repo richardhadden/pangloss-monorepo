@@ -115,9 +115,10 @@ stands for. **Nothing is guessed** (`build_table`, which raises `PanglossMetaErr
   `ZoteroObject`. Every item is imported; none is skipped for lack of a class.
 - A class that says nothing, or is abstract, is an error.
 - **A wrong type in Zotero** (a book entered as a document): the person sets `item_type_override` on the node, and
-  that is what a class is asked about when a node is linked (below). The class of an existing node is not changed:
-  **a node's class is fixed when it is created**, so an item whose type later changes in Zotero keeps its class and
-  takes the new `item_type`, and a stub made from a document keeps the class that document gave it.
+  that is what a class is asked about when a node is linked (below). **The sync never changes the class of a node**:
+  an item whose type later changes in Zotero keeps its class and takes the new `item_type`, and a stub made from a
+  document keeps the class that document gave it. A person can change it, from the fallback class to another
+  ([below](#turning-an-item-into-a-book-by-hand)).
 
 ### Fields the sync owns
 
@@ -179,12 +180,32 @@ the concrete classes that have no concrete parent. A deleted node is not found b
 ### Linking a text object made by hand
 
 The Zotero fields cannot be set through the API, so `POST /api/zotero/link` `{model, id, zotero_url}` (logged in) is how
-a node made by hand becomes an item (`link.py`). It refuses (with the reason): a model that is not a Zotero class
-(422); an address that is not `https://www.zotero.org/{groups|users}/N/items/KEY` or in a library that is not synced
-(422); a node that is already linked (409); an item that is **already a node** (409: "use that one", since two nodes
-cannot be joined yet); an item that is not in the library (404); a class that cannot be of the item's type (422:
+a node made by hand becomes an item (`link.py`). It refuses (with the reason): a model that is not a Zotero class, or is
+the fallback class (422); an address that is not `https://www.zotero.org/{groups|users}/N/items/KEY` or in a library that
+is not synced (422); a node that is already linked (409); an item that is **already a node** of a class other than the
+fallback (409); an item that is a node of the fallback class is merged with it (below); an item that is not in the
+library (404); a class that cannot be of the item's type (422:
 the type is `item_type_override` if the node has one, else Zotero's; a class with no `_zotero_meta` accepts any). Then
 it writes the item's fields and adds the address to the node's URLs.
+
+### Turning an item into a Book by hand
+
+Built 2026-11-05; the decisions are in [Zotero items as sources and as subjects](zotero-sources.md#turning-an-item-into-a-project-class-by-hand).
+Leave the types unclaimed, and every item comes in as `ZoteroObject` (the fallback); a person then makes one a `Book`
+(any concrete `ZoteroBacked` class but the fallback), and it stays an item that the sync keeps up to date. In
+`link.py`, behind routes that need a login (the refusal's status and reason as `detail`):
+
+| Route | Does |
+|-------|------|
+| `GET /api/zotero/classes` | `{fallback, targets}`: the class of the items, and the classes one can be made into |
+| `POST /api/zotero/base-on` `{model, item, data}` | The item (its id or address; it must be of the fallback class, or 409 "already in the database as …") becomes a `model` **in place** (`changing_class_from`): same id, URLs and what refers to it, with what `data` (the form of a new one) holds. The fields the sync owns come from the item. 409 if something refers to it by a relation that cannot hold the class |
+| `POST /api/zotero/link` `{model, id, zotero_url}` | As above for an item that is not a node; for one that is, the two become one, keeping **the node something refers to** (the hand-made one takes the item's fields and address, and the item's node is deleted; or the item's node becomes the class, with the hand-made one's fields and URLs, and that one is deleted). 409 if both are referred to, naming what refers to each. Gives `{id, type, label}` of the node kept |
+| `POST /api/zotero/unlink` `{model, id}` | The node keeps its id, its own fields and what refers to it, and loses the Zotero fields and the address; the item is made again as a node of the fallback class (`zotero_synced_entity_version` 1: as if the sync had made it). Gives that node |
+
+`accepts` applies to all three (a class that names item types takes only those, unless `item_type_override` says
+otherwise). The writes of a merge and of an unlink are two or three transactions (free the URLs, write, delete): a
+failure in the middle puts the URLs back, but is not atomic. Tested in `tests/live/test_zotero_live_adopt.py` (both
+backends) and `e2e/test_zotero.py`.
 
 ### Watching
 
@@ -240,12 +261,13 @@ by hand beside the server's is safe, as writes are against the version read (the
 ## Not built
 
 - **The read-only flag in the exported models**, so that the interface shows the fields read-only
-  ([meta slots](meta-slots.md)). The interface itself is untouched: a search of the library for a source field, and a
-  "link to Zotero" action that offers the imported items, are for when it is built.
+  ([meta slots](meta-slots.md)): the form of a `Book` shows the Zotero fields as inputs (what is typed in them is not
+  saved). The interface has *From Zotero*, *Link to Zotero* and *Unlink* ([below](#turning-an-item-into-a-book-by-hand));
+  a search of the library in a source field is not built.
 - **`check` for the database**: duplicates (two nodes for one work), a node whose class is not the one the table now gives,
   a node whose item is not in the library any more. It needs reading every item.
-- A **lease** for several workers (above); a **merge of two entities** (re-point relations, URLs and history, delete the
-  second), which the duplicate case needs; the first import in a **bulk** way (each item is written one at a time:
+- A **lease** for several workers (above); a general **merge of two entities** that are both referred to (re-point
+  relations, URLs and history, delete the second: `pangloss_cypher.relink` does the re-pointing for typologies); the first import in a **bulk** way (each item is written one at a time:
   measure on a real library before deciding; the bulk loader needs an empty database).
 - Attachments and notes (skipped); parsing Zotero's text dates (the [dates design](dates.md)).
 

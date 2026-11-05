@@ -94,6 +94,35 @@ export interface ConsoleActionProps {
 }
 
 /**
+ * The form of a new item, as a component a module adds to its console (`newItemActions`) is given it.
+ */
+export interface NewItemForm {
+  /** The value at a path of the form (`["label"]`, `["writtenBy", 0]`) */
+  get: (path: (string | number)[]) => unknown;
+  /** Sets the value at a path, as a field of the form does */
+  set: (path: (string | number)[], value: unknown) => void;
+  /**
+   * How Save sends the form from now on, instead of making a new item: given what would be sent (checked, as for a
+   * create), it gives what was saved. `undefined` puts back the usual way. What it refuses is shown as a refused
+   * create is.
+   */
+  sendBy: (
+    sender: ((body: Record<string, unknown>) => Promise<{ id: string; type: string; label: string }>) | undefined,
+  ) => void;
+}
+
+/**
+ * What a component a module adds to the console of the form that makes a new item (`newItemActions`) is given. It
+ * decides itself whether to show anything (usually a `ConsoleButton`).
+ */
+export interface NewItemActionProps {
+  /** The type of what is made */
+  type: string;
+  model: ModelDefinition;
+  form: NewItemForm;
+}
+
+/**
  * What a component a module adds after the contents of an item's page (`itemSections`) is given. It decides itself
  * whether to show anything (a section, usually under a `SectionBar`).
  */
@@ -162,6 +191,11 @@ export interface ModuleManifest {
    * own buttons (each loaded when the console is first shown)
    */
   consoleActions?: Record<string, ComponentLoader>;
+  /**
+   * Components for the console of the form that makes a new item, before its own buttons (`NewItemActionProps`: they
+   * can fill the form in, and change how it is sent)
+   */
+  newItemActions?: Record<string, ComponentLoader>;
   /** Components after the contents of every item's page, in the order of the modules (each loaded when first shown) */
   itemSections?: Record<string, ComponentLoader>;
   /** Other ways of showing what refers to an item (`IncomingView`): by its name `app:key` */

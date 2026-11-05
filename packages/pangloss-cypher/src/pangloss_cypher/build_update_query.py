@@ -78,8 +78,10 @@ def build_tree_meta_query(head_id: uuid.UUID) -> tuple[str, dict[str, typing.Any
 
 def build_replace_head_query(
     instance: _DocumentUpdateDBBase | _EntityUpdateDBBase,
+    remove_labels: typing.Iterable[str] = (),
 ) -> tuple[str, dict[str, typing.Any]]:
-    """Delete everything the head node owns, and replace its properties"""
+    """Delete everything the head node owns, and replace its properties. `remove_labels`: those of the class it was,
+    when its class is changed"""
     params = QueryParams()
     head_id_identifier = params.add(str(instance.id))
     data = get_node_fields_as_writable_dict(instance, is_new=True, is_head_node=True)
@@ -91,7 +93,7 @@ def build_replace_head_query(
     # the classes it fulfils now, by what it holds: their labels are put on, and those of the
     # classes it could fulfil and does not are taken off
     labels = instance._labels
-    gone = sorted(fulfillable_labels(instance) - set(labels))
+    gone = sorted((fulfillable_labels(instance) | set(remove_labels)) - set(labels))
     relabel = "".join(
         [
             f"SET head{''.join(':' + label for label in labels)}\n        "

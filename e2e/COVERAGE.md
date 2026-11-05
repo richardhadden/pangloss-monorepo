@@ -3,7 +3,7 @@
 Keep this current: when a page or feature is added to the interface (or a test is added here), change its row.
 ✅ tested · 🚧 partly · ⬜ not yet · — not built, so nothing to test
 
-147 tests, about 320 s. The e2e project (`conftest.py`) has `Person` (`has_role: list[Role]`), `Role` (`has_type`), `RoleType` (a
+151 tests, about 355 s. The e2e project (`conftest.py`) has `Person` (`has_role: list[Role]`), `Role` (`has_type`), `RoleType` (a
 typology, also a `Role`) with Clerk > Secretary and Advisor, and `Statement` (a document: `text`, `about: Person`). The `data`
 fixture adds Maximilian (his secretary: a `Role` of the type Secretary), Marie of Burgundy (her advisor, and a statement
 about her "held court at Ghent") and Charles the Bold (no role); `types` has only the types; `stack` has one admin user.
@@ -191,6 +191,17 @@ bishop's appointment in 1510, a notary's not before 1490 (`notAfter` not known),
 | Entity page: the slider of years (From / To) narrows the dated rows ("1 of 2"); a period is in the years if any of it is | ✅ | the same tests |
 | A reference with fields only in the database (a dateable document's copy of its date) is still a chip; the form does not offer them | ✅ | `test_dateable.py` (both tests); Vitest (`ItemContents.test.tsx`, `ItemForm.test.tsx`) |
 | Date editor: a range's ends are "Not before" and "Not after", each with a "Not known" button (pressed: an `UnknownDate`, the parts gone; again: a date); the other end's button is disabled while one is pressed; it reads "not before 1490" | ✅ | `test_dateable.py::test_an_end_of_a_range_that_is_not_known_is_a_button`; Vitest in the module (`DateEditor.test.tsx`, `format.test.ts`) |
+
+## `pangloss_zotero` module
+
+| Area | State | Where / notes |
+| --- | --- | --- |
+| *From Zotero* on the form of a new `Book`: the picker of the library, the form filled in, the item as a chip, Save turns the item into the Book (same id; what cited it now cites a Book) | ✅ | `test_zotero.py::test_a_new_book_is_based_on_an_item_and_unlinked_again`; dev build in `test_dev_mode.py::test_a_book_from_zotero_and_unlinked` |
+| *Unlink from Zotero*: asks first; the Book keeps its fields, the item is an entry of its own again | ✅ | the same |
+| *Link to Zotero* on a Book made by hand, to an item nothing refers to (the Book is kept, the item's node goes) | ✅ | `test_a_book_made_by_hand_is_linked_to_an_item` |
+| *Link to Zotero*: the item's node kept (another id, the page follows); refused when both are referred to; by an address | 🚧 | live tests in `pangloss-zotero` (`test_zotero_live_adopt.py`); not in a browser |
+| *From Zotero* only on the classes an item can be made into | ✅ | `test_from_zotero_is_only_on_the_classes_an_item_can_be_made_into` |
+| The hook (`newItemActions`): filling the form in and sending it another way | ✅ | Vitest `NewItemActions.test.tsx` |
 
 ## Findings of this suite (for the interface, not yet changed)
 

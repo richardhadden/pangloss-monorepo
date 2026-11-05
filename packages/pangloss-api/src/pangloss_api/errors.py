@@ -5,6 +5,7 @@ import logging
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from pangloss_models.exceptions import (
+    PanglossClassChangeError,
     PanglossConflictError,
     PanglossEntityInUseError,
     PanglossNotDeletableError,
@@ -37,6 +38,7 @@ STATUS_FOR_ERROR: list[tuple[type[Exception], int]] = [
     (PanglossNotFoundError, 404),
     (PanglossVersionConflictError, 412),
     (PanglossEntityInUseError, 409),
+    (PanglossClassChangeError, 409),
     (PanglossConflictError, 409),
     (PanglossNotDeletedError, 409),
     (PanglossNotDeletableError, 400),

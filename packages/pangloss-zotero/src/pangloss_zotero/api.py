@@ -11,8 +11,8 @@ from pydantic import BaseModel
 
 from pangloss_zotero import config
 from pangloss_zotero.client import ZoteroClient
-from pangloss_zotero.link import LinkError, link_item
-from pangloss_zotero.mapping import build_table
+from pangloss_zotero.link import LinkError, base_on, fallback, link_item, unlink_item
+from pangloss_zotero.mapping import build_table, concrete_classes
 from pangloss_zotero.store import ModelStore
 from pangloss_zotero.watch import watch
 
@@ -41,16 +41,37 @@ async def status(request: Request) -> dict[str, Any]:
     }
 
 
+@router.get("/classes")
+async def classes() -> dict[str, Any]:
+    """The class of the items no project class stands for (`fallback`), and the classes a person can make one into
+    (`targets`: `base-on`, `link`)"""
+    plain = fallback()
+    return {
+        "fallback": plain.__name__,
+        "targets": sorted(
+            c.__name__ for c in concrete_classes() if c.__name__ != plain.__name__
+        ),
+    }
+
+
+class Summary(BaseModel):
+    id: UUID
+    type: str
+    label: str
+
+
 class LinkRequest(BaseModel):
     model: str
     id: UUID
     zotero_url: str
 
 
-@router.post("/link", status_code=204, dependencies=[Depends(get_current_user)])
-async def link(body: LinkRequest, request: Request) -> None:
+@router.post("/link", dependencies=[Depends(get_current_user)])
+async def link(body: LinkRequest, request: Request) -> Summary:
     """Make a text object that was made by hand an item of the Zotero library: it takes the item's fields and
-    its address. Refused if the item is in the database already, or the class cannot be of its type."""
+    its address. If the item is a node already, the two become one: the one something refers to is kept (refused if
+    both are), so the node that is the item, which this gives, may be another one. Refused if the class cannot be
+    of the item's type."""
     settings = core_settings.SETTINGS
     factory = getattr(request.app.state, "zotero_client", None)
     client = (
@@ -59,12 +80,49 @@ async def link(body: LinkRequest, request: Request) -> None:
         else ZoteroClient(config.api_key(settings), config.api_url(settings))
     )
     try:
-        await link_item(settings, client, body.model, body.id, body.zotero_url)
+        return Summary(
+            **await link_item(settings, client, body.model, body.id, body.zotero_url)
+        )
     except LinkError as error:
         raise HTTPException(error.status, detail=str(error)) from error
     finally:
         if not factory:
             await client.close()
+
+
+class BaseOnRequest(BaseModel):
+    model: str
+    # (the item's id, or its Zotero address)
+    item: str
+    # (what the form of a new `model` gives)
+    data: dict[str, Any]
+
+
+@router.post("/base-on", dependencies=[Depends(get_current_user)])
+async def make_from_item(body: BaseOnRequest) -> Summary:
+    """Make an item (a node of the fallback class) a `model`, in place, with what the form gives: it keeps its id, its
+    address and what refers to it, and stays an item of the library"""
+    try:
+        return Summary(
+            **await base_on(core_settings.SETTINGS, body.model, body.item, body.data)
+        )
+    except LinkError as error:
+        raise HTTPException(error.status, detail=str(error)) from error
+
+
+class UnlinkRequest(BaseModel):
+    model: str
+    id: UUID
+
+
+@router.post("/unlink", dependencies=[Depends(get_current_user)])
+async def unlink(body: UnlinkRequest) -> Summary:
+    """Take the Zotero item off a node: the node keeps its own fields and what refers to it; the item is a node of the
+    fallback class again, which this gives"""
+    try:
+        return Summary(**await unlink_item(core_settings.SETTINGS, body.model, body.id))
+    except LinkError as error:
+        raise HTTPException(error.status, detail=str(error)) from error
 
 
 def configure_app(app: FastAPI, settings: Any) -> None:

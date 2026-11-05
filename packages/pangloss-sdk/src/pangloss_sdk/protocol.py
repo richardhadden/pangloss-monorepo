@@ -55,6 +55,7 @@ ERRORS_BY_NAME: dict[str, type[Exception]] = {
         models_exceptions.PanglossConflictError,
         models_exceptions.PanglossVersionConflictError,
         models_exceptions.PanglossEntityInUseError,
+        models_exceptions.PanglossClassChangeError,
         models_exceptions.PanglossNotDeletableError,
         models_exceptions.PanglossNotDeletedError,
         models_exceptions.PanglossUserNotFoundError,

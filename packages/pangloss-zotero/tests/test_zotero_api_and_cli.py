@@ -51,13 +51,14 @@ def link_client(monkeypatch, result):
         calls.append((model, id, url))
         if isinstance(result, Exception):
             raise result
+        return {"id": id, "type": model, "label": "Linked"}
 
     monkeypatch.setattr(api, "link_item", fake)
     monkeypatch.setattr(api.core_settings, "SETTINGS", Settings, raising=False)
     return TestClient(app), calls
 
 
-def test_the_link_route_links_and_gives_no_content(monkeypatch):
+def test_the_link_route_links_and_gives_the_node_that_is_the_item(monkeypatch):
     client, calls = link_client(monkeypatch, None)
     id = uuid7()
     response = client.post(
@@ -68,7 +69,8 @@ def test_the_link_route_links_and_gives_no_content(monkeypatch):
             "zotero_url": "https://www.zotero.org/groups/1/items/AAAA",
         },
     )
-    assert response.status_code == 204
+    assert response.status_code == 200
+    assert response.json() == {"id": str(id), "type": "Atlas", "label": "Linked"}
     assert calls == [("Atlas", id, "https://www.zotero.org/groups/1/items/AAAA")]
 
 
@@ -80,6 +82,107 @@ def test_the_link_route_says_why_it_refused(monkeypatch, status):
     )
     assert response.status_code == status
     assert response.json()["detail"] == "because"
+
+
+def logged_in_client(monkeypatch):
+    app = FastAPI()
+    app.include_router(api.router)
+    app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(
+        username="john"
+    )
+    monkeypatch.setattr(api.core_settings, "SETTINGS", Settings, raising=False)
+    return TestClient(app)
+
+
+def test_the_base_on_route_makes_an_item_the_class(monkeypatch):
+    calls = []
+    id = uuid7()
+
+    async def fake(settings, model, item, data):
+        calls.append((model, item, data))
+        return {"id": id, "type": model, "label": data["label"]}
+
+    monkeypatch.setattr(api, "base_on", fake)
+    response = logged_in_client(monkeypatch).post(
+        "/api/zotero/base-on",
+        json={"model": "Book", "item": str(id), "data": {"label": "My book"}},
+    )
+    assert response.status_code == 200
+    assert response.json() == {"id": str(id), "type": "Book", "label": "My book"}
+    assert calls == [("Book", str(id), {"label": "My book"})]
+
+
+def test_the_unlink_route_gives_the_item_as_a_node_of_its_own(monkeypatch):
+    id, item = uuid7(), uuid7()
+
+    async def fake(settings, model, given):
+        assert (model, given) == ("Book", id)
+        return {"id": item, "type": "ZoteroObject", "label": "(Smith)"}
+
+    monkeypatch.setattr(api, "unlink_item", fake)
+    response = logged_in_client(monkeypatch).post(
+        "/api/zotero/unlink", json={"model": "Book", "id": str(id)}
+    )
+    assert response.status_code == 200
+    assert response.json()["id"] == str(item)
+
+
+@pytest.mark.parametrize("route", ["base-on", "unlink"])
+def test_the_routes_say_why_they_refused(monkeypatch, route):
+    async def refuse(*args):
+        raise LinkError(409, "because")
+
+    monkeypatch.setattr(api, "base_on", refuse)
+    monkeypatch.setattr(api, "unlink_item", refuse)
+    body = {"model": "Book", "id": str(uuid7()), "item": "x", "data": {}}
+    response = logged_in_client(monkeypatch).post(f"/api/zotero/{route}", json=body)
+    assert response.status_code == 409
+    assert response.json()["detail"] == "because"
+
+
+def test_the_classes_an_item_can_be_made_into_are_listed(monkeypatch):
+    class Table:
+        fallback = SimpleNamespace(__name__="ZoteroObject")
+
+    monkeypatch.setattr(api, "build_table", lambda: Table)
+    monkeypatch.setattr(
+        api,
+        "concrete_classes",
+        lambda: [
+            SimpleNamespace(__name__="ZoteroObject"),
+            SimpleNamespace(__name__="Book"),
+            SimpleNamespace(__name__="Letter"),
+        ],
+    )
+    monkeypatch.setattr(api, "fallback", lambda: Table.fallback)
+    app = FastAPI()
+    app.include_router(api.router)
+    response = TestClient(app).get("/api/zotero/classes")
+    assert response.json() == {
+        "fallback": "ZoteroObject",
+        "targets": ["Book", "Letter"],
+    }
+
+
+@pytest.mark.parametrize("route", ["link", "base-on", "unlink"])
+def test_the_routes_that_write_need_a_login(route):
+    app = FastAPI()
+    app.include_router(api.router)
+    response = TestClient(app).post(
+        f"/api/zotero/{route}",
+        json={
+            "model": "A",
+            "id": str(uuid7()),
+            "zotero_url": "x",
+            "item": "x",
+            "data": {},
+        },
+    )
+    assert response.status_code in (
+        401,
+        403,
+        500,
+    )  # (no user: the dependency is the API's own)
 
 
 def test_the_link_route_needs_a_login():

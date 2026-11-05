@@ -99,9 +99,20 @@ async def restore(
     `expected_version` is the version that the person saw (as `If-Match`): if the head node
     has changed since, `PanglossVersionConflictError`. Without it, the version at the time is used."""
     record = store.get(id, version)
-    if record is None or record.model != model.__name__:
+    records = store.versions(id)
+    if record is None or not records or records[-1].model != model.__name__:
         raise PanglossNotFoundError(
             f"Version {version} of {model.__name__} {id} was not recorded"
+        )
+    if record.model != model.__name__:
+        raise PanglossRestoreError(
+            [
+                {
+                    "kind": "class-changed",
+                    "message": f"Version {version} was a {record.model}, and this is a {model.__name__} now: "
+                    "a version from before its class was changed cannot be put back",
+                }
+            ]
         )
 
     draft = make_draft(record, model)

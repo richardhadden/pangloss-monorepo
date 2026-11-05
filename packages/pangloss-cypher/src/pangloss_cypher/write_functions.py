@@ -8,12 +8,15 @@ from uuid import UUID
 
 from pangloss_models import hooks
 from pangloss_models.exceptions import (
+    PanglossClassChangeError,
     PanglossConflictError,
+    PanglossNotFoundError,
     PanglossEntityInUseError,
     PanglossVersionConflictError,
     PanglossWriteError,
 )
 from pangloss_models.hooks import WriteEvent, emit_write_event
+from pangloss_models.model_bases.labels import labels_for_model
 from pangloss_models.model_bases.document import (
     Document,
     _DocumentCreateBase,
@@ -41,6 +44,7 @@ from pangloss_cypher.delete_node import (
     undelete,
 )
 from pangloss_cypher.read_functions import get_document, get_entity
+from pangloss_cypher.read_incoming import fetch_incoming_relations
 from pangloss_cypher.render_write import render
 from pangloss_cypher.transactions import (
     Transaction,
@@ -106,6 +110,7 @@ def announce(
     payload: Any | None = None,
     created_entities: tuple[Any, ...] = (),
     restored_from: int | None = None,
+    changed_class_from: type | None = None,
 ) -> None:
     """Tell the listeners (`pangloss_models.hooks`) of a write that has committed"""
     emit_write_event(
@@ -119,6 +124,7 @@ def announce(
             payload=payload,
             created_entities=created_entities,
             restored_from=restored_from,
+            changed_class_from=changed_class_from,
         )
     )
 
@@ -278,12 +284,69 @@ async def create_head_node(
     )
 
 
+type Referrers = set[tuple[str, str, str]]
+
+
+async def referrers(tx: Transaction, cls: type[Entity], id: UUID) -> Referrers:
+    """What refers to an entity, read as being of `cls`: (the name of the relation, the type and id of what holds it)"""
+    incoming = await fetch_incoming_relations(tx, cls, id)
+    return {
+        (name, str(item["type"]), str(item["id"]))
+        for name, items in incoming.items()
+        for item in items
+    }
+
+
+async def check_class_change(
+    tx: Transaction, db_instance: _EntityUpdateDBBase, old: type
+) -> Referrers:
+    """That the head is an entity of exactly the class `old`, which it is to be changed from. Gives what refers to it"""
+    new = db_instance._owner
+    if old.__metatype__ != "Entity" or new.__metatype__ != "Entity":
+        raise PanglossClassChangeError(
+            f"Only an entity can change its class, not a {old.__name__} into a {new.__name__}"
+        )
+    result = await tx.run(
+        "MATCH (head:HeadNode {id: $id}) RETURN head.type AS type",
+        id=str(db_instance.id),
+    )
+    found = await result.value()
+    if not found:
+        raise PanglossNotFoundError(
+            f"There is no {old.__name__} with id {db_instance.id}"
+        )
+    if found[0] != old.__name__:
+        raise PanglossClassChangeError(
+            f"{db_instance.id} is a {found[0]}, not a {old.__name__}, so its class cannot be changed from "
+            f"{old.__name__}"
+        )
+    return await referrers(tx, cast(type[Entity], old), db_instance.id)
+
+
+async def check_references_kept(
+    tx: Transaction, db_instance: _EntityUpdateDBBase, before: Referrers
+) -> None:
+    """After a change of class, in its transaction: that everything that referred to the entity still does, read as
+    the new class (a relation that cannot hold it is not read). Raises, so that nothing is changed, if not"""
+    new = cast(type[Entity], db_instance._owner)
+    lost = before - await referrers(tx, new, db_instance.id)
+    if lost:
+        which = ", ".join(
+            f"{type_name} {id} ({name})" for name, type_name, id in sorted(lost)
+        )
+        raise PanglossClassChangeError(
+            f"{db_instance.id} cannot become a {new.__name__}: it is referred to by a relation that cannot hold "
+            f"a {new.__name__}: {which}"
+        )
+
+
 @write_transaction
 async def replace_head_node(
     tx: Transaction,
     db_instance: _DocumentUpdateDBBase | _EntityUpdateDBBase,
     expected_version: int | None = None,
     before_write: BeforeWrite | None = None,
+    changing_class_from: type | None = None,
 ) -> tuple[ExistingHead, tuple[Any, ...]]:
     """Replace everything below a head node, and its properties, with the new
     version. All checks are made before anything is deleted, and if anything
@@ -294,13 +357,23 @@ async def replace_head_node(
     both write to the head node, so the second is made to run again by the
     database, and then finds the new version.)
 
-    `before_write` is run first, in the transaction."""
+    `before_write` is run first, in the transaction.
+
+    `changing_class_from`: the class of the entity now, which becomes the class of `db_instance` (see
+    `update_head_node`)."""
 
     await check_user_exists(tx)
     if before_write is not None:
         await before_write(tx)
+    referred_by: Referrers = set()
+    head_type = db_instance.type
+    if changing_class_from is not None:
+        referred_by = await check_class_change(
+            tx, cast(_EntityUpdateDBBase, db_instance), changing_class_from
+        )
+        head_type = changing_class_from.__name__
     await dialect().before_replace(tx, db_instance.id)
-    existing_head = await get_existing_head(tx, db_instance.id, db_instance.type)
+    existing_head = await get_existing_head(tx, db_instance.id, head_type)
     if expected_version is not None and existing_head.version != expected_version:
         raise PanglossVersionConflictError(
             f"{db_instance.type} {db_instance.id} is at version "
@@ -313,7 +386,12 @@ async def replace_head_node(
     plan = plan_update(db_instance, previous_meta)
     existing = await checked_plan(tx, plan)
 
-    replace_query, replace_params = build_replace_head_query(db_instance)
+    replace_query, replace_params = build_replace_head_query(
+        db_instance,
+        remove_labels=labels_for_model(changing_class_from, "Entity")
+        if changing_class_from is not None
+        else (),
+    )
 
     # (a guard, as in `write_head_node`: the head was read above, in this transaction)
     if not await run_write_query(tx, replace_query, replace_params):
@@ -331,6 +409,11 @@ async def replace_head_node(
     ):
         raise PanglossWriteError("Nothing was written")
 
+    if changing_class_from is not None:
+        await check_references_kept(
+            tx, cast(_EntityUpdateDBBase, db_instance), referred_by
+        )
+
     created = plan.created_entities(existing)
     await pending.mark_written(tx, db_instance._owner, db_instance.id, created)
     return existing_head, created
@@ -344,6 +427,7 @@ async def update_head_node(
     published: bool | None = None,
     review_status: str | None = None,
     before_write: BeforeWrite | None = None,
+    changing_class_from: type | None = None,
 ):
     """Replace a Document or Entity (and, for a Document, everything nested in it)
     with the given version.
@@ -358,7 +442,11 @@ async def update_head_node(
     if someone has updated it since, `PanglossVersionConflictError` is raised and
     nothing is written. Without it, the update is made whatever the version.
 
-    `before_write` is run inside the transaction, before anything is read (see `BeforeWrite`)."""
+    `before_write` is run inside the transaction, before anything is read (see `BeforeWrite`).
+
+    `changing_class_from`: the entity is now of that class, and becomes one of this class, in place: it keeps its id,
+    its URLs and what refers to it. Refused (`PanglossClassChangeError`) if it is not of that class, or if something
+    refers to it by a relation that cannot hold this class."""
     db_instance = cast(
         _DocumentUpdateDBBase | _EntityUpdateDBBase, instance._to_db_model()
     )
@@ -366,7 +454,11 @@ async def update_head_node(
         hooks.review_status_asked(published, review_status)
     ):
         existing_head, created_entities = await write_with_retries(
-            replace_head_node, db_instance, expected_version, before_write
+            replace_head_node,
+            db_instance,
+            expected_version,
+            before_write,
+            changing_class_from,
         )
 
     owner = cast(type[Document | Entity], instance._owner)
@@ -378,6 +470,7 @@ async def update_head_node(
         db_instance,
         created_entities,
         restored_from,
+        changing_class_from,
     )
     if detail:
         return await _get_head_view(owner, db_instance.id)

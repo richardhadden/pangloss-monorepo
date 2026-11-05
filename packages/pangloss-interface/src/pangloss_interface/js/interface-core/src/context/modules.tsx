@@ -11,6 +11,7 @@ import type {
   IncomingViewProps,
   ItemSectionProps,
   ModuleManifest,
+  NewItemActionProps,
 } from "../types";
 import { useModels } from "./models";
 
@@ -22,6 +23,8 @@ interface ModulesValue {
   collapseRule(reference: ComponentReference): CollapseRule | undefined;
   /** What the modules add to the console of an item (`consoleActions`), in the order of the modules (lazy; the same each time) */
   consoleActions(): Component<ConsoleActionProps>[];
+  /** What the modules add to the console of the form that makes a new item (`newItemActions`), in order (lazy) */
+  newItemActions(): Component<NewItemActionProps>[];
   /** What the modules add after the contents of an item's page (`itemSections`), in the order of the modules (lazy) */
   itemSections(): Component<ItemSectionProps>[];
   /** The other ways of showing what refers to an item (`incomingViews`), by name `app:key` (each component lazy) */
@@ -42,6 +45,7 @@ const NONE: ModulesValue = {
   custom: () => undefined,
   collapseRule: () => undefined,
   consoleActions: () => [],
+  newItemActions: () => [],
   itemSections: () => [],
   incomingViews: () => [],
 };
@@ -62,6 +66,7 @@ export function ModulesProvider(props: ParentProps<{ modules: readonly ModuleMan
         .filter(([name]) => !disabled.has(name)),
     );
   let actions: Component<ConsoleActionProps>[] | undefined;
+  let newActions: Component<NewItemActionProps>[] | undefined;
   let sections: Component<ItemSectionProps>[] | undefined;
   let views: LoadedIncomingView[] | undefined;
   const value: ModulesValue = {
@@ -91,6 +96,12 @@ export function ModulesProvider(props: ParentProps<{ modules: readonly ModuleMan
         ([, loader]) => lazy(loader) as Component<ConsoleActionProps>,
       );
       return actions;
+    },
+    newItemActions() {
+      newActions ??= each((module) => module.newItemActions).map(
+        ([, loader]) => lazy(loader) as Component<NewItemActionProps>,
+      );
+      return newActions;
     },
     itemSections() {
       sections ??= each((module) => module.itemSections).map(

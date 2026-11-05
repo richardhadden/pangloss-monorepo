@@ -564,8 +564,13 @@ Done afterwards (2026-10-29):
   `ItemContents` offers each view that `takes` some of it (`useIncomingView()`, in the console's context); a button the module
   adds with `consoleActions` chooses it; then what it takes goes to its component, after the fields, and the rest stays by field.
   pangloss-dates' timeline is one (`ByDate`, with the button `SortByDate`). `Manifest.item_sections`, `Manifest.incoming_views`.
+- **`newItemActions` (2026-11-05, for [Zotero](zotero-sources.md)).** Components for the console of the form that makes a new
+  item, before its own buttons, given `NewItemActionProps` (`type`, `model`, `form`). `form` is a `NewItemForm`: `get(path)`,
+  `set(path, value)` (as a field does), and `sendBy(sender)`, which makes Save call `sender(body)` (the checked body of the
+  create) instead of `POST /api/<type>`, until `sendBy(undefined)`. Drawn by `ItemForm` (`NewItemActions`), each in its own
+  `Loading` and `Errored`. `useModules().newItemActions()`; `Manifest.new_item_actions`. Tested by `NewItemActions.test.tsx`.
 - **`InterfaceConfig(disabled=[...])` (2026-11-05).** A project leaves out what a module adds to every item page, by `app:key` (a
-  key of `consoleActions`, `itemSections` or `incomingViews`). The names of all apps are exported as `disabled`, and
+  key of `consoleActions`, `newItemActions`, `itemSections` or `incomingViews`). The names of all apps are exported as `disabled`, and
   `ModulesProvider` drops those; `check` reports one that no module has. To replace one, disable it and add your own.
 - **A module may have `"use server"` functions** (2026-11-03): the Solid plugin compiles only `src/**` of the Vite root by default, so
   `vite.config.ts` adds the modules' folders (`../modules/*/src`, and `PANGLOSS_MODULE_ROOTS` for `--link`) to `serverFunctions.filter`.

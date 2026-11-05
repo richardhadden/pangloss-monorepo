@@ -74,12 +74,24 @@ def describe(record: HistoryRecord) -> dict[str, Any]:
         "at": record.at.isoformat(),
         "schemaPosition": record.schema_position,
         "restoredFrom": record.restored_from,
+        # (the class it was then: an entity's class can change, `changing_class_from`)
+        "model": record.model,
     }
 
 
+def model_of(record: HistoryRecord, model: type) -> type:
+    """The class a version is upgraded as: the one it was then, if that class is still a model (an entity's class can
+    change), or else that of the node now"""
+    for known in routable_models():
+        if known.__name__ == record.model:
+            return known
+    return model
+
+
 def records_of_model(store: HistoryStore, model: type, id: UUID) -> list[HistoryRecord]:
-    records = [r for r in store.versions(id) if r.model == model.__name__]
-    if not records:
+    """The history of a node that is of `model` now: with the versions from before its class was changed, if it was"""
+    records = store.versions(id)
+    if not records or records[-1].model != model.__name__:
         raise HTTPException(
             status.HTTP_404_NOT_FOUND,
             detail=f"There is no history of a {model.__name__} with id {id}",
@@ -134,7 +146,7 @@ async def get_contents(model_name: str, id: UUID, store: Store) -> dict[str, Any
     for record in records:
         full = store.get(record.head_id, record.version)
         if full is not None:
-            drafts.append((full, make_draft(full, model)))
+            drafts.append((full, make_draft(full, model_of(full, model))))
     views = await views_of([draft.data for _, draft in drafts])
     return {
         "id": str(id),
@@ -188,7 +200,7 @@ async def get_version(
     record = version_content(store, model, id, version)
     body = describe(record)
     if upgrade:
-        draft = make_draft(record, model)
+        draft = make_draft(record, model_of(record, model))
         return {
             **body,
             "content": await view_of(draft.data) if view else draft.data,
@@ -212,7 +224,7 @@ async def get_draft(
     problems that someone has to decide (it may be incomplete or invalid)"""
     model = find_model(model_name)
     record = version_content(store, model, id, version)
-    draft = make_draft(record, model)
+    draft = make_draft(record, model_of(record, model))
     return {
         "fromVersion": version,
         "schemaPosition": record.schema_position,

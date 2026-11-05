@@ -163,7 +163,8 @@ class Atlas(TextObject):
 - **Zotero may have the type wrong** (a book entered as a document). The person says what it is on the node
   (`item_type_override`), and that is what a class is asked about when a node is linked to an item
   (`accepts`). Linking an `Atlas` to a Zotero letter is refused unless the person says it is a book.
-- **The class is fixed when the node is created** (decided; it is how Pangloss stores nodes). An item whose type later
+- **The class is fixed when the node is created** (decided; it is how Pangloss stores nodes. *Since 2026-11-05 a person
+  can change it, by hand: [below](#turning-an-item-into-a-project-class-by-hand).*) An item whose type later
   changes in Zotero keeps its class and takes the new `item_type`; a stub made from a factoid's payload keeps the class
   that payload gave it. The sync fills in either and never changes a class. A way to change one node's class (option D)
   is not needed for a first version.
@@ -215,3 +216,71 @@ it makes (the sync is the user `zotero_sync`), and any other version means a per
    a URL that has the library in it; `zotero_library` is a field of the item. Whether they can share a class is
    fine; whether a project can have items from two libraries with different classes needs a table per
    library (the table is global now).
+
+## Turning an item into a project class by hand ✅
+
+**Status: built 2026-11-05** (the routes: [the package](zotero.md#turning-an-item-into-a-book-by-hand)). Choosing the class by the Zotero type (`_zotero_meta`, above) is kept, but it is not
+enough on its own: Zotero's type cannot always be trusted, and a book that is only a secondary source (a work of
+historiography) must not appear as if it were a historical object. So a person decides, in the interface, that an
+item is a `Book` (a project class built on `ZoteroBacked`), and it stays a Zotero item: the sync keeps its Zotero
+fields up to date.
+
+The usual set-up: no project class claims the types, so every item comes in as `ZoteroObject` (or the class that says
+`fallback=True`); a person makes the ones that matter into a `Book`, a `Letter` and so on.
+
+### Decided (the user, 2026-11-05)
+
+1. **The class changes in place** (option D above, after all): the item's node becomes a `Book`, keeping its id, its
+   URLs and everything that refers to it. This is a general operation of the models, not of this package:
+   `Book.Update(...).save(expected_version=v, changing_class_from=ZoteroObject)`. It is refused if something refers to
+   the node through a relation that cannot hold the new class.
+2. **Linking a hand-made `Book` to an item that is already a node keeps the node that something refers to**, so that
+   nothing is re-pointed. If only the item is referred to, the item becomes the `Book` (in place, as in 1) and takes
+   the hand-made one's fields and URLs; the hand-made node is deleted. Otherwise the `Book` takes the item's fields
+   and URL, and the item's node is deleted. If both are referred to, it is refused, saying what refers to each.
+   (References are edges to a node: a URL is looked up when a reference is written, so moving a URL does not move
+   them. Storing references by URL instead was considered and not chosen: it changes how every relation is stored.)
+3. **Unlinking splits**: the `Book` keeps its id, its own fields and everything that refers to it, and loses the
+   Zotero fields and URL; the item is written again at once as a new node of the fallback class, with its URL.
+4. **A new `Book` can be based on an item**: on the new-item form a person picks an item, the form is filled in from
+   it and says which item it is based on, and Save turns that item into the `Book` with what the form holds (so a
+   `Book` with required fields of its own works).
+
+### Rules (my choices, to be confirmed)
+
+- What can be turned into a `Book`, or merged with one, is an item of the **fallback class** (`ZoteroObject` unless a
+  class says `fallback=True`): one that has a project class already has been decided ("refuse if it has already
+  happened"). The target is any concrete `ZoteroBacked` class other than the fallback.
+- The fields the sync owns come from the item, never from the form (the form shows them, the server ignores them).
+- `accepts` still applies: a `Book` that declares item types can only be an item of one of them, unless
+  `item_type_override` says otherwise. A class that declares none accepts any.
+
+### Parts
+
+| Where | What |
+|---|---|
+| `pangloss-cypher` (`replace_head_node`) | `changing_class_from`: the head must be of that class exactly; every relation that refers to it must accept the new class (`PanglossClassChangeError`); the old class's labels are taken off. Conformance tests, both backends |
+| `pangloss-models` (`hooks.WriteEvent`) | `changed_class_from`, so that history can tell |
+| `pangloss-history` | The history of a node that changed class has the versions from before; restoring one of them is refused, saying why |
+| `pangloss-zotero` (`adopt.py`) | `base_on`, `link` (now with the merge), `unlink`; routes `POST /api/zotero/base-on`, `/link`, `/unlink` |
+| `interface-core` | A general hook, `newItemActions`: a module's component in the console of the new-item form, given the form (read, set, and replace how it is sent) |
+| `pangloss_zotero/interface` | A module: *From Zotero* on the new form of a Zotero class; *Link to Zotero* and *Unlink* in the console of such an item |
+
+### As built
+
+As planned, with these details:
+
+- `changing_class_from` checks what refers to the entity **inside the update's transaction**: it reads the incoming
+  relations as the old class before the write and as the new class after it (`fetch_incoming_relations`, which is what
+  the `HeadView` shows), and rolls back if anything is missing. So a relation through reified relations is judged as a
+  read would judge it. Only an entity changes class.
+- `pangloss-history`: the history of the node lists the versions from before (each says its `model`); restoring one of
+  them is refused (`class-changed`); the history is found by the class the node is now.
+- The interface module (`pangloss_zotero/interface`): *From Zotero* on the new form of a target class fills in the label
+  and the literal fields the item has, shows the item as a chip with ✕, and sends Save to `base-on`; *Link to Zotero*
+  (a search of the fallback class, or an address) and *Unlink* (asks first) are in the console of the item's page and of
+  its form (the form is read again afterwards, and says so). After a merge that kept the item's node, the page goes to
+  it (another id).
+- `Create` takes no `urls`: a hand-made `Book` gets URLs of its own only by an update.
+- Not done: the Zotero fields are still inputs on the form; a test that classes of earlier tests do not leak into a
+  relation to `ZoteroBacked` (they stay its subclasses after the registry is emptied: the tests name the classes).

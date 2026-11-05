@@ -55,6 +55,7 @@ MODELS = textwrap.dedent(
     from pangloss_library.models import WeightedAlternative
     from pangloss_review.meta import ReviewMeta
     from pangloss_typology import Typed, Typology, TypologyMeta
+    from pangloss_zotero import ZoteroBacked, ZoteroObject
 
 
     class Role(Entity):
@@ -120,6 +121,16 @@ MODELS = textwrap.dedent(
     # (a feast, by rule or attached by hand: what the calendar's days are characterised by)
     class Feast(DateCharacterisation):
         use: str | None = None
+
+
+    # (an item of the Zotero library made a book by hand: `pangloss_zotero`; the items come in as `ZoteroObject`)
+    class Book(ZoteroBacked):
+        pages: int | None = None
+
+
+    # (what cites an item of the library, or a book)
+    class Citation(Document):
+        source: ZoteroObject | Book
 
 
     # (a person said to be a member of a group: two such make the derived fact that they are of one group)
@@ -296,7 +307,7 @@ def make_project(root: Path) -> Path:
         '"pangloss_memgraph",',
         '"pangloss_memgraph",\n        "pangloss_interface",\n        "pangloss_typology",\n        "pangloss_dates",\n'
         '        "pangloss_calendar",\n        "pangloss_review",\n        "pangloss_library",\n        "pangloss_history",\n'
-        '        "pangloss_derived",',
+        '        "pangloss_derived",\n        "pangloss_zotero",',
         1,
     )
     text = text.replace('DB_USERNAME="memgraph"', 'DB_USERNAME="test"')
@@ -307,6 +318,8 @@ def make_project(root: Path) -> Path:
     text = text.replace(
         "    INTERFACE_LANGUAGES:",
         "    REVIEW_ALLOW_SELF_REVIEW: bool = False\n"
+        # (the library the Zotero items are from; with no key, nothing is synced and nothing is watched)
+        '    ZOTERO_LIBRARIES: list[str] = ["groups/1"]\n'
         '    DATES_DEFAULT_CALENDAR: str = "julian"\n'
         "    CALENDAR_FIRST_YEAR: int = 1499\n"
         "    CALENDAR_LAST_YEAR: int = 1501\n"
