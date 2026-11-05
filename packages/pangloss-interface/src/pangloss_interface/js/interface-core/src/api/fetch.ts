@@ -3,6 +3,9 @@
  * browser and on the server alike; they have no state, and no cache: the application wraps
  * them (the router's `query` caches and shares them).
  */
+import { entityReferences, refreshReferences } from "../schema";
+import type { FormData, RefreshedReferences } from "../schema";
+import type { ModelDefinitions } from "../types";
 import { ApiError } from "./client";
 import type { ApiClient } from "./client";
 import type {
@@ -90,6 +93,30 @@ export function autocomplete(
     page: params.page,
     page_size: params.pageSize,
   });
+}
+
+/**
+ * Which of these entities are still there (not deleted), with their types and labels as they are now, in the order
+ * asked: one request for them all
+ */
+export async function references(client: ApiClient, ids: string[]): Promise<Summary[]> {
+  if (ids.length === 0) return [];
+  const answer: { found: Summary[] } = await client.post("/references", { ids });
+  return answer.found;
+}
+
+/**
+ * `value` with the entities it refers to checked against the API, in one request: those that are gone taken out, and
+ * labels made what they are now (`refreshReferences`). For something kept a while in the browser (a stashed item)
+ */
+export async function withCurrentReferences(
+  client: ApiClient,
+  definitions: ModelDefinitions,
+  value: FormData,
+): Promise<RefreshedReferences> {
+  const asked = entityReferences(definitions, value);
+  if (asked.length === 0) return { value, gone: [], renamed: [] };
+  return refreshReferences(definitions, value, await references(client, asked.map((reference) => reference.id)));
 }
 
 /** The items that fit a pattern */

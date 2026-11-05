@@ -47,6 +47,7 @@ export * from "./share";
 export * from "./sharing";
 export * from "./relationLayout";
 export * from "./clipboard";
+export * from "./stash";
 export * from "./retype";
 export * from "./validation";
 export * from "./collapse";

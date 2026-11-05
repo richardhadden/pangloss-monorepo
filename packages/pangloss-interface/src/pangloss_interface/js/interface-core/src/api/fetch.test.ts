@@ -10,8 +10,11 @@ import {
   listItems,
   logIn,
   logOut,
+  references,
   searchItems,
+  withCurrentReferences,
 } from "./fetch";
+import type { ModelDefinitions } from "../types";
 
 type Call = { url: string; init: RequestInit };
 
@@ -234,4 +237,28 @@ test("a 412 keeps what else the API said, and a 422 is read as a line for each p
   );
   expect(problemsOf(invalid)).toEqual(["statements › 0 › text: too short", "odd"]);
   expect(problemsOf(new ApiError(409, "Id in use"))).toEqual(["Id in use"]);
+});
+
+test("which entities are still there is one request with every id; with none, no request", async () => {
+  const { client, calls } = clientAnswering(() => json({ found: [{ id: "p1", type: "Person", label: "Alice Smith" }] }));
+  expect(await references(client, [])).toEqual([]);
+  expect(calls).toEqual([]);
+  expect(await references(client, ["p1", "p2"])).toEqual([{ id: "p1", type: "Person", label: "Alice Smith" }]);
+  expect(calls[0]!.url).toBe("http://api.test/api/references");
+  expect(calls[0]!.init.method).toBe("POST");
+  expect(JSON.parse(String(calls[0]!.init.body))).toEqual({ ids: ["p1", "p2"] });
+});
+
+test("a stashed item is brought up to date with what the API says of its entities", async () => {
+  const definitions = { models: { Person: { name: "Person", kind: "Entity" } }, enums: {} } as unknown as ModelDefinitions;
+  const { client } = clientAnswering(() => json({ found: [{ id: "p1", type: "Person", label: "Alice Smith" }] }));
+  const refreshed = await withCurrentReferences(client, definitions, {
+    type: "Note",
+    people: [
+      { type: "Person", id: "p1", label: "Alice" },
+      { type: "Person", id: "p2", label: "Bob" },
+    ],
+  });
+  expect(refreshed.value.people).toEqual([{ type: "Person", id: "p1", label: "Alice Smith" }]);
+  expect(refreshed.gone).toEqual([{ type: "Person", id: "p2", label: "Bob" }]);
 });

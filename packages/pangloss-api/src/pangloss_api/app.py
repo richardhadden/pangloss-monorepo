@@ -26,7 +26,7 @@ from pangloss_api.background import Supervisor
 from pangloss_api.dependencies import set_visibility
 from pangloss_api.errors import ServerErrorResponder, register_error_handlers
 from pangloss_api.request_log import RequestLogger
-from pangloss_api.routes import autocomplete, search, users
+from pangloss_api.routes import autocomplete, references, search, users
 from pangloss_api.routes.models import build_router, routable_models
 
 SETTINGS_ENVIRONMENT_VARIABLE = "PANGLOSS_SETTINGS"
@@ -235,6 +235,7 @@ def create_app() -> FastAPI:
     configure_apps(app, settings)
     app.include_router(users.router)
     app.include_router(autocomplete.router)
+    app.include_router(references.router)
     app.include_router(search.router)
     for router in app_routers(settings.INSTALLED_APPS):
         app.include_router(router)

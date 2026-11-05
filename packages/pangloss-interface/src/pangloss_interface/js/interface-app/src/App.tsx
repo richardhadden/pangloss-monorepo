@@ -13,8 +13,9 @@ import {
   TranslationsProvider,
   SessionProvider,
   SidePanelProvider,
+  StashProvider,
   ToastsProvider,
-  useClipboard,
+  useBottomBar,
   useComponent,
   useTranslations,
 } from "@pangloss/interface-core";
@@ -51,6 +52,7 @@ function Frame(props: ParentProps) {
     <SessionProvider user={user}>
       {/* (each user has their own clipboard) */}
       <ClipboardProvider owner={() => user()?.username}>
+       <StashProvider owner={() => user()?.username}>
         {/* (the frame outlives the pages, so a toast stays when a save goes to another page) */}
         <ToastsProvider>
           {/* (the bar reads the user, so it waits for it: until then, one with no one logged in) */}
@@ -70,15 +72,16 @@ function Frame(props: ParentProps) {
           <Toasts />
           <LoginDialog />
         </ToastsProvider>
+       </StashProvider>
       </ClipboardProvider>
     </SessionProvider>
   );
 }
 
-// The page beside the nav bar, clear of the console bar, and of the clipboard bar when it is showing
+// The page beside the nav bar, clear of the console bar, and of the bar of the clipboard and stash when it is showing
 function Padded(props: ParentProps<{ navPinned: boolean }>) {
-  const clipboard = useClipboard();
-  const barShown = () => (clipboard?.entries().length ?? 0) > 0 && !!clipboard?.formShown();
+  const bottomBar = useBottomBar();
+  const barShown = bottomBar.shown;
   return (
     <div
       class={[
@@ -86,8 +89,8 @@ function Padded(props: ParentProps<{ navPinned: boolean }>) {
         {
           "pl-72": props.navPinned,
           "pl-12": !props.navPinned,
-          "pb-48": barShown() && !clipboard?.collapsed(),
-          "pb-12": barShown() && !!clipboard?.collapsed(),
+          "pb-48": barShown() && !bottomBar.collapsed(),
+          "pb-12": barShown() && bottomBar.collapsed(),
         },
       ]}
     >

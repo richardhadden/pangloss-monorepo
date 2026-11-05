@@ -7,6 +7,7 @@ import {
   useComponent,
   getModel,
   useModels,
+  useStash,
   useTranslations,
   headOf,
   wrappingSpaces,
@@ -35,6 +36,12 @@ export default function EntityList(props: RouteProps<"/:type">) {
   const definitions = useModels();
   const model = () => getModel(definitions, props.params.type);
   const [search, setSearch] = useSearchParams();
+  // (the stashed items of this type, and of its types, are shown beside the clipboard while the page is about it)
+  const stash = useStash();
+  createEffect(
+    () => props.params.type,
+    (type) => stash?.showFor(type),
+  );
   return (
     <Customised
       slot="listPage"

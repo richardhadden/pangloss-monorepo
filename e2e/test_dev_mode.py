@@ -117,6 +117,8 @@ def test_making_and_editing(page: Page, data, dev_url: str, errors: list[str]):
     # Save button is in the console, outside it, so the form itself is looked for)
     expect(page.get_by_role("textbox", name="Text")).to_be_visible()
     expect(page.locator("main")).not_to_contain_text(SOLID_ERROR)
+    # (Save is on once there is a change)
+    page.get_by_role("textbox", name="Text").fill("Marie held court at Ghent, again")
     page.get_by_role("button", name="Save").click()
     expect(page.get_by_role("status", name="Notifications")).to_contain_text("saved")
     page.goto(f"{dev_url}/Statement/new")
@@ -427,8 +429,8 @@ def test_narrowing_and_widening_a_document_in_a_form(
     # (and back, which loses nothing: no question)
     page.get_by_role("button", name="Widen Making it to a type above it").click()
     expect(page.get_by_role("dialog")).to_have_count(0)
-    page.get_by_role("button", name="Save").click()
-    expect(page.get_by_role("status", name="Notifications")).to_contain_text("saved")
+    # (the document is as it was loaded: nothing to save)
+    expect(page.get_by_role("button", name="Save")).to_be_disabled()
     # (a new one whose subject a creation of a painting cannot hold: said at the field)
     page.goto(f"{dev_url}/Provenance/new")
     hydrated(page)
@@ -437,5 +439,36 @@ def test_narrowing_and_widening_a_document_in_a_form(
     page.get_by_role("button", name="Add Steps").click()
     page.get_by_role("button", name="Creation of painting", exact=True).click()
     expect(page.get_by_text("cannot go here: choose one that can")).to_be_visible()
+    expect(page.locator("main")).not_to_contain_text(SOLID_ERROR)
+    assert errors == []
+
+
+def test_leaving_and_stashing(page: Page, data, dev_url: str, errors: list[str]):
+    from conftest import PASSWORD, USERNAME
+
+    response = page.request.post(
+        f"{dev_url}/api/users/session",
+        form={"username": USERNAME, "password": PASSWORD},
+    )
+    assert response.ok, response.text()
+    page.goto(f"{dev_url}/Statement/new")
+    hydrated(page)
+    page.get_by_role("textbox", name="Text").fill("Half done")
+    page.get_by_role("button", name="Cancel").click()
+    dialog = page.get_by_role("dialog", name="Leave without saving?")
+    dialog.get_by_label("A label, to know it by").fill("A stashed statement")
+    dialog.get_by_role("button", name="Stash and leave").click()
+    page.wait_for_url(re.compile(r"/Statement$"))
+    stashed = page.get_by_role("region", name="Stashed")
+    expect(stashed).to_contain_text("A stashed statement")
+    stashed.get_by_role("button", name=re.compile("^Stashed")).click()
+    stashed.get_by_role("link", name="Go on with A stashed statement").click()
+    page.wait_for_url(re.compile(r"/Statement/new\?stash="))
+    expect(page.get_by_role("textbox", name="Text")).to_have_value("Half done")
+    expect(page.locator("main")).not_to_contain_text(SOLID_ERROR)
+    # (opened from the stash, and taken up again on a page loaded afresh: read once settled)
+    page.reload()
+    hydrated(page)
+    expect(page.get_by_role("textbox", name="Text")).to_have_value("Half done")
     expect(page.locator("main")).not_to_contain_text(SOLID_ERROR)
     assert errors == []

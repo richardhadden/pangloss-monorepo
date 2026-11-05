@@ -366,6 +366,7 @@ test("an entity is found by searching, then shown as a reference, and only its t
   click(document.body.querySelector('[role="option"]'));
   await settle();
   fillRequired();
+  await settle();
   click(button("Save"));
   await settle();
   expect(sent.at(-1)!.body.author).toEqual({ type: "Person", id: "p1" });
@@ -553,6 +554,7 @@ test("an edit sends the whole item back with the version it was loaded at; what 
   await settle();
   expect(byLabel<HTMLInputElement>("Label").value).toBe("Fall of Rome");
   type("year", "477");
+  await settle();
   click(button("Save"));
   await settle();
   expect(sent[0]).toMatchObject({
@@ -630,6 +632,7 @@ test("a problem the API names is shown at its field, and the form keeps what was
   show(client);
   await settle();
   fillRequired();
+  await settle();
   click(button("Save"));
   await settle();
   expect(rowName("year").className).toContain("text-red-700");
@@ -646,8 +649,11 @@ test("Save is off while the item is being sent, and on again whatever the answer
   const { client } = fakeClient(() => new Promise((resolve, reject) => ((finish = resolve), (refuse = reject))));
   const saved = show(client);
   await settle();
-  fillRequired();
   const save = () => button("Save") as HTMLButtonElement;
+  // (nothing to save yet)
+  expect(save().disabled).toBe(true);
+  fillRequired();
+  await settle();
   expect(save().disabled).toBe(false);
   click(save());
   await settle();
@@ -673,6 +679,7 @@ test("an error that is not about the fields is a red toast", async () => {
   show(client);
   await settle();
   fillRequired();
+  await settle();
   click(button("Save"));
   await settle();
   expect(toastText()).toContain("You are not allowed to do this.");
@@ -689,6 +696,8 @@ test("an item saved by someone else meanwhile is not overwritten: the form says 
     version: 3,
     onReload: () => (reloaded += 1),
   });
+  await settle();
+  type("year", "477");
   await settle();
   click(button("Save"));
   await settle();
@@ -790,6 +799,7 @@ test("an entity can be made from the form: a dialog with its own form, and what 
   expect(document.body.querySelector('[role="dialog"]')).toBeNull();
   expect(document.body.textContent).toContain("Bede");
   fillRequired();
+  await settle();
   click(button("Save"));
   await settle();
   expect(sent.at(-1)).toMatchObject({ path: "/Factoid", body: { author: { type: "Person", id: "p9" } } });
@@ -866,7 +876,7 @@ test("with several types of entity, + opens the dialog on the types; the one cho
 
 const pasteSlots = () => [...document.body.querySelectorAll<HTMLElement>('[role="group"][aria-label="Paste here"]')];
 const clipboardCards = () =>
-  [...document.body.querySelectorAll('aside[aria-label="Clipboard"] li.w-72')].map((card) => card.textContent);
+  [...document.body.querySelectorAll('section[aria-label="Clipboard"] li.w-72')].map((card) => card.textContent);
 
 const meeting = { id: "a1", type: "Activity", label: "Meeting", text: "met", meta: { version: 1 } };
 
@@ -952,7 +962,7 @@ test("the head bar of a block folds it, and its buttons are cut, copy, remove; t
   ]);
   click(button("Copy Meeting"));
   await settle();
-  const list = document.body.querySelector('aside[aria-label="Clipboard"] ul')!;
+  const list = document.body.querySelector('section[aria-label="Clipboard"] ul')!;
   expect(list.classList.contains("hidden")).toBe(false);
   click(byLabel("Fold or unfold the clipboard"));
   await settle();

@@ -199,3 +199,18 @@ export function EmbeddedPasteSlot(props: { field: EmbeddedField; onPaste: (value
     />
   );
 }
+
+/** The icon of something stashed (a tray with an arrow into it), as on the Stash button */
+export function StashIcon(props: { class?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      class={["select-none fill-none stroke-current stroke-2", props.class ?? "size-3.5"]}
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M3.5 13.5h4.5l1.5 2.5h5l1.5-2.5h4.5M3.5 13.5l2.5-6h2.5M20.5 13.5l-2.5-6h-2.5M3.5 13.5V19h17v-5.5M12 3.5v8M9 8.5l3 3 3-3" />
+    </svg>
+  );
+}

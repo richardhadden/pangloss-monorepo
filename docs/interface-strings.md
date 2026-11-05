@@ -52,6 +52,25 @@ tree and in reference chips (the typology API sends the default label only), and
 | *(the plural)* | {Type}s, {Type}es, {Type}ies | `Console` (`pluralOf`) | **not a string to translate: code.** A stand-in that makes an English plural of the type; it goes when the plural names of models come from `models.jsonc` |
 | *(field names)* | activity type, carried out by... | `ItemContents` (the keys) | **not strings of the interface**: the name of the field in Python with `_` as a space. They should come from the models' translations (`models.jsonc`); incoming relations likewise (`participants reverse`) |
 | *(words)* | list of, relation to, relations to, embedded, value, required `*` | `FieldList` (`describe`) | a placeholder component; not on a page now |
+| `stash_this` | Stash this | `ItemForm` (console button beside Save, `aria-label` and tooltip) | |
+| `stash` | Stash | `StashDialog` (button) | |
+| `stash_and_leave` | Stash and leave | `StashDialog` (button) | |
+| `stash_title` | Stash this {type} | `StashDialog` (heading) | |
+| `stash_explain` | A stashed {type} is kept in this browser, to be finished later: it is offered where a new one is made. | `StashDialog` | |
+| `stash_label` | A label, to know it by | `StashDialog` (the label field, when the item has none) | |
+| `leave_title` | Leave without saving? | `StashDialog` (heading, when leaving) | |
+| `leave_lost` | The changes in this form are not saved: they will be lost. | `StashDialog` | |
+| `leave_or_stash` | The changes in this form are not saved. Stash it to finish it later, or leave it and lose them. | `StashDialog` | |
+| `leave_stay` | Stay | `StashDialog` (button) | |
+| `leave_discard` | Leave without saving | `StashDialog` (button) | |
+| `toast_stashed` | {type} “{label}” stashed | `ItemForm` (toast) | |
+| `stash_gone` | These were referred to when this was stashed, and are no longer there: they have been taken out. | `ItemForm` (above a form opened from the stash) | |
+| `bottom_bar` | Clipboard and stash | `ClipboardBar` (`aria-label` of the bar) | |
+| `stashed` | Stashed | `ClipboardBar` (`aria-label` of the section, tooltip of the icon) | |
+| `stashed_count` | Stashed ({count}) | `ClipboardBar` (section heading) | |
+| `stash_open` | Go on with {label} | `ClipboardBar` (`aria-label` and tooltip of a stashed item's link) | |
+| `stash_open_here` | Open in this form | `ClipboardBar` (tooltip of the item the form was opened from) | |
+| `stash_remove` | Throw away {label} | `ClipboardBar` (`aria-label` and tooltip of ✕) | |
 
 ## Labels for a screen reader, and tooltips
 

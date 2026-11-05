@@ -11,7 +11,7 @@ from uuid import UUID
 
 from pangloss_models import exceptions as models_exceptions
 from pangloss_models import hooks
-from pangloss_models.autocomplete import AutocompleteResults
+from pangloss_models.autocomplete import AutocompleteItem, AutocompleteResults
 from pangloss_models.model_bases.base_models import _ListItems
 from pangloss_models.search import Match, check_match
 from pangloss_models.utils import get_concrete_types
@@ -247,6 +247,15 @@ def autocomplete(
 def autocompleted(response: Any) -> Any:
     check(response)
     return AutocompleteResults.model_validate(response.json())
+
+
+def references(ids: list[UUID]) -> Call:
+    return Call("POST", "/api/references", json={"ids": [str(id) for id in ids]})
+
+
+def referenced(response: Any) -> list[AutocompleteItem]:
+    check(response)
+    return [AutocompleteItem.model_validate(item) for item in response.json()["found"]]
 
 
 def write_params(

@@ -148,6 +148,27 @@ export interface ItemFormProps {
   onDeleted?: () => void;
   /** Called to load the item again, after it was found to have been changed by someone else */
   onReload?: () => void;
+  /**
+   * What the item is when there is nothing to save, if not `initial`: a new item opened from the stash starts as the
+   * stashed item, and can be saved at once
+   */
+  baseline?: Record<string, unknown>;
+  /**
+   * The stashed item the form was opened from (`initial` is it): stashing again replaces it, and saving removes it.
+   * `gone`: the entities it referred to that are no longer there, which were taken out (shown above the form)
+   */
+  stashed?: { key: string; gone: { type: string; id: string; label?: string }[] };
+  /**
+   * Called once the form is shown, with what the page calls before it is left: given how to leave, it says whether the
+   * page may go now (true: nothing to lose). If not, the form asks (stay, leave without saving, or stash and leave),
+   * and leaves itself if told to. What it gives back is called when the form is gone
+   */
+  guardLeaving?: (guard: (leave: () => void) => boolean) => (() => void) | void;
+  /**
+   * With it, a new head document (not an entity) has a Stash button beside Save (where there is a stash); called once
+   * it is stashed
+   */
+  onStashed?: () => void;
 }
 
 export interface ModalProps {

@@ -98,3 +98,34 @@ def test_both_flavours_of_the_sdk_have_it(module):
     )
 
     assert callable(functions.autocomplete)
+
+
+def test_references_is_one_request_with_every_id():
+    a, b = uuid7(), uuid7()
+
+    call = protocol.references([a, b])
+
+    assert (call.method, call.path) == ("POST", "/api/references")
+    assert call.json == {"ids": [str(a), str(b)]}
+    assert call.needs_login is False
+
+
+def test_references_of_a_class_keeps_only_its_own(monkeypatch):
+    Person, Place = models()
+    a, b = uuid7(), uuid7()
+    payload = {
+        "found": [
+            {"id": str(a), "type": "Person", "label": "John"},
+            {"id": str(b), "type": "Place", "label": "Paris"},
+        ]
+    }
+    response = SimpleNamespace(status_code=200, is_success=True, json=lambda: payload)
+    client = SimpleNamespace(send=lambda call: response)
+    monkeypatch.setattr(exposed_functions, "current_client", lambda: client)
+
+    assert [i.label for i in exposed_functions.references(Entity, [a, b])] == [
+        "John",
+        "Paris",
+    ]
+    assert [i.label for i in exposed_functions.references(Person, [a, b])] == ["John"]
+    assert exposed_functions.references(Person, []) == []

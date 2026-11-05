@@ -222,6 +222,7 @@ test("without the module's say, a new item is made as usual; an item being edite
   document.body
     .querySelector<HTMLInputElement>('[aria-label="Label"]')!
     .dispatchEvent(new InputEvent("input", { bubbles: true }));
+  await settle();
   click(button("Save"));
   await settle();
   expect(posted).toEqual([{ path: "/Book", body: expect.objectContaining({ label: "Typed" }) }]);
@@ -249,6 +250,10 @@ test("a read-only field is not on the form, and what was loaded of it is sent ba
   await settle();
   expect(rowNames()).toEqual(["title"]);
   expect(document.body.textContent).not.toContain("WXYZ9876");
+  const title = document.body.querySelector<HTMLInputElement>('[aria-label="title"]')!;
+  title.value = "Another title";
+  title.dispatchEvent(new InputEvent("input", { bubbles: true }));
+  await settle();
   click(button("Save"));
   await settle();
   expect(posted).toEqual([

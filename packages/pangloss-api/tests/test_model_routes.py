@@ -191,7 +191,9 @@ def test_no_models_no_model_routes(settings):
 
     paths = set(TestClient(create_app()).get("/openapi.json").json()["paths"])
     assert all(
-        path.startswith(("/api/users", "/api/autocomplete", "/api/search"))
+        path.startswith(
+            ("/api/users", "/api/autocomplete", "/api/references", "/api/search")
+        )
         for path in paths
     )
 

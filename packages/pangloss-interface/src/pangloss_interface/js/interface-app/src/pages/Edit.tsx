@@ -9,6 +9,7 @@ import type { RouteProps } from "@solidjs/router";
 import { createMemo, Errored, Loading, onSettled, refresh, Show } from "solid-js";
 import { apiClient } from "../api";
 import { revalidateAll } from "../queries";
+import { useLeaveGuard } from "../leaving";
 import { Page } from "../Page";
 
 // Once the form is on show, scrolls to the document inside it whose id is `id` (the block that has it in
@@ -43,6 +44,7 @@ export default function EditItem(props: RouteProps<"/:type/:id/edit">) {
   const navigate = useNavigate();
   const [search] = useSearchParams();
   const { t } = useTranslations();
+  const guardLeaving = useLeaveGuard();
   const item = createMemo(() => getEditView(apiClient(), props.params.type, props.params.id));
   return (
     <RequireLogin onCancel={() => navigate("/", { replace: true })}>
@@ -57,6 +59,7 @@ export default function EditItem(props: RouteProps<"/:type/:id/edit">) {
                   initial={loaded}
                   version={loaded.meta.version}
                   meta={loaded.meta}
+                  guardLeaving={guardLeaving}
                   onSaved={(saved) => {
                     void revalidateAll();
                     navigate(`/${saved.type}/${encodeURIComponent(saved.id)}`);

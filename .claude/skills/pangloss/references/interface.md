@@ -94,6 +94,8 @@ production build lets through.
 - A module-level memo that depends on who is logged in reads `useSessionKey()`, so it is fetched again on login and
   logout.
 - Decide what a logged-in user sees with `userIsLoggedIn()`.
+- A page that shows an `ItemForm` gives it `guardLeaving={useLeaveGuard()}` (`interface-app/src/leaving.ts`), so a
+  form with changes asks before it is left (docs/unsaved-changes-and-stash.md).
 
 Known traps of the current release candidate are listed in `docs/interface-refactoring.md`.
 
@@ -200,3 +202,5 @@ you: to see pages that need a login, use the e2e stack with its own user, not a 
 - Keep e2e tests few: what only a browser shows (drag and drop, hydration, built chunks). Logic belongs in Vitest and
   API tests. Notes on writing them are in `e2e/README.md`.
 - In a module's Vitest, a lazy view needs `vi.waitFor`, not one tick.
+- **Save is off until the item has changed** (`ItemFormState.changed`): a test that saves must change something
+  first, and in Vitest wait a tick after typing before clicking Save (the memo and the button follow after a flush).

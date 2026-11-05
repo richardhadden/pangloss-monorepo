@@ -17,7 +17,9 @@ get_document = get_entity = get_entity_for_edit = _unused
 delete_document = delete_entity = undelete_document = undelete_entity = (
     check_deletable
 ) = _unused
-list_items = autocomplete = search = create_head_node = update_head_node = _unused
+list_items = autocomplete = references = search = create_head_node = (
+    update_head_node
+) = _unused
 
 
 async def create_user_in_db(user):

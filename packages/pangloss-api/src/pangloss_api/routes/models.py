@@ -79,6 +79,7 @@ logged_in = [Depends(get_current_user)]
 RESERVED_NAMES = {
     "users",
     "autocomplete",
+    "references",
     "search",
     "sdk",
     "docs",

@@ -8,12 +8,13 @@ what the database module of the server returns, or raises what it raises.
 from typing import Any
 from uuid import UUID
 
-from pangloss_models.autocomplete import AutocompleteResults
+from pangloss_models.autocomplete import AutocompleteItem, AutocompleteResults
 from pangloss_models.model_bases.base_models import _ListItems
 from pangloss_models.model_bases.document import Document
 from pangloss_models.model_bases.entity import Entity
 from pangloss_models.search import Match, OrderBy, search_match
 from pangloss_models.search_where import Where
+from pangloss_models.utils import get_concrete_types
 from pangloss_sdk import protocol
 from pangloss_sdk.client import current_async_client
 from pydantic import AnyHttpUrl
@@ -76,6 +77,17 @@ async def autocomplete(
 ) -> AutocompleteResults:
     call = protocol.autocomplete(search_terms, types or [cls], page_number, page_size)
     return protocol.autocompleted(await current_async_client().send(call))
+
+
+async def references(cls: type[Entity], ids: list[UUID]) -> list[AutocompleteItem]:
+    if not ids:
+        return []
+    call = protocol.references(ids)
+    found = protocol.referenced(await current_async_client().send(call))
+    if cls is Entity:
+        return found
+    allowed = {t.__name__ for t in get_concrete_types(cls, include_abstract=True)}
+    return [item for item in found if item.type in allowed]
 
 
 async def create_head_node(

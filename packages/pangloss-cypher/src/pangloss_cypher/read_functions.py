@@ -1,9 +1,10 @@
 """The reads the models are bound to (`get`, `list`, `search`, `autocomplete`), on the backend in use"""
 
-from typing import Any, Union, cast
+from typing import Any, LiteralString, Union, cast
 from uuid import UUID
 
 from pangloss_models.autocomplete import (
+    AutocompleteItem,
     AutocompleteResults,
     labels_to_match,
 )
@@ -31,6 +32,7 @@ from pangloss_models.search_where import Where
 from pangloss_models.utils import get_concrete_types
 from pydantic import AnyHttpUrl, TypeAdapter
 
+from pangloss_cypher import fragments
 from pangloss_cypher.autocomplete_query import autocomplete_query, most_used_query
 from pangloss_cypher.build_tree import GraphFragment
 from pangloss_cypher.list_query import (
@@ -201,6 +203,39 @@ async def autocomplete(
     rows = await result.value()
     found: dict = rows[0] if rows else await empty_page(tx, query, params)
     return AutocompleteResults.model_validate(found)
+
+
+# $ids: the ids looked for (strings)
+REFERENCES_QUERY = cast(
+    LiteralString,
+    f"""
+    UNWIND $ids AS id
+    MATCH (n:PGIndexableNode {{id: id}})
+    WHERE n:Entity AND {fragments.not_deleted("n")}
+    RETURN n.id AS id, n.type AS type, n.label AS label
+""",
+)
+
+
+@read_transaction
+async def references(
+    tx: Transaction, cls: type[Entity], ids: list[UUID]
+) -> list[AutocompleteItem]:
+    """The entities with these ids that are there (not deleted), each with its type and label as they are now, in the
+    order asked for. An id that is not an entity's (or not of `cls` or a subclass), or whose entity is deleted, is left
+    out. For what refers to entities by a copy of their label (a stashed form): to see what is gone, and what is
+    renamed"""
+    if not ids:
+        return []
+    asked = list(dict.fromkeys(convert_type_for_writing(id) for id in ids))
+    result = await tx.run(REFERENCES_QUERY, ids=asked)
+    found = {row["id"]: row for row in await result.data()}
+    allowed = {t.__name__ for t in get_concrete_types(cls, include_abstract=True)}
+    return [
+        AutocompleteItem.model_validate(found[id])
+        for id in asked
+        if id in found and (cls is Entity or found[id]["type"] in allowed)
+    ]
 
 
 async def class_of_node[T: (Document, Entity)](
