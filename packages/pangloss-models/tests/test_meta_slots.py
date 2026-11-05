@@ -3,16 +3,19 @@
 from dataclasses import dataclass
 
 import pytest
-from pangloss_models import meta_slots
-from pangloss_models.exceptions import PanglossMetaError
-from pangloss_models.meta_slots import declared_slots, register_meta_slot
-from pangloss_models.model_bases.conjunction import Conjunction
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.edge_model import EdgeModel
-from pangloss_models.model_bases.embedded import Embedded
-from pangloss_models.model_bases.entity import Entity
-from pangloss_models.model_bases.reified_relation import ReifiedRelation
-from pangloss_models.model_bases.semantic_space import SemanticSpace
+from pangloss_models import (
+    Conjunction,
+    Document,
+    EdgeModel,
+    Embedded,
+    Entity,
+    PanglossMetaError,
+    ReifiedRelation,
+    SemanticSpace,
+    meta_slots,
+    register_meta_slot,
+)
+from pangloss_models.meta_slots import declared_slots
 
 
 @dataclass(frozen=True)
@@ -167,7 +170,7 @@ def test_two_slots_are_independent():
 
 
 def test_a_generic_parametrisation_inherits_the_slot():
-    from pangloss_models.model_bases.semantic_space import SemanticSpace
+    from pangloss_models import SemanticSpace
 
     register_meta_slot("_colour_meta", ColourMeta)
 
@@ -222,7 +225,7 @@ def test_a_name_used_by_another_class_is_refused_but_repeating_it_is_not():
 
 
 def test_slots_are_kept_when_the_registry_is_reset():
-    from pangloss_models.model_registry import ModelRegistry
+    from pangloss_models import ModelRegistry
 
     register_meta_slot("_colour_meta", ColourMeta)
     ModelRegistry._reset()

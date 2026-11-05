@@ -7,13 +7,15 @@ from types import SimpleNamespace as ns
 from typing import no_type_check
 
 import pytest
-from pangloss_models.exceptions import PanglossMigrationAnswerNeeded
+from pangloss_models import (
+    Document,
+    Embedded,
+    Entity,
+    PanglossMigrationAnswerNeeded,
+    ReifiedRelation,
+    SemanticSpace,
+)
 from pangloss_models.migrations import PossibleRename
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.embedded import Embedded
-from pangloss_models.model_bases.entity import Entity
-from pangloss_models.model_bases.reified_relation import ReifiedRelation
-from pangloss_models.model_bases.semantic_space import SemanticSpace
 
 from .helpers import run
 from .migration_support import declare, migrate, with_answers
@@ -438,7 +440,7 @@ async def test_a_new_embedded_object_is_made_for_each_node_that_exists(
 async def test_a_new_embedded_object_that_could_be_of_several_kinds_is_not_guessed(
     db_driver, clear_database
 ):
-    from pangloss_models.exceptions import PanglossMigrationNotSupported
+    from pangloss_models import PanglossMigrationNotSupported
 
     old_models, old = declare(new_embedded_models(embedded=False))
     await old_models.Statement.Create(label="S", text="T").save()

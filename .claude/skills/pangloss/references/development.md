@@ -139,8 +139,15 @@ migrated. `docs/demo-setup.md` describes the demo; `populate.py` fills it.
 - Match the file you are in. Comments say *why*, often as a parenthesised aside above the line:
   `# (one worker: the scripts share the workspace's caches)`. Docstrings are a plain sentence, usually without a
   final full stop, and name the hook or caller a function exists for.
+- **Import public names from a package's root** (`from pangloss_models import Document, initialise`,
+  `from pangloss_dates import Dateable`, `from pangloss_core import BaseSettings`), outside that package: the roots
+  list them in `__all__` with `lazy from` imports, so a root costs nothing until a name is used and makes no cycles.
+  Inside a package, its modules import from each other's files. A new public name goes into the root's `__all__`; it
+  must not be the name of a submodule (the module replaces a lazy name when imported first). A test that reloads a
+  module to declare its models again also reloads the roots that re-export from it (`docs/imports.md`). Migration
+  files import from `pangloss_models.migrations`.
 - Errors are specific exception classes with a message that names the model, field or setting at fault
-  (`pangloss_models.exceptions`). A command shows a message and exits with a status, not a traceback, for a mistake
+  (exported by `pangloss_models`). A command shows a message and exits with a status, not a traceback, for a mistake
   the user can fix.
 - No new dependency, setting, shared component or public name without a reason the user would recognise; ask when in
   doubt.

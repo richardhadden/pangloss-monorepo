@@ -4,10 +4,9 @@ import asyncio
 
 import httpx2 as httpx
 import pytest
-from pangloss_zotero.client import ZoteroAuthError, ZoteroError
+from pangloss_zotero import ZoteroAuthError, ZoteroError, ZoteroObject
 from pangloss_zotero.convert import item_url
 from pangloss_zotero.mapping import TypeTable
-from pangloss_zotero.models import ZoteroObject
 from pangloss_zotero.sync import sync_library
 from zotero_support import LIBRARY, FakeZotero, MemoryStore, make_item
 
@@ -233,7 +232,7 @@ def test_a_wrong_key_is_an_auth_error_and_is_not_tried_again():
 
 
 def test_the_class_for_the_type_comes_from_the_table():
-    from pangloss_zotero.models import ZoteroBacked
+    from pangloss_zotero import ZoteroBacked
 
     class Atlas(ZoteroObject):
         pass

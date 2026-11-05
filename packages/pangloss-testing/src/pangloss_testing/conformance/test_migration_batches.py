@@ -5,14 +5,16 @@ from types import SimpleNamespace as ns
 from typing import no_type_check
 
 import pytest
-from pangloss_models.exceptions import PanglossMigrationAnswerNeeded
+from pangloss_models import (
+    Document,
+    Entity,
+    PanglossMigrationAnswerNeeded,
+    ReifiedRelation,
+)
 from pangloss_models.migrations.files import EMPTY_SNAPSHOT, MigrationGraph
 from pangloss_models.migrations.history import pending
 from pangloss_models.migrations.planner import plan
 from pangloss_models.migrations.questions import with_answer
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.entity import Entity
-from pangloss_models.model_bases.reified_relation import ReifiedRelation
 from pangloss_testing.under_test import migration_backend as backend
 from pangloss_cypher.migrations import runner
 
@@ -337,7 +339,7 @@ async def test_a_renamed_relation_is_renamed_in_batches_even_when_stopped(
     db_driver, clear_database, monkeypatch
 ):
     from pangloss_models.migrations import PossibleRename
-    from pangloss_models.model_bases.document import Document
+    from pangloss_models import Document
 
     def v1():
         class Place(Entity):
@@ -411,7 +413,7 @@ async def test_a_renamed_relation_is_renamed_in_batches_even_when_stopped(
 async def test_a_removed_relation_is_removed_in_batches_with_what_it_owned(
     db_driver, clear_database, monkeypatch
 ):
-    from pangloss_models.model_bases.document import Document
+    from pangloss_models import Document
 
     def v1():
         class Place(Entity):

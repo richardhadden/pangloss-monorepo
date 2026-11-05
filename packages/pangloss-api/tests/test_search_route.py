@@ -2,11 +2,9 @@
 
 from conftest import PASSWORD  # noqa: F401
 from fastapi.testclient import TestClient
-from pangloss_api.app import create_app
-from pangloss_models.exceptions import PanglossSearchError
+from pangloss_api import create_app
+from pangloss_models import Document, Entity, PanglossSearchError
 from pangloss_models.model_bases.base_models import _ListItems
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.entity import Entity
 from test_model_routes import stub
 
 
@@ -102,7 +100,7 @@ def test_it_is_refused_without_a_type_or_for_one_that_cannot_be_searched(setting
 
 
 def test_a_model_cannot_be_called_search(settings):
-    from pangloss_models.model_bases.document import Document as Doc
+    from pangloss_models import Document as Doc
 
     class Search(Doc):
         pass
@@ -148,7 +146,7 @@ def test_nested_patterns_and_combinators_reach_the_database_as_they_were_sent(
 def test_a_search_that_took_too_long_is_a_504_that_names_the_error(
     settings, monkeypatch
 ):
-    from pangloss_models.exceptions import PanglossSearchTimeoutError
+    from pangloss_models import PanglossSearchTimeoutError
 
     make_models()
     client = TestClient(create_app())

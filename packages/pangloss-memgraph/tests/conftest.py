@@ -6,13 +6,13 @@ import neo4j
 import pangloss_core.settings as core_settings
 import pytest
 import pytest_asyncio
-from pangloss_core.settings import BaseSettings
+from pangloss_core import BaseSettings
 from pangloss_memgraph.databases.memgraph.database import Database, install
 from pangloss_memgraph.databases.memgraph.initialise_database import (
     initialise_database,
 )
-from pangloss_memgraph.databases.memgraph.settings import MemgraphDatabaseSettings
-from pangloss_models.model_registry import ModelRegistry
+from pangloss_memgraph import MemgraphDatabaseSettings
+from pangloss_models import ModelRegistry
 from pangloss_users import current_request_username
 from pydantic import AnyHttpUrl
 from pytest import fixture, mark

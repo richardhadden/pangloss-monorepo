@@ -4,14 +4,16 @@ from typing import Annotated, no_type_check
 
 import pytest
 from annotated_types import Ge, Le, Lt
+from pangloss_core import ClientSettings
 from pangloss_core import settings as core_settings
-from pangloss_core.settings import ClientSettings
 from pangloss_interface import Slider
-from pangloss_models import initialise
-from pangloss_models.exceptions import PanglossModelError
-from pangloss_models.export import export_models
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_registry import ModelRegistry
+from pangloss_models import (
+    Document,
+    ModelRegistry,
+    PanglossModelError,
+    export_models,
+    initialise,
+)
 
 
 @pytest.fixture(autouse=True)

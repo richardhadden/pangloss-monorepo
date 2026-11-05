@@ -17,7 +17,7 @@ from dataclasses import dataclass
 from typing import Any
 
 import neo4j
-from pangloss_models.text import fold
+from pangloss_models import fold
 
 TEXT_INDEX_NAME = "label_text"
 

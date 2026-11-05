@@ -1,25 +1,22 @@
 """Easter in both calendars, and the rules that move with it"""
 
 import pytest
-from pangloss_dates.calendar import (
+from pangloss_dates import (
     Calendar,
+    Frequency,
+    InvalidRule,
+    RecurrenceRule,
     Weekday,
     convert,
     describe,
     from_jdn,
+    occurrences,
+    occurs_on,
     to_jdn,
     weekday,
 )
 from pangloss_dates.easter import easter
-from pangloss_dates.recurrence import (
-    Frequency,
-    InvalidRule,
-    RecurrenceRule,
-    day_keys,
-    occurrences,
-    occurs_on,
-    pattern_keys,
-)
+from pangloss_dates.recurrence import day_keys, pattern_keys
 
 J = Calendar.JULIAN
 G = Calendar.GREGORIAN
@@ -153,7 +150,7 @@ def test_easter_agrees_with_dateutil_over_1400_to_1800():
 
 
 def test_a_feast_on_24_february_is_a_day_later_in_a_leap_year_only_with_leap_shift():
-    from pangloss_dates.calendar import is_leap_year
+    from pangloss_dates import is_leap_year
 
     matthias = RecurrenceRule(Frequency.YEARLY, month=2, month_day=24, leap_shift=True)
     plain = RecurrenceRule(Frequency.YEARLY, month=2, month_day=24)

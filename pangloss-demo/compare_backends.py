@@ -23,7 +23,7 @@ import neo4j as neo4j_driver
 import pangloss_core.settings as core_settings
 import pydantic
 from demo_app import models
-from pangloss_core.settings import BaseSettings
+from pangloss_core import BaseSettings
 from pangloss_models import initialise
 from pangloss_users import current_request_username
 from pydantic import AnyHttpUrl

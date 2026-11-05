@@ -48,16 +48,18 @@ MODELS = textwrap.dedent(
     """
     from typing import Annotated
 
-    from pangloss_models.field_definitions import FieldBinding, FieldSubclassing
-    from pangloss_models.model_bases.configs import RelationConfig
-    from pangloss_models.model_bases.document import Document
-    from pangloss_models.model_bases.entity import Entity
-    from pangloss_models.model_bases.reified_relation import ReifiedRelationDocument
-    from pangloss_calendar.models import DateCharacterisation
-    from pangloss_dates.dateable import Dateable
-    from pangloss_dates.models import Date
-    from pangloss_library.models import WeightedAlternative
-    from pangloss_review.meta import ReviewMeta
+    from pangloss_models import (
+        Document,
+        Entity,
+        FieldBinding,
+        FieldSubclassing,
+        ReifiedRelationDocument,
+        RelationConfig,
+    )
+    from pangloss_calendar import DateCharacterisation
+    from pangloss_dates import Date, Dateable
+    from pangloss_library import WeightedAlternative
+    from pangloss_review import ReviewMeta
     from pangloss_typology import Typed, Typology, TypologyMeta
     from pangloss_zotero import ZoteroBacked, ZoteroObject
 

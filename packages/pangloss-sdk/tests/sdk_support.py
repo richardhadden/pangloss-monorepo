@@ -6,10 +6,9 @@ from collections.abc import Callable
 from uuid import uuid7
 
 import httpx2 as httpx
-from pangloss_models import initialise
-from pangloss_models.model_bases.entity import Entity
+from pangloss_models import Entity, initialise
+from pangloss_sdk import SdkSettings
 from pangloss_sdk import client as sdk_client
-from pangloss_sdk.settings import SdkSettings
 
 
 def make_models():

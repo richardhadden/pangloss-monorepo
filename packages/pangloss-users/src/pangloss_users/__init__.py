@@ -1,4 +1,34 @@
+"""Users of Pangloss: their models, passwords and the `service` functions (docs/users.md)"""
+
 from contextvars import ContextVar
+
+lazy from pangloss_users.exceptions import (
+    PanglossInvalidUserError,
+    PanglossUserDoesNotExistError,
+    PanglossUserError,
+    PanglossUserExistsError,
+)
+lazy from pangloss_users.models import (
+    AccessTokenInfo,
+    User,
+    UserCreate,
+    UserInDB,
+    UserUpdate,
+)
+
+__all__ = [
+    "AccessTokenInfo",
+    "current_request_username",
+    "PanglossInvalidUserError",
+    "PanglossUserDoesNotExistError",
+    "PanglossUserError",
+    "PanglossUserExistsError",
+    "see_unpublished",
+    "User",
+    "UserCreate",
+    "UserInDB",
+    "UserUpdate",
+]
 
 current_request_username = ContextVar(
     "current_request_username", default="pangloss_default_user"

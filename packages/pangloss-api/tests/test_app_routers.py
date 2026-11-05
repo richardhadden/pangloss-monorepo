@@ -3,7 +3,7 @@ import textwrap
 import pytest
 from conftest import Settings
 from fastapi.testclient import TestClient
-from pangloss_api.app import create_app
+from pangloss_api import create_app
 
 
 @pytest.fixture

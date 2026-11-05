@@ -7,7 +7,7 @@ a user's tokens, and the head nodes of the review queue. Without one Memgraph re
 Made by `pangloss makemigrations`; the answers a change needs may be filled in here.
 """
 
-from pangloss_models.migrations.files import changes_from_data
+from pangloss_models.migrations import changes_from_data
 
 dependencies = []
 schema_hash = "d00855e120a0ac4434d6ac083d875b0ffb1e161841df9390dcb5f80e3e5a3708"

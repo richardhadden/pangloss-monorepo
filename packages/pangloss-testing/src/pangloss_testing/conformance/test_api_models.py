@@ -7,13 +7,15 @@ from uuid import uuid7
 
 import httpx2 as httpx
 import pytest
-from pangloss_api.app import create_app
-from pangloss_models.model_bases.annotated_value import AnnotatedValue
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.embedded import Embedded
-from pangloss_models.model_bases.entity import Entity
-from pangloss_models.model_bases.reified_relation import ReifiedRelation
-from pangloss_models.model_bases.semantic_space import SemanticSpace
+from pangloss_api import create_app
+from pangloss_models import (
+    AnnotatedValue,
+    Document,
+    Embedded,
+    Entity,
+    ReifiedRelation,
+    SemanticSpace,
+)
 from pangloss_users import service
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")

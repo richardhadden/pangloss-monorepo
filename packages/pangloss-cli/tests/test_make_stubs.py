@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 from cli_support import write
 from pangloss_cli.main import build_app
-from pangloss_models.model_registry import ModelRegistry
+from pangloss_models import ModelRegistry
 from typer.testing import CliRunner
 
 runner = CliRunner()
@@ -13,8 +13,7 @@ MODELS = """
     import enum
     from typing import Annotated
 
-    from pangloss_models.model_bases.document import Document
-    from pangloss_models.model_bases.entity import Entity
+    from pangloss_models import Document, Entity
 
 
     class Colour(enum.Enum):
@@ -146,8 +145,7 @@ def test_a_model_made_by_another_class_is_any_where_it_is_used_and_a_generic_is_
         project,
         "fakeapp/models.py",
         """
-        from pangloss_models.model_bases.annotated_value import AnnotatedValue
-        from pangloss_models.model_bases.entity import Entity
+        from pangloss_models import AnnotatedValue, Entity
 
 
         class Noted[T](AnnotatedValue[T]):

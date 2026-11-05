@@ -5,36 +5,34 @@ from uuid import UUID, uuid7
 
 import pytest
 from annotated_types import Gt, MinLen
-from pangloss_models import initialise
-from pangloss_models.exceptions import PanglossMetaError, PanglossModelError
-from pangloss_models.field_definitions import (
+from pangloss_models import (
+    AnnotatedValue,
+    Conjunction,
+    DBField,
+    Document,
+    EdgeModel,
+    Embedded,
+    Entity,
     FieldSubclassing,
+    Fulfils,
+    NonHeritableTrait,
+    PanglossMetaError,
+    PanglossModelError,
+    ReifiedRelation,
+    RelationConfig,
+    SemanticSpace,
+    Trait,
+    ViaEdge,
+    initialise,
+)
+from pangloss_models.field_definitions import (
     ListFieldDefinition,
     LiteralFieldDefinition,
     RelationFieldDefinition,
 )
-from pangloss_models.model_bases.annotated_value import AnnotatedValue
-from pangloss_models.model_bases.configs import RelationConfig
-from pangloss_models.model_bases.conjunction import (
-    Conjunction,
-    _ConjunctionCreateDBBase,
-)
-from pangloss_models.model_bases.document import (
-    Document,
-)
-from pangloss_models.model_bases.edge_model import EdgeModel
-from pangloss_models.model_bases.embedded import Embedded
-from pangloss_models.model_bases.entity import Entity
-from pangloss_models.model_bases.helpers import DBField, Fulfils, ViaEdge
-from pangloss_models.model_bases.reified_relation import (
-    ReifiedRelation,
-    _ReifiedRelationCreateDBBase,
-)
-from pangloss_models.model_bases.semantic_space import (
-    SemanticSpace,
-    _SemanticSpaceCreateDBBase,
-)
-from pangloss_models.model_bases.trait import NonHeritableTrait, Trait
+from pangloss_models.model_bases.conjunction import _ConjunctionCreateDBBase
+from pangloss_models.model_bases.reified_relation import _ReifiedRelationCreateDBBase
+from pangloss_models.model_bases.semantic_space import _SemanticSpaceCreateDBBase
 from pydantic import AnyHttpUrl, ValidationError
 
 

@@ -105,7 +105,7 @@ The bar on the left (open it with the button at the top) can list your models, i
 there in a file of its own. Make `chronicle/interface_config.py`:
 
 ```python
-from pangloss_interface.config import InterfaceConfig, NavModel
+from pangloss_interface import InterfaceConfig, NavModel
 
 config = InterfaceConfig(
     sections=["Sources", "People and places"],
@@ -126,7 +126,7 @@ config = InterfaceConfig(
 ```python
 from typing import Annotated
 
-from pangloss_models.model_bases.configs import RelationConfig
+from pangloss_models import RelationConfig
 ...
 
 

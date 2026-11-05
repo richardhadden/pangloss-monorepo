@@ -4,10 +4,8 @@ from typing import no_type_check
 
 import httpx2 as httpx
 import pytest
-from pangloss_api.app import create_app
-from pangloss_models import initialise
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.entity import Entity
+from pangloss_api import create_app
+from pangloss_models import Document, Entity, initialise
 
 from pangloss_derived import Derived, RuleType, Var, rule
 from pangloss_derived.worker import run_pending_derivations
@@ -140,8 +138,8 @@ async def test_the_routes_and_the_derived_section_of_a_view(clear_database):
 @no_type_check
 async def test_the_sdk_reads_what_the_database_reads(clear_database, monkeypatch):
     from pangloss_core import settings as core_settings
+    from pangloss_sdk import SdkSettings
     from pangloss_sdk import client as sdk_client
-    from pangloss_sdk.settings import SdkSettings
 
     from pangloss_derived import access, graph
 
@@ -185,8 +183,8 @@ async def test_the_blocking_sdk_reads_the_same(clear_database, monkeypatch):
     """The blocking functions ask the same requests and give the same views: the answers of the API, taken through the
     async client, are given back to a blocking client that does not run (the test's database is on this loop)"""
     from pangloss_core import settings as core_settings
+    from pangloss_sdk import SdkSettings
     from pangloss_sdk import client as sdk_client
-    from pangloss_sdk.settings import SdkSettings
 
     from pangloss_derived import access, graph
     from pangloss_derived.registry import DerivedRegistry

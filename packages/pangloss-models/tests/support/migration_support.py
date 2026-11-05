@@ -1,8 +1,7 @@
 """Helpers for the tests of migrations: the snapshots of models that a function declares"""
 
-from pangloss_models import initialise
+from pangloss_models import ModelRegistry, initialise
 from pangloss_models.migrations import build_snapshot, data_view, diff, replay
-from pangloss_models.model_registry import ModelRegistry
 
 
 def snapshot_of(declare) -> dict:
@@ -27,7 +26,7 @@ def changes(before, after, **answers):
 def check_reversal(old, found):
     """Whatever can be undone is undone to the models as they were (reversing is checked in
     every case that finds changes; what cannot be is said so, not wrong)"""
-    from pangloss_models.exceptions import PanglossMigrationIrreversible
+    from pangloss_models import PanglossMigrationIrreversible
     from pangloss_models.migrations.reverse import reverse_changes
 
     try:

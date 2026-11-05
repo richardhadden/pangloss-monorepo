@@ -10,7 +10,7 @@ the server refuses what does not add up to exactly 100; the others give way in p
 ## Declaring it
 
 ```python
-from pangloss_models.validators import SumsTo
+from pangloss_models import SumsTo
 from pangloss_interface import Slider
 
 class Probability(EdgeModel):

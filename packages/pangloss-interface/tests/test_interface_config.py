@@ -3,15 +3,9 @@
 import sys
 
 import pytest
-from pangloss_interface.config import (
-    InterfaceConfig,
-    NavLink,
-    NavModel,
-    load_configs,
-    merge,
-    merge_disabled,
-)
-from pangloss_models.exceptions import PanglossMetaError
+from pangloss_interface import InterfaceConfig, NavLink, NavModel
+from pangloss_interface.config import load_configs, merge, merge_disabled
+from pangloss_models import PanglossMetaError
 
 
 def test_without_any_config_the_bar_is_as_it_was():

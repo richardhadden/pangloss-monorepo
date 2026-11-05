@@ -15,9 +15,8 @@ from dataclasses import dataclass
 from typing import Any
 from uuid import UUID
 
-from pangloss_core import backend
-from pangloss_core.backend import Transaction
-from pangloss_dates.calendar import Calendar, from_jdn, to_jdn, weekday
+from pangloss_core import Transaction, backend
+from pangloss_dates import Calendar, from_jdn, to_jdn, weekday
 from pangloss_dates.config import default_calendar
 
 from pangloss_calendar.characterisations import Characterisation, days_between, from_row

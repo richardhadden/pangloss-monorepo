@@ -15,10 +15,10 @@ import sys
 import time
 
 from demo_app import models
-from pangloss_cli.project import load_project
+from pangloss_cli import load_project
 from pangloss_models import initialise
 from pangloss_users import current_request_username
-from pangloss_zotero.models import ZoteroObject
+from pangloss_zotero import ZoteroObject
 
 N_ENTITIES = int(sys.argv[1]) if len(sys.argv) > 1 else 100_000
 N_FACTOIDS = int(sys.argv[2]) if len(sys.argv) > 2 else 30_000

@@ -18,7 +18,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, FastAPI, Query, Request, status
 from fastapi.responses import JSONResponse
-from pangloss_api.dependencies import CurrentUser, get_current_user
+from pangloss_api import CurrentUser, get_current_user
 from pangloss_models import hooks
 from pydantic import BaseModel, ConfigDict
 from pydantic.alias_generators import to_camel

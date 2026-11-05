@@ -4,7 +4,7 @@ import datetime
 import json
 from uuid import UUID, uuid7
 
-from pangloss_history.store import HistoryRecord
+from pangloss_history import HistoryRecord
 
 AT = datetime.datetime(2026, 10, 23, 12, 0, tzinfo=datetime.UTC)
 

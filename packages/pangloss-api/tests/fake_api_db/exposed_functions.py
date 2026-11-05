@@ -1,9 +1,6 @@
 """A backend that keeps users in memory"""
 
-from pangloss_users.exceptions import (
-    PanglossUserDoesNotExistError,
-    PanglossUserExistsError,
-)
+from pangloss_users import PanglossUserDoesNotExistError, PanglossUserExistsError
 
 USERS: dict = {}
 

@@ -9,11 +9,12 @@ a `username`) are read with the other properties unset.
 import datetime
 from typing import Any
 
-from pangloss_users.exceptions import (
+from pangloss_users import (
     PanglossUserDoesNotExistError,
     PanglossUserExistsError,
+    UserInDB,
 )
-from pangloss_users.models import AccessTokenRecord, UserInDB
+from pangloss_users.models import AccessTokenRecord
 
 from pangloss_cypher.transaction import Transaction
 from pangloss_cypher.transactions import dialect

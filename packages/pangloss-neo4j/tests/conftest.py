@@ -12,8 +12,8 @@ import neo4j
 import pangloss_core.settings as core_settings
 import pytest
 import pytest_asyncio
-from pangloss_core.settings import BaseSettings
-from pangloss_models.model_registry import ModelRegistry
+from pangloss_core import BaseSettings
+from pangloss_models import ModelRegistry
 from pangloss_neo4j.databases.neo4j.database import Database, install
 from pangloss_neo4j.databases.neo4j.initialise_database import (
     initialise_database,

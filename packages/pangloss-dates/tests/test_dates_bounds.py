@@ -1,12 +1,18 @@
 """The four bounds, the padding convention and the sort day"""
 
 import pytest
-from pangloss_dates.bounds import (
+from pangloss_dates import (
     Bounds,
+    Calendar,
     InvalidBounds,
+    InvalidDate,
     Padding,
     Precision,
     SortBy,
+    from_jdn,
+    to_jdn,
+)
+from pangloss_dates.bounds import (
     exact_bounds,
     ongoing_bounds,
     padded_bounds,
@@ -14,7 +20,6 @@ from pangloss_dates.bounds import (
     shift_month,
     spanning_bounds,
 )
-from pangloss_dates.calendar import Calendar, InvalidDate, from_jdn, to_jdn
 
 J = Calendar.JULIAN
 

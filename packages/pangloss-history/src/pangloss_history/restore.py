@@ -19,12 +19,12 @@ from collections.abc import Iterator
 from typing import Any
 from uuid import UUID
 
-from pangloss_models.exceptions import (
+from pangloss_models import (
+    Entity,
+    ModelRegistry,
     PanglossConflictError,
     PanglossNotFoundError,
 )
-from pangloss_models.model_bases.entity import Entity
-from pangloss_models.model_registry import ModelRegistry
 
 from pangloss_history.draft import make_draft
 from pangloss_history.store import HistoryStore

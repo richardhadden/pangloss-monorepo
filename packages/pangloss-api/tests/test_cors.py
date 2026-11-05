@@ -1,12 +1,9 @@
 import pytest
 from conftest import PASSWORD, Settings
 from fastapi.testclient import TestClient
-from pangloss_api.app import create_app
-from pangloss_core.settings import (
-    BaseSettings,
-    DatabaseSettings,
-    normalise_cors_origins,
-)
+from pangloss_api import create_app
+from pangloss_core import BaseSettings, DatabaseSettings
+from pangloss_core.settings import normalise_cors_origins
 from pangloss_users import service
 from pydantic import AnyHttpUrl, ValidationError
 

@@ -1,7 +1,7 @@
 """Which class a Zotero item type is written as: declared, never guessed"""
 
 import pytest
-from pangloss_models.exceptions import PanglossMetaError
+from pangloss_models import PanglossMetaError
 from pangloss_zotero import ZoteroBacked, ZoteroItemType, ZoteroMeta, ZoteroObject
 from pangloss_zotero.mapping import accepts, build_table
 
@@ -116,7 +116,7 @@ def test_a_declaration_that_says_nothing_is_refused():
 
 
 def test_an_abstract_class_cannot_stand_for_types():
-    from pangloss_models.model_bases.entity import Entity
+    from pangloss_models import Entity
 
     class Base(ZoteroBacked):
         _meta = Entity.Meta(abstract=True)

@@ -20,8 +20,7 @@ them set. (They are `X | None = None` so that a `CreateDB` can be made without t
 
 from typing import Annotated, ClassVar
 
-from pangloss_models.model_bases.embedded import Embedded
-from pangloss_models.model_bases.helpers import DBField
+from pangloss_models import DBField, Embedded
 from pydantic import model_validator
 
 from pangloss_dates import config

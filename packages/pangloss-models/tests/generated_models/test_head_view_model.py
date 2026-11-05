@@ -3,16 +3,16 @@ from inspect import isclass
 from typing import Annotated, get_args, get_origin, no_type_check
 from uuid import UUID, uuid7
 
-from pangloss_models import initialise
-from pangloss_models.model_bases.base_models import _APIHeadMeta
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.embedded import Embedded
-from pangloss_models.model_bases.entity import Entity
-from pangloss_models.model_bases.reified_relation import (
+from pangloss_models import (
+    Document,
+    Embedded,
+    Entity,
+    ModelRegistry,
     ReifiedRelation,
     ReifiedRelationDocument,
+    initialise,
 )
-from pangloss_models.model_registry import ModelRegistry
+from pangloss_models.model_bases.base_models import _APIHeadMeta
 
 
 @no_type_check

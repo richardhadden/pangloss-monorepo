@@ -4,12 +4,11 @@ from typing import no_type_check
 
 import pytest
 from migration_support import snapshot_of
-from pangloss_models.exceptions import PanglossMigrationIrreversible
-from pangloss_models.migrations import changes as c
+from pangloss_models import Entity, PanglossMigrationIrreversible
 from pangloss_models.migrations import data_view, diff, replay
+from pangloss_models.migrations import changes as c
 from pangloss_models.migrations.questions import collect_questions
 from pangloss_models.migrations.reverse import reverse_changes
-from pangloss_models.model_bases.entity import Entity
 
 
 def undo(before, after, **answers):

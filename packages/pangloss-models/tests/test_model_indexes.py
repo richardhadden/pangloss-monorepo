@@ -4,16 +4,18 @@ that a class names in `indexes`"""
 import datetime
 
 import pytest
-from pangloss_models import initialise
-from pangloss_models.exceptions import PanglossMetaError
+from pangloss_models import (
+    Document,
+    Embedded,
+    Entity,
+    PanglossMetaError,
+    SemanticSpace,
+    Trait,
+    initialise,
+)
 from pangloss_models.indexes import model_indexes
 from pangloss_models.migrations import changes as c
 from pangloss_models.migrations.planner import app_of_change
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.embedded import Embedded
-from pangloss_models.model_bases.entity import Entity
-from pangloss_models.model_bases.semantic_space import SemanticSpace
-from pangloss_models.model_bases.trait import Trait
 
 
 def label(name):

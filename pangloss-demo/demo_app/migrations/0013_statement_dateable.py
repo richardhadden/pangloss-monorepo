@@ -5,7 +5,7 @@ nodes (of every kind) get the `:Dateable` label and the copies of their date; th
 are filled in from their dates by `fill_in_dateables` (last).
 """
 
-from pangloss_models.migrations.files import changes_from_data
+from pangloss_models.migrations import changes_from_data
 
 dependencies = [['pangloss_dates', '0002_rename_daterange_ends']]
 schema_hash = '733834f3d1488cbbbcf5d416feb998300cd4b79ce51b31c89e36686931ce5107'

@@ -17,10 +17,10 @@ from contextlib import asynccontextmanager
 
 from fastapi import APIRouter, Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from pangloss_core import check_requirements, storage_of
 from pangloss_core import settings as core_settings
 from pangloss_core.logs import configure_from_settings
-from pangloss_core.storage import check_requirements, storage_of
-from pangloss_models.model_registry import ModelRegistry
+from pangloss_models import ModelRegistry
 
 from pangloss_api.background import Supervisor
 from pangloss_api.dependencies import set_visibility
@@ -74,7 +74,7 @@ def prepare_models(settings: core_settings.BaseSettings) -> None:
 async def check_migrations(settings: core_settings.BaseSettings) -> None:
     """If the project has migrations, the database must be what they say and the models what
     they come to: `MIGRATION_CHECK` says what to do if not (see `docs/migrations.md`)"""
-    from pangloss_models.exceptions import PanglossMigrationError
+    from pangloss_models import PanglossMigrationError
     from pangloss_models.migrations.startup import (
         migration_backend_of,
         migration_problems,

@@ -63,7 +63,7 @@ The package does not own a class that projects link to. It gives an **abstract b
 and the project's text class is built on it:
 
 ```python
-from pangloss_zotero.models import ZoteroBacked
+from pangloss_zotero import ZoteroBacked
 
 class TextObject(ZoteroBacked):
     """Anything that is a text: a letter, a chronicle, a charter"""

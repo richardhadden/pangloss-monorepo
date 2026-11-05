@@ -5,16 +5,16 @@ from typing import no_type_check
 
 import pytest
 from pangloss_memgraph.databases.memgraph import migration_backend as backend
-from pangloss_models.exceptions import (
+from pangloss_models import (
+    Entity,
     PanglossMigrationAnswerNeeded,
     PanglossMigrationError,
 )
-from pangloss_models.migrations import data_view
-from pangloss_models.migrations.files import EMPTY_SNAPSHOT, Migration, MigrationGraph
+from pangloss_models.migrations import Migration, data_view
+from pangloss_models.migrations.files import EMPTY_SNAPSHOT, MigrationGraph
 from pangloss_models.migrations.history import pending, problems
 from pangloss_models.migrations.planner import plan
 from pangloss_models.migrations.questions import with_answer
-from pangloss_models.model_bases.entity import Entity
 
 from .helpers import run
 from pangloss_testing.conformance.migration_support import declare

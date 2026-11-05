@@ -4,12 +4,14 @@ it is nested in another document, and again when it is updated"""
 from typing import Annotated, no_type_check
 
 import pytest
-from pangloss_models import initialise
-from pangloss_models.field_definitions import FieldSubclassing
-from pangloss_models.model_bases.configs import RelationConfig
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.entity import Entity
-from pangloss_models.model_bases.helpers import Fulfils
+from pangloss_models import (
+    Document,
+    Entity,
+    FieldSubclassing,
+    Fulfils,
+    RelationConfig,
+    initialise,
+)
 
 from .helpers import run
 

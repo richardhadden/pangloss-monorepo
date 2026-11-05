@@ -19,7 +19,7 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, FastAPI, HTTPException, Query, Request, status
 from fastapi.responses import JSONResponse
-from pangloss_api.background import BackgroundTask
+from pangloss_api import BackgroundTask
 
 from pangloss_derived import read
 from pangloss_derived.check import ends_of

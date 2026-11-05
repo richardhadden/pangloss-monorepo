@@ -1,8 +1,8 @@
 import typing
 
 import pytest
-from pangloss_core.settings import BaseSettings, DatabaseSettings
-from pangloss_models.model_registry import ModelRegistry
+from pangloss_core import BaseSettings, DatabaseSettings
+from pangloss_models import ModelRegistry
 from pydantic import AnyHttpUrl
 
 

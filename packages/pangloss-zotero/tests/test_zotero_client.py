@@ -4,7 +4,7 @@ import asyncio
 
 import httpx2 as httpx
 import pytest
-from pangloss_zotero.client import ZoteroAuthError, ZoteroError
+from pangloss_zotero import ZoteroAuthError, ZoteroError
 from zotero_support import LIBRARY, FakeZotero, make_item
 
 
@@ -111,7 +111,7 @@ def test_a_network_failure_is_tried_again_and_then_reported():
         raise httpx.ConnectError("no route")
 
     async def main():
-        from pangloss_zotero.client import ZoteroClient
+        from pangloss_zotero import ZoteroClient
 
         slept = []
 

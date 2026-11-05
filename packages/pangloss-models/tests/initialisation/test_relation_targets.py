@@ -3,12 +3,14 @@
 from typing import no_type_check
 
 import pytest
-from pangloss_models import initialise
-from pangloss_models.exceptions import PanglossModelError
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.entity import Entity
-from pangloss_models.model_bases.semantic_space import SemanticSpace
-from pangloss_models.model_bases.trait import Trait
+from pangloss_models import (
+    Document,
+    Entity,
+    PanglossModelError,
+    SemanticSpace,
+    Trait,
+    initialise,
+)
 
 
 @no_type_check

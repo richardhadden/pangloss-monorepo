@@ -13,35 +13,33 @@ from uuid import uuid7
 
 import pytest
 from annotated_types import Gt, MinLen
-from pangloss_models import initialise
-from pangloss_models.field_definitions import (
+from pangloss_models import (
+    AnnotatedValue,
+    Conjunction,
+    DBField,
+    Document,
+    EdgeModel,
+    Embedded,
+    Entity,
     FieldBinding,
     FieldSubclassing,
+    Fulfils,
+    ReifiedRelation,
+    ReifiedRelationDocument,
+    RelationConfig,
+    SemanticSpace,
+    Trait,
+    ViaEdge,
+    initialise,
+)
+from pangloss_models.field_definitions import (
     ListFieldDefinition,
     LiteralFieldDefinition,
     RelationFieldDefinition,
 )
-from pangloss_models.model_bases.annotated_value import AnnotatedValue
-from pangloss_models.model_bases.configs import RelationConfig
-from pangloss_models.model_bases.conjunction import (
-    Conjunction,
-    _ConjunctionUpdateBase,
-)
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.edge_model import EdgeModel
-from pangloss_models.model_bases.embedded import Embedded
-from pangloss_models.model_bases.entity import Entity
-from pangloss_models.model_bases.helpers import DBField, Fulfils, ViaEdge
-from pangloss_models.model_bases.reified_relation import (
-    ReifiedRelation,
-    ReifiedRelationDocument,
-    _ReifiedRelationUpdateBase,
-)
-from pangloss_models.model_bases.semantic_space import (
-    SemanticSpace,
-    _SemanticSpaceUpdateBase,
-)
-from pangloss_models.model_bases.trait import Trait
+from pangloss_models.model_bases.conjunction import _ConjunctionUpdateBase
+from pangloss_models.model_bases.reified_relation import _ReifiedRelationUpdateBase
+from pangloss_models.model_bases.semantic_space import _SemanticSpaceUpdateBase
 from pydantic import ValidationError
 
 
@@ -1609,8 +1607,7 @@ def test_list_validators():
 def test_optional_literal_fields_do_not_have_to_be_given():
     from uuid import uuid7
 
-    from pangloss_models import initialise
-    from pangloss_models.model_bases.document import Document
+    from pangloss_models import Document, initialise
 
     class Statement(Document):
         number: int | None

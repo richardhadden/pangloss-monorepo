@@ -10,7 +10,7 @@ model class **on the class**, next to `_meta`, without `pangloss_models` knowing
 
 ```python
 from pangloss_interface import InterfaceMeta
-from pangloss_models.model_bases.entity import Entity
+from pangloss_models import Entity
 
 
 class Person(Entity):

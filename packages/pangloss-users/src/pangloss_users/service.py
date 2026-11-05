@@ -21,7 +21,7 @@ import uuid
 from types import ModuleType
 from typing import Any
 
-from pangloss_core.storage import storage_of
+from pangloss_core import storage_of
 from pydantic import ValidationError
 
 from pangloss_users.exceptions import (

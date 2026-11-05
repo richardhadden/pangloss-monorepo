@@ -28,10 +28,7 @@ FAKE_DB_SETUP = """
 """
 
 FAKE_DB_EXPOSED = """
-    from pangloss_users.exceptions import (
-        PanglossUserDoesNotExistError,
-        PanglossUserExistsError,
-    )
+    from pangloss_users import PanglossUserDoesNotExistError, PanglossUserExistsError
 
     USERS = {}
 
@@ -81,7 +78,7 @@ FAKE_DB_EXPOSED = """
 """
 
 SETTINGS = """
-    from pangloss_core.settings import BaseSettings, DatabaseSettings
+    from pangloss_core import BaseSettings, DatabaseSettings
     from pydantic import AnyHttpUrl
 
     class Settings(BaseSettings[DatabaseSettings]):

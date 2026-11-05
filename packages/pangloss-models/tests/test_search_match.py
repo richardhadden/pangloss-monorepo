@@ -7,14 +7,17 @@ from decimal import Decimal
 from typing import TypedDict
 
 import pytest
-from pangloss_models import initialise
-from pangloss_models.exceptions import PanglossSearchError, PanglossUnknownTypeError
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.entity import Entity
-from pangloss_models.model_bases.trait import Trait
+from pangloss_models import (
+    Document,
+    Entity,
+    Match,
+    PanglossSearchError,
+    PanglossUnknownTypeError,
+    Trait,
+    initialise,
+)
 from pangloss_models.search import (
     CheckedCondition,
-    Match,
     SearchKey,
     SearchRequest,
     check_match,
@@ -331,7 +334,7 @@ def test_a_pattern_is_the_same_dumped_and_read_again():
 
 
 def wrapper_models():
-    from pangloss_models.model_bases.semantic_space import SemanticSpace
+    from pangloss_models import SemanticSpace
 
     class Negative[T](SemanticSpace[T]):
         pass
@@ -456,7 +459,7 @@ def test_incoming_is_one_pattern_or_a_list_and_has_a_type():
 
 
 def test_an_embedded_field_is_searched_by_a_pattern_for_it():
-    from pangloss_models.model_bases.embedded import Embedded
+    from pangloss_models import Embedded
 
     class When(Embedded):
         _meta = Embedded.Meta(abstract=True)
@@ -502,8 +505,8 @@ def test_an_embedded_field_is_searched_by_a_pattern_for_it():
 
 
 def test_what_to_order_by_is_checked():
-    from pangloss_models.model_bases.embedded import Embedded
-    from pangloss_models.search import OrderBy, check_order
+    from pangloss_models import Embedded, OrderBy
+    from pangloss_models.search import check_order
 
     class When(Embedded):
         _meta = Embedded.Meta(abstract=True)
@@ -580,7 +583,7 @@ def test_published_and_review_status_are_searched_for_a_head_document():
 
 @pytest.mark.parametrize("name", ["published", "review_status", "deleted"])
 def test_a_field_cannot_be_named_as_a_property_kept_on_a_head_node(name):
-    from pangloss_models.exceptions import PanglossModelError
+    from pangloss_models import PanglossModelError
 
     type("Odd", (Document,), {"__annotations__": {name: bool | None}, name: None})
     with pytest.raises(PanglossModelError, match=name):

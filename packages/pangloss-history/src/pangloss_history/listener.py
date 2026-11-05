@@ -5,8 +5,7 @@ import logging
 from typing import Any
 
 from pangloss_core import settings as core_settings
-from pangloss_models import hooks
-from pangloss_models.hooks import WriteEvent
+from pangloss_models import WriteEvent, hooks
 
 from pangloss_history import config
 from pangloss_history.recorder import Recorder, stop_at_exit

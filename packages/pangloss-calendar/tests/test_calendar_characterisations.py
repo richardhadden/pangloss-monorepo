@@ -10,9 +10,17 @@ from pangloss_calendar.characterisations import (
     moveable,
     on_day,
 )
-from pangloss_dates.calendar import Calendar, Weekday, from_jdn, to_jdn, weekday
+from pangloss_dates import (
+    Calendar,
+    Frequency,
+    RecurrenceRule,
+    Weekday,
+    from_jdn,
+    occurrences,
+    to_jdn,
+    weekday,
+)
 from pangloss_dates.easter import easter
-from pangloss_dates.recurrence import Frequency, RecurrenceRule, occurrences
 
 J = Calendar.JULIAN
 G = Calendar.GREGORIAN
@@ -112,7 +120,7 @@ def test_the_days_that_move_with_easter_are_in_order_and_only_those():
 
 
 def test_days_between_applies_the_leap_shift():
-    from pangloss_dates.calendar import is_leap_year
+    from pangloss_dates import is_leap_year
 
     matthias = make(
         RecurrenceRule(Frequency.YEARLY, month=2, month_day=24, leap_shift=True)

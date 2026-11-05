@@ -3,16 +3,19 @@
 import itertools
 
 import pytest
-from pangloss_dates.calendar import Calendar, Weekday, from_jdn, to_jdn, weekday
-from pangloss_dates.recurrence import (
+from pangloss_dates import (
+    Calendar,
     Frequency,
     InvalidRule,
     RecurrenceRule,
-    day_keys,
+    Weekday,
+    from_jdn,
     occurrences,
     occurs_on,
-    pattern_keys,
+    to_jdn,
+    weekday,
 )
+from pangloss_dates.recurrence import day_keys, pattern_keys
 
 J = Calendar.JULIAN
 G = Calendar.GREGORIAN

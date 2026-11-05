@@ -1,17 +1,18 @@
 """The upgrade of a stored version, from migrations made by hand (no database)"""
 
 import pytest
+from pangloss_history import HistoryRecord
 from pangloss_history import draft as draft_module
 from pangloss_history import upgrade as module
-from pangloss_history.store import HistoryRecord
 from pangloss_history.upgrade import (
     CannotFindPosition,
     apply_migrations,
     migrations_after,
     upgrade,
 )
+from pangloss_models.migrations import Migration
 from pangloss_models.migrations import changes as c
-from pangloss_models.migrations.files import Migration, MigrationGraph
+from pangloss_models.migrations.files import MigrationGraph
 
 
 def literal(name, type="str", nullable=False):

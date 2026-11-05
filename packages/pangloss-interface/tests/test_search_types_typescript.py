@@ -9,12 +9,11 @@ from pathlib import Path
 
 import pangloss_interface
 import pytest
+from pangloss_core import ClientSettings
 from pangloss_core import settings as core_settings
-from pangloss_core.settings import ClientSettings
 from pangloss_interface.meta import export_definitions
 from pangloss_interface.typescript import models_module
-from pangloss_models import initialise
-from pangloss_models.model_registry import ModelRegistry
+from pangloss_models import ModelRegistry, initialise
 
 JS = Path(pangloss_interface.__file__).parent / "js"
 SUPPORT = Path(__file__).parents[2] / "pangloss-models/tests/support"

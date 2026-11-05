@@ -9,8 +9,7 @@ import binascii
 from fastapi import HTTPException, Request, status
 from pangloss_api import throttle
 from pangloss_api.dependencies import ACCESS_COOKIE_NAME, user_for_token
-from pangloss_users import current_request_username, service
-from pangloss_users.models import User
+from pangloss_users import User, current_request_username, service
 
 from pangloss_sdk_server import config
 

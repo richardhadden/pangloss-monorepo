@@ -1,1 +1,129 @@
-"""Dates for Pangloss: the day arithmetic (`pangloss_dates.calendar`) is plain Python"""
+"""Dates for Pangloss: uncertain dates, ranges, periods and repeated events in the Julian or Gregorian calendar.
+
+The day arithmetic (`Calendar`, `to_jdn`, ...) is plain Python. The imports are lazy: `from pangloss_dates import
+Calendar` does not declare the date models. See docs/imports.md.
+"""
+
+lazy from pangloss_dates.bounds import (
+    Bounds,
+    InvalidBounds,
+    Padding,
+    Precision,
+    SortBy,
+)
+lazy from pangloss_dates.calendar import (
+    MAX_YEAR,
+    MIN_YEAR,
+    Calendar,
+    InvalidDate,
+    Weekday,
+    convert,
+    describe,
+    from_jdn,
+    is_leap_year,
+    month_length,
+    nth_weekday,
+    to_jdn,
+    weekday,
+)
+lazy from pangloss_dates.dateable import Dateable, PeriodDateable, SingleDateable
+lazy from pangloss_dates.gregorian import (
+    GregorianDate,
+    GregorianDateRange,
+    GregorianEDTFDate,
+    GregorianExactDate,
+    GregorianOngoingDate,
+    GregorianPeriod,
+    GregorianRecurrence,
+    GregorianUnknownDate,
+)
+lazy from pangloss_dates.julian import (
+    JulianDate,
+    JulianDateRange,
+    JulianEDTFDate,
+    JulianExactDate,
+    JulianOngoingDate,
+    JulianPeriod,
+    JulianRecurrence,
+    JulianUnknownDate,
+)
+lazy from pangloss_dates.models import (
+    Date,
+    DateRange,
+    EDTFDate,
+    ExactDate,
+    OngoingDate,
+    Period,
+    Recurrence,
+    SortDefault,
+    UnknownDate,
+)
+lazy from pangloss_dates.query import on_day
+lazy from pangloss_dates.recurrence import (
+    Frequency,
+    InvalidRule,
+    RecurrenceRule,
+    occurrences,
+    occurs_on,
+)
+lazy from pangloss_dates.rules import after, before, during, overlaps, within
+
+__all__ = [
+    "after",
+    "before",
+    "Bounds",
+    "Calendar",
+    "convert",
+    "Date",
+    "Dateable",
+    "DateRange",
+    "describe",
+    "during",
+    "EDTFDate",
+    "ExactDate",
+    "Frequency",
+    "from_jdn",
+    "GregorianDate",
+    "GregorianDateRange",
+    "GregorianEDTFDate",
+    "GregorianExactDate",
+    "GregorianOngoingDate",
+    "GregorianPeriod",
+    "GregorianRecurrence",
+    "GregorianUnknownDate",
+    "InvalidBounds",
+    "InvalidDate",
+    "InvalidRule",
+    "is_leap_year",
+    "JulianDate",
+    "JulianDateRange",
+    "JulianEDTFDate",
+    "JulianExactDate",
+    "JulianOngoingDate",
+    "JulianPeriod",
+    "JulianRecurrence",
+    "JulianUnknownDate",
+    "MAX_YEAR",
+    "MIN_YEAR",
+    "month_length",
+    "nth_weekday",
+    "occurrences",
+    "occurs_on",
+    "on_day",
+    "OngoingDate",
+    "overlaps",
+    "Padding",
+    "Period",
+    "PeriodDateable",
+    "Precision",
+    "Recurrence",
+    "RecurrenceRule",
+    "SingleDateable",
+    "SortBy",
+    "SortDefault",
+    "to_jdn",
+    "UnknownDate",
+    "Weekday",
+    "weekday",
+    "within",
+]

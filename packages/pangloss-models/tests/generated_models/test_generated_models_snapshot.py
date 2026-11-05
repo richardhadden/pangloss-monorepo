@@ -24,8 +24,7 @@ from pathlib import Path
 import kitchen_sink
 import pytest
 import snapshot_support
-from pangloss_models import initialise
-from pangloss_models.model_registry import ModelRegistry
+from pangloss_models import ModelRegistry, initialise
 
 SNAPSHOT = Path(__file__).parent / "snapshots" / "generated_models.json"
 

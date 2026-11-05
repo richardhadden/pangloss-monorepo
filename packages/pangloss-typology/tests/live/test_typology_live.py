@@ -5,8 +5,7 @@ import asyncio
 from typing import no_type_check
 
 import pytest
-from pangloss_models import initialise
-from pangloss_models.model_bases.entity import Entity
+from pangloss_models import Entity, initialise
 from pangloss_testing.live import run
 from pangloss_typology import Typed, Typology, TypologyMeta, service
 from pangloss_typology.service import NotFound, Refused
@@ -421,7 +420,7 @@ async def test_the_routes(clear_database):
 
     import httpx2 as httpx
     from fastapi import FastAPI
-    from pangloss_api.dependencies import get_current_user
+    from pangloss_api import get_current_user
     from pangloss_typology.api import router
 
     Post, RoleTypology = vocabulary()
@@ -491,7 +490,7 @@ async def test_a_type_is_edited_and_stays_where_it_is(clear_database):
 
     import httpx2 as httpx
     from fastapi import FastAPI
-    from pangloss_api.dependencies import get_current_user
+    from pangloss_api import get_current_user
     from pangloss_typology.api import router
 
     Post, RoleTypology = vocabulary()
@@ -581,7 +580,7 @@ def write_events():
 
 @no_type_check
 async def test_a_move_is_an_update_of_the_type(clear_database, write_events):
-    from pangloss_models.exceptions import PanglossVersionConflictError
+    from pangloss_models import PanglossVersionConflictError
 
     _, RoleTypology = vocabulary()
     official, secretary, private, chancellor, bard = await build(RoleTypology)
@@ -611,8 +610,7 @@ async def test_a_move_is_an_update_of_the_type(clear_database, write_events):
 async def test_a_merge_writes_a_new_version_of_each_head_it_changes(
     clear_database, write_events
 ):
-    from pangloss_models.exceptions import PanglossVersionConflictError
-    from pangloss_models.model_bases.document import Document
+    from pangloss_models import Document, PanglossVersionConflictError
 
     class Post(Entity):
         has_type: list[Typed[RoleTypology]]
@@ -669,8 +667,7 @@ async def test_a_merge_writes_a_new_version_of_each_head_it_changes(
 
 @no_type_check
 async def test_a_merge_keeps_the_properties_of_the_edges(clear_database, db_driver):
-    from pangloss_models.model_bases.edge_model import EdgeModel
-    from pangloss_models.model_bases.helpers import ViaEdge
+    from pangloss_models import EdgeModel, ViaEdge
 
     class Certainty(EdgeModel):
         level: int
@@ -711,7 +708,7 @@ async def test_a_type_is_made_through_the_api(clear_database):
 
     import httpx2 as httpx
     from fastapi import FastAPI
-    from pangloss_api.dependencies import get_current_user
+    from pangloss_api import get_current_user
     from pangloss_typology.api import router
 
     _, RoleTypology = vocabulary()

@@ -4,10 +4,9 @@ from uuid import uuid7
 
 from conftest import PASSWORD  # noqa: F401
 from fastapi.testclient import TestClient
-from pangloss_api.app import create_app
+from pangloss_api import create_app
 from pangloss_models.autocomplete import AutocompleteItem, AutocompleteResults
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.entity import Entity
+from pangloss_models import Document, Entity
 from test_model_routes import stub
 
 
@@ -152,7 +151,7 @@ def test_a_type_that_is_not_an_entity_is_refused_and_named(settings):
 
 def test_a_model_cannot_take_the_path(settings):
     import pytest
-    from pangloss_models.exceptions import PanglossInitialisationError
+    from pangloss_models import PanglossInitialisationError
 
     class Autocomplete(Entity):
         pass

@@ -4,7 +4,7 @@ import json
 from uuid import uuid7
 
 import pytest
-from pangloss_models.exceptions import (
+from pangloss_models import (
     PanglossConflictError,
     PanglossEntityInUseError,
     PanglossNotDeletableError,

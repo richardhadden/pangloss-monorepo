@@ -6,7 +6,7 @@ Your models are ordinary Python classes, so you can use them from any Python cod
 import asyncio
 
 from letters.models import Letter, Person, Place
-from pangloss_cli.project import load_project
+from pangloss_cli import load_project
 from pangloss_models import initialise
 from pangloss_users import current_request_username
 

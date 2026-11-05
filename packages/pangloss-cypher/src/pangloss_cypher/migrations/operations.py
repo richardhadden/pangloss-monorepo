@@ -26,7 +26,7 @@ from typing import Any
 
 import neo4j
 from pangloss_models.context import propagate_context
-from pangloss_models.exceptions import (
+from pangloss_models import (
     PanglossMigrationAnswerNeeded,
     PanglossMigrationError,
     PanglossMigrationNotSupported,

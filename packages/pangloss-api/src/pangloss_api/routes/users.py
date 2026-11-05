@@ -12,12 +12,14 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 from pangloss_core import settings as core_settings
-from pangloss_users import service
-from pangloss_users.exceptions import (
+from pangloss_users import (
+    AccessTokenInfo,
     PanglossInvalidUserError,
     PanglossUserDoesNotExistError,
+    User,
+    UserUpdate,
+    service,
 )
-from pangloss_users.models import AccessTokenInfo, User, UserUpdate
 
 from pangloss_api import throttle
 from pangloss_api.dependencies import (

@@ -3,26 +3,26 @@ from typing import Annotated, Generic
 
 from annotated_types import MaxLen
 from pangloss_models.meta_kit import WithMeta
-from pangloss_models.model_bases.annotated_value import AnnotatedValue
-from pangloss_models.model_bases.base_models import _BaseObject, _DeclaredClass
-from pangloss_models.model_bases.configs import RelationConfig
-from pangloss_models.model_bases.conjunction import Conjunction
-from pangloss_models.model_bases.document import Document, DocumentMeta
-from pangloss_models.model_bases.edge_model import EdgeModel
-from pangloss_models.model_bases.embedded import Embedded, EmbeddedMeta
-from pangloss_models.model_bases.entity import Entity
-from pangloss_models.model_bases.helpers import ViaEdge
-from pangloss_models.model_bases.reified_relation import (
+from pangloss_models import (
+    AnnotatedValue,
+    Conjunction,
+    Document,
+    EdgeModel,
+    Embedded,
+    Entity,
+    NonHeritableTrait,
     ReifiedRelation,
     ReifiedRelationDocument,
-)
-from pangloss_models.model_bases.relation import Relation
-from pangloss_models.model_bases.semantic_space import SemanticSpace
-from pangloss_models.model_bases.trait import (
-    NonHeritableTrait,
+    RelationConfig,
+    SemanticSpace,
     Trait,
-    _Trait,
+    ViaEdge,
 )
+from pangloss_models.model_bases.base_models import _BaseObject, _DeclaredClass
+from pangloss_models.model_bases.document import DocumentMeta
+from pangloss_models.model_bases.embedded import EmbeddedMeta
+from pangloss_models.model_bases.relation import Relation
+from pangloss_models.model_bases.trait import _Trait
 from pangloss_models.utils import (
     generic_get_subclasses,
     get_all_parent_classes,

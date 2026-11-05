@@ -2,7 +2,7 @@
 
 from typing import get_origin
 
-from pangloss_models.exceptions import PanglossMetaError
+from pangloss_models import PanglossMetaError
 
 from pangloss_zotero import config
 from pangloss_zotero.mapping import build_table, concrete_classes

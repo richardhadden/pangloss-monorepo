@@ -9,26 +9,17 @@ from pangloss_models.autocomplete import (
     labels_to_match,
 )
 from pangloss_models.model_bases.base_models import _ListItems
+from pangloss_models import Document, Entity, Match, ModelRegistry, OrderBy, Where
 from pangloss_models.model_bases.document import (
-    Document,
     _DocumentHeadViewBase,
     _DocumentReferenceViewBase,
 )
 from pangloss_models.model_bases.entity import (
-    Entity,
     _EntityEditViewBase,
     _EntityHeadViewBase,
     _EntityReferenceViewBase,
 )
-from pangloss_models.model_registry import ModelRegistry
-from pangloss_models.search import (
-    Match,
-    OrderBy,
-    check_match,
-    check_order,
-    search_match,
-)
-from pangloss_models.search_where import Where
+from pangloss_models.search import check_match, check_order, search_match
 from pangloss_models.utils import get_concrete_types
 from pydantic import AnyHttpUrl, TypeAdapter
 

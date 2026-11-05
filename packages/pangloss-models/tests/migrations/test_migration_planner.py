@@ -6,9 +6,9 @@ from typing import Annotated, no_type_check
 
 import pytest
 from migration_support import snapshot_of
-from pangloss_models.exceptions import PanglossMigrationError
-from pangloss_models.migrations import changes as c
+from pangloss_models import Document, Entity, PanglossMigrationError, ReifiedRelation
 from pangloss_models.migrations import data_view
+from pangloss_models.migrations import changes as c
 from pangloss_models.migrations.files import (
     MigrationGraph,
     graph_of,
@@ -21,9 +21,6 @@ from pangloss_models.migrations.questions import (
     parse_value,
     with_answer,
 )
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.entity import Entity
-from pangloss_models.model_bases.reified_relation import ReifiedRelation
 
 
 @pytest.fixture
@@ -400,7 +397,7 @@ def test_the_fields_of_a_wrapper_are_asked_for():
 
 
 def test_answers_are_parsed_by_type():
-    from pangloss_models.exceptions import PanglossMigrationError
+    from pangloss_models import PanglossMigrationError
 
     enums = {"Colour": {"members": [{"name": "RED", "value": "red"}]}}
     assert parse_value("3.5", {"type": "float"}, enums) == 3.5
@@ -420,7 +417,7 @@ def test_answers_are_parsed_by_type():
 @no_type_check
 def test_what_the_new_wrapper_or_the_embedded_object_has_more_is_asked():
     from pangloss_models.migrations import diff
-    from pangloss_models.model_bases.embedded import Embedded
+    from pangloss_models import Embedded
 
     def one():
         class IdentifiedAs[T](ReifiedRelation[T]):
@@ -539,7 +536,7 @@ def test_a_model_given_a_parent_class_gets_its_labels_and_the_parent(apps):
 
 @no_type_check
 def test_changing_the_kind_of_a_model_or_a_field_is_refused(apps):
-    from pangloss_models.exceptions import PanglossMigrationNotSupported
+    from pangloss_models import PanglossMigrationNotSupported
 
     def entity():
         class Thing(Entity):
@@ -559,7 +556,7 @@ def test_changing_the_kind_of_a_model_or_a_field_is_refused(apps):
 
 
 def test_changing_the_kind_of_a_field_is_refused_too():
-    from pangloss_models.exceptions import PanglossMigrationNotSupported
+    from pangloss_models import PanglossMigrationNotSupported
     from pangloss_models.migrations.planner import refuse_kind_changes
 
     with pytest.raises(
@@ -580,7 +577,7 @@ def test_changing_the_kind_of_a_field_is_refused_too():
 @no_type_check
 def test_a_new_embedded_object_asks_for_the_values_it_requires():
     from pangloss_models.migrations import diff
-    from pangloss_models.model_bases.embedded import Embedded
+    from pangloss_models import Embedded
 
     def before():
         class Statement(Document):
@@ -611,9 +608,7 @@ def test_a_new_embedded_object_asks_for_the_values_it_requires():
 
 @no_type_check
 def test_a_model_that_fulfils_a_class_of_another_app_depends_on_that_app(apps):
-    from pangloss_models.field_definitions import FieldSubclassing
-    from pangloss_models.model_bases.configs import RelationConfig
-    from pangloss_models.model_bases.helpers import Fulfils
+    from pangloss_models import FieldSubclassing, Fulfils, RelationConfig
 
     def plain():
         class Person(Entity):

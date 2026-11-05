@@ -5,15 +5,13 @@ from uuid import uuid7
 
 import pangloss_sdk
 import pytest
-from pangloss_models.exceptions import PanglossWriteError
+from pangloss_models import PanglossWriteError
 from pangloss_sdk import (
     PanglossSdkMismatch,
     PanglossSdkOutOfDate,
     PanglossSdkOutOfDateWarning,
 )
-from pangloss_sdk import (
-    client as sdk_client,
-)
+from pangloss_sdk import client as sdk_client
 from pangloss_sdk.schemas import schema_hash
 from sdk_support import FakeServer, head_json, make_models, settings
 

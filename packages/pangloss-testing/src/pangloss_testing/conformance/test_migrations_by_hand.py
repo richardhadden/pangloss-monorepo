@@ -4,9 +4,8 @@ from types import SimpleNamespace as ns
 from typing import no_type_check
 
 import pytest
-from pangloss_models.exceptions import PanglossMigrationError
+from pangloss_models import Entity, PanglossMigrationError
 from pangloss_models.migrations import changes as c
-from pangloss_models.model_bases.entity import Entity
 from pangloss_cypher.migrations import (
     apply_changes,
     apply_changes_in_batches,

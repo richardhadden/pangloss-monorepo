@@ -1,9 +1,7 @@
 """A type that is also another entity (`also=Role`)"""
 
 import pytest
-from pangloss_models import initialise
-from pangloss_models.exceptions import PanglossMetaError
-from pangloss_models.model_bases.entity import Entity
+from pangloss_models import Entity, PanglossMetaError, initialise
 from pangloss_models.model_bases.labels import labels_for_model
 from pangloss_typology import Typed, Typology, TypologyMeta
 

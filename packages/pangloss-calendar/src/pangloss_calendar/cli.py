@@ -6,7 +6,7 @@ from collections.abc import Awaitable, Callable
 from typing import Any
 
 import typer
-from pangloss_dates.calendar import Calendar, from_jdn
+from pangloss_dates import Calendar, from_jdn
 
 from pangloss_calendar import settings as calendar_settings
 

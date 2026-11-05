@@ -6,12 +6,11 @@ from typing import no_type_check
 
 import pytest
 from migration_support import snapshot_of
-from pangloss_models.exceptions import PanglossMigrationError
+from pangloss_models import Entity, PanglossMigrationError
+from pangloss_models.migrations import Migration, data_view, diff, replay
 from pangloss_models.migrations import changes as c
-from pangloss_models.migrations import data_view, diff, replay
 from pangloss_models.migrations.files import (
     EMPTY_SNAPSHOT,
-    Migration,
     MigrationGraph,
     discover,
     load,
@@ -20,7 +19,6 @@ from pangloss_models.migrations.files import (
     slug_of,
     write,
 )
-from pangloss_models.model_bases.entity import Entity
 
 
 @pytest.fixture
@@ -74,7 +72,7 @@ def test_a_migration_is_written_and_read_back(app):
 def test_create_directly_is_not_a_change_of_the_data():
     """Whether a document can be made on its own changes nothing stored: `makemigrations` has nothing to
     write, so the state the migrations come to must be the models' (as `pangloss dev` checks it)"""
-    from pangloss_models.model_bases.document import Document
+    from pangloss_models import Document
 
     def declare(create_directly: bool):
         def make():

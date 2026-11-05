@@ -7,8 +7,8 @@ Where the book is not there (a database without the library), nothing is moved, 
 if a factoid has a source. It cannot be undone: which source each factoid had is not kept.
 """
 
+from pangloss_models.migrations import changes_from_data
 from pangloss_models.migrations import changes as c
-from pangloss_models.migrations.files import changes_from_data
 
 BOOK = "01a1a6dd-eead-75ec-b1ac-8056709f34d9"
 

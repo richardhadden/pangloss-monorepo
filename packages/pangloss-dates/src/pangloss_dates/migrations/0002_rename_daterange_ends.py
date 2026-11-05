@@ -6,7 +6,7 @@ be an `UnknownDate` (a widening: no data changes). And the index of a dateable d
 (`pangloss_dates.structure`).
 """
 
-from pangloss_models.migrations.files import changes_from_data
+from pangloss_models.migrations import changes_from_data
 
 dependencies = [["pangloss_dates", "0001_initial"]]
 schema_hash = "edae4bf0be05f69c1ba747c756f3703d45644d4d044a01a7e917407aea3a2a15"

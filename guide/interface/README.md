@@ -67,7 +67,7 @@ class Factoid(Document):
 **Navigation.** An app puts links in the bar from `<app>/interface_config.py`:
 
 ```python
-from pangloss_interface.config import InterfaceConfig, NavLink, NavModel
+from pangloss_interface import InterfaceConfig, NavLink, NavModel
 
 config = InterfaceConfig(
     sections=["People"],

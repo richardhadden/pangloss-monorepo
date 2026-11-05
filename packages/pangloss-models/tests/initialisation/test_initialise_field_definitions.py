@@ -13,15 +13,33 @@ from typing import (
 
 import pytest
 from annotated_types import MaxLen
-from pangloss_models import initialise
-from pangloss_models.exceptions import PanglossModelError
+from pangloss_models import (
+    AnnotatedValue,
+    Conjunction,
+    DBField,
+    Document,
+    EdgeModel,
+    Embedded,
+    Entity,
+    FieldBinding,
+    FieldSubclassing,
+    Fulfils,
+    ModelRegistry,
+    NonHeritableTrait,
+    PanglossModelError,
+    ReifiedRelation,
+    ReifiedRelationDocument,
+    RelationConfig,
+    SemanticSpace,
+    Trait,
+    ViaEdge,
+    initialise,
+)
 from pangloss_models.field_definitions import (
     AnnotatedValueFieldDefinition,
     EmbeddedFieldDefinition,
     EmbeddedOption,
-    FieldBinding,
     FieldFulfilment,
-    FieldSubclassing,
     IncomingRelationDefinition,
     ListFieldDefinition,
     LiteralFieldDefinition,
@@ -38,21 +56,8 @@ from pangloss_models.field_definitions import (
 from pangloss_models.initialise_models.initialise_field_definitions import (
     get_fields_on_model,
 )
-from pangloss_models.model_bases.annotated_value import AnnotatedValue
-from pangloss_models.model_bases.configs import RelationConfig
-from pangloss_models.model_bases.conjunction import Conjunction
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.edge_model import EdgeModel
-from pangloss_models.model_bases.embedded import Embedded, EmbeddedMeta
-from pangloss_models.model_bases.entity import Entity, EntityMeta
-from pangloss_models.model_bases.helpers import DBField, Fulfils, ViaEdge
-from pangloss_models.model_bases.reified_relation import (
-    ReifiedRelation,
-    ReifiedRelationDocument,
-)
-from pangloss_models.model_bases.semantic_space import SemanticSpace
-from pangloss_models.model_bases.trait import NonHeritableTrait, Trait
-from pangloss_models.model_registry import ModelRegistry
+from pangloss_models.model_bases.embedded import EmbeddedMeta
+from pangloss_models.model_bases.entity import EntityMeta
 from pangloss_models.utils import get_all_parent_classes, is_single_relatable
 from pydantic import ValidationError
 
@@ -2318,9 +2323,7 @@ def test_the_values_of_an_enum_must_be_strings_or_numbers():
     import datetime
     from enum import Enum
 
-    from pangloss_models import initialise
-    from pangloss_models.exceptions import PanglossModelError
-    from pangloss_models.model_bases.document import Document
+    from pangloss_models import Document, PanglossModelError, initialise
 
     class Fine(Enum):
         A = "a"
@@ -2332,7 +2335,7 @@ def test_the_values_of_an_enum_must_be_strings_or_numbers():
 
     initialise()  # (an enum is stored as the values of its members: these can be)
 
-    from pangloss_models.model_registry import ModelRegistry
+    from pangloss_models import ModelRegistry
 
     ModelRegistry._reset()
 

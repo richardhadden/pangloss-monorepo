@@ -24,27 +24,15 @@ from decimal import Decimal
 from enum import Enum
 from typing import Annotated, TypedDict
 from annotated_types import Ge, MaxLen, MinLen
-from pangloss_calendar.models import DateCharacterisation
-from pangloss_dates.bounds import SortBy
-from pangloss_dates.dateable import Dateable
-from pangloss_dates.models import Date, SortDefault
+from pangloss_calendar import DateCharacterisation
+from pangloss_dates import Date, Dateable, SortBy, SortDefault
 from pangloss_derived import DerivedMeta
 from pangloss_interface import InterfaceMeta
-from pangloss_library.models import WeightedAlternative
-from pangloss_models.field_definitions import FieldBinding, FieldSubclassing
-from pangloss_models.model_bases.annotated_value import AnnotatedValue
-from pangloss_models.model_bases.configs import RelationConfig
-from pangloss_models.model_bases.conjunction import Conjunction
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.edge_model import EdgeModel
-from pangloss_models.model_bases.entity import Entity
-from pangloss_models.model_bases.helpers import ViaEdge
-from pangloss_models.model_bases.reified_relation import ReifiedRelation
-from pangloss_models.model_bases.semantic_space import SemanticSpace
-from pangloss_models.model_bases.trait import Trait
-from pangloss_review.meta import ReviewMeta
+from pangloss_library import WeightedAlternative
+from pangloss_models import AnnotatedValue, Conjunction, Document, EdgeModel, Entity, FieldBinding, FieldSubclassing, ReifiedRelation, RelationConfig, SemanticSpace, Trait, ViaEdge
+from pangloss_review import ReviewMeta
 from pangloss_typology import Typed, Typology, TypologyMeta
-from pangloss_zotero.models import ZoteroBacked
+from pangloss_zotero import ZoteroBacked
 
 class Role(Enum):
     LEADER = 'leader'

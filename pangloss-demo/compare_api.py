@@ -31,11 +31,10 @@ import httpx2 as httpx
 import neo4j as neo4j_driver
 import pangloss_core.settings as core_settings
 import pydantic
-from pangloss_api.app import create_app
-from pangloss_core.settings import BaseSettings
+from pangloss_api import create_app
+from pangloss_core import BaseSettings
 from pangloss_models.migrations.files import EMPTY_SNAPSHOT, load
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.entity import Entity
+from pangloss_models import Document, Entity
 from pangloss_testing.live import apply_changes
 from pangloss_users import current_request_username, service as users
 from pydantic import AnyHttpUrl
@@ -99,7 +98,7 @@ rng = random.Random(1)
 
 if args.part == "core":
     from demo_app import models as demo
-    from pangloss_review.meta import ReviewMeta
+    from pangloss_review import ReviewMeta
 
     class Memo(Document):
         """(a document that is reviewed: the demo's are not)"""
@@ -107,19 +106,20 @@ if args.part == "core":
         _review_meta = ReviewMeta(reviewable=True)
 
 else:
-    from pangloss_dates import julian
+    from pangloss_dates import Calendar, julian
     from pangloss_dates import models as date_models
-    from pangloss_dates.calendar import Calendar
-    from pangloss_models.model_registry import ModelRegistry
+    from pangloss_models import ModelRegistry
 
     # (as the live tests do: the date models are registered afresh, so that the abstract `JulianDate` is the union of its kinds)
+    import pangloss_dates
     from pangloss_calendar import models as calendar_models
 
     ModelRegistry._reset()
-    for module in (date_models, julian, calendar_models):
+    # (and the root of `pangloss_dates`, which the calendar's models import from: it keeps the classes it gave out)
+    for module in (date_models, julian, pangloss_dates, calendar_models):
         importlib.reload(module)
+    from pangloss_calendar import DateCharacterisation
     from pangloss_calendar import graph as calendar_graph
-    from pangloss_calendar.models import DateCharacterisation
     from pangloss_typology import Typed, Typology, TypologyMeta
 
     class RoleTypology(Typology):

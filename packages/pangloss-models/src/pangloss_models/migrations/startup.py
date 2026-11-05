@@ -7,7 +7,7 @@ or lost after it was applied, and models that have changed since the migrations 
 project with no migrations makes no promise, and is not checked.
 """
 
-from pangloss_core.storage import Storage
+from pangloss_core import Storage
 from types import ModuleType
 from typing import Any
 

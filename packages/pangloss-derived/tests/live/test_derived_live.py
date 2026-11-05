@@ -5,19 +5,20 @@ one), and the worker's handling of writes"""
 from typing import no_type_check
 
 import pytest
-from pangloss_models import initialise
-from pangloss_models.model_bases.conjunction import Conjunction
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.edge_model import EdgeModel
-from pangloss_models.model_bases.entity import Entity
-from pangloss_models.model_bases.helpers import ViaEdge
-from pangloss_models.model_bases.reified_relation import ReifiedRelation
-from pangloss_models.model_bases.semantic_space import SemanticSpace
+from pangloss_models import (
+    Conjunction,
+    Document,
+    EdgeModel,
+    Entity,
+    ReifiedRelation,
+    SemanticSpace,
+    ViaEdge,
+    initialise,
+)
 from pangloss_testing.live import run
 
-from pangloss_derived import Derived, DerivedMeta, RuleType, Var, rule
+from pangloss_derived import Derived, DerivedMeta, RuleType, Var, read, rule
 from pangloss_derived.worker import run_pending_derivations
-from pangloss_derived import read
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 

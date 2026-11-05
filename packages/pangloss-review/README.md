@@ -4,7 +4,7 @@ Optional. Documents are checked by a user before they are published. Add `"pangl
 and mark the models to review:
 
 ```python
-from pangloss_review.meta import ReviewMeta
+from pangloss_review import ReviewMeta
 
 
 class Letter(Document):

@@ -11,7 +11,8 @@ Dates that are not repeated are found by their bounds alone.
 from collections.abc import Iterable
 from typing import Any
 
-from pangloss_models.search import Match, SearchKey
+from pangloss_models import Match
+from pangloss_models.search import SearchKey
 
 from pangloss_dates.calendar import Calendar
 from pangloss_dates.models import worked_out

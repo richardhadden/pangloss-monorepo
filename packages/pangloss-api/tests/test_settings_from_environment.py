@@ -31,7 +31,7 @@ def test_without_settings_or_the_variable_it_says_what_to_do(no_settings, monkey
 def test_the_module_the_variable_names_is_imported(no_settings, monkeypatch, tmp_path):
     (tmp_path / "env_settings_ok.py").write_text(
         textwrap.dedent("""
-        from pangloss_core.settings import BaseSettings, DatabaseSettings
+        from pangloss_core import BaseSettings, DatabaseSettings
         from pydantic import AnyHttpUrl
 
         class Settings(BaseSettings[DatabaseSettings]):

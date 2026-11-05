@@ -4,8 +4,7 @@ from typing import Annotated
 
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
-from pangloss_users import current_request_username, see_unpublished, service
-from pangloss_users.models import User
+from pangloss_users import User, current_request_username, see_unpublished, service
 
 from pangloss_api.tokens import TokenError, decode_token
 

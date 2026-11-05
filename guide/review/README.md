@@ -4,8 +4,8 @@
 `INSTALLED_APPS`, and say which models are reviewed:
 
 ```python
-from pangloss_models.model_bases.document import Document
-from pangloss_review.meta import ReviewMeta
+from pangloss_models import Document
+from pangloss_review import ReviewMeta
 
 
 class Letter(Document):

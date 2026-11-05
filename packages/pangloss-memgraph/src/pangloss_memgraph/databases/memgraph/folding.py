@@ -7,8 +7,8 @@ memgraph refold`, deprecated), or, in a migration, by `refold_in_migration`."""
 
 from typing import Any
 
-from pangloss_cypher.transactions import Database
-from pangloss_models.text import fold
+from pangloss_cypher import Database
+from pangloss_models import fold
 
 from pangloss_memgraph.databases.memgraph.database import current
 from pangloss_memgraph.databases.memgraph.dialect import FOLDED_LABEL

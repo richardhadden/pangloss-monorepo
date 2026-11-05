@@ -3,7 +3,7 @@
 Made by `pangloss makemigrations`; the answers a change needs may be filled in here.
 """
 
-from pangloss_models.migrations.files import changes_from_data
+from pangloss_models.migrations import changes_from_data
 
 dependencies = [['pangloss_calendar', '0002_addindex_createmodel_datecharacterisation_createmodel_norule'],
  ['pangloss_dates', '0001_initial']]

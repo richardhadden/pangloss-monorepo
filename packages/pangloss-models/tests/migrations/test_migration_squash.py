@@ -7,12 +7,11 @@ from typing import no_type_check
 
 import pytest
 from migration_support import snapshot_of
-from pangloss_models.exceptions import PanglossMigrationError
+from pangloss_models import Entity, PanglossMigrationError
+from pangloss_models.migrations import Migration, data_view, diff
 from pangloss_models.migrations import changes as c
-from pangloss_models.migrations import data_view, diff
 from pangloss_models.migrations.files import (
     EMPTY_SNAPSHOT,
-    Migration,
     MigrationGraph,
     discover,
     migrations_directory,
@@ -20,7 +19,6 @@ from pangloss_models.migrations.files import (
     write,
 )
 from pangloss_models.migrations.history import pending, problems
-from pangloss_models.model_bases.entity import Entity
 
 
 @no_type_check

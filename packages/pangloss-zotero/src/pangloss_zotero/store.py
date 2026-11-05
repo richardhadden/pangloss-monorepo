@@ -15,14 +15,13 @@ import secrets
 from collections.abc import Generator
 from typing import Any, get_origin
 
-from pangloss_models.exceptions import (
+from pangloss_models import (
+    ModelRegistry,
     PanglossNotDeletedError,
     PanglossNotFoundError,
     PanglossVersionConflictError,
 )
-from pangloss_models.model_registry import ModelRegistry
-from pangloss_users import current_request_username, service
-from pangloss_users.exceptions import PanglossUserExistsError
+from pangloss_users import PanglossUserExistsError, current_request_username, service
 from pydantic import AnyHttpUrl
 
 from pangloss_zotero import convert

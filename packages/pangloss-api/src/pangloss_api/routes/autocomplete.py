@@ -12,8 +12,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Query, status
 from pangloss_models.autocomplete import AutocompleteResults, resolve_entity_types
-from pangloss_models.exceptions import PanglossUnknownTypeError
-from pangloss_models.model_bases.entity import Entity
+from pangloss_models import Entity, PanglossUnknownTypeError
 
 from pangloss_api.routes.models import called
 

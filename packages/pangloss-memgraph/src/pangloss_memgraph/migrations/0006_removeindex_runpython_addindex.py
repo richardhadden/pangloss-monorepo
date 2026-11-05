@@ -5,7 +5,7 @@ folded (`pangloss_models.text.fold`), which every node with a label is given her
 on. (Memgraph's text index does not fold accents itself.)
 """
 
-from pangloss_models.migrations.files import changes_from_data
+from pangloss_models.migrations import changes_from_data
 
 dependencies = []
 schema_hash = "80377d12ab28edd5acfc62d2f62023652f0d842fc6ca1befc25b2b341c62894d"

@@ -38,14 +38,16 @@ Here is the whole of `chronicle/models.py` as it will be at the end of this part
 from enum import Enum
 from typing import Annotated
 
-from pangloss_dates.models import Date
+from pangloss_dates import Date
 from pangloss_interface import InterfaceMeta
-from pangloss_models.model_bases.configs import RelationConfig
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.entity import Entity
-from pangloss_models.model_bases.reified_relation import ReifiedRelation
-from pangloss_models.model_bases.semantic_space import SemanticSpace
-from pangloss_models.model_bases.trait import Trait
+from pangloss_models import (
+    Document,
+    Entity,
+    ReifiedRelation,
+    RelationConfig,
+    SemanticSpace,
+    Trait,
+)
 
 
 class Agent(Trait):

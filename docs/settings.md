@@ -3,8 +3,8 @@
 Defined in `pangloss_core.settings`. Create **one** `BaseSettings` subclass for your project and instantiate it before calling `initialise()`: construction stores the instance in `pangloss_core.settings.SETTINGS` (once it is valid: a construction that fails leaves the settings before), which the rest of Pangloss reads.
 
 ```python
-from pangloss_core.settings import BaseSettings
-from pangloss_memgraph.databases.memgraph.settings import MemgraphDatabaseSettings
+from pangloss_core import BaseSettings
+from pangloss_memgraph import MemgraphDatabaseSettings
 
 
 class Settings(BaseSettings[MemgraphDatabaseSettings]):

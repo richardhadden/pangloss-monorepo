@@ -4,7 +4,7 @@ The structure of the calendar graph: an index and a unique key for days, months,
 Written by hand (the calendar's own nodes are not models); the nodes are made by `pangloss calendar seed`.
 """
 
-from pangloss_models.migrations.files import changes_from_data
+from pangloss_models.migrations import changes_from_data
 
 dependencies = []
 

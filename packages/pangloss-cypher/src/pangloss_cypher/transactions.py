@@ -11,11 +11,8 @@ from collections.abc import Awaitable, Callable, Generator
 from typing import Any, Concatenate
 
 import neo4j
-from pangloss_core.settings import BaseSettings
-from pangloss_models.exceptions import (
-    PanglossReadOnlyError,
-    PanglossSearchTimeoutError,
-)
+from pangloss_core import BaseSettings
+from pangloss_models import PanglossReadOnlyError, PanglossSearchTimeoutError
 
 from pangloss_cypher.dialect import Dialect
 from pangloss_cypher.transaction import Transaction as Transaction

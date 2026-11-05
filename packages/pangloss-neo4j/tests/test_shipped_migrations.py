@@ -27,7 +27,7 @@ CHECK = textwrap.dedent(
     from pangloss_neo4j.databases.neo4j import migration_backend
     import pangloss_calendar.models, pangloss_zotero.models
 
-    from pangloss_core.settings import BaseSettings
+    from pangloss_core import BaseSettings
     from pangloss_neo4j.databases.neo4j.settings import Neo4jDatabaseSettings
 
     class Settings(BaseSettings[Neo4jDatabaseSettings]):

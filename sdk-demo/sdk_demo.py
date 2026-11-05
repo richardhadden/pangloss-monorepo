@@ -21,7 +21,7 @@ import sys
 
 import pangloss_demo_sdk as sdk
 import pangloss_sdk
-from pangloss_models.exceptions import PanglossVersionConflictError
+from pangloss_models import PanglossVersionConflictError
 
 KEEP = "--keep" in sys.argv
 

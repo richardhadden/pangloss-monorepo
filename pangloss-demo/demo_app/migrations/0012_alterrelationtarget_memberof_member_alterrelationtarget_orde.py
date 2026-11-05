@@ -6,8 +6,8 @@ migrations already, so this is not a rename that `makemigrations` can see: the n
 (`RunCypher`), and the models after, which then have no nodes of the old ones to delete.
 """
 
+from pangloss_models.migrations import changes_from_data
 from pangloss_models.migrations import changes as c
-from pangloss_models.migrations.files import changes_from_data
 
 OLD, NEW = "Alternative", "WeightedAlternative"
 

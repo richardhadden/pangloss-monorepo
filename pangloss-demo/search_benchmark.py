@@ -17,10 +17,10 @@ from typing import Any
 
 import neo4j
 from demo_app import models
-from pangloss_cli.project import load_project
+from pangloss_cli import load_project
 from pangloss_cypher.search_query import build_search_query
-from pangloss_models import initialise
-from pangloss_models.search import Match, check_match
+from pangloss_models import Match, initialise
+from pangloss_models.search import check_match
 from pangloss_users import current_request_username
 
 parser = argparse.ArgumentParser()

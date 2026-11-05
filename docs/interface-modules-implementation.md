@@ -236,7 +236,7 @@ and `structure.py`; it is not `interface.py`, which would sit beside the module'
 
 ```python
 # pangloss_manuscripts/interface_config.py
-from pangloss_interface.config import InterfaceConfig, NavLink, NavModel
+from pangloss_interface import InterfaceConfig, NavLink, NavModel
 
 config = InterfaceConfig(
     nav=[

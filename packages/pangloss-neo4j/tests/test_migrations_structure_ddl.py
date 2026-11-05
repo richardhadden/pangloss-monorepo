@@ -1,7 +1,7 @@
 """Indexes and constraints as changes, made on a database"""
 
 import pytest
-from pangloss_models.exceptions import PanglossMigrationError
+from pangloss_models import PanglossMigrationError
 from pangloss_models.migrations import changes as c
 from pangloss_models.migrations.files import EMPTY_SNAPSHOT
 from pangloss_neo4j.databases.neo4j.initialise_database import structure

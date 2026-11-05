@@ -19,7 +19,7 @@ def project(tmp_path, monkeypatch):
         tmp_path,
         "fakedb/__init__.py",
         """
-        from pangloss_core.storage import Capabilities, Storage
+        from pangloss_core import Capabilities, Storage
 
         storage = Storage(
             name="fakedb", package="fakedb", capabilities=Capabilities(snapshots=True)

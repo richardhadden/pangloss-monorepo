@@ -11,7 +11,7 @@ from pangloss_calendar.days import (
     previous_month,
     view_of,
 )
-from pangloss_dates.calendar import Calendar, Weekday, from_jdn, to_jdn, weekday
+from pangloss_dates import Calendar, Weekday, from_jdn, to_jdn, weekday
 
 J = Calendar.JULIAN
 G = Calendar.GREGORIAN

@@ -6,11 +6,8 @@ from uuid import uuid7
 
 import pytest
 from pangloss_core import settings as core_settings
-from pangloss_history import listener
-from pangloss_history.store import SqliteStore
-from pangloss_models import hooks, initialise
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.entity import Entity
+from pangloss_history import SqliteStore, listener
+from pangloss_models import Document, Entity, hooks, initialise
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 

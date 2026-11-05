@@ -139,7 +139,7 @@ def test_a_request_id_that_is_not_plain_is_replaced(client):
 def test_records_made_in_a_request_have_its_id(settings, capsys):
     settings.LOG_FORMAT = "json"
     from fastapi.testclient import TestClient
-    from pangloss_api.app import create_app
+    from pangloss_api import create_app
 
     client = TestClient(create_app())
     make_user()
@@ -191,7 +191,7 @@ def test_startup_and_shutdown_are_logged(app, log):
 def test_the_log_is_set_up_from_the_settings(settings, capsys):
     settings.LOG_LEVEL = "DEBUG"
     settings.LOG_FORMAT = "json"
-    from pangloss_api.app import create_app
+    from pangloss_api import create_app
 
     create_app()
     logging.getLogger("pangloss.test").debug("probe")

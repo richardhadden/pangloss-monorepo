@@ -1,16 +1,15 @@
 """Users: creating, finding, changing, and logging in"""
 
 import pytest
-from pangloss_models import initialise
-from pangloss_models.exceptions import PanglossUserDisabledError
-from pangloss_models.model_bases.document import Document
-from pangloss_users import current_request_username, service
-from pangloss_users.exceptions import (
+from pangloss_models import Document, PanglossUserDisabledError, initialise
+from pangloss_users import (
     PanglossInvalidUserError,
     PanglossUserDoesNotExistError,
     PanglossUserExistsError,
+    UserUpdate,
+    current_request_username,
+    service,
 )
-from pangloss_users.models import UserUpdate
 
 from .helpers import run
 

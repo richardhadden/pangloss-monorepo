@@ -4,7 +4,7 @@ Given to `connect()`, or read from the environment (`PANGLOSS_URL`, `PANGLOSS_US
 `PANGLOSS_PASSWORD`, `PANGLOSS_TOKEN`, ...) and a `.env` in the working directory.
 """
 
-from pangloss_core.settings import ClientSettings
+from pangloss_core import ClientSettings
 from pydantic import AnyHttpUrl, SecretStr
 from pydantic_settings import SettingsConfigDict
 

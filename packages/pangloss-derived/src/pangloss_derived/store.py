@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from pangloss_derived.declare import Derived
 
 from pangloss_cypher import fragments
-from pangloss_core.backend import Transaction
+from pangloss_core import Transaction
 
 from pangloss_derived.check import CheckedRule, Seed
 from pangloss_derived.compile import compile_rule

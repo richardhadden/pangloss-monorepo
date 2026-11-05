@@ -3,10 +3,8 @@
 from uuid import uuid7
 
 import pangloss_sdk
-from pangloss_core.settings import ClientSettings
-from pangloss_models import initialise
-from pangloss_models.model_bases.entity import Entity
-from pangloss_models.model_registry import ModelRegistry
+from pangloss_core import ClientSettings
+from pangloss_models import Entity, ModelRegistry, initialise
 from pangloss_sdk.databases.api_sync import exposed_functions as sync_api
 from sdk_support import FakeServer, head_json, reference_json, sync_client
 
@@ -88,7 +86,7 @@ def page_of(*labels, next_page=None):
 def make_sync_document():
     ModelRegistry._reset()
     ClientSettings(INSTALLED_APPS=[], STORAGE="pangloss_sdk.storage:api_sync")
-    from pangloss_models.model_bases.document import Document
+    from pangloss_models import Document
 
     class Note(Document):
         text: str
@@ -128,7 +126,7 @@ def test_update_with_and_without_a_version():
 
 
 def test_a_stale_update_raises_the_error_of_the_database_module():
-    from pangloss_models.exceptions import PanglossVersionConflictError
+    from pangloss_models import PanglossVersionConflictError
 
     Person = make_sync_models()
     body = {
@@ -268,7 +266,7 @@ def test_a_login_that_fails_for_another_reason_raises_that():
 
     server._respond = respond
     sync_client(server, USERNAME="ada", PASSWORD="secret")
-    from pangloss_models.exceptions import PanglossReadOnlyError
+    from pangloss_models import PanglossReadOnlyError
 
     with pytest.raises(PanglossReadOnlyError):
         Person.get_for_edit(uuid7())

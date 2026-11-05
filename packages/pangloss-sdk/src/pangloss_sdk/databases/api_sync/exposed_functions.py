@@ -10,10 +10,8 @@ from uuid import UUID
 
 from pangloss_models.autocomplete import AutocompleteItem, AutocompleteResults
 from pangloss_models.model_bases.base_models import _ListItems
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.entity import Entity
-from pangloss_models.search import Match, OrderBy, search_match
-from pangloss_models.search_where import Where
+from pangloss_models import Document, Entity, Match, OrderBy, Where
+from pangloss_models.search import search_match
 from pangloss_models.utils import get_concrete_types
 from pangloss_sdk import protocol
 from pangloss_sdk.client import current_client

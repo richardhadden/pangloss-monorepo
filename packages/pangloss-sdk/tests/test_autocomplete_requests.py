@@ -4,8 +4,7 @@ from types import SimpleNamespace
 from uuid import uuid7
 
 import pytest
-from pangloss_models import initialise
-from pangloss_models.model_bases.entity import Entity
+from pangloss_models import Entity, initialise
 from pangloss_sdk import protocol
 from pangloss_sdk.databases.api_sync import exposed_functions
 

@@ -5,18 +5,21 @@ from typing import Annotated, no_type_check
 from uuid import uuid7
 
 import pytest
-from pangloss_models import initialise
-from pangloss_models.field_definitions import FieldBinding, FieldSubclassing
+from pangloss_models import (
+    Document,
+    Entity,
+    FieldBinding,
+    FieldSubclassing,
+    RelationConfig,
+    Trait,
+    initialise,
+)
 from pangloss_models.model_bases.binding import (
     allow_bind_on_this_item,
     binding_applies,
     class_names,
     names_stood_for,
 )
-from pangloss_models.model_bases.configs import RelationConfig
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.entity import Entity
-from pangloss_models.model_bases.trait import Trait
 from pydantic import ValidationError
 
 

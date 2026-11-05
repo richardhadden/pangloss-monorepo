@@ -2,7 +2,7 @@
 `pangloss_memgraph.databases.memgraph.setup`). There is nothing to set up for a
 remote Pangloss instance: this is a stub."""
 
-from pangloss_core.settings import BaseSettings
+from pangloss_core import BaseSettings
 
 
 def create_database(settings: BaseSettings) -> None:

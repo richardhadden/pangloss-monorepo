@@ -97,9 +97,7 @@ def restore_version(
     ),
 ) -> None:
     """Write an earlier version again, as a new version"""
-    from pangloss_models import initialise
-    from pangloss_models.exceptions import PanglossWriteError
-    from pangloss_models.model_registry import ModelRegistry
+    from pangloss_models import ModelRegistry, PanglossWriteError, initialise
     from pangloss_users import current_request_username
 
     project = ctx.obj
@@ -142,8 +140,7 @@ def record_baseline(
 ) -> None:
     """Record what each document and entity is now, if history has no record of its version (as for data written
     before pangloss_history was installed). Safe to run again: what has a record is left alone."""
-    from pangloss_models import initialise
-    from pangloss_models.model_registry import ModelRegistry
+    from pangloss_models import ModelRegistry, initialise
 
     from pangloss_history.baseline import make_baseline, models_with_history
     from pangloss_history.draft import installed_apps

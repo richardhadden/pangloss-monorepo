@@ -9,27 +9,25 @@ import pytest
 from pangloss_testing.under_test.initialise_database import (
     initialise_database,
 )
-from pangloss_models import initialise
-from pangloss_models.exceptions import (
+from pangloss_models import (
+    AnnotatedValue,
+    Conjunction,
+    Document,
+    EdgeModel,
+    Embedded,
+    Entity,
+    FieldSubclassing,
     PanglossConflictError,
     PanglossReferenceError,
     PanglossUserNotFoundError,
-)
-from pangloss_models.field_definitions import FieldSubclassing
-from pangloss_models.model_bases.annotated_value import AnnotatedValue
-from pangloss_models.model_bases.configs import RelationConfig
-from pangloss_models.model_bases.conjunction import Conjunction
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.edge_model import EdgeModel
-from pangloss_models.model_bases.embedded import Embedded
-from pangloss_models.model_bases.entity import Entity
-from pangloss_models.model_bases.helpers import ViaEdge
-from pangloss_models.model_bases.reified_relation import (
     ReifiedRelation,
     ReifiedRelationDocument,
+    RelationConfig,
+    SemanticSpace,
+    Trait,
+    ViaEdge,
+    initialise,
 )
-from pangloss_models.model_bases.semantic_space import SemanticSpace
-from pangloss_models.model_bases.trait import Trait
 from pangloss_users import current_request_username
 from pydantic import AnyHttpUrl
 
@@ -2770,7 +2768,7 @@ async def test_annotated_value(db_driver, clear_database):
 
 @no_type_check
 async def test_bound_field_values_are_written_on_children(db_driver, clear_database):
-    from pangloss_models.field_definitions import FieldBinding
+    from pangloss_models import FieldBinding
 
     class Action(Document):
         action_when: datetime.date
@@ -2800,7 +2798,7 @@ async def test_bound_field_values_are_written_on_children(db_driver, clear_datab
 
 @no_type_check
 async def test_explicit_child_value_wins_over_bound_value(db_driver, clear_database):
-    from pangloss_models.field_definitions import FieldBinding
+    from pangloss_models import FieldBinding
 
     class Action(Document):
         action_when: datetime.date
@@ -2993,7 +2991,7 @@ async def test_a_write_that_keeps_breaking_a_uniqueness_constraint_is_a_conflict
     """`write_with_retries`: a write that loses the race every time is tried `WRITE_ATTEMPTS` times, then is a conflict;
     any other error is raised at once"""
     from neo4j.exceptions import ClientError
-    from pangloss_models.exceptions import PanglossConflictError
+    from pangloss_models import PanglossConflictError
     from pangloss_testing.under_test import exposed_functions
 
     attempts = []

@@ -9,10 +9,9 @@ from typing import Any
 
 import neo4j
 from pangloss_cypher.migrations.operations import ident
-from pangloss_cypher.transaction import Transaction
-from pangloss_models.exceptions import PanglossMigrationError
+from pangloss_cypher import Transaction
+from pangloss_models import PanglossMigrationError, fold
 from pangloss_models.migrations import changes as c
-from pangloss_models.text import fold
 
 from pangloss_memgraph.databases.memgraph.dialect import FOLDED_LABEL
 

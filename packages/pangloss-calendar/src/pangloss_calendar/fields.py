@@ -10,9 +10,7 @@ from dataclasses import dataclass
 from types import UnionType
 from typing import Annotated, Any, Union, get_args, get_origin
 
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.entity import Entity
-from pangloss_models.model_registry import ModelRegistry
+from pangloss_models import Document, Entity, ModelRegistry
 
 from pangloss_calendar.settings import setting
 

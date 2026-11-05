@@ -10,10 +10,9 @@ from fastapi import FastAPI
 from pangloss_calendar import graph, service
 from pangloss_calendar.api import router
 from pangloss_calendar.days import parse_day
-from pangloss_dates.calendar import Calendar, weekday
+from pangloss_dates import Calendar, weekday
 from pangloss_dates.easter import easter
-from pangloss_models import initialise
-from pangloss_models.model_bases.document import Document
+from pangloss_models import Document, initialise
 from pangloss_testing.live import initialise_database
 from pangloss_users import see_unpublished
 
@@ -28,11 +27,13 @@ def exact(year, month=None, day=None):
 
 
 def models():
+    import pangloss_dates
     from pangloss_calendar import models as calendar_models
     from pangloss_dates import julian
     from pangloss_dates import models as date_models
 
-    for module in (date_models, julian, calendar_models):
+    # (and the root of `pangloss_dates`, which the calendar's models import from: it keeps the classes it gave out)
+    for module in (date_models, julian, pangloss_dates, calendar_models):
         importlib.reload(module)
 
     class FeastDay(calendar_models.DateCharacterisation):
@@ -302,9 +303,9 @@ async def test_easter_and_the_year(clear_database, clear_calendar):
 async def test_the_routes(clear_database, clear_calendar, monkeypatch):
     from types import SimpleNamespace
 
-    from pangloss_api.dependencies import get_current_user
+    from pangloss_api import get_current_user
     from pangloss_calendar import settings as calendar_settings
-    from pangloss_dates.calendar import to_jdn
+    from pangloss_dates import to_jdn
 
     Factoid, Mass, FeastDay = models()
     await initialise_database()

@@ -104,7 +104,7 @@ def connect_offline(apps: Iterable[str]) -> None:
     """Import and initialise the models of the apps with no server: the model functions
     are bound to the API, and fail if used. For checking that an SDK imports and that its
     models are the server's."""
-    from pangloss_core.settings import ClientSettings
+    from pangloss_core import ClientSettings
     from pangloss_models import initialise
 
     app_list = list(apps)

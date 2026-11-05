@@ -14,8 +14,7 @@ import base64
 import json
 from typing import Any
 
-from pangloss_core import backend
-from pangloss_core.backend import Transaction
+from pangloss_core import Transaction, backend
 
 from pangloss_typology.tree import Row, Rows
 

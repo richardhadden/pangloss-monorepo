@@ -14,7 +14,7 @@ from uuid import UUID
 from fastapi import APIRouter
 from pangloss_models.autocomplete import AutocompleteItem
 from pangloss_models.model_bases.base_models import _BaseObject
-from pangloss_models.model_bases.entity import Entity
+from pangloss_models import Entity
 from pydantic import Field
 
 from pangloss_api.routes.models import called

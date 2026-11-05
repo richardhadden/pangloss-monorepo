@@ -8,11 +8,8 @@ import json
 from pathlib import Path
 
 import pytest
-from pangloss_models import initialise
+from pangloss_models import Document, Entity, PanglossBulkRecordError, initialise
 from pangloss_models.bulk_upload import creator, read_records, upload, validate
-from pangloss_models.exceptions import PanglossBulkRecordError
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.entity import Entity
 
 
 def models():

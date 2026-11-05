@@ -18,8 +18,7 @@ import re
 from typing import Any
 from uuid import UUID
 
-from pangloss_models.exceptions import PanglossClassChangeError
-from pangloss_models.model_registry import ModelRegistry
+from pangloss_models import ModelRegistry, PanglossClassChangeError
 from pydantic import AnyHttpUrl, ValidationError
 
 from pangloss_zotero import config, convert

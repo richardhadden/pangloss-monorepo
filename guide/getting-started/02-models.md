@@ -3,8 +3,7 @@
 Open `letters/models.py` and replace its contents with:
 
 ```python
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.entity import Entity
+from pangloss_models import Document, Entity
 
 
 class Person(Entity):

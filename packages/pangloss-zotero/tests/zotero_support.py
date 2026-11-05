@@ -5,7 +5,7 @@ from typing import Any
 from uuid import uuid7
 
 import httpx2 as httpx
-from pangloss_zotero.client import ZoteroClient
+from pangloss_zotero import ZoteroClient
 from pangloss_zotero.convert import item_url
 from pangloss_zotero.sync import Existing, LibraryState
 

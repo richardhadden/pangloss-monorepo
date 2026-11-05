@@ -3,7 +3,7 @@ from uuid import uuid7
 
 from history_support import record
 from pangloss_history.cli import cli
-from pangloss_history.store import SqliteStore
+from pangloss_history import SqliteStore
 from typer.testing import CliRunner
 
 
@@ -52,8 +52,7 @@ def test_restore_runs_with_the_database_connected_and_says_what_it_made(
     tmp_path, monkeypatch
 ):
     from pangloss_history import cli as module
-    from pangloss_models.exceptions import PanglossVersionConflictError
-    from pangloss_models.model_registry import ModelRegistry
+    from pangloss_models import ModelRegistry, PanglossVersionConflictError
 
     path = tmp_path / "h.sqlite3"
     SqliteStore(path)

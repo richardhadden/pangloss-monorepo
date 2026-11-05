@@ -8,14 +8,16 @@ from types import SimpleNamespace as ns
 from typing import Annotated, no_type_check
 
 import pytest
-from pangloss_models.field_definitions import FieldSubclassing
+from pangloss_models import (
+    Document,
+    EdgeModel,
+    Entity,
+    FieldSubclassing,
+    RelationConfig,
+    SemanticSpace,
+    ViaEdge,
+)
 from pangloss_models.migrations import PossibleRename
-from pangloss_models.model_bases.configs import RelationConfig
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.edge_model import EdgeModel
-from pangloss_models.model_bases.entity import Entity
-from pangloss_models.model_bases.helpers import ViaEdge
-from pangloss_models.model_bases.semantic_space import SemanticSpace
 
 from .helpers import run
 from .migration_support import declare, migrate, with_answers

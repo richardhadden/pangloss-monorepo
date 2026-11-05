@@ -8,9 +8,7 @@ from types import SimpleNamespace as ns
 from typing import no_type_check
 
 import pytest
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.entity import Entity
-from pangloss_models.model_bases.semantic_space import SemanticSpace
+from pangloss_models import Document, Entity, SemanticSpace
 from pangloss_cypher.migrations.operations import (
     recompute_contexts,
 )

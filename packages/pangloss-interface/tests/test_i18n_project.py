@@ -6,10 +6,10 @@ import textwrap
 from types import SimpleNamespace
 
 import pytest
+from pangloss_core import ClientSettings
 from pangloss_core import settings as core_settings
-from pangloss_core.settings import ClientSettings
-from pangloss_interface import cli as interface_cli
 from pangloss_interface import translations_cli
+from pangloss_interface import cli as interface_cli
 from pangloss_interface.i18n import files, jsonc
 from pangloss_interface.i18n.check import check, failing
 from pangloss_interface.i18n.extract import extract, words
@@ -17,17 +17,13 @@ from pangloss_interface.i18n.gather import gather
 from pangloss_interface.i18n.generate import generate, languages_of
 from pangloss_interface.i18n.renames import rename_steps
 from pangloss_interface.i18n.resolve import load_layers
-from pangloss_models import initialise
-from pangloss_models.export import export_models
-from pangloss_models.model_registry import ModelRegistry
+from pangloss_models import ModelRegistry, export_models, initialise
 from typer.testing import CliRunner
 
 MODELS = '''
     from enum import Enum
 
-    from pangloss_models.model_bases.document import Document
-    from pangloss_models.model_bases.edge_model import EdgeModel
-    from pangloss_models.model_bases.entity import Entity
+    from pangloss_models import Document, EdgeModel, Entity
     from pydantic import Field
 
 

@@ -6,11 +6,7 @@ from typing import no_type_check
 from migration_support import snapshot_of
 from pangloss_models.migrations import PossibleRename, data_view, diff
 from pangloss_models.migrations.affected import affected_models
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.embedded import Embedded
-from pangloss_models.model_bases.entity import Entity
-from pangloss_models.model_bases.reified_relation import ReifiedRelation
-from pangloss_models.model_bases.trait import Trait
+from pangloss_models import Document, Embedded, Entity, ReifiedRelation, Trait
 
 
 def affected(before, after, **answers) -> set[str]:

@@ -20,8 +20,8 @@ because it adds its own commands.
 ## Memgraph
 
 ```python
-from pangloss_core.settings import BaseSettings
-from pangloss_memgraph.databases.memgraph.settings import MemgraphDatabaseSettings
+from pangloss_core import BaseSettings
+from pangloss_memgraph import MemgraphDatabaseSettings
 
 
 class Settings(BaseSettings[MemgraphDatabaseSettings]):

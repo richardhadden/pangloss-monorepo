@@ -12,7 +12,7 @@ from pathlib import Path
 
 import typer
 from pangloss_models.bulk_upload import read_records, upload, validate
-from pangloss_models.exceptions import (
+from pangloss_models import (
     PanglossBulkLoadError,
     PanglossBulkRecordError,
     PanglossMigrationError,

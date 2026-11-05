@@ -1,7 +1,7 @@
 """Narrow dates on their days, wide ones apart"""
 
 from pangloss_calendar.views import Dated, place
-from pangloss_dates.calendar import Calendar, to_jdn
+from pangloss_dates import Calendar, to_jdn
 
 J = Calendar.JULIAN
 FIRST = to_jdn(1500, 3, 1, J)
@@ -105,7 +105,7 @@ def test_dates_are_counted_in_every_year_they_reach():
     from types import SimpleNamespace
 
     from pangloss_calendar.service import count_by_year
-    from pangloss_dates.calendar import Calendar, to_jdn
+    from pangloss_dates import Calendar, to_jdn
 
     J = Calendar.JULIAN
     ref = lambda n: SimpleNamespace(id=n, field="when")  # noqa: E731

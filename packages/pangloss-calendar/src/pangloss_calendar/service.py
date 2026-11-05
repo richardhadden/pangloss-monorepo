@@ -10,13 +10,13 @@ they are made as they are asked for, within the reach of the calendar).
 from typing import Any, Literal
 from uuid import UUID
 
-from pangloss_dates.calendar import Calendar, Weekday, from_jdn
+from pangloss_dates import Calendar, Weekday, from_jdn, occurrences, occurs_on
 from pangloss_dates.easter import easter
-from pangloss_dates.recurrence import day_keys, occurrences, occurs_on
+from pangloss_dates.recurrence import day_keys
 from pydantic import BaseModel
 
-from pangloss_calendar import characterisations as rules
 from pangloss_calendar import graph, settings
+from pangloss_calendar import characterisations as rules
 from pangloss_calendar.characterisations import Characterisation, is_single
 from pangloss_calendar.days import (
     DayView,

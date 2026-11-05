@@ -13,9 +13,7 @@ import datetime
 from collections.abc import Generator
 from typing import Any
 
-from pangloss_models import hooks
-from pangloss_models.meta_slots import register_meta_slot
-from pangloss_models.model_bases.document import Document
+from pangloss_models import Document, hooks, register_meta_slot
 from pangloss_users import current_request_username
 
 from pangloss_review import config

@@ -10,7 +10,7 @@ What is seen is as everywhere: a fact one of whose justifications rests on docum
 
 from typing import TYPE_CHECKING, Any
 
-from pangloss_models.exceptions import PanglossSearchError
+from pangloss_models import PanglossSearchError
 from pangloss_models.search import Checked, Extension, register_extension
 from pangloss_models.search_where import WhereExtension, where_extensions
 

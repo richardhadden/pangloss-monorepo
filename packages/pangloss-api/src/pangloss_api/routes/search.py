@@ -9,8 +9,8 @@ field, a value of the wrong type) is a 422 that says which.
 """
 
 from fastapi import APIRouter, HTTPException, status
-from pangloss_models.exceptions import PanglossSearchError, PanglossUnknownTypeError
-from pangloss_models.search import Match, SearchRequest, resolve_search_type
+from pangloss_models import Match, PanglossSearchError, PanglossUnknownTypeError
+from pangloss_models.search import SearchRequest, resolve_search_type
 
 from pangloss_api.routes.models import called
 

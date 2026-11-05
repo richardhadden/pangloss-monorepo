@@ -1,13 +1,12 @@
 import sys
 
 import pytest
-from pangloss_core.settings import ClientSettings
-from pangloss_models.model_registry import ModelRegistry
+from pangloss_core import ClientSettings
+from pangloss_models import ModelRegistry
 from server_support import write
 
 MODELS = """
-    from pangloss_models.model_bases.document import Document
-    from pangloss_models.model_bases.entity import Entity
+    from pangloss_models import Document, Entity
 
     from shop.helpers import SHOUT
 

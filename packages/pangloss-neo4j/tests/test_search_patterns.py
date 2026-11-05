@@ -1,7 +1,7 @@
 """The words of a search, as patterns for the full-text index (no database needed)"""
 
 import pytest
-from pangloss_models.text import fold
+from pangloss_models import fold
 from pangloss_neo4j.databases.neo4j.schema import search_patterns
 
 

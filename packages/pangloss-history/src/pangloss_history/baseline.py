@@ -13,9 +13,7 @@ import datetime
 from collections.abc import Iterable, Sequence
 from typing import Any
 
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.entity import Entity
-from pangloss_models.model_registry import ModelRegistry
+from pangloss_models import Document, Entity, ModelRegistry
 
 from pangloss_history import config
 from pangloss_history.listener import serialise

@@ -5,7 +5,7 @@ from calendar_live_support import count, structure
 from neo4j.exceptions import ClientError, ConstraintError
 from pangloss_calendar import graph
 from pangloss_calendar.days import parse_day
-from pangloss_dates.calendar import Calendar, to_jdn
+from pangloss_dates import Calendar, to_jdn
 from pangloss_testing.live import run
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")

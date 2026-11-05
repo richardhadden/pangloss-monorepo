@@ -6,13 +6,21 @@ from typing import Annotated, no_type_check
 
 from annotated_types import Ge
 from migration_support import changes, snapshot_of
-from pangloss_models.field_definitions import FieldSubclassing
-from pangloss_models.migrations import (
-    PossibleRename,
-    diff,
-    snapshot_hash,
+from pangloss_models import (
+    AnnotatedValue,
+    Conjunction,
+    Document,
+    EdgeModel,
+    Embedded,
+    Entity,
+    FieldSubclassing,
+    ReifiedRelation,
+    RelationConfig,
+    SemanticSpace,
+    Trait,
+    ViaEdge,
 )
-from pangloss_models.migrations.changes import (
+from pangloss_models.migrations import (
     AddEnumMember,
     AddField,
     AlterAnnotatedValue,
@@ -33,6 +41,7 @@ from pangloss_models.migrations.changes import (
     CreateModel,
     DeleteModel,
     LiteralToAnnotatedValue,
+    PossibleRename,
     RemoveEnumMember,
     RenameEnum,
     RenameEnumMember,
@@ -40,18 +49,9 @@ from pangloss_models.migrations.changes import (
     RenameModel,
     UnwrapRelation,
     WrapRelation,
+    diff,
+    snapshot_hash,
 )
-from pangloss_models.model_bases.annotated_value import AnnotatedValue
-from pangloss_models.model_bases.configs import RelationConfig
-from pangloss_models.model_bases.conjunction import Conjunction
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.edge_model import EdgeModel
-from pangloss_models.model_bases.embedded import Embedded
-from pangloss_models.model_bases.entity import Entity
-from pangloss_models.model_bases.helpers import ViaEdge
-from pangloss_models.model_bases.reified_relation import ReifiedRelation
-from pangloss_models.model_bases.semantic_space import SemanticSpace
-from pangloss_models.model_bases.trait import Trait
 
 
 def kinds(result) -> list[str]:
@@ -1064,7 +1064,7 @@ def test_adding_a_wrapped_alternative_is_only_a_new_option():
 
 @no_type_check
 def test_a_relation_that_changes_its_wrapper():
-    from pangloss_models.migrations.changes import ChangeWrapper
+    from pangloss_models.migrations import ChangeWrapper
 
     def before():
         class IdentifiedAs[T](ReifiedRelation[T]):
@@ -1096,10 +1096,7 @@ def test_a_relation_that_changes_its_wrapper():
 
 @no_type_check
 def test_literals_that_become_an_embedded_object_and_back():
-    from pangloss_models.migrations.changes import (
-        EmbeddedToLiterals,
-        LiteralsToEmbedded,
-    )
+    from pangloss_models.migrations import EmbeddedToLiterals, LiteralsToEmbedded
 
     def literals():
         class Statement(Document):
@@ -1135,7 +1132,7 @@ def test_literals_that_become_an_embedded_object_and_back():
 
 
 def test_an_embedded_model_widened_to_a_union_that_has_it_loses_nothing():
-    from pangloss_models.migrations.changes import AlterEmbedded
+    from pangloss_models.migrations import AlterEmbedded
 
     widened = AlterEmbedded(
         model="DateRange",

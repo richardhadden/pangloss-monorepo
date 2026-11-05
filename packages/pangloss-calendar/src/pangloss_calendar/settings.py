@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from pangloss_dates.calendar import Calendar, to_jdn
+from pangloss_dates import Calendar, to_jdn
 from pangloss_dates.config import default_calendar, setting
 
 from pangloss_calendar.views import DEFAULT_NARROW_DAYS

@@ -6,11 +6,7 @@ from uuid import uuid7
 
 import pytest
 from annotated_types import MaxLen, MinLen
-from pangloss_models import initialise
-from pangloss_models.model_bases.conjunction import Conjunction
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.entity import Entity
-from pangloss_models.model_bases.reified_relation import ReifiedRelation
+from pangloss_models import Conjunction, Document, Entity, ReifiedRelation, initialise
 from pydantic import ValidationError
 
 

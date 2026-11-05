@@ -11,9 +11,7 @@ import importlib
 import logging
 from typing import Any
 
-from pangloss_models import hooks
-from pangloss_models.model_registry import ModelRegistry
-from pangloss_models.search import Var
+from pangloss_models import ModelRegistry, Var, hooks
 
 from pangloss_derived.declare import (
     Constraint,

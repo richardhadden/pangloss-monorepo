@@ -10,11 +10,11 @@ from pathlib import Path
 
 import pangloss_interface
 import pytest
+from pangloss_core import ClientSettings
 from pangloss_core import settings as core_settings
-from pangloss_core.settings import ClientSettings
-from pangloss_models import initialise
-from pangloss_interface.meta import COLOURS, export_definitions
-from pangloss_models.model_registry import ModelRegistry
+from pangloss_models import ModelRegistry, initialise
+from pangloss_interface import COLOURS
+from pangloss_interface.meta import export_definitions
 
 MODELS_TS = (
     Path(pangloss_interface.__file__).parent / "js/interface-core/src/types/models.ts"
@@ -148,7 +148,8 @@ def test_the_interface_meta_and_the_nav_have_the_keys_of_their_types(
         assert set(meta) == types["InterfaceMeta"]
     assert set(exported["nav"]) == types["NavConfig"]
     # (the entries are made from the dataclasses of config.py)
-    from pangloss_interface.config import InterfaceConfig, NavLink, NavModel, merge
+    from pangloss_interface import InterfaceConfig, NavLink, NavModel
+    from pangloss_interface.config import merge
 
     nav = merge([("a", InterfaceConfig(nav=[NavModel("X"), NavLink("L", "/l")]))])
     assert set(nav["models"]["X"]) == types["NavModelEntry"]

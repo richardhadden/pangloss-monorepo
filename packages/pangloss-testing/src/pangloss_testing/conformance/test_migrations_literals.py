@@ -5,10 +5,8 @@ from types import SimpleNamespace as ns
 from typing import no_type_check
 
 import pytest
-from pangloss_models.exceptions import PanglossMigrationAnswerNeeded
+from pangloss_models import AnnotatedValue, Entity, PanglossMigrationAnswerNeeded
 from pangloss_models.migrations import PossibleRename
-from pangloss_models.model_bases.annotated_value import AnnotatedValue
-from pangloss_models.model_bases.entity import Entity
 
 from .helpers import run
 from .migration_support import declare, migrate, with_answers

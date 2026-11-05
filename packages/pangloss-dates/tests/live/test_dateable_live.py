@@ -5,12 +5,8 @@ import importlib
 from typing import no_type_check
 
 import pytest
-from pangloss_dates.calendar import Calendar, to_jdn
-from pangloss_models import initialise
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.entity import Entity
-from pangloss_models.model_bases.reified_relation import ReifiedRelation
-from pangloss_models.search import Match
+from pangloss_dates import Calendar, to_jdn
+from pangloss_models import Document, Entity, Match, ReifiedRelation, initialise
 from pangloss_testing.live import initialise_database
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
@@ -131,8 +127,8 @@ async def test_documents_written_before_they_were_dateable_are_filled_in(
     clear_database, db_driver
 ):
     from pangloss_cypher.migrations import apply_changes
+    from pangloss_models.migrations import build_snapshot
     from pangloss_models.migrations import changes as c
-    from pangloss_models.migrations.snapshot import build_snapshot
     from pangloss_testing.live import run
     from pangloss_testing.under_test.database import current
 

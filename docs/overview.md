@@ -9,9 +9,7 @@ You describe your research data (people, statements, events, places, and how the
 3. **Persists** to a graph database through a pluggable backend. Memgraph is the only real backend so far.
 
 ```python
-from pangloss_models import initialise
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.entity import Entity
+from pangloss_models import Document, Entity, initialise
 
 
 class Person(Entity):

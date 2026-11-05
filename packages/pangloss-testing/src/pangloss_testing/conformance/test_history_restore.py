@@ -6,17 +6,17 @@ from typing import no_type_check
 
 import pytest
 from pangloss_core import settings as core_settings
-from pangloss_history import listener
-from pangloss_history.restore import PanglossRestoreError, restore
-from pangloss_history.store import SqliteStore
-from pangloss_models import hooks, initialise
-from pangloss_models.exceptions import (
+from pangloss_history import PanglossRestoreError, SqliteStore, listener
+from pangloss_history.restore import restore
+from pangloss_models import (
+    Document,
+    Entity,
     PanglossConflictError,
     PanglossNotFoundError,
     PanglossVersionConflictError,
+    hooks,
+    initialise,
 )
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.entity import Entity
 from pydantic import AnyHttpUrl
 
 from .helpers import run

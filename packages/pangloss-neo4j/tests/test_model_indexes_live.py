@@ -3,13 +3,10 @@
 from typing import no_type_check
 
 import pytest
-from pangloss_models import initialise
+from pangloss_models import Document, Embedded, Entity, Match, initialise
 from pangloss_models.migrations import changes as c
 from pangloss_models.migrations.files import EMPTY_SNAPSHOT
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.embedded import Embedded
-from pangloss_models.model_bases.entity import Entity
-from pangloss_models.search import Match, check_match
+from pangloss_models.search import check_match
 
 from .schema_helpers import drop_indexes_of, indexes
 from pangloss_cypher.search_query import build_search_query

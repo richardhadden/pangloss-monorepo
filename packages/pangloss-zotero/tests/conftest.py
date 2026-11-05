@@ -2,7 +2,7 @@ import sys
 from pathlib import Path
 
 import pytest
-from pangloss_models.model_registry import ModelRegistry
+from pangloss_models import ModelRegistry
 
 sys.path.insert(0, str(Path(__file__).parent))
 
@@ -16,8 +16,8 @@ def reset_model_registry():
 @pytest.fixture
 def offline_settings():
     """Settings with a database module that needs no connection (for `initialise()`)"""
+    from pangloss_core import BaseSettings, DatabaseSettings
     from pangloss_core import settings as core_settings
-    from pangloss_core.settings import BaseSettings, DatabaseSettings
     from pydantic import AnyHttpUrl
 
     class Settings(BaseSettings):

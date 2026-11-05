@@ -3,8 +3,7 @@ dialect walks the tree)"""
 
 import uuid
 
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.entity import Entity
+from pangloss_models import Document, Entity
 
 from pangloss_cypher import fragments
 from pangloss_cypher.params import Identifier, QueryParams

@@ -3,16 +3,18 @@ from enum import Enum
 from typing import Annotated
 
 from annotated_types import Ge
-from pangloss_models import initialise
-from pangloss_models.export import export_models
-from pangloss_models.model_bases.annotated_value import AnnotatedValue
-from pangloss_models.model_bases.configs import RelationConfig
-from pangloss_models.model_bases.conjunction import Conjunction
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.embedded import Embedded
-from pangloss_models.model_bases.entity import Entity
-from pangloss_models.model_bases.reified_relation import ReifiedRelation
-from pangloss_models.model_bases.semantic_space import SemanticSpace
+from pangloss_models import (
+    AnnotatedValue,
+    Conjunction,
+    Document,
+    Embedded,
+    Entity,
+    ReifiedRelation,
+    RelationConfig,
+    SemanticSpace,
+    export_models,
+    initialise,
+)
 
 
 def by_name(model: dict) -> dict:
@@ -143,7 +145,7 @@ def test_models_are_exported_as_plain_data():
 
 
 def test_a_relation_says_which_fields_of_its_ancestors_it_stands_for():
-    from pangloss_models.field_definitions import FieldSubclassing
+    from pangloss_models import FieldSubclassing
 
     class Agent(Entity):
         pass

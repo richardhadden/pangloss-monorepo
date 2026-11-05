@@ -10,10 +10,8 @@ from typing import no_type_check
 
 import pytest
 from pangloss_history.upgrade import apply_migrations
-from pangloss_models.migrations.files import Migration
-from pangloss_models.migrations.snapshot import data_view
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.entity import Entity
+from pangloss_models.migrations import Migration, data_view
+from pangloss_models import Document, Entity
 
 from .helpers import run
 from .migration_support import declare, migrate

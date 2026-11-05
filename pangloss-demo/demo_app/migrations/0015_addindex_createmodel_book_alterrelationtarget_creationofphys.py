@@ -5,7 +5,7 @@ only `ZoteroObject`, so that an item a factoid cites can be made a `Book`. Both 
 `fail` is there to say so (nothing is removed, so nothing can fail).
 """
 
-from pangloss_models.migrations.files import changes_from_data
+from pangloss_models.migrations import changes_from_data
 
 dependencies = [['pangloss_zotero', '0001_initial']]
 schema_hash = '567250b97a5d4e620c47b630af677ed3446f8595e3875b3e0271ce9664fc2785'

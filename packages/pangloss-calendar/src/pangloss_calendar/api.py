@@ -8,8 +8,8 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
-from pangloss_api.dependencies import get_current_user
-from pangloss_dates.calendar import MAX_YEAR, MIN_YEAR, Calendar, InvalidDate
+from pangloss_api import get_current_user
+from pangloss_dates import MAX_YEAR, MIN_YEAR, Calendar, InvalidDate
 from pydantic import BaseModel
 
 from pangloss_calendar import graph, service, settings

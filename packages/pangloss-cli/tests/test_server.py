@@ -159,7 +159,7 @@ def test_run_without_uvicorn(project: Path, monkeypatch):
 
 
 def test_installed_app_directories_ignores_missing_apps(project: Path):
-    from pangloss_cli.project import load_project
+    from pangloss_cli import load_project
 
     loaded = load_project(argv=[], environment={}, directory=project)
     assert loaded.settings is not None

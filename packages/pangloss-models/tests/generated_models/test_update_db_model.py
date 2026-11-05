@@ -6,35 +6,31 @@ from uuid import UUID, uuid7
 
 import pytest
 from annotated_types import Gt, MinLen
-from pangloss_models import initialise
-from pangloss_models.field_definitions import (
+from pangloss_models import (
+    AnnotatedValue,
+    Conjunction,
+    DBField,
+    Document,
+    EdgeModel,
+    Embedded,
+    Entity,
     FieldSubclassing,
+    Fulfils,
+    ReifiedRelation,
+    RelationConfig,
+    SemanticSpace,
+    Trait,
+    ViaEdge,
+    initialise,
+)
+from pangloss_models.field_definitions import (
     ListFieldDefinition,
     LiteralFieldDefinition,
     RelationFieldDefinition,
 )
-from pangloss_models.model_bases.annotated_value import AnnotatedValue
-from pangloss_models.model_bases.configs import RelationConfig
-from pangloss_models.model_bases.conjunction import (
-    Conjunction,
-    _ConjunctionUpdateDBBase,
-)
-from pangloss_models.model_bases.document import (
-    Document,
-)
-from pangloss_models.model_bases.edge_model import EdgeModel
-from pangloss_models.model_bases.embedded import Embedded
-from pangloss_models.model_bases.entity import Entity
-from pangloss_models.model_bases.helpers import DBField, Fulfils, ViaEdge
-from pangloss_models.model_bases.reified_relation import (
-    ReifiedRelation,
-    _ReifiedRelationUpdateDBBase,
-)
-from pangloss_models.model_bases.semantic_space import (
-    SemanticSpace,
-    _SemanticSpaceUpdateDBBase,
-)
-from pangloss_models.model_bases.trait import Trait
+from pangloss_models.model_bases.conjunction import _ConjunctionUpdateDBBase
+from pangloss_models.model_bases.reified_relation import _ReifiedRelationUpdateDBBase
+from pangloss_models.model_bases.semantic_space import _SemanticSpaceUpdateDBBase
 from pydantic import AnyHttpUrl, ValidationError
 
 
@@ -1231,7 +1227,7 @@ def test_save_is_bound_on_update_models():
 def test_save_refuses_a_document_that_cannot_be_made_on_its_own_and_nothing_else(
     monkeypatch,
 ):
-    from pangloss_models.exceptions import PanglossNotCreatableError
+    from pangloss_models import PanglossNotCreatableError
     from pangloss_sdk.databases.api import exposed_functions
 
     class Statement(Document):

@@ -8,8 +8,8 @@ The state is kept by the storage backend (`STORAGE`), which supplies, in its `ex
 from types import ModuleType
 from uuid import UUID
 
-from pangloss_core.storage import storage_of
-from pangloss_models.model_registry import ModelRegistry
+from pangloss_core import storage_of
+from pangloss_models import ModelRegistry
 
 from pangloss_review import config
 from pangloss_review.exceptions import (

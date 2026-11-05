@@ -27,8 +27,7 @@ Pangloss has a kind of model for each:
 Replace the contents of `chronicle/models.py` with:
 
 ```python
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.entity import Entity
+from pangloss_models import Document, Entity
 
 
 class Person(Entity):
@@ -182,7 +181,7 @@ First, a few lines of setup that you will want every time. Make a file `shell.py
 ```python
 """For an interactive session: `python -m asyncio`, then `from shell import *` and `await connect()`"""
 
-from pangloss_cli.project import load_project
+from pangloss_cli import load_project
 from pangloss_models import initialise
 from pangloss_users import current_request_username
 

@@ -26,8 +26,12 @@ writes `library/migrations/0007_backfill_nicknames.py` with no changes and a com
 A migration with a hand-written change looks like this; the list may mix dictionaries and the changes themselves:
 
 ```python
-from pangloss_models.migrations.changes import RunCypher, RunPython, StateOnly
-from pangloss_models.migrations.files import changes_from_data
+from pangloss_models.migrations import (
+    RunCypher,
+    RunPython,
+    StateOnly,
+    changes_from_data,
+)
 
 dependencies = []
 schema_hash = "..."  # leave what makemigrations wrote

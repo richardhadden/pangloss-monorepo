@@ -5,11 +5,13 @@ import datetime
 from typing import Annotated, no_type_check
 from uuid import uuid7
 
-from pangloss_models import initialise
-from pangloss_models.field_definitions import FieldBinding
-from pangloss_models.model_bases.configs import RelationConfig
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.semantic_space import SemanticSpace
+from pangloss_models import (
+    Document,
+    FieldBinding,
+    RelationConfig,
+    SemanticSpace,
+    initialise,
+)
 
 DEPTH = 8
 

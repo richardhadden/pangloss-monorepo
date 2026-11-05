@@ -15,21 +15,25 @@ from enum import Enum
 from typing import Annotated, TypedDict
 
 from annotated_types import Ge, MaxLen, MinLen
-from pangloss_models.field_definitions import FieldBinding, FieldSubclassing
-from pangloss_models.model_bases.annotated_value import AnnotatedValue
-from pangloss_models.model_bases.configs import RelationConfig
-from pangloss_models.model_bases.conjunction import Conjunction
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.edge_model import EdgeModel
-from pangloss_models.model_bases.embedded import Embedded
-from pangloss_models.model_bases.entity import Entity
-from pangloss_models.model_bases.helpers import DBField, Fulfils, ViaEdge
-from pangloss_models.model_bases.reified_relation import (
+from pangloss_models import (
+    AnnotatedValue,
+    Conjunction,
+    DBField,
+    Document,
+    EdgeModel,
+    Embedded,
+    Entity,
+    FieldBinding,
+    FieldSubclassing,
+    Fulfils,
+    NonHeritableTrait,
     ReifiedRelation,
     ReifiedRelationDocument,
+    RelationConfig,
+    SemanticSpace,
+    Trait,
+    ViaEdge,
 )
-from pangloss_models.model_bases.semantic_space import SemanticSpace
-from pangloss_models.model_bases.trait import NonHeritableTrait, Trait
 from pydantic import Field
 
 

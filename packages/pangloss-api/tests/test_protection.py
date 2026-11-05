@@ -4,9 +4,9 @@ from types import SimpleNamespace
 from uuid import uuid7
 
 from fastapi.testclient import TestClient
-from pangloss_api.app import create_app
-from pangloss_models.model_bases.entity import Entity, _EntityUpdateBase
-from pangloss_models.protection import Protection, protection_of
+from pangloss_api import create_app
+from pangloss_models import Entity, Protection, protection_of
+from pangloss_models.model_bases.entity import _EntityUpdateBase
 from test_model_routes import login, stub
 
 

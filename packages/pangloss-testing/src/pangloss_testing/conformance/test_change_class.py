@@ -8,15 +8,16 @@ from typing import no_type_check
 from uuid import uuid7
 
 import pytest
-from pangloss_models import hooks, initialise
-from pangloss_models.exceptions import (
+from pangloss_models import (
+    Document,
+    Entity,
     PanglossClassChangeError,
     PanglossVersionConflictError,
     PanglossWriteError,
+    ReifiedRelation,
+    hooks,
+    initialise,
 )
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.entity import Entity
-from pangloss_models.model_bases.reified_relation import ReifiedRelation
 from pydantic import AnyHttpUrl
 
 from .helpers import labels_of, run

@@ -4,11 +4,9 @@ import datetime
 from types import SimpleNamespace
 from uuid import uuid7
 
-from pangloss_models import initialise
-from pangloss_models.model_bases.entity import Entity
-from pangloss_sdk import protocol
+from pangloss_models import Entity, initialise
+from pangloss_sdk import SdkSettings, protocol
 from pangloss_sdk.client import client_arguments
-from pangloss_sdk.settings import SdkSettings
 
 
 def models():

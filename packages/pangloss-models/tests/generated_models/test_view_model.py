@@ -6,32 +6,30 @@ from uuid import uuid7
 import pytest
 from annotated_types import Gt, MinLen
 from dirty_equals import IsStr
-from pangloss_models import initialise
-from pangloss_models.field_definitions import (
+from pangloss_models import (
+    AnnotatedValue,
+    Conjunction,
+    DBField,
+    Document,
+    EdgeModel,
+    Embedded,
+    Entity,
     FieldSubclassing,
+    Fulfils,
+    ReifiedRelation,
+    RelationConfig,
+    SemanticSpace,
+    Trait,
+    ViaEdge,
+    initialise,
+)
+from pangloss_models.field_definitions import (
     ListFieldDefinition,
     LiteralFieldDefinition,
 )
-from pangloss_models.model_bases.annotated_value import AnnotatedValue
-from pangloss_models.model_bases.configs import RelationConfig
-from pangloss_models.model_bases.conjunction import (
-    Conjunction,
-    _ConjunctionViewBase,
-)
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.edge_model import EdgeModel
-from pangloss_models.model_bases.embedded import Embedded
-from pangloss_models.model_bases.entity import Entity
-from pangloss_models.model_bases.helpers import DBField, Fulfils, ViaEdge
-from pangloss_models.model_bases.reified_relation import (
-    ReifiedRelation,
-    _ReifiedRelationViewBase,
-)
-from pangloss_models.model_bases.semantic_space import (
-    SemanticSpace,
-    _SemanticSpaceViewBase,
-)
-from pangloss_models.model_bases.trait import Trait
+from pangloss_models.model_bases.conjunction import _ConjunctionViewBase
+from pangloss_models.model_bases.reified_relation import _ReifiedRelationViewBase
+from pangloss_models.model_bases.semantic_space import _SemanticSpaceViewBase
 from pydantic import ValidationError
 
 
@@ -908,7 +906,7 @@ def test_list_relations_default_to_empty_in_view_models():
 def test_list_relations_of_a_bound_generic_default_to_empty_in_view_models():
     """The same for the type variable of a reified relation where it is used: one saved
     with an empty target has no edges, and must still be read back (it was a missing field)"""
-    from pangloss_models.model_bases.reified_relation import ReifiedRelation
+    from pangloss_models import ReifiedRelation
 
     class Source(Entity):
         pass
@@ -931,7 +929,7 @@ def test_list_relations_of_a_bound_generic_default_to_empty_in_view_models():
 
 @no_type_check
 def test_reified_relation_document_view_requires_a_label():
-    from pangloss_models.model_bases.reified_relation import ReifiedRelationDocument
+    from pangloss_models import ReifiedRelationDocument
 
     class Person(Entity):
         pass

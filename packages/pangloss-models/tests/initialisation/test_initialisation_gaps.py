@@ -11,9 +11,25 @@ from typing import Annotated, no_type_check
 from uuid import uuid7
 
 import pytest
-from pangloss_models import initialise
-from pangloss_models.exceptions import PanglossModelError
-from pangloss_models.field_definitions import FieldBinding, FieldSubclassing
+from pangloss_models import (
+    AnnotatedValue,
+    Conjunction,
+    Document,
+    EdgeModel,
+    Embedded,
+    Entity,
+    FieldBinding,
+    FieldSubclassing,
+    Fulfils,
+    ModelRegistry,
+    PanglossModelError,
+    ReifiedRelation,
+    RelationConfig,
+    SemanticSpace,
+    Trait,
+    ViaEdge,
+    initialise,
+)
 from pangloss_models.initialise_models import (
     builder,
     initialise_create_db_model,
@@ -22,18 +38,6 @@ from pangloss_models.initialise_models import (
     initialise_update_model,
     initialise_view_model,
 )
-from pangloss_models.model_bases.annotated_value import AnnotatedValue
-from pangloss_models.model_bases.configs import RelationConfig
-from pangloss_models.model_bases.conjunction import Conjunction
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.edge_model import EdgeModel
-from pangloss_models.model_bases.embedded import Embedded
-from pangloss_models.model_bases.entity import Entity
-from pangloss_models.model_bases.helpers import Fulfils, ViaEdge
-from pangloss_models.model_bases.reified_relation import ReifiedRelation
-from pangloss_models.model_bases.semantic_space import SemanticSpace
-from pangloss_models.model_bases.trait import Trait
-from pangloss_models.model_registry import ModelRegistry
 from pydantic import Field, ValidationError
 
 ACTION_MODELS = ["Create", "CreateDB", "Update", "UpdateDB", "View"]
@@ -1145,7 +1149,7 @@ def test_the_name_of_a_generic_model_does_not_depend_on_the_order_of_a_set(modul
 
 
 def test_models_can_be_made_without_the_database_functions(monkeypatch):
-    from pangloss_models.model_registry import ModelRegistry
+    from pangloss_models import ModelRegistry
 
     def fail():
         raise AssertionError("the database functions should not be bound")

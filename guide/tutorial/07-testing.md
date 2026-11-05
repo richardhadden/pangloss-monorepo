@@ -14,7 +14,7 @@ Make a directory `tests/` in the project, and in it a `conftest.py`, which pytes
 
 ```python
 import pytest
-from pangloss_cli.project import load_project
+from pangloss_cli import load_project
 from pangloss_models import initialise
 
 

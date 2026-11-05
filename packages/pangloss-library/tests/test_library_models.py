@@ -3,13 +3,9 @@
 from uuid import uuid7
 
 import pytest
+from pangloss_core import ClientSettings
 from pangloss_core import settings as core_settings
-from pangloss_core.settings import ClientSettings
-from pangloss_models import initialise
-from pangloss_models.export import export_models
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.entity import Entity
-from pangloss_models.model_registry import ModelRegistry
+from pangloss_models import Document, Entity, ModelRegistry, export_models, initialise
 from pydantic import ValidationError
 
 

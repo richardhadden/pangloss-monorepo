@@ -3,8 +3,7 @@
 import datetime
 
 import pytest
-from pangloss_models import initialise
-from pangloss_models.model_bases.entity import Entity
+from pangloss_models import Entity, initialise
 from pangloss_zotero import ZoteroBacked, ZoteroItemType, ZoteroMeta
 from pangloss_zotero.convert import convert, item_url, stamp
 from pangloss_zotero.mapping import build_table
@@ -31,7 +30,7 @@ SYNC = "zotero_sync"
 
 
 def models():
-    from pangloss_models.model_registry import ModelRegistry
+    from pangloss_models import ModelRegistry
     from pangloss_zotero import ZoteroLibrary, ZoteroObject
 
     # (the registry is emptied for each test: the models of the package are put back)

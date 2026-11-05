@@ -4,10 +4,8 @@ import importlib
 from typing import no_type_check
 
 import pytest
-from pangloss_dates.calendar import Calendar, from_jdn, to_jdn
-from pangloss_models import initialise
-from pangloss_models.model_bases.document import Document
-from pangloss_models.search import Match
+from pangloss_dates import Calendar, from_jdn, to_jdn
+from pangloss_models import Document, Match, initialise
 from pangloss_testing.live import initialise_database, run
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
@@ -179,8 +177,7 @@ async def test_documents_are_ordered_by_a_field_of_their_date_and_those_without_
 async def test_everything_on_a_day_finds_dates_that_hold_it_and_repeated_events_that_fall_on_it(
     clear_database,
 ):
-    from pangloss_dates.calendar import Weekday, weekday
-    from pangloss_dates.query import on_day
+    from pangloss_dates import Weekday, on_day, weekday
 
     Factoid = models()
     await initialise_database()

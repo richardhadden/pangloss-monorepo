@@ -8,8 +8,8 @@ import pytest
 from conftest import Settings
 from fake_api_db import migration_backend
 from fastapi.testclient import TestClient
-from pangloss_api.app import create_app
-from pangloss_models.exceptions import PanglossMigrationError
+from pangloss_api import create_app
+from pangloss_models import PanglossMigrationError
 from pangloss_models.migrations import build_snapshot
 from pangloss_models.migrations.files import (
     graph_of,
@@ -89,7 +89,7 @@ def test_models_that_have_changed_since_the_migrations_stop_the_server(project):
     project.write_text(project.read_text() + "    born: int\n")
     for name in [n for n in sys.modules if n.startswith("checkapp.models")]:
         del sys.modules[name]
-    from pangloss_models.model_registry import ModelRegistry
+    from pangloss_models import ModelRegistry
 
     ModelRegistry._reset()
     with pytest.raises(PanglossMigrationError, match="not what the migrations come to"):
@@ -123,7 +123,7 @@ def test_a_write_during_a_migration_is_answered_with_unavailable_and_when_to_try
     import asyncio
 
     from pangloss_api.errors import error_handler, status_for
-    from pangloss_models.exceptions import PanglossReadOnlyError, PanglossWriteError
+    from pangloss_models import PanglossReadOnlyError, PanglossWriteError
 
     error = PanglossReadOnlyError("The database is being migrated")
     assert status_for(error) == 503

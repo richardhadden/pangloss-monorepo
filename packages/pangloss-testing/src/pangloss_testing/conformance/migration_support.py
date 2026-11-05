@@ -3,9 +3,8 @@ the first, migrated, and read with the second"""
 
 from types import SimpleNamespace
 
-from pangloss_models import initialise
+from pangloss_models import ModelRegistry, initialise
 from pangloss_models.migrations import build_snapshot, diff
-from pangloss_models.model_registry import ModelRegistry
 from pangloss_cypher.migrations import (
     apply_changes,
     apply_changes_in_batches,

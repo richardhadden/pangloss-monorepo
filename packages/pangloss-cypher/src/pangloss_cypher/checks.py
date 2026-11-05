@@ -1,9 +1,6 @@
 """Checks made inside a write transaction"""
 
-from pangloss_models.exceptions import (
-    PanglossUserDisabledError,
-    PanglossUserNotFoundError,
-)
+from pangloss_models import PanglossUserDisabledError, PanglossUserNotFoundError
 from pangloss_users import current_request_username
 
 from pangloss_cypher.transaction import Transaction

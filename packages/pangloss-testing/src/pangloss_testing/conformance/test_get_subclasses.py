@@ -3,9 +3,7 @@
 from typing import no_type_check
 
 import pytest
-from pangloss_models import initialise
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.entity import Entity
+from pangloss_models import Document, Entity, initialise
 from pydantic import AnyHttpUrl
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
@@ -60,7 +58,7 @@ async def test_an_entity_is_read_as_the_class_it_is_by_any_class_it_is_a_subclas
 
 
 def ModelRegistryClass(name):
-    from pangloss_models.model_registry import ModelRegistry
+    from pangloss_models import ModelRegistry
 
     return ModelRegistry.all_models()[name]
 

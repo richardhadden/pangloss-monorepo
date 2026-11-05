@@ -28,7 +28,7 @@ class DerivedPage(BaseModel):
 
 def storage_kind() -> str:
     """`cypher` (the server), `api` (the SDK) or `api_sync` (the blocking SDK)"""
-    from pangloss_core.storage import storage_of
+    from pangloss_core import storage_of
 
     storage = storage_of()
     if storage.capabilities.cypher:

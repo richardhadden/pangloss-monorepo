@@ -3,15 +3,17 @@ from typing import no_type_check
 import pytest
 from pangloss_interface import Collapse, InterfaceMeta
 from pangloss_interface.meta import export_definitions
+from pangloss_core import ClientSettings
 from pangloss_core import settings as core_settings
-from pangloss_core.settings import ClientSettings
-from pangloss_models import initialise
-from pangloss_models.exceptions import PanglossMetaError
-from pangloss_models.model_bases.conjunction import Conjunction
-from pangloss_models.model_bases.entity import Entity
-from pangloss_models.model_bases.reified_relation import ReifiedRelation
-from pangloss_models.model_bases.semantic_space import SemanticSpace
-from pangloss_models.model_registry import ModelRegistry
+from pangloss_models import (
+    Conjunction,
+    Entity,
+    ModelRegistry,
+    PanglossMetaError,
+    ReifiedRelation,
+    SemanticSpace,
+    initialise,
+)
 
 
 def none(**given):
@@ -340,8 +342,7 @@ def test_only_a_reified_relation_can_be_headless(clear_registry):
 def test_a_field_something_else_keeps_up_to_date_is_read_only_in_the_models_built_on_it(
     clear_registry,
 ):
-    from pangloss_models.export import export_models
-    from pangloss_models.protection import Protection
+    from pangloss_models import Protection, export_models
 
     class Text(Entity):
         _meta = Entity.Meta(abstract=True)

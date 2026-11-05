@@ -22,20 +22,22 @@ from pangloss_models.field_definitions import (
     RelationToReifiedRelationDocument,
     RelationToSemanticSpace,
 )
-from pangloss_models.exceptions import PanglossSearchError
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.embedded import Embedded
-from pangloss_models.model_bases.entity import Entity
-from pangloss_models.model_registry import ModelRegistry
+from pangloss_models import (
+    AnyOf,
+    Document,
+    Embedded,
+    Entity,
+    ModelRegistry,
+    Not,
+    PanglossSearchError,
+    Var,
+)
 from pangloss_models.search import (
     WRAPPER_LABELS,
-    AnyOf,
     CheckedCondition,
     CheckedPattern,
     Expr,
-    Not,
     RuleKey,
-    Var,
     check_where,
     checking_rule,
     kind_of,

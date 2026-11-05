@@ -27,7 +27,7 @@ SEED = textwrap.dedent(
     """
     import asyncio, json, sys
 
-    from pangloss_cli.project import load_project
+    from pangloss_cli import load_project
     from pangloss_models import initialise
     from pangloss_users import current_request_username
     from pydantic import AnyHttpUrl

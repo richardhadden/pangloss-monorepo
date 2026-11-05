@@ -238,8 +238,7 @@ def test_save_of_a_document_can_say_what_review_status_to_write_and_save_of_an_e
 
 
 def test_the_create_of_a_document_that_cannot_be_made_on_its_own_has_no_save_in_its_stub():
-    from pangloss_models import initialise
-    from pangloss_models.model_bases.document import Document
+    from pangloss_models import Document, initialise
     from pangloss_models.typestubs import nested_classes_of
 
     class Statement(Document):
@@ -264,8 +263,7 @@ def test_the_create_of_a_document_that_cannot_be_made_on_its_own_has_no_save_in_
 
 
 def test_a_model_with_operations_has_search_in_its_stub_taking_its_where_or_a_match():
-    from pangloss_models import initialise
-    from pangloss_models.model_bases.entity import Entity
+    from pangloss_models import Entity, initialise
     from pangloss_models.typestubs import operations_source
 
     class Ship(Entity):
@@ -286,7 +284,7 @@ def test_a_model_with_operations_has_search_in_its_stub_taking_its_where_or_a_ma
 def test_a_generic_pydantic_class_with_its_parameters_is_written_as_the_generic_and_them():
     import datetime
 
-    from pangloss_models.search_where import Compare, Items, Text
+    from pangloss_models import Compare, Items, Text
 
     rendered = TypeRenderer("here", {})
     assert (

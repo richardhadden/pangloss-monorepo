@@ -20,7 +20,7 @@ INSTALLED_APPS = [..., "pangloss_library"]
 ```
 
 ```python
-from pangloss_library.models import WeightedAlternative
+from pangloss_library import WeightedAlternative
 
 
 class Statement(Document):
@@ -31,7 +31,7 @@ The same can be declared in a project with the primitives (another name, another
 
 ```python
 from pangloss_interface import Slider
-from pangloss_models.validators import SumsTo
+from pangloss_models import SumsTo
 
 
 class Probability(EdgeModel):

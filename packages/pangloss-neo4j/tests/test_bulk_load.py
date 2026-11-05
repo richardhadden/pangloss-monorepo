@@ -8,7 +8,7 @@ import asyncio
 
 import pytest
 import pytest_asyncio
-from pangloss_models.exceptions import (
+from pangloss_models import (
     PanglossBulkLoadError,
     PanglossMigrationError,
     PanglossReadOnlyError,

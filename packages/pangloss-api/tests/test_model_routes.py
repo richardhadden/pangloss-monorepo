@@ -6,8 +6,10 @@ from uuid import uuid7
 
 import pytest
 from conftest import PASSWORD
-from pangloss_api.app import create_app
-from pangloss_models.exceptions import (
+from pangloss_api import create_app
+from pangloss_models import (
+    Document,
+    Entity,
     PanglossConflictError,
     PanglossEntityInUseError,
     PanglossNotDeletableError,
@@ -16,8 +18,6 @@ from pangloss_models.exceptions import (
     PanglossReferenceError,
     PanglossWriteError,
 )
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.entity import Entity
 from pangloss_users import service
 
 META = {
@@ -676,7 +676,7 @@ def test_entities_are_found_by_url_as_well_as_by_id(settings, monkeypatch):
 
 @pytest.mark.parametrize("name", ["users", "Users", "docs", "Docs", "redoc"])
 def test_a_model_cannot_have_the_name_of_other_routes(settings, name):
-    from pangloss_models.exceptions import PanglossInitialisationError
+    from pangloss_models import PanglossInitialisationError
 
     type(name, (Entity,), {"__module__": __name__})
     with pytest.raises(PanglossInitialisationError, match="cannot be called"):
@@ -833,7 +833,7 @@ def test_etags_are_the_versions(settings, monkeypatch):
 
 def test_an_update_of_an_old_version_is_refused_with_the_new_one(settings, monkeypatch):
     from fastapi.testclient import TestClient
-    from pangloss_models.exceptions import PanglossVersionConflictError
+    from pangloss_models import PanglossVersionConflictError
     from pangloss_models.model_bases.entity import _EntityUpdateBase
 
     _, Person, _ = make_models()

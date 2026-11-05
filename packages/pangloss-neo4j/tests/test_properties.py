@@ -3,7 +3,7 @@
 import datetime
 
 import pytest
-from pangloss_models.exceptions import PanglossWriteError
+from pangloss_models import PanglossWriteError
 from pangloss_neo4j.databases.neo4j import properties as p
 
 WHEN = datetime.datetime(2026, 10, 29, 12, 0, tzinfo=datetime.UTC)

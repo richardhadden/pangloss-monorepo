@@ -10,7 +10,7 @@ from typing import no_type_check
 
 import pytest
 from pangloss_review.cli import cli
-from pangloss_review.status import ReviewStatus
+from pangloss_review import ReviewStatus
 from typer.testing import CliRunner
 
 from .test_review_live import make_user, models

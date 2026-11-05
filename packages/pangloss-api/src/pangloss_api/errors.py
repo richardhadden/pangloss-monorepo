@@ -4,7 +4,7 @@ import logging
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
-from pangloss_models.exceptions import (
+from pangloss_models import (
     PanglossClassChangeError,
     PanglossConflictError,
     PanglossEntityInUseError,
@@ -19,7 +19,7 @@ from pangloss_models.exceptions import (
     PanglossVersionConflictError,
     PanglossWriteError,
 )
-from pangloss_users.exceptions import (
+from pangloss_users import (
     PanglossInvalidUserError,
     PanglossUserDoesNotExistError,
     PanglossUserError,

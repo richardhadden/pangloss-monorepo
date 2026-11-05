@@ -1,12 +1,11 @@
 """Julian and Gregorian day arithmetic, against known days and against `juliandate`"""
 
 import pytest
-from pangloss_dates.calendar import (
+from pangloss_dates import (
     Calendar,
     InvalidDate,
     Weekday,
     convert,
-    first_and_last_day,
     from_jdn,
     is_leap_year,
     month_length,
@@ -14,6 +13,7 @@ from pangloss_dates.calendar import (
     to_jdn,
     weekday,
 )
+from pangloss_dates.calendar import first_and_last_day
 
 J, G = Calendar.JULIAN, Calendar.GREGORIAN
 

@@ -6,16 +6,18 @@ from types import SimpleNamespace as ns
 from typing import Annotated, no_type_check
 
 import pytest
-from pangloss_models.exceptions import PanglossMigrationAnswerNeeded
-from pangloss_models.field_definitions import FieldSubclassing
+from pangloss_models import (
+    Document,
+    EdgeModel,
+    Entity,
+    FieldSubclassing,
+    PanglossMigrationAnswerNeeded,
+    ReifiedRelation,
+    RelationConfig,
+    Trait,
+    ViaEdge,
+)
 from pangloss_models.migrations import PossibleRename
-from pangloss_models.model_bases.configs import RelationConfig
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.edge_model import EdgeModel
-from pangloss_models.model_bases.entity import Entity
-from pangloss_models.model_bases.helpers import ViaEdge
-from pangloss_models.model_bases.reified_relation import ReifiedRelation
-from pangloss_models.model_bases.trait import Trait
 
 from .helpers import run
 from .migration_support import declare, migrate, with_answers
@@ -734,7 +736,7 @@ async def test_a_wrapper_is_in_the_semantic_space_of_what_it_is_on(
 ):
     """The context of the new node is what the models give it: inside a semantic space, and
     the statement that holds it is a part of the context"""
-    from pangloss_models.model_bases.semantic_space import SemanticSpace
+    from pangloss_models import SemanticSpace
 
     def models(wrapped: bool):
         def declare_models():

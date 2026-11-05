@@ -14,7 +14,7 @@ A backend (its `Storage`, named by `STORAGE`) has a `setup` module with these fu
 import logging
 from urllib.parse import urlparse
 
-from pangloss_core.settings import BaseSettings
+from pangloss_core import BaseSettings
 from pangloss_cypher import transactions
 
 from pangloss_neo4j.databases.neo4j.database import (

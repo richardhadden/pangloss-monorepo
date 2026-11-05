@@ -9,13 +9,10 @@ from pangloss_memgraph.databases.memgraph.initialise_database import (
     structure,
 )
 from pangloss_memgraph.databases.memgraph.migrations import apply_changes
-from pangloss_models import initialise
+from pangloss_models import Document, Embedded, Entity, Match, initialise
 from pangloss_models.migrations import changes as c
 from pangloss_models.migrations.files import EMPTY_SNAPSHOT
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.embedded import Embedded
-from pangloss_models.model_bases.entity import Entity
-from pangloss_models.search import Match, check_match
+from pangloss_models.search import check_match
 from pangloss_memgraph.databases.memgraph.database import current
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")

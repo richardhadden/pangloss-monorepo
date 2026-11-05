@@ -11,9 +11,7 @@ import pytest
 from pangloss_models import initialise, typestubs
 
 MODELS = """
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.entity import Entity
-from pangloss_models.model_bases.trait import Trait
+from pangloss_models import Document, Entity, Trait
 
 
 class Agent(Trait):
@@ -65,7 +63,7 @@ def same_family(a: Var[Person], b: Var[Person], f: Var[Group]):
 """
 
 USAGE = """
-from pangloss_models.search import Var
+from pangloss_models import Var
 from rulesapp.derived import Knew, SameFamily
 from rulesapp.models import Group, MemberOf, Person, Place
 

@@ -36,8 +36,8 @@ CHECK = textwrap.dedent(
     from pangloss_memgraph.databases.memgraph import migration_backend
     import pangloss_calendar.models, pangloss_zotero.models, pangloss_library.models
 
-    from pangloss_core.settings import BaseSettings
-    from pangloss_memgraph.databases.memgraph.settings import MemgraphDatabaseSettings
+    from pangloss_core import BaseSettings
+    from pangloss_memgraph import MemgraphDatabaseSettings
 
     class Settings(BaseSettings[MemgraphDatabaseSettings]):
         PROJECT_NAME: str = "Shipped"

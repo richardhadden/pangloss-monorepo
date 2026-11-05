@@ -17,8 +17,7 @@ from collections.abc import Iterable
 from enum import Enum
 from typing import Annotated, Any, Literal, TypeVar, Union, get_args, get_origin
 
-from pangloss_models.field_definitions import FieldBinding, FieldSubclassing
-from pangloss_models.model_registry import ModelRegistry
+from pangloss_models import FieldBinding, FieldSubclassing, ModelRegistry
 from pydantic import BaseModel
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined

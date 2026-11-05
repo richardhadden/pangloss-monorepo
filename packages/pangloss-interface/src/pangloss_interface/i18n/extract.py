@@ -23,10 +23,8 @@ import re
 from dataclasses import dataclass, field
 from typing import Any
 
-from pangloss_models import hooks
-from pangloss_models.exceptions import PanglossInitialisationError
+from pangloss_models import ModelRegistry, PanglossInitialisationError, hooks
 from pangloss_models.migrations.planner import app_of_module
-from pangloss_models.model_registry import ModelRegistry
 
 from pangloss_interface.i18n.paths import Path
 

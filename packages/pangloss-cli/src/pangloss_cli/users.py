@@ -4,9 +4,7 @@ import asyncio
 from collections.abc import Awaitable, Callable
 
 import typer
-from pangloss_users import service
-from pangloss_users.exceptions import PanglossUserError
-from pangloss_users.models import User
+from pangloss_users import PanglossUserError, User, service
 
 from pangloss_cli.project import Project, fail
 

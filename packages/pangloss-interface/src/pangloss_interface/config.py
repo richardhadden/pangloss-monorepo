@@ -26,7 +26,7 @@ from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
-from pangloss_models.exceptions import PanglossMetaError
+from pangloss_models import PanglossMetaError
 
 # (the sections the bar has without any configuration, first and in this order)
 DEFAULT_SECTIONS = ("Documents", "Entities")

@@ -27,8 +27,8 @@ import inspect
 from collections.abc import Callable, Iterable, Sequence
 from typing import Any, ClassVar, Literal, overload
 
-from pangloss_models.meta_slots import register_meta_slot
-from pangloss_models.search import Var, VarComparison
+from pangloss_models import Var, register_meta_slot
+from pangloss_models.search import VarComparison
 
 from pangloss_derived.registry import DerivedRegistry
 
@@ -385,7 +385,7 @@ class Head:
         """The body of the rule: the patterns (each a `Model.Where`, with variables), then any constraints. `block`
         and `allow`: semantic spaces (and other wrappers) that this rule does not derive from, or does, whatever their
         `DerivedMeta` says"""
-        from pangloss_models.search_where import Where
+        from pangloss_models import Where
 
         patterns = [i for i in items if isinstance(i, Where)]
         constraints = [as_constraint(i) for i in items if not isinstance(i, Where)]

@@ -2,9 +2,7 @@
 (the merge), and unlinks it again. Against the backend under test."""
 
 import pytest
-from pangloss_models import initialise
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.entity import Entity
+from pangloss_models import Document, Entity, initialise
 from pangloss_zotero import ZoteroBacked, ZoteroItemType, ZoteroMeta
 from pangloss_zotero.convert import item_url
 from pangloss_zotero.link import LinkError, base_on, link_item, unlink_item
@@ -25,7 +23,7 @@ class Settings:
 
 
 def models():
-    from pangloss_models.model_registry import ModelRegistry
+    from pangloss_models import ModelRegistry
     from pangloss_zotero import ZoteroLibrary, ZoteroObject
 
     for model in (ZoteroBacked, ZoteroObject, ZoteroLibrary):

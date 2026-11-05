@@ -2,8 +2,7 @@
 
 from typing import Any
 
-from pangloss_models.exceptions import PanglossModelError
-from pangloss_models.markers import FieldMarker
+from pangloss_models import FieldMarker, PanglossModelError
 
 
 class Slider(FieldMarker):

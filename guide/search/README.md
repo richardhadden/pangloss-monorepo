@@ -47,7 +47,7 @@ A pattern written as JSON, compiled to one query on the server. Only names of fi
 always parameters.
 
 ```python
-from pangloss_models.search import Match
+from pangloss_models import Match
 
 page = await Letter.search(Match(where={
     "sender":    {"is": str(smith.id)},                       # a relation to an entity, by id
@@ -67,7 +67,7 @@ there or the operator is not one it takes. It is the same search: it is made int
 
 ```python
 import datetime
-from pangloss_models.search_where import Compare, Rel, Text
+from pangloss_models import Compare, Rel, Text
 
 page = await Letter.search(
     Letter.Where(

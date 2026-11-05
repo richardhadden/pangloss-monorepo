@@ -2,7 +2,7 @@ from uuid import uuid7
 
 import pytest
 from history_support import record
-from pangloss_history.store import SqliteStore
+from pangloss_history import SqliteStore
 
 
 @pytest.fixture

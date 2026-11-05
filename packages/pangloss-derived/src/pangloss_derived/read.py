@@ -13,9 +13,8 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from pangloss_derived.declare import Derived
 
-from pangloss_core import backend
+from pangloss_core import Transaction, backend
 from pangloss_cypher import fragments
-from pangloss_core.backend import Transaction
 from pangloss_cypher.values import native_datetime
 
 from pangloss_derived.check import ends_of, symmetric_fields
@@ -444,8 +443,7 @@ async def derived_section(owner: type, view: Any) -> dict[str, Any]:
     """(`hooks.head_view_extras`) `_derived` of the view of a head node: what the rules derive about it, an entity or a
     head document (the facts with a field that points at it). Not what a document is evidence of: that is what it says
     itself. Not given when there is nothing"""
-    from pangloss_models.model_bases.document import Document
-    from pangloss_models.model_bases.entity import Entity
+    from pangloss_models import Document, Entity
 
     if not DerivedRegistry.checked or not issubclass(owner, (Entity, Document)):
         return {}

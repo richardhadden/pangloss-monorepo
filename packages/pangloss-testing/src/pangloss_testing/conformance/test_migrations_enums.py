@@ -7,16 +7,16 @@ from types import SimpleNamespace as ns
 from typing import TypedDict, no_type_check
 
 import pytest
-from pangloss_models.exceptions import (
+from pangloss_models import (
+    AnnotatedValue,
+    Document,
+    EdgeModel,
+    Entity,
     PanglossMigrationAnswerNeeded,
     PanglossMigrationNotSupported,
+    ViaEdge,
 )
 from pangloss_models.migrations import PossibleRename
-from pangloss_models.model_bases.annotated_value import AnnotatedValue
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.edge_model import EdgeModel
-from pangloss_models.model_bases.entity import Entity
-from pangloss_models.model_bases.helpers import ViaEdge
 
 from .helpers import run
 from .migration_support import declare, migrate, with_answers

@@ -6,8 +6,10 @@ from typing import no_type_check
 from uuid import uuid7
 
 import pytest
-from pangloss_models import initialise
-from pangloss_models.exceptions import (
+from pangloss_models import (
+    Document,
+    Embedded,
+    Entity,
     PanglossConflictError,
     PanglossEntityInUseError,
     PanglossNotDeletableError,
@@ -15,11 +17,9 @@ from pangloss_models.exceptions import (
     PanglossNotFoundError,
     PanglossReferenceError,
     PanglossUserNotFoundError,
+    ReifiedRelation,
+    initialise,
 )
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.embedded import Embedded
-from pangloss_models.model_bases.entity import Entity
-from pangloss_models.model_bases.reified_relation import ReifiedRelation
 from pangloss_users import current_request_username
 from pydantic import AnyHttpUrl
 
@@ -752,7 +752,7 @@ async def test_undelete_missing_or_nested(db_driver, clear_database):
 
 @no_type_check
 async def test_check_deletable_says_why_and_writes_nothing(db_driver, clear_database):
-    from pangloss_core.storage import storage_of
+    from pangloss_core import storage_of
 
     check_deletable = storage_of().operations.check_deletable
 

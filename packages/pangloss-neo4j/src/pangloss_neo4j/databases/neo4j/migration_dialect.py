@@ -8,11 +8,8 @@ full-text index folds accents itself), and makes its indexes and constraints wit
 from typing import Any
 
 import neo4j
-from pangloss_cypher.transaction import Transaction
-from pangloss_models.exceptions import (
-    PanglossMigrationError,
-    PanglossMigrationNotSupported,
-)
+from pangloss_cypher import Transaction
+from pangloss_models import PanglossMigrationError, PanglossMigrationNotSupported
 from pangloss_models.migrations import changes as c
 
 from pangloss_neo4j.databases.neo4j.properties import flat_meta

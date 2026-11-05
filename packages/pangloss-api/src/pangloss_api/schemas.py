@@ -2,7 +2,8 @@
 
 from typing import Literal
 
-from pangloss_users.models import AccessTokenInfo, CamelCaseModel, UserCreate
+from pangloss_users import AccessTokenInfo, UserCreate
+from pangloss_users.models import CamelCaseModel
 from pydantic import BaseModel
 
 

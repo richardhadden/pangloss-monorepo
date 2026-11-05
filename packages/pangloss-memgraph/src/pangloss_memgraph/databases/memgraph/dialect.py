@@ -5,10 +5,10 @@ from typing import Any
 
 import neo4j
 from pangloss_models.autocomplete import search_words
-from pangloss_models.text import fold
+from pangloss_models import fold
 
 from pangloss_cypher.search_query import Compiler, wrapper
-from pangloss_cypher.transaction import Transaction
+from pangloss_cypher import Transaction
 
 # The property of a node that the text index is on: its label, folded (`pangloss_models.text.fold`)
 FOLDED_LABEL = "label_folded"

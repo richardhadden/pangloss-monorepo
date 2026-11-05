@@ -23,7 +23,7 @@ from pangloss_memgraph.databases.memgraph.database import Database
 from pangloss_memgraph.databases.memgraph.initialise_database import (
     initialise_database,
 )
-from pangloss_models.exceptions import (
+from pangloss_models import (
     PanglossBulkLoadError,
     PanglossMigrationError,
     PanglossReadOnlyError,

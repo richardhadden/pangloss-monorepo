@@ -5,17 +5,10 @@ from typing import no_type_check
 
 import pytest
 from migration_support import changes, snapshot_of
-from pangloss_models.migrations import (
-    apply_change,
-    change_from_dict,
-    data_view,
-    replay,
-)
+from pangloss_models.migrations import apply_change, change_from_dict, data_view, replay
 from pangloss_models.migrations import changes as c
 from pangloss_models.migrations.state import HANDLERS
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.entity import Entity
-from pangloss_models.model_bases.reified_relation import ReifiedRelation
+from pangloss_models import Document, Entity, ReifiedRelation
 
 
 def all_change_types() -> list[type[c.Change]]:

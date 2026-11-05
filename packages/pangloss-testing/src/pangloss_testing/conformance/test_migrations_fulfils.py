@@ -5,13 +5,9 @@ from types import SimpleNamespace as ns
 from typing import Annotated, no_type_check
 
 import pytest
-from pangloss_models.field_definitions import FieldSubclassing
-from pangloss_models.migrations import changes as c
+from pangloss_models import Document, Entity, FieldSubclassing, Fulfils, RelationConfig
 from pangloss_models.migrations import diff
-from pangloss_models.model_bases.configs import RelationConfig
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.entity import Entity
-from pangloss_models.model_bases.helpers import Fulfils
+from pangloss_models.migrations import changes as c
 
 from .helpers import run
 from .migration_support import declare, migrate

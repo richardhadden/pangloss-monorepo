@@ -6,10 +6,7 @@ from typing import Annotated
 from annotated_types import Ge, Le, MinLen
 from pangloss_derived import DerivedMeta
 from pangloss_interface import InterfaceMeta, Slider
-from pangloss_models.model_bases.conjunction import Conjunction
-from pangloss_models.model_bases.edge_model import EdgeModel
-from pangloss_models.model_bases.helpers import ViaEdge
-from pangloss_models.validators import SumsTo
+from pangloss_models import Conjunction, EdgeModel, SumsTo, ViaEdge
 
 
 class Likelihood(EdgeModel):

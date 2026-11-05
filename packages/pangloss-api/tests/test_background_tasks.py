@@ -6,8 +6,8 @@ import textwrap
 import pytest
 from conftest import Settings
 from fastapi.testclient import TestClient
-from pangloss_api.app import create_app
-from pangloss_api.background import BackgroundTask, Supervisor
+from pangloss_api import BackgroundTask, create_app
+from pangloss_api.background import Supervisor
 
 
 def run(coroutine):
@@ -179,7 +179,7 @@ def test_two_tasks_with_one_name_are_refused():
 
 
 API = """
-    from pangloss_api.background import BackgroundTask
+    from pangloss_api import BackgroundTask
     import asyncio
 
     events = []

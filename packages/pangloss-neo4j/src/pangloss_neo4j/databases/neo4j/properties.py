@@ -18,7 +18,7 @@ import json
 from collections.abc import Callable
 from typing import Any
 
-from pangloss_models.exceptions import PanglossWriteError
+from pangloss_models import PanglossWriteError
 
 SEPARATOR = "."
 

@@ -18,6 +18,7 @@ Each feature in these docs is marked with its status:
 |----------|----------------|
 | [Overview](overview.md) | What Pangloss is for and how a model becomes stored data |
 | [Packages](packages.md) | The workspace packages and how they depend on each other |
+| [Importing](imports.md) ✅ | Every package exports its public names from its root (`from pangloss_models import Document`); what each exports, and why there is no `pangloss.` namespace |
 | [Defining models](models.md) | Documents, Entities, Embedded, Traits, EdgeModels, and the other model kinds |
 | [Relations and fields](relations.md) | Literal fields, relations, `ViaEdge`, `RelationConfig`, field binding, `Fulfils` |
 | [Generated models](generated-models.md) | The `Create`, `CreateDB`, `Update`, `UpdateDB`, `View`, `HeadView` and reference models, and the initialisation pipeline |

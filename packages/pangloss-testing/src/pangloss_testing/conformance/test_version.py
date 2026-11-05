@@ -5,10 +5,7 @@ import asyncio
 from typing import no_type_check
 
 import pytest
-from pangloss_models import initialise
-from pangloss_models.exceptions import PanglossVersionConflictError
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.entity import Entity
+from pangloss_models import Document, Entity, PanglossVersionConflictError, initialise
 
 from .helpers import count_nodes
 
@@ -146,7 +143,7 @@ async def test_updating_something_that_is_not_there_is_not_found_not_a_conflict(
 ):
     from uuid import uuid7
 
-    from pangloss_models.exceptions import PanglossNotFoundError
+    from pangloss_models import PanglossNotFoundError
 
     class Statement(Document):
         text: str

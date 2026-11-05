@@ -11,10 +11,10 @@ import asyncio
 import sys
 
 from demo_app import models
-from pangloss_cli.project import load_project
+from pangloss_cli import load_project
 from pangloss_models import initialise
 from pangloss_users import current_request_username
-from pangloss_zotero.models import ZoteroObject
+from pangloss_zotero import ZoteroObject
 from pydantic import AnyHttpUrl
 
 USERNAME = "demo"

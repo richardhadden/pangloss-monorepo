@@ -4,9 +4,8 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from history_support import record
-from pangloss_api.dependencies import get_current_user
-from pangloss_history import api
-from pangloss_history.store import SqliteStore
+from pangloss_api import get_current_user
+from pangloss_history import SqliteStore, api
 
 
 class Statement:
@@ -142,7 +141,7 @@ def test_restore_needs_the_version_it_replaces_and_gives_the_new_one(
 
 def test_a_restore_that_cannot_be_done_is_a_conflict(client, monkeypatch):
     from pangloss_api.errors import register_error_handlers
-    from pangloss_history.restore import PanglossRestoreError
+    from pangloss_history import PanglossRestoreError
 
     register_error_handlers(client.app)
     id = seed(client)
@@ -162,7 +161,7 @@ def test_a_restore_that_cannot_be_done_is_a_conflict(client, monkeypatch):
 
 
 def test_a_version_and_its_draft_are_upgraded_with_the_problems(client, monkeypatch):
-    from pangloss_history.draft import Draft
+    from pangloss_history import Draft
     from pangloss_history.upgrade import Problem
 
     id = seed(client)
@@ -227,7 +226,7 @@ def test_a_version_in_the_read_form(client):
 
 
 def test_every_version_with_its_content_in_the_read_form(client, monkeypatch):
-    from pangloss_history.draft import Draft
+    from pangloss_history import Draft
 
     # (the models of the test have no `Update` to check the content against)
     monkeypatch.setattr(

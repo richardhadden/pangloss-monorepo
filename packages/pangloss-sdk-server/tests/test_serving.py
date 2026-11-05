@@ -14,8 +14,8 @@ import tarfile
 import zipfile
 
 import pytest
+from pangloss_core import BaseSettings, DatabaseSettings
 from pangloss_core import settings as core_settings
-from pangloss_core.settings import BaseSettings, DatabaseSettings
 from pangloss_sdk.schemas import schema_hash
 from pangloss_sdk_server import archives, check, current
 from pangloss_users import service
@@ -25,7 +25,7 @@ from server_support import API_TESTS, write
 sys.path.insert(0, str(API_TESTS))
 from fake_api_db import exposed_functions
 from fastapi.testclient import TestClient
-from pangloss_api.app import create_app
+from pangloss_api import create_app
 
 PASSWORD = "correct horse"
 
@@ -340,9 +340,9 @@ async def test_a_client_with_the_built_manifest_is_current_against_the_app(
     make_app, project
 ):
     import httpx2 as httpx
+    from pangloss_sdk import SdkSettings
     from pangloss_sdk import check as check_version
     from pangloss_sdk import client as sdk_client
-    from pangloss_sdk.settings import SdkSettings
 
     app = make_app()
     await current.ensure_built(core_settings.SETTINGS)

@@ -1,10 +1,8 @@
 """The date types as models: the bounds are worked out when a document is written"""
 
 import pytest
-from pangloss_dates.bounds import Precision
-from pangloss_dates.calendar import Calendar, Weekday, from_jdn, to_jdn
-from pangloss_models import initialise
-from pangloss_models.model_bases.document import Document
+from pangloss_dates import Calendar, Precision, Weekday, from_jdn, to_jdn
+from pangloss_models import Document, initialise
 from pydantic import ValidationError
 
 J, G = Calendar.JULIAN, Calendar.GREGORIAN
@@ -397,9 +395,7 @@ def test_a_field_can_say_what_its_dates_sort_by():
     import importlib
     from typing import Annotated
 
-    from pangloss_dates import julian, models
-    from pangloss_dates.bounds import SortBy
-    from pangloss_dates.models import SortDefault
+    from pangloss_dates import SortBy, SortDefault, julian, models
 
     for module in (models, julian):
         importlib.reload(module)
@@ -426,7 +422,7 @@ def test_a_field_can_say_what_its_dates_sort_by():
     assert ymd(person.born.sort_day) == (1500, 12, 31)
     assert SortDefault  # (the class is the one from the module)
     # the interface is told, to show it as chosen
-    from pangloss_models.export import export_models
+    from pangloss_models import export_models
 
     fields = {f["name"]: f for f in export_models()["models"]["Person"]["fields"]}
     assert fields["born"]["markers"] == [

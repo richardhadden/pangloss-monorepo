@@ -14,7 +14,7 @@ from typing import Any
 
 import neo4j
 
-from pangloss_cypher.transactions import Database
+from pangloss_cypher import Database
 from pangloss_models.indexes import model_indexes
 
 from pangloss_memgraph.databases.memgraph.database import current

@@ -13,8 +13,8 @@ import pangloss_core.settings as core_settings
 import pydantic
 import pytest
 import pytest_asyncio
-from pangloss_core.settings import BaseSettings
-from pangloss_models.model_registry import ModelRegistry
+from pangloss_core import BaseSettings
+from pangloss_models import ModelRegistry
 from pangloss_users import current_request_username
 from pydantic import AnyHttpUrl
 from tenacity import retry, stop_after_delay, wait_fixed

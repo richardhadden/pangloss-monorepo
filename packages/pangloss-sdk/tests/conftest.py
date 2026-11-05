@@ -2,8 +2,8 @@ import sys
 import textwrap
 
 import pytest
-from pangloss_core.settings import ClientSettings
-from pangloss_models.model_registry import ModelRegistry
+from pangloss_core import ClientSettings
+from pangloss_models import ModelRegistry
 from pangloss_sdk import client as sdk_client
 
 
@@ -30,7 +30,7 @@ def an_app(tmp_path, monkeypatch):
     (package / "models.py").write_text(
         textwrap.dedent(
             """
-            from pangloss_models.model_bases.entity import Entity
+            from pangloss_models import Entity
 
             class Person(Entity):
                 pass

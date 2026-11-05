@@ -5,17 +5,16 @@ from typing import no_type_check
 from uuid import uuid4
 
 import pytest
-from pangloss_models import initialise
-from pangloss_models.model_bases.document import Document
-from pangloss_review import service
-from pangloss_review.exceptions import (
+from pangloss_models import Document, initialise
+from pangloss_review import (
     PanglossCommentTargetError,
     PanglossNoSuchCommentError,
     PanglossNotReviewableError,
     PanglossSelfReviewError,
+    ReviewMeta,
+    ReviewStatus,
+    service,
 )
-from pangloss_review.meta import ReviewMeta
-from pangloss_review.status import ReviewStatus
 from pangloss_users import current_request_username, see_unpublished
 
 from .helpers import DATABASE_NAME
@@ -203,7 +202,7 @@ async def test_a_user_can_be_stopped_from_checking_their_own_work(
 
 @no_type_check
 async def test_the_api(clear_database, db_driver):
-    from pangloss_api.app import create_app
+    from pangloss_api import create_app
     from pangloss_review import api
 
     from .test_api_models import client_for, logged_in
@@ -305,8 +304,8 @@ async def test_the_api(clear_database, db_driver):
 async def test_lists_and_searches_carry_the_state_and_can_be_filtered(
     clear_database, db_driver
 ):
-    from pangloss_api.app import create_app
-    from pangloss_models.search import Match
+    from pangloss_api import create_app
+    from pangloss_models import Match
     from pangloss_review import api
 
     from .test_api_models import client_for, logged_in
@@ -371,7 +370,7 @@ async def test_lists_and_searches_carry_the_state_and_can_be_filtered(
 async def test_structured_search_by_published_and_review_status(
     clear_database, db_driver
 ):
-    from pangloss_models.search import Match
+    from pangloss_models import Match
 
     _, Letter, Memo, _ = models()
     await Letter.Create(label="Waiting", title="t", notes=[]).save()
@@ -482,7 +481,7 @@ async def test_asking_for_a_status_is_refused_when_self_review_is_not_allowed(
     clear_database, db_driver, monkeypatch
 ):
     from pangloss_core import settings as core_settings
-    from pangloss_review.exceptions import PanglossSelfReviewError
+    from pangloss_review import PanglossSelfReviewError
 
     _, Letter, *_ = models()
     monkeypatch.setattr(
@@ -506,7 +505,7 @@ async def test_asking_for_a_status_is_refused_when_self_review_is_not_allowed(
 
 @no_type_check
 async def test_the_api_takes_the_status_to_write_as_a_query(clear_database, db_driver):
-    from pangloss_api.app import create_app
+    from pangloss_api import create_app
     from pangloss_review import api
 
     from .test_api_models import client_for, logged_in
@@ -617,7 +616,7 @@ async def test_a_document_can_carry_its_own_review_status(clear_database, db_dri
 
 @no_type_check
 async def test_the_api_takes_the_review_status_in_the_body(clear_database, db_driver):
-    from pangloss_api.app import create_app
+    from pangloss_api import create_app
     from pangloss_review import api
 
     from .test_api_models import client_for, logged_in

@@ -9,7 +9,7 @@ import neo4j
 from neo4j.exceptions import ConstraintError
 
 from pangloss_cypher.search_query import wrapper
-from pangloss_cypher.transaction import Transaction
+from pangloss_cypher import Transaction
 from pangloss_neo4j.databases.neo4j.properties import (
     ALWAYS_JSON,
     decode,

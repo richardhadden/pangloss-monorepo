@@ -22,10 +22,9 @@ from types import ModuleType
 from typing import NoReturn
 
 import typer
+from pangloss_core import BaseSettings, check_requirements, storage_of
 from pangloss_core import settings as core_settings
 from pangloss_core.logs import configure_logging
-from pangloss_core.settings import BaseSettings
-from pangloss_core.storage import check_requirements, storage_of
 
 SETTINGS_ENVIRONMENT_VARIABLE = "PANGLOSS_SETTINGS"
 SETTINGS_OPTION = "--settings"

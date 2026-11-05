@@ -119,7 +119,7 @@ def test_both_backends_give_the_one_set_of_fragments():
 
 
 def dialect_parts() -> list[str]:
-    from pangloss_cypher.dialect import Dialect
+    from pangloss_cypher import Dialect
 
     names = {name for name in vars(Dialect) if not name.startswith("_")}
     return sorted(names | set(Dialect.__annotations__))
@@ -127,7 +127,7 @@ def dialect_parts() -> list[str]:
 
 @pytest.mark.parametrize("name", dialect_parts())
 def test_both_dialects_have_every_part_of_the_dialect_with_its_signature(name):
-    from pangloss_cypher.dialect import Dialect
+    from pangloss_cypher import Dialect
     from pangloss_memgraph.databases.memgraph.dialect import MemgraphDialect
     from pangloss_neo4j.databases.neo4j.dialect import Neo4jDialect
 
@@ -150,7 +150,7 @@ def test_the_search_compiler_of_a_dialect_is_the_kits_or_a_subclass_of_it():
 
 
 def migration_dialect_parts() -> list[str]:
-    from pangloss_cypher.dialect import MigrationDialect
+    from pangloss_cypher import MigrationDialect
 
     names = {name for name in vars(MigrationDialect) if not name.startswith("_")}
     return sorted(names | set(MigrationDialect.__annotations__))
@@ -160,7 +160,7 @@ def migration_dialect_parts() -> list[str]:
 def test_both_dialects_have_every_part_of_the_migration_dialect_with_its_signature(
     name,
 ):
-    from pangloss_cypher.dialect import MigrationDialect
+    from pangloss_cypher import MigrationDialect
     from pangloss_memgraph.databases.memgraph.dialect import MemgraphDialect
     from pangloss_neo4j.databases.neo4j.dialect import Neo4jDialect
 

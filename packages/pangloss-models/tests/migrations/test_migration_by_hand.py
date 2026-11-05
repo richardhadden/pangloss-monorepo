@@ -4,18 +4,12 @@ from typing import no_type_check
 
 import pytest
 from migration_support import snapshot_of
-from pangloss_models.exceptions import PanglossMigrationError
+from pangloss_models import Entity, PanglossMigrationError
+from pangloss_models.migrations import changes_from_data, data_view, replay
 from pangloss_models.migrations import changes as c
-from pangloss_models.migrations import data_view, replay
 from pangloss_models.migrations.affected import affected_models
-from pangloss_models.migrations.files import (
-    EMPTY_SNAPSHOT,
-    changes_from_data,
-    checksum_of,
-    empty_hint,
-)
+from pangloss_models.migrations.files import EMPTY_SNAPSHOT, checksum_of, empty_hint
 from pangloss_models.migrations.reverse import reverse_changes
-from pangloss_models.model_bases.entity import Entity
 
 
 def a_function(tx, state):
@@ -98,7 +92,8 @@ def test_what_is_read_afterwards_is_what_the_change_says():
 
 
 def test_a_migration_that_is_only_by_hand_is_fine_for_the_graph():
-    from pangloss_models.migrations.files import Migration, MigrationGraph
+    from pangloss_models.migrations import Migration
+    from pangloss_models.migrations.files import MigrationGraph
 
     first = Migration(app="x", name="0001_initial", changes=())
     second = Migration(

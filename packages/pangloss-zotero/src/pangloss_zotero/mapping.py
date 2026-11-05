@@ -6,9 +6,8 @@ For a type no class claims, the `fallback` class is used, or `ZoteroObject`. Onl
 
 from dataclasses import dataclass, field
 
-from pangloss_models.exceptions import PanglossMetaError
+from pangloss_models import ModelRegistry, PanglossMetaError
 from pangloss_models.meta_slots import declared_slots
-from pangloss_models.model_registry import ModelRegistry
 
 from pangloss_zotero.item_types import SLOT, ZoteroMeta
 from pangloss_zotero.models import ZoteroBacked, ZoteroObject

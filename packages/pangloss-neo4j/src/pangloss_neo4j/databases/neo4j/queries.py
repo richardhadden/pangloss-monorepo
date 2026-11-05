@@ -1,7 +1,6 @@
 """Neo4j's own text for parts of the kit's queries (`Dialect.query`), where the kit's is slow on Neo4j"""
 
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.entity import Entity
+from pangloss_models import Document, Entity
 
 from pangloss_cypher import fragments
 from pangloss_cypher.list_query import LISTED_HEAD

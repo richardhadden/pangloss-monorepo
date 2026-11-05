@@ -1,9 +1,7 @@
 """Declaring a typology: the entity it makes, and what is refused"""
 
 import pytest
-from pangloss_models import initialise
-from pangloss_models.exceptions import PanglossMetaError, PanglossModelError
-from pangloss_models.model_bases.entity import Entity
+from pangloss_models import Entity, PanglossMetaError, PanglossModelError, initialise
 from pangloss_typology import Typed, Typology, TypologyMeta
 
 

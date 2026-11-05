@@ -18,8 +18,8 @@ pytestmark = pytest.mark.usefixtures("bulk_memgraph")
 
 
 SETTINGS = """
-    from pangloss_core.settings import BaseSettings
-    from pangloss_memgraph.databases.memgraph.settings import MemgraphDatabaseSettings
+    from pangloss_core import BaseSettings
+    from pangloss_memgraph import MemgraphDatabaseSettings
     from pydantic import AnyHttpUrl
 
 
@@ -43,8 +43,7 @@ SETTINGS = """
 """
 
 MODELS = """
-    from pangloss_models.model_bases.document import Document
-    from pangloss_models.model_bases.entity import Entity
+    from pangloss_models import Document, Entity
 
 
     class Person(Entity):

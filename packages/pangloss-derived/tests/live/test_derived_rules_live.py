@@ -4,15 +4,10 @@ removed, the limit per seed, and what does not trigger anything"""
 from typing import no_type_check
 
 import pytest
-from pangloss_models import initialise
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.entity import Entity
-from pangloss_models.model_bases.reified_relation import ReifiedRelation
-from pangloss_models.model_bases.semantic_space import SemanticSpace
+from pangloss_models import Document, Entity, ReifiedRelation, SemanticSpace, initialise
 from pangloss_testing.live import run
 
-from pangloss_derived import Derived, DerivedMeta, RuleType, Var, rule
-from pangloss_derived import read
+from pangloss_derived import Derived, DerivedMeta, RuleType, Var, read, rule
 from pangloss_derived.registry import DerivedRegistry
 from pangloss_derived.worker import run_pending_derivations, worker
 
@@ -477,8 +472,7 @@ async def test_a_variable_of_a_list_field_is_one_of_its_items(clear_database):
 @no_type_check
 async def test_a_derived_class_in_a_search(clear_database):
     """`Person.Where(derived_=SameOrganisation.Where(organisation=court))`: the people with such a fact"""
-    from pangloss_models.exceptions import PanglossSearchError
-    from pangloss_models.search import Match
+    from pangloss_models import Match, PanglossSearchError
 
     m, n = await setup(clear_database)
     F = m["Factoid"]

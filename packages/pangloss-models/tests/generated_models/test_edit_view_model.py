@@ -3,9 +3,7 @@ from typing import no_type_check
 from uuid import uuid7
 
 import pytest
-from pangloss_models import initialise
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.entity import Entity
+from pangloss_models import Document, Entity, initialise
 from pydantic import ValidationError
 
 TEST_META = {

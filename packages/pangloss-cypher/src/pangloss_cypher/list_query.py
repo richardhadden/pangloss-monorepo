@@ -4,8 +4,7 @@ may give its own text for a part (`Dialect.query`)"""
 
 from typing import LiteralString, cast
 
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.entity import Entity
+from pangloss_models import Document, Entity
 
 from pangloss_cypher import fragments
 from pangloss_cypher.dialect import Dialect

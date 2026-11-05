@@ -8,7 +8,7 @@ Julian or the Gregorian calendar. A day is written for a URL or a person as `J15
 import re
 from dataclasses import dataclass
 
-from pangloss_dates.calendar import (
+from pangloss_dates import (
     Calendar,
     InvalidDate,
     Weekday,

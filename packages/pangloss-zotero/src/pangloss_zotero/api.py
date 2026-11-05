@@ -4,8 +4,7 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request
-from pangloss_api.background import BackgroundTask
-from pangloss_api.dependencies import get_current_user
+from pangloss_api import BackgroundTask, get_current_user
 from pangloss_core import settings as core_settings
 from pydantic import BaseModel
 

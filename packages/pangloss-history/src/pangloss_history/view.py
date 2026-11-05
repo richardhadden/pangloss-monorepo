@@ -5,8 +5,7 @@ entities as they are now, too). An entity that is gone is marked `missing`. (doc
 from collections.abc import Awaitable, Callable, Iterable
 from typing import Any
 
-from pangloss_models.model_bases.entity import Entity
-from pangloss_models.model_registry import ModelRegistry
+from pangloss_models import Entity, ModelRegistry
 from pydantic.alias_generators import to_camel
 
 from pangloss_history.restore import called

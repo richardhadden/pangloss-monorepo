@@ -10,9 +10,8 @@ from dataclasses import dataclass
 from typing import Any
 from uuid import UUID
 
-from pangloss_core.storage import storage_of
-from pangloss_models.exceptions import PanglossVersionConflictError
-from pangloss_models.model_registry import ModelRegistry
+from pangloss_core import storage_of
+from pangloss_models import ModelRegistry, PanglossVersionConflictError
 from pydantic import BaseModel
 
 from pangloss_typology import graph, tree

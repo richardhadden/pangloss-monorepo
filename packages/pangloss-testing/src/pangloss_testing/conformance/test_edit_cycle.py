@@ -13,9 +13,8 @@ import sys
 
 import pytest
 from neo4j.exceptions import Neo4jError
+from pangloss_models import ModelRegistry, initialise
 from pangloss_models import exceptions as pangloss_exceptions
-from pangloss_models import initialise
-from pangloss_models.model_registry import ModelRegistry
 from pydantic import ValidationError
 
 sys.path.insert(

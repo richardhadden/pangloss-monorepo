@@ -9,11 +9,11 @@ import dataclasses
 from typing import Any, Literal, Union
 from uuid import UUID
 
+from pangloss_models import Match, hooks
 from pangloss_models import exceptions as models_exceptions
-from pangloss_models import hooks
 from pangloss_models.autocomplete import AutocompleteItem, AutocompleteResults
 from pangloss_models.model_bases.base_models import _ListItems
-from pangloss_models.search import Match, check_match
+from pangloss_models.search import check_match
 from pangloss_models.utils import get_concrete_types
 from pydantic import TypeAdapter
 
@@ -144,7 +144,7 @@ def get(cls: type, id: Any) -> Call:
 def class_of_answer(cls: type, payload: Any) -> type:
     """The class the server says an item is (its `type`), if that is a subclass of `cls`: a read by a
     class gives an item of a subclass as that subclass"""
-    from pangloss_models.model_registry import ModelRegistry
+    from pangloss_models import ModelRegistry
 
     named = payload.get("type") if isinstance(payload, dict) else None
     found = ModelRegistry._model_dict.get(named) if named else None

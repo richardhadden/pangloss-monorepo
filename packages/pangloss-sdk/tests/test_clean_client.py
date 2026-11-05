@@ -44,9 +44,8 @@ def test_models_initialise_and_validate_without_neo4j():
 
         sys.meta_path.insert(0, Blocker())
 
-        from pangloss_core.settings import ClientSettings
-        from pangloss_models import initialise
-        from pangloss_models.model_bases.entity import Entity
+        from pangloss_core import ClientSettings
+        from pangloss_models import Entity, initialise
 
         ClientSettings(
             INSTALLED_APPS=[], STORAGE="pangloss_sdk.storage:api"

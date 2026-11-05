@@ -26,9 +26,8 @@ import time
 import uuid
 from typing import Any
 
-from pangloss_core import backend
+from pangloss_core import Transaction, backend
 from pangloss_cypher import pending
-from pangloss_core.backend import Transaction
 from pangloss_models import hooks
 
 from pangloss_derived import store

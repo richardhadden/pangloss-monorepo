@@ -1,7 +1,8 @@
 import datetime
 
-from pangloss_models.model_bases.document import Document, DocumentMeta
-from pangloss_models.model_bases.embedded import Embedded, EmbeddedMeta
+from pangloss_models import Document, Embedded
+from pangloss_models.model_bases.document import DocumentMeta
+from pangloss_models.model_bases.embedded import EmbeddedMeta
 
 
 def test_meta_inheritance_of_abstract():
@@ -64,7 +65,7 @@ def test_meta_inheritance_of_abstract_on_embedded():
 
 
 def test_an_entity_inherits_the_meta_of_its_parent():
-    from pangloss_models.model_bases.entity import Entity
+    from pangloss_models import Entity
 
     class Base(Entity):
         _meta = Entity.Meta(
@@ -129,7 +130,7 @@ def test_each_model_has_its_own_meta_that_names_it_as_the_owner():
 
 
 def test_a_parametrisation_of_a_generic_has_a_meta_of_its_own():
-    from pangloss_models.model_bases.annotated_value import AnnotatedValue
+    from pangloss_models import AnnotatedValue
 
     class WithSource[T](AnnotatedValue[T]):
         source: str
@@ -141,7 +142,7 @@ def test_a_parametrisation_of_a_generic_has_a_meta_of_its_own():
 
 
 def test_a_trait_has_a_meta_of_its_own():
-    from pangloss_models.model_bases.trait import NonHeritableTrait, Trait
+    from pangloss_models import NonHeritableTrait, Trait
 
     class Agent(Trait):
         pass
@@ -159,18 +160,17 @@ def test_a_trait_has_a_meta_of_its_own():
 
 
 def test_every_kind_of_model_has_its_own_meta_made_from_its_parents():
-    from pangloss_models.model_bases.conjunction import Conjunction, ConjunctionMeta
-    from pangloss_models.model_bases.edge_model import EdgeModel
-    from pangloss_models.model_bases.embedded import Embedded
-    from pangloss_models.model_bases.reified_relation import (
+    from pangloss_models import (
+        Conjunction,
+        EdgeModel,
+        Embedded,
         ReifiedRelation,
         ReifiedRelationDocument,
-        ReifiedRelationDocumentMeta,
-    )
-    from pangloss_models.model_bases.semantic_space import (
         SemanticSpace,
-        SemanticSpaceMeta,
     )
+    from pangloss_models.model_bases.conjunction import ConjunctionMeta
+    from pangloss_models.model_bases.reified_relation import ReifiedRelationDocumentMeta
+    from pangloss_models.model_bases.semantic_space import SemanticSpaceMeta
 
     class Date(Embedded):
         _meta = EmbeddedMeta(abstract=True)

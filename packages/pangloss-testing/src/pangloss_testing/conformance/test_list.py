@@ -1,11 +1,8 @@
 from typing import no_type_check
 
 import pytest
-from pangloss_models import initialise
+from pangloss_models import Document, Entity, SemanticSpace, initialise
 from pangloss_models.model_bases.base_models import _ListItems
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.entity import Entity
-from pangloss_models.model_bases.semantic_space import SemanticSpace
 from pangloss_testing.under_test.database import current
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
@@ -588,7 +585,7 @@ async def test_a_list_search_that_takes_too_long_is_stopped(
     import time
 
     import pytest
-    from pangloss_models.exceptions import PanglossSearchTimeoutError
+    from pangloss_models import PanglossSearchTimeoutError
     from pangloss_cypher import read_functions
 
     class Person(Entity):
@@ -627,7 +624,7 @@ async def test_a_read_of_another_package_that_takes_too_long_raises_the_search_t
         Transaction,
         timeout_from_setting,
     )
-    from pangloss_models.exceptions import PanglossSearchTimeoutError
+    from pangloss_models import PanglossSearchTimeoutError
 
     with db_driver.session() as session:
         session.run("UNWIND range(1, 400) AS x CREATE (:Filler {id: x})").consume()
@@ -656,7 +653,7 @@ async def test_a_timed_read_that_fails_otherwise_raises_the_drivers_error(
     """Only a timeout is made a `PanglossSearchTimeoutError`: any other error of the database reaches the caller as it
     was"""
     import neo4j
-    from pangloss_models.exceptions import PanglossSearchTimeoutError
+    from pangloss_models import PanglossSearchTimeoutError
     from pangloss_testing.under_test.database import (
         Transaction,
         timeout_from_setting,

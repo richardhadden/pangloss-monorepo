@@ -35,8 +35,8 @@ from contextlib import asynccontextmanager
 from typing import Any
 
 import neo4j
-from pangloss_cypher.transactions import Database
-from pangloss_models.exceptions import PanglossBulkLoadError
+from pangloss_cypher import Database
+from pangloss_models import PanglossBulkLoadError
 
 from pangloss_memgraph.databases.memgraph.database import slow_query_ms
 from pangloss_memgraph.databases.memgraph.database import current

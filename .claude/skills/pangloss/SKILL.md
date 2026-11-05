@@ -15,6 +15,9 @@ disagree, the code is right**: follow it, and then correct the skill (see the la
 ## The idea
 
 ```python
+from pangloss_models import Document, Entity, initialise   # public names come from a package's root
+
+
 class Person(Entity):
     pass
 

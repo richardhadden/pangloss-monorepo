@@ -2,7 +2,7 @@ import datetime
 
 import jwt
 import pytest
-from pangloss_api.app import create_app
+from pangloss_api import create_app
 from pangloss_api.tokens import ALGORITHM, TokenError, create_token, decode_token
 
 

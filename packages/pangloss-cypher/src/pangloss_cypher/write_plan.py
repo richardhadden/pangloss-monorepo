@@ -17,9 +17,8 @@ import typing
 import uuid
 from collections.abc import Iterator, Mapping
 
-from pangloss_models import hooks
+from pangloss_models import EdgeModel, FieldSubclassing, hooks
 from pangloss_models.field_definitions import (
-    FieldSubclassing,
     RelationOption,
     RelationToDocument,
     RelationToEntity,
@@ -35,7 +34,6 @@ from pangloss_models.model_bases.document import (
     _DocumentCreateDBBase,
     _DocumentUpdateDBBase,
 )
-from pangloss_models.model_bases.edge_model import EdgeModel
 from pangloss_models.model_bases.embedded import _EmbeddedCreateDBBase
 from pangloss_models.model_bases.entity import _EntityCreateDBBase, _EntityUpdateDBBase
 from pangloss_models.model_bases.reified_relation import (

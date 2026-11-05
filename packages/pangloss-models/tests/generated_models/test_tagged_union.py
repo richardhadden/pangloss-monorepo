@@ -8,14 +8,16 @@ from typing import Annotated, no_type_check
 from uuid import uuid7
 
 import pytest
-from pangloss_models import initialise
-from pangloss_models.field_definitions import FieldBinding
+from pangloss_models import (
+    Document,
+    Embedded,
+    Entity,
+    FieldBinding,
+    RelationConfig,
+    SemanticSpace,
+    initialise,
+)
 from pangloss_models.initialise_models.tagged_union import TaggedUnion
-from pangloss_models.model_bases.configs import RelationConfig
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.embedded import Embedded
-from pangloss_models.model_bases.entity import Entity
-from pangloss_models.model_bases.semantic_space import SemanticSpace
 from pydantic import ValidationError
 
 

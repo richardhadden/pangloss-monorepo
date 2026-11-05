@@ -18,8 +18,7 @@ dateable". A class that had a date before it was dateable has nothing copied unt
 
 from typing import Annotated, Any, ClassVar
 
-from pangloss_models.model_bases.helpers import DBField
-from pangloss_models.model_bases.trait import Trait
+from pangloss_models import DBField, Trait
 from pydantic import model_validator
 
 from pangloss_dates.models import (
@@ -39,7 +38,7 @@ COPIED_FIELDS = ("date_sort_day", "date_end_sort_day", "date_text")
 def _kind(date) -> type:
     """The class of a date: of a model of it, or of a date read from the database as a dict (`type` and its ends)"""
     if isinstance(date, dict):
-        from pangloss_models.model_registry import ModelRegistry
+        from pangloss_models import ModelRegistry
 
         return ModelRegistry.all_models()[date["type"]]
     return type(date)._owner

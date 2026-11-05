@@ -3,14 +3,11 @@
 from types import SimpleNamespace
 
 import pytest
-from pangloss_models import hooks
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.entity import Entity
-from pangloss_review import meta
+from pangloss_models import Document, Entity, hooks
+from pangloss_review import ReviewMeta, ReviewStatus, is_reviewable, meta
 from pangloss_review.cli import cli
 from pangloss_review.config import allow_self_review
-from pangloss_review.meta import ReviewMeta, is_reviewable, new_head_properties
-from pangloss_review.status import ReviewStatus
+from pangloss_review.meta import new_head_properties
 from typer.testing import CliRunner
 
 
@@ -112,7 +109,7 @@ def test_the_reviewed_classes_are_listed_by_name():
 
 
 def test_the_interface_has_a_link_to_the_queue_for_someone_logged_in():
-    from pangloss_interface.config import NavLink
+    from pangloss_interface import NavLink
     from pangloss_review.interface_config import config
 
     assert config.nav == [NavLink("Review", href="/review", requires_login=True)]

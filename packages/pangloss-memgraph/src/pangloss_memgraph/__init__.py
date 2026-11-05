@@ -1,6 +1,10 @@
 """Pangloss on Memgraph. In a project's settings: `STORAGE = "pangloss_memgraph:storage"`"""
 
-from pangloss_core.storage import Capabilities, Storage
+from pangloss_core import Capabilities, Storage
+
+lazy from pangloss_memgraph.databases.memgraph.settings import MemgraphDatabaseSettings
+
+__all__ = ["MemgraphDatabaseSettings", "storage"]
 
 storage = Storage(
     name="memgraph",

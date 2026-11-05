@@ -1,7 +1,7 @@
 """The Memgraph database: `pangloss_cypher.transactions`, with Memgraph's dialect. (Everything else of the transactions is
 there, and named here as well, for what imports it from here.)"""
 
-from pangloss_core.settings import BaseSettings
+from pangloss_core import BaseSettings
 from pangloss_cypher import transactions
 from pangloss_cypher.transactions import (
     MAX_LOGGED_QUERY as MAX_LOGGED_QUERY,
@@ -9,9 +9,7 @@ from pangloss_cypher.transactions import (
 from pangloss_cypher.transactions import (
     LoggedTransaction as LoggedTransaction,
 )
-from pangloss_cypher.transactions import (
-    Transaction as Transaction,
-)
+from pangloss_cypher import Transaction as Transaction
 from pangloss_cypher.transactions import (
     current as current,
 )
@@ -21,9 +19,7 @@ from pangloss_cypher.transactions import (
 from pangloss_cypher.transactions import (
     installed as installed,
 )
-from pangloss_cypher.transactions import (
-    read_transaction as read_transaction,
-)
+from pangloss_cypher import read_transaction as read_transaction
 from pangloss_cypher.transactions import (
     refuse_while_migrating as refuse_while_migrating,
 )
@@ -39,9 +35,7 @@ from pangloss_cypher.transactions import (
 from pangloss_cypher.transactions import (
     using as using,
 )
-from pangloss_cypher.transactions import (
-    write_transaction as write_transaction,
-)
+from pangloss_cypher import write_transaction as write_transaction
 
 from pangloss_memgraph.databases.memgraph.dialect import MemgraphDialect
 from pangloss_memgraph.databases.memgraph.settings import MemgraphDatabaseSettings

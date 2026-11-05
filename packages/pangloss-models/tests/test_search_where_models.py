@@ -7,25 +7,29 @@ import uuid
 
 import kitchen_sink
 import pytest
-from pangloss_models import initialise
-from pangloss_models.exceptions import PanglossModelError
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.embedded import Embedded
-from pangloss_models.model_bases.entity import Entity
-from pangloss_models.model_registry import ModelRegistry
-from pangloss_models.search import OPERATORS, Match, Var, check_match, field_kind
-from pangloss_models.typestubs import stub_annotation
-from pangloss_models.search_where import (
+from pangloss_models import (
     Choice,
     Compare,
+    Document,
+    Embedded,
+    Entity,
+    IncomingFrom,
+    Items,
+    Match,
+    ModelRegistry,
+    PanglossModelError,
+    Rel,
+    Text,
+    Var,
+    Where,
+    initialise,
+)
+from pangloss_models.search import OPERATORS, check_match, field_kind
+from pangloss_models.typestubs import stub_annotation
+from pangloss_models.search_where import (
     DocumentWhere,
     EmbeddedWhere,
     EntityWhere,
-    IncomingFrom,
-    Items,
-    Rel,
-    Text,
-    Where,
     can_have_where,
 )
 from pydantic import BaseModel, ValidationError
@@ -241,7 +245,8 @@ def test_a_field_with_a_name_of_the_pattern_is_an_error():
 
 
 def test_search_match_makes_a_match_of_a_where_a_match_or_nothing():
-    from pangloss_models.search import OrderBy, search_match
+    from pangloss_models import OrderBy
+    from pangloss_models.search import search_match
 
     Person, Poet, Place, Letter, *_ = models()
 
@@ -292,7 +297,8 @@ def test_or_and_and_not_are_the_combinators():
 
 
 def test_check_order_takes_each_of_orderable_fields_and_order_is_typed_with_them():
-    from pangloss_models.search import OrderBy, check_order, orderable_fields
+    from pangloss_models import OrderBy
+    from pangloss_models.search import check_order, orderable_fields
 
     ModelRegistry._reset()
     kitchen_sink.declare()

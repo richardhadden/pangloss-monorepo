@@ -10,7 +10,7 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pangloss_api.dependencies import get_current_user
+from pangloss_api import get_current_user
 from pydantic import BaseModel, StringConstraints
 
 from pangloss_typology import service

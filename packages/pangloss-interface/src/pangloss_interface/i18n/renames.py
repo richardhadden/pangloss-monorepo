@@ -1,11 +1,11 @@
 """What the migrations know about the models: which things were renamed, and whether the models have
 changed since the last migration."""
 
-from pangloss_models.exceptions import PanglossMigrationError
+from pangloss_models import PanglossMigrationError
+from pangloss_models.migrations import build_snapshot
 from pangloss_models.migrations import changes as c
 from pangloss_models.migrations.diff import diff
 from pangloss_models.migrations.files import graph_of
-from pangloss_models.migrations.snapshot import build_snapshot
 
 from pangloss_interface.i18n.merge import ItemRename
 

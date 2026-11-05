@@ -1,5 +1,4 @@
-from pangloss_models.exceptions import PanglossInitialisationError
-from pangloss_models.model_registry import ModelRegistry
+from pangloss_models import ModelRegistry, PanglossInitialisationError
 from pytest import raises
 
 

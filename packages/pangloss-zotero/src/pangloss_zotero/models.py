@@ -11,8 +11,7 @@ which writes through Python. See docs/zotero-sources.md.
 
 import datetime
 
-from pangloss_models.model_bases.entity import Entity
-from pangloss_models.protection import Protection
+from pangloss_models import Entity, Protection
 
 from pangloss_zotero.item_types import SLOT, ZoteroMeta
 

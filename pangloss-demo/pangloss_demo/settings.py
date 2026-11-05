@@ -5,8 +5,8 @@ Values can also be set in the environment, or in the `.env` file next to
 login tokens, is set there.
 """
 
-from pangloss_core.settings import BaseSettings
-from pangloss_memgraph.databases.memgraph.settings import MemgraphDatabaseSettings
+from pangloss_core import BaseSettings
+from pangloss_memgraph import MemgraphDatabaseSettings
 from pydantic import AnyHttpUrl
 
 

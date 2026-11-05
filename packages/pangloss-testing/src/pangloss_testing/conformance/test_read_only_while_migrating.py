@@ -3,10 +3,13 @@
 from typing import no_type_check
 
 import pytest
-from pangloss_models import initialise
-from pangloss_models.exceptions import PanglossReadOnlyError, PanglossWriteError
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.entity import Entity
+from pangloss_models import (
+    Document,
+    Entity,
+    PanglossReadOnlyError,
+    PanglossWriteError,
+    initialise,
+)
 from pangloss_testing.under_test import migration_backend as backend
 
 from .helpers import count_nodes
@@ -68,8 +71,9 @@ async def try_to_write(tx, state):
 async def test_a_migration_that_is_running_holds_the_lock(db_driver, clear_database):
     """What `pangloss migrate` does (the lock, then `apply`): a write made by a change in the middle of
     it, by something else, is refused"""
+    from pangloss_models.migrations import Migration
     from pangloss_models.migrations import changes as c
-    from pangloss_models.migrations.files import EMPTY_SNAPSHOT, Migration
+    from pangloss_models.migrations.files import EMPTY_SNAPSHOT
 
     class Person(Entity):
         name: str

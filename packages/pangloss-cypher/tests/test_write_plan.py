@@ -7,8 +7,8 @@ import uuid
 from typing import Annotated, no_type_check
 
 import pytest
+from pangloss_core import BaseSettings, DatabaseSettings
 from pangloss_core import settings as core_settings
-from pangloss_core.settings import BaseSettings, DatabaseSettings
 from pangloss_cypher.write_plan import (
     ExistingEntity,
     InlineEntity,
@@ -18,15 +18,18 @@ from pangloss_cypher.write_plan import (
     plan_create,
     plan_update,
 )
-from pangloss_models import initialise
-from pangloss_models.field_definitions import FieldSubclassing
-from pangloss_models.model_bases.configs import RelationConfig
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.edge_model import EdgeModel
-from pangloss_models.model_bases.entity import Entity
-from pangloss_models.model_bases.helpers import Fulfils, ViaEdge
-from pangloss_models.model_bases.semantic_space import SemanticSpace
-from pangloss_models.model_registry import ModelRegistry
+from pangloss_models import (
+    Document,
+    EdgeModel,
+    Entity,
+    FieldSubclassing,
+    Fulfils,
+    ModelRegistry,
+    RelationConfig,
+    SemanticSpace,
+    ViaEdge,
+    initialise,
+)
 from pydantic import AnyHttpUrl
 
 

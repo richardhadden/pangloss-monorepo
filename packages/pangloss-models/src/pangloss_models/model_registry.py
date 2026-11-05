@@ -7,7 +7,7 @@ from typing import ClassVar, get_args, get_origin
 
 from pydantic import BaseModel
 from pydantic.alias_generators import to_camel
-lazy from pangloss_core.storage import storage_of
+lazy from pangloss_core import storage_of
 
 from pangloss_models.exceptions import (
     PanglossImportError,

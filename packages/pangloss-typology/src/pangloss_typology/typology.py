@@ -18,11 +18,13 @@ from types import get_original_bases
 from typing import Annotated, Any, ClassVar, ForwardRef, Literal, get_origin
 
 from annotated_types import MaxLen
-from pangloss_models.exceptions import PanglossMetaError
-from pangloss_models.model_bases.configs import RelationConfig
-from pangloss_models.model_bases.entity import Entity
-from pangloss_models.model_registry import ModelRegistry
-from pangloss_models.protection import Protection
+from pangloss_models import (
+    Entity,
+    ModelRegistry,
+    PanglossMetaError,
+    Protection,
+    RelationConfig,
+)
 from pydantic.fields import FieldInfo
 
 HAS_TYPE = "has_type"

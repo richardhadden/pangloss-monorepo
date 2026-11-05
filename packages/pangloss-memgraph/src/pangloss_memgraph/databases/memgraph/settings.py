@@ -1,4 +1,4 @@
-from pangloss_core.settings import DatabaseSettings
+from pangloss_core import DatabaseSettings
 
 
 class MemgraphDatabaseSettings(DatabaseSettings):

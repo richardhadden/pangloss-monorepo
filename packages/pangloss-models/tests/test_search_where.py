@@ -6,21 +6,22 @@ from decimal import Decimal
 from types import SimpleNamespace
 
 import pytest
-from pangloss_models import initialise
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.entity import Entity
-from pangloss_models.search import Match, check_match
-from pangloss_models.search_where import (
+from pangloss_models import (
     AnyRel,
     Choice,
     Compare,
-    EntityWhere,
+    Document,
+    Entity,
     IncomingFrom,
     Items,
+    Match,
     Rel,
     Text,
     Where,
+    initialise,
 )
+from pangloss_models.search import check_match
+from pangloss_models.search_where import EntityWhere
 from pydantic import ValidationError
 
 SMITH = uuid.UUID("0194a1b2-0000-7000-8000-000000000001")

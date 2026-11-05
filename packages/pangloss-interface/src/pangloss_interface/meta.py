@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Literal, get_args
 
-from pangloss_models.exceptions import PanglossMetaError
+from pangloss_models import PanglossMetaError
 
 # The base colours of Tailwind, except black and white. (The interface has the same list in
 # `interface-core/src/types/models.ts`; a test holds the two together.)
@@ -281,9 +281,7 @@ def export_definitions() -> dict[str, Any]:
     (something other than a person keeps it up to date: `Protection`, which the API enforces); the `nav`; and the
     `searchPatterns` (`export_search_patterns`). (Not in `export_models()` itself: the migrations' snapshots are
     made from that, and what a form may edit is not a change to the models.)"""
-    from pangloss_models.export import export_models
-    from pangloss_models.model_registry import ModelRegistry
-    from pangloss_models.protection import protection_of
+    from pangloss_models import ModelRegistry, export_models, protection_of
 
     exported = export_models()
     classes = {

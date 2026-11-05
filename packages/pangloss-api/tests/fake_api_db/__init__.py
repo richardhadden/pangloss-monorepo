@@ -1,3 +1,3 @@
-from pangloss_core.storage import Storage
+from pangloss_core import Storage
 
 storage = Storage(name="fake_api_db", package="fake_api_db")

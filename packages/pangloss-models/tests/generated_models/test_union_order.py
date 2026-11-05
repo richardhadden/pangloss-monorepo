@@ -14,8 +14,7 @@ from uuid import uuid7
 import kitchen_sink
 import pytest
 import sample_data
-from pangloss_models import initialise
-from pangloss_models.model_registry import ModelRegistry
+from pangloss_models import ModelRegistry, initialise
 from pydantic import BaseModel, TypeAdapter
 
 EDGE_SAMPLES = {"Certainty": {"level": 1}, "Weight": {"weight": 1.5}}

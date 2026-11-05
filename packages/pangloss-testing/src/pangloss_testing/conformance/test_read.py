@@ -2,21 +2,21 @@ import datetime
 from typing import Annotated, TypedDict, no_type_check
 
 import pytest
-from pangloss_models import initialise
-from pangloss_models.exceptions import PanglossInitialisationError
-from pangloss_models.model_bases.annotated_value import AnnotatedValue
-from pangloss_models.model_bases.conjunction import Conjunction
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.edge_model import EdgeModel
-from pangloss_models.model_bases.embedded import Embedded
-from pangloss_models.model_bases.entity import Entity
-from pangloss_models.model_bases.helpers import ViaEdge
-from pangloss_models.model_bases.reified_relation import (
+from pangloss_models import (
+    AnnotatedValue,
+    Conjunction,
+    Document,
+    EdgeModel,
+    Embedded,
+    Entity,
+    PanglossInitialisationError,
     ReifiedRelation,
     ReifiedRelationDocument,
+    SemanticSpace,
+    SumsTo,
+    ViaEdge,
+    initialise,
 )
-from pangloss_models.model_bases.semantic_space import SemanticSpace
-from pangloss_models.validators import SumsTo
 from pydantic import ValidationError
 from pangloss_testing.under_test.initialise_database import (
     initialise_database,
@@ -942,7 +942,7 @@ async def test_the_read_query_is_the_same_text_for_every_document():
     each call it planned the query afresh each time, which was most of what a read took"""
     import uuid
 
-    from pangloss_models.model_bases.entity import Entity
+    from pangloss_models import Entity
     from pangloss_cypher.read_query import (
         build_fetch_document_query,
     )

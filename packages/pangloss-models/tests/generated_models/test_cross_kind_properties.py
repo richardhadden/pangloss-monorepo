@@ -13,8 +13,7 @@ from uuid import uuid7
 import kitchen_sink
 import pytest
 import sample_data
-from pangloss_models import initialise
-from pangloss_models.model_registry import ModelRegistry
+from pangloss_models import ModelRegistry, initialise
 
 
 @pytest.fixture

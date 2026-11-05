@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 from cli_support import write
 from pangloss_cli.main import build_app
-from pangloss_models.model_registry import ModelRegistry
+from pangloss_models import ModelRegistry
 from typer.testing import CliRunner
 
 runner = CliRunner()
@@ -34,14 +34,14 @@ FAKE_MIGRATION_BACKEND = """
         return [{"path": "/snapshots/1", "creation_time": "2026-10-21T10:00", "size": "62KiB"}]
 
     async def restore(path):
-        from pangloss_models.exceptions import PanglossMigrationError
+        from pangloss_models import PanglossMigrationError
 
         if path != "/snapshots/1":
             raise PanglossMigrationError(f"{path} is not a snapshot the server has")
         RESTORED.append(path)
 
     async def backup():
-        from pangloss_models.exceptions import PanglossMigrationError
+        from pangloss_models import PanglossMigrationError
 
         CALLS.append("backup")
         if BACKUP_FAILS:
@@ -98,14 +98,14 @@ FAKE_MIGRATION_BACKEND = """
 """
 
 V1 = """
-    from pangloss_models.model_bases.entity import Entity
+    from pangloss_models import Entity
 
     class Person(Entity):
         name: str
 """
 
 V2 = """
-    from pangloss_models.model_bases.entity import Entity
+    from pangloss_models import Entity
 
     class Person(Entity):
         name: str
@@ -188,7 +188,7 @@ def test_a_model_declared_wrongly_is_a_message_not_a_traceback(models_project: P
     set_models(
         models_project,
         """
-        from pangloss_models.model_bases.entity import Entity
+        from pangloss_models import Entity
 
 
         class Person(Entity):
@@ -271,7 +271,7 @@ def test_an_empty_migration_is_made_to_write_by_hand(models_project: Path):
     path.write_text(
         path.read_text().replace(
             "changes = changes_from_data([])",
-            "from pangloss_models.migrations.changes import RunCypher\n\n"
+            "from pangloss_models.migrations import RunCypher\n\n"
             "changes = changes_from_data([RunCypher(query='MATCH (n) SET n.x = 1', lossy=True)])",
         )
     )
@@ -652,7 +652,7 @@ def test_a_migration_that_cannot_be_undone_is_said_to_be(two_migrations: Path):
     path.write_text(
         path.read_text().replace(
             "changes = changes_from_data(",
-            "from pangloss_models.migrations.changes import RunCypher\n\n"
+            "from pangloss_models.migrations import RunCypher\n\n"
             "changes = changes_from_data([RunCypher(query='RETURN 1')] + ",
         )
     )
@@ -870,10 +870,9 @@ def test_a_model_that_changes_kind_is_refused_by_makemigrations(models_project: 
     assert invoke("makemigrations")[0] == 0
     set_models(
         models_project,
-        V1.replace(
-            "from pangloss_models.model_bases.entity import Entity",
-            "from pangloss_models.model_bases.document import Document",
-        ).replace("(Entity)", "(Document)"),
+        V1.replace("import Entity", "import Document").replace(
+            "(Entity)", "(Document)"
+        ),
     )
     exit_code, output = invoke("makemigrations")
     assert exit_code == 1
@@ -1071,7 +1070,7 @@ def test_a_backend_without_snapshots_says_so(models_project: Path, monkeypatch):
 
 def test_a_query_by_hand_is_for_the_backend_installed(monkeypatch):
     from pangloss_cli import migrations
-    from pangloss_core.storage import Capabilities, Storage
+    from pangloss_core import Capabilities, Storage
 
     def storage(name: str, cypher: bool):
         return lambda settings: Storage(

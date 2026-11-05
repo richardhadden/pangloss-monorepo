@@ -4,8 +4,9 @@ from uuid import uuid7
 
 from conftest import PASSWORD  # noqa: F401
 from fastapi.testclient import TestClient
-from pangloss_api.app import create_app
-from pangloss_models.model_bases.entity import Entity, _EntityUpdateBase
+from pangloss_api import create_app
+from pangloss_models import Entity
+from pangloss_models.model_bases.entity import _EntityUpdateBase
 from test_model_routes import META, login, stub
 
 

@@ -12,7 +12,7 @@ import random
 import sys
 
 from demo_app import models
-from pangloss_cli.project import load_project
+from pangloss_cli import load_project
 from pangloss_models import initialise
 from pangloss_users import current_request_username
 from pydantic import AnyHttpUrl

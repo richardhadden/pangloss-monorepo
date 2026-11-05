@@ -11,22 +11,20 @@ from types import SimpleNamespace
 from typing import Any
 from uuid import UUID
 
-from pangloss_dates.calendar import (
+from pangloss_dates import (
     Calendar,
+    Frequency,
     InvalidDate,
+    Recurrence,
+    RecurrenceRule,
     from_jdn,
     is_leap_year,
     nth_weekday,
+    occurrences,
+    occurs_on,
     to_jdn,
 )
 from pangloss_dates.easter import easter
-from pangloss_dates.models import Recurrence
-from pangloss_dates.recurrence import (
-    Frequency,
-    RecurrenceRule,
-    occurrences,
-    occurs_on,
-)
 
 
 @dataclass(frozen=True)

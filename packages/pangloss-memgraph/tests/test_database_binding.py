@@ -5,8 +5,7 @@ import subprocess
 import sys
 
 import pytest
-from pangloss_models import initialise
-from pangloss_models.model_bases.entity import Entity
+from pangloss_models import Entity, initialise
 from pangloss_users import current_request_username
 from pangloss_memgraph.databases.memgraph.database import Database, current, using
 from pangloss_memgraph.databases.memgraph.initialise_database import initialise_database

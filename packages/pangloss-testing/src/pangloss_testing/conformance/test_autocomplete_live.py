@@ -3,8 +3,7 @@
 from typing import no_type_check
 
 import pytest
-from pangloss_models import initialise
-from pangloss_models.model_bases.entity import Entity
+from pangloss_models import Entity, initialise
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -159,7 +158,7 @@ async def test_any_entity(clear_database):
 
 @no_type_check
 async def test_a_trait_finds_the_entities_that_have_it_and_nothing_else(clear_database):
-    from pangloss_models.model_bases.trait import Trait
+    from pangloss_models import Trait
 
     class Marked(Trait):
         pass
@@ -195,7 +194,7 @@ async def test_an_entity_with_an_id_of_its_own_is_found(clear_database):
 
 @no_type_check
 async def test_documents_are_not_found(clear_database):
-    from pangloss_models.model_bases.document import Document
+    from pangloss_models import Document
 
     class Paper(Document):
         pass
@@ -216,8 +215,7 @@ async def test_with_nothing_typed_the_entities_most_referred_to_come_first(
 ):
     from typing import Annotated
 
-    from pangloss_models.model_bases.configs import RelationConfig
-    from pangloss_models.model_bases.document import Document
+    from pangloss_models import Document, RelationConfig
 
     class Person(Entity):
         pass

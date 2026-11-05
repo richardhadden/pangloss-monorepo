@@ -84,7 +84,7 @@ Attach options to a relation by wrapping the type in `Annotated`:
 
 ```python
 from typing import Annotated
-from pangloss_models.model_bases.configs import RelationConfig
+from pangloss_models import RelationConfig
 
 
 class Statement(Document):

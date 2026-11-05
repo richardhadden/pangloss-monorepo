@@ -5,7 +5,7 @@ that what does not convert can be found; except `date`, which the database repor
 Decimals are stored as strings; enums as the values of their members.
 """
 
-from pangloss_models.exceptions import PanglossMigrationNotSupported
+from pangloss_models import PanglossMigrationNotSupported
 
 SCALARS = {"str", "int", "float", "bool", "decimal", "date"}
 

@@ -1,9 +1,7 @@
 """`mode="after"` model validators a class declares are copied to the models that are written"""
 
 import pytest
-from pangloss_models import initialise
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.embedded import Embedded
+from pangloss_models import Document, Embedded, initialise
 from pydantic import ValidationError, model_validator
 
 

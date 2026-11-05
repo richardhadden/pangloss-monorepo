@@ -4,7 +4,7 @@ import hashlib
 import json
 from typing import Any
 
-from pangloss_models.model_registry import ModelRegistry
+from pangloss_models import ModelRegistry
 
 
 def canonical(value: Any) -> Any:

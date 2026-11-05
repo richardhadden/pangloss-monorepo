@@ -4,8 +4,8 @@ import pytest
 
 pytest.importorskip("edtf")
 
-from pangloss_dates.bounds import Padding, Precision, exact_bounds
-from pangloss_dates.calendar import Calendar, from_jdn, to_jdn
+from pangloss_dates import Calendar, Padding, Precision, from_jdn, to_jdn
+from pangloss_dates.bounds import exact_bounds
 from pangloss_dates.edtf import (
     EdtfError,
     EdtfNotADate,

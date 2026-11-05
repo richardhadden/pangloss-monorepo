@@ -4,9 +4,7 @@ import importlib
 from typing import no_type_check
 
 import pytest
-from pangloss_models import initialise
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.entity import Entity
+from pangloss_models import Document, Entity, initialise
 from pangloss_testing.live import run
 
 from pangloss_derived import Derived, PanglossDerivedError, Var, rule
@@ -17,8 +15,8 @@ pytestmark = pytest.mark.asyncio(loop_scope="session")
 
 @no_type_check
 def models(constraint):
-    from pangloss_dates import models as dates
     from pangloss_dates import rules
+    from pangloss_dates import models as dates
 
     importlib.reload(dates)  # (the registry was reset: the date family again)
     Date = dates.Date
@@ -130,8 +128,8 @@ async def test_before_during_and_within(clear_database, db_driver):
 
 @no_type_check
 async def test_a_date_constraint_refuses_a_variable_that_is_not_a_date(clear_database):
-    from pangloss_dates import models as dates
     from pangloss_dates import rules
+    from pangloss_dates import models as dates
 
     importlib.reload(dates)
     Date = dates.Date

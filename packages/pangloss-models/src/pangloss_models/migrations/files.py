@@ -144,7 +144,7 @@ def render(
         '"""',
         "",
     ]
-    lines.append("from pangloss_models.migrations.files import changes_from_data")
+    lines.append("from pangloss_models.migrations import changes_from_data")
     lines.append("")
     lines.append(
         f"dependencies = {_pformat([list(d) for d in migration.dependencies])}"
@@ -170,7 +170,7 @@ def empty_hint(dialect: str | None = None) -> list[str]:
     installed, is filled in"""
     on = f", dialect={dialect!r}" if dialect else ""
     return [
-        "# Changes written by hand go here (import them from pangloss_models.migrations.changes):",
+        "# Changes written by hand go here (import them from pangloss_models.migrations):",
         "# queries, or functions of this app, and, when a change of",
         "# the models was refused (`[NEEDS CODE]`), its data moved first and the models after it:",
         "#",

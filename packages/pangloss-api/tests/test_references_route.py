@@ -4,10 +4,10 @@ from uuid import uuid7
 
 from conftest import PASSWORD  # noqa: F401
 from fastapi.testclient import TestClient
-from pangloss_api.app import create_app
+from pangloss_api import create_app
 from pangloss_api.routes.references import MAX_REFERENCES
 from pangloss_models.autocomplete import AutocompleteItem
-from pangloss_models.model_bases.entity import Entity
+from pangloss_models import Entity
 from test_model_routes import stub
 
 

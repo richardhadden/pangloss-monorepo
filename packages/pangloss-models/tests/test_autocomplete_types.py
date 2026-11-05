@@ -1,17 +1,19 @@
 """Naming the types of an autocomplete, and reducing them to the smallest set that finds the same entities"""
 
 import pytest
-from pangloss_models import initialise
+from pangloss_models import (
+    Document,
+    Entity,
+    PanglossUnknownTypeError,
+    Trait,
+    initialise,
+)
 from pangloss_models.autocomplete import (
     labels_to_match,
     resolve_entity_types,
     search_words,
     smallest_types,
 )
-from pangloss_models.exceptions import PanglossUnknownTypeError
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.entity import Entity
-from pangloss_models.model_bases.trait import Trait
 
 
 def models():

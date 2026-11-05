@@ -8,10 +8,9 @@ from calendar_live_support import count, structure
 from pangloss_calendar import graph, service
 from pangloss_calendar import settings as calendar_settings
 from pangloss_calendar.days import parse_day
-from pangloss_dates.calendar import Calendar, to_jdn
+from pangloss_dates import Calendar, to_jdn
 from pangloss_dates.easter import easter
-from pangloss_models import initialise
-from pangloss_models.model_bases.document import Document
+from pangloss_models import Document, initialise
 from pangloss_testing.live import initialise_database, run
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
@@ -31,11 +30,13 @@ def exact(year, month=None, day=None):
 
 def models():
     """A feast day, a document with a date, and the base, made again (the registry is emptied for each test)"""
+    import pangloss_dates
     from pangloss_calendar import models as calendar_models
     from pangloss_dates import julian
     from pangloss_dates import models as date_models
 
-    for module in (date_models, julian, calendar_models):
+    # (and the root of `pangloss_dates`, which the calendar's models import from: it keeps the classes it gave out)
+    for module in (date_models, julian, pangloss_dates, calendar_models):
         importlib.reload(module)
 
     class FeastDay(calendar_models.DateCharacterisation):

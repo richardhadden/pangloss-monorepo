@@ -122,7 +122,7 @@ for person in pangloss_sdk.iterate_sync(Person.list, page_size=100):   # sync=Tr
 
 ```python
 from demo_app.models import Activity
-from pangloss_models.search_where import Rel
+from pangloss_models import Rel
 
 found = await Factoid.search(
     Factoid.Where(statements=Activity.Where(carried_out_by=Rel(is_=charlemagne))),
@@ -167,7 +167,7 @@ An update replaces the whole document, so say which version you based it on. If 
 refused, not merged.
 
 ```python
-from pangloss_models.exceptions import PanglossVersionConflictError
+from pangloss_models import PanglossVersionConflictError
 
 editing = await Person.get_for_edit(charlemagne.id)       # the EditView, with meta.version
 based_on = editing.meta.version
@@ -225,7 +225,7 @@ import csv
 import sys
 
 import pangloss_demo_sdk as sdk
-from pangloss_models.exceptions import PanglossWriteError
+from pangloss_models import PanglossWriteError
 
 sdk.connect()       # PANGLOSS_URL, and PANGLOSS_TOKEN or a kept login, from the environment
 

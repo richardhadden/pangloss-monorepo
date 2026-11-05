@@ -23,8 +23,7 @@ from pangloss_models.field_definitions import RelationFieldDefinition, RelationT
 from pangloss_models.initialise_models.initialise_reference_models import (
     reference_view_extra_fields,
 )
-from pangloss_models.model_bases.entity import Entity
-from pangloss_models.model_registry import ModelRegistry
+from pangloss_models import Entity, ModelRegistry
 
 from pangloss_cypher.read_query import (
     WRAPPER_LABELS,

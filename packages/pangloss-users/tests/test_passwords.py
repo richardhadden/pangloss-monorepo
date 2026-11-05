@@ -1,6 +1,5 @@
 import pytest
-from pangloss_users.exceptions import PanglossInvalidUserError
-from pangloss_users.models import User, UserCreate
+from pangloss_users import PanglossInvalidUserError, User, UserCreate
 from pangloss_users.passwords import hash_password, verify_password
 from pydantic import ValidationError
 

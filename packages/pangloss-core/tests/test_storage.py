@@ -4,7 +4,7 @@ import sys
 import types
 
 import pytest
-from pangloss_core.storage import (
+from pangloss_core import (
     Capabilities,
     PanglossStorageError,
     Storage,

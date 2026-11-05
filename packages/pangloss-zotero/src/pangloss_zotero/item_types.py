@@ -10,7 +10,7 @@ more: an item whose type is not in the enum is still imported (its type is kept 
 from dataclasses import dataclass
 from enum import Enum
 
-from pangloss_models.meta_slots import register_meta_slot
+from pangloss_models import register_meta_slot
 
 
 class ZoteroItemType(Enum):

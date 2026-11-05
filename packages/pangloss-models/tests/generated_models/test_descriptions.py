@@ -1,10 +1,6 @@
 from typing import Annotated
 
-from pangloss_models import initialise
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.embedded import Embedded
-from pangloss_models.model_bases.entity import Entity
-from pangloss_models.model_bases.helpers import Description
+from pangloss_models import Description, Document, Embedded, Entity, initialise
 
 
 def test_model_description():

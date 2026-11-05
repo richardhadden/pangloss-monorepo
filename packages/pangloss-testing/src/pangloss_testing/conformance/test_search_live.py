@@ -6,11 +6,7 @@ from decimal import Decimal
 from typing import no_type_check
 
 import pytest
-from pangloss_models import initialise
-from pangloss_models.exceptions import PanglossSearchError
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.entity import Entity
-from pangloss_models.search import Match
+from pangloss_models import Document, Entity, Match, PanglossSearchError, initialise
 from pangloss_testing.under_test.database import current
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
@@ -282,7 +278,7 @@ async def test_a_search_that_takes_too_long_is_stopped_and_not_tried_again(
 ):
     import time
 
-    from pangloss_models.exceptions import PanglossSearchTimeoutError
+    from pangloss_models import PanglossSearchTimeoutError
     from pangloss_cypher import read_functions
 
     Person, Poet, Letter = models()
@@ -313,7 +309,7 @@ async def test_a_search_that_takes_too_long_is_stopped_and_not_tried_again(
 async def test_a_search_can_be_written_with_where_and_ordered_without_a_match(
     clear_database,
 ):
-    from pangloss_models.search_where import Compare, Rel, Text
+    from pangloss_models import Compare, Rel, Text
 
     Person, Poet, Letter, john, jane, letter = await make(clear_database)
     await letter("Plague in Venice", john, pages=3, sent=datetime.date(1576, 5, 1))

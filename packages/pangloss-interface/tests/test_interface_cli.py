@@ -287,7 +287,7 @@ def test_check_type_checks_with_the_models_and_checks_the_layers(commands, proje
 def test_models_that_cannot_be_initialised_are_explained(
     commands, project, monkeypatch
 ):
-    from pangloss_models.exceptions import PanglossInitialisationError
+    from pangloss_models import PanglossInitialisationError
 
     def broken(project):
         raise PanglossInitialisationError("Person.friend: no such model")

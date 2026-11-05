@@ -8,7 +8,7 @@ that declares it itself included; since then a subclass that still has the field
 has a removal of its own.
 """
 
-from pangloss_models.migrations.files import changes_from_data
+from pangloss_models.migrations import changes_from_data
 
 dependencies = []
 schema_hash = "6014980418dc5ae5ad5091afdf7c76b542577040a00e4d02d3db7e484056b950"

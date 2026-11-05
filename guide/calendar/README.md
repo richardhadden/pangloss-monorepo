@@ -26,7 +26,7 @@ are in [docs/calendar-implementation.md](../../docs/calendar-implementation.md).
 None are provided: you make them. `DateCharacterisation` is an abstract entity; subclass it for what you need:
 
 ```python
-from pangloss_calendar.models import DateCharacterisation
+from pangloss_calendar import DateCharacterisation
 
 class FeastDay(DateCharacterisation):
     saint: list[Saint]       # anything else an entity can have

@@ -18,9 +18,8 @@ by hand to days, months, years or spans (`/api/calendar/attach`). A repeated eve
 characterisation's days with `feast = "<id of the characterisation>"` in its rule.
 """
 
-from pangloss_dates.models import DateRange, EDTFDate, ExactDate, Period, Recurrence
-from pangloss_models.model_bases.embedded import Embedded
-from pangloss_models.model_bases.entity import Entity
+from pangloss_dates import DateRange, EDTFDate, ExactDate, Period, Recurrence
+from pangloss_models import Embedded, Entity
 
 
 class NoRule(Embedded):

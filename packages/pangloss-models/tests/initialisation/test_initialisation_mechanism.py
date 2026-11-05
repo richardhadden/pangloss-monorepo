@@ -1,12 +1,14 @@
 import datetime
 from typing import Annotated
 
-from pangloss_models import initialise
-from pangloss_models.field_definitions import FieldBinding
-from pangloss_models.model_bases.configs import RelationConfig
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.semantic_space import SemanticSpace
-from pangloss_models.model_registry import ModelRegistry
+from pangloss_models import (
+    Document,
+    FieldBinding,
+    ModelRegistry,
+    RelationConfig,
+    SemanticSpace,
+    initialise,
+)
 
 
 def test_initialisation_of_single_model():
@@ -3515,7 +3517,7 @@ def test_a_field_of_an_abstract_embedded_type_takes_its_subclasses_whatever_the_
     """The models are made in the order of their dependencies, and then of their modules' names. A model in a module whose
     name sorts first (`chronicle.models`) took only the base of an embedded type declared in another (`pangloss_dates.models`):
     its subclasses' `Create` were not made yet, so each was the base's, which it inherits"""
-    from pangloss_models.model_bases.embedded import Embedded
+    from pangloss_models import Embedded
 
     class Date(Embedded):
         __module__ = "zz_dates.models"

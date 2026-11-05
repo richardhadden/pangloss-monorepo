@@ -8,9 +8,7 @@ from pangloss_models.migrations.check import check_data
 from pangloss_models.migrations.files import EMPTY_SNAPSHOT, MigrationGraph
 from pangloss_models.migrations.planner import plan
 from pangloss_models.migrations.questions import with_answer
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.entity import Entity
-from pangloss_models.model_bases.reified_relation import ReifiedRelation
+from pangloss_models import Document, Entity, ReifiedRelation
 from pangloss_testing.under_test import migration_backend as backend
 from pangloss_cypher.migrations import dry_run
 

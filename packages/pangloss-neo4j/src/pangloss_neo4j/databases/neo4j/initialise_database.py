@@ -12,7 +12,7 @@ import dataclasses
 import importlib
 from typing import Any
 
-from pangloss_cypher.transactions import Database
+from pangloss_cypher import Database
 from pangloss_models.indexes import model_indexes
 
 from pangloss_neo4j.databases.neo4j.database import current

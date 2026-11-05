@@ -3,7 +3,7 @@
 import httpx2 as httpx
 import pytest
 import pytest_asyncio
-from pangloss_api.app import create_app
+from pangloss_api import create_app
 from pangloss_users import service
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")

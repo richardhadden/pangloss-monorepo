@@ -35,7 +35,7 @@ def find_ty() -> str | None:
 def usage_source(models: Iterable[type], mode: str) -> str:
     """A file that uses each model's functions as the kind of stub says they are, with the types
     they should have"""
-    from pangloss_models.model_bases.entity import Entity
+    from pangloss_models import Entity
 
     wait = "await " if mode == "async" else ""
     define = "async def" if mode == "async" else "def"

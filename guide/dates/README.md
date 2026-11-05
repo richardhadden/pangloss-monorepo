@@ -11,9 +11,7 @@ Add the package (and `pangloss-dates[edtf]` if you want to type EDTF text) and g
 ```python
 from typing import Annotated
 
-from pangloss_dates.bounds import SortBy
-from pangloss_dates.julian import JulianDate, JulianExactDate
-from pangloss_dates.models import SortDefault
+from pangloss_dates import JulianDate, JulianExactDate, SortBy, SortDefault
 from pangloss_models import Document, Entity
 
 
@@ -25,8 +23,8 @@ class Person(Entity):
     born: Annotated[JulianExactDate, SortDefault(SortBy.EARLIEST_FUZZY)]
 ```
 
-- `pangloss_dates.julian` and `pangloss_dates.gregorian` each have a family: `JulianDate` (take any kind), `JulianExactDate`, `JulianEDTFDate`, `JulianDateRange`, `JulianOngoingDate`, `JulianPeriod`, `JulianRecurrence`. A Julian date cannot be given another calendar.
-- `pangloss_dates.models` has the same types with no calendar fixed (`Date`, `ExactDate`, ...): the date says, or the setting `DATES_DEFAULT_CALENDAR` (Gregorian) does.
+- There is a family for each calendar (all imported from `pangloss_dates`): `JulianDate` (take any kind), `JulianExactDate`, `JulianEDTFDate`, `JulianDateRange`, `JulianOngoingDate`, `JulianPeriod`, `JulianRecurrence`. A Julian date cannot be given another calendar.
+- `Date`, `ExactDate` and the rest are the same types with no calendar fixed: the date says, or the setting `DATES_DEFAULT_CALENDAR` (Gregorian) does.
 - A project uses one family. Day numbers are the same in every calendar, so dates of both can be ordered together if you do mix them.
 
 ## The kinds of date
@@ -127,7 +125,7 @@ def contemporaries(a: Var[Person], b: Var[Person], d1: Var[Date], d2: Var[Date])
 A document (or an entity) that happened at some time can have its date from a trait, instead of a field of its own:
 
 ```python
-from pangloss_dates.dateable import Dateable, PeriodDateable, SingleDateable
+from pangloss_dates import Dateable, PeriodDateable, SingleDateable
 
 
 class Statement(Document, Dateable):           # date: Date (any kind)

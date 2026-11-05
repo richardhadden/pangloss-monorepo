@@ -5,10 +5,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from pangloss_models import initialise
-from pangloss_models.exceptions import PanglossSearchError
-from pangloss_models.model_bases.document import Document
-from pangloss_models.search import Match
+from pangloss_models import Document, Match, PanglossSearchError, initialise
 from pangloss_sdk import protocol
 from pangloss_sdk.databases.api_sync import exposed_functions
 
@@ -97,7 +94,7 @@ def test_a_pattern_that_cannot_be_made_is_refused_before_it_is_sent(monkeypatch)
 
 
 def test_a_where_and_order_by_are_sent_as_the_json_of_a_match(monkeypatch):
-    from pangloss_models.search_where import Text
+    from pangloss_models import Text
 
     Letter = models()
     sent = []
@@ -133,7 +130,7 @@ def test_a_where_and_order_by_are_sent_as_the_json_of_a_match(monkeypatch):
 
 
 def test_a_504_that_names_the_error_is_a_search_timeout():
-    from pangloss_models.exceptions import PanglossSearchTimeoutError
+    from pangloss_models import PanglossSearchTimeoutError
 
     response = SimpleNamespace(
         status_code=504,

@@ -7,17 +7,14 @@ finds some of what is tested in another way, for its planner (`Dialect.search_co
 
 from typing import LiteralString, cast
 
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.entity import Entity
+from pangloss_models import AnyOf, Document, Entity, Not
 from pangloss_models.search import (
     WRAPPER_LABELS,
-    AnyOf,
     CheckedCondition,
     CheckedIncoming,
     CheckedOrder,
     CheckedPattern,
     Expr,
-    Not,
     SearchKey,
 )
 

@@ -4,7 +4,7 @@ The work a write leaves pending for an installed app (`pangloss_cypher.pending`)
 work and head node, unique by its key.
 """
 
-from pangloss_models.migrations.files import changes_from_data
+from pangloss_models.migrations import changes_from_data
 
 dependencies = []
 

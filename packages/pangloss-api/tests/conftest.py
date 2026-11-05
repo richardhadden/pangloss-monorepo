@@ -1,11 +1,10 @@
 import pytest
 from fake_api_db import exposed_functions
 from fastapi.testclient import TestClient
-from pangloss_api import throttle
-from pangloss_api.app import create_app
+from pangloss_api import create_app, throttle
+from pangloss_core import BaseSettings, DatabaseSettings
 from pangloss_core import settings as core_settings
-from pangloss_core.settings import BaseSettings, DatabaseSettings
-from pangloss_models.model_registry import ModelRegistry
+from pangloss_models import ModelRegistry
 from pydantic import AnyHttpUrl
 
 PASSWORD = "correct horse"

@@ -61,7 +61,7 @@ import.
 Mark the model whose documents are to be checked:
 
 ```python
-from pangloss_review.meta import ReviewMeta
+from pangloss_review import ReviewMeta
 ...
 
 

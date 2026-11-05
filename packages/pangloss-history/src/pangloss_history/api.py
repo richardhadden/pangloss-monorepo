@@ -9,7 +9,7 @@ from typing import Annotated, Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Response, status
-from pangloss_api.dependencies import get_current_user
+from pangloss_api import get_current_user
 from pangloss_api.routes.models import etag, expected_version, routable_models
 
 from pangloss_history import config

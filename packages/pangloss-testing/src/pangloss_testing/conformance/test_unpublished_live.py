@@ -3,10 +3,7 @@
 from typing import no_type_check
 
 import pytest
-from pangloss_models import initialise
-from pangloss_models.model_bases.document import Document
-from pangloss_models.model_bases.entity import Entity
-from pangloss_models.search import Match
+from pangloss_models import Document, Entity, Match, initialise
 from pangloss_users import see_unpublished
 
 from .helpers import DATABASE_NAME
@@ -112,7 +109,7 @@ async def test_unpublished_documents_are_seen_only_by_those_who_may(
 
 @no_type_check
 async def test_the_api_shows_them_to_users_who_are_logged_in(clear_database, db_driver):
-    from pangloss_api.app import create_app
+    from pangloss_api import create_app
 
     from .test_api_models import client_for, logged_in
 

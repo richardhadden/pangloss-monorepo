@@ -10,8 +10,7 @@ from pangloss_sdk_server.sources import ServerOnlyProblem, shipped_source
 from server_support import load_models, settings_for, write
 
 SOURCE = '''\
-from pangloss_models import server_only
-from pangloss_models.model_bases.entity import Entity
+from pangloss_models import Entity, server_only
 
 
 class Person(Entity):

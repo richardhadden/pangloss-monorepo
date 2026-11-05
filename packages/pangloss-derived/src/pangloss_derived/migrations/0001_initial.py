@@ -5,7 +5,7 @@ justifications of a rule; the state of each rule and the lease of the worker. Wr
 models); they are made by the worker.
 """
 
-from pangloss_models.migrations.files import changes_from_data
+from pangloss_models.migrations import changes_from_data
 
 dependencies = []
 

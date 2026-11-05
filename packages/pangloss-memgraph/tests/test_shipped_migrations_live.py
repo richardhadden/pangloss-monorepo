@@ -84,9 +84,7 @@ async def test_the_ends_of_a_date_range_are_renamed(db_driver, clear_database):
     import importlib
 
     from pangloss_dates import julian, models
-    from pangloss_models import initialise
-    from pangloss_models.model_bases.document import Document
-    from pangloss_models.model_registry import ModelRegistry
+    from pangloss_models import Document, ModelRegistry, initialise
     from pangloss_testing.live import initialise_database
 
     ModelRegistry._reset()

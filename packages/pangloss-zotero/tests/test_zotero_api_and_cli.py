@@ -6,9 +6,8 @@ from uuid import uuid7
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from pangloss_api.dependencies import get_current_user
-from pangloss_models import initialise
-from pangloss_models.model_bases.entity import Entity
+from pangloss_api import get_current_user
+from pangloss_models import Entity, initialise
 from pangloss_zotero import ZoteroBacked, ZoteroItemType, ZoteroMeta, api, checks
 from pangloss_zotero.link import LinkError
 from typer.testing import CliRunner

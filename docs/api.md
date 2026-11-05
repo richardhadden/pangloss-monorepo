@@ -3,7 +3,7 @@
 The API is the `pangloss-api` package, built with [FastAPI](https://fastapi.tiangolo.com/). It has the user endpoints, and routes made from the models of the project. Start it with `pangloss run` or, to restart on changes, `pangloss dev` (see [Command line](cli.md#running-the-server)).
 
 ```python
-from pangloss_api.app import create_app
+from pangloss_api import create_app
 
 app = create_app()  # or: uvicorn "pangloss_api.app:create_app" --factory
 ```

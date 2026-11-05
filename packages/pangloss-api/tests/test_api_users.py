@@ -1,11 +1,8 @@
 import asyncio
 
 from conftest import PASSWORD
-from pangloss_api.dependencies import (
-    ACCESS_COOKIE_NAME,
-    REFRESH_COOKIE_NAME,
-    CurrentUser,
-)
+from pangloss_api import CurrentUser
+from pangloss_api.dependencies import ACCESS_COOKIE_NAME, REFRESH_COOKIE_NAME
 from pangloss_api.tokens import create_token
 from pangloss_users import current_request_username, service
 
