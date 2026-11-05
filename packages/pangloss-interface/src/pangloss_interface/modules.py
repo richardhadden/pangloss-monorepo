@@ -67,6 +67,7 @@ class Manifest:
     collapse_rules: tuple[str, ...] = ()
     console_actions: tuple[str, ...] = ()
     new_item_actions: tuple[str, ...] = ()
+    new_item_fields: tuple[str, ...] = ()
     item_sections: tuple[str, ...] = ()
     incoming_views: tuple[str, ...] = ()
 
@@ -80,6 +81,7 @@ class Manifest:
             collapse_rules=tuple(data.get("collapseRules", [])),
             console_actions=tuple(data.get("consoleActions", [])),
             new_item_actions=tuple(data.get("newItemActions", [])),
+            new_item_fields=tuple(data.get("newItemFields", [])),
             item_sections=tuple(data.get("itemSections", [])),
             incoming_views=tuple(data.get("incomingViews", [])),
         )
@@ -90,6 +92,7 @@ class Manifest:
         return (
             self.console_actions
             + self.new_item_actions
+            + self.new_item_fields
             + self.item_sections
             + self.incoming_views
         )
@@ -292,7 +295,7 @@ def _disabled(
     manifests: Mapping[str, Manifest], exported: Mapping[str, Any]
 ) -> list[str]:
     """What a project disables is something a module adds: `app:key`, a key of its `consoleActions`, `newItemActions`,
-    `itemSections` or `incomingViews`"""
+    `newItemFields`, `itemSections` or `incomingViews`"""
     found = []
     for name in exported.get("disabled") or []:
         app, _, key = name.partition(":")
@@ -304,7 +307,7 @@ def _disabled(
         elif key not in manifest.contributions:
             found.append(
                 f"InterfaceConfig(disabled=...) {name!r}: {key!r} is not in the consoleActions, newItemActions, "
-                f"itemSections or incomingViews of {app} ({', '.join(manifest.contributions) or 'none'})"
+                f"newItemFields, itemSections or incomingViews of {app} ({', '.join(manifest.contributions) or 'none'})"
             )
     return found
 

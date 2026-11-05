@@ -94,7 +94,8 @@ export interface ConsoleActionProps {
 }
 
 /**
- * The form of a new item, as a component a module adds to its console (`newItemActions`) is given it.
+ * The form of a new item, as a component a module adds to its console (`newItemActions`) or its fields
+ * (`newItemFields`) is given it.
  */
 export interface NewItemForm {
   /** The value at a path of the form (`["label"]`, `["writtenBy", 0]`) */
@@ -112,8 +113,8 @@ export interface NewItemForm {
 }
 
 /**
- * What a component a module adds to the console of the form that makes a new item (`newItemActions`) is given. It
- * decides itself whether to show anything (usually a `ConsoleButton`).
+ * What a component a module adds to the console of the form that makes a new item (`newItemActions`), or to its fields
+ * (`newItemFields`), is given. It decides itself whether to show anything (usually a `ConsoleButton`, or a `FieldRow`).
  */
 export interface NewItemActionProps {
   /** The type of what is made */
@@ -196,6 +197,11 @@ export interface ModuleManifest {
    * can fill the form in, and change how it is sent)
    */
   newItemActions?: Record<string, ComponentLoader>;
+  /**
+   * Components first among the fields of the form that makes a new item, on its page and in the dialog of a relation
+   * (`NewItemActionProps`, as `newItemActions`): rows of the form, usually a `FieldRow`
+   */
+  newItemFields?: Record<string, ComponentLoader>;
   /** Components after the contents of every item's page, in the order of the modules (each loaded when first shown) */
   itemSections?: Record<string, ComponentLoader>;
   /** Other ways of showing what refers to an item (`IncomingView`): by its name `app:key` */

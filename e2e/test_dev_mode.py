@@ -374,8 +374,8 @@ def test_what_refers_to_a_person_by_date(
 def test_a_book_from_zotero_and_unlinked(
     page: Page, types, dev_url: str, errors: list[str]
 ):
-    """The module of pangloss_zotero: *From Zotero* on the form of a new Book, its picker, Save, and *Unlink* in the
-    console of the Book"""
+    """The module of pangloss_zotero: the *Zotero item* row of the form of a new Book, its picker, Save, and *Unlink* in
+    the console of the Book"""
     from conftest import PASSWORD, USERNAME
     from test_zotero import forget_items, pick, seed
 
@@ -388,7 +388,7 @@ def test_a_book_from_zotero_and_unlinked(
     assert response.ok, response.text()
     page.goto(f"{dev_url}/Book/new")
     hydrated(page)
-    page.get_by_role("button", name="From Zotero").click()
+    page.get_by_role("button", name="Find in the library").click()
     pick(page, "Smith, DEVONE")
     expect(page.get_by_test_id("zotero-based-on")).to_contain_text("Smith, DEVONE")
     page.get_by_role("button", name="Save").click()

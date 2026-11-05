@@ -36,12 +36,14 @@ import type {
   EmbeddedField,
   FieldDefinition,
   ModelDefinition,
+  NewItemForm,
   RelationField,
   RelationOption,
 } from "../../types";
 import { createItem } from "../../api";
 import type { Summary } from "../../api";
 import { EntityPicker } from "./EntityPicker";
+import { NewItemFields } from "./NewItemActions";
 import { rememberEntity } from "./recent";
 import { JsonEditor, LiteralEditor } from "./LiteralEditor";
 import {
@@ -154,9 +156,10 @@ function Block(
 /**
  * One labelled row of a form: the name on the left, the editor on the right. A required field has
  * a mark after its name, green once it is `met` (something is in it, and nothing wrong). The row of the field at
- * `path` shows what was found wrong in it when it was saved: its name turns red, with why under it.
+ * `path` shows what was found wrong in it when it was saved: its name turns red, with why under it. (An interface
+ * module's row in a form is one too: `FieldRow`.)
  */
-function Row(
+export function FieldRow(
   props: ParentProps<{
     name: string;
     path?: Path;
@@ -210,8 +213,8 @@ function Row(
 /**
  * The editors of the fields of a model, each in its row, in the order of the model, for the
  * object at `path` of the form. `env` says what the type variables of a generic model stand for
- * here; `skip` leaves fields out (those only in the database are never shown), and `bare` is the field (a reified relation's target) shown
- * without its name, first: what the thing holds, then what is said of it.
+ * here; `skip` leaves fields out (those only in the database, and read-only ones, are never shown), and `bare` is the
+ * field (a reified relation's target) shown without its name, first: what the thing holds, then what is said of it.
  */
 export function ModelFields(props: {
   model: ModelDefinition;
@@ -221,21 +224,28 @@ export function ModelFields(props: {
   bare?: string;
   /** What a field is taken to be when it is not set, by key: shown as chosen (a choice), not written */
   defaults?: Record<string, unknown>;
+  /** Rows before the fields (`FieldRow`s): those an interface module adds to a new item's form */
+  lead?: JSX.Element;
 }) {
   const form = useItemForm();
   const { fieldName } = useTranslations();
-  // (not those only in the database: the server works them out, whatever is sent)
-  const editable = () => props.model.fields.filter((field) => !field.dbField);
+  // (not those only in the database: the server works them out, whatever is sent; nor those something else keeps up
+  // to date, or the model says its forms do not show, which the item's page shows: what the form loaded of them is
+  // sent back as it was)
+  const hidden = () => props.model.interfaceMeta?.hideOnForms ?? [];
+  const editable = () =>
+    props.model.fields.filter((field) => !field.dbField && !field.readOnly && !hidden().includes(field.key));
   const fields = () => [
     ...editable().filter((field) => field.key === props.bare),
     ...editable().filter((field) => field.key !== props.bare),
   ];
   return (
     <dl class={fieldGridClass}>
+      {props.lead}
       <For each={fields()}>
         {(field) => (
           <Show when={!(props.skip ?? []).includes(field.key)}>
-            <Row
+            <FieldRow
               name={fieldName(props.model.name, field.name)}
               path={[...props.path(), field.key]}
               required={field.required}
@@ -251,7 +261,7 @@ export function ModelFields(props: {
                 bare={field.key === props.bare}
                 fallback={props.defaults?.[field.key]}
               />
-            </Row>
+            </FieldRow>
           </Show>
         )}
       </For>
@@ -270,6 +280,8 @@ export function ItemFields(props: {
   /** Show the id too, for an item that is being made */
   creating?: boolean;
   title?: boolean;
+  /** The form of the new item it is (the page's, or a dialog's): for the rows interface modules add (`newItemFields`) */
+  newItem?: NewItemForm;
 }) {
   const form = useItemForm();
   const { t, fieldName } = useTranslations();
@@ -301,17 +313,17 @@ export function ItemFields(props: {
       <Show when={!props.title || (props.creating && props.model.createWithId)}>
         <dl class={fieldGridClass}>
           <Show when={!props.title}>
-            <Row
+            <FieldRow
               name={t("label", "Label")}
               path={[...props.path(), "label"]}
               required={props.model.requireLabel}
               met={text("label") !== ""}
             >
               {labelInput(inputClass)}
-            </Row>
+            </FieldRow>
           </Show>
           <Show when={props.creating && props.model.createWithId}>
-            <Row name={fieldName(props.model.name, "id")} path={[...props.path(), "id"]}>
+            <FieldRow name={fieldName(props.model.name, "id")} path={[...props.path(), "id"]}>
               <input
                 type="text"
                 class={inputClass}
@@ -319,7 +331,7 @@ export function ItemFields(props: {
                 value={text("id")}
                 onInput={(event) => form.set([...props.path(), "id"], event.currentTarget.value)}
               />
-            </Row>
+            </FieldRow>
           </Show>
         </dl>
       </Show>
@@ -329,6 +341,11 @@ export function ItemFields(props: {
           model={props.model}
           path={props.path}
           env={{}}
+          lead={
+            <Show when={props.newItem}>
+              {(form) => <NewItemFields type={props.model.name} model={props.model} form={form()} />}
+            </Show>
+          }
         />
       </div>
     </div>
@@ -357,17 +374,28 @@ function TitleBox(props: {
     box.style.height = "auto";
     box.style.height = `${box.scrollHeight}px`;
   };
-  // (sized with the DOM, before the page is painted)
+  // (sized with the DOM, before the page is painted. A label set by code, not typed, may not be in the box yet when
+  // this runs: it is put there first, or the box is measured with the old one)
   createRenderEffect(
     () => props.value,
-    () => {
+    (value) => {
+      if (box && box.value !== value) box.value = value;
       fit();
     },
   );
   onSettled(() => {
     fit();
-    window.addEventListener("resize", fit);
-    return () => window.removeEventListener("resize", fit);
+    // (again when it is wider or narrower: the window, a dialog laid out, a panel opened beside it. Not when only its
+    // height changes, which is this)
+    if (!box || typeof ResizeObserver === "undefined") return;
+    let width = box.clientWidth;
+    const observer = new ResizeObserver(() => {
+      if (box?.clientWidth === width) return;
+      width = box?.clientWidth;
+      fit();
+    });
+    observer.observe(box);
+    return () => observer.disconnect();
   });
   return (
     <div data-problem={bad() ? "" : undefined}>
@@ -1010,9 +1038,19 @@ function EntityCreateForm(props: {
   const toasts = useToasts();
   let root: HTMLDivElement | undefined;
   const checks = useSaveChecks(state, () => root);
+  // (how it is sent instead of being made, if an interface module has said: `NewItemForm.sendBy`)
+  let sender: Parameters<NewItemForm["sendBy"]>[0];
+  const newItemForm: NewItemForm = {
+    get: (path) => state.get(path),
+    set: (path, value) => state.set(path, value),
+    sendBy: (given) => {
+      sender = given;
+    },
+  };
   // (what comes of it is `save`'s, once it is over)
   const make = action(function* (body: FormData) {
     setSaving(true);
+    if (sender) return (yield sender(body)) as Summary;
     return (yield createItem(api, type, body)) as Summary;
   });
   async function save() {
@@ -1042,7 +1080,7 @@ function EntityCreateForm(props: {
     <ItemFormProvider state={state}>
       <div ref={root} class="flex flex-col gap-6 p-6">
         <Show when={model}>
-          <ItemFields model={model!} path={() => []} creating title />
+          <ItemFields model={model!} path={() => []} creating title newItem={newItemForm} />
         </Show>
         <div class="flex gap-2">
           <Show when={props.onBack}>

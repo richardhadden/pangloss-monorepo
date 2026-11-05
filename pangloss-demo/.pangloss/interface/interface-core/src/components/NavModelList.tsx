@@ -17,11 +17,15 @@ import type { NavEntry } from "../schema";
 export function NavModelList(props: { loggedIn?: boolean; filter?: string }) {
   const models = useModels();
   const { t, modelName, modelNames } = useTranslations();
+  // (a label an app gave is a slot, translated; without a translation it is the label as written)
+  const labelOf = (entry: NavEntry) => (entry.labelSlot ? t(entry.labelSlot, entry.label) : entry.label);
   const words = () => foldCase(props.filter ?? "").split(/\s+/).filter((word) => word !== "");
   const matches = (entry: NavEntry) => {
     const wanted = words();
     if (wanted.length === 0) return true;
-    const names = (entry.model ? [entry.label, ...modelNames(entry.model)] : [entry.label]).map(foldCase);
+    const names = (entry.model ? [entry.label, ...modelNames(entry.model)] : [entry.label, labelOf(entry)]).map(
+      foldCase,
+    );
     return wanted.every((word) => names.some((name) => name.includes(word)));
   };
   // (the sections the interface makes itself have their title from the words for the kinds; any other is a slot,
@@ -63,7 +67,7 @@ export function NavModelList(props: { loggedIn?: boolean; filter?: string }) {
             <For each={section.entries}>
               {(entry) => (
                 <NavRowButton href={entry.href} indent={filtering() ? 0 : entry.depth}>
-                  {entry.model ? modelName(entry.model) : entry.label}
+                  {entry.model ? modelName(entry.model) : labelOf(entry)}
                 </NavRowButton>
               )}
             </For>

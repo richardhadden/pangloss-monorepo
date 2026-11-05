@@ -1,38 +1,23 @@
-import { ApiError, ConsoleButton, getItem, useApi, useComponent, useToasts, useTranslations } from "@pangloss/interface-core";
-import type { ModelDefinition, NewItemActionProps, NewItemForm } from "@pangloss/interface-core";
+import { FieldRow, smallButtonClass, useApi, useComponent, useTranslations } from "@pangloss/interface-core";
+import type { NewItemActionProps, NewItemForm } from "@pangloss/interface-core";
 import { createMemo, createSignal, Show, untrack } from "solid-js";
-import { baseOn, getClasses, itemValues } from "../api";
+import { baseOn, getClasses } from "../api";
 import type { Summary } from "../api";
 import { ItemPicker, ZoteroIcon } from "./ItemPicker";
 
-const reasonOf = (error: unknown) =>
-  error instanceof ApiError ? error.detail : error instanceof Error ? error.message : String(error);
-
-/** Picking an item, and then the item the new one is based on, with a way to undo that */
-function Based(props: { type: string; model: ModelDefinition; form: NewItemForm; fallback: string }) {
+/** The row of the item the new one is based on: a button that finds one, then the item, with a way to undo that */
+function Based(props: { type: string; form: NewItemForm; fallback: string }) {
   const api = useApi();
-  const toasts = useToasts();
   const { t, modelName } = useTranslations();
   const ReferenceChip = useComponent("ReferenceChip");
   const [picking, setPicking] = createSignal(false);
   const [based, setBased] = createSignal<Summary>();
 
-  const choose = async (picked: Summary) => {
+  // (the fields the sync owns are not on the form: Save takes them from the item. The label is the item's, to change)
+  const choose = (picked: Summary) => {
     setPicking(false);
     const type = untrack(() => props.type);
-    let item: Record<string, unknown>;
-    try {
-      item = (await getItem(api, untrack(() => props.fallback), picked.id)) as Record<string, unknown>;
-    } catch (error) {
-      toasts?.show(t("zotero_not_read", "The item could not be read: {reason}", { reason: reasonOf(error) }), "error");
-      return;
-    }
-    // (the form shows what the item gives; the fields the sync owns are taken from the item when it is saved)
-    const keys = untrack(() => props.model.fields)
-      .filter((field) => field.kind === "literal")
-      .map((field) => field.key);
-    props.form.set(["label"], item.label);
-    for (const [key, value] of Object.entries(itemValues(item, keys))) props.form.set([key], value);
+    props.form.set(["label"], picked.label);
     props.form.sendBy((body) => baseOn(api, type, picked.id, body));
     setBased(picked);
   };
@@ -42,34 +27,31 @@ function Based(props: { type: string; model: ModelDefinition; form: NewItemForm;
   };
 
   return (
-    <>
+    <FieldRow
+      name={t("zotero_item", "Zotero item")}
+      description={t("zotero_item_note", "The item of the library it is (Save makes the item this {type})", {
+        type: modelName(props.type),
+      })}
+    >
       <Show
         when={based()}
         fallback={
-          <ConsoleButton label={t("zotero_from", "From Zotero")} text onClick={() => setPicking(true)}>
-            <span class="flex" data-testid="zotero-from">
-              <ZoteroIcon />
-            </span>
-          </ConsoleButton>
+          <button type="button" class={smallButtonClass} data-testid="zotero-from" onClick={() => setPicking(true)}>
+            <ZoteroIcon class="size-4" />
+            {t("zotero_find", "Find in the library")}
+          </button>
         }
       >
         {(item) => (
-          <span class="flex h-full items-center gap-2 border-l-[0.5px] border-slate-400/60 px-3" data-testid="zotero-based-on">
-            <span class="text-xs font-semibold uppercase select-none">{t("zotero_based_on", "Based on")}</span>
+          // (as wide as the row at most: a long label is cut short, and ✕ stays in view)
+          <span class="flex max-w-full min-w-0" data-testid="zotero-based-on">
             <ReferenceChip
               type={item().type}
               label={item().label}
               href={`/${encodeURIComponent(item().type)}/${encodeURIComponent(item().id)}`}
+              onRemove={clear}
+              removeLabel={t("zotero_not_based_on", "Not based on it")}
             />
-            <button
-              type="button"
-              class="cursor-pointer rounded-xs px-1 text-slate-600 select-none hover:bg-slate-400/40"
-              aria-label={t("zotero_not_based_on", "Not based on it")}
-              title={t("zotero_not_based_on", "Not based on it")}
-              onClick={clear}
-            >
-              ✕
-            </button>
           </span>
         )}
       </Show>
@@ -84,24 +66,26 @@ function Based(props: { type: string; model: ModelDefinition; form: NewItemForm;
             { type: modelName(props.type) },
           )}
           fallback={props.fallback}
-          onPick={(item) => void choose(item)}
+          onPick={choose}
           onClose={() => setPicking(false)}
         />
       </Show>
-    </>
+    </FieldRow>
   );
 }
 
 /**
- * *From Zotero* on the form of a new item of a class that an item can be made into (a `newItemActions` entry): the form
- * is filled in from the item picked, and Save turns that item into the new one (`POST /api/zotero/base-on`).
+ * The Zotero item a new item of a class that an item can be made into is (a `newItemFields` entry: a row first among
+ * its fields, on its page and in the dialog of a relation). The fields the sync owns are not on the form (they are
+ * `readOnly`): Save turns the item picked into the new one, with them (`POST /api/zotero/base-on`). With none picked,
+ * it is made by hand, and has none of them.
  */
 export default function FromZotero(props: NewItemActionProps) {
   const api = useApi();
   const classes = createMemo(() => getClasses(api));
   return (
     <Show when={classes().targets.includes(props.type)}>
-      <Based type={props.type} model={props.model} form={props.form} fallback={classes().fallback} />
+      <Based type={props.type} form={props.form} fallback={classes().fallback} />
     </Show>
   );
 }

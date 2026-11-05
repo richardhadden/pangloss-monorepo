@@ -2,12 +2,12 @@
 // Read for every installed app, after the interface's own; a project changes or adds a language in its own
 // translations/ui.jsonc.
 {
-  "zotero_from": { "en": "From Zotero", "de": "Aus Zotero", "fr": "Depuis Zotero" },
+  "zotero_item": { "en": "Zotero item", "de": "Zotero-Eintrag", "fr": "Élément Zotero" },
+  "zotero_item_note": { "en": "The item of the library it is (Save makes the item this {type})", "de": "Der Eintrag der Bibliothek, der es ist (beim Speichern wird der Eintrag zu diesem Datensatz: {type})", "fr": "L’élément de la bibliothèque qu’il est (à l’enregistrement, l’élément devient cet enregistrement : {type})" },
+  "zotero_find": { "en": "Find in the library", "de": "In der Bibliothek suchen", "fr": "Chercher dans la bibliothèque" },
   "zotero_from_title": { "en": "A new {type} from an item of the Zotero library", "de": "Neu: {type} aus einem Eintrag der Zotero-Bibliothek", "fr": "Nouveau : {type} à partir d’un élément de la bibliothèque Zotero" },
   "zotero_from_note": { "en": "The item becomes this {type}, and stays an item of the library: what refers to it is kept. Save makes it so.", "de": "Der Eintrag wird zu diesem Datensatz ({type}) und bleibt ein Eintrag der Bibliothek: Was auf ihn verweist, bleibt erhalten. Speichern führt es aus.", "fr": "L’élément devient cet enregistrement ({type}) et reste un élément de la bibliothèque : ce qui y renvoie est conservé. L’enregistrement l’applique." },
-  "zotero_based_on": { "en": "Based on", "de": "Beruht auf", "fr": "Fondé sur" },
   "zotero_not_based_on": { "en": "Not based on it", "de": "Nicht darauf beruhen", "fr": "Ne pas s’en servir" },
-  "zotero_not_read": { "en": "The item could not be read: {reason}", "de": "Der Eintrag konnte nicht gelesen werden: {reason}", "fr": "L’élément n’a pas pu être lu : {reason}" },
   "zotero_search": { "en": "Find an item of the Zotero library", "de": "Einen Eintrag der Zotero-Bibliothek suchen", "fr": "Chercher un élément de la bibliothèque Zotero" },
   "zotero_address": { "en": "Or the item's Zotero address", "de": "Oder die Zotero-Adresse des Eintrags", "fr": "Ou l’adresse Zotero de l’élément" },
   "zotero_link_address": { "en": "Link", "de": "Verknüpfen", "fr": "Lier" },

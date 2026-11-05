@@ -115,7 +115,9 @@ stands for. **Nothing is guessed** (`build_table`, which raises `PanglossMetaErr
   `ZoteroObject`. Every item is imported; none is skipped for lack of a class.
 - A class that says nothing, or is abstract, is an error.
 - **A wrong type in Zotero** (a book entered as a document): the person sets `item_type_override` on the node, and
-  that is what a class is asked about when a node is linked (below). **The sync never changes the class of a node**:
+  that is what a class is asked about when a node is linked (below). Only a class that names item types asks it, so
+  the forms of the others do not show it (`InterfaceMeta(hide_on_forms=...)` on `ZoteroBacked`, a function of the
+  class, set when `pangloss_interface` is installed). **The sync never changes the class of a node**:
   an item whose type later changes in Zotero keeps its class and takes the new `item_type`, and a stub made from a
   document keeps the class that document gave it. A person can change it, from the fallback class to another
   ([below](#turning-an-item-into-a-book-by-hand)).
@@ -123,7 +125,8 @@ stands for. **Nothing is guessed** (`build_table`, which raises `PanglossMetaErr
 ### Fields the sync owns
 
 `ZoteroBacked` has `_protect_meta = Protection(read_only=<all but item_type_override>, delete_only_if="removed_from_zotero")`.
-The **API** refuses (403, saying which) a create that sets those fields, an update that changes them (leaving one out
+They are exported to the interface as `readOnly`, and no form shows them. The **API** refuses (403, saying which) a
+create that sets those fields, an update that changes them (leaving one out
 counts), and a delete of an item that is not `removed_from_zotero`. A subclass keeps this and may add its own. The sync
 writes through Python and is not stopped. The remote SDK goes through the API and is covered.
 

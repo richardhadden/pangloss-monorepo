@@ -35,6 +35,7 @@ const field = (
     kind,
     description: null,
     dbField: false,
+    readOnly: false,
     required: false,
     nullable: false,
   }) as FieldDefinition;
@@ -68,6 +69,7 @@ const dateCopies = () =>
   ["date_sort_day", "date_end_sort_day", "date_text"].map((name) => ({
     ...field(name.replaceAll("_", " "), name.replace(/_(\w)/g, (_, c: string) => c.toUpperCase())),
     dbField: true,
+    readOnly: false,
   }));
 
 const definitions: ModelDefinitions = {

@@ -70,6 +70,8 @@
   "interface-core/src/components/form/ItemForm.tsx",
   "interface-core/src/components/form/LiteralEditor.tsx",
   "interface-core/src/components/form/ModelFields.tsx",
+  "interface-core/src/components/form/NewItemActions.test.tsx",
+  "interface-core/src/components/form/NewItemActions.tsx",
   "interface-core/src/components/form/NumberInput.test.tsx",
   "interface-core/src/components/form/NumberInput.tsx",
   "interface-core/src/components/form/Problems.tsx",

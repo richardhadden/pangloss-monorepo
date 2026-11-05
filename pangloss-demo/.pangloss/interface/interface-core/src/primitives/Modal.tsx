@@ -62,7 +62,11 @@ export function Modal(props: ModalProps) {
           aria-labelledby={titleId}
           class={[
             "flex max-h-full w-full flex-col overflow-hidden rounded-xs border-[0.5px] border-slate-400/70 bg-slate-100",
-            { "max-w-sm": props.size !== "lg", "max-w-4xl": props.size === "lg" },
+            {
+              "max-w-sm": props.size === undefined || props.size === "sm",
+              "max-w-4xl": props.size === "lg",
+              "max-w-6xl": props.size === "xl",
+            },
           ]}
         >
           <div class="flex h-12 shrink-0 items-center justify-between border-b-[0.5px] border-slate-400/70 text-xs font-semibold text-slate-700 uppercase">

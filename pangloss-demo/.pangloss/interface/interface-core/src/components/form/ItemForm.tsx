@@ -14,9 +14,10 @@ import {
 import { ConsoleButton } from "../../primitives";
 import { cleanForSave, createFormHooks, getModel } from "../../schema";
 import type { FormData } from "../../schema";
-import type { ItemFormProps } from "../../types";
+import type { ItemFormProps, NewItemForm } from "../../types";
 import { DeleteButton } from "./DeleteButton";
 import { ItemFields } from "./ModelFields";
+import { NewItemActions } from "./NewItemActions";
 import { useSaveChecks } from "./Problems";
 
 /**
@@ -54,10 +55,23 @@ export function ItemForm(props: ItemFormProps) {
     return typeof given === "string" && given !== "" ? given : undefined;
   };
 
+  // (how a new item is sent instead of being made, if an interface module has said: `NewItemForm.sendBy`)
+  let sender: Parameters<NewItemForm["sendBy"]>[0];
+  const newItemForm: NewItemForm = {
+    get: (path) => state.get(path),
+    set: (path, value) => state.set(path, value),
+    sendBy: (given) => {
+      sender = given;
+    },
+  };
+
   // Sends the item: a create, or an update of the version it was loaded at. What comes of it is the caller's
   // (`save`), once it is over: a toast and `onSaved`, or what is wrong shown at the fields
   const send = action(function* (body: FormData) {
     setSaving(true);
+    if (props.version === undefined && sender) {
+      return (yield sender(body)) as Summary;
+    }
     if (props.version === undefined) {
       // (the type of what is made is the address's: the body of a create has none of its own)
       delete body.type;
@@ -95,6 +109,9 @@ export function ItemForm(props: ItemFormProps) {
         item={creating() ? undefined : { type: props.type, id: String(props.initial.id) }}
         page="edit"
       >
+        <Show when={creating() && model()}>
+          {(made) => <NewItemActions type={props.type} model={made()} form={newItemForm} />}
+        </Show>
         <Show when={!creating() && props.onDeleted}>
           <DeleteButton
             type={props.type}
@@ -161,7 +178,13 @@ export function ItemForm(props: ItemFormProps) {
           </div>
         </Show>
         <Show when={model()}>
-          <ItemFields model={model()!} path={() => []} creating={creating()} title />
+          <ItemFields
+            model={model()!}
+            path={() => []}
+            creating={creating()}
+            title
+            newItem={creating() ? newItemForm : undefined}
+          />
         </Show>
       </form>
     </ItemFormProvider>

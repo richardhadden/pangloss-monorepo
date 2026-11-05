@@ -7,5 +7,6 @@ import module3 from "../../../modules/pangloss_review/src/index";
 import module4 from "../../../modules/pangloss_derived/src/index";
 import module5 from "../../../modules/pangloss_library/src/index";
 import module6 from "../../../modules/pangloss_history/src/index";
+import module7 from "../../../modules/pangloss_zotero/src/index";
 
-export const modules: ModuleManifest[] = [module0, module1, module2, module3, module4, module5, module6];
+export const modules: ModuleManifest[] = [module0, module1, module2, module3, module4, module5, module6, module7];

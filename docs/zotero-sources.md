@@ -263,8 +263,8 @@ The usual set-up: no project class claims the types, so every item comes in as `
 | `pangloss-models` (`hooks.WriteEvent`) | `changed_class_from`, so that history can tell |
 | `pangloss-history` | The history of a node that changed class has the versions from before; restoring one of them is refused, saying why |
 | `pangloss-zotero` (`adopt.py`) | `base_on`, `link` (now with the merge), `unlink`; routes `POST /api/zotero/base-on`, `/link`, `/unlink` |
-| `interface-core` | A general hook, `newItemActions`: a module's component in the console of the new-item form, given the form (read, set, and replace how it is sent) |
-| `pangloss_zotero/interface` | A module: *From Zotero* on the new form of a Zotero class; *Link to Zotero* and *Unlink* in the console of such an item |
+| `interface-core` | General hooks, `newItemActions` (the console of the new-item form) and `newItemFields` (rows first among its fields, on its page and in a relation's dialog), given the form (read, set, and replace how it is sent); fields `readOnly` by `Protection` are not on forms |
+| `pangloss_zotero/interface` | A module: the *Zotero item* row on the new form of a Zotero class; *Link to Zotero* and *Unlink* in the console of such an item |
 
 ### As built
 
@@ -276,11 +276,12 @@ As planned, with these details:
   read would judge it. Only an entity changes class.
 - `pangloss-history`: the history of the node lists the versions from before (each says its `model`); restoring one of
   them is refused (`class-changed`); the history is found by the class the node is now.
-- The interface module (`pangloss_zotero/interface`): *From Zotero* on the new form of a target class fills in the label
-  and the literal fields the item has, shows the item as a chip with ✕, and sends Save to `base-on`; *Link to Zotero*
+- The interface module (`pangloss_zotero/interface`): the *Zotero item* row (*Find in the library*) on the new form of a
+  target class, on its page or in a relation's dialog, fills in the label, shows the item as a chip with ✕, and sends Save
+  to `base-on`. The fields the sync owns are not on any form (they are `readOnly`): Save takes them from the item; *Link to Zotero*
   (a search of the fallback class, or an address) and *Unlink* (asks first) are in the console of the item's page and of
   its form (the form is read again afterwards, and says so). After a merge that kept the item's node, the page goes to
   it (another id).
 - `Create` takes no `urls`: a hand-made `Book` gets URLs of its own only by an update.
-- Not done: the Zotero fields are still inputs on the form; a test that classes of earlier tests do not leak into a
+- Not done: a test that classes of earlier tests do not leak into a
   relation to `ZoteroBacked` (they stay its subclasses after the registry is emptied: the tests name the classes).

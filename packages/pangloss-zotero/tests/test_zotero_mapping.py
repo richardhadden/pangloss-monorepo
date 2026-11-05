@@ -140,3 +140,23 @@ def test_a_class_accepts_the_types_it_stands_for_and_one_that_says_nothing_accep
     assert accepts(Atlas, "book") and accepts(Atlas, "someNewType")
     assert not accepts(Atlas, "letter")
     assert accepts(AtlasOfCities, "book") and not accepts(AtlasOfCities, "letter")
+
+
+def test_the_override_of_the_type_is_on_the_forms_only_of_a_class_that_names_types():
+    from pangloss_interface.meta import resolved_meta
+
+    class Book(ZoteroBacked):
+        pass
+
+    class Atlas(ZoteroBacked):
+        _zotero_meta = ZoteroMeta(item_types=[BOOK])
+
+    def hidden(model: type):
+        meta = resolved_meta(model)
+        assert meta is not None
+        return meta["hideOnForms"]
+
+    assert hidden(Book) == ["item_type_override"]
+    assert hidden(ZoteroObject) == ["item_type_override"]
+    # (a person says what an item is where the class asks: "an Atlas cannot be a Zotero letter")
+    assert hidden(Atlas) is None

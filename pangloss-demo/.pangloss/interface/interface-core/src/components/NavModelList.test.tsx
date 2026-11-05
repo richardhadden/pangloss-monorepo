@@ -112,3 +112,32 @@ test("the filter matches part of any name of a type, in any language, without in
   expect(filtered("pe ple").names).toEqual(["Person"]);
   expect(filtered("zzz").text).toContain("No types match");
 });
+
+test("a label an app gave is translated by its slot, and found by its translation", () => {
+  const german: TranslationBundle = {
+    ...bundle,
+    language: "de",
+    ui: { a: "Öffentlich" },
+    models: {},
+    modelNames: {},
+  };
+  const list = (filter?: string) => {
+    const host = document.createElement("div");
+    render(
+      () => (
+        <ModelsProvider definitions={definitions}>
+          <TranslationsProvider initial={german} load={async () => german}>
+            <NavExpandedProvider>
+              <NavModelList loggedIn filter={filter} />
+            </NavExpandedProvider>
+          </TranslationsProvider>
+        </ModelsProvider>
+      ),
+      host,
+    );
+    return [...host.querySelectorAll("a")].map((a) => a.textContent?.trim());
+  };
+  // (a label with no translation is the label as written)
+  expect(list()).toEqual(["Öffentlich", "Private"]);
+  expect(list("öffentl")).toEqual(["Öffentlich"]);
+});

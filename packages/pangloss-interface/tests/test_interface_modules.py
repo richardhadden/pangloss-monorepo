@@ -377,7 +377,7 @@ def test_what_a_project_disables_must_be_something_a_module_adds(module):
     wrong_key = problems([module], given, {**exported(), "disabled": ["withmod:Page"]})
     assert wrong_key == [
         (
-            "InterfaceConfig(disabled=...) 'withmod:Page': 'Page' is not in the consoleActions, newItemActions, itemSections or "
+            "InterfaceConfig(disabled=...) 'withmod:Page': 'Page' is not in the consoleActions, newItemActions, newItemFields, itemSections or "
             "incomingViews of withmod (SortByDate, Derived, ByDate)"
         )
     ]

@@ -2,7 +2,7 @@
 // Places it refers to (entities); a Statement with its own text and a Person; an embedded Date
 import type { FieldDefinition, ModelDefinition, ModelDefinitions } from "@pangloss/interface-core";
 
-const base = { description: null, dbField: false, required: false, nullable: true };
+const base = { description: null, dbField: false, readOnly: false, required: false, nullable: true };
 
 export const literal = (name: string, key = name): FieldDefinition =>
   ({ ...base, name, key, kind: "literal", type: { type: "str" }, validators: [] }) as FieldDefinition;

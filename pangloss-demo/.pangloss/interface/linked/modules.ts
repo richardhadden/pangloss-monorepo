@@ -7,5 +7,6 @@ import module3 from "/Users/rhadden/Development/pangloss-monorepo/packages/pangl
 import module4 from "/Users/rhadden/Development/pangloss-monorepo/packages/pangloss-derived/src/pangloss_derived/interface/src/index";
 import module5 from "/Users/rhadden/Development/pangloss-monorepo/packages/pangloss-library/src/pangloss_library/interface/src/index";
 import module6 from "/Users/rhadden/Development/pangloss-monorepo/packages/pangloss-history/src/pangloss_history/interface/src/index";
+import module7 from "/Users/rhadden/Development/pangloss-monorepo/packages/pangloss-zotero/src/pangloss_zotero/interface/src/index";
 
-export const modules: ModuleManifest[] = [module0, module1, module2, module3, module4, module5, module6];
+export const modules: ModuleManifest[] = [module0, module1, module2, module3, module4, module5, module6, module7];

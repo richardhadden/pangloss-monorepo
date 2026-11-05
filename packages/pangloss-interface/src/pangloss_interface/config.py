@@ -72,7 +72,7 @@ class InterfaceConfig:
     # after these, in the order they are met)
     sections: Sequence[str] = field(default_factory=tuple)
     # What the interface modules add to every item page that is not used, as `app:key` (a key of their
-    # `consoleActions`, `newItemActions`, `itemSections` or `incomingViews`): `"pangloss_derived:Derived"`
+    # `consoleActions`, `newItemActions`, `newItemFields`, `itemSections` or `incomingViews`): `"pangloss_derived:Derived"`
     disabled: Sequence[str] = field(default_factory=tuple)
 
 

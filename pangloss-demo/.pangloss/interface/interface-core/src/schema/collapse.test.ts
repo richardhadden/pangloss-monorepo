@@ -15,6 +15,7 @@ const field = (key: string, kind: FieldDefinition["kind"] = "literal") =>
     kind,
     description: null,
     dbField: true,
+    readOnly: false,
     required: false,
     nullable: false,
   }) as FieldDefinition;

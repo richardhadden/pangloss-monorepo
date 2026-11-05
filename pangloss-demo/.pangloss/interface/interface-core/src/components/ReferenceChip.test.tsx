@@ -5,7 +5,7 @@ import { ModelsProvider } from "../context";
 import type { ModelDefinitions } from "../types";
 import { DefaultReferenceChip } from "./ReferenceChip";
 
-const base = { description: null, dbField: false, required: false, nullable: false, validators: [] };
+const base = { description: null, dbField: false, readOnly: false, required: false, nullable: false, validators: [] };
 const model = (name: string, kind: string, fields: object[] = []) => ({ name, kind, fields, concreteTypes: [name] });
 const definitions = {
   models: {

@@ -157,8 +157,11 @@ export interface ModalProps {
   onClose: () => void;
   /** The name of the close button (`Close` if not given) */
   closeLabel?: string;
-  /** How wide it is: `sm` for a short form such as the login (the default), `lg` for a form with many fields */
-  size?: "sm" | "lg";
+  /**
+   * How wide it is: `sm` for a short form such as the login (the default), `lg` for a form with many fields, `xl` for
+   * a search with long results over another dialog
+   */
+  size?: "sm" | "lg" | "xl";
   children?: JSX.Element;
 }
 

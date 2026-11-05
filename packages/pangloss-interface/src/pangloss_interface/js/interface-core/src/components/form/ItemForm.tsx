@@ -178,7 +178,13 @@ export function ItemForm(props: ItemFormProps) {
           </div>
         </Show>
         <Show when={model()}>
-          <ItemFields model={model()!} path={() => []} creating={creating()} title />
+          <ItemFields
+            model={model()!}
+            path={() => []}
+            creating={creating()}
+            title
+            newItem={creating() ? newItemForm : undefined}
+          />
         </Show>
       </form>
     </ItemFormProvider>

@@ -25,6 +25,7 @@ def none(**given):
         "editCard": None,
         "collapse": None,
         "headless": None,
+        "hideOnForms": None,
         **given,
     }
 
@@ -333,4 +334,73 @@ def test_only_a_reified_relation_can_be_headless(clear_registry):
 
     initialise()
     with pytest.raises(PanglossMetaError, match="Person.*headless"):
+        export_definitions()
+
+
+def test_a_field_something_else_keeps_up_to_date_is_read_only_in_the_models_built_on_it(
+    clear_registry,
+):
+    from pangloss_models.export import export_models
+    from pangloss_models.protection import Protection
+
+    class Text(Entity):
+        _meta = Entity.Meta(abstract=True)
+        _protect_meta = Protection(read_only=("key",))
+        key: str | None = None
+        note: str | None = None
+
+    class PhysicalObject(Entity):
+        pass
+
+    # (protected by its second parent: see test_meta_slots)
+    class Book(PhysicalObject, Text):
+        pages: int | None = None
+
+    initialise()
+    fields = {f["name"]: f for f in export_definitions()["models"]["Book"]["fields"]}
+
+    assert fields["key"]["readOnly"] is True
+    assert fields["note"]["readOnly"] is False
+    assert fields["pages"]["readOnly"] is False
+    # (not a part of the models, which the migrations' snapshots are made from)
+    assert all("readOnly" not in f for f in export_models()["models"]["Book"]["fields"])
+
+
+def test_fields_hidden_on_forms_are_exported_by_key_through_the_parents(
+    clear_registry,
+):
+    class Text(Entity):
+        _meta = Entity.Meta(abstract=True)
+        _interface_meta = InterfaceMeta(hide_on_forms=("inner_note",))
+        inner_note: str | None = None
+
+    class Letter(Text):
+        pass
+
+    class Charter(Text):
+        # (a function of the class exported: here, of its name)
+        _interface_meta = InterfaceMeta(
+            hide_on_forms=lambda cls: ("inner_note",) if cls.__name__ == "Copy" else ()
+        )
+
+    class Copy(Charter):
+        pass
+
+    initialise()
+    models = export_definitions()["models"]
+
+    assert models["Letter"]["interfaceMeta"]["hideOnForms"] == ["innerNote"]
+    assert models["Charter"]["interfaceMeta"]["hideOnForms"] is None
+    assert models["Copy"]["interfaceMeta"]["hideOnForms"] == ["innerNote"]
+
+
+def test_a_field_hidden_on_forms_must_be_one_of_the_models(clear_registry):
+    with pytest.raises(PanglossMetaError, match="hide_on_forms"):
+        InterfaceMeta(hide_on_forms="label")  # ty: ignore[invalid-argument-type]
+
+    class Place(Entity):
+        _interface_meta = InterfaceMeta(hide_on_forms=("nowhere",))
+
+    initialise()
+    with pytest.raises(PanglossMetaError, match="Place.*nowhere"):
         export_definitions()

@@ -14,7 +14,7 @@ import datetime
 from pangloss_models.model_bases.entity import Entity
 from pangloss_models.protection import Protection
 
-from pangloss_zotero.item_types import ZoteroMeta
+from pangloss_zotero.item_types import SLOT, ZoteroMeta
 
 # The fields the sync writes. A person changes none of them (the API refuses), except `item_type_override`.
 OWNED_FIELDS = (
@@ -38,6 +38,22 @@ OWNED_FIELDS = (
 )
 
 
+def _override_unless_typed(model: type) -> tuple[str, ...]:
+    """`item_type_override` is asked only of a class that names the Zotero types it stands for (`accepts`): the forms
+    of the others do not show it"""
+    meta = getattr(model, SLOT, None)
+    return () if meta is not None and meta.item_types else ("item_type_override",)
+
+
+def interface_meta() -> dict:
+    """What the forms do not show, if the interface is installed"""
+    try:
+        from pangloss_interface import InterfaceMeta
+    except ImportError:
+        return {}
+    return {"_interface_meta": InterfaceMeta(hide_on_forms=_override_unless_typed)}
+
+
 class ZoteroBacked(Entity):
     """A text that is (or may be) an item in a Zotero library. Everything is optional, so one made by hand has
     none of it. Build your class on this: `class TextObject(ZoteroBacked)`."""
@@ -49,6 +65,7 @@ class ZoteroBacked(Entity):
         read_only=(*OWNED_FIELDS, "removed_from_zotero"),
         delete_only_if="removed_from_zotero",
     )
+    locals().update(interface_meta())
 
     # where it is from
     zotero_url: str | None = None

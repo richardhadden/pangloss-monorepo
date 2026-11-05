@@ -28,13 +28,3 @@ export const linkItem = (api: ApiClient, model: string, id: string, zoteroUrl: s
 /** Take the item off a node; gives the item, a node of its own again */
 export const unlinkItem = (api: ApiClient, model: string, id: string) =>
   api.post<Summary>("/zotero/unlink", { model, id });
-
-/** The literal fields an item gives to a new one of the class (as the form holds them), from the item as the API sends it */
-export function itemValues(item: Record<string, unknown>, keys: string[]): Record<string, unknown> {
-  const values: Record<string, unknown> = {};
-  for (const key of keys) {
-    const value = item[key];
-    if (value !== null && value !== undefined) values[key] = value;
-  }
-  return values;
-}

@@ -1,6 +1,6 @@
-"""Zotero in the interface (the module of `pangloss_zotero`): a new Book based on an item of the library (*From Zotero*
-on its form), the Book unlinked from the item again, and a Book made by hand linked to an item (the two nodes become
-one). The items are written as the sync writes them, through Python: there is no Zotero here."""
+"""Zotero in the interface (the module of `pangloss_zotero`): a new Book based on an item of the library (the *Zotero
+item* row of its form, on its page or in a relation's dialog), the Book unlinked from the item again, and a Book made by
+hand linked to an item (the two nodes become one). The fields the sync owns are never inputs. The items are written as the sync writes them, through Python: there is no Zotero here."""
 
 import json
 import re
@@ -128,11 +128,19 @@ def test_a_new_book_is_based_on_an_item_and_unlinked_again(logged_in: Page, item
     page = logged_in
     page.goto("/Book/new")
     hydrated(page)
-    page.get_by_role("button", name="From Zotero").click()
+    # (the fields the sync owns are not inputs: a row finds the item instead)
+    expect(page.get_by_role("spinbutton", name="Pages")).to_be_visible()
+    expect(page.get_by_role("textbox", name="Title")).to_have_count(0)
+    expect(page.get_by_role("textbox", name="Zotero key")).to_have_count(0)
+    # (nor the override of the type: a Book names no Zotero types, so nothing asks it)
+    expect(page.get_by_role("textbox", name="Item type override")).to_have_count(0)
+    page.get_by_role("button", name="Find in the library").click()
     pick(page, "Smith, E2EONE")
     based = page.get_by_test_id("zotero-based-on")
     expect(based).to_contain_text("Smith, E2EONE")
     expect(page.get_by_label("Label", exact=True)).to_have_value("(Smith, E2EONE)")
+    # (nor are they there once it is picked: Save takes them from the item)
+    expect(page.locator("form")).not_to_contain_text("The book E2EONE")
     page.get_by_role("spinbutton", name="Pages").fill("120")
     page.get_by_role("button", name="Save").click()
 
@@ -171,11 +179,69 @@ def test_a_book_made_by_hand_is_linked_to_an_item(logged_in: Page, items):
     assert items.api.send("GET", f"/api/ZoteroObject/{items.ids['E2ETWO']}")[0] == 404
 
 
-def test_from_zotero_is_only_on_the_classes_an_item_can_be_made_into(
+def test_a_book_made_in_a_relations_dialog_is_based_on_an_item(
+    logged_in: Page, items
+):
+    page = logged_in
+    page.goto("/Citation/new")
+    hydrated(page)
+    page.get_by_role("button", name="Make a new one").click()
+    # (the types it can be: Book, or the items' own class)
+    page.get_by_role("dialog").get_by_role("button", name="Book", exact=True).click()
+    dialog = page.get_by_role("dialog", name="New Book")
+    expect(dialog.get_by_role("textbox", name="Title")).to_have_count(0)
+    dialog.get_by_role("button", name="Find in the library").click()
+    pick(page, "Smith, E2ETWO")
+    expect(dialog.get_by_test_id("zotero-based-on")).to_contain_text("Smith, E2ETWO")
+    dialog.get_by_role("button", name="Save").click()
+    expect(dialog).to_have_count(0)
+    # (the item is the Book now, at its own id, and the citation holds it)
+    expect(page.locator("form")).to_contain_text("(Smith, E2ETWO)")
+    book = items.api.ok("GET", f"/api/Book/{items.ids['E2ETWO']}")
+    assert book["zoteroKey"] == "E2ETWO"
+
+
+def test_the_zotero_row_is_only_on_the_classes_an_item_can_be_made_into(
     logged_in: Page, items
 ):
     page = logged_in
     page.goto("/Statement/new")
     hydrated(page)
     expect(page.get_by_label("Label", exact=True)).to_be_visible()
-    expect(page.get_by_role("button", name="From Zotero")).to_have_count(0)
+    expect(page.get_by_role("button", name="Find in the library")).to_have_count(0)
+
+
+LONG = (
+    "Négociations diplomatiques entre la France et l'Autriche durant les trente premières années du XVI. siècle, "
+    "publiées par Le Glay, tome premier"
+)
+
+
+def test_a_long_label_from_the_item_is_shown_whole(logged_in: Page, items):
+    page = logged_in
+    id = items.ids["E2ETWO"]
+    edit = items.api.ok("GET", f"/api/ZoteroObject/{id}/edit")
+    status, result = items.api.send(
+        "PUT",
+        f"/api/ZoteroObject/{id}",
+        {**edit, "label": LONG},
+        headers={"If-Match": "*"},
+    )
+    assert status < 300, result
+    page.goto("/Citation/new")
+    hydrated(page)
+    page.get_by_role("button", name="Make a new one").click()
+    page.get_by_role("dialog").get_by_role("button", name="Book", exact=True).click()
+    dialog = page.get_by_role("dialog", name="New Book")
+    dialog.get_by_role("button", name="Find in the library").click()
+    pick(page, "Négociations")
+    label = dialog.get_by_label("Label", exact=True)
+    expect(label).to_have_value(LONG)
+    # (the box grows to the label set by the pick, as it does to one typed: several lines, none hidden)
+    client, scroll = label.evaluate("box => [box.clientHeight, box.scrollHeight]")
+    assert client > 60 and scroll - client <= 2, (client, scroll)
+    # (the chip of the item is cut short to the row, and its ✕ stays in it)
+    remove = dialog.get_by_role("button", name="Not based on it")
+    expect(remove).to_be_in_viewport()
+    box, panel = remove.bounding_box(), dialog.bounding_box()
+    assert box and panel and box["x"] + box["width"] <= panel["x"] + panel["width"]

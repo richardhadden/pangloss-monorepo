@@ -8,7 +8,7 @@ A subclass that sets none has its parent's.
 """
 
 import re
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Literal, get_args
@@ -168,6 +168,10 @@ class InterfaceMeta:
     # is the only thing a field can hold and the field holds one of it, and must: its type says nothing
     # there, and it is never added or removed. In the view and the form
     headless: bool | None = None
+    # Fields the forms of the model do not show (the item's page still does; what a form loaded of them is sent back
+    # as it was): their names, or a function of the class (a subclass's own, when it is exported) that gives them, for
+    # a package whose fields matter to some of the classes built on its base. `()` turns off the parent's
+    hide_on_forms: Sequence[str] | Callable[[type], Iterable[str]] | None = None
 
     def __post_init__(self) -> None:
         if self.colour is not None and self.colour not in COLOURS:
@@ -189,6 +193,18 @@ class InterfaceMeta:
                     "(an installed app, and a key of 'components' in its interface module), or False "
                     "to turn off the parent's"
                 )
+        if not (
+            self.hide_on_forms is None
+            or callable(self.hide_on_forms)
+            or (
+                not isinstance(self.hide_on_forms, str)
+                and all(isinstance(name, str) for name in self.hide_on_forms)
+            )
+        ):
+            raise PanglossMetaError(
+                f"InterfaceMeta(hide_on_forms={self.hide_on_forms!r}): the names of fields, or a function of the "
+                "class that gives them"
+            )
         if self.headless is not None and not isinstance(self.headless, bool):
             raise PanglossMetaError(
                 f"InterfaceMeta(headless={self.headless!r}): True, or False to turn off the parent's"
@@ -247,6 +263,10 @@ def resolved_meta(model: type) -> dict[str, Any] | None:
     )
     headless = next((m.headless for m in metas if m.headless is not None), None)
     resolved["headless"] = True if headless else None
+    # (by name: `export_definitions` gives the keys, and checks the names)
+    hidden = next((m.hide_on_forms for m in metas if m.hide_on_forms is not None), None)
+    names = list(hidden(model) if callable(hidden) else hidden or [])
+    resolved["hideOnForms"] = names or None
     return resolved
 
 
@@ -257,10 +277,13 @@ def _camel(name: str) -> str:
 
 def export_definitions() -> dict[str, Any]:
     """`export_models()`, with the `interfaceMeta` of each model: `{"colour": ..., "listPage": {"module",
-    "name"} or None, ...}`, resolved through the parents, or None for a model with none; the `nav`; and the
-    `searchPatterns` (`export_search_patterns`)"""
+    "name"} or None, ...}`, resolved through the parents, or None for a model with none; `readOnly` on each field
+    (something other than a person keeps it up to date: `Protection`, which the API enforces); the `nav`; and the
+    `searchPatterns` (`export_search_patterns`). (Not in `export_models()` itself: the migrations' snapshots are
+    made from that, and what a form may edit is not a change to the models.)"""
     from pangloss_models.export import export_models
     from pangloss_models.model_registry import ModelRegistry
+    from pangloss_models.protection import protection_of
 
     exported = export_models()
     classes = {
@@ -283,6 +306,9 @@ def export_definitions() -> dict[str, Any]:
     exported["searchPatterns"] = export_search_patterns(classes.values())
     for name, definition in exported["models"].items():
         cls = classes.get(name)
+        protected = () if cls is None else protection_of(cls).read_only
+        for exported_field in definition["fields"]:
+            exported_field["readOnly"] = exported_field["name"] in protected
         meta = definition["interfaceMeta"] = None if cls is None else resolved_meta(cls)
         if meta and meta["collapse"]:
             if definition["kind"] not in COLLAPSIBLE_KINDS:
@@ -292,11 +318,26 @@ def export_definitions() -> dict[str, Any]:
                 )
             if isinstance(meta["collapse"], Collapse):
                 meta["collapse"] = _export_collapse(name, definition, meta["collapse"])
+        if meta and meta["hideOnForms"]:
+            meta["hideOnForms"] = _export_hidden(name, definition, meta["hideOnForms"])
         if meta and meta["headless"] and definition["kind"] != "ReifiedRelation":
             raise PanglossMetaError(
                 f"{name}: InterfaceMeta(headless=True) is for a ReifiedRelation, and this is a {definition['kind']}"
             )
     return exported
+
+
+def _export_hidden(
+    name: str, definition: dict[str, Any], names: list[str]
+) -> list[str]:
+    """`hide_on_forms` by the keys of the fields; raises if it names a field the model does not have"""
+    keys = {f["name"]: f["key"] for f in definition["fields"]}
+    wrong = sorted(set(names) - set(keys))
+    if wrong:
+        raise PanglossMetaError(
+            f"{name}: InterfaceMeta(hide_on_forms=...) names {', '.join(wrong)}, which is not one of its fields"
+        )
+    return [keys[n] for n in names]
 
 
 def _export_collapse(

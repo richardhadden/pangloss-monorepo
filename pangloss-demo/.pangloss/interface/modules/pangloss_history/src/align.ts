@@ -205,6 +205,7 @@ const LABEL: FieldDefinition = {
   validators: [],
   description: null,
   dbField: false,
+  readOnly: false,
   required: false,
   nullable: true,
 };

@@ -151,6 +151,73 @@
       "found": "Found",
       "found_more": "Found, and more: narrow the search",
       "go_to_head": "Go to the {type}",
+      "history_back": "Back to the item",
+      "history_button": "History",
+      "history_cannot_restore": "This version can't be restored as it is.",
+      "history_cannot_restore_why": "Some things have changed since it was saved:",
+      "history_close": "Close the history",
+      "history_close_version": "Close this version",
+      "history_compare": "Every version",
+      "history_compare_all": "Compare all",
+      "history_current": "Current",
+      "history_empty": "Nothing to show",
+      "history_gap": "Versions {from}–{to} were not recorded",
+      "history_gap_one": "Version {version} was not recorded",
+      "history_is_current": "This is the version the item is at now.",
+      "history_mark_added": "Put back",
+      "history_mark_changed": "Changed",
+      "history_mark_removed": "Taken out",
+      "history_none": "No versions of this are recorded.",
+      "history_none_why": "History began after it was last saved: its next save will be the first version. `pangloss history baseline` records what it is now.",
+      "history_not_recorded": "Not recorded",
+      "history_op_baseline": "Recorded as it was",
+      "history_op_create": "Created",
+      "history_op_delete": "Deleted",
+      "history_op_restore": "Restored",
+      "history_op_restore_from": "Restored from version {version}",
+      "history_op_undelete": "Undeleted",
+      "history_op_update": "Edited",
+      "history_page_title": "History of {label}",
+      "history_panel": "History",
+      "history_problem_cardinalities_changed": "{fields} now take only one value each, but this version has several.",
+      "history_problem_cardinality_changed": "{field} now takes only one value, but this version has several.",
+      "history_problem_hand_written": "Since this version, the data was changed in a way that can't be followed automatically, so some of it may now mean something different.",
+      "history_problem_missing_required": "{field} is now required, but this version has nothing in it.",
+      "history_problem_missing_required_many": "{fields} are now required, but this version has nothing in them.",
+      "history_problem_model_removed": "Records of the kind {field} no longer exist, so this part can't be brought back.",
+      "history_problem_models_removed": "Records of the kinds {fields} no longer exist, so these parts can't be brought back.",
+      "history_problem_reference_not_allowed": "{field} links to something it is no longer allowed to link to.",
+      "history_problem_references_not_allowed": "{fields} link to things they are no longer allowed to link to.",
+      "history_problem_removed_field": "{field} is no longer part of this record, so its old value isn't shown here.",
+      "history_problem_removed_fields": "{fields} are no longer part of this record, so their old values aren't shown here.",
+      "history_problem_some_fields": "Some fields",
+      "history_problem_type_changed": "{field} now holds a different kind of value, and the old one doesn't fit it.",
+      "history_problem_types_changed": "{fields} now hold different kinds of value, and the old ones don't fit.",
+      "history_problem_unknown_position": "It isn't known when this version was saved, so it is shown exactly as it was stored.",
+      "history_problem_unsupported": "{field} was changed in a way that can't yet be applied to old versions.",
+      "history_problem_unsupported_many": "{fields} were changed in a way that can't yet be applied to old versions.",
+      "history_problem_unsupported_none": "Since this version, the data was changed in a way that can't yet be applied to old versions.",
+      "history_problem_validation": "{field} doesn't have a value that would be accepted today.",
+      "history_problem_validation_none": "Some of it wouldn't be accepted today.",
+      "history_problem_validations": "{fields} don't have values that would be accepted today.",
+      "history_restore": "Restore",
+      "history_restore_changes": "What will change",
+      "history_restore_hint": "Restoring writes this as a new version: nothing is erased.",
+      "history_restore_no_changes": "Nothing: the content is the same as it is now.",
+      "history_restore_nothing_erased": "Nothing is erased: the history keeps every version, and this restore can be undone the same way.",
+      "history_restore_refused": "Not restored: {reason}",
+      "history_restore_stale": "Not restored: it was changed meanwhile. The versions are shown again.",
+      "history_restore_title": "Restore version {version}?",
+      "history_restore_to": "Restore to this point",
+      "history_restore_undone": "The work of these versions will be undone",
+      "history_restore_unrecorded": "The latest version ({version}) wasn't recorded in the history, so its changes can't be listed here. They will be undone too.",
+      "history_restored": "Restored version {version} as version {now}",
+      "history_restoring": "Restoring…",
+      "history_unreadable": "The history could not be read.",
+      "history_upgraded": "This version was saved before some fields were changed. It's shown as it would look today.",
+      "history_version": "Version {version}",
+      "history_version_unreadable": "This version could not be read.",
+      "history_versions": "Versions",
       "home": "Home",
       "id": "ID",
       "incoming_date_unknown": "Date unknown",
@@ -380,7 +447,27 @@
       "typology_subtypes": "Subtypes",
       "username": "Username",
       "widen_type": "Widen {name} to a type above it",
-      "yes": "Yes"
+      "yes": "Yes",
+      "zotero_address": "Or the item's Zotero address",
+      "zotero_find": "Find in the library",
+      "zotero_from_note": "The item becomes this {type}, and stays an item of the library: what refers to it is kept. Save makes it so.",
+      "zotero_from_title": "A new {type} from an item of the Zotero library",
+      "zotero_item": "Zotero item",
+      "zotero_item_note": "The item of the library it is (Save makes the item this {type})",
+      "zotero_link": "Link to Zotero",
+      "zotero_link_address": "Link",
+      "zotero_link_note": "This takes the item's fields and address. If the item is already in the database, the two become one: the one that something refers to is kept.",
+      "zotero_link_refused": "Not linked: {reason}",
+      "zotero_link_title": "Link to an item of the Zotero library",
+      "zotero_linked": "Linked to the Zotero item",
+      "zotero_not_based_on": "Not based on it",
+      "zotero_search": "Find an item of the Zotero library",
+      "zotero_unlink": "Unlink from Zotero",
+      "zotero_unlink_note": "This keeps its own fields and what refers to it, and loses the Zotero fields. The item becomes an entry of its own again.",
+      "zotero_unlink_refused": "Not unlinked: {reason}",
+      "zotero_unlink_title": "Unlink from the Zotero item?",
+      "zotero_unlinked": "Unlinked: the Zotero item is “{label}” again",
+      "zotero_unsaved_lost": "Changes in the form that are not saved are lost."
     },
     "de": {
       "abstract_no_types": "{type} ist ein abstrakter Typ, und es gibt in diesem Projekt keinen Typ davon: Es gibt nichts aufzulisten.",
@@ -527,6 +614,73 @@
       "found": "Gefunden",
       "found_more": "Gefunden, und mehr: Suche eingrenzen",
       "go_to_head": "Zum Objekt: {type}",
+      "history_back": "Zurück zum Eintrag",
+      "history_button": "Verlauf",
+      "history_cannot_restore": "Diese Version kann nicht so, wie sie ist, wiederhergestellt werden.",
+      "history_cannot_restore_why": "Seit dem Speichern hat sich einiges geändert:",
+      "history_close": "Verlauf schließen",
+      "history_close_version": "Diese Version schließen",
+      "history_compare": "Alle Versionen",
+      "history_compare_all": "Alle vergleichen",
+      "history_current": "Aktuell",
+      "history_empty": "Nichts anzuzeigen",
+      "history_gap": "Die Versionen {from}–{to} wurden nicht aufgezeichnet",
+      "history_gap_one": "Version {version} wurde nicht aufgezeichnet",
+      "history_is_current": "Dies ist die Version, auf der der Eintrag jetzt steht.",
+      "history_mark_added": "Wieder eingefügt",
+      "history_mark_changed": "Geändert",
+      "history_mark_removed": "Herausgenommen",
+      "history_none": "Davon sind keine Versionen aufgezeichnet.",
+      "history_none_why": "Der Verlauf begann nach dem letzten Speichern: Das nächste Speichern wird die erste Version. `pangloss history baseline` zeichnet den jetzigen Stand auf.",
+      "history_not_recorded": "Nicht aufgezeichnet",
+      "history_op_baseline": "Im damaligen Stand aufgezeichnet",
+      "history_op_create": "Erstellt",
+      "history_op_delete": "Gelöscht",
+      "history_op_restore": "Wiederhergestellt",
+      "history_op_restore_from": "Aus Version {version} wiederhergestellt",
+      "history_op_undelete": "Löschen rückgängig gemacht",
+      "history_op_update": "Bearbeitet",
+      "history_page_title": "Verlauf von {label}",
+      "history_panel": "Verlauf",
+      "history_problem_cardinalities_changed": "{fields} nehmen jetzt nur je einen Wert, aber diese Version hat mehrere.",
+      "history_problem_cardinality_changed": "{field} nimmt jetzt nur einen Wert, aber diese Version hat mehrere.",
+      "history_problem_hand_written": "Seit dieser Version wurden die Daten auf eine Weise geändert, die sich nicht automatisch nachvollziehen lässt; manches kann jetzt etwas anderes bedeuten.",
+      "history_problem_missing_required": "{field} ist jetzt ein Pflichtfeld, aber diese Version enthält dort nichts.",
+      "history_problem_missing_required_many": "{fields} sind jetzt Pflichtfelder, aber diese Version enthält dort nichts.",
+      "history_problem_model_removed": "Datensätze der Art {field} gibt es nicht mehr, daher kann dieser Teil nicht wiederhergestellt werden.",
+      "history_problem_models_removed": "Datensätze der Arten {fields} gibt es nicht mehr, daher können diese Teile nicht wiederhergestellt werden.",
+      "history_problem_reference_not_allowed": "{field} verweist auf etwas, worauf es nicht mehr verweisen darf.",
+      "history_problem_references_not_allowed": "{fields} verweisen auf etwas, worauf sie nicht mehr verweisen dürfen.",
+      "history_problem_removed_field": "{field} gehört nicht mehr zu diesem Datensatz, daher wird der alte Wert hier nicht gezeigt.",
+      "history_problem_removed_fields": "{fields} gehören nicht mehr zu diesem Datensatz, daher werden die alten Werte hier nicht gezeigt.",
+      "history_problem_some_fields": "Einige Felder",
+      "history_problem_type_changed": "{field} enthält jetzt eine andere Art von Wert, und der alte passt nicht dazu.",
+      "history_problem_types_changed": "{fields} enthalten jetzt andere Arten von Werten, und die alten passen nicht dazu.",
+      "history_problem_unknown_position": "Es ist nicht bekannt, wann diese Version gespeichert wurde, daher wird sie genau so gezeigt, wie sie gespeichert ist.",
+      "history_problem_unsupported": "{field} wurde auf eine Weise geändert, die sich noch nicht auf alte Versionen anwenden lässt.",
+      "history_problem_unsupported_many": "{fields} wurden auf eine Weise geändert, die sich noch nicht auf alte Versionen anwenden lässt.",
+      "history_problem_unsupported_none": "Seit dieser Version wurden die Daten auf eine Weise geändert, die sich noch nicht auf alte Versionen anwenden lässt.",
+      "history_problem_validation": "{field} hat keinen Wert, der heute angenommen würde.",
+      "history_problem_validation_none": "Manches davon würde heute nicht angenommen.",
+      "history_problem_validations": "{fields} haben keine Werte, die heute angenommen würden.",
+      "history_restore": "Wiederherstellen",
+      "history_restore_changes": "Was sich ändert",
+      "history_restore_hint": "Wiederherstellen schreibt dies als neue Version: Nichts wird gelöscht.",
+      "history_restore_no_changes": "Nichts: Der Inhalt ist derselbe wie jetzt.",
+      "history_restore_nothing_erased": "Nichts wird gelöscht: Der Verlauf behält jede Version, und diese Wiederherstellung lässt sich auf dieselbe Weise rückgängig machen.",
+      "history_restore_refused": "Nicht wiederhergestellt: {reason}",
+      "history_restore_stale": "Nicht wiederhergestellt: Es wurde inzwischen geändert. Die Versionen werden neu angezeigt.",
+      "history_restore_title": "Version {version} wiederherstellen?",
+      "history_restore_to": "Bis hierhin wiederherstellen",
+      "history_restore_undone": "Die Arbeit dieser Versionen wird rückgängig gemacht",
+      "history_restore_unrecorded": "Die neueste Version ({version}) wurde nicht im Verlauf aufgezeichnet, daher können ihre Änderungen hier nicht aufgeführt werden. Auch sie werden rückgängig gemacht.",
+      "history_restored": "Version {version} als Version {now} wiederhergestellt",
+      "history_restoring": "Wird wiederhergestellt…",
+      "history_unreadable": "Der Verlauf konnte nicht gelesen werden.",
+      "history_upgraded": "Diese Version wurde gespeichert, bevor einige Felder geändert wurden. Sie wird so gezeigt, wie sie heute aussähe.",
+      "history_version": "Version {version}",
+      "history_version_unreadable": "Diese Version konnte nicht gelesen werden.",
+      "history_versions": "Versionen",
       "home": "Startseite",
       "id": "ID",
       "incoming_date_unknown": "Datum unbekannt",
@@ -756,7 +910,27 @@
       "typology_subtypes": "Untertypen",
       "username": "Benutzername",
       "widen_type": "{name} auf einen Obertyp erweitern",
-      "yes": "Ja"
+      "yes": "Ja",
+      "zotero_address": "Oder die Zotero-Adresse des Eintrags",
+      "zotero_find": "In der Bibliothek suchen",
+      "zotero_from_note": "Der Eintrag wird zu diesem Datensatz ({type}) und bleibt ein Eintrag der Bibliothek: Was auf ihn verweist, bleibt erhalten. Speichern führt es aus.",
+      "zotero_from_title": "Neu: {type} aus einem Eintrag der Zotero-Bibliothek",
+      "zotero_item": "Zotero-Eintrag",
+      "zotero_item_note": "Der Eintrag der Bibliothek, der es ist (beim Speichern wird der Eintrag zu diesem Datensatz: {type})",
+      "zotero_link": "Mit Zotero verknüpfen",
+      "zotero_link_address": "Verknüpfen",
+      "zotero_link_note": "Dies übernimmt die Felder und die Adresse des Eintrags. Ist der Eintrag schon in der Datenbank, werden beide eins: Erhalten bleibt der, auf den etwas verweist.",
+      "zotero_link_refused": "Nicht verknüpft: {reason}",
+      "zotero_link_title": "Mit einem Eintrag der Zotero-Bibliothek verknüpfen",
+      "zotero_linked": "Mit dem Zotero-Eintrag verknüpft",
+      "zotero_not_based_on": "Nicht darauf beruhen",
+      "zotero_search": "Einen Eintrag der Zotero-Bibliothek suchen",
+      "zotero_unlink": "Von Zotero lösen",
+      "zotero_unlink_note": "Die eigenen Felder und was darauf verweist bleiben, die Zotero-Felder fallen weg. Der Eintrag wird wieder ein eigener Datensatz.",
+      "zotero_unlink_refused": "Nicht gelöst: {reason}",
+      "zotero_unlink_title": "Vom Zotero-Eintrag lösen?",
+      "zotero_unlinked": "Gelöst: Der Zotero-Eintrag ist wieder „{label}“",
+      "zotero_unsaved_lost": "Nicht gespeicherte Änderungen im Formular gehen verloren."
     },
     "fr": {
       "abstract_no_types": "{type} est un type abstrait, et aucun de ses types n’existe dans ce projet : il n’y a rien à afficher.",
@@ -903,6 +1077,73 @@
       "found": "Trouvés",
       "found_more": "Trouvés, et d’autres encore : affinez la recherche",
       "go_to_head": "Aller à l’objet : {type}",
+      "history_back": "Retour à l’élément",
+      "history_button": "Historique",
+      "history_cannot_restore": "Cette version ne peut pas être rétablie telle quelle.",
+      "history_cannot_restore_why": "Certaines choses ont changé depuis son enregistrement :",
+      "history_close": "Fermer l’historique",
+      "history_close_version": "Fermer cette version",
+      "history_compare": "Toutes les versions",
+      "history_compare_all": "Tout comparer",
+      "history_current": "Actuelle",
+      "history_empty": "Rien à afficher",
+      "history_gap": "Les versions {from}–{to} n’ont pas été enregistrées",
+      "history_gap_one": "La version {version} n’a pas été enregistrée",
+      "history_is_current": "C’est la version où se trouve actuellement l’élément.",
+      "history_mark_added": "Remis",
+      "history_mark_changed": "Modifié",
+      "history_mark_removed": "Retiré",
+      "history_none": "Aucune version n’en est enregistrée.",
+      "history_none_why": "L’historique a commencé après le dernier enregistrement : le prochain sera la première version. `pangloss history baseline` enregistre l’état actuel.",
+      "history_not_recorded": "Non enregistrée",
+      "history_op_baseline": "Enregistré tel quel",
+      "history_op_create": "Créé",
+      "history_op_delete": "Supprimé",
+      "history_op_restore": "Rétabli",
+      "history_op_restore_from": "Rétabli depuis la version {version}",
+      "history_op_undelete": "Suppression annulée",
+      "history_op_update": "Modifié",
+      "history_page_title": "Historique de {label}",
+      "history_panel": "Historique",
+      "history_problem_cardinalities_changed": "{fields} n’acceptent plus qu’une seule valeur chacun, mais cette version en a plusieurs.",
+      "history_problem_cardinality_changed": "{field} n’accepte plus qu’une seule valeur, mais cette version en a plusieurs.",
+      "history_problem_hand_written": "Depuis cette version, les données ont été modifiées d’une manière qui ne peut pas être suivie automatiquement : une partie peut donc avoir désormais un autre sens.",
+      "history_problem_missing_required": "{field} est désormais obligatoire, mais cette version n’y contient rien.",
+      "history_problem_missing_required_many": "{fields} sont désormais obligatoires, mais cette version n’y contient rien.",
+      "history_problem_model_removed": "Les enregistrements du type {field} n’existent plus : cette partie ne peut donc pas être rétablie.",
+      "history_problem_models_removed": "Les enregistrements des types {fields} n’existent plus : ces parties ne peuvent donc pas être rétablies.",
+      "history_problem_reference_not_allowed": "{field} renvoie à quelque chose auquel il ne peut plus renvoyer.",
+      "history_problem_references_not_allowed": "{fields} renvoient à des choses auxquelles ils ne peuvent plus renvoyer.",
+      "history_problem_removed_field": "{field} ne fait plus partie de cet enregistrement : son ancienne valeur n’est donc pas affichée ici.",
+      "history_problem_removed_fields": "{fields} ne font plus partie de cet enregistrement : leurs anciennes valeurs ne sont donc pas affichées ici.",
+      "history_problem_some_fields": "Certains champs",
+      "history_problem_type_changed": "{field} contient désormais un autre type de valeur, et l’ancienne n’y correspond pas.",
+      "history_problem_types_changed": "{fields} contiennent désormais d’autres types de valeurs, et les anciennes n’y correspondent pas.",
+      "history_problem_unknown_position": "On ne sait pas quand cette version a été enregistrée : elle est donc affichée exactement telle qu’elle a été stockée.",
+      "history_problem_unsupported": "{field} a été modifié d’une manière qui ne peut pas encore être appliquée aux anciennes versions.",
+      "history_problem_unsupported_many": "{fields} ont été modifiés d’une manière qui ne peut pas encore être appliquée aux anciennes versions.",
+      "history_problem_unsupported_none": "Depuis cette version, les données ont été modifiées d’une manière qui ne peut pas encore être appliquée aux anciennes versions.",
+      "history_problem_validation": "{field} n’a pas de valeur qui serait acceptée aujourd’hui.",
+      "history_problem_validation_none": "Une partie ne serait pas acceptée aujourd’hui.",
+      "history_problem_validations": "{fields} n’ont pas de valeurs qui seraient acceptées aujourd’hui.",
+      "history_restore": "Rétablir",
+      "history_restore_changes": "Ce qui va changer",
+      "history_restore_hint": "Le rétablissement l’écrit comme une nouvelle version : rien n’est effacé.",
+      "history_restore_no_changes": "Rien : le contenu est le même qu’actuellement.",
+      "history_restore_nothing_erased": "Rien n’est effacé : l’historique garde chaque version, et ce rétablissement peut être annulé de la même façon.",
+      "history_restore_refused": "Non rétabli : {reason}",
+      "history_restore_stale": "Non rétabli : l’élément a été modifié entre-temps. Les versions sont affichées à nouveau.",
+      "history_restore_title": "Rétablir la version {version} ?",
+      "history_restore_to": "Rétablir jusqu’ici",
+      "history_restore_undone": "Le travail de ces versions sera annulé",
+      "history_restore_unrecorded": "La dernière version ({version}) n’a pas été enregistrée dans l’historique : ses modifications ne peuvent donc pas être listées ici. Elles seront annulées elles aussi.",
+      "history_restored": "Version {version} rétablie comme version {now}",
+      "history_restoring": "Rétablissement…",
+      "history_unreadable": "L’historique n’a pas pu être lu.",
+      "history_upgraded": "Cette version a été enregistrée avant que certains champs ne soient modifiés. Elle est affichée telle qu’elle se présenterait aujourd’hui.",
+      "history_version": "Version {version}",
+      "history_version_unreadable": "Cette version n’a pas pu être lue.",
+      "history_versions": "Versions",
       "home": "Accueil",
       "id": "ID",
       "incoming_date_unknown": "Date inconnue",
@@ -1132,7 +1373,27 @@
       "typology_subtypes": "Sous-types",
       "username": "Nom d’utilisateur",
       "widen_type": "Élargir {name} à un type parent",
-      "yes": "Oui"
+      "yes": "Oui",
+      "zotero_address": "Ou l’adresse Zotero de l’élément",
+      "zotero_find": "Chercher dans la bibliothèque",
+      "zotero_from_note": "L’élément devient cet enregistrement ({type}) et reste un élément de la bibliothèque : ce qui y renvoie est conservé. L’enregistrement l’applique.",
+      "zotero_from_title": "Nouveau : {type} à partir d’un élément de la bibliothèque Zotero",
+      "zotero_item": "Élément Zotero",
+      "zotero_item_note": "L’élément de la bibliothèque qu’il est (à l’enregistrement, l’élément devient cet enregistrement : {type})",
+      "zotero_link": "Lier à Zotero",
+      "zotero_link_address": "Lier",
+      "zotero_link_note": "Cela reprend les champs et l’adresse de l’élément. Si l’élément est déjà dans la base, les deux n’en font plus qu’un : celui auquel quelque chose renvoie est conservé.",
+      "zotero_link_refused": "Non lié : {reason}",
+      "zotero_link_title": "Lier à un élément de la bibliothèque Zotero",
+      "zotero_linked": "Lié à l’élément Zotero",
+      "zotero_not_based_on": "Ne pas s’en servir",
+      "zotero_search": "Chercher un élément de la bibliothèque Zotero",
+      "zotero_unlink": "Délier de Zotero",
+      "zotero_unlink_note": "Ses propres champs et ce qui y renvoie sont conservés ; les champs Zotero disparaissent. L’élément redevient un enregistrement à part.",
+      "zotero_unlink_refused": "Non délié : {reason}",
+      "zotero_unlink_title": "Délier de l’élément Zotero ?",
+      "zotero_unlinked": "Délié : l’élément Zotero est de nouveau « {label} »",
+      "zotero_unsaved_lost": "Les modifications non enregistrées du formulaire sont perdues."
     }
   },
   "models": {
@@ -1231,6 +1492,122 @@
           }
         },
         "incoming": {}
+      },
+      "Book": {
+        "name": "Book",
+        "plural": "Book",
+        "help": "",
+        "description": "A book. It may be a Zotero item: no Zotero type is claimed, so an item comes in as a `ZoteroObject`, and a\nperson makes it a `Book` by hand (or makes a `Book` and links it to an item)",
+        "kind": "Entity",
+        "fields": {
+          "zotero_url": {
+            "name": "Zotero url",
+            "plural": "Zotero url",
+            "help": ""
+          },
+          "zotero_library": {
+            "name": "Zotero library",
+            "plural": "Zotero library",
+            "help": ""
+          },
+          "zotero_key": {
+            "name": "Zotero key",
+            "plural": "Zotero key",
+            "help": ""
+          },
+          "zotero_version": {
+            "name": "Zotero version",
+            "plural": "Zotero version",
+            "help": ""
+          },
+          "zotero_synced_entity_version": {
+            "name": "Zotero synced entity version",
+            "plural": "Zotero synced entity version",
+            "help": ""
+          },
+          "item_type": {
+            "name": "Item type",
+            "plural": "Item type",
+            "help": ""
+          },
+          "title": {
+            "name": "Title",
+            "plural": "Title",
+            "help": ""
+          },
+          "short_title": {
+            "name": "Short title",
+            "plural": "Short title",
+            "help": ""
+          },
+          "creators": {
+            "name": "Creators",
+            "plural": "Creators",
+            "help": ""
+          },
+          "date": {
+            "name": "Date",
+            "plural": "Date",
+            "help": ""
+          },
+          "language": {
+            "name": "Language",
+            "plural": "Language",
+            "help": ""
+          },
+          "abstract": {
+            "name": "Abstract",
+            "plural": "Abstract",
+            "help": ""
+          },
+          "zotero_data": {
+            "name": "Zotero data",
+            "plural": "Zotero data",
+            "help": ""
+          },
+          "citation": {
+            "name": "Citation",
+            "plural": "Citation",
+            "help": ""
+          },
+          "bibliography": {
+            "name": "Bibliography",
+            "plural": "Bibliography",
+            "help": ""
+          },
+          "csl_json": {
+            "name": "Csl json",
+            "plural": "Csl json",
+            "help": ""
+          },
+          "removed_from_zotero": {
+            "name": "Removed from zotero",
+            "plural": "Removed from zotero",
+            "help": ""
+          },
+          "synced_when": {
+            "name": "Synced when",
+            "plural": "Synced when",
+            "help": ""
+          },
+          "item_type_override": {
+            "name": "Item type override",
+            "plural": "Item type override",
+            "help": ""
+          }
+        },
+        "incoming": {
+          "object_created_reverse": {
+            "name": "Object created reverse",
+            "plural": "Object created reverse",
+            "help": ""
+          },
+          "source_reverse": {
+            "name": "Source reverse",
+            "plural": "Source reverse",
+            "help": ""
+          }
+        }
       },
       "Causes": {
         "name": "Causes",
@@ -2493,13 +2870,7 @@
             "help": ""
           }
         },
-        "incoming": {
-          "source_reverse": {
-            "name": "Source of",
-            "plural": "Source of",
-            "help": ""
-          }
-        }
+        "incoming": {}
       },
       "Statement": {
         "name": "Statement",
@@ -2939,7 +3310,13 @@
             "help": ""
           }
         },
-        "incoming": {}
+        "incoming": {
+          "source_reverse": {
+            "name": "Source reverse",
+            "plural": "Source reverse",
+            "help": ""
+          }
+        }
       },
       "SameGroup": {
         "name": "Same group",
@@ -3092,6 +3469,122 @@
           }
         },
         "incoming": {}
+      },
+      "Book": {
+        "name": "Book",
+        "plural": "Book",
+        "help": "",
+        "description": "A book. It may be a Zotero item: no Zotero type is claimed, so an item comes in as a `ZoteroObject`, and a\nperson makes it a `Book` by hand (or makes a `Book` and links it to an item)",
+        "kind": "Entity",
+        "fields": {
+          "zotero_url": {
+            "name": "Zotero url",
+            "plural": "Zotero url",
+            "help": ""
+          },
+          "zotero_library": {
+            "name": "Zotero library",
+            "plural": "Zotero library",
+            "help": ""
+          },
+          "zotero_key": {
+            "name": "Zotero key",
+            "plural": "Zotero key",
+            "help": ""
+          },
+          "zotero_version": {
+            "name": "Zotero version",
+            "plural": "Zotero version",
+            "help": ""
+          },
+          "zotero_synced_entity_version": {
+            "name": "Zotero synced entity version",
+            "plural": "Zotero synced entity version",
+            "help": ""
+          },
+          "item_type": {
+            "name": "Item type",
+            "plural": "Item type",
+            "help": ""
+          },
+          "title": {
+            "name": "Title",
+            "plural": "Title",
+            "help": ""
+          },
+          "short_title": {
+            "name": "Short title",
+            "plural": "Short title",
+            "help": ""
+          },
+          "creators": {
+            "name": "Creators",
+            "plural": "Creators",
+            "help": ""
+          },
+          "date": {
+            "name": "Date",
+            "plural": "Date",
+            "help": ""
+          },
+          "language": {
+            "name": "Language",
+            "plural": "Language",
+            "help": ""
+          },
+          "abstract": {
+            "name": "Abstract",
+            "plural": "Abstract",
+            "help": ""
+          },
+          "zotero_data": {
+            "name": "Zotero data",
+            "plural": "Zotero data",
+            "help": ""
+          },
+          "citation": {
+            "name": "Citation",
+            "plural": "Citation",
+            "help": ""
+          },
+          "bibliography": {
+            "name": "Bibliography",
+            "plural": "Bibliography",
+            "help": ""
+          },
+          "csl_json": {
+            "name": "Csl json",
+            "plural": "Csl json",
+            "help": ""
+          },
+          "removed_from_zotero": {
+            "name": "Removed from zotero",
+            "plural": "Removed from zotero",
+            "help": ""
+          },
+          "synced_when": {
+            "name": "Synced when",
+            "plural": "Synced when",
+            "help": ""
+          },
+          "item_type_override": {
+            "name": "Item type override",
+            "plural": "Item type override",
+            "help": ""
+          }
+        },
+        "incoming": {
+          "object_created_reverse": {
+            "name": "Object created reverse",
+            "plural": "Object created reverse",
+            "help": ""
+          },
+          "source_reverse": {
+            "name": "Source reverse",
+            "plural": "Source reverse",
+            "help": ""
+          }
+        }
       },
       "Causes": {
         "name": "Verursacht",
@@ -4354,13 +4847,7 @@
             "help": ""
           }
         },
-        "incoming": {
-          "source_reverse": {
-            "name": "Quelle von",
-            "plural": "Quelle von",
-            "help": ""
-          }
-        }
+        "incoming": {}
       },
       "Statement": {
         "name": "Aussage",
@@ -4800,7 +5287,13 @@
             "help": ""
           }
         },
-        "incoming": {}
+        "incoming": {
+          "source_reverse": {
+            "name": "Source reverse",
+            "plural": "Source reverse",
+            "help": ""
+          }
+        }
       },
       "SameGroup": {
         "name": "Gleiche Gruppe",
@@ -4953,6 +5446,122 @@
           }
         },
         "incoming": {}
+      },
+      "Book": {
+        "name": "Book",
+        "plural": "Book",
+        "help": "",
+        "description": "A book. It may be a Zotero item: no Zotero type is claimed, so an item comes in as a `ZoteroObject`, and a\nperson makes it a `Book` by hand (or makes a `Book` and links it to an item)",
+        "kind": "Entity",
+        "fields": {
+          "zotero_url": {
+            "name": "Zotero url",
+            "plural": "Zotero url",
+            "help": ""
+          },
+          "zotero_library": {
+            "name": "Zotero library",
+            "plural": "Zotero library",
+            "help": ""
+          },
+          "zotero_key": {
+            "name": "Zotero key",
+            "plural": "Zotero key",
+            "help": ""
+          },
+          "zotero_version": {
+            "name": "Zotero version",
+            "plural": "Zotero version",
+            "help": ""
+          },
+          "zotero_synced_entity_version": {
+            "name": "Zotero synced entity version",
+            "plural": "Zotero synced entity version",
+            "help": ""
+          },
+          "item_type": {
+            "name": "Item type",
+            "plural": "Item type",
+            "help": ""
+          },
+          "title": {
+            "name": "Title",
+            "plural": "Title",
+            "help": ""
+          },
+          "short_title": {
+            "name": "Short title",
+            "plural": "Short title",
+            "help": ""
+          },
+          "creators": {
+            "name": "Creators",
+            "plural": "Creators",
+            "help": ""
+          },
+          "date": {
+            "name": "Date",
+            "plural": "Date",
+            "help": ""
+          },
+          "language": {
+            "name": "Language",
+            "plural": "Language",
+            "help": ""
+          },
+          "abstract": {
+            "name": "Abstract",
+            "plural": "Abstract",
+            "help": ""
+          },
+          "zotero_data": {
+            "name": "Zotero data",
+            "plural": "Zotero data",
+            "help": ""
+          },
+          "citation": {
+            "name": "Citation",
+            "plural": "Citation",
+            "help": ""
+          },
+          "bibliography": {
+            "name": "Bibliography",
+            "plural": "Bibliography",
+            "help": ""
+          },
+          "csl_json": {
+            "name": "Csl json",
+            "plural": "Csl json",
+            "help": ""
+          },
+          "removed_from_zotero": {
+            "name": "Removed from zotero",
+            "plural": "Removed from zotero",
+            "help": ""
+          },
+          "synced_when": {
+            "name": "Synced when",
+            "plural": "Synced when",
+            "help": ""
+          },
+          "item_type_override": {
+            "name": "Item type override",
+            "plural": "Item type override",
+            "help": ""
+          }
+        },
+        "incoming": {
+          "object_created_reverse": {
+            "name": "Object created reverse",
+            "plural": "Object created reverse",
+            "help": ""
+          },
+          "source_reverse": {
+            "name": "Source reverse",
+            "plural": "Source reverse",
+            "help": ""
+          }
+        }
       },
       "Causes": {
         "name": "Cause",
@@ -6215,13 +6824,7 @@
             "help": ""
           }
         },
-        "incoming": {
-          "source_reverse": {
-            "name": "Source de",
-            "plural": "Source de",
-            "help": ""
-          }
-        }
+        "incoming": {}
       },
       "Statement": {
         "name": "Énoncé",
@@ -6661,7 +7264,13 @@
             "help": ""
           }
         },
-        "incoming": {}
+        "incoming": {
+          "source_reverse": {
+            "name": "Source reverse",
+            "plural": "Source reverse",
+            "help": ""
+          }
+        }
       },
       "SameGroup": {
         "name": "Même groupe",

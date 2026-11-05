@@ -2,7 +2,7 @@
 // It is made again each time the interface is built.
 import type { AnyRelationCondition, ChoiceCondition, CompareCondition, ItemsCondition, ModelDefinitions, NodePattern, RelationCondition, SearchOrder, SearchPattern, TextCondition } from "@pangloss/interface-core";
 
-export type ModelName = "Activity" | "Artwork" | "AtPage" | "Causes" | "Certainty" | "CreationOfArtwork" | "CreationOfPainting" | "CreationOfPhysicalObject" | "Date" | "DateCharacterisation" | "DateRange" | "EDTFDate" | "ExactDate" | "Factoid" | "Feast" | "Group" | "Hypothetical" | "Identification" | "InRole" | "Likelihood" | "MemberOf" | "Negative" | "NegativeSubjunctive" | "NoRule" | "OccupationType" | "OngoingDate" | "Order" | "Painting" | "Period" | "Person" | "PhysicalObject" | "Place" | "PositiveSubjunctive" | "Recurrence" | "Source" | "Statement" | "Transfer" | "UnknownDate" | "WeightedAlternative" | "WithCertainty" | "ZoteroBacked" | "ZoteroLibrary" | "ZoteroObject";
+export type ModelName = "Activity" | "Artwork" | "AtPage" | "Book" | "Causes" | "Certainty" | "CreationOfArtwork" | "CreationOfPainting" | "CreationOfPhysicalObject" | "Date" | "DateCharacterisation" | "DateRange" | "EDTFDate" | "ExactDate" | "Factoid" | "Feast" | "Group" | "Hypothetical" | "Identification" | "InRole" | "Likelihood" | "MemberOf" | "Negative" | "NegativeSubjunctive" | "NoRule" | "OccupationType" | "OngoingDate" | "Order" | "Painting" | "Period" | "Person" | "PhysicalObject" | "Place" | "PositiveSubjunctive" | "Recurrence" | "Source" | "Statement" | "Transfer" | "UnknownDate" | "WeightedAlternative" | "WithCertainty" | "ZoteroBacked" | "ZoteroLibrary" | "ZoteroObject";
 
 export const definitions: ModelDefinitions = {
   "models": {
@@ -40,7 +40,8 @@ export const definitions: ModelDefinitions = {
             "Recurrence",
             "UnknownDate"
           ],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "date_sort_day",
@@ -54,7 +55,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "date_end_sort_day",
@@ -68,7 +70,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "date_text",
@@ -82,7 +85,8 @@ export const definitions: ModelDefinitions = {
             "type": "str"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "text",
@@ -101,7 +105,8 @@ export const definitions: ModelDefinitions = {
               "min_length": 5
             }
           ],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "places",
@@ -123,7 +128,8 @@ export const definitions: ModelDefinitions = {
           "validators": [],
           "subclasses": [],
           "defaultReifiedType": null,
-          "bindings": []
+          "bindings": [],
+          "readOnly": false
         },
         {
           "name": "activity_type",
@@ -138,7 +144,8 @@ export const definitions: ModelDefinitions = {
             "enum": "ActivityType"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "carried_out_by",
@@ -167,7 +174,8 @@ export const definitions: ModelDefinitions = {
             "involves"
           ],
           "defaultReifiedType": null,
-          "bindings": []
+          "bindings": [],
+          "readOnly": false
         },
         {
           "name": "participants",
@@ -206,7 +214,8 @@ export const definitions: ModelDefinitions = {
           "validators": [],
           "subclasses": [],
           "defaultReifiedType": "InRole",
-          "bindings": []
+          "bindings": [],
+          "readOnly": false
         }
       ],
       "incoming": [],
@@ -304,7 +313,8 @@ export const definitions: ModelDefinitions = {
           ],
           "subclasses": [],
           "defaultReifiedType": null,
-          "bindings": []
+          "bindings": [],
+          "readOnly": false
         },
         {
           "name": "page",
@@ -318,7 +328,8 @@ export const definitions: ModelDefinitions = {
             "type": "str"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         }
       ],
       "incoming": [],
@@ -331,7 +342,349 @@ export const definitions: ModelDefinitions = {
         "viewCard": null,
         "editCard": null,
         "collapse": null,
-        "headless": true
+        "headless": true,
+        "hideOnForms": null
+      }
+    },
+    "Book": {
+      "name": "Book",
+      "kind": "Entity",
+      "abstract": false,
+      "description": "A book. It may be a Zotero item: no Zotero type is claimed, so an item comes in as a `ZoteroObject`, and a\nperson makes it a `Book` by hand (or makes a `Book` and links it to an item)",
+      "parent": "PhysicalObject",
+      "concreteTypes": [
+        "Book"
+      ],
+      "typeParameters": [],
+      "createWithId": true,
+      "createDirectly": true,
+      "acceptUrlAsId": true,
+      "requireLabel": true,
+      "useInSemanticSpaceLabel": true,
+      "fields": [
+        {
+          "name": "zotero_url",
+          "key": "zoteroUrl",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": [],
+          "readOnly": true
+        },
+        {
+          "name": "zotero_library",
+          "key": "zoteroLibrary",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": [],
+          "readOnly": true
+        },
+        {
+          "name": "zotero_key",
+          "key": "zoteroKey",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": [],
+          "readOnly": true
+        },
+        {
+          "name": "zotero_version",
+          "key": "zoteroVersion",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": [],
+          "markers": [],
+          "readOnly": true
+        },
+        {
+          "name": "zotero_synced_entity_version",
+          "key": "zoteroSyncedEntityVersion",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": [],
+          "markers": [],
+          "readOnly": true
+        },
+        {
+          "name": "item_type",
+          "key": "itemType",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": [],
+          "readOnly": true
+        },
+        {
+          "name": "title",
+          "key": "title",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": [],
+          "readOnly": true
+        },
+        {
+          "name": "short_title",
+          "key": "shortTitle",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": [],
+          "readOnly": true
+        },
+        {
+          "name": "creators",
+          "key": "creators",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": [],
+          "readOnly": true
+        },
+        {
+          "name": "date",
+          "key": "date",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": [],
+          "readOnly": true
+        },
+        {
+          "name": "language",
+          "key": "language",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": [],
+          "readOnly": true
+        },
+        {
+          "name": "abstract",
+          "key": "abstract",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": [],
+          "readOnly": true
+        },
+        {
+          "name": "zotero_data",
+          "key": "zoteroData",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": [],
+          "readOnly": true
+        },
+        {
+          "name": "citation",
+          "key": "citation",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": [],
+          "readOnly": true
+        },
+        {
+          "name": "bibliography",
+          "key": "bibliography",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": [],
+          "readOnly": true
+        },
+        {
+          "name": "csl_json",
+          "key": "cslJson",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": [],
+          "readOnly": true
+        },
+        {
+          "name": "removed_from_zotero",
+          "key": "removedFromZotero",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "bool"
+          },
+          "validators": [],
+          "markers": [],
+          "readOnly": true
+        },
+        {
+          "name": "synced_when",
+          "key": "syncedWhen",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "datetime"
+          },
+          "validators": [],
+          "markers": [],
+          "readOnly": true
+        },
+        {
+          "name": "item_type_override",
+          "key": "itemTypeOverride",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": [],
+          "readOnly": false
+        }
+      ],
+      "incoming": [
+        {
+          "name": "object_created_reverse",
+          "key": "objectCreatedReverse",
+          "sources": [
+            {
+              "model": "CreationOfPhysicalObject",
+              "field": "object_created",
+              "viaReified": false
+            }
+          ]
+        },
+        {
+          "name": "source_reverse",
+          "key": "sourceReverse",
+          "sources": [
+            {
+              "model": "Factoid",
+              "field": "source",
+              "viaReified": true
+            }
+          ]
+        }
+      ],
+      "traits": [],
+      "interfaceMeta": {
+        "colour": null,
+        "navSection": null,
+        "listPage": null,
+        "itemPage": null,
+        "viewCard": null,
+        "editCard": null,
+        "collapse": null,
+        "headless": null,
+        "hideOnForms": [
+          "itemTypeOverride"
+        ]
       }
     },
     "Causes": {
@@ -373,7 +726,8 @@ export const definitions: ModelDefinitions = {
           "validators": [],
           "subclasses": [],
           "defaultReifiedType": null,
-          "bindings": []
+          "bindings": [],
+          "readOnly": false
         },
         {
           "name": "result",
@@ -395,7 +749,8 @@ export const definitions: ModelDefinitions = {
           "validators": [],
           "subclasses": [],
           "defaultReifiedType": null,
-          "bindings": []
+          "bindings": [],
+          "readOnly": false
         }
       ],
       "incoming": [],
@@ -433,7 +788,8 @@ export const definitions: ModelDefinitions = {
               "ge": 1
             }
           ],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         }
       ],
       "incoming": [],
@@ -475,7 +831,8 @@ export const definitions: ModelDefinitions = {
             "Recurrence",
             "UnknownDate"
           ],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "date_sort_day",
@@ -489,7 +846,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "date_end_sort_day",
@@ -503,7 +861,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "date_text",
@@ -517,7 +876,8 @@ export const definitions: ModelDefinitions = {
             "type": "str"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "text",
@@ -536,7 +896,8 @@ export const definitions: ModelDefinitions = {
               "min_length": 5
             }
           ],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "places",
@@ -558,7 +919,8 @@ export const definitions: ModelDefinitions = {
           "validators": [],
           "subclasses": [],
           "defaultReifiedType": null,
-          "bindings": []
+          "bindings": [],
+          "readOnly": false
         },
         {
           "name": "created_by",
@@ -582,7 +944,8 @@ export const definitions: ModelDefinitions = {
             "involves"
           ],
           "defaultReifiedType": null,
-          "bindings": []
+          "bindings": [],
+          "readOnly": false
         },
         {
           "name": "artwork_created",
@@ -611,7 +974,8 @@ export const definitions: ModelDefinitions = {
             "object_created"
           ],
           "defaultReifiedType": null,
-          "bindings": []
+          "bindings": [],
+          "readOnly": false
         }
       ],
       "incoming": [],
@@ -654,7 +1018,8 @@ export const definitions: ModelDefinitions = {
             "Recurrence",
             "UnknownDate"
           ],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "date_sort_day",
@@ -668,7 +1033,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "date_end_sort_day",
@@ -682,7 +1048,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "date_text",
@@ -696,7 +1063,8 @@ export const definitions: ModelDefinitions = {
             "type": "str"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "text",
@@ -715,7 +1083,8 @@ export const definitions: ModelDefinitions = {
               "min_length": 5
             }
           ],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "places",
@@ -737,7 +1106,8 @@ export const definitions: ModelDefinitions = {
           "validators": [],
           "subclasses": [],
           "defaultReifiedType": null,
-          "bindings": []
+          "bindings": [],
+          "readOnly": false
         },
         {
           "name": "created_by",
@@ -761,7 +1131,8 @@ export const definitions: ModelDefinitions = {
             "involves"
           ],
           "defaultReifiedType": null,
-          "bindings": []
+          "bindings": [],
+          "readOnly": false
         },
         {
           "name": "painting_created",
@@ -786,7 +1157,8 @@ export const definitions: ModelDefinitions = {
             "object_created"
           ],
           "defaultReifiedType": null,
-          "bindings": []
+          "bindings": [],
+          "readOnly": false
         }
       ],
       "incoming": [],
@@ -831,7 +1203,8 @@ export const definitions: ModelDefinitions = {
             "Recurrence",
             "UnknownDate"
           ],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "date_sort_day",
@@ -845,7 +1218,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "date_end_sort_day",
@@ -859,7 +1233,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "date_text",
@@ -873,7 +1248,8 @@ export const definitions: ModelDefinitions = {
             "type": "str"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "text",
@@ -892,7 +1268,8 @@ export const definitions: ModelDefinitions = {
               "min_length": 5
             }
           ],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "places",
@@ -914,7 +1291,8 @@ export const definitions: ModelDefinitions = {
           "validators": [],
           "subclasses": [],
           "defaultReifiedType": null,
-          "bindings": []
+          "bindings": [],
+          "readOnly": false
         },
         {
           "name": "created_by",
@@ -938,7 +1316,8 @@ export const definitions: ModelDefinitions = {
             "involves"
           ],
           "defaultReifiedType": null,
-          "bindings": []
+          "bindings": [],
+          "readOnly": false
         },
         {
           "name": "object_created",
@@ -958,6 +1337,11 @@ export const definitions: ModelDefinitions = {
             },
             {
               "kind": "entity",
+              "type": "Book",
+              "edgeModel": null
+            },
+            {
+              "kind": "entity",
               "type": "Painting",
               "edgeModel": null
             },
@@ -970,7 +1354,8 @@ export const definitions: ModelDefinitions = {
           "validators": [],
           "subclasses": [],
           "defaultReifiedType": null,
-          "bindings": []
+          "bindings": [],
+          "readOnly": false
         }
       ],
       "incoming": [],
@@ -1014,7 +1399,8 @@ export const definitions: ModelDefinitions = {
             "enum": "Calendar"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "source_text",
@@ -1028,7 +1414,8 @@ export const definitions: ModelDefinitions = {
             "type": "str"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "sort_by",
@@ -1043,7 +1430,8 @@ export const definitions: ModelDefinitions = {
             "enum": "SortBy"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "precision",
@@ -1058,7 +1446,8 @@ export const definitions: ModelDefinitions = {
             "enum": "Precision"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "earliest_fuzzy",
@@ -1072,7 +1461,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "earliest_strict",
@@ -1086,7 +1476,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "latest_strict",
@@ -1100,7 +1491,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "latest_fuzzy",
@@ -1114,7 +1506,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "sort_day",
@@ -1128,7 +1521,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "end_sort_day",
@@ -1142,7 +1536,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         }
       ],
       "incoming": [],
@@ -1161,7 +1556,8 @@ export const definitions: ModelDefinitions = {
           "name": "DateEditor"
         },
         "collapse": null,
-        "headless": null
+        "headless": null,
+        "hideOnForms": null
       }
     },
     "DateCharacterisation": {
@@ -1197,7 +1593,8 @@ export const definitions: ModelDefinitions = {
             "Period",
             "Recurrence"
           ],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         }
       ],
       "incoming": [],
@@ -1233,7 +1630,8 @@ export const definitions: ModelDefinitions = {
             "enum": "Calendar"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "source_text",
@@ -1247,7 +1645,8 @@ export const definitions: ModelDefinitions = {
             "type": "str"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "sort_by",
@@ -1262,7 +1661,8 @@ export const definitions: ModelDefinitions = {
             "enum": "SortBy"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "precision",
@@ -1277,7 +1677,8 @@ export const definitions: ModelDefinitions = {
             "enum": "Precision"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "earliest_fuzzy",
@@ -1291,7 +1692,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "earliest_strict",
@@ -1305,7 +1707,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "latest_strict",
@@ -1319,7 +1722,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "latest_fuzzy",
@@ -1333,7 +1737,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "sort_day",
@@ -1347,7 +1752,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "end_sort_day",
@@ -1361,7 +1767,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "not_before",
@@ -1376,7 +1783,8 @@ export const definitions: ModelDefinitions = {
             "ExactDate",
             "UnknownDate"
           ],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "not_after",
@@ -1391,7 +1799,8 @@ export const definitions: ModelDefinitions = {
             "ExactDate",
             "UnknownDate"
           ],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         }
       ],
       "incoming": [],
@@ -1410,7 +1819,8 @@ export const definitions: ModelDefinitions = {
           "name": "DateEditor"
         },
         "collapse": null,
-        "headless": null
+        "headless": null,
+        "hideOnForms": null
       }
     },
     "EDTFDate": {
@@ -1442,7 +1852,8 @@ export const definitions: ModelDefinitions = {
             "enum": "Calendar"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "source_text",
@@ -1456,7 +1867,8 @@ export const definitions: ModelDefinitions = {
             "type": "str"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "sort_by",
@@ -1471,7 +1883,8 @@ export const definitions: ModelDefinitions = {
             "enum": "SortBy"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "precision",
@@ -1486,7 +1899,8 @@ export const definitions: ModelDefinitions = {
             "enum": "Precision"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "earliest_fuzzy",
@@ -1500,7 +1914,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "earliest_strict",
@@ -1514,7 +1929,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "latest_strict",
@@ -1528,7 +1944,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "latest_fuzzy",
@@ -1542,7 +1959,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "sort_day",
@@ -1556,7 +1974,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "end_sort_day",
@@ -1570,7 +1989,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "edtf",
@@ -1584,7 +2004,8 @@ export const definitions: ModelDefinitions = {
             "type": "str"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         }
       ],
       "incoming": [],
@@ -1603,7 +2024,8 @@ export const definitions: ModelDefinitions = {
           "name": "DateEditor"
         },
         "collapse": null,
-        "headless": null
+        "headless": null,
+        "hideOnForms": null
       }
     },
     "ExactDate": {
@@ -1635,7 +2057,8 @@ export const definitions: ModelDefinitions = {
             "enum": "Calendar"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "source_text",
@@ -1649,7 +2072,8 @@ export const definitions: ModelDefinitions = {
             "type": "str"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "sort_by",
@@ -1664,7 +2088,8 @@ export const definitions: ModelDefinitions = {
             "enum": "SortBy"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "precision",
@@ -1679,7 +2104,8 @@ export const definitions: ModelDefinitions = {
             "enum": "Precision"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "earliest_fuzzy",
@@ -1693,7 +2119,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "earliest_strict",
@@ -1707,7 +2134,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "latest_strict",
@@ -1721,7 +2149,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "latest_fuzzy",
@@ -1735,7 +2164,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "sort_day",
@@ -1749,7 +2179,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "end_sort_day",
@@ -1763,7 +2194,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "year",
@@ -1777,7 +2209,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "month",
@@ -1791,7 +2224,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "day",
@@ -1805,7 +2239,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         }
       ],
       "incoming": [],
@@ -1824,7 +2259,8 @@ export const definitions: ModelDefinitions = {
           "name": "DateEditor"
         },
         "collapse": null,
-        "headless": null
+        "headless": null,
+        "hideOnForms": null
       }
     },
     "Factoid": {
@@ -1864,7 +2300,12 @@ export const definitions: ModelDefinitions = {
                   "options": [
                     {
                       "kind": "entity",
-                      "type": "Source",
+                      "type": "Book",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "entity",
+                      "type": "ZoteroObject",
                       "edgeModel": null
                     }
                   ]
@@ -1875,7 +2316,8 @@ export const definitions: ModelDefinitions = {
           "validators": [],
           "subclasses": [],
           "defaultReifiedType": null,
-          "bindings": []
+          "bindings": [],
+          "readOnly": false
         },
         {
           "name": "statements",
@@ -2108,7 +2550,8 @@ export const definitions: ModelDefinitions = {
           "validators": [],
           "subclasses": [],
           "defaultReifiedType": null,
-          "bindings": []
+          "bindings": [],
+          "readOnly": false
         }
       ],
       "incoming": [],
@@ -2148,7 +2591,8 @@ export const definitions: ModelDefinitions = {
             "Period",
             "Recurrence"
           ],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "use",
@@ -2162,7 +2606,8 @@ export const definitions: ModelDefinitions = {
             "type": "str"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "rank",
@@ -2176,7 +2621,8 @@ export const definitions: ModelDefinitions = {
             "type": "str"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         }
       ],
       "incoming": [],
@@ -2220,7 +2666,8 @@ export const definitions: ModelDefinitions = {
               "max_length": 100
             }
           ],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         }
       ],
       "incoming": [
@@ -2367,7 +2814,8 @@ export const definitions: ModelDefinitions = {
           "validators": [],
           "subclasses": [],
           "defaultReifiedType": null,
-          "bindings": []
+          "bindings": [],
+          "readOnly": false
         }
       ],
       "incoming": [],
@@ -2380,7 +2828,8 @@ export const definitions: ModelDefinitions = {
         "viewCard": null,
         "editCard": null,
         "collapse": null,
-        "headless": null
+        "headless": null,
+        "hideOnForms": null
       }
     },
     "Identification": {
@@ -2428,7 +2877,8 @@ export const definitions: ModelDefinitions = {
           ],
           "subclasses": [],
           "defaultReifiedType": null,
-          "bindings": []
+          "bindings": [],
+          "readOnly": false
         },
         {
           "name": "identified_by",
@@ -2442,7 +2892,8 @@ export const definitions: ModelDefinitions = {
             "type": "str"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         }
       ],
       "incoming": [],
@@ -2455,7 +2906,8 @@ export const definitions: ModelDefinitions = {
         "viewCard": null,
         "editCard": null,
         "collapse": true,
-        "headless": null
+        "headless": null,
+        "hideOnForms": null
       }
     },
     "InRole": {
@@ -2494,7 +2946,8 @@ export const definitions: ModelDefinitions = {
           "validators": [],
           "subclasses": [],
           "defaultReifiedType": null,
-          "bindings": []
+          "bindings": [],
+          "readOnly": false
         },
         {
           "name": "role",
@@ -2509,7 +2962,8 @@ export const definitions: ModelDefinitions = {
             "enum": "Role"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         }
       ],
       "incoming": [],
@@ -2556,7 +3010,8 @@ export const definitions: ModelDefinitions = {
               "name": "Slider",
               "unit": "%"
             }
-          ]
+          ],
+          "readOnly": false
         }
       ],
       "incoming": [],
@@ -2597,7 +3052,8 @@ export const definitions: ModelDefinitions = {
             "Recurrence",
             "UnknownDate"
           ],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "date_sort_day",
@@ -2611,7 +3067,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "date_end_sort_day",
@@ -2625,7 +3082,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "date_text",
@@ -2639,7 +3097,8 @@ export const definitions: ModelDefinitions = {
             "type": "str"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "text",
@@ -2658,7 +3117,8 @@ export const definitions: ModelDefinitions = {
               "min_length": 5
             }
           ],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "places",
@@ -2680,7 +3140,8 @@ export const definitions: ModelDefinitions = {
           "validators": [],
           "subclasses": [],
           "defaultReifiedType": null,
-          "bindings": []
+          "bindings": [],
+          "readOnly": false
         },
         {
           "name": "member",
@@ -2738,7 +3199,8 @@ export const definitions: ModelDefinitions = {
             "involves"
           ],
           "defaultReifiedType": null,
-          "bindings": []
+          "bindings": [],
+          "readOnly": false
         },
         {
           "name": "group",
@@ -2760,7 +3222,8 @@ export const definitions: ModelDefinitions = {
           "validators": [],
           "subclasses": [],
           "defaultReifiedType": null,
-          "bindings": []
+          "bindings": [],
+          "readOnly": false
         }
       ],
       "incoming": [],
@@ -2807,7 +3270,8 @@ export const definitions: ModelDefinitions = {
           "validators": [],
           "subclasses": [],
           "defaultReifiedType": null,
-          "bindings": []
+          "bindings": [],
+          "readOnly": false
         }
       ],
       "incoming": [],
@@ -2820,7 +3284,8 @@ export const definitions: ModelDefinitions = {
         "viewCard": null,
         "editCard": null,
         "collapse": null,
-        "headless": null
+        "headless": null,
+        "hideOnForms": null
       }
     },
     "NegativeSubjunctive": {
@@ -2861,7 +3326,8 @@ export const definitions: ModelDefinitions = {
           "validators": [],
           "subclasses": [],
           "defaultReifiedType": null,
-          "bindings": []
+          "bindings": [],
+          "readOnly": false
         }
       ],
       "incoming": [],
@@ -2874,7 +3340,8 @@ export const definitions: ModelDefinitions = {
         "viewCard": null,
         "editCard": null,
         "collapse": null,
-        "headless": null
+        "headless": null,
+        "hideOnForms": null
       }
     },
     "NoRule": {
@@ -2925,7 +3392,8 @@ export const definitions: ModelDefinitions = {
             "type": "str"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "is_subtype_of",
@@ -2952,7 +3420,8 @@ export const definitions: ModelDefinitions = {
           ],
           "subclasses": [],
           "defaultReifiedType": null,
-          "bindings": []
+          "bindings": [],
+          "readOnly": true
         },
         {
           "name": "label_de",
@@ -2966,7 +3435,8 @@ export const definitions: ModelDefinitions = {
             "type": "str"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "label_fr",
@@ -2980,7 +3450,8 @@ export const definitions: ModelDefinitions = {
             "type": "str"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         }
       ],
       "incoming": [
@@ -3025,7 +3496,8 @@ export const definitions: ModelDefinitions = {
         },
         "editCard": null,
         "collapse": null,
-        "headless": null
+        "headless": null,
+        "hideOnForms": null
       }
     },
     "OngoingDate": {
@@ -3057,7 +3529,8 @@ export const definitions: ModelDefinitions = {
             "enum": "Calendar"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "source_text",
@@ -3071,7 +3544,8 @@ export const definitions: ModelDefinitions = {
             "type": "str"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "sort_by",
@@ -3086,7 +3560,8 @@ export const definitions: ModelDefinitions = {
             "enum": "SortBy"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "precision",
@@ -3101,7 +3576,8 @@ export const definitions: ModelDefinitions = {
             "enum": "Precision"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "earliest_fuzzy",
@@ -3115,7 +3591,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "earliest_strict",
@@ -3129,7 +3606,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "latest_strict",
@@ -3143,7 +3621,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "latest_fuzzy",
@@ -3157,7 +3636,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "sort_day",
@@ -3171,7 +3651,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "end_sort_day",
@@ -3185,7 +3666,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         }
       ],
       "incoming": [],
@@ -3204,7 +3686,8 @@ export const definitions: ModelDefinitions = {
           "name": "DateEditor"
         },
         "collapse": null,
-        "headless": null
+        "headless": null,
+        "hideOnForms": null
       }
     },
     "Order": {
@@ -3241,7 +3724,8 @@ export const definitions: ModelDefinitions = {
             "Recurrence",
             "UnknownDate"
           ],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "date_sort_day",
@@ -3255,7 +3739,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "date_end_sort_day",
@@ -3269,7 +3754,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "date_text",
@@ -3283,7 +3769,8 @@ export const definitions: ModelDefinitions = {
             "type": "str"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "text",
@@ -3302,7 +3789,8 @@ export const definitions: ModelDefinitions = {
               "min_length": 5
             }
           ],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "places",
@@ -3324,7 +3812,8 @@ export const definitions: ModelDefinitions = {
           "validators": [],
           "subclasses": [],
           "defaultReifiedType": null,
-          "bindings": []
+          "bindings": [],
+          "readOnly": false
         },
         {
           "name": "ordered_by",
@@ -3382,7 +3871,8 @@ export const definitions: ModelDefinitions = {
             "involves"
           ],
           "defaultReifiedType": null,
-          "bindings": []
+          "bindings": [],
+          "readOnly": false
         },
         {
           "name": "ordered_to",
@@ -3438,7 +3928,8 @@ export const definitions: ModelDefinitions = {
           "validators": [],
           "subclasses": [],
           "defaultReifiedType": null,
-          "bindings": []
+          "bindings": [],
+          "readOnly": false
         },
         {
           "name": "thing_ordered",
@@ -3560,7 +4051,8 @@ export const definitions: ModelDefinitions = {
               "excludedTypes": [],
               "converted": false
             }
-          ]
+          ],
+          "readOnly": false
         }
       ],
       "incoming": [],
@@ -3652,7 +4144,8 @@ export const definitions: ModelDefinitions = {
             "enum": "Calendar"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "source_text",
@@ -3666,7 +4159,8 @@ export const definitions: ModelDefinitions = {
             "type": "str"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "sort_by",
@@ -3681,7 +4175,8 @@ export const definitions: ModelDefinitions = {
             "enum": "SortBy"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "precision",
@@ -3696,7 +4191,8 @@ export const definitions: ModelDefinitions = {
             "enum": "Precision"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "earliest_fuzzy",
@@ -3710,7 +4206,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "earliest_strict",
@@ -3724,7 +4221,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "latest_strict",
@@ -3738,7 +4236,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "latest_fuzzy",
@@ -3752,7 +4251,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "sort_day",
@@ -3766,7 +4266,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "end_sort_day",
@@ -3780,7 +4281,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "start",
@@ -3797,7 +4299,8 @@ export const definitions: ModelDefinitions = {
             "ExactDate",
             "UnknownDate"
           ],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "end",
@@ -3815,7 +4318,8 @@ export const definitions: ModelDefinitions = {
             "OngoingDate",
             "UnknownDate"
           ],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         }
       ],
       "incoming": [],
@@ -3834,7 +4338,8 @@ export const definitions: ModelDefinitions = {
           "name": "DateEditor"
         },
         "collapse": null,
-        "headless": null
+        "headless": null,
+        "hideOnForms": null
       }
     },
     "Person": {
@@ -3864,7 +4369,8 @@ export const definitions: ModelDefinitions = {
           "model": "WithCertainty",
           "valueType": {
             "type": "str"
-          }
+          },
+          "readOnly": false
         },
         {
           "name": "born",
@@ -3889,7 +4395,8 @@ export const definitions: ModelDefinitions = {
               "name": "SortDefault",
               "sortBy": "earliest_fuzzy"
             }
-          ]
+          ],
+          "readOnly": false
         },
         {
           "name": "aliases",
@@ -3903,7 +4410,8 @@ export const definitions: ModelDefinitions = {
             "type": "str"
           },
           "validators": [],
-          "itemValidators": []
+          "itemValidators": [],
+          "readOnly": false
         },
         {
           "name": "has_type",
@@ -3925,7 +4433,8 @@ export const definitions: ModelDefinitions = {
           "validators": [],
           "subclasses": [],
           "defaultReifiedType": null,
-          "bindings": []
+          "bindings": [],
+          "readOnly": false
         }
       ],
       "incoming": [
@@ -3968,12 +4477,12 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Transfer",
               "field": "given_by",
-              "viaReified": false
+              "viaReified": true
             },
             {
               "model": "Transfer",
               "field": "given_by",
-              "viaReified": true
+              "viaReified": false
             }
           ]
         },
@@ -3995,12 +4504,12 @@ export const definitions: ModelDefinitions = {
             {
               "model": "MemberOf",
               "field": "member",
-              "viaReified": false
+              "viaReified": true
             },
             {
               "model": "MemberOf",
               "field": "member",
-              "viaReified": true
+              "viaReified": false
             }
           ]
         },
@@ -4011,12 +4520,12 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Order",
               "field": "ordered_by",
-              "viaReified": false
+              "viaReified": true
             },
             {
               "model": "Order",
               "field": "ordered_by",
-              "viaReified": true
+              "viaReified": false
             }
           ]
         },
@@ -4038,12 +4547,12 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Transfer",
               "field": "given_to",
-              "viaReified": false
+              "viaReified": true
             },
             {
               "model": "Transfer",
               "field": "given_to",
-              "viaReified": true
+              "viaReified": false
             }
           ]
         },
@@ -4054,12 +4563,12 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Order",
               "field": "ordered_to",
-              "viaReified": false
+              "viaReified": true
             },
             {
               "model": "Order",
               "field": "ordered_to",
-              "viaReified": true
+              "viaReified": false
             }
           ]
         }
@@ -4077,6 +4586,7 @@ export const definitions: ModelDefinitions = {
       "parent": null,
       "concreteTypes": [
         "Artwork",
+        "Book",
         "Painting",
         "PhysicalObject"
       ],
@@ -4139,7 +4649,8 @@ export const definitions: ModelDefinitions = {
             }
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         }
       ],
       "incoming": [
@@ -4231,7 +4742,8 @@ export const definitions: ModelDefinitions = {
           "validators": [],
           "subclasses": [],
           "defaultReifiedType": null,
-          "bindings": []
+          "bindings": [],
+          "readOnly": false
         }
       ],
       "incoming": [],
@@ -4244,7 +4756,8 @@ export const definitions: ModelDefinitions = {
         "viewCard": null,
         "editCard": null,
         "collapse": null,
-        "headless": null
+        "headless": null,
+        "hideOnForms": null
       }
     },
     "Recurrence": {
@@ -4276,7 +4789,8 @@ export const definitions: ModelDefinitions = {
             "enum": "Calendar"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "source_text",
@@ -4290,7 +4804,8 @@ export const definitions: ModelDefinitions = {
             "type": "str"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "sort_by",
@@ -4305,7 +4820,8 @@ export const definitions: ModelDefinitions = {
             "enum": "SortBy"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "precision",
@@ -4320,7 +4836,8 @@ export const definitions: ModelDefinitions = {
             "enum": "Precision"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "earliest_fuzzy",
@@ -4334,7 +4851,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "earliest_strict",
@@ -4348,7 +4866,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "latest_strict",
@@ -4362,7 +4881,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "latest_fuzzy",
@@ -4376,7 +4896,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "sort_day",
@@ -4390,7 +4911,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "end_sort_day",
@@ -4404,7 +4926,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "frequency",
@@ -4419,7 +4942,8 @@ export const definitions: ModelDefinitions = {
             "enum": "Frequency"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "weekdays",
@@ -4433,7 +4957,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "itemValidators": []
+          "itemValidators": [],
+          "readOnly": false
         },
         {
           "name": "nth",
@@ -4447,7 +4972,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "month",
@@ -4461,7 +4987,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "month_day",
@@ -4475,7 +5002,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "interval",
@@ -4489,7 +5017,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "excluded_days",
@@ -4503,7 +5032,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "itemValidators": []
+          "itemValidators": [],
+          "readOnly": false
         },
         {
           "name": "leap_shift",
@@ -4517,7 +5047,8 @@ export const definitions: ModelDefinitions = {
             "type": "bool"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "easter_offset",
@@ -4531,7 +5062,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "feast",
@@ -4545,7 +5077,8 @@ export const definitions: ModelDefinitions = {
             "type": "str"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "start",
@@ -4562,7 +5095,8 @@ export const definitions: ModelDefinitions = {
             "ExactDate",
             "UnknownDate"
           ],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "end",
@@ -4580,7 +5114,8 @@ export const definitions: ModelDefinitions = {
             "OngoingDate",
             "UnknownDate"
           ],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "pattern_keys",
@@ -4594,7 +5129,8 @@ export const definitions: ModelDefinitions = {
             "type": "str"
           },
           "validators": [],
-          "itemValidators": []
+          "itemValidators": [],
+          "readOnly": false
         }
       ],
       "incoming": [],
@@ -4613,7 +5149,8 @@ export const definitions: ModelDefinitions = {
           "name": "DateEditor"
         },
         "collapse": null,
-        "headless": null
+        "headless": null,
+        "hideOnForms": null
       }
     },
     "Source": {
@@ -4644,7 +5181,8 @@ export const definitions: ModelDefinitions = {
             "type": "str"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "written",
@@ -4658,7 +5196,8 @@ export const definitions: ModelDefinitions = {
             "type": "date"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "edition_price",
@@ -4672,22 +5211,11 @@ export const definitions: ModelDefinitions = {
             "type": "decimal"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         }
       ],
-      "incoming": [
-        {
-          "name": "source_reverse",
-          "key": "sourceReverse",
-          "sources": [
-            {
-              "model": "Factoid",
-              "field": "source",
-              "viaReified": true
-            }
-          ]
-        }
-      ],
+      "incoming": [],
       "traits": [],
       "interfaceMeta": null
     },
@@ -4731,7 +5259,8 @@ export const definitions: ModelDefinitions = {
             "Recurrence",
             "UnknownDate"
           ],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "date_sort_day",
@@ -4745,7 +5274,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "date_end_sort_day",
@@ -4759,7 +5289,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "date_text",
@@ -4773,7 +5304,8 @@ export const definitions: ModelDefinitions = {
             "type": "str"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "text",
@@ -4792,7 +5324,8 @@ export const definitions: ModelDefinitions = {
               "min_length": 5
             }
           ],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "involves",
@@ -4819,7 +5352,8 @@ export const definitions: ModelDefinitions = {
           "validators": [],
           "subclasses": [],
           "defaultReifiedType": null,
-          "bindings": []
+          "bindings": [],
+          "readOnly": false
         },
         {
           "name": "places",
@@ -4841,7 +5375,8 @@ export const definitions: ModelDefinitions = {
           "validators": [],
           "subclasses": [],
           "defaultReifiedType": null,
-          "bindings": []
+          "bindings": [],
+          "readOnly": false
         }
       ],
       "incoming": [],
@@ -4884,7 +5419,8 @@ export const definitions: ModelDefinitions = {
             "Recurrence",
             "UnknownDate"
           ],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "date_sort_day",
@@ -4898,7 +5434,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "date_end_sort_day",
@@ -4912,7 +5449,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "date_text",
@@ -4926,7 +5464,8 @@ export const definitions: ModelDefinitions = {
             "type": "str"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "text",
@@ -4945,7 +5484,8 @@ export const definitions: ModelDefinitions = {
               "min_length": 5
             }
           ],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "places",
@@ -4967,7 +5507,8 @@ export const definitions: ModelDefinitions = {
           "validators": [],
           "subclasses": [],
           "defaultReifiedType": null,
-          "bindings": []
+          "bindings": [],
+          "readOnly": false
         },
         {
           "name": "item",
@@ -4981,7 +5522,8 @@ export const definitions: ModelDefinitions = {
             "type": "str"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "quantity",
@@ -4995,7 +5537,8 @@ export const definitions: ModelDefinitions = {
             "type": "decimal"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "given_by",
@@ -5053,7 +5596,8 @@ export const definitions: ModelDefinitions = {
             "involves"
           ],
           "defaultReifiedType": null,
-          "bindings": []
+          "bindings": [],
+          "readOnly": false
         },
         {
           "name": "given_to",
@@ -5109,7 +5653,8 @@ export const definitions: ModelDefinitions = {
           "validators": [],
           "subclasses": [],
           "defaultReifiedType": null,
-          "bindings": []
+          "bindings": [],
+          "readOnly": false
         }
       ],
       "incoming": [],
@@ -5147,7 +5692,8 @@ export const definitions: ModelDefinitions = {
             "enum": "Calendar"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "source_text",
@@ -5161,7 +5707,8 @@ export const definitions: ModelDefinitions = {
             "type": "str"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "sort_by",
@@ -5176,7 +5723,8 @@ export const definitions: ModelDefinitions = {
             "enum": "SortBy"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "precision",
@@ -5191,7 +5739,8 @@ export const definitions: ModelDefinitions = {
             "enum": "Precision"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "earliest_fuzzy",
@@ -5205,7 +5754,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "earliest_strict",
@@ -5219,7 +5769,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "latest_strict",
@@ -5233,7 +5784,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "latest_fuzzy",
@@ -5247,7 +5799,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "sort_day",
@@ -5261,7 +5814,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         },
         {
           "name": "end_sort_day",
@@ -5275,7 +5829,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         }
       ],
       "incoming": [],
@@ -5294,7 +5849,8 @@ export const definitions: ModelDefinitions = {
           "name": "DateEditor"
         },
         "collapse": null,
-        "headless": null
+        "headless": null,
+        "hideOnForms": null
       }
     },
     "WeightedAlternative": {
@@ -5345,7 +5901,8 @@ export const definitions: ModelDefinitions = {
           ],
           "subclasses": [],
           "defaultReifiedType": null,
-          "bindings": []
+          "bindings": [],
+          "readOnly": false
         }
       ],
       "incoming": [],
@@ -5361,7 +5918,8 @@ export const definitions: ModelDefinitions = {
         },
         "editCard": null,
         "collapse": true,
-        "headless": null
+        "headless": null,
+        "hideOnForms": null
       }
     },
     "WithCertainty": {
@@ -5388,7 +5946,8 @@ export const definitions: ModelDefinitions = {
           "required": true,
           "nullable": false,
           "kind": "typeVar",
-          "typeVar": "T"
+          "typeVar": "T",
+          "readOnly": false
         },
         {
           "name": "certainty",
@@ -5402,7 +5961,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         }
       ],
       "incoming": [],
@@ -5416,6 +5976,7 @@ export const definitions: ModelDefinitions = {
       "description": "A text that is (or may be) an item in a Zotero library. Everything is optional, so one made by hand has\nnone of it. Build your class on this: `class TextObject(ZoteroBacked)`.",
       "parent": null,
       "concreteTypes": [
+        "Book",
         "ZoteroObject"
       ],
       "typeParameters": [],
@@ -5437,7 +5998,8 @@ export const definitions: ModelDefinitions = {
             "type": "str"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": true
         },
         {
           "name": "zotero_library",
@@ -5451,7 +6013,8 @@ export const definitions: ModelDefinitions = {
             "type": "str"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": true
         },
         {
           "name": "zotero_key",
@@ -5465,7 +6028,8 @@ export const definitions: ModelDefinitions = {
             "type": "str"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": true
         },
         {
           "name": "zotero_version",
@@ -5479,7 +6043,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": true
         },
         {
           "name": "zotero_synced_entity_version",
@@ -5493,7 +6058,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": true
         },
         {
           "name": "item_type",
@@ -5507,7 +6073,8 @@ export const definitions: ModelDefinitions = {
             "type": "str"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": true
         },
         {
           "name": "title",
@@ -5521,7 +6088,8 @@ export const definitions: ModelDefinitions = {
             "type": "str"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": true
         },
         {
           "name": "short_title",
@@ -5535,7 +6103,8 @@ export const definitions: ModelDefinitions = {
             "type": "str"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": true
         },
         {
           "name": "creators",
@@ -5549,7 +6118,8 @@ export const definitions: ModelDefinitions = {
             "type": "str"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": true
         },
         {
           "name": "date",
@@ -5563,7 +6133,8 @@ export const definitions: ModelDefinitions = {
             "type": "str"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": true
         },
         {
           "name": "language",
@@ -5577,7 +6148,8 @@ export const definitions: ModelDefinitions = {
             "type": "str"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": true
         },
         {
           "name": "abstract",
@@ -5591,7 +6163,8 @@ export const definitions: ModelDefinitions = {
             "type": "str"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": true
         },
         {
           "name": "zotero_data",
@@ -5605,7 +6178,8 @@ export const definitions: ModelDefinitions = {
             "type": "str"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": true
         },
         {
           "name": "citation",
@@ -5619,7 +6193,8 @@ export const definitions: ModelDefinitions = {
             "type": "str"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": true
         },
         {
           "name": "bibliography",
@@ -5633,7 +6208,8 @@ export const definitions: ModelDefinitions = {
             "type": "str"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": true
         },
         {
           "name": "csl_json",
@@ -5647,7 +6223,8 @@ export const definitions: ModelDefinitions = {
             "type": "str"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": true
         },
         {
           "name": "removed_from_zotero",
@@ -5661,7 +6238,8 @@ export const definitions: ModelDefinitions = {
             "type": "bool"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": true
         },
         {
           "name": "synced_when",
@@ -5675,7 +6253,8 @@ export const definitions: ModelDefinitions = {
             "type": "datetime"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": true
         },
         {
           "name": "item_type_override",
@@ -5689,12 +6268,25 @@ export const definitions: ModelDefinitions = {
             "type": "str"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         }
       ],
       "incoming": [],
       "traits": [],
-      "interfaceMeta": null
+      "interfaceMeta": {
+        "colour": null,
+        "navSection": null,
+        "listPage": null,
+        "itemPage": null,
+        "viewCard": null,
+        "editCard": null,
+        "collapse": null,
+        "headless": null,
+        "hideOnForms": [
+          "itemTypeOverride"
+        ]
+      }
     },
     "ZoteroLibrary": {
       "name": "ZoteroLibrary",
@@ -5724,7 +6316,8 @@ export const definitions: ModelDefinitions = {
             "type": "str"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": true
         },
         {
           "name": "synced_version",
@@ -5738,7 +6331,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": true
         },
         {
           "name": "last_sync",
@@ -5752,7 +6346,8 @@ export const definitions: ModelDefinitions = {
             "type": "datetime"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": true
         },
         {
           "name": "last_error",
@@ -5766,7 +6361,8 @@ export const definitions: ModelDefinitions = {
             "type": "str"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": true
         }
       ],
       "incoming": [],
@@ -5801,7 +6397,8 @@ export const definitions: ModelDefinitions = {
             "type": "str"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": true
         },
         {
           "name": "zotero_library",
@@ -5815,7 +6412,8 @@ export const definitions: ModelDefinitions = {
             "type": "str"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": true
         },
         {
           "name": "zotero_key",
@@ -5829,7 +6427,8 @@ export const definitions: ModelDefinitions = {
             "type": "str"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": true
         },
         {
           "name": "zotero_version",
@@ -5843,7 +6442,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": true
         },
         {
           "name": "zotero_synced_entity_version",
@@ -5857,7 +6457,8 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": true
         },
         {
           "name": "item_type",
@@ -5871,7 +6472,8 @@ export const definitions: ModelDefinitions = {
             "type": "str"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": true
         },
         {
           "name": "title",
@@ -5885,7 +6487,8 @@ export const definitions: ModelDefinitions = {
             "type": "str"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": true
         },
         {
           "name": "short_title",
@@ -5899,7 +6502,8 @@ export const definitions: ModelDefinitions = {
             "type": "str"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": true
         },
         {
           "name": "creators",
@@ -5913,7 +6517,8 @@ export const definitions: ModelDefinitions = {
             "type": "str"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": true
         },
         {
           "name": "date",
@@ -5927,7 +6532,8 @@ export const definitions: ModelDefinitions = {
             "type": "str"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": true
         },
         {
           "name": "language",
@@ -5941,7 +6547,8 @@ export const definitions: ModelDefinitions = {
             "type": "str"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": true
         },
         {
           "name": "abstract",
@@ -5955,7 +6562,8 @@ export const definitions: ModelDefinitions = {
             "type": "str"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": true
         },
         {
           "name": "zotero_data",
@@ -5969,7 +6577,8 @@ export const definitions: ModelDefinitions = {
             "type": "str"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": true
         },
         {
           "name": "citation",
@@ -5983,7 +6592,8 @@ export const definitions: ModelDefinitions = {
             "type": "str"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": true
         },
         {
           "name": "bibliography",
@@ -5997,7 +6607,8 @@ export const definitions: ModelDefinitions = {
             "type": "str"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": true
         },
         {
           "name": "csl_json",
@@ -6011,7 +6622,8 @@ export const definitions: ModelDefinitions = {
             "type": "str"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": true
         },
         {
           "name": "removed_from_zotero",
@@ -6025,7 +6637,8 @@ export const definitions: ModelDefinitions = {
             "type": "bool"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": true
         },
         {
           "name": "synced_when",
@@ -6039,7 +6652,8 @@ export const definitions: ModelDefinitions = {
             "type": "datetime"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": true
         },
         {
           "name": "item_type_override",
@@ -6053,12 +6667,37 @@ export const definitions: ModelDefinitions = {
             "type": "str"
           },
           "validators": [],
-          "markers": []
+          "markers": [],
+          "readOnly": false
         }
       ],
-      "incoming": [],
+      "incoming": [
+        {
+          "name": "source_reverse",
+          "key": "sourceReverse",
+          "sources": [
+            {
+              "model": "Factoid",
+              "field": "source",
+              "viaReified": true
+            }
+          ]
+        }
+      ],
       "traits": [],
-      "interfaceMeta": null
+      "interfaceMeta": {
+        "colour": null,
+        "navSection": null,
+        "listPage": null,
+        "itemPage": null,
+        "viewCard": null,
+        "editCard": null,
+        "collapse": null,
+        "headless": null,
+        "hideOnForms": [
+          "itemTypeOverride"
+        ]
+      }
     }
   },
   "enums": {
@@ -6316,6 +6955,146 @@ export const definitions: ModelDefinitions = {
         "label"
       ]
     },
+    "Book": {
+      "kind": "entity",
+      "fields": {
+        "zotero_url": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "zotero_library": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "zotero_key": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "zotero_version": {
+          "operators": "compare",
+          "value": {
+            "type": "int"
+          }
+        },
+        "zotero_synced_entity_version": {
+          "operators": "compare",
+          "value": {
+            "type": "int"
+          }
+        },
+        "item_type": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "title": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "short_title": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "creators": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "date": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "language": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "abstract": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "zotero_data": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "citation": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "bibliography": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "csl_json": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "removed_from_zotero": {
+          "operators": "choice",
+          "value": {
+            "type": "bool"
+          }
+        },
+        "synced_when": {
+          "operators": "compare",
+          "value": {
+            "type": "datetime"
+          }
+        },
+        "item_type_override": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        }
+      },
+      "orderBy": [
+        "label",
+        "zotero_url",
+        "zotero_library",
+        "zotero_key",
+        "zotero_version",
+        "zotero_synced_entity_version",
+        "item_type",
+        "title",
+        "short_title",
+        "creators",
+        "date",
+        "language",
+        "abstract",
+        "zotero_data",
+        "citation",
+        "bibliography",
+        "csl_json",
+        "synced_when",
+        "item_type_override"
+      ]
+    },
     "CreationOfArtwork": {
       "kind": "document",
       "fields": {
@@ -6521,6 +7300,7 @@ export const definitions: ModelDefinitions = {
           "operators": "relation",
           "targets": [
             "Artwork",
+            "Book",
             "Painting",
             "PhysicalObject"
           ]
@@ -6880,7 +7660,8 @@ export const definitions: ModelDefinitions = {
         "source": {
           "operators": "relation",
           "targets": [
-            "Source"
+            "Book",
+            "ZoteroObject"
           ]
         },
         "statements": {
@@ -8137,6 +8918,36 @@ export type ArtworkWhere = {
 
 export type ArtworkPattern = { type: "Artwork"; where?: ArtworkWhere };
 
+export type BookWhere = {
+  zotero_url?: TextCondition;
+  zotero_library?: TextCondition;
+  zotero_key?: TextCondition;
+  zotero_version?: CompareCondition<number>;
+  zotero_synced_entity_version?: CompareCondition<number>;
+  item_type?: TextCondition;
+  title?: TextCondition;
+  short_title?: TextCondition;
+  creators?: TextCondition;
+  date?: TextCondition;
+  language?: TextCondition;
+  abstract?: TextCondition;
+  zotero_data?: TextCondition;
+  citation?: TextCondition;
+  bibliography?: TextCondition;
+  csl_json?: TextCondition;
+  removed_from_zotero?: ChoiceCondition<boolean>;
+  synced_when?: CompareCondition<string>;
+  item_type_override?: TextCondition;
+  $all?: BookWhere[];
+  $any_of?: BookWhere[];
+  $not?: BookWhere;
+  $any?: AnyRelationCondition;
+  label?: TextCondition;
+  $incoming?: NodePattern | NodePattern[];
+};
+
+export type BookPattern = { type: "Book"; where?: BookWhere };
+
 export type CreationOfArtworkWhere = {
   date?: RelationCondition | (RelationCondition & (DatePattern | DateRangePattern | EDTFDatePattern | ExactDatePattern | OngoingDatePattern | PeriodPattern | RecurrencePattern | UnknownDatePattern));
   date_sort_day?: CompareCondition<number>;
@@ -8191,7 +9002,7 @@ export type CreationOfPhysicalObjectWhere = {
   text?: TextCondition;
   places?: RelationCondition | (RelationCondition & (PlacePattern));
   created_by?: RelationCondition | (RelationCondition & (PersonPattern));
-  object_created?: RelationCondition | (RelationCondition & (ArtworkPattern | PaintingPattern | PhysicalObjectPattern));
+  object_created?: RelationCondition | (RelationCondition & (ArtworkPattern | BookPattern | PaintingPattern | PhysicalObjectPattern));
   $all?: CreationOfPhysicalObjectWhere[];
   $any_of?: CreationOfPhysicalObjectWhere[];
   $not?: CreationOfPhysicalObjectWhere;
@@ -8301,7 +9112,7 @@ export type ExactDateWhere = {
 export type ExactDatePattern = { type: "ExactDate"; where?: ExactDateWhere };
 
 export type FactoidWhere = {
-  source?: RelationCondition | (RelationCondition & (SourcePattern));
+  source?: RelationCondition | (RelationCondition & (BookPattern | ZoteroObjectPattern));
   statements?: RelationCondition | (RelationCondition & (ActivityPattern | CreationOfArtworkPattern | CreationOfPaintingPattern | CreationOfPhysicalObjectPattern | MemberOfPattern | OrderPattern | TransferPattern));
   $all?: FactoidWhere[];
   $any_of?: FactoidWhere[];
@@ -8691,6 +9502,7 @@ export type ZoteroObjectPattern = { type: "ZoteroObject"; where?: ZoteroObjectWh
 export interface Wheres {
   Activity: ActivityWhere;
   Artwork: ArtworkWhere;
+  Book: BookWhere;
   CreationOfArtwork: CreationOfArtworkWhere;
   CreationOfPainting: CreationOfPaintingWhere;
   CreationOfPhysicalObject: CreationOfPhysicalObjectWhere;
@@ -8716,6 +9528,7 @@ export interface Wheres {
 export interface OrderFields {
   Activity: "label" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day" | "date_sort_day" | "date_end_sort_day" | "date_text" | "text";
   Artwork: "label";
+  Book: "label" | "zotero_url" | "zotero_library" | "zotero_key" | "zotero_version" | "zotero_synced_entity_version" | "item_type" | "title" | "short_title" | "creators" | "date" | "language" | "abstract" | "zotero_data" | "citation" | "bibliography" | "csl_json" | "synced_when" | "item_type_override";
   CreationOfArtwork: "label" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day" | "date_sort_day" | "date_end_sort_day" | "date_text" | "text";
   CreationOfPainting: "label" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day" | "date_sort_day" | "date_end_sort_day" | "date_text" | "text";
   CreationOfPhysicalObject: "label" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day" | "date_sort_day" | "date_end_sort_day" | "date_text" | "text";

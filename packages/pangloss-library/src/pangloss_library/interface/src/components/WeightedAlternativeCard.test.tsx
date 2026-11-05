@@ -5,7 +5,7 @@ import { ComponentsProvider, ModelsProvider, ReferenceChip } from "@pangloss/int
 import type { ComponentMap, ModelDefinitions } from "@pangloss/interface-core";
 import WeightedAlternativeCard from "./WeightedAlternativeCard";
 
-const base = { description: null, dbField: false, required: false, nullable: false };
+const base = { description: null, dbField: false, readOnly: false, required: false, nullable: false };
 const model = (name: string, kind: string, fields: object[] = []) => ({
   name, kind, parent: null, abstract: false, concreteTypes: [name], description: null, typeParameters: [],
   createWithId: false, createDirectly: true, acceptUrlAsId: false, requireLabel: false, useInSemanticSpaceLabel: true,

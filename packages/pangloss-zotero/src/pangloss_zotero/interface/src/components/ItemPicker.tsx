@@ -18,8 +18,9 @@ export function ItemPicker(props: {
   const { t } = useTranslations();
   const [address, setAddress] = createSignal("");
   return (
-    <Modal title={props.title} onClose={props.onClose} size="lg">
-      <div class="flex flex-col gap-4 p-4 text-sm" data-testid="zotero-picker">
+    // (wider than the form it is over, and tall enough for the list of what is found, which the dialog would cut off)
+    <Modal title={props.title} onClose={props.onClose} size="xl">
+      <div class="flex min-h-[60vh] flex-col gap-4 p-4 text-sm" data-testid="zotero-picker">
         <Show when={props.note}>
           <p class="text-slate-600">{props.note}</p>
         </Show>

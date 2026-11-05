@@ -35,6 +35,8 @@ export interface FieldBase {
   key: string;
   description: string | null;
   dbField: boolean;
+  /** Kept up to date by something other than a person (`Protection`): a form does not show it (the item's page does) */
+  readOnly: boolean;
   /** May not be left out */
   required: boolean;
   nullable: boolean;
@@ -208,6 +210,8 @@ export interface InterfaceMeta {
    * thing a field can hold, one of it, and must (`headlessIn`). In the view and the form
    */
   headless?: true | null;
+  /** The keys of fields its forms do not show (the item's page does): `InterfaceMeta(hide_on_forms=...)` */
+  hideOnForms?: string[] | null;
 }
 
 /** `Collapse(...)` in Python: conditions on top of the built-in rule, by the keys of fields */
@@ -308,7 +312,7 @@ export interface ModelDefinitions {
   nav?: NavConfig;
   /**
    * What the interface modules add that the project does not use (`InterfaceConfig(disabled=...)`), as `app:key`: a
-   * key of `consoleActions`, `newItemActions`, `itemSections` or `incomingViews` (absent: none)
+   * key of `consoleActions`, `newItemActions`, `newItemFields`, `itemSections` or `incomingViews` (absent: none)
    */
   disabled?: string[];
 }

@@ -196,12 +196,15 @@ bishop's appointment in 1510, a notary's not before 1490 (`notAfter` not known),
 
 | Area | State | Where / notes |
 | --- | --- | --- |
-| *From Zotero* on the form of a new `Book`: the picker of the library, the form filled in, the item as a chip, Save turns the item into the Book (same id; what cited it now cites a Book) | ✅ | `test_zotero.py::test_a_new_book_is_based_on_an_item_and_unlinked_again`; dev build in `test_dev_mode.py::test_a_book_from_zotero_and_unlinked` |
+| The *Zotero item* row on the form of a new `Book` (no inputs for the Zotero fields): the picker of the library, the label filled in, the item as a chip, Save turns the item into the Book (same id; what cited it now cites a Book) | ✅ | `test_zotero.py::test_a_new_book_is_based_on_an_item_and_unlinked_again`; dev build in `test_dev_mode.py::test_a_book_from_zotero_and_unlinked` |
+| The same row in the dialog that makes a Book from a relation's field | ✅ | `test_a_book_made_in_a_relations_dialog_is_based_on_an_item` |
+| `item_type_override` not on the form of a class that names no Zotero types | ✅ | `test_a_new_book_is_based_on_an_item_and_unlinked_again`; pytest `test_zotero_mapping.py` |
+| A long label set by the pick grows the label box (several lines), and the chip of the item is cut short with its ✕ in view | ✅ | `test_a_long_label_from_the_item_is_shown_whole` |
 | *Unlink from Zotero*: asks first; the Book keeps its fields, the item is an entry of its own again | ✅ | the same |
 | *Link to Zotero* on a Book made by hand, to an item nothing refers to (the Book is kept, the item's node goes) | ✅ | `test_a_book_made_by_hand_is_linked_to_an_item` |
 | *Link to Zotero*: the item's node kept (another id, the page follows); refused when both are referred to; by an address | 🚧 | live tests in `pangloss-zotero` (`test_zotero_live_adopt.py`); not in a browser |
-| *From Zotero* only on the classes an item can be made into | ✅ | `test_from_zotero_is_only_on_the_classes_an_item_can_be_made_into` |
-| The hook (`newItemActions`): filling the form in and sending it another way | ✅ | Vitest `NewItemActions.test.tsx` |
+| The *Zotero item* row only on the classes an item can be made into | ✅ | `test_the_zotero_row_is_only_on_the_classes_an_item_can_be_made_into` |
+| The hooks (`newItemActions`, `newItemFields`, page and dialog): filling the form in and sending it another way; `readOnly` fields not on forms, sent back as loaded | ✅ | Vitest `NewItemActions.test.tsx` |
 
 ## Findings of this suite (for the interface, not yet changed)
 

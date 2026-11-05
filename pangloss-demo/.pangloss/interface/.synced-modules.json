@@ -118,5 +118,14 @@
   "modules/pangloss_typology/src/tree.test.ts",
   "modules/pangloss_typology/src/tree.ts",
   "modules/pangloss_typology/tsconfig.json",
-  "modules/pangloss_typology/vitest.config.ts"
+  "modules/pangloss_typology/vitest.config.ts",
+  "modules/pangloss_zotero/README.md",
+  "modules/pangloss_zotero/package.json",
+  "modules/pangloss_zotero/src/api.ts",
+  "modules/pangloss_zotero/src/components/FromZotero.tsx",
+  "modules/pangloss_zotero/src/components/ItemPicker.tsx",
+  "modules/pangloss_zotero/src/components/ZoteroLinkAction.tsx",
+  "modules/pangloss_zotero/src/index.ts",
+  "modules/pangloss_zotero/tsconfig.json",
+  "modules/pangloss_zotero/vitest.config.ts"
 ]

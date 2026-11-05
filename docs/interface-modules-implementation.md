@@ -569,8 +569,22 @@ Done afterwards (2026-10-29):
   `set(path, value)` (as a field does), and `sendBy(sender)`, which makes Save call `sender(body)` (the checked body of the
   create) instead of `POST /api/<type>`, until `sendBy(undefined)`. Drawn by `ItemForm` (`NewItemActions`), each in its own
   `Loading` and `Errored`. `useModules().newItemActions()`; `Manifest.new_item_actions`. Tested by `NewItemActions.test.tsx`.
+- **`newItemFields` (2026-11-05, for Zotero).** The same props, for components drawn first among the fields of a new item's
+  form: rows of its grid, usually a `FieldRow` (exported). Drawn by `ItemFields` given `newItem` (the `NewItemForm`), which
+  both the page's `ItemForm` and the dialog of a relation (`EntityCreateForm`) give, so the dialog has `sendBy` too.
+  `useModules().newItemFields()`; `Manifest.new_item_fields`. Tested by `NewItemActions.test.tsx`.
+- **`InterfaceMeta(hide_on_forms=...)` (2026-11-05).** Fields the forms of a model do not show: names, or a function of
+  the class exported (for a package's base: Zotero shows `item_type_override` only on classes that name item types). The
+  nearest class that sets it wins; `()` turns off a parent's. Exported as `interfaceMeta.hideOnForms`, by key;
+  `export_definitions` refuses a name the model does not have. Like `readOnly`, what the form loaded is sent back.
+- **`Modal` size `xl`** (2026-11-05): wider than `lg`, for a search over another dialog (Zotero's item picker, whose
+  results the narrower dialog cut off).
+- **`readOnly` fields (2026-11-05).** `export_definitions` sets `readOnly` on every field: true where the model's
+  `Protection` names it (something other than a person keeps it up to date; the API refuses a change). A form does not
+  show such a field (the item's page does); what the form loaded of it is sent back unchanged. It is not in
+  `export_models()`, which the migrations' snapshots are made from.
 - **`InterfaceConfig(disabled=[...])` (2026-11-05).** A project leaves out what a module adds to every item page, by `app:key` (a
-  key of `consoleActions`, `newItemActions`, `itemSections` or `incomingViews`). The names of all apps are exported as `disabled`, and
+  key of `consoleActions`, `newItemActions`, `newItemFields`, `itemSections` or `incomingViews`). The names of all apps are exported as `disabled`, and
   `ModulesProvider` drops those; `check` reports one that no module has. To replace one, disable it and add your own.
 - **A module may have `"use server"` functions** (2026-11-03): the Solid plugin compiles only `src/**` of the Vite root by default, so
   `vite.config.ts` adds the modules' folders (`../modules/*/src`, and `PANGLOSS_MODULE_ROOTS` for `--link`) to `serverFunctions.filter`.

@@ -39,7 +39,7 @@ const model = (name: string, extra: Partial<ModelDefinition> = {}) =>
     ...extra,
   }) as ModelDefinition;
 
-const base = { description: null, dbField: false, required: false, nullable: false };
+const base = { description: null, dbField: false, readOnly: false, required: false, nullable: false };
 const literal = (name: string) =>
   ({ ...base, name, key: name, kind: "literal", type: { type: "str" }, validators: [] }) as FieldDefinition;
 const relation = (name: string, key: string, options: RelationOption[], many: boolean, subclasses: string[] = []) =>

@@ -17,6 +17,7 @@ const field = (key: string, type: object): FieldDefinition =>
     key,
     description: null,
     dbField: false,
+    readOnly: false,
     required: false,
     nullable: true,
     kind: "literal",
@@ -321,7 +322,7 @@ test("a date that does not say what it sorts by shows the midpoint chosen, or it
     { type: "ExactDate", year: 800 },
     {
       field: {
-        name: "born", key: "born", description: null, dbField: false, required: false, nullable: true,
+        name: "born", key: "born", description: null, dbField: false, readOnly: false, required: false, nullable: true,
         kind: "embedded", model: "Date", types: ["ExactDate"],
         markers: [{ name: "SortDefault", sortBy: "earliest_fuzzy" }],
       },

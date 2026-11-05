@@ -137,7 +137,7 @@ export default defineModule({
   requires: [],                           // other modules it uses
   components: { MonthPage: () => import("./components/MonthPage") },   // lazy
   routes: [{ path: "/calendar/:calendar/:year/:month", component: "MonthPage" }],
-  // also: collapseRules, consoleActions, newItemActions, itemSections, incomingViews
+  // also: collapseRules, consoleActions, newItemActions, newItemFields, itemSections, incomingViews
 });
 ```
 
@@ -148,6 +148,9 @@ export default defineModule({
 | Links and sections in the navigation bar | `<app>/interface_config.py`: `config = InterfaceConfig(nav=[NavModel(...), NavLink(...)], sections=[...])` |
 | A button or panel in the console of a page | `consoleActions` |
 | A button on the form of a new item that fills it in, or sends it another way | `newItemActions` (`NewItemForm`: `get`, `set`, `sendBy`) |
+| A row among the fields of a new item's form (page and relation dialog), with the same powers | `newItemFields` (draw a `FieldRow`) |
+| Fields a form must not edit (kept up to date by the package) | `Protection(read_only=...)` on the model: exported as `readOnly`, left off every form |
+| Fields a person may set but forms need not show (per class) | `InterfaceMeta(hide_on_forms=(...) or a function of the class)` |
 | A section after an item's own contents | `itemSections` |
 | Another way to show what refers to an item (a timeline) | `incomingViews` (`takes` chooses the items; the rest stay by field) |
 | A rule for folding a wrapper into the one thing it holds | `collapseRules`, named from `InterfaceMeta(collapse="app:rule")` |

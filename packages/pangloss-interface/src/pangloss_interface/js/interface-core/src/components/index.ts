@@ -17,7 +17,7 @@ export * from "./ItemSections";
 export * from "./Customised";
 export * from "./form/ItemForm";
 // (for the editors of interface modules: the rows of a model's fields, and the look of the inputs)
-export { ModelFields } from "./form/ModelFields";
+export { FieldRow, ModelFields } from "./form/ModelFields";
 // (for interface modules: find an entity or make a new one, as a relation's field does; and the dialog that makes one)
 export { NewEntityDialog, PickOrCreate } from "./form/ModelFields";
 export * from "./form/NumberInput";

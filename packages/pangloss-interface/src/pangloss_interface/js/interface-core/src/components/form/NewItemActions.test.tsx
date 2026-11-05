@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import { render } from "@solidjs/web";
+import type { JSX } from "@solidjs/web";
 import { afterEach, expect, test } from "vitest";
 import type { ApiClient } from "../../api";
 import {
@@ -19,6 +20,7 @@ import { Console } from "../Console";
 import { ConsoleBar } from "../ConsoleBar";
 import { ReferenceChip } from "../ReferenceChip";
 import { ItemForm } from "./ItemForm";
+import { FieldRow, NewEntityDialog } from "./ModelFields";
 
 const definitions = {
   models: {
@@ -45,6 +47,20 @@ const definitions = {
           validators: [],
           description: null,
           dbField: false,
+          readOnly: false,
+          required: false,
+          nullable: true,
+        },
+        {
+          // (kept up to date by something else)
+          name: "zotero_key",
+          key: "zoteroKey",
+          kind: "literal",
+          type: { type: "str" },
+          validators: [],
+          description: null,
+          dbField: false,
+          readOnly: true,
           required: false,
           nullable: true,
         },
@@ -77,8 +93,35 @@ function FromElsewhere(props: NewItemActionProps) {
     </button>
   );
 }
+// (a module's row among the fields: the same, from the form's grid)
+function RowElsewhere(props: NewItemActionProps) {
+  given.push(props);
+  return (
+    <FieldRow name="Elsewhere">
+      <button
+        type="button"
+        data-testid="row-elsewhere"
+        onClick={() => {
+          props.form.set(["label"], "From the row");
+          props.form.set(["zoteroKey"], "ABCD1234");
+          props.form.sendBy(async (body) => {
+            sentBy.push(body);
+            return { id: "b2", type: "Book", label: String(body.label) };
+          });
+        }}
+      >
+        {props.type}
+      </button>
+    </FieldRow>
+  );
+}
 const modules: ModuleManifest[] = [
-  { name: "elsewhere", components: {}, newItemActions: { From: async () => ({ default: FromElsewhere }) } },
+  {
+    name: "elsewhere",
+    components: {},
+    newItemActions: { From: async () => ({ default: FromElsewhere }) },
+    newItemFields: { Row: async () => ({ default: RowElsewhere }) },
+  },
 ];
 
 const settle = (ms = 10) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -90,7 +133,7 @@ afterEach(() => {
   sentBy.length = 0;
 });
 
-function show(initial: Record<string, unknown>, version?: number) {
+function mount(content: (saved: unknown[]) => JSX.Element) {
   const posted: unknown[] = [];
   const saved: unknown[] = [];
   const client = {
@@ -100,7 +143,10 @@ function show(initial: Record<string, unknown>, version?: number) {
       posted.push({ path, body });
       return { id: "made", type: "Book", label: "Made" };
     },
-    put: async () => ({ id: "b1", type: "Book", label: "Edited" }),
+    put: async (path: string, body: unknown) => {
+      posted.push({ path, body, put: true });
+      return { id: "b1", type: "Book", label: "Edited" };
+    },
   } as unknown as ApiClient;
   const container = document.createElement("div");
   document.body.append(container);
@@ -115,14 +161,7 @@ function show(initial: Record<string, unknown>, version?: number) {
                   <ConsoleMountProvider>
                     <ClipboardProvider>
                       <ToastsProvider>
-                        <ConsoleBar />
-                        <ItemForm
-                          type="Book"
-                          initial={initial}
-                          version={version}
-                          onSaved={(summary) => saved.push(summary)}
-                          onCancel={() => {}}
-                        />
+                        {content(saved)}
                       </ToastsProvider>
                     </ClipboardProvider>
                   </ConsoleMountProvider>
@@ -138,6 +177,20 @@ function show(initial: Record<string, unknown>, version?: number) {
   return { posted, saved };
 }
 
+const show = (initial: Record<string, unknown>, version?: number) =>
+  mount((saved) => (
+    <>
+      <ConsoleBar />
+      <ItemForm
+        type="Book"
+        initial={initial}
+        version={version}
+        onSaved={(summary) => saved.push(summary)}
+        onCancel={() => {}}
+      />
+    </>
+  ));
+
 const click = (element: Element | null | undefined) =>
   (element as HTMLElement).dispatchEvent(new MouseEvent("click", { bubbles: true }));
 const button = (name: string) =>
@@ -148,7 +201,10 @@ const button = (name: string) =>
 test("a module's action in the console of a new item fills the form in, and sends it its own way", async () => {
   const { posted, saved } = show({ type: "Book" });
   await settle();
-  expect(given.map((p) => [p.type, p.model.name])).toEqual([["Book", "Book"]]);
+  expect(given.map((p) => [p.type, p.model.name])).toEqual([
+    ["Book", "Book"],
+    ["Book", "Book"],
+  ]);
   click(document.body.querySelector('[data-testid="from-elsewhere"]'));
   await settle();
   expect(document.body.querySelector<HTMLInputElement>('[aria-label="Label"]')!.value).toBe("Filled in");
@@ -177,4 +233,52 @@ test("without the module's say, a new item is made as usual; an item being edite
   await settle();
   expect(given).toEqual([]);
   expect(document.body.querySelector('[data-testid="from-elsewhere"]')).toBeNull();
+});
+
+const rowNames = () =>
+  [...document.body.querySelectorAll("dt")].map((dt) => dt.firstChild?.textContent?.trim()).filter(Boolean);
+
+test("a read-only field is not on the form, and what was loaded of it is sent back as it was", async () => {
+  show({ type: "Book" });
+  await settle();
+  expect(rowNames()).toEqual(["Elsewhere", "title"]);
+  dispose?.();
+  document.body.innerHTML = "";
+
+  const { posted } = show({ type: "Book", id: "b1", label: "A book", zoteroKey: "WXYZ9876" }, 1);
+  await settle();
+  expect(rowNames()).toEqual(["title"]);
+  expect(document.body.textContent).not.toContain("WXYZ9876");
+  click(button("Save"));
+  await settle();
+  expect(posted).toEqual([
+    { path: expect.stringContaining("/Book/b1"), body: expect.objectContaining({ zoteroKey: "WXYZ9876" }), put: true },
+  ]);
+});
+
+test("a module's row is first among the fields of a new item's page, and what it sets is sent", async () => {
+  show({ type: "Book" });
+  await settle();
+  expect(rowNames()[0]).toBe("Elsewhere");
+  click(document.body.querySelector('[data-testid="row-elsewhere"]'));
+  await settle();
+  click(button("Save"));
+  await settle();
+  expect(sentBy).toEqual([expect.objectContaining({ label: "From the row", zoteroKey: "ABCD1234" })]);
+});
+
+test("a module's row is in the dialog that makes an entity too, and sends it its own way", async () => {
+  const made: unknown[] = [];
+  const { posted } = mount(() => (
+    <NewEntityDialog types={["Book"]} onCreated={(entity) => made.push(entity)} onClose={() => {}} />
+  ));
+  await settle();
+  expect(rowNames()).toEqual(["Elsewhere", "title"]);
+  click(document.body.querySelector('[data-testid="row-elsewhere"]'));
+  await settle();
+  click(button("Save"));
+  await settle();
+  expect(posted).toEqual([]);
+  expect(sentBy).toEqual([expect.objectContaining({ label: "From the row" })]);
+  expect(made).toEqual([{ id: "b2", type: "Book", label: "From the row" }]);
 });
