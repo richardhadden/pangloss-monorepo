@@ -1,0 +1,33 @@
+// The fixed text of the interface module of pangloss_typology (the slots of its pages): {"key": {"language": "text"}}.
+// Read for every installed app, after the interface's own; a project changes or adds a language in its own
+// translations/ui.jsonc.
+{
+  "nav_section_typologies": { "en": "Typologies", "de": "Typologien", "fr": "Typologies" },
+  "type_marker": { "en": "type", "de": "Typ", "fr": "type" },
+  "typology_path": { "en": "Path", "de": "Pfad", "fr": "Chemin" },
+  "typology_all": { "en": "All", "de": "Alle", "fr": "Tous" },
+  "typology_labels": { "en": "Labels", "de": "Bezeichnungen", "fr": "Libellés" },
+  "typology_default_label": { "en": "default", "de": "Standard", "fr": "par défaut" },
+  "typology_not_translated_shown": { "en": "(not translated: the default is shown)", "de": "(nicht übersetzt: der Standard wird angezeigt)", "fr": "(non traduit : le libellé par défaut est affiché)" },
+  "typology_not_translated": { "en": "(not translated)", "de": "(nicht übersetzt)", "fr": "(non traduit)" },
+  "typology_description": { "en": "description", "de": "Beschreibung", "fr": "description" },
+  "typology_edit_labels": { "en": "Edit labels", "de": "Bezeichnungen bearbeiten", "fr": "Modifier les libellés" },
+  "typology_concrete": { "en": "Also a concrete entity (a relation that takes the other class takes this type)", "de": "Auch eine konkrete Entität (eine Beziehung, die die andere Klasse annimmt, nimmt auch diesen Typ an)", "fr": "Aussi une entité concrète (une relation qui accepte l’autre classe accepte ce type)" },
+  "typology_subtypes": { "en": "Subtypes", "de": "Untertypen", "fr": "Sous-types" },
+  "typology_none": { "en": "None.", "de": "Keine.", "fr": "Aucun." },
+  "typology_counts": { "en": "{subtypes} subtypes · {entities} entities", "de": "{subtypes} Untertypen · {entities} Entitäten", "fr": "{subtypes} sous-types · {entities} entités" },
+  "typology_entities_with": { "en": "Entities with this type ({count})", "de": "Entitäten mit diesem Typ ({count})", "fr": "Entités de ce type ({count})" },
+  "typology_including_subtypes": { "en": "including subtypes", "de": "einschließlich Untertypen", "fr": "y compris les sous-types" },
+  "typology_show_more": { "en": "Show more", "de": "Mehr anzeigen", "fr": "Afficher plus" },
+  "typology_collapse": { "en": "Collapse", "de": "Einklappen", "fr": "Replier" },
+  "typology_expand": { "en": "Expand", "de": "Ausklappen", "fr": "Déplier" },
+  "typology_edit_label": { "en": "Edit the label of {name}", "de": "Bezeichnung von {name} bearbeiten", "fr": "Modifier le libellé de {name}" },
+  "typology_subtype_count": { "en": "{count} subtypes", "de": "{count} Untertypen", "fr": "{count} sous-types" },
+  "typology_add_subtype": { "en": "Add a subtype of {name}", "de": "Untertyp von {name} hinzufügen", "fr": "Ajouter un sous-type de {name}" },
+  "typology_add_top": { "en": "Add a top-level type", "de": "Typ der obersten Ebene hinzufügen", "fr": "Ajouter un type de premier niveau" },
+  "typology_new_top": { "en": "New top-level {type}", "de": "Neuer {type} der obersten Ebene", "fr": "Nouveau {type} de premier niveau" },
+  "typology_new_subtype": { "en": "New subtype of {name}", "de": "Neuer Untertyp von {name}", "fr": "Nouveau sous-type de {name}" },
+  "typology_add": { "en": "Add", "de": "Hinzufügen", "fr": "Ajouter" },
+  "typology_label_of": { "en": "Label of {name}", "de": "Bezeichnung von {name}", "fr": "Libellé de {name}" },
+  "typology_no_types": { "en": "No types yet.", "de": "Noch keine Typen.", "fr": "Aucun type pour l’instant." }
+}

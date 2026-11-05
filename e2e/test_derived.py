@@ -4,14 +4,16 @@ group are of the same group. (The fixture `grouped` is in conftest.py.)"""
 
 import re
 
-from helpers import hydrated
+from helpers import expand_nav, hydrated
 from playwright.sync_api import Page, expect
 
 
+def derived_in(page: Page, heading: str):
+    return page.locator("main section").filter(has=page.locator("h2", has_text=heading))
+
+
 def derived(page: Page):
-    return page.locator("main section").filter(
-        has=page.locator("h2", has_text="Derived")
-    )
+    return derived_in(page, "Derived")
 
 
 def facts_of(section):
@@ -122,3 +124,29 @@ def test_a_fact_whose_evidence_is_deleted_is_gone_at_once(page: Page, grouped):
     expect(facts_of(section)).to_have_count(26)
     expect(section.get_by_role("link", name=re.compile("Margriet"))).to_have_count(0)
     expect(section.get_by_role("link", name=re.compile("Pieter"))).to_have_count(1)
+
+
+def test_the_words_of_the_modules_are_their_own_and_follow_the_language(
+    page: Page, grouped
+):
+    # (each interface module's texts are in its app's translations/ui.jsonc, not the interface's: the derived section,
+    # the timeline and its button (pangloss_dates), the calendar's link and the typologies' section in the bar)
+    page.goto(f"/Person/{grouped.jan}")
+    expand_nav(page)
+    page.get_by_role("button", name="Deutsch").click()
+    expect(page.locator("html")).to_have_attribute("lang", "de")
+    nav = page.locator("nav[aria-label]").first
+    expect(nav.get_by_role("link", name="Kalender")).to_be_visible()
+    expect(nav).to_contain_text("Typologien")
+    # (off the bar: it closes)
+    page.mouse.move(600, 400)
+    expect(page.locator("main h2")).to_have_text(["Abgeleitet"])
+    expect(
+        facts_of(derived_in(page, "Abgeleitet")).first.get_by_role("button")
+    ).to_have_text("▸Warum (1)")
+    page.get_by_role("button", name="Nach Datum sortieren").click()
+    expect(page.locator("main h2")).to_have_text(["Zeitleiste", "Abgeleitet"])
+    page.get_by_role("button", name="Nach Datum sortieren").click()
+    page.locator("nav[aria-label]").first.hover()
+    page.get_by_role("button", name="English").click()
+    expect(page.locator("main h2")).to_have_text(["Derived"])

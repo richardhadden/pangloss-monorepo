@@ -3,6 +3,8 @@ import { modelHierarchy } from "./hierarchy";
 
 export interface NavEntry {
   label: string;
+  /** The translation slot of a label an app gave (`nav_<app>_<label>`): the label as written is its English */
+  labelSlot?: string;
   /** The model it is the list of, if a model's (its name is then translated, unless an app gave a label) */
   model?: string;
   href: string;
@@ -64,7 +66,7 @@ export function navSections(definitions: ModelDefinitions): NavSection[] {
         section,
         {
           label: placement?.label ?? model.name,
-          ...(placement?.label ? {} : { model: model.name }),
+          ...(placement?.label ? { labelSlot: placement.labelSlot } : { model: model.name }),
           href: `/${model.name}`,
           depth,
           external: false,
@@ -79,6 +81,7 @@ export function navSections(definitions: ModelDefinitions): NavSection[] {
       link.section ?? LINKS_SECTION,
       {
         label: link.label,
+        labelSlot: link.labelSlot,
         href: link.href,
         depth: 0,
         external: link.external,

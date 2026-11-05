@@ -1,0 +1,9 @@
+// The fixed text of the interface module of pangloss_derived (the slots of its pages): {"key": {"language": "text"}}.
+// Read for every installed app, after the interface's own; a project changes or adds a language in its own
+// translations/ui.jsonc.
+{
+  "derived_heading": { "en": "Derived", "de": "Abgeleitet", "fr": "Déduit" },
+  "derived_why": { "en": "Why ({count})", "de": "Warum ({count})", "fr": "Pourquoi ({count})" },
+  "derived_qualified": { "en": "Only from statements with a context", "de": "Nur aus Aussagen mit einem Kontext", "fr": "Seulement d’énoncés avec un contexte" },
+  "derived_more": { "en": "and {count} more", "de": "und {count} weitere", "fr": "et {count} de plus" }
+}

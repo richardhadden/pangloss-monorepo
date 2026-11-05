@@ -15,6 +15,10 @@ language of the page (`formatDate(date, words)`: month and weekday names from `I
 and the words), and so are the times in the console. What is still not translatable: the labels of typology types in the
 tree and in reference chips (the typology API sends the default label only), and the API's own messages (English).
 
+**2026-11-05:** the slots of the interface modules moved to their apps' own `translations/ui.jsonc` (see
+[translations.md](translations.md)); where the tables below say "in `ui.jsonc`" for a `date_*`, `calendar_*`, `review_*`,
+`typology_*` or `derived_*` slot, it is that app's file.
+
 ## Visible text
 
 | Slot | English | Where | Notes |
