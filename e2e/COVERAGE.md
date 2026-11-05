@@ -3,7 +3,7 @@
 Keep this current: when a page or feature is added to the interface (or a test is added here), change its row.
 ✅ tested · 🚧 partly · ⬜ not yet · — not built, so nothing to test
 
-140 tests, about 310 s. The e2e project (`conftest.py`) has `Person` (`has_role: list[Role]`), `Role` (`has_type`), `RoleType` (a
+145 tests, about 315 s. The e2e project (`conftest.py`) has `Person` (`has_role: list[Role]`), `Role` (`has_type`), `RoleType` (a
 typology, also a `Role`) with Clerk > Secretary and Advisor, and `Statement` (a document: `text`, `about: Person`). The `data`
 fixture adds Maximilian (his secretary: a `Role` of the type Secretary), Marie of Burgundy (her advisor, and a statement
 about her "held court at Ghent") and Charles the Bold (no role); `types` has only the types; `stack` has one admin user.
@@ -47,7 +47,7 @@ about her "held court at Ghent") and Charles the Bold (no role); `types` has onl
 | Item page: reified relations without a "target" key; the full trail (spaces and documents) round a chip; reverse through a reified relation shows the field in its document | 🚧 | unit tests in `ItemContents.test.tsx`; the e2e project has no reified relation or semantic space |
 | Dates (`pangloss_dates` module): a date is said as a person would, not listed by field | 🚧 | unit tests in the module (`format.test.ts`, `DateCard.test.tsx`); the e2e project has no dates |
 | Item page: a type in a field leads to the page of the type (module page) | ✅ | |
-| Item page: "Derived" section (`_derived` of `pangloss-derived`): each class with the other end and its fields (each by its field name in the derived class), the context of a qualified fact, "and N more" reading the next page, "Why" fetching the justifications | 🚧 | unit tests in `pangloss_derived/interface` (`DerivedSection.test.tsx`; it is that module's `itemSections.Derived`), the hook in `ItemContents.test.tsx`; the e2e project does not install `pangloss_derived` |
+| Item page: "Derived" section (`_derived` of `pangloss-derived`, the `itemSections.Derived` of its interface module): after the item's facts, well apart, under a bar; each class with its count; each fact with the other end and its fields (the two symmetric ends as one "member"), never the item itself; "Why (n)" opens the rule and the evidence documents as chips, and closes; "and N more" reads the next page; after the Timeline when sorted by date; no section for an item with nothing derived; a deleted document hides at once only the facts it alone justifies | ✅ | `test_derived.py` (5 tests; the e2e project derives `SameGroup` from two `Membership`s); unit tests in `pangloss_derived/interface` (`DerivedSection.test.tsx`); the read rule: `pangloss-derived/tests/live` (`test_a_deleted_factoid_hides_only_what_it_justifies`) |
 | Interface-module hooks on the item page: `itemSections` (after the contents), `incomingViews` (another view of what refers to the item, offered while it takes some; the rest stays by field), and `InterfaceConfig(disabled=...)` leaving either (or a console action) out | ✅ | e2e through the dates module (the timeline tests above); `disabled` and the sections: Vitest `ItemContents.test.tsx`; the check: `test_interface_modules.py`, `test_interface_config.py` |
 | Item page of a subtype (308 to its own route) | ✅ | through `/Role/<concrete type id>` in `test_typology_item.py` |
 | Not-found page, with a 404 status | ✅ | `test_navigation.py` |

@@ -244,6 +244,19 @@ async def test_deleting_a_factoid_hides_at_once_and_removes_when_the_worker_has_
 
 
 @no_type_check
+async def test_a_deleted_factoid_hides_only_what_it_justifies(clear_database):
+    # (a regression: Memgraph read the rule so that one deleted document hid every fact until the worker had run)
+    Person, Group, Factoid, SameFamily, p, g = await make(clear_database)
+    await Factoid.Create(label="F1", statements=[member(p["A"], g)]).save()
+    await Factoid.Create(label="F2", statements=[member(p["B"], g)]).save()
+    f3 = await Factoid.Create(label="F3", statements=[member(p["C"], g)]).save()
+    await run_pending_derivations()
+    assert len(await pairs(SameFamily)) == 3
+    await Factoid.delete(f3.id)
+    assert [x[0] for x in await pairs(SameFamily)] == [("A", "B")]
+
+
+@no_type_check
 async def test_an_update_that_removes_a_member_removes_the_pair_and_one_that_changes_nothing_writes_nothing(
     clear_database, db_driver
 ):

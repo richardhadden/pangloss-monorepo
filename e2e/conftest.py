@@ -120,6 +120,43 @@ MODELS = textwrap.dedent(
     # (a feast, by rule or attached by hand: what the calendar's days are characterised by)
     class Feast(DateCharacterisation):
         use: str | None = None
+
+
+    # (a person said to be a member of a group: two such make the derived fact that they are of one group)
+    class Membership(Document):
+        member: Person
+        group: Group
+    """
+)
+# What the project derives (`pangloss_derived`): the members of one group, from two memberships
+DERIVED = textwrap.dedent(
+    """
+    from typing import Annotated
+
+    from pangloss_derived import Derived, RuleType, SymmetricLabel, Var, rule
+
+    from roles.models import Group, Membership, Person
+
+    family = RuleType("family", "Ties of family and of membership")
+
+
+    class SameGroup(Derived):
+        \"\"\"Members of the same group\"\"\"
+
+        _meta = Derived.Meta(symmetric=True)
+
+        first: Annotated[Person, SymmetricLabel("member")]
+        second: Annotated[Person, SymmetricLabel("member")]
+        group: Group
+
+
+    @rule(types=[family])
+    def same_group(a: Var[Person], b: Var[Person], group: Var[Group]):
+        \"\"\"Two people said to be members of one group\"\"\"
+        return SameGroup.Derive(first=a, second=b, group=group).when(
+            Membership.Where(member=a, group=group),
+            Membership.Where(member=b, group=group),
+        )
     """
 )
 TYPES = (
@@ -252,12 +289,14 @@ def make_project(root: Path) -> Path:
     run(["new-project", "e2e_project"], root)
     run(["new-app", "roles"], root)
     (root / "roles" / "models.py").write_text(MODELS)
+    (root / "roles" / "derived.py").write_text(DERIVED)
     settings = root / "e2e_project" / "settings.py"
     text = settings.read_text()
     text = text.replace(
         '"pangloss_memgraph",',
         '"pangloss_memgraph",\n        "pangloss_interface",\n        "pangloss_typology",\n        "pangloss_dates",\n'
-        '        "pangloss_calendar",\n        "pangloss_review",\n        "pangloss_library",\n        "pangloss_history",',
+        '        "pangloss_calendar",\n        "pangloss_review",\n        "pangloss_library",\n        "pangloss_history",\n'
+        '        "pangloss_derived",',
         1,
     )
     text = text.replace('DB_USERNAME="memgraph"', 'DB_USERNAME="test"')
@@ -619,6 +658,65 @@ def appointed(types: Stack) -> SimpleNamespace:
     made("Appointment", "Abbot", appointed=person, date={"type": "UnknownDate"})
     made("Statement", "She was there", text="She was there", about=person)
     return SimpleNamespace(ada=ada, notary=notary)
+
+
+@pytest.fixture
+def grouped(types: Stack) -> SimpleNamespace:
+    """Jan, a member of the guild (with Pieter and Margriet) and of the council (with 25 councillors), and appointed a
+    notary in 1495; Hendrik, a member of nothing. The rule `same_group` derives that Jan is of one group with 27 people:
+    one more than the first page. Waits for the worker to have derived them all."""
+    forget("Membership", "Group", "Appointment", "PGDerived", "PGJustification")
+    api = types.admin()
+
+    def made(kind: str, label: str, **fields) -> str:
+        return api.ok("POST", f"/api/{kind}", {"label": label, **fields})["id"]
+
+    names: dict[str, str] = {}
+
+    def named(kind: str, label: str, **fields) -> str:
+        names[(made_id := made(kind, label, **fields))] = label
+        return made_id
+
+    def member(person: str, group: str) -> str:
+        return made(
+            "Membership",
+            f"{names[person]} in {names[group]}",
+            member={"type": "Person", "id": person},
+            group={"type": "Group", "id": group},
+        )
+
+    guild, council = named("Group", "The guild"), named("Group", "The council")
+    jan, pieter, margriet = (
+        named("Person", name, has_role=[]) for name in ("Jan", "Pieter", "Margriet")
+    )
+    memberships = {
+        "jan_guild": member(jan, guild),
+        "pieter": member(pieter, guild),
+        "margriet": member(margriet, guild),
+        "jan_council": member(jan, council),
+    }
+    for n in range(25):
+        member(named("Person", f"Councillor {n + 1:02}", has_role=[]), council)
+    made(
+        "Appointment",
+        "Notary",
+        appointed={"type": "Person", "id": jan},
+        date=julian(1495),
+    )
+    deadline = time.monotonic() + 60
+    while api.ok("GET", f"/api/derived/SameGroup?entity={jan}")["count"] < 27:
+        assert time.monotonic() < deadline, "the worker did not derive the facts"
+        time.sleep(0.3)
+    return SimpleNamespace(
+        api=api,
+        jan=jan,
+        pieter=pieter,
+        margriet=margriet,
+        guild=guild,
+        council=council,
+        hendrik=made("Person", "Hendrik", has_role=[]),
+        memberships=memberships,
+    )
 
 
 @pytest.fixture
