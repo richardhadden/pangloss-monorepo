@@ -74,7 +74,8 @@ be set: `Annotated[Person, RelationConfig(reverse_name="is_subject_of")]`.
 
 `RelationConfig` also has `subclasses_parent_fields` (this relation stands for a field of a parent or fulfilled
 class), `bind_to_child_field` (copy a value of the parent into nested children, so it is entered once; the child keeps
-its own copy), `validators`, `description`, and `default_reified_type` (for the interface's form). `Fulfils[Other]`
+its own copy; its allowed and excluded types include the types below them, and its child fields reach the fields that
+stand for them in narrower classes), `validators`, `description`, and `default_reified_type` (for the interface's form). `Fulfils[Other]`
 lets one payload make a node that is also an `Other`, with its labels. See `docs/relations.md`.
 
 ## What is not supported

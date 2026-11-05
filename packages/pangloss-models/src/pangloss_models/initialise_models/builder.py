@@ -48,6 +48,7 @@ from pangloss_models.initialise_models.tagged_union import (
     TaggedUnion,
     choose_by_tag,
 )
+from pangloss_models.model_bases.binding import bound_names
 from pangloss_models.model_bases.model_tools import set_field
 from pangloss_models.utils import (
     annotation_is_optional,
@@ -147,7 +148,7 @@ def add_fields(
     ) -> dict[str, bool]:
         return {
             "bound": field_has_inherited_field_bindings(
-                bindings, name, definition.field_on_model
+                bindings, bound_names(name, definition), definition.field_on_model
             ),
             "fulfil": fulfil,
             "optional": annotation_is_optional(definition.annotated_type),

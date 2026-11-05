@@ -4,10 +4,12 @@
  * it to them when the item is written. A child field that was changed is the child's own: it is not changed again when
  * the item's field is. It still follows while it is empty, or the same as what was copied to it.
  */
-import type { FieldBindingDefinition, ModelDefinitions, RelationField } from "../types";
+import type { FieldBindingDefinition, FieldDefinition, ModelDefinition, ModelDefinitions, RelationField } from "../types";
+import { fitsRelation } from "./clipboard";
 import { getAt } from "./formValue";
 import type { FormData, Path } from "./formValue";
 import { getModel } from "./lookup";
+import { ancestry } from "./typeChoices";
 
 const isObject = (value: unknown): value is FormData =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -92,8 +94,53 @@ function sameAs(definitions: ModelDefinitions, value: unknown): unknown {
 const same = (definitions: ModelDefinitions, a: unknown, b: unknown) =>
   (isEmpty(a) && isEmpty(b)) || JSON.stringify(sameAs(definitions, a)) === JSON.stringify(sameAs(definitions, b));
 
-const applies = (binding: FieldBindingDefinition, type: string) =>
-  (binding.allowedTypes.length === 0 || binding.allowedTypes.includes(type)) && !binding.excludedTypes.includes(type);
+/**
+ * Whether a binding applies to an item of `type`: its type, a type above it or one of its traits must be one of the
+ * binding's allowed types (if it has any), and none of them one of its excluded types; so a binding to a creation of a
+ * physical object applies to a creation of a painting too, narrowed or not (as on the server: `binding_applies`)
+ */
+function applies(definitions: ModelDefinitions, binding: FieldBindingDefinition, type: string): boolean {
+  const names = new Set([...ancestry(definitions, type), ...(getModel(definitions, type)?.traits ?? [])]);
+  return (
+    (binding.allowedTypes.length === 0 || binding.allowedTypes.some((name) => names.has(name))) &&
+    !binding.excludedTypes.some((name) => names.has(name))
+  );
+}
+
+/** The keys of the fields above `type` (in its ancestors and traits) that `field` stands for (its `subclasses`, by name) */
+function keysStoodFor(definitions: ModelDefinitions, type: string, field: FieldDefinition): string[] {
+  const names = field.kind === "relation" ? ((field as RelationField).subclasses ?? []) : [];
+  if (names.length === 0) return [];
+  const above = [...ancestry(definitions, type), ...(getModel(definitions, type)?.traits ?? [])].flatMap(
+    (name) => getModel(definitions, name)?.fields ?? [],
+  );
+  return above.filter((other) => names.includes(other.name)).map((other) => other.key);
+}
+
+/**
+ * The fields of an item that a binding into `key` gives a value to: the field with that key, or, in a type that
+ * narrows it, the field that stands for it (`object_created` is `paintingCreated` in a creation of a painting), as on
+ * the server (`fields_bound`)
+ */
+function fieldsBound(definitions: ModelDefinitions, model: ModelDefinition, key: string): FieldDefinition[] {
+  return model.fields.filter(
+    (field) => field.key === key || keysStoodFor(definitions, model.name, field).includes(key),
+  );
+}
+
+/**
+ * Whether a bound value can go in a field that stands for the bound one (narrower: only a painting can be the
+ * painting created): each thing in it is of a type the field holds, and a list only where it holds a list. Nothing
+ * always can
+ */
+function fitsNarrower(definitions: ModelDefinitions, field: FieldDefinition, value: unknown): boolean {
+  if (isEmpty(value)) return true;
+  if (field.kind !== "relation") return false;
+  const relation = field as RelationField;
+  if (Array.isArray(value) && !relation.many) return false;
+  const items = Array.isArray(value) ? value : [value];
+  return items.every((item) => isObject(item) && fitsRelation(definitions, item, relation.options, {}));
+}
 
 /** What a child field is to be given, and whether it is only where it is empty (`old` absent) */
 interface Rule {
@@ -117,12 +164,17 @@ function give(definitions: ModelDefinitions, value: unknown, rules: Map<string, 
   const model = getModel(definitions, value.type);
   if (!model || model.kind === "Entity" || model.kind === "Embedded") return;
   for (const [key, rule] of rules) {
-    if (!applies(rule.binding, value.type) || !model.fields.some((field) => field.key === key)) continue;
-    const now = value[key];
-    if (!isEmpty(now) && !(rule.follows && same(definitions, now, rule.old))) continue;
-    if (same(definitions, now, rule.value)) continue;
-    if (isEmpty(rule.value)) delete value[key];
-    else value[key] = copyOf(definitions, rule.value);
+    if (!applies(definitions, rule.binding, value.type)) continue;
+    for (const field of fieldsBound(definitions, model, key)) {
+      const now = value[field.key];
+      if (!isEmpty(now) && !(rule.follows && same(definitions, now, rule.old))) continue;
+      // (a narrower field that cannot hold the value is not given it: if it followed the binding, it is emptied, so
+      // that it is filled in by hand, and does not keep a value the bound field no longer has)
+      const given = field.key === key || fitsNarrower(definitions, field, rule.value) ? rule.value : undefined;
+      if (same(definitions, now, given)) continue;
+      if (isEmpty(given)) delete value[field.key];
+      else value[field.key] = copyOf(definitions, given);
+    }
   }
   for (const field of model.fields) {
     if (field.kind !== "relation") continue;

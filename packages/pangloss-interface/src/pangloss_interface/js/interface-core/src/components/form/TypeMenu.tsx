@@ -23,7 +23,9 @@ const groupTint = (definitions: ModelDefinitions, group: MenuGroup) =>
  * types on their own, then a section for each space, headed by its name, with the same types inside
  * it (shown on the colour of the space). With only one thing to choose there is no menu: the button chooses it.
  * The keys move in the menu as in any other: Down (or Up) opens it, Up and Down go through what
- * can be chosen (Home and End to the first and last), Enter chooses, Escape and Tab close it.
+ * can be chosen (Home and End to the first and last), Enter chooses, Escape and Tab close it. A type in
+ * `unavailable` is in the menu, greyed, with the reason under its name, and cannot be chosen; so with one
+ * to choose and some that cannot be, it is still a menu, and with none to choose, a menu that says why.
  */
 export function TypeMenu(props: {
   groups: MenuGroup[];
@@ -38,6 +40,8 @@ export function TypeMenu(props: {
   alignRight?: boolean;
   /** As wide as what it is in (an add slot at the end of a list) */
   wide?: boolean;
+  /** Types that are shown but cannot be chosen, each with why */
+  unavailable?: Record<string, string>;
 }) {
   const definitions = useModels();
   const { modelName } = useTranslations();
@@ -86,7 +90,9 @@ export function TypeMenu(props: {
     document.addEventListener("click", away);
     return () => document.removeEventListener("click", away);
   });
-  const choices = () => choicesOf(props.groups);
+  const reasonFor = (type: string) => props.unavailable?.[type];
+  const listed = () => choicesOf(props.groups);
+  const choices = () => listed().filter((choice) => reasonFor(choice.type) === undefined);
   const choose = (choice: Choice) => {
     setOpen(false);
     props.onChoose(choice);
@@ -94,7 +100,7 @@ export function TypeMenu(props: {
   const tintOf = (group: MenuGroup) => groupTint(definitions, group);
   const spaceName = (group: MenuGroup) => group.spaces.map((space) => modelName(space)).join(" › ");
   return (
-    <Show when={choices().length > 0}>
+    <Show when={listed().length > 0}>
       <div
         class={[
           "relative",
@@ -106,7 +112,7 @@ export function TypeMenu(props: {
         onKeyDown={onKeyDown}
       >
         <Show
-          when={choices().length > 1}
+          when={choices().length !== 1 || listed().length > 1}
           fallback={
             <button
               type="button"
@@ -161,14 +167,34 @@ export function TypeMenu(props: {
                               {(row) => (
                                 <li style={{ "padding-left": `${row.depth * 0.75}rem` }}>
                                   <Show
-                                    when={row.selectable}
+                                    when={row.selectable && reasonFor(row.name) === undefined}
                                     fallback={
-                                      <span
-                                        class="block px-2 py-1 text-sm text-slate-500 italic"
-                                        aria-disabled="true"
+                                      <Show
+                                        when={row.selectable}
+                                        fallback={
+                                          <span
+                                            class="block px-2 py-1 text-sm text-slate-500 italic"
+                                            aria-disabled="true"
+                                          >
+                                            {modelName(row.name)}
+                                          </span>
+                                        }
                                       >
-                                        {modelName(row.name)}
-                                      </span>
+                                        {/* (in the menu, so the arrow keys reach it and a screen reader says why, but not chosen) */}
+                                        <button
+                                          type="button"
+                                          role="menuitem"
+                                          tabindex="-1"
+                                          aria-disabled="true"
+                                          data-unavailable
+                                          class="block w-full max-w-xs cursor-not-allowed rounded-xs px-2 py-1 text-left text-sm text-slate-500 focus:bg-slate-400/20 focus:outline-none"
+                                        >
+                                          {modelName(row.name)}
+                                          <span class="block text-xs whitespace-normal" data-reason>
+                                            {reasonFor(row.name)}
+                                          </span>
+                                        </button>
+                                      </Show>
                                     }
                                   >
                                     <button

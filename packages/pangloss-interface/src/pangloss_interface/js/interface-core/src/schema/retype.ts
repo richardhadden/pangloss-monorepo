@@ -3,7 +3,8 @@
  * physical object becomes a creation of a painting) or above it (widening), keeping what it holds.
  * A field of the new type takes the value of the field of the old one with the same name, or of the
  * one it stands for (`subclasses`: `artwork_created` for `object_created`), or that stands for it.
- * What does not fit is lost, and said: a widening that loses nothing is done without asking.
+ * What does not fit is lost, and said: a widening that loses nothing is done without asking. A narrowing is only
+ * offered where nothing would be lost (`narrowingChoices`): the others are shown, with what they would lose.
  */
 import type { FieldDefinition, ModelDefinition, ModelDefinitions, RelationField, RelationOption } from "../types";
 import { getModel } from "./lookup";
@@ -29,11 +30,16 @@ export function widerTypes(definitions: ModelDefinitions, type: string, options:
     .filter((name) => getModel(definitions, name)?.abstract === false && !!optionFor(options, name));
 }
 
-/** A field of the old type whose value would be lost, and how many things in it (the items of a list) */
+/**
+ * A field of the old type whose value would be lost, and how many things in it (the items of a list); or, with
+ * `edgeProperties`, how many of the things kept in it would lose the properties of their relation (the new field's
+ * relation has another edge model, or none)
+ */
 export interface LostField {
   model: string;
   field: string;
   count: number;
+  edgeProperties?: true;
 }
 
 export interface Retyped {
@@ -57,13 +63,16 @@ function sourceOf(from: ModelDefinition, target: FieldDefinition, used: Set<stri
 
 const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 
-/** The value of `from` as the value of `to`, and how many things in it are lost */
+/** Whether a relation's edge properties hold anything (`{ level: "" }`, a property not yet typed, holds nothing) */
+const edgeFilled = (properties: unknown) => isObject(properties) && Object.values(properties).some(filled);
+
+/** The value of `from` as the value of `to`, how many things in it are lost, and how many kept lose their edge properties */
 function carry(
   definitions: ModelDefinitions,
   value: unknown,
   from: FieldDefinition,
   to: FieldDefinition,
-): { value?: unknown; lost: number } {
+): { value?: unknown; lost: number; edgesLost?: number } {
   if (value === undefined || value === null) return { lost: 0 };
   const whole = () => (filled(value) ? 1 : 0);
   if (from.kind === "relation" && to.kind === "relation") {
@@ -78,12 +87,17 @@ function carry(
       const option = optionFor(from.options, String(item.type));
       return option && "edgeModel" in option ? option.edgeModel : null;
     };
-    const kept = items.filter(fits).map((item) => fitEdge(item, to.options, {}, fromEdge(item)));
+    const fitting = items.filter(fits);
+    const kept = fitting.map((item) => fitEdge(item, to.options, {}, fromEdge(item)));
+    // (a thing kept whose relation had properties, and has none now)
+    const edgesLostOf = (count: number) =>
+      fitting.slice(0, count).filter((item, at) => edgeFilled(item.edgeProperties) && !("edgeProperties" in kept[at]!))
+        .length;
     let lost = items.filter((item) => !fits(item) && filled(item)).length;
-    if (to.many) return { value: kept, lost };
+    if (to.many) return { value: kept, lost, edgesLost: edgesLostOf(kept.length) };
     // (one where there were several: the first, and the rest are lost)
     lost += kept.slice(1).filter(filled).length;
-    return { value: kept[0], lost };
+    return { value: kept[0], lost, edgesLost: edgesLostOf(1) };
   }
   if (from.kind !== to.kind) return { lost: whole() };
   switch (to.kind) {
@@ -130,6 +144,9 @@ export function retype(definitions: ModelDefinitions, value: FormData, to: strin
       const result = carry(definitions, value[source.key], source, field);
       carried = result.value;
       if (result.lost > 0) lost.push({ model: from.name, field: source.name, count: result.lost });
+      if (result.edgesLost) {
+        lost.push({ model: from.name, field: source.name, count: result.edgesLost, edgeProperties: true });
+      }
     }
     if (carried === undefined) carried = blank[field.key];
     if (carried !== undefined) out[field.key] = carried;
@@ -145,4 +162,23 @@ export function retype(definitions: ModelDefinitions, value: FormData, to: strin
     }
   }
   return { value: out, lost };
+}
+
+/** A type that a document could be narrowed to, and what it would lose there (nothing: it can be chosen) */
+export interface NarrowingChoice {
+  type: string;
+  lost: LostField[];
+}
+
+/**
+ * The types below `value`'s that the field it is in allows (`narrowerTypes`), each with what narrowing to it would
+ * lose. Only those that lose nothing are to be chosen: a narrowing never throws away what is filled in (a thing in a
+ * field that the narrower type's field cannot hold, all but one of a list where it holds one, the properties of a
+ * relation). With nothing filled in, every type below can be chosen.
+ */
+export function narrowingChoices(definitions: ModelDefinitions, value: FormData, options: RelationOption[]): NarrowingChoice[] {
+  return narrowerTypes(definitions, String(value.type), options).map((type) => ({
+    type,
+    lost: retype(definitions, value, type).lost,
+  }));
 }

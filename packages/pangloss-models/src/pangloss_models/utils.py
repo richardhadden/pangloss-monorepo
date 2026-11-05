@@ -30,6 +30,7 @@ from pangloss_models.meta_kit import WithMeta
 from pangloss_models.model_bases.annotated_value import AnnotatedValue
 from pangloss_models.model_bases.base_models import _BaseObject, _DeclaredClass
 from pangloss_models.model_bases.base_types import BaseTypes
+from pangloss_models.model_bases.binding import binding_applies, class_names
 from pangloss_models.model_bases.configs import RelationConfig
 from pangloss_models.model_bases.conjunction import Conjunction
 from pangloss_models.model_bases.document import Document
@@ -485,17 +486,16 @@ def map_validators_to_kwargs(validators: list[BaseMetadata]):
 
 def field_has_inherited_field_bindings(
     field_bindings: frozenset[FieldBinding],
-    field_name: str,
+    field_names: set[str],
     model: type[_DeclaredClass],
 ) -> bool:
+    """Whether a binding fills the field (so it need not be given): one that applies to `model`, into one of
+    `field_names` (the field's own name, and those of the fields it stands for: `bound_names`)"""
+    # (by the class and those above it, as the binding is applied: `allow_bind_on_this_item`)
+    names = class_names(model, model.__name__)
     for field_binding in field_bindings:
-        if (
-            field_name in field_binding.child_fields
-            and (
-                not field_binding.allowed_type_names
-                or model.__name__ in field_binding.allowed_type_names
-            )
-            and model.__name__ not in field_binding.excluded_type_names
+        if not field_names.isdisjoint(field_binding.child_fields) and binding_applies(
+            field_binding, names
         ):
             return True
 

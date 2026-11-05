@@ -400,3 +400,34 @@ def test_a_book_from_zotero_and_unlinked(
     expect(page.get_by_role("button", name="Link to Zotero")).to_be_visible()
     expect(page.locator("main")).not_to_contain_text(SOLID_ERROR)
     assert errors == []
+
+
+def test_narrowing_and_widening_a_document_in_a_form(
+    page: Page, provenance, dev_url: str, errors: list[str]
+):
+    from conftest import PASSWORD, USERNAME
+
+    response = page.request.post(
+        f"{dev_url}/api/users/session",
+        form={"username": USERNAME, "password": PASSWORD},
+    )
+    assert response.ok, response.text()
+    page.goto(f"{dev_url}/Provenance/{provenance.of_artwork}/edit")
+    hydrated(page)
+    narrow = page.get_by_role("button", name="Narrow Making it to a type below it")
+    narrow.click()
+    menu = page.get_by_role("menu")
+    # (one that cannot be chosen, saying why; one that can)
+    expect(menu.locator("[data-reason]")).to_have_text("Would lose: Object created")
+    menu.locator("[data-unavailable]").click(force=True)
+    menu.get_by_role("menuitem", name="Creation of artwork").click()
+    expect(
+        page.locator(f"[data-item-id='{provenance.artwork_step}'] [data-tint]").first
+    ).to_have_text("Creation of artwork")
+    # (and back, which loses nothing: no question)
+    page.get_by_role("button", name="Widen Making it to a type above it").click()
+    expect(page.get_by_role("dialog")).to_have_count(0)
+    page.get_by_role("button", name="Save").click()
+    expect(page.get_by_role("status", name="Notifications")).to_contain_text("saved")
+    expect(page.locator("main")).not_to_contain_text(SOLID_ERROR)
+    assert errors == []

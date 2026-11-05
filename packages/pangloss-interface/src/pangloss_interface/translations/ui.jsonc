@@ -213,6 +213,8 @@
   "retype_title": { "en": "Change to {type}?", "de": "In {type} ändern?", "fr": "Changer en {type} ?" },
   "retype_loses": { "en": "{type} has no room for what is in these fields of {from}, which will be lost:", "de": "{type} hat keinen Platz für den Inhalt dieser Felder von {from}; er geht verloren:", "fr": "{type} n’a pas de place pour le contenu de ces champs de {from}, qui sera perdu :" },
   "retype_confirm": { "en": "Change the type", "de": "Typ ändern", "fr": "Changer le type" },
+  "retype_lost_edge": { "en": "{field}: the properties of the relation", "de": "{field}: die Eigenschaften der Beziehung", "fr": "{field} : les propriétés de la relation" },
+  "narrow_would_lose": { "en": "Would lose: {fields}", "de": "Ginge verloren: {fields}", "fr": "Perdrait : {fields}" },
   "find_entity": { "en": "Find {type}…", "de": "{type} suchen …", "fr": "Rechercher : {type}…" },
   "nothing_found": { "en": "Nothing found", "de": "Nichts gefunden", "fr": "Aucun résultat" },
   "search_failed": { "en": "The search failed", "de": "Die Suche ist fehlgeschlagen", "fr": "La recherche a échoué" },

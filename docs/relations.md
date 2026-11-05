@@ -149,7 +149,21 @@ class Statement(Document):
 - In `Statement.Create`, `action.action_when` becomes optional (`date | None`).
 - A model validator on `Create`/`Update` copies the parent's value into children where the child field is unset.
 - The binding recurses through intermediate objects and the semantic-space wrappers.
-- `allowed_type_names` / `excluded_type_names` restrict which child types are bound; `converter` transforms the value on the way down.
+- `allowed_type_names` / `excluded_type_names` restrict which child types are bound, **with the types below them**
+  (2026-11-05): `allowed_type_names=["CreationOfPhysicalObject"]` binds a `CreationOfPainting` too, and one excluded
+  excludes its subclasses. A child is bound if its class, a class above it or one of its traits is allowed (or none is
+  listed), and none of them is excluded; so a child below both an allowed and an excluded type is not bound. The
+  library's own bases (`Document`) are not names it is matched by. So narrowing or widening a child (↧/↥ in the
+  interface) does not change whether a binding applies, as long as it stays below what is allowed. The builder makes a
+  child's field optional by the same rule, and the interface's binder matches the same way (`binding_applies`,
+  `class_names` in `model_bases/binding.py`; `applies` in `schema/binding.ts`). `converter` transforms the value on the
+  way down.
+- `child_fields` reach **the fields that stand for them** (2026-11-05): a binding into `object_created` gives a
+  `CreationOfPainting` its `painting_created` (the field that subclasses it, directly or through `artwork_created`), and
+  that field need not be given either. A value the narrower field cannot hold (an artwork bound to the painting
+  created) is refused by its validation, naming the field; in the interface it is not given (and a field that was
+  following the binding is emptied). (`fields_bound`, `bound_names` in `model_bases/binding.py`; `fieldsBound` in
+  `schema/binding.ts`.) See [implied-types.md](implied-types.md), "Field bindings across a narrowed document".
 - The value is validated as the child field's own type: a relation bound into a child (`ordered_to` into `given_by`) is
   a copy of its own, a new reified relation if it is one, not the parent's object.
 - The child's value, given or bound, is stored on the child like any other (the binding is not data: a migration does

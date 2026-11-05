@@ -5,18 +5,70 @@
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from pangloss_models.field_definitions import FieldBinding
+    from pangloss_models.field_definitions import FieldBinding, FieldDefinition
     from pangloss_models.model_bases.base_models import _CreateBase, _UpdateBase
+
+
+# (where the classes above a model that are not models of a project come from: this library's bases and kit, pydantic's)
+NOT_MODELS = ("pangloss_models.", "pydantic", "builtins", "typing")
+
+
+def class_names(model: type | None, type_name: str) -> set[str]:
+    """The names a binding's types are matched against: those of the class and of every class above it (its parents
+    and traits), so that a binding to `CreationOfPhysicalObject` applies to a `CreationOfPainting` too. Not the
+    library's bases (`Document`): the interface's binder has the same names, from the export's `parent` and `traits`.
+    Without the class, only `type_name`"""
+    if model is None:
+        return {type_name}
+    return {type_name} | {
+        cls.__name__
+        for cls in model.__mro__
+        if not cls.__module__.startswith(NOT_MODELS)
+    }
+
+
+def binding_applies(binding: FieldBinding, names: set[str]) -> bool:
+    """Whether a binding applies to a class with these `names` (`class_names`): it must be, or be below, one of
+    `allowed_type_names` (if there are any), and be, or be below, none of `excluded_type_names`. (Being below one
+    excluded excludes it, even if it is also below one allowed)"""
+    if binding.allowed_type_names and names.isdisjoint(binding.allowed_type_names):
+        return False
+    return names.isdisjoint(binding.excluded_type_names)
 
 
 def allow_bind_on_this_item(
     item: _CreateBase | _UpdateBase, binding: FieldBinding
 ) -> bool:
-    """Whether a binding applies to an item of this type: it must be one of `allowed_type_names`
-    (if there are any) and none of `excluded_type_names`"""
-    if binding.allowed_type_names and item.type not in binding.allowed_type_names:
-        return False
-    return item.type not in binding.excluded_type_names
+    """Whether a binding applies to an item: by its class and the classes above it (`binding_applies`)"""
+    return binding_applies(
+        binding, class_names(getattr(type(item), "_owner", None), item.type)
+    )
+
+
+def names_stood_for(definition: FieldDefinition) -> set[str]:
+    """The names of the fields of classes above that a relation field stands for (`subclasses_parent_fields`, which
+    initialisation makes transitive: `painting_created` stands for `artwork_created` and `object_created`)"""
+    return {
+        getattr(subclassed, "field_name", subclassed)
+        for subclassed in getattr(definition, "subclasses_parent_fields", ())
+    }
+
+
+def bound_names(name: str, definition: FieldDefinition) -> set[str]:
+    """The names a binding's `child_fields` reach a field by: its own, and those of the fields it stands for"""
+    return {name} | names_stood_for(definition)
+
+
+def fields_bound(item, child_field: str) -> list[str]:
+    """The fields of `item` that a binding into `child_field` gives a value to: the field of that name, or (in a class
+    that narrows it) the field that stands for it, so a binding into `object_created` gives `painting_created` of a
+    `CreationOfPainting`"""
+    fields = item._meta.fields
+    return [
+        name
+        for name in type(item).model_fields
+        if name in fields and child_field in bound_names(name, fields[name])
+    ]
 
 
 def give(item, field: str, value) -> None:
@@ -54,10 +106,10 @@ def recursively_add_bound_field_values(item, binding: FieldBinding, value=None) 
 
     if allow_bind_on_this_item(item, binding):
         for child_bound_field in binding.child_fields:
-            if hasattr(item, child_bound_field) and not getattr(
-                item, child_bound_field, None
-            ):
-                give(item, child_bound_field, value)
+            # (a value the field cannot hold, an artwork bound to the painting created, is refused by its validation)
+            for field_name in fields_bound(item, child_bound_field):
+                if not getattr(item, field_name, None):
+                    give(item, field_name, value)
 
     for related_field_name in item._meta.fields.relation_fields:
         recursively_add_bound_field_values(

@@ -46,6 +46,10 @@ TYPOLOGY_POLL_MS = "300"
 
 MODELS = textwrap.dedent(
     """
+    from typing import Annotated
+
+    from pangloss_models.field_definitions import FieldBinding, FieldSubclassing
+    from pangloss_models.model_bases.configs import RelationConfig
     from pangloss_models.model_bases.document import Document
     from pangloss_models.model_bases.entity import Entity
     from pangloss_models.model_bases.reified_relation import ReifiedRelationDocument
@@ -137,6 +141,63 @@ MODELS = textwrap.dedent(
     class Membership(Document):
         member: Person
         group: Group
+
+
+    # (things made, and the making of them as a chain of narrower types, each field standing for the one above it:
+    # what a document inside another is narrowed to, and widened back from, ↧ and ↥)
+    class PhysicalObject(Entity):
+        pass
+
+
+    class Artwork(PhysicalObject):
+        pass
+
+
+    class Painting(Artwork):
+        pass
+
+
+    class CreationOfPhysicalObject(Document):
+        _meta = Document.Meta(create_directly=False)
+
+        object_created: PhysicalObject
+
+
+    class CreationOfArtwork(CreationOfPhysicalObject):
+        artwork_created: Annotated[
+            Artwork,
+            RelationConfig(
+                subclasses_parent_fields=[
+                    FieldSubclassing("object_created", field_on_model=CreationOfPhysicalObject)
+                ]
+            ),
+        ]
+        medium: str | None = None
+
+
+    class CreationOfPainting(CreationOfArtwork):
+        painting_created: Annotated[
+            Painting,
+            RelationConfig(
+                subclasses_parent_fields=[
+                    FieldSubclassing("artwork_created", field_on_model=CreationOfArtwork)
+                ]
+            ),
+        ]
+
+
+    # (what was done to a thing, one step after another: the thing is given to each step, as the object created, or
+    # the artwork or painting created of a narrower one)
+    class Provenance(Document):
+        subject: PhysicalObject
+        steps: Annotated[
+            list[CreationOfPhysicalObject],
+            RelationConfig(
+                bind_to_child_field=[
+                    FieldBinding(bound_field="subject", child_fields=["object_created"])
+                ]
+            ),
+        ]
     """
 )
 # What the project derives (`pangloss_derived`): the members of one group, from two memberships
@@ -779,4 +840,52 @@ def dated(types: Stack) -> SimpleNamespace:
         ),
         benedict=made("Feast", "Benedict", use="sarum", when=rule),
         market=made("Feast", "Market day", when={"type": "NoRule"}),
+    )
+
+
+@pytest.fixture
+def provenance(types) -> SimpleNamespace:
+    """An artwork and a painting, and the provenance of each: one step, a creation of a physical object (the broadest)"""
+    forget(
+        "PhysicalObject",
+        "Provenance",
+        "CreationOfPhysicalObject",
+    )
+    api = types.admin()
+
+    def made(kind: str, label: str, **fields) -> str:
+        return api.ok("POST", f"/api/{kind}", {"label": label, **fields})["id"]
+
+    artwork = made("Artwork", "The thing")
+    painting = made("Painting", "The portrait")
+
+    def history(label: str, thing: dict) -> tuple[str, str]:
+        id = made(
+            "Provenance",
+            label,
+            subject=thing,
+            steps=[
+                {
+                    "type": "CreationOfPhysicalObject",
+                    "label": "Making it",
+                    "object_created": thing,
+                }
+            ],
+        )
+        return id, api.ok("GET", f"/api/Provenance/{id}")["steps"][0]["id"]
+
+    of_artwork, artwork_step = history(
+        "History of the thing", {"type": "Artwork", "id": artwork}
+    )
+    of_painting, painting_step = history(
+        "History of the portrait", {"type": "Painting", "id": painting}
+    )
+    return SimpleNamespace(
+        api=api,
+        artwork=artwork,
+        painting=painting,
+        of_artwork=of_artwork,
+        artwork_step=artwork_step,
+        of_painting=of_painting,
+        painting_step=painting_step,
     )
