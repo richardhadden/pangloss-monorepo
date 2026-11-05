@@ -27,13 +27,62 @@ const SORT_DEFAULT = "midpoint";
 /**
  * The editor of a date (the card `Date` names for `edit_card`, which the other dates have from it):
  * only what a person says of a date, never the bounds and sort days the server works out. An exact
- * date is its year, month and day on one line; a range, its earliest and latest; an EDTF date, the
+ * date is its year, month and day on one line; a range, its not-before and not-after (either may be
+ * not known: `RangeEnd`); an EDTF date, the
  * text. A recurrence is said as a person would (`RecurrenceParts`: every year on 21 March, from... until...). A
  * period is its fields, with its start and end each a date again (and so this editor again). Under it,
  * the date as it reads; then the calendar, what the source said and what to sort by. What it sorts by
  * when it does not say (the midpoint, or the field's `SortDefault`) is shown as chosen. The start and
  * end of a period have no Sort by: the period's says how it sorts.
  */
+/**
+ * An end of a range (`notBefore`, `notAfter`, as the TEI names them): its name, then the date, and a
+ * "Not known" button. Pressed, the end is an `UnknownDate` (nothing is known of it) and the date's
+ * parts are gone; pressed again, it is a date to fill in. Both ends cannot be unknown: the button of
+ * one is not offered while the other is pressed.
+ */
+function RangeEnd(props: {
+  path: (string | number)[];
+  end: string;
+  other: string;
+  name: string;
+  label: string;
+}) {
+  const form = useItemForm();
+  const { t } = useTranslations();
+  const typeAt = (end: string) =>
+    (form.get([...props.path, end]) as Record<string, unknown> | undefined)?.type;
+  const unknown = () => typeAt(props.end) === "UnknownDate";
+  return (
+    <>
+      <span class="text-xs font-semibold text-slate-500 uppercase">{props.name}</span>
+      <div class="flex flex-wrap items-center gap-3">
+        <Show when={!unknown()}>
+          <ExactParts path={[...props.path, props.end]} label={`${props.label} ${props.name}`} />
+        </Show>
+        <button
+          type="button"
+          class={[
+            "rounded-sm border px-2 py-1 text-xs",
+            unknown()
+              ? "border-slate-600 bg-slate-600 text-white"
+              : "border-slate-300 text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:hover:bg-transparent",
+          ]}
+          aria-pressed={unknown() ? "true" : "false"}
+          aria-label={`${props.label} ${props.name} ${t("date_not_known", "Not known")}`}
+          title={t("date_not_known_help", "Nothing is known of this end (press again to give a date)")}
+          disabled={!unknown() && typeAt(props.other) === "UnknownDate"}
+          onClick={() =>
+            form.set([...props.path, props.end], { type: unknown() ? "ExactDate" : "UnknownDate" })
+          }
+        >
+          {t("date_not_known", "Not known")}
+        </button>
+      </div>
+    </>
+  );
+}
+
 export default function DateEditor(props: EditCardProps) {
   const form = useItemForm();
   const { t, language, memberName } = useTranslations();
@@ -51,7 +100,7 @@ export default function DateEditor(props: EditCardProps) {
     props.field?.markers?.find((marker) => marker.name === "SortDefault")?.sortBy ?? SORT_DEFAULT;
   const reads = () => {
     const text = formatDate(props.value, { language: language(), t, memberName });
-    // (not until it is all there: a range without its latest does not read)
+    // (not until it is all there: a range without its not-after does not read)
     return text && !text.includes("undefined") ? text : undefined;
   };
   return (
@@ -73,19 +122,19 @@ export default function DateEditor(props: EditCardProps) {
           </Match>
           <Match when={props.type === "DateRange"}>
             <div class="grid grid-cols-[10rem_minmax(0,1fr)] items-center gap-x-6 gap-y-3">
-              <span class="text-xs font-semibold text-slate-500 uppercase">
-                {t("date_earliest", "Earliest")}
-              </span>
-              <ExactParts
-                path={[...props.path, "earliest"]}
-                label={`${props.label} ${t("date_earliest", "Earliest")}`}
+              <RangeEnd
+                path={props.path}
+                end="notBefore"
+                other="notAfter"
+                name={t("date_not_before", "Not before")}
+                label={props.label}
               />
-              <span class="text-xs font-semibold text-slate-500 uppercase">
-                {t("date_latest", "Latest")}
-              </span>
-              <ExactParts
-                path={[...props.path, "latest"]}
-                label={`${props.label} ${t("date_latest", "Latest")}`}
+              <RangeEnd
+                path={props.path}
+                end="notAfter"
+                other="notBefore"
+                name={t("date_not_after", "Not after")}
+                label={props.label}
               />
             </div>
           </Match>

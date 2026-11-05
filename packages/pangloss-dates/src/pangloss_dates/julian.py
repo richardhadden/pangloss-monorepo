@@ -33,16 +33,16 @@ class JulianEDTFDate(JulianDate, EDTFDate):
     pass
 
 
-class JulianDateRange(JulianDate, DateRange):
-    earliest: JulianExactDate
-    latest: JulianExactDate
-
-
-class JulianOngoingDate(JulianDate, OngoingDate):
+class JulianUnknownDate(JulianDate, UnknownDate):
     pass
 
 
-class JulianUnknownDate(JulianDate, UnknownDate):
+class JulianDateRange(JulianDate, DateRange):
+    not_before: JulianExactDate | JulianUnknownDate
+    not_after: JulianExactDate | JulianUnknownDate
+
+
+class JulianOngoingDate(JulianDate, OngoingDate):
     pass
 
 

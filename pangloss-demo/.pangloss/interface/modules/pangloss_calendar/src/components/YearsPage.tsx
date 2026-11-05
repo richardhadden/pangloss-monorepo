@@ -1,4 +1,4 @@
-import { useApi, useComponent, useTranslations } from "@pangloss/interface-core";
+import { useApi, useComponent, useSessionKey, useTranslations } from "@pangloss/interface-core";
 import { useLocation, useSearchParams } from "@solidjs/router";
 import { createEffect, createMemo, Errored, For, Loading, Show } from "solid-js";
 import { getSettings, getYears, isCalendar } from "../api";
@@ -117,7 +117,10 @@ function YearsOf(props: { settings: CalendarSettings }) {
     props.settings.first_year !== null && props.settings.last_year !== null
       ? { first: props.settings.first_year, last: props.settings.last_year }
       : undefined;
+  // (asked again when someone logs in or out: what is dated may be more, or less)
+  const session = useSessionKey();
   const report = createMemo(() => {
+    session();
     const years = span();
     return years ? getYears(api, calendar(), years.first, years.last) : undefined;
   });

@@ -57,8 +57,8 @@ async def test_every_kind_is_stored_and_read_back_with_its_bounds(
         "exact": exact(1500, 3, 2),
         "range": {
             "type": "JulianDateRange",
-            "earliest": exact(1500),
-            "latest": exact(1502, 3),
+            "not_before": exact(1500),
+            "not_after": exact(1502, 3),
         },
         "edtf": {"type": "JulianEDTFDate", "edtf": "1500-02~"},
         "period": {
@@ -99,7 +99,7 @@ async def test_every_kind_is_stored_and_read_back_with_its_bounds(
     assert stored_date(saved["exact"].id)["sort_day"] == day(1500, 3, 2)
     assert stored_date(saved["edtf"].id)["earliest_fuzzy"] < day(1500, 2, 1)
     assert stored_date(saved["period"].id)["latest_strict"] == day(1600, 12, 31)
-    assert (await Factoid.get(saved["range"].id)).when.earliest.year == 1500
+    assert (await Factoid.get(saved["range"].id)).when.not_before.year == 1500
 
 
 @no_type_check

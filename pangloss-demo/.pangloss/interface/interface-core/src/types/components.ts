@@ -118,6 +118,8 @@ export interface ConsoleProps extends ConsoleSearchProps {
   };
   /** Where the item can be edited: an Edit button, for someone who is logged in */
   editHref?: string;
+  /** Called once the item (`item`) has been deleted: with it, a Delete button for someone who is logged in, which asks first */
+  onDeleted?: () => void;
   /** A list whose page makes a new item itself (a dialog): the New button calls this, and is no link to `/<type>/new` */
   onNew?: () => void;
   /**
@@ -142,6 +144,8 @@ export interface ItemFormProps {
   /** Called with the summary the API answers when the item is saved */
   onSaved: (saved: { id: string; type: string; label: string }) => void;
   onCancel: () => void;
+  /** Called once the item has been deleted; with it, an item being edited has a Delete button */
+  onDeleted?: () => void;
   /** Called to load the item again, after it was found to have been changed by someone else */
   onReload?: () => void;
 }

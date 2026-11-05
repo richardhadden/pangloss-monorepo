@@ -33,16 +33,16 @@ class GregorianEDTFDate(GregorianDate, EDTFDate):
     pass
 
 
-class GregorianDateRange(GregorianDate, DateRange):
-    earliest: GregorianExactDate
-    latest: GregorianExactDate
-
-
-class GregorianOngoingDate(GregorianDate, OngoingDate):
+class GregorianUnknownDate(GregorianDate, UnknownDate):
     pass
 
 
-class GregorianUnknownDate(GregorianDate, UnknownDate):
+class GregorianDateRange(GregorianDate, DateRange):
+    not_before: GregorianExactDate | GregorianUnknownDate
+    not_after: GregorianExactDate | GregorianUnknownDate
+
+
+class GregorianOngoingDate(GregorianDate, OngoingDate):
     pass
 
 

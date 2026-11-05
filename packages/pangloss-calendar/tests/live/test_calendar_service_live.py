@@ -86,8 +86,8 @@ async def make_feasts(FeastDay):
             label="Council",
             when={
                 "type": "JulianDateRange",
-                "earliest": exact(1500, 3, 4),
-                "latest": exact(1500, 3, 5),
+                "not_before": exact(1500, 3, 4),
+                "not_after": exact(1500, 3, 5),
             },
         ).save(),
         "lent": await FeastDay.Create(
@@ -107,8 +107,8 @@ async def make_documents(Factoid):
         "exact": exact(1500, 3, 2),
         "range": {
             "type": "JulianDateRange",
-            "earliest": exact(1500, 3, 1),
-            "latest": exact(1500, 3, 3),
+            "not_before": exact(1500, 3, 1),
+            "not_after": exact(1500, 3, 3),
         },
         "about": {"type": "JulianEDTFDate", "edtf": "1500-03-06~"},
         "period": {

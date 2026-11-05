@@ -210,7 +210,7 @@ function Row(
 /**
  * The editors of the fields of a model, each in its row, in the order of the model, for the
  * object at `path` of the form. `env` says what the type variables of a generic model stand for
- * here; `skip` leaves fields out, and `bare` is the field (a reified relation's target) shown
+ * here; `skip` leaves fields out (those only in the database are never shown), and `bare` is the field (a reified relation's target) shown
  * without its name, first: what the thing holds, then what is said of it.
  */
 export function ModelFields(props: {
@@ -224,9 +224,11 @@ export function ModelFields(props: {
 }) {
   const form = useItemForm();
   const { fieldName } = useTranslations();
+  // (not those only in the database: the server works them out, whatever is sent)
+  const editable = () => props.model.fields.filter((field) => !field.dbField);
   const fields = () => [
-    ...props.model.fields.filter((field) => field.key === props.bare),
-    ...props.model.fields.filter((field) => field.key !== props.bare),
+    ...editable().filter((field) => field.key === props.bare),
+    ...editable().filter((field) => field.key !== props.bare),
   ];
   return (
     <dl class={fieldGridClass}>

@@ -50,6 +50,7 @@ MODELS = textwrap.dedent(
     from pangloss_models.model_bases.entity import Entity
     from pangloss_models.model_bases.reified_relation import ReifiedRelationDocument
     from pangloss_calendar.models import DateCharacterisation
+    from pangloss_dates.dateable import Dateable
     from pangloss_dates.models import Date
     from pangloss_library.models import WeightedAlternative
     from pangloss_review.meta import ReviewMeta
@@ -109,6 +110,11 @@ MODELS = textwrap.dedent(
     class Event(Document):
         text: str
         when: Date
+
+
+    # (dateable: a person's page can show what refers to them by date)
+    class Appointment(Document, Dateable):
+        appointed: Person
 
 
     # (a feast, by rule or attached by hand: what the calendar's days are characterised by)
@@ -581,9 +587,38 @@ def between(first: dict, last: dict) -> dict:
     return {
         "type": "DateRange",
         "calendar": "julian",
-        "earliest": first,
-        "latest": last,
+        "not_before": first,
+        "not_after": last,
     }
+
+
+@pytest.fixture
+def appointed(types: Stack) -> SimpleNamespace:
+    """Ada: a bishop in 1510, a notary not before 1490 (when it ended, nobody knows), an abbot at a date nobody knows;
+    and a statement about her, which has no date"""
+    forget("Appointment")
+    api = types.admin()
+
+    def made(kind: str, label: str, **fields) -> str:
+        return api.ok("POST", f"/api/{kind}", {"label": label, **fields})["id"]
+
+    ada = made("Person", "Ada", has_role=[])
+    person = {"type": "Person", "id": ada}
+    notary = made(
+        "Appointment",
+        "Notary",
+        appointed=person,
+        date={
+            "type": "DateRange",
+            "calendar": "julian",
+            "not_before": julian(1490),
+            "not_after": {"type": "UnknownDate"},
+        },
+    )
+    made("Appointment", "Bishop", appointed=person, date=julian(1510))
+    made("Appointment", "Abbot", appointed=person, date={"type": "UnknownDate"})
+    made("Statement", "She was there", text="She was there", about=person)
+    return SimpleNamespace(ada=ada, notary=notary)
 
 
 @pytest.fixture

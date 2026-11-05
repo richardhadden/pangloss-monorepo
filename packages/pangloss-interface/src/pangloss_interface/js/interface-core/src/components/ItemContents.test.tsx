@@ -22,7 +22,7 @@ const field = (
     key,
     kind,
     description: null,
-    dbField: true,
+    dbField: false,
     required: false,
     nullable: false,
   }) as FieldDefinition;
@@ -50,6 +50,13 @@ const model = (
   fields,
   incoming,
 });
+
+// (what a dateable document has of its date: only in the database, and in its reference)
+const dateCopies = () =>
+  ["date_sort_day", "date_end_sort_day", "date_text"].map((name) => ({
+    ...field(name.replaceAll("_", " "), name.replace(/_(\w)/g, (_, c: string) => c.toUpperCase())),
+    dbField: true,
+  }));
 
 const definitions: ModelDefinitions = {
   models: {
@@ -103,6 +110,23 @@ const definitions: ModelDefinitions = {
       [],
       [{ name: "happened_here", key: "happenedHere", sources: [] }],
     ),
+    // (what refers to a person can be dateable: a birth, an office; a note cannot)
+    Witness: model(
+      "Witness",
+      "Entity",
+      [],
+      [
+        { name: "born_reverse", key: "bornReverse", sources: [] },
+        { name: "held_reverse", key: "heldReverse", sources: [] },
+        { name: "about_reverse", key: "aboutReverse", sources: [] },
+      ],
+    ),
+    Birth: {
+      ...model("Birth", "Document", dateCopies()),
+      traits: ["Dateable", "SingleDateable"],
+    },
+    Office: { ...model("Office", "Document", dateCopies()), traits: ["Dateable"] },
+    Note: { ...model("Note", "Document"), traits: [] },
     Negative: model(
       "Negative",
       "SemanticSpace",
@@ -473,4 +497,90 @@ test("a conjunction that is shown whole can be folded from its head too", () => 
   (host.querySelector("button[aria-label='Fold Alternative']") as HTMLButtonElement).click();
   flush();
   expect(host.textContent).not.toContain("Alternative");
+});
+
+const witness = {
+  id: "w1",
+  type: "Witness",
+  label: "Ada",
+  bornReverse: [
+    { id: "b1", type: "Birth", label: "Born in Rome", dateSortDay: 2268924, dateText: "1500" },
+  ],
+  heldReverse: [
+    {
+      id: "o1",
+      type: "Office",
+      label: "Bishop",
+      dateSortDay: 2268924 + 3700,
+      dateEndSortDay: 2268924 + 7400,
+      dateText: "1510–1520",
+    },
+    { id: "o2", type: "Office", label: "Abbot", dateSortDay: 2268000, dateText: "?" },
+    { id: "o3", type: "Office", label: "Notary", dateSortDay: 2268924 - 3600, dateText: "1490" },
+  ],
+  aboutReverse: [{ id: "n1", type: "Note", label: "A note" }],
+};
+
+test("what refers to an item by field, until it is asked for by date (only if something of it is dateable)", () => {
+  localStorage.clear();
+  let host = show(witness);
+  const byDate = [...host.querySelectorAll("button")].find((b) => b.textContent === "By date")!;
+  expect(byDate.getAttribute("aria-pressed")).toBe("false");
+  expect(host.querySelector("[data-testid=incoming-by-date]")).toBeNull();
+  expect(host.textContent).toContain("born reverse");
+
+  byDate.click();
+  flush();
+  const rows = [...host.querySelectorAll("[data-testid=dated-item]")];
+  // (in order of date, each with its date and the field it is in, on the left)
+  expect(rows.map((row) => row.querySelector("a")?.textContent)).toEqual([
+    "OfficeNotary",
+    "BirthBorn in Rome",
+    "OfficeBishop",
+  ]);
+  expect(rows[0].textContent).toContain("1490");
+  expect(rows[0].textContent).toContain("held reverse");
+  expect(host.querySelector("[data-testid=incoming-date-unknown]")!.textContent).toContain("Abbot");
+  expect(host.textContent).toContain("Not dated");
+  expect(host.textContent).toContain("A note");
+  // (the choice is remembered from one page to the next)
+  expect(localStorage.getItem("pangloss.incomingOrder")).toBe("date");
+  dispose?.();
+  document.body.innerHTML = "";
+
+  host = show({ ...witness, heldReverse: [], bornReverse: [] });
+  expect(host.textContent).not.toContain("By date");
+  localStorage.clear();
+});
+
+test("the year slider narrows the dated rows to a span of years", () => {
+  localStorage.setItem("pangloss.incomingOrder", "date");
+  const host = show(witness);
+  flush();
+  const shown = () => host.querySelectorAll("[data-testid=dated-item]").length;
+  expect(shown()).toBe(3);
+  const from = host.querySelector<HTMLInputElement>('input[aria-label="From"]')!;
+  expect([from.min, from.max]).toEqual(["1490", "1520"]);
+  from.value = "1505";
+  from.dispatchEvent(new InputEvent("input", { bubbles: true }));
+  flush();
+  // (the office from 1510 to 1520 is in them; the birth in 1500 and the notary in 1490 are not)
+  expect(shown()).toBe(1);
+  expect(host.querySelector("[data-testid=incoming-shown]")!.textContent).toBe("1 of 3");
+  const to = host.querySelector<HTMLInputElement>('input[aria-label="To"]')!;
+  to.value = "1500";
+  to.dispatchEvent(new InputEvent("input", { bubbles: true }));
+  flush();
+  // (the start follows the end back)
+  expect(from.value).toBe("1500");
+  expect(shown()).toBe(1);
+  expect(host.querySelector("[data-testid=dated-item]")!.textContent).toContain("Born in Rome");
+  localStorage.clear();
+});
+
+test("what is only in the database is not shown, and does not make a reference a block", () => {
+  const host = show(witness);
+  // (the copy of a dateable document's date is a field of its model only in the database)
+  expect(host.textContent).not.toContain("date text");
+  expect(host.querySelectorAll("[data-block]")).toHaveLength(0);
 });

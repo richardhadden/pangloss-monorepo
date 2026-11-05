@@ -153,6 +153,8 @@ export function formatDate(date: unknown, words: DateWords = ENGLISH): string | 
   return say(date, true, words);
 }
 
+const isUnknown = (end: unknown) => isData(end) && end.type === "UnknownDate";
+
 // (the ends of a period or a range are in its calendar: they do not say it again)
 function say(date: unknown, outer: boolean, words: DateWords): string | undefined {
   if (!isData(date)) return undefined;
@@ -166,7 +168,10 @@ function say(date: unknown, outer: boolean, words: DateWords): string | undefine
       text = typeof date.edtf === "string" ? date.edtf : undefined;
       break;
     case "DateRange":
-      text = words.t("date_range", "{from} to {to}", { from: inner(date.earliest), to: inner(date.latest) });
+      // (one end may be unknown: then it is said by the other)
+      if (isUnknown(date.notAfter)) text = words.t("date_not_before_reads", "not before {date}", { date: inner(date.notBefore) });
+      else if (isUnknown(date.notBefore)) text = words.t("date_not_after_reads", "not after {date}", { date: inner(date.notAfter) });
+      else text = words.t("date_range", "{from} to {to}", { from: inner(date.notBefore), to: inner(date.notAfter) });
       break;
     case "OngoingDate":
       text = words.t("date_ongoing", "ongoing");

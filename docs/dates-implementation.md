@@ -289,7 +289,7 @@ Embedded
 └── JulianDate / GregorianDate / Date   the base of a family: the bounds, calendar, source_text, sort_by, sort_day, precision
     ├── ExactDate          year, month=None, day=None
     ├── EDTFDate           edtf string (parsed by python-edtf, bounds by us)
-    ├── DateRange          earliest: ExactDate, latest: ExactDate        (embeds two exact dates)
+    ├── DateRange          not_before, not_after: ExactDate | UnknownDate  (embeds two dates; renamed 2026-11-05, see the end)
     ├── OngoingDate        no fields: the end of an open period
     ├── Period             start: ExactDate | DateRange | EDTFDate | OngoingDate, end: the same
     └── Recurrence         rule fields + start, end as in Period + excluded_days
@@ -388,3 +388,20 @@ period or recurrence are worked out again from what the end says (`models.worked
 Searching and ordering by them is unchanged (the search takes the fields of `_meta`, which has the database fields). No migration: a snapshot does
 not record `dbField`, and nothing stored changes. A `to_db` hook was not used: it is given the data before it is validated, so the nested ends
 would still be dicts without bounds; the `after` validator runs on the ends first.
+
+### One-sided ranges and dateable documents (2026-11-05)
+
+Plan and decisions: [dateable-plan.md](dateable-plan.md). **Ranges**: `DateRange.earliest/latest` are `not_before/not_after` (the TEI
+names), each `ExactDate | UnknownDate`, not both unknown; a one-sided range runs to the horizon (or from the floor) and sorts by its known
+end unless `sort_by` says otherwise. Migration `0002` renames the edges (`RenameField`) and widens the types (`AlterEmbedded`, which no
+longer counts a single model widened to a union that still has it as lossy). **`pangloss_dates.dateable`**: `Dateable` / `SingleDateable` /
+`PeriodDateable` traits (`date`, plus the DBFields `date_sort_day`, `date_end_sort_day`, `date_text`, copied by a validator and added to the
+reference view by the trait's `reference_view_fields`); `text_of`; `fill_in_dateables` (a `RunPython` for documents written before);
+`structure.py` asks for the index `:Dateable(date_sort_day)`. Core changes it needed: a trait's `reference_view_fields` (and DBFields allowed in
+a reference view); field markers applied before the class's validators (a copy made from a field with a `SortDefault` was out of date); the
+export's `traits`; incoming items through a reified relation carry the holder's reference-view fields; and the models a topological sort
+could not order (those in a cycle, and any that depend on one) are now made after the others, in the order of their strongly connected
+components (a dateable `Appointment` of a `Person` in a typology cycle was made before the dates it embeds). Interface: `DateEditor`'s
+"Not known" button for each end; on an entity page, "By field / By date" with a slider of years (`schema/dating.ts`); fields only in the
+database are no longer shown in item views or offered in forms.
+

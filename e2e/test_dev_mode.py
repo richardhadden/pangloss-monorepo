@@ -348,3 +348,22 @@ def test_the_history_panel_and_page(page: Page, types, dev_url: str, errors: lis
     expect(page.get_by_test_id("history-column")).to_have_count(3)
     expect(page.locator("main")).not_to_contain_text(SOLID_ERROR)
     assert errors == []
+
+
+def test_what_refers_to_a_person_by_date(
+    page: Page, appointed, dev_url: str, errors: list[str]
+):
+    page.goto(f"{dev_url}/Person/{appointed.ada}")
+    hydrated(page)
+    page.get_by_role("button", name="By date").click()
+    expect(page.get_by_test_id("dated-item")).to_have_count(2)
+    page.get_by_role("slider", name="From").fill("1500")
+    expect(page.get_by_test_id("dated-item")).to_have_count(1)
+    # (the next person's page, by a link: the choice is kept, and the slider starts again)
+    page.get_by_role("link", name=re.compile("Bishop")).click()
+    expect(page.get_by_role("heading", name="Bishop")).to_be_visible()
+    page.go_back()
+    expect(page.get_by_test_id("dated-item")).to_have_count(2)
+    page.get_by_role("button", name="By field").click()
+    expect(page.locator("main")).not_to_contain_text(SOLID_ERROR)
+    assert errors == []

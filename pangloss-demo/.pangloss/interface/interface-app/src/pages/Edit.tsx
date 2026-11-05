@@ -62,6 +62,10 @@ export default function EditItem(props: RouteProps<"/:type/:id/edit">) {
                     navigate(`/${saved.type}/${encodeURIComponent(saved.id)}`);
                   }}
                   onCancel={() => navigate(`/${loaded.type}/${encodeURIComponent(loaded.id)}`)}
+                  onDeleted={() => {
+                    void revalidateAll();
+                    navigate(`/${loaded.type}`, { replace: true });
+                  }}
                   onReload={() => void refresh(item)}
                 />
               )}

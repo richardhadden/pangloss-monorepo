@@ -321,9 +321,48 @@ class ModelRegistry:
                     if indegree[other] == 0:
                         heapq.heappush(heap, (cls._model_key(other), id(other), other))
 
-        cyclic = {n for n in graph if indegree[n] > 0}
+        left = {n for n in graph if indegree[n] > 0}
         del heap
-        return ordered, cyclic
+        return ordered, cls._order_cyclic(graph, left)
+
+    @classmethod
+    def _order_cyclic(cls, graph, left: set) -> list:
+        """What the sort could not order (the models in a cycle, and those that depend on one), each after what it
+        depends on, except within a cycle: the cycles (strongly connected components, by Tarjan's algorithm, which
+        gives each only after those it depends on), and in each, by name. (A model that only depends on a cycle, an
+        `Appointment` of a `Person` whose typology refers back to it, comes after it, and after the dates it embeds.)"""
+        index: dict = {}
+        low: dict = {}
+        stack: list = []
+        on_stack: set = set()
+        ordered: list = []
+
+        def visit(node) -> None:
+            index[node] = low[node] = len(index)
+            stack.append(node)
+            on_stack.add(node)
+            for dep in graph[node]:
+                if dep not in left:
+                    continue
+                if dep not in index:
+                    visit(dep)
+                    low[node] = min(low[node], low[dep])
+                elif dep in on_stack:
+                    low[node] = min(low[node], index[dep])
+            if low[node] == index[node]:
+                component = []
+                while True:
+                    member = stack.pop()
+                    on_stack.discard(member)
+                    component.append(member)
+                    if member is node:
+                        break
+                ordered.extend(sorted(component, key=cls._model_key))
+
+        for node in sorted(left, key=cls._model_key):
+            if node not in index:
+                visit(node)
+        return ordered
 
     # ----------------------------
     # Finalisation
@@ -425,7 +464,8 @@ class ModelRegistry:
             initialise_reference_set_model(model)
             initialise_reference_view_model(model)
 
-        for model in chain(cyclic, order):
+        # (what the sort ordered first: none of it depends on what it could not, which is ordered as well as it can be)
+        for model in chain(order, cyclic):
             if can_have_create_model(model):
                 initialise_create_model(model)
                 add_fields_to_create_model(model.Create, frozenset())
@@ -434,7 +474,7 @@ class ModelRegistry:
 
             add_fields_to_create_db_model(model)
 
-        for model in chain(cyclic, order):
+        for model in chain(order, cyclic):
             if can_have_update_model(model):
                 initialise_update_model(model=model)
                 add_fields_to_update_model(model.Update, frozenset())
@@ -443,12 +483,12 @@ class ModelRegistry:
 
             add_fields_to_update_db_model(model)
 
-        for model in chain(cyclic, order):
+        for model in chain(order, cyclic):
             if can_have_view_model(model):
                 initialise_view_model(model=model)
                 add_fields_to_view_model(model.View, frozenset())
 
-        for model in chain(cyclic, order):
+        for model in chain(order, cyclic):
             if can_have_head_view_model(model):
                 initialise_head_view_model(model)
             if can_have_edit_view_model(model):

@@ -74,6 +74,16 @@ def initialise_reference_set_model(model: type[_DeclaredClass]):
     model.ReferenceSet.model_rebuild(force=True)
 
 
+def reference_view_extra_fields(model: type[_DeclaredClass]) -> list[str]:
+    """The fields added to the `ReferenceView` of a model: those of its `_meta`, then those its traits ask for
+    (`reference_view_fields` of a trait)"""
+    names = list(model._meta.reference_view_extra_fields)
+    for name in getattr(model, "reference_view_fields", ()):
+        if name not in names:
+            names.append(name)
+    return names
+
+
 def initialise_reference_view_model(model: type[_DeclaredClass]):
     if not issubclass(model, (Entity, Document, ReifiedRelationDocument)):
         return
@@ -107,11 +117,11 @@ def initialise_reference_view_model(model: type[_DeclaredClass]):
         else (str | None, None),
     )
 
-    for field_name in model._meta.reference_view_extra_fields:
+    for field_name in reference_view_extra_fields(model):
         if field_name not in model._meta.fields.literal_fields:
             raise PanglossModelError(
                 f"{model.__name__}._meta.reference_view_extra_fields '{field_name}' "
-                "either does not exist, is a DBField, or is not a literal field"
+                "either does not exist or is not a literal field"
             )
 
         field_definition = model._meta.fields[field_name]

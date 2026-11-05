@@ -167,6 +167,8 @@ const definitions = {
         relation("author", [{ kind: "entity", type: "Person", edgeModel: null }], false),
         relation("statements", [doc("Activity"), doc("Transfer"), negative]),
         { ...base, name: "when", key: "when", kind: "embedded", model: null, types: ["Day", "Span"] },
+        // (worked out by the server, only in the database: a dateable document's copy of its date)
+        literal("date_text", { type: "str" }, { dbField: true }),
       ],
     }),
   },
@@ -1118,4 +1120,13 @@ test("shares are edited with sliders that give way to each other, and are sent a
     { type: "Person", id: "p1", edgeProperties: { percent: 70 } },
     { type: "Person", id: "p2", edgeProperties: { percent: 30 } },
   ]);
+});
+
+test("a field only in the database is not in the form", async () => {
+  const { client } = fakeClient(() => ({ id: "f1", type: "Factoid", label: "F" }));
+  show(client);
+  await settle();
+  expect(rowName("year")).toBeTruthy();
+  expect(rowName("date_text")).toBeUndefined();
+  expect(document.body.querySelector('[aria-label="date_text"]')).toBeNull();
 });

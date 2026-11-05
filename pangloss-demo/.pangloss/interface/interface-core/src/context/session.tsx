@@ -1,4 +1,4 @@
-import { createContext, useContext } from "solid-js";
+import { createContext, createMemo, useContext } from "solid-js";
 import type { Accessor, ParentProps } from "solid-js";
 import type { User } from "../api";
 
@@ -20,6 +20,27 @@ export function useCurrentUser(): User | undefined {
     throw new Error("useCurrentUser(): there is no <SessionProvider> above");
   }
   return user();
+}
+
+/**
+ * Who is logged in, by username (`undefined`: no one), for what is read from the API with a login in mind.
+ * The app asks again for its own (router) queries after logging in or out; what a module reads in a
+ * memo of its own it has to ask for again itself, so the memo reads this first: it changes only when
+ * someone logs in or out, not each time the session is asked for again (as it is after a save). Call
+ * it in the component; read it in the memo.
+ *
+ *     const session = useSessionKey();
+ *     const report = createMemo(() => {
+ *       session();
+ *       return getMonth(api, ...);
+ *     });
+ */
+export function useSessionKey(): Accessor<string | undefined> {
+  const user = useContext(SessionContext);
+  if (!user) {
+    throw new Error("useSessionKey(): there is no <SessionProvider> above");
+  }
+  return createMemo(() => user()?.username);
 }
 
 /**

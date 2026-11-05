@@ -78,7 +78,6 @@
       "date_day_month_year": "{day} {month} {year}",
       "date_day_of_the_month": "the {day}.",
       "date_days": "days",
-      "date_earliest": "Earliest",
       "date_easter": "Easter",
       "date_easter_help": "0 is Easter Day, 49 Pentecost, −47 Shrove Tuesday, −46 Ash Wednesday",
       "date_easter_offset": "Days from Easter",
@@ -93,12 +92,17 @@
       "date_from_easter": "Easter {sign} {days} days",
       "date_how_often": "How often",
       "date_interval": "Every",
-      "date_latest": "Latest",
       "date_leap_shift": "A day later in a leap year (the old Roman leap day repeated 24 February)",
       "date_month": "Month",
       "date_month_year": "{month} {year}",
       "date_no_month": "(no month)",
       "date_no_weekday": "(weekday)",
+      "date_not_after": "Not after",
+      "date_not_after_reads": "not after {date}",
+      "date_not_before": "Not before",
+      "date_not_before_reads": "not before {date}",
+      "date_not_known": "Not known",
+      "date_not_known_help": "Nothing is known of this end (press again to give a date)",
       "date_nth": "Which",
       "date_nth_fifth": "fifth",
       "date_nth_first": "first",
@@ -149,6 +153,16 @@
       "go_to_head": "Go to the {type}",
       "home": "Home",
       "id": "ID",
+      "incoming_by_date": "By date",
+      "incoming_by_field": "By field",
+      "incoming_date_unknown": "Date unknown",
+      "incoming_from_year": "From",
+      "incoming_none_in_years": "Nothing in these years",
+      "incoming_not_dated": "Not dated",
+      "incoming_order": "What refers to it",
+      "incoming_shown": "{shown} of {total}",
+      "incoming_to_year": "To",
+      "incoming_years": "Years",
       "invalid_json": "This is not valid JSON, so it is not changed",
       "invalid_must_be_under": "Must be less than {n}",
       "invalid_must_exceed": "Must be more than {n}",
@@ -446,7 +460,6 @@
       "date_day_month_year": "{day}. {month} {year}",
       "date_day_of_the_month": "dem {day}.",
       "date_days": "Tage",
-      "date_earliest": "Frühestens",
       "date_easter": "Ostern",
       "date_easter_help": "0 ist der Ostersonntag, 49 Pfingsten, −47 Faschingsdienstag, −46 Aschermittwoch",
       "date_easter_offset": "Tage ab Ostern",
@@ -461,12 +474,17 @@
       "date_from_easter": "Ostern {sign} {days} Tage",
       "date_how_often": "Wie oft",
       "date_interval": "Alle",
-      "date_latest": "Spätestens",
       "date_leap_shift": "Im Schaltjahr einen Tag später (der alte römische Schalttag verdoppelte den 24. Februar)",
       "date_month": "Monat",
       "date_month_year": "{month} {year}",
       "date_no_month": "(kein Monat)",
       "date_no_weekday": "(Wochentag)",
+      "date_not_after": "Nicht nach",
+      "date_not_after_reads": "nicht nach {date}",
+      "date_not_before": "Nicht vor",
+      "date_not_before_reads": "nicht vor {date}",
+      "date_not_known": "Unbekannt",
+      "date_not_known_help": "Über dieses Ende ist nichts bekannt (erneut drücken, um ein Datum anzugeben)",
       "date_nth": "Welcher",
       "date_nth_fifth": "fünften",
       "date_nth_first": "ersten",
@@ -517,6 +535,16 @@
       "go_to_head": "Zum Objekt: {type}",
       "home": "Startseite",
       "id": "ID",
+      "incoming_by_date": "Nach Datum",
+      "incoming_by_field": "Nach Feld",
+      "incoming_date_unknown": "Datum unbekannt",
+      "incoming_from_year": "Von",
+      "incoming_none_in_years": "Nichts in diesen Jahren",
+      "incoming_not_dated": "Ohne Datum",
+      "incoming_order": "Was darauf verweist",
+      "incoming_shown": "{shown} von {total}",
+      "incoming_to_year": "Bis",
+      "incoming_years": "Jahre",
       "invalid_json": "Das ist kein gültiges JSON und wird daher nicht übernommen",
       "invalid_must_be_under": "Muss kleiner als {n} sein",
       "invalid_must_exceed": "Muss größer als {n} sein",
@@ -814,7 +842,6 @@
       "date_day_month_year": "{day} {month} {year}",
       "date_day_of_the_month": "le {day}",
       "date_days": "jours",
-      "date_earliest": "Au plus tôt",
       "date_easter": "Pâques",
       "date_easter_help": "0 est le jour de Pâques, 49 la Pentecôte, −47 le mardi gras, −46 le mercredi des Cendres",
       "date_easter_offset": "Jours à partir de Pâques",
@@ -829,12 +856,17 @@
       "date_from_easter": "Pâques {sign} {days} jours",
       "date_how_often": "Fréquence",
       "date_interval": "Tous les",
-      "date_latest": "Au plus tard",
       "date_leap_shift": "Un jour plus tard dans une année bissextile (l’ancien jour intercalaire romain doublait le 24 février)",
       "date_month": "Mois",
       "date_month_year": "{month} {year}",
       "date_no_month": "(pas de mois)",
       "date_no_weekday": "(jour de la semaine)",
+      "date_not_after": "Pas après",
+      "date_not_after_reads": "pas après {date}",
+      "date_not_before": "Pas avant",
+      "date_not_before_reads": "pas avant {date}",
+      "date_not_known": "Inconnu",
+      "date_not_known_help": "On ne sait rien de cette borne (appuyer de nouveau pour donner une date)",
       "date_nth": "Lequel",
       "date_nth_fifth": "cinquième",
       "date_nth_first": "premier",
@@ -885,6 +917,16 @@
       "go_to_head": "Aller à l’objet : {type}",
       "home": "Accueil",
       "id": "ID",
+      "incoming_by_date": "Par date",
+      "incoming_by_field": "Par champ",
+      "incoming_date_unknown": "Date inconnue",
+      "incoming_from_year": "De",
+      "incoming_none_in_years": "Rien pendant ces années",
+      "incoming_not_dated": "Sans date",
+      "incoming_order": "Ce qui y renvoie",
+      "incoming_shown": "{shown} sur {total}",
+      "incoming_to_year": "À",
+      "incoming_years": "Années",
       "invalid_json": "Ce n’est pas du JSON valide : rien n’est modifié",
       "invalid_must_be_under": "Doit être inférieur à {n}",
       "invalid_must_exceed": "Doit être supérieur à {n}",
@@ -1120,14 +1162,29 @@
         "description": "An agent did something, with others in different roles",
         "kind": "Document",
         "fields": {
-          "text": {
-            "name": "Text",
-            "plural": "Text",
-            "help": ""
-          },
           "date": {
             "name": "Date",
             "plural": "Date",
+            "help": ""
+          },
+          "date_sort_day": {
+            "name": "Date sort day",
+            "plural": "Date sort day",
+            "help": ""
+          },
+          "date_end_sort_day": {
+            "name": "Date end sort day",
+            "plural": "Date end sort day",
+            "help": ""
+          },
+          "date_text": {
+            "name": "Date text",
+            "plural": "Date text",
+            "help": ""
+          },
+          "text": {
+            "name": "Text",
+            "plural": "Text",
             "help": ""
           },
           "places": {
@@ -1235,14 +1292,29 @@
         "description": "",
         "kind": "Document",
         "fields": {
-          "text": {
-            "name": "Text",
-            "plural": "Text",
-            "help": ""
-          },
           "date": {
             "name": "Date",
             "plural": "Date",
+            "help": ""
+          },
+          "date_sort_day": {
+            "name": "Date sort day",
+            "plural": "Date sort day",
+            "help": ""
+          },
+          "date_end_sort_day": {
+            "name": "Date end sort day",
+            "plural": "Date end sort day",
+            "help": ""
+          },
+          "date_text": {
+            "name": "Date text",
+            "plural": "Date text",
+            "help": ""
+          },
+          "text": {
+            "name": "Text",
+            "plural": "Text",
             "help": ""
           },
           "places": {
@@ -1270,14 +1342,29 @@
         "description": "",
         "kind": "Document",
         "fields": {
-          "text": {
-            "name": "Text",
-            "plural": "Text",
-            "help": ""
-          },
           "date": {
             "name": "Date",
             "plural": "Date",
+            "help": ""
+          },
+          "date_sort_day": {
+            "name": "Date sort day",
+            "plural": "Date sort day",
+            "help": ""
+          },
+          "date_end_sort_day": {
+            "name": "Date end sort day",
+            "plural": "Date end sort day",
+            "help": ""
+          },
+          "date_text": {
+            "name": "Date text",
+            "plural": "Date text",
+            "help": ""
+          },
+          "text": {
+            "name": "Text",
+            "plural": "Text",
             "help": ""
           },
           "places": {
@@ -1305,14 +1392,29 @@
         "description": "",
         "kind": "Document",
         "fields": {
-          "text": {
-            "name": "Text",
-            "plural": "Text",
-            "help": ""
-          },
           "date": {
             "name": "Date",
             "plural": "Date",
+            "help": ""
+          },
+          "date_sort_day": {
+            "name": "Date sort day",
+            "plural": "Date sort day",
+            "help": ""
+          },
+          "date_end_sort_day": {
+            "name": "Date end sort day",
+            "plural": "Date end sort day",
+            "help": ""
+          },
+          "date_text": {
+            "name": "Date text",
+            "plural": "Date text",
+            "help": ""
+          },
+          "text": {
+            "name": "Text",
+            "plural": "Text",
             "help": ""
           },
           "places": {
@@ -1412,7 +1514,7 @@
         "name": "Date range",
         "plural": "Date ranges",
         "help": "",
-        "description": "One date whose day is not known: somewhere from `earliest` to `latest`",
+        "description": "One date whose day is not known: somewhere from `not_before` to `not_after` (the names of the Text Encoding\nInitiative). Either may be unknown (`UnknownDate`: \"not before March 1500\", and nothing said of when it was by),\nnot both; such a range runs to the horizon (or from the floor) and sorts by its known end",
         "kind": "Embedded",
         "fields": {
           "calendar": {
@@ -1465,14 +1567,14 @@
             "plural": "End sort day",
             "help": ""
           },
-          "earliest": {
-            "name": "Earliest",
-            "plural": "Earliest",
+          "not_before": {
+            "name": "Not before",
+            "plural": "Not before",
             "help": ""
           },
-          "latest": {
-            "name": "Latest",
-            "plural": "Latest",
+          "not_after": {
+            "name": "Not after",
+            "plural": "Not after",
             "help": ""
           }
         },
@@ -1801,14 +1903,29 @@
         "description": "Someone was a member of a group: of a family, an order, an army. (Two factoids that say so of two people make\nthem members of the same group: see `derived.py`)",
         "kind": "Document",
         "fields": {
-          "text": {
-            "name": "Text",
-            "plural": "Text",
-            "help": ""
-          },
           "date": {
             "name": "Date",
             "plural": "Date",
+            "help": ""
+          },
+          "date_sort_day": {
+            "name": "Date sort day",
+            "plural": "Date sort day",
+            "help": ""
+          },
+          "date_end_sort_day": {
+            "name": "Date end sort day",
+            "plural": "Date end sort day",
+            "help": ""
+          },
+          "date_text": {
+            "name": "Date text",
+            "plural": "Date text",
+            "help": ""
+          },
+          "text": {
+            "name": "Text",
+            "plural": "Text",
             "help": ""
           },
           "places": {
@@ -1976,14 +2093,29 @@
         "description": "Someone ordered something to be done: *something else*, which is a statement of\nits own, said in a subjunctive space, because it was wished, and not necessarily done",
         "kind": "Document",
         "fields": {
-          "text": {
-            "name": "Text",
-            "plural": "Text",
-            "help": ""
-          },
           "date": {
             "name": "Date",
             "plural": "Date",
+            "help": ""
+          },
+          "date_sort_day": {
+            "name": "Date sort day",
+            "plural": "Date sort day",
+            "help": ""
+          },
+          "date_end_sort_day": {
+            "name": "Date end sort day",
+            "plural": "Date end sort day",
+            "help": ""
+          },
+          "date_text": {
+            "name": "Date text",
+            "plural": "Date text",
+            "help": ""
+          },
+          "text": {
+            "name": "Text",
+            "plural": "Text",
             "help": ""
           },
           "places": {
@@ -2394,14 +2526,29 @@
         "description": "Something that happened between agents and in places (abstract: a kind of\nstatement is one of the classes below)",
         "kind": "Document",
         "fields": {
-          "text": {
-            "name": "Text",
-            "plural": "Text",
-            "help": ""
-          },
           "date": {
             "name": "Date",
             "plural": "Date",
+            "help": ""
+          },
+          "date_sort_day": {
+            "name": "Date sort day",
+            "plural": "Date sort day",
+            "help": ""
+          },
+          "date_end_sort_day": {
+            "name": "Date end sort day",
+            "plural": "Date end sort day",
+            "help": ""
+          },
+          "date_text": {
+            "name": "Date text",
+            "plural": "Date text",
+            "help": ""
+          },
+          "text": {
+            "name": "Text",
+            "plural": "Text",
             "help": ""
           },
           "involves": {
@@ -2424,14 +2571,29 @@
         "description": "Something passed from one agent to another",
         "kind": "Document",
         "fields": {
-          "text": {
-            "name": "Text",
-            "plural": "Text",
-            "help": ""
-          },
           "date": {
             "name": "Date",
             "plural": "Date",
+            "help": ""
+          },
+          "date_sort_day": {
+            "name": "Date sort day",
+            "plural": "Date sort day",
+            "help": ""
+          },
+          "date_end_sort_day": {
+            "name": "Date end sort day",
+            "plural": "Date end sort day",
+            "help": ""
+          },
+          "date_text": {
+            "name": "Date text",
+            "plural": "Date text",
+            "help": ""
+          },
+          "text": {
+            "name": "Text",
+            "plural": "Text",
             "help": ""
           },
           "places": {
@@ -2861,14 +3023,29 @@
         "description": "Ein Akteur tat etwas, zusammen mit anderen in verschiedenen Rollen",
         "kind": "Document",
         "fields": {
-          "text": {
-            "name": "Text",
-            "plural": "Text",
-            "help": ""
-          },
           "date": {
             "name": "Datum",
             "plural": "Datum",
+            "help": ""
+          },
+          "date_sort_day": {
+            "name": "Date sort day",
+            "plural": "Date sort day",
+            "help": ""
+          },
+          "date_end_sort_day": {
+            "name": "Date end sort day",
+            "plural": "Date end sort day",
+            "help": ""
+          },
+          "date_text": {
+            "name": "Date text",
+            "plural": "Date text",
+            "help": ""
+          },
+          "text": {
+            "name": "Text",
+            "plural": "Text",
             "help": ""
           },
           "places": {
@@ -2976,14 +3153,29 @@
         "description": "",
         "kind": "Document",
         "fields": {
-          "text": {
-            "name": "Text",
-            "plural": "Text",
-            "help": ""
-          },
           "date": {
             "name": "Datum",
             "plural": "Datum",
+            "help": ""
+          },
+          "date_sort_day": {
+            "name": "Date sort day",
+            "plural": "Date sort day",
+            "help": ""
+          },
+          "date_end_sort_day": {
+            "name": "Date end sort day",
+            "plural": "Date end sort day",
+            "help": ""
+          },
+          "date_text": {
+            "name": "Date text",
+            "plural": "Date text",
+            "help": ""
+          },
+          "text": {
+            "name": "Text",
+            "plural": "Text",
             "help": ""
           },
           "places": {
@@ -3011,14 +3203,29 @@
         "description": "",
         "kind": "Document",
         "fields": {
-          "text": {
-            "name": "Text",
-            "plural": "Text",
-            "help": ""
-          },
           "date": {
             "name": "Datum",
             "plural": "Datum",
+            "help": ""
+          },
+          "date_sort_day": {
+            "name": "Date sort day",
+            "plural": "Date sort day",
+            "help": ""
+          },
+          "date_end_sort_day": {
+            "name": "Date end sort day",
+            "plural": "Date end sort day",
+            "help": ""
+          },
+          "date_text": {
+            "name": "Date text",
+            "plural": "Date text",
+            "help": ""
+          },
+          "text": {
+            "name": "Text",
+            "plural": "Text",
             "help": ""
           },
           "places": {
@@ -3046,14 +3253,29 @@
         "description": "",
         "kind": "Document",
         "fields": {
-          "text": {
-            "name": "Text",
-            "plural": "Text",
-            "help": ""
-          },
           "date": {
             "name": "Datum",
             "plural": "Datum",
+            "help": ""
+          },
+          "date_sort_day": {
+            "name": "Date sort day",
+            "plural": "Date sort day",
+            "help": ""
+          },
+          "date_end_sort_day": {
+            "name": "Date end sort day",
+            "plural": "Date end sort day",
+            "help": ""
+          },
+          "date_text": {
+            "name": "Date text",
+            "plural": "Date text",
+            "help": ""
+          },
+          "text": {
+            "name": "Text",
+            "plural": "Text",
             "help": ""
           },
           "places": {
@@ -3206,14 +3428,14 @@
             "plural": "Sortiertag (Ende)",
             "help": ""
           },
-          "earliest": {
-            "name": "Frühestens",
-            "plural": "Frühestens",
+          "not_before": {
+            "name": "Not before",
+            "plural": "Not before",
             "help": ""
           },
-          "latest": {
-            "name": "Spätestens",
-            "plural": "Spätestens",
+          "not_after": {
+            "name": "Not after",
+            "plural": "Not after",
             "help": ""
           }
         },
@@ -3542,14 +3764,29 @@
         "description": "Jemand war Mitglied einer Gruppe: einer Familie, eines Ordens, eines Heeres. (Zwei Faktoide, die das von zwei Personen sagen, machen sie zu Mitgliedern derselben Gruppe: siehe `derived.py`)",
         "kind": "Document",
         "fields": {
-          "text": {
-            "name": "Text",
-            "plural": "Text",
-            "help": ""
-          },
           "date": {
             "name": "Datum",
             "plural": "Datum",
+            "help": ""
+          },
+          "date_sort_day": {
+            "name": "Date sort day",
+            "plural": "Date sort day",
+            "help": ""
+          },
+          "date_end_sort_day": {
+            "name": "Date end sort day",
+            "plural": "Date end sort day",
+            "help": ""
+          },
+          "date_text": {
+            "name": "Date text",
+            "plural": "Date text",
+            "help": ""
+          },
+          "text": {
+            "name": "Text",
+            "plural": "Text",
             "help": ""
           },
           "places": {
@@ -3717,14 +3954,29 @@
         "description": "Jemand befahl, etwas zu tun: *etwas anderes*, das eine eigene Aussage ist, gesagt in einem Konjunktiv-Raum, weil es gewünscht und nicht notwendigerweise ausgeführt wurde",
         "kind": "Document",
         "fields": {
-          "text": {
-            "name": "Text",
-            "plural": "Text",
-            "help": ""
-          },
           "date": {
             "name": "Datum",
             "plural": "Datum",
+            "help": ""
+          },
+          "date_sort_day": {
+            "name": "Date sort day",
+            "plural": "Date sort day",
+            "help": ""
+          },
+          "date_end_sort_day": {
+            "name": "Date end sort day",
+            "plural": "Date end sort day",
+            "help": ""
+          },
+          "date_text": {
+            "name": "Date text",
+            "plural": "Date text",
+            "help": ""
+          },
+          "text": {
+            "name": "Text",
+            "plural": "Text",
             "help": ""
           },
           "places": {
@@ -4135,14 +4387,29 @@
         "description": "Etwas, das zwischen Akteuren und an Orten geschah (abstrakt: eine Art von Aussage ist eine der folgenden Klassen)",
         "kind": "Document",
         "fields": {
-          "text": {
-            "name": "Text",
-            "plural": "Text",
-            "help": ""
-          },
           "date": {
             "name": "Datum",
             "plural": "Datum",
+            "help": ""
+          },
+          "date_sort_day": {
+            "name": "Date sort day",
+            "plural": "Date sort day",
+            "help": ""
+          },
+          "date_end_sort_day": {
+            "name": "Date end sort day",
+            "plural": "Date end sort day",
+            "help": ""
+          },
+          "date_text": {
+            "name": "Date text",
+            "plural": "Date text",
+            "help": ""
+          },
+          "text": {
+            "name": "Text",
+            "plural": "Text",
             "help": ""
           },
           "involves": {
@@ -4165,14 +4432,29 @@
         "description": "Etwas ging von einem Akteur auf einen anderen über",
         "kind": "Document",
         "fields": {
-          "text": {
-            "name": "Text",
-            "plural": "Text",
-            "help": ""
-          },
           "date": {
             "name": "Datum",
             "plural": "Datum",
+            "help": ""
+          },
+          "date_sort_day": {
+            "name": "Date sort day",
+            "plural": "Date sort day",
+            "help": ""
+          },
+          "date_end_sort_day": {
+            "name": "Date end sort day",
+            "plural": "Date end sort day",
+            "help": ""
+          },
+          "date_text": {
+            "name": "Date text",
+            "plural": "Date text",
+            "help": ""
+          },
+          "text": {
+            "name": "Text",
+            "plural": "Text",
             "help": ""
           },
           "places": {
@@ -4602,14 +4884,29 @@
         "description": "Un agent a fait quelque chose, avec d’autres dans divers rôles",
         "kind": "Document",
         "fields": {
-          "text": {
-            "name": "Texte",
-            "plural": "Texte",
-            "help": ""
-          },
           "date": {
             "name": "Date",
             "plural": "Date",
+            "help": ""
+          },
+          "date_sort_day": {
+            "name": "Date sort day",
+            "plural": "Date sort day",
+            "help": ""
+          },
+          "date_end_sort_day": {
+            "name": "Date end sort day",
+            "plural": "Date end sort day",
+            "help": ""
+          },
+          "date_text": {
+            "name": "Date text",
+            "plural": "Date text",
+            "help": ""
+          },
+          "text": {
+            "name": "Texte",
+            "plural": "Texte",
             "help": ""
           },
           "places": {
@@ -4717,14 +5014,29 @@
         "description": "",
         "kind": "Document",
         "fields": {
-          "text": {
-            "name": "Texte",
-            "plural": "Texte",
-            "help": ""
-          },
           "date": {
             "name": "Date",
             "plural": "Date",
+            "help": ""
+          },
+          "date_sort_day": {
+            "name": "Date sort day",
+            "plural": "Date sort day",
+            "help": ""
+          },
+          "date_end_sort_day": {
+            "name": "Date end sort day",
+            "plural": "Date end sort day",
+            "help": ""
+          },
+          "date_text": {
+            "name": "Date text",
+            "plural": "Date text",
+            "help": ""
+          },
+          "text": {
+            "name": "Texte",
+            "plural": "Texte",
             "help": ""
           },
           "places": {
@@ -4752,14 +5064,29 @@
         "description": "",
         "kind": "Document",
         "fields": {
-          "text": {
-            "name": "Texte",
-            "plural": "Texte",
-            "help": ""
-          },
           "date": {
             "name": "Date",
             "plural": "Date",
+            "help": ""
+          },
+          "date_sort_day": {
+            "name": "Date sort day",
+            "plural": "Date sort day",
+            "help": ""
+          },
+          "date_end_sort_day": {
+            "name": "Date end sort day",
+            "plural": "Date end sort day",
+            "help": ""
+          },
+          "date_text": {
+            "name": "Date text",
+            "plural": "Date text",
+            "help": ""
+          },
+          "text": {
+            "name": "Texte",
+            "plural": "Texte",
             "help": ""
           },
           "places": {
@@ -4787,14 +5114,29 @@
         "description": "",
         "kind": "Document",
         "fields": {
-          "text": {
-            "name": "Texte",
-            "plural": "Texte",
-            "help": ""
-          },
           "date": {
             "name": "Date",
             "plural": "Date",
+            "help": ""
+          },
+          "date_sort_day": {
+            "name": "Date sort day",
+            "plural": "Date sort day",
+            "help": ""
+          },
+          "date_end_sort_day": {
+            "name": "Date end sort day",
+            "plural": "Date end sort day",
+            "help": ""
+          },
+          "date_text": {
+            "name": "Date text",
+            "plural": "Date text",
+            "help": ""
+          },
+          "text": {
+            "name": "Texte",
+            "plural": "Texte",
             "help": ""
           },
           "places": {
@@ -4947,14 +5289,14 @@
             "plural": "Jour de tri (fin)",
             "help": ""
           },
-          "earliest": {
-            "name": "Au plus tôt",
-            "plural": "Au plus tôt",
+          "not_before": {
+            "name": "Not before",
+            "plural": "Not before",
             "help": ""
           },
-          "latest": {
-            "name": "Au plus tard",
-            "plural": "Au plus tard",
+          "not_after": {
+            "name": "Not after",
+            "plural": "Not after",
             "help": ""
           }
         },
@@ -5283,14 +5625,29 @@
         "description": "Quelqu’un était membre d’un groupe : une famille, un ordre, une armée. (Deux factoïdes qui le disent de deux personnes en font des membres du même groupe : voir `derived.py`)",
         "kind": "Document",
         "fields": {
-          "text": {
-            "name": "Texte",
-            "plural": "Texte",
-            "help": ""
-          },
           "date": {
             "name": "Date",
             "plural": "Date",
+            "help": ""
+          },
+          "date_sort_day": {
+            "name": "Date sort day",
+            "plural": "Date sort day",
+            "help": ""
+          },
+          "date_end_sort_day": {
+            "name": "Date end sort day",
+            "plural": "Date end sort day",
+            "help": ""
+          },
+          "date_text": {
+            "name": "Date text",
+            "plural": "Date text",
+            "help": ""
+          },
+          "text": {
+            "name": "Texte",
+            "plural": "Texte",
             "help": ""
           },
           "places": {
@@ -5458,14 +5815,29 @@
         "description": "Quelqu’un a ordonné que quelque chose soit fait : *autre chose*, qui est un énoncé à part entière, dit dans un espace subjonctif, car c’était souhaité, et pas forcément fait",
         "kind": "Document",
         "fields": {
-          "text": {
-            "name": "Texte",
-            "plural": "Texte",
-            "help": ""
-          },
           "date": {
             "name": "Date",
             "plural": "Date",
+            "help": ""
+          },
+          "date_sort_day": {
+            "name": "Date sort day",
+            "plural": "Date sort day",
+            "help": ""
+          },
+          "date_end_sort_day": {
+            "name": "Date end sort day",
+            "plural": "Date end sort day",
+            "help": ""
+          },
+          "date_text": {
+            "name": "Date text",
+            "plural": "Date text",
+            "help": ""
+          },
+          "text": {
+            "name": "Texte",
+            "plural": "Texte",
             "help": ""
           },
           "places": {
@@ -5876,14 +6248,29 @@
         "description": "Quelque chose qui s’est passé entre des agents et en des lieux (abstrait : un genre d’énoncé est l’une des classes ci-dessous)",
         "kind": "Document",
         "fields": {
-          "text": {
-            "name": "Texte",
-            "plural": "Texte",
-            "help": ""
-          },
           "date": {
             "name": "Date",
             "plural": "Date",
+            "help": ""
+          },
+          "date_sort_day": {
+            "name": "Date sort day",
+            "plural": "Date sort day",
+            "help": ""
+          },
+          "date_end_sort_day": {
+            "name": "Date end sort day",
+            "plural": "Date end sort day",
+            "help": ""
+          },
+          "date_text": {
+            "name": "Date text",
+            "plural": "Date text",
+            "help": ""
+          },
+          "text": {
+            "name": "Texte",
+            "plural": "Texte",
             "help": ""
           },
           "involves": {
@@ -5906,14 +6293,29 @@
         "description": "Quelque chose est passé d’un agent à un autre",
         "kind": "Document",
         "fields": {
-          "text": {
-            "name": "Texte",
-            "plural": "Texte",
-            "help": ""
-          },
           "date": {
             "name": "Date",
             "plural": "Date",
+            "help": ""
+          },
+          "date_sort_day": {
+            "name": "Date sort day",
+            "plural": "Date sort day",
+            "help": ""
+          },
+          "date_end_sort_day": {
+            "name": "Date end sort day",
+            "plural": "Date end sort day",
+            "help": ""
+          },
+          "date_text": {
+            "name": "Date text",
+            "plural": "Date text",
+            "help": ""
+          },
+          "text": {
+            "name": "Texte",
+            "plural": "Texte",
             "help": ""
           },
           "places": {

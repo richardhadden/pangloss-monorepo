@@ -8,6 +8,9 @@ from pydantic.fields import FieldInfo
 
 from pangloss_models.field_definitions import IncomingRelationDefinition
 from pangloss_models.initialise_models.builder import union_order
+from pangloss_models.initialise_models.initialise_reference_models import (
+    reference_view_extra_fields,
+)
 from pangloss_models.initialise_models.initialise_view_model import (
     get_relation_annotation_types,
 )
@@ -85,6 +88,11 @@ def build_incoming_bound_model(
     set_field(
         incoming_bound_model, "label", FieldInfo(annotation=str | None, default=None)
     )
+    # And what its reference view adds (a dateable document's date), as for a relation to the entity that is direct
+    for name in reference_view_extra_fields(source_model):
+        field_info = source_model.ReferenceView.model_fields.get(name)
+        if field_info is not None:
+            set_field(incoming_bound_model, name, copy(field_info))
     annotation = get_relation_annotation_types(
         incoming_relation_definition.field_definition, field_bindings=[]
     )

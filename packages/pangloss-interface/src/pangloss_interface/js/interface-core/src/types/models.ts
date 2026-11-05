@@ -273,6 +273,8 @@ export interface ModelDefinition {
   useInSemanticSpaceLabel: boolean;
   fields: FieldDefinition[];
   incoming: IncomingRelation[];
+  /** The traits it has, by name (`Dateable`...): what kind of thing it is, without reading its fields (none if absent) */
+  traits?: string[];
   /** (from the interface's `_interface_meta`; null for a model that sets none, nor its parents) */
   interfaceMeta: InterfaceMeta | null;
 }

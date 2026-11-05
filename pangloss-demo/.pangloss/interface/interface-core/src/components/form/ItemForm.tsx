@@ -15,6 +15,7 @@ import { ConsoleButton } from "../../primitives";
 import { cleanForSave, createFormHooks, getModel } from "../../schema";
 import type { FormData } from "../../schema";
 import type { ItemFormProps } from "../../types";
+import { DeleteButton } from "./DeleteButton";
 import { ItemFields } from "./ModelFields";
 import { useSaveChecks } from "./Problems";
 
@@ -25,7 +26,8 @@ import { useSaveChecks } from "./Problems";
  * checked first, by the schemas of the models (`useSaveChecks`): what is wrong is not sent, but
  * shown at its fields, red, with a red toast; so is what the API refuses. An item someone else saved
  * meanwhile (a 412) is not overwritten, and the form offers to load the new version. A save that
- * worked is told in a toast (`useToasts`).
+ * worked is told in a toast (`useToasts`). With `onDeleted`, an item being edited has Delete too, which asks first
+ * (`DeleteDialog`), or says why it cannot be deleted.
  */
 export function ItemForm(props: ItemFormProps) {
   const Console = useComponent("Console");
@@ -93,6 +95,14 @@ export function ItemForm(props: ItemFormProps) {
         item={creating() ? undefined : { type: props.type, id: String(props.initial.id) }}
         page="edit"
       >
+        <Show when={!creating() && props.onDeleted}>
+          <DeleteButton
+            type={props.type}
+            id={String(props.initial.id)}
+            label={label()}
+            onDeleted={() => props.onDeleted?.()}
+          />
+        </Show>
         <ConsoleButton label={t("cancel", "Cancel")} onClick={props.onCancel} tone="danger">
           <svg
             viewBox="0 0 24 24"

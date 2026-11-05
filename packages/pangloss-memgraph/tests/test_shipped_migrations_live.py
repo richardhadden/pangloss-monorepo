@@ -76,3 +76,52 @@ async def test_the_migrations_of_a_package_make_what_they_describe(db_driver, ap
     for migration in migrations:  # (again: nothing to do, and no error)
         state = await apply_changes(current(), state, list(migration.changes))
     assert all(has_index(db_driver, i) for i in indexes)
+
+
+async def test_the_ends_of_a_date_range_are_renamed(db_driver, clear_database):
+    """`pangloss_dates` 0002: a range written when its ends were `earliest` and `latest` is read with them as
+    `not_before` and `not_after`"""
+    import importlib
+
+    from pangloss_dates import julian, models
+    from pangloss_models import initialise
+    from pangloss_models.model_bases.document import Document
+    from pangloss_models.model_registry import ModelRegistry
+    from pangloss_testing.live import initialise_database
+
+    ModelRegistry._reset()
+    for module in (models, julian):
+        importlib.reload(module)
+
+    class Factoid(Document):
+        when: julian.JulianDate
+
+    initialise()
+    await initialise_database()
+    saved = await Factoid.Create(
+        label="x",
+        when={
+            "type": "JulianDateRange",
+            "not_before": {"type": "JulianExactDate", "year": 1500},
+            "not_after": {"type": "JulianExactDate", "year": 1502},
+        },
+    ).save()
+    # (as it was stored before)
+    for new, old in (("not_before", "earliest"), ("not_after", "latest")):
+        for suffix in ("", "_reverse"):
+            show(
+                db_driver,
+                f"MATCH (a)-[r:{new}{suffix}]->(b) CREATE (a)-[o:{old}{suffix}]->(b) SET o = properties(r) DELETE r",
+            )
+
+    dates = [m for m in graph_of(APPS).order() if m.app == "pangloss_dates"]
+    state = await apply_changes(current(), EMPTY_SNAPSHOT, list(dates[0].changes))
+    assert dates[1].name.startswith("0002")
+    await apply_changes(current(), state, list(dates[1].changes))
+
+    read = await Factoid.get(id=saved.id)
+    assert (read.when.not_before.year, read.when.not_after.year) == (1500, 1502)
+    assert not show(
+        db_driver,
+        "MATCH ()-[r:earliest|latest|earliest_reverse|latest_reverse]->() RETURN r",
+    )

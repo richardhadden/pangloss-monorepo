@@ -12,6 +12,7 @@ import {
   useNavExpanded,
   TranslationsProvider,
   SessionProvider,
+  SidePanelProvider,
   ToastsProvider,
   useClipboard,
   useComponent,
@@ -113,14 +114,17 @@ export default function App() {
                 <NavExpandedProvider>
                   <LoginDialogProvider>
                     <ConsoleMountProvider>
-                      <Router>
-                        {(props) => (
-                          <>
-                            <Title>Pangloss</Title>
-                            <Frame>{props.children}</Frame>
-                          </>
-                        )}
-                      </Router>
+                      {/* (one panel on the right at a time: review, history, ...) */}
+                      <SidePanelProvider>
+                        <Router>
+                          {(props) => (
+                            <>
+                              <Title>Pangloss</Title>
+                              <Frame>{props.children}</Frame>
+                            </>
+                          )}
+                        </Router>
+                      </SidePanelProvider>
                     </ConsoleMountProvider>
                   </LoginDialogProvider>
                 </NavExpandedProvider>

@@ -101,11 +101,13 @@ pydantic-discarded-extra-argument = "ignore"
 unused-type-ignore-comment = "ignore"
 unused-ignore-comment = "ignore"
 
-# the date families override the type of a field with the member of the family that has the calendar
+# the date families override the type of a field with the member of the family that has the calendar (and the dateable
+# traits narrow `date` to the kinds they take)
 [[tool.ty.overrides]]
 include = [
     "packages/pangloss-dates/src/pangloss_dates/julian.py",
     "packages/pangloss-dates/src/pangloss_dates/gregorian.py",
+    "packages/pangloss-dates/src/pangloss_dates/dateable.py",
 ]
 [tool.ty.overrides.rules]
 invalid-mutable-override = "ignore"

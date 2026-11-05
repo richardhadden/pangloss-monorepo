@@ -1188,3 +1188,32 @@ def test_a_binding_does_not_look_into_a_reference_to_something_that_exists():
         label="R", year=1900, witnesses=[{"type": "Person", "id": uuid7()}]
     )
     assert len(report.witnesses) == 1
+
+
+@no_type_check
+def test_a_model_that_depends_on_a_cycle_is_made_after_what_it_embeds():
+    """Models in a cycle (a person's roles, each of which names its holders), and one that depends on them (an
+    appointment of a person) without being in it, were made before every other model: the appointment's embedded
+    stamp had no `Create` yet. Those the sort orders come first now, and the rest after what they depend on"""
+
+    class AStamp(Embedded):
+        year: int
+
+    class ZPerson(Entity):
+        roles: list["ZRole"]
+
+    class ZRole(Entity):
+        holders: list[ZPerson]
+
+    # (named to sort before the stamp, as `roles.models.Appointment` before `pangloss_dates.models.ExactDate`)
+    class Appointment(Document):
+        of: ZPerson
+        stamp: AStamp
+
+    initialise()
+    made = Appointment.Create(
+        label="x",
+        of={"type": "ZPerson", "id": uuid7()},
+        stamp={"type": "AStamp", "year": 1500},
+    )
+    assert made.stamp.year == 1500

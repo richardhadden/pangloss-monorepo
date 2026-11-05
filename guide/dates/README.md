@@ -35,7 +35,7 @@ class Person(Entity):
 |---|---|
 | `{"type": "JulianExactDate", "year": 1500}` (and `"month"`, `"day"`) | The year, the month or the day, as stated |
 | `{"type": "JulianEDTFDate", "edtf": "1500-03~"}` | EDTF text: `?` uncertain, `~` approximate, `15XX`, `[1500,1502]`. Nobody has to write it |
-| `{"type": "JulianDateRange", "earliest": {...}, "latest": {...}}` | One date that is somewhere between two exact dates (each can be a year, a month or a day) |
+| `{"type": "JulianDateRange", "not_before": {...}, "not_after": {...}}` | One date that is somewhere between two exact dates (each can be a year, a month or a day). The names are the TEI's (`notBefore`, `notAfter` in the API). Either end may be `{"type": "JulianUnknownDate"}` ("not before 1490", and nothing said of when it was by), not both: the range then runs to `DATES_OPEN_END_YEAR` (or from `DATES_EARLIEST_YEAR`) and sorts by the end that is known |
 | `{"type": "JulianPeriod", "start": {...}, "end": {...}}` | An office, a residence. The ends are any of the above. If one end is not known, `{"type": "JulianUnknownDate"}` (not both); `{"type": "JulianOngoingDate"}` as the end says it was still going |
 | `{"type": "JulianRecurrence", "frequency": "weekly", "weekdays": [0], "excluded_days": [], "start": {...}, "end": {...}}` | A repeated event: weekdays are 0 for Sunday to 6; `frequency` is `weekly`, `monthly` or `yearly`; with `nth` (the third, or -1 for the last), `month`, `month_day`, `interval`; yearly only, instead of a month: `easter_offset` (days from Easter, -80 to 250; 49 is Pentecost) or `feast` (a key the calendar package works out) |
 
@@ -121,3 +121,36 @@ def contemporaries(a: Var[Person], b: Var[Person], d1: Var[Date], d2: Var[Date])
 
 `overlaps`, `before`, `after`, `during` and `within(d1, d2, days=...)` compare the dates' bounds allowing for doubt
 (`strict=True` compares them as stated).
+
+## Dateable documents
+
+A document (or an entity) that happened at some time can have its date from a trait, instead of a field of its own:
+
+```python
+from pangloss_dates.dateable import Dateable, PeriodDateable, SingleDateable
+
+
+class Statement(Document, Dateable):           # date: Date (any kind)
+    text: str
+
+
+class Birth(Document, SingleDateable):         # date: an ExactDate, a DateRange, an EDTFDate or an UnknownDate
+    child: Person
+
+
+class Office(Document, PeriodDateable):        # date: a Period or an UnknownDate
+    holder: Person
+```
+
+- The field is always `date`. A class can narrow it: `date: JulianDate`, or `date: Annotated[Date, SortDefault(SortBy.EARLIEST_FUZZY)]`.
+- When one is saved, its date's `sort_day` and `end_sort_day` and a short text of it are copied onto its own node, as `date_sort_day`, `date_end_sort_day` and `date_text`. They are only in the database (worked out, never sent), and they are in its **reference**: a list, and what refers to an entity, carry its date without reading it. `date_text` uses no words, so it needs no translation: `1500`, `1500-03`, `1500–1502`, `≥ 1500`, `≤ 1502`, `?`, `1500–…`, `[1500–1501]–1520`, `↻ 1500–1520` (a recurrence), or an EDTF date as written.
+- Order a search by date with `order_by=[{"field": "date_sort_day"}]` (there is an index on `:Dateable(date_sort_day)`).
+- The nodes are labelled `:Dateable` (and `:SingleDateable`, `:PeriodDateable`), so a relation can point to "anything dateable".
+- In the interface, an entity's page shows what refers to it **by field** or **by date**: by date, in order, with the date and the field on the left and a slider of years on the right; then those whose date is not known, and those of a kind that has no date.
+
+A class that already had a `date: Date` and becomes dateable gets the label and the fields from `makemigrations`; the copies of the documents that exist are filled in by a step you add at the end of that migration:
+
+```python
+{"change": "RunPython", "safety": "transforming", "function": "pangloss_dates.dateable:fill_in_dateables", "affects": ["Statement"]}
+```
+

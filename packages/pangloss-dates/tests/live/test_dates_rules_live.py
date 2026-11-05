@@ -62,7 +62,7 @@ def year(y, approximate=False):
 
 
 def span(y1, y2):
-    return {"type": "DateRange", "earliest": year(y1), "latest": year(y2)}
+    return {"type": "DateRange", "not_before": year(y1), "not_after": year(y2)}
 
 
 async def pairs(Contemporaries):

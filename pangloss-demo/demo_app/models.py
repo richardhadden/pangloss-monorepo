@@ -37,6 +37,7 @@ from typing import Annotated, TypedDict
 from annotated_types import Ge, MaxLen, MinLen
 from pangloss_calendar.models import DateCharacterisation
 from pangloss_dates.bounds import SortBy
+from pangloss_dates.dateable import Dateable
 from pangloss_dates.models import Date, SortDefault
 from pangloss_derived import DerivedMeta
 from pangloss_interface import InterfaceMeta
@@ -186,15 +187,15 @@ class Source(Entity):
 # ---------------------------------------------------------------------------
 
 
-class Statement(Document):
+class Statement(Document, Dateable):
     """Something that happened between agents and in places (abstract: a kind of
-    statement is one of the classes below)"""
+    statement is one of the classes below). Dateable: it has a `date`, and says when in
+    lists and on the pages of the people and places it involves"""
 
     # A statement is only ever part of a factoid: none of its kinds can be made on its own
     _meta = Document.Meta(abstract=True, create_directly=False)
 
     text: Annotated[str, MinLen(5)]
-    date: Date
     involves: list[Agent]
     places: list[Place]
 

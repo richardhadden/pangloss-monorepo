@@ -32,6 +32,9 @@ class _Trait(_DeclaredClass):
 
 class Trait[T: Document | Entity](_Trait):
     _kind_base: ClassVar[bool] = True
+    # Fields of the trait added to the `ReferenceView` of every class that has it (a database field may be one: a
+    # reference view is only read). Those of a trait it extends are added too
+    reference_view_fields: ClassVar[tuple[str, ...]] = ()
     Meta: ClassVar[Any] = TraitMeta
     _meta: Any  # type: ignore
 

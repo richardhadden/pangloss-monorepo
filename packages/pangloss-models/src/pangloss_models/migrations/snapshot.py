@@ -39,6 +39,7 @@ NOT_DATA_KEYS = {
     "required",  # whether it has a default
     "concreteTypes",  # follows from the models that exist
     "incoming",  # follows from the fields of the other models
+    "traits",  # the labels say it
     "subclasses",  # the fields a relation stands for: in its `storage`, as their edges
     "defaultReifiedType",  # what the interface offers first
     "bindings",  # a value given to the fields of what a relation holds when it is written (they are stored as given)

@@ -78,7 +78,6 @@
       "date_day_month_year": "{day} {month} {year}",
       "date_day_of_the_month": "the {day}.",
       "date_days": "days",
-      "date_earliest": "Earliest",
       "date_easter": "Easter",
       "date_easter_help": "0 is Easter Day, 49 Pentecost, −47 Shrove Tuesday, −46 Ash Wednesday",
       "date_easter_offset": "Days from Easter",
@@ -93,12 +92,17 @@
       "date_from_easter": "Easter {sign} {days} days",
       "date_how_often": "How often",
       "date_interval": "Every",
-      "date_latest": "Latest",
       "date_leap_shift": "A day later in a leap year (the old Roman leap day repeated 24 February)",
       "date_month": "Month",
       "date_month_year": "{month} {year}",
       "date_no_month": "(no month)",
       "date_no_weekday": "(weekday)",
+      "date_not_after": "Not after",
+      "date_not_after_reads": "not after {date}",
+      "date_not_before": "Not before",
+      "date_not_before_reads": "not before {date}",
+      "date_not_known": "Not known",
+      "date_not_known_help": "Nothing is known of this end (press again to give a date)",
       "date_nth": "Which",
       "date_nth_fifth": "fifth",
       "date_nth_first": "first",
@@ -149,6 +153,16 @@
       "go_to_head": "Go to the {type}",
       "home": "Home",
       "id": "ID",
+      "incoming_by_date": "By date",
+      "incoming_by_field": "By field",
+      "incoming_date_unknown": "Date unknown",
+      "incoming_from_year": "From",
+      "incoming_none_in_years": "Nothing in these years",
+      "incoming_not_dated": "Not dated",
+      "incoming_order": "What refers to it",
+      "incoming_shown": "{shown} of {total}",
+      "incoming_to_year": "To",
+      "incoming_years": "Years",
       "invalid_json": "This is not valid JSON, so it is not changed",
       "invalid_must_be_under": "Must be less than {n}",
       "invalid_must_exceed": "Must be more than {n}",
@@ -344,28 +358,32 @@
       "toast_saved": "{type} “{label}” saved",
       "toasts": "Notifications",
       "type_marker": "type",
+      "typology_add": "Add",
+      "typology_add_subtype": "Add a subtype of {name}",
+      "typology_add_top": "Add a top-level type",
       "typology_all": "All",
       "typology_collapse": "Collapse",
       "typology_concrete": "Also a concrete entity (a relation that takes the other class takes this type)",
       "typology_counts": "{subtypes} subtypes · {entities} entities",
       "typology_default_label": "default",
       "typology_description": "description",
-      "typology_drop_top": "Drop here for the top level",
+      "typology_edit_label": "Edit the label of {name}",
       "typology_edit_labels": "Edit labels",
       "typology_entities_with": "Entities with this type ({count})",
       "typology_expand": "Expand",
       "typology_including_subtypes": "including subtypes",
+      "typology_label_of": "Label of {name}",
       "typology_labels": "Labels",
-      "typology_move": "Move {name} to",
-      "typology_move_to": "Move to…",
+      "typology_new_subtype": "New subtype of {name}",
+      "typology_new_top": "New top-level {type}",
       "typology_no_types": "No types yet.",
       "typology_none": "None.",
       "typology_not_translated": "(not translated)",
       "typology_not_translated_shown": "(not translated: the default is shown)",
       "typology_path": "Path",
       "typology_show_more": "Show more",
+      "typology_subtype_count": "{count} subtypes",
       "typology_subtypes": "Subtypes",
-      "typology_top_level": "(top level)",
       "username": "Username",
       "widen_type": "Widen {name} to a type above it",
       "yes": "Yes"
@@ -442,7 +460,6 @@
       "date_day_month_year": "{day}. {month} {year}",
       "date_day_of_the_month": "dem {day}.",
       "date_days": "Tage",
-      "date_earliest": "Frühestens",
       "date_easter": "Ostern",
       "date_easter_help": "0 ist der Ostersonntag, 49 Pfingsten, −47 Faschingsdienstag, −46 Aschermittwoch",
       "date_easter_offset": "Tage ab Ostern",
@@ -457,12 +474,17 @@
       "date_from_easter": "Ostern {sign} {days} Tage",
       "date_how_often": "Wie oft",
       "date_interval": "Alle",
-      "date_latest": "Spätestens",
       "date_leap_shift": "Im Schaltjahr einen Tag später (der alte römische Schalttag verdoppelte den 24. Februar)",
       "date_month": "Monat",
       "date_month_year": "{month} {year}",
       "date_no_month": "(kein Monat)",
       "date_no_weekday": "(Wochentag)",
+      "date_not_after": "Nicht nach",
+      "date_not_after_reads": "nicht nach {date}",
+      "date_not_before": "Nicht vor",
+      "date_not_before_reads": "nicht vor {date}",
+      "date_not_known": "Unbekannt",
+      "date_not_known_help": "Über dieses Ende ist nichts bekannt (erneut drücken, um ein Datum anzugeben)",
       "date_nth": "Welcher",
       "date_nth_fifth": "fünften",
       "date_nth_first": "ersten",
@@ -513,6 +535,16 @@
       "go_to_head": "Zum Objekt: {type}",
       "home": "Startseite",
       "id": "ID",
+      "incoming_by_date": "Nach Datum",
+      "incoming_by_field": "Nach Feld",
+      "incoming_date_unknown": "Datum unbekannt",
+      "incoming_from_year": "Von",
+      "incoming_none_in_years": "Nichts in diesen Jahren",
+      "incoming_not_dated": "Ohne Datum",
+      "incoming_order": "Was darauf verweist",
+      "incoming_shown": "{shown} von {total}",
+      "incoming_to_year": "Bis",
+      "incoming_years": "Jahre",
       "invalid_json": "Das ist kein gültiges JSON und wird daher nicht übernommen",
       "invalid_must_be_under": "Muss kleiner als {n} sein",
       "invalid_must_exceed": "Muss größer als {n} sein",
@@ -708,28 +740,32 @@
       "toast_saved": "{type} „{label}“ gespeichert",
       "toasts": "Benachrichtigungen",
       "type_marker": "Typ",
+      "typology_add": "Hinzufügen",
+      "typology_add_subtype": "Untertyp von {name} hinzufügen",
+      "typology_add_top": "Typ der obersten Ebene hinzufügen",
       "typology_all": "Alle",
       "typology_collapse": "Einklappen",
       "typology_concrete": "Auch eine konkrete Entität (eine Beziehung, die die andere Klasse annimmt, nimmt auch diesen Typ an)",
       "typology_counts": "{subtypes} Untertypen · {entities} Entitäten",
       "typology_default_label": "Standard",
       "typology_description": "Beschreibung",
-      "typology_drop_top": "Hier ablegen für die oberste Ebene",
+      "typology_edit_label": "Bezeichnung von {name} bearbeiten",
       "typology_edit_labels": "Bezeichnungen bearbeiten",
       "typology_entities_with": "Entitäten mit diesem Typ ({count})",
       "typology_expand": "Ausklappen",
       "typology_including_subtypes": "einschließlich Untertypen",
+      "typology_label_of": "Bezeichnung von {name}",
       "typology_labels": "Bezeichnungen",
-      "typology_move": "{name} verschieben nach",
-      "typology_move_to": "Verschieben nach …",
+      "typology_new_subtype": "Neuer Untertyp von {name}",
+      "typology_new_top": "Neuer {type} der obersten Ebene",
       "typology_no_types": "Noch keine Typen.",
       "typology_none": "Keine.",
       "typology_not_translated": "(nicht übersetzt)",
       "typology_not_translated_shown": "(nicht übersetzt: der Standard wird angezeigt)",
       "typology_path": "Pfad",
       "typology_show_more": "Mehr anzeigen",
+      "typology_subtype_count": "{count} Untertypen",
       "typology_subtypes": "Untertypen",
-      "typology_top_level": "(oberste Ebene)",
       "username": "Benutzername",
       "widen_type": "{name} auf einen Obertyp erweitern",
       "yes": "Ja"
@@ -806,7 +842,6 @@
       "date_day_month_year": "{day} {month} {year}",
       "date_day_of_the_month": "le {day}",
       "date_days": "jours",
-      "date_earliest": "Au plus tôt",
       "date_easter": "Pâques",
       "date_easter_help": "0 est le jour de Pâques, 49 la Pentecôte, −47 le mardi gras, −46 le mercredi des Cendres",
       "date_easter_offset": "Jours à partir de Pâques",
@@ -821,12 +856,17 @@
       "date_from_easter": "Pâques {sign} {days} jours",
       "date_how_often": "Fréquence",
       "date_interval": "Tous les",
-      "date_latest": "Au plus tard",
       "date_leap_shift": "Un jour plus tard dans une année bissextile (l’ancien jour intercalaire romain doublait le 24 février)",
       "date_month": "Mois",
       "date_month_year": "{month} {year}",
       "date_no_month": "(pas de mois)",
       "date_no_weekday": "(jour de la semaine)",
+      "date_not_after": "Pas après",
+      "date_not_after_reads": "pas après {date}",
+      "date_not_before": "Pas avant",
+      "date_not_before_reads": "pas avant {date}",
+      "date_not_known": "Inconnu",
+      "date_not_known_help": "On ne sait rien de cette borne (appuyer de nouveau pour donner une date)",
       "date_nth": "Lequel",
       "date_nth_fifth": "cinquième",
       "date_nth_first": "premier",
@@ -877,6 +917,16 @@
       "go_to_head": "Aller à l’objet : {type}",
       "home": "Accueil",
       "id": "ID",
+      "incoming_by_date": "Par date",
+      "incoming_by_field": "Par champ",
+      "incoming_date_unknown": "Date inconnue",
+      "incoming_from_year": "De",
+      "incoming_none_in_years": "Rien pendant ces années",
+      "incoming_not_dated": "Sans date",
+      "incoming_order": "Ce qui y renvoie",
+      "incoming_shown": "{shown} sur {total}",
+      "incoming_to_year": "À",
+      "incoming_years": "Années",
       "invalid_json": "Ce n’est pas du JSON valide : rien n’est modifié",
       "invalid_must_be_under": "Doit être inférieur à {n}",
       "invalid_must_exceed": "Doit être supérieur à {n}",
@@ -1072,28 +1122,32 @@
       "toast_saved": "{type} « {label} » enregistré",
       "toasts": "Notifications",
       "type_marker": "type",
+      "typology_add": "Ajouter",
+      "typology_add_subtype": "Ajouter un sous-type de {name}",
+      "typology_add_top": "Ajouter un type de premier niveau",
       "typology_all": "Tous",
       "typology_collapse": "Replier",
       "typology_concrete": "Aussi une entité concrète (une relation qui accepte l’autre classe accepte ce type)",
       "typology_counts": "{subtypes} sous-types · {entities} entités",
       "typology_default_label": "par défaut",
       "typology_description": "description",
-      "typology_drop_top": "Déposer ici pour le niveau supérieur",
+      "typology_edit_label": "Modifier le libellé de {name}",
       "typology_edit_labels": "Modifier les libellés",
       "typology_entities_with": "Entités de ce type ({count})",
       "typology_expand": "Déplier",
       "typology_including_subtypes": "y compris les sous-types",
+      "typology_label_of": "Libellé de {name}",
       "typology_labels": "Libellés",
-      "typology_move": "Déplacer {name} vers",
-      "typology_move_to": "Déplacer vers…",
+      "typology_new_subtype": "Nouveau sous-type de {name}",
+      "typology_new_top": "Nouveau {type} de premier niveau",
       "typology_no_types": "Aucun type pour l’instant.",
       "typology_none": "Aucun.",
       "typology_not_translated": "(non traduit)",
       "typology_not_translated_shown": "(non traduit : le libellé par défaut est affiché)",
       "typology_path": "Chemin",
       "typology_show_more": "Afficher plus",
+      "typology_subtype_count": "{count} sous-types",
       "typology_subtypes": "Sous-types",
-      "typology_top_level": "(niveau supérieur)",
       "username": "Nom d’utilisateur",
       "widen_type": "Élargir {name} à un type parent",
       "yes": "Oui"
@@ -1108,14 +1162,29 @@
         "description": "An agent did something, with others in different roles",
         "kind": "Document",
         "fields": {
-          "text": {
-            "name": "Text",
-            "plural": "Text",
-            "help": ""
-          },
           "date": {
             "name": "Date",
             "plural": "Date",
+            "help": ""
+          },
+          "date_sort_day": {
+            "name": "Date sort day",
+            "plural": "Date sort day",
+            "help": ""
+          },
+          "date_end_sort_day": {
+            "name": "Date end sort day",
+            "plural": "Date end sort day",
+            "help": ""
+          },
+          "date_text": {
+            "name": "Date text",
+            "plural": "Date text",
+            "help": ""
+          },
+          "text": {
+            "name": "Text",
+            "plural": "Text",
             "help": ""
           },
           "places": {
@@ -1223,14 +1292,29 @@
         "description": "",
         "kind": "Document",
         "fields": {
-          "text": {
-            "name": "Text",
-            "plural": "Text",
-            "help": ""
-          },
           "date": {
             "name": "Date",
             "plural": "Date",
+            "help": ""
+          },
+          "date_sort_day": {
+            "name": "Date sort day",
+            "plural": "Date sort day",
+            "help": ""
+          },
+          "date_end_sort_day": {
+            "name": "Date end sort day",
+            "plural": "Date end sort day",
+            "help": ""
+          },
+          "date_text": {
+            "name": "Date text",
+            "plural": "Date text",
+            "help": ""
+          },
+          "text": {
+            "name": "Text",
+            "plural": "Text",
             "help": ""
           },
           "places": {
@@ -1258,14 +1342,29 @@
         "description": "",
         "kind": "Document",
         "fields": {
-          "text": {
-            "name": "Text",
-            "plural": "Text",
-            "help": ""
-          },
           "date": {
             "name": "Date",
             "plural": "Date",
+            "help": ""
+          },
+          "date_sort_day": {
+            "name": "Date sort day",
+            "plural": "Date sort day",
+            "help": ""
+          },
+          "date_end_sort_day": {
+            "name": "Date end sort day",
+            "plural": "Date end sort day",
+            "help": ""
+          },
+          "date_text": {
+            "name": "Date text",
+            "plural": "Date text",
+            "help": ""
+          },
+          "text": {
+            "name": "Text",
+            "plural": "Text",
             "help": ""
           },
           "places": {
@@ -1293,14 +1392,29 @@
         "description": "",
         "kind": "Document",
         "fields": {
-          "text": {
-            "name": "Text",
-            "plural": "Text",
-            "help": ""
-          },
           "date": {
             "name": "Date",
             "plural": "Date",
+            "help": ""
+          },
+          "date_sort_day": {
+            "name": "Date sort day",
+            "plural": "Date sort day",
+            "help": ""
+          },
+          "date_end_sort_day": {
+            "name": "Date end sort day",
+            "plural": "Date end sort day",
+            "help": ""
+          },
+          "date_text": {
+            "name": "Date text",
+            "plural": "Date text",
+            "help": ""
+          },
+          "text": {
+            "name": "Text",
+            "plural": "Text",
             "help": ""
           },
           "places": {
@@ -1400,7 +1514,7 @@
         "name": "Date range",
         "plural": "Date ranges",
         "help": "",
-        "description": "One date whose day is not known: somewhere from `earliest` to `latest`",
+        "description": "One date whose day is not known: somewhere from `not_before` to `not_after` (the names of the Text Encoding\nInitiative). Either may be unknown (`UnknownDate`: \"not before March 1500\", and nothing said of when it was by),\nnot both; such a range runs to the horizon (or from the floor) and sorts by its known end",
         "kind": "Embedded",
         "fields": {
           "calendar": {
@@ -1453,14 +1567,14 @@
             "plural": "End sort day",
             "help": ""
           },
-          "earliest": {
-            "name": "Earliest",
-            "plural": "Earliest",
+          "not_before": {
+            "name": "Not before",
+            "plural": "Not before",
             "help": ""
           },
-          "latest": {
-            "name": "Latest",
-            "plural": "Latest",
+          "not_after": {
+            "name": "Not after",
+            "plural": "Not after",
             "help": ""
           }
         },
@@ -1789,14 +1903,29 @@
         "description": "Someone was a member of a group: of a family, an order, an army. (Two factoids that say so of two people make\nthem members of the same group: see `derived.py`)",
         "kind": "Document",
         "fields": {
-          "text": {
-            "name": "Text",
-            "plural": "Text",
-            "help": ""
-          },
           "date": {
             "name": "Date",
             "plural": "Date",
+            "help": ""
+          },
+          "date_sort_day": {
+            "name": "Date sort day",
+            "plural": "Date sort day",
+            "help": ""
+          },
+          "date_end_sort_day": {
+            "name": "Date end sort day",
+            "plural": "Date end sort day",
+            "help": ""
+          },
+          "date_text": {
+            "name": "Date text",
+            "plural": "Date text",
+            "help": ""
+          },
+          "text": {
+            "name": "Text",
+            "plural": "Text",
             "help": ""
           },
           "places": {
@@ -1964,14 +2093,29 @@
         "description": "Someone ordered something to be done: *something else*, which is a statement of\nits own, said in a subjunctive space, because it was wished, and not necessarily done",
         "kind": "Document",
         "fields": {
-          "text": {
-            "name": "Text",
-            "plural": "Text",
-            "help": ""
-          },
           "date": {
             "name": "Date",
             "plural": "Date",
+            "help": ""
+          },
+          "date_sort_day": {
+            "name": "Date sort day",
+            "plural": "Date sort day",
+            "help": ""
+          },
+          "date_end_sort_day": {
+            "name": "Date end sort day",
+            "plural": "Date end sort day",
+            "help": ""
+          },
+          "date_text": {
+            "name": "Date text",
+            "plural": "Date text",
+            "help": ""
+          },
+          "text": {
+            "name": "Text",
+            "plural": "Text",
             "help": ""
           },
           "places": {
@@ -2382,14 +2526,29 @@
         "description": "Something that happened between agents and in places (abstract: a kind of\nstatement is one of the classes below)",
         "kind": "Document",
         "fields": {
-          "text": {
-            "name": "Text",
-            "plural": "Text",
-            "help": ""
-          },
           "date": {
             "name": "Date",
             "plural": "Date",
+            "help": ""
+          },
+          "date_sort_day": {
+            "name": "Date sort day",
+            "plural": "Date sort day",
+            "help": ""
+          },
+          "date_end_sort_day": {
+            "name": "Date end sort day",
+            "plural": "Date end sort day",
+            "help": ""
+          },
+          "date_text": {
+            "name": "Date text",
+            "plural": "Date text",
+            "help": ""
+          },
+          "text": {
+            "name": "Text",
+            "plural": "Text",
             "help": ""
           },
           "involves": {
@@ -2412,14 +2571,29 @@
         "description": "Something passed from one agent to another",
         "kind": "Document",
         "fields": {
-          "text": {
-            "name": "Text",
-            "plural": "Text",
-            "help": ""
-          },
           "date": {
             "name": "Date",
             "plural": "Date",
+            "help": ""
+          },
+          "date_sort_day": {
+            "name": "Date sort day",
+            "plural": "Date sort day",
+            "help": ""
+          },
+          "date_end_sort_day": {
+            "name": "Date end sort day",
+            "plural": "Date end sort day",
+            "help": ""
+          },
+          "date_text": {
+            "name": "Date text",
+            "plural": "Date text",
+            "help": ""
+          },
+          "text": {
+            "name": "Text",
+            "plural": "Text",
             "help": ""
           },
           "places": {
@@ -2545,6 +2719,246 @@
         },
         "incoming": {}
       },
+      "ZoteroBacked": {
+        "name": "Zotero backed",
+        "plural": "Zotero backed",
+        "help": "",
+        "description": "A text that is (or may be) an item in a Zotero library. Everything is optional, so one made by hand has\nnone of it. Build your class on this: `class TextObject(ZoteroBacked)`.",
+        "kind": "Entity",
+        "fields": {
+          "zotero_url": {
+            "name": "Zotero url",
+            "plural": "Zotero url",
+            "help": ""
+          },
+          "zotero_library": {
+            "name": "Zotero library",
+            "plural": "Zotero library",
+            "help": ""
+          },
+          "zotero_key": {
+            "name": "Zotero key",
+            "plural": "Zotero key",
+            "help": ""
+          },
+          "zotero_version": {
+            "name": "Zotero version",
+            "plural": "Zotero version",
+            "help": ""
+          },
+          "zotero_synced_entity_version": {
+            "name": "Zotero synced entity version",
+            "plural": "Zotero synced entity version",
+            "help": ""
+          },
+          "item_type": {
+            "name": "Item type",
+            "plural": "Item type",
+            "help": ""
+          },
+          "title": {
+            "name": "Title",
+            "plural": "Title",
+            "help": ""
+          },
+          "short_title": {
+            "name": "Short title",
+            "plural": "Short title",
+            "help": ""
+          },
+          "creators": {
+            "name": "Creators",
+            "plural": "Creators",
+            "help": ""
+          },
+          "date": {
+            "name": "Date",
+            "plural": "Date",
+            "help": ""
+          },
+          "language": {
+            "name": "Language",
+            "plural": "Language",
+            "help": ""
+          },
+          "abstract": {
+            "name": "Abstract",
+            "plural": "Abstract",
+            "help": ""
+          },
+          "zotero_data": {
+            "name": "Zotero data",
+            "plural": "Zotero data",
+            "help": ""
+          },
+          "citation": {
+            "name": "Citation",
+            "plural": "Citation",
+            "help": ""
+          },
+          "bibliography": {
+            "name": "Bibliography",
+            "plural": "Bibliography",
+            "help": ""
+          },
+          "csl_json": {
+            "name": "Csl json",
+            "plural": "Csl json",
+            "help": ""
+          },
+          "removed_from_zotero": {
+            "name": "Removed from zotero",
+            "plural": "Removed from zotero",
+            "help": ""
+          },
+          "synced_when": {
+            "name": "Synced when",
+            "plural": "Synced when",
+            "help": ""
+          },
+          "item_type_override": {
+            "name": "Item type override",
+            "plural": "Item type override",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "ZoteroLibrary": {
+        "name": "Zotero library",
+        "plural": "Zotero library",
+        "help": "",
+        "description": "How far a library has been synced. The id is its URL (`https://www.zotero.org/groups/2556736`).",
+        "kind": "Entity",
+        "fields": {
+          "library": {
+            "name": "Library",
+            "plural": "Library",
+            "help": ""
+          },
+          "synced_version": {
+            "name": "Synced version",
+            "plural": "Synced version",
+            "help": ""
+          },
+          "last_sync": {
+            "name": "Last sync",
+            "plural": "Last sync",
+            "help": ""
+          },
+          "last_error": {
+            "name": "Last error",
+            "plural": "Last error",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "ZoteroObject": {
+        "name": "Zotero object",
+        "plural": "Zotero object",
+        "help": "",
+        "description": "A Zotero item that no class of the project stands for",
+        "kind": "Entity",
+        "fields": {
+          "zotero_url": {
+            "name": "Zotero url",
+            "plural": "Zotero url",
+            "help": ""
+          },
+          "zotero_library": {
+            "name": "Zotero library",
+            "plural": "Zotero library",
+            "help": ""
+          },
+          "zotero_key": {
+            "name": "Zotero key",
+            "plural": "Zotero key",
+            "help": ""
+          },
+          "zotero_version": {
+            "name": "Zotero version",
+            "plural": "Zotero version",
+            "help": ""
+          },
+          "zotero_synced_entity_version": {
+            "name": "Zotero synced entity version",
+            "plural": "Zotero synced entity version",
+            "help": ""
+          },
+          "item_type": {
+            "name": "Item type",
+            "plural": "Item type",
+            "help": ""
+          },
+          "title": {
+            "name": "Title",
+            "plural": "Title",
+            "help": ""
+          },
+          "short_title": {
+            "name": "Short title",
+            "plural": "Short title",
+            "help": ""
+          },
+          "creators": {
+            "name": "Creators",
+            "plural": "Creators",
+            "help": ""
+          },
+          "date": {
+            "name": "Date",
+            "plural": "Date",
+            "help": ""
+          },
+          "language": {
+            "name": "Language",
+            "plural": "Language",
+            "help": ""
+          },
+          "abstract": {
+            "name": "Abstract",
+            "plural": "Abstract",
+            "help": ""
+          },
+          "zotero_data": {
+            "name": "Zotero data",
+            "plural": "Zotero data",
+            "help": ""
+          },
+          "citation": {
+            "name": "Citation",
+            "plural": "Citation",
+            "help": ""
+          },
+          "bibliography": {
+            "name": "Bibliography",
+            "plural": "Bibliography",
+            "help": ""
+          },
+          "csl_json": {
+            "name": "Csl json",
+            "plural": "Csl json",
+            "help": ""
+          },
+          "removed_from_zotero": {
+            "name": "Removed from zotero",
+            "plural": "Removed from zotero",
+            "help": ""
+          },
+          "synced_when": {
+            "name": "Synced when",
+            "plural": "Synced when",
+            "help": ""
+          },
+          "item_type_override": {
+            "name": "Item type override",
+            "plural": "Item type override",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
       "SameGroup": {
         "name": "Same group",
         "plural": "Same group",
@@ -2609,14 +3023,29 @@
         "description": "Ein Akteur tat etwas, zusammen mit anderen in verschiedenen Rollen",
         "kind": "Document",
         "fields": {
-          "text": {
-            "name": "Text",
-            "plural": "Text",
-            "help": ""
-          },
           "date": {
             "name": "Datum",
             "plural": "Datum",
+            "help": ""
+          },
+          "date_sort_day": {
+            "name": "Date sort day",
+            "plural": "Date sort day",
+            "help": ""
+          },
+          "date_end_sort_day": {
+            "name": "Date end sort day",
+            "plural": "Date end sort day",
+            "help": ""
+          },
+          "date_text": {
+            "name": "Date text",
+            "plural": "Date text",
+            "help": ""
+          },
+          "text": {
+            "name": "Text",
+            "plural": "Text",
             "help": ""
           },
           "places": {
@@ -2724,14 +3153,29 @@
         "description": "",
         "kind": "Document",
         "fields": {
-          "text": {
-            "name": "Text",
-            "plural": "Text",
-            "help": ""
-          },
           "date": {
             "name": "Datum",
             "plural": "Datum",
+            "help": ""
+          },
+          "date_sort_day": {
+            "name": "Date sort day",
+            "plural": "Date sort day",
+            "help": ""
+          },
+          "date_end_sort_day": {
+            "name": "Date end sort day",
+            "plural": "Date end sort day",
+            "help": ""
+          },
+          "date_text": {
+            "name": "Date text",
+            "plural": "Date text",
+            "help": ""
+          },
+          "text": {
+            "name": "Text",
+            "plural": "Text",
             "help": ""
           },
           "places": {
@@ -2759,14 +3203,29 @@
         "description": "",
         "kind": "Document",
         "fields": {
-          "text": {
-            "name": "Text",
-            "plural": "Text",
-            "help": ""
-          },
           "date": {
             "name": "Datum",
             "plural": "Datum",
+            "help": ""
+          },
+          "date_sort_day": {
+            "name": "Date sort day",
+            "plural": "Date sort day",
+            "help": ""
+          },
+          "date_end_sort_day": {
+            "name": "Date end sort day",
+            "plural": "Date end sort day",
+            "help": ""
+          },
+          "date_text": {
+            "name": "Date text",
+            "plural": "Date text",
+            "help": ""
+          },
+          "text": {
+            "name": "Text",
+            "plural": "Text",
             "help": ""
           },
           "places": {
@@ -2794,14 +3253,29 @@
         "description": "",
         "kind": "Document",
         "fields": {
-          "text": {
-            "name": "Text",
-            "plural": "Text",
-            "help": ""
-          },
           "date": {
             "name": "Datum",
             "plural": "Datum",
+            "help": ""
+          },
+          "date_sort_day": {
+            "name": "Date sort day",
+            "plural": "Date sort day",
+            "help": ""
+          },
+          "date_end_sort_day": {
+            "name": "Date end sort day",
+            "plural": "Date end sort day",
+            "help": ""
+          },
+          "date_text": {
+            "name": "Date text",
+            "plural": "Date text",
+            "help": ""
+          },
+          "text": {
+            "name": "Text",
+            "plural": "Text",
             "help": ""
           },
           "places": {
@@ -2954,14 +3428,14 @@
             "plural": "Sortiertag (Ende)",
             "help": ""
           },
-          "earliest": {
-            "name": "Frühestens",
-            "plural": "Frühestens",
+          "not_before": {
+            "name": "Not before",
+            "plural": "Not before",
             "help": ""
           },
-          "latest": {
-            "name": "Spätestens",
-            "plural": "Spätestens",
+          "not_after": {
+            "name": "Not after",
+            "plural": "Not after",
             "help": ""
           }
         },
@@ -3290,14 +3764,29 @@
         "description": "Jemand war Mitglied einer Gruppe: einer Familie, eines Ordens, eines Heeres. (Zwei Faktoide, die das von zwei Personen sagen, machen sie zu Mitgliedern derselben Gruppe: siehe `derived.py`)",
         "kind": "Document",
         "fields": {
-          "text": {
-            "name": "Text",
-            "plural": "Text",
-            "help": ""
-          },
           "date": {
             "name": "Datum",
             "plural": "Datum",
+            "help": ""
+          },
+          "date_sort_day": {
+            "name": "Date sort day",
+            "plural": "Date sort day",
+            "help": ""
+          },
+          "date_end_sort_day": {
+            "name": "Date end sort day",
+            "plural": "Date end sort day",
+            "help": ""
+          },
+          "date_text": {
+            "name": "Date text",
+            "plural": "Date text",
+            "help": ""
+          },
+          "text": {
+            "name": "Text",
+            "plural": "Text",
             "help": ""
           },
           "places": {
@@ -3465,14 +3954,29 @@
         "description": "Jemand befahl, etwas zu tun: *etwas anderes*, das eine eigene Aussage ist, gesagt in einem Konjunktiv-Raum, weil es gewünscht und nicht notwendigerweise ausgeführt wurde",
         "kind": "Document",
         "fields": {
-          "text": {
-            "name": "Text",
-            "plural": "Text",
-            "help": ""
-          },
           "date": {
             "name": "Datum",
             "plural": "Datum",
+            "help": ""
+          },
+          "date_sort_day": {
+            "name": "Date sort day",
+            "plural": "Date sort day",
+            "help": ""
+          },
+          "date_end_sort_day": {
+            "name": "Date end sort day",
+            "plural": "Date end sort day",
+            "help": ""
+          },
+          "date_text": {
+            "name": "Date text",
+            "plural": "Date text",
+            "help": ""
+          },
+          "text": {
+            "name": "Text",
+            "plural": "Text",
             "help": ""
           },
           "places": {
@@ -3883,14 +4387,29 @@
         "description": "Etwas, das zwischen Akteuren und an Orten geschah (abstrakt: eine Art von Aussage ist eine der folgenden Klassen)",
         "kind": "Document",
         "fields": {
-          "text": {
-            "name": "Text",
-            "plural": "Text",
-            "help": ""
-          },
           "date": {
             "name": "Datum",
             "plural": "Datum",
+            "help": ""
+          },
+          "date_sort_day": {
+            "name": "Date sort day",
+            "plural": "Date sort day",
+            "help": ""
+          },
+          "date_end_sort_day": {
+            "name": "Date end sort day",
+            "plural": "Date end sort day",
+            "help": ""
+          },
+          "date_text": {
+            "name": "Date text",
+            "plural": "Date text",
+            "help": ""
+          },
+          "text": {
+            "name": "Text",
+            "plural": "Text",
             "help": ""
           },
           "involves": {
@@ -3913,14 +4432,29 @@
         "description": "Etwas ging von einem Akteur auf einen anderen über",
         "kind": "Document",
         "fields": {
-          "text": {
-            "name": "Text",
-            "plural": "Text",
-            "help": ""
-          },
           "date": {
             "name": "Datum",
             "plural": "Datum",
+            "help": ""
+          },
+          "date_sort_day": {
+            "name": "Date sort day",
+            "plural": "Date sort day",
+            "help": ""
+          },
+          "date_end_sort_day": {
+            "name": "Date end sort day",
+            "plural": "Date end sort day",
+            "help": ""
+          },
+          "date_text": {
+            "name": "Date text",
+            "plural": "Date text",
+            "help": ""
+          },
+          "text": {
+            "name": "Text",
+            "plural": "Text",
             "help": ""
           },
           "places": {
@@ -4046,6 +4580,246 @@
         },
         "incoming": {}
       },
+      "ZoteroBacked": {
+        "name": "Zotero backed",
+        "plural": "Zotero backed",
+        "help": "",
+        "description": "A text that is (or may be) an item in a Zotero library. Everything is optional, so one made by hand has\nnone of it. Build your class on this: `class TextObject(ZoteroBacked)`.",
+        "kind": "Entity",
+        "fields": {
+          "zotero_url": {
+            "name": "Zotero url",
+            "plural": "Zotero url",
+            "help": ""
+          },
+          "zotero_library": {
+            "name": "Zotero library",
+            "plural": "Zotero library",
+            "help": ""
+          },
+          "zotero_key": {
+            "name": "Zotero key",
+            "plural": "Zotero key",
+            "help": ""
+          },
+          "zotero_version": {
+            "name": "Zotero version",
+            "plural": "Zotero version",
+            "help": ""
+          },
+          "zotero_synced_entity_version": {
+            "name": "Zotero synced entity version",
+            "plural": "Zotero synced entity version",
+            "help": ""
+          },
+          "item_type": {
+            "name": "Item type",
+            "plural": "Item type",
+            "help": ""
+          },
+          "title": {
+            "name": "Title",
+            "plural": "Title",
+            "help": ""
+          },
+          "short_title": {
+            "name": "Short title",
+            "plural": "Short title",
+            "help": ""
+          },
+          "creators": {
+            "name": "Creators",
+            "plural": "Creators",
+            "help": ""
+          },
+          "date": {
+            "name": "Date",
+            "plural": "Date",
+            "help": ""
+          },
+          "language": {
+            "name": "Language",
+            "plural": "Language",
+            "help": ""
+          },
+          "abstract": {
+            "name": "Abstract",
+            "plural": "Abstract",
+            "help": ""
+          },
+          "zotero_data": {
+            "name": "Zotero data",
+            "plural": "Zotero data",
+            "help": ""
+          },
+          "citation": {
+            "name": "Citation",
+            "plural": "Citation",
+            "help": ""
+          },
+          "bibliography": {
+            "name": "Bibliography",
+            "plural": "Bibliography",
+            "help": ""
+          },
+          "csl_json": {
+            "name": "Csl json",
+            "plural": "Csl json",
+            "help": ""
+          },
+          "removed_from_zotero": {
+            "name": "Removed from zotero",
+            "plural": "Removed from zotero",
+            "help": ""
+          },
+          "synced_when": {
+            "name": "Synced when",
+            "plural": "Synced when",
+            "help": ""
+          },
+          "item_type_override": {
+            "name": "Item type override",
+            "plural": "Item type override",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "ZoteroLibrary": {
+        "name": "Zotero library",
+        "plural": "Zotero library",
+        "help": "",
+        "description": "How far a library has been synced. The id is its URL (`https://www.zotero.org/groups/2556736`).",
+        "kind": "Entity",
+        "fields": {
+          "library": {
+            "name": "Library",
+            "plural": "Library",
+            "help": ""
+          },
+          "synced_version": {
+            "name": "Synced version",
+            "plural": "Synced version",
+            "help": ""
+          },
+          "last_sync": {
+            "name": "Last sync",
+            "plural": "Last sync",
+            "help": ""
+          },
+          "last_error": {
+            "name": "Last error",
+            "plural": "Last error",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "ZoteroObject": {
+        "name": "Zotero object",
+        "plural": "Zotero object",
+        "help": "",
+        "description": "A Zotero item that no class of the project stands for",
+        "kind": "Entity",
+        "fields": {
+          "zotero_url": {
+            "name": "Zotero url",
+            "plural": "Zotero url",
+            "help": ""
+          },
+          "zotero_library": {
+            "name": "Zotero library",
+            "plural": "Zotero library",
+            "help": ""
+          },
+          "zotero_key": {
+            "name": "Zotero key",
+            "plural": "Zotero key",
+            "help": ""
+          },
+          "zotero_version": {
+            "name": "Zotero version",
+            "plural": "Zotero version",
+            "help": ""
+          },
+          "zotero_synced_entity_version": {
+            "name": "Zotero synced entity version",
+            "plural": "Zotero synced entity version",
+            "help": ""
+          },
+          "item_type": {
+            "name": "Item type",
+            "plural": "Item type",
+            "help": ""
+          },
+          "title": {
+            "name": "Title",
+            "plural": "Title",
+            "help": ""
+          },
+          "short_title": {
+            "name": "Short title",
+            "plural": "Short title",
+            "help": ""
+          },
+          "creators": {
+            "name": "Creators",
+            "plural": "Creators",
+            "help": ""
+          },
+          "date": {
+            "name": "Date",
+            "plural": "Date",
+            "help": ""
+          },
+          "language": {
+            "name": "Language",
+            "plural": "Language",
+            "help": ""
+          },
+          "abstract": {
+            "name": "Abstract",
+            "plural": "Abstract",
+            "help": ""
+          },
+          "zotero_data": {
+            "name": "Zotero data",
+            "plural": "Zotero data",
+            "help": ""
+          },
+          "citation": {
+            "name": "Citation",
+            "plural": "Citation",
+            "help": ""
+          },
+          "bibliography": {
+            "name": "Bibliography",
+            "plural": "Bibliography",
+            "help": ""
+          },
+          "csl_json": {
+            "name": "Csl json",
+            "plural": "Csl json",
+            "help": ""
+          },
+          "removed_from_zotero": {
+            "name": "Removed from zotero",
+            "plural": "Removed from zotero",
+            "help": ""
+          },
+          "synced_when": {
+            "name": "Synced when",
+            "plural": "Synced when",
+            "help": ""
+          },
+          "item_type_override": {
+            "name": "Item type override",
+            "plural": "Item type override",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
       "SameGroup": {
         "name": "Gleiche Gruppe",
         "plural": "Gleiche Gruppe",
@@ -4110,14 +4884,29 @@
         "description": "Un agent a fait quelque chose, avec d’autres dans divers rôles",
         "kind": "Document",
         "fields": {
-          "text": {
-            "name": "Texte",
-            "plural": "Texte",
-            "help": ""
-          },
           "date": {
             "name": "Date",
             "plural": "Date",
+            "help": ""
+          },
+          "date_sort_day": {
+            "name": "Date sort day",
+            "plural": "Date sort day",
+            "help": ""
+          },
+          "date_end_sort_day": {
+            "name": "Date end sort day",
+            "plural": "Date end sort day",
+            "help": ""
+          },
+          "date_text": {
+            "name": "Date text",
+            "plural": "Date text",
+            "help": ""
+          },
+          "text": {
+            "name": "Texte",
+            "plural": "Texte",
             "help": ""
           },
           "places": {
@@ -4225,14 +5014,29 @@
         "description": "",
         "kind": "Document",
         "fields": {
-          "text": {
-            "name": "Texte",
-            "plural": "Texte",
-            "help": ""
-          },
           "date": {
             "name": "Date",
             "plural": "Date",
+            "help": ""
+          },
+          "date_sort_day": {
+            "name": "Date sort day",
+            "plural": "Date sort day",
+            "help": ""
+          },
+          "date_end_sort_day": {
+            "name": "Date end sort day",
+            "plural": "Date end sort day",
+            "help": ""
+          },
+          "date_text": {
+            "name": "Date text",
+            "plural": "Date text",
+            "help": ""
+          },
+          "text": {
+            "name": "Texte",
+            "plural": "Texte",
             "help": ""
           },
           "places": {
@@ -4260,14 +5064,29 @@
         "description": "",
         "kind": "Document",
         "fields": {
-          "text": {
-            "name": "Texte",
-            "plural": "Texte",
-            "help": ""
-          },
           "date": {
             "name": "Date",
             "plural": "Date",
+            "help": ""
+          },
+          "date_sort_day": {
+            "name": "Date sort day",
+            "plural": "Date sort day",
+            "help": ""
+          },
+          "date_end_sort_day": {
+            "name": "Date end sort day",
+            "plural": "Date end sort day",
+            "help": ""
+          },
+          "date_text": {
+            "name": "Date text",
+            "plural": "Date text",
+            "help": ""
+          },
+          "text": {
+            "name": "Texte",
+            "plural": "Texte",
             "help": ""
           },
           "places": {
@@ -4295,14 +5114,29 @@
         "description": "",
         "kind": "Document",
         "fields": {
-          "text": {
-            "name": "Texte",
-            "plural": "Texte",
-            "help": ""
-          },
           "date": {
             "name": "Date",
             "plural": "Date",
+            "help": ""
+          },
+          "date_sort_day": {
+            "name": "Date sort day",
+            "plural": "Date sort day",
+            "help": ""
+          },
+          "date_end_sort_day": {
+            "name": "Date end sort day",
+            "plural": "Date end sort day",
+            "help": ""
+          },
+          "date_text": {
+            "name": "Date text",
+            "plural": "Date text",
+            "help": ""
+          },
+          "text": {
+            "name": "Texte",
+            "plural": "Texte",
             "help": ""
           },
           "places": {
@@ -4455,14 +5289,14 @@
             "plural": "Jour de tri (fin)",
             "help": ""
           },
-          "earliest": {
-            "name": "Au plus tôt",
-            "plural": "Au plus tôt",
+          "not_before": {
+            "name": "Not before",
+            "plural": "Not before",
             "help": ""
           },
-          "latest": {
-            "name": "Au plus tard",
-            "plural": "Au plus tard",
+          "not_after": {
+            "name": "Not after",
+            "plural": "Not after",
             "help": ""
           }
         },
@@ -4791,14 +5625,29 @@
         "description": "Quelqu’un était membre d’un groupe : une famille, un ordre, une armée. (Deux factoïdes qui le disent de deux personnes en font des membres du même groupe : voir `derived.py`)",
         "kind": "Document",
         "fields": {
-          "text": {
-            "name": "Texte",
-            "plural": "Texte",
-            "help": ""
-          },
           "date": {
             "name": "Date",
             "plural": "Date",
+            "help": ""
+          },
+          "date_sort_day": {
+            "name": "Date sort day",
+            "plural": "Date sort day",
+            "help": ""
+          },
+          "date_end_sort_day": {
+            "name": "Date end sort day",
+            "plural": "Date end sort day",
+            "help": ""
+          },
+          "date_text": {
+            "name": "Date text",
+            "plural": "Date text",
+            "help": ""
+          },
+          "text": {
+            "name": "Texte",
+            "plural": "Texte",
             "help": ""
           },
           "places": {
@@ -4966,14 +5815,29 @@
         "description": "Quelqu’un a ordonné que quelque chose soit fait : *autre chose*, qui est un énoncé à part entière, dit dans un espace subjonctif, car c’était souhaité, et pas forcément fait",
         "kind": "Document",
         "fields": {
-          "text": {
-            "name": "Texte",
-            "plural": "Texte",
-            "help": ""
-          },
           "date": {
             "name": "Date",
             "plural": "Date",
+            "help": ""
+          },
+          "date_sort_day": {
+            "name": "Date sort day",
+            "plural": "Date sort day",
+            "help": ""
+          },
+          "date_end_sort_day": {
+            "name": "Date end sort day",
+            "plural": "Date end sort day",
+            "help": ""
+          },
+          "date_text": {
+            "name": "Date text",
+            "plural": "Date text",
+            "help": ""
+          },
+          "text": {
+            "name": "Texte",
+            "plural": "Texte",
             "help": ""
           },
           "places": {
@@ -5384,14 +6248,29 @@
         "description": "Quelque chose qui s’est passé entre des agents et en des lieux (abstrait : un genre d’énoncé est l’une des classes ci-dessous)",
         "kind": "Document",
         "fields": {
-          "text": {
-            "name": "Texte",
-            "plural": "Texte",
-            "help": ""
-          },
           "date": {
             "name": "Date",
             "plural": "Date",
+            "help": ""
+          },
+          "date_sort_day": {
+            "name": "Date sort day",
+            "plural": "Date sort day",
+            "help": ""
+          },
+          "date_end_sort_day": {
+            "name": "Date end sort day",
+            "plural": "Date end sort day",
+            "help": ""
+          },
+          "date_text": {
+            "name": "Date text",
+            "plural": "Date text",
+            "help": ""
+          },
+          "text": {
+            "name": "Texte",
+            "plural": "Texte",
             "help": ""
           },
           "involves": {
@@ -5414,14 +6293,29 @@
         "description": "Quelque chose est passé d’un agent à un autre",
         "kind": "Document",
         "fields": {
-          "text": {
-            "name": "Texte",
-            "plural": "Texte",
-            "help": ""
-          },
           "date": {
             "name": "Date",
             "plural": "Date",
+            "help": ""
+          },
+          "date_sort_day": {
+            "name": "Date sort day",
+            "plural": "Date sort day",
+            "help": ""
+          },
+          "date_end_sort_day": {
+            "name": "Date end sort day",
+            "plural": "Date end sort day",
+            "help": ""
+          },
+          "date_text": {
+            "name": "Date text",
+            "plural": "Date text",
+            "help": ""
+          },
+          "text": {
+            "name": "Texte",
+            "plural": "Texte",
             "help": ""
           },
           "places": {
@@ -5542,6 +6436,246 @@
           "certainty": {
             "name": "Certitude",
             "plural": "Certitude",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "ZoteroBacked": {
+        "name": "Zotero backed",
+        "plural": "Zotero backed",
+        "help": "",
+        "description": "A text that is (or may be) an item in a Zotero library. Everything is optional, so one made by hand has\nnone of it. Build your class on this: `class TextObject(ZoteroBacked)`.",
+        "kind": "Entity",
+        "fields": {
+          "zotero_url": {
+            "name": "Zotero url",
+            "plural": "Zotero url",
+            "help": ""
+          },
+          "zotero_library": {
+            "name": "Zotero library",
+            "plural": "Zotero library",
+            "help": ""
+          },
+          "zotero_key": {
+            "name": "Zotero key",
+            "plural": "Zotero key",
+            "help": ""
+          },
+          "zotero_version": {
+            "name": "Zotero version",
+            "plural": "Zotero version",
+            "help": ""
+          },
+          "zotero_synced_entity_version": {
+            "name": "Zotero synced entity version",
+            "plural": "Zotero synced entity version",
+            "help": ""
+          },
+          "item_type": {
+            "name": "Item type",
+            "plural": "Item type",
+            "help": ""
+          },
+          "title": {
+            "name": "Title",
+            "plural": "Title",
+            "help": ""
+          },
+          "short_title": {
+            "name": "Short title",
+            "plural": "Short title",
+            "help": ""
+          },
+          "creators": {
+            "name": "Creators",
+            "plural": "Creators",
+            "help": ""
+          },
+          "date": {
+            "name": "Date",
+            "plural": "Date",
+            "help": ""
+          },
+          "language": {
+            "name": "Language",
+            "plural": "Language",
+            "help": ""
+          },
+          "abstract": {
+            "name": "Abstract",
+            "plural": "Abstract",
+            "help": ""
+          },
+          "zotero_data": {
+            "name": "Zotero data",
+            "plural": "Zotero data",
+            "help": ""
+          },
+          "citation": {
+            "name": "Citation",
+            "plural": "Citation",
+            "help": ""
+          },
+          "bibliography": {
+            "name": "Bibliography",
+            "plural": "Bibliography",
+            "help": ""
+          },
+          "csl_json": {
+            "name": "Csl json",
+            "plural": "Csl json",
+            "help": ""
+          },
+          "removed_from_zotero": {
+            "name": "Removed from zotero",
+            "plural": "Removed from zotero",
+            "help": ""
+          },
+          "synced_when": {
+            "name": "Synced when",
+            "plural": "Synced when",
+            "help": ""
+          },
+          "item_type_override": {
+            "name": "Item type override",
+            "plural": "Item type override",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "ZoteroLibrary": {
+        "name": "Zotero library",
+        "plural": "Zotero library",
+        "help": "",
+        "description": "How far a library has been synced. The id is its URL (`https://www.zotero.org/groups/2556736`).",
+        "kind": "Entity",
+        "fields": {
+          "library": {
+            "name": "Library",
+            "plural": "Library",
+            "help": ""
+          },
+          "synced_version": {
+            "name": "Synced version",
+            "plural": "Synced version",
+            "help": ""
+          },
+          "last_sync": {
+            "name": "Last sync",
+            "plural": "Last sync",
+            "help": ""
+          },
+          "last_error": {
+            "name": "Last error",
+            "plural": "Last error",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "ZoteroObject": {
+        "name": "Zotero object",
+        "plural": "Zotero object",
+        "help": "",
+        "description": "A Zotero item that no class of the project stands for",
+        "kind": "Entity",
+        "fields": {
+          "zotero_url": {
+            "name": "Zotero url",
+            "plural": "Zotero url",
+            "help": ""
+          },
+          "zotero_library": {
+            "name": "Zotero library",
+            "plural": "Zotero library",
+            "help": ""
+          },
+          "zotero_key": {
+            "name": "Zotero key",
+            "plural": "Zotero key",
+            "help": ""
+          },
+          "zotero_version": {
+            "name": "Zotero version",
+            "plural": "Zotero version",
+            "help": ""
+          },
+          "zotero_synced_entity_version": {
+            "name": "Zotero synced entity version",
+            "plural": "Zotero synced entity version",
+            "help": ""
+          },
+          "item_type": {
+            "name": "Item type",
+            "plural": "Item type",
+            "help": ""
+          },
+          "title": {
+            "name": "Title",
+            "plural": "Title",
+            "help": ""
+          },
+          "short_title": {
+            "name": "Short title",
+            "plural": "Short title",
+            "help": ""
+          },
+          "creators": {
+            "name": "Creators",
+            "plural": "Creators",
+            "help": ""
+          },
+          "date": {
+            "name": "Date",
+            "plural": "Date",
+            "help": ""
+          },
+          "language": {
+            "name": "Language",
+            "plural": "Language",
+            "help": ""
+          },
+          "abstract": {
+            "name": "Abstract",
+            "plural": "Abstract",
+            "help": ""
+          },
+          "zotero_data": {
+            "name": "Zotero data",
+            "plural": "Zotero data",
+            "help": ""
+          },
+          "citation": {
+            "name": "Citation",
+            "plural": "Citation",
+            "help": ""
+          },
+          "bibliography": {
+            "name": "Bibliography",
+            "plural": "Bibliography",
+            "help": ""
+          },
+          "csl_json": {
+            "name": "Csl json",
+            "plural": "Csl json",
+            "help": ""
+          },
+          "removed_from_zotero": {
+            "name": "Removed from zotero",
+            "plural": "Removed from zotero",
+            "help": ""
+          },
+          "synced_when": {
+            "name": "Synced when",
+            "plural": "Synced when",
+            "help": ""
+          },
+          "item_type_override": {
+            "name": "Item type override",
+            "plural": "Item type override",
             "help": ""
           }
         },

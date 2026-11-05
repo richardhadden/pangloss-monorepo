@@ -423,11 +423,25 @@ class AlterEmbedded(Change):
     def safety(self) -> Safety:  # ty: ignore[invalid-property-type-override]
         return (
             "lossy"
-            if self.removed_types or self.old_model != self.new_model
+            if self.removed_types
+            or (self.old_model != self.new_model and not self.widened)
             else "safe"
         )
 
+    @property
+    def widened(self) -> bool:
+        """One model made a union that still has it (`ExactDate` to `ExactDate | UnknownDate`): every value it had
+        is still one of the field's"""
+        return (
+            self.new_model is None
+            and self.old_model is not None
+            and self.old_model in self.types
+            and not self.removed_types
+        )
+
     def describe(self) -> str:
+        if self.widened:
+            return f"{self.model}.{self.name}: embedded {self.old_model} -> {' | '.join(self.types)}"
         return (
             f"{self.model}.{self.name}: embedded {self.old_model} -> {self.new_model}"
         )

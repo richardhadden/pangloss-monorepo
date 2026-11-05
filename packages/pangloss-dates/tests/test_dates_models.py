@@ -119,14 +119,14 @@ def test_a_range_embeds_two_exact_dates(models):
         JulianEvent,
         {
             "type": "JulianDateRange",
-            "earliest": {"type": "JulianExactDate", "year": 1500},
-            "latest": {"type": "JulianExactDate", "year": 1502, "month": 3},
+            "not_before": {"type": "JulianExactDate", "year": 1500},
+            "not_after": {"type": "JulianExactDate", "year": 1502, "month": 3},
         },
     )
     assert when.precision == Precision.RANGE
     assert ymd(when.earliest_strict) == (1500, 1, 1)
     assert ymd(when.latest_strict) == (1502, 3, 31)
-    assert when.earliest.sort_day  # the ends are filled in too
+    assert when.not_before.sort_day  # the ends are filled in too
 
 
 def test_a_range_cannot_end_before_it_starts(models):
@@ -136,10 +136,82 @@ def test_a_range_cannot_end_before_it_starts(models):
             JulianEvent,
             {
                 "type": "JulianDateRange",
-                "earliest": {"type": "JulianExactDate", "year": 1502},
-                "latest": {"type": "JulianExactDate", "year": 1500},
+                "not_before": {"type": "JulianExactDate", "year": 1502},
+                "not_after": {"type": "JulianExactDate", "year": 1500},
             },
         )
+
+
+def test_a_range_may_say_only_not_before(models):
+    _, JulianEvent, _ = models
+    when = make(
+        JulianEvent,
+        {
+            "type": "JulianDateRange",
+            "not_before": {"type": "JulianExactDate", "year": 1500, "month": 3},
+            "not_after": {"type": "JulianUnknownDate"},
+        },
+    )
+    assert when.precision == Precision.RANGE
+    assert ymd(when.earliest_strict) == (1500, 3, 1)
+    assert ymd(when.latest_strict) == (1600, 12, 31)  # the horizon
+    # (it sorts by what is known of it, not by the middle of 1500 to the horizon)
+    assert when.sort_day == to_jdn(1500, 3, 16, J)
+
+
+def test_a_range_may_say_only_not_after(models):
+    _, JulianEvent, _ = models
+    when = make(
+        JulianEvent,
+        {
+            "type": "JulianDateRange",
+            "not_before": {"type": "JulianUnknownDate"},
+            "not_after": {"type": "JulianExactDate", "year": 1502},
+        },
+    )
+    assert ymd(when.latest_strict) == (1502, 12, 31)
+    assert when.earliest_strict < to_jdn(1000, 1, 1, J)  # the floor
+    assert ymd(when.sort_day) == (1502, 7, 2)
+    # (what it says wins)
+    said = make(
+        JulianEvent,
+        {
+            "type": "JulianDateRange",
+            "sort_by": "latest_strict",
+            "not_before": {"type": "JulianUnknownDate"},
+            "not_after": {"type": "JulianExactDate", "year": 1502},
+        },
+    )
+    assert ymd(said.sort_day) == (1502, 12, 31)
+
+
+def test_a_range_cannot_be_unknown_at_both_ends(models):
+    _, JulianEvent, _ = models
+    with pytest.raises(ValidationError, match="both be unknown"):
+        make(
+            JulianEvent,
+            {
+                "type": "JulianDateRange",
+                "not_before": {"type": "JulianUnknownDate"},
+                "not_after": {"type": "JulianUnknownDate"},
+            },
+        )
+
+
+def test_the_ends_of_a_range_are_called_as_in_tei(models):
+    Event, _, _ = models
+    fields = Event.Create.model_validate(
+        {
+            "label": "x",
+            "when": {
+                "type": "DateRange",
+                "notBefore": {"type": "ExactDate", "year": 1500},
+                "notAfter": {"type": "ExactDate", "year": 1502},
+            },
+        }
+    ).model_dump(by_alias=True)["when"]
+    assert set(fields) >= {"notBefore", "notAfter"}
+    assert "earliest" not in fields and "latest" not in fields
 
 
 def test_edtf_dates_use_the_calendar_of_the_date(models):
@@ -174,8 +246,8 @@ def test_a_period_sorts_by_its_start_and_an_open_end_stops_at_the_horizon(models
             "start": {"type": "JulianExactDate", "year": 1500},
             "end": {
                 "type": "JulianDateRange",
-                "earliest": {"type": "JulianExactDate", "year": 1510},
-                "latest": {"type": "JulianExactDate", "year": 1512},
+                "not_before": {"type": "JulianExactDate", "year": 1510},
+                "not_after": {"type": "JulianExactDate", "year": 1512},
             },
         },
     )
@@ -311,8 +383,12 @@ def test_a_range_cannot_mix_calendars(models):
             {
                 "type": "DateRange",
                 "calendar": "julian",
-                "earliest": {"type": "ExactDate", "year": 1500},
-                "latest": {"type": "ExactDate", "year": 1502, "calendar": "gregorian"},
+                "not_before": {"type": "ExactDate", "year": 1500},
+                "not_after": {
+                    "type": "ExactDate",
+                    "year": 1502,
+                    "calendar": "gregorian",
+                },
             },
         )
 

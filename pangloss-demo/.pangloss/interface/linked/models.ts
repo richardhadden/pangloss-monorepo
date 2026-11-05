@@ -23,25 +23,6 @@ export const definitions: ModelDefinitions = {
       "useInSemanticSpaceLabel": true,
       "fields": [
         {
-          "name": "text",
-          "key": "text",
-          "description": null,
-          "dbField": false,
-          "required": true,
-          "nullable": false,
-          "kind": "literal",
-          "type": {
-            "type": "str"
-          },
-          "validators": [
-            {
-              "name": "MinLen",
-              "min_length": 5
-            }
-          ],
-          "markers": []
-        },
-        {
           "name": "date",
           "key": "date",
           "description": null,
@@ -58,6 +39,67 @@ export const definitions: ModelDefinitions = {
             "Period",
             "Recurrence",
             "UnknownDate"
+          ],
+          "markers": []
+        },
+        {
+          "name": "date_sort_day",
+          "key": "dateSortDay",
+          "description": null,
+          "dbField": true,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": [],
+          "markers": []
+        },
+        {
+          "name": "date_end_sort_day",
+          "key": "dateEndSortDay",
+          "description": null,
+          "dbField": true,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": [],
+          "markers": []
+        },
+        {
+          "name": "date_text",
+          "key": "dateText",
+          "description": null,
+          "dbField": true,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": []
+        },
+        {
+          "name": "text",
+          "key": "text",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [
+            {
+              "name": "MinLen",
+              "min_length": 5
+            }
           ],
           "markers": []
         },
@@ -168,6 +210,9 @@ export const definitions: ModelDefinitions = {
         }
       ],
       "incoming": [],
+      "traits": [
+        "Dateable"
+      ],
       "interfaceMeta": null
     },
     "Artwork": {
@@ -211,6 +256,7 @@ export const definitions: ModelDefinitions = {
           ]
         }
       ],
+      "traits": [],
       "interfaceMeta": null
     },
     "AtPage": {
@@ -276,6 +322,7 @@ export const definitions: ModelDefinitions = {
         }
       ],
       "incoming": [],
+      "traits": [],
       "interfaceMeta": {
         "colour": null,
         "navSection": null,
@@ -352,6 +399,7 @@ export const definitions: ModelDefinitions = {
         }
       ],
       "incoming": [],
+      "traits": [],
       "interfaceMeta": null
     },
     "Certainty": {
@@ -389,6 +437,7 @@ export const definitions: ModelDefinitions = {
         }
       ],
       "incoming": [],
+      "traits": [],
       "interfaceMeta": null
     },
     "CreationOfArtwork": {
@@ -409,25 +458,6 @@ export const definitions: ModelDefinitions = {
       "useInSemanticSpaceLabel": true,
       "fields": [
         {
-          "name": "text",
-          "key": "text",
-          "description": null,
-          "dbField": false,
-          "required": true,
-          "nullable": false,
-          "kind": "literal",
-          "type": {
-            "type": "str"
-          },
-          "validators": [
-            {
-              "name": "MinLen",
-              "min_length": 5
-            }
-          ],
-          "markers": []
-        },
-        {
           "name": "date",
           "key": "date",
           "description": null,
@@ -444,6 +474,67 @@ export const definitions: ModelDefinitions = {
             "Period",
             "Recurrence",
             "UnknownDate"
+          ],
+          "markers": []
+        },
+        {
+          "name": "date_sort_day",
+          "key": "dateSortDay",
+          "description": null,
+          "dbField": true,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": [],
+          "markers": []
+        },
+        {
+          "name": "date_end_sort_day",
+          "key": "dateEndSortDay",
+          "description": null,
+          "dbField": true,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": [],
+          "markers": []
+        },
+        {
+          "name": "date_text",
+          "key": "dateText",
+          "description": null,
+          "dbField": true,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": []
+        },
+        {
+          "name": "text",
+          "key": "text",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [
+            {
+              "name": "MinLen",
+              "min_length": 5
+            }
           ],
           "markers": []
         },
@@ -524,6 +615,9 @@ export const definitions: ModelDefinitions = {
         }
       ],
       "incoming": [],
+      "traits": [
+        "Dateable"
+      ],
       "interfaceMeta": null
     },
     "CreationOfPainting": {
@@ -543,25 +637,6 @@ export const definitions: ModelDefinitions = {
       "useInSemanticSpaceLabel": true,
       "fields": [
         {
-          "name": "text",
-          "key": "text",
-          "description": null,
-          "dbField": false,
-          "required": true,
-          "nullable": false,
-          "kind": "literal",
-          "type": {
-            "type": "str"
-          },
-          "validators": [
-            {
-              "name": "MinLen",
-              "min_length": 5
-            }
-          ],
-          "markers": []
-        },
-        {
           "name": "date",
           "key": "date",
           "description": null,
@@ -578,6 +653,67 @@ export const definitions: ModelDefinitions = {
             "Period",
             "Recurrence",
             "UnknownDate"
+          ],
+          "markers": []
+        },
+        {
+          "name": "date_sort_day",
+          "key": "dateSortDay",
+          "description": null,
+          "dbField": true,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": [],
+          "markers": []
+        },
+        {
+          "name": "date_end_sort_day",
+          "key": "dateEndSortDay",
+          "description": null,
+          "dbField": true,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": [],
+          "markers": []
+        },
+        {
+          "name": "date_text",
+          "key": "dateText",
+          "description": null,
+          "dbField": true,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": []
+        },
+        {
+          "name": "text",
+          "key": "text",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [
+            {
+              "name": "MinLen",
+              "min_length": 5
+            }
           ],
           "markers": []
         },
@@ -654,6 +790,9 @@ export const definitions: ModelDefinitions = {
         }
       ],
       "incoming": [],
+      "traits": [
+        "Dateable"
+      ],
       "interfaceMeta": null
     },
     "CreationOfPhysicalObject": {
@@ -675,25 +814,6 @@ export const definitions: ModelDefinitions = {
       "useInSemanticSpaceLabel": true,
       "fields": [
         {
-          "name": "text",
-          "key": "text",
-          "description": null,
-          "dbField": false,
-          "required": true,
-          "nullable": false,
-          "kind": "literal",
-          "type": {
-            "type": "str"
-          },
-          "validators": [
-            {
-              "name": "MinLen",
-              "min_length": 5
-            }
-          ],
-          "markers": []
-        },
-        {
           "name": "date",
           "key": "date",
           "description": null,
@@ -710,6 +830,67 @@ export const definitions: ModelDefinitions = {
             "Period",
             "Recurrence",
             "UnknownDate"
+          ],
+          "markers": []
+        },
+        {
+          "name": "date_sort_day",
+          "key": "dateSortDay",
+          "description": null,
+          "dbField": true,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": [],
+          "markers": []
+        },
+        {
+          "name": "date_end_sort_day",
+          "key": "dateEndSortDay",
+          "description": null,
+          "dbField": true,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": [],
+          "markers": []
+        },
+        {
+          "name": "date_text",
+          "key": "dateText",
+          "description": null,
+          "dbField": true,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": []
+        },
+        {
+          "name": "text",
+          "key": "text",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [
+            {
+              "name": "MinLen",
+              "min_length": 5
+            }
           ],
           "markers": []
         },
@@ -793,6 +974,9 @@ export const definitions: ModelDefinitions = {
         }
       ],
       "incoming": [],
+      "traits": [
+        "Dateable"
+      ],
       "interfaceMeta": null
     },
     "Date": {
@@ -865,7 +1049,7 @@ export const definitions: ModelDefinitions = {
           "name": "precision",
           "key": "precision",
           "description": null,
-          "dbField": false,
+          "dbField": true,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -880,7 +1064,7 @@ export const definitions: ModelDefinitions = {
           "name": "earliest_fuzzy",
           "key": "earliestFuzzy",
           "description": null,
-          "dbField": false,
+          "dbField": true,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -894,7 +1078,7 @@ export const definitions: ModelDefinitions = {
           "name": "earliest_strict",
           "key": "earliestStrict",
           "description": null,
-          "dbField": false,
+          "dbField": true,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -908,7 +1092,7 @@ export const definitions: ModelDefinitions = {
           "name": "latest_strict",
           "key": "latestStrict",
           "description": null,
-          "dbField": false,
+          "dbField": true,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -922,7 +1106,7 @@ export const definitions: ModelDefinitions = {
           "name": "latest_fuzzy",
           "key": "latestFuzzy",
           "description": null,
-          "dbField": false,
+          "dbField": true,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -936,7 +1120,7 @@ export const definitions: ModelDefinitions = {
           "name": "sort_day",
           "key": "sortDay",
           "description": null,
-          "dbField": false,
+          "dbField": true,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -950,7 +1134,7 @@ export const definitions: ModelDefinitions = {
           "name": "end_sort_day",
           "key": "endSortDay",
           "description": null,
-          "dbField": false,
+          "dbField": true,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -962,6 +1146,7 @@ export const definitions: ModelDefinitions = {
         }
       ],
       "incoming": [],
+      "traits": [],
       "interfaceMeta": {
         "colour": null,
         "navSection": null,
@@ -1016,13 +1201,14 @@ export const definitions: ModelDefinitions = {
         }
       ],
       "incoming": [],
+      "traits": [],
       "interfaceMeta": null
     },
     "DateRange": {
       "name": "DateRange",
       "kind": "Embedded",
       "abstract": false,
-      "description": "One date whose day is not known: somewhere from `earliest` to `latest`",
+      "description": "One date whose day is not known: somewhere from `not_before` to `not_after` (the names of the Text Encoding\nInitiative). Either may be unknown (`UnknownDate`: \"not before March 1500\", and nothing said of when it was by),\nnot both; such a range runs to the horizon (or from the floor) and sorts by its known end",
       "parent": "Date",
       "concreteTypes": [
         "DateRange"
@@ -1082,7 +1268,7 @@ export const definitions: ModelDefinitions = {
           "name": "precision",
           "key": "precision",
           "description": null,
-          "dbField": false,
+          "dbField": true,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -1097,7 +1283,7 @@ export const definitions: ModelDefinitions = {
           "name": "earliest_fuzzy",
           "key": "earliestFuzzy",
           "description": null,
-          "dbField": false,
+          "dbField": true,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -1111,7 +1297,7 @@ export const definitions: ModelDefinitions = {
           "name": "earliest_strict",
           "key": "earliestStrict",
           "description": null,
-          "dbField": false,
+          "dbField": true,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -1125,7 +1311,7 @@ export const definitions: ModelDefinitions = {
           "name": "latest_strict",
           "key": "latestStrict",
           "description": null,
-          "dbField": false,
+          "dbField": true,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -1139,7 +1325,7 @@ export const definitions: ModelDefinitions = {
           "name": "latest_fuzzy",
           "key": "latestFuzzy",
           "description": null,
-          "dbField": false,
+          "dbField": true,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -1153,7 +1339,7 @@ export const definitions: ModelDefinitions = {
           "name": "sort_day",
           "key": "sortDay",
           "description": null,
-          "dbField": false,
+          "dbField": true,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -1167,7 +1353,7 @@ export const definitions: ModelDefinitions = {
           "name": "end_sort_day",
           "key": "endSortDay",
           "description": null,
-          "dbField": false,
+          "dbField": true,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -1178,35 +1364,38 @@ export const definitions: ModelDefinitions = {
           "markers": []
         },
         {
-          "name": "earliest",
-          "key": "earliest",
+          "name": "not_before",
+          "key": "notBefore",
           "description": null,
           "dbField": false,
           "required": true,
           "nullable": false,
           "kind": "embedded",
-          "model": "ExactDate",
+          "model": null,
           "types": [
-            "ExactDate"
+            "ExactDate",
+            "UnknownDate"
           ],
           "markers": []
         },
         {
-          "name": "latest",
-          "key": "latest",
+          "name": "not_after",
+          "key": "notAfter",
           "description": null,
           "dbField": false,
           "required": true,
           "nullable": false,
           "kind": "embedded",
-          "model": "ExactDate",
+          "model": null,
           "types": [
-            "ExactDate"
+            "ExactDate",
+            "UnknownDate"
           ],
           "markers": []
         }
       ],
       "incoming": [],
+      "traits": [],
       "interfaceMeta": {
         "colour": null,
         "navSection": null,
@@ -1288,7 +1477,7 @@ export const definitions: ModelDefinitions = {
           "name": "precision",
           "key": "precision",
           "description": null,
-          "dbField": false,
+          "dbField": true,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -1303,7 +1492,7 @@ export const definitions: ModelDefinitions = {
           "name": "earliest_fuzzy",
           "key": "earliestFuzzy",
           "description": null,
-          "dbField": false,
+          "dbField": true,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -1317,7 +1506,7 @@ export const definitions: ModelDefinitions = {
           "name": "earliest_strict",
           "key": "earliestStrict",
           "description": null,
-          "dbField": false,
+          "dbField": true,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -1331,7 +1520,7 @@ export const definitions: ModelDefinitions = {
           "name": "latest_strict",
           "key": "latestStrict",
           "description": null,
-          "dbField": false,
+          "dbField": true,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -1345,7 +1534,7 @@ export const definitions: ModelDefinitions = {
           "name": "latest_fuzzy",
           "key": "latestFuzzy",
           "description": null,
-          "dbField": false,
+          "dbField": true,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -1359,7 +1548,7 @@ export const definitions: ModelDefinitions = {
           "name": "sort_day",
           "key": "sortDay",
           "description": null,
-          "dbField": false,
+          "dbField": true,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -1373,7 +1562,7 @@ export const definitions: ModelDefinitions = {
           "name": "end_sort_day",
           "key": "endSortDay",
           "description": null,
-          "dbField": false,
+          "dbField": true,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -1399,6 +1588,7 @@ export const definitions: ModelDefinitions = {
         }
       ],
       "incoming": [],
+      "traits": [],
       "interfaceMeta": {
         "colour": null,
         "navSection": null,
@@ -1480,7 +1670,7 @@ export const definitions: ModelDefinitions = {
           "name": "precision",
           "key": "precision",
           "description": null,
-          "dbField": false,
+          "dbField": true,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -1495,7 +1685,7 @@ export const definitions: ModelDefinitions = {
           "name": "earliest_fuzzy",
           "key": "earliestFuzzy",
           "description": null,
-          "dbField": false,
+          "dbField": true,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -1509,7 +1699,7 @@ export const definitions: ModelDefinitions = {
           "name": "earliest_strict",
           "key": "earliestStrict",
           "description": null,
-          "dbField": false,
+          "dbField": true,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -1523,7 +1713,7 @@ export const definitions: ModelDefinitions = {
           "name": "latest_strict",
           "key": "latestStrict",
           "description": null,
-          "dbField": false,
+          "dbField": true,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -1537,7 +1727,7 @@ export const definitions: ModelDefinitions = {
           "name": "latest_fuzzy",
           "key": "latestFuzzy",
           "description": null,
-          "dbField": false,
+          "dbField": true,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -1551,7 +1741,7 @@ export const definitions: ModelDefinitions = {
           "name": "sort_day",
           "key": "sortDay",
           "description": null,
-          "dbField": false,
+          "dbField": true,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -1565,7 +1755,7 @@ export const definitions: ModelDefinitions = {
           "name": "end_sort_day",
           "key": "endSortDay",
           "description": null,
-          "dbField": false,
+          "dbField": true,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -1619,6 +1809,7 @@ export const definitions: ModelDefinitions = {
         }
       ],
       "incoming": [],
+      "traits": [],
       "interfaceMeta": {
         "colour": null,
         "navSection": null,
@@ -1921,6 +2112,7 @@ export const definitions: ModelDefinitions = {
         }
       ],
       "incoming": [],
+      "traits": [],
       "interfaceMeta": null
     },
     "Feast": {
@@ -1988,6 +2180,7 @@ export const definitions: ModelDefinitions = {
         }
       ],
       "incoming": [],
+      "traits": [],
       "interfaceMeta": null
     },
     "Group": {
@@ -2131,6 +2324,9 @@ export const definitions: ModelDefinitions = {
           ]
         }
       ],
+      "traits": [
+        "Agent"
+      ],
       "interfaceMeta": null
     },
     "Hypothetical": {
@@ -2175,6 +2371,7 @@ export const definitions: ModelDefinitions = {
         }
       ],
       "incoming": [],
+      "traits": [],
       "interfaceMeta": {
         "colour": "yellow",
         "navSection": null,
@@ -2249,6 +2446,7 @@ export const definitions: ModelDefinitions = {
         }
       ],
       "incoming": [],
+      "traits": [],
       "interfaceMeta": {
         "colour": null,
         "navSection": null,
@@ -2315,6 +2513,7 @@ export const definitions: ModelDefinitions = {
         }
       ],
       "incoming": [],
+      "traits": [],
       "interfaceMeta": null
     },
     "Likelihood": {
@@ -2361,6 +2560,7 @@ export const definitions: ModelDefinitions = {
         }
       ],
       "incoming": [],
+      "traits": [],
       "interfaceMeta": null
     },
     "MemberOf": {
@@ -2380,25 +2580,6 @@ export const definitions: ModelDefinitions = {
       "useInSemanticSpaceLabel": true,
       "fields": [
         {
-          "name": "text",
-          "key": "text",
-          "description": null,
-          "dbField": false,
-          "required": true,
-          "nullable": false,
-          "kind": "literal",
-          "type": {
-            "type": "str"
-          },
-          "validators": [
-            {
-              "name": "MinLen",
-              "min_length": 5
-            }
-          ],
-          "markers": []
-        },
-        {
           "name": "date",
           "key": "date",
           "description": null,
@@ -2415,6 +2596,67 @@ export const definitions: ModelDefinitions = {
             "Period",
             "Recurrence",
             "UnknownDate"
+          ],
+          "markers": []
+        },
+        {
+          "name": "date_sort_day",
+          "key": "dateSortDay",
+          "description": null,
+          "dbField": true,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": [],
+          "markers": []
+        },
+        {
+          "name": "date_end_sort_day",
+          "key": "dateEndSortDay",
+          "description": null,
+          "dbField": true,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": [],
+          "markers": []
+        },
+        {
+          "name": "date_text",
+          "key": "dateText",
+          "description": null,
+          "dbField": true,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": []
+        },
+        {
+          "name": "text",
+          "key": "text",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [
+            {
+              "name": "MinLen",
+              "min_length": 5
+            }
           ],
           "markers": []
         },
@@ -2522,6 +2764,9 @@ export const definitions: ModelDefinitions = {
         }
       ],
       "incoming": [],
+      "traits": [
+        "Dateable"
+      ],
       "interfaceMeta": null
     },
     "Negative": {
@@ -2566,6 +2811,7 @@ export const definitions: ModelDefinitions = {
         }
       ],
       "incoming": [],
+      "traits": [],
       "interfaceMeta": {
         "colour": "rose",
         "navSection": null,
@@ -2619,6 +2865,7 @@ export const definitions: ModelDefinitions = {
         }
       ],
       "incoming": [],
+      "traits": [],
       "interfaceMeta": {
         "colour": "orange",
         "navSection": null,
@@ -2647,6 +2894,7 @@ export const definitions: ModelDefinitions = {
       "useInSemanticSpaceLabel": true,
       "fields": [],
       "incoming": [],
+      "traits": [],
       "interfaceMeta": null
     },
     "OccupationType": {
@@ -2759,6 +3007,7 @@ export const definitions: ModelDefinitions = {
           ]
         }
       ],
+      "traits": [],
       "interfaceMeta": {
         "colour": null,
         "navSection": "Typologies",
@@ -2843,7 +3092,7 @@ export const definitions: ModelDefinitions = {
           "name": "precision",
           "key": "precision",
           "description": null,
-          "dbField": false,
+          "dbField": true,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -2858,7 +3107,7 @@ export const definitions: ModelDefinitions = {
           "name": "earliest_fuzzy",
           "key": "earliestFuzzy",
           "description": null,
-          "dbField": false,
+          "dbField": true,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -2872,7 +3121,7 @@ export const definitions: ModelDefinitions = {
           "name": "earliest_strict",
           "key": "earliestStrict",
           "description": null,
-          "dbField": false,
+          "dbField": true,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -2886,7 +3135,7 @@ export const definitions: ModelDefinitions = {
           "name": "latest_strict",
           "key": "latestStrict",
           "description": null,
-          "dbField": false,
+          "dbField": true,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -2900,7 +3149,7 @@ export const definitions: ModelDefinitions = {
           "name": "latest_fuzzy",
           "key": "latestFuzzy",
           "description": null,
-          "dbField": false,
+          "dbField": true,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -2914,7 +3163,7 @@ export const definitions: ModelDefinitions = {
           "name": "sort_day",
           "key": "sortDay",
           "description": null,
-          "dbField": false,
+          "dbField": true,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -2928,7 +3177,7 @@ export const definitions: ModelDefinitions = {
           "name": "end_sort_day",
           "key": "endSortDay",
           "description": null,
-          "dbField": false,
+          "dbField": true,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -2940,6 +3189,7 @@ export const definitions: ModelDefinitions = {
         }
       ],
       "incoming": [],
+      "traits": [],
       "interfaceMeta": {
         "colour": null,
         "navSection": null,
@@ -2974,25 +3224,6 @@ export const definitions: ModelDefinitions = {
       "useInSemanticSpaceLabel": true,
       "fields": [
         {
-          "name": "text",
-          "key": "text",
-          "description": null,
-          "dbField": false,
-          "required": true,
-          "nullable": false,
-          "kind": "literal",
-          "type": {
-            "type": "str"
-          },
-          "validators": [
-            {
-              "name": "MinLen",
-              "min_length": 5
-            }
-          ],
-          "markers": []
-        },
-        {
           "name": "date",
           "key": "date",
           "description": null,
@@ -3009,6 +3240,67 @@ export const definitions: ModelDefinitions = {
             "Period",
             "Recurrence",
             "UnknownDate"
+          ],
+          "markers": []
+        },
+        {
+          "name": "date_sort_day",
+          "key": "dateSortDay",
+          "description": null,
+          "dbField": true,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": [],
+          "markers": []
+        },
+        {
+          "name": "date_end_sort_day",
+          "key": "dateEndSortDay",
+          "description": null,
+          "dbField": true,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": [],
+          "markers": []
+        },
+        {
+          "name": "date_text",
+          "key": "dateText",
+          "description": null,
+          "dbField": true,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": []
+        },
+        {
+          "name": "text",
+          "key": "text",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [
+            {
+              "name": "MinLen",
+              "min_length": 5
+            }
           ],
           "markers": []
         },
@@ -3272,6 +3564,9 @@ export const definitions: ModelDefinitions = {
         }
       ],
       "incoming": [],
+      "traits": [
+        "Dateable"
+      ],
       "interfaceMeta": null
     },
     "Painting": {
@@ -3325,6 +3620,7 @@ export const definitions: ModelDefinitions = {
           ]
         }
       ],
+      "traits": [],
       "interfaceMeta": null
     },
     "Period": {
@@ -3391,7 +3687,7 @@ export const definitions: ModelDefinitions = {
           "name": "precision",
           "key": "precision",
           "description": null,
-          "dbField": false,
+          "dbField": true,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -3406,7 +3702,7 @@ export const definitions: ModelDefinitions = {
           "name": "earliest_fuzzy",
           "key": "earliestFuzzy",
           "description": null,
-          "dbField": false,
+          "dbField": true,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -3420,7 +3716,7 @@ export const definitions: ModelDefinitions = {
           "name": "earliest_strict",
           "key": "earliestStrict",
           "description": null,
-          "dbField": false,
+          "dbField": true,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -3434,7 +3730,7 @@ export const definitions: ModelDefinitions = {
           "name": "latest_strict",
           "key": "latestStrict",
           "description": null,
-          "dbField": false,
+          "dbField": true,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -3448,7 +3744,7 @@ export const definitions: ModelDefinitions = {
           "name": "latest_fuzzy",
           "key": "latestFuzzy",
           "description": null,
-          "dbField": false,
+          "dbField": true,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -3462,7 +3758,7 @@ export const definitions: ModelDefinitions = {
           "name": "sort_day",
           "key": "sortDay",
           "description": null,
-          "dbField": false,
+          "dbField": true,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -3476,7 +3772,7 @@ export const definitions: ModelDefinitions = {
           "name": "end_sort_day",
           "key": "endSortDay",
           "description": null,
-          "dbField": false,
+          "dbField": true,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -3523,6 +3819,7 @@ export const definitions: ModelDefinitions = {
         }
       ],
       "incoming": [],
+      "traits": [],
       "interfaceMeta": {
         "colour": null,
         "navSection": null,
@@ -3767,6 +4064,9 @@ export const definitions: ModelDefinitions = {
           ]
         }
       ],
+      "traits": [
+        "Agent"
+      ],
       "interfaceMeta": null
     },
     "PhysicalObject": {
@@ -3800,6 +4100,7 @@ export const definitions: ModelDefinitions = {
           ]
         }
       ],
+      "traits": [],
       "interfaceMeta": null
     },
     "Place": {
@@ -3889,6 +4190,7 @@ export const definitions: ModelDefinitions = {
           ]
         }
       ],
+      "traits": [],
       "interfaceMeta": null
     },
     "PositiveSubjunctive": {
@@ -3933,6 +4235,7 @@ export const definitions: ModelDefinitions = {
         }
       ],
       "incoming": [],
+      "traits": [],
       "interfaceMeta": {
         "colour": "green",
         "navSection": null,
@@ -4008,7 +4311,7 @@ export const definitions: ModelDefinitions = {
           "name": "precision",
           "key": "precision",
           "description": null,
-          "dbField": false,
+          "dbField": true,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -4023,7 +4326,7 @@ export const definitions: ModelDefinitions = {
           "name": "earliest_fuzzy",
           "key": "earliestFuzzy",
           "description": null,
-          "dbField": false,
+          "dbField": true,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -4037,7 +4340,7 @@ export const definitions: ModelDefinitions = {
           "name": "earliest_strict",
           "key": "earliestStrict",
           "description": null,
-          "dbField": false,
+          "dbField": true,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -4051,7 +4354,7 @@ export const definitions: ModelDefinitions = {
           "name": "latest_strict",
           "key": "latestStrict",
           "description": null,
-          "dbField": false,
+          "dbField": true,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -4065,7 +4368,7 @@ export const definitions: ModelDefinitions = {
           "name": "latest_fuzzy",
           "key": "latestFuzzy",
           "description": null,
-          "dbField": false,
+          "dbField": true,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -4079,7 +4382,7 @@ export const definitions: ModelDefinitions = {
           "name": "sort_day",
           "key": "sortDay",
           "description": null,
-          "dbField": false,
+          "dbField": true,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -4093,7 +4396,7 @@ export const definitions: ModelDefinitions = {
           "name": "end_sort_day",
           "key": "endSortDay",
           "description": null,
-          "dbField": false,
+          "dbField": true,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -4295,6 +4598,7 @@ export const definitions: ModelDefinitions = {
         }
       ],
       "incoming": [],
+      "traits": [],
       "interfaceMeta": {
         "colour": null,
         "navSection": null,
@@ -4384,13 +4688,14 @@ export const definitions: ModelDefinitions = {
           ]
         }
       ],
+      "traits": [],
       "interfaceMeta": null
     },
     "Statement": {
       "name": "Statement",
       "kind": "Document",
       "abstract": true,
-      "description": "Something that happened between agents and in places (abstract: a kind of\nstatement is one of the classes below)",
+      "description": "Something that happened between agents and in places (abstract: a kind of\nstatement is one of the classes below). Dateable: it has a `date`, and says when in\nlists and on the pages of the people and places it involves",
       "parent": null,
       "concreteTypes": [
         "Activity",
@@ -4409,25 +4714,6 @@ export const definitions: ModelDefinitions = {
       "useInSemanticSpaceLabel": true,
       "fields": [
         {
-          "name": "text",
-          "key": "text",
-          "description": null,
-          "dbField": false,
-          "required": true,
-          "nullable": false,
-          "kind": "literal",
-          "type": {
-            "type": "str"
-          },
-          "validators": [
-            {
-              "name": "MinLen",
-              "min_length": 5
-            }
-          ],
-          "markers": []
-        },
-        {
           "name": "date",
           "key": "date",
           "description": null,
@@ -4444,6 +4730,67 @@ export const definitions: ModelDefinitions = {
             "Period",
             "Recurrence",
             "UnknownDate"
+          ],
+          "markers": []
+        },
+        {
+          "name": "date_sort_day",
+          "key": "dateSortDay",
+          "description": null,
+          "dbField": true,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": [],
+          "markers": []
+        },
+        {
+          "name": "date_end_sort_day",
+          "key": "dateEndSortDay",
+          "description": null,
+          "dbField": true,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": [],
+          "markers": []
+        },
+        {
+          "name": "date_text",
+          "key": "dateText",
+          "description": null,
+          "dbField": true,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": []
+        },
+        {
+          "name": "text",
+          "key": "text",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [
+            {
+              "name": "MinLen",
+              "min_length": 5
+            }
           ],
           "markers": []
         },
@@ -4498,6 +4845,9 @@ export const definitions: ModelDefinitions = {
         }
       ],
       "incoming": [],
+      "traits": [
+        "Dateable"
+      ],
       "interfaceMeta": null
     },
     "Transfer": {
@@ -4517,25 +4867,6 @@ export const definitions: ModelDefinitions = {
       "useInSemanticSpaceLabel": true,
       "fields": [
         {
-          "name": "text",
-          "key": "text",
-          "description": null,
-          "dbField": false,
-          "required": true,
-          "nullable": false,
-          "kind": "literal",
-          "type": {
-            "type": "str"
-          },
-          "validators": [
-            {
-              "name": "MinLen",
-              "min_length": 5
-            }
-          ],
-          "markers": []
-        },
-        {
           "name": "date",
           "key": "date",
           "description": null,
@@ -4552,6 +4883,67 @@ export const definitions: ModelDefinitions = {
             "Period",
             "Recurrence",
             "UnknownDate"
+          ],
+          "markers": []
+        },
+        {
+          "name": "date_sort_day",
+          "key": "dateSortDay",
+          "description": null,
+          "dbField": true,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": [],
+          "markers": []
+        },
+        {
+          "name": "date_end_sort_day",
+          "key": "dateEndSortDay",
+          "description": null,
+          "dbField": true,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": [],
+          "markers": []
+        },
+        {
+          "name": "date_text",
+          "key": "dateText",
+          "description": null,
+          "dbField": true,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": []
+        },
+        {
+          "name": "text",
+          "key": "text",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [
+            {
+              "name": "MinLen",
+              "min_length": 5
+            }
           ],
           "markers": []
         },
@@ -4721,6 +5113,9 @@ export const definitions: ModelDefinitions = {
         }
       ],
       "incoming": [],
+      "traits": [
+        "Dateable"
+      ],
       "interfaceMeta": null
     },
     "UnknownDate": {
@@ -4787,7 +5182,7 @@ export const definitions: ModelDefinitions = {
           "name": "precision",
           "key": "precision",
           "description": null,
-          "dbField": false,
+          "dbField": true,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -4802,7 +5197,7 @@ export const definitions: ModelDefinitions = {
           "name": "earliest_fuzzy",
           "key": "earliestFuzzy",
           "description": null,
-          "dbField": false,
+          "dbField": true,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -4816,7 +5211,7 @@ export const definitions: ModelDefinitions = {
           "name": "earliest_strict",
           "key": "earliestStrict",
           "description": null,
-          "dbField": false,
+          "dbField": true,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -4830,7 +5225,7 @@ export const definitions: ModelDefinitions = {
           "name": "latest_strict",
           "key": "latestStrict",
           "description": null,
-          "dbField": false,
+          "dbField": true,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -4844,7 +5239,7 @@ export const definitions: ModelDefinitions = {
           "name": "latest_fuzzy",
           "key": "latestFuzzy",
           "description": null,
-          "dbField": false,
+          "dbField": true,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -4858,7 +5253,7 @@ export const definitions: ModelDefinitions = {
           "name": "sort_day",
           "key": "sortDay",
           "description": null,
-          "dbField": false,
+          "dbField": true,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -4872,7 +5267,7 @@ export const definitions: ModelDefinitions = {
           "name": "end_sort_day",
           "key": "endSortDay",
           "description": null,
-          "dbField": false,
+          "dbField": true,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -4884,6 +5279,7 @@ export const definitions: ModelDefinitions = {
         }
       ],
       "incoming": [],
+      "traits": [],
       "interfaceMeta": {
         "colour": null,
         "navSection": null,
@@ -4953,6 +5349,7 @@ export const definitions: ModelDefinitions = {
         }
       ],
       "incoming": [],
+      "traits": [],
       "interfaceMeta": {
         "colour": null,
         "navSection": null,
@@ -5009,6 +5406,7 @@ export const definitions: ModelDefinitions = {
         }
       ],
       "incoming": [],
+      "traits": [],
       "interfaceMeta": null
     },
     "ZoteroBacked": {
@@ -5295,6 +5693,7 @@ export const definitions: ModelDefinitions = {
         }
       ],
       "incoming": [],
+      "traits": [],
       "interfaceMeta": null
     },
     "ZoteroLibrary": {
@@ -5371,6 +5770,7 @@ export const definitions: ModelDefinitions = {
         }
       ],
       "incoming": [],
+      "traits": [],
       "interfaceMeta": null
     },
     "ZoteroObject": {
@@ -5657,6 +6057,7 @@ export const definitions: ModelDefinitions = {
         }
       ],
       "incoming": [],
+      "traits": [],
       "interfaceMeta": null
     }
   },
@@ -5827,12 +6228,6 @@ export const definitions: ModelDefinitions = {
     "Activity": {
       "kind": "document",
       "fields": {
-        "text": {
-          "operators": "text",
-          "value": {
-            "type": "str"
-          }
-        },
         "date": {
           "operators": "relation",
           "targets": [
@@ -5845,6 +6240,30 @@ export const definitions: ModelDefinitions = {
             "Recurrence",
             "UnknownDate"
           ]
+        },
+        "date_sort_day": {
+          "operators": "compare",
+          "value": {
+            "type": "int"
+          }
+        },
+        "date_end_sort_day": {
+          "operators": "compare",
+          "value": {
+            "type": "int"
+          }
+        },
+        "date_text": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "text": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
         },
         "places": {
           "operators": "relation",
@@ -5876,14 +6295,17 @@ export const definitions: ModelDefinitions = {
       },
       "orderBy": [
         "label",
-        "text",
         "date.source_text",
         "date.earliest_fuzzy",
         "date.earliest_strict",
         "date.latest_strict",
         "date.latest_fuzzy",
         "date.sort_day",
-        "date.end_sort_day"
+        "date.end_sort_day",
+        "date_sort_day",
+        "date_end_sort_day",
+        "date_text",
+        "text"
       ]
     },
     "Artwork": {
@@ -5896,12 +6318,6 @@ export const definitions: ModelDefinitions = {
     "CreationOfArtwork": {
       "kind": "document",
       "fields": {
-        "text": {
-          "operators": "text",
-          "value": {
-            "type": "str"
-          }
-        },
         "date": {
           "operators": "relation",
           "targets": [
@@ -5914,6 +6330,30 @@ export const definitions: ModelDefinitions = {
             "Recurrence",
             "UnknownDate"
           ]
+        },
+        "date_sort_day": {
+          "operators": "compare",
+          "value": {
+            "type": "int"
+          }
+        },
+        "date_end_sort_day": {
+          "operators": "compare",
+          "value": {
+            "type": "int"
+          }
+        },
+        "date_text": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "text": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
         },
         "places": {
           "operators": "relation",
@@ -5937,25 +6377,22 @@ export const definitions: ModelDefinitions = {
       },
       "orderBy": [
         "label",
-        "text",
         "date.source_text",
         "date.earliest_fuzzy",
         "date.earliest_strict",
         "date.latest_strict",
         "date.latest_fuzzy",
         "date.sort_day",
-        "date.end_sort_day"
+        "date.end_sort_day",
+        "date_sort_day",
+        "date_end_sort_day",
+        "date_text",
+        "text"
       ]
     },
     "CreationOfPainting": {
       "kind": "document",
       "fields": {
-        "text": {
-          "operators": "text",
-          "value": {
-            "type": "str"
-          }
-        },
         "date": {
           "operators": "relation",
           "targets": [
@@ -5968,6 +6405,30 @@ export const definitions: ModelDefinitions = {
             "Recurrence",
             "UnknownDate"
           ]
+        },
+        "date_sort_day": {
+          "operators": "compare",
+          "value": {
+            "type": "int"
+          }
+        },
+        "date_end_sort_day": {
+          "operators": "compare",
+          "value": {
+            "type": "int"
+          }
+        },
+        "date_text": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "text": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
         },
         "places": {
           "operators": "relation",
@@ -5990,25 +6451,22 @@ export const definitions: ModelDefinitions = {
       },
       "orderBy": [
         "label",
-        "text",
         "date.source_text",
         "date.earliest_fuzzy",
         "date.earliest_strict",
         "date.latest_strict",
         "date.latest_fuzzy",
         "date.sort_day",
-        "date.end_sort_day"
+        "date.end_sort_day",
+        "date_sort_day",
+        "date_end_sort_day",
+        "date_text",
+        "text"
       ]
     },
     "CreationOfPhysicalObject": {
       "kind": "document",
       "fields": {
-        "text": {
-          "operators": "text",
-          "value": {
-            "type": "str"
-          }
-        },
         "date": {
           "operators": "relation",
           "targets": [
@@ -6021,6 +6479,30 @@ export const definitions: ModelDefinitions = {
             "Recurrence",
             "UnknownDate"
           ]
+        },
+        "date_sort_day": {
+          "operators": "compare",
+          "value": {
+            "type": "int"
+          }
+        },
+        "date_end_sort_day": {
+          "operators": "compare",
+          "value": {
+            "type": "int"
+          }
+        },
+        "date_text": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "text": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
         },
         "places": {
           "operators": "relation",
@@ -6045,14 +6527,17 @@ export const definitions: ModelDefinitions = {
       },
       "orderBy": [
         "label",
-        "text",
         "date.source_text",
         "date.earliest_fuzzy",
         "date.earliest_strict",
         "date.latest_strict",
         "date.latest_fuzzy",
         "date.sort_day",
-        "date.end_sort_day"
+        "date.end_sort_day",
+        "date_sort_day",
+        "date_end_sort_day",
+        "date_text",
+        "text"
       ]
     },
     "Date": {
@@ -6209,16 +6694,18 @@ export const definitions: ModelDefinitions = {
             "type": "int"
           }
         },
-        "earliest": {
+        "not_before": {
           "operators": "relation",
           "targets": [
-            "ExactDate"
+            "ExactDate",
+            "UnknownDate"
           ]
         },
-        "latest": {
+        "not_after": {
           "operators": "relation",
           "targets": [
-            "ExactDate"
+            "ExactDate",
+            "UnknownDate"
           ]
         }
       },
@@ -6463,12 +6950,6 @@ export const definitions: ModelDefinitions = {
     "MemberOf": {
       "kind": "document",
       "fields": {
-        "text": {
-          "operators": "text",
-          "value": {
-            "type": "str"
-          }
-        },
         "date": {
           "operators": "relation",
           "targets": [
@@ -6481,6 +6962,30 @@ export const definitions: ModelDefinitions = {
             "Recurrence",
             "UnknownDate"
           ]
+        },
+        "date_sort_day": {
+          "operators": "compare",
+          "value": {
+            "type": "int"
+          }
+        },
+        "date_end_sort_day": {
+          "operators": "compare",
+          "value": {
+            "type": "int"
+          }
+        },
+        "date_text": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "text": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
         },
         "places": {
           "operators": "relation",
@@ -6504,14 +7009,17 @@ export const definitions: ModelDefinitions = {
       },
       "orderBy": [
         "label",
-        "text",
         "date.source_text",
         "date.earliest_fuzzy",
         "date.earliest_strict",
         "date.latest_strict",
         "date.latest_fuzzy",
         "date.sort_day",
-        "date.end_sort_day"
+        "date.end_sort_day",
+        "date_sort_day",
+        "date_end_sort_day",
+        "date_text",
+        "text"
       ]
     },
     "NoRule": {
@@ -6626,12 +7134,6 @@ export const definitions: ModelDefinitions = {
     "Order": {
       "kind": "document",
       "fields": {
-        "text": {
-          "operators": "text",
-          "value": {
-            "type": "str"
-          }
-        },
         "date": {
           "operators": "relation",
           "targets": [
@@ -6644,6 +7146,30 @@ export const definitions: ModelDefinitions = {
             "Recurrence",
             "UnknownDate"
           ]
+        },
+        "date_sort_day": {
+          "operators": "compare",
+          "value": {
+            "type": "int"
+          }
+        },
+        "date_end_sort_day": {
+          "operators": "compare",
+          "value": {
+            "type": "int"
+          }
+        },
+        "date_text": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "text": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
         },
         "places": {
           "operators": "relation",
@@ -6680,14 +7206,17 @@ export const definitions: ModelDefinitions = {
       },
       "orderBy": [
         "label",
-        "text",
         "date.source_text",
         "date.earliest_fuzzy",
         "date.earliest_strict",
         "date.latest_strict",
         "date.latest_fuzzy",
         "date.sort_day",
-        "date.end_sort_day"
+        "date.end_sort_day",
+        "date_sort_day",
+        "date_end_sort_day",
+        "date_text",
+        "text"
       ]
     },
     "Painting": {
@@ -7026,12 +7555,6 @@ export const definitions: ModelDefinitions = {
     "Statement": {
       "kind": "document",
       "fields": {
-        "text": {
-          "operators": "text",
-          "value": {
-            "type": "str"
-          }
-        },
         "date": {
           "operators": "relation",
           "targets": [
@@ -7044,6 +7567,30 @@ export const definitions: ModelDefinitions = {
             "Recurrence",
             "UnknownDate"
           ]
+        },
+        "date_sort_day": {
+          "operators": "compare",
+          "value": {
+            "type": "int"
+          }
+        },
+        "date_end_sort_day": {
+          "operators": "compare",
+          "value": {
+            "type": "int"
+          }
+        },
+        "date_text": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "text": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
         },
         "involves": {
           "operators": "relation",
@@ -7061,25 +7608,22 @@ export const definitions: ModelDefinitions = {
       },
       "orderBy": [
         "label",
-        "text",
         "date.source_text",
         "date.earliest_fuzzy",
         "date.earliest_strict",
         "date.latest_strict",
         "date.latest_fuzzy",
         "date.sort_day",
-        "date.end_sort_day"
+        "date.end_sort_day",
+        "date_sort_day",
+        "date_end_sort_day",
+        "date_text",
+        "text"
       ]
     },
     "Transfer": {
       "kind": "document",
       "fields": {
-        "text": {
-          "operators": "text",
-          "value": {
-            "type": "str"
-          }
-        },
         "date": {
           "operators": "relation",
           "targets": [
@@ -7092,6 +7636,30 @@ export const definitions: ModelDefinitions = {
             "Recurrence",
             "UnknownDate"
           ]
+        },
+        "date_sort_day": {
+          "operators": "compare",
+          "value": {
+            "type": "int"
+          }
+        },
+        "date_end_sort_day": {
+          "operators": "compare",
+          "value": {
+            "type": "int"
+          }
+        },
+        "date_text": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "text": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
         },
         "places": {
           "operators": "relation",
@@ -7128,7 +7696,6 @@ export const definitions: ModelDefinitions = {
       },
       "orderBy": [
         "label",
-        "text",
         "date.source_text",
         "date.earliest_fuzzy",
         "date.earliest_strict",
@@ -7136,6 +7703,10 @@ export const definitions: ModelDefinitions = {
         "date.latest_fuzzy",
         "date.sort_day",
         "date.end_sort_day",
+        "date_sort_day",
+        "date_end_sort_day",
+        "date_text",
+        "text",
         "item",
         "quantity"
       ]
@@ -7531,8 +8102,11 @@ export const definitions: ModelDefinitions = {
 // The search patterns of the models
 
 export type ActivityWhere = {
-  text?: TextCondition;
   date?: RelationCondition | (RelationCondition & (DatePattern | DateRangePattern | EDTFDatePattern | ExactDatePattern | OngoingDatePattern | PeriodPattern | RecurrencePattern | UnknownDatePattern));
+  date_sort_day?: CompareCondition<number>;
+  date_end_sort_day?: CompareCondition<number>;
+  date_text?: TextCondition;
+  text?: TextCondition;
   places?: RelationCondition | (RelationCondition & (PlacePattern));
   activity_type?: ChoiceCondition<"meeting" | "journey" | "battle" | "ceremony" | "correspondence">;
   carried_out_by?: RelationCondition | (RelationCondition & (GroupPattern | PersonPattern));
@@ -7563,8 +8137,11 @@ export type ArtworkWhere = {
 export type ArtworkPattern = { type: "Artwork"; where?: ArtworkWhere };
 
 export type CreationOfArtworkWhere = {
-  text?: TextCondition;
   date?: RelationCondition | (RelationCondition & (DatePattern | DateRangePattern | EDTFDatePattern | ExactDatePattern | OngoingDatePattern | PeriodPattern | RecurrencePattern | UnknownDatePattern));
+  date_sort_day?: CompareCondition<number>;
+  date_end_sort_day?: CompareCondition<number>;
+  date_text?: TextCondition;
+  text?: TextCondition;
   places?: RelationCondition | (RelationCondition & (PlacePattern));
   created_by?: RelationCondition | (RelationCondition & (PersonPattern));
   artwork_created?: RelationCondition | (RelationCondition & (ArtworkPattern | PaintingPattern));
@@ -7583,8 +8160,11 @@ export type CreationOfArtworkWhere = {
 export type CreationOfArtworkPattern = { type: "CreationOfArtwork"; where?: CreationOfArtworkWhere };
 
 export type CreationOfPaintingWhere = {
-  text?: TextCondition;
   date?: RelationCondition | (RelationCondition & (DatePattern | DateRangePattern | EDTFDatePattern | ExactDatePattern | OngoingDatePattern | PeriodPattern | RecurrencePattern | UnknownDatePattern));
+  date_sort_day?: CompareCondition<number>;
+  date_end_sort_day?: CompareCondition<number>;
+  date_text?: TextCondition;
+  text?: TextCondition;
   places?: RelationCondition | (RelationCondition & (PlacePattern));
   created_by?: RelationCondition | (RelationCondition & (PersonPattern));
   painting_created?: RelationCondition | (RelationCondition & (PaintingPattern));
@@ -7603,8 +8183,11 @@ export type CreationOfPaintingWhere = {
 export type CreationOfPaintingPattern = { type: "CreationOfPainting"; where?: CreationOfPaintingWhere };
 
 export type CreationOfPhysicalObjectWhere = {
-  text?: TextCondition;
   date?: RelationCondition | (RelationCondition & (DatePattern | DateRangePattern | EDTFDatePattern | ExactDatePattern | OngoingDatePattern | PeriodPattern | RecurrencePattern | UnknownDatePattern));
+  date_sort_day?: CompareCondition<number>;
+  date_end_sort_day?: CompareCondition<number>;
+  date_text?: TextCondition;
+  text?: TextCondition;
   places?: RelationCondition | (RelationCondition & (PlacePattern));
   created_by?: RelationCondition | (RelationCondition & (PersonPattern));
   object_created?: RelationCondition | (RelationCondition & (ArtworkPattern | PaintingPattern | PhysicalObjectPattern));
@@ -7664,8 +8247,8 @@ export type DateRangeWhere = {
   latest_fuzzy?: CompareCondition<number>;
   sort_day?: CompareCondition<number>;
   end_sort_day?: CompareCondition<number>;
-  earliest?: RelationCondition | (RelationCondition & (ExactDatePattern));
-  latest?: RelationCondition | (RelationCondition & (ExactDatePattern));
+  not_before?: RelationCondition | (RelationCondition & (ExactDatePattern | UnknownDatePattern));
+  not_after?: RelationCondition | (RelationCondition & (ExactDatePattern | UnknownDatePattern));
   $all?: DateRangeWhere[];
   $any_of?: DateRangeWhere[];
   $not?: DateRangeWhere;
@@ -7760,8 +8343,11 @@ export type GroupWhere = {
 export type GroupPattern = { type: "Group"; where?: GroupWhere };
 
 export type MemberOfWhere = {
-  text?: TextCondition;
   date?: RelationCondition | (RelationCondition & (DatePattern | DateRangePattern | EDTFDatePattern | ExactDatePattern | OngoingDatePattern | PeriodPattern | RecurrencePattern | UnknownDatePattern));
+  date_sort_day?: CompareCondition<number>;
+  date_end_sort_day?: CompareCondition<number>;
+  date_text?: TextCondition;
+  text?: TextCondition;
   places?: RelationCondition | (RelationCondition & (PlacePattern));
   member?: RelationCondition | (RelationCondition & (GroupPattern | PersonPattern));
   group?: RelationCondition | (RelationCondition & (GroupPattern));
@@ -7823,8 +8409,11 @@ export type OngoingDateWhere = {
 export type OngoingDatePattern = { type: "OngoingDate"; where?: OngoingDateWhere };
 
 export type OrderWhere = {
-  text?: TextCondition;
   date?: RelationCondition | (RelationCondition & (DatePattern | DateRangePattern | EDTFDatePattern | ExactDatePattern | OngoingDatePattern | PeriodPattern | RecurrencePattern | UnknownDatePattern));
+  date_sort_day?: CompareCondition<number>;
+  date_end_sort_day?: CompareCondition<number>;
+  date_text?: TextCondition;
+  text?: TextCondition;
   places?: RelationCondition | (RelationCondition & (PlacePattern));
   ordered_by?: RelationCondition | (RelationCondition & (GroupPattern | PersonPattern));
   ordered_to?: RelationCondition | (RelationCondition & (GroupPattern | PersonPattern));
@@ -7958,8 +8547,11 @@ export type SourceWhere = {
 export type SourcePattern = { type: "Source"; where?: SourceWhere };
 
 export type StatementWhere = {
-  text?: TextCondition;
   date?: RelationCondition | (RelationCondition & (DatePattern | DateRangePattern | EDTFDatePattern | ExactDatePattern | OngoingDatePattern | PeriodPattern | RecurrencePattern | UnknownDatePattern));
+  date_sort_day?: CompareCondition<number>;
+  date_end_sort_day?: CompareCondition<number>;
+  date_text?: TextCondition;
+  text?: TextCondition;
   involves?: RelationCondition | (RelationCondition & (GroupPattern | PersonPattern));
   places?: RelationCondition | (RelationCondition & (PlacePattern));
   $all?: StatementWhere[];
@@ -7977,8 +8569,11 @@ export type StatementWhere = {
 export type StatementPattern = { type: "Statement"; where?: StatementWhere };
 
 export type TransferWhere = {
-  text?: TextCondition;
   date?: RelationCondition | (RelationCondition & (DatePattern | DateRangePattern | EDTFDatePattern | ExactDatePattern | OngoingDatePattern | PeriodPattern | RecurrencePattern | UnknownDatePattern));
+  date_sort_day?: CompareCondition<number>;
+  date_end_sort_day?: CompareCondition<number>;
+  date_text?: TextCondition;
+  text?: TextCondition;
   places?: RelationCondition | (RelationCondition & (PlacePattern));
   item?: TextCondition;
   quantity?: CompareCondition<number | string>;
@@ -8118,25 +8713,25 @@ export interface Wheres {
 }
 
 export interface OrderFields {
-  Activity: "label" | "text" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day";
+  Activity: "label" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day" | "date_sort_day" | "date_end_sort_day" | "date_text" | "text";
   Artwork: "label";
-  CreationOfArtwork: "label" | "text" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day";
-  CreationOfPainting: "label" | "text" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day";
-  CreationOfPhysicalObject: "label" | "text" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day";
+  CreationOfArtwork: "label" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day" | "date_sort_day" | "date_end_sort_day" | "date_text" | "text";
+  CreationOfPainting: "label" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day" | "date_sort_day" | "date_end_sort_day" | "date_text" | "text";
+  CreationOfPhysicalObject: "label" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day" | "date_sort_day" | "date_end_sort_day" | "date_text" | "text";
   DateCharacterisation: "label";
   Factoid: "label";
   Feast: "label" | "use" | "rank";
   Group: "label" | "name";
-  MemberOf: "label" | "text" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day";
+  MemberOf: "label" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day" | "date_sort_day" | "date_end_sort_day" | "date_text" | "text";
   OccupationType: "label" | "description" | "label_de" | "label_fr";
-  Order: "label" | "text" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day";
+  Order: "label" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day" | "date_sort_day" | "date_end_sort_day" | "date_text" | "text";
   Painting: "label";
   Person: "label" | "born.source_text" | "born.earliest_fuzzy" | "born.earliest_strict" | "born.latest_strict" | "born.latest_fuzzy" | "born.sort_day" | "born.end_sort_day";
   PhysicalObject: "label";
   Place: "label";
   Source: "label" | "author" | "written" | "edition_price";
-  Statement: "label" | "text" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day";
-  Transfer: "label" | "text" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day" | "item" | "quantity";
+  Statement: "label" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day" | "date_sort_day" | "date_end_sort_day" | "date_text" | "text";
+  Transfer: "label" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day" | "date_sort_day" | "date_end_sort_day" | "date_text" | "text" | "item" | "quantity";
   ZoteroBacked: "label" | "zotero_url" | "zotero_library" | "zotero_key" | "zotero_version" | "zotero_synced_entity_version" | "item_type" | "title" | "short_title" | "creators" | "date" | "language" | "abstract" | "zotero_data" | "citation" | "bibliography" | "csl_json" | "synced_when" | "item_type_override";
   ZoteroLibrary: "label" | "library" | "synced_version" | "last_sync" | "last_error";
   ZoteroObject: "label" | "zotero_url" | "zotero_library" | "zotero_key" | "zotero_version" | "zotero_synced_entity_version" | "item_type" | "title" | "short_title" | "creators" | "date" | "language" | "abstract" | "zotero_data" | "citation" | "bibliography" | "csl_json" | "synced_when" | "item_type_override";

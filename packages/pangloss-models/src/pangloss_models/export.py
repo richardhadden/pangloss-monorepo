@@ -327,7 +327,11 @@ class Exporter:
     # --- models ----------------------------------------------------------
 
     def export_model(self, model: type) -> dict[str, Any]:
-        from pangloss_models.utils import get_concrete_types, get_parent_class
+        from pangloss_models.utils import (
+            get_concrete_types,
+            get_parent_class,
+            model_is_trait,
+        )
 
         meta = model._meta  # type: ignore[attr-defined]
         description = model.__dict__.get("__doc__")
@@ -366,6 +370,15 @@ class Exporter:
                 for n, d in meta.field_definitions.fields.items()
             ],
             "incoming": self.incoming(meta.field_definitions.incoming_fields),
+            # (the traits it has, by name: a module can tell "anything dateable" without reading its fields)
+            "traits": sorted(
+                c.__name__
+                for c in model.__mro__
+                if c is not model
+                and model_is_trait(c)
+                and c.__name__ != "Trait"
+                and not c.__module__.startswith("pangloss_models.model_bases")
+            ),
         }
 
     def incoming(

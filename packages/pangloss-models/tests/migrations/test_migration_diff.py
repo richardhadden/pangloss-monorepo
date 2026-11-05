@@ -1132,3 +1132,35 @@ def test_literals_that_become_an_embedded_object_and_back():
     assert unwrapped.fields == ["precision", "when"]
     assert unwrapped.safety == "lossy"
     assert "RemoveField" not in kinds(back)
+
+
+def test_an_embedded_model_widened_to_a_union_that_has_it_loses_nothing():
+    from pangloss_models.migrations.changes import AlterEmbedded
+
+    widened = AlterEmbedded(
+        model="DateRange",
+        name="not_after",
+        old_model="ExactDate",
+        new_model=None,
+        added_types=["UnknownDate"],
+        types=["ExactDate", "UnknownDate"],
+    )
+    assert widened.safety == "safe"
+    assert "ExactDate | UnknownDate" in widened.describe()
+    # (another model, or one taken away, is lossy as it was)
+    assert (
+        AlterEmbedded(model="M", name="f", old_model="A", new_model="B").safety
+        == "lossy"
+    )
+    assert (
+        AlterEmbedded(
+            model="M",
+            name="f",
+            old_model="A",
+            new_model=None,
+            types=["B", "C"],
+            added_types=["B", "C"],
+            removed_types=["A"],
+        ).safety
+        == "lossy"
+    )

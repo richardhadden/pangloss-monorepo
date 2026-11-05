@@ -204,7 +204,7 @@ const LABEL: FieldDefinition = {
   type: { type: "str" },
   validators: [],
   description: null,
-  dbField: true,
+  dbField: false,
   required: false,
   nullable: true,
 };

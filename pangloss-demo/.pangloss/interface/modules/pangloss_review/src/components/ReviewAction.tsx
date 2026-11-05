@@ -5,6 +5,7 @@ import {
   useApi,
   useCurrentUser,
   useModels,
+  useSidePanel,
   useToasts,
   useTranslations,
 } from "@pangloss/interface-core";
@@ -34,7 +35,8 @@ function Review(props: { type: string; id: string; me?: string }) {
     api,
     me: () => props.me,
   });
-  const [open, setOpen] = createSignal(false);
+  // (one panel on the right at a time: opening this closes history's, and the other way round)
+  const { open, setOpen } = useSidePanel("review");
   // The parts of the document, read (as saved) when the panel is first opened: what a comment can be about, and which
   // parts that comments are about are no longer there
   const [parts, setParts] = createSignal<Part[]>();

@@ -39,8 +39,8 @@ test("a calendar other than the Gregorian is named, once", () => {
     formatDate({
       type: "DateRange",
       calendar: "julian",
-      earliest: exact(1500),
-      latest: exact(1502),
+      notBefore: exact(1500),
+      notAfter: exact(1502),
     }),
   ).toBe("1500 to 1502 (julian)");
 });
@@ -125,7 +125,7 @@ test("in another language: its month and weekday names, its order and words, and
   expect(formatDate({ ...christmas, day: undefined }, words("fr"))).toBe("décembre 800");
   expect(formatDate(exact(1500, 3, 2), words("fr"))).toBe("2 mars 1500 (julien)");
   expect(
-    formatDate({ type: "DateRange", calendar: "julian", earliest: exact(1500), latest: exact(1502) }, words("de")),
+    formatDate({ type: "DateRange", calendar: "julian", notBefore: exact(1500), notAfter: exact(1502) }, words("de")),
   ).toBe("1500 bis 1502 (Julianisch)");
   expect(
     formatDate({ type: "Period", calendar: "gregorian", start: exact(1500), end: { type: "UnknownDate" } }, words("fr")),
@@ -135,4 +135,15 @@ test("in another language: its month and weekday names, its order and words, and
   expect(formatDate({ ...recurrence, frequency: "weekly", interval: 2 }, words("fr"))).toBe(
     "tous les 2 semaines, 1500 – 1510",
   );
+});
+
+test("a range with one end not known is said by the other", () => {
+  const range = (notBefore: unknown, notAfter: unknown) => ({
+    type: "DateRange",
+    calendar: "gregorian",
+    notBefore,
+    notAfter,
+  });
+  expect(formatDate(range(exact(1500), { type: "UnknownDate" }))).toBe("not before 1500");
+  expect(formatDate(range({ type: "UnknownDate" }, exact(1502)))).toBe("not after 1502");
 });

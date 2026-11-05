@@ -79,13 +79,8 @@ def get_model_validators(model, ids: bool, declared: bool) -> dict[str, Any]:
             check_create_and_id_present
         )
     if declared:
-        for name, decorator in model.__pydantic_decorators__.model_validators.items():
-            # (not those of Pangloss's own base classes, which the generated models have in their own way)
-            if decorator.info.mode == "after" and not decorator.cls_ref.startswith(
-                "pangloss_models."
-            ):
-                validators[name] = model_validator(mode="after")(decorator.func)
-
+        # (the markers of embedded fields first: a validator of the class that copies from such a field, as a
+        # `Dateable` copies its date's sort day, sees it as it will be stored)
         markers = {
             name: definition.markers
             for name, definition in model._meta.fields.items()
@@ -95,6 +90,13 @@ def get_model_validators(model, ids: bool, declared: bool) -> dict[str, Any]:
             validators["apply_embedded_markers"] = model_validator(mode="after")(
                 _apply_markers(markers)
             )
+
+        for name, decorator in model.__pydantic_decorators__.model_validators.items():
+            # (not those of Pangloss's own base classes, which the generated models have in their own way)
+            if decorator.info.mode == "after" and not decorator.cls_ref.startswith(
+                "pangloss_models."
+            ):
+                validators[name] = model_validator(mode="after")(decorator.func)
 
         shares = {
             name: found

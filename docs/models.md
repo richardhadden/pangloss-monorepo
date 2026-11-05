@@ -159,6 +159,11 @@ class Statement(Document):
 
 - `Trait[T]` is heritable: subclasses of `Person` are also `Agent`s and the trait's name is added to the node labels.
 - `NonHeritableTrait` applies only to the classes that directly inherit it, not their subclasses.
+- A trait can carry fields (literal, embedded, `DBField`s) and `@model_validator(mode="after")`s, which the classes that have it get as their
+  own. `reference_view_fields: ClassVar[tuple[str, ...]]` on a trait adds those fields to the `ReferenceView` of every class that has it (a
+  `DBField` may be one: a reference view is only read). `pangloss_dates.dateable.Dateable` is one: a `date`, and a copy of its sort day and
+  text in the reference.
+- The export of a model (`export_models`) names its traits (`traits`), for the interface.
 
 ## EdgeModel
 

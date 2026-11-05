@@ -8,7 +8,7 @@ them set. (They are `X | None = None` so that a `CreateDB` can be made without t
     Date                      the base (never used on its own)
     ├── ExactDate             year, and optionally month and day
     ├── EDTFDate              an EDTF string (needs the `edtf` extra)
-    ├── DateRange             earliest and latest, each an ExactDate
+    ├── DateRange             not_before and not_after, each an ExactDate (or unknown: not both)
     ├── OngoingDate           the end of a period that has not ended
     ├── UnknownDate           a start or an end that nobody knows (not both ends of a period)
     ├── Period                start and end, each an ExactDate, DateRange or EDTFDate (or unknown; the end may be ongoing)
@@ -159,29 +159,6 @@ class EDTFDate(Date):
         return result.bounds, result.precision
 
 
-def _check_ends_in_calendar(date, *ends) -> None:
-    for end in ends:
-        if end.calendar != date.calendar:
-            raise ValueError(
-                f"the {end.calendar} date {end} is in a {date.calendar} {type(date).__name__}"
-            )
-
-
-class DateRange(Date):
-    """One date whose day is not known: somewhere from `earliest` to `latest`"""
-
-    earliest: ExactDate
-    latest: ExactDate
-
-    @classmethod
-    def work_out(cls, date) -> tuple[Bounds, Precision]:
-        _check_ends_in_calendar(date, date.earliest, date.latest)
-        return (
-            spanning_bounds(worked_out(date.earliest)[0], worked_out(date.latest)[0]),
-            Precision.RANGE,
-        )
-
-
 class OngoingDate(Date):
     """The end of a period that has not ended (it is taken to stop by the end of `DATES_OPEN_END_YEAR`)"""
 
@@ -208,6 +185,50 @@ class UnknownDate(Date):
             ),
             Precision.UNKNOWN,
         )
+
+
+def _check_ends_in_calendar(date, *ends) -> None:
+    for end in ends:
+        if end.calendar != date.calendar:
+            raise ValueError(
+                f"the {end.calendar} date {end} is in a {date.calendar} {type(date).__name__}"
+            )
+
+
+class DateRange(Date):
+    """One date whose day is not known: somewhere from `not_before` to `not_after` (the names of the Text Encoding
+    Initiative). Either may be unknown (`UnknownDate`: "not before March 1500", and nothing said of when it was by),
+    not both; such a range runs to the horizon (or from the floor) and sorts by its known end"""
+
+    not_before: ExactDate | UnknownDate
+    not_after: ExactDate | UnknownDate
+
+    @classmethod
+    def work_out(cls, date) -> tuple[Bounds, Precision]:
+        _check_ends_in_calendar(date, date.not_before, date.not_after)
+        (first, first_precision), (last, last_precision) = (
+            worked_out(date.not_before),
+            worked_out(date.not_after),
+        )
+        if first_precision == last_precision == Precision.UNKNOWN:
+            raise ValueError(
+                "the ends of a range cannot both be unknown: say what is known of one of them (or use UnknownDate)"
+            )
+        return spanning_bounds(first, last), Precision.RANGE
+
+    @classmethod
+    def sort_days(cls, date, bounds: Bounds) -> tuple[int, int]:
+        """A range with one end unknown sorts by the other, unless it says how (the middle of 1500 to the horizon
+        would mean nothing)"""
+        if date.sort_by is None:
+            (first, first_precision), (last, last_precision) = (
+                worked_out(date.not_before),
+                worked_out(date.not_after),
+            )
+            if Precision.UNKNOWN in (first_precision, last_precision):
+                known = last if first_precision == Precision.UNKNOWN else first
+                return known.sort_day(), known.sort_day()
+        return super().sort_days(date, bounds)
 
 
 def _span_of_lifetime(date) -> Bounds:

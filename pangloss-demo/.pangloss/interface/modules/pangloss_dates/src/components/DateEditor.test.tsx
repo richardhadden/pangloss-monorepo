@@ -59,6 +59,7 @@ const definitions = {
   models: {
     ExactDate: model("ExactDate", [field("year", int), field("month", int), field("day", int)]),
     EDTFDate: model("EDTFDate", [field("edtf", { type: "str" })]),
+    DateRange: model("DateRange", []),
     Recurrence: model("Recurrence", [
       field("frequency", { type: "enum", enum: "Frequency" }),
       field("nth", int),
@@ -348,4 +349,48 @@ test("the start and end of a period have no Sort by (the period's says how it so
   show(start, { path: ["date", "start"], item: { type: "Statement", date: { type: "Other", start } } });
   await settle();
   expect(byLabel("sortBy")).toBeTruthy();
+});
+
+test("an end of a range is not known at the press of a button, and a date again at the next", async () => {
+  const { host, state } = show({
+    type: "DateRange",
+    calendar: "gregorian",
+    notBefore: { type: "ExactDate", year: 1500 },
+    notAfter: { type: "ExactDate", year: 1502 },
+  });
+  await settle();
+  expect(host.textContent).toContain("Not before");
+  expect(host.textContent).toContain("Not after");
+  expect(byLabel<HTMLInputElement>("Date Not after Year")!.value).toBe("1502");
+  const notAfter = byLabel<HTMLButtonElement>("Date Not after Not known")!;
+  const notBefore = byLabel<HTMLButtonElement>("Date Not before Not known")!;
+  expect(notAfter.getAttribute("aria-pressed")).toBe("false");
+
+  notAfter.click();
+  await settle();
+  expect(state.get(["date", "notAfter"])).toEqual({ type: "UnknownDate" });
+  expect(notAfter.getAttribute("aria-pressed")).toBe("true");
+  // (its date is gone)
+  expect(byLabel("Date Not after Year")).toBeNull();
+  // (both ends cannot be unknown)
+  expect(notBefore.disabled).toBe(true);
+
+  notAfter.click();
+  await settle();
+  expect(state.get(["date", "notAfter"])).toEqual({ type: "ExactDate" });
+  expect(byLabel<HTMLInputElement>("Date Not after Year")!.value).toBe("");
+  expect(notBefore.disabled).toBe(false);
+});
+
+test("a range with an end not known shows it pressed, and reads by the end that is known", async () => {
+  const { host } = show({
+    type: "DateRange",
+    calendar: "gregorian",
+    notBefore: { type: "UnknownDate" },
+    notAfter: { type: "ExactDate", year: 1502 },
+  });
+  await settle();
+  expect(byLabel("Date Not before Not known")!.getAttribute("aria-pressed")).toBe("true");
+  expect(byLabel("Date Not before Year")).toBeNull();
+  expect(host.querySelector("[data-testid=date-reads]")!.textContent).toContain("not after 1502");
 });

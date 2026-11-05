@@ -3,7 +3,7 @@
 Keep this current: when a page or feature is added to the interface (or a test is added here), change its row.
 ✅ tested · 🚧 partly · ⬜ not yet · — not built, so nothing to test
 
-115 tests, about 218 s. The e2e project (`conftest.py`) has `Person` (`has_role: list[Role]`), `Role` (`has_type`), `RoleType` (a
+139 tests, about 307 s. The e2e project (`conftest.py`) has `Person` (`has_role: list[Role]`), `Role` (`has_type`), `RoleType` (a
 typology, also a `Role`) with Clerk > Secretary and Advisor, and `Statement` (a document: `text`, `about: Person`). The `data`
 fixture adds Maximilian (his secretary: a `Role` of the type Secretary), Marie of Burgundy (her advisor, and a statement
 about her "held court at Ghent") and Charles the Bold (no role); `types` has only the types; `stack` has one admin user.
@@ -177,6 +177,18 @@ The e2e project installs `pangloss_dates` and `pangloss_calendar` (Julian, span 
 | The pages in the dev build (years, month, day, next day, Gregorian, Years) with no Solid error | ✅ | `test_dev_mode.py::test_the_calendar` |
 | The module's own tests and type-check, in the built project | ✅ | `test_the_calendar_module_tests_pass_in_the_built_project` |
 | A truncated month or day (more than `MONTH_LIMIT` dates) | ⬜ | |
+
+## `pangloss_dates`: dateable documents and ranges
+
+The e2e project's `Appointment` (`appointed: Person`) is `Dateable`; its `Statement` is not. The `appointed` fixture gives Ada a
+bishop's appointment in 1510, a notary's not before 1490 (`notAfter` not known), an abbot's at a date not known, and a statement.
+
+| Area | State | Where / notes |
+| --- | --- | --- |
+| Entity page: "By field / By date" (only when something that refers to it is dateable); by date, one row each in order, the date (`dateText`) and the field on the left, the chip on the right; "Date unknown"; "Not dated" by field; the choice kept in `localStorage` | ✅ | `test_dateable.py::test_what_refers_to_a_person_is_shown_by_date`; dev build: `test_dev_mode.py::test_what_refers_to_a_person_by_date`; order, periods, unknown: Vitest (`ItemContents.test.tsx`, `dating.test.ts`) |
+| Entity page: the slider of years (From / To) narrows the dated rows ("1 of 2"); a period is in the years if any of it is | ✅ | the same tests |
+| A reference with fields only in the database (a dateable document's copy of its date) is still a chip; the form does not offer them | ✅ | `test_dateable.py` (both tests); Vitest (`ItemContents.test.tsx`, `ItemForm.test.tsx`) |
+| Date editor: a range's ends are "Not before" and "Not after", each with a "Not known" button (pressed: an `UnknownDate`, the parts gone; again: a date); the other end's button is disabled while one is pressed; it reads "not before 1490" | ✅ | `test_dateable.py::test_an_end_of_a_range_that_is_not_known_is_a_button`; Vitest in the module (`DateEditor.test.tsx`, `format.test.ts`) |
 
 ## Findings of this suite (for the interface, not yet changed)
 
