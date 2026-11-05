@@ -191,7 +191,7 @@ Widening a blocker is `retype` run upwards in Python: the carrying rules of `sch
   will fill it, by the same exact names.
 
 Both are fixed (2026-11-05): the type names include the types below them (solution 2), and the field names reach
-the fields that stand for them (solution 1). The mark for a bound value that does not fit (3) is not built.
+the fields that stand for them (solution 1). The note at a field whose bound value does not fit (3) is built too.
 
 A narrowed child does not have its parent's field under the old name: the narrower class has `painting_created` in
 place of `object_created` (`get_fields_on_model` removes subclassed fields). So:
@@ -232,19 +232,23 @@ subclass renames, so nothing shows it.
    allowed. Tests: `test_binding_rules.py` (the rule; `Create` and `Update` with subclasses of allowed and excluded
    types; the field relaxed or required), `form.test.ts` (the form; a child narrowed, then widened out of what is
    allowed). It changed the meaning of existing declarations: none in the repository relied on exact matching.
-3. **A bound value that no longer fits a narrowed child.** In the form, a child that follows the binding (the binder's
-   "until changed") and has been narrowed, whose parent's value changes to one the narrower field cannot hold (the
-   order's recipient changes from a painting to a sculpture): the binder does not give it, and marks the field "the
-   bound value (X) cannot go here", with the ↥ button beside it.
+3. **A bound value that does not fit a narrowed child.** ✅ Built 2026-11-05. The form says so at the field, in red
+   with its problems: "The thing is given to this from above, but cannot go here: choose one that can" (the problem
+   code `bound_not_held`, `invalid_bound_not_held`). It is worked out from the item as it is (`bindingNotices` in
+   `schema/binding.ts`, through a new `FormHook.notices`; a memo in the form's state that `problemsAt` adds to the
+   problems found on save), so it is there whether the field was never given the value or was emptied when the value
+   changed, and goes when the field is filled in or the bound value changes to one that fits. It is not a problem of
+   the save: the save's own check says "Required" beside it. Tests: `formNotices.test.ts` (in the browser build of
+   Solid: in the server's build, which `form.test.ts` uses, a memo is never worked out again), e2e
+   `test_a_step_that_cannot_hold_the_subject_says_so_at_its_field`, dev build.
 4. **A binding and ↧.** A bound value counts as filled in, so it decides which narrowings can be chosen exactly as a
    chosen one does (a child bound to an artwork cannot be narrowed to a creation of a painting). That is right, and
    needs nothing beyond a test. (If the unasked suggestion is ever built, a bound value prompts it the same way.)
 
-**Not built:** 3, the mark at a field whose bound value does not fit (the field is emptied, without saying why).
+All four are built or need nothing more.
 
 ## Open questions
 
-- Field bindings: should the form say why a narrowed child's field was emptied (a bound value it cannot hold: 3)?
 - (For later, if entities can ever change class generally: widen the documents in the way in one transaction, or
   only name them.)
 

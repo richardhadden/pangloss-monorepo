@@ -429,5 +429,13 @@ def test_narrowing_and_widening_a_document_in_a_form(
     expect(page.get_by_role("dialog")).to_have_count(0)
     page.get_by_role("button", name="Save").click()
     expect(page.get_by_role("status", name="Notifications")).to_contain_text("saved")
+    # (a new one whose subject a creation of a painting cannot hold: said at the field)
+    page.goto(f"{dev_url}/Provenance/new")
+    hydrated(page)
+    page.locator("form").get_by_role("combobox").first.fill("thing")
+    page.get_by_role("option", name=re.compile("The thing")).click()
+    page.get_by_role("button", name="Add Steps").click()
+    page.get_by_role("button", name="Creation of painting", exact=True).click()
+    expect(page.get_by_text("cannot go here: choose one that can")).to_be_visible()
     expect(page.locator("main")).not_to_contain_text(SOLID_ERROR)
     assert errors == []

@@ -162,7 +162,8 @@ class Statement(Document):
   `CreationOfPainting` its `painting_created` (the field that subclasses it, directly or through `artwork_created`), and
   that field need not be given either. A value the narrower field cannot hold (an artwork bound to the painting
   created) is refused by its validation, naming the field; in the interface it is not given (and a field that was
-  following the binding is emptied). (`fields_bound`, `bound_names` in `model_bases/binding.py`; `fieldsBound` in
+  following the binding is emptied), and the field says why ("The thing is given to this from above, but cannot go
+  here") until it is filled in or the value fits. (`fields_bound`, `bound_names` in `model_bases/binding.py`; `fieldsBound` in
   `schema/binding.ts`.) See [implied-types.md](implied-types.md), "Field bindings across a narrowed document".
 - The value is validated as the child field's own type: a relation bound into a child (`ordered_to` into `given_by`) is
   a copy of its own, a new reified relation if it is one, not the parent's object.

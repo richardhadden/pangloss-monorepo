@@ -8,6 +8,7 @@ import type { FieldBindingDefinition, FieldDefinition, ModelDefinition, ModelDef
 import { fitsRelation } from "./clipboard";
 import { getAt } from "./formValue";
 import type { FormData, Path } from "./formValue";
+import type { FieldProblem } from "./problems";
 import { getModel } from "./lookup";
 import { ancestry } from "./typeChoices";
 
@@ -35,6 +36,8 @@ export interface PendingBinding {
 export interface FormHook<Pending> {
   before(root: unknown, path: Path, adding: boolean): Pending[];
   after(root: FormData, pending: Pending[]): void;
+  /** What is to be said at fields of the item as it is now (not what is wrong with it: it is not checked on save) */
+  notices?(root: FormData): FieldProblem[];
 }
 
 /** What the bindings over a change are (`createBinder`) */
@@ -45,6 +48,7 @@ export function composeHooks(...hooks: FormHook<unknown>[]): FormHook<unknown[]>
   return {
     before: (root, path, adding) => hooks.map((hook) => hook.before(root, path, adding)),
     after: (root, pending) => hooks.forEach((hook, at) => hook.after(root, pending[at] as unknown[])),
+    notices: (root) => hooks.flatMap((hook) => hook.notices?.(root) ?? []),
   };
 }
 
@@ -193,6 +197,54 @@ function give(definitions: ModelDefinitions, value: unknown, rules: Map<string, 
   }
 }
 
+/** What a bound value is called in a notice: the labels of what it holds (an entity's), or their types */
+function labelOf(value: unknown): string {
+  if (Array.isArray(value)) return value.map(labelOf).join(", ");
+  if (!isObject(value)) return String(value);
+  return typeof value.label === "string" && value.label !== "" ? value.label : String(value.type ?? "");
+}
+
+/**
+ * Where a binding cannot give its value: a field of a narrower type that stands for the bound one, which is empty
+ * because what the binding has is not something it can hold (an artwork, where only a painting can be the painting
+ * created), each a `bound_not_held` notice at the field, with what it is (`value`). Worked out from the item as it
+ * is, so it goes when the field is filled in or the bound value changes to one that fits
+ */
+export function bindingNotices(definitions: ModelDefinitions, root: FormData): FieldProblem[] {
+  const found: FieldProblem[] = [];
+  const walk = (value: unknown, path: Path, rules: Map<string, { binding: FieldBindingDefinition; value: unknown }>) => {
+    if (Array.isArray(value)) {
+      value.forEach((each, at) => walk(each, [...path, at], rules));
+      return;
+    }
+    if (!isObject(value) || typeof value.type !== "string") return;
+    const model = getModel(definitions, value.type);
+    if (!model || model.kind === "Entity" || model.kind === "Embedded") return;
+    for (const [key, rule] of rules) {
+      if (isEmpty(rule.value) || !applies(definitions, rule.binding, value.type)) continue;
+      for (const field of fieldsBound(definitions, model, key)) {
+        if (field.key === key || !isEmpty(value[field.key]) || fitsNarrower(definitions, field, rule.value)) continue;
+        found.push({ path: [...path, field.key], code: "bound_not_held", params: { value: labelOf(rule.value) }, message: "" });
+      }
+    }
+    // (under each relation, its own bindings, the nearest, over those from above, as the binder gives them)
+    for (const field of model.fields) {
+      if (field.kind !== "relation") continue;
+      const own = ((field as RelationField).bindings ?? []).filter((binding) => !binding.converted);
+      let under = rules;
+      if (own.length > 0) {
+        under = new Map(rules);
+        for (const binding of own) {
+          for (const key of binding.childFields) under.set(key, { binding, value: value[binding.boundField] });
+        }
+      }
+      if (under.size > 0) walk(value[field.key], [...path, field.key], under);
+    }
+  };
+  walk(root, [], new Map());
+  return found;
+}
+
 /** The bindings of the models, for a form (`createItemFormState`) */
 export function createBinder(definitions: ModelDefinitions): FormBinder {
   return {
@@ -226,5 +278,6 @@ export function createBinder(definitions: ModelDefinitions): FormBinder {
         give(definitions, item[relation], rules, added);
       }
     },
+    notices: (root) => bindingNotices(definitions, root),
   };
 }

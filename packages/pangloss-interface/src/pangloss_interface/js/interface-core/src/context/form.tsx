@@ -1,4 +1,4 @@
-import { createContext, createSignal, createStore, snapshot, useContext } from "solid-js";
+import { createContext, createMemo, createSignal, createStore, snapshot, useContext } from "solid-js";
 import type { Accessor, ParentProps } from "solid-js";
 import { getAt, removeAt, setAt } from "../schema";
 import type { FieldProblem, FormData, FormHook, Path } from "../schema";
@@ -30,7 +30,10 @@ export interface ItemFormState {
   problems: Accessor<PlacedProblem[]>;
   /** Shows these problems instead of those shown; gives them back placed */
   setProblems: (problems: FieldProblem[]) => PlacedProblem[];
-  /** The problems shown at the row of `path` (reactive) */
+  /**
+   * The problems shown at the row of `path` (reactive): those found on save placed there, and what the form's hooks
+   * say about the field at `path` as the item is now (`FormHook.notices`: a bound value that cannot go there)
+   */
   problemsAt: (path: Path) => FieldProblem[];
   /** Says that a row of the form shows the field at `path`, for as long as it is there: call what it gives back to take it away */
   registerRow: (path: Path) => () => void;
@@ -60,6 +63,8 @@ export function createItemFormState(initial: FormData, options: ItemFormOptions 
   const { headId, fill, binder } = options;
   const [data, setData] = createStore<FormData>(structuredClone(initial));
   const [problems, setPlaced] = createSignal<PlacedProblem[]>([]);
+  // (what the hooks say about the item as it is, by the path of the field: worked out again when the item changes)
+  const notices = createMemo(() => binder?.notices?.(data) ?? []);
   // (the rows on the page, by path: a plain count, read only when problems are placed)
   const rows = new Map<string, number>();
   const rowOf = (path: Path): Path | undefined => {
@@ -105,9 +110,12 @@ export function createItemFormState(initial: FormData, options: ItemFormOptions 
     },
     problemsAt: (path) => {
       const key = keyOf(path);
-      return problems()
-        .filter(({ row }) => row !== undefined && keyOf(row) === key)
-        .map(({ problem }) => problem);
+      return [
+        ...problems()
+          .filter(({ row }) => row !== undefined && keyOf(row) === key)
+          .map(({ problem }) => problem),
+        ...notices().filter((notice) => keyOf(notice.path) === key),
+      ];
     },
     registerRow: (path) => {
       const key = keyOf(path);

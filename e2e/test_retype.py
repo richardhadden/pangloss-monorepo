@@ -194,3 +194,42 @@ def test_the_server_gives_the_subject_to_a_step_of_a_narrower_type(provenance):
     )
     assert status == 422, result
     assert "painting_created" in str(result) or "paintingCreated" in str(result)
+
+
+NOT_HELD = (
+    "The thing is given to this from above, but cannot go here: choose one that can"
+)
+
+
+def test_a_step_that_cannot_hold_the_subject_says_so_at_its_field(
+    logged_in: Page, provenance
+):
+    """The subject is an artwork, which a creation of a painting cannot have as its painting created: the field is
+    left empty, and says why, until a painting is chosen there"""
+    page = logged_in
+    page.goto("/Provenance/new")
+    hydrated(page)
+    page.get_by_label("Label", exact=True).fill("Where the thing came from")
+    page.locator("form").get_by_role("combobox").first.fill("thing")
+    page.get_by_role("option", name=re.compile("The thing")).click()
+    page.get_by_role("button", name="Add Steps").click()
+    page.get_by_role("button", name="Creation of painting", exact=True).click()
+    expect(page.get_by_text(NOT_HELD)).to_be_visible()
+    # (the subject is not put there)
+    expect(
+        page.get_by_role("button", name="Remove The thing", exact=True)
+    ).to_have_count(1)
+    # (a painting chosen by hand: nothing to say)
+    # (typed as a person does: a finder just drawn may miss a value set all at once)
+    finder = page.get_by_label("Find Painting…", exact=True)
+    finder.click()
+    finder.press_sequentially("portrait")
+    page.get_by_role("option", name=re.compile("The portrait")).click()
+    expect(page.get_by_text(NOT_HELD)).to_have_count(0)
+    # (a creation of an artwork can have it: given, nothing said)
+    page.get_by_role("button", name="Add Steps").click()
+    page.get_by_role("button", name="Creation of artwork", exact=True).click()
+    expect(
+        page.get_by_role("button", name="Remove The thing", exact=True)
+    ).to_have_count(2)
+    expect(page.get_by_text(NOT_HELD)).to_have_count(0)

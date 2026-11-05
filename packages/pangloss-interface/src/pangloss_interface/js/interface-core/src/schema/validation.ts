@@ -8,6 +8,7 @@ import * as v from "valibot";
 import type { FieldDefinition, FieldType, ModelDefinition, ModelDefinitions, RelationOption, Validator } from "../types";
 import type { FormData, Path } from "./formValue";
 import { getModel } from "./lookup";
+import type { FieldProblem, ProblemCode } from "./problems";
 import { sharesOf } from "./sharing";
 import type { Shares } from "./sharing";
 import { envOf, optionFor, resolveOptions } from "./typeChoices";
@@ -15,40 +16,8 @@ import type { Env } from "./typeChoices";
 
 type Schema = v.GenericSchema;
 
-/** What is wrong (each a UI string, `invalid_<code>`) */
-export type ProblemCode =
-  | "required"
-  | "too_short"
-  | "too_long"
-  | "too_few"
-  | "too_many"
-  | "too_small"
-  | "must_exceed"
-  | "too_large"
-  | "must_be_under"
-  | "not_whole"
-  | "not_multiple"
-  | "not_number"
-  | "not_date"
-  | "not_datetime"
-  | "not_uuid"
-  | "not_choice"
-  | "shares_total"
-  | "wrong_type"
-  | "type_not_allowed"
-  | "invalid"
-  | "server";
-
-/**
- * Something wrong in an item, at `path` of the form; `params` are what its text needs (`{n}`, the
- * API's `{message}`), and `message` is the text, in the language of the check (the API's own words for a 422)
- */
-export interface FieldProblem {
-  path: Path;
-  code: ProblemCode;
-  params: Record<string, string | number>;
-  message: string;
-}
+// (the types of what is wrong are in `problems.ts`, which the bindings use too)
+export type { FieldProblem, ProblemCode } from "./problems";
 
 /** The text of a problem in a language: what the interface's translations say for its code */
 export type SayProblem = (code: ProblemCode, params: Record<string, string | number>) => string;

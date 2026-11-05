@@ -58,6 +58,8 @@ export function useSayProblem(): SayProblem {
         return t("invalid_not_choice", "Not one of the choices");
       case "type_not_allowed":
         return t("invalid_type_not_allowed", "This type is not allowed here");
+      case "bound_not_held":
+        return t("invalid_bound_not_held", "{value} is given to this from above, but cannot go here: choose one that can", params);
       case "server":
         // (the API's own words: it is English)
         return String(params.message ?? "");

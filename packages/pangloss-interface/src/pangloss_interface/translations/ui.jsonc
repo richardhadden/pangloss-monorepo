@@ -162,6 +162,7 @@
   "invalid_not_uuid": { "en": "Must be a UUID", "de": "Muss eine UUID sein", "fr": "Doit être un UUID" },
   "invalid_not_choice": { "en": "Not one of the choices", "de": "Keine der Auswahlmöglichkeiten", "fr": "Ne fait pas partie des choix" },
   "invalid_type_not_allowed": { "en": "This type is not allowed here", "de": "Dieser Typ ist hier nicht erlaubt", "fr": "Ce type n’est pas autorisé ici" },
+  "invalid_bound_not_held": { "en": "{value} is given to this from above, but cannot go here: choose one that can", "de": "{value} wird von oben übernommen, kann hier aber nicht stehen: bitte etwas Passendes wählen", "fr": "{value} vient du niveau supérieur, mais ne peut pas aller ici : choisissez-en un qui convient" },
   "invalid_value": { "en": "Not a valid value", "de": "Kein gültiger Wert", "fr": "Valeur non valide" },
 
   // The kinds of model (a model's "kind" in the gathered file is one of these, as kind_<snake case>)
