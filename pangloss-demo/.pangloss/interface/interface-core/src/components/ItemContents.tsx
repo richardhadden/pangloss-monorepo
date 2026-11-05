@@ -1,7 +1,8 @@
-import { createMemo, createSignal, For, Match, onSettled, Show, Switch } from "solid-js";
+import { createEffect, createMemo, createSignal, Errored, For, Loading, Match, Show, Switch } from "solid-js";
 import type { ParentProps } from "solid-js";
 import {
   useComponent,
+  useIncomingView,
   useModels,
   useModules,
   useTranslations,
@@ -10,18 +11,14 @@ import { kindRule, kindTint, spaceTint } from "../primitives";
 import { contextTrail } from "../api";
 import type { ContextLabel } from "../api";
 import {
-  arrangeByDate,
   collapsedView,
   edgeModelFor,
   getModel,
   headlessIn,
-  inYears,
-  isDateable,
-  yearSpan,
 } from "../schema";
-import type { IncomingEntry } from "../schema";
 import type {
   FieldDefinition,
+  IncomingEntry,
   ItemContentsProps,
   ModelDefinition,
 } from "../types";
@@ -143,8 +140,9 @@ function Head(props: {
 /**
  * The rows of an object: a key and its contents for each field of its model, in the order of
  * the model, the keys in a column on the left and the contents on the right. Fields with
- * nothing in them are left out, and those only in the database (worked out, not said). What refers to the object from elsewhere (`incoming`) follows,
- * as chips: by the field it is in, or (on the item's page, when some of it is `Dateable`) by date.
+ * nothing in them are left out, and those only in the database (worked out, not said). What refers to the object from
+ * elsewhere (`incoming`) follows, as chips, by the field it is in; on the item's own page, an interface module's view
+ * of it (`incomingViews`, chosen in the console) can take some of it, to show after the rows in its own way.
  */
 function Fields(props: {
   value: Data;
@@ -152,9 +150,13 @@ function Fields(props: {
   depth: number;
   /** (a field that is shown some other way) */
   exclude?: string;
+  /** (the item's own page: its type and id, for a module's view of what refers to it) */
+  page?: { type: string; id: string };
 }) {
   const { fieldName, incomingName } = useTranslations();
   const definitions = useModels();
+  const views = useModules().incomingViews();
+  const incoming = useIncomingView();
   const entries = createMemo<IncomingEntry[]>(() =>
     (props.model?.incoming ?? []).flatMap((incoming) => {
       const value = props.value[incoming.key];
@@ -167,266 +169,98 @@ function Fields(props: {
         }));
     }),
   );
-  // (only on the item's own page, and only if something that refers to it can have a date)
-  const canDate = () =>
-    props.depth === 0 && entries().some((entry) => isDateable(definitions, entry.item.type));
-  const order = useIncomingOrder();
-  return (
-    <dl class={fieldGridClass}>
-      <For each={props.model?.fields ?? []}>
-        {(field) => (
-          <Show
-            when={
-              field.key !== props.exclude &&
-              !field.dbField &&
-              !isEmpty(props.value[field.key])
-            }
-          >
-            <Row name={fieldName(props.model!.name, field.name)}>
-              <Value
-                value={props.value[field.key]}
-                field={field}
-                depth={props.depth}
-              />
-            </Row>
-          </Show>
-        )}
-      </For>
-      <Show when={canDate()}>
-        <IncomingOrderSwitch order={order.order()} onChange={order.setOrder} />
-      </Show>
-      <Show
-        when={canDate() && order.order() === "date"}
-        fallback={
-          <For each={props.model?.incoming ?? []}>
-            {(incoming) => (
-              <Show when={!isEmpty(props.value[incoming.key])}>
-                <Row name={incomingName(props.model!.name, incoming.name)} incoming>
-                  <Value
-                    value={props.value[incoming.key]}
-                    depth={props.depth}
-                    asChip
-                  />
-                </Row>
-              </Show>
-            )}
-          </For>
-        }
-      >
-        <IncomingByDate entries={entries()} depth={props.depth} />
-      </Show>
-    </dl>
+  // (the views that have something to show: only on the item's own page)
+  const offered = createMemo(() =>
+    props.page && views.length > 0
+      ? views.filter((view) => entries().some((entry) => view.takes(entry.item, definitions)))
+      : [],
   );
-}
-
-type IncomingOrder = "field" | "date";
-const INCOMING_ORDER_KEY = "pangloss.incomingOrder";
-
-/** How what refers to an item is shown, remembered from one page to the next (read once settled, so that the
- * server-side render and the first client render agree) */
-function useIncomingOrder() {
-  const [order, setOrderSignal] = createSignal<IncomingOrder>("field");
-  onSettled(() => {
-    try {
-      if (localStorage.getItem(INCOMING_ORDER_KEY) === "date") setOrderSignal("date");
-    } catch {
-      // (storage unavailable: the choice is just not remembered)
-    }
+  // (the console offers each for as long as it has something)
+  createEffect(offered, (now) => {
+    const withdraw = now.map((view) => incoming.offer(view.name));
+    return () => withdraw.forEach((done) => done());
   });
-  const setOrder = (next: IncomingOrder) => {
-    setOrderSignal(next);
-    try {
-      localStorage.setItem(INCOMING_ORDER_KEY, next);
-    } catch {
-      // (as above)
-    }
-  };
-  return { order, setOrder };
-}
-
-/** Two buttons, one pressed: what refers to the item by the field it is in, or by date */
-function IncomingOrderSwitch(props: { order: IncomingOrder; onChange: (order: IncomingOrder) => void }) {
-  const { t } = useTranslations();
-  const button = (order: IncomingOrder, text: string) => (
-    <button
-      type="button"
-      class={[
-        "px-2.5 py-1 text-xs first:rounded-l-sm last:rounded-r-sm",
-        props.order === order
-          ? "bg-slate-600 text-white"
-          : "bg-white text-slate-600 hover:bg-slate-100",
-      ]}
-      aria-pressed={props.order === order ? "true" : "false"}
-      onClick={() => props.onChange(order)}
-    >
-      {text}
-    </button>
-  );
-  return (
-    <div class={["col-span-2 flex items-center gap-3 border-t pt-6", fieldRuleClass]}>
-      <span class="text-xs font-semibold text-slate-500 uppercase">
-        {t("incoming_order", "What refers to it")}
-      </span>
-      <div
-        role="group"
-        aria-label={t("incoming_order", "What refers to it")}
-        class="inline-flex divide-x divide-slate-300 rounded-sm border border-slate-300"
-      >
-        {button("field", t("incoming_by_field", "By field"))}
-        {button("date", t("incoming_by_date", "By date"))}
-      </div>
-    </div>
-  );
-}
-
-/**
- * What refers to the item, by date: each dated one on a row of its own, in order, with its date and
- * the field it is in on the left (where a field's name is) and its chip on the right; a slider of
- * years beside them, which narrows the rows to a span of years. Then those whose date is not known,
- * and last those of a kind that has no date, by field as they are otherwise.
- */
-function IncomingByDate(props: { entries: IncomingEntry[]; depth: number }) {
-  const { t } = useTranslations();
-  const definitions = useModels();
-  const arranged = createMemo(() => arrangeByDate(props.entries, definitions));
-  const span = createMemo(() => yearSpan(arranged().dated));
-  // (the years chosen; none chosen is the whole span, which follows the items)
-  const [from, setFrom] = createSignal<number>();
-  const [to, setTo] = createSignal<number>();
-  const first = () => Math.max(from() ?? span()?.[0] ?? 0, span()?.[0] ?? 0);
-  const last = () => Math.min(to() ?? span()?.[1] ?? 0, span()?.[1] ?? 0);
-  const shown = createMemo(() =>
-    arranged().dated.filter((entry) => inYears(entry, first(), last())),
-  );
-  const undatedByField = createMemo(() => {
+  const view = () => offered().find((view) => view.name === incoming.chosen());
+  const taken = createMemo(() => {
+    const chosen = view();
+    return chosen ? entries().filter((entry) => chosen.takes(entry.item, definitions)) : [];
+  });
+  // (what the view does not take, by the relation it is in)
+  const restByField = createMemo(() => {
     const groups = new Map<string, IncomingEntry[]>();
-    for (const entry of arranged().undated)
-      groups.set(entry.name, [...(groups.get(entry.name) ?? []), entry]);
+    for (const entry of entries()) {
+      if (!taken().includes(entry)) groups.set(entry.name, [...(groups.get(entry.name) ?? []), entry]);
+    }
     return [...groups.entries()];
   });
   return (
     <>
-      <Show when={arranged().dated.length > 0}>
-        <div class="col-span-2 flex items-start gap-6 pt-1">
-          <div class={["grid min-w-0 flex-1 grid-cols-[10rem_minmax(0,1fr)] gap-x-6"]} data-testid="incoming-by-date">
-            <For each={shown()}>
-              {(entry) => <DatedRow entry={entry} depth={props.depth} />}
-            </For>
-            <Show when={shown().length === 0}>
-              <p class="col-span-2 py-3 text-sm text-slate-500">
-                {t("incoming_none_in_years", "Nothing in these years")}
-              </p>
-            </Show>
-          </div>
-          <Show when={span() && span()![0] < span()![1]}>
-            <aside
-              class="sticky top-28 flex w-40 shrink-0 flex-col gap-3 rounded-sm border border-slate-300 p-3"
-              aria-label={t("incoming_years", "Years")}
+      <dl class={fieldGridClass}>
+        <For each={props.model?.fields ?? []}>
+          {(field) => (
+            <Show
+              when={
+                field.key !== props.exclude &&
+                !field.dbField &&
+                !isEmpty(props.value[field.key])
+              }
             >
-              <YearSlider
-                label={t("incoming_from_year", "From")}
-                min={span()![0]}
-                max={span()![1]}
-                value={first()}
-                onInput={(year) => {
-                  setFrom(year);
-                  if (year > last()) setTo(year);
-                }}
-              />
-              <YearSlider
-                label={t("incoming_to_year", "To")}
-                min={span()![0]}
-                max={span()![1]}
-                value={last()}
-                onInput={(year) => {
-                  setTo(year);
-                  if (year < first()) setFrom(year);
-                }}
-              />
-              <p class="text-xs text-slate-500" data-testid="incoming-shown">
-                {t("incoming_shown", "{shown} of {total}", {
-                  shown: shown().length,
-                  total: arranged().dated.length,
-                })}
-              </p>
-            </aside>
-          </Show>
-        </div>
-      </Show>
-      <Show when={arranged().unknown.length > 0}>
-        <Row name={t("incoming_date_unknown", "Date unknown")} incoming>
-          <div class="grid w-full grid-cols-[10rem_minmax(0,1fr)] gap-x-6 gap-y-3" data-testid="incoming-date-unknown">
-            <For each={arranged().unknown}>
-              {(entry) => (
-                <>
-                  <span class="pt-1 text-xs font-semibold text-slate-500 uppercase">{entry.name}</span>
-                  <div class="flex min-w-0 flex-wrap items-center gap-2">
-                    <Value value={entry.item} depth={props.depth} asChip />
-                  </div>
-                </>
-              )}
-            </For>
-          </div>
-        </Row>
-      </Show>
-      <Show when={undatedByField().length > 0}>
-        <div class={["col-span-2 border-t pt-6 text-xs font-semibold text-slate-500 uppercase", fieldRuleClass]}>
-          {t("incoming_not_dated", "Not dated")}
-        </div>
-        <For each={undatedByField()}>
-          {([name, group]) => (
-            <Row name={name} incoming>
-              <Value value={group.map((entry) => entry.item)} depth={props.depth} asChip />
-            </Row>
+              <Row name={fieldName(props.model!.name, field.name)}>
+                <Value
+                  value={props.value[field.key]}
+                  field={field}
+                  depth={props.depth}
+                />
+              </Row>
+            </Show>
           )}
         </For>
+        <Show
+          when={view()}
+          fallback={
+            <For each={props.model?.incoming ?? []}>
+              {(incoming) => (
+                <Show when={!isEmpty(props.value[incoming.key])}>
+                  <Row name={incomingName(props.model!.name, incoming.name)} incoming>
+                    <Value
+                      value={props.value[incoming.key]}
+                      depth={props.depth}
+                      asChip
+                    />
+                  </Row>
+                </Show>
+              )}
+            </For>
+          }
+        >
+          <For each={restByField()}>
+            {([name, group]) => (
+              <Row name={name} incoming>
+                <Value value={group.map((entry) => entry.item)} depth={props.depth} asChip />
+              </Row>
+            )}
+          </For>
+        </Show>
+      </dl>
+      <Show when={view() && props.page && props.model ? view() : undefined}>
+        {(chosen) => {
+          const View = chosen().component;
+          return (
+            <Errored
+              fallback={(error) => {
+                // (said in the browser's console, so that a module's author sees why there is nothing)
+                console.error("A view of an interface module failed:", error());
+                return null;
+              }}
+            >
+              <Loading fallback={null}>
+                <View type={props.page!.type} id={props.page!.id} model={props.model!} entries={taken()} />
+              </Loading>
+            </Errored>
+          );
+        }}
       </Show>
     </>
-  );
-}
-
-/** A dated item: its date and the field it is in on the left, its chip on the right */
-function DatedRow(props: { entry: IncomingEntry; depth: number }) {
-  return (
-    <div
-      class={["col-span-2 grid grid-cols-subgrid items-center border-t py-3 first:border-t-0", fieldRuleClass]}
-      data-testid="dated-item"
-    >
-      <div class="flex flex-col">
-        <span class="text-sm text-slate-800 tabular-nums">{String(props.entry.item.dateText)}</span>
-        <span class="text-xs font-semibold text-slate-500 uppercase">{props.entry.name}</span>
-      </div>
-      <div class="flex min-w-0 flex-wrap items-center gap-2">
-        <Value value={props.entry.item} depth={props.depth} asChip />
-      </div>
-    </div>
-  );
-}
-
-function YearSlider(props: {
-  label: string;
-  min: number;
-  max: number;
-  value: number;
-  onInput: (year: number) => void;
-}) {
-  return (
-    <label class="flex flex-col gap-1">
-      <span class="flex items-baseline justify-between text-xs font-semibold text-slate-500 uppercase">
-        {props.label}
-        <span class="text-sm font-normal text-slate-800 tabular-nums normal-case">{props.value}</span>
-      </span>
-      <input
-        type="range"
-        class="w-full accent-slate-600"
-        min={props.min}
-        max={props.max}
-        step={1}
-        value={props.value}
-        aria-label={props.label}
-        onInput={(event) => props.onInput(Number(event.currentTarget.value))}
-      />
-    </label>
   );
 }
 
@@ -749,8 +583,8 @@ function ObjectValue(props: {
  * A value of a field as the item's page shows it (a chip, a block, a band, text): for an interface module's card
  * that shows what a model holds in its own way. `field`: the field it is the value of (its edge model, its type)
  */
-export function ItemValue(props: { value: unknown; field?: FieldDefinition; depth?: number }) {
-  return <Value value={props.value} field={props.field} depth={props.depth ?? 1} />;
+export function ItemValue(props: { value: unknown; field?: FieldDefinition; depth?: number; asChip?: boolean }) {
+  return <Value value={props.value} field={props.field} depth={props.depth ?? 1} asChip={props.asChip} />;
 }
 
 export function ItemContents(props: ItemContentsProps) {
@@ -760,5 +594,9 @@ export function ItemContents(props: ItemContentsProps) {
       definitions,
       typeof props.item.type === "string" ? props.item.type : "",
     );
-  return <Fields value={props.item} model={model()} depth={0} />;
+  const page = () =>
+    typeof props.item.type === "string" && typeof props.item.id === "string"
+      ? { type: props.item.type, id: props.item.id }
+      : undefined;
+  return <Fields value={props.item} model={model()} depth={0} page={page()} />;
 }

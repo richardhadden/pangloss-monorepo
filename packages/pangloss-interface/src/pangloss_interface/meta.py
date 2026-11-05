@@ -272,10 +272,11 @@ def export_definitions() -> dict[str, Any]:
     }
     from pangloss_core import settings as core_settings
 
-    from pangloss_interface.config import export_nav
+    from pangloss_interface.config import export_disabled, export_nav
 
     apps = getattr(core_settings.__dict__.get("SETTINGS"), "INSTALLED_APPS", [])
     exported["nav"] = export_nav(apps, exported["models"])
+    exported["disabled"] = export_disabled(apps)
     # (the search patterns of the models: the interface's types of them, `LetterWhere`)
     from pangloss_models.search_where import export_search_patterns
 

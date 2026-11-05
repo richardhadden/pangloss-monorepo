@@ -3,7 +3,6 @@ import { Errored, For, Loading, onSettled, Show } from "solid-js";
 import type { ParentProps } from "solid-js";
 import {
   useConsoleMount,
-  useIncomingOrder,
   useModels,
   useModules,
   useTranslations,
@@ -132,35 +131,6 @@ function ModuleActions(props: { item: ConsoleProps["item"]; page: "item" | "edit
 }
 
 /**
- * A toggle, while the page offers it (it has something that refers to its item that can be dated): pressed, what refers
- * to the item is sorted by date; not pressed, grouped by the relation it is in
- */
-function IncomingOrderToggle() {
-  const { t } = useTranslations();
-  const incoming = useIncomingOrder();
-  return (
-    <Show when={incoming.offered()}>
-      <ConsoleButton
-        label={t("incoming_sort_by_date", "Sort by date")}
-        pressed={incoming.order() === "date"}
-        onClick={() => incoming.setOrder(incoming.order() === "date" ? "field" : "date")}
-      >
-        {/* (a calendar) */}
-        <svg
-          viewBox="0 0 24 24"
-          class="size-5 select-none fill-none stroke-current stroke-2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          aria-hidden="true"
-        >
-          <path d="M5 6h14a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zM4 10.5h16M8.5 3.5v4M15.5 3.5v4" />
-        </svg>
-      </ConsoleButton>
-    </Show>
-  );
-}
-
-/**
  * What a page says about itself in the console bar: on the left the type (in the plural
  * for a list) and, for one item, its label; on the right the actions that can be taken
  * (the `children`). It renders into the bar by a portal, so a page puts it anywhere in its
@@ -251,9 +221,6 @@ export function Console(props: ConsoleProps) {
                     )}
                   </Show>
                 </div>
-              </Show>
-              <Show when={(props.page ?? "item") === "item"}>
-                <IncomingOrderToggle />
               </Show>
               <ModuleActions item={props.item} page={props.page ?? "item"} />
               {props.children}

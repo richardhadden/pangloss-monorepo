@@ -9,55 +9,60 @@ interface ConsoleMount {
   active: Accessor<boolean>;
   /** A `Console` calls this when it is shown; the function it returns, when it is gone */
   register: () => () => void;
-  /** How what refers to the item of the page is shown: the console has the buttons, the page shows it */
-  incomingOrder: IncomingOrderState;
+  /** How what refers to the item of the page is shown: a module's button in the console chooses, the page shows it */
+  incomingView: IncomingViewState;
 }
 
-/** What refers to an item, grouped by the field it is in, or sorted by date */
-export type IncomingOrder = "field" | "date";
-
-export interface IncomingOrderState {
-  order: Accessor<IncomingOrder>;
-  setOrder: (order: IncomingOrder) => void;
-  /** Whether the page has something to sort by date (the console shows the buttons only then) */
-  offered: Accessor<boolean>;
+/**
+ * Which view of what refers to the item of the page is chosen: one an interface module adds (`incomingViews`, by its
+ * name `app:name`), or none, by the field it is in. A view is chosen only while the page offers it.
+ */
+export interface IncomingViewState {
+  /** The name of the view chosen (whether or not the page offers it); undefined: by field */
+  chosen: Accessor<string | undefined>;
+  choose: (name: string | undefined) => void;
+  /** Whether the page has something the view shows (its button is shown only then) */
+  offered: (name: string) => boolean;
   /** The page calls this while it has; the function it returns, when it has not */
-  offer: () => () => void;
+  offer: (name: string) => () => void;
 }
 
-const INCOMING_ORDER_KEY = "pangloss.incomingOrder";
+const INCOMING_VIEW_KEY = "pangloss.incomingView";
 
-/** The order, remembered from one page to the next (read once settled, so that the server-side render and the first
+/** The view, remembered from one page to the next (read once settled, so that the server-side render and the first
  * client render agree) */
-function createIncomingOrder(): IncomingOrderState {
-  const [order, setOrderSignal] = createSignal<IncomingOrder>("field");
-  const [offers, setOffers] = createSignal(0);
+function createIncomingView(): IncomingViewState {
+  const [chosen, setChosen] = createSignal<string>();
+  const [offers, setOffers] = createSignal<Record<string, number>>({});
   onSettled(() => {
     try {
-      if (localStorage.getItem(INCOMING_ORDER_KEY) === "date") setOrderSignal("date");
+      setChosen(localStorage.getItem(INCOMING_VIEW_KEY) ?? undefined);
     } catch {
       // (storage unavailable: the choice is just not remembered)
     }
   });
+  const count = (name: string, by: number) =>
+    setOffers((all) => ({ ...all, [name]: (all[name] ?? 0) + by }));
   return {
-    order,
-    setOrder: (next) => {
-      setOrderSignal(next);
+    chosen,
+    choose: (name) => {
+      setChosen(name);
       try {
-        localStorage.setItem(INCOMING_ORDER_KEY, next);
+        if (name) localStorage.setItem(INCOMING_VIEW_KEY, name);
+        else localStorage.removeItem(INCOMING_VIEW_KEY);
       } catch {
         // (as above)
       }
     },
-    offered: () => offers() > 0,
-    offer: () => {
-      setOffers((n) => n + 1);
-      return () => setOffers((n) => n - 1);
+    offered: (name) => (offers()[name] ?? 0) > 0,
+    offer: (name) => {
+      count(name, 1);
+      return () => count(name, -1);
     },
   };
 }
 
-// (null when there is none, so that a part that can do without a console, as `useIncomingOrder`, may ask)
+// (null when there is none, so that a part that can do without a console, as `useIncomingView`, may ask)
 const ConsoleMountContext = createContext<ConsoleMount | null>(null);
 
 /**
@@ -72,9 +77,9 @@ export function ConsoleMountProvider(props: ParentProps) {
     setCount((n) => n + 1);
     return () => setCount((n) => n - 1);
   };
-  const incomingOrder = createIncomingOrder();
+  const incomingView = createIncomingView();
   return (
-    <ConsoleMountContext value={{ mount, setMount, active: () => count() > 0, register, incomingOrder }}>
+    <ConsoleMountContext value={{ mount, setMount, active: () => count() > 0, register, incomingView }}>
       {props.children}
     </ConsoleMountContext>
   );
@@ -89,16 +94,16 @@ export function useConsoleMount(): ConsoleMount {
 }
 
 /**
- * How what refers to the item of the page is shown (see `IncomingOrderState`). Without a console (a component on its own,
- * in a test) it is grouped by field, and nothing offers to sort it.
+ * How what refers to the item of the page is shown (see `IncomingViewState`). Without a console (a component on its own,
+ * in a test) it is by field, and nothing is offered.
  */
-export function useIncomingOrder(): IncomingOrderState {
-  return useContext(ConsoleMountContext)?.incomingOrder ?? FIELD_ONLY;
+export function useIncomingView(): IncomingViewState {
+  return useContext(ConsoleMountContext)?.incomingView ?? BY_FIELD;
 }
 
-const FIELD_ONLY: IncomingOrderState = {
-  order: () => "field",
-  setOrder: () => {},
+const BY_FIELD: IncomingViewState = {
+  chosen: () => undefined,
+  choose: () => {},
   offered: () => false,
   offer: () => () => {},
 };

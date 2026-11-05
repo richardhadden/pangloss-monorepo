@@ -75,6 +75,7 @@ function show(
     truncated?: boolean;
     editHref?: string;
     onNew?: () => void;
+    page?: "item" | "edit";
   },
 ) {
   const container = document.createElement("div");

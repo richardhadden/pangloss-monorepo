@@ -1,7 +1,14 @@
 import { createMemo, createSignal, For, Loading, Show } from "solid-js";
-import { useApi, useTranslations } from "../context";
-import { ReferenceChip } from "./ReferenceChip";
-import { fieldGridClass, fieldRowClass, smallButtonClass } from "./form/styles";
+import {
+  fieldGridClass,
+  fieldRowClass,
+  SectionBar,
+  smallButtonClass,
+  useApi,
+  useComponent,
+  useTranslations,
+} from "@pangloss/interface-core";
+import type { ItemSectionProps } from "@pangloss/interface-core";
 
 /** A thing a derived fact names: an entity, or a head document */
 interface DerivedRef {
@@ -40,13 +47,6 @@ interface DerivedClass {
   symmetricLabel?: SymmetricLabel | null;
   count: number;
   items: DerivedItem[];
-}
-
-export interface DerivedSectionProps {
-  /** `_derived` of the item: for each derived class (by its name, or a reverse name), a count and a first page */
-  derived: Record<string, DerivedClass>;
-  /** The item (an entity, or a head document a fact points at): its facts leave it out */
-  itemId: string;
 }
 
 /** A page of `/api/derived/{Class}`: the facts as their views (every end a field) */
@@ -109,6 +109,7 @@ function shownFields(item: DerivedItem, itemId: string): [string, FieldValue][] 
 
 /** The rules and documents a fact rests on: read when it is asked for */
 function Why(props: { type: string; id: string }) {
+  const ReferenceChip = useComponent("ReferenceChip");
   const api = useApi();
   const { t } = useTranslations();
   const fact = createMemo(() =>
@@ -150,6 +151,7 @@ function Why(props: { type: string; id: string }) {
 }
 
 function Fact(props: { item: DerivedItem; itemId: string; symmetricLabel?: SymmetricLabel | null }) {
+  const ReferenceChip = useComponent("ReferenceChip");
   const { t, fieldName } = useTranslations();
   const [why, setWhy] = createSignal(false);
   const fields = createMemo(() =>
@@ -259,18 +261,18 @@ function ClassSection(props: {
 }
 
 /**
- * What the rules derive about an item (`_derived` of its view, from `pangloss-derived`), apart from what its documents
- * say: for each derived class, its facts, each with "why" (the rules and documents it rests on) on demand
+ * What the rules derive about an item (`_derived` of its view), apart from what its documents say: for each derived
+ * class, its facts, each with "why" (the rules and documents it rests on) on demand. A section after the item's
+ * contents (`itemSections.Derived`); the item (an entity, or a head document a fact points at) is left out of its facts.
  */
-export function DerivedSection(props: DerivedSectionProps) {
+export default function DerivedSection(props: ItemSectionProps) {
   const { t } = useTranslations();
-  const classes = createMemo(() => Object.entries(props.derived ?? {}));
+  // (`_derived`: for each derived class, by its name or a reverse name, a count and a first page)
+  const classes = createMemo(() => Object.entries((props.item._derived ?? {}) as Record<string, DerivedClass>));
   return (
     <Show when={classes().length > 0}>
-      <section class="mt-10 border-t-[0.5px] border-slate-400/70 pt-4">
-        <h2 class="mb-4 text-xs font-semibold text-slate-500 uppercase">
-          {t("derived_heading", "Derived")}
-        </h2>
+      <section>
+        <SectionBar>{t("derived_heading", "Derived")}</SectionBar>
         <dl class={fieldGridClass}>
           <For each={classes()}>
             {([name, section]) => (
@@ -280,7 +282,7 @@ export function DerivedSection(props: DerivedSectionProps) {
                 symmetricLabel={section.symmetricLabel}
                 count={section.count}
                 first={section.items}
-                itemId={props.itemId}
+                itemId={props.id}
               />
             )}
           </For>

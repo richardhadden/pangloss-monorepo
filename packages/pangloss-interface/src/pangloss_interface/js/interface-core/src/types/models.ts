@@ -306,4 +306,9 @@ export interface ModelDefinitions {
   searchPatterns?: Record<string, SearchPatternDefinition>;
   /** (absent: nothing configured) */
   nav?: NavConfig;
+  /**
+   * What the interface modules add that the project does not use (`InterfaceConfig(disabled=...)`), as `app:key`: a
+   * key of `consoleActions`, `itemSections` or `incomingViews` (absent: none)
+   */
+  disabled?: string[];
 }

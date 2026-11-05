@@ -2,11 +2,18 @@
 import { describe, expect, it, vi } from "vitest";
 import { render } from "@solidjs/web";
 import { flush } from "solid-js";
-import { ApiProvider, ComponentsProvider, ModelsProvider } from "../context";
-import type { ApiClient } from "../api";
-import type { ComponentMap, ModelDefinitions } from "../types";
-import { DerivedSection } from "./DerivedSection";
-import { ReferenceChip } from "./ReferenceChip";
+import { ApiProvider, ComponentsProvider, ModelsProvider, ReferenceChip } from "@pangloss/interface-core";
+import type { ApiClient, ComponentMap, ModelDefinition, ModelDefinitions } from "@pangloss/interface-core";
+import DerivedSection from "./DerivedSection";
+
+// (the section as the item's page gives it: the item, with its `_derived`)
+const person = { name: "Person", kind: "Entity", fields: [], incoming: [] } as unknown as ModelDefinition;
+const section = (derived: unknown) => ({
+  type: "Person",
+  id: "p1",
+  item: { id: "p1", type: "Person", _derived: derived },
+  model: person,
+});
 
 function Providers(props: { api: ApiClient; children: unknown }) {
   return (
@@ -58,7 +65,7 @@ describe("DerivedSection", () => {
     render(
       () => (
         <Providers api={api}>
-          <DerivedSection derived={derived} itemId="p1" />
+          <DerivedSection {...section(derived)} />
         </Providers>
       ),
       root,
@@ -109,7 +116,7 @@ describe("DerivedSection", () => {
     render(
       () => (
         <Providers api={api}>
-          <DerivedSection derived={derived} itemId="p1" />
+          <DerivedSection {...section(derived)} />
         </Providers>
       ),
       root,
@@ -159,7 +166,7 @@ describe("DerivedSection", () => {
     render(
       () => (
         <Providers api={api}>
-          <DerivedSection derived={labelled} itemId="p1" />
+          <DerivedSection {...section(labelled)} />
         </Providers>
       ),
       root,
@@ -182,7 +189,7 @@ describe("DerivedSection", () => {
     render(
       () => (
         <Providers api={{} as ApiClient}>
-          <DerivedSection derived={{}} itemId="p1" />
+          <DerivedSection {...section({})} />
         </Providers>
       ),
       root,

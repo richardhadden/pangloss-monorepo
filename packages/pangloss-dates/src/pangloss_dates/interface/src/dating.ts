@@ -3,29 +3,21 @@
  * date in their reference (`dateSortDay`, `dateEndSortDay`, a day number; `dateText`, the date said with no
  * words), so they can be ordered by it with what the page already has, on the client.
  */
-import type { ModelDefinitions } from "../types";
-import { getModel } from "./lookup";
-
-type Data = Record<string, unknown>;
-
-/** One item that refers to the item of the page, with the name of the field (as the page says it) it is in */
-export interface IncomingEntry {
-  key: string;
-  name: string;
-  item: Data;
-}
+import { getModel } from "@pangloss/interface-core";
+import type { IncomingEntry, ModelDefinitions } from "@pangloss/interface-core";
+import { monthNames } from "./format";
+import type { DateWords } from "./format";
 
 export interface ByDate {
   /** Dated, in order of their date */
   dated: IncomingEntry[];
   /** Of a dateable kind, but nothing is known of when (or their copy of the date was never made) */
   unknown: IncomingEntry[];
-  /** Of a kind that has no date: a date means nothing for them */
-  undated: IncomingEntry[];
 }
 
 export const DATEABLE = "Dateable";
 
+/** Whether items of a type can have a date: its model has the `Dateable` trait */
 export function isDateable(definitions: ModelDefinitions, type: unknown): boolean {
   return typeof type === "string" && (getModel(definitions, type)?.traits ?? []).includes(DATEABLE);
 }
@@ -38,14 +30,10 @@ export function isDated(entry: IncomingEntry): boolean {
   return typeof entry.item.dateSortDay === "number" && entry.item.dateText !== "?";
 }
 
-/** The entries in three: dated (by day, then by the day their end sorts by, then by label), not known, not dateable */
-export function arrangeByDate(entries: IncomingEntry[], definitions: ModelDefinitions): ByDate {
-  const arranged: ByDate = { dated: [], unknown: [], undated: [] };
-  for (const entry of entries) {
-    if (!isDateable(definitions, entry.item.type)) arranged.undated.push(entry);
-    else if (isDated(entry)) arranged.dated.push(entry);
-    else arranged.unknown.push(entry);
-  }
+/** The entries (of dateable kinds) in two: dated (by day, then by the day their end sorts by, then by label), and not known */
+export function arrangeByDate(entries: IncomingEntry[]): ByDate {
+  const arranged: ByDate = { dated: [], unknown: [] };
+  for (const entry of entries) (isDated(entry) ? arranged.dated : arranged.unknown).push(entry);
   const label = (entry: IncomingEntry) => String(entry.item.label ?? "");
   arranged.dated.sort(
     (a, b) => sortDay(a) - sortDay(b) || endDay(a) - endDay(b) || label(a).localeCompare(label(b)),
@@ -88,20 +76,6 @@ export function byYear(dated: IncomingEntry[]): [number, IncomingEntry[]][] {
   return years;
 }
 
-/** The words `dateInWords` says a date in: the language (for the names of the months) and the interface's `date_*` texts */
-export interface DateWords {
-  language: string;
-  t: (key: string, english: string, params?: Record<string, string | number>) => string;
-}
-
-function monthName(month: number, language: string): string {
-  try {
-    return new Intl.DateTimeFormat(language, { month: "long", timeZone: "UTC" }).format(Date.UTC(2000, month - 1, 1));
-  } catch {
-    return String(month);
-  }
-}
-
 const EXACT = /^(-?\d+)(?:-(\d{2}))?(?:-(\d{2}))?$/;
 
 /** The two ends of `a–b`, where `a` may be a range in brackets (`[a–b]–c`, the start of a period) */
@@ -127,8 +101,8 @@ export function dateInWords(text: string, words: DateWords): string {
   const exact = EXACT.exec(text);
   if (exact) {
     const [, year, month, day] = exact;
-    if (day) return t("date_day_month_year", "{day} {month} {year}", { day: Number(day), month: monthName(Number(month), words.language), year: year! });
-    if (month) return t("date_month_year", "{month} {year}", { month: monthName(Number(month), words.language), year: year! });
+    if (day) return t("date_day_month_year", "{day} {month} {year}", { day: Number(day), month: monthNames(words.language)[Number(month) - 1], year: year! });
+    if (month) return t("date_month_year", "{month} {year}", { month: monthNames(words.language)[Number(month) - 1], year: year! });
     return year!;
   }
   const both = ends(text);

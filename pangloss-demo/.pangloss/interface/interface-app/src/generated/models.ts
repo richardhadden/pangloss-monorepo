@@ -6224,6 +6224,7 @@ export const definitions: ModelDefinitions = {
       }
     ]
   },
+  "disabled": [],
   "searchPatterns": {
     "Activity": {
       "kind": "document",

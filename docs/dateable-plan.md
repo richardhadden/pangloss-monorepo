@@ -130,3 +130,13 @@ and the console buttons; `ItemContents` tests for the three parts in order; e2e 
   that cannot have a date, with no heading), the **Timeline** (what has a date) and **Derived** (pangloss-derived). The
   last two have a heading that is a bar across the page, as the console is (`SectionBar` in `primitives`).
 - The slider of years is gone: the timeline is enough to move about the years. It spans all the dated items.
+
+## Fourth round: out of core (2026-11-05)
+
+The timeline left `pangloss-interface` for `pangloss_dates/interface` ([interface-hooks-plan.md](interface-hooks-plan.md)).
+Core has a generic hook, `incomingViews`, and no longer knows of `Dateable`, `dateSortDay` or `dateText`. The dates
+module has the view `ByDate` (was `IncomingTimeline`), `Timeline`, `dating.ts` (was `schema/dating.ts`; `arrangeByDate`
+now only splits dated from not known, since the view is only given what is dateable), and the button `SortByDate` (a
+`consoleAction`; it was `IncomingOrderToggle` in `Console`). `useIncomingOrder` became `useIncomingView`
+(`chosen`/`choose`/`offered(name)`/`offer(name)`), and the choice is kept in `localStorage` as `pangloss.incomingView`
+(`pangloss_dates:ByDate`). A project can leave it out with `InterfaceConfig(disabled=["pangloss_dates:ByDate"])`.

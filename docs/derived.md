@@ -138,7 +138,9 @@ plain ("only from a negated statement"). Nothing is filtered by default.
 | `GET /api/Factoid/{id}` | has `_derived` only of facts with a field that points at the document, not what it is evidence of (that is what it says itself; `list(evidence=...)` gives it) |
 
 The same functions work through the SDK (they ask the API; blocking with `connect(sync=True)`, as the models' own
-are). The interface shows `_derived` under an item's contents, a page at a time, with "why" on demand.
+are). The interface shows `_derived` under an item's contents, a page at a time, with "why" on demand: the "Derived" section is
+the interface module of `pangloss_derived` (`itemSections.Derived`), so a project can leave it out, or put its own in its place, with
+`InterfaceConfig(disabled=["pangloss_derived:Derived"])` ([interface-hooks-plan.md](interface-hooks-plan.md)).
 
 ## Commands
 

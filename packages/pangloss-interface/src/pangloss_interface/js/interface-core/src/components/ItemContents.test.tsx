@@ -2,15 +2,26 @@
 import { render } from "@solidjs/web";
 import { flush } from "solid-js";
 import { afterEach, expect, test } from "vitest";
-import { ComponentsProvider, ConsoleMountProvider, ModelsProvider, useIncomingOrder } from "../context";
-import type { IncomingOrderState } from "../context";
+import {
+  ComponentsProvider,
+  ConsoleMountProvider,
+  ModelsProvider,
+  ModulesProvider,
+  useIncomingView,
+} from "../context";
+import type { IncomingViewState } from "../context";
+import { defineModule } from "../schema";
 import type {
   ComponentMap,
   FieldDefinition,
+  IncomingViewProps,
+  ItemSectionProps,
   ModelDefinition,
   ModelDefinitions,
+  ModuleManifest,
 } from "../types";
 import { ItemContents } from "./ItemContents";
+import { ItemSections } from "./ItemSections";
 import { ReferenceChip } from "./ReferenceChip";
 
 const field = (
@@ -151,14 +162,38 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
-// (the order of what refers to the item, as the console has it: its buttons are tested with the console)
-let incoming: IncomingOrderState;
+// (the view of what refers to the item, as the console has it: a module's button chooses it)
+let incoming: IncomingViewState;
 function Probe() {
-  incoming = useIncomingOrder();
+  incoming = useIncomingView();
   return null;
 }
 
-function show(item: Record<string, unknown>) {
+// (a module with a view that takes the offices, and a section after the item's contents)
+const offices = defineModule({
+  name: "offices",
+  components: {},
+  incomingViews: {
+    Held: {
+      takes: (item) => item.type === "Office",
+      component: async () => ({
+        default: (props: IncomingViewProps) => (
+          <section data-testid="held">
+            {props.type}/{props.id}: {props.entries.map((entry) => entry.item.label).join(", ")}
+          </section>
+        ),
+      }),
+    },
+  },
+  itemSections: {
+    Extra: async () => ({
+      default: (props: ItemSectionProps) => <aside data-testid="extra">{`${props.model.name} ${props.id}`}</aside>,
+    }),
+  },
+});
+const settle = () => new Promise((resolve) => setTimeout(resolve));
+
+function show(item: Record<string, unknown>, modules: ModuleManifest[] = [], disabled?: string[]) {
   const container = document.createElement("div");
   document.body.append(container);
   dispose = render(
@@ -166,8 +201,11 @@ function show(item: Record<string, unknown>) {
       <ConsoleMountProvider>
         <Probe />
         <ComponentsProvider components={{ ReferenceChip } as ComponentMap}>
-          <ModelsProvider definitions={definitions}>
-            <ItemContents item={item} />
+          <ModelsProvider definitions={{ ...definitions, disabled }}>
+            <ModulesProvider modules={modules}>
+              <ItemContents item={item} />
+              <ItemSections item={item} />
+            </ModulesProvider>
           </ModelsProvider>
         </ComponentsProvider>
       </ConsoleMountProvider>
@@ -532,66 +570,54 @@ const witness = {
   aboutReverse: [{ id: "n1", type: "Note", label: "A note" }],
 };
 
-test("what refers to an item by field, until the console sorts it by date (offered only if some of it is dateable)", () => {
+test("a module's view of what refers to an item: offered while it takes some, then it shows that, the rest by field", async () => {
   localStorage.clear();
-  let host = show(witness);
+  let host = show(witness, [offices]);
   flush();
-  expect(incoming.offered()).toBe(true);
-  expect(incoming.order()).toBe("field");
-  expect(host.querySelector("[data-testid=incoming-by-date]")).toBeNull();
-  expect(host.textContent).toContain("born reverse");
+  expect(incoming.offered("offices:Held")).toBe(true);
+  expect(incoming.chosen()).toBeUndefined();
+  expect(host.querySelector("[data-testid=held]")).toBeNull();
+  expect(host.textContent).toContain("held reverse");
 
-  incoming.setOrder("date");
+  incoming.choose("offices:Held");
   flush();
-  // (the item's own values and what cannot have a date, with no heading; then the timeline, a section of its own)
-  expect([...host.querySelectorAll("h2")].map((h) => h.textContent)).toEqual(["Timeline"]);
+  await settle();
+  flush();
+  // (what it takes, given to it after the fields; what it does not take, by field)
+  expect(host.querySelector("[data-testid=held]")!.textContent).toBe("Witness/w1: Bishop, Abbot, Notary");
   const facts = host.querySelector("dl")!;
+  expect(facts.textContent).not.toContain("held reverse");
   expect(facts.querySelector('a[href="/Note/n1"]')).toBeTruthy();
-  expect(facts.querySelector("[data-testid=dated-item]")).toBeNull();
-  expect(host.querySelector("section")!.querySelector("[data-testid=dated-item]")).toBeTruthy();
-  const rows = [...host.querySelectorAll("[data-testid=dated-item]")];
-  // (in order of date, under their years, each with its date in words and the field it is in, on the left)
-  expect(rows.map((row) => row.querySelector("a")?.textContent)).toEqual([
-    "OfficeNotary",
-    "BirthBorn in Rome",
-    "OfficeBishop",
-    "OfficeAbbot",
-  ]);
-  expect([...host.querySelectorAll("[data-year]")].map((h) => h.textContent)).toEqual(["1490", "1500", "1510"]);
-  expect(rows[2]!.textContent).toContain("1510 to 1520");
-  expect(rows[0]!.textContent).toContain("held reverse");
-  // (last, those whose date is not known)
-  expect(host.querySelector("[data-testid=incoming-date-unknown]")!.textContent).toContain("Abbot");
+  expect(facts.querySelector('a[href="/Birth/b1"]')).toBeTruthy();
   // (the choice is remembered from one page to the next)
-  expect(localStorage.getItem("pangloss.incomingOrder")).toBe("date");
+  expect(localStorage.getItem("pangloss.incomingView")).toBe("offices:Held");
   dispose?.();
   document.body.innerHTML = "";
 
-  host = show({ ...witness, heldReverse: [], bornReverse: [] });
+  // (nothing it takes: not offered, and by field though it is chosen)
+  host = show({ ...witness, heldReverse: [] }, [offices]);
   flush();
-  expect(incoming.offered()).toBe(false);
+  expect(incoming.offered("offices:Held")).toBe(false);
+  expect(host.querySelector("[data-testid=held]")).toBeNull();
+  expect(host.textContent).toContain("born reverse");
   localStorage.clear();
 });
 
-test("the timeline goes to the heading of a year (the next that has something), by the keys too", () => {
-  localStorage.setItem("pangloss.incomingOrder", "date");
-  const host = show(witness);
+test("a module's section follows the item's contents; what the project disables is not there", async () => {
+  let host = show(witness, [offices]);
+  await settle();
   flush();
-  const scrolled: string[] = [];
-  for (const heading of host.querySelectorAll<HTMLElement>("[data-year]"))
-    heading.scrollIntoView = () => scrolled.push(heading.textContent ?? "");
-  const timeline = host.querySelector<HTMLElement>("[role=slider][aria-orientation=vertical]")!;
-  expect(timeline.getAttribute("aria-valuenow")).toBe("1490");
-  timeline.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+  expect(host.querySelector("[data-testid=extra]")!.textContent).toBe("Witness w1");
+  dispose?.();
+  document.body.innerHTML = "";
+
+  localStorage.setItem("pangloss.incomingView", "offices:Held");
+  host = show(witness, [offices], ["offices:Extra", "offices:Held"]);
+  await settle();
   flush();
-  expect(timeline.getAttribute("aria-valuenow")).toBe("1500");
-  timeline.dispatchEvent(new KeyboardEvent("keydown", { key: "End", bubbles: true }));
-  flush();
-  expect(timeline.getAttribute("aria-valuenow")).toBe("1510");
-  expect(scrolled).toEqual(["1500", "1510"]);
-  // (a bar for each year, the longest for the year with most)
-  const bars = [...host.querySelectorAll<HTMLElement>("[data-bar]")];
-  expect(bars.map((bar) => bar.style.width)).toEqual(["100%", "100%", "100%"]);
+  expect(host.querySelector("[data-testid=extra]")).toBeNull();
+  expect(incoming.offered("offices:Held")).toBe(false);
+  expect(host.querySelector("[data-testid=held]")).toBeNull();
   localStorage.clear();
 });
 

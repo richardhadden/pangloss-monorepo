@@ -3,7 +3,7 @@
  * provides for a model's page or card. (docs/interface-modules-implementation.md)
  */
 import type { Component } from "solid-js";
-import type { EmbeddedField, ModelDefinition } from "./models";
+import type { EmbeddedField, ModelDefinition, ModelDefinitions } from "./models";
 import type { Search } from "./components";
 
 /** The four things a model can name a component for (`list_page` ... in Python) */
@@ -93,6 +93,47 @@ export interface ConsoleActionProps {
   page: "item" | "edit";
 }
 
+/**
+ * What a component a module adds after the contents of an item's page (`itemSections`) is given. It decides itself
+ * whether to show anything (a section, usually under a `SectionBar`).
+ */
+export interface ItemSectionProps {
+  /** The item's own type */
+  type: string;
+  id: string;
+  /** The item as the API sends it */
+  item: Record<string, unknown>;
+  model: ModelDefinition;
+}
+
+/** One item that refers to the item of the page, with the name of the field (as the page says it) it is in */
+export interface IncomingEntry {
+  key: string;
+  name: string;
+  item: Record<string, unknown>;
+}
+
+/**
+ * Another way of showing what refers to an item than by the field it is in (`incomingViews`): it takes some of it,
+ * and shows that in a section of its own after the item's fields; the rest stays by field. A button the module adds to
+ * the console (`consoleActions`) chooses it, with `useIncomingView()`, while the page offers it.
+ */
+export interface IncomingView {
+  /** Whether it shows this item that refers to the item of the page (not loaded lazily: it is small) */
+  takes: (item: Record<string, unknown>, definitions: ModelDefinitions) => boolean;
+  /** Shows what it takes (given `IncomingViewProps`; loaded when it is first chosen) */
+  component: ComponentLoader;
+}
+
+export interface IncomingViewProps {
+  /** The item's own type */
+  type: string;
+  id: string;
+  model: ModelDefinition;
+  /** What it takes, in the order of the model's incoming fields */
+  entries: IncomingEntry[];
+}
+
 /** What a loader gives: a module with a component as its default export */
 export type ComponentLoader = () => Promise<{ default: Component<any> }>;
 
@@ -121,4 +162,8 @@ export interface ModuleManifest {
    * own buttons (each loaded when the console is first shown)
    */
   consoleActions?: Record<string, ComponentLoader>;
+  /** Components after the contents of every item's page, in the order of the modules (each loaded when first shown) */
+  itemSections?: Record<string, ComponentLoader>;
+  /** Other ways of showing what refers to an item (`IncomingView`): by its name `app:key` */
+  incomingViews?: Record<string, IncomingView>;
 }

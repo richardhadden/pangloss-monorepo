@@ -557,6 +557,16 @@ Done afterwards (2026-10-29):
   `model`, `page`: `"item"` or `"edit"`); each decides itself whether to show anything. They are drawn by `Console` (new props `item`
   and `page`) before the page's own buttons, each lazily, in a `Loading` and an `Errored` of its own (a failure is logged in the browser's
   console and shows nothing). `useModules().consoleActions()`; `Manifest.console_actions` in Python.
+- **`itemSections` and `incomingViews` (2026-11-05, [interface-hooks-plan.md](interface-hooks-plan.md)).** `itemSections: { Name:
+  () => import(...) }` are drawn after the contents of every item page by `ItemSections` (exported, so that a model's own `itemPage`
+  can place them), given `ItemSectionProps` (`type`, `id`, `item`, `model`); pangloss-derived's "Derived" section is one.
+  `incomingViews: { Name: { takes, component } }` are other ways of showing what refers to an item: on the item's own page,
+  `ItemContents` offers each view that `takes` some of it (`useIncomingView()`, in the console's context); a button the module
+  adds with `consoleActions` chooses it; then what it takes goes to its component, after the fields, and the rest stays by field.
+  pangloss-dates' timeline is one (`ByDate`, with the button `SortByDate`). `Manifest.item_sections`, `Manifest.incoming_views`.
+- **`InterfaceConfig(disabled=[...])` (2026-11-05).** A project leaves out what a module adds to every item page, by `app:key` (a
+  key of `consoleActions`, `itemSections` or `incomingViews`). The names of all apps are exported as `disabled`, and
+  `ModulesProvider` drops those; `check` reports one that no module has. To replace one, disable it and add your own.
 - **A module may have `"use server"` functions** (2026-11-03): the Solid plugin compiles only `src/**` of the Vite root by default, so
   `vite.config.ts` adds the modules' folders (`../modules/*/src`, and `PANGLOSS_MODULE_ROOTS` for `--link`) to `serverFunctions.filter`.
   The review module's live feed is one.

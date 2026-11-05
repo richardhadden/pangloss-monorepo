@@ -13,7 +13,7 @@ export * from "./LoginForm";
 export * from "./RequireLogin";
 export * from "./ReferenceChip";
 export * from "./ItemContents";
-export * from "./DerivedSection";
+export * from "./ItemSections";
 export * from "./Customised";
 export * from "./form/ItemForm";
 // (for the editors of interface modules: the rows of a model's fields, and the look of the inputs)

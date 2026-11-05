@@ -1,7 +1,6 @@
 import { expect, test } from "vitest";
-import type { ModelDefinition, ModelDefinitions } from "../types";
+import type { IncomingEntry, ModelDefinition, ModelDefinitions } from "@pangloss/interface-core";
 import { arrangeByDate, byYear, dateInWords, isDateable, yearOfDay, yearSpan } from "./dating";
-import type { IncomingEntry } from "./dating";
 
 const model = (name: string, traits?: string[]) =>
   ({ name, kind: "Document", fields: [], incoming: [], traits }) as unknown as ModelDefinition;
@@ -36,21 +35,18 @@ test("the year of a day number", () => {
   expect(yearOfDay(1705063)).toBe(-44);
 });
 
-test("what refers to an item is dated in order, not known, or not dateable", () => {
+test("what refers to an item is dated in order, or not known", () => {
   const arranged = arrangeByDate(
     [
-      entry("Note", "a note"),
       entry("Birth", "late", { dateSortDay: 2269000, dateText: "1500" }),
       entry("Birth", "unknown", { dateSortDay: 1721426, dateText: "?" }),
       entry("Office", "early, long", { dateSortDay: 2268000, dateEndSortDay: 2275000, dateText: "1497–1517" }),
       entry("Office", "early, short", { dateSortDay: 2268000, dateEndSortDay: 2268100, dateText: "1497" }),
       entry("Birth", "never copied"),
     ],
-    definitions,
   );
   expect(arranged.dated.map((e) => e.item.label)).toEqual(["early, short", "early, long", "late"]);
   expect(arranged.unknown.map((e) => e.item.label)).toEqual(["unknown", "never copied"]);
-  expect(arranged.undated.map((e) => e.item.label)).toEqual(["a note"]);
 });
 
 test("the span of the timeline: a period to the year of its end", () => {

@@ -1,35 +1,29 @@
-import { createEffect, createMemo, createSignal, For, Match, onCleanup, Show, Switch } from "solid-js";
+import { createEffect, createMemo, createSignal, Errored, For, Loading, Match, Show, Switch } from "solid-js";
 import type { ParentProps } from "solid-js";
 import {
   useComponent,
-  useIncomingOrder,
+  useIncomingView,
   useModels,
   useModules,
   useTranslations,
 } from "../context";
-import { kindRule, kindTint, SectionBar, spaceTint } from "../primitives";
+import { kindRule, kindTint, spaceTint } from "../primitives";
 import { contextTrail } from "../api";
 import type { ContextLabel } from "../api";
 import {
-  arrangeByDate,
-  byYear,
   collapsedView,
-  dateInWords,
   edgeModelFor,
   getModel,
   headlessIn,
-  isDateable,
-  yearSpan,
 } from "../schema";
-import type { IncomingEntry } from "../schema";
 import type {
   FieldDefinition,
+  IncomingEntry,
   ItemContentsProps,
   ModelDefinition,
 } from "../types";
 import { Customised } from "./Customised";
 import { SpaceBands } from "./SpaceBands";
-import { Timeline } from "./Timeline";
 import {
   fieldGridClass,
   fieldRowClass,
@@ -146,8 +140,9 @@ function Head(props: {
 /**
  * The rows of an object: a key and its contents for each field of its model, in the order of
  * the model, the keys in a column on the left and the contents on the right. Fields with
- * nothing in them are left out, and those only in the database (worked out, not said). What refers to the object from elsewhere (`incoming`) follows,
- * as chips: by the field it is in, or (on the item's page, when some of it is `Dateable`) by date.
+ * nothing in them are left out, and those only in the database (worked out, not said). What refers to the object from
+ * elsewhere (`incoming`) follows, as chips, by the field it is in; on the item's own page, an interface module's view
+ * of it (`incomingViews`, chosen in the console) can take some of it, to show after the rows in its own way.
  */
 function Fields(props: {
   value: Data;
@@ -155,9 +150,13 @@ function Fields(props: {
   depth: number;
   /** (a field that is shown some other way) */
   exclude?: string;
+  /** (the item's own page: its type and id, for a module's view of what refers to it) */
+  page?: { type: string; id: string };
 }) {
   const { fieldName, incomingName } = useTranslations();
   const definitions = useModels();
+  const views = useModules().incomingViews();
+  const incoming = useIncomingView();
   const entries = createMemo<IncomingEntry[]>(() =>
     (props.model?.incoming ?? []).flatMap((incoming) => {
       const value = props.value[incoming.key];
@@ -170,18 +169,28 @@ function Fields(props: {
         }));
     }),
   );
-  // (only on the item's own page, and only if something that refers to it can have a date)
-  const canDate = () =>
-    props.depth === 0 && entries().some((entry) => isDateable(definitions, entry.item.type));
-  const incoming = useIncomingOrder();
-  // (the console offers to sort by date for as long as there is something to sort)
-  createEffect(canDate, (can) => (can ? incoming.offer() : undefined));
-  const byDate = () => canDate() && incoming.order() === "date";
-  const arranged = createMemo(() => arrangeByDate(entries(), definitions));
-  // (what cannot have a date, by the relation it is in)
-  const undatedByField = createMemo(() => {
+  // (the views that have something to show: only on the item's own page)
+  const offered = createMemo(() =>
+    props.page && views.length > 0
+      ? views.filter((view) => entries().some((entry) => view.takes(entry.item, definitions)))
+      : [],
+  );
+  // (the console offers each for as long as it has something)
+  createEffect(offered, (now) => {
+    const withdraw = now.map((view) => incoming.offer(view.name));
+    return () => withdraw.forEach((done) => done());
+  });
+  const view = () => offered().find((view) => view.name === incoming.chosen());
+  const taken = createMemo(() => {
+    const chosen = view();
+    return chosen ? entries().filter((entry) => chosen.takes(entry.item, definitions)) : [];
+  });
+  // (what the view does not take, by the relation it is in)
+  const restByField = createMemo(() => {
     const groups = new Map<string, IncomingEntry[]>();
-    for (const entry of arranged().undated) groups.set(entry.name, [...(groups.get(entry.name) ?? []), entry]);
+    for (const entry of entries()) {
+      if (!taken().includes(entry)) groups.set(entry.name, [...(groups.get(entry.name) ?? []), entry]);
+    }
     return [...groups.entries()];
   });
   return (
@@ -207,7 +216,7 @@ function Fields(props: {
           )}
         </For>
         <Show
-          when={byDate()}
+          when={view()}
           fallback={
             <For each={props.model?.incoming ?? []}>
               {(incoming) => (
@@ -224,7 +233,7 @@ function Fields(props: {
             </For>
           }
         >
-          <For each={undatedByField()}>
+          <For each={restByField()}>
             {([name, group]) => (
               <Row name={name} incoming>
                 <Value value={group.map((entry) => entry.item)} depth={props.depth} asChip />
@@ -233,136 +242,25 @@ function Fields(props: {
           </For>
         </Show>
       </dl>
-      <Show when={byDate()}>
-        <IncomingTimeline dated={arranged().dated} unknown={arranged().unknown} depth={props.depth} />
+      <Show when={view() && props.page && props.model ? view() : undefined}>
+        {(chosen) => {
+          const View = chosen().component;
+          return (
+            <Errored
+              fallback={(error) => {
+                // (said in the browser's console, so that a module's author sees why there is nothing)
+                console.error("A view of an interface module failed:", error());
+                return null;
+              }}
+            >
+              <Loading fallback={null}>
+                <View type={props.page!.type} id={props.page!.id} model={props.model!} entries={taken()} />
+              </Loading>
+            </Errored>
+          );
+        }}
       </Show>
     </>
-  );
-}
-
-// (the band near the top of the page in which a year's heading is the one the timeline is at: below the bars)
-const READING_BAND = "-112px 0px -60% 0px";
-
-/**
- * What refers to the item and has a date, a section of its own after the item's facts (and what cannot have a date): in
- * order of date under the year it is in, each with its date in words and its field on the left and its chip on the
- * right, and last those whose date is not known. A timeline beside them, with a bar for how many each year has, scrolls
- * to a year (and follows the page as it is scrolled).
- */
-function IncomingTimeline(props: { dated: IncomingEntry[]; unknown: IncomingEntry[]; depth: number }) {
-  const { t, language } = useTranslations();
-  const span = createMemo(() => yearSpan(props.dated));
-  const years = createMemo(() => byYear(props.dated));
-  const counts = createMemo(() => years().map(([year, group]): [number, number] => [year, group.length]));
-
-  // The timeline: the year it is at, and the headings of the years it scrolls to
-  const [at, setAt] = createSignal<number>();
-  const position = () => at() ?? years()[0]?.[0] ?? 0;
-  const headings = new Map<number, HTMLElement>();
-  let dragging = false;
-  let observer: IntersectionObserver | undefined;
-  const heading = (year: number) => (element: HTMLElement) => {
-    headings.set(year, element);
-    if (typeof IntersectionObserver === "undefined") return;
-    // (the page scrolled: the timeline is at the year whose heading is near the top, unless it is being dragged)
-    observer ??= new IntersectionObserver(
-      (seen) => {
-        if (dragging) return;
-        const year = seen.find((entry) => entry.isIntersecting)?.target.getAttribute("data-year");
-        if (year) setAt(Number(year));
-      },
-      { rootMargin: READING_BAND },
-    );
-    observer.observe(element);
-  };
-  onCleanup(() => observer?.disconnect());
-  // (the first year from `year` on that has something; the last, if none has)
-  const yearWithItems = (year: number) => years().find(([some]) => some >= year)?.[0] ?? years().at(-1)?.[0];
-  const goTo = (year: number) => {
-    setAt(year);
-    const target = yearWithItems(year);
-    if (target !== undefined) headings.get(target)?.scrollIntoView?.({ block: "start" });
-  };
-  // (a drag that ends on a year with nothing in it: the thumb goes to the year the page went to)
-  const onDrag = (now: boolean) => {
-    dragging = now;
-    if (!now) setAt(yearWithItems(position()));
-  };
-
-  return (
-    <section>
-      <SectionBar>{t("incoming_timeline", "Timeline")}</SectionBar>
-      <div class="flex items-start gap-8">
-        <div class="grid min-w-0 flex-1 grid-cols-[10rem_minmax(0,1fr)] gap-x-6" data-testid="incoming-by-date">
-          <For each={years()}>
-            {([year, group]) => (
-              <>
-                <div
-                  ref={heading(year)}
-                  data-year={year}
-                  class="col-span-2 scroll-mt-28 pt-5 pb-1 text-xs font-semibold text-slate-400 tabular-nums first:pt-0"
-                >
-                  {year}
-                </div>
-                <For each={group}>
-                  {(entry) => (
-                    <DatedRow
-                      entry={entry}
-                      date={dateInWords(String(entry.item.dateText ?? ""), { language: language(), t })}
-                      depth={props.depth}
-                    />
-                  )}
-                </For>
-              </>
-            )}
-          </For>
-          <Show when={props.unknown.length > 0}>
-            <div class="col-span-2 grid grid-cols-subgrid" data-testid="incoming-date-unknown">
-              <div class="col-span-2 pt-5 pb-1 text-xs font-semibold text-slate-400">
-                {t("incoming_date_unknown", "Date unknown")}
-              </div>
-              <For each={props.unknown}>{(entry) => <DatedRow entry={entry} depth={props.depth} />}</For>
-            </div>
-          </Show>
-        </div>
-        <Show when={span() && span()![0] < span()![1]}>
-          {/* (as tall as the list, but no taller than the window, in which it stays while the list scrolls) */}
-          <div class="shrink-0 self-stretch">
-            <div class="sticky top-28 h-full max-h-[calc(100vh-10rem)] min-h-40 py-2">
-              <Timeline
-                from={span()![0]}
-                to={span()![1]}
-                value={position()}
-                onChange={goTo}
-                onDrag={onDrag}
-                counts={counts()}
-                label={t("incoming_go_to_year", "Go to year")}
-              />
-            </div>
-          </div>
-        </Show>
-      </div>
-    </section>
-  );
-}
-
-/** What refers to the item, dated: the field it is in and, under it, its date (in words) on the left, its chip on the right */
-function DatedRow(props: { entry: IncomingEntry; date?: string; depth: number }) {
-  return (
-    <div
-      class={["col-span-2 grid grid-cols-subgrid items-center border-t py-2.5", fieldRuleClass]}
-      data-testid="dated-item"
-    >
-      <div class="flex flex-col gap-0.5">
-        <span class="text-xs font-semibold text-slate-500 uppercase">{props.entry.name}</span>
-        <Show when={props.date}>
-          <span class="text-[0.7rem] text-slate-500">{props.date}</span>
-        </Show>
-      </div>
-      <div class="flex min-w-0 flex-wrap items-center gap-2">
-        <Value value={props.entry.item} depth={props.depth} asChip />
-      </div>
-    </div>
   );
 }
 
@@ -685,8 +583,8 @@ function ObjectValue(props: {
  * A value of a field as the item's page shows it (a chip, a block, a band, text): for an interface module's card
  * that shows what a model holds in its own way. `field`: the field it is the value of (its edge model, its type)
  */
-export function ItemValue(props: { value: unknown; field?: FieldDefinition; depth?: number }) {
-  return <Value value={props.value} field={props.field} depth={props.depth ?? 1} />;
+export function ItemValue(props: { value: unknown; field?: FieldDefinition; depth?: number; asChip?: boolean }) {
+  return <Value value={props.value} field={props.field} depth={props.depth ?? 1} asChip={props.asChip} />;
 }
 
 export function ItemContents(props: ItemContentsProps) {
@@ -696,5 +594,9 @@ export function ItemContents(props: ItemContentsProps) {
       definitions,
       typeof props.item.type === "string" ? props.item.type : "",
     );
-  return <Fields value={props.item} model={model()} depth={0} />;
+  const page = () =>
+    typeof props.item.type === "string" && typeof props.item.id === "string"
+      ? { type: props.item.type, id: props.item.id }
+      : undefined;
+  return <Fields value={props.item} model={model()} depth={0} page={page()} />;
 }

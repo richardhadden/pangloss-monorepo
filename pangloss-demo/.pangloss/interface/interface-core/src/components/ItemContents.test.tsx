@@ -2,14 +2,26 @@
 import { render } from "@solidjs/web";
 import { flush } from "solid-js";
 import { afterEach, expect, test } from "vitest";
-import { ComponentsProvider, ModelsProvider } from "../context";
+import {
+  ComponentsProvider,
+  ConsoleMountProvider,
+  ModelsProvider,
+  ModulesProvider,
+  useIncomingView,
+} from "../context";
+import type { IncomingViewState } from "../context";
+import { defineModule } from "../schema";
 import type {
   ComponentMap,
   FieldDefinition,
+  IncomingViewProps,
+  ItemSectionProps,
   ModelDefinition,
   ModelDefinitions,
+  ModuleManifest,
 } from "../types";
 import { ItemContents } from "./ItemContents";
+import { ItemSections } from "./ItemSections";
 import { ReferenceChip } from "./ReferenceChip";
 
 const field = (
@@ -150,16 +162,53 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
-function show(item: Record<string, unknown>) {
+// (the view of what refers to the item, as the console has it: a module's button chooses it)
+let incoming: IncomingViewState;
+function Probe() {
+  incoming = useIncomingView();
+  return null;
+}
+
+// (a module with a view that takes the offices, and a section after the item's contents)
+const offices = defineModule({
+  name: "offices",
+  components: {},
+  incomingViews: {
+    Held: {
+      takes: (item) => item.type === "Office",
+      component: async () => ({
+        default: (props: IncomingViewProps) => (
+          <section data-testid="held">
+            {props.type}/{props.id}: {props.entries.map((entry) => entry.item.label).join(", ")}
+          </section>
+        ),
+      }),
+    },
+  },
+  itemSections: {
+    Extra: async () => ({
+      default: (props: ItemSectionProps) => <aside data-testid="extra">{`${props.model.name} ${props.id}`}</aside>,
+    }),
+  },
+});
+const settle = () => new Promise((resolve) => setTimeout(resolve));
+
+function show(item: Record<string, unknown>, modules: ModuleManifest[] = [], disabled?: string[]) {
   const container = document.createElement("div");
   document.body.append(container);
   dispose = render(
     () => (
-      <ComponentsProvider components={{ ReferenceChip } as ComponentMap}>
-        <ModelsProvider definitions={definitions}>
-          <ItemContents item={item} />
-        </ModelsProvider>
-      </ComponentsProvider>
+      <ConsoleMountProvider>
+        <Probe />
+        <ComponentsProvider components={{ ReferenceChip } as ComponentMap}>
+          <ModelsProvider definitions={{ ...definitions, disabled }}>
+            <ModulesProvider modules={modules}>
+              <ItemContents item={item} />
+              <ItemSections item={item} />
+            </ModulesProvider>
+          </ModelsProvider>
+        </ComponentsProvider>
+      </ConsoleMountProvider>
     ),
     container,
   );
@@ -521,60 +570,54 @@ const witness = {
   aboutReverse: [{ id: "n1", type: "Note", label: "A note" }],
 };
 
-test("what refers to an item by field, until it is asked for by date (only if something of it is dateable)", () => {
+test("a module's view of what refers to an item: offered while it takes some, then it shows that, the rest by field", async () => {
   localStorage.clear();
-  let host = show(witness);
-  const byDate = [...host.querySelectorAll("button")].find((b) => b.textContent === "By date")!;
-  expect(byDate.getAttribute("aria-pressed")).toBe("false");
-  expect(host.querySelector("[data-testid=incoming-by-date]")).toBeNull();
-  expect(host.textContent).toContain("born reverse");
-
-  byDate.click();
+  let host = show(witness, [offices]);
   flush();
-  const rows = [...host.querySelectorAll("[data-testid=dated-item]")];
-  // (in order of date, each with its date and the field it is in, on the left)
-  expect(rows.map((row) => row.querySelector("a")?.textContent)).toEqual([
-    "OfficeNotary",
-    "BirthBorn in Rome",
-    "OfficeBishop",
-  ]);
-  expect(rows[0].textContent).toContain("1490");
-  expect(rows[0].textContent).toContain("held reverse");
-  expect(host.querySelector("[data-testid=incoming-date-unknown]")!.textContent).toContain("Abbot");
-  expect(host.textContent).toContain("Not dated");
-  expect(host.textContent).toContain("A note");
+  expect(incoming.offered("offices:Held")).toBe(true);
+  expect(incoming.chosen()).toBeUndefined();
+  expect(host.querySelector("[data-testid=held]")).toBeNull();
+  expect(host.textContent).toContain("held reverse");
+
+  incoming.choose("offices:Held");
+  flush();
+  await settle();
+  flush();
+  // (what it takes, given to it after the fields; what it does not take, by field)
+  expect(host.querySelector("[data-testid=held]")!.textContent).toBe("Witness/w1: Bishop, Abbot, Notary");
+  const facts = host.querySelector("dl")!;
+  expect(facts.textContent).not.toContain("held reverse");
+  expect(facts.querySelector('a[href="/Note/n1"]')).toBeTruthy();
+  expect(facts.querySelector('a[href="/Birth/b1"]')).toBeTruthy();
   // (the choice is remembered from one page to the next)
-  expect(localStorage.getItem("pangloss.incomingOrder")).toBe("date");
+  expect(localStorage.getItem("pangloss.incomingView")).toBe("offices:Held");
   dispose?.();
   document.body.innerHTML = "";
 
-  host = show({ ...witness, heldReverse: [], bornReverse: [] });
-  expect(host.textContent).not.toContain("By date");
+  // (nothing it takes: not offered, and by field though it is chosen)
+  host = show({ ...witness, heldReverse: [] }, [offices]);
+  flush();
+  expect(incoming.offered("offices:Held")).toBe(false);
+  expect(host.querySelector("[data-testid=held]")).toBeNull();
+  expect(host.textContent).toContain("born reverse");
   localStorage.clear();
 });
 
-test("the year slider narrows the dated rows to a span of years", () => {
-  localStorage.setItem("pangloss.incomingOrder", "date");
-  const host = show(witness);
+test("a module's section follows the item's contents; what the project disables is not there", async () => {
+  let host = show(witness, [offices]);
+  await settle();
   flush();
-  const shown = () => host.querySelectorAll("[data-testid=dated-item]").length;
-  expect(shown()).toBe(3);
-  const from = host.querySelector<HTMLInputElement>('input[aria-label="From"]')!;
-  expect([from.min, from.max]).toEqual(["1490", "1520"]);
-  from.value = "1505";
-  from.dispatchEvent(new InputEvent("input", { bubbles: true }));
+  expect(host.querySelector("[data-testid=extra]")!.textContent).toBe("Witness w1");
+  dispose?.();
+  document.body.innerHTML = "";
+
+  localStorage.setItem("pangloss.incomingView", "offices:Held");
+  host = show(witness, [offices], ["offices:Extra", "offices:Held"]);
+  await settle();
   flush();
-  // (the office from 1510 to 1520 is in them; the birth in 1500 and the notary in 1490 are not)
-  expect(shown()).toBe(1);
-  expect(host.querySelector("[data-testid=incoming-shown]")!.textContent).toBe("1 of 3");
-  const to = host.querySelector<HTMLInputElement>('input[aria-label="To"]')!;
-  to.value = "1500";
-  to.dispatchEvent(new InputEvent("input", { bubbles: true }));
-  flush();
-  // (the start follows the end back)
-  expect(from.value).toBe("1500");
-  expect(shown()).toBe(1);
-  expect(host.querySelector("[data-testid=dated-item]")!.textContent).toContain("Born in Rome");
+  expect(host.querySelector("[data-testid=extra]")).toBeNull();
+  expect(incoming.offered("offices:Held")).toBe(false);
+  expect(host.querySelector("[data-testid=held]")).toBeNull();
   localStorage.clear();
 });
 

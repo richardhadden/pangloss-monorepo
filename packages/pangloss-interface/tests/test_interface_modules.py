@@ -351,3 +351,35 @@ def test_dev_link_uses_the_modules_where_they_are(apps, tmp_path):
     assert f"@source {json.dumps(str(root))};" in linked.sources.read_text()
     # nothing is copied into the working directory
     assert not (working_directory(tmp_path) / "modules").exists()
+
+
+def test_a_manifest_keeps_the_names_of_its_item_sections_and_incoming_views():
+    read = Manifest.from_data(
+        {"name": "m", "itemSections": ["Derived"], "incomingViews": ["ByDate"]}
+    )
+    assert read.item_sections == ("Derived",)
+    assert read.incoming_views == ("ByDate",)
+    assert read.contributions == ("Derived", "ByDate")
+    assert Manifest.from_data({"name": "m"}).contributions == ()
+
+
+def test_what_a_project_disables_must_be_something_a_module_adds(module):
+    given = manifests(
+        console_actions=("SortByDate",),
+        item_sections=("Derived",),
+        incoming_views=("ByDate",),
+    )
+    fine = {
+        **exported(),
+        "disabled": ["withmod:SortByDate", "withmod:Derived", "withmod:ByDate"],
+    }
+    assert problems([module], given, fine) == []
+    wrong_key = problems([module], given, {**exported(), "disabled": ["withmod:Page"]})
+    assert wrong_key == [
+        (
+            "InterfaceConfig(disabled=...) 'withmod:Page': 'Page' is not in the consoleActions, itemSections or "
+            "incomingViews of withmod (SortByDate, Derived, ByDate)"
+        )
+    ]
+    no_app = problems([module], given, {**exported(), "disabled": ["plain:Derived"]})
+    assert "no installed app 'plain' has an interface module" in no_app[0]

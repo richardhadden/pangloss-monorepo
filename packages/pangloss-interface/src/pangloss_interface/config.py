@@ -1,5 +1,6 @@
-"""`InterfaceConfig`: what an app tells the interface that is not about one model. For now, where its
-links go in the navigation bar (docs/interface-modules-implementation.md, 4.4).
+"""`InterfaceConfig`: what an app tells the interface that is not about one model: where its links go
+in the navigation bar (docs/interface-modules-implementation.md, 4.4), and what the interface modules
+add to every item page that the project does not use (`disabled`, docs/interface-hooks-plan.md).
 
 An app has it in `<app>/interface_config.py`, as `config`:
 
@@ -70,6 +71,9 @@ class InterfaceConfig:
     # The sections that this app introduces, in order (a section that only entries name comes
     # after these, in the order they are met)
     sections: Sequence[str] = field(default_factory=tuple)
+    # What the interface modules add to every item page that is not used, as `app:key` (a key of their
+    # `consoleActions`, `itemSections` or `incomingViews`): `"pangloss_derived:Derived"`
+    disabled: Sequence[str] = field(default_factory=tuple)
 
 
 def label_slot(app: str, label: str) -> str:
@@ -161,3 +165,14 @@ def merge(
 
 def export_nav(installed_apps: Iterable[str], models: Iterable[str]) -> dict[str, Any]:
     return merge(load_configs(installed_apps), models)
+
+
+def merge_disabled(configs: Iterable[tuple[str, InterfaceConfig]]) -> list[str]:
+    """What the apps disable, together, in the order of the apps (each name once)"""
+    return list(
+        dict.fromkeys(name for _, config in configs for name in config.disabled)
+    )
+
+
+def export_disabled(installed_apps: Iterable[str]) -> list[str]:
+    return merge_disabled(load_configs(installed_apps))

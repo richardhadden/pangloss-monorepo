@@ -66,6 +66,8 @@ class Manifest:
     requires: tuple[str, ...] = ()
     collapse_rules: tuple[str, ...] = ()
     console_actions: tuple[str, ...] = ()
+    item_sections: tuple[str, ...] = ()
+    incoming_views: tuple[str, ...] = ()
 
     @classmethod
     def from_data(cls, data: Mapping[str, Any]) -> Manifest:
@@ -76,7 +78,14 @@ class Manifest:
             requires=tuple(data.get("requires", [])),
             collapse_rules=tuple(data.get("collapseRules", [])),
             console_actions=tuple(data.get("consoleActions", [])),
+            item_sections=tuple(data.get("itemSections", [])),
+            incoming_views=tuple(data.get("incomingViews", [])),
         )
+
+    @property
+    def contributions(self) -> tuple[str, ...]:
+        """What it adds to every item page, which a project can disable (`InterfaceConfig(disabled=...)`)"""
+        return self.console_actions + self.item_sections + self.incoming_views
 
 
 def core_version() -> str:
@@ -185,6 +194,7 @@ def problems(
     found += _nav_links(modules, manifests, exported)
     found += _cycles(manifests)
     found += _route_clashes(modules, manifests, exported)
+    found += _disabled(manifests, exported)
     for name, model in exported.get("models", {}).items():
         meta = model.get("interfaceMeta") or {}
         for slot in SLOT_KEYS:
@@ -268,6 +278,27 @@ def _nav_links(
         found.append(
             f"NavLink {link['label']!r}: {link['href']!r} is neither a type nor a route of an interface module"
         )
+    return found
+
+
+def _disabled(
+    manifests: Mapping[str, Manifest], exported: Mapping[str, Any]
+) -> list[str]:
+    """What a project disables is something a module adds: `app:key`, a key of its `consoleActions`, `itemSections` or
+    `incomingViews`"""
+    found = []
+    for name in exported.get("disabled") or []:
+        app, _, key = name.partition(":")
+        manifest = manifests.get(app)
+        if manifest is None:
+            found.append(
+                f"InterfaceConfig(disabled=...) {name!r}: no installed app {app!r} has an interface module"
+            )
+        elif key not in manifest.contributions:
+            found.append(
+                f"InterfaceConfig(disabled=...) {name!r}: {key!r} is not in the consoleActions, itemSections or "
+                f"incomingViews of {app} ({', '.join(manifest.contributions) or 'none'})"
+            )
     return found
 
 

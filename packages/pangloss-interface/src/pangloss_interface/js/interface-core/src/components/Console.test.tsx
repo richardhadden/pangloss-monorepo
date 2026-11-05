@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { render } from "@solidjs/web";
-import { createSignal, onSettled } from "solid-js";
+import { createSignal } from "solid-js";
 import { afterEach, expect, test, vi } from "vitest";
 import type { User } from "../api";
 import {
@@ -8,9 +8,7 @@ import {
   ModelsProvider,
   NavExpandedProvider,
   SessionProvider,
-  useIncomingOrder,
 } from "../context";
-import type { IncomingOrderState } from "../context";
 import type { ModelDefinition, ModelDefinitions } from "../types";
 import { Console } from "./Console";
 import { ConsoleBar } from "./ConsoleBar";
@@ -60,14 +58,6 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
-// (stands for the page's contents, which offer the console to sort what refers to the item by date)
-let incoming: IncomingOrderState;
-function Page(props: { offers: boolean }) {
-  incoming = useIncomingOrder();
-  onSettled(() => (props.offers ? incoming.offer() : undefined));
-  return null;
-}
-
 function show(
   user: () => User | undefined,
   props: {
@@ -87,7 +77,6 @@ function show(
     onNew?: () => void;
     page?: "item" | "edit";
   },
-  offers = false,
 ) {
   const container = document.createElement("div");
   document.body.append(container);
@@ -99,7 +88,6 @@ function show(
             <ConsoleMountProvider>
               <ConsoleBar />
               <Console {...props} />
-              <Page offers={offers} />
             </ConsoleMountProvider>
           </NavExpandedProvider>
         </ModelsProvider>
@@ -272,34 +260,4 @@ test("and none for no one, or for a page that offers no edit", async () => {
   show(() => demo, { type: "Place", label: "Rome" });
   await settle();
   expect(editLink()).toBeNull();
-});
-
-const toggle = () => document.body.querySelector<HTMLButtonElement>('button[aria-label="Sort by date"]');
-
-test("an item's page that offers it has a toggle: sorted by date when pressed, grouped by relation when not", async () => {
-  localStorage.clear();
-  show(() => undefined, { type: "Place", label: "Rome" }, true);
-  await settle();
-  expect(toggle()!.getAttribute("aria-pressed")).toBe("false");
-  toggle()!.click();
-  await settle();
-  expect(incoming.order()).toBe("date");
-  expect(toggle()!.getAttribute("aria-pressed")).toBe("true");
-  expect(localStorage.getItem("pangloss.incomingOrder")).toBe("date");
-  toggle()!.click();
-  await settle();
-  expect(incoming.order()).toBe("field");
-  expect(toggle()!.getAttribute("aria-pressed")).toBe("false");
-  localStorage.clear();
-});
-
-test("no toggle where nothing offers it, nor on an edit page", async () => {
-  show(() => undefined, { type: "Place", label: "Rome" });
-  await settle();
-  expect(toggle()).toBeNull();
-  dispose?.();
-  document.body.innerHTML = "";
-  show(() => undefined, { type: "Place", label: "Rome", page: "edit" }, true);
-  await settle();
-  expect(toggle()).toBeNull();
 });

@@ -9,6 +9,7 @@ from pangloss_interface.config import (
     NavModel,
     load_configs,
     merge,
+    merge_disabled,
 )
 from pangloss_models.exceptions import PanglossMetaError
 
@@ -144,3 +145,21 @@ def test_a_label_is_a_ui_slot_with_the_label_as_its_default_text():
         "nav_ms_codices": "Codices",
         "nav_ms_the_chart": "The chart",
     }
+
+
+def test_what_the_apps_disable_is_merged_in_their_order_once_each():
+    configs = [
+        ("one", InterfaceConfig(disabled=["pangloss_derived:Derived"])),
+        ("two", InterfaceConfig()),
+        (
+            "three",
+            InterfaceConfig(
+                disabled=["pangloss_dates:ByDate", "pangloss_derived:Derived"]
+            ),
+        ),
+    ]
+    assert merge_disabled(configs) == [
+        "pangloss_derived:Derived",
+        "pangloss_dates:ByDate",
+    ]
+    assert merge_disabled([]) == []

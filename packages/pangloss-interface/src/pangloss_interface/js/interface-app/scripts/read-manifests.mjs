@@ -24,6 +24,8 @@ try {
       components: Object.keys(manifest.components ?? {}),
       collapseRules: Object.keys(manifest.collapseRules ?? {}),
       consoleActions: Object.keys(manifest.consoleActions ?? {}),
+      itemSections: Object.keys(manifest.itemSections ?? {}),
+      incomingViews: Object.keys(manifest.incomingViews ?? {}),
       routes: (manifest.routes ?? []).map(({ path, component }) => ({ path, component })),
     });
   }
