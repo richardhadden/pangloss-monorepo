@@ -1,9 +1,10 @@
 # Smoke test: fixes (progress log)
 
 Fixing what `PROBLEMS.md` lists, in order of severity. Started 2026-11-06 on branch `full-smoke-test-fixes`.
-Committed and pushed: `fa58588`, `482a9f8`, `23c9f32` (everything down to "Smaller items"). **Not committed:** what
-follows that (#10, #11, #12, #24, #16/#25, #13, #36, #31, what the user reported of the development server, and what
-was found on the way); see "The last full run" below. This file is kept up to date as the work goes, so that it can be picked up again: the state of each
+Committed and pushed: `fa58588`, `482a9f8`, `23c9f32` (everything down to "Smaller items"), then `04c58e4` (the
+interface: Solid rc.21, `/api` from its own server, the development build's messages) and `0f4594f` (#10, #11, #24,
+#31, #16/#25, #13, #36 and the rest). Where a section below says "Not committed yet", it was written before those
+two. See "The last full run" for what was tested. This file is kept up to date as the work goes, so that it can be picked up again: the state of each
 problem, what was changed, how it was checked, and what is still to do. Numbers (#n) are those of `PROBLEMS.md`.
 
 ## State
@@ -641,7 +642,7 @@ Merchant 2,965; the two and the level below together (`$any_of`) 3,506. What is 
 type or any below it" (the guide calls it `$under`, under "Not yet"). `guide/typology/README.md` now shows the
 search that works. **For the user:** whether to build the operator.
 
-### The last full run (2026-11-06, with everything above in, not committed)
+### The last full run (2026-11-06, with everything above in; committed after it as `04c58e4` and `0f4594f`)
 
 `./run_tests.sh`: ruff, `ty`, the skill check and the packages' stubs pass; packages on Memgraph 2,871 passed and
 1 failed; on Neo4j the conformance suite 537, `pangloss-neo4j` 166, the live tests of typology 26, calendar 19,
