@@ -1,5 +1,6 @@
 import { createEffect, createMemo, createSignal, Errored, For, Loading, Match, Show, Switch } from "solid-js";
 import type { ParentProps } from "solid-js";
+import { Dynamic } from "@solidjs/web";
 import {
   useApi,
   useComponent,
@@ -374,22 +375,26 @@ function Fields(props: {
         />
       </Show>
       <Show when={view() && props.page && props.model ? view() : undefined}>
-        {(chosen) => {
-          const View = chosen().component;
-          return (
-            <Errored
-              fallback={(error) => {
-                // (said in the browser's console, so that a module's author sees why there is nothing)
-                console.error("A view of an interface module failed:", error());
-                return null;
-              }}
-            >
-              <Loading fallback={null}>
-                <View type={props.page!.type} id={props.page!.id} model={props.model!} entries={taken()} />
-              </Loading>
-            </Errored>
-          );
-        }}
+        {(chosen) => (
+          <Errored
+            fallback={(error) => {
+              // (said in the browser's console, so that a module's author sees why there is nothing)
+              console.error("A view of an interface module failed:", error());
+              return null;
+            }}
+          >
+            <Loading fallback={null}>
+              {/* (`Dynamic`: the view chosen is read where it is shown, so another one chosen is shown) */}
+              <Dynamic
+                component={chosen().component}
+                type={props.page!.type}
+                id={props.page!.id}
+                model={props.model!}
+                entries={taken()}
+              />
+            </Loading>
+          </Errored>
+        )}
       </Show>
     </>
   );

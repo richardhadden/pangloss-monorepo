@@ -186,7 +186,7 @@ export default function ReviewQueue() {
               value={type()}
               onChange={(event) => setSearch({ type: event.currentTarget.value || undefined, page: undefined })}
             >
-              <option value="">{t("review_queue_all_types", "All types")}</option>
+              <option value="" textContent={t("review_queue_all_types", "All types")} />
               <For each={types()}>{(name) => <option value={name}>{modelName(name)}</option>}</For>
             </select>
           </label>

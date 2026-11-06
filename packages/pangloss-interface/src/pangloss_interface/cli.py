@@ -336,18 +336,34 @@ def serve(
     runtime: str | None = RuntimeOption,
     host: str = typer.Option("127.0.0.1", "--host", help="The address to listen on"),
     port: int = typer.Option(3000, "--port", help="The port to listen on"),
+    api_url: str = typer.Option(
+        "http://127.0.0.1:8000",
+        "--api-url",
+        envvar="PANGLOSS_API_URL",
+        help="Where the Pangloss API is",
+    ),
+    api_proxy: bool = typer.Option(
+        True,
+        "--api-proxy/--no-api-proxy",
+        help="Pass /api on to the API. Not needed where a reverse proxy in front does",
+    ),
 ) -> None:
-    """Run the built interface (server-side rendered)"""
+    """Run the built interface (server-side rendered; it passes /api on to the API)"""
     directory = working_directory(project_of(ctx).location.root)
     entry = built_server(directory)
     if not entry.is_file():
         fail("The interface is not built: run 'pangloss interface build'")
     found = runtime_or_exit(runtime)
-    # (serve.mjs is the built server with its answers gzipped)
+    # (serve.mjs is the built server with its answers gzipped, and `/api` passed on)
     run_or_exit(
         found.run_file(directory / "interface-app" / "serve.mjs"),
         directory / "interface-app",
-        {"HOST": host, "PORT": str(port)},
+        {
+            "HOST": host,
+            "PORT": str(port),
+            "PANGLOSS_API_URL": api_url,
+            "PANGLOSS_API_PROXY": "on" if api_proxy else "off",
+        },
     )
 
 

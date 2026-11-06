@@ -4,27 +4,25 @@ Run with `uv run pytest e2e` (they are not in `packages/`, so `./run_tests.sh` d
 test Memgraph on :7687 (wiped), Node, and a browser: `uv run playwright install chromium`.
 
 The project is made new for the session, in a temporary directory, with the commands a user would run
-(`pangloss new-project`, `makemigrations`, `migrate`, `interface build`, ...). A small proxy puts the API at `/api`
-beside the interface, as whatever is in front of a deployed interface does.
+(`pangloss new-project`, `makemigrations`, `migrate`, `interface build`, ...). The interface is the built one
+(`pangloss interface serve`), which passes `/api` on to the API itself: nothing is in front of it.
 """
 
-import http.client
 import http.cookiejar
 import json
 import os
+import re
 import signal
 import socket
 import subprocess
 import sys
 import textwrap
-import threading
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
 from collections.abc import Iterator
 from dataclasses import dataclass
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -426,61 +424,6 @@ def stop(process: subprocess.Popen, sent: int) -> None:
         pass
 
 
-class Proxy(BaseHTTPRequestHandler):
-    """`/api` to the API, the rest to the interface"""
-
-    api_port = 0
-    ui_port = 0
-    protocol_version = "HTTP/1.1"
-
-    def handle_any(self) -> None:
-        port = self.api_port if self.path.startswith("/api") else self.ui_port
-        body = self.rfile.read(int(self.headers.get("Content-Length") or 0))
-        connection = http.client.HTTPConnection("127.0.0.1", port, timeout=300)
-        headers = {
-            k: v
-            for k, v in self.headers.items()
-            if k.lower() not in ("host", "connection")
-        }
-        connection.request(self.command, self.path, body or None, headers)
-        response = connection.getresponse()
-        self.send_response(response.status)
-        for name, value in response.getheaders():
-            if name.lower() not in (
-                "transfer-encoding",
-                "connection",
-                "content-length",
-            ):
-                self.send_header(name, value)
-        if (
-            response.getheader("Content-Length") is not None
-            or self.command == "HEAD"
-            or response.status in (204, 304)
-        ):
-            content = response.read()
-            self.send_header("Content-Length", str(len(content)))
-            self.end_headers()
-            self.wfile.write(content)
-        else:
-            # (a stream, such as a live server function's: passed on as it comes, not when it ends)
-            self.send_header("Transfer-Encoding", "chunked")
-            self.end_headers()
-            try:
-                while chunk := response.read1(65536):
-                    self.wfile.write(b"%x\r\n%s\r\n" % (len(chunk), chunk))
-                    self.wfile.flush()
-                self.wfile.write(b"0\r\n\r\n")
-            except OSError:
-                # (the browser went away, or the stream stopped: the connection is not reused)
-                self.close_connection = True
-        connection.close()
-
-    do_GET = do_POST = do_PUT = do_PATCH = do_DELETE = do_HEAD = handle_any
-
-    def log_message(self, *args) -> None:
-        pass
-
-
 @pytest.fixture(scope="session")
 def stack(tmp_path_factory) -> Iterator[Stack]:
     try:
@@ -529,13 +472,20 @@ def stack(tmp_path_factory) -> Iterator[Stack]:
     run(["typology", "load", "RoleType", "types.json", "--user", USERNAME], root)
     run(["interface", "build"], root)
 
-    api_port, ui_port, port = free_port(), free_port(), free_port()
+    api_port, port = free_port(), free_port()
     commands = {
         "api": ([str(BIN / "pangloss"), "run", "--port", str(api_port)], {}),
         "interface": (
-            [str(BIN / "pangloss"), "interface", "serve", "--port", str(ui_port)],
+            [
+                str(BIN / "pangloss"),
+                "interface",
+                "serve",
+                "--port",
+                str(port),
+                "--api-url",
+                f"http://127.0.0.1:{api_port}",
+            ],
             {
-                "PANGLOSS_API_URL": f"http://127.0.0.1:{api_port}",
                 "PANGLOSS_REVIEW_POLL_MS": REVIEW_POLL_MS,
                 "PANGLOSS_TYPOLOGY_POLL_MS": TYPOLOGY_POLL_MS,
             },
@@ -552,19 +502,15 @@ def stack(tmp_path_factory) -> Iterator[Stack]:
         )
         for name, (command, more) in commands.items()
     ]
-    Proxy.api_port, Proxy.ui_port = api_port, ui_port
-    server = ThreadingHTTPServer(("127.0.0.1", port), Proxy)
-    threading.Thread(target=server.serve_forever, daemon=True).start()
     try:
         wait_for(
             f"http://127.0.0.1:{api_port}/api/typology/RoleType/tree",
             "the API",
             processes[0],
         )
-        wait_for(f"http://127.0.0.1:{ui_port}/", "the interface", processes[1])
+        wait_for(f"http://127.0.0.1:{port}/", "the interface", processes[1])
         yield Stack(f"http://127.0.0.1:{port}", f"http://127.0.0.1:{api_port}", root)
     finally:
-        server.shutdown()
         for process in processes:
             stop(process, signal.SIGTERM)
         for process in processes:
@@ -612,6 +558,63 @@ def dev_url(stack: Stack) -> Iterator[str]:
             process.wait(10)
         except subprocess.TimeoutExpired:
             stop(process, signal.SIGKILL)
+    said = development_warnings((stack.project / "dev.log").read_text())
+    if said:
+        pytest.fail(
+            "The development server reported, while the tests used it:\n  "
+            + "\n  ".join(said),
+            pytrace=False,
+        )
+
+
+# What Solid's development build says of a page that works but is not right: on the server (a page rendered in
+# passes one after another, state written while rendering) and in the browser, whose warnings Vite passes on to the
+# server's log (a value read where it will not update; nodes of the server's page that the browser did not take over)
+DIAGNOSTIC = re.compile(r"\[([A-Z]+(?:_[A-Z]+)+)\] (?!what it means|agent repair guide|deeper evidence)")
+HYDRATION = re.compile(r"Hydration (key miss|completed with \d+ unclaimed)")
+EXPECTED_DIAGNOSTICS = {
+    # (a page for what is not there is an error that is caught, and said: that is what the tests ask for)
+    "SSR_RENDER_ERROR_CONTAINED",
+    # (advice, not a fault: a document in a form that is made another type is put in the form's store as a new
+    # object, on purpose, as all of it is shown anew)
+    "IMMUTABLE_UPDATE_IN_STORE",
+}
+
+
+# One more that is known, and is the development server's own. A page asks for the code its modules add when it asks
+# for the item (`preloadItemPage`), so that code is loaded by the time the item has come. But Solid's development
+# server then looks up the assets of each lazily loaded component when it is rendered, a pass of the boundary for
+# each, and does not count that as work already started: an item's page with two such components or more is "3
+# sequential async waits" there, whatever the page does. The built server looks assets up at once, with no pass.
+KNOWN_IN_DEVELOPMENT = [("SSR_BOUNDARY_WATERFALL", "at src/pages/Item.tsx")]
+
+
+def development_warnings(log: str) -> list[str]:
+    """The diagnostics in a development server's log, each kind once with how often, without those that are
+    expected"""
+    found: dict[str, int] = {}
+    lines = log.splitlines()
+    for number, line in enumerate(lines):
+        code = DIAGNOSTIC.search(line)
+        if code and code.group(1) not in EXPECTED_DIAGNOSTICS:
+            # (with where: the line that says `at src/pages/Item.tsx:163:9`, if one follows)
+            where = next(
+                (
+                    after.strip()
+                    for after in lines[number + 1 : number + 4]
+                    if after.strip().startswith("at ")
+                ),
+                "",
+            )
+            if (code.group(1), where.rsplit(":", 2)[0]) in KNOWN_IN_DEVELOPMENT:
+                continue
+            text = f"{line[code.start() :][:200]} {where}".strip()
+        elif HYDRATION.search(line):
+            text = re.sub(r'"[0-9a-z]{20,}"', '"…"', line[HYDRATION.search(line).start() :])[:160]  # type: ignore[union-attr]
+        else:
+            continue
+        found[text] = found.get(text, 0) + 1
+    return [f"{text} (x{count})" for text, count in found.items()]
 
 
 @pytest.fixture(scope="session")

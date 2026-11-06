@@ -1,6 +1,8 @@
 /**
  * A client for the REST API (see docs/api.md).
  */
+import { markSafeError } from "@solidjs/web";
+
 export interface ApiClientOptions {
   /** Where the API is, as seen by whoever makes the request (`/api` in a browser) */
   baseUrl: string;
@@ -27,7 +29,14 @@ export interface ApiClient {
   delete<T>(path: string): Promise<T>;
 }
 
-/** A response that was not a success: the status, and what the API said was wrong */
+/**
+ * A response that was not a success: the status, and what the API said was wrong.
+ *
+ * It is what the API answered this reader, so it may be shown to them: it is marked as safe to send from the server
+ * render to the browser. (The built server otherwise puts a bare "Internal Server Error" in place of any error, and a
+ * page for an item that is not there said that, where the development server said "Page not found".) What arrives
+ * in the browser is a plain `Error` with these properties, which `instanceof ApiError` also takes for one.
+ */
 export class ApiError extends Error {
   constructor(
     readonly status: number,
@@ -37,6 +46,16 @@ export class ApiError extends Error {
   ) {
     super(`${status} ${detail}`);
     this.name = "ApiError";
+    markSafeError(this);
+  }
+
+  static [Symbol.hasInstance](value: unknown): boolean {
+    return (
+      typeof value === "object" &&
+      value !== null &&
+      (value as { name?: unknown }).name === "ApiError" &&
+      typeof (value as { status?: unknown }).status === "number"
+    );
   }
 }
 

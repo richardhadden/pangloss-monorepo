@@ -1,9 +1,65 @@
 // The production server: the one the Solid plugin builds (dist/server/node.js), with its answers gzipped when the
 // browser accepts it. Rendered pages are mostly repeated markup (a calendar month runs to megabytes) and shrink by
-// 90% or more. `pangloss interface serve` runs this file (env: PORT, HOST).
-import { createServer } from "node:http";
+// 90% or more. And `/api` is passed on to the Pangloss API, as the development server does: the browser only talks
+// to this server. `pangloss interface serve` runs this file (env: PORT, HOST, PANGLOSS_API_URL, PANGLOSS_API_PROXY).
+import { createServer, request as httpRequest } from "node:http";
+import { request as httpsRequest } from "node:https";
 import zlib from "node:zlib";
 import { createListener } from "./dist/server/node.js";
+
+// Where the API is (the pages rendered here ask it too: src/api.ts)
+const apiUrl = process.env.PANGLOSS_API_URL || "http://127.0.0.1:8000";
+// "off" where something in front of this server passes `/api` on itself, so that nothing for it should come here
+const passesApiOn = process.env.PANGLOSS_API_PROXY !== "off";
+
+const isForApi = (url) => url === "/api" || url.startsWith("/api/") || url.startsWith("/api?");
+
+function refuse(res, detail) {
+  if (res.headersSent) return res.destroy();
+  res.writeHead(502, { "content-type": "application/json" });
+  res.end(JSON.stringify({ detail }));
+}
+
+/**
+ * Pass a request for `/api` on to the API and its answer back, both as they come (a stream of events stays one). The
+ * headers are the browser's, with its `Host`, so that the API sees the request as the browser made it; the answer is
+ * not compressed here (the API does that itself). If the API is not there, the answer says so: a login that says
+ * only "Not Found" takes a while to understand.
+ */
+function passOn(req, res) {
+  if (!passesApiOn) {
+    return refuse(
+      res,
+      "The interface's server was started with --no-api-proxy, so it does not pass /api on to the Pangloss API: " +
+        "what is in front of it has to, and did not",
+    );
+  }
+  let target;
+  try {
+    target = new URL(req.url, apiUrl);
+  } catch {
+    return refuse(res, `'${apiUrl}' is not the address of an API: see 'pangloss interface serve --api-url'`);
+  }
+  const from = [req.headers["x-forwarded-for"], req.socket.remoteAddress].filter(Boolean).join(", ");
+  const upstream = (target.protocol === "https:" ? httpsRequest : httpRequest)(
+    target,
+    { method: req.method, headers: { ...req.headers, "x-forwarded-for": from } },
+    (answer) => {
+      res.writeHead(answer.statusCode ?? 502, answer.headers);
+      answer.pipe(res);
+    },
+  );
+  upstream.on("error", (error) =>
+    refuse(
+      res,
+      `The Pangloss API cannot be reached at ${apiUrl} (${error.code ?? error.message}). Start it ('pangloss run'), ` +
+        "or say where it is: 'pangloss interface serve --api-url URL'",
+    ),
+  );
+  // (the browser went away, as it does from a stream of events: the API is not left sending to no one)
+  res.on("close", () => upstream.destroy());
+  req.pipe(upstream);
+}
 
 const COMPRESSIBLE = /^(text\/|application\/(json|javascript|xml|manifest\+json)|image\/svg\+xml)/;
 // (smaller answers are sent as they are: compressing them saves nothing worth the time)
@@ -57,9 +113,15 @@ function compressed(req, res) {
 
 const listener = createListener();
 const server = createServer((req, res) => {
+  if (isForApi(req.url ?? "")) return passOn(req, res);
   compressed(req, res);
   return listener(req, res);
 });
 const port = Number(process.env.PORT || 3000);
 const host = process.env.HOST;
-server.listen(port, host, () => console.log(`Listening on http://${host || "localhost"}:${port}`));
+server.listen(port, host, () =>
+  console.log(
+    `Listening on http://${host || "localhost"}:${port}` +
+      (passesApiOn ? ` (/api is passed on to ${apiUrl})` : " (/api is not passed on)"),
+  ),
+);

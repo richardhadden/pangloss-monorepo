@@ -51,7 +51,7 @@ export function ExactParts(props: { path: Path; label: string }) {
           value={part("month")}
           onChange={(event) => write("month", event.currentTarget.value)}
         >
-          <option value="">{t("date_no_month", "(no month)")}</option>
+          <option value="" textContent={t("date_no_month", "(no month)")} />
           <For each={monthNames(language())}>
             {(name, index) => (
               <option

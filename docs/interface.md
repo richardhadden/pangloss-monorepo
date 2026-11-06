@@ -159,9 +159,16 @@ package's `js/` the first time. (Symlinking the copy was not used: Vite follows 
 ## Architecture
 
 **The browser only talks to the interface's server**, on one origin; `/api` is passed on to the Pangloss
-API (the Vite dev server does it in development; in production a reverse proxy, or a middleware of the
-interface's server, does). So: no CORS, cookies are first-party, and the server-side render can call the API
-as the user. (The API's CORS settings are for other frontends.)
+API. The Vite dev server does it in development, and in production the interface's own server does ✅
+(`interface-app/serve.mjs`, which `pangloss interface serve` runs): a request for `/api` goes to the API at
+`--api-url` (or `PANGLOSS_API_URL`; `http://127.0.0.1:8000` by default) with the browser's headers, its `Host`
+among them, and `X-Forwarded-For`; the answer comes back as it is sent, so a stream of events stays a stream, and
+it is not compressed again (the API compresses its own answers). So `pangloss run` and `pangloss interface serve`
+are a whole site with nothing in front of them. If the API cannot be reached the answer is a 502 whose `detail`
+says where it was looked for, and the interface says that it cannot reach the API (not a bare "Not Found", which
+is what a login said before). Where a reverse proxy in front passes `/api` on itself, `--no-api-proxy` turns this
+off: a request for `/api` that still arrives is a 502 that says so. So: no CORS, cookies are first-party, and the
+server-side render can call the API as the user. (The API's CORS settings are for other frontends.)
 
 **Rendering**: streaming SSR (`ssr: true`), hydrated in the browser. The routes are written in code, in
 `interface-app/src/routes.ts` (`defineRoutes` / `defineRoute`, so that `params` are typed from the path); the pages are in
@@ -227,7 +234,8 @@ the interface itself, run `npm install` and `npm run dev` / `npm run check:layer
    copy in `.pangloss/interface` when it is prepared.
 2. **`@pangloss/interface-core` stays in the wheel** for now (not published to npm).
 3. **Styling** (Tailwind in the old interface), forms and the editing views, search/autocomplete.
-4. **Sessions** (above), and the production proxy for `/api`.
+4. **Sessions** (above). (The production proxy for `/api` is decided: the interface's server passes it on, see
+   Architecture.)
 5. **Using the models further**: forms from the field kinds and validators, a view for each model kind
    (reified relations, semantic spaces and conjunctions are only listed so far), and the `bindToChildField`
    and `Fulfils` information, which is not exported yet.

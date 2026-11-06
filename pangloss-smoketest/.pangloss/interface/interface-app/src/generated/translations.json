@@ -146,6 +146,7 @@
       "derived_why": "Why ({count})",
       "edit": "Edit",
       "edit_form": "{type} form",
+      "error_api_unreachable": "The interface cannot reach the API. If you run this site: check that the API is running, and that the interface was told where it is.",
       "error_forbidden": "You are not allowed to do this.",
       "error_server": "Something went wrong on the server. Please try again in a moment.",
       "error_unauthorised": "You need to log in to do this.",

@@ -53,7 +53,7 @@ about her "held court at Ghent") and Charles the Bold (no role); `types` has onl
 | Interface-module hooks on the item page: `itemSections` (after the contents), `incomingViews` (another view of what refers to the item, offered while it takes some; the rest stays by field), and `InterfaceConfig(disabled=...)` leaving either (or a console action) out | ✅ | e2e through the dates module (the timeline tests above); `disabled` and the sections: Vitest `ItemContents.test.tsx`; the check: `test_interface_modules.py`, `test_interface_config.py` |
 | Item page of a subtype (308 to its own route) | ✅ | through `/Role/<concrete type id>` in `test_typology_item.py` |
 | Not-found page, with a 404 status | ✅ | `test_navigation.py` |
-| An item that is not there is explained (`role="alert"`) | ✅ | |
+| An item that is not there is explained (`role="alert"`): "Page not found" in the page as the server renders it too, not the built server's "Internal Server Error" | ✅ | `test_an_item_that_is_not_there_is_explained` |
 | An unknown type in the address | 🚧 | explained either way; what it should say is not decided |
 | Server rendering: the first response has the data | ✅ | raw response text; **not** complete without JavaScript (Solid streams it) |
 | Language switch | — | the bar shows the languages but `App.tsx` passes no `onLanguage`: it does nothing yet |
@@ -219,6 +219,11 @@ bishop's appointment in 1510, a notary's not before 1490 (`notAfter` not known),
 
 Logic that Vitest or the API tests cover: the shape of a response, validation, the hierarchy rules, the protection of
 fields. Here only what needs a real browser: events, hydration, the built chunks, the proxy to the API, cookies.
+
+The proxy to the API is the built interface's own (`pangloss interface serve --api-url`, `serve.mjs`): every test
+goes through it, the streams of events too, and nothing else is in front of the interface. What it answers when the
+API is not there (a 502, and "The interface cannot reach the API" on the page) is not tested here: the message is in
+`ErrorMessage.test.tsx`, and the answer was checked by hand.
 
 ## Writing tests: what was learned
 

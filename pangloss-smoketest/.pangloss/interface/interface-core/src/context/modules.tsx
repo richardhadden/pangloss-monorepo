@@ -31,6 +31,13 @@ interface ModulesValue {
   itemSections(): Component<ItemSectionProps>[];
   /** The other ways of showing what refers to an item (`incomingViews`), by name `app:key` (each component lazy) */
   incomingViews(): LoadedIncomingView[];
+  /**
+   * Start loading the code the modules add to the page of an item of the type: the model's own page, the sections,
+   * the views of what refers to it, and the cards of the models that have their own. A page calls it as it starts to read the item, so that the code is loaded
+   * while the item is read: left to the first render that needs it, it was asked for only once the item had
+   * come, and the server rendered the page in as many passes as there were things to wait for, one after another
+   */
+  preloadItemPage(type: string): void;
 }
 
 /** An `IncomingView` of a module, with its name and its component made */
@@ -51,6 +58,7 @@ const NONE: ModulesValue = {
   newItemFields: () => [],
   itemSections: () => [],
   incomingViews: () => [],
+  preloadItemPage: () => {},
 };
 const ModulesContext = createContext<ModulesValue>(NONE);
 
@@ -126,6 +134,22 @@ export function ModulesProvider(props: ParentProps<{ modules: readonly ModuleMan
         component: lazy(view.component) as Component<IncomingViewProps>,
       }));
       return views;
+    },
+    preloadItemPage(type) {
+      const page = slotOf(definitions, type, "itemPage") ? value.custom(type, "itemPage") : undefined;
+      // (the cards of the models that have their own: what is inside the item, or refers to it, can be of any of them)
+      const cards = Object.keys(definitions.models)
+        .filter((name) => slotOf(definitions, name, "viewCard"))
+        .map((name) => value.custom(name, "viewCard"));
+      for (const component of [
+        page,
+        ...cards,
+        ...value.itemSections(),
+        ...value.incomingViews().map((view) => view.component),
+      ]) {
+        // (a `lazy` component; what fails to load says so where it is shown, not here)
+        void (component as { preload?: () => Promise<unknown> } | undefined)?.preload?.().catch(() => {});
+      }
     },
   };
   return <ModulesContext value={value}>{props.children}</ModulesContext>;

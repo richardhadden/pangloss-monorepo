@@ -1,3 +1,4 @@
+import { isSafeError } from "@solidjs/web";
 import { expect, test } from "vitest";
 import { contextTrail, headOf, wrappingSpaces } from "./context";
 import { ApiError, createApiClient, problemsOf, queryString } from "./client";
@@ -62,6 +63,22 @@ test("the id of an item is escaped, as it can be a URL", async () => {
   const { client, calls } = clientAnswering(() => json({ id: "x" }));
   await getItem(client, "Person", "https://example.org/a b");
   expect(calls[0]!.url).toBe("http://api.test/api/Person/https%3A%2F%2Fexample.org%2Fa%20b");
+});
+
+test("an ApiError may be sent from the server render, and is still one when it arrives", () => {
+  // (the built server puts "Internal Server Error" in place of an error that is not marked safe)
+  const error = new ApiError(404, "There is no Place with id n1", { detail: "There is no Place with id n1" });
+  expect(isSafeError(error)).toBe(true);
+  // what the browser is given is a plain Error with the properties
+  const arrived = Object.assign(new Error(error.message), { name: "ApiError", status: 404, detail: error.detail });
+  expect(arrived instanceof ApiError).toBe(true);
+  expect((arrived as ApiError).status).toBe(404);
+  // ... and nothing else is one
+  expect(new Error("404 Not Found") instanceof ApiError).toBe(false);
+  expect(Object.assign(new Error("x"), { name: "ApiError" }) instanceof ApiError).toBe(false);
+  for (const other of [null, undefined, "ApiError", 404] as unknown[]) {
+    expect(other instanceof ApiError).toBe(false);
+  }
 });
 
 test("a failure is an ApiError with the status and what the API said", async () => {

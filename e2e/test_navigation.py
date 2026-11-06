@@ -1,5 +1,7 @@
 """The home page, the navigation bar, pages that are not there"""
 
+import re
+
 from helpers import expand_nav, hydrated, retract_nav
 from playwright.sync_api import Page, expect
 
@@ -76,8 +78,18 @@ def test_a_page_that_is_not_there_is_a_404(page: Page, types):
 
 
 def test_an_item_that_is_not_there_is_explained(page: Page, types):
+    # (rendered on the server: the built server puts "Internal Server Error" in place of an error it is not told is
+    # safe to show, and this page said that, where the development server said what it should)
     page.goto("/Person/00000000-0000-0000-0000-000000000000")
-    expect(page.get_by_role("alert")).to_be_visible()
+    # (in the server's language first, then in the one this browser has chosen)
+    not_found = re.compile("Page not found|Seite nicht gefunden")
+    expect(page.get_by_role("heading", name=not_found)).to_be_visible()
+    expect(page.get_by_role("alert")).to_contain_text(
+        re.compile("There is nothing here|Hier ist nichts")
+    )
+    expect(page.locator("main")).not_to_contain_text("Internal Server Error")
+    hydrated(page)
+    expect(page.get_by_role("heading", name=not_found)).to_be_visible()
 
 
 def test_a_type_that_is_not_a_model_is_explained(page: Page, types):

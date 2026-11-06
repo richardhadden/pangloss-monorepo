@@ -1,4 +1,4 @@
-import { action, createMemo, createOptimistic, createRenderEffect, createSignal, onSettled, untrack, For, Match, Show, Switch } from "solid-js";
+import { action, children, createMemo, createOptimistic, createRenderEffect, createSignal, onSettled, untrack, For, Match, Show, Switch } from "solid-js";
 import type { Accessor, ParentProps } from "solid-js";
 import type { JSX } from "@solidjs/web";
 import {
@@ -98,6 +98,9 @@ function Block(
 ) {
   const { t, modelName } = useTranslations();
   const [folded, setFolded] = createSignal(false);
+  // (made once: each read of a prop that is elements makes them again, and one read only to ask whether there
+  // are any left a second set, of which the browser said "Hydration key miss ... a detached element was created")
+  const buttons = children(() => props.buttons);
   return (
     // (scrolled to, it stops clear of the console bar, with room for a line of what it is in)
     <div class="flex w-full min-w-0 scroll-mt-28 flex-col" data-item-id={props.itemId}>
@@ -105,7 +108,7 @@ function Block(
         <span data-tint class={[typeChipClass, props.tint || plainTint, props.rule]}>
           {modelName(props.type)}
         </span>
-        <div class={props.buttons ? headRestOpenClass : headRestClass}>
+        <div class={buttons() ? headRestOpenClass : headRestClass}>
           {/* (the grey of the bar, with the label in it, folds it; folded, a ▸ says so) */}
           <button
             type="button"
@@ -122,7 +125,7 @@ function Block(
             </Show>
             <span class="min-w-0 truncate">{props.label}</span>
           </button>
-          {props.buttons}
+          {buttons()}
           {/* (cut, copy, remove) */}
           <Show when={props.clip}>
             <ClipButtons

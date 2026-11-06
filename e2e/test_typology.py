@@ -1,5 +1,5 @@
 """The typology tree in a browser: what only a real browser shows (drag and drop, the built chunks, the live feed from
-the interface's server, the API behind the proxy)"""
+the interface's server, the API behind it)"""
 
 import subprocess
 import time

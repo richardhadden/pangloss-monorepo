@@ -5,6 +5,7 @@ import {
   ItemSections,
   useComponent,
   useModels,
+  useModules,
   headOf,
   useTranslations,
   wrappingSpaces,
@@ -26,6 +27,7 @@ import {
   Show,
 } from "solid-js";
 import { useNavigate } from "@solidjs/router";
+import { isServer } from "@solidjs/web";
 import { itemQuery, revalidateAll } from "../queries";
 import { Page } from "../Page";
 
@@ -74,7 +76,8 @@ function Track(props: {
       });
     },
   );
-  onCleanup(() => props.onShow(undefined));
+  // (in the browser only: the server renders a page in passes and discards each, and state is not written there)
+  if (!isServer) onCleanup(() => props.onShow(undefined));
   return null;
 }
 
@@ -107,7 +110,12 @@ export default function EntityPage(props: RouteProps<"/:type/:id">) {
   const ErrorMessage = useComponent("ErrorMessage");
   const { t } = useTranslations();
   const navigate = useNavigate();
-  const item = createMemo(() => itemQuery(props.params.type, props.params.id));
+  const modules = useModules();
+  const item = createMemo(() => {
+    // (what the modules add to the page is loaded while the item is read, not once it has come)
+    modules.preloadItemPage(props.params.type);
+    return itemQuery(props.params.type, props.params.id);
+  });
   // (a model may name a page of an interface module for its items: it replaces the rest of this one)
   // What the console says of the item, kept in a signal of its own (set by `Track`, which is inside the error
   // boundary below and so goes with the item's page): the console is outside it, and an item that was there and

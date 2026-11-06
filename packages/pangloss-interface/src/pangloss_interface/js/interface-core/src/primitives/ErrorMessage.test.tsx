@@ -21,6 +21,10 @@ test("not logged in, not allowed and a failing server have words of their own", 
   expect(shown(new ApiError(401, "Not authenticated"))).toBe("You need to log in to do this.");
   expect(shown(new ApiError(403, "Forbidden"))).toBe("You are not allowed to do this.");
   expect(shown(new ApiError(503, "Service Unavailable"))).toContain("Something went wrong");
+  // (the interface's server could not pass the request on to the API)
+  expect(shown(new ApiError(502, "The Pangloss API cannot be reached at http://127.0.0.1:8000 (ECONNREFUSED)"))).toContain(
+    "The interface cannot reach the API",
+  );
 });
 
 test("any other error shows its message", () => {

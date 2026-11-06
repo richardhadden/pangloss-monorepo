@@ -157,9 +157,28 @@ def test_serve_needs_a_build(commands, project):
         invoke(project, "serve", "--host", "0.0.0.0", "--port", "8080").exit_code == 0
     )
     command, cwd, environment = commands[-1]
-    # (the built server, wrapped so that its answers are gzipped)
+    # (the built server, wrapped so that its answers are gzipped and `/api` is passed on to the API)
     assert command == ["/bin/node", str(entry.parent.parent.parent / "serve.mjs")]
-    assert environment == {"HOST": "0.0.0.0", "PORT": "8080"}
+    assert environment == {
+        "HOST": "0.0.0.0",
+        "PORT": "8080",
+        "PANGLOSS_API_URL": "http://127.0.0.1:8000",
+        "PANGLOSS_API_PROXY": "on",
+    }
+
+    # where the API is, and whether this server passes `/api` on to it (not where a reverse proxy does)
+    assert (
+        invoke(
+            project, "serve", "--api-url", "http://api:9000", "--no-api-proxy"
+        ).exit_code
+        == 0
+    )
+    assert commands[-1][2] == {
+        "HOST": "127.0.0.1",
+        "PORT": "3000",
+        "PANGLOSS_API_URL": "http://api:9000",
+        "PANGLOSS_API_PROXY": "off",
+    }
 
 
 def test_export_models_prints_or_writes(commands, project, tmp_path):
@@ -215,6 +234,9 @@ def test_dev_link_runs_the_package_source_with_the_projects_models(
 
     monkeypatch.setattr(interface_cli, "is_source_checkout", lambda: True)
     monkeypatch.setattr(interface_cli, "installed", lambda directory: True)
+    # (whatever the state of the checkout's own `node_modules`: after its `package.json` files were changed and
+    # the packages installed by hand, this test found them out of date, and failed on the install it then saw)
+    monkeypatch.setattr(interface_cli, "up_to_date", lambda directory: True)
     result = invoke(project, "dev", "--link", "--api-url", "http://api:9000")
     assert result.exit_code == 0, result.output
 

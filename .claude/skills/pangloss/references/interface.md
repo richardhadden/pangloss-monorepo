@@ -90,14 +90,29 @@ production build lets through.
   some lazily): read it in the component body.
 - An async read is a `createMemo` shown inside `<Loading>`; errors in `<Errored>` (whose fallback gets an accessor,
   `err()`). Saves are actions. Setters are batched: a read straight after a write is the old value.
-- `For` gives the item as a plain value and the index as an accessor.
+- `For` gives the item as a plain value and the index as an accessor. Key a list whose items are made anew on each
+  update (`keyed={(item) => item.value}`), or every row is made again.
+- **The text of an `<option>` that other options follow is `textContent={...}`, not a child expression**: the browser
+  counts the expression and the server does not, and the options after it are not taken over on hydration.
+- **A prop that is elements is read once**: each `props.buttons` makes them again. To ask whether there are any and
+  then show them, `const buttons = children(() => props.buttons)` and read `buttons()`.
+- **On the server nothing is written to a signal, not even from an `onCleanup`** (the server discards each pass of a
+  boundary): register such a cleanup only `if (!isServer)`.
+- Code a page needs only once its data has come (a module's `lazy` components) is started with the data, not after
+  it: `useModules().preloadItemPage(type)` on an item's page. Otherwise the server renders the page in one pass for
+  each thing it waits for.
+- An error thrown while the server renders reaches the page as "Internal Server Error" in the built interface unless
+  it is marked `markSafeError` (as `ApiError` is). Test such a page in the built interface, not only in development.
 - A module-level memo that depends on who is logged in reads `useSessionKey()`, so it is fetched again on login and
   logout.
 - Decide what a logged-in user sees with `userIsLoggedIn()`.
 - A page that shows an `ItemForm` gives it `guardLeaving={useLeaveGuard()}` (`interface-app/src/leaving.ts`), so a
   form with changes asks before it is left (docs/unsaved-changes-and-stash.md).
 
-Known traps of the current release candidate are listed in `docs/interface-refactoring.md`.
+Known traps of the current release candidate are listed in `docs/interface-refactoring.md`. The development server
+says when one is met (`[SSR_BOUNDARY_WATERFALL]`, `[SERVER_WRITE]`, `[STRICT_READ_UNTRACKED]`, "Hydration key miss"):
+read its output after clicking through what you changed. The browser tests fail on them (`dev_url` in
+`e2e/conftest.py`).
 
 ## Rules of the look
 
@@ -177,7 +192,7 @@ that names a component no manifest has. `pangloss interface modules` lists what 
 pangloss dev                       # the API, port 8000
 pangloss interface dev             # the interface with hot reload, port 3000; passes /api on
 pangloss interface dev --link      # the same, run from the package's source: for working on the interface itself
-pangloss interface build && pangloss interface serve
+pangloss interface build && pangloss interface serve   # the built one; it passes /api on too (--api-url)
 pangloss interface check           # types with the project's models, layers, modules
 ```
 

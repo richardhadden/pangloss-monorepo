@@ -112,6 +112,11 @@
   // What an error says (the API's own explanations are English: the API is not multilingual)
   "error_unauthorised": { "en": "You need to log in to do this.", "de": "Dafür müssen Sie sich anmelden.", "fr": "Vous devez vous connecter pour faire cela." },
   "error_forbidden": { "en": "You are not allowed to do this.", "de": "Sie dürfen das nicht tun.", "fr": "Vous n’êtes pas autorisé à faire cela." },
+  "error_api_unreachable": {
+    "en": "The interface cannot reach the API. If you run this site: check that the API is running, and that the interface was told where it is.",
+    "de": "Die Oberfläche erreicht die API nicht. Wenn Sie diese Seite betreiben: Prüfen Sie, ob die API läuft und ob der Oberfläche mitgeteilt wurde, wo sie ist.",
+    "fr": "L’interface ne parvient pas à joindre l’API. Si vous gérez ce site : vérifiez que l’API fonctionne et que l’interface sait où elle se trouve."
+  },
   "error_server": {
     "en": "Something went wrong on the server. Please try again in a moment.",
     "de": "Auf dem Server ist etwas schiefgegangen. Bitte versuchen Sie es gleich noch einmal.",

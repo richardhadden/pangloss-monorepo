@@ -155,7 +155,7 @@ export function RecurrenceParts(props: { path: Path; label: string }) {
       value={part("month")}
       onChange={(event) => writeNumber("month", event.currentTarget.value)}
     >
-      <option value="">{t("date_no_month", "(no month)")}</option>
+      <option value="" textContent={t("date_no_month", "(no month)")} />
       <For each={months()}>
         {(name, index) => (
           <option value={String(index() + 1)} selected={part("month") === String(index() + 1)}>
@@ -172,7 +172,7 @@ export function RecurrenceParts(props: { path: Path; label: string }) {
       value={theWeekday()}
       onChange={(event) => set("weekdays", event.currentTarget.value === "" ? [] : [Number(event.currentTarget.value)])}
     >
-      <option value="">{t("date_no_weekday", "(weekday)")}</option>
+      <option value="" textContent={t("date_no_weekday", "(weekday)")} />
       <For each={WEEK}>
         {(day) => (
           <option value={String(day)} selected={theWeekday() === String(day)}>

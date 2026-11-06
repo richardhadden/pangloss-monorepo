@@ -6,7 +6,7 @@ import {
 } from "@pangloss/interface-core";
 import { useNavigate, useSearchParams } from "@solidjs/router";
 import type { RouteProps } from "@solidjs/router";
-import { createMemo, Errored, Loading, onSettled, refresh, Show } from "solid-js";
+import { createMemo, Errored, Loading, onSettled, refresh, Show, untrack } from "solid-js";
 import { apiClient } from "../api";
 import { revalidateAll } from "../queries";
 import { useLeaveGuard } from "../leaving";
@@ -17,7 +17,8 @@ import { Page } from "../Page";
 function ScrollToNested(props: { id: string | undefined }) {
   // (read here, not in `onSettled`: reading the address there makes the router's reactive values in a place
   // that may not have them, which the development build stops at)
-  const id = props.id;
+  // (once, on purpose: it is where to scroll to when the form first shows)
+  const id = untrack(() => props.id);
   onSettled(() => {
     if (!id) return;
     // (after the browser has laid the form out)

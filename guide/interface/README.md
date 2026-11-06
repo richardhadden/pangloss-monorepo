@@ -104,9 +104,17 @@ No page reads the gathered file yet, so nothing is translated on screen. [Transl
 
 ## Deploying
 
-`pangloss interface build`, then `pangloss interface serve` behind the same host as the API (the production proxy for
-`/api` is a decision still open; see [the interface](../../docs/interface.md)). The login is the API's cookie session, so the
-interface and the API must share a site.
+```sh
+pangloss interface build
+pangloss run                                                  # the API, port 8000
+pangloss interface serve --api-url http://127.0.0.1:8000      # the interface, port 3000
+```
+
+The interface's server passes `/api` on to the API, as the development server does, so the two commands are a whole
+site: the browser only talks to the interface, and the login is the API's cookie session on that one address. Put a
+reverse proxy in front for TLS. If that proxy sends `/api` to the API itself, start the interface with
+`--no-api-proxy` (it still needs `--api-url`: the pages it renders ask the API too). If a page says "The interface
+cannot reach the API", the API is not running or is not at `--api-url`.
 
 ## Tests
 
