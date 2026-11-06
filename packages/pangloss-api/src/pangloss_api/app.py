@@ -17,6 +17,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import APIRouter, Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from pangloss_core import check_requirements, storage_of
 from pangloss_core import settings as core_settings
 from pangloss_core.logs import configure_from_settings
@@ -133,6 +134,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
 
 
 MIN_SECRET_LENGTH = 32
+# (smaller answers are sent as they are: compressing them saves nothing worth the time)
+GZIP_MINIMUM_SIZE = 1000
 
 CORS_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
 
@@ -229,6 +232,9 @@ def create_app() -> FastAPI:
     # (added first, so inside the CORS middleware: a 500 then has the CORS headers)
     app.add_middleware(ServerErrorResponder)
     add_cors(app, settings.BACKEND_CORS_ORIGINS)
+    # (compressed when the client accepts it: the JSON of an entity with many references, the calendar and
+    # /openapi.json run to megabytes and shrink by 90% or more; event streams are left alone by the middleware)
+    app.add_middleware(GZipMiddleware, minimum_size=GZIP_MINIMUM_SIZE)
     # (added last, so outermost: the request id is on everything logged for the request)
     app.add_middleware(RequestLogger)
     register_error_handlers(app)

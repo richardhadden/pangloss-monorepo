@@ -1,0 +1,9 @@
+[project]
+name = "smoketest-site"
+version = "0.1.0"
+requires-python = ">=3.15"
+# Add the Pangloss packages you use, such as pangloss-cli and pangloss-memgraph
+dependencies = []
+
+[tool.pangloss]
+settings = "smoketest_site.settings"

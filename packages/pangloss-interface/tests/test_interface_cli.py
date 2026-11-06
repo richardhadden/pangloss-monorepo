@@ -157,7 +157,8 @@ def test_serve_needs_a_build(commands, project):
         invoke(project, "serve", "--host", "0.0.0.0", "--port", "8080").exit_code == 0
     )
     command, cwd, environment = commands[-1]
-    assert command == ["/bin/node", str(entry)]
+    # (the built server, wrapped so that its answers are gzipped)
+    assert command == ["/bin/node", str(entry.parent.parent.parent / "serve.mjs")]
     assert environment == {"HOST": "0.0.0.0", "PORT": "8080"}
 
 

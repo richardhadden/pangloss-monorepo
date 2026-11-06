@@ -1,0 +1,34 @@
+// The texts of the interface in a language. The gathered file has every language, so it is read
+// on the server only: `"use server"` makes this a call to the server from the browser, and the
+// file is not in what the browser loads. The default language is asked for at the start (the
+// server renders with it); another is asked for the first time it is chosen.
+import type { TranslationBundle } from "@pangloss/interface-core";
+
+type AllModels = Record<string, Record<string, { name?: string; plural?: string }>>;
+
+/** Each model's names in every language (`TranslationBundle.modelNames`) */
+function modelNames(models: AllModels): Record<string, string[]> {
+  const names: Record<string, Set<string>> = {};
+  for (const texts of Object.values(models)) {
+    for (const [model, text] of Object.entries(texts)) {
+      const known = (names[model] ??= new Set());
+      for (const name of [text.name, text.plural]) if (name) known.add(name);
+    }
+  }
+  return Object.fromEntries(Object.entries(names).map(([model, set]) => [model, [...set]]));
+}
+
+export async function loadTranslations(language?: string): Promise<TranslationBundle> {
+  "use server";
+  const { default: all } = await import("@generated/translations");
+  const code = language && all.languages.includes(language) ? language : all.default;
+  return {
+    language: code,
+    default: all.default,
+    languages: all.languages,
+    ui: (all.ui as Record<string, Record<string, string>>)[code] ?? {},
+    models: ((all.models as Record<string, unknown>)[code] ?? {}) as TranslationBundle["models"],
+    enums: ((all.enums as Record<string, unknown>)[code] ?? {}) as TranslationBundle["enums"],
+    modelNames: modelNames(all.models as AllModels),
+  };
+}

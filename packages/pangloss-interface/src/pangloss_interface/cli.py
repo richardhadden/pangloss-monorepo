@@ -343,8 +343,9 @@ def serve(
     if not entry.is_file():
         fail("The interface is not built: run 'pangloss interface build'")
     found = runtime_or_exit(runtime)
+    # (serve.mjs is the built server with its answers gzipped)
     run_or_exit(
-        found.run_file(entry),
+        found.run_file(directory / "interface-app" / "serve.mjs"),
         directory / "interface-app",
         {"HOST": host, "PORT": str(port)},
     )
