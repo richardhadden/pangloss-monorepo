@@ -71,7 +71,24 @@ export interface HeadView {
   type: string;
   label?: string;
   meta: ItemMeta;
+  /**
+   * An entity read with a limit on what refers to it (`getItem` with `incomingLimit`): how many there are in each
+   * incoming field, by its key (the field itself has the first of them; `getIncoming` reads the rest)
+   */
+  incomingCounts?: Record<string, number>;
   [field: string]: unknown;
+}
+
+/** Some of what refers to an entity by one relation (`getIncoming`) */
+export interface IncomingPage {
+  /** The key of the incoming field */
+  field: string;
+  /** How many there are in all */
+  count: number;
+  page: number;
+  pageSize: number;
+  /** As they are in that field of the entity */
+  results: Record<string, unknown>[];
 }
 
 /** The body of a create or an update: the fields of the model, as the edit view has them */

@@ -16,7 +16,7 @@ problem, what was changed, how it was checked, and what is still to do. Numbers 
 | 26, 33 | Writes superlinear in document size | **Fixed** on both backends: 200 statements 134 s -> 0.3 s; conformance test; documented |
 | 5, 21 | Calendar: thousands of open-dated documents on every day; 21 MB page | **Fixed** on both backends: month page 21-26 MB -> 0.45 MB, a day 2.2 s -> 0.15 s; tests, browser, docs. **One judgement call to confirm** (unknown dates left out) |
 | 29 | Typology: generic DELETE marks a type in use | **Fixed** on both backends (all three parts), tests, checked on the smoke server, docs. **One judgement call to confirm** (same-named siblings refused) |
-| 15, 22, 28 | An entity's view inlines every reverse relation | Not started |
+| 15, 22, 28 | An entity's view inlines every reverse relation | **Fixed** (committed after fa58588): whole read 0.8-1.3 s -> 0.6-0.8 s; limited read 0.32 s; page 5.2 s -> 2.4 s. Both backends, tests, browser, docs. By-date view of everything is on request, still heavy |
 | the rest (Low, Perf, Design) | | Not started |
 
 ## What was done
@@ -268,6 +268,64 @@ Also found while checking: `uv run ty check` had two errors in `packages/` from 
 (`pangloss_sdk_server/typecheck.py`, a test of `Typed[int]`) and failed on the smoke project (three loose driver calls
 in `smoke_scripts/`, 231 unused `type: ignore` in its generated stubs). Fixed the first two; the others have
 overrides in `pyproject.toml`. `uv run ty check` now passes.
+
+### #15, #22, #28 An entity that thousands of documents refer to
+
+Committed after `fa58588` (the commit "Smoke test fixes: an entity that thousands of documents refer to").
+
+Measured before (the "super-person", 3,927 references in 83 fields; `smoke_scripts/read_phases.py`): finding the
+6,799 reverse rows takes 14 ms; reading the properties of every node of every chain 480 ms; who made each 160 ms;
+and 2,863 of the rows were thrown away in Python afterwards (a narrowed relation is stored under both names).
+
+What changed:
+
+- **The query** (`pangloss-cypher/read_query.py`, `build_fetch_incoming_query(cls, id, allowed, *, field, skip,
+  limit)`): it works out each row's field name itself, keeps only what the models show
+  (`read_incoming.shown_relations`), sorts by the label of what refers, counts each field, and cuts each field
+  **before** reading any properties. `read_incoming.fetch_incoming_relations` returns `(items by field, counts)`.
+- **Storage operations for the API** (like `check_deletable`: not bound to the models, not in the SDK):
+  `get_entity_with_some(cls, id, incoming_limit)` -> `(HeadView, counts)`;
+  `get_incoming(cls, id, field, skip, limit)` -> `IncomingPage`. `Entity.get` still returns everything (as the user
+  said: the API for API use can return large documents), faster, and its incoming fields are now in label order.
+- **API** (`pangloss-api/routes/models.py`): `GET /api/NAME/{id}?incoming_limit=N` (adds `incomingCounts`) and
+  `GET /api/NAME/{id}/incoming/{field}?page=&page_size=` (one more read route for each entity class; an entity named
+  by a URL keeps its own query string).
+- **Interface** (`interface-core`): `getItem(..., {incomingLimit})`, `getIncoming`, `INCOMING_SHOWN = 25`,
+  `INCOMING_PAGE = 100` (`api/fetch.ts`); the app's `itemQuery` asks with the limit; `ItemContents.tsx` has
+  `MoreIncoming` ("and N more" after a row, reads the next hundred) and `ReadAllIncoming` (above a module's view of
+  the references, such as by date: "N more refer to this and are not read yet", **Read them all**). Three new slots
+  in `translations/ui.jsonc` (en, de, fr). The modules needed no change.
+
+Numbers (smoke database, the super-person):
+
+| | Before | Now |
+|---|---|---|
+| `GET /api/Person/{id}`, whole (1.86 MB) | 0.8-1.3 s | 0.6-0.8 s |
+| `?incoming_limit=25` (0.99 MB) | - | 0.32 s |
+| `?incoming_limit=10` (0.42 MB) | - | 0.19 s |
+| `/incoming/{field}`, 50 items | - | 0.06 s |
+| The page, dev build (#22) | 5.2 s, 29,507 elements, 105,716 px | 2.4 s, 16,045 elements, 61,050 px |
+| The page with 10 of each (not the default) | - | 1.25 s, 7,339 elements, 30,072 px |
+| By date (#28) | 3.5 s, 47,069 elements, on choosing it | 2.2 s and 25,413 elements with what the page has; **Read them all**: 5.3 s (78 requests), then 47,791 elements |
+
+**For the user to decide:** 25 or 10 of each field (25 keeps a typical entity whole; 10 halves the heavy page
+again). And #28 is only half fixed: the by-date view of everything is as heavy as it was, now on request; making it
+light needs the view itself to page or to draw only what is on screen (not done).
+
+Checked:
+
+- Conformance: `test_read_incoming_paged.py` (4 tests) and a new test in `test_api_models.py`, on Memgraph and
+  Neo4j; the whole conformance suite on Memgraph after the query change (530 passed); `pangloss-api` (166).
+- Interface: `npm test` (333 passed, 3 new in `ItemContents.test.tsx`), `npm run typecheck`, `check:layers`.
+- e2e: new `test_lists_and_items.py::test_an_entity_that_much_refers_to_...` (30 statements and 27 dated
+  appointments: the rows, the button, the by-date notice); it and `test_dateable.py` pass (15).
+- In a browser on the smoke project's dev build (`/tmp/pgstubs/super_browser.py`): the numbers above, a row read
+  from 25 to 40, no console or page error.
+- Docs: `docs/api.md`, `docs/large-data.md` (new section with the measurements), `docs/interface.md`,
+  `e2e/COVERAGE.md`, the skill (`references/architecture.md`).
+
+`./run_tests.sh` in full passed after it (2026-11-06, exit 0): all packages on Memgraph (2,839); on Neo4j the
+conformance suite (535), `pangloss-neo4j` (165) and the add-ons' live tests (72); e2e (166).
 
 ## Still to do for what is fixed
 

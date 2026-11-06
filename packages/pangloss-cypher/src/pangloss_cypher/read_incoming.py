@@ -151,21 +151,48 @@ async def fetch_held(tx: Transaction, node_ids: list[str]) -> dict[str, list[dic
     return {row["id"]: row["held"] for row in await result.data()}
 
 
-async def fetch_incoming_relations(
-    tx: Transaction, entity_class: type[Entity], entity_id: uuid.UUID
-) -> dict[str, list[dict[str, typing.Any]]]:
-    """Get what refers to an entity, as the values of the incoming fields of its
-    `HeadView`"""
+def shown_relations(entity_class: type[Entity]) -> list[str]:
+    """What can be on the other end of each incoming field, according to the models: `name|Holder|1` for a relation
+    of that name from the class `Holder`, through a wrapper (`1`) or not (`0`). A relation that a subclass narrows
+    (`carried_out_by` for `concerns_person`) is stored under both names, but only appears under the narrower one,
+    and so the model does not allow the subclass under the wider one. (The query keeps only these.)"""
+    return sorted(
+        {
+            f"{name}|{definition.source.__name__}|{int(definition.via_reified)}"
+            for name, definitions in entity_class._meta.field_definitions.incoming_fields.items()
+            for definition in definitions
+        }
+    )
 
-    # What can be on the other end of each incoming field, according to the models.
-    # A relation that a subclass narrows (`carried_out_by` for `concerns_person`) is
-    # stored under both names, but only appears under the narrower one, and so
-    # the model does not allow the subclass under the wider one.
+
+async def fetch_incoming_relations(
+    tx: Transaction,
+    entity_class: type[Entity],
+    entity_id: uuid.UUID,
+    *,
+    field: str | None = None,
+    skip: int = 0,
+    limit: int | None = None,
+) -> tuple[dict[str, list[dict[str, typing.Any]]], dict[str, int]]:
+    """Get what refers to an entity, as the values of the incoming fields of its `HeadView`, and how many there are
+    in each. All of it; or, with `limit`, that many of each field from `skip`, by the label of what refers (the
+    counts are still of all); with `field`, that field alone."""
+
     incoming_definitions = entity_class._meta.field_definitions.incoming_fields
 
-    query, params = build_fetch_incoming_query(entity_class, entity_id)
+    query, params = build_fetch_incoming_query(
+        entity_class,
+        entity_id,
+        shown_relations(entity_class),
+        field=field,
+        skip=skip,
+        limit=limit,
+    )
     result = await tx.run(query, **params)  # ty: ignore[invalid-argument-type]
     records = await result.data()
+    counts: dict[str, int] = {record["name"]: record["total"] for record in records}
+    # (a field of which nothing is in the slice has a row for its count, and no chain)
+    records = [record for record in records if record["chain"] is not None]
 
     # What the wrappers next to the entity hold (their targets), for those that come to it through one
     held = await fetch_held(
@@ -183,22 +210,11 @@ async def fetch_incoming_relations(
         chain: list[dict] = record["chain"]
         edge_types: list[str] = record["chain_edge_types"]
         holder = chain[-1]
-
-        via_reified = bool(chain[0]["_labels"]) and bool(
-            set(chain[0]["_labels"]) & WRAPPERS
-        )
-
-        # The name of the relation (as seen from the entity) is the reverse edge
-        # that the chain of wrappers, if any, ends with, or else the first reverse edge
-        reified_run = 0
-        if via_reified:
-            while reified_run + 1 < len(chain) and (
-                set(chain[reified_run + 1]["_labels"]) & WRAPPERS
-            ):
-                reified_run += 1
-            name = edge_types[reified_run]
-        else:
-            name = record["first_edge_type"]
+        # The name of the relation (as seen from the entity) is the reverse edge that the chain of wrappers, if
+        # any, ends with, or else the first reverse edge: worked out by the query, which counts and cuts by it
+        name = record["name"]
+        via_reified = record["wrappers"] > 0
+        reified_run = record["wrappers"] - 1
 
         definitions = [
             definition
@@ -224,6 +240,7 @@ async def fetch_incoming_relations(
                     holder["id"],
                     error,
                 )
+                counts[name] -= 1
                 continue
             item = {
                 "id": holder["id"],
@@ -251,4 +268,4 @@ async def fetch_incoming_relations(
             }
         incoming.setdefault(name, []).append(item)
 
-    return incoming
+    return incoming, {name: count for name, count in counts.items() if count > 0}

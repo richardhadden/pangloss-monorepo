@@ -2,7 +2,9 @@
 import { render } from "@solidjs/web";
 import { flush } from "solid-js";
 import { afterEach, expect, test } from "vitest";
+import type { ApiClient } from "../api";
 import {
+  ApiProvider,
   ComponentsProvider,
   ConsoleMountProvider,
   ModelsProvider,
@@ -631,4 +633,138 @@ test("what is only in the database is not shown, and does not make a reference a
   // (the copy of a dateable document's date is a field of its model only in the database)
   expect(host.textContent).not.toContain("date text");
   expect(host.querySelectorAll("[data-block]")).toHaveLength(0);
+});
+
+// (an API that answers `getIncoming` from a list of everything that refers by a field)
+function incomingApi(all: Record<string, Record<string, unknown>[]>) {
+  const asked: [string, unknown][] = [];
+  const client = {
+    get: async (path: string, query?: Record<string, unknown>) => {
+      asked.push([path, query]);
+      const field = path.split("/").at(-1)!;
+      const size = query!.page_size as number;
+      const start = ((query!.page as number) - 1) * size;
+      return {
+        field,
+        count: all[field].length,
+        page: query!.page,
+        pageSize: size,
+        results: all[field].slice(start, start + size),
+      };
+    },
+  } as unknown as ApiClient;
+  return { client, asked };
+}
+
+function showWithApi(item: Record<string, unknown>, client: ApiClient, modules: ModuleManifest[] = []) {
+  const container = document.createElement("div");
+  document.body.append(container);
+  dispose = render(
+    () => (
+      <ApiProvider client={client}>
+        <ConsoleMountProvider>
+          <Probe />
+          <ComponentsProvider components={{ ReferenceChip } as ComponentMap}>
+            <ModelsProvider definitions={definitions}>
+              <ModulesProvider modules={modules}>
+                <ItemContents item={item} />
+              </ModulesProvider>
+            </ModelsProvider>
+          </ComponentsProvider>
+        </ConsoleMountProvider>
+      </ApiProvider>
+    ),
+    container,
+  );
+  return container;
+}
+
+const offices250 = Array.from({ length: 250 }, (_, n) => ({
+  id: `o${n}`,
+  type: "Office",
+  label: `Office ${String(n).padStart(3, "0")}`,
+}));
+
+test("an entity read with the first of what refers to it: a row that has more says how many, and reads them when asked", async () => {
+  const { client, asked } = incomingApi({ heldReverse: offices250 });
+  const host = showWithApi(
+    {
+      id: "w1",
+      type: "Witness",
+      label: "A witness",
+      heldReverse: offices250.slice(0, 25),
+      aboutReverse: [{ id: "n1", type: "Note", label: "A note" }],
+      incomingCounts: { heldReverse: 250, aboutReverse: 1 },
+    },
+    client,
+  );
+  const links = () => host.querySelectorAll('a[href^="/Office/"]').length;
+  expect(links()).toBe(25);
+  // (one row has more; the other is all there, and has no button; the counts are not a field)
+  const buttons = () => [...host.querySelectorAll<HTMLButtonElement>("[data-testid=incoming-more]")];
+  expect(buttons().map((button) => button.textContent)).toEqual(["and 225 more"]);
+  expect(host.textContent).not.toContain("incomingCounts");
+  expect(asked).toEqual([]);
+
+  // a hundred at a time, whole pages from the start (the 25 are the first of the first page)
+  buttons()[0].click();
+  await settle();
+  flush();
+  expect(asked).toEqual([["/Witness/w1/incoming/heldReverse", { page: 1, page_size: 100 }]]);
+  expect(links()).toBe(100);
+  expect(buttons()[0].textContent).toBe("and 150 more");
+  buttons()[0].click();
+  await settle();
+  flush();
+  expect(asked[1]).toEqual(["/Witness/w1/incoming/heldReverse", { page: 2, page_size: 100 }]);
+  expect(links()).toBe(200);
+  buttons()[0].click();
+  await settle();
+  flush();
+  expect(links()).toBe(250);
+  expect(host.querySelector('a[href="/Office/o249"]')).toBeTruthy();
+  // (all read: no button)
+  expect(buttons()).toEqual([]);
+});
+
+test("an entity read whole (no counts) has no such button, and needs no API", () => {
+  const host = show({ id: "w1", type: "Witness", label: "A witness", heldReverse: offices250.slice(0, 30) });
+  expect(host.querySelectorAll('a[href^="/Office/"]').length).toBe(30);
+  expect(host.querySelector("[data-testid=incoming-more]")).toBeNull();
+});
+
+test("a module's view of what refers to an entity says how many it is without, and reads them all when asked", async () => {
+  localStorage.clear();
+  const { client, asked } = incomingApi({ heldReverse: offices250 });
+  const host = showWithApi(
+    {
+      id: "w1",
+      type: "Witness",
+      label: "A witness",
+      heldReverse: offices250.slice(0, 25),
+      incomingCounts: { heldReverse: 250 },
+    },
+    client,
+    [offices],
+  );
+  await settle();
+  flush();
+  // (by field: no notice, the row's own button)
+  expect(host.querySelector("[data-testid=incoming-not-read]")).toBeNull();
+  incoming.choose("offices:Held");
+  flush();
+  await settle();
+  flush();
+  const held = () => host.querySelector("[data-testid=held]")!.textContent!;
+  expect(held().split(", ")).toHaveLength(25);
+  const notice = host.querySelector("[data-testid=incoming-not-read]")!;
+  expect(notice.textContent).toContain("225 more refer to this and are not read yet");
+  notice.querySelector("button")!.click();
+  await settle();
+  flush();
+  // (every page of the field, five hundred at a time, and the view has them all)
+  expect(asked).toEqual([["/Witness/w1/incoming/heldReverse", { page: 1, page_size: 500 }]]);
+  expect(held().split(", ")).toHaveLength(250);
+  expect(host.querySelector("[data-testid=incoming-not-read]")).toBeNull();
+  localStorage.clear();
 });

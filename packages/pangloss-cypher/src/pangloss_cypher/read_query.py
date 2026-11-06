@@ -124,7 +124,13 @@ CHAIN_LABELS = (*WRAPPER_LABELS, "Embedded")
 
 
 def build_fetch_incoming_query(
-    entity_class: type[Entity], entity_id: uuid.UUID
+    entity_class: type[Entity],
+    entity_id: uuid.UUID,
+    allowed: list[str],
+    *,
+    field: str | None = None,
+    skip: int = 0,
+    limit: int | None = None,
 ) -> tuple[str, dict]:
     """Build the query for the relations *to* an entity.
 
@@ -136,18 +142,39 @@ def build_fetch_incoming_query(
     follows the chain up to the node that holds the relation (the document, or
     entity, that the chain starts from).
 
-    Each row has the reverse edge's name, the nodes of the chain from the one next
-    to the entity up to that node (and the names of the edges between them), and
-    what is needed for the `meta` of that node. (What the nodes of the chain hold is
-    read by `build_fetch_held_query`: with it in this query, the server returned a
-    different path.)
+    Each row has the name of the relation as the entity has it (`name`: the field of its `HeadView`), how many there
+    are of that name (`total`), the reverse edge's name, the nodes of the chain from the one next to the entity up
+    to that node (and the names of the edges between them, and how many of the first are wrappers), and what is
+    needed for the `meta` of that node. (What the nodes of the chain hold is read by `build_fetch_held_query`: with
+    it in this query, the server returned a different path.)
+
+    `allowed` is what the models show: `name|Holder|1` for each relation of that name from a class `Holder`, through
+    a wrapper (`1`) or not (`0`). A relation that a subclass narrows is stored under both names and shown under one:
+    the rest is left out here, before anything of it is read. With `field`, only the relations of that name. With
+    `limit`, that many of each name from `skip`, by the label of what holds them: a name of which none is in the
+    slice still has a row, with its `total` and no `chain`.
+
+    (Finding the rows is quick, and reading the properties of every node of every chain is what takes the time:
+    for an entity that 3,900 statements refer to, 14 ms and 480 ms, and another 160 ms for who made each. So the
+    rows are found, sorted and cut first, and only what is kept is read.)
     """
     params = {
         "id": str(entity_id),
         "type": entity_class.__name__,
         "chain_labels": list(CHAIN_LABELS),
+        "wrapper_labels": list(WRAPPER_LABELS),
+        "allowed": allowed,
         "see_unpublished": unpublished_visible(),
     }
+    only = ""
+    if field is not None:
+        only = "AND name = $field"
+        params["field"] = field
+    kept = "found"
+    if limit is not None:
+        kept = "found[$skip..$skip + $limit]"
+        params["skip"] = skip
+        params["limit"] = limit
     # (the labels are tested as a list: written as `a:X OR a:Y OR ...`, a longer list made the server
     # return the wrong path for a chain of several nodes)
     query = f"""
@@ -165,6 +192,25 @@ def build_fetch_incoming_query(
     WITH first, next, ascent, holder, {HOLDER_HEAD} AS headnode
     // (what has been deleted no longer refers to the entity)
     WHERE {fragments.visible("holder", "headnode")}
+    // How many wrappers the relation passes through first (the node next to the entity, and those above it without
+    // a break): counted up while they are wrappers, and held (as a negative number) from the first that is not
+    WITH first, next, ascent, holder, headnode,
+         CASE WHEN ascent IS NULL THEN 0 ELSE reduce(run = 0, chain_node IN nodes(ascent) |
+             CASE WHEN run < 0 THEN run
+                  WHEN ANY(label IN labels(chain_node) WHERE label IN $wrapper_labels) THEN run + 1
+                  ELSE -run - 1 END) END AS run
+    WITH first, next, ascent, holder, headnode, CASE WHEN run < 0 THEN -run - 1 ELSE run END AS wrappers
+    // The name of the relation as the entity has it: the reverse edge that the wrappers end with, or else the first
+    WITH first, next, ascent, holder, headnode, wrappers,
+         CASE WHEN wrappers > 0 THEN type(relationships(ascent)[wrappers - 1]) ELSE type(first) END AS name
+    WHERE (name + '|' + holder.type + '|' + CASE WHEN wrappers > 0 THEN '1' ELSE '0' END) IN $allowed {only}
+    WITH name, first, next, ascent, holder, headnode, wrappers
+    ORDER BY toLower(coalesce(holder.label, '')), holder.id
+    WITH name, collect({{first: type(first), next: next, ascent: ascent, holder: holder, headnode: headnode,
+                        wrappers: wrappers}}) AS found
+    WITH name, size(found) AS total, {kept} AS kept
+    UNWIND (CASE WHEN size(kept) = 0 THEN [null] ELSE kept END) AS row
+    WITH name, total, row, row.next AS next, row.ascent AS ascent, row.holder AS holder, row.headnode AS headnode
     OPTIONAL MATCH (headnode)<-[:is_creation_of]-(creation:PGCreation)-[:created_by]->(creator:PGUser)
     CALL {{
         WITH headnode
@@ -174,10 +220,13 @@ def build_fetch_incoming_query(
         LIMIT 1
     }}
     RETURN
-        type(first) AS first_edge_type,
-        CASE WHEN ascent IS NULL
-            THEN [next{{.*, _labels: labels(next)}}]
-            ELSE [chain_node IN nodes(ascent) | chain_node{{.*, _labels: labels(chain_node)}}]
+        name,
+        total,
+        row.first AS first_edge_type,
+        row.wrappers AS wrappers,
+        CASE WHEN row IS NULL THEN null
+             WHEN ascent IS NULL THEN [next{{.*, _labels: labels(next)}}]
+             ELSE [chain_node IN nodes(ascent) | chain_node{{.*, _labels: labels(chain_node)}}]
         END AS chain,
         CASE WHEN ascent IS NULL THEN [] ELSE [edge IN relationships(ascent) | type(edge)] END AS chain_edge_types,
         {{

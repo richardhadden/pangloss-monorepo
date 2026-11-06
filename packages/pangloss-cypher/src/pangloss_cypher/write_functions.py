@@ -295,7 +295,7 @@ type Referrers = set[tuple[str, str, str]]
 
 async def referrers(tx: Transaction, cls: type[Entity], id: UUID) -> Referrers:
     """What refers to an entity, read as being of `cls`: (the name of the relation, the type and id of what holds it)"""
-    incoming = await fetch_incoming_relations(tx, cls, id)
+    incoming, _ = await fetch_incoming_relations(tx, cls, id)
     return {
         (name, str(item["type"]), str(item["id"]))
         for name, items in incoming.items()

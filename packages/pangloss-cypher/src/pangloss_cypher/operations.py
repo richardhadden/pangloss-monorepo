@@ -14,6 +14,9 @@ from pangloss_cypher.read_functions import (
     read_entity as read_entity,
     get_entity as get_entity,
     get_entity_for_edit as get_entity_for_edit,
+    get_entity_with_some as get_entity_with_some,
+    get_incoming as get_incoming,
+    IncomingPage as IncomingPage,
 )
 from pangloss_cypher.relink import relink as relink
 from pangloss_cypher.write_functions import (
@@ -66,6 +69,9 @@ __all__ = [
     "read_entity",
     "get_entity",
     "get_entity_for_edit",
+    "get_entity_with_some",
+    "get_incoming",
+    "IncomingPage",
     "run_write_query",
     "soft_delete_node",
     "check_deletable",

@@ -7,6 +7,7 @@ import {
   decodeSearchForm,
   getCurrentUser,
   getItem,
+  INCOMING_SHOWN,
   listItems,
   searchItems,
 } from "@pangloss/interface-core";
@@ -36,7 +37,11 @@ export function requestOf(type: string, form: string, q: string): string {
   return request ? JSON.stringify(request) : "";
 }
 
-export const itemQuery = query((type: string, id: string) => getItem(apiClient(), type, id), "item");
+// (an entity with the first of what refers to it in each field: the page reads the rest when asked)
+export const itemQuery = query(
+  (type: string, id: string) => getItem(apiClient(), type, id, { incomingLimit: INCOMING_SHOWN }),
+  "item",
+);
 
 /**
  * Who is logged in, or undefined. `revalidateAll()` after logging in or out.

@@ -1,12 +1,13 @@
 """Routes for the Documents and Entities declared in the project.
 
-For each one, `NAME` being its class name (an abstract class has only the two that read, and
+For each one, `NAME` being its class name (an abstract class has only those that read, and
 they give the items of its subclasses; a document with `create_directly=False` has no `POST`):
 
 | | | |
 |-|-|-|
 | `GET`    | `/api/NAME`                       | list (`q`, `deep`, `page`, `page_size`) |
-| `GET`    | `/api/NAME/{id}`         | the `HeadView` |
+| `GET`    | `/api/NAME/{id}`         | the `HeadView` (an entity: `incoming_limit` cuts what refers to it) |
+| `GET`    | `/api/NAME/{id}/incoming/{field}` | an entity: what refers to it by one relation (`page`, `page_size`) |
 | `POST`   | `/api/NAME`              | create (`Create`); login required |
 | `GET`    | `/api/NAME/{id}/edit`    | to edit: an entity's `EditView`, a document's `HeadView`; login required |
 | `PUT`    | `/api/NAME/{id}`         | update (`Update`); login required, and `If-Match` |
@@ -47,6 +48,7 @@ from pangloss_models import (
     Entity,
     ModelRegistry,
     PanglossInitialisationError,
+    PanglossReferenceError,
     hooks,
     protection_of,
 )
@@ -71,6 +73,22 @@ class Deletable(BaseModel):
     referenced_by: list[dict[str, str]] = []
     reference_count: int = 0
 
+
+class IncomingPage(BaseModel):
+    """Some of what refers to an entity by one relation (`GET /api/NAME/{id}/incoming/{field}`)"""
+
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    field: str
+    count: int
+    page: int
+    page_size: int
+    # (as they are in that field of the entity's `HeadView`)
+    results: list[Any]
+
+
+# How many of what refers to an entity a page has, if the request does not say
+DEFAULT_INCOMING_PAGE = 50
 
 # The most items a page of a list may have
 MAX_PAGE_SIZE = 500
@@ -154,11 +172,20 @@ def parse_reference(reference: str, query: str = "") -> UUID | AnyHttpUrl:
         ) from None
 
 
+# The parameters of the route that reads an entity: they are the request's, not part of a URL that names the entity
+OWN_PARAMETERS = {"incoming_limit"}
+
+
 async def entity_reference(
     request: Request,
     ref: Annotated[str, Path(description="The id of the entity, or one of its URLs")],
 ) -> UUID | AnyHttpUrl:
-    return parse_reference(ref, request.url.query)
+    query = "&".join(
+        part
+        for part in request.url.query.split("&")
+        if part.split("=")[0] not in OWN_PARAMETERS
+    )
+    return parse_reference(ref, query)
 
 
 async def entity_id(
@@ -391,16 +418,90 @@ def build_router(model: type[Document | Entity]) -> APIRouter:
                 reference_count=check.reference_count,
             )
 
+    if is_entity:
+
+        @router.get(
+            f"{item}/incoming/{{field}}",
+            response_model=IncomingPage,
+            operation_id=f"incoming_{name}",
+        )
+        async def incoming_of_item(
+            id: ChangeId,  # type: ignore[valid-type]
+            field: Annotated[
+                str,
+                Path(
+                    description="An incoming field of the entity's view: `givenToReverse`"
+                ),
+            ],
+            page: Annotated[int, Query(ge=1)] = 1,
+            page_size: Annotated[
+                int, Query(ge=1, le=MAX_PAGE_SIZE)
+            ] = DEFAULT_INCOMING_PAGE,
+        ):
+            """What refers to the entity by one relation, a page at a time, by the label of what refers: the items
+            as they are in that field of the entity's view, and how many there are (`count`). For an entity that
+            many documents refer to, read with `?incoming_limit=`"""
+            try:
+                found = await called(
+                    storage_of().operations.get_incoming(
+                        model, id, field, skip=(page - 1) * page_size, limit=page_size
+                    )
+                )
+            except PanglossReferenceError as error:
+                raise HTTPException(
+                    status.HTTP_404_NOT_FOUND, detail=str(error)
+                ) from error
+            if found is None:
+                raise not_found(model, id)
+            annotation = found.model.HeadView.model_fields[found.field].annotation
+            return JSONResponse(
+                {
+                    "field": to_camel(found.field),
+                    "count": found.count,
+                    "page": page,
+                    "pageSize": page_size,
+                    "results": TypeAdapter(annotation).dump_python(
+                        found.items, mode="json", by_alias=True
+                    ),
+                }
+            )
+
     @router.get(item, response_model=get_response, operation_id=f"get_{name}")
-    async def get_item(id: ItemId, response: Response):  # type: ignore[valid-type]
+    async def get_item(
+        id: ItemId,  # type: ignore[valid-type]
+        response: Response,
+        incoming_limit: Annotated[
+            int | None,
+            Query(
+                ge=1,
+                le=MAX_PAGE_SIZE,
+                description="For an entity: no more than this many of what refers to it in each incoming "
+                "field (the first by label), with how many there are in each as `incomingCounts`",
+            ),
+        ] = None,
+    ):
         """The item, as the class it is: for a class that has subclasses, the view of the subclass (its
-        `type` says which; `Content-Location` is where it is edited)."""
-        found = await called(model.get(id))  # type: ignore[arg-type]
+        `type` says which; `Content-Location` is where it is edited).
+
+        An entity has everything that refers to it, in its incoming fields. For one that thousands of documents
+        refer to, `incoming_limit` cuts each field, and `GET .../incoming/{field}` reads the rest a page at a time."""
+        extras: dict[str, Any] = {}
+        if is_entity and incoming_limit is not None:
+            read = await called(
+                storage_of().operations.get_entity_with_some(model, id, incoming_limit)
+            )
+            found = read[0] if read is not None else None
+            if read is not None:
+                # (every field that has something, so that a reader can tell which it has all of)
+                extras["incomingCounts"] = {
+                    to_camel(field): count for field, count in sorted(read[1].items())
+                }
+        else:
+            found = await called(model.get(id))  # type: ignore[arg-type]
         if found is None:
             raise not_found(model, id)
         if found.type != name:
             response.headers["Content-Location"] = f"/api/{found.type}/{found.id}"
-        extras: dict[str, Any] = {}
         for extra in hooks.head_view_extras:
             extras.update(await extra(found._owner, found))
         if extras:

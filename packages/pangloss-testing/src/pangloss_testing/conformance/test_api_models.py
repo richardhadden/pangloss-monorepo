@@ -842,3 +842,135 @@ async def test_search_over_http_with_the_data_in_the_database(
             "/api/search", json={"type": "Letter", "where": {"pages": {"contains": 1}}}
         )
         assert refused.status_code == 422 and "pages.contains" in refused.text
+
+
+@no_type_check
+async def test_an_entity_is_read_with_some_of_what_refers_to_it_and_the_rest_in_pages(
+    db_driver, clear_database
+):
+    """An entity that thousands of documents refer to is megabytes in one answer: `?incoming_limit=` cuts each
+    incoming field and says how many there are, and `/incoming/{field}` reads a field a page at a time"""
+
+    class Person(Entity):
+        _meta = Entity.Meta(create_with_id=True)
+
+    class Identification[T](ReifiedRelation[T]):
+        pass
+
+    class Statement(Document):
+        about_person: Person
+
+    class Gift(Document):
+        given_by: Identification[Person]
+
+    app = create_app()
+    async with client_for(app) as client:
+        headers = await logged_in(client)
+        person_url = "http://example.com/people/john-smith?id=5"
+        made = await client.post(
+            "/api/Person",
+            json={"type": "Person", "id": person_url, "createNew": True, "label": "J"},
+            headers=headers,
+        )
+        assert made.status_code == 201, made.text
+        person = {"type": "Person", "id": made.json()["id"]}
+        for n in (3, 0, 4, 2, 1):
+            body = {
+                "type": "Statement",
+                "label": f"Statement {n}",
+                "aboutPerson": person,
+            }
+            assert (
+                await client.post("/api/Statement", json=body, headers=headers)
+            ).status_code == 201
+        gift = {
+            "type": "Gift",
+            "label": "A gift",
+            "givenBy": {"type": "Identification", "target": [person]},
+        }
+        assert (
+            await client.post("/api/Gift", json=gift, headers=headers)
+        ).status_code == 201
+        at = f"/api/Person/{person['id']}"
+
+        # all of it, as ever: no counts
+        whole = (await client.get(at)).json()
+        assert [s["label"] for s in whole["aboutPersonReverse"]] == [
+            f"Statement {n}" for n in range(5)
+        ]
+        assert "incomingCounts" not in whole
+
+        some = await client.get(at, params={"incoming_limit": 2})
+        assert some.status_code == 200
+        body = some.json()
+        assert [s["label"] for s in body["aboutPersonReverse"]] == [
+            "Statement 0",
+            "Statement 1",
+        ]
+        assert body["incomingCounts"] == {"aboutPersonReverse": 5, "givenByReverse": 1}
+        assert body["givenByReverse"] == whole["givenByReverse"]
+        # (the rest of the view is as it was)
+        assert {k: v for k, v in body.items() if not k.endswith("Reverse")} == {
+            **{k: v for k, v in whole.items() if not k.endswith("Reverse")},
+            "incomingCounts": body["incomingCounts"],
+        }
+        # by its URL (which has a query of its own: the limit is not part of it)
+        by_url = await client.get(f"/api/Person/{person_url}&incoming_limit=1")
+        assert by_url.status_code == 200, by_url.text
+        assert len(by_url.json()["aboutPersonReverse"]) == 1
+        assert by_url.json()["incomingCounts"]["aboutPersonReverse"] == 5
+        for wrong in (0, 501, "many"):
+            assert (
+                await client.get(at, params={"incoming_limit": wrong})
+            ).status_code == 422
+        missing = f"/api/Person/{uuid7()}"
+        assert (
+            await client.get(missing, params={"incoming_limit": 2})
+        ).status_code == 404
+        # (a document has no incoming fields: the limit changes nothing)
+        statement = whole["aboutPersonReverse"][0]["id"]
+        assert (
+            await client.get(
+                f"/api/Statement/{statement}", params={"incoming_limit": 2}
+            )
+        ).json()["label"] == "Statement 0"
+
+        # a field, a page at a time (by either name), open to anyone as the entity is
+        page = await client.get(
+            f"{at}/incoming/aboutPersonReverse", params={"page": 2, "page_size": 2}
+        )
+        assert page.status_code == 200, page.text
+        assert page.json() == {
+            "field": "aboutPersonReverse",
+            "count": 5,
+            "page": 2,
+            "pageSize": 2,
+            "results": whole["aboutPersonReverse"][2:4],
+        }
+        default = (await client.get(f"{at}/incoming/about_person_reverse")).json()
+        assert (default["page"], default["pageSize"]) == (1, 50)
+        assert default["results"] == whole["aboutPersonReverse"]
+        gifts = (await client.get(f"{at}/incoming/givenByReverse")).json()
+        assert gifts["count"] == 1 and gifts["results"] == whole["givenByReverse"]
+        assert gifts["results"][0]["givenBy"]["target"][0]["id"] == person["id"]
+        past = (await client.get(f"{at}/incoming/aboutPersonReverse?page=9")).json()
+        assert past["results"] == [] and past["count"] == 5
+
+        no_field = await client.get(f"{at}/incoming/aboutPerson")
+        assert (
+            no_field.status_code == 404 and "aboutPerson" in no_field.json()["detail"]
+        )
+        assert (
+            await client.get(f"{missing}/incoming/aboutPersonReverse")
+        ).status_code == 404
+        assert (
+            await client.get(f"{at}/incoming/aboutPersonReverse?page_size=501")
+        ).status_code == 422
+        # (only at the id)
+        assert (
+            await client.get(
+                "/api/Person/http://example.com/people/x/incoming/aboutPersonReverse"
+            )
+        ).status_code == 400
+        # the entity itself is still read by a URL that ends in a word
+        assert (await client.get(f"/api/Person/{person_url}")).json()["label"] == "J"

@@ -1,5 +1,6 @@
 """The reads the models are bound to (`get`, `list`, `search`, `autocomplete`), on the backend in use"""
 
+from dataclasses import dataclass
 from typing import Any, LiteralString, Union, cast
 from uuid import UUID
 
@@ -9,7 +10,15 @@ from pangloss_models.autocomplete import (
     labels_to_match,
 )
 from pangloss_models.model_bases.base_models import _ListItems
-from pangloss_models import Document, Entity, Match, ModelRegistry, OrderBy, Where
+from pangloss_models import (
+    Document,
+    Entity,
+    Match,
+    ModelRegistry,
+    OrderBy,
+    PanglossReferenceError,
+    Where,
+)
 from pangloss_models.model_bases.document import (
     _DocumentHeadViewBase,
     _DocumentReferenceViewBase,
@@ -22,6 +31,7 @@ from pangloss_models.model_bases.entity import (
 from pangloss_models.search import check_match, check_order, search_match
 from pangloss_models.utils import get_concrete_types
 from pydantic import AnyHttpUrl, TypeAdapter
+from pydantic.alias_generators import to_camel
 
 from pangloss_cypher import fragments
 from pangloss_cypher.autocomplete_query import autocomplete_query, most_used_query
@@ -277,10 +287,16 @@ def tree_of(record: dict) -> dict:
 
 
 async def read_entity(
-    tx: Transaction, cls: type[Entity], id: UUID | AnyHttpUrl, incoming: bool
+    tx: Transaction,
+    cls: type[Entity],
+    id: UUID | AnyHttpUrl,
+    incoming: bool,
+    incoming_limit: int | None = None,
+    counts: dict[str, int] | None = None,
 ) -> tuple[dict, type[Entity]] | None:
-    """The data of an entity (with the incoming relations, if `incoming`), and the class it is: `cls`, or
-    the subclass it was made as"""
+    """The data of an entity (with the incoming relations, if `incoming`: all of them, or `incoming_limit` of each
+    field), and the class it is: `cls`, or the subclass it was made as. `counts`, if given, is filled with how many
+    there are in each incoming field"""
     resolved_id = await resolve_id(tx, id)
     if resolved_id is None:
         return None
@@ -296,7 +312,12 @@ async def read_entity(
     data = tree_of(records[0])
     data["urls"] = sorted(records[0]["urls"])
     if incoming:
-        data.update(await fetch_incoming_relations(tx, cls, resolved_id))
+        found, totals = await fetch_incoming_relations(
+            tx, cls, resolved_id, limit=incoming_limit
+        )
+        data.update(found)
+        if counts is not None:
+            counts.update(totals)
     return data, cls
 
 
@@ -312,6 +333,75 @@ async def get_entity(
         return None
     data, made_as = read
     return made_as.HeadView(**data)
+
+
+@read_transaction
+async def get_entity_with_some(
+    tx: Transaction, cls: type[Entity], id: UUID | AnyHttpUrl, incoming_limit: int
+) -> tuple[_EntityHeadViewBase, dict[str, int]] | None:
+    """An entity as `get_entity` gives it, but with no more than `incoming_limit` of what refers to it in each
+    field (the first by label), and how many there are in each field. For a page that shows an entity which
+    thousands of documents refer to: the rest is read a page at a time (`get_incoming`)"""
+    counts: dict[str, int] = {}
+    read = await read_entity(
+        tx, cls, id, incoming=True, incoming_limit=incoming_limit, counts=counts
+    )
+    if read is None:
+        return None
+    data, made_as = read
+    return made_as.HeadView(**data), counts
+
+
+@dataclass
+class IncomingPage:
+    """Some of what refers to an entity by one relation (`get_incoming`)"""
+
+    model: type[Entity]
+    """The class the entity is"""
+    field: str
+    count: int
+    """How many there are in all"""
+    items: list[Any]
+    """As they are in the field of the entity's `HeadView`"""
+
+
+def incoming_field_named(cls: type[Entity], name: str) -> str | None:
+    """The incoming field of a class called `name`, as Python has it or as JSON does (`given_to_reverse`,
+    `givenToReverse`)"""
+    names = cls._meta.field_definitions.incoming_fields
+    return next((n for n in names if name in (n, to_camel(n)) and names[n]), None)
+
+
+@read_transaction
+async def get_incoming(
+    tx: Transaction,
+    cls: type[Entity],
+    id: UUID | AnyHttpUrl,
+    field: str,
+    skip: int = 0,
+    limit: int = 50,
+) -> IncomingPage | None:
+    """What refers to an entity by one relation (`field`: an incoming field of its `HeadView`), `limit` of them from
+    `skip`, by the label of what refers. None if there is no such entity; a `PanglossReferenceError` if the class
+    the entity is has no such field"""
+    read = await read_entity(tx, cls, id, incoming=False)
+    if read is None:
+        return None
+    data, made_as = read
+    name = incoming_field_named(made_as, field)
+    if name is None:
+        raise PanglossReferenceError(
+            f"Nothing refers to a {made_as.__name__} by a relation called {field}"
+        )
+    found, counts = await fetch_incoming_relations(
+        tx, made_as, UUID(str(data["id"])), field=name, skip=skip, limit=limit
+    )
+    items = TypeAdapter(made_as.HeadView.model_fields[name].annotation).validate_python(
+        found.get(name, [])
+    )
+    return IncomingPage(
+        model=made_as, field=name, count=counts.get(name, 0), items=items
+    )
 
 
 @read_transaction

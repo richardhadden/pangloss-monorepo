@@ -11,7 +11,7 @@ library, synced), 8,795 factoids, 337,423 nodes / 825,815 edges. Item numbers ar
 severity.
 
 **Fixed since (2026-11-06, branch `full-smoke-test-fixes`; what was changed and how it was checked is in
-`FIXES.md`):** 1, 2, 3, 5, 20, 21, 26, 29, 32, 33. Each is marked below. The text of an item is as it was found.
+`FIXES.md`):** 1, 2, 3, 5, 15, 20, 21, 22, 26, 28 (in part), 29, 32, 33. Each is marked below. The text of an item is as it was found.
 
 ## High
 
@@ -94,7 +94,7 @@ severity.
 14. **Writes are ~500 ms each while another writer is busy.** During the Zotero sync, entity writes at concurrency
     16 took 510-550 ms each (`write_head_node took 5xx ms (slow)`), and reads queued behind them
     (`get_access_token_in_db_by_hash took 706 ms`, `get_user_in_db 563 ms`). Alone: 155-200 entities/s.
-15. **An entity's `HeadView` inlines every reverse relation, unpaged.** The super-person (3,926 reverse items from
+15. ✅ *Fixed: the query cuts before it reads; `?incoming_limit=` and `GET /api/NAME/{id}/incoming/{field}`; whole read 0.6-0.8 s, limited 0.32 s.* **An entity's `HeadView` inlines every reverse relation, unpaged.** The super-person (3,926 reverse items from
     3,000 factoids) is a 1.86 MB response, 0.8-1.1 s, logged in. Linear in references.
 16. **The Zotero first sync is slow and restarts from zero.** The library version is stored only at the end of a
     sync, so a server restart during the first sync (here at 5,440 items) starts it again; the second pass skips
@@ -104,7 +104,7 @@ severity.
 21. ✅ *Fixed: the month page is 0.45 MB, the day page 0.55 MB (see 5).* **Interface calendar pages are huge.** `/calendar/gregorian/1500/3` server-renders **21 MB of HTML** (1.6 s on
     the server; 5-6 s to load in the browser), and the day and year pages are as slow: the API's hits of item 5,
     once per day. Other pages: 70-250 ms.
-22. **The super-person's interface page**: 5.2 s to load, 29,507 DOM elements, 105,716 px tall (every reverse
+22. ✅ *Fixed: the page reads 25 of each relation, with "and N more": 2.4 s, 16,045 elements, 61,050 px.* **The super-person's interface page**: 5.2 s to load, 29,507 DOM elements, 105,716 px tall (every reverse
     relation as chips, no paging or folding). Usable, but it grows with the data. (Its edit page: 160 ms.)
 23. **Every interface page is ~256 KB of HTML** on the dev server even when empty (a missing person: 256,570 bytes).
     Not checked on the production build (it needs a proxy for /api, item 12).
@@ -125,7 +125,7 @@ severity.
     factoid 31/43, list search 47/63, autocomplete 35/49, structured search 38/51. With 8 writers as well: 301 req/s,
     get person 199/489 ms, writes 328/675 ms. A person read is 7 ms alone but queues badly under concurrency (it
     reads ~95 reverse-relation fields).
-28. **The by-date view of the super-person** takes 3.5 s and makes 47,069 DOM elements.
+28. ✅ *Fixed: in part: the view has what the page has read (2.2 s) and reads everything only when asked; all of it is as heavy as it was.* **The by-date view of the super-person** takes 3.5 s and makes 47,069 DOM elements.
 
 29. ✅ *Fixed: the delete refuses and marks nothing; a second type of one name beside the first is refused (a judgement call, to confirm); either name finds a typology.* **Typology: the generic DELETE route marks a type in use for deletion**, where the typology's own rule is to
     refuse. `DELETE /api/OccupationType/{Banker}` (620 people have it) answered 409 "... It has been marked for

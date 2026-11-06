@@ -96,6 +96,39 @@ Each change below ran against the full dataset, after a dry run, with `--backup`
 - **The snapshot from `--backup` does not last.** Memgraph keeps three snapshots, taking one every 300 seconds, so the one `--backup` takes is gone in about 15 minutes. A migration whose check takes longer than that has no restore point by the end. `migrate` says so at the end if the database no longer lists the backup it took (`The backup ... is no longer there`). Copy the snapshot from the server, or raise `--storage-snapshot-retention-count` ([Migrations guide](../guide/migrations/04-safety.md)).
 - **Nothing else may write while a migration runs.** The lock refuses other writers (`PanglossReadOnlyError`, "The database is being migrated"), which is right, but a loader running at the time stops with an error. `migrate --fake` also takes the lock.
 
+## Reading an entity that thousands of documents refer to
+
+An entity's `HeadView` has everything that refers to it, in its incoming fields. Measured 2026-11-06 on the smoke
+test's database (337,000 nodes), for a person that 3,927 statements refer to, in 83 fields:
+
+| | Before | Now |
+|---|---|---|
+| `GET /api/Person/{id}` (whole: 1.86 MB) | 0.8 to 1.3 s | 0.6 to 0.8 s |
+| `GET /api/Person/{id}?incoming_limit=25` (0.99 MB) | - | 0.32 s |
+| `GET /api/Person/{id}?incoming_limit=10` (0.42 MB) | - | 0.19 s |
+| `GET /api/Person/{id}/incoming/{field}`, a page of 50 | - | 0.06 s |
+| The item's page in the interface (dev build) | 5.2 s, 29,507 elements, 105,716 px tall | 2.4 s, 16,045 elements, 61,050 px (with 25 of each field) |
+
+Where the time went (`pangloss-smoketest/smoke_scripts/read_phases.py`): finding the 6,799 reverse edges and the
+documents above them took 14 ms; reading the properties of every node on the way 480 ms; who made and last changed
+each 160 ms. And 2,863 of the rows were read only to be dropped in Python (a relation that a subclass narrows is
+stored under both names, and shown under one). So `build_fetch_incoming_query` now works out the field of each row
+in the query, keeps only what the models show (`read_incoming.shown_relations`, passed as a parameter), sorts by the
+label of what refers, counts each field, and cuts each field **before** it reads any properties.
+
+- `Entity.get` still gives everything (now in label order, and faster). An API client that wants it all gets it.
+- `storage.operations.get_entity_with_some(cls, id, limit)` and `get_incoming(cls, id, field, skip, limit)` are what
+  the two routes use. They are for the API, as `check_deletable` is: not bound to the models, and not in the SDK.
+- The interface reads an entity's page with 25 of each field (`INCOMING_SHOWN`); a row that has more ends in
+  "and N more", which reads the next hundred. With 10 of each the same page was 1.25 s and 7,339 elements: the
+  number is a constant in `interface-core/src/api/fetch.ts`.
+- A module's view of what refers to an entity (by date, of `pangloss-dates`) has what the page has read. It says how
+  many it is without, and **Read them all** reads them (78 requests and 5.3 s for the person above, and then the
+  47,000 elements that view always was for it): on request, no longer on every visit.
+
+Not done: the HTML of that page is still 4.2 MB (the answer is in it twice, as markup and as the data the browser
+starts from), and the page is as tall as its 83 rows.
+
 ## Searching
 
 Structured searches ([Structured search](structured-search.md#step-5-measured)) on the same data: every search tried takes under 600 ms with the indexes Pangloss makes, `$mentions` (a reference anywhere in a document) the longest. A label index for the class searched makes a search of a class three times faster, and an index on a property 100 times faster for an equality; edge indexes make no difference. `search_benchmark.py` in `pangloss-demo/` repeats the measurements.

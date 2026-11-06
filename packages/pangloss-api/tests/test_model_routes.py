@@ -118,7 +118,12 @@ def test_an_abstract_class_can_be_read_but_not_changed(settings, monkeypatch):
         for path, methods in paths.items()
         if path.startswith("/api/Agent")
         for method in methods
-    } == {("/api/Agent", "get"), ("/api/Agent/{ref}", "get")}
+    } == {
+        ("/api/Agent", "get"),
+        ("/api/Agent/{ref}", "get"),
+        # (what refers to an entity, a page at a time: a read)
+        ("/api/Agent/{ref}/incoming/{field}", "get"),
+    }
     headers = {"Authorization": "Bearer nothing"}
     assert client.post("/api/Agent", json={}, headers=headers).status_code == 405
     assert client.put(f"/api/Agent/{uuid7()}", json={}).status_code in (404, 405)

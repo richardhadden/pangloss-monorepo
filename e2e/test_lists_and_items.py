@@ -2,6 +2,8 @@
 
 import re
 
+import neo4j
+from conftest import MEMGRAPH_AUTH, MEMGRAPH_URI
 from helpers import hydrated
 from playwright.sync_api import Page, expect
 
@@ -161,3 +163,84 @@ def test_a_long_list_is_loaded_as_it_is_scrolled_and_starts_where_it_was_left(
     page.wait_for_url(re.compile(r"q=Person"))
     assert "at=" not in page.url
     assert page.evaluate("window.scrollY") == 0
+
+
+def test_an_entity_that_much_refers_to_has_the_first_of_each_and_reads_more_when_asked(
+    page: Page, types
+):
+    """The page of an entity is read with 25 of what refers to it in each field (thousands made a page of megabytes):
+    a row that has more ends in "and N more", which reads them; and a module's view of what refers (by date) says
+    how many it is without, and reads them all when asked"""
+    api = types.admin()
+    philip = api.ok("POST", "/api/Person", {"label": "Philip the Good", "has_role": []})
+    person = {"type": "Person", "id": philip["id"]}
+    for n in range(30):
+        api.ok(
+            "POST",
+            "/api/Statement",
+            {"label": f"Letter {n:02}", "text": "Wrote", "about": person},
+        )
+    for n in range(27):
+        api.ok(
+            "POST",
+            "/api/Appointment",
+            {
+                "label": f"Office {n:02}",
+                "appointed": person,
+                "date": {
+                    "type": "ExactDate",
+                    "calendar": "julian",
+                    "year": 1430 + n,
+                },
+            },
+        )
+    try:
+        much_refers_to(page, philip["id"])
+    finally:
+        # (what this made, and nothing else: other tests count the statements and the people)
+        driver = neo4j.GraphDatabase.driver(MEMGRAPH_URI, auth=MEMGRAPH_AUTH)
+        try:
+            driver.execute_query(  # ty: ignore[no-matching-overload]
+                "MATCH (n) WHERE (n:Statement AND n.label STARTS WITH 'Letter ') "
+                "OR (n:Appointment AND n.label STARTS WITH 'Office ') OR n.id = $id DETACH DELETE n",
+                id=philip["id"],
+                database_="memgraph",
+            )
+        finally:
+            driver.close()
+
+
+def much_refers_to(page: Page, philip: str) -> None:
+    page.goto(f"/Person/{philip}")
+    hydrated(page)
+    expect(page.get_by_role("heading", name="Philip the Good")).to_be_visible()
+    letters = page.get_by_role("link", name=re.compile(r"Letter \d\d$"))
+    offices = page.get_by_role("link", name=re.compile(r"Office \d\d$"))
+    # (the first 25 of each, by label)
+    expect(letters).to_have_count(25)
+    expect(offices).to_have_count(25)
+    expect(page.get_by_role("link", name="Letter 24")).to_be_visible()
+    more = page.get_by_test_id("incoming-more")
+    expect(more).to_have_count(2)
+    assert sorted(more.all_text_contents()) == ["and 2 more", "and 5 more"]
+    with page.expect_response(re.compile(r"/incoming/aboutReverse\?")) as asked:
+        more.filter(has_text="and 5 more").click()
+    assert asked.value.ok
+    expect(letters).to_have_count(30)
+    expect(page.get_by_role("link", name="Letter 29")).to_be_visible()
+    # (that row has everything now: only the other still has its button)
+    expect(more).to_have_text(["and 2 more"])
+
+    # by date (the view of `pangloss_dates`): it has what the page has, says so, and reads the rest
+    page.get_by_role("button", name="Sort by date").click()
+    dated = page.locator("main section").get_by_test_id("dated-item")
+    expect(dated).to_have_count(25)
+    notice = page.get_by_test_id("incoming-not-read")
+    expect(notice).to_contain_text("2 more refer to this and are not read yet")
+    notice.get_by_role("button", name="Read them all").click()
+    expect(dated).to_have_count(27)
+    expect(notice).to_have_count(0)
+    # (and back by field: nothing more to read)
+    page.get_by_role("button", name="Sort by date").click()
+    expect(offices).to_have_count(27)
+    expect(more).to_have_count(0)

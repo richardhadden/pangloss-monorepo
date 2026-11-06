@@ -1,6 +1,7 @@
 import { createEffect, createMemo, createSignal, Errored, For, Loading, Match, Show, Switch } from "solid-js";
 import type { ParentProps } from "solid-js";
 import {
+  useApi,
   useComponent,
   useIncomingView,
   useModels,
@@ -8,7 +9,7 @@ import {
   useTranslations,
 } from "../context";
 import { kindRule, kindTint, spaceTint } from "../primitives";
-import { contextTrail } from "../api";
+import { contextTrail, getIncoming, INCOMING_PAGE } from "../api";
 import type { ContextLabel } from "../api";
 import {
   collapsedView,
@@ -35,6 +36,7 @@ import {
   headRestClass,
   nestedClass,
   plainTint,
+  smallButtonClass,
   spaceTypeClass,
   typeChipClass,
 } from "./form/styles";
@@ -137,12 +139,120 @@ function Head(props: {
   );
 }
 
+/** What has been read of what refers to an item: by the key of the incoming field, the items it has now */
+type Read = Record<string, Data[]>;
+
+const asItems = (value: unknown): Data[] =>
+  (Array.isArray(value) ? value : value ? [value] : []).filter(isObject);
+
+/**
+ * After the items of a row of what refers to an entity, when there are more than were read with it: "and 109 more",
+ * which reads the next of them (a hundred at a time, by label, as the first were) and gives the row what it has now.
+ */
+function MoreIncoming(props: {
+  page: { type: string; id: string };
+  field: string;
+  /** What the row has */
+  items: Data[];
+  /** How many it does not have */
+  left: number;
+  onRead: (items: Data[]) => void;
+}) {
+  const api = useApi();
+  const { t } = useTranslations();
+  const [reading, setReading] = createSignal(false);
+  const read = async () => {
+    setReading(true);
+    try {
+      // (whole pages from the start: what the row has of the page it is in is read again with the rest of it)
+      const page = Math.floor(props.items.length / INCOMING_PAGE) + 1;
+      const kept = props.items.slice(0, (page - 1) * INCOMING_PAGE);
+      const answer = await getIncoming(api, props.page.type, props.page.id, props.field, page);
+      props.onRead([...kept, ...answer.results]);
+    } finally {
+      setReading(false);
+    }
+  };
+  return (
+    <button
+      type="button"
+      class={[smallButtonClass, "text-slate-600 disabled:text-slate-400"]}
+      disabled={reading()}
+      data-testid="incoming-more"
+      onClick={() => void read()}
+    >
+      {t("incoming_more", "and {count} more", { count: props.left })}
+    </button>
+  );
+}
+
+/**
+ * Above an interface module's view of what refers to an entity, when not all of it has been read: the view has only
+ * what the page has (sorted by date, the first few of each field are not the earliest), so it says how many are
+ * missing, and reads them all when asked.
+ */
+function ReadAllIncoming(props: {
+  page: { type: string; id: string };
+  /** The fields that have more than was read, by key, with what each has */
+  fields: { key: string; items: Data[] }[];
+  left: number;
+  /** (once, with every field: the view is laid out again for each change of what it has) */
+  onRead: (read: Read) => void;
+}) {
+  const api = useApi();
+  const { t } = useTranslations();
+  const [reading, setReading] = createSignal(false);
+  const all = async (key: string): Promise<Data[]> => {
+    let items: Data[] = [];
+    for (let page = 1; ; page++) {
+      const answer = await getIncoming(api, props.page.type, props.page.id, key, page, 500);
+      items = [...items, ...answer.results];
+      if (answer.results.length === 0 || items.length >= answer.count) return items;
+    }
+  };
+  const read = async () => {
+    setReading(true);
+    try {
+      const keys = props.fields.map((field) => field.key);
+      const found: Read = {};
+      // (a few fields at a time: an entity can have a hundred)
+      const next = async (): Promise<void> => {
+        const key = keys.shift();
+        if (key === undefined) return;
+        found[key] = await all(key);
+        return next();
+      };
+      await Promise.all(Array.from({ length: 6 }, next));
+      props.onRead(found);
+    } finally {
+      setReading(false);
+    }
+  };
+  return (
+    <p class="mt-6 flex flex-wrap items-center gap-3 text-xs text-slate-600" data-testid="incoming-not-read">
+      <span>{t("incoming_not_read", "{count} more refer to this and are not read yet", { count: props.left })}</span>
+      <button
+        type="button"
+        class={[smallButtonClass, "text-slate-600 disabled:text-slate-400"]}
+        disabled={reading()}
+        onClick={() => void read()}
+      >
+        {t("incoming_read_all", "Read them all")}
+      </button>
+    </p>
+  );
+}
+
 /**
  * The rows of an object: a key and its contents for each field of its model, in the order of
  * the model, the keys in a column on the left and the contents on the right. Fields with
  * nothing in them are left out, and those only in the database (worked out, not said). What refers to the object from
  * elsewhere (`incoming`) follows, as chips, by the field it is in; on the item's own page, an interface module's view
  * of it (`incomingViews`, chosen in the console) can take some of it, to show after the rows in its own way.
+ *
+ * An entity's page is read with the first few of each incoming field and how many there are (`incomingCounts`): a
+ * row that has more ends in "and N more" (`MoreIncoming`), and a module's view says how many it is without
+ * (`ReadAllIncoming`).
  */
 function Fields(props: {
   value: Data;
@@ -157,17 +267,25 @@ function Fields(props: {
   const definitions = useModels();
   const views = useModules().incomingViews();
   const incoming = useIncomingView();
+  // What has been read of what refers to the item since it was (forgotten when the item is another, or read again)
+  const [read, setRead] = createSignal<Read>(() => (void props.value, {}));
+  const itemsOf = (key: string): Data[] => read()[key] ?? asItems(props.value[key]);
+  const counts = () => (isObject(props.value.incomingCounts) ? (props.value.incomingCounts as Record<string, number>) : {});
+  // (how many of a field the page does not have)
+  const leftOf = (key: string) => Math.max(0, (counts()[key] ?? 0) - itemsOf(key).length);
+  const partial = createMemo(() =>
+    (props.model?.incoming ?? [])
+      .filter((incoming) => leftOf(incoming.key) > 0)
+      .map((incoming) => ({ key: incoming.key, items: itemsOf(incoming.key) })),
+  );
   const entries = createMemo<IncomingEntry[]>(() =>
-    (props.model?.incoming ?? []).flatMap((incoming) => {
-      const value = props.value[incoming.key];
-      return (Array.isArray(value) ? value : value ? [value] : [])
-        .filter(isObject)
-        .map((item) => ({
-          key: incoming.key,
-          name: incomingName(props.model!.name, incoming.name),
-          item,
-        }));
-    }),
+    (props.model?.incoming ?? []).flatMap((incoming) =>
+      itemsOf(incoming.key).map((item) => ({
+        key: incoming.key,
+        name: incomingName(props.model!.name, incoming.name),
+        item,
+      })),
+    ),
   );
   // (the views that have something to show: only on the item's own page)
   const offered = createMemo(() =>
@@ -220,13 +338,18 @@ function Fields(props: {
           fallback={
             <For each={props.model?.incoming ?? []}>
               {(incoming) => (
-                <Show when={!isEmpty(props.value[incoming.key])}>
+                <Show when={itemsOf(incoming.key).length > 0}>
                   <Row name={incomingName(props.model!.name, incoming.name)} incoming>
-                    <Value
-                      value={props.value[incoming.key]}
-                      depth={props.depth}
-                      asChip
-                    />
+                    <Value value={itemsOf(incoming.key)} depth={props.depth} asChip />
+                    <Show when={props.page && leftOf(incoming.key) > 0}>
+                      <MoreIncoming
+                        page={props.page!}
+                        field={incoming.key}
+                        items={itemsOf(incoming.key)}
+                        left={leftOf(incoming.key)}
+                        onRead={(items) => setRead((before) => ({ ...before, [incoming.key]: items }))}
+                      />
+                    </Show>
                   </Row>
                 </Show>
               )}
@@ -242,6 +365,14 @@ function Fields(props: {
           </For>
         </Show>
       </dl>
+      <Show when={view() && props.page && partial().length > 0}>
+        <ReadAllIncoming
+          page={props.page!}
+          fields={partial()}
+          left={partial().reduce((sum, field) => sum + leftOf(field.key), 0)}
+          onRead={(found) => setRead((before) => ({ ...before, ...found }))}
+        />
+      </Show>
       <Show when={view() && props.page && props.model ? view() : undefined}>
         {(chosen) => {
           const View = chosen().component;

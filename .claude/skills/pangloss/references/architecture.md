@@ -56,7 +56,10 @@ free, and that it is based on the latest version; only then delete everything be
 write the new tree. A failed update changes nothing.
 
 A read: one query walks out from the head node, the paths are made into a tree (`build_tree`), `meta` is added, and the
-result is validated as the `HeadView`.
+result is validated as the `HeadView`. An entity's view also has what refers to it (`read_incoming`), all of it by
+default: the query finds the rows, drops what the models do not show, sorts, counts and cuts **before** reading any
+properties (reading them is what costs). `?incoming_limit=` and `GET /api/NAME/{id}/incoming/{field}` read some of it
+(`operations.get_entity_with_some`, `get_incoming`: for the API, not bound to the models).
 
 Tests reset the registry before each test (`ModelRegistry._reset()`), so classes declared inside a test do not leak.
 Do the same in a scratch script that declares classes twice.
