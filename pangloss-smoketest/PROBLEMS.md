@@ -11,7 +11,7 @@ library, synced), 8,795 factoids, 337,423 nodes / 825,815 edges. Item numbers ar
 severity.
 
 **Fixed since (2026-11-06, branch `full-smoke-test-fixes`; what was changed and how it was checked is in
-`FIXES.md`):** 1, 2, 3, 5, 6, 7 (in part), 8, 9, 15, 20, 21, 22, 26, 28 (in part), 29, 30, 32, 33, 34, 35 (the count, not the speed). Each is marked below. The text of an item is as it was found.
+`FIXES.md`):** 1, 2, 3, 5, 6, 7 (in part), 8, 9, 10, 11, 12, 13, 15, 16, 20, 21, 22, 24, 25, 26, 31 (in part), 28 (in part), 29, 30, 32, 33, 34, 35 (the count, not the speed), 36, and what the user reported at the end. Each is marked below. The text of an item is as it was found.
 
 ## High
 
@@ -77,17 +77,17 @@ severity.
 9. ✅ *Fixed: the message names the setting.* **A Period that starts after `DATES_OPEN_END_YEAR` and is ongoing is refused** with "the earliest date is after
    the latest (the range would be empty)". With the default 1600, a period starting in 1605 cannot be ongoing. The
    message does not name the setting. (Set `DATES_OPEN_END_YEAR = 1700` here.)
-10. **Query parameters are snake_case only, and unknown ones are ignored silently.** `?pageSize=100` (the camelCase
+10. ✅ *Fixed: read in either case; an unknown one is a 422 that lists those the route has.* **Query parameters are snake_case only, and unknown ones are ignored silently.** `?pageSize=100` (the camelCase
     the JSON uses everywhere) is ignored and 50 come back; `?pageSize=501` is not refused either.
-11. **422 messages for union fields are enormous**: the `loc` of a factoid's statement error names the whole union
+11. ✅ *Fixed: `loc` is the path in what was sent; the union member is in `model`, short; a long `input` is left out.* **422 messages for union fields are enormous**: the `loc` of a factoid's statement error names the whole union
     (`Hypothetical[Accusation, Appointment, ... 68 names]Create`), ~3 KB for one error.
-12. **The production interface (`pangloss interface serve`) on its own cannot log in**: nothing passes `/api` to
+12. ✅ *Fixed: the interface's server passes `/api` on (`--api-url`), and says so when the API is not there.* **The production interface (`pangloss interface serve`) on its own cannot log in**: nothing passes `/api` to
     the API (by design: "the production proxy for /api is a decision still open"), and the login dialog shows a bare
     "Not Found". A message saying the API cannot be reached would save time. Used `interface dev --api-url` instead.
 
 ## Perf
 
-13. **`initialise()` takes 11-12 s for this model** (6,538 Pydantic classes built, 4,600 `model_rebuild` calls;
+13. ✅ *Fixed: 3.2 s; the schemas made on the way are no longer made.* **`initialise()` takes 11-12 s for this model** (6,538 Pydantic classes built, 4,600 `model_rebuild` calls;
     profiled `setup-database`: 18.5 of 19.5 s in `_initialise_models`). Every command that needs models pays it
     (`makemigrations` 14 s, `migrate` 15 s, `setup-database` 12 s, `zotero status` 17 s), and so do server start and
     any script. Commands that do not initialise (`showmigrations`) take 0.5 s.
@@ -96,7 +96,7 @@ severity.
     (`get_access_token_in_db_by_hash took 706 ms`, `get_user_in_db 563 ms`). Alone: 155-200 entities/s.
 15. ✅ *Fixed: the query cuts before it reads; `?incoming_limit=` and `GET /api/NAME/{id}/incoming/{field}`; whole read 0.6-0.8 s, limited 0.32 s.* **An entity's `HeadView` inlines every reverse relation, unpaged.** The super-person (3,926 reverse items from
     3,000 factoids) is a 1.86 MB response, 0.8-1.1 s, logged in. Linear in references.
-16. **The Zotero first sync is slow and restarts from zero.** The library version is stored only at the end of a
+16. ✅ *Fixed: the version reached is stored as the sync goes, and `status` says how far it is. Its speed is Zotero's.* **The Zotero first sync is slow and restarts from zero.** The library version is stored only at the end of a
     sync, so a server restart during the first sync (here at 5,440 items) starts it again; the second pass skips
     unchanged items but still took 15+ minutes to make progress visible. `zotero status` says "version 0, never
     synced" the whole time, with 8,000+ items in the database.
@@ -109,12 +109,12 @@ severity.
 23. **Every interface page is ~256 KB of HTML** on the dev server even when empty (a missing person: 256,570 bytes).
     Not checked on the production build (it needs a proxy for /api, item 12).
 
-24. **A running server is not told the database was migrated.** `pangloss migrate` (rename `Kinship.kind` to
+24. ✅ *Fixed: the server looks, and answers 503 "restart the server" once a migration it did not have is applied.* **A running server is not told the database was migrated.** `pangloss migrate` (rename `Kinship.kind` to
     `kinship_kind`, 217 nodes; 67 s with the read-back of 36,525 items) while the API ran: during it, writes were
     refused properly (`PanglossReadOnlyError`); after it, the old server read a factoid with a Kinship and answered
     **500** (`ValidationError for FactoidHeadView`) until restarted. It could notice the schema moved on (it already
     checks pending migrations at start) and say so (503), rather than 500.
-25. **One failed Zotero item means the whole library version is not stored.** The sync finished with "10129
+25. ✅ *Fixed: a failed item holds only itself back and is tried again; a migration postpones the sync.* **One failed Zotero item means the whole library version is not stored.** The sync finished with "10129
     created, 0 updated, 5440 unchanged, 150 removed, skipped 10 attachment, 14 note, 1 errors": the one error was
     ZZ3UD5ZS, refused because my migration had locked writes for a minute. So `synced_version` stays 0 with ~15,500
     items in the database, and the next sync goes through all of them again; and it is not retried until Zotero's
@@ -136,7 +136,7 @@ severity.
     (`pangloss typology tree OccupationTypology`: "No typology OccupationTypology. Known: OccupationType, TitleType").
 30. ✅ *Fixed: the slow threshold is raised while the check reads many at once.* **`pangloss check-data` floods the terminal** with hundreds of `read transaction get_entity took 5xx ms (slow)`
     warnings while it reads (93,470 items, 135 s), burying its one line of result.
-31. **`/openapi.json` is 2.5 MB (570 paths, 1,014 schemas) and the first request takes 4.9 s** (then cached: 10 ms).
+31. ✅ *Fixed as far as it goes: made in a thread, so the server answers meanwhile; 104 KB on the wire since gzip.* **`/openapi.json` is 2.5 MB (570 paths, 1,014 schemas) and the first request takes 4.9 s** (then cached: 10 ms).
     `/docs` loads it.
 
 32. ✅ *Fixed: the packages ship stubs of their models; typology entities, `Typed[...]` and `Var` of a trait type-check.* **`make-stubs` output does not type-check in a project outside the monorepo's `ty` overrides.** `ty check
@@ -167,7 +167,7 @@ severity.
     by a separate script process, as the hooks run in any Pangloss process). So a real run would write ~19,000
     needless records (not run). The history store is `.pangloss/history.sqlite3`, 222 MB for this data.
 
-36. **`squashmigrations` does not fold a later rename or added field into the create** (dry run of 0001-0002: "220
+36. ✅ *Fixed: 220 -> 218 here; one migration named alone is the run up to it.* **`squashmigrations` does not fold a later rename or added field into the create** (dry run of 0001-0002: "220
     changes in 2 migrations -> 220 changes": "Create the Document Kinship" then "Rename the field Kinship.kind to
     kinship_kind"; "Create the Entity Person" then "Add the literal field Person.nickname"). It works; it is just not
     shorter. Also `squashmigrations smoke 0002` (one number) only says "Missing argument 'last'".
@@ -188,7 +188,7 @@ severity.
 
 - **Login lockout is by username**: after 10 wrong passwords for `editor`, the 11th and 12th tries are 429, and so
   is the right password. Anyone can lock any user out by guessing (documented as "count towards the login limit").
-- **Migrating back** asks before losing data (`--backup` or `--no-backup`; `nickname` is flagged although no node
+- ✅ *Fixed: it says so before the list.* **Migrating back** asks before losing data (`--backup` or `--no-backup`; `nickname` is flagged although no node
   has it), took a snapshot, renamed 219 properties back in 72 s; its read-back then lists 421 "unreadable"
   factoids, rightly, since the code is still at 0002: it could say "the code is ahead of the database" instead.
 
@@ -253,3 +253,18 @@ too big: items 5, 15, 21, 22.)
   Zotero read-only fields (403): all as documented.
 - Derived rules kept up with the REST writes (923 MetWith, 278 GaveTo, 34 SameGroup) and are hidden from anonymous
   readers while their factoids are unpublished.
+
+
+
+- ✅ *Fixed (2026-11-06): Solid raised to rc.21, which changed neither; both were ours, and three more of the kind were found. See `FIXES.md` and `docs/interface-refactoring.md`.* REPORTED BY USER: Clicked around a bit on the live smoketest frontend, and the server was logging the following:
+
+[SSR_BOUNDARY_WATERFALL] A <Loading> boundary took 4 render passes — 3 sequential async waits, 524ms end to end: each read could start only after the previous one answered. If a later read doesn't need the earlier answer, derive both from the same inputs so they start together; if the dependency is intrinsic, preload the dependent data or join the requests.
+  in <Document> › <App> › <ComponentsProvider> › <ComponentsContext> › <ApiProvider> › <ApiContext> › <ModelsProvider> › <ModelsContext> › <ModulesProvider> › <ModulesContext> › <Loading> › <TranslationsProvider> › <TranslationsContext> › <NavExpandedProvider> › <NavExpandedContext> › <LoginDialogProvider> › <LoginDialogContext> › <ConsoleMountProvider> › <ConsoleMountContext> › <SidePanelProvider> › <SidePanelContext> › <Router> › <RouterContextObj> › <Root> › <RootComp> › <Frame> › <SessionProvider> › <SessionContext> › <ClipboardProvider> › <ClipboardContext> › <StashProvider> › <StashContext> › <ToastsProvider> › <ToastsContext> › <Padded> › <Loading> › <Routes> › <Show> › <RouteContextObj> › <wrap> › <Page> › <Errored> › <Loading>
+  at src/pages/Item.tsx:163:9
+[SSR_BOUNDARY_WATERFALL] what it means and how to fix it: https://v2.solidjs.com/reference/solid-js/diagnostics/ssr-boundary-waterfall
+[SSR_BOUNDARY_WATERFALL] agent repair guide: node_modules/solid-js/skills/reactivity-diagnostics/SKILL.md#ssr_boundary_waterfall — https://github.com/solidjs/solid/blob/next/packages/solid/skills/reactivity-diagnostics/SKILL.md#ssr_boundary_waterfall
+[SERVER_WRITE] Writing a signal on the server is deprecated and will become an error. Server render is pure: state changes flow from async sources (promises, async iterables), never setters — this write landed as inert data (nothing re-renders). If you are bridging a subscription, make it the async source itself instead of pushing writes from its callback.
+[SERVER_WRITE] what it means and how to fix it: https://v2.solidjs.com/reference/solid-js/diagnostics/server-write
+[SERVER_WRITE] agent repair guide: node_modules/solid-js/skills/reactivity-diagnostics/SKILL.md#server_write — https://github.com/solidjs/solid/blob/next/packages/solid/skills/reactivity-diagnostics/SKILL.md#server_write
+
+Check these things out. First, try bumping the version of SolidJs 2.0 to the most recent release (it's still working through release candidates, but at a quite fast rate)

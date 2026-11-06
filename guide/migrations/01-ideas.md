@@ -101,3 +101,5 @@ When the API starts it compares the database and the models with the migrations.
 - or the models have changed since the migrations were written (you forgot `makemigrations`).
 
 This stops you running new code against old data, or the reverse. The setting `MIGRATION_CHECK` controls it: `"error"` (the default) refuses to start, `"warn"` starts and warns, `"off"` does not look. A project with no migrations is not checked.
+
+A server that is already running when you migrate still has the old models. It notices within a few seconds (`MIGRATION_WATCH_SECONDS`, 10) and from then on answers every request with a 503 that says so, until you restart it. So: deploy the new code, run `pangloss migrate`, restart the server.

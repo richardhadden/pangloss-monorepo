@@ -15,7 +15,7 @@ from pangloss_models.exceptions import PanglossModelError
 from pangloss_models.model_bases.base_models import _DeclaredClass
 from pangloss_models.model_bases.document import Document
 from pangloss_models.model_bases.entity import Entity
-from pangloss_models.model_bases.model_tools import set_field
+from pangloss_models.model_bases.model_tools import rebuild, set_field
 from pangloss_models.model_bases.reified_relation import (
     ReifiedRelation,
     ReifiedRelationDocument,
@@ -71,7 +71,7 @@ def initialise_reference_set_model(model: type[_DeclaredClass]):
         label=(str | None, None),
     )
 
-    model.ReferenceSet.model_rebuild(force=True)
+    rebuild(model.ReferenceSet)
 
 
 def reference_view_extra_fields(model: type[_DeclaredClass]) -> list[str]:
@@ -142,4 +142,4 @@ def initialise_reference_view_model(model: type[_DeclaredClass]):
             ),
         )
 
-    model.ReferenceView.model_rebuild(force=True)
+    rebuild(model.ReferenceView)

@@ -135,11 +135,13 @@ def status(
             line += f" of {latest}" + (
                 " (behind)" if latest > state.synced_version else " (up to date)"
             )
-        line += (
-            f", synced {state.last_sync:%Y-%m-%d %H:%M:%S}"
-            if state.last_sync
-            else ", never synced"
-        )
+        if state.last_sync:
+            line += f", synced {state.last_sync:%Y-%m-%d %H:%M:%S}"
+        elif state.synced_version:
+            # (the version is stored as a long sync goes: it has got this far)
+            line += ", first sync not finished"
+        else:
+            line += ", never synced"
         typer.echo(line)
         if state.last_error:
             typer.secho(f"  last error: {state.last_error}", fg="red")

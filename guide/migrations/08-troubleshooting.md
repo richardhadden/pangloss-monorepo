@@ -31,6 +31,15 @@ The files and the database's record disagree.
 
 You can silence the server's check with `MIGRATION_CHECK = "warn"` or `"off"` while you sort it out. Not in production.
 
+## The server answers 503 to everything
+
+```
+The database has been migrated since this server started (library.0003_… applied): the server's models are not
+the database's any more. Restart the server
+```
+
+`pangloss migrate` was run while the server was up. The server still has the models it started with, which no longer fit the data, so it refuses every request rather than answer wrongly or write in the old shape. Restart it (with the code the migration came from).
+
 ## `makemigrations`
 
 **"These need an answer (so no migration is written without asking)"** — you ran with `--noinput` and Pangloss needed to ask something (a rename). Run it without `--noinput`.

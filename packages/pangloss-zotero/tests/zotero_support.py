@@ -5,6 +5,7 @@ from typing import Any
 from uuid import uuid7
 
 import httpx2 as httpx
+from pangloss_models import PanglossReadOnlyError
 from pangloss_zotero import ZoteroClient
 from pangloss_zotero.convert import item_url
 from pangloss_zotero.sync import Existing, LibraryState
@@ -48,6 +49,8 @@ class FakeZotero:
         self.requests: list[httpx.Request] = []
         self.script: list[httpx.Response] = []  # answers given first, in order
         self.fail_items: set[str] = set()
+        # (every request from this one on, counted from 1, is answered 500: Zotero going away part way)
+        self.fail_from_request: int | None = None
 
     def put(self, item: dict[str, Any]) -> dict[str, Any]:
         self.version += 1
@@ -72,6 +75,11 @@ class FakeZotero:
         self.requests.append(request)
         if self.script:
             return self.script.pop(0)
+        if (
+            self.fail_from_request is not None
+            and len(self.requests) >= self.fail_from_request
+        ):
+            return httpx.Response(500)
         if request.headers.get("Zotero-API-Key") != "key":
             return httpx.Response(403)
         headers = {"Last-Modified-Version": str(self.version)}
@@ -127,13 +135,20 @@ class MemoryStore:
         self.referenced: set[str] = set()
         self.writes: list[tuple[str, str]] = []
         self.fail_for: set[str] = set()
+        self.read_only = False  # (as while `pangloss migrate` runs)
+        self.saved_versions: list[
+            int
+        ] = []  # (each time the library's state was stored)
 
     async def library_state(self, library: str) -> LibraryState:
         state = self.states.get(library, LibraryState())
         return LibraryState(state.synced_version, state.last_sync, state.last_error)
 
     async def save_library_state(self, library: str, state: LibraryState) -> None:
+        if self.read_only:
+            raise PanglossReadOnlyError("The database is being migrated")
         self.states[library] = state
+        self.saved_versions.append(state.synced_version)
 
     async def find(self, url: str) -> Existing | None:
         node = self.nodes.get(url)
@@ -153,6 +168,8 @@ class MemoryStore:
         )
 
     def _write(self, url: str) -> None:
+        if self.read_only:
+            raise PanglossReadOnlyError("The database is being migrated")
         if url in self.fail_for:
             raise RuntimeError("the database said no")
 
@@ -180,6 +197,7 @@ class MemoryStore:
 
     async def delete(self, existing: Existing) -> None:
         url = next(u for u, n in self.nodes.items() if n["_id"] == existing.id)
+        self._write(url)
         self.nodes[url]["_deleted"] = True
         self.writes.append(("delete", url))
 

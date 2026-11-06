@@ -30,7 +30,7 @@ One area can be turned up alone: `logging.getLogger("pangloss.memgraph.queries")
 |---|---|---|
 | ERROR | an unhandled error in a request (with the traceback) | `pangloss.api.errors` |
 | ERROR | the database cannot be reached | `pangloss.memgraph.transactions` |
-| ERROR | a migration failed; the migration lock is held by another run; start-up refused for migrations (`MIGRATION_CHECK = "error"`) | `pangloss.memgraph.migrations`, `pangloss.api.app` |
+| ERROR | a migration failed; the migration lock is held by another run; start-up refused for migrations (`MIGRATION_CHECK = "error"`); the database was migrated while the server ran (it answers 503 until restarted) | `pangloss.memgraph.migrations`, `pangloss.api.app`, `pangloss.api.migrations` |
 | ERROR/exception | a history record dropped or lost; a listener to writes failed; the SDK could not be built or committed | `pangloss.history`, `pangloss.models.hooks`, `pangloss.sdk` |
 | WARNING | login throttled (`429`); wrong password (user, address) | `pangloss.api.auth` |
 | WARNING | an edit conflict (`412`); a write refused during a migration | `pangloss.api.errors` |

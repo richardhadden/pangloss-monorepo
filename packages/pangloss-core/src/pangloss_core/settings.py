@@ -119,6 +119,9 @@ class BaseSettings[TDatabaseSettings: DatabaseSettings](ClientSettings):
     # what they say, or the models are not what they come to: "error" does not start, "warn"
     # starts and says so, "off" does not look
     MIGRATION_CHECK: typing.Literal["error", "warn", "off"] = "error"
+    # How often (seconds) a running server looks whether the database has been migrated under it, after
+    # which it answers 503 until it is restarted; 0: only before a write and after a failure
+    MIGRATION_WATCH_SECONDS: float = 10.0
 
     @field_validator("BACKEND_CORS_ORIGINS", mode="before")
     @classmethod

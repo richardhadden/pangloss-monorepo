@@ -533,6 +533,22 @@ async def test_the_api_takes_the_status_to_write_as_a_query(clear_database, db_d
         )
         assert bad.status_code == 422
 
+        # (the name in camelCase is the same parameter, and another is refused: the route has none of its own)
+        camel = await client.post(
+            "/api/Letter", headers=ann, params={"reviewStatus": "checked"}, json=letter
+        )
+        assert camel.status_code == 201, camel.text
+        meta = (await client.get(f"/api/Letter/{camel.json()['id']}")).json()["meta"]
+        assert (meta["published"], meta["reviewStatus"]) == (True, "checked")
+        unknown = await client.post(
+            "/api/Letter",
+            headers=ann,
+            params={"review_status": "checked", "reviewed": "yes"},
+            json=letter,
+        )
+        assert unknown.status_code == 422
+        assert "Unknown query parameter 'reviewed'" in unknown.text
+
         # (an update with no status keeps it; with one, changes it)
         update = {**letter, "id": id, "title": "u"}
         assert (

@@ -351,10 +351,12 @@ def squashmigrations(
     ctx: typer.Context,
     app: str = typer.Argument(..., help="The app"),
     first: str = typer.Argument(
-        ..., help="The first migration of the run (name or number)"
+        ...,
+        help="The first migration of the run (name or number); given alone, the last, "
+        "of a run from the app's first migration",
     ),
-    last: str = typer.Argument(
-        ..., help="The last migration of the run (name or number)"
+    last: str | None = typer.Argument(
+        None, help="The last migration of the run (name or number)"
     ),
     name: str | None = typer.Option(
         None, "--name", "-n", help="A name for the squashed migration"
@@ -375,6 +377,15 @@ def squashmigrations(
     if app not in apps:
         fail(f"{app} is not one of the INSTALLED_APPS")
     graph = load_graph(apps)
+    if last is None:
+        # (one migration named: from the app's first up to it)
+        own = sorted(
+            (m for m in graph.migrations.values() if m.app == app),
+            key=lambda m: m.number,
+        )
+        if not own:
+            fail(f"{app} has no migrations")
+        first, last = own[0].name, first
     try:
         squashed = squash(graph, app, first, last, name=name, optimize=not no_optimize)
     except PanglossMigrationError as error:
@@ -683,6 +694,14 @@ def go_backwards(
         if affected:
             typer.echo(
                 f"Models the undoing could have made unreadable: {', '.join(affected)}"
+            )
+            # (the models read with are the code's, which still has what was undone: what they cannot read
+            # now is what going back means, not damage)
+            typer.secho(
+                f"The code is ahead of the database now (it still has {', '.join(str(m) for m in undoing)}): "
+                "what its models cannot read below is expected, until the code is at the same migration "
+                "or the database is migrated forward again",
+                fg="yellow",
             )
             report_data_check(project, types=affected)
         else:

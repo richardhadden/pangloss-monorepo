@@ -1,5 +1,7 @@
 """Small tools for making and writing the generated models (see `base_models.py`)"""
 
+from collections.abc import Generator
+from contextlib import contextmanager
 from copy import copy
 from typing import Any
 from uuid import uuid7
@@ -27,6 +29,38 @@ def forget_schema(model: type[BaseModel]) -> None:
     model.__pydantic_complete__ = False
 
 
+# The models whose rebuild has been put off (in the order they were first asked for), while that is being done
+_put_off: dict[type[BaseModel], None] | None = None
+
+
+def rebuild(model: Any) -> None:
+    """Make the schema of a generated model again, after its fields were changed (`model_rebuild(force=True)`).
+
+    While all the models are being put together (`rebuilds_put_off`) it is only noted: every schema is
+    forgotten and made again when they are all there, so one made on the way is made for nothing. On a project
+    with 96 classes those were two thirds of the 11 seconds `initialise()` took."""
+    if _put_off is not None:
+        _put_off[model] = None
+        return
+    model.model_rebuild(force=True)
+
+
+@contextmanager
+def rebuilds_put_off() -> Generator[dict[type[BaseModel], None]]:
+    """Inside, `rebuild` does nothing but note the model: what is given is those noted, for the caller to
+    rebuild (all of them, after forgetting the schema of each) when it is done"""
+    global _put_off
+    if _put_off is not None:
+        # (already inside one: its caller rebuilds)
+        yield _put_off
+        return
+    _put_off = noted = {}
+    try:
+        yield noted
+    finally:
+        _put_off = None
+
+
 def inherit_fields(model: type[BaseModel], base: type[BaseModel]) -> None:
     """Give `model` the fields of `base` that it lacks.
 
@@ -41,7 +75,7 @@ def inherit_fields(model: type[BaseModel], base: type[BaseModel]) -> None:
             set_field(model, name, copy(field))
             changed = True
     if changed:
-        model.model_rebuild(force=True)
+        rebuild(model)
 
 
 def make_id(model: type[BaseModel], data: dict[str, Any]) -> None:

@@ -19,7 +19,7 @@ from pangloss_zotero import config
 from pangloss_zotero.client import ZoteroAuthError, ZoteroClient, ZoteroError
 from pangloss_zotero.mapping import build_table
 from pangloss_zotero.store import DryRunStore, ModelStore, acting_as, ensure_sync_user
-from pangloss_zotero.sync import Report, Store, sync_library
+from pangloss_zotero.sync import Progress, Report, Store, sync_library
 
 logger = logging.getLogger("pangloss.zotero.watch")
 
@@ -27,6 +27,8 @@ AUTH_TIMEOUT = 10.0
 FIRST_DELAY = 5.0
 MAX_DELAY = 300.0
 HEALTHY_AFTER = 60.0
+# (items that could not be written are tried again after a delay that doubles up to this: an hour)
+RETRY_MAX_DELAY = 3600.0
 
 
 class StreamError(Exception):
@@ -47,8 +49,10 @@ async def sync_libraries(
     dry_run: bool = False,
     client: ZoteroClient | None = None,
     store: Store | None = None,
+    progress: dict[str, Progress] | None = None,
 ) -> list[Report]:
-    """One sync of each library (those in the settings, if none are named), as the sync user"""
+    """One sync of each library (those in the settings, if none are named), as the sync user. `progress` is what
+    a caller that syncs again and again keeps for each library between its syncs (see `sync.Progress`)"""
     names = libraries or config.libraries(settings)
     if not names:
         raise ZoteroError("There is no library to sync: set ZOTERO_LIBRARIES")
@@ -71,6 +75,9 @@ async def sync_libraries(
                     library,
                     full=full,
                     skip_types=config.skip_types(settings),
+                    progress=None
+                    if progress is None
+                    else progress.setdefault(library, Progress()),
                 )
                 logger.info("%s", report.summary())
                 reports.append(report)
@@ -197,6 +204,16 @@ async def watch(
     )
     pending.update(libraries)
     wake.set()
+    # (how far each library was read, and the items to try again: kept from one sync to the next)
+    progress: dict[str, Progress] = {}
+    retry: asyncio.Task | None = None
+    unwritten = 0
+
+    async def again(delay: float, names: list[str]) -> None:
+        await sleep(delay)
+        pending.update(names)
+        wake.set()
+
     try:
         failures = 0
         while True:
@@ -205,8 +222,24 @@ async def watch(
             batch, pending_now = sorted(pending), set(pending)
             pending.clear()
             try:
-                await sync_libraries(settings, batch, client=client, store=store)
+                reports = await sync_libraries(
+                    settings, batch, client=client, store=store, progress=progress
+                )
                 failures = 0
+                # (items that could not be written are not left until Zotero next says something: tried again,
+                # after longer each time; meanwhile the library is synced as ever when it changes)
+                waiting = [r.library for r in reports if r.errors]
+                unwritten = unwritten + 1 if waiting else 0
+                if waiting and (retry is None or retry.done()):
+                    delay = min(FIRST_DELAY * 2**unwritten, RETRY_MAX_DELAY)
+                    logger.warning(
+                        "Zotero: items of %s could not be written; trying them again in %.0f s",
+                        ", ".join(waiting),
+                        delay,
+                    )
+                    retry = asyncio.create_task(
+                        again(delay, waiting), name="pangloss-zotero-retry"
+                    )
             except ZoteroAuthError as error:
                 logger.error("Zotero refused the key: %s", error)
                 pending.update(pending_now)
@@ -219,8 +252,10 @@ async def watch(
                 await sleep(min(FIRST_DELAY * 2**failures, MAX_DELAY))
                 wake.set()
     finally:
-        listener.cancel()
-        with contextlib.suppress(asyncio.CancelledError):
-            await listener
+        for task in (listener, retry):
+            if task is not None:
+                task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await task
         if own_client:
             await client.close()

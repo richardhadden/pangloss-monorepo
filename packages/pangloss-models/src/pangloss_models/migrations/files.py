@@ -573,7 +573,9 @@ def squash(
         state = before
         for change in found.changes:
             state = apply_change(state, change)
-        if state == data_view(after) and not any(
+        # (compared as what is stored: the indexes and constraints of the two are in the order they were added,
+        # which is not the same order, and a run that added one was never shortened for it)
+        if data_view(state) == data_view(after) and not any(
             isinstance(ch, (c.AlterModelKind, c.ChangeFieldKind))
             for ch in found.changes
         ):

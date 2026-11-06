@@ -26,6 +26,9 @@ from pangloss_models import ModelRegistry
 from pangloss_api.background import Supervisor
 from pangloss_api.dependencies import set_visibility
 from pangloss_api.errors import ServerErrorResponder, register_error_handlers
+from pangloss_api.migration_watch import MigrationGate, MigrationWatch
+from pangloss_api.openapi import make_openapi_in_a_thread
+from pangloss_api.query import QueryNames, known_parameters
 from pangloss_api.request_log import RequestLogger
 from pangloss_api.routes import autocomplete, references, search, users
 from pangloss_api.routes.models import build_router, routable_models
@@ -72,9 +75,12 @@ def prepare_models(settings: core_settings.BaseSettings) -> None:
     initialise()
 
 
-async def check_migrations(settings: core_settings.BaseSettings) -> None:
+async def check_migrations(
+    settings: core_settings.BaseSettings,
+) -> MigrationWatch | None:
     """If the project has migrations, the database must be what they say and the models what
-    they come to: `MIGRATION_CHECK` says what to do if not (see `docs/migrations.md`)"""
+    they come to: `MIGRATION_CHECK` says what to do if not (see `docs/migrations.md`). The answer is
+    a watch for a migration made while the server runs, to be started (`None` if nothing is checked)"""
     from pangloss_models import PanglossMigrationError
     from pangloss_models.migrations.startup import (
         migration_backend_of,
@@ -82,14 +88,17 @@ async def check_migrations(settings: core_settings.BaseSettings) -> None:
     )
 
     if settings.MIGRATION_CHECK == "off":
-        return
+        return None
     migrations = migration_backend_of(storage_of(settings))
     if migrations is None:
-        return
+        return None
+    watch = MigrationWatch(
+        migrations, settings.INSTALLED_APPS, settings.MIGRATION_WATCH_SECONDS
+    )
     found = await migration_problems(settings.INSTALLED_APPS, migrations)
     if not found:
         logger.info("Migrations: the database and the models agree with them")
-        return
+        return watch
     message = (
         "The database and the models do not agree with the migrations:\n  "
         + "\n  ".join(found)
@@ -99,6 +108,7 @@ async def check_migrations(settings: core_settings.BaseSettings) -> None:
         raise PanglossMigrationError(message)
     logger.warning("%s", message)
     warnings.warn(message, stacklevel=2)
+    return watch
 
 
 @asynccontextmanager
@@ -114,8 +124,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
         ", ".join(settings.INSTALLED_APPS) or "(none)",
     )
     await backend.connect()
+    watch = None
     try:
-        await check_migrations(settings)
+        watch = app.state.migration_watch = await check_migrations(settings)
+        if watch is not None:
+            await watch.start()
         # (what installed apps asked to be done when the server starts; see `configure_apps`)
         for hook in app.state.startup_hooks:
             await hook()
@@ -129,6 +142,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
         finally:
             await supervisor.stop()
     finally:
+        if watch is not None:
+            await watch.stop()
         await backend.disconnect()
         logger.info("%s stopped", settings.PROJECT_NAME)
 
@@ -224,21 +239,25 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title=settings.PROJECT_NAME,
         lifespan=lifespan,
-        dependencies=[Depends(set_visibility)],
+        dependencies=[Depends(set_visibility), Depends(known_parameters)],
     )
     app.state.startup_hooks = []
     app.state.background_tasks = []
 
     # (added first, so inside the CORS middleware: a 500 then has the CORS headers)
     app.add_middleware(ServerErrorResponder)
+    # (once the database has been migrated under the server, nothing is answered but that: see `migration_watch`)
+    app.add_middleware(MigrationGate)
     add_cors(app, settings.BACKEND_CORS_ORIGINS)
     # (compressed when the client accepts it: the JSON of an entity with many references, the calendar and
     # /openapi.json run to megabytes and shrink by 90% or more; event streams are left alone by the middleware)
     app.add_middleware(GZipMiddleware, minimum_size=GZIP_MINIMUM_SIZE)
-    # (added last, so outermost: the request id is on everything logged for the request)
+    # (outside all but what the installed apps add: the request id is on everything logged for the request)
     app.add_middleware(RequestLogger)
     register_error_handlers(app)
     configure_apps(app, settings)
+    # (added last, so outermost: everything else, an app's middleware too, reads the parameters in snake_case)
+    app.add_middleware(QueryNames)
     app.include_router(users.router)
     app.include_router(autocomplete.router)
     app.include_router(references.router)
@@ -247,4 +266,6 @@ def create_app() -> FastAPI:
         app.include_router(router)
     for model in routable_models():
         app.include_router(build_router(model))
+    # (the document of all those routes takes seconds to make for a large project: not on the event loop)
+    make_openapi_in_a_thread(app)
     return app

@@ -49,7 +49,7 @@ from pangloss_models.initialise_models.tagged_union import (
     choose_by_tag,
 )
 from pangloss_models.model_bases.binding import bound_names
-from pangloss_models.model_bases.model_tools import set_field
+from pangloss_models.model_bases.model_tools import rebuild, set_field
 from pangloss_models.utils import (
     annotation_is_optional,
     field_has_inherited_field_bindings,
@@ -102,7 +102,7 @@ def initialise_model(kind: ModelKind, model: type) -> None:
     if kind.id_fields:
         add_id_fields(made)
     add_label_field(made)
-    made.model_rebuild(force=True)
+    rebuild(made)
 
 
 def add_id_fields(made: type) -> None:
@@ -116,7 +116,7 @@ def add_id_fields(made: type) -> None:
         set_field(
             made, "create_new", FieldInfo(annotation=Literal[True] | None, default=None)
         )
-        made.model_rebuild()  # type: ignore[attr-defined]
+        rebuild(made)
 
 
 def add_label_field(made: type) -> None:
@@ -258,14 +258,15 @@ def add_fields(
         if holds(kind.annotated_value, "default", when):
             model.model_fields[name].default = None  # type: ignore[attr-defined]
 
-    model.model_rebuild(force=True)  # type: ignore[attr-defined]
+    rebuild(model)
 
 
 def embedded_annotation(kind: ModelKind, definition: Any) -> Any:
     """What may be given for an embedded object: its model (and, in `Update`, a new one)"""
+    # (in a fixed order, as for a relation: the options are a set)
     types = [
         getattr(option.annotated_type, name)
-        for option in definition.type_options
+        for option in sorted(definition.type_options, key=option_order)
         for name in kind.offers
     ]
     return Union[*types]  # type: ignore[valid-type]
@@ -414,7 +415,7 @@ def _build_generic_model(
     initialise_model(kind, generic)
     base = getattr(generic, kind.attribute)
     add_fields(kind, base, frozenset())
-    base.model_rebuild(force=True)
+    rebuild(base)
 
     type_names = recursively_get_generic_naming(type_option.parameter_type_options)
     bound = pydantic_create_model(
@@ -476,7 +477,7 @@ def _build_generic_model(
         if kind.empty_list_default and definition.wrapper:
             # (as in `add_fields`: a relation with no items has no edges, so nothing to read back)
             bound.model_fields[name].default_factory = definition.wrapper  # type: ignore[attr-defined]
-        bound.model_rebuild(force=True)
+        rebuild(bound)
 
     return bound
 
@@ -512,5 +513,5 @@ def build_bound_model(
         add_id_fields(bound)
     add_label_field(bound)
     add_fields(kind, bound, bindings)
-    bound.model_rebuild(force=True)
+    rebuild(bound)
     return bound

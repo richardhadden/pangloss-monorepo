@@ -129,6 +129,15 @@ Everything can be looked at by anyone; creating, loading for edit, updating, del
 
 The JSON is `camelCase` throughout (`bornIn`, `meta.createdBy`, `aboutPersonReverse`), though the models declare their fields in `snake_case`. Requests accept either. (The models do this with an `alias_generator`, and a pass at the end of `initialise()` that gives the same aliases to the fields added to the generated models afterwards.)
 
+**Query parameters** ✅ are read in either case too (`?pageSize=100` is `?page_size=100`; the docs write `snake_case`), on every route of the API and of the installed apps: a middleware (`pangloss_api.query.QueryNames`) puts the names in `snake_case` before the request is routed, and never changes a value. A parameter a route does not have is a 422 that names it and lists those the route has (`Unknown query parameter 'pagesize'. This route has: deep, page, page_size, published, q, review_status`): ignored, a misspelt name gave the default with no word of why. The one exception is an entity read at one of its URLs (below): the query string is then the URL's, so nothing in it is renamed or refused. A route of an app that reads parameters it does not declare (`/api/derived/{Class}?family=<id>`: any field of the class) is marked `@checks_own_parameters` and calls `refuse_unknown_parameters(request, also=...)` with what it reads (both from `pangloss_api`).
+
+**What a 422 says** ✅. `detail` is a list of problems, as FastAPI gives it, made shorter and easier to place (`pangloss_api/validation.py`): `loc` is the path in what was sent and nothing else (`["body", "statements", 0, "text"]`), so a form finds the field; what the input was read as is in `model` (`DeathCreate`; for a generic class without the types it takes, `Causes[…]Create`); and `input` is given only when it is short (200 characters as JSON), not the whole object a field is missing from. Pydantic puts the member of a union in the location, and the name of a generic class is every type it takes: one problem in a project with 68 kinds of statement was 3 KB.
+
+```json
+{"detail": [{"type": "missing", "loc": ["body", "statements", 0, "text"], "msg": "Field required",
+             "input": {"type": "Death", "label": "d"}, "model": "DeathCreate"}]}
+```
+
 | Status | When |
 |--------|------|
 | 412 | An update based on a version that is no longer the latest (see below) |
@@ -137,7 +146,8 @@ The JSON is `camelCase` throughout (`bornIn`, `meta.createdBy`, `aboutPersonReve
 | 401 | Not logged in |
 | 404 | No such item (also: update, delete or undelete of one that does not exist) |
 | 409 | (Every error answer has `detail` and `error`, the name of the exception class, which the SDK raises again.) An id already in use; undeleting what is not deleted; deleting an entity that is referred to. For the last, the response also has `referencedBy`, a list of `{id, type, label}`, and the entity is marked for deletion |
-| 422 | A body that is not valid for the model; a reference to an entity that does not exist or is of the wrong type; a bad page |
+| 503 | A write while `pangloss migrate` runs (`PanglossReadOnlyError`, with `Retry-After`); any request once the database has been migrated since the server started: its `detail` says to restart the server (see [Database migrations](migrations.md)) |
+| 422 | A body that is not valid for the model; a reference to an entity that does not exist or is of the wrong type; a bad page; a query parameter the route does not have |
 
 **URLs.** An entity can be given URLs, such as its address in another database, by creating it with a URL as its `id` (if its class has `create_with_id`; the entity still gets an id of its own). To get an entity, one of its URLs can be put in the path instead of its `{id}`, as it is:
 
@@ -154,7 +164,7 @@ The response has the entity's `id`. **Everything else is only ever at an id**: l
 
 The URLs of an entity are returned as a list, `urls`, in its `HeadView` and `EditView`. To change them, send `urls` in the update body (the `EditView` can be sent back changed): the list replaces the entity's URLs, so a URL left out is removed, and `[]` removes them all; if `urls` is not in the body they are left as they are. A URL that belongs to another entity (even a deleted one) is refused with 409.
 
-The OpenAPI document (`/openapi.json`, with the interactive `/docs`) describes every route, with the schemas of the models.
+The OpenAPI document (`/openapi.json`, with the interactive `/docs`) describes every route, with the schemas of the models. For a large project it is megabytes (2.5 MB for 96 classes; about 100 KB compressed) and takes seconds to make the first time it is asked for: it is made in a thread (`pangloss_api/openapi.py`), once, so the server goes on answering other requests meanwhile, and is kept from then on.
 
 ## Routes from installed apps
 

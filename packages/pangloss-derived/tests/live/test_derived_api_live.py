@@ -91,6 +91,18 @@ async def test_the_routes_and_the_derived_section_of_a_view(clear_database):
             await client.get("/api/derived/SameFamily", params={"family": str(g.id)})
         ).json()["count"] == 1
 
+        # (what is neither a parameter nor a field is refused, with both named)
+        unknown = await client.get("/api/derived/SameFamily", params={"famly": "x"})
+        assert unknown.status_code == 422
+        message = unknown.json()["detail"][0]["msg"]
+        assert "Unknown query parameter 'famly'" in message
+        assert "family" in message and "page_size" in message
+        assert (
+            await client.get(
+                "/api/derived/SameFamily", params={"ruleType": "nothing", "pageSize": 5}
+            )
+        ).json()["count"] == 0
+
         why = (await client.get(f"/api/derived/SameFamily/{fact['id']}")).json()
         (justification,) = why["justifications"]
         assert (

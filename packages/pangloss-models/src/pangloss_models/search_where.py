@@ -37,7 +37,7 @@ from pydantic import (
 from pydantic.fields import FieldInfo
 
 from pangloss_models.exceptions import PanglossModelError
-from pangloss_models.model_bases.model_tools import forget_schema, set_field
+from pangloss_models.model_bases.model_tools import forget_schema, rebuild, set_field
 from pangloss_models.search import (
     OrderBy,
     Reach,
@@ -514,7 +514,7 @@ def initialise_where_models(models: Iterable[Any]) -> None:
     for where in made.values():
         forget_schema(where)
     for where in made.values():
-        where.model_rebuild(force=True)
+        rebuild(where)
 
 
 def literal_of(values: list[str]) -> Any:

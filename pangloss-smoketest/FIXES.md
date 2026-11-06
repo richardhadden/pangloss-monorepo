@@ -1,7 +1,9 @@
 # Smoke test: fixes (progress log)
 
-Fixing what `PROBLEMS.md` lists, in order of severity. Started 2026-11-06 on branch `full-smoke-test-fixes`. Nothing
-is committed yet. This file is kept up to date as the work goes, so that it can be picked up again: the state of each
+Fixing what `PROBLEMS.md` lists, in order of severity. Started 2026-11-06 on branch `full-smoke-test-fixes`.
+Committed and pushed: `fa58588`, `482a9f8`, `23c9f32` (everything down to "Smaller items"). **Not committed:** what
+follows that (#10, #11, #12, #24, #16/#25, #13, #36, #31, what the user reported of the development server, and what
+was found on the way); see "The last full run" below. This file is kept up to date as the work goes, so that it can be picked up again: the state of each
 problem, what was changed, how it was checked, and what is still to do. Numbers (#n) are those of `PROBLEMS.md`.
 
 ## State
@@ -24,7 +26,19 @@ problem, what was changed, how it was checked, and what is still to do. Numbers 
 | 34 | Neo4j: log flooded with notifications on a new database | **Fixed**: the "unrecognized" class is off in the driver; test, and checked on a Neo4j |
 | 30 | `check-data` floods the terminal with slow-read warnings | **Fixed**: the threshold is raised while it reads many at once; conformance test, both backends |
 | 35 | `history baseline` counts nested statements | **Fixed** (the count; conformance test, both backends). Its speed is not changed |
-| 10, 11, 12, 13, 14, 16, 23, 24, 25, 27, 31, 36 and the Design items | | Not started |
+| 10 | Query parameters snake_case only; unknown ones ignored | **Fixed**: either case, on every route; an unknown one is a 422 that lists those the route has. Tests (unit, and live for review and derived); checked on the smoke server |
+| 11 | 422 messages for union fields are enormous | **Fixed**: `loc` is the path in what was sent, the union member is in `model` (short), a long `input` is left out: 4,152 -> 1,113 bytes for the same request. Tests; checked on the smoke server |
+| 12 | `interface serve` on its own cannot log in | **Fixed**: the interface's server passes `/api` on (`--api-url`, `--no-api-proxy`), and says so when the API is not there. The browser tests all go through it. **A decision taken** (it was open in `docs/interface.md`): to confirm |
+| 24 | A running server is not told the database was migrated | **Fixed**: the server looks (every 10 s, before a write, after a failure) and answers 503 "restart the server" once a migration it did not have is applied. Tests; tried on the smoke database |
+| 16, 25 | Zotero: a first sync restarts from zero; one failed item and no version is stored | **Fixed**: the version is stored as the sync goes (items in the order of their versions); a failed item holds only itself back and is tried again; a database being migrated postpones the sync. Tests; tried on the real library |
+| 13 | `initialise()` takes 11-12 s | **Fixed**: 3.2 s. The schemas made while the models are put together are no longer made; all 1,297 are as they were. Tests |
+| 36 | `squashmigrations` does not fold a rename or an added field | **Fixed**: the comparison that decides it took the order of the indexes for a difference (220 -> 218 on the smoke project); one migration named alone works. Tests |
+| 23 | Every page is ~256 KB | **Measured, not changed**: 154 KB on the built interface, 30 KB gzipped, 144 KB of it the texts of the language. For the user to decide |
+| (user) | The development server's `SSR_BOUNDARY_WATERFALL` and `SERVER_WRITE` | **Fixed**, after raising Solid to rc.21 (which changed neither): both gone, and three more of the kind found and fixed. The browser tests now fail on them |
+| (found) | The built interface says "Internal Server Error" for an item that is not there | **Fixed**: `ApiError` is marked safe to show. Tests, browser |
+| 31 | `/openapi.json` is 2.5 MB and its first request takes 4.9 s | **Fixed** as far as it goes: it is made in a thread, so the server answers other requests meanwhile (it answered nothing); 104 KB on the wire since gzip. The first asker still waits 4.8 s |
+| 27 | Load: one worker, 479 req/s; a person read queues | **Measured again, not changed**: 450 req/s, the same latencies. One Python process is the limit; `pangloss run` has no `--workers`. For the user to decide (background tasks would run in each) |
+| 14 and the Design items (17, 18, 19) | | Not started |
 
 ## What was done
 
@@ -379,6 +393,276 @@ the dates tests and the SDK builder's tests pass after it. The full script was n
   `pangloss_history/baseline.py` `is_head`. Conformance test in `test_history_baseline.py`, on both backends.
   **Not changed: its speed** (6 minutes for 93,000). It reads every head node to learn its version, as a list does
   not give one: making it fast needs the version in the list, or one query for all the versions.
+
+### The rest of Low (#10, #11, #12)
+
+Not committed yet (after `23c9f32`).
+
+- **#10 Query parameters.** `pangloss_api/query.py` (new):
+  - `QueryNames`, a middleware added last (so outermost, outside what the installed apps add): the names of the
+    query string are put in snake_case before the request is routed; a value is never changed, and a query string
+    with no capital in a name is passed on as the very same bytes.
+  - `known_parameters`, a dependency of every route of the app: a parameter that is not among those the route and
+    its dependencies declare is a 422 in FastAPI's own shape (`type: unknown_parameter`, `loc: ["query", name]`,
+    and a message that lists the names the route has).
+  - An entity read at one of its URLs (`GET /api/Person/http://example.com/people?id=5`) keeps its query string as
+    it is: it is the URL's (a path with `/http:/` or `/https:/` in it is neither renamed nor checked).
+  - For a route that reads parameters it does not declare: `@checks_own_parameters` and
+    `refuse_unknown_parameters(request, also=...)`, both exported from `pangloss_api`. `pangloss-derived`'s list of
+    facts uses them (a field of the class as a parameter). `pangloss-review`'s middleware, which reads
+    `review_status` on a write, now takes the parameter out of the query string (and reads it in either case).
+  - Tests: `pangloss-api/tests/test_query_parameters.py` (new, 4); `test_review_live.py` (conformance:
+    `?reviewStatus=checked` on a POST, and an unknown one refused); `test_derived_api_live.py` (a misspelt field
+    refused with both kinds of name listed; `ruleType`, `pageSize`).
+  - On the smoke server: `?pageSize=3` gives 3; `?pageSize=501` is a 422 ("less than or equal to 500");
+    `?pagesize=3` is a 422 that lists `deep, page, page_size, published, q, review_status`.
+- **#11 What a 422 says.** `pangloss_api/validation.py` (new), registered with the other error handlers:
+  - The long name was the tag of the member of a union, which Pydantic puts in `loc` after the field; a generic
+    class's name is every type it takes. The handler follows `loc` through the body that was sent: a part that is
+    a key (or an index) stays, a part that is a union member (`pangloss_models...tagged_union.is_tag`, or the name
+    of a model) and not a key there is taken out, and the last one is given as `model`, with the types of a
+    generic left out (`Causes[…]Create`).
+  - `input` is left out when it is more than 200 characters as JSON (a missing field's input is the whole object
+    it is missing from); "Unable to extract tag using discriminator choose()" is now "Input should be an object, of
+    one of the types that are allowed here".
+  - **Found on the way:** the interface puts a server's problem on a field by its `loc`, and its filter did not
+    know tags like `DeathCreate`, so a 422 never marked the field of a statement. With a clean `loc` it does.
+  - Tests: `pangloss-api/tests/test_validation_errors.py` (new, 4). On the smoke server the request of the report
+    (a `Death` with nothing in it and a `Causes` with a list for `cause`) is 1,113 bytes, was 4,152.
+- **#12 The production interface on its own.** `interface-app/serve.mjs` passes `/api` on to the API (Node's
+  `http`, no new dependency): the browser's headers with its `Host`, `X-Forwarded-For` added, the answer piped back
+  as it comes (so a stream of events stays one), not compressed again; if the browser goes away the request to the
+  API is dropped. `pangloss interface serve --api-url URL` (or `PANGLOSS_API_URL`, as before) says where the API
+  is, for the pass-through and for the pages rendered on the server; `--no-api-proxy` for a deployment whose
+  reverse proxy does it. If the API is not there: 502 with a `detail` that says where it was looked for and how to
+  say where it is; the interface shows "The interface cannot reach the API. If you run this site: ..." (a new
+  slot, `error_api_unreachable`, en/de/fr) in place of "Not Found" or "Something went wrong".
+  - Checked in the smoke project: `pangloss interface build`, `pangloss interface serve --api-url
+    http://localhost:8010 --port 3011`, and in a browser the login dialog logs in and `/Person` lists
+    (`/tmp/pgstubs/serve_browser.py`); with `--api-url` at a port nothing listens on, the dialog shows the new
+    message; with `--no-api-proxy`, `/api/Person` is a 502 that says so.
+  - `e2e/conftest.py`: the Python proxy that stood in front of the interface is gone; the suite uses the built
+    interface's own pass-through, so all of it tests this path.
+  - Docs: `docs/interface.md` (Architecture; the decision is struck from "Decisions to make next"),
+    `guide/interface/README.md` (Deploying), `TODO.md`, `e2e/COVERAGE.md`, the skill.
+  - **To confirm:** that the interface's server passing `/api` on is the wanted answer to the open decision. A
+    reverse proxy that does it instead is still possible (`--no-api-proxy`).
+
+### #24 A server that is running when the database is migrated (Perf list, but a 500)
+
+Not committed yet.
+
+- `pangloss_api/migration_watch.py` (new). `MigrationWatch` remembers which migrations were applied when the server
+  started (and which migration files its code had), and reads the record again (`migration_backend.applied()`, on
+  either backend) every `MIGRATION_WATCH_SECONDS` (new setting, 10), before a write and after a request that
+  failed, if the last look is more than a second old. A migration applied that the code did not have, or one
+  taken back, and from then on `MigrationGate` (a middleware, inside CORS) answers every request for `/api` with a
+  503 whose `detail` names the migration and says to restart the server; logged once as an error. A request that
+  fails with an unhandled error looks first, so the read of a document the models no longer fit is that 503 and
+  not a 500 (`ServerErrorResponder`).
+- Not a change: a migration the server's code already had (pending at a start with `MIGRATION_CHECK = "warn"`); a
+  migration that is still running (writes are refused by its lock, as before; reads go on). Nothing is watched
+  with `MIGRATION_CHECK = "off"`.
+- Tests: `pangloss-api/tests/test_migration_check.py` (4 new: a write looks first and is refused, then everything
+  is; a failing read is a 503; back and forward; the loop on its own, and off).
+- On the smoke database: `makemigrations --empty smoke`, `migrate` beside the running server; six seconds after it
+  was done the server answered 503 with "smoke.0003_watch_probe applied ... Restart the server". Undone after
+  (`migrate smoke 0002`, the file removed, the server restarted).
+- Docs: `docs/migrations.md` (with the start-up check), `docs/settings.md`, `docs/api.md` (503), `docs/logging.md`,
+  `guide/migrations/01-ideas.md` and `08-troubleshooting.md`, the skill.
+- **Not done:** the server does not restart itself; the interface shows its general "Something went wrong on the
+  server" for the 503 (the reason is in the response and the server's log). The SDK raises `PanglossReadOnlyError`
+  with the message (its error for a 503).
+
+### #16, #25 The Zotero sync
+
+Not committed yet.
+
+- `pangloss_zotero/sync.py`, `sync_library`:
+  - The stored version means "everything up to here is written". Deletions are dealt with first; then the items
+    in the order of their versions, and after a batch (not more often than `CHECKPOINT_SECONDS`, 30) the version
+    just below the next item's is stored. A sync that stops goes on from there.
+  - An item that fails is in `report.errors`; the others are written; the stored version stays just below it
+    (`stored_version`). `Progress` (new) is what a process keeps between its syncs of a library: how far it read
+    and the items (and deletions) to try again, so that its next sync asks only for what is new and for them.
+  - `PanglossReadOnlyError` (a migration is running) is not an item's fault: the sync stops with `SyncPostponed`
+    (a `ZoteroError`, so the watcher's delay and retry apply), and nothing is counted as failed.
+- `watch.py`: the watcher keeps a `Progress` for each library, and after a sync with items that failed tries
+  again by itself (10 s, doubling to an hour), where it used to wait for Zotero to say something.
+- `cli.py`: `zotero status` says "first sync not finished" where a version is stored and no sync has ended.
+- Tests: `test_zotero_sync.py` (9 new: stopping part way and going on; items of one version not split; a failed
+  item with and without `Progress`; one Zotero no longer has; postponed; a failed deletion; `stored_version`),
+  `test_zotero_watch.py` (2 new). The package: 93 passed (with its live tests on Memgraph).
+- On the real library (`groups/2556736`, 16,006 versions), in a scratch project with only users and Zotero on the
+  test Memgraph (:7687, emptied after): `zotero sync` stopped after 100 s had written 1,060 items and `status
+  --remote` said "version 6883 of 16006 (behind), first sync not finished"; run again for 50 s it went on (1,488
+  items, version 8108).
+- Docs: `docs/zotero.md` (Sync), `guide/zotero/README.md`.
+- **Not changed:** the speed of a first sync (about 12 items a second here: Zotero's answers with citations and
+  bibliography are most of it). The failed items are remembered in the process, not in the database: a new
+  process finds them again by starting below them, at the cost of reading what came after once more.
+
+### Found on the way: the built interface said "Internal Server Error" for an item that is not there
+
+Not in `PROBLEMS.md`: the smoke test could not use the built interface (#12), so it did not see it. Not committed
+yet.
+
+- `GET /Person/<an id that is not there>` on `pangloss interface serve` rendered "Internal Server Error" where
+  the development server says "Page not found" (following a link inside the application was right: only the page
+  as the server renders it was wrong). Solid's built server puts a bare `Error("Internal Server Error")` in place
+  of any error that is not marked safe to show, before the page's own error boundary sees it; so every
+  `error instanceof ApiError` on the server was false.
+- `interface-core/src/api/client.ts`: an `ApiError` is what the API answered this reader, so it is marked
+  (`markSafeError`, from `@solidjs/web`). What then arrives in the browser is a plain `Error` with `name`, `status`,
+  `detail` and `body`; `ApiError` takes such a value for one of its own (`Symbol.hasInstance`), so the 22 places
+  that ask `instanceof ApiError` are right after hydration too.
+- Tests: `fetch.test.ts` (new test; `interface-core` 334 passed); e2e
+  `test_an_item_that_is_not_there_is_explained` now asks for the heading and the text, in the page as the server
+  renders it (it asked only for an alert, which the wrong message also was). Checked in a browser on the smoke
+  project's built interface.
+
+### #23 The size of a page (measured; not changed)
+
+On the built interface (which #12 made usable): an empty page is 154 KB, 30 KB gzipped (`/` 163 KB / 30 KB;
+`/Person` 216 KB / 36 KB). 144 KB of it is one script: the texts of the language (the interface's own and the
+labels of this project's 96 classes and their fields), which the server puts in every page so that the browser has
+them when it takes the page over. The page itself is 7 KB. Since the gzip change the cost on the wire is the 30 KB.
+To take it out of the page, the texts would be a file of their own that the browser keeps (one request, then
+cached), read before the page is taken over: a change to how translations are loaded, **not made**. For the user
+to decide whether 30 KB a page is worth it.
+
+### #13 `initialise()` (Perf)
+
+Not committed yet.
+
+- Profiled on the smoke project: 6,237 schemas made for 1,512 generated classes, 4,562 `model_rebuild` calls. A
+  class was rebuilt each time it was given fields, and at the end every schema was forgotten and made again
+  anyway (so that classes that refer to each other get a recursive schema).
+- `pangloss_models/model_bases/model_tools.py`: `rebuild(model)` in place of `model.model_rebuild(force=True)` in
+  the code that makes the generated models, and `rebuilds_put_off()`, inside which a rebuild is only noted.
+  `ModelRegistry._initialise_models` works inside it, and then forgets and rebuilds, once, the classes made for
+  the models and whatever else was noted (the search patterns among them: one that kept its schema would be
+  embedded as it was). Outside that phase `rebuild` rebuilds at once, as before.
+- Measured: `initialise()` 11.3-12.1 s -> 3.2 s; `pangloss zotero status` 17 s -> 5.1 s. The JSON schemas of all
+  1,297 classes with a schema are the same before and after (`/tmp/pgstubs/init_deferred.py`, comparing them with
+  the order of union members put aside, see next).
+- **Found with it:** the members of the union of an embedded field (`start: ExactDate | DateRange | ...`) were in
+  the order of a set, which differs from one process to the next: 745 of the 1,297 schemas differed between two
+  runs of the same code. `builder.embedded_annotation` now sorts them, as a relation's are.
+- Tests: `pangloss-models` 938 passed (the snapshot of the generated models among them).
+
+### #36 `squashmigrations`
+
+Not committed yet.
+
+- The run from an app's first migration is replaced by the changes from the models before to the models after,
+  if applying those gives the same state. That comparison was of a state as the changes left it with one put in
+  order (`data_view`): with an index from another app already there, the indexes were in another order, the two
+  were "different", and every change was kept. `pangloss_models/migrations/files.py`: both sides in order. On the
+  smoke project: "220 changes in 2 migrations -> 218 changes" (the rename and the added field are in the creates).
+- `pangloss squashmigrations APP NAME` with one migration named is the run from the app's first up to it (it said
+  only "Missing argument 'last'").
+- Tests: `test_migration_squash.py` (new; it fails without the fix), `test_migrations_cli.py`.
+
+### Reported by the user: what the development server logged (`SSR_BOUNDARY_WATERFALL`, `SERVER_WRITE`)
+
+Not committed yet. The whole account, with the table of what was found, is in `docs/interface-refactoring.md`
+("2026-11-06: rc.21, and what the development server said").
+
+- **Solid raised first, as asked**: `solid-js` and `@solidjs/web` 2.0.0-rc.19 -> rc.21, `@solidjs/router`
+  next.43 -> next.44, `@solidjs/vite-plugin` next.52 -> next.56, in `interface-core`, `interface-app` and the eight
+  modules' `package.json`, and `js/package-lock.json`. The plugin renamed an option (`start: { nodeServer: true }`).
+  Type check, layer check, 334 unit tests and the build pass. **It changed neither diagnostic**: both were there
+  on rc.21 as on rc.19 (checked by putting rc.19 back in the smoke project's copy).
+- **`SSR_BOUNDARY_WATERFALL`** (`pages/Item.tsx`): the code the modules add to an item's page was asked for only
+  once the item had come. `useModules().preloadItemPage(type)` (new, `context/modules.tsx`) starts it with the
+  request for the item.
+- **`SERVER_WRITE`** (`pages/Item.tsx`, `Track`): a cleanup that clears the console's item ran on the server, which
+  discards each pass. Registered in the browser only.
+- **Three more, found by clicking through 18 pages and following links, logged in:** a value read once without
+  `untrack` (`pages/Edit.tsx`); **hydration warnings on every list page** (the options of the menu that adds an
+  order were not taken over by the browser: an `<option>` whose text is a child expression, followed by a `<For>`;
+  fixed here and in five other places of the same shape); every row of that menu made again on each choice (keyed
+  by value now).
+- After: the smoke project's development server says nothing through the same clicks, and the browser has no
+  warning (`/tmp/pgstubs/click_around.py`, `diag_pages.sh`).
+- **So that it stays so:** the browser tests' development server fixture fails if its log has any such diagnostic
+  when the tests are done (`e2e/conftest.py`, `development_warnings`).
+- **Its first run found three more**, in the tests' own project: a second set of retype buttons made and thrown
+  away on the form of a document with documents inside (a prop that is elements, read twice:
+  `form/ModelFields.tsx`, `Block`); an untracked read where a view of what refers to an item is shown
+  (`ItemContents.tsx`); and the waterfall again, on an item page with two components of modules. The first two are
+  fixed.
+- **The waterfall is fixed in part.** The code the modules add is now asked for with the item (also the cards of
+  models that have their own). What is left is the development server's: Solid waits one pass for the assets of
+  each lazily loaded component it renders, and does not count that as work already started, so a page with two or
+  more of them still says "3 sequential async waits" the first time, in development only (found by logging what
+  each pass waited for; the built server looks assets up at once). The check knows this one
+  (`KNOWN_IN_DEVELOPMENT`). It could be reported to Solid: the lookup's promise is not stamped when the module is
+  already loaded.
+- **For the user:** the demo's linked development server on :3000 runs from the package's `js/`, whose
+  `node_modules` now has rc.21: restart it.
+
+### #31 `/openapi.json`
+
+Not committed yet.
+
+- FastAPI makes the document in the coroutine of the first request for it: 4.9 s here in which the server answered
+  nothing. `pangloss_api/openapi.py` (new): its route is put behind one that has the document made in a thread,
+  once (those who ask meanwhile wait for the one), and then kept as before.
+- On the smoke server: the first request 4.78 s, during which 32 other requests were answered (the slowest 0.43 s);
+  the second 0.02 s; 2.68 MB, 104 KB on the wire with gzip.
+- Tests: `pangloss-api/tests/test_openapi_route.py` (new, 2). `docs/api.md`.
+- Not changed: the time it takes to make (pydantic's JSON schemas of 1,014 models).
+
+### #27 Load (measured again)
+
+`smoke_scripts/load_test.py 32 20` after everything above: 450 requests a second (479 in the report); get person
+119/145 ms p50/p95 (113/139), list search 50/65 (47/63), autocomplete 38/51 (35/49), structured search 42/58
+(38/51). Unchanged: the limit is one Python process at full use. `pangloss run` starts one worker and has no
+option for more; with more, each would run the background tasks (the Zotero watcher, the derived worker, the
+migration watch), which is why it is left: for the user to decide. (#14, writes of ~500 ms while another writer is
+busy, is the same kind: the cost of the text index for each commit, see `docs/large-data.md`.)
+
+### Going back to an earlier migration (from the Design list)
+
+Not committed yet. `pangloss migrate APP EARLIER` reads the affected models back with the code's models, which
+still have what was undone, so it lists what they cannot read (421 factoids in the smoke test), rightly, and that
+read as damage. It now says first: "The code is ahead of the database now (it still has smoke.0002_...): what its
+models cannot read below is expected, until the code is at the same migration or the database is migrated forward
+again". `pangloss_cli/migrations.py`; asserted in `test_migrations_cli.py`.
+
+### #19 Searching by a type and its subtypes (Design: looked at, nothing built)
+
+The report tried a field `supertype`, which there is not: the hierarchy is the types' field `is_subtype_of`, and a
+structured search follows it today, a level at a time (`smoke_scripts`-style check in
+`/tmp/pgstubs/subtype_search.py`): `has_type is Merchant` 595 people; `has_type` a type whose `is_subtype_of` is
+Merchant 2,965; the two and the level below together (`$any_of`) 3,506. What is missing is one operator for "this
+type or any below it" (the guide calls it `$under`, under "Not yet"). `guide/typology/README.md` now shows the
+search that works. **For the user:** whether to build the operator.
+
+### The last full run (2026-11-06, with everything above in, not committed)
+
+`./run_tests.sh`: ruff, `ty`, the skill check and the packages' stubs pass; packages on Memgraph 2,871 passed and
+1 failed; on Neo4j the conformance suite 537, `pangloss-neo4j` 166, the live tests of typology 26, calendar 19,
+dates 12 and Zotero 15; the browser tests 166 passed, on Solid rc.21, with the development server's log checked.
+The one failure was `test_dev_link_runs_the_package_source_with_the_projects_models`: it looked at whether the
+checkout's own `node_modules` was up to date (it was not marked so, the packages having been installed by hand
+after the versions were raised) and saw an install it did not expect. The test no longer depends on that; it and
+the rest of `pangloss-interface` and `pangloss-cli` pass (286), as do ruff and `ty`, after the last two small
+changes (that test, and the message of going back). The whole script was not run again after those.
+
+**Left, in the order of `PROBLEMS.md`:** #14 (writes while another writer is busy: the text index's cost for each
+commit) and #27 (one worker) are measured and not changed; #23 is measured (30 KB a page gzipped) and left for a
+decision; the Design items #17 and #18 are not looked at, #19 has a search that works and no new operator; #7,
+#28 and #35 are fixed in part, as before.
+
+**For the user to decide or do** (all in the sections above): restart the demo's linked development server on
+:3000 (its `node_modules` is on rc.21 now); the production interface passing `/api` on itself (#12); the two
+earlier judgement calls (unknown dates out of the calendar; no two types of one name side by side); 25 or 10
+reverse relations for each field on an entity's page; a small project on port 7687 (#7); several workers for the
+API (#27); an operator for "this type or any below it" (#19); whether the texts of the language should leave the
+page (#23).
 
 ## Still to do for what is fixed
 

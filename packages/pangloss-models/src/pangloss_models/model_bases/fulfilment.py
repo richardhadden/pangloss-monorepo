@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Literal, NamedTuple
 
 from pydantic import ValidationError, create_model
 
-from pangloss_models.model_bases.model_tools import set_field
+from pangloss_models.model_bases.model_tools import rebuild, set_field
 
 if TYPE_CHECKING:
     from pangloss_models.model_bases.base_models import (
@@ -111,7 +111,7 @@ def build_fulfilled_model[T: _CreateDBBase | _UpdateDBBase](
         set_field(new_fulfilled_model, field_name, field_info)
 
     # (the fields are not copied: a relation might point at a new Create that has been given an id)
-    new_fulfilled_model.model_rebuild(force=True)
+    rebuild(new_fulfilled_model)
 
     # TODO: find a way to copy _meta fields...
 

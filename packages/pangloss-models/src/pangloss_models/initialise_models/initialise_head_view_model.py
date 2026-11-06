@@ -17,7 +17,7 @@ from pangloss_models.initialise_models.initialise_view_model import (
 from pangloss_models.model_bases.base_models import _DeclaredClass
 from pangloss_models.model_bases.document import Document, _DocumentHeadViewBase
 from pangloss_models.model_bases.entity import Entity, _EntityHeadViewBase
-from pangloss_models.model_bases.model_tools import set_field
+from pangloss_models.model_bases.model_tools import rebuild, set_field
 from pangloss_models.model_bases.reified_relation import (
     ReifiedRelationDocument,
     _ReifiedRelationDocumentHeadViewBase,
@@ -164,4 +164,4 @@ def initialise_head_view_model(
                 FieldInfo(annotation=list[annotation], default_factory=list),
             )
 
-    model.HeadView.model_rebuild(force=True)
+    rebuild(model.HeadView)

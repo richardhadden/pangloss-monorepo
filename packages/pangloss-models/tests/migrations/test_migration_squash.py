@@ -88,6 +88,66 @@ def test_a_run_from_the_start_is_squashed_to_the_changes_between_the_models():
     assert MigrationGraph.of([squashed]).state() == graph.state()
 
 
+def test_a_run_that_adds_indexes_and_renames_a_field_is_shortened_too():
+    # (the indexes of the two states are in the order they were added, which differs: the run was taken to
+    # come to something else, and all its changes were kept: "220 changes in 2 migrations -> 220 changes")
+    first, second, third, fourth = versions()
+
+    def index(label):
+        return {"kind": "label+property", "label": label, "properties": ["name"]}
+
+    # (an app it needs has an index already, which is the first of the state the run begins with)
+    needed = Migration(
+        app="base",
+        name="0001_initial",
+        changes=(c.AddIndex(index=index("Zebra")),),
+        schema_hash="base1",
+    )
+    migrations = [
+        needed,
+        Migration(
+            app="sq",
+            name="0001_initial",
+            changes=(
+                *diff(EMPTY_SNAPSHOT, third).changes,
+                c.AddIndex(index=index("Place")),
+            ),
+            dependencies=(needed.key,),
+            schema_hash="hash1",
+        ),
+        Migration(
+            app="sq",
+            name="0002_step",
+            changes=(
+                c.RenameField(model="Person", old="nickname", new="known_as"),
+                c.AddIndex(index=index("Person")),
+                *diff(third, fourth).changes,
+            ),
+            schema_hash="hash2",
+        ),
+    ]
+    graph = MigrationGraph.of(migrations)
+    assert [type(ch) for ch in migrations[2].changes][:2] == [c.RenameField, c.AddIndex]
+
+    squashed = squash(graph, "sq", "0001", "0002")
+
+    kinds = [type(ch) for ch in squashed.changes]
+    # (the models are made as they end, and the indexes are still made)
+    assert c.RenameField not in kinds and c.AddField not in kinds
+    assert kinds.count(c.CreateModel) == 2 and kinds.count(c.AddIndex) == 2
+    assert len(squashed.changes) < sum(len(m.changes) for m in migrations[1:])
+    assert squashed.dependencies == (needed.key,)
+    created = next(
+        ch
+        for ch in squashed.changes
+        if isinstance(ch, c.CreateModel) and ch.model == "Person"
+    )
+    assert "known_as" in str(created) and "nickname" not in str(created)
+    assert data_view(MigrationGraph.of([needed, squashed]).state()) == data_view(
+        graph.state()
+    )
+
+
 def test_a_run_in_the_middle_keeps_its_changes_as_they_were():
     migrations = run_of_migrations()
     graph = MigrationGraph.of(migrations)

@@ -156,20 +156,45 @@ to an item by reading it, so it never marks an item for deletion by trying.)
 
 ## Sync
 
-`sync_library(client, store, table, library, full=False)`, for each library:
+`sync_library(client, store, table, library, full=False, progress=None)`, for each library:
 
-1. Read the library's `synced_version` (0 if new, or with `--full`).
+1. Read the library's `synced_version` (0 if new, or with `--full`). It means "everything up to here is written".
 2. `GET /<library>/items/top?format=versions&since=V&includeTrashed=1` with `If-Modified-Since-Version: V`: `{key:
    version}` and the library's version (`Last-Modified-Version`); `304` is nothing changed. *To check:* that `/items/top`
    takes `includeTrashed` and `since` as used.
-3. Fetch the items in batches of 50 (`itemKey=`, `include=data,citation,bib,csljson`, `includeTrashed=1`). Skipped,
-   and counted: `ZOTERO_SKIP_TYPES` (attachments, notes, annotations).
-4. Write each (`apply_item`): create it as the class for its type, or set the fields of the node with that URL
+3. If a version was held: `GET /<library>/deleted?since=V` and deal with each key as in the table above. This is
+   done first, so that the version stored during step 5 never passes a deletion that was not dealt with.
+4. Fetch the items in batches of 50 (`itemKey=`, `include=data,citation,bib,csljson`, `includeTrashed=1`), **in the
+   order of their versions**, the oldest change first. Skipped, and counted: `ZOTERO_SKIP_TYPES` (attachments, notes,
+   annotations).
+5. Write each (`apply_item`): create it as the class for its type, or set the fields of the node with that URL
    (found as any class, the most specific first). An item whose version and trash state are as held is left alone.
-5. If a version was held: `GET /<library>/deleted?since=V` and deal with each key as in the table above.
-6. Store the new version **only if every item was written**. A failure to write one item is in `report.errors` (and
-   `last_error`), the others are written, and the next sync does it all again from the old version (writing an item
-   twice changes nothing). A failure to reach Zotero is recorded and raised.
+   After a batch, if `CHECKPOINT_SECONDS` (30) have passed since the last time, the version just below the next
+   item's is stored: every item of a lower version is written. (Not after every batch: each time is a write of the
+   library's entity, and a version of it in the history.)
+6. Store the version: that of the library if everything was written, and otherwise the one just below the first
+   item that was not (`stored_version`).
+
+✅ **A sync that stops goes on from where it was** (as built after the smoke test, which found a first sync of 15,570
+items starting from nothing after a restart at 5,440, and `status` saying "version 0, never synced" all the while).
+Tried on the real library: stopped after 100 seconds, 1,060 items were written and `pangloss zotero status --remote`
+said `version 6883 of 16006 (behind), first sync not finished`; started again, it went on from there (1,488 items
+and version 8108 after 50 seconds more).
+
+✅ **An item that cannot be written does not hold the rest back.** It is in `report.errors` and `last_error` (which
+names the items), the others are written, and the stored version stays just below it, so that a process that knows
+nothing of it reads it again. A process that syncs again and again, the watcher, keeps a `Progress` for each
+library: how far it read (further than what is stored) and the items to try again. Its next sync asks Zotero for what
+is new and for those items only, not for everything after them; and it does not wait for Zotero to say something:
+it tries them again after 10 seconds, then 20, doubling to an hour at most. A deletion that could not be made is
+kept and tried again in the same way. (Before: one failed item of 15,500 left the version at 0, every later sync
+went through all of them again, and the item was not tried until Zotero reported a change.)
+
+✅ **A database that is being migrated postpones the sync.** While `pangloss migrate` runs, every write is refused
+(`PanglossReadOnlyError`). That is not a fault of an item: the sync stops with `SyncPostponed` (a `ZoteroError`), the
+watcher tries again after its delay, and what was already written and stored stays.
+
+A failure to reach Zotero is recorded in `last_error` and raised.
 
 Zotero asks for: `Zotero-API-Key` and `Zotero-API-Version: 3`; waiting for `Retry-After` (on 429 and 503) and
 `Backoff`; and `If-Modified-Since-Version`. The client does all of it (up to 5 attempts; a wrong key, 401 or 403, is not

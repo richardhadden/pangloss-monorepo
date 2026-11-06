@@ -126,7 +126,15 @@ tested there. A backend's own `tests/` are for what only it has.
 - Reading needs no login; every change needs a logged-in user. Finer permissions are not built (an open decision in
   `TODO.md`): do not invent a permission model in passing.
 - Errors carry `detail` and `error` (the exception's class name), which the SDK raises again as the same exception.
-- The server will not start with migrations pending, or with an app whose `requires` the backend does not meet.
+- Query parameters are read in either case (`pageSize` is `page_size`) and one a route does not have is a 422
+  (`pangloss_api/query.py`). An app's route that reads parameters it does not declare is marked
+  `@checks_own_parameters` and calls `refuse_unknown_parameters(request, also=...)`; a middleware that reads a
+  parameter of its own takes it out of the query string (as `pangloss_review` does with `review_status` on a write).
+- A 422 for a body is FastAPI's list, cleaned (`pangloss_api/validation.py`): `loc` is the path in what was sent,
+  the union member it was read as is in `model`, and a long `input` is left out. Do not rely on Pydantic's own `loc`.
+- The server will not start with migrations pending, or with an app whose `requires` the backend does not meet. A
+  server that is running when `pangloss migrate` is applied notices (`pangloss_api/migration_watch.py`,
+  `MIGRATION_WATCH_SECONDS`) and answers 503 to everything until it is restarted.
 
 Full table and status codes: `docs/api.md`.
 

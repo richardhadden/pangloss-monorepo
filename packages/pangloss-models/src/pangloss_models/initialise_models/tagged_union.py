@@ -153,10 +153,22 @@ def choose_by_tag(kind: Any, field: FieldInfo) -> FieldInfo:
     return field
 
 
+# (every tag there is: see `is_tag`)
+_tags: set[str] = set()
+
+
 def tags_for(members: list[type[BaseModel]]) -> list[str]:
     """A tag for each member: its name (which is seen in the location of an error), made unique"""
     names = [member.__name__ for member in members]
-    return [
+    tags = [
         name if names.count(name) == 1 else f"{name}#{index}"
         for index, name in enumerate(names)
     ]
+    _tags.update(tags)
+    return tags
+
+
+def is_tag(name: str) -> bool:
+    """Whether the name is the tag of a member of one of these unions. Pydantic puts the tag in the location of a
+    validation error, after the field the union is in: this is how the API tells it from a key of the input"""
+    return name in _tags

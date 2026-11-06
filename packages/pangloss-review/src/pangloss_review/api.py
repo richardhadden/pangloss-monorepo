@@ -13,7 +13,7 @@ server makes it `unchecked` when it is created, and an update leaves the state a
 """
 
 from typing import Annotated
-from urllib.parse import parse_qs
+from urllib.parse import parse_qsl, urlencode
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, FastAPI, Query, Request, status
@@ -53,6 +53,10 @@ async def review_error_handler(request: Request, error: Exception) -> JSONRespon
     )
 
 
+# (in either case, as every parameter is: this may be reached before the API has put the names in snake_case)
+STATUS_PARAMETER = ("review_status", "reviewStatus")
+
+
 class RequestedStatus:
     """`?review_status=checked` (or `unchecked`, `errors_found`) on a create (`POST /api/Letter`) or an update
     (`PUT /api/Letter/{id}`): the document is written with that status, `checked` published at once, for data that
@@ -70,9 +74,13 @@ class RequestedStatus:
             or scope["path"].startswith("/api/review")
         ):
             return await self.app(scope, receive, send)
-        asked = parse_qs(scope["query_string"].decode()).get("review_status")
+        query = parse_qsl(scope["query_string"].decode(), keep_blank_values=True)
+        asked = [value for name, value in query if name in STATUS_PARAMETER]
         if not asked:
             return await self.app(scope, receive, send)
+        # (the parameter is read here: the route does not have it, and would refuse it)
+        rest = urlencode([pair for pair in query if pair[0] not in STATUS_PARAMETER])
+        scope = {**scope, "query_string": rest.encode()}
         try:
             status_asked = ReviewStatus(asked[-1])
         except ValueError:

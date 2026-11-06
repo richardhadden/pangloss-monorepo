@@ -74,7 +74,11 @@ lazy from pangloss_models.model_bases.entity import (
     _EntityCreateBase,
     _EntityUpdateBase,
 )
-lazy from pangloss_models.model_bases.model_tools import forget_schema, inherit_fields
+lazy from pangloss_models.model_bases.model_tools import (
+    forget_schema,
+    inherit_fields,
+    rebuilds_put_off,
+)
 
 
 def apply_camel_case_aliases(model: type[BaseModel]) -> None:
@@ -421,103 +425,108 @@ class ModelRegistry:
     def _initialise_models(cls):
         """Generate all action classes (Create, View, etc.) for the registered models."""
 
-        graph = cls._build_graph()
-        order, cyclic = cls._toposort(graph)
+        # (a model is to be rebuilt each time it is given fields: that is put off, to be done once, below)
+        with rebuilds_put_off() as put_off:
+            graph = cls._build_graph()
+            order, cyclic = cls._toposort(graph)
 
-        # To initialise field definitions, we need to initialise in
-        # declaration order
-        for model in cls._model_dict.values():
-            initialise_field_definitions(model)
+            # To initialise field definitions, we need to initialise in
+            # declaration order
+            for model in cls._model_dict.values():
+                initialise_field_definitions(model)
 
-        check_relation_targets(list(cls._model_dict.values()))
+            check_relation_targets(list(cls._model_dict.values()))
 
-        from pangloss_models.indexes import check_indexes
+            from pangloss_models.indexes import check_indexes
 
-        for model in cls._model_dict.values():
-            if hasattr(model, "__metatype__") and model.__metatype__ in [
-                "Document",
-                "Entity",
-                "Embedded",
-            ]:
-                check_indexes(model)
+            for model in cls._model_dict.values():
+                if hasattr(model, "__metatype__") and model.__metatype__ in [
+                    "Document",
+                    "Entity",
+                    "Embedded",
+                ]:
+                    check_indexes(model)
 
-        for model in cls._model_dict.values():
-            if hasattr(model, "__metatype__") and model.__metatype__ in [
-                "Document",
-                "Entity",
-            ]:
-                cls._check_field_names(model)
+            for model in cls._model_dict.values():
+                if hasattr(model, "__metatype__") and model.__metatype__ in [
+                    "Document",
+                    "Entity",
+                ]:
+                    cls._check_field_names(model)
 
-        # (the incoming relations are worked out from all the models, so start again if this is not the first time)
-        for model in cls._model_dict.values():
-            model._meta.field_definitions.incoming_fields.clear()
+            # (the incoming relations are worked out from all the models, so start again if this is not the first time)
+            for model in cls._model_dict.values():
+                model._meta.field_definitions.incoming_fields.clear()
 
-        for model in cls._model_dict.values():
-            if hasattr(model, "__metatype__") and model.__metatype__ in [
-                "Document",
-                "Entity",
-                "ReifiedRelationDocument",
-            ]:
-                initialise_incoming_relation_definitions(model)
+            for model in cls._model_dict.values():
+                if hasattr(model, "__metatype__") and model.__metatype__ in [
+                    "Document",
+                    "Entity",
+                    "ReifiedRelationDocument",
+                ]:
+                    initialise_incoming_relation_definitions(model)
 
-        for model in chain(order, cyclic):
-            initialise_reference_set_model(model)
-            initialise_reference_view_model(model)
+            for model in chain(order, cyclic):
+                initialise_reference_set_model(model)
+                initialise_reference_view_model(model)
 
-        # (what the sort ordered first: none of it depends on what it could not, which is ordered as well as it can be)
-        for model in chain(order, cyclic):
-            if can_have_create_model(model):
-                initialise_create_model(model)
-                add_fields_to_create_model(model.Create, frozenset())
+            # (what the sort ordered first: none of it depends on what it could not, which is ordered as well as it can be)
+            for model in chain(order, cyclic):
+                if can_have_create_model(model):
+                    initialise_create_model(model)
+                    add_fields_to_create_model(model.Create, frozenset())
 
-            initialise_create_db_model(model)
+                initialise_create_db_model(model)
 
-            add_fields_to_create_db_model(model)
+                add_fields_to_create_db_model(model)
 
-        for model in chain(order, cyclic):
-            if can_have_update_model(model):
-                initialise_update_model(model=model)
-                add_fields_to_update_model(model.Update, frozenset())
+            for model in chain(order, cyclic):
+                if can_have_update_model(model):
+                    initialise_update_model(model=model)
+                    add_fields_to_update_model(model.Update, frozenset())
 
-            initialise_update_db_model(model)
+                initialise_update_db_model(model)
 
-            add_fields_to_update_db_model(model)
+                add_fields_to_update_db_model(model)
 
-        for model in chain(order, cyclic):
-            if can_have_view_model(model):
-                initialise_view_model(model=model)
-                add_fields_to_view_model(model.View, frozenset())
+            for model in chain(order, cyclic):
+                if can_have_view_model(model):
+                    initialise_view_model(model=model)
+                    add_fields_to_view_model(model.View, frozenset())
 
-        for model in chain(order, cyclic):
-            if can_have_head_view_model(model):
-                initialise_head_view_model(model)
-            if can_have_edit_view_model(model):
-                initialise_edit_view_model(model)
+            for model in chain(order, cyclic):
+                if can_have_head_view_model(model):
+                    initialise_head_view_model(model)
+                if can_have_edit_view_model(model):
+                    initialise_edit_view_model(model)
 
-        # The variants with an edge model were made when their base had the fields it had then:
-        # give them the ones it was given since
-        for action_class in list(cls._action_classes):
-            for variant in action_class._via.values():
-                inherit_fields(variant, action_class)
+            # The variants with an edge model were made when their base had the fields it had then:
+            # give them the ones it was given since
+            for action_class in list(cls._action_classes):
+                for variant in action_class._via.values():
+                    inherit_fields(variant, action_class)
 
-        # The fields added to the models above have to be given their camelCase
-        # aliases (the `alias_generator` of the models only sees the fields they are
-        # created with)
-        for action_class in cls._action_classes:
-            apply_camel_case_aliases(action_class)
+            # The fields added to the models above have to be given their camelCase
+            # aliases (the `alias_generator` of the models only sees the fields they are
+            # created with)
+            for action_class in cls._action_classes:
+                apply_camel_case_aliases(action_class)
 
-        # The search patterns of the models (`Person.Where`; see docs/search-where-implementation.md)
-        initialise_where_models(cls._model_dict.values())
+            # The search patterns of the models (`Person.Where`; see docs/search-where-implementation.md)
+            initialise_where_models(cls._model_dict.values())
 
         # A model embeds the schema of the models it refers to as they were when it was last rebuilt, so
         # models that refer to each other (an `Order` that orders a `Statement`, which may be an `Order`)
         # kept the half-made schema of the one that came first, and could be nested only so deep. Forget all
         # the schemas, then make them again: pydantic then meets the cycle while it makes a schema, and
-        # makes it recursive, so there is no limit to the depth.
-        for action_class in cls._action_classes:
-            forget_schema(action_class)
-        for action_class in cls._action_classes:
-            action_class.model_rebuild(force=True)
+        # makes it recursive, so there is no limit to the depth. (All of them: the classes made for the
+        # models, and whatever else was to be rebuilt on the way, such as the search patterns. One that kept
+        # its schema would be embedded as it was.)
+        everything = list(dict.fromkeys([*cls._action_classes, *put_off]))
+        for made in everything:
+            forget_schema(made)
+        for made in everything:
+            made.model_rebuild(force=True)
 
     # ----------------------------
     # Database bindings

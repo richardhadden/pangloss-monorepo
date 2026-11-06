@@ -77,6 +77,20 @@ level may be given to an entity.
 To see a type with its parents, direct subtypes (each with counts) and the entities that have it, use
 `RoleTypology.view(id, include_subtypes=True)`.
 
+In a [structured search](../../docs/structured-search.md), `has_type: {"is": id}` finds what has exactly that type.
+The hierarchy is the types' own field `is_subtype_of`, which a search can follow, a level at a time, and combine with
+any other condition:
+
+```json
+{"type": "Person", "where": {"$any_of": [
+  {"has_type": {"is": "<merchant>"}},
+  {"has_type": {"type": "OccupationType", "where": {"is_subtype_of": {"is": "<merchant>"}}}}
+]}}
+```
+
+(On the smoke test's data: 595 people are merchants as such, 2,965 have a type directly under it.) There is no
+operator yet for "this type or any below it, however deep": see "Not yet".
+
 ## Loading a vocabulary
 
 ```bash

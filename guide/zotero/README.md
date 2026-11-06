@@ -70,6 +70,14 @@ pangloss zotero check           # the library against the database
 
 Or just run the server: it watches. The sync is idempotent and runs by version, so a restart catches up.
 
+A first sync of a large library takes a while (Zotero gives 50 items at a time, with their citations). It can be
+stopped: the version it has reached is stored every half minute, and the next run goes on from there.
+`pangloss zotero status --remote` says how far it is (`version 6883 of 16006 (behind), first sync not finished`).
+
+An item that cannot be written is named in `last error` (in `status`), and does not stop the others. The watcher
+tries it again by itself, after longer each time; so does any later `pangloss zotero sync`. While
+`pangloss migrate` runs nothing can be written, and the sync waits for it.
+
 ## What the nodes are
 
 `zotero_url` (also the entity's id, `https://www.zotero.org/groups/2556736/items/ABCD1234`), `zotero_library`,

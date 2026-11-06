@@ -19,7 +19,11 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, FastAPI, HTTPException, Query, Request, status
 from fastapi.responses import JSONResponse
-from pangloss_api import BackgroundTask
+from pangloss_api import (
+    BackgroundTask,
+    checks_own_parameters,
+    refuse_unknown_parameters,
+)
 
 from pangloss_derived import read
 from pangloss_derived.check import ends_of
@@ -123,6 +127,7 @@ async def get_graph(
 
 
 @router.get("/{name}", operation_id="derived_list")
+@checks_own_parameters
 async def list_derived(
     name: str,
     request: Request,
@@ -143,6 +148,7 @@ async def list_derived(
 ) -> dict[str, Any]:
     """A page of the facts of the class. A field of the class can be given as a parameter (`?family=<id>`)"""
     model = read.derived_class(name)
+    refuse_unknown_parameters(request, also=model._fields)
     fields = {
         key: value
         for key, value in request.query_params.items()

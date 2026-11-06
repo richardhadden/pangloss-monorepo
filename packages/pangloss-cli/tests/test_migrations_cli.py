@@ -619,6 +619,9 @@ def test_going_back_undoes_what_follows_and_it_can_be_applied_again(
     assert exit_code == 0, output
     assert "Backup: /snapshots/1" in output
     assert [name for _, name in backend().APPLIED] == ["0001_initial"]
+    # (the data is read with the code's models, which still have what was undone: said, before what they cannot read)
+    assert "could have made unreadable: Person" in output
+    assert "The code is ahead of the database now (it still has fakeapp.0002" in output
     unapplied = [call for call in backend().CALLS if call[0] == "unapply"]
     assert [call[3] for call in unapplied] == [["RemoveField"]]
 
@@ -693,6 +696,13 @@ def test_a_run_is_squashed_and_the_originals_are_kept(three_migrations: Path):
     assert exit_code == 0, output
     assert "nothing was written" in output and "replaces" in output
     assert len(migration_files(three_migrations)) == 3
+
+    # one migration named: the run from the app's first up to it (it said only "Missing argument 'last'")
+    exit_code, up_to = invoke("squashmigrations", "fakeapp", "0003", "--dry-run")
+    assert exit_code == 0, up_to
+    assert up_to == output
+    exit_code, two = invoke("squashmigrations", "fakeapp", "0002", "--dry-run")
+    assert exit_code == 0 and "changes in 2 migrations" in two.replace("  ", " ")
 
     exit_code, output = invoke("squashmigrations", "fakeapp", "0001", "0003")
     assert exit_code == 0, output

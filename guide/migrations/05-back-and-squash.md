@@ -43,6 +43,8 @@ The migrations come off **last first**. Each is undone by the opposite of each o
 | Make a field required | Make it optional |
 | Make a field optional | Make it required (**asked** for a value for the empty ones) |
 
+After going back, the command reads the affected models with the models of your code, and your code is still at the later migration: it says so ("The code is ahead of the database now ..."), and what it then lists as unreadable is what going back means, not damage. Check out the code of the migration you went back to (or migrate forward again) and it reads.
+
 A useful way to think of it: **the structure goes back exactly; the data goes back as far as the information still exists.** A removed field comes back, but its values do not. Undoing is marked `[LOSES DATA]` whenever that is so, and, as for going forwards, you must pick `--backup` or `--no-backup` and confirm.
 
 Every reversal is checked before it is tried: applied to the models as they were after the migration, it must give the models as they were before. If it does not, that migration is refused as irreversible.
@@ -119,6 +121,7 @@ Delete them? [y/N]:
 ### Rules
 
 - You can squash any run of one app's consecutive migrations (`0003` to `0007`), not only from the start.
+- With one migration named (`pangloss squashmigrations library 0007`), the run is from the app's first migration up to it.
 - A squashed migration can be squashed again with the migrations after it (`squashmigrations library 0001 0010`). The new one replaces the old one and everything the old one replaced, and each database uses it, or the first squashed migration, or the originals, according to how far it has got.
 - Later migrations, and migrations of other apps that depended on an original, continue to work: they follow the squashed one.
 - Going back past a squashed migration removes the originals' records too.

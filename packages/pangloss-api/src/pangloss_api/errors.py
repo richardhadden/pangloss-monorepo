@@ -3,6 +3,7 @@
 import logging
 
 from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pangloss_models import (
     PanglossClassChangeError,
@@ -26,6 +27,9 @@ from pangloss_users import (
     PanglossUserExistsError,
 )
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
+
+from pangloss_api.migration_watch import moved_after_failure, refusal
+from pangloss_api.validation import validation_error_handler
 
 logger = logging.getLogger("pangloss.api.errors")
 
@@ -87,6 +91,7 @@ async def error_handler(request: Request, error: Exception) -> JSONResponse:
 
 
 def register_error_handlers(app: FastAPI) -> None:
+    app.add_exception_handler(RequestValidationError, validation_error_handler)
     app.add_exception_handler(PanglossUserError, error_handler)
     app.add_exception_handler(PanglossWriteError, error_handler)
     app.add_exception_handler(PanglossSearchTimeoutError, error_handler)
@@ -122,7 +127,13 @@ class ServerErrorResponder:
             if started:
                 raise  # (too late to change the response)
             logger.exception("Unhandled error in %s %s", scope["method"], scope["path"])
-            response = JSONResponse(
-                status_code=500, content={"detail": "Internal server error"}
+            # (data the models do not fit is what a migration made under the server looks like: say that)
+            moved = await moved_after_failure(scope)
+            response = (
+                refusal(moved)
+                if moved is not None
+                else JSONResponse(
+                    status_code=500, content={"detail": "Internal server error"}
+                )
             )
             await response(scope, receive, send)

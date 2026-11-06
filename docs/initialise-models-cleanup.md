@@ -106,7 +106,12 @@ How the five models are made is described in [Generated models](generated-models
   Where the time goes: `initialise()` is 75% pydantic's `model_rebuild` (977 calls for 200 generated classes), and more
   than half of those (520 calls, about 45% of the time) are the two loops at the end of `ModelRegistry._initialise_models`
   that rebuild every action class again. Whether one of those loops can go has not been tried; it is the only
-  lever of any size. (An earlier figure of 0.9 s was measured under `tracemalloc`, which slows this code about 4×.)
+  lever of any size. **Done 2026-11-06, the other way round** ✅: the loops at the end stay (they are what makes the
+  schemas of classes that refer to each other recursive) and the rebuilds *before* them go. A class was rebuilt
+  each time it was given fields, for a schema that the end forgets: `model_tools.rebuild` only notes the class
+  while the models are put together (`rebuilds_put_off`), and the end rebuilds what was noted with the rest. On the
+  smoke test's 96 classes (1,512 generated): 4,562 rebuilds -> 1,663, `initialise()` 11.3 s -> 3.2 s, every JSON
+  schema the same. (An earlier figure of 0.9 s was measured under `tracemalloc`, which slows this code about 4×.)
 - ~~`initialise()` needs settings loaded~~ **Done:** `initialise(bind_database=False)` makes the models alone.
 - Type-checker ignore comments (`# type: ignore`, `# pyright: ignore[...]`, `# ty:ignore[...]`) on the same lines:
   the builder has `# type: ignore[...]` with the error named; the rest of the module has the old three. Not removed: no

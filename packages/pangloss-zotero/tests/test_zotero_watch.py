@@ -233,3 +233,49 @@ def test_a_zotero_that_cannot_be_reached_is_tried_again_later_not_given_up():
     )
 
     assert any(s >= 5 for s in sleeps)
+
+
+def test_an_item_that_could_not_be_written_is_tried_again_without_zotero_saying_anything():
+    zotero, store = FakeZotero(), MemoryStore()
+    for key in ("AAAA", "BBBB"):
+        zotero.put(make_item(key))
+    store.fail_for.add(url("AAAA"))
+    sleeps: list[float] = []
+
+    def written_at_last(sent, opened):
+        # (the first try failed and a later one is waited for: then the database takes it)
+        if 10.0 in sleeps:
+            store.fail_for.clear()
+        return url("AAAA") in store.nodes
+
+    # (the stream says nothing after the subscription)
+    run_watch(zotero, store, [[CONNECTED, SUBSCRIBED]], written_at_last, sleeps)
+
+    assert 10.0 in sleeps
+    assert store.states[LIBRARY].synced_version == zotero.version
+    assert store.states[LIBRARY].last_error is None
+    # the item was asked for on its own, not the library again
+    alone = [
+        request.url.params["itemKey"]
+        for request in zotero.requests
+        if request.url.path.endswith("/items")
+    ]
+    assert alone[0] == "AAAA,BBBB" and set(alone[1:]) == {"AAAA"}
+
+
+def test_a_database_being_migrated_is_waited_for_and_nothing_is_reported_as_failed():
+    zotero, store = FakeZotero(), MemoryStore()
+    zotero.put(make_item("AAAA"))
+    store.read_only = True
+    sleeps: list[float] = []
+
+    def done(sent, opened):
+        if sleeps:
+            store.read_only = False
+        return url("AAAA") in store.nodes
+
+    run_watch(zotero, store, [[CONNECTED, SUBSCRIBED]], done, sleeps)
+
+    assert any(s >= 5 for s in sleeps)
+    assert store.states[LIBRARY].last_error is None
+    assert store.states[LIBRARY].synced_version == zotero.version
