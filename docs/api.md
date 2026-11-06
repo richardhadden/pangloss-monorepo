@@ -111,7 +111,7 @@ For every Document and Entity of the project, `NAME` being the class name (so `P
 | `POST /api/NAME` | yes | Create, with the body of `NAME.Create`. Returns 201 and a summary (`ReferenceView`), or with `?detail=true` the whole `HeadView` |
 | `GET /api/NAME/{id}/edit` | yes | What to edit: for an entity its `EditView` (no incoming relations), for a document its `HeadView`. For an item that is a subclass of `NAME`: **`308` to `/api/Sub/{id}/edit`**, as the edit view and the body of an update are the subclass's |
 | `PUT /api/NAME/{id}` | yes | Update, with the body of `NAME.Update`: a full replacement, which what `/edit` returns can be sent back as. The `id` in the body must be the one in the path (400); the item must be a `NAME` and not a subclass of it (409, naming the route to use); and the header `If-Match` says which version it is based on (see below). Returns a summary, or with `?detail=true` the `HeadView` |
-| `DELETE /api/NAME/{id}` | yes | Delete. 204 |
+| `DELETE /api/NAME/{id}` | yes | Delete. 204. 409 for an entity that is referred to (it is marked for deletion), or for one whose package refuses (nothing is changed: see protection, below) |
 | `POST /api/NAME/{id}/undelete` | yes | Undelete. 204 |
 | `GET /api/NAME/{id}/deletable` | yes | Whether a delete would go through, and if not why, without changing anything (a delete of an entity that is referred to marks it for deletion; this does not): `deletable`, `reason` (a sentence), and for an entity in use `referencedBy` (up to ten: `id`, `type`, `label`) and `referenceCount`. A document inside another, and a model whose `delete_only_if` field is not true, are not deletable. The interface asks this before its Delete |
 
@@ -177,6 +177,11 @@ has those fields protected in the routes: a create that sets one, an update that
 delete while `removed` is not true, are refused with `403` and a message saying which. Code that writes through Python,
 such as a sync, is not stopped.
 
+A package can also give a model its own rule for deleting (`Protection(delete_refused=...)`, a function that says why
+not): the delete is then refused with `409` and the reason, **and nothing is marked for deletion**; `/deletable` gives the
+same reason. A type of a typology has one: it is not deleted while it has subtypes or anything has it as a type (see
+[typology](typology-implementation.md)).
+
 ## Not done yet ⏳
 
 - A route to list the types (the interface reads them from the exported models).
@@ -186,14 +191,15 @@ such as a sync, is not stopped.
 
 ## The calendar (`pangloss_calendar`)
 
-An installed `pangloss_calendar` adds read-only routes under `/api/calendar` (see [the calendar plan](calendar-implementation.md)). A day is `J1500-03-02` (Julian), `G1500-03-12` (Gregorian) or a day number; a bad one is a 422. The visibility of any search applies: a reader who may not see unpublished documents does not find them.
+An installed `pangloss_calendar` adds read-only routes under `/api/calendar` (see [the calendar plan](calendar-implementation.md)). A day is `J1500-03-02` (Julian), `G1500-03-12` (Gregorian) or a day number; a bad one is a 422. The visibility of any search applies: a reader who may not see unpublished documents does not find them. Two things are left out of every view: a date that is only unknown (`UnknownDate`: it says nothing of when, and its bounds are every day there is), and a long period that covers all of what is asked for, which is counted (`covering`) and read from its own route. A period that begins or ends among the days asked for is a date of them like any other.
 
 | Route | Gives |
 |---|---|
 | `GET /api/calendar/settings` | what the interface reads: `calendar` (`CALENDAR_DEFAULT`), `first_year` and `last_year` (the span; null if not set), `narrow_days`, `extend_margin_years` |
 | `GET /api/calendar/years/{calendar}?from=&to=` | the years from `from` to `to` (default: the span; 422 without either) with how many dates state a range that meets each (`count`), at most 1000 years; `truncated` as for a month |
-| `GET /api/calendar/day/{ref}?calendar=` | the day by both names and its weekday, with `previous` and `next` (the days either side), the characterisations on it (`origin` `rule` or `manual`; `via` says whether it is attached to the day, its month, its year or a span), and the documents dated on it, each `stated` (a period whose strict bounds hold the day; a single date that names the day; a repeated event that falls on it) or `possible` (a single date known only to a range that holds the day, or one whose allowance for doubt alone reaches it), with `single` (one day, as against a period) and the range it states (`first`, `last`); `truncated` if there were more than `MONTH_LIMIT` (20,000) dates in a field |
-| `GET /api/calendar/month/{calendar}/{year}/{month}` | the weeks, the days with their characterisations and the dates on them (single days, and periods of `CALENDAR_NARROW_DAYS` days or fewer); `spanning`: longer periods; `between`: single dates known only within a range of days that lies in the month; `roughly`: single dates known only within a range that reaches beyond the month; `characterised_spans` (those attached to the month, year or a span); `truncated` if more dates were found than shown |
+| `GET /api/calendar/day/{ref}?calendar=` | the day by both names and its weekday, with `previous` and `next` (the days either side), the characterisations on it (`origin` `rule` or `manual`; `via` says whether it is attached to the day, its month, its year or a span), and the documents dated on it, each `stated` (a period whose strict bounds hold the day; a single date that names the day; a repeated event that falls on it) or `possible` (a single date known only to a range that holds the day, or one whose allowance for doubt alone reaches it), with `single` (one day, as against a period) and the range it states (`first`, `last`); `covering`: how many long periods cover the day and are not among the hits (see `covering` below); `truncated` if there were more than `MONTH_LIMIT` (20,000) dates |
+| `GET /api/calendar/month/{calendar}/{year}/{month}` | the weeks, the days with their characterisations and the dates on them (single days, and periods of `CALENDAR_NARROW_DAYS` days or fewer); `spanning`: longer periods; `between`: single dates known only within a range of days that lies in the month; `roughly`: single dates known only within a range that reaches beyond the month; `characterised_spans` (those attached to the month, year or a span); `covering`: how many long periods cover the whole month and are not in `spanning`; `truncated` if more dates were found than shown |
+| `GET /api/calendar/covering?first=&last=&page=&page_size=` | the long periods that cover every day from `first` to `last` (default: `first` alone): they begin before `first`, end after `last` and state `CALENDAR_LONG_DAYS` (366) days or more. `count`, and a page of them (`results`, each with `ref`, `first`, `last`), the earliest to begin first; `page_size` 50 by default, at most 500; 422 if `last` is before `first` |
 | `GET /api/calendar/year/{calendar}/{year}` | the months, Easter, and the characterisations that move with it |
 | `GET /api/calendar/easter/{calendar}/{year}` | Easter in that calendar, and the characterisations that move with it |
 | `GET /api/calendar/characterisations?q=` | the characterisations (entities of a subclass of `DateCharacterisation`), each with `kind` (the kind of its `when`) and `repeated` (a rule) |

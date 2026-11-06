@@ -204,9 +204,15 @@ def has_constraint(
 # --- searching the full-text index ------------------------------------------------------------------------------------
 
 
+# The index keeps no word longer than 255 characters whole (Lucene's analyzer cuts it there), so a longer word of a
+# search finds nothing whatever follows: the pattern is cut one character past that. (Uncut, a word of 500 characters
+# was refused by Lucene, "TooComplexToDeterminizeException", which reached the user as an internal error.)
+LONGEST_WORD = 256
+
+
 def search_patterns(search_terms: str | None) -> list[str]:
     """A pattern for each word of a search: `*word*`, folded. The text is cut where the index cuts a label into words (at
     anything that is not a letter, a digit or an underscore), so what Lucene reads as syntax (`( ) - * ? :` ...) never
     reaches the query, and `max-planck` is the words `max` and `planck`. Nothing to search for gives no pattern."""
     words = re.split(r"[^\w]+", fold(search_terms or ""))
-    return [f"*{word}*" for word in words if word]
+    return [f"*{word[:LONGEST_WORD]}*" for word in words if word]

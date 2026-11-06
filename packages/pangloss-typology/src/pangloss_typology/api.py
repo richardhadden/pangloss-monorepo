@@ -1,4 +1,5 @@
-"""`/api/typology/{name}`: the hierarchy of a typology (`name` is the name of its entity: `RoleType`).
+"""`/api/typology/{name}`: the hierarchy of a typology (`name` is the name of its entity, `RoleType`; the name of
+the typology itself, `RoleTypology`, is taken for it too).
 
 A type is an entity, so its ordinary endpoints (`/RoleType`, ...) are there as for any entity; these are the hierarchy that
 those cannot do: the whole tree, a type as it is viewed (parents, subtypes, the entities that have it), its path, moving
@@ -21,9 +22,12 @@ logged_in = [Depends(get_current_user)]
 
 
 def typology_named(name: str) -> type[Typology]:
-    found = Typology.registry.get(name)
+    found = Typology.named(name)
     if found is None:
-        raise HTTPException(status_code=404, detail=f"There is no typology {name}")
+        known = ", ".join(sorted(Typology.registry)) or "(none)"
+        raise HTTPException(
+            status_code=404, detail=f"There is no typology {name}. Known: {known}"
+        )
     return found
 
 

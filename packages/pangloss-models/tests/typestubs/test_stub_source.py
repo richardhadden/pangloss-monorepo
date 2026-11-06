@@ -294,3 +294,37 @@ def test_a_generic_pydantic_class_with_its_parameters_is_written_as_the_generic_
     assert rendered.render(Items[str]) == "pangloss_models.search_where.Items[str]"
     assert rendered.render(Text) == "pangloss_models.search_where.Text"
     assert {"datetime", "pangloss_models.search_where"} <= rendered.imports
+
+
+def test_a_model_with_the_name_of_a_class_made_for_it_is_called_by_another_name_in_its_own_functions(
+    tmp_path, monkeypatch
+):
+    """`Order.Order` is what a search of orders is ordered by: in the body of `class Order` the name is that class,
+    so `get` and `list`, which are written there, name the model by an alias at the top of the module"""
+    import importlib
+    import sys
+
+    from pangloss_models import initialise
+    from pangloss_models.typestubs import stub_for_module
+
+    (tmp_path / "ordersapp.py").write_text(
+        "from pangloss_models import Document\n\n\n"
+        "class Order(Document):\n    text: str\n\n\n"
+        "class Letter(Document):\n    text: str\n"
+    )
+    monkeypatch.syspath_prepend(str(tmp_path))
+    sys.modules.pop("ordersapp", None)
+    module = importlib.import_module("ordersapp")
+    initialise()
+
+    stub = stub_for_module(module, [module.Order, module.Letter], None, "async")
+
+    assert "-> _pg_model_Order.HeadView | None" in stub
+    assert "-> _PgListItems[_pg_model_Order.ReferenceView]" in stub
+    assert stub.rstrip().endswith("_pg_model_Order = Order")
+    # (the others are called by their own names, and there is no alias for them)
+    assert "-> Letter.HeadView | None" in stub
+    assert "_pg_model_Letter" not in stub
+    # (without the functions there is nothing to call it by)
+    assert "_pg_model_" not in stub_for_module(module, [module.Order, module.Letter])
+    sys.modules.pop("ordersapp", None)

@@ -22128,12 +22128,12 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Gift",
               "field": "given_by",
-              "viaReified": false
+              "viaReified": true
             },
             {
               "model": "Gift",
               "field": "given_by",
-              "viaReified": true
+              "viaReified": false
             }
           ]
         },
@@ -22300,12 +22300,12 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Membership",
               "field": "member",
-              "viaReified": false
+              "viaReified": true
             },
             {
               "model": "Membership",
               "field": "member",
-              "viaReified": true
+              "viaReified": false
             }
           ]
         },
@@ -22360,12 +22360,12 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Order",
               "field": "ordered_by",
-              "viaReified": false
+              "viaReified": true
             },
             {
               "model": "Order",
               "field": "ordered_by",
-              "viaReified": true
+              "viaReified": false
             }
           ]
         },
@@ -22546,12 +22546,12 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Gift",
               "field": "given_to",
-              "viaReified": false
+              "viaReified": true
             },
             {
               "model": "Gift",
               "field": "given_to",
-              "viaReified": true
+              "viaReified": false
             }
           ]
         },
@@ -22573,12 +22573,12 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Order",
               "field": "ordered_to",
-              "viaReified": false
+              "viaReified": true
             },
             {
               "model": "Order",
               "field": "ordered_to",
-              "viaReified": true
+              "viaReified": false
             }
           ]
         },

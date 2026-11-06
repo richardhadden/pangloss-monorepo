@@ -43,7 +43,7 @@ from pangloss_cypher.delete_node import (
 )
 from pangloss_cypher.read_functions import get_document, get_entity
 from pangloss_cypher.read_incoming import fetch_incoming_relations
-from pangloss_cypher.render_write import render
+from pangloss_cypher.render_write import Statement, render
 from pangloss_cypher.transactions import (
     Transaction,
     dialect,
@@ -80,6 +80,21 @@ async def run_write_query(tx: Transaction, query: str, params: dict) -> list:
     """Run a query that writes, and get its result"""
     response = await tx.run(query, **params)  # type: ignore
     return await response.value()
+
+
+async def run_statements(tx: Transaction, statements: list[Statement]) -> None:
+    """Run the statements of a write (`render_write`), in order. Each says how many rows it wrote: fewer than it was
+    given is a node that was to be written to and was not found, and the write is not made (the transaction is rolled
+    back by the error).
+
+    (Not reached by any test: the user, the head and what the plan refers to are checked before, in this transaction,
+    so every `MATCH` finds its node. A guard, if one ever does not.)"""
+    for statement in statements:
+        written = await run_write_query(tx, statement.text, statement.params)
+        if not written or written[0] != statement.rows:
+            raise PanglossWriteError(
+                "Nothing was written: a node that the write is made to was not found"
+            )
 
 
 @write_transaction
@@ -189,14 +204,7 @@ async def write_head_node(
     plan = plan_create(db_instance)
     existing = await checked_plan(tx, plan)
 
-    query_object = render(plan, existing)
-    result = await run_write_query(
-        tx, query_object.to_query_string(), query_object.params
-    )
-    # (not reached by any test: the user and what the plan refers to were checked above, in this
-    # transaction, so every MATCH of the query finds its node. A guard, if one ever does not)
-    if not result:
-        raise PanglossWriteError("Nothing was written")
+    await run_statements(tx, render(plan, existing))
     created = plan.created_entities(existing)
     await pending.mark_written(tx, db_instance._owner, db_instance.id, created)
     return created
@@ -391,7 +399,7 @@ async def replace_head_node(
         else (),
     )
 
-    # (a guard, as in `write_head_node`: the head was read above, in this transaction)
+    # (a guard, as in `run_statements`: the head was read above, in this transaction)
     if not await run_write_query(tx, replace_query, replace_params):
         raise PanglossWriteError("Nothing was updated")
 
@@ -400,12 +408,7 @@ async def replace_head_node(
     if urls is not None:
         await replace_urls(tx, db_instance.id, [str(url) for url in urls])
 
-    query_object = render(plan, existing)
-    # (a guard, as in `write_head_node`)
-    if not await run_write_query(
-        tx, query_object.to_query_string(), query_object.params
-    ):
-        raise PanglossWriteError("Nothing was written")
+    await run_statements(tx, render(plan, existing))
 
     if changing_class_from is not None:
         await check_references_kept(

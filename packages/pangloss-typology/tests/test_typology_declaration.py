@@ -79,7 +79,7 @@ def test_typed_is_the_entity_of_the_typology():
 
     assert Typed[RoleTypology] is RoleTypology.Type
     with pytest.raises(PanglossMetaError):
-        Typed[int]
+        Typed[int]  # ty: ignore[invalid-type-arguments]
 
 
 def test_an_entity_can_have_types_through_has_type():

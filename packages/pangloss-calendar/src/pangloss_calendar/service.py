@@ -32,7 +32,11 @@ from pangloss_calendar.fields import DateField, calendar_fields
 from pangloss_calendar.views import Dated, place
 
 MONTH_LIMIT = 20_000
-"""Dates looked at, for each field, to fill a month or a day (more are left out, and the report says `truncated`)"""
+"""Dates looked at to fill a month or a day (more are left out, and the report says `truncated`)"""
+
+COVERING_PAGE = 50
+"""How many of the long periods that cover a view are read at once, if the request does not say (`covering`)"""
+MAX_COVERING_PAGE = 500
 
 Mark = Literal["stated", "possible"]
 Origin = Literal["rule", "manual"]
@@ -120,6 +124,9 @@ class DayReport(BaseModel):
     """The day before and the day after (for stepping through the days)"""
     characterisations: list[Characterised]
     hits: list[Hit]
+    covering: int = 0
+    """How many long periods cover the day, beginning before it and ending after: not among the `hits` (`/covering`
+    has them, a page at a time)"""
     truncated: bool = False
     """More dates were found than are shown (`MONTH_LIMIT`)"""
 
@@ -155,8 +162,22 @@ class MonthReport(BaseModel):
     """Single dates known only within a range that reaches beyond the month: listed, not drawn"""
     characterised_spans: list[Characterised]
     """Characterisations attached to the month, its year or a span, not to a day"""
+    covering: int = 0
+    """How many long periods cover the whole month, beginning before it and ending after: not among `spanning`
+    (`/covering` has them, a page at a time)"""
     truncated: bool
     """More dates were found than are shown (`MONTH_LIMIT`)"""
+
+
+class CoveringReport(BaseModel):
+    """The long periods that cover all the days from `first` to `last`, a page of them"""
+
+    first: DayOut
+    last: DayOut
+    count: int
+    page: int
+    page_size: int
+    results: list[Spanning]
 
 
 class MoveableOut(BaseModel):
@@ -263,13 +284,13 @@ async def _ensure(first: int, last: int) -> None:
         await graph.ensure_range(first, last)
 
 
-def _ref(row: dict[str, Any], field: DateField) -> Ref:
-    return Ref(
-        id=row["id"],
-        label=row["label"],
-        type=row["type"] or field.model.__name__,
-        field=field.field,
-    )
+def _ref(row: dict[str, Any]) -> Ref:
+    return Ref(id=row["id"], label=row["label"], type=row["type"], field=row["field"])
+
+
+def _names(fields: list[DateField] | None) -> list[str]:
+    """The fields to look in, as the query takes them (`Class.field`)"""
+    return [f.name for f in (fields if fields is not None else calendar_fields())]
 
 
 def _is_repeated(row: dict[str, Any]) -> bool:
@@ -345,42 +366,43 @@ async def day(
     extra = [c.feast_key for c in by_rule]
     keys = _both_calendars_keys(jdn, extra)
     hits: dict[tuple[UUID, str], Hit] = {}
-    truncated = False
-    for field in fields if fields is not None else calendar_fields():
-        rows, cut = await graph.dated_between(
-            field.model.__name__,
-            field.field,
+    names = _names(fields)
+    rows, truncated = await graph.dated_between(
+        names,
+        jdn,
+        jdn,
+        strict=False,
+        keys=keys,
+        limit=MONTH_LIMIT,
+        long_days=settings.long_days(),
+    )
+    for row in rows:
+        if _is_repeated(row) and not occurs_on(
+            _rule_of(row).rule,
             jdn,
-            jdn,
-            strict=False,
-            keys=keys,
-            limit=MONTH_LIMIT,
+            _calendar_of(row, calendar),
+            _anchor(row),
+            extra,
+        ):
+            continue
+        repeated = _is_repeated(row)
+        single = repeated or is_single(row["kind"])
+        # (a single date is stated on the day only if it says that day; a period, on each of its days)
+        stated = repeated or (
+            row["earliest_strict"] == row["latest_strict"] == jdn
+            if single
+            else row["earliest_strict"] <= jdn <= row["latest_strict"]
         )
-        truncated = truncated or cut
-        for row in rows:
-            if _is_repeated(row) and not occurs_on(
-                _rule_of(row).rule,
-                jdn,
-                _calendar_of(row, calendar),
-                _anchor(row),
-                extra,
-            ):
-                continue
-            repeated = _is_repeated(row)
-            single = repeated or is_single(row["kind"])
-            # (a single date is stated on the day only if it says that day; a period, on each of its days)
-            stated = repeated or (
-                row["earliest_strict"] == row["latest_strict"] == jdn
-                if single
-                else row["earliest_strict"] <= jdn <= row["latest_strict"]
-            )
-            hits[(row["id"], field.name)] = Hit(
-                ref=_ref(row, field),
-                mark="stated" if stated else "possible",
-                single=single,
-                first=DayOut.of(jdn if repeated else row["earliest_strict"]),
-                last=DayOut.of(jdn if repeated else row["latest_strict"]),
-            )
+        hits[(row["id"], row["field"])] = Hit(
+            ref=_ref(row),
+            mark="stated" if stated else "possible",
+            single=single,
+            first=DayOut.of(jdn if repeated else row["earliest_strict"]),
+            last=DayOut.of(jdn if repeated else row["latest_strict"]),
+        )
+    covering, _ = await graph.covering_between(
+        names, jdn, jdn, long_days=settings.long_days(), skip=0, size=0
+    )
     ordered = sorted(
         hits.values(), key=lambda h: (h.ref.label.lower(), str(h.ref.id), h.ref.field)
     )
@@ -391,31 +413,33 @@ async def day(
         next=DayOut.of(jdn + 1),
         characterisations=_characterised(by_rule, await graph.manual_between(jdn, jdn)),
         hits=ordered,
+        covering=covering,
         truncated=truncated,
     )
 
 
 async def _dated_in(
-    field: DateField,
+    fields: list[DateField] | None,
     first: int,
     last: int,
     calendar: Calendar,
     chars: list[Characterisation],
 ) -> tuple[list[Dated], bool]:
-    """The dates of the field in the days, as ranges: a date by its stated range, a repeated event by each day it
-    falls on (and whether more were found than `MONTH_LIMIT`)"""
+    """The dates of the fields in the days, as ranges: a date by its stated range, a repeated event by each day it
+    falls on (and whether more were found than `MONTH_LIMIT`). Not the long periods that cover all the days
+    (`covering`)"""
     rows, truncated = await graph.dated_between(
-        field.model.__name__,
-        field.field,
+        _names(fields),
         first,
         last,
         strict=True,
         keys=None,
         limit=MONTH_LIMIT,
+        long_days=settings.long_days(),
     )
     found: list[Dated] = []
     for row in rows:
-        ref = _ref(row, field)
+        ref = _ref(row)
         if _is_repeated(row):
             days = occurrences(
                 _rule_of(row).rule,
@@ -438,6 +462,43 @@ async def _dated_in(
     return found, truncated
 
 
+async def covering(
+    first: int,
+    last: int,
+    page: int = 1,
+    page_size: int = COVERING_PAGE,
+    fields: list[DateField] | None = None,
+) -> CoveringReport:
+    """The long periods (`CALENDAR_LONG_DAYS` or more) that cover all the days from `first` to `last`, beginning
+    before them and ending after: the earliest to begin first, a page at a time. A day and a month say how many there
+    are, and leave them out of what they list"""
+    if first > last:
+        raise ValueError("the days go from the first to the last")
+    count, rows = await graph.covering_between(
+        _names(fields),
+        first,
+        last,
+        long_days=settings.long_days(),
+        skip=(page - 1) * page_size,
+        size=page_size,
+    )
+    return CoveringReport(
+        first=DayOut.of(first),
+        last=DayOut.of(last),
+        count=count,
+        page=page,
+        page_size=page_size,
+        results=[
+            Spanning(
+                ref=_ref(row),
+                first=DayOut.of(row["earliest_strict"]),
+                last=DayOut.of(row["latest_strict"]),
+            )
+            for row in rows
+        ],
+    )
+
+
 async def month(
     calendar: Calendar,
     year: int,
@@ -448,12 +509,10 @@ async def month(
     first, last = month_span(calendar, year, month_number)
     await _ensure(first, last)
     chars = await graph.read_characterisations()
-    dated: list[Dated] = []
-    truncated = False
-    for field in fields if fields is not None else calendar_fields():
-        part, cut = await _dated_in(field, first, last, calendar, chars)
-        dated.extend(part)
-        truncated = truncated or cut
+    dated, truncated = await _dated_in(fields, first, last, calendar, chars)
+    covering_count, _ = await graph.covering_between(
+        _names(fields), first, last, long_days=settings.long_days(), skip=0, size=0
+    )
     view = place(dated, first, last, settings.narrow_days())
     by_day = rules.days_of(chars, first, last)
     manual = await graph.manual_between(first, last)
@@ -488,6 +547,7 @@ async def month(
         between=_spanning(view.between),
         roughly=_spanning(view.roughly),
         characterised_spans=wide,
+        covering=covering_count,
         truncated=truncated,
     )
 
@@ -530,14 +590,13 @@ async def year_report(
     chars = await graph.read_characterisations()
     spans = [month_span(calendar, year, number) for number in range(1, 13)]
     seen: list[set[tuple[UUID, str]]] = [set() for _ in spans]
-    truncated = False
-    for field in fields if fields is not None else calendar_fields():
-        dated, cut = await _dated_in(field, spans[0][0], spans[-1][1], calendar, chars)
-        truncated = truncated or cut
-        for item in dated:
-            for index, (first, last) in enumerate(spans):
-                if item.earliest_strict <= last and item.latest_strict >= first:
-                    seen[index].add((item.ref.id, item.ref.field))
+    dated, truncated = await _dated_in(
+        fields, spans[0][0], spans[-1][1], calendar, chars
+    )
+    for item in dated:
+        for index, (first, last) in enumerate(spans):
+            if item.earliest_strict <= last and item.latest_strict >= first:
+                seen[index].add((item.ref.id, item.ref.field))
     months = [
         YearMonth(
             month=number,
@@ -571,12 +630,7 @@ async def years_report(
     chars = await graph.read_characterisations()
     first = year_span(calendar, first_year)[0]
     last = year_span(calendar, last_year)[1]
-    dated: list[Dated] = []
-    truncated = False
-    for field in fields if fields is not None else calendar_fields():
-        part, cut = await _dated_in(field, first, last, calendar, chars)
-        dated.extend(part)
-        truncated = truncated or cut
+    dated, truncated = await _dated_in(fields, first, last, calendar, chars)
     counts = count_by_year(dated, calendar, first_year, last_year)
     return YearsReport(
         calendar=calendar,

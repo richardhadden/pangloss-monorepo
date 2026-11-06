@@ -24,7 +24,7 @@ from pangloss_models.model_bases.entity import _EntityUpdateDBBase
 from pangloss_models.model_bases.labels import fulfillable_labels
 
 from pangloss_cypher.params import QueryParams
-from pangloss_cypher.render_write import PropertyAssignments, QueryObject, render
+from pangloss_cypher.render_write import PropertyAssignments, Statement, render
 from pangloss_cypher.write_plan import (
     ExistingEntity,
     InlineEntityKey,
@@ -130,6 +130,6 @@ def build_head_update_query(
     instance: _DocumentUpdateDBBase | _EntityUpdateDBBase,
     previous_meta: dict[str, dict[str, typing.Any]],
     existing_entities: dict[InlineEntityKey, ExistingEntity] | None = None,
-) -> QueryObject:
+) -> list[Statement]:
     """Write the new tree below an existing head node, and record the update (`plan_update`, rendered)"""
     return render(plan_update(instance, previous_meta), existing_entities)

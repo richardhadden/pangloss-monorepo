@@ -144,3 +144,5 @@ With `pangloss_sdk_server` in `INSTALLED_APPS` (see [the SDK](sdk.md)): `panglos
 - Models in other modules of the project (imported by a `models.py`) get stubs of their own. Modules in `site-packages` or a virtual environment do not.
 - The first line says the file was generated. Commit the stubs of your apps, so that everyone who clones the project (and any CI type check) has them: do not add `*.pyi` to `.gitignore`. Make them again, and commit the change, when the models change.
 - The nested classes are marked `# type: ignore` where they replace the class variable of the same name in `Entity` or `Document`.
+- A class that a package makes at run time and puts in your module (the entity of a typology: `RoleType` for `RoleTypology`) is in the stub, so `from myapp.models import RoleType` type-checks.
+- The models of the Pangloss packages (dates, calendar, library, Zotero) have stubs of their own, shipped with the packages, so a field that holds a date is typed. (They are written by `uv run python -m pangloss_testing.framework_stubs`, in this repository.)

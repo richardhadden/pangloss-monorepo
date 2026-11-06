@@ -123,6 +123,25 @@ async def row_of(typology: type[Typology], id: UUID | str) -> tuple[Rows, Row]:
 # --- changing ----------------------------------------------------------------------------------------
 
 
+def check_no_namesake(
+    rows: Rows, parent: str | None, label: str, *, but: str | None = None
+) -> None:
+    """Refuse a second type called `label` (ignoring case) beside the others below `parent` (among the roots, for
+    `None`); `but` is the type itself, when it is renamed or moved. Two types of one name side by side cannot be told
+    apart in the tree or in a search, and `load` could not say which of them a file means: if they are one thing,
+    merge them. (Under different supertypes the same name is two things: a secretary of a court and of a guild)"""
+    wanted = label.strip().casefold()
+    for row in tree.children_of(rows, parent):
+        if row.id != but and row.label.strip().casefold() == wanted:
+            where = (
+                f"below {rows[parent].label}" if parent in rows else "at the top level"
+            )
+            raise Refused(
+                f"There is already a type called {row.label} {where}: name this one differently, "
+                "or merge the two if they are the same"
+            )
+
+
 async def create(
     typology: type[Typology],
     label: str,
@@ -143,9 +162,12 @@ async def create(
         if field not in typology.Type.model_fields:
             raise Refused(f"A {name} has no label in the language {code!r}")
         values[field] = text
+    rows = await rows_of(typology)
     if supertype is not None:
-        await row_of(typology, supertype)  # (it must be there)
+        if str(supertype) not in rows:  # (it must be there)
+            raise NotFound(f"There is no {name} {supertype}")
         values[IS_SUBTYPE_OF] = [{"type": name, "id": str(supertype)}]
+    check_no_namesake(rows, str(supertype) if supertype is not None else None, label)
     made = await typology.Type.Create(**values).save()
     return await get(typology, made.id)
 
@@ -158,7 +180,8 @@ async def get(typology: type[Typology], id: UUID | str) -> TypeOut:
 async def move(
     typology: type[Typology], id: UUID | str, to: UUID | str | None = None
 ) -> TypeOut:
-    """Make `to` the supertype of the type (a root, for `None`). Refused if that would put it below itself"""
+    """Make `to` the supertype of the type (a root, for `None`). Refused if that would put it below itself, or
+    beside a type of the same name"""
     rows, row = await row_of(typology, id)
     if to is not None:
         await row_of(typology, to)
@@ -167,6 +190,8 @@ async def move(
         raise Refused(
             "A type cannot be moved below itself or below one of its own subtypes"
         )
+    if target != row.parent:
+        check_no_namesake(rows, target, row.label, but=row.id)
     await move_type(typology, row.id, target)
     return await get(typology, id)
 
@@ -210,11 +235,12 @@ async def update(
     """Change what a type says of itself (its label, its description, its labels in other languages) as an entity is
     changed: a new version, and the hierarchy as it was. What is not given is left as it is"""
     name = label_of(typology)
-    await row_of(typology, id)
+    rows, row = await row_of(typology, id)
     changes: dict[str, Any] = {}
     if label is not None:
         if not label.strip():
             raise Refused("A type needs a label")
+        check_no_namesake(rows, row.parent, label, but=row.id)
         changes["label"] = label.strip()
     if description is not None:
         changes["description"] = description
@@ -243,24 +269,35 @@ async def set_concrete(typology: type[Typology], id: UUID | str, on: bool) -> Ty
     return await get(typology, id)
 
 
-async def delete(typology: type[Typology], id: UUID | str) -> None:
-    """Delete a type. Refused while it has subtypes, or anything has it as a type or refers to it (merge it, or move
-    those, first)"""
+async def why_not_deletable(typology: type[Typology], id: UUID | str) -> str | None:
+    """The reason a type cannot be deleted, if there is one: it has subtypes, or something has it as a type or refers
+    to it. (The rule of `delete`, and of the API's delete of the type as an entity: `typology.delete_refused`)"""
     rows, row = await row_of(typology, id)
     below = tree.children_of(rows, row.id)
     if below:
-        raise Refused(
-            f"It has subtypes ({', '.join(r.label for r in below[:5])}): move or delete them first"
+        return (
+            f"{row.label} has subtypes ({', '.join(r.label for r in below[:5])}"
+            + (" and more" if len(below) > 5 else "")
+            + "): move or delete them first"
         )
     users = await graph.uses(label_of(typology), row.id)
     if users:
         names = ", ".join(f"{u['label']}" for u in users[:5])
-        raise Refused(
-            f"It is in use by {names}"
-            + (" and more" if len(users) > 5 else "")
+        return (
+            f"{row.label} is in use by {names}"
+            + (f" and {len(users) - 5} more" if len(users) > 5 else "")
             + ": merge it into another type, or change those first"
         )
-    await typology.Type.delete(UUID(row.id))
+    return None
+
+
+async def delete(typology: type[Typology], id: UUID | str) -> None:
+    """Delete a type. Refused while it has subtypes, or anything has it as a type or refers to it (merge it, or move
+    those, first)"""
+    reason = await why_not_deletable(typology, id)
+    if reason:
+        raise Refused(reason)
+    await typology.Type.delete(UUID(str(id)))
 
 
 @dataclass

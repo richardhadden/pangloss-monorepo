@@ -799,8 +799,9 @@ def grouped(types: Stack) -> SimpleNamespace:
 def dated(types: Stack) -> SimpleNamespace:
     """Events in March 1500 (Julian): a coronation on the 2nd, a siege from the 3rd to the 10th (a period: a bar in the
     month), a fair on the 4th or the 5th (one day, known only within two: a hollow bar between them), a birth sometime
-    in 1500 (listed under the month); a feast by rule (Benedict, 21 March) and one with no rule (Market), to attach by
-    hand"""
+    in 1500 (listed under the month); a reign from 1490 to 1510 (a long period over the whole span: counted on a day
+    and a month, and read when asked for); a feast by rule (Benedict, 21 March) and one with no rule (Market), to attach
+    by hand"""
     forget("Event", "Feast")
     api = types.admin()
 
@@ -839,6 +840,17 @@ def dated(types: Stack) -> SimpleNamespace:
             "The fair",
             text="Traded",
             when=between(julian(1500, 3, 4), julian(1500, 3, 5)),
+        ),
+        reign=made(
+            "Event",
+            "Reign of the king",
+            text="Reigned",
+            when={
+                "type": "Period",
+                "calendar": "julian",
+                "start": julian(1490, 1, 1),
+                "end": julian(1510, 12, 31),
+            },
         ),
         benedict=made("Feast", "Benedict", use="sarum", when=rule),
         market=made("Feast", "Market day", when={"type": "NoRule"}),

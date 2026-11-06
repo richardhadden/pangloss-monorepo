@@ -261,8 +261,12 @@ still worth fixing at the source.
 
 - **Containers (not removed):** `pangloss-memgraph-smoketest` (:7697) and `pangloss-neo4j-smoketest` (:7699).
   `docker stop` or `docker rm -f` them when done.
-- **Servers (background processes of this session):** API on :8010 (Memgraph) and :8011 (Neo4j); production
-  interface on :3011. The dev interface (:3010) has already stopped.
+- **Servers (background processes of this session):** none is running; each stopped at its background time limit:
+  - the Memgraph API on :8010: restart with `../.venv/bin/pangloss run --port 8010`;
+  - the production interface on :3011: `PANGLOSS_API_URL=http://localhost:8010 ../.venv/bin/pangloss interface
+    serve --port 3011`;
+  - the dev interface on :3010;
+  - the Neo4j API on :8011: `PANGLOSS_SETTINGS=smoketest_site.settings_neo4j ../.venv/bin/pangloss run --port 8011`.
 - **Files:** the project in `pangloss-smoketest/`, with `REPORT.md` (this file), `PROBLEMS.md`, `README.md` and
   `smoke_scripts/`. Logs, timings, JSON results and screenshots are in `smoke_scripts/out/` and `out-neo4j/`
   (git-ignored, with `.env`, `.secrets` and tokens).

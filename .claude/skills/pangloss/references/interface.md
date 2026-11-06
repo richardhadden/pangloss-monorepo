@@ -202,5 +202,9 @@ you: to see pages that need a login, use the e2e stack with its own user, not a 
 - Keep e2e tests few: what only a browser shows (drag and drop, hydration, built chunks). Logic belongs in Vitest and
   API tests. Notes on writing them are in `e2e/README.md`.
 - In a module's Vitest, a lazy view needs `vi.waitFor`, not one tick.
+- **Do not give a lazy module component that the server renders a `Loading` of its own inside a page.** On a page
+  that takes seconds to hydrate, the nested boundary is resumed after its server-rendered nodes have been removed, and
+  the component hydrates nodes that are gone (`node.setAttribute is not a function`). Let the page's `Loading` wait for
+  it, as cards and `itemSections` do; an `Errored` of its own is fine.
 - **Save is off until the item has changed** (`ItemFormState.changed`): a test that saves must change something
   first, and in Vitest wait a tick after typing before clicking Save (the memo and the button follow after a flush).

@@ -132,9 +132,14 @@ SYNC_STUBS = "sync_stubs"
 
 
 def shipped(path: Path) -> bytes:
-    """A module's source as shipped (the bodies of `@server_only` functions taken out)"""
+    """A module's source as shipped (the bodies of `@server_only` functions taken out, the interface's names from
+    where a client has them)"""
+    return shipped_text(path.read_text(), str(path))
+
+
+def shipped_text(text: str, filename: str) -> bytes:
     try:
-        return shipped_source(path.read_text(), str(path)).encode()
+        return shipped_source(text, filename).encode()
     except ServerOnlyProblem as error:
         raise SdkBuildError(
             "The models cannot be shipped as they are", [str(error)]
@@ -178,7 +183,7 @@ def connect(url: str | None = None, **options: Any) -> None:
 
 def connect_offline() -> None:
     """Initialise the models with no server (to check them)"""
-    pangloss_sdk.connect_offline(APPS)
+    pangloss_sdk.connect_offline(APPS, sdk=MANIFEST)
 '''
 
 
@@ -301,10 +306,13 @@ def build_package(
         # a different stub, as the same function is `async` or not, and a stub can only say
         # one. `pangloss-sdk sync-stubs` puts the second where a checker will use it
         stub = path.with_suffix(".pyi").as_posix()
-        files[stub] = stub_for_module(imported, models, names, "async").encode()
-        files[f"{module}/{SYNC_STUBS}/{stub}"] = stub_for_module(
-            imported, models, names, "sync"
-        ).encode()
+        # (a stub has the module's imports: the interface's are pointed away in it as in the module)
+        files[stub] = shipped_text(
+            stub_for_module(imported, models, names, "async"), stub
+        )
+        files[f"{module}/{SYNC_STUBS}/{stub}"] = shipped_text(
+            stub_for_module(imported, models, names, "sync"), stub
+        )
 
     # (a checker takes a package from the first place it is found whole: so the directory of the
     # blocking stubs has every module of the models, the others as they are)
@@ -325,8 +333,18 @@ def build_package(
     files[f"{module}/py.typed"] = b""
 
     position = schema_position(list(settings.INSTALLED_APPS))
+    # (the settings the models are made from, as they are here: a client has no others)
+    from pangloss_core.settings import model_settings
+
+    made_from = {
+        name: getattr(settings, name)
+        for name in sorted(model_settings)
+        if hasattr(settings, name)
+    }
     fingerprint = content_fingerprint(
-        files, {"requires": requires, "apps": apps, "name": distribution}
+        files,
+        {"requires": requires, "apps": apps, "name": distribution}
+        | ({"model_settings": made_from} if made_from else {}),
     )
     version = f"0.{build_number}"
     manifest = {
@@ -339,6 +357,7 @@ def build_package(
         "requires": requires,
         "fingerprint": fingerprint,
         "schema_position": position,
+        "model_settings": made_from,
         "pangloss_sdk_version": importlib.metadata.version("pangloss-sdk"),
     }
     files[f"{module}/manifest.json"] = (

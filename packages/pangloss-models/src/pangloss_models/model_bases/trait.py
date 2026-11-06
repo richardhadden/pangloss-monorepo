@@ -36,10 +36,12 @@ class Trait[T: Document | Entity](_Trait):
     # reference view is only read). Those of a trait it extends are added too
     reference_view_fields: ClassVar[tuple[str, ...]] = ()
     Meta: ClassVar[Any] = TraitMeta
-    _meta: Any  # type: ignore
+    # (a class variable, as `Entity._meta` is: so that `class Person(Entity, Agent)` with a `_meta` of its own is not,
+    # to a type checker, a class variable over an instance variable)
+    _meta: ClassVar[Any]
 
 
 class NonHeritableTrait(_Trait):
     _kind_base: ClassVar[bool] = True
     Meta: ClassVar[Any] = TraitMeta
-    _meta: Any  # type: ignore
+    _meta: ClassVar[Any]

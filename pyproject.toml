@@ -17,6 +17,9 @@ asyncio_default_fixture_loop_scope = "session"
 
 [tool.ruff]
 target-version = "py315"
+# (the stubs of the packages' own models are generated, `python -m pangloss_testing.framework_stubs`: formatting them
+# moves their `type: ignore` comments, and they import what the module does, used or not)
+extend-exclude = ["packages/*/src/**/*.pyi"]
 
 # (`run_tests.sh` checks pyflakes and bugbear: `ruff check --select F,B`. Typer's parameters are
 # made in the defaults by design)
@@ -46,6 +49,8 @@ include = [
     "packages/pangloss-testing/src/pangloss_testing/conformance/**",
     "pangloss-demo/**",
     "sdk-demo/**",
+    # (the scripts of the smoke test; its app, `pangloss-smoketest/smoke`, is checked as a project's own code is)
+    "pangloss-smoketest/smoke_scripts/**",
 ]
 [tool.ty.overrides.rules]
 unresolved-attribute = "ignore"
@@ -105,12 +110,25 @@ unused-ignore-comment = "ignore"
 # traits narrow `date` to the kinds they take)
 [[tool.ty.overrides]]
 include = [
-    "packages/pangloss-dates/src/pangloss_dates/julian.py",
-    "packages/pangloss-dates/src/pangloss_dates/gregorian.py",
-    "packages/pangloss-dates/src/pangloss_dates/dateable.py",
+    "packages/pangloss-dates/src/pangloss_dates/julian.py*",
+    "packages/pangloss-dates/src/pangloss_dates/gregorian.py*",
+    "packages/pangloss-dates/src/pangloss_dates/dateable.py*",
 ]
 [tool.ty.overrides.rules]
 invalid-mutable-override = "ignore"
+
+# the stubs of the packages' own models (`python -m pangloss_testing.framework_stubs`) and of the smoke test project
+# (`pangloss make-stubs`) are written for any checker: they carry `type: ignore` comments that ty does not need
+[[tool.ty.overrides]]
+include = ["packages/*/src/**/*.pyi", "pangloss-smoketest/smoke/*.pyi"]
+[tool.ty.overrides.rules]
+unused-type-ignore-comment = "ignore"
+
+# the scripts of the smoke test call the drivers (neo4j, Playwright) more loosely than their types allow
+[[tool.ty.overrides]]
+include = ["pangloss-smoketest/smoke_scripts/**"]
+[tool.ty.overrides.rules]
+no-matching-overload = "ignore"
 
 # dulwich's types are strict about object ids and refs (bytes are accepted at run time)
 [[tool.ty.overrides]]

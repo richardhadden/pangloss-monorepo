@@ -431,6 +431,9 @@ Neo4j folds already (`standard-folding` analyzer, and `schema.fold` on the words
   - `inline_entities`, `references(existing)`, `nodes_to_write(existing)`, `urls_to_write(existing)` and
     `created_entities(existing)` are built on `walk`.
 - **`render_write.py`.** `render(plan, existing)` gives the `QueryObject` (match and create parts, `QueryParams`).
+  (Since 2026-11-06 it gives a list of `Statement`s, each over a list of rows, run in order by `write_functions.run_statements`:
+  one statement with a clause for every node and edge took minutes for a document of 200 nested ones. The dialect's part is
+  `labels_from`. See [large data](large-data.md#writing-a-large-document).)
   `PropertyAssignments` encodes through the dialect. `build_head_create_query(instance, existing)` is `render(plan_create(...))`.
 - **Checks.** `validate_write`'s checks read the plan: `check_references_exist(tx, plan, existing)`,
   `check_ids_available(tx, plan, existing)` (`is_update` comes from the plan) and `check_urls_available(tx, plan,

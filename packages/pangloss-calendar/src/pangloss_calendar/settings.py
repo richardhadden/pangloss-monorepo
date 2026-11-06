@@ -34,6 +34,15 @@ def narrow_days(settings: Any = None) -> int:
     return setting("CALENDAR_NARROW_DAYS", DEFAULT_NARROW_DAYS, settings)
 
 
+DEFAULT_LONG_DAYS = 366
+
+
+def long_days(settings: Any = None) -> int:
+    """`CALENDAR_LONG_DAYS`: a period of this many days or more that covers all of what a view shows (it begins
+    before and ends after) is counted there and read apart, not listed with the dates of the days (default 366)"""
+    return setting("CALENDAR_LONG_DAYS", DEFAULT_LONG_DAYS, settings)
+
+
 DEFAULT_EXTEND_MARGIN_YEARS = 10
 
 

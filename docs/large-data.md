@@ -22,7 +22,7 @@ Every `.save()` is one transaction. Written through the models, one process:
 | 30,000 factoids | 518 s (58 a second) |
 | Total | 1,283 s (21 minutes) |
 
-Throughput falls slowly as the database grows. A factoid is written, with its statements, in a single statement.
+Throughput falls slowly as the database grows. A factoid is written, with its statements, in one transaction of a few statements (three, usually: see [Writing a large document](#writing-a-large-document)).
 
 With 16 writers many `write_head_node` transactions take over 500 ms, and **`SLOW_QUERY_MS` (default 500) fills the log with warnings.** Raise it for the load ([Logging](logging.md)); `bulk-load` (below) does that itself.
 
@@ -49,6 +49,36 @@ The text index costs about 4.5 ms **a commit**, not a node, and it makes writers
 **Memgraph 3.14's `--experimental-enabled=commit-lock-narrowing` removes the waiting** (measured 2026-10-28, same raw Cypher: 16 writers, one text-indexed node a commit, 22 a second without and 244 with; 16 writers writing 100 nodes a commit, 936 and 12,074; one to four writers unchanged). The load of this page at **16 writers with it** took 989 s (100,000 entities in 583 s, 150 to 220 a second, and 30,000 factoids in 406 s, 74 a second) against 1,283 s at four writers without it, and the 16-writer load without it, which fell to 30 entities a second. The same data (642,550 nodes, 1,649,526 edges). It is experimental, so it is a choice for the project; `docker run ... memgraph/memgraph-mage:3.14.0 --experimental-enabled=commit-lock-narrowing`. Only the load was tried with it, not the API or the migrations.
 
 Pangloss writes a document, with the documents and embedded objects inside it, as one transaction, and one document per `.save()`. A way to write many documents in one transaction (a batch) would be the way to load faster into a database that already has data, where `bulk-load` cannot be used; there is not one yet. (In Memgraph's analytical mode the text index costs nothing, at 1,588 a second against 1,504 for a plain node, which is part of why `bulk-load` is fast.)
+
+### Writing a large document
+
+A document can be large in itself: a register page with an entry for each line, a charter with a hundred statements. Until
+2026-11-06 a write was **one Cypher statement with a clause for every node and edge**, and the database's time for such a
+statement grows much faster than its length (about the cube: parsing and planning, not the writing). Found by the smoke test of
+2026-11-06 (`pangloss-smoketest/`, 337,000 nodes), where a factoid of 200 statements took 134 seconds to write and an update that
+dropped 50 of them 59; on Neo4j 160 statements took 50 seconds, and one try in three ended in an error inside the database.
+
+A write is now **a few statements, each over a list of rows** (`pangloss_cypher.render_write`): the head; one `MERGE` over the nodes
+of the document, their labels a list in each row; the new entities and their URLs, if there are any; and one statement over the edges,
+with a part for each pair of edge names the write has (the type of an edge cannot come from a row). Three statements for an ordinary
+document, and their texts do not depend on its size. Measured on the same database, through the API, one writer:
+
+| One factoid of | Before | Now |
+|---|---|---|
+| 10 statements (deaths) | 58 ms | 47 ms |
+| 40 | 527 ms | 75 ms |
+| 80 | 3,681 ms | 152 ms |
+| 200 (mixed kinds) | 134,537 ms | 289 ms |
+| 200, then an update dropping 50 | 59,000 ms | 276 ms |
+| 1,000 | not tried | 1,100 to 1,500 ms |
+
+An ordinary factoid (5 statements or so) is as before: 23 to 24 ms each one at a time, 58 to 62 a second with eight writers (53 a
+second before). In the database alone (the write's statements, rolled back): Memgraph 90 ms for 200 statements and 392 ms for 1,000;
+Neo4j 51 ms for 160 and 416 ms for 1,000. A statement for each set of labels and each pair of edge names (17 for an ordinary factoid)
+was tried first and given up: as fast for the large documents, but a round trip each.
+
+The time left for a very large document is no longer the database's: of the 1.4 seconds for 1,000 statements, about 0.5 is validating
+the payload and making the models, and reading it back takes a second (`smoke_scripts/write_phases.py`, `large_update.py`).
 
 ## Migrating
 

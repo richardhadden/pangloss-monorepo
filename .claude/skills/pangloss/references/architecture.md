@@ -48,7 +48,8 @@ module are assigned to `Document.get`, `.list`, `.delete`, `Create.save` and the
 
 A write: user data → `Statement.Create` (validated) → `_to_db_model()` → `Statement.CreateDB` (ids, labels, semantic
 spaces and context labels filled in) → a `WritePlan` (`pangloss_cypher.write_plan`: nodes, relations, references; no
-Cypher yet) → one Cypher statement (`render_write`) → the database → a `ReferenceView` or `HeadView`.
+Cypher yet) → a few Cypher statements, each over a list of rows (`render_write`: the head, the nodes, the edges) → the
+database → a `ReferenceView` or `HeadView`.
 
 An update, in one transaction: check the document exists, that what it refers to exists, that the ids it uses are
 free, and that it is based on the latest version; only then delete everything below the head (never entities) and
@@ -197,6 +198,12 @@ All measured; the numbers and query plans are in `docs/backend-profiling.md`, `d
 - **A transaction timeout arrives as a transient error, which the driver retries** for many seconds. It is translated
   to `PanglossSearchTimeoutError` inside the transaction function for that reason; keep new timeouts there too.
 - `toLower(prop) CONTAINS` never uses an index; regular expressions over the text index are slow on common words.
+- **A statement's cost grows much faster than its length** (about the cube of the number of clauses, on both
+  databases): one with a clause for each of 3,000 nodes and edges took 27 seconds. Put what varies in rows
+  (`UNWIND $rows`), so the text is short and the same each time. Labels can come from a row (`Dialect.labels_from`);
+  the type of an edge cannot, so `render_write` has a `FOREACH` for each pair of names.
+- **The text index keeps no word of 40 bytes or more** (Memgraph), and gives 1,000 hits unless asked for more
+  (`{limit: ...}`): pass `SEARCH_HIT_LIMIT` wherever the label index is searched.
 - Memgraph evaluates a pattern comprehension on the variable of an enclosing quantifier wrongly
   (`any(j IN … WHERE all(h IN [(j)-->(h) | h] …))`): build the inner list inside the outer comprehension.
 - Memgraph must be started with `--storage-properties-on-edges=true` and have the `text_search` module (the
@@ -212,5 +219,12 @@ the package out. In a script, `sdk.connect(url)` sets `STORAGE` to a backend who
   lives in a module the models do not import.
 - The model tests of `pangloss-models` use the SDK's storage because it needs no connection.
 - A new operation on the models needs its SDK side (`packages/pangloss-sdk/src/pangloss_sdk/databases/`) and a contract test.
+- A client has no interface and no project settings. Interface names in a shipped module are rewritten to the inert
+  `pangloss_sdk.no_interface`; a setting that changes what a model is must be named in
+  `pangloss_core.settings.model_settings` (read with `model_setting`), or the SDK's models will differ from the
+  server's and the build's check will fail. A framework package that declares models must import on a client: no
+  server package at module level.
+- The packages ship stubs of their own model modules. After changing a model of a package:
+  `uv run python -m pangloss_testing.framework_stubs` (`run_tests.sh` runs its `--check`).
 
 Design and phases: `docs/sdk.md`. Using it: `guide/sdk/README.md`.

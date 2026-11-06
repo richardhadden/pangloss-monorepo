@@ -250,6 +250,22 @@ Decided: one supertype (no DAG); the field is written `Typed[RoleTypology]`; the
 - **The switch** is done with `__labels_unmanaged__` on the generated class (its `Create` and `Update` never put or take away the labels of `also`; `service.set_concrete` does) and `has_allowed_label` in `pangloss_models/model_bases/labels.py`, used by the reference checks of `validate_write.py`: a relation that accepts `Role` accepts a `RoleType` node only if it has the label `Role`. `is_subtype_of` and `is_concrete` are protected from the API (`_protect_meta`), so only the typology endpoints change them.
 - **A moved type takes a lock.** Edges made by different transactions do not conflict in Memgraph, and three racing moves did make a loop (found by `test_racing_moves_never_make_a_loop`), so `move` and `merge` first write a node of their own per typology (`:TypologyLock`); one of two racing moves waits (about a second) and is then refused by its own check.
 - **The card** marks a type with "type" but does not show the path: a card in a list has no cheap way to get it.
+- **2026-11-06, after the smoke test**: (1) **The entity's own `DELETE /api/RoleType/{id}` follows the typology's
+  rule.** It used to mark a type in use for deletion (as for any entity that is referred to) and leave it in the
+  tree, on what had it and in every search. The type's `Protection` now has `delete_refused`
+  (`typology.delete_refused`, which asks `service.why_not_deletable`): 409 with the reason ("Banker is in use by
+  ... and 615 more: merge it into another type, or change those first"), nothing marked, and `/deletable` says the
+  same, so the interface's Delete dialog shows it. A leaf that nothing has is deleted. (2) **Two types side by side
+  cannot have the same name** (ignoring case): `create`, `update` (a new label) and `move` refuse it
+  (`service.check_no_namesake`), since `load` already takes the label under a supertype for the type. The same name
+  under different supertypes is allowed. Not checked: a type written as a plain entity (`POST /api/RoleType`,
+  `RoleType.Create(...).save()`), and `merge`, which is how two that exist are made one. (3) **A typology is found
+  by either name**: `RoleType` (its entity) or `RoleTypology` (itself), in the routes and the commands
+  (`Typology.named`). (4) **The entity is importable and typed**: `RoleType` is put in the module that declares the
+  typology (`from app.models import RoleType`), the stubs have it, and `Typed[RoleTypology]` type-checks
+  (`Typed` is generic). The languages of a typology's labels are a *model setting* (`INTERFACE_LANGUAGES`,
+  `DEFAULT_INTERFACE_LANGUAGE`), so an SDK's models have the same label fields as the server's ([SDK](sdk.md),
+  phase 8).
 - **2026-11-04, the interface** ([typology-interface-dnd.md](typology-interface-dnd.md)): the tree follows the server
   through a `live()` server function (`treeFeed`, polling the tree every `PANGLOSS_TYPOLOGY_POLL_MS`, 3000 ms); a type is
   moved only by dragging (onto the middle of a row: below it; onto its top or bottom edge: beside it), with no "Move to…"

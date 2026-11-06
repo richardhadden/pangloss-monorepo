@@ -15,6 +15,7 @@ are in [docs/calendar-implementation.md](../../docs/calendar-implementation.md).
    | `CALENDAR_DEFAULT` | `"julian"` or `"gregorian"`: the calendar a view is read in (default: `DATES_DEFAULT_CALENDAR`) |
    | `CALENDAR_EXTEND_MARGIN_YEARS` | How far beyond the span days are made when a rule or an attachment needs them (default 10; 0 for none) |
    | `CALENDAR_NARROW_DAYS` | A date that states a range of this many days or fewer is drawn on each of its days in a month; a wider one is listed apart (default 7) |
+   | `CALENDAR_LONG_DAYS` | A period of this many days or more that covers all of a day or a month (it begins before and ends after) is counted there and read on request, not listed with the dates (default 366) |
    | `CALENDAR_FIELDS` | `["Letter.sent", ...]`: look only in these date fields (default: every date field of every Document and Entity) |
    | `CALENDAR_AUTO_EXTEND` | Make the days of the graph that are asked for and are not there (default off; the answers do not need them) |
 
@@ -77,6 +78,12 @@ Read only, under `/api/calendar` (see [the API](../../docs/api.md)): `day/J1500-
 day), `month/julian/1500/3`, `year/julian/1500`, `easter/julian/1500`, `characterisations`. A date is **stated** on a day if the date says so,
 **possible** if only its allowance for doubt reaches it. Characterisations are listed on their own, with how each comes to be there (`rule`, or attached by hand to the `day`, `month`, `year` or `span`). Nothing deleted, and nothing unpublished for a reader who may not see it, is shown.
 
+Two kinds of date are kept out of the lists, because there can be thousands and they say nothing of the day. A date that is
+only **unknown** (`UnknownDate` on its own) is in no view. A **long period that covers the whole view** (a residence from
+1456 to 1520, on a day of 1500) is counted: a day and a month say how many there are (`covering`), and
+`covering?first=J1500-03-02` (with `last`, for more than a day) gives them a page at a time. A period that begins or ends
+on the day, or in the month, is listed as any other date is, and so is one shorter than `CALENDAR_LONG_DAYS`.
+
 ## In the interface
 
 With `pangloss_interface` installed as well, the calendar has pages of its own (the module in `pangloss_calendar/interface/`),
@@ -92,12 +99,14 @@ and **Calendar** in the navigation bar leads to them:
   drawn as if it lasted: if its range of days lies in the month it is a hollow, dashed bar *between* them; if it reaches beyond
   the month it is listed under the grid, "Sometime in or around this month", with the days it could be on. Feasts and other
   characterisations are named in amber on their days. A day with more than three dates says "+N more". Under the grid, too,
-  what is attached to the month, its year or a span.
+  what is attached to the month, its year or a span; and "Long periods over the whole month" with how many there are
+  and a button that shows them, fifty at a time (they are not drawn: each would be a bar across every week).
 - **`/calendar/julian/1500/3/2`**: the day, with its weekday, its name in the other calendar (a link to the same day under that
   name), the days either side and its month; the characterisations on it and how each comes to be there (by rule, or attached
   to the day, the month, the year or a span; "repeats" on one with a rule); and everything dated on it with the field it is in,
   marked *possible* (with the days it could be on) when the date does not name the day: a single day known only to a month or
-  a year, or a date whose allowance for doubt alone reaches the day. A period is stated on each of its days.
+  a year, or a date whose allowance for doubt alone reaches the day. A period is stated on each of its days. Under them,
+  "Long periods that include this day" with how many there are and a button that shows them, fifty at a time.
 
 Every page has one button in the console bar that names the calendar it is read in (**Julian**) and shows the same thing
 read in the other (a month is the month of that name in the other calendar; a day is the same day under its other name),

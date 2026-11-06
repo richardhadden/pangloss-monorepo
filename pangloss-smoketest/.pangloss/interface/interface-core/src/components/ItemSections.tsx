@@ -1,10 +1,10 @@
-import { Errored, For, Loading, Show } from "solid-js";
+import { Errored, For, Show } from "solid-js";
 import { useModels, useModules } from "../context";
 import { getModel } from "../schema";
 
 /**
  * What the interface modules add after the contents of an item's page (`itemSections`), in the order of the modules,
- * each loaded when first shown, and each deciding itself whether to show anything. The generic item page has them
+ * each loaded with the page that first shows it, and each deciding itself whether to show anything. The generic item page has them
  * after `ItemContents`; a model's own page (`itemPage`) puts them where it wants.
  */
 export function ItemSections(props: { item: Record<string, unknown> }) {
@@ -23,9 +23,10 @@ export function ItemSections(props: { item: Record<string, unknown> }) {
                 return null;
               }}
             >
-              <Loading fallback={null}>
-                <Section type={type()} id={String(props.item.id ?? "")} item={props.item} model={model()} />
-              </Loading>
+              {/* (no `Loading` of its own: the section's code is waited for with the page's, as a module's card is.
+                  With one, a page that takes seconds to hydrate lost the section: its boundary was resumed after
+                  the server's nodes for it had been taken out of the page, and it hydrated nodes that were gone) */}
+              <Section type={type()} id={String(props.item.id ?? "")} item={props.item} model={model()} />
             </Errored>
           )}
         </For>

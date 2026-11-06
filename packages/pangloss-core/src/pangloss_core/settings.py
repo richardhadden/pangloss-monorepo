@@ -51,6 +51,9 @@ class ClientSettings(PydanticBaseSettings):
     STORAGE: str | None = None
     # (what came before `STORAGE`: the module path of the backend. Still read, with a warning)
     DATABASE_MODULE: str | None = None
+    # The server's values of the settings that the models are made from (`model_settings`), for a client that has
+    # not got the server's settings: the SDK of a project fills it in
+    MODEL_SETTINGS: dict[str, typing.Any] = {}
 
     model_config = SettingsConfigDict(case_sensitive=True, env_file=".env")
 
@@ -132,6 +135,22 @@ def configure(settings: ClientSettings) -> None:
     """Make these the project's settings"""
     global SETTINGS
     SETTINGS = typing.cast("BaseSettings", settings)
+
+
+# The names of the settings that change what the models are, not only how a server runs (the languages that a type of
+# `pangloss-typology` has a label in). A package that reads one while the models are made adds its name here and reads
+# it with `model_setting`: the SDK of a project is built with their values, so that a client makes the server's models
+model_settings: set[str] = set()
+
+
+def model_setting(name: str, default: typing.Any = None) -> typing.Any:
+    """A setting that the models are made from: the project's, or on a client what its SDK says the server's is"""
+    settings = globals().get("SETTINGS")
+    if settings is None:
+        return default
+    if hasattr(settings, name):
+        return getattr(settings, name)
+    return settings.MODEL_SETTINGS.get(name, default)
 
 
 def get_settings() -> BaseSettings:

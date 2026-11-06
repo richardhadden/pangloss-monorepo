@@ -66,6 +66,12 @@ Over the SDK it is one request to the endpoint. The answer is an `AutocompleteRe
 
 One text search per word of `q` (lower case, cut at anything that is not a letter or digit, the way the index cuts a label, so no punctuation or regular-expression character reaches the index), `.*word.*` for each. A node is kept if it matched **every** word, is an entity with one of the labels, and is not deleted. The query is `pangloss_memgraph/.../build_autocomplete_query.py`.
 
+Each of those searches asks the index for up to `SEARCH_HIT_LIMIT` hits (100,000), as a list's search does. Without a
+limit Memgraph gives **1,000**, of any type, before the type is looked at: a word that was in more than 1,000 labels
+lost entities (a person could not be found by a surname that many statements had in their labels; found by the smoke
+test, fixed 2026-11-06, conformance test `test_autocomplete_live.py`). A word is cut to the longest the index can
+match (40 characters on Memgraph, 256 on Neo4j): a longer one was a 500 from the index's own limits.
+
 Two things found while building it:
 
 - The nodes the index finds, collected after the ordering, came back as the *same node* several times. The query collects a map of `id`, `type` and `label` instead of the nodes.

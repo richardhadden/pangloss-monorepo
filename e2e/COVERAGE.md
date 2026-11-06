@@ -159,7 +159,7 @@ Marie at Ghent; moved to Bruges; about Mary and renamed); a `Report` has parts i
 
 ## `pangloss_calendar` module
 
-The e2e project installs `pangloss_dates` and `pangloss_calendar` (Julian, span 1499 to 1501, `CALENDAR_FIELDS = ["Event.when"]`); `Event` has a date, `Feast` is a `DateCharacterisation`. The `dated` fixture makes three events in March 1500 (a day, a range of eight days, a range of two), a feast by rule (Benedict, 21 March) and one with no rule (Market day).
+The e2e project installs `pangloss_dates` and `pangloss_calendar` (Julian, span 1499 to 1501, `CALENDAR_FIELDS = ["Event.when"]`); `Event` has a date, `Feast` is a `DateCharacterisation`. The `dated` fixture makes three events in March 1500 (a day, a range of eight days, a range of two), a reign from 1490 to 1510 (a long period over the whole span), a feast by rule (Benedict, 21 March) and one with no rule (Market day).
 
 | Area | State | Where / notes |
 | --- | --- | --- |
@@ -178,6 +178,7 @@ The e2e project installs `pangloss_dates` and `pangloss_calendar` (Julian, span 
 | The form of a Feast: a Recurrence is said as a person would (Repeats: every year / month / week; On: a day of a month, a weekday of a month, a day from Easter, or the weekdays; How often; From / Until), none of the rule's raw fields, reads "every year on 12 March, 1450 – 1530", saved, and found on its day | ✅ | `test_a_feast_by_rule_is_made_in_the_form_as_a_person_says_it`; the ways, what each clears, the leap-day shift, the weekdays: Vitest (`DateEditor.test.tsx`, `format.test.ts`) |
 | Under the month grid, what is dated roughly and what is attached to the month are reference chips | ✅ | in the month test; Vitest (`MonthPage.test.tsx`) |
 | The pages in the dev build (years, month, day, next day, Gregorian, Years) with no Solid error | ✅ | `test_dev_mode.py::test_the_calendar` |
+| Day and month: "Long periods that include this day" / "over the whole month" with the count; nothing is read until **Show them**, which lists a page (field, chip, range) and then "and N more"; no section when there are none | ✅ | `test_long_periods_over_a_day_or_a_month_are_counted_and_shown_when_asked_for` (the fixture's reign, 1490 to 1510); the dev build: `test_dev_mode.py::test_the_calendar`; paging ("and N more"): Vitest (`DayView.test.tsx`) |
 | The module's own tests and type-check, in the built project | ✅ | `test_the_calendar_module_tests_pass_in_the_built_project` |
 | A truncated month or day (more than `MONTH_LIMIT` dates) | ⬜ | |
 

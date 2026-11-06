@@ -169,6 +169,9 @@ class Neo4jDialect:
     def tie_break(self, node: str) -> str:
         return f"elementId({node})"
 
+    def labels_from(self, node: str, labels: str) -> str:
+        return f"{node}:$({labels})"
+
     def facets_from(self, type: str, nodes: str) -> str:
         # (Neo4j has no `collect(key, value)` for a map)
         return f"collect({{type: {type}, nodes: {nodes}}})"

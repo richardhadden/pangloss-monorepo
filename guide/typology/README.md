@@ -62,6 +62,14 @@ await RoleTypology.delete(id)                                # refused if it has
 await Role.Create(label="Maximilian's secretary", has_type=[{"type": "RoleType", "id": secretary.id}]).save()
 ```
 
+A type is deleted only when it has no subtypes and nothing has it. That holds for the entity's own route too:
+`DELETE /api/RoleType/{id}` on a type in use answers 409 with the reason and changes nothing (it does not mark the type
+for deletion, as it would any other entity that is referred to). Merge it into another type, or change what has it, first.
+
+Two types side by side (below the same supertype, or both at the top level) cannot have the same name, ignoring case:
+making, renaming or moving one so that they would is refused (409). If they are the same thing, `merge` them. Under
+different supertypes the same name is fine.
+
 `move` and `merge` keep the hierarchy a tree: a move to the type itself or to a descendant is refused (409), the move is
 one transaction, and two racing moves take a lock so that the loser is refused instead of making a loop. Any type at any
 level may be given to an entity.
@@ -102,6 +110,8 @@ Loading is repeatable: a type already there (the same label under the same super
 | `PUT /api/typology/RoleType/{id}/concrete` | Switch the concrete entity on or off |
 
 `supertype` and `is_concrete` are protected: the ordinary entity endpoints will not change them, only these do.
+In these routes, and in the `pangloss typology` commands, the typology is named by its entity (`RoleType`) or by its own
+name (`RoleTypology`).
 
 ## Not yet
 

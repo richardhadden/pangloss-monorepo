@@ -86,7 +86,12 @@ def check_package(directory: Path, module: str, shipped_modules: set[str]) -> No
     """Raise `SdkBuildError` unless the package, on a clean client, makes the models the
     server has (of the shipped modules)"""
     client = run_in_clean_process(directory, module)
-    server = head_model_schemas(shipped_modules)
+    # (the client also has the models of the packages its modules import, `ZoteroBacked` of `pangloss_zotero`: they
+    # are compared with the server's too, and are not ones the SDK lacks or has too many of)
+    everywhere = head_model_schemas()
+    server = head_model_schemas(shipped_modules) | {
+        name: everywhere[name] for name in client if name in everywhere
+    }
     problems = differences(server, client)
     if problems:
         raise SdkBuildError("The SDK's models are not those of the server", problems)

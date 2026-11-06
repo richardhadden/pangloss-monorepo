@@ -143,6 +143,9 @@ says which file (an `__init__.py` that connects to something should not run on a
 ### What is left out
 
 - Settings, `.env`, migrations, the `populate` scripts, anything outside the closure.
+- **What the models say to the interface** (`_interface_meta = InterfaceMeta(...)`, `Collapse`, `Slider`, `Colour`): a
+  client has no interface. The models keep their lines; the SDK's copy of a module imports the names from
+  `pangloss_sdk.no_interface`, which has stand-ins that do nothing (see "As built: phase 8").
 - Apps that are not the project's: framework packages (`pangloss_*`) are dependencies, not copied.
 - Apps listed in `SDK_EXCLUDE_APPS`; and, if `SDK_APPS` is set, everything not in it (default: every installed
   app that is not a framework package and declares models).
@@ -641,6 +644,59 @@ A model with a method called `list` would make a checker read `list[str]` in its
 
 **Tests**: `test_typecheck.py` (8: the two kinds, `list`, the blocking directory, ty passes, a wrong stub is named `[sync]`, bad syntax, the three settings), `test_server_only.py` (6), `test_update.py` (+2: `sync-stubs`), `test_serving.py` (+1: the installer).
 
+
+## As built: phase 8 (models that use the interface, the packages' own stubs) ✅
+
+2026-11-06, after the smoke test: a project whose models had `InterfaceMeta` or used `pangloss_library` could not
+build an SDK at all (`pangloss_interface` is server-only, and so is everything that imports it).
+
+**Interface settings are left out, not refused.** `from pangloss_interface import InterfaceMeta, Collapse, Slider,
+Colour` (and from its submodules) in a shipped module is rewritten, in the SDK's copy and in its stubs, to
+`from pangloss_sdk.no_interface import ...` (`sources.interface_imports`, `shipped_source`). `no_interface` uses the
+real names when `pangloss_interface` is installed, and otherwise has inert stand-ins: `InterfaceMeta` takes anything
+and registers the `_interface_meta` slot, `Slider` is a field marker that marks nothing, `Collapse` is a holder,
+`Colour` is `str`. Still refused, with the file and line: `import pangloss_interface` as a module, and a name from it
+that is not for models (a route, a component).
+
+**Framework packages on a client.** `pangloss_library` imports the interface only if it is there (it is a
+development dependency of the package, no longer a requirement), and `pangloss_review` imports `pangloss_users` when
+a request asks, not at import. So `pangloss-library`, `-dates`, `-calendar`, `-typology`, `-review` and `-derived`
+import in a process where the server's modules are blocked. Their distributions still *depend* on server packages
+(`pangloss-api`): on a clean client they are installed with `--no-deps` (`pangloss-smoketest/smoke_scripts/
+sdk_client.sh` does), and the SDK's `requires` does not list them. ⏳ Not decided: splitting those packages, or
+listing them as requirements.
+
+**Model settings travel with the SDK.** A model can depend on a setting (a typology has a label for each of
+`INTERFACE_LANGUAGES`), and a client has no project settings, so its models differed from the server's. A package
+names such settings (`pangloss_core.settings.model_settings`, a set; `model_setting(name, default)` reads one); the
+build puts their values in the manifest (`model_settings`), and `connect()` / `connect_offline()` give them to
+`ClientSettings(MODEL_SETTINGS=...)`.
+
+**The check compares what a client has.** It compared the models of the shipped modules only, and a head model of a
+framework package (a `ZoteroItem`, a feast) was "on the client, not on the server". It now compares the shipped
+modules' models and the server's versions of whatever else the client has.
+
+**The packages' own stubs.** A project's stub names `pangloss_dates.models.ExactDate.Create`, which a checker
+could not see: every field with a date was an error (1,748 diagnostics in the smoke project outside this
+repository's overrides). The packages now ship stubs of their model modules (`pangloss_dates/models.pyi`,
+`julian.pyi`, `gregorian.pyi`, `dateable.pyi`, `pangloss_calendar/models.pyi`, `pangloss_library/models.pyi`,
+`pangloss_zotero/models.pyi`), written by `uv run python -m pangloss_testing.framework_stubs` and checked by
+`run_tests.sh` (`--check`): **write them again after changing a model of a package.** Also in the stub writer:
+
+- a class made at run time and put in the module (a typology's `RoleType`) is in the stub, and
+  `RoleTypology.Type` is typed as it; `Typed[RoleTypology]` type-checks (`Typed` is generic);
+- a model with a field or method called as one of its own classes (`Order` with `Order.Order`) gets an alias
+  (`_pg_model_Order = Order`) that its operations use;
+- a `Var` of a trait or an abstract class is accepted where a relation holds every concrete class of it
+  (`Meeting.Where(participants=a)` with `a: Var[Agent]`), which the derived rules need.
+
+**The usage file** of the type check only asserts `c.save()` for a model that can be created directly.
+
+**Tests**: `pangloss-sdk-server/tests/test_no_interface.py` (10), `pangloss-typology/tests/test_typology_stubs.py`,
+`pangloss-models/tests/typestubs/test_stub_source.py`, `test_search_where_models.py`,
+`pangloss-derived/tests/test_derived_stubs.py`. **Run for real**: the smoke project's SDK (0.1, 3 modules) installed
+in a clean environment and used to read, search, write and delete (`smoke_scripts/sdk_client.sh`); the demo's SDK
+builds again (0.8).
 
 ## Review (2026-10-24)
 

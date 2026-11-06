@@ -138,3 +138,61 @@ def test_an_entity_is_deleted_only_when_its_field_says_so(settings, monkeypatch)
     state["gone"] = True
     assert client.delete(f"/api/Source/{source_id}", headers=headers).status_code == 204
     assert deleted == [source_id]
+
+
+def test_a_delete_that_the_rule_of_the_model_refuses_changes_nothing(
+    settings, monkeypatch
+):
+    """`Protection.delete_refused`: a package's own rule for deleting (a type of a typology that is in use), asked
+    before the delete, and by `/deletable`"""
+    asked = []
+    state = {"reason": "It is in use by three people: merge it first"}
+
+    async def refused(model, id):
+        asked.append((model.__name__, id))
+        return state["reason"]
+
+    class Term(Entity):
+        _protect_meta = Protection(delete_refused=refused)
+
+    class Narrower(Term):
+        # (its own protection adds to its parent's: the rule is still asked)
+        _protect_meta = Protection(read_only=("code",))
+
+        code: str | None = None
+
+    assert protection_of(Narrower) == Protection(("code",), None, refused)
+    client = TestClient(create_app())
+    headers = login(client)
+    models = __import__(
+        "pangloss_models.model_registry", fromlist=["x"]
+    ).ModelRegistry.all_models()
+    deleted = []
+
+    async def delete(cls, id):
+        deleted.append((cls.__name__, id))
+
+    for name in ("Term", "Narrower"):
+        stub(monkeypatch, models[name], "delete", delete)
+
+    term_id = uuid7()
+    response = client.delete(f"/api/Term/{term_id}", headers=headers)
+    assert response.status_code == 409
+    assert response.json()["detail"] == state["reason"]
+    assert deleted == [] and asked == [("Term", term_id)]
+    assert client.delete(f"/api/Narrower/{term_id}", headers=headers).status_code == 409
+    # asking first says the same, and changes nothing either
+    asking = client.get(f"/api/Term/{term_id}/deletable", headers=headers)
+    assert asking.status_code == 200
+    assert asking.json() == {
+        "deletable": False,
+        "reason": state["reason"],
+        "referencedBy": [],
+        "referenceCount": 0,
+    }
+    assert deleted == []
+
+    # with no reason against it, it is deleted as any entity is
+    state["reason"] = None
+    assert client.delete(f"/api/Term/{term_id}", headers=headers).status_code == 204
+    assert deleted == [("Term", term_id)]

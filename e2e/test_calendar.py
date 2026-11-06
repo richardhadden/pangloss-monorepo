@@ -153,6 +153,50 @@ def test_a_day_names_itself_in_both_calendars_and_lists_what_is_dated_on_it(
     expect(feasts).to_contain_text("repeats")
 
 
+def test_long_periods_over_a_day_or_a_month_are_counted_and_shown_when_asked_for(
+    page: Page, dated
+):
+    """The reign, from 1490 to 1510, covers every day of the span: it is not a date of the day or a bar of the month,
+    but counted under them, and read from the API by the button"""
+    page.goto("/calendar/julian/1500/3/2")
+    hydrated(page)
+    on_day = page.get_by_role("region", name="On this day")
+    expect(on_day.get_by_role("link", name="Coronation")).to_be_visible()
+    expect(on_day).not_to_contain_text("Reign")
+    covering = page.get_by_test_id("calendar-covering")
+    expect(covering.get_by_role("heading")).to_have_text(
+        re.compile(r"^Long periods that include this day\s*\(1\)$")
+    )
+    expect(covering.get_by_role("listitem")).to_have_count(0)
+    with page.expect_response(re.compile(r"/api/calendar/covering\?")) as asked:
+        covering.get_by_role("button", name="Show them").click()
+    assert asked.value.ok
+    row = covering.get_by_role("listitem")
+    expect(row).to_have_count(1)
+    # (the field, a chip of what it is in, and the days it states)
+    expect(row).to_contain_text("When")
+    expect(row).to_contain_text("1 January 1490 – 31 December 1510")
+    # (all read: no button)
+    expect(covering.get_by_role("button")).to_have_count(0)
+    row.get_by_role("link", name="Event Reign of the king").click()
+    page.wait_for_url(f"**/Event/{dated.reign}")
+
+    # the month: not a bar (the siege has the two there are), but counted under the grid
+    page.goto("/calendar/julian/1500/3")
+    hydrated(page)
+    month = page.get_by_test_id("calendar-month")
+    expect(month).not_to_contain_text("Reign")
+    covering = page.get_by_test_id("calendar-covering")
+    expect(covering.get_by_role("heading")).to_have_text(
+        re.compile(r"^Long periods over the whole month\s*\(1\)$")
+    )
+    covering.get_by_role("button", name="Show them").click()
+    expect(
+        covering.get_by_role("link", name="Event Reign of the king")
+    ).to_be_visible()
+    # (and the years count their dates without it: `test_the_navigation_bar_links_to_the_years_of_the_calendar`)
+
+
 def test_someone_logged_in_attaches_a_feast_to_a_day_and_takes_it_away(
     logged_in: Page, dated
 ):

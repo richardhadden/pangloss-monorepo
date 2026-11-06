@@ -5,14 +5,29 @@ from typing import Annotated
 
 from annotated_types import Ge, Le, MinLen
 from pangloss_derived import DerivedMeta
-from pangloss_interface import InterfaceMeta, Slider
 from pangloss_models import Conjunction, EdgeModel, SumsTo, ViaEdge
+
+# How the interface shows these, if it is installed (a client of the API, with the SDK, does not have it): the
+# percentage as a slider; the alternatives on the item page as their own card (no head, each with its likelihood at
+# the end of its chip, the name of the field only for several)
+try:
+    from pangloss_interface import InterfaceMeta, Slider
+except ImportError:
+    SLIDER = ()
+    INTERFACE_META = {}
+else:
+    SLIDER = (Slider(unit="%"),)
+    INTERFACE_META = {
+        "_interface_meta": InterfaceMeta(
+            collapse=True, view_card="pangloss_library:WeightedAlternativeCard"
+        )
+    }
 
 
 class Likelihood(EdgeModel):
     """How likely it is that this is the one meant, out of the alternatives (1 to 100, in per cent)"""
 
-    percent: Annotated[int, Ge(1), Le(100), Slider(unit="%")]
+    percent: Annotated[int, Ge(1), Le(100), *SLIDER]
 
 
 class WeightedAlternative[T](Conjunction):
@@ -21,10 +36,6 @@ class WeightedAlternative[T](Conjunction):
 
     # (one of them, not known which: a derived relation takes one alternative at a time, never two together)
     _derived_meta = DerivedMeta(exclusive=True)
-    # (on the item page, its own card: no head, each with its likelihood at the end of its chip, the name of the
-    # field only for several; in the form, the sliders)
-    _interface_meta = InterfaceMeta(
-        collapse=True, view_card="pangloss_library:WeightedAlternativeCard"
-    )
+    locals().update(INTERFACE_META)
 
     alternatives: Annotated[list[ViaEdge[T, Likelihood]], MinLen(1), SumsTo("percent")]

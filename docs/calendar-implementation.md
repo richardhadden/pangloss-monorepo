@@ -214,7 +214,7 @@ check the app label).
 
 Settings: `CALENDAR_DEFAULT` (default: `DATES_DEFAULT_CALENDAR`), `CALENDAR_FIRST_YEAR` / `CALENDAR_LAST_YEAR` (the span to browse and
 to seed; **no default**, decided 2026-10-29), `CALENDAR_AUTO_EXTEND` (make days outside the span when asked, default off),
-`CALENDAR_NARROW_DAYS` (7), `CALENDAR_FIELDS` (default: all). (`CALENDAR_USE` was removed with `use`, 2026-11-03.)
+`CALENDAR_NARROW_DAYS` (7), `CALENDAR_LONG_DAYS` (366: see the fifth round of phase 5), `CALENDAR_FIELDS` (default: all). (`CALENDAR_USE` was removed with `use`, 2026-11-03.)
 
 ## Phases
 
@@ -360,6 +360,23 @@ to seed; **no default**, decided 2026-10-29), `CALENDAR_AUTO_EXTEND` (make days 
    month's year and month as links above the heading; the year goes to its row in the list of years (`#year-1500`, marked
    from the router's hash, since a client navigation does not set `:target`). (5) The list of years ends each row with
    "<n> events", the number in a circle.
+   *Fifth round (2026-11-06), after the smoke test* (120,000 documents, sixty date fields; a day took 1.1 to 2.2 s and
+   2.1 MB, a month 1.9 MB, and the month's page was 21 to 26 MB of HTML that the browser could not show): (1) **One
+   query for all the fields** (`graph.dated_between(fields, ...)`): it starts from the dates, as before, and keeps
+   those whose document and field are among `Class.field` names passed as a parameter (`(n.type + '.' + type(e)) IN
+   $fields`). There was a query for each field of each class. (2) **A date that is only unknown is in no view**
+   (`UnknownDate` as the whole date: its bounds are every day, so it was on all of them; a period or a range with one
+   end unknown says something and stays). (3) **A long period that covers all of a view is counted, not listed**: one
+   that begins before the first day shown, ends after the last and states `CALENDAR_LONG_DAYS` (default 366) days or
+   more. A day and a month have `covering` (the number); `GET /api/calendar/covering` reads them a page at a time
+   (`graph.covering_between`, `service.covering`). A period that begins or ends in the view is a date of it as before,
+   and so is a short period that covers it (the year-long office on a day of that year). The year and the list of
+   years count without the covering periods and the unknown dates. (4) In the interface, `Covering.tsx`: under a
+   day's dates and under a month's grid, "Long periods that include this day (33)" with a button that reads the first
+   fifty, then "and N more". Measured on the same data afterwards: a day 0.13 to 0.15 s and 55 KB, a month 0.12 s
+   and 38 KB, a year 0.06 s (was 1.4 s), the covering page 0.03 to 0.04 s; the month's page is 450 KB of HTML and the
+   day's 550 KB. Not done: the page of a day or month is still rendered whole on the server; with these sizes there
+   was no need to stream it.
 6. (Gate) Version 2.
 
 ## Tests, in short

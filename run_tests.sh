@@ -53,6 +53,9 @@ if [ -z "$args" ]; then
     # (the skill that tells an agent how Pangloss works, `.claude/skills/pangloss`: the paths, modules and packages
     # it names are still there. What it says is kept true by hand, with the change that makes it untrue)
     run "the Pangloss skill" uv run python .claude/skills/pangloss/scripts/check_skill.py
+    # (the type stubs that the packages ship of their own models, `pangloss_dates/models.pyi`: they are what would
+    # be written now. After changing a model of a package: uv run python -m pangloss_testing.framework_stubs)
+    run "the stubs of the packages' models" uv run python -m pangloss_testing.framework_stubs --check
     # (everything: the Neo4j package has a run of its own)
     run "packages (Memgraph)" uv run pytest --dist=loadgroup -n auto --ignore=packages/pangloss-neo4j
 else

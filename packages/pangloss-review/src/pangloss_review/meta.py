@@ -14,7 +14,6 @@ from collections.abc import Generator
 from typing import Any
 
 from pangloss_models import Document, hooks, register_meta_slot
-from pangloss_users import current_request_username
 
 from pangloss_review import config
 from pangloss_review.exceptions import PanglossSelfReviewError
@@ -68,6 +67,10 @@ def requested_properties(model: type) -> dict[str, Any]:
     if asked is None or not is_reviewable(model):
         return {}
     status = ReviewStatus(asked)
+    # (imported here: this runs where the document is written, and a client of the API, which has the models
+    # and so this module, does not have `pangloss_users`)
+    from pangloss_users import current_request_username
+
     user = current_request_username.get()
     if not config.allow_self_review():
         raise PanglossSelfReviewError(

@@ -575,6 +575,8 @@ const witness = {
 test("a module's view of what refers to an item: offered while it takes some, then it shows that, the rest by field", async () => {
   localStorage.clear();
   let host = show(witness, [offices]);
+  // (the module also has a section, which has no boundary of its own: the page is there once its code is)
+  await settle();
   flush();
   expect(incoming.offered("offices:Held")).toBe(true);
   expect(incoming.chosen()).toBeUndefined();
@@ -598,6 +600,7 @@ test("a module's view of what refers to an item: offered while it takes some, th
 
   // (nothing it takes: not offered, and by field though it is chosen)
   host = show({ ...witness, heldReverse: [] }, [offices]);
+  await settle();
   flush();
   expect(incoming.offered("offices:Held")).toBe(false);
   expect(host.querySelector("[data-testid=held]")).toBeNull();

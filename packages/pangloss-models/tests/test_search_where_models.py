@@ -31,6 +31,7 @@ from pangloss_models.search_where import (
     EmbeddedWhere,
     EntityWhere,
     can_have_where,
+    variable_classes,
 )
 from pydantic import BaseModel, ValidationError
 
@@ -112,7 +113,14 @@ def test_every_where_has_a_field_of_the_kind_check_match_finds_for_each_field_th
                     model,
                     name,
                 )
-                assert {typing.get_args(v)[0] for v in variables} == set(reach.options)
+                # (of what it holds or of a declared class above, the topmost: a `Var` is covariant, so each of
+                # what it holds is taken)
+                classes = {typing.get_args(v)[0] for v in variables}
+                assert classes == set(variable_classes(reach.options))
+                assert all(
+                    any(issubclass(option, cls) for cls in classes)
+                    for option in reach.options
+                )
             elif kind == "list":
                 # (a variable of a list field is one of its items)
                 (cls,) = annotation

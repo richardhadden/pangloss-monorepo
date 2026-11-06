@@ -560,6 +560,12 @@ Done afterwards (2026-10-29):
 - **`itemSections` and `incomingViews` (2026-11-05, [interface-hooks-plan.md](interface-hooks-plan.md)).** `itemSections: { Name:
   () => import(...) }` are drawn after the contents of every item page by `ItemSections` (exported, so that a model's own `itemPage`
   can place them), given `ItemSectionProps` (`type`, `id`, `item`, `model`); pangloss-derived's "Derived" section is one.
+  Each is in an `Errored` of its own, but **not** in a `Loading` of its own (since 2026-11-06): its code is waited for with
+  the page's, as a card's is. With a `Loading` round each, the section was lost on a page that takes seconds to hydrate (a
+  person named in 3,000 factoids, 7.8 MB of HTML): the nested boundary, which the server had rendered in place, was resumed after the
+  page had taken its nodes out, and the section hydrated nodes that were no longer in the document (`node.setAttribute is not a
+  function`; found by the smoke test, `pangloss-smoketest/FIXES.md` #20). The price: where a page is made in the browser, it is
+  shown when the sections' code has arrived (once, a few kilobytes each).
   `incomingViews: { Name: { takes, component } }` are other ways of showing what refers to an item: on the item's own page,
   `ItemContents` offers each view that `takes` some of it (`useIncomingView()`, in the console's context); a button the module
   adds with `consoleActions` chooses it; then what it takes goes to its component, after the fields, and the rest stays by field.

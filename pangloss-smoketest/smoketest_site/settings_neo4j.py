@@ -8,7 +8,7 @@ from smoketest_site.settings import Settings as MemgraphSettings
 class Settings(MemgraphSettings):
     INSTALLED_APPS: list[str] = ["pangloss_neo4j", *MemgraphSettings.model_fields["INSTALLED_APPS"].default[1:]]
     STORAGE: str | None = "pangloss_neo4j:storage"
-    DATABASE: Neo4jDatabaseSettings = Neo4jDatabaseSettings(  # type: ignore[assignment]
+    DATABASE: Neo4jDatabaseSettings = Neo4jDatabaseSettings(  # ty: ignore[invalid-attribute-override]
         DB_URL="bolt://localhost:7699",
         DB_USERNAME="neo4j",
         DB_PASSWORD="smoketest-neo4j-pw",

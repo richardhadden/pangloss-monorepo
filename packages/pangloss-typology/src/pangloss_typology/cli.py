@@ -38,7 +38,7 @@ def typology_named(ctx: typer.Context, name: str):
     from pangloss_typology.typology import Typology
 
     ctx.obj.import_models()  # (a typology exists once the models that declare it are imported)
-    found = Typology.registry.get(name)
+    found = Typology.named(name)
     if found is None:
         known = ", ".join(sorted(Typology.registry)) or "(none)"
         typer.secho(f"No typology {name}. Known: {known}", fg="red", err=True)

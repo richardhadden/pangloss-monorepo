@@ -32,7 +32,9 @@ pangloss-demo-sdk 0.4 built (fingerprint 5c1f0a9e47b2)
 What the build does:
 
 1. Finds what ships: the `models` module of each app, and every module *of your project* that those import (read with
-   `ast`, never run). Framework packages (`pangloss_*`) are dependencies of the SDK, not copied.
+   `ast`, never run). Framework packages (`pangloss_*`) are dependencies of the SDK, not copied. What your models say to
+   the interface (`InterfaceMeta`, `Collapse`, `Slider`, `Colour`) stays in your code and does nothing on a client: you
+   do not need to take it out or move it.
 2. Writes the package: your modules as written, a `.pyi` stub for each that declares models, the `<project>_sdk` entry
    module, a manifest, a `pyproject.toml` that requires `pangloss-sdk` at this server's version and whatever third-party
    packages your models import.

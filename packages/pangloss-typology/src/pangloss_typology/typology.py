@@ -13,11 +13,14 @@ hierarchy valid.
 """
 
 import re
+import sys
 from dataclasses import dataclass, field
 from types import get_original_bases
 from typing import Annotated, Any, ClassVar, ForwardRef, Literal, get_origin
+from uuid import UUID
 
 from annotated_types import MaxLen
+from pangloss_core.settings import model_setting, model_settings
 from pangloss_models import (
     Entity,
     ModelRegistry,
@@ -76,10 +79,9 @@ def language_field(code: str) -> str:
     return "label_" + re.sub(r"[^a-z0-9]+", "_", code.lower()).strip("_")
 
 
-def setting(name: str, default: Any) -> Any:
-    from pangloss_core import settings as core_settings
-
-    return getattr(core_settings.__dict__.get("SETTINGS"), name, default)
+# (the entity of a typology has a label for each language: a client of the API must be told them, to make the same)
+model_settings.update({"DEFAULT_INTERFACE_LANGUAGE", "INTERFACE_LANGUAGES"})
+setting = model_setting
 
 
 def languages_of(meta: TypologyMeta) -> list[str]:
@@ -94,11 +96,21 @@ class Typology:
     """Inherit directly from this, with a `_typology_meta`, to make a typology"""
 
     _typology_meta: ClassVar[TypologyMeta]
-    Type: ClassVar[type[Entity]]
+    # (`Any`, so that the stub of a typology can say which: `Type: ClassVar[type[RoleType]]`)
+    Type: ClassVar[Any]
     """The entity made: `RoleType`"""
 
     registry: ClassVar[dict[str, type[Typology]]] = {}
     """The typologies by the name of their entity"""
+
+    @staticmethod
+    def named(name: str) -> type[Typology] | None:
+        """The typology called `name`: by the name of its entity (`RoleType`, as the routes and the commands say it),
+        or by its own (`RoleTypology`, which is as natural to type)"""
+        found = Typology.registry.get(name)
+        if found is not None:
+            return found
+        return next((t for t in Typology.registry.values() if t.__name__ == name), None)
 
     @classmethod
     def new_values(cls) -> dict[str, Any]:
@@ -131,6 +143,12 @@ class Typology:
             )
         cls.Type = make_entity(cls, meta)
         Typology.registry[meta.name] = cls
+        # (the entity is found where it says it is, `from app.models import RoleType`: the type stubs and the SDK
+        # name it so. Not over something else the module has under the name)
+        module = sys.modules.get(cls.__module__)
+        there = getattr(module, meta.name, None)
+        if module is not None and (there is None or typology_of(there) is not None):
+            setattr(module, meta.name, cls.Type)
 
     # --- the operations (see `pangloss_typology.service`) ---
 
@@ -195,7 +213,7 @@ class Typology:
         return await service.set_concrete(cls, id, on)
 
 
-class Typed:
+class Typed[T: Typology]:
     """`Typed[RoleTypology]` in a field: a type of that typology (it is the entity the typology made)
 
         has_type: list[Typed[RoleTypology]]
@@ -204,6 +222,8 @@ class Typed:
     never needs to know the field names. A field that goes to several typologies is one `has_type`
     (`list[Typed[RoleTypology] | Typed[OfficeTypology]]`)."""
 
+    # (generic only for a type checker, which otherwise refuses `Typed[RoleTypology]` in an annotation: at run time
+    # the brackets give the typology's entity class, never an instance of this)
     def __class_getitem__(cls, typology: Any) -> Any:
         if not (isinstance(typology, type) and issubclass(typology, Typology)):
             raise PanglossMetaError(
@@ -313,8 +333,31 @@ def make_entity(typology: type[Typology], meta: TypologyMeta) -> type[Entity]:
         namespace["__typology_values__"] = values_for_also(
             meta.also, meta.defaults, meta.name
         )
-    namespace["_protect_meta"] = Protection(read_only=tuple(protected))
+    namespace["_protect_meta"] = Protection(
+        read_only=tuple(protected), delete_refused=delete_refused
+    )
     return type(base)(meta.name, (base,), namespace)
+
+
+async def delete_refused(model: type, id: Any) -> str | None:
+    """Why the API may not delete a type (`Protection.delete_refused`): the typology's rule, as `Typology.delete` has
+    it. The delete of any entity would mark a type that is in use for deletion and leave it in the tree, on what has
+    it and in every search: a vocabulary has no use for that. (A type that is not there is left to the delete to say)"""
+    from pangloss_typology import service
+
+    typology = typology_of(model)
+    if typology is None:
+        return None
+    if not isinstance(id, UUID):
+        # (named by a URL)
+        found = await model.get(id)  # type: ignore[attr-defined]
+        if found is None:
+            return None
+        id = found.id
+    try:
+        return await service.why_not_deletable(typology, id)
+    except service.NotFound:
+        return None
 
 
 def complete_typologies() -> None:

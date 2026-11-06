@@ -27,6 +27,9 @@ PAGE = """\
 
 
 # $patterns: a pattern for each word typed (`Dialect.search_patterns`)
+# $limit: how many hits the text index is asked for, of each word (`SEARCH_HIT_LIMIT`). The index is of every label,
+#   of documents and of what is in them too, and it gives 1000 if it is not asked: a word that is in more labels than
+#   that (a surname, in the labels of the statements about the family) then found few of the entities, or none
 # $labels: any of these labels finds the node (the types asked for, with none that a parent already finds)
 # $start: what was typed (`Dialect.autocomplete_start`), to put the labels that begin with it first
 # $page (1-indexed), $page_size
@@ -35,7 +38,7 @@ def autocomplete_query(d: Dialect) -> LiteralString:
         LiteralString,
         f"""
     UNWIND $patterns AS pattern
-    CALL {d.text_search("label_text", "pattern")} YIELD node, score
+    CALL {d.text_search("label_text", "pattern", "{limit: $limit}")} YIELD node, score
     WITH node AS n, pattern, max(score) AS patternScore
     WITH n, count(*) AS matchedPatterns, sum(patternScore) AS totalScore
     WHERE matchedPatterns = size($patterns)

@@ -984,16 +984,26 @@ source = { editable = "packages/pangloss-library" }
 dependencies = [
     { name = "annotated-types" },
     { name = "pangloss-derived" },
-    { name = "pangloss-interface" },
     { name = "pangloss-models" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "pangloss-interface" },
+    { name = "pangloss-sdk" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "annotated-types", specifier = ">=0.7" },
     { name = "pangloss-derived", editable = "packages/pangloss-derived" },
-    { name = "pangloss-interface", editable = "packages/pangloss-interface" },
     { name = "pangloss-models", editable = "packages/pangloss-models" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "pangloss-interface", editable = "packages/pangloss-interface" },
+    { name = "pangloss-sdk", editable = "packages/pangloss-sdk" },
 ]
 
 [[package]]

@@ -1413,3 +1413,67 @@ async def test_a_list_is_read_in_the_order_it_was_written(db_driver, clear_datab
     assert all(
         getattr(action, "edge_properties", None) is None for action in head.actions
     )
+
+
+@no_type_check
+async def test_a_document_of_hundreds_of_nested_documents_is_written_and_updated_in_proportion_to_its_size(
+    db_driver, clear_database
+):
+    """A register with an entry for each line of a page is one document. Written as one statement with a clause for
+    each node and edge, 200 entries took over two minutes (the database's time for a statement grows much faster than
+    its length), and an update as long again: it is written as rows of a few statements (`render_write`)"""
+    import time
+
+    class Person(Entity):
+        pass
+
+    class Entry(Document):
+        text: str
+        about: list[Person]
+
+    class Register(Document):
+        entries: list[Entry]
+
+    initialise()
+    people = [await Person.Create(label=f"Person {n}").save() for n in range(3)]
+
+    def entry(n: int) -> dict:
+        return {
+            "type": "Entry",
+            "label": f"Entry {n}",
+            "text": f"line {n}",
+            # (some refer to one person, some to two, the first of them twice over in the register)
+            "about": [
+                {"type": "Person", "id": people[k % 3].id}
+                for k in range(n, n + 1 + n % 2)
+            ],
+        }
+
+    started = time.perf_counter()
+    made = await Register.Create(
+        label="A register", entries=[entry(n) for n in range(400)]
+    ).save()
+    register = await Register.get(made.id)
+    assert [e.label for e in register.entries] == [f"Entry {n}" for n in range(400)]
+    assert [[p.id for p in e.about] for e in register.entries[:3]] == [
+        [people[0].id],
+        [people[1].id, people[2].id],
+        [people[2].id],
+    ]
+    assert count_nodes(db_driver, "Entry") == 400
+
+    # (the update: half of them dropped, the rest the other way round, one changed)
+    kept = [entry(n) for n in reversed(range(200))]
+    kept[0]["text"] = "changed"
+    await Register.Update(
+        id=made.id, type="Register", label="A register", entries=kept
+    ).save()
+    took = time.perf_counter() - started
+    register = await Register.get(made.id)
+    assert [e.label for e in register.entries] == [
+        f"Entry {n}" for n in reversed(range(200))
+    ]
+    assert register.entries[0].text == "changed"
+    assert count_nodes(db_driver, "Entry") == 200
+    # (a second or so; as one statement, minutes)
+    assert took < 30, f"{took:.1f} s"

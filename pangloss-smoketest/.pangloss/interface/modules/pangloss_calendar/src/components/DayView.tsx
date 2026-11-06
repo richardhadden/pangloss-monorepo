@@ -4,6 +4,7 @@ import type { CalendarName, Characterised, CharacterisationOut, DayReport, Hit }
 import { dayHref, itemHref, nameOf, sayBetween, sayCalendar, sayDate, weekdayNames } from "../days";
 import type { Say } from "../days";
 import { Arrows, Breadcrumbs, useCharacterisationTypes, useDatedDocumentTypes, useOnTheDayFill } from "./Chrome";
+import { Covering } from "./Covering";
 
 
 export interface DayViewProps {
@@ -73,7 +74,8 @@ function HitRow(props: { hit: Hit; calendar: CalendarName }) {
  * before and after; the feasts and other characterisations on it as chips, with how each comes to be there (for someone
  * logged in, one attached by hand has a remove button, and under them is the search that finds one to attach, with a +
  * that makes a new one, or a document with a date, in a dialog: every date in it that can be one day starts as the day);
- * and everything dated on it, `stated` by its date or only `possible`.
+ * everything dated on it, `stated` by its date or only `possible`; and how many long periods it is a day of, which
+ * are read when asked for (`Covering`).
  */
 export function DayView(props: DayViewProps) {
   const { t, language } = useTranslations();
@@ -204,6 +206,13 @@ export function DayView(props: DayViewProps) {
           </p>
         </Show>
       </section>
+      <Covering
+        count={props.report.covering ?? 0}
+        first={props.report.day}
+        last={props.report.day}
+        calendar={props.calendar}
+        heading={t("calendar_covering_day", "Long periods that include this day")}
+      />
     </>
   );
 }

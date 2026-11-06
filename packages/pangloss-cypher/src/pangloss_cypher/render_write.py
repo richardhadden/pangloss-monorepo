@@ -11,9 +11,20 @@ How the plan is stored is said here:
 - a URL of an entity is a node of its own (`PGUrl`, unique), that the entity `has_url`;
 - an existing node is matched by its id (or by a URL it has), and must have one of the allowed labels.
 
-The variables and the parameters are named `x1`, `x2`... in the order the plan is walked, so a write of the same shape is
-the same text (Memgraph keeps the plan of a query by its text)."""
+A plan is written as **a few statements, each over a list of rows** (`UNWIND $rows`), run one after another in the
+write's transaction: the head; the nodes of the document; the entities written in it; their URLs; the edges. Usually
+three. What differs from one write to the next is in the parameters: the classes of the nodes are a list in each row,
+and the text of the statement for the edges depends only on which relations the write has (a part for each pair of
+names: a database cannot take the type of an edge from a row), so the database plans a text once (Memgraph keeps the
+plan of a query by its text).
 
+(Until 2026-11-06 a plan was one statement, with a clause for every node and edge. The database's time for such a
+statement grows much faster than its length: a document of 160 small nested documents, 2,985 clauses, took 27 seconds
+to write, nearly all of it in the database, and one of 200 took 134. As rows, the time is in proportion to the size:
+1,000 in a second, and an ordinary document as before. A statement for each set of labels and each pair of names was
+tried first, 17 for an ordinary document: as fast for the large ones, but a round trip each, about 0.4 ms.)"""
+
+import dataclasses
 import datetime
 import typing
 import uuid
@@ -22,8 +33,9 @@ from collections.abc import Mapping
 from pangloss_users import current_request_username
 
 from pangloss_cypher.build_tree import POSITION
-from pangloss_cypher.params import Identifier, QueryParams
+from pangloss_cypher.params import QueryParams
 from pangloss_cypher.transactions import dialect
+from pangloss_cypher.values import convert_type_for_writing
 from pangloss_cypher.write_plan import (
     ExistingEntity,
     InlineEntity,
@@ -63,51 +75,177 @@ def labels_of(node: PlannedNode, extra_labels: list[str]) -> str:
     return ":".join([*node.labels, *extra_labels])
 
 
-class QueryObject:
-    """The query of a plan, as it is made: its parts, and its parameters"""
+@dataclasses.dataclass
+class Statement:
+    """One statement of a write. It answers with how many rows it wrote (`written`), which must be `rows`, the number
+    it was given: fewer is a node that it was to write to and did not find"""
 
-    match_query_strings: list[str]
-    create_query_strings: list[str]
-    params: QueryParams
-    return_identifier: Identifier | None
+    text: typing.LiteralString
+    params: dict[str, typing.Any]
+    rows: int = 1
 
-    def __init__(self) -> None:
-        self.match_query_strings = []
-        self.create_query_strings = []
-        self.params = QueryParams()
-        self.return_identifier = None
 
-    def to_query_string(self) -> typing.LiteralString:
-        if not self.return_identifier:
-            raise ValueError("CreateQuery.to_query_string called on non-top-level node")
-        return typing.cast(
+def encoded(properties: dict[str, typing.Any], *, node: bool = True) -> typing.Any:
+    """Properties as they are sent: as the backend stores them, each value of a type the driver takes"""
+    return convert_type_for_writing(dialect().encode_properties(properties, node=node))
+
+
+def new_record(when: str) -> dict[str, typing.Any]:
+    """The properties of a record of a creation or an update (`when`: the name of its time)"""
+    return convert_type_for_writing(
+        {"id": str(uuid.uuid7()), when: datetime.datetime.now(datetime.UTC)}
+    )
+
+
+WRITTEN = "RETURN count(*) AS written"
+
+
+def head_create_statement(head: PlannedNode, username: str) -> Statement:
+    return Statement(
+        typing.cast(
             typing.LiteralString,
             f"""
-            {"\n".join(self.match_query_strings)}
-            {"\n".join(self.create_query_strings)}
-            RETURN {self.return_identifier}.id AS id
-        """,
-        )
+            MATCH (user:PGUser {{username: $username}})
+            CREATE (head:{labels_of(head, HEAD_LABELS)})
+            SET head = $properties
+            CREATE (creation:PGCreation)
+            SET creation = $creation
+            CREATE (creation)-[:is_creation_of]->(head)
+            CREATE (creation)-[:created_by]->(user)
+            {WRITTEN}
+            """,
+        ),
+        {
+            "username": username,
+            "properties": encoded(head.properties),
+            "creation": new_record("created_when"),
+        },
+    )
+
+
+HEAD_UPDATE = f"""
+    MATCH (user:PGUser {{username: $username}})
+    MATCH (head:HeadNode {{id: $id}})
+    CREATE (update:PGUpdate)
+    SET update = $update
+    CREATE (update)-[:is_update_of]->(head)
+    CREATE (update)-[:updated_by]->(user)
+    {WRITTEN}
+"""
+
+# $rows: {id, url}
+URLS = f"""
+    UNWIND $rows AS row
+    MATCH (entity:PGIndexableNode {{id: row.id}})
+    CREATE (url:PGUrl {{url: row.url}})
+    CREATE (entity)-[:has_url]->(url)
+    {WRITTEN}
+"""
+
+
+# $rows: {id, labels, properties}: the nodes of the document, of any classes
+def tree_nodes_statement(rows: list[dict]) -> Statement:
+    return Statement(
+        typing.cast(
+            typing.LiteralString,
+            f"""
+            UNWIND $rows AS row
+            MERGE (node:{":".join(TREE_LABELS)} {{id: row.id}})
+            ON CREATE SET node = row.properties, {dialect().labels_from("node", "row.labels")}
+            {WRITTEN}
+            """,
+        ),
+        {"rows": rows},
+        len(rows),
+    )
+
+
+# $rows: {labels, properties, creation}. The entities written in the document that were not there: head nodes of
+# their own, made by the user who makes the write
+def entities_statement(rows: list[dict], username: str) -> Statement:
+    return Statement(
+        typing.cast(
+            typing.LiteralString,
+            f"""
+            MATCH (user:PGUser {{username: $username}})
+            UNWIND $rows AS row
+            CREATE (entity:{":".join(HEAD_LABELS)})
+            SET entity = row.properties, {dialect().labels_from("entity", "row.labels")}
+            CREATE (creation:PGCreation)
+            SET creation = row.creation
+            CREATE (creation)-[:is_creation_of]->(entity)
+            CREATE (creation)-[:created_by]->(user)
+            {WRITTEN}
+            """,
+        ),
+        {"rows": rows, "username": username},
+        len(rows),
+    )
+
+
+def edge_names(forward: str, backward: str) -> str:
+    """What a row of the edges says its edges are called"""
+    return f"{forward}/{backward}"
+
+
+# $rows: {source, target, names, position, properties, allowed}. The forward and reverse edges between two nodes, with any
+# edge properties on both (`+=`: `=` would take the `reverse` and the position off them), and the place of the value in
+# its list on the forward one. `target` is the id of a node, or (`by_url`) a URL of an entity; `allowed` is the labels
+# one of which an existing node must have, or null for a node that this write makes. `names` is the pair of names of
+# the row's edges (`edge_names`): the type of an edge cannot come from a row, so there is a part for each pair the write
+# has, which makes the edges of the rows that are of it
+def edges_statement(
+    pairs: list[tuple[str, str]], by_url: bool, rows: list[dict]
+) -> Statement:
+    target = (
+        "(:PGUrl {url: row.target})<-[:has_url]-(target:PGIndexableNode)"
+        if by_url
+        else "(target:PGIndexableNode {id: row.target})"
+    )
+    each = "\n".join(
+        f"""
+            FOREACH (_ IN CASE WHEN row.names = '{edge_names(forward, backward)}' THEN [1] ELSE [] END |
+                CREATE (source)-[forward:{forward} {{{POSITION}: row.position}}]->(target)
+                CREATE (source)<-[backward:{backward} {{reverse: true}}]-(target)
+                SET forward += row.properties
+                SET backward += row.properties
+            )"""
+        for forward, backward in pairs
+    )
+    return Statement(
+        typing.cast(
+            typing.LiteralString,
+            f"""
+            UNWIND $rows AS row
+            MATCH (source:PGIndexableNode {{id: row.source}})
+            MATCH {target}
+            WHERE row.allowed IS NULL OR any(label IN labels(target) WHERE label IN row.allowed)
+            {each}
+            {WRITTEN}
+            """,
+        ),
+        {"rows": rows},
+        len(rows),
+    )
 
 
 class _Renderer:
-    def __init__(
-        self,
-        query: QueryObject,
-        existing: Mapping[InlineEntityKey, ExistingEntity] | None,
-        user: Identifier,
-    ):
-        self.query = query
-        # The user making the write (`PGUser`), matched by `render`: the maker of the new entities too
-        self.user = user
-        self.params = query.params
-        self.existing = existing or {}
-        # Identifiers of the existing nodes already matched, so that one referred to many times is matched once
-        self.matched_references: dict[tuple, Identifier] = {}
-        # Identifiers of the entities written in the document, so that one that is written twice is one
-        self.inline_entity_identifiers: dict[InlineEntityKey, Identifier] = {}
+    """Walks a plan, gathering the rows of each statement"""
 
-    def relations(self, node: PlannedNode, identifier: Identifier) -> None:
+    def __init__(self, existing: Mapping[InlineEntityKey, ExistingEntity] | None):
+        self.existing = existing or {}
+        # The rows of the nodes of the document, of the new entities, and of their URLs
+        self.tree_nodes: list[dict] = []
+        self.entities: list[dict] = []
+        self.url_rows: list[dict] = []
+        # The rows of the edges, and the pairs of names among them: those to a node by its id, and those to one found
+        # by a URL
+        self.edge_rows: dict[bool, list[dict]] = {False: [], True: []}
+        self.edge_pairs: dict[bool, set[tuple[str, str]]] = {False: set(), True: set()}
+        # The ids of the entities written in the document, so that one that is written twice is one
+        self.inline_entity_ids: dict[InlineEntityKey, str] = {}
+
+    def relations(self, node: PlannedNode) -> None:
         # (the values of a field are in the plan in the order of its list: each has its place in it)
         positions: dict[str, int] = {}
         for relation in node.relations:
@@ -116,198 +254,138 @@ class _Renderer:
             positions[field] = position + 1
             target = relation.target
             if isinstance(target, InlineEntity):
-                self.inline_entity(relation, target, identifier, position)
+                self.edges(relation, node.id, self.inline_entity(target), position)
             elif isinstance(target, ReferenceToExisting):
-                self.reference(relation, target, identifier, position)
+                # (an entity can be referred to by a URL, as well as by its id)
+                self.edges(
+                    relation,
+                    node.id,
+                    target.value,
+                    position,
+                    by_url=target.is_url,
+                    allowed=list(target.allowed_types),
+                )
             else:
-                self.tree_node(relation, target, identifier, position)
+                self.tree_nodes.append(
+                    {
+                        "id": target.id,
+                        "labels": list(target.labels),
+                        "properties": encoded(target.properties),
+                    }
+                )
+                self.edges(relation, node.id, target.id, position)
+                self.relations(target)
 
-    def urls(self, node: PlannedNode, identifier: Identifier) -> None:
+    def urls(self, node: PlannedNode) -> None:
         """The URLs of a new entity, as nodes (`PGUrl`) that it has, rather than as a
         property: a URL is unique, so that two entities cannot have it, even if they are
         made at the same time (a uniqueness constraint)."""
-        for url in node.urls:
-            url_identifier = self.params.new_identifier()
-            url_parameter = self.params.add(url)
-            self.query.create_query_strings.append(f"""
-            CREATE ({url_identifier}:PGUrl {{url: ${url_parameter}}})
-            CREATE ({identifier})-[:has_url]->({url_identifier})
-        """)
+        self.url_rows.extend({"id": node.id, "url": url} for url in node.urls)
 
     def edges(
-        self, relation: Relation, source: Identifier, target: Identifier, position: int
-    ) -> None:
-        """The forward and reverse edges between two nodes — and the same pair for each parent field that the field
-        subclasses — with any edge properties on all of them, and the place of the value in its list on the forward
-        ones (`pg_position`)"""
-        edge_property_assignments: PropertyAssignments | None = None
-        if relation.edge_properties:
-            edge_property_assignments = PropertyAssignments(
-                self.params, relation.edge_properties, node=False
-            )
-        position_parameter = self.params.add(position)
-        for forward_name, backward_name in relation.edges:
-            forward_query_identifier = self.params.new_identifier()
-            reverse_query_identifier = self.params.new_identifier()
-            self.query.create_query_strings.append(f"""
-            CREATE ({source})-[{forward_query_identifier}:{forward_name} {{{POSITION}: ${position_parameter}}}]->({target})
-            CREATE ({source})<-[{reverse_query_identifier}:{backward_name} {{reverse: true}}]-({target})
-        """)
-            if edge_property_assignments:
-                # `+=` adds to the edge's properties; `=` would replace them and
-                # remove the {reverse: true} marker
-                self.query.create_query_strings.append(f"""
-                SET {edge_property_assignments.set_items(forward_query_identifier)}
-                SET {edge_property_assignments.set_items(reverse_query_identifier)}
-            """)
-
-    def tree_node(
-        self, relation: Relation, node: PlannedNode, source: Identifier, position: int
-    ) -> None:
-        identifier = self.params.new_identifier()
-        node_id_identifier = self.params.add(node.id)
-        node_data = PropertyAssignments(self.params, node.properties)
-        self.query.create_query_strings.append(f"""
-        MERGE ({identifier}:{labels_of(node, TREE_LABELS)} {{id: ${node_id_identifier}}})
-        ON CREATE SET {node_data.set_items(identifier, replace=True)}
-    """)
-        self.edges(relation, source, identifier, position)
-        self.relations(node, identifier)
-
-    def inline_entity(
         self,
         relation: Relation,
-        entity: InlineEntity,
-        source: Identifier,
+        source: str,
+        target: str,
         position: int,
+        by_url: bool = False,
+        allowed: list[str] | None = None,
     ) -> None:
-        """An entity written in the document: the one there is, or a new head node of its own"""
-        key = entity.key
-        if key in self.inline_entity_identifiers:
-            identifier = self.inline_entity_identifiers[key]
-        elif key in self.existing:
-            identifier = self.params.new_identifier()
-            existing_id = self.params.add(self.existing[key].id)
-            self.query.match_query_strings.append(
-                f"MATCH ({identifier}:PGIndexableNode {{id: ${existing_id}}})"
-            )
-            self.inline_entity_identifiers[key] = identifier
-        else:
-            assert entity.node is not None
-            identifier = self.params.new_identifier()
-            self.inline_entity_identifiers[key] = identifier
-            entity_data = PropertyAssignments(self.params, entity.node.properties)
-            creation = self.params.new_identifier()
-            creation_data = self.params.add(
+        """A row for the pair of edges of the field, and for the same pair of each parent field that the field
+        subclasses"""
+        properties = (
+            encoded(relation.edge_properties, node=False)
+            if relation.edge_properties
+            else {}
+        )
+        for forward, backward in relation.edges:
+            self.edge_pairs[by_url].add((forward, backward))
+            self.edge_rows[by_url].append(
                 {
-                    "id": str(uuid.uuid7()),
-                    "created_when": datetime.datetime.now(datetime.UTC),
+                    "source": source,
+                    "target": target,
+                    "names": edge_names(forward, backward),
+                    "position": position,
+                    "properties": properties,
+                    "allowed": allowed,
                 }
             )
-            self.query.create_query_strings.append(f"""
-            CREATE ({identifier}:{labels_of(entity.node, HEAD_LABELS)})
-            SET {entity_data.set_items(identifier, replace=True)}
-            CREATE ({creation}:PGCreation)
-            SET {creation} = ${creation_data}
-            CREATE ({creation})-[:is_creation_of]->({identifier})
-            CREATE ({creation})-[:created_by]->({self.user})
-        """)
-            self.urls(entity.node, identifier)
-            self.relations(entity.node, identifier)
-        self.edges(relation, source, identifier, position)
 
-    def reference(
-        self,
-        relation: Relation,
-        reference: ReferenceToExisting,
-        source: Identifier,
-        position: int,
-    ) -> None:
-        allowed_types = list(reference.allowed_types)
-        reference_key = (reference.value, reference.allowed_types)
-        if reference_key in self.matched_references:
-            identifier = self.matched_references[reference_key]
-        else:
-            identifier = self.params.new_identifier()
-            self.matched_references[reference_key] = identifier
-            id_identifier = self.params.add(reference.value)
-            allowed_types_identifier = self.params.add(allowed_types)
-            # An entity can be referred to by a URL, as well as by its id
-            if reference.is_url:
-                match_node = (
-                    f"(:PGUrl {{url: ${id_identifier}}})"
-                    f"<-[:has_url]-({identifier}:PGIndexableNode)"
+    def inline_entity(self, entity: InlineEntity) -> str:
+        """The id of an entity written in the document: the one there is, or a new head node of its own"""
+        key = entity.key
+        if key in self.inline_entity_ids:
+            return self.inline_entity_ids[key]
+        if key in self.existing:
+            self.inline_entity_ids[key] = self.existing[key].id
+            return self.existing[key].id
+        node = entity.node
+        assert node is not None
+        self.inline_entity_ids[key] = node.id
+        self.entities.append(
+            {
+                "labels": list(node.labels),
+                "properties": encoded(node.properties),
+                "creation": new_record("created_when"),
+            }
+        )
+        self.urls(node)
+        self.relations(node)
+        return node.id
+
+    def statements(self, username: str) -> list[Statement]:
+        """Nodes before edges, as an edge is between nodes that are there"""
+        found: list[Statement] = []
+        if self.tree_nodes:
+            found.append(tree_nodes_statement(self.tree_nodes))
+        if self.entities:
+            found.append(entities_statement(self.entities, username))
+        if self.url_rows:
+            found.append(
+                Statement(
+                    typing.cast(typing.LiteralString, URLS),
+                    {"rows": self.url_rows},
+                    len(self.url_rows),
                 )
-            else:
-                match_node = f"({identifier}:PGIndexableNode {{id: ${id_identifier}}})"
-            self.query.match_query_strings.append(
-                f"""MATCH {match_node}
-                WHERE ANY(label IN labels({identifier}) WHERE label IN ${allowed_types_identifier})
-            """
             )
-        self.edges(relation, source, identifier, position)
+        for by_url, rows in self.edge_rows.items():
+            if rows:
+                # (in a fixed order: the text is then the same for the same relations)
+                pairs = sorted(self.edge_pairs[by_url])
+                found.append(edges_statement(pairs, by_url, rows))
+        return found
 
 
 def render(
     plan: WritePlan,
     existing: Mapping[InlineEntityKey, ExistingEntity] | None = None,
-) -> QueryObject:
-    """The query that makes the write of `plan`, given which of the entities written in it exist (`existing`, found by
-    `validate_write.find_existing_entities`)"""
-    query = QueryObject()
-    params = query.params
+) -> list[Statement]:
+    """The statements that make the write of `plan`, in the order to run them, given which of the entities written in
+    it exist (`existing`, found by `validate_write.find_existing_entities`)"""
     head = plan.head
-    identifier = params.new_identifier()
-    query.return_identifier = identifier
-    user = params.new_identifier()
-    username_identifier = params.add(current_request_username.get())
-    query.match_query_strings.append(
-        f"MATCH ({user}:PGUser {{username: ${username_identifier}}})"
-    )
-    renderer = _Renderer(query, existing, user)
+    username = current_request_username.get()
+    renderer = _Renderer(existing)
 
     if plan.is_update:
-        head_id_identifier = params.add(head.id)
-        update_data_identifier = params.add(
+        first = Statement(
+            typing.cast(typing.LiteralString, HEAD_UPDATE),
             {
-                "id": str(uuid.uuid7()),
-                "updated_when": datetime.datetime.now(datetime.UTC),
-            }
+                "username": username,
+                "id": head.id,
+                "update": new_record("updated_when"),
+            },
         )
-        query.match_query_strings.append(
-            f"MATCH ({identifier}:HeadNode {{id: ${head_id_identifier}}})"
-        )
-        query.create_query_strings.append(f"""
-        CREATE (update:PGUpdate)
-        SET update = ${update_data_identifier}
-        CREATE (update)-[:is_update_of]->({identifier})
-        CREATE (update)-[:updated_by]->({user})
-    """)
     else:
-        node_data = PropertyAssignments(params, head.properties)
-        creation_data_identifier = params.add(
-            {
-                "id": str(uuid.uuid7()),
-                "created_when": datetime.datetime.now(datetime.UTC),
-            }
-        )
-        query.create_query_strings.append(f"""
-        CREATE ({identifier}:{labels_of(head, HEAD_LABELS)})
-        SET {node_data.set_items(identifier, replace=True)}
-        CREATE (creation:PGCreation)
-        SET creation = ${creation_data_identifier}
-        CREATE (creation)-[:is_creation_of]->({identifier})
-        CREATE (creation)-[:created_by]->({user})
-    """)
-        renderer.urls(head, identifier)
+        first = head_create_statement(head, username)
+        renderer.urls(head)
 
-    renderer.relations(head, identifier)
-    return query
+    renderer.relations(head)
+    return [first, *renderer.statements(username)]
 
 
 def build_head_create_query(
     instance: typing.Any,
     existing_entities: Mapping[InlineEntityKey, ExistingEntity] | None = None,
-) -> QueryObject:
-    """The query that creates a document or an entity (`plan_create`, rendered)"""
+) -> list[Statement]:
+    """The statements that create a document or an entity (`plan_create`, rendered)"""
     return render(plan_create(instance), existing_entities)

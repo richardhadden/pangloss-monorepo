@@ -177,6 +177,11 @@ class Dialect(Protocol):
         """An expression to order nodes by when all else is equal (the database's own id of the node)"""
         ...
 
+    def labels_from(self, node: str, labels: str) -> str:
+        """What follows `SET` to give the node the labels of a list (`labels`, an expression: `row.labels`), so that one
+        statement writes nodes of any classes (`render_write`)"""
+        ...
+
     def facets_from(self, type: str, nodes: str) -> str:
         """An aggregation: the facets of a list, the `nodes` of each `type`, in a form `read_facets` reads"""
         ...

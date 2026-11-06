@@ -86,6 +86,30 @@ async def get_day(
     return await service.day(day_of(ref), calendar or settings.calendar_default())
 
 
+@router.get("/covering", response_model=service.CoveringReport)
+async def get_covering(
+    first: Annotated[
+        str, Query(description="The first day: `G1500-03-01`, or a day number")
+    ],
+    last: Annotated[
+        str | None, Query(description="The last day (default: the first)")
+    ] = None,
+    page: Annotated[int, Query(ge=1)] = 1,
+    page_size: Annotated[
+        int, Query(ge=1, le=service.MAX_COVERING_PAGE)
+    ] = service.COVERING_PAGE,
+):
+    """The long periods that cover all the days from `first` to `last`, beginning before them and ending after: what a
+    day or a month counts (`covering`) and does not list, a page at a time, the earliest to begin first"""
+    start = day_of(first)
+    try:
+        return await service.covering(
+            start, day_of(last) if last is not None else start, page, page_size
+        )
+    except ValueError as error:
+        raise refused(error) from error
+
+
 @router.get("/month/{calendar}/{year}/{month}", response_model=service.MonthReport)
 async def get_month(calendar: Calendar, year: Year, month: MonthNumber):
     return await service.month(calendar, year, month)

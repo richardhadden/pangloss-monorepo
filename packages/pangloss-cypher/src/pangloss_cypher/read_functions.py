@@ -186,7 +186,11 @@ async def autocomplete(
                 next_page=None,
                 previous_page=page - 1 if page > 1 else None,
             )
-        params |= {"patterns": patterns, "start": d.autocomplete_start(search_terms)}
+        params |= {
+            "patterns": patterns,
+            "start": d.autocomplete_start(search_terms),
+            "limit": getattr(current().settings, "SEARCH_HIT_LIMIT", DEFAULT_HIT_LIMIT),
+        }
         query = autocomplete_query(d)
     else:
         query = most_used_query(d)

@@ -12,6 +12,11 @@ from pangloss_cypher import Transaction
 
 # The property of a node that the text index is on: its label, folded (`pangloss_models.text.fold`)
 FOLDED_LABEL = "label_folded"
+# The text index (Tantivy) keeps no word of 40 bytes or more, so a longer word of a search finds nothing whatever
+# follows its fortieth character: the pattern is cut there. (Uncut, a word of some 490 characters was refused by the
+# index, "Compiled regex exceeds size limit", which reached the user as an internal error. Measured 2026-11-06: a word
+# of 39 characters in a label is found, one of 40 is not.)
+LONGEST_WORD = 40
 
 
 def with_folded_label(properties: dict[str, Any]) -> dict[str, Any]:
@@ -80,7 +85,9 @@ class MemgraphDialect:
         """A regular expression for each word of the search. The words are cut as the index cuts a label (`search_words`),
         so no regular-expression character (`(`, `.`, `[`) gets into a pattern; nothing to search for is no pattern
         (`.*.*` would be every node of the index)"""
-        return [f".*{word}.*" for word in search_words(search_terms or "")]
+        return [
+            f".*{word[:LONGEST_WORD]}.*" for word in search_words(search_terms or "")
+        ]
 
     def autocomplete_start(self, search_terms: str) -> str:
         return " ".join(search_words(search_terms))
@@ -90,6 +97,9 @@ class MemgraphDialect:
 
     def tie_break(self, node: str) -> str:
         return f"id({node})"
+
+    def labels_from(self, node: str, labels: str) -> str:
+        return f"{node}:{labels}"
 
     def facets_from(self, type: str, nodes: str) -> str:
         return f"collect({type}, {nodes})"

@@ -56,7 +56,7 @@ user dict / kwargs
                                            │  semantic spaces, context labels
                                            ▼
                                   build_head_create_query()
-                                           │  one Cypher statement
+                                           │  a few Cypher statements, each over rows
                                            ▼
                                        Memgraph
                                            │

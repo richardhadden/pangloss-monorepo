@@ -278,6 +278,12 @@ def test_the_calendar(page: Page, dated, dev_url: str, errors: list[str]):
     expect(
         page.get_by_role("heading", name=re.compile("^Monday 2 March 1500"))
     ).to_be_visible()
+    # (the long periods over the day, read by the button)
+    covering = page.get_by_test_id("calendar-covering")
+    covering.get_by_role("button", name="Show them").click()
+    expect(
+        covering.get_by_role("link", name="Event Reign of the king")
+    ).to_be_visible()
     page.get_by_role("link", name="Next day").click()
     expect(
         page.get_by_role("heading", name=re.compile("^Tuesday 3 March 1500"))

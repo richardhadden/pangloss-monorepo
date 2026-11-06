@@ -10,9 +10,12 @@ typologies, 68 concrete statement kinds. Data at the end: 49,910 entities + 15,5
 library, synced), 8,795 factoids, 337,423 nodes / 825,815 edges. Item numbers are in the order found, grouped by
 severity.
 
+**Fixed since (2026-11-06, branch `full-smoke-test-fixes`; what was changed and how it was checked is in
+`FIXES.md`):** 1, 2, 3, 5, 20, 21, 26, 29, 32, 33. Each is marked below. The text of an item is as it was found.
+
 ## High
 
-1. **No SDK can be built for a project that uses `InterfaceMeta` or `pangloss_library`, the demo included.**
+1. ✅ *Fixed: the SDK's copy of a module takes the interface names from an inert stand-in; `pangloss_library` no longer needs the interface.* **No SDK can be built for a project that uses `InterfaceMeta` or `pangloss_library`, the demo included.**
    `pangloss_interface` is in the SDK builder's `SERVER_ONLY` list (`pangloss-sdk-server/.../closure.py`), so a
    models module that imports `InterfaceMeta` (as the docs and the demo do) is refused: "`smoke.models` imports
    `pangloss_interface`, which a client of the API does not have". After taking `InterfaceMeta` out of the models,
@@ -24,11 +27,11 @@ severity.
 
 ## Medium
 
-2. **A search term with one long word is a 500.** `GET /api/Person?q=<500 × 'a'>` and `GET /api/autocomplete?q=...`
+2. ✅ *Fixed: a word is cut to what the index can match; both backends.* **A search term with one long word is a 500.** `GET /api/Person?q=<500 × 'a'>` and `GET /api/autocomplete?q=...`
    answer `500 Internal server error`; Memgraph says `Tantivy error: ... Compiled regex exceeds size limit of 1000
    states`. 480 characters passes, 500 fails. (A pasted URL or a long run of text with no spaces can do it.) Should
    be a 422, or the word cut short.
-3. **Autocomplete loses entities whenever a word of the query is in more than 1,000 labels of any type.**
+3. ✅ *Fixed: the autocomplete search passes `SEARCH_HIT_LIMIT`.* **Autocomplete loses entities whenever a word of the query is in more than 1,000 labels of any type.**
    Root cause found: `autocomplete_query` (`pangloss-cypher/autocomplete_query.py`) calls Memgraph's
    `text_search.regex_search("label_text", pattern)` with no limit, and Memgraph returns **at most 1,000 hits** by
    default; the type filter (`$labels`) is applied after. (The list query passes `SEARCH_HIT_LIMIT`, 100,000, and
@@ -39,13 +42,13 @@ severity.
    2,500; `q=House&type=Family` 501 of 1,500. **In the interface this means a person cannot be picked in a form by
    their surname if the surname is common in factoid labels**: `Find Person…` with "Bartolomeo Ubiq" offers nothing.
 4. (merged into 3)
-5. **Calendar day view lists thousands of undated-in-effect documents, on every day.** `GET
+5. ✅ *Fixed: unknown dates are in no view (a judgement call, to confirm); long covering periods are counted and read from `GET /api/calendar/covering`; one query for all fields: a day 0.15 s, 55 KB.* **Calendar day view lists thousands of undated-in-effect documents, on every day.** `GET
    /api/calendar/day/G1500-03-25` returns 5,829 hits (2.1 MB anonymous, 2.6 MB logged in, 1.1-2.2 s). 5,673 of
    them span 100 years or more: statements with an `UnknownDate`, or periods whose end is unknown or ongoing, which
    run from `DATES_EARLIEST_YEAR` to `DATES_OPEN_END_YEAR`. So every day of 1400-1700 shows the same ~5,700 items;
    there is no paging or cap (`truncated: false`). Month and year views take 1.2-1.7 s too.
 
-20. **Interface: the derived section of an entity with more than 25 facts of a class crashes.** On the super-person's
+20. ✅ *Fixed: the cause was a nested `Loading` round a lazily loaded section, not the 25 facts.* **Interface: the derived section of an entity with more than 25 facts of a class crashes.** On the super-person's
     page (MetWith 137, GaveTo 58: the only person over the first page of 25) the console says `A section of an
     interface module failed: TypeError: node.setAttribute is not a function at className ... at _$effect.name
     (DerivedSection.tsx:74:5)` and the whole derived section is missing (no "and N more" button either). An ordinary
@@ -54,7 +57,7 @@ severity.
     Seen on the dev server and **also on the production build** (`TypeError: e.setAttribute is not a function at
     ... DerivedSection-H0mb7qHC.js`), logged in by the session cookie; there the page loads in 2.3 s (dev 5.2 s).
 
-26. **Writing one document is superlinear in its size: a factoid of 200 statements took 134 s.** One
+26. ✅ *Fixed: a write is three statements over rows whatever its size: 200 statements 134 s -> 0.3 s.* **Writing one document is superlinear in its size: a factoid of 200 statements took 134 s.** One
     `write_head_node` transaction of 134,444 ms (`POST /api/Factoid -> 201 in 134537 ms`); dropping 50 of them in an
     update (`replace_head_node`) took 59 s. Reading it back: 116 ms. Measured (`smoke_scripts/scaling.py`): Deaths
     only, 10 / 20 / 40 / 80 statements: 58 / 134 / 527 / 3,681 ms; mixed kinds, 5 / 10 / 20 / 40: 53 / 90 / 211 /
@@ -98,7 +101,7 @@ severity.
     unchanged items but still took 15+ minutes to make progress visible. `zotero status` says "version 0, never
     synced" the whole time, with 8,000+ items in the database.
 
-21. **Interface calendar pages are huge.** `/calendar/gregorian/1500/3` server-renders **21 MB of HTML** (1.6 s on
+21. ✅ *Fixed: the month page is 0.45 MB, the day page 0.55 MB (see 5).* **Interface calendar pages are huge.** `/calendar/gregorian/1500/3` server-renders **21 MB of HTML** (1.6 s on
     the server; 5-6 s to load in the browser), and the day and year pages are as slow: the API's hits of item 5,
     once per day. Other pages: 70-250 ms.
 22. **The super-person's interface page**: 5.2 s to load, 29,507 DOM elements, 105,716 px tall (every reverse
@@ -124,7 +127,7 @@ severity.
     reads ~95 reverse-relation fields).
 28. **The by-date view of the super-person** takes 3.5 s and makes 47,069 DOM elements.
 
-29. **Typology: the generic DELETE route marks a type in use for deletion**, where the typology's own rule is to
+29. ✅ *Fixed: the delete refuses and marks nothing; a second type of one name beside the first is refused (a judgement call, to confirm); either name finds a typology.* **Typology: the generic DELETE route marks a type in use for deletion**, where the typology's own rule is to
     refuse. `DELETE /api/OccupationType/{Banker}` (620 people have it) answered 409 "... It has been marked for
     deletion", and Banker now has `meta.markedForDeletion: true` while it stays in the tree, in autocomplete and on
     620 people (guide/typology: `delete(id)` "refused if it has subtypes or is in use"). Also: a second root type
@@ -136,7 +139,7 @@ severity.
 31. **`/openapi.json` is 2.5 MB (570 paths, 1,014 schemas) and the first request takes 4.9 s** (then cached: 10 ms).
     `/docs` loads it.
 
-32. **`make-stubs` output does not type-check in a project outside the monorepo's `ty` overrides.** `ty check
+32. ✅ *Fixed: the packages ship stubs of their models; typology entities, `Typed[...]` and `Var` of a trait type-check.* **`make-stubs` output does not type-check in a project outside the monorepo's `ty` overrides.** `ty check
     pangloss-smoketest/smoke`: 1,748 diagnostics (1,240 `invalid-type-form`, 335 `unresolved-attribute`, 161
     unused `type: ignore`). Causes: the stub refers to `pangloss_dates.models.DateRange.Create` / `.Where` etc., which
     in `pangloss_dates` (no stubs of its own) are typed as variables (`type[_EmbeddedCreateBase]`) or not at all (1,232
@@ -146,7 +149,7 @@ severity.
     the stubs though they work. The demo shows "All checks passed" only because `pyproject.toml` relaxes those rules
     for `pangloss-demo/**`; `models.pyi` here is 689 KB, 6,074 lines.
 
-33. **Neo4j (`pangloss-neo4j`), same project at 1/10 scale on `neo4j:2026.10.1` (:7699, `settings_neo4j.py`):**
+33. ✅ *Fixed: as 26: the same write path, and no long transaction.* **Neo4j (`pangloss-neo4j`), same project at 1/10 scale on `neo4j:2026.10.1` (:7699, `settings_neo4j.py`):**
     5,333 entities at 319/s and 500 factoids over REST (39/s, p50 179 ms), 0 errors. But the superlinear write of
     item 26 is worse there: one factoid of 10 / 20 / 40 / 80 / 120 / 160 Deaths took 281 / 694 / 1,676 / 8,896 /
     23,817 / 49,045-52,321 ms. Once in three tries at 160 it was a **500**: Neo4j's own `Neo.DatabaseError.General.

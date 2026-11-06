@@ -394,8 +394,41 @@ def variables_for(kind: str, base: Any) -> list[Any]:
     `check_rule` checks its class, and says where. A `Var[Person]` in each place it can go, for every field of every
     model, made pydantic's schemas of the demo's models a third larger)"""
     if kind == "relation":
-        return [var_of(option) for option in base.options]
+        return [var_of(model) for model in variable_classes(base.options)]
     return [var_of(base)]
+
+
+def variable_classes(options: list[type]) -> list[type]:
+    """The classes a variable of a relation is written with: what the relation can hold, and a declared class above
+    them (a trait they have, an abstract parent) if everything of that class is something the relation can hold
+    (`Var[Agent]` where the field is an `Agent`, or a reified relation of one; not where it is a `Person`, as a group
+    is an agent too). Of these, the topmost: a `Var` is covariant, so `Var[Agent]` takes a `Var[Person]`. (The classes
+    the relation holds alone would refuse the `Var[Agent]` of a rule about any agent.)"""
+    from pangloss_models.model_registry import ModelRegistry
+    from pangloss_models.utils import model_is_trait
+
+    declared = ModelRegistry._models
+
+    def holds_all_of(cls: type) -> bool:
+        return all(
+            any(issubclass(model, option) for option in options)
+            for model in declared
+            if issubclass(model, cls)
+            and not model_is_trait(model)
+            and not getattr(getattr(model, "_meta", None), "abstract", False)
+        )
+
+    above = dict.fromkeys(options)
+    for option in options:
+        for cls in option.__mro__:
+            if cls in ModelRegistry._model_set and cls not in above:
+                if holds_all_of(cls):
+                    above[cls] = None
+    return [
+        cls
+        for cls in above
+        if not any(cls is not other and issubclass(cls, other) for other in above)
+    ]
 
 
 def with_variables(kind: str, base: Any, made: dict[type, type[Where]]) -> FieldInfo:

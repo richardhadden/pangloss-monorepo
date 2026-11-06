@@ -768,3 +768,104 @@ async def test_a_type_is_made_through_the_api(clear_database):
     assert (
         await client.post("/api/typology/RoleType", json={"label": "  "})
     ).status_code == 422
+
+
+@no_type_check
+async def test_the_delete_of_any_entity_refuses_a_type_as_the_typology_does(
+    clear_database,
+):
+    """`DELETE /api/RoleType/{id}`, the route every entity has: a type in use was marked for deletion by it (an
+    entity that is referred to is), and stayed in the tree and on what had it. The typology's rule is asked first"""
+    from types import SimpleNamespace
+
+    import httpx2 as httpx
+    from fastapi import FastAPI
+    from pangloss_api import get_current_user
+    from pangloss_api.errors import register_error_handlers
+    from pangloss_api.routes.models import build_router
+
+    Post, RoleTypology = vocabulary()
+    official, secretary, private, chancellor, bard = await build(RoleTypology)
+    await made(Post, "Court bard", bard.id)
+    app = FastAPI()
+    app.include_router(build_router(RoleTypology.Type))
+    register_error_handlers(app)
+    app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(
+        username="someone"
+    )
+    client = httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    )
+
+    in_use = await client.delete(f"/api/RoleType/{bard.id}")
+    assert in_use.status_code == 409
+    assert in_use.json()["detail"].startswith("Bard is in use by Court bard")
+    # (not marked: it is as it was)
+    assert not (await RoleTypology.Type.get(bard.id)).meta.marked_for_deletion
+    above = await client.delete(f"/api/RoleType/{official.id}")
+    assert above.status_code == 409
+    assert "has subtypes (Chancellor, Secretary)" in above.json()["detail"]
+    assert not (await RoleTypology.Type.get(official.id)).meta.marked_for_deletion
+    asked = (await client.get(f"/api/RoleType/{bard.id}/deletable")).json()
+    assert asked["deletable"] is False and "in use by Court bard" in asked["reason"]
+
+    # a leaf that nothing has is deleted
+    assert (await client.get(f"/api/RoleType/{private.id}/deletable")).json()[
+        "deletable"
+    ] is True
+    assert (await client.delete(f"/api/RoleType/{private.id}")).status_code == 204
+    with pytest.raises(NotFound):
+        await service.get(RoleTypology, private.id)
+    # (and one that is not there is the delete's to say)
+    missing = "0198cfd0-0000-7000-8000-000000000000"
+    assert (await client.delete(f"/api/RoleType/{missing}")).status_code == 404
+
+
+@no_type_check
+async def test_two_types_side_by_side_do_not_have_the_same_name(clear_database):
+    _, RoleTypology = vocabulary()
+    official, secretary, private, chancellor, bard = await build(RoleTypology)
+    # made: at the top level, and below a type (ignoring case and the space round it)
+    with pytest.raises(Refused, match="already a type called Bard at the top level"):
+        await RoleTypology.create("bard ")
+    with pytest.raises(Refused, match="already a type called Secretary below Official"):
+        await RoleTypology.create("Secretary", supertype=official.id)
+    # (below another supertype it is another thing)
+    guild = await RoleTypology.create("Secretary", supertype=bard.id)
+    # renamed
+    with pytest.raises(Refused, match="already a type called Secretary below Official"):
+        await service.update(RoleTypology, chancellor.id, label="SECRETARY")
+    # (to its own name, or to its own in other letters, is no clash)
+    assert (await service.update(RoleTypology, bard.id, label="BARD")).label == "BARD"
+    # moved beside its namesake
+    with pytest.raises(Refused, match="already a type called Secretary below Official"):
+        await RoleTypology.move(guild.id, official.id)
+    # two that are there already (made as entities, which the typology does not see) are merged, as before
+    twin = await RoleTypology.Type.Create(
+        label="Chancellor", is_subtype_of=[{"type": "RoleType", "id": official.id}]
+    ).save()
+    await RoleTypology.merge(from_=twin.id, into=chancellor.id)
+    tree = await RoleTypology.tree()
+    assert [c["label"] for c in tree[1]["children"]] == ["Chancellor", "Secretary"]
+
+
+@no_type_check
+async def test_a_typology_is_found_by_its_own_name_as_by_its_entitys(clear_database):
+    import httpx2 as httpx
+    from fastapi import FastAPI
+    from pangloss_typology.api import router
+
+    _, RoleTypology = vocabulary()
+    await build(RoleTypology)
+    assert Typology.named("RoleType") is RoleTypology
+    assert Typology.named("RoleTypology") is RoleTypology
+    assert Typology.named("Role") is None
+    app = FastAPI()
+    app.include_router(router)
+    client = httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    )
+    by_entity = (await client.get("/api/typology/RoleType/tree")).json()
+    assert (await client.get("/api/typology/RoleTypology/tree")).json() == by_entity
+    missing = await client.get("/api/typology/Role/tree")
+    assert missing.status_code == 404 and "Known: RoleType" in missing.json()["detail"]

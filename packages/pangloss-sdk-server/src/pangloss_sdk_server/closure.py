@@ -11,9 +11,11 @@ import dataclasses
 import sys
 from pathlib import Path
 
-from pangloss_sdk_server.sources import is_server_only
+from pangloss_sdk_server.sources import INTERFACE, interface_imports, is_server_only
 
-# What only a server has: a model module that imports one of these cannot run on a client
+# What only a server has: a model module that imports one of these cannot run on a client. (The exception is
+# `pangloss_interface`, where it is only what a model is declared with: the SDK ships the module with that import
+# pointed at `pangloss_sdk.no_interface`, see `sources`.)
 SERVER_ONLY = {
     "neo4j",
     "fastapi",
@@ -177,7 +179,14 @@ def closure_of(root: Path, start: list[str]) -> Closure:
 
     for name, path in sorted(result.modules.items()):
         imported_top = {n.split(".")[0] for n in imports_of(name, path)[0]}
-        for forbidden in sorted(imported_top & SERVER_ONLY):
+        if INTERFACE in imported_top:
+            text = path.read_text()
+            result.problems.extend(
+                interface_imports(
+                    ast.parse(text, filename=str(path)), text.split("\n"), str(path)
+                )[1]
+            )
+        for forbidden in sorted((imported_top & SERVER_ONLY) - {INTERFACE}):
             result.problems.append(
                 f"{path}: `{name}` imports `{forbidden}`, which a client of the API does "
                 "not have; models must not need it"

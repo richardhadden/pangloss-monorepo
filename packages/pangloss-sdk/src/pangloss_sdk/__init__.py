@@ -88,6 +88,8 @@ def connect(
     configured = SdkSettings(  # type: ignore[call-arg]
         INSTALLED_APPS=app_list,
         STORAGE=SYNC_STORAGE if sync else ASYNC_STORAGE,
+        # (what the server's models were made from, as the SDK was built: `pangloss_core.settings.model_settings`)
+        MODEL_SETTINGS=(sdk or {}).get("model_settings", {}),
         **settings,
     )
     _client.install(
@@ -100,15 +102,19 @@ def connect(
     initialise()
 
 
-def connect_offline(apps: Iterable[str]) -> None:
+def connect_offline(apps: Iterable[str], sdk: dict[str, Any] | None = None) -> None:
     """Import and initialise the models of the apps with no server: the model functions
     are bound to the API, and fail if used. For checking that an SDK imports and that its
-    models are the server's."""
+    models are the server's. `sdk` is the manifest of a generated SDK, as for `connect`."""
     from pangloss_core import ClientSettings
     from pangloss_models import initialise
 
     app_list = list(apps)
-    ClientSettings(INSTALLED_APPS=app_list, STORAGE=ASYNC_STORAGE)
+    ClientSettings(
+        INSTALLED_APPS=app_list,
+        STORAGE=ASYNC_STORAGE,
+        MODEL_SETTINGS=(sdk or {}).get("model_settings", {}),
+    )
     for app in app_list:
         importlib.import_module(f"{app}.models")
     initialise()

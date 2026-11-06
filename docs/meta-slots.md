@@ -173,15 +173,22 @@ A type checker does not know `_interface_meta` exists on `Entity`. Two ways, bot
 
 ### Protection: a slot of the models' own
 
-`pangloss_models/protection.py` registers `_protect_meta = Protection(read_only=(...), delete_only_if="...")`.
-It is for fields that something other than a person keeps up to date (the Zotero fields).
+`pangloss_models/protection.py` registers `_protect_meta = Protection(read_only=(...), delete_only_if="...",
+delete_refused=...)`. It is for fields that something other than a person keeps up to date (the Zotero fields), and
+for a model whose package has its own rule for deleting (a type of a typology).
 
 - The **API** refuses a create that sets a `read_only` field, an update that changes one (it reads the stored
   value; leaving a field out counts as changing it), and a delete of a model whose `delete_only_if` field is not
   true: all `403`, saying which. Code that writes through Python is not stopped (trusted), so the sync can write the
   fields. The remote SDK goes through the API and is covered.
+- `delete_refused` is an async function of the model and the id that gives **the reason the model cannot be deleted,
+  or `None`**. The API asks it before a delete (`409` with the reason, and nothing is changed) and in `/deletable`.
+  It is there because the delete of an entity that is referred to *marks it for deletion* and leaves it, which is
+  wrong for a vocabulary: `pangloss_typology` gives its types the typology's rule (no subtypes, nothing has it).
+  The core does not know of typologies: it asks the function. As with the fields, Python is not stopped
+  (`RoleType.delete(id)` is the plain delete; `RoleTypology.delete(id)` is the rule).
 - A subclass **adds** to its parents' protection (`protection_of` puts the declared values together: the fields are
-  the union, the nearest `delete_only_if` wins), where a slot would otherwise replace it.
+  the union, the nearest `delete_only_if` and `delete_refused` win), where a slot would otherwise replace it.
 - Not built: the flag in `export_models()` and the generated TypeScript (so a form could show the fields
   read-only); it is a change to the exporter, its TypeScript type and the guard test that holds the two together.
 

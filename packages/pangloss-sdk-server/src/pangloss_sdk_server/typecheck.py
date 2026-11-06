@@ -67,8 +67,14 @@ def usage_source(models: Iterable[type], mode: str) -> str:
             f"    assert_type({name}.Where() | ~{name}.Where() & {name}.Where(), {name}.Where)",
             f"    assert_type({wait}{name}.delete(i), None)",
             f"    assert_type({wait}{name}.undelete(i), None)",
-            f"    assert_type({wait}c.save(), {name}.ReferenceView)",
-            f"    assert_type({wait}c.save(detail=True), {name}.HeadView)",
+        ]
+        # (a document that is only made as part of another has no `save` of its `Create`: `create_directly`)
+        if getattr(getattr(model, "_meta", None), "create_directly", True):
+            lines += [
+                f"    assert_type({wait}c.save(), {name}.ReferenceView)",
+                f"    assert_type({wait}c.save(detail=True), {name}.HeadView)",
+            ]
+        lines += [
             f"    assert_type({wait}u.save(), {name}.ReferenceView)",
             f"    assert_type({wait}u.save(detail=True, expected_version=3), {name}.HeadView)",
         ]

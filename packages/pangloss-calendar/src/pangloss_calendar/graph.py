@@ -460,21 +460,50 @@ RETURN d.jdn AS jdn ORDER BY d.jdn
 # Dates found from the dates, not from the documents (the plan's "date-first" query)
 
 
-def dated_between_query(label: str, field: str) -> str:
-    """(`label` and `field` are checked to be names, as they are put in the query)"""
+# What the calendar leaves out, and what it keeps apart, of the dates that meet the days asked for:
+#
+# - a date that is only "not known" (`UnknownDate`) says nothing of when: it is in no view. (Its bounds are the whole
+#   span of years, so it was on every day, thousands of them. A period with one end unknown still says when it began,
+#   or ended, and stays.)
+# - a long period that covers all the days asked for, beginning before them and ending after (`COVERS`), has nothing
+#   to show there: it is counted, and read a page at a time (`covering_between`), not listed with the dates of the
+#   days. One that begins or ends among them is a date of the days like any other.
+NOT_UNKNOWN = "NOT d.type ENDS WITH 'UnknownDate'"
+COVERS = (
+    "(d.type ENDS WITH 'Period' AND d.earliest_strict < $first AND d.latest_strict > $last "
+    "AND d.latest_strict - d.earliest_strict >= $long)"
+)
+
+
+def _dated(where: str) -> tuple[str, str]:
+    """The start of a query for the dates that meet `$first` to `$last` and fit `where`, with what each is in (`n`,
+    by its field `e`): of the fields `$fields` (`Class.field`), and seen by the reader. And the condition after it"""
     fragments = _fragments()
     head = fragments.head_of("n", "h")
-    return f"""
+    return (
+        f"""
 MATCH (d:Date)
 WHERE d.earliest_fuzzy <= $last AND d.latest_fuzzy >= $first
-  AND ($strict = false OR (d.earliest_strict <= $last AND d.latest_strict >= $first))
-  AND ($keys IS NULL OR d.pattern_keys IS NULL OR any(k IN d.pattern_keys WHERE k IN $keys))
-MATCH (n:{fragments.label(label)})-[:{fragments.field_edge(field)}]->(d)
+  AND {NOT_UNKNOWN}
+  AND {where}
+MATCH (n)-[e]->(d)
+WHERE (n.type + '.' + type(e)) IN $fields
 {head.match}
-WITH n, d, {head} AS head
-WHERE {fragments.visible("head")}
+WITH n, d, e, {head} AS head""",
+        f"WHERE {fragments.visible('head')}",
+    )
+
+
+def dated_between_query() -> str:
+    match, visible = (
+        _dated(f"""($strict = false OR (d.earliest_strict <= $last AND d.latest_strict >= $first))
+  AND ($keys IS NULL OR d.pattern_keys IS NULL OR any(k IN d.pattern_keys WHERE k IN $keys))
+  AND NOT {COVERS}""")
+    )
+    return f"""{match}
+{visible}
 OPTIONAL MATCH (d)-[:start]->(s:Date)
-RETURN n.id AS id, n.label AS label, n.type AS type, d.type AS kind, d.calendar AS calendar,
+RETURN n.id AS id, n.label AS label, n.type AS type, type(e) AS field, d.type AS kind, d.calendar AS calendar,
        d.earliest_fuzzy AS earliest_fuzzy, d.earliest_strict AS earliest_strict,
        d.latest_strict AS latest_strict, d.latest_fuzzy AS latest_fuzzy,
        d.frequency AS frequency, d.weekdays AS weekdays, d.nth AS nth, d.month AS month,
@@ -485,21 +514,25 @@ LIMIT $limit
 
 
 async def dated_between(
-    label: str,
-    field: str,
+    fields: list[str],
     first: int,
     last: int,
     *,
     strict: bool,
     keys: list[str] | None,
     limit: int,
+    long_days: int,
 ) -> tuple[list[dict[str, Any]], bool]:
-    """The dates in `field` of the nodes of class `label` that might meet the days `first` to `last`, with the node
-    each is in: by the strict bounds if `strict`, else by the fuzzy ones (a superset). A repeated event is a
-    candidate if its lifetime meets the days and, when `keys` is given, it has one of them (`pattern_keys`). What
-    is deleted, or unpublished for a reader who may not see it, is left out. Returns the rows and whether there
-    were more than `limit`."""
-    query = dated_between_query(label, field)
+    """The dates in the `fields` (`Class.field`, the class the node is of) that might meet the days `first` to `last`,
+    with the node each is in and the field: by the strict bounds if `strict`, else by the fuzzy ones (a superset). A
+    repeated event is a candidate if its lifetime meets the days and, when `keys` is given, it has one of them
+    (`pattern_keys`). Left out: what is deleted, or unpublished for a reader who may not see it; a date that is only
+    unknown; and a period of `long_days` or more that covers all the days (`covering_between` has those). Returns the
+    rows and whether there were more than `limit`.
+
+    (One query for all the fields. There was one for each field of each class, some sixty for a project with many
+    kinds of statement, and a day took one to two seconds for it.)"""
+    query = dated_between_query()
     database = _database()
 
     @database.read_transaction
@@ -507,8 +540,10 @@ async def dated_between(
     async def read(tx: Transaction) -> list[dict[str, Any]]:
         result = await tx.run(
             query,
+            fields=fields,
             first=first,
             last=last,
+            long=long_days,
             strict=strict,
             keys=keys,
             limit=limit + 1,
@@ -518,3 +553,42 @@ async def dated_between(
 
     rows = await read()
     return rows[:limit], len(rows) > limit
+
+
+def covering_between_query() -> str:
+    match, visible = _dated(COVERS)
+    return f"""{match}
+{visible}
+WITH n, d, e
+ORDER BY d.earliest_strict, d.latest_strict, toLower(n.label), n.id, type(e)
+WITH collect({{id: n.id, label: n.label, type: n.type, field: type(e),
+               earliest_strict: d.earliest_strict, latest_strict: d.latest_strict}}) AS found
+RETURN size(found) AS count, found[$skip..$skip + $size] AS page
+"""
+
+
+async def covering_between(
+    fields: list[str], first: int, last: int, *, long_days: int, skip: int, size: int
+) -> tuple[int, list[dict[str, Any]]]:
+    """The periods of `long_days` or more in the `fields` that cover all the days `first` to `last` (they begin before
+    and end after): how many, and `size` of them from `skip`, the earliest to begin first"""
+    query = covering_between_query()
+    database = _database()
+
+    @database.read_transaction
+    @backend.current().timeout_from_setting("SEARCH_TIMEOUT_SECONDS", 30)
+    async def read(tx: Transaction) -> tuple[int, list[dict[str, Any]]]:
+        result = await tx.run(
+            query,
+            fields=fields,
+            first=first,
+            last=last,
+            long=long_days,
+            skip=skip,
+            size=size,
+            see_unpublished=unpublished_visible(),
+        )
+        record = await result.single()
+        return (0, []) if record is None else (record["count"], list(record["page"]))
+
+    return await read()

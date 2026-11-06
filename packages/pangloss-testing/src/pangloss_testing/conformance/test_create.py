@@ -2953,8 +2953,9 @@ async def test_a_stored_value_that_is_not_a_member_cannot_be_read(
 async def test_a_write_of_the_same_shape_is_the_same_query_text(
     db_driver, clear_database
 ):
-    """Memgraph keeps the plan of a query by its text. Names for the variables and parameters made at
-    random planned every write afresh; they are counted, so the text depends only on the shape"""
+    """Memgraph keeps the plan of a query by its text. A write is a few statements, each over a list of rows: what
+    differs from one write to the next is in the parameters, and the texts depend only on which relations the write
+    has (so a document with more in it is the same texts too)"""
     import uuid
 
     from pangloss_cypher.render_write import build_head_create_query
@@ -2966,25 +2967,31 @@ async def test_a_write_of_the_same_shape_is_the_same_query_text(
         text: str
 
     class Statement(Document):
-        who: Person
-        action: Action
+        who: list[Person]
+        actions: list[Action]
 
     initialise()
 
-    def build(label: str):
+    def build(label: str, count: int = 1):
         instance = Statement.Create(
             label=label,
-            who={"type": "Person", "id": uuid.uuid4()},
-            action={"type": "Action", "label": f"A {label}", "text": label},
+            who=[{"type": "Person", "id": uuid.uuid4()} for _ in range(count)],
+            actions=[
+                {"type": "Action", "label": f"A {label} {n}", "text": label}
+                for n in range(count)
+            ],
         )._to_db_model()
         return build_head_create_query(instance)
 
-    first, second = build("one"), build("two")
-    assert first.to_query_string() == second.to_query_string()
-    assert dict(first.params) != dict(
-        second.params
-    )  # (what differs is in the parameters)
-    assert all(name.startswith("x") and name[1:].isdigit() for name in first.params)
+    first, second, larger = build("one"), build("two"), build("three", 50)
+    texts = [statement.text for statement in first]
+    assert texts == [statement.text for statement in second]
+    assert texts == [statement.text for statement in larger]
+    # (the head, the nested documents, and the edges)
+    assert len(texts) == 3
+    # (what differs is in the parameters)
+    assert [s.params for s in first] != [s.params for s in second]
+    assert [s.rows for s in larger] == [1, 50, 100]
 
 
 async def test_a_write_that_keeps_breaking_a_uniqueness_constraint_is_a_conflict():

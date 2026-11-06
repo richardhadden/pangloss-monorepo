@@ -393,9 +393,11 @@ def nested_classes_of(
     model: type,
     operations: Operations | None = None,
     qualified_name: str = "",
+    refer_as: str | None = None,
 ) -> str:
     """The source of the nested classes to add to a model (with the `save` of `Create` and
-    `Update`, and the model's own `get`, `list` and so on, if `operations` says which kind)"""
+    `Update`, and the model's own `get`, `list` and so on, if `operations` says which kind).
+    `refer_as`: the name the model's own functions call it by, if not its own (`own_name_is_taken`)"""
     from pangloss_models.model_bases.document import Document
 
     operations = operations if operations and has_operations(model) else None
@@ -413,8 +415,15 @@ def nested_classes_of(
         if is_for_users(name)
     ]
     if operations:
-        parts.append(operations_source(model, qualified_name, operations))
+        parts.append(operations_source(model, refer_as or qualified_name, operations))
     return "\n\n".join(parts)
+
+
+def own_name_is_taken(model: type) -> bool:
+    """Whether a class made for the model has the model's name (a model called `Order` has `Order.Order`, what its
+    searches are ordered by): in the body of the model's class the name is then that class, not the model, and the
+    types of `get`, `list` and `search`, which are written there, would be of the wrong one"""
+    return model.__name__ in generated_classes(model)
 
 
 # ---------------------------------------------------------------------------
@@ -456,6 +465,21 @@ class _BuiltinList(ast.NodeTransformer):
         return node
 
 
+def declared_class_names(statements: Iterable[ast.stmt], prefix: str) -> Iterable[str]:
+    """The qualified names of the classes the source declares (in a class, and in the branches of an `if` or `try`)"""
+    for node in statements:
+        if isinstance(node, ast.ClassDef):
+            yield f"{prefix}{node.name}"
+            yield from declared_class_names(node.body, f"{prefix}{node.name}.")
+        elif isinstance(node, ast.If):
+            yield from declared_class_names([*node.body, *node.orelse], prefix)
+        elif isinstance(node, ast.Try):
+            handlers = [s for h in node.handlers for s in h.body]
+            yield from declared_class_names(
+                [*node.body, *handlers, *node.orelse], prefix
+            )
+
+
 class Stubifier:
     """Makes the stub of a module from its source: the same declarations, without
     function bodies, and with nested classes added to the models"""
@@ -465,17 +489,99 @@ class Stubifier:
         renderer: TypeRenderer,
         models: dict[str, type],
         operations: Operations | None = None,
+        runtime_module: types.ModuleType | None = None,
     ) -> None:
         self.renderer = renderer
         self.operations = operations
         # The models of the module, by qualified name
         self.models = models
+        # Those of them the source has no class for: made by something else that the module declares (the entity of
+        # a typology of `pangloss-typology`, `RoleType`). Written after the rest, as if they had been declared
+        self.made: dict[str, type] = {}
+        self.runtime_module = runtime_module
         # The source to put in place of a placeholder statement (`ast.unparse` does
         # not keep comments, so the nested classes are put in as text afterwards)
         self.insertions: dict[str, str] = {}
+        # Another name for a model, at the top of the module, for its own functions (`own_name_is_taken`)
+        self.aliases: dict[str, str] = {}
+
+    def nested(self, model: type, qualified_name: str) -> str:
+        refer_as = None
+        if self.operations and has_operations(model) and own_name_is_taken(model):
+            refer_as = "_pg_model_" + qualified_name.replace(".", "_")
+            self.aliases[refer_as] = qualified_name
+        return nested_classes_of(
+            self.renderer, model, self.operations, qualified_name, refer_as
+        )
 
     def module(self, tree: ast.Module) -> ast.Module:
-        return ast.Module(body=self.body(tree.body, ""), type_ignores=[])
+        declared = set(declared_class_names(tree.body, ""))
+        self.made = {
+            name: model
+            for name, model in self.models.items()
+            # (not a generic model with its parameters filled in, `InRole[Person]`: that is written as a type)
+            if name not in declared and name.isidentifier()
+        }
+        body = self.body(tree.body, "")
+        body.extend(self.made_class(name, model) for name, model in self.made.items())
+        return ast.Module(body=body, type_ignores=[])
+
+    def made_class(self, name: str, model: type) -> ast.ClassDef:
+        """A model the source has no class for, with the parents that can be named and the classes made for it"""
+        bases = [
+            ast.parse(written, mode="eval").body
+            for base in model.__bases__
+            if (written := self.renderer.class_name(base)) is not None
+        ]
+        body: list[ast.stmt] = []
+        if source := self.nested(model, name):
+            placeholder = f"__nested_classes_of_{len(self.insertions)}__"
+            self.insertions[placeholder] = source
+            body.append(ast.Expr(ast.Name(placeholder)))
+        return ast.ClassDef(
+            name=name,
+            bases=bases,
+            keywords=[],
+            body=body or [ELLIPSIS],
+            decorator_list=[],
+            type_params=[],
+        )
+
+    def made_attributes(
+        self, qualified_name: str, body: list[ast.stmt]
+    ) -> list[ast.stmt]:
+        """For a class of the source that holds a made model as an attribute (`RoleTypology.Type`): the attribute, as
+        that class"""
+        found: typing.Any = self.runtime_module
+        for part in qualified_name.split("."):
+            found = getattr(found, part, None)
+        if not isinstance(found, type) or not self.made:
+            return []
+        set_already = {
+            target.id
+            for statement in body
+            for target in (
+                statement.targets
+                if isinstance(statement, ast.Assign)
+                else [statement.target]
+                if isinstance(statement, ast.AnnAssign)
+                else []
+            )
+            if isinstance(target, ast.Name)
+        }
+        made = {id(model): name for name, model in self.made.items()}
+        return [
+            ast.AnnAssign(
+                target=ast.Name(attribute),
+                annotation=ast.parse(
+                    f"typing.ClassVar[type[{made[id(value)]}]]", mode="eval"
+                ).body,
+                value=None,
+                simple=1,
+            )
+            for attribute, value in vars(found).items()
+            if id(value) in made and attribute not in set_already
+        ]
 
     def body(self, statements: Iterable[ast.stmt], prefix: str) -> list[ast.stmt]:
         result: list[ast.stmt] = []
@@ -529,15 +635,14 @@ class Stubifier:
         qualified_name = f"{prefix}{node.name}"
         body = self.body(node.body, f"{qualified_name}.")
         if model := self.models.get(qualified_name):
-            if source := nested_classes_of(
-                self.renderer, model, self.operations, qualified_name
-            ):
+            if source := self.nested(model, qualified_name):
                 placeholder = f"__nested_classes_of_{len(self.insertions)}__"
                 self.insertions[placeholder] = source
                 body.append(ast.Expr(ast.Name(placeholder)))
         if self.operations and qualified_name in self.models:
             # (the model has a method `list`, which a checker would take for the type)
             body = [self.unshadowed(statement) for statement in body]
+        body.extend(self.made_attributes(qualified_name, body))
         node.body = body or [ELLIPSIS]
         return node
 
@@ -564,11 +669,17 @@ def stub_for_module(
     tree = ast.parse(path.read_text())
 
     renderer = TypeRenderer(module.__name__, names)
-    stubifier = Stubifier(renderer, {m.__qualname__: m for m in models}, operations)
+    stubifier = Stubifier(
+        renderer, {m.__qualname__: m for m in models}, operations, module
+    )
     stub = stubifier.module(tree)
     code = ast.unparse(ast.fix_missing_locations(stub))
     for placeholder, source in stubifier.insertions.items():
         code = insert_source(code, placeholder, source)
+    if stubifier.aliases:
+        code += "\n\n" + "\n".join(
+            f"{alias} = {name}" for alias, name in stubifier.aliases.items()
+        )
 
     import_lines = renderer.import_lines()
     if operations:

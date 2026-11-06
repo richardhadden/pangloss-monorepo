@@ -479,3 +479,160 @@ async def test_a_day_or_month_with_more_dates_than_the_limit_says_so(
     assert (await service.month(J, 1500, 3)).truncated
     monkeypatch.setattr(service, "MONTH_LIMIT", 5)
     assert not (await service.day(parse_day("J1500-03-02"), J)).truncated
+
+
+def period(start, end):
+    return {"type": "JulianPeriod", "start": start, "end": end}
+
+
+@no_type_check
+async def test_a_date_that_is_only_unknown_is_in_no_view(
+    clear_database, clear_calendar
+):
+    """`UnknownDate` says nothing of when: its bounds are the whole span of years, and it was on every day"""
+    Factoid, Mass, FeastDay = models()
+    await initialise_database()
+    await Factoid.Create(label="exact", when=exact(1500, 3, 2)).save()
+    await Factoid.Create(label="unknown", when={"type": "JulianUnknownDate"}).save()
+    # (a period with one end unknown still says when it began: it stays)
+    await Factoid.Create(
+        label="from the first",
+        when=period(exact(1500, 3, 1), {"type": "JulianUnknownDate"}),
+    ).save()
+
+    day = await service.day(parse_day("J1500-03-01"), J)
+    assert labels(day.hits) == ["from the first"] and day.covering == 0
+    month = await service.month(J, 1500, 3)
+    assert [s.ref.label for s in month.spanning] == ["from the first"]
+    assert month.roughly == [] and month.between == [] and month.covering == 0
+    assert {d.day.julian: labels(d.hits) for d in month.days if d.hits} == {
+        "J1500-03-02": ["exact"]
+    }
+    year = await service.year_report(J, 1500)
+    # (January and February have nothing; March the exact day and the period; the rest the period)
+    assert [m.count for m in year.months] == [0, 0, 2] + [1] * 9
+    # a day later in the period is a day that it covers (it began before, and has no known end)
+    later = await service.day(parse_day("J1500-03-02"), J)
+    assert labels(later.hits) == ["exact"] and later.covering == 1
+    found = await service.covering(parse_day("J1500-03-02"), parse_day("J1500-03-02"))
+    assert [s.ref.label for s in found.results] == ["from the first"]
+
+
+@no_type_check
+async def test_long_periods_that_cover_the_view_are_counted_and_read_apart(
+    clear_database, clear_calendar, monkeypatch
+):
+    from pangloss_calendar import settings as calendar_settings
+
+    Factoid, Mass, FeastDay = models()
+    await initialise_database()
+    # (an exact day, a range, a period of the year 1500 and others: `make_documents`)
+    await make_documents(Factoid)
+    for label, when in {
+        "life": period(exact(1480, 1, 1), exact(1520, 12, 31)),
+        "office": period(exact(1490, 6, 1), exact(1510, 6, 1)),
+        "term": period(exact(1499, 1, 1), exact(1501, 12, 31)),
+        # (long, but it begins in the month, and on a day of it: a date of them like any other)
+        "begins in March": period(exact(1500, 3, 2), exact(1520, 12, 31)),
+    }.items():
+        await Factoid.Create(label=label, when=when).save()
+    await Mass.Create(
+        label="chantry", when=period(exact(1470, 1, 1), exact(1530, 1, 1))
+    ).save()
+    second = parse_day("J1500-03-02")
+
+    day = await service.day(second, J)
+    assert day.covering == 4 and not day.truncated
+    # (the period of the year 1500 covers the day too, but is not long: it is still a date of the day)
+    assert labels(day.hits, "stated") == ["begins in March", "exact", "period"]
+    month = await service.month(J, 1500, 3)
+    assert month.covering == 4
+    assert [s.ref.label for s in month.spanning] == ["period", "begins in March"]
+    # (and the year counts every month's dates without them)
+    year = await service.year_report(J, 1500)
+    assert [m.count for m in year.months][0] == 1
+
+    # read a page at a time, the earliest to begin first, of every field
+    first = await service.covering(second, second, page=1, page_size=3)
+    assert (first.count, first.page, first.page_size) == (4, 1, 3)
+    assert [(s.ref.label, s.ref.type, s.ref.field) for s in first.results] == [
+        ("chantry", "Mass", "when"),
+        ("life", "Factoid", "when"),
+        ("office", "Factoid", "when"),
+    ]
+    assert first.results[0].first.julian == "J1470-01-01"
+    assert first.results[0].last.julian == "J1530-01-01"
+    rest = await service.covering(second, second, page=2, page_size=3)
+    assert rest.count == 4 and [s.ref.label for s in rest.results] == ["term"]
+    assert (await service.covering(second, second, page=3, page_size=3)).results == []
+    # of the whole month, the same four (the one that begins in it is not one)
+    first_of_month, last_of_month = parse_day("J1500-03-01"), parse_day("J1500-03-31")
+    whole = await service.covering(first_of_month, last_of_month)
+    assert whole.count == 4 and len(whole.results) == 4
+    # of three years, only those that begin before them and end after
+    wide = await service.covering(parse_day("J1499-01-01"), parse_day("J1501-12-31"))
+    assert [s.ref.label for s in wide.results] == ["chantry", "life", "office"]
+    with pytest.raises(ValueError):
+        await service.covering(last_of_month, first_of_month)
+
+    # the route, by a day's name or its number
+    app = FastAPI()
+    app.include_router(router)
+    client = httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    )
+    got = await client.get(
+        f"/api/calendar/covering?first={first_of_month}&last=J1500-03-31&page_size=2"
+    )
+    assert got.status_code == 200
+    body = got.json()
+    assert body["count"] == 4 and body["page"] == 1 and body["page_size"] == 2
+    assert [s["ref"]["label"] for s in body["results"]] == ["chantry", "life"]
+    assert body["first"]["julian"] == "J1500-03-01"
+    one = (await client.get("/api/calendar/covering?first=J1500-03-02")).json()
+    assert one["count"] == 4 and one["last"]["julian"] == "J1500-03-02"
+    assert (await client.get("/api/calendar/day/J1500-03-02")).json()["covering"] == 4
+    assert (
+        await client.get("/api/calendar/covering?first=J1500-03-31&last=J1500-03-01")
+    ).status_code == 422
+    assert (
+        await client.get("/api/calendar/covering?first=J1500-03-02&page_size=501")
+    ).status_code == 422
+
+    # `CALENDAR_LONG_DAYS` says what is long: with none long, they are dates of the day again
+    monkeypatch.setattr(calendar_settings, "long_days", lambda settings=None: 10**9)
+    day = await service.day(second, J)
+    assert day.covering == 0 and labels(day.hits, "stated") == [
+        "begins in March",
+        "chantry",
+        "exact",
+        "life",
+        "office",
+        "period",
+        "term",
+    ]
+
+
+@no_type_check
+async def test_a_day_is_read_with_one_query_for_all_the_fields(
+    clear_database, clear_calendar, monkeypatch
+):
+    """(There was a query for each field of each class: some sixty for a project with many kinds of statement)"""
+    Factoid, Mass, FeastDay = models()
+    await initialise_database()
+    await Factoid.Create(label="a statement", when=exact(1500, 3, 2)).save()
+    await Mass.Create(label="a mass", when=exact(1500, 3, 2)).save()
+    asked = []
+    dated_between = graph.dated_between
+
+    async def counted(fields, *args, **kwargs):
+        asked.append(fields)
+        return await dated_between(fields, *args, **kwargs)
+
+    monkeypatch.setattr(graph, "dated_between", counted)
+    day = await service.day(parse_day("J1500-03-02"), J)
+    assert [(h.ref.label, h.ref.type) for h in day.hits] == [
+        ("a mass", "Mass"),
+        ("a statement", "Factoid"),
+    ]
+    assert asked == [["Factoid.when", "Mass.when"]]

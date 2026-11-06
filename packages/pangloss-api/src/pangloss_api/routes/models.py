@@ -376,6 +376,10 @@ def build_router(model: type[Document | Entity]) -> APIRouter:
                         reason="This is kept in step with something outside Pangloss, so it cannot be deleted "
                         f"here until '{protection.delete_only_if}' is true.",
                     )
+            if protection.delete_refused:
+                reason = await called(protection.delete_refused(model, id))
+                if reason:
+                    return Deletable(deletable=False, reason=reason)
             check = await called(storage_of().operations.check_deletable(model, id))
             return Deletable(
                 deletable=check.deletable,
@@ -463,7 +467,12 @@ def build_router(model: type[Document | Entity]) -> APIRouter:
             status_code=status.HTTP_204_NO_CONTENT,
             dependencies=logged_in,
             operation_id=f"delete_{name}",
-            responses={409: {"description": "An entity that is referred to"}},
+            responses={
+                409: {
+                    "description": "An entity that is referred to (it is marked for deletion), or one that the "
+                    "rule of its package refuses to delete (nothing is changed)"
+                }
+            },
         )
         async def delete_item(id: ChangeId):  # type: ignore[valid-type]
             if protection.delete_only_if:
@@ -476,6 +485,11 @@ def build_router(model: type[Document | Entity]) -> APIRouter:
                         detail=f"A {name} is kept in step with something outside Pangloss, so it cannot be "
                         f"deleted here until '{protection.delete_only_if}' is true",
                     )
+            if protection.delete_refused:
+                # (the rule of the package the model is of: refused, and nothing marked)
+                reason = await called(protection.delete_refused(model, id))
+                if reason:
+                    raise HTTPException(status.HTTP_409_CONFLICT, detail=reason)
             await called(model.delete(id))  # type: ignore[arg-type]
             return Response(status_code=status.HTTP_204_NO_CONTENT)
 

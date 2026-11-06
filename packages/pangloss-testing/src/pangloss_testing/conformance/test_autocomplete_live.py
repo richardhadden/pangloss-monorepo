@@ -248,3 +248,49 @@ async def test_with_nothing_typed_the_entities_most_referred_to_come_first(
     assert labels(second) == ["Carol"]
     assert second.previous_page == 1
     assert labels(await Entity.autocomplete(types=[Place])) == ["Atlanta"]
+
+
+@no_type_check
+async def test_an_entity_is_found_by_a_word_that_is_in_many_labels_of_other_things(
+    clear_database, db_driver
+):
+    """The index of labels is of documents and what is in them too, and a text index gives a first few hits (Memgraph:
+    1000) unless it is asked for more: a person was not found by a surname that 1000 statements had in their labels"""
+    from pangloss_testing.conformance.helpers import run
+
+    _, Person, *_ = models()
+    run(
+        db_driver,
+        """
+        UNWIND range(1, 1100) AS i
+        CREATE (:PGIndexableNode {
+            id: 'note-' + toString(i), type: 'Note',
+            label: 'A note on Smith ' + toString(i), label_folded: 'a note on smith ' + toString(i)
+        })
+        """,
+    )
+    await Person.Create(label="Anna Smith").save()
+    await Person.Create(label="Smith of the Notes").save()
+
+    found = await Person.autocomplete("smith")
+    assert sorted(labels(found)) == ["Anna Smith", "Smith of the Notes"]
+    assert labels(await Person.autocomplete("smith note")) == ["Smith of the Notes"]
+
+
+@no_type_check
+async def test_a_very_long_word_finds_nothing_and_is_not_an_error(clear_database):
+    """(Memgraph's index refused the pattern of a word of some 490 characters: an internal error, for a pasted line of
+    text with no spaces)"""
+    _, Person, *_ = models()
+    long_but_a_word = "pneumonoultramicroscopicsilicovolcanoco"  # (39 letters)
+    await Person.Create(label=f"John {long_but_a_word}").save()
+
+    for text in ("a" * 500, "john " + "b" * 2000):
+        assert (await Person.autocomplete(text)).count == 0
+        assert (await Person.list(search_terms=text)).count == 0
+        assert (await Person.list(search_terms=text, deep_search=True)).count == 0
+    # (a long word that is a word is found)
+    assert labels(await Person.autocomplete(long_but_a_word)) == [
+        f"John {long_but_a_word}"
+    ]
+    assert (await Person.list(search_terms=long_but_a_word)).count == 1
