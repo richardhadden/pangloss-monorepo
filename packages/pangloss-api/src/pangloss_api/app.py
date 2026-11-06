@@ -27,7 +27,7 @@ from pangloss_api.background import Supervisor
 from pangloss_api.dependencies import set_visibility
 from pangloss_api.errors import ServerErrorResponder, register_error_handlers
 from pangloss_api.migration_watch import MigrationGate, MigrationWatch
-from pangloss_api.openapi import make_openapi_in_a_thread
+from pangloss_api.openapi import add_rapidoc, make_openapi_in_a_thread
 from pangloss_api.query import QueryNames, known_parameters
 from pangloss_api.request_log import RequestLogger
 from pangloss_api.routes import autocomplete, references, search, users
@@ -239,6 +239,8 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title=settings.PROJECT_NAME,
         lifespan=lifespan,
+        # (RapiDoc instead: see `add_rapidoc`)
+        docs_url=None,
         dependencies=[Depends(set_visibility), Depends(known_parameters)],
     )
     app.state.startup_hooks = []
@@ -268,4 +270,5 @@ def create_app() -> FastAPI:
         app.include_router(build_router(model))
     # (the document of all those routes takes seconds to make for a large project: not on the event loop)
     make_openapi_in_a_thread(app)
+    add_rapidoc(app)
     return app

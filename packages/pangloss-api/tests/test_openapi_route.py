@@ -18,8 +18,14 @@ def test_the_document_is_as_fastapi_makes_it(settings):
     document = client.get("/openapi.json").json()
     assert "/api/Person" in document["paths"]
     assert document == app.openapi()
-    # (and the page that loads it is still there)
-    assert client.get("/docs").status_code == 200
+    # (and the pages that load it are still there: /docs is RapiDoc, not Swagger UI)
+    docs = client.get("/docs")
+    assert docs.status_code == 200
+    assert '<rapi-doc spec-url="/openapi.json"' in docs.text
+    assert "swagger" not in docs.text.lower()
+    assert client.get("/redoc").status_code == 200
+    # (neither is in the document)
+    assert "/docs" not in document["paths"]
 
 
 def test_making_it_does_not_stop_other_requests(settings):

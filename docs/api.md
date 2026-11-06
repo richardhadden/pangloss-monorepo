@@ -164,7 +164,7 @@ The response has the entity's `id`. **Everything else is only ever at an id**: l
 
 The URLs of an entity are returned as a list, `urls`, in its `HeadView` and `EditView`. To change them, send `urls` in the update body (the `EditView` can be sent back changed): the list replaces the entity's URLs, so a URL left out is removed, and `[]` removes them all; if `urls` is not in the body they are left as they are. A URL that belongs to another entity (even a deleted one) is refused with 409.
 
-The OpenAPI document (`/openapi.json`, with the interactive `/docs`) describes every route, with the schemas of the models. For a large project it is megabytes (2.5 MB for 96 classes; about 100 KB compressed) and takes seconds to make the first time it is asked for: it is made in a thread (`pangloss_api/openapi.py`), once, so the server goes on answering other requests meanwhile, and is kept from then on.
+The OpenAPI document (`/openapi.json`, with the interactive `/docs`, and `/redoc`) describes every route, with the schemas of the models. For a large project it is megabytes (2.5 MB for 96 classes; about 100 KB compressed) and takes seconds to make the first time it is asked for: it is made in a thread (`pangloss_api/openapi.py`), once, so the server goes on answering other requests meanwhile, and is kept from then on. `/docs` is [RapiDoc](https://rapidocweb.com) (`add_rapidoc`, a page that loads it from unpkg) rather than FastAPI's Swagger UI, which does not get as far as listing the routes of the smoketest project (840 operations) in three minutes; RapiDoc lists them in under a second once the document is made, and opens an operation in one or two.
 
 ## Routes from installed apps
 
