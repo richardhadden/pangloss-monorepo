@@ -615,7 +615,7 @@ Not committed yet.
   the second 0.02 s; 2.68 MB, 104 KB on the wire with gzip.
 - Tests: `pangloss-api/tests/test_openapi_route.py` (new, 2). `docs/api.md`.
 - Not changed: the time it takes to make (pydantic's JSON schemas of 1,014 models).
-- Later (2026-11-06, not committed): `/docs` is RapiDoc (`add_rapidoc` in `pangloss_api/openapi.py`, a page that
+- Later (2026-11-06, fbb87a0): `/docs` is RapiDoc (`add_rapidoc` in `pangloss_api/openapi.py`, a page that
   loads rapidoc@12.0.0 from unpkg; FastAPI's `docs_url=None`; `/redoc` unchanged). Swagger UI had not listed 50 of
   the 840 operations after 180 s; RapiDoc lists them all in 0.5 s (document already made) and opens `POST
   /api/Factoid`, with its example and schema, in 1.8 s; no page errors. Test: the first in `test_openapi_route.py`.
