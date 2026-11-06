@@ -52,6 +52,39 @@ def test_create_asks_for_what_is_missing(project):
     assert "[admin]" in invoke("users", "list").output
 
 
+def test_create_takes_the_username_as_the_other_commands_do(project):
+    """`pangloss users create admin` only said "Username: Aborted.": the name was not taken, and not refused either"""
+    result = invoke(
+        "users",
+        "create",
+        "ada",
+        "--email",
+        "ada@example.com",
+        "--password",
+        "correct horse",
+        "--admin",
+    )
+    assert result.exit_code == 0, result.output
+    assert "Created user 'ada'" in result.output
+    assert "Username" not in result.output
+    assert "ada  ada@example.com  [admin]" in invoke("users", "list").output
+    # (the rest is still asked for, after the name)
+    asked = invoke(
+        "users",
+        "create",
+        "bob",
+        input="bob@example.com\ncorrect horse\ncorrect horse\nn\n",
+    )
+    assert asked.exit_code == 0, asked.output
+    assert "Email" in asked.output and "Username" not in asked.output
+    # two names that differ
+    both = invoke("users", "create", "carol", "--username", "caroline")
+    assert both.exit_code == 1 and "Two usernames" in both.output
+    # with nothing to read the answers from, it says what it lacks
+    nothing = invoke("users", "create", "dave", input="")
+    assert nothing.exit_code == 1 and "Email" in nothing.output
+
+
 def test_create_reports_errors_without_a_traceback(project):
     assert create().exit_code == 0
 

@@ -6,7 +6,8 @@ what fails and why. It needs the models initialised and the database connected.
 """
 
 import asyncio
-from collections.abc import Callable
+import contextlib
+from collections.abc import Callable, Generator
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -20,6 +21,35 @@ PAGE_SIZE = 100
 # with sixteen, and about 460 with 32 or 64. (On a small database of small documents, concurrency
 # was slower: the time was in building the models. It is not, when the documents are large.)
 CONCURRENCY = 16
+# While they are read at once, a read is only "slow" (to a backend that warns of slow reads) past this many
+# milliseconds
+QUIET_MS = 10_000
+
+
+@contextlib.contextmanager
+def reading_many_at_once(concurrency: int) -> Generator[None]:
+    """For the length of the check, a backend that warns of slow reads warns only of very slow ones.
+
+    Sixteen reads at once each wait for the others, so each takes far longer than it would alone (500 ms, on a
+    database where one alone takes 7): a Cypher backend, which logs a warning for a read over `SLOW_QUERY_MS`,
+    logged one for nearly every item, hundreds of lines that buried the one line of result. Its threshold
+    (`Database.slow_query_threshold`) is raised to `QUIET_MS` and put back. A backend with no such thing is left
+    alone."""
+    database = None
+    if concurrency > 1:
+        with contextlib.suppress(Exception):
+            from pangloss_core import backend
+
+            database = backend.current().database()
+    if database is None or not hasattr(database, "slow_query_threshold"):
+        yield
+        return
+    before = database.slow_query_threshold
+    database.slow_query_threshold = max(before or 0, QUIET_MS)
+    try:
+        yield
+    finally:
+        database.slow_query_threshold = before
 
 
 @dataclass
@@ -96,28 +126,29 @@ async def check_data(
                 )
         return None
 
-    for model in wanted:
-        page, count = 1, 0
-        while True:
-            listing: Any = await model.list(page_number=page, page_size=PAGE_SIZE)  # type: ignore[attr-defined]
-            to_read = []
-            for reference in listing.results:
-                node_id = str(reference.id)
-                if node_id in seen:
-                    continue  # (a node is listed with each model above it)
-                seen.add(node_id)
-                count += 1
-                if limit is not None and count > limit:
+    with reading_many_at_once(concurrency):
+        for model in wanted:
+            page, count = 1, 0
+            while True:
+                listing: Any = await model.list(page_number=page, page_size=PAGE_SIZE)  # type: ignore[attr-defined]
+                to_read = []
+                for reference in listing.results:
+                    node_id = str(reference.id)
+                    if node_id in seen:
+                        continue  # (a node is listed with each model above it)
+                    seen.add(node_id)
+                    count += 1
+                    if limit is not None and count > limit:
+                        break
+                    to_read.append(reference)
+                found = await asyncio.gather(
+                    *(read(model, reference) for reference in to_read)
+                )
+                result.checked += len(to_read)
+                result.problems += [problem for problem in found if problem is not None]
+                if (limit is not None and count > limit) or listing.next_page is None:
                     break
-                to_read.append(reference)
-            found = await asyncio.gather(
-                *(read(model, reference) for reference in to_read)
-            )
-            result.checked += len(to_read)
-            result.problems += [problem for problem in found if problem is not None]
-            if (limit is not None and count > limit) or listing.next_page is None:
-                break
-            page = listing.next_page
-        if progress:
-            progress(model.__name__, count)
+                page = listing.next_page
+            if progress:
+                progress(model.__name__, count)
     return result

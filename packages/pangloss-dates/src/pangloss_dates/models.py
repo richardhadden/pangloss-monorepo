@@ -186,6 +186,26 @@ class UnknownDate(Date):
         )
 
 
+def _spanning(
+    first: Bounds, first_precision: Precision, last: Bounds, last_precision: Precision
+) -> Bounds:
+    """From one date to another (`spanning_bounds`). When they are the wrong way round only because an end that is
+    open (not known, or not yet come) is taken to be by a year of the settings, the error says which setting: "the
+    range would be empty" of a period from 1605 that is still going on said nothing of `DATES_OPEN_END_YEAR`"""
+    if first.earliest_strict > last.latest_strict:
+        if last_precision in (Precision.ONGOING, Precision.UNKNOWN):
+            raise ValueError(
+                f"it starts after {config.open_end_year()}, and an end that is not known or has not come is taken to "
+                f"be by the end of that year (the setting DATES_OPEN_END_YEAR): set DATES_OPEN_END_YEAR to a later year"
+            )
+        if first_precision == Precision.UNKNOWN:
+            raise ValueError(
+                f"it ends before {config.earliest_year()}, and a start that is not known is taken to be no earlier "
+                f"than that year (the setting DATES_EARLIEST_YEAR): set DATES_EARLIEST_YEAR to an earlier year"
+            )
+    return spanning_bounds(first, last)
+
+
 def _check_ends_in_calendar(date, *ends) -> None:
     for end in ends:
         if end.calendar != date.calendar:
@@ -213,7 +233,7 @@ class DateRange(Date):
             raise ValueError(
                 "the ends of a range cannot both be unknown: say what is known of one of them (or use UnknownDate)"
             )
-        return spanning_bounds(first, last), Precision.RANGE
+        return _spanning(first, first_precision, last, last_precision), Precision.RANGE
 
     @classmethod
     def sort_days(cls, date, bounds: Bounds) -> tuple[int, int]:
@@ -241,7 +261,7 @@ def _span_of_lifetime(date) -> Bounds:
         raise ValueError(
             "the start and the end cannot both be unknown: say what is known of one of them"
         )
-    return spanning_bounds(start, end)
+    return _spanning(start, start_precision, end, end_precision)
 
 
 def _sort_a_lifetime(cls, date, bounds: Bounds) -> tuple[int, int]:

@@ -273,6 +273,9 @@ class UnknownDate(Date):
         end_sort_day: pangloss_models.search.Var[int] | pangloss_models.search_where.Compare[int] | None = ...
         def __init__(self, *, is_: pangloss_models.search.Var[UnknownDate] | None = ..., all_: list[UnknownDate.Where] | None = ..., any_of_: list[UnknownDate.Where] | None = ..., not_: UnknownDate.Where | None = ..., any_: pangloss_models.search_where.AnyRel | None = ..., calendar: pangloss_models.search.Var[pangloss_dates.calendar.Calendar] | pangloss_models.search_where.Choice[pangloss_dates.calendar.Calendar] | None = ..., source_text: pangloss_models.search.Var[str] | pangloss_models.search_where.Text | None = ..., sort_by: pangloss_models.search.Var[pangloss_dates.bounds.SortBy] | pangloss_models.search_where.Choice[pangloss_dates.bounds.SortBy] | None = ..., precision: pangloss_models.search.Var[pangloss_dates.bounds.Precision] | pangloss_models.search_where.Choice[pangloss_dates.bounds.Precision] | None = ..., earliest_fuzzy: pangloss_models.search.Var[int] | pangloss_models.search_where.Compare[int] | None = ..., earliest_strict: pangloss_models.search.Var[int] | pangloss_models.search_where.Compare[int] | None = ..., latest_strict: pangloss_models.search.Var[int] | pangloss_models.search_where.Compare[int] | None = ..., latest_fuzzy: pangloss_models.search.Var[int] | pangloss_models.search_where.Compare[int] | None = ..., sort_day: pangloss_models.search.Var[int] | pangloss_models.search_where.Compare[int] | None = ..., end_sort_day: pangloss_models.search.Var[int] | pangloss_models.search_where.Compare[int] | None = ...) -> None: ...  # type: ignore
 
+def _spanning(first: Bounds, first_precision: Precision, last: Bounds, last_precision: Precision) -> Bounds:
+    ...
+
 def _check_ends_in_calendar(date, *ends) -> None:
     ...
 

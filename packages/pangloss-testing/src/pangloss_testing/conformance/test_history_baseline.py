@@ -95,6 +95,42 @@ async def test_data_from_before_history_gets_a_baseline_once(
 
 
 @no_type_check
+async def test_a_document_inside_another_gets_no_baseline_of_its_own(
+    db_driver, clear_database, history
+):
+    """A part of a statement is listed with the parts, but is written with its statement and has no versions of
+    its own: a dry run said that each "would be recorded" (19,191 statements of 8,795 factoids), and a run would
+    have written a record for each"""
+    Person, Part, Statement = models()
+    john = await Person.Create(label="John").save()
+    s = await Statement.Create(
+        label="S",
+        text="one",
+        about=about(john),
+        parts=[
+            {"type": "Part", "label": "P1", "text": "a"},
+            {"type": "Part", "label": "P2", "text": "b"},
+        ],
+    ).save()
+    history.install()
+    parts = (await Statement.get(s.id)).parts
+    assert len(parts) == 2
+
+    dry = await make_baseline(history.store, POSITION, dry_run=True)
+    assert (dry.looked_at, dry.recorded, dry.up_to_date, dry.failed) == (2, 2, 0, [])
+    made = await make_baseline(history.store, POSITION)
+    assert (made.looked_at, made.recorded) == (2, 2)
+    assert history.store.latest_version(john.id) == 1
+    assert history.store.latest_version(s.id) == 1
+    for part in parts:
+        assert history.store.latest_version(part.id) is None
+    # (the statement's record has its parts in it)
+    assert "P2" in str(history.store.get(s.id, 1).data())
+    again = await make_baseline(history.store, POSITION, dry_run=True)
+    assert (again.looked_at, again.recorded, again.up_to_date) == (2, 0, 2)
+
+
+@no_type_check
 async def test_a_baseline_is_restored_and_edits_after_it_are_recorded(
     db_driver, clear_database, history
 ):

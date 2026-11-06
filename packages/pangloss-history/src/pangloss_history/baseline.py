@@ -48,6 +48,13 @@ def models_with_history() -> list[Any]:
     ]
 
 
+def is_head(item: Any) -> bool:
+    """Whether something listed is a head node: a list of a document class has the documents inside others too (a
+    statement of a factoid), which are written with the one they are in and have no versions of their own. (What is
+    listed says so in its `meta`; an entity always is one)"""
+    return getattr(getattr(item, "meta", None), "is_head_node", True)
+
+
 async def head_nodes(model: Any) -> Iterable[Any]:
     """The head nodes of exactly this model (not of its subclasses, which are listed as themselves)"""
     found = []
@@ -55,7 +62,7 @@ async def head_nodes(model: Any) -> Iterable[Any]:
     while True:
         listed = await called(model.list(page_number=page, page_size=PAGE_SIZE))
         for item in listed.results:
-            if item.type == model.__name__ and getattr(item, "is_head_node", True):
+            if item.type == model.__name__ and is_head(item):
                 found.append(item)
         if not listed.next_page:
             return found

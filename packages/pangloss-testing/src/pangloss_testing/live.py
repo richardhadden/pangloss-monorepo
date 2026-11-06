@@ -5,6 +5,7 @@
 (They are not a plugin: a plugin's fixtures would be there for every test of a session, these only below the conftest that
 imports them.)"""
 
+import os
 import typing
 from collections.abc import Generator
 
@@ -94,6 +95,32 @@ def assure_container(backend_under_test: BackendUnderTest):
         yield  # (one is there already)
 
 
+# More nodes than the tests ever leave behind: a database with as many is somebody's data
+REAL_DATA_NODES = 20_000
+
+
+def refuse_to_empty_real_data(driver: neo4j.Driver, uri: str, database: str) -> None:
+    """Stop the run if the database the tests are about to empty looks like real data.
+
+    The tests empty the database they are pointed at, on the port a new project's settings have by default
+    (7687): a project with data on that port, on the machine the tests are run on, would lose it. This catches a
+    database with a great deal in it (more than `REAL_DATA_NODES` nodes), which is the loss that cannot be made
+    good; a small one is not told from what a test run left. `PANGLOSS_TEST_WIPE=1` says to go ahead."""
+    if os.environ.get("PANGLOSS_TEST_WIPE") == "1":
+        return
+    records, _, _ = driver.execute_query(
+        "MATCH (n) RETURN count(n) AS nodes", database_=database
+    )
+    nodes = records[0]["nodes"]
+    if nodes > REAL_DATA_NODES:
+        pytest.exit(
+            f"The database on {uri} has {nodes:,} nodes: that looks like a project's data, and the tests would "
+            "empty it. Give the project's database another port (the tests use this one), or, if it really is "
+            "the test database, run again with PANGLOSS_TEST_WIPE=1.",
+            returncode=3,
+        )
+
+
 @pytest.fixture(scope="session")
 def db_driver(
     backend_under_test: BackendUnderTest, assure_container
@@ -103,6 +130,9 @@ def db_driver(
     )
     try:
         driver.verify_connectivity()
+        refuse_to_empty_real_data(
+            driver, backend_under_test.uri, backend_under_test.database
+        )
         yield driver
     finally:
         driver.close()

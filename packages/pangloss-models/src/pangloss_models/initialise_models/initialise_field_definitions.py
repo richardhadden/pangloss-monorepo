@@ -1,6 +1,7 @@
 from collections.abc import Iterable
+from copy import copy
 from inspect import isclass
-from types import UnionType
+from types import NoneType, UnionType
 from typing import (
     TYPE_CHECKING,
     Annotated,
@@ -55,6 +56,7 @@ from pangloss_models.model_bases.reified_relation import (
 from pangloss_models.model_bases.semantic_space import SemanticSpace
 from pangloss_models.model_bases.trait import NonHeritableTrait, Trait
 from pangloss_models.utils import (
+    annotation_is_optional,
     check_enum_values_in,
     extract_validators,
     flatten,
@@ -1012,6 +1014,33 @@ def define_field(
     return None
 
 
+def with_optional_lifted(field_info: FieldInfo) -> FieldInfo:
+    """`Annotated[int, Ge(1)] | None` read as `Annotated[int | None, Ge(1)]`.
+
+    Both say "a whole number of at least 1, or nothing", and the first is the natural way to write it. Pydantic keeps
+    what is in the `Annotated` with the member of the union, not with the field, where the definitions look for the
+    validators and markers: so the type was refused as unsupported, though each half of it is supported."""
+    annotation = field_info.annotation
+    if not annotation_is_optional(annotation):
+        return field_info
+    members = [member for member in get_args(annotation) if member is not NoneType]
+    if len(members) != 1 or get_origin(members[0]) is not Annotated:
+        return field_info
+    inner, *metadata = get_args(members[0])
+    lifted = copy(field_info)
+    lifted.annotation = inner | None
+    lifted.metadata = []
+    for item in metadata:
+        # (a `Field(...)` in the `Annotated` holds its own: `Field(ge=1, description="...")`)
+        if isinstance(item, FieldInfo):
+            lifted.metadata.extend(item.metadata)
+            lifted.description = lifted.description or item.description
+        else:
+            lifted.metadata.append(item)
+    lifted.metadata.extend(field_info.metadata)
+    return lifted
+
+
 def initialise_field_definitions(model: type[_DeclaredClass]):
     """Initialise and register field definitions for the model.
 
@@ -1021,9 +1050,10 @@ def initialise_field_definitions(model: type[_DeclaredClass]):
     """
     check_model_fields_are_allowed(model)
 
-    for field_name, field_info, field_fulfilment, normalised in get_fields_on_model(
+    for field_name, declared_info, field_fulfilment, normalised in get_fields_on_model(
         model
     ):
+        field_info = with_optional_lifted(declared_info)
         is_db_field = any(
             isclass(md) and issubclass(md, DBField) or isinstance(md, DBField)
             for md in field_info.metadata

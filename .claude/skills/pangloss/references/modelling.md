@@ -53,7 +53,8 @@ initialisation and each use gets its own generated models. Docstrings of classes
 | `Annotated[T, DBField]` | database-side field | In `CreateDB`, not in `Create`: filled by a validator or `to_db`, not by the user |
 
 `annotated_types` validators (`Annotated[int, Ge(1)]`, `MinLen`, `MaxLen`) are carried to the generated models, the
-export and so the interface's forms. `pangloss_models.validators.SumsTo` checks that an edge property adds up over a
+export and so the interface's forms. An optional one is written either way: `Annotated[int, Ge(1)] | None` or
+`Annotated[int | None, Ge(1)]`. `pangloss_models.validators.SumsTo` checks that an edge property adds up over a
 list. A `@model_validator(mode="after")` on an `Embedded` class or a trait is copied to `Create`/`Update` and their DB
 models (not the views), so a class can work out fields from its others.
 

@@ -45,7 +45,9 @@ uv run pytest e2e
 - `packages/pangloss-models/tests` need no database (they use the SDK's storage). Anything that touches a database
   is in the xdist group `db` and runs serially.
 - The fixtures start a Memgraph (and, for the Neo4j runs, a Neo4j) in Docker if none is reachable, and **empty the
-  database** between tests.
+  database** between tests. A run stops (exit 3) if that database has more than 20,000 nodes, which a test run never
+  leaves: it looks like a project's data (`refuse_to_empty_real_data`; `PANGLOSS_TEST_WIPE=1` goes ahead). A small
+  project on the port is not protected by this.
 - Storage behaviour is tested in the conformance suite
   (`packages/pangloss-testing/src/pangloss_testing/conformance/`), which runs on both backends. An add-on's tests
   that need a database are in its `tests/live/`, with fixtures from `pangloss_testing.live`, and run on both too.

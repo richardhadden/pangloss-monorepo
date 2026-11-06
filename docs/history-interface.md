@@ -50,7 +50,9 @@ For each model with history (Documents and Entities that are not in `HISTORY_EXC
 record is missing or older than its version in the graph gets a record of what it is now: its edit view, validated as
 its `Update`, made the write form (`_to_db_model()`), serialised as the listener does. `op = "baseline"`, `version` its
 version, `who` / `at` the last change in its `meta` (or the creation). Paged through `Model.list`. `--dry-run` counts.
-A restore of a baseline is an ordinary restore.
+A restore of a baseline is an ordinary restore. A document inside another (a statement of a factoid) gets none: it is
+written with the one it is in, whose record has it. (Until 2026-11-06 a baseline counted, and would have recorded, each
+of those: the smoke test's dry run said 19,191 statements "would be recorded".)
 
 ## The module
 

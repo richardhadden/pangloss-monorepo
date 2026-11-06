@@ -11,7 +11,7 @@ library, synced), 8,795 factoids, 337,423 nodes / 825,815 edges. Item numbers ar
 severity.
 
 **Fixed since (2026-11-06, branch `full-smoke-test-fixes`; what was changed and how it was checked is in
-`FIXES.md`):** 1, 2, 3, 5, 15, 20, 21, 22, 26, 28 (in part), 29, 32, 33. Each is marked below. The text of an item is as it was found.
+`FIXES.md`):** 1, 2, 3, 5, 6, 7 (in part), 8, 9, 15, 20, 21, 22, 26, 28 (in part), 29, 30, 32, 33, 34, 35 (the count, not the speed). Each is marked below. The text of an item is as it was found.
 
 ## High
 
@@ -66,15 +66,15 @@ severity.
 
 ## Low
 
-6. **`Annotated[int, Ge(1)] | None` is refused** by `initialise()` ("Unsupported type for field
+6. ✅ *Fixed: read as `Annotated[int | None, Ge(1)]`.* **`Annotated[int, Ge(1)] | None` is refused** by `initialise()` ("Unsupported type for field
    LanguageSpoken.fluency"), though `Annotated[int, Ge(1)]` and `int | None` both work.
    `Annotated[int | None, Ge(1), Le(5)] = None` is accepted. Natural spelling, confusing refusal.
-7. **`pangloss new-project` writes `DB_URL="bolt://localhost:7687"`**, the port the test suite wipes (the
+7. ✅ *Fixed: in part: the template says so at the port, and the tests stop at a database of more than 20,000 nodes.* **`pangloss new-project` writes `DB_URL="bolt://localhost:7687"`**, the port the test suite wipes (the
    tutorial says to change it, but the default is the dangerous one).
-8. **`pangloss users create admin` (username as an argument) says only "Username: Aborted."** with stdin closed:
+8. ✅ *Fixed: the username is an argument, as in the other commands.* **`pangloss users create admin` (username as an argument) says only "Username: Aborted."** with stdin closed:
    the extra argument is ignored silently, not reported. Emails at `.test` are refused as "special-use" (fine, but
    surprising for a smoke test; `example.org`-style works).
-9. **A Period that starts after `DATES_OPEN_END_YEAR` and is ongoing is refused** with "the earliest date is after
+9. ✅ *Fixed: the message names the setting.* **A Period that starts after `DATES_OPEN_END_YEAR` and is ongoing is refused** with "the earliest date is after
    the latest (the range would be empty)". With the default 1600, a period starting in 1605 cannot be ongoing. The
    message does not name the setting. (Set `DATES_OPEN_END_YEAR = 1700` here.)
 10. **Query parameters are snake_case only, and unknown ones are ignored silently.** `?pageSize=100` (the camelCase
@@ -134,7 +134,7 @@ severity.
     called "Merchant" is accepted (two "Merchant"s side by side in the tree); and the API takes the typology's class
     name (`/api/typology/OccupationTypology/tree` works) while the CLI only takes the type's
     (`pangloss typology tree OccupationTypology`: "No typology OccupationTypology. Known: OccupationType, TitleType").
-30. **`pangloss check-data` floods the terminal** with hundreds of `read transaction get_entity took 5xx ms (slow)`
+30. ✅ *Fixed: the slow threshold is raised while the check reads many at once.* **`pangloss check-data` floods the terminal** with hundreds of `read transaction get_entity took 5xx ms (slow)`
     warnings while it reads (93,470 items, 135 s), burying its one line of result.
 31. **`/openapi.json` is 2.5 MB (570 paths, 1,014 schemas) and the first request takes 4.9 s** (then cached: 10 ms).
     `/docs` loads it.
@@ -155,12 +155,12 @@ severity.
     23,817 / 49,045-52,321 ms. Once in three tries at 160 it was a **500**: Neo4j's own `Neo.DatabaseError.General.
     UnknownError: Comparison method violates its general contract!` (a Java sort inside the database, during
     Pangloss's single big transaction), then `GqlError 50N09 invalid server state transition`.
-34. **On a new Neo4j database the logs are flooded with driver notifications**, each "property key does not exist"
+34. ✅ *Fixed: the "unrecognized" class of notifications is off in the driver.* **On a new Neo4j database the logs are flooded with driver notifications**, each "property key does not exist"
     warning (`head_node_type`, `review_status`, `meta.semantic_spaces`, ...) printed **with the whole Cypher query**
     (~3 KB each) during `migrate`'s read-back and the first reads, until data exists. They are harmless and could be
     filtered (the driver's `notifications_min_severity` / disabled categories).
 
-35. **`pangloss history baseline --dry-run` counts nested statements as needing a record, and is slow.** "93474
+35. ✅ *Fixed: the count: a document inside another is not a head node. The speed is as it was.* **`pangloss history baseline --dry-run` counts nested statements as needing a record, and is slow.** "93474
     looked at: 19191 would be recorded, 74283 had a record of their version already" in **6 min 8 s**. 19,191 is
     exactly the number of `Statement` nodes, which are nested in factoids (`create_directly=False`) and have no
     versions of their own; every factoid and entity has its record (history was written even for the entities made

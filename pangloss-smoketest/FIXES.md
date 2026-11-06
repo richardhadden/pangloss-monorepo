@@ -17,7 +17,14 @@ problem, what was changed, how it was checked, and what is still to do. Numbers 
 | 5, 21 | Calendar: thousands of open-dated documents on every day; 21 MB page | **Fixed** on both backends: month page 21-26 MB -> 0.45 MB, a day 2.2 s -> 0.15 s; tests, browser, docs. **One judgement call to confirm** (unknown dates left out) |
 | 29 | Typology: generic DELETE marks a type in use | **Fixed** on both backends (all three parts), tests, checked on the smoke server, docs. **One judgement call to confirm** (same-named siblings refused) |
 | 15, 22, 28 | An entity's view inlines every reverse relation | **Fixed** (committed after fa58588): whole read 0.8-1.3 s -> 0.6-0.8 s; limited read 0.32 s; page 5.2 s -> 2.4 s. Both backends, tests, browser, docs. By-date view of everything is on request, still heavy |
-| the rest (Low, Perf, Design) | | Not started |
+| 6 | `Annotated[int, Ge(1)] \| None` refused | **Fixed**, test |
+| 7 | `new-project` writes port 7687, which the tests wipe | **Mitigated**: a comment in the template; the tests stop at a database of more than 20,000 nodes. A small project on 7687 is still not protected: for the user to decide |
+| 8 | `users create admin` only says "Aborted" | **Fixed**: the username is an argument, as in the other commands; test |
+| 9 | Open-ended period refused without naming the setting | **Fixed**: the message names `DATES_OPEN_END_YEAR` / `DATES_EARLIEST_YEAR`; test |
+| 34 | Neo4j: log flooded with notifications on a new database | **Fixed**: the "unrecognized" class is off in the driver; test, and checked on a Neo4j |
+| 30 | `check-data` floods the terminal with slow-read warnings | **Fixed**: the threshold is raised while it reads many at once; conformance test, both backends |
+| 35 | `history baseline` counts nested statements | **Fixed** (the count; conformance test, both backends). Its speed is not changed |
+| 10, 11, 12, 13, 14, 16, 23, 24, 25, 27, 31, 36 and the Design items | | Not started |
 
 ## What was done
 
@@ -326,6 +333,52 @@ Checked:
 
 `./run_tests.sh` in full passed after it (2026-11-06, exit 0): all packages on Memgraph (2,839); on Neo4j the
 conformance suite (535), `pangloss-neo4j` (165) and the add-ons' live tests (72); e2e (166).
+
+### Smaller items (#6, #7, #8, #9, #30, #34, #35)
+
+Done after the commit `482a9f8`, and committed together ("Smoke test fixes: smaller items"). `./run_tests.sh` in full
+(2026-11-06): every test stage passed (Memgraph 2,846; Neo4j conformance 537, `pangloss-neo4j` 166, add-on live tests
+72; e2e 166), and the stub check failed, rightly: `pangloss_dates/models.py` had changed (#9) and its shipped stub had
+not been written again. Written again (`uv run python -m pangloss_testing.framework_stubs`); the stub check, ruff, `ty`,
+the dates tests and the SDK builder's tests pass after it. The full script was not run a second time.
+
+- **#6** `Annotated[int, Ge(1)] | None`: `initialise_field_definitions.with_optional_lifted` reads it as
+  `Annotated[int | None, Ge(1)]` (pydantic keeps the constraint with the member of the union, where the definitions
+  did not look). Also a `Field(ge=1, description=...)` in the `Annotated`, and `DBField`. Test in
+  `pangloss-models/tests/initialisation/test_initialise_field_definitions.py`; `pangloss-models` 938 passed.
+- **#8** `pangloss users create [USERNAME]`: the username is taken as an argument (as `set-password`, `make-admin`
+  and the rest take it) or `--username`; what is missing is asked for in the function, in order (an option that
+  prompts does so before click refuses an unexpected argument: hence "Username: Aborted."). Test in
+  `pangloss-cli/tests/test_users_commands.py`; `docs/cli.md`. (Emails at `.test` are still refused: that is the
+  email validator's rule for special-use domains, left alone.)
+- **#9** A period (or a range) that starts after `DATES_OPEN_END_YEAR` with an end that is ongoing or unknown now
+  says: "it starts after 1600, and an end that is not known or has not come is taken to be by the end of that year
+  (the setting DATES_OPEN_END_YEAR): set DATES_OPEN_END_YEAR to a later year"; the same for an unknown start before
+  `DATES_EARLIEST_YEAR`. `pangloss_dates/models.py` `_spanning`. Test in `test_dates_models.py`; the dates package
+  212 passed; `guide/dates/README.md`.
+- **#34** `Neo4jDialect.driver_options` also disables the `UNRECOGNIZED` class of notifications (label, type or
+  property that no data has yet). Checked against a Neo4j: a query naming an unknown label and property gets two
+  notifications with a plain driver, none with Pangloss's options. Test `test_neo4j_driver_options.py`;
+  `docs/neo4j-implementation.md`.
+- **#7** The template's settings now say, at the port, that Pangloss's own tests empty the database on 7687. And
+  the tests refuse to run (exit 3) against a database with more than 20,000 nodes
+  (`pangloss_testing.live.refuse_to_empty_real_data`, used by the live fixtures and by e2e's wipe;
+  `PANGLOSS_TEST_WIPE=1` goes ahead). This would have protected the smoke database (337,000 nodes) but **not a
+  small project**: telling a small project from test leftovers needs a marker the tests leave, or the tests on a
+  port of their own. Both change how the test database is used: for the user to decide. Tests:
+  `pangloss-testing/tests/test_testing_wipe_guard.py`.
+
+- **#30** `check-data` (and the read-back of `migrate`) reads sixteen items at once, so each read waits for the
+  others and takes hundreds of milliseconds: a Cypher backend warned of nearly every one. For the length of the
+  check the backend's slow threshold is 10 s (`pangloss_models.migrations.check.reading_many_at_once`, which sets
+  `Database.slow_query_threshold` if the backend has one, as a bulk load does), and is put back after. Conformance
+  test in `test_migration_dry_run.py`, on both backends.
+- **#35** `pangloss history baseline` took the documents inside others for head nodes (`getattr(item,
+  "is_head_node", True)` looked on the item, and the flag is in its `meta`): the dry run's "19191 would be recorded"
+  were the statements of the factoids, and a real run would have written a record for each.
+  `pangloss_history/baseline.py` `is_head`. Conformance test in `test_history_baseline.py`, on both backends.
+  **Not changed: its speed** (6 minutes for 93,000). It reads every head node to learn its version, as a list does
+  not give one: making it fast needs the version in the list, or one query for all the versions.
 
 ## Still to do for what is fixed
 

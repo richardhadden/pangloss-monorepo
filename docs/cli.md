@@ -61,9 +61,9 @@ The module is imported, and so constructs the project's `BaseSettings` subclass 
 | `pangloss cleanmigrations [app] [--yes]` | Deletes the files of the migrations that a squashed migration replaces, if this database is not part way through them (no other database is looked at) |
 | `pangloss backups` | Lists the snapshots the server has, newest first |
 | `pangloss restore PATH [--yes]` | Puts the database back to a snapshot: **replaces everything**, the record of migrations included; makes the text indexes again |
-| `pangloss check-data [--type T] [--limit N] [--parallel N]` | Reads all the data with the models as they are, and reports what cannot be read |
+| `pangloss check-data [--type T] [--limit N] [--parallel N]` | Reads all the data with the models as they are, and reports what cannot be read. (While it reads many at once, a read is logged as slow only past 10 s: each waits for the others, and a warning for each said nothing) |
 | `pangloss showmigrations` | The migrations of each app, and which the database has had |
-| `pangloss users create` | Asks for (or takes `--username`, `--email`, `--password`, `--full-name`, `--admin/--no-admin`) the details of a new user |
+| `pangloss users create [USERNAME]` | Asks for (or takes: the username as an argument or `--username`, `--email`, `--password`, `--full-name`, `--admin/--no-admin`) the details of a new user |
 | `pangloss users list` | |
 | `pangloss users set-password <username>` | |
 | `pangloss users make-admin <username>`, `remove-admin` | |

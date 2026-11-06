@@ -33,7 +33,7 @@ Everything here was run, on 2026-10-29, against `neo4j:latest` in Docker: **Neo4
 | DDL cannot be mixed into a transaction with data (syntax error). | As in Memgraph (`run_statement` on its own session). |
 | One user database (`neo4j`) in Community. | `DATABASE_NAME` stays a setting, defaulting to `neo4j`. Tests wipe the database instead of making one. |
 | No online snapshot in Community. | `backup`, `backups`, `restore` and `backup_notice` are *optional* in the migration contract: left out, and `pangloss migrate --backup` says the backend has none (Neo4j's way is `neo4j-admin database dump`/`backup`, offline). |
-| The driver reports every deprecation as a notification (a log line per query). | The driver is made with the deprecation class of notifications disabled. |
+| The driver reports every deprecation as a notification (a log line per query), and on a new database every label, type and property key that no data has yet ("unrecognized"), each with the whole query. | The driver is made with those two classes of notifications disabled (`Neo4jDialect.driver_options`). |
 
 ## 2. What is reused and what changes
 

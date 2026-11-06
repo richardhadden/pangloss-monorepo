@@ -352,8 +352,12 @@ def free_port() -> int:
 
 
 def wipe_database() -> None:
+    from pangloss_testing.live import refuse_to_empty_real_data
+
     driver = neo4j.GraphDatabase.driver(MEMGRAPH_URI, auth=MEMGRAPH_AUTH)
     try:
+        # (a database with a great deal in it is somebody's data, not what a test run left)
+        refuse_to_empty_real_data(driver, MEMGRAPH_URI, "memgraph")
         driver.execute_query("MATCH (n) DETACH DELETE n", database_="memgraph")
     finally:
         driver.close()

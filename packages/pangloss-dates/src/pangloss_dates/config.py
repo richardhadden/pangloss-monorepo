@@ -27,11 +27,21 @@ def padding(settings: Any = None) -> Padding:
     )
 
 
+def open_end_year(settings: Any = None) -> int:
+    """`DATES_OPEN_END_YEAR` (default 1600)"""
+    return setting("DATES_OPEN_END_YEAR", 1600, settings)
+
+
 def open_end_horizon(calendar: Calendar, settings: Any = None) -> int:
     """`DATES_OPEN_END_YEAR`: a period or an order with no end is taken to stop by the end of this year"""
-    return to_jdn(setting("DATES_OPEN_END_YEAR", 1600, settings), 12, 31, calendar)
+    return to_jdn(open_end_year(settings), 12, 31, calendar)
+
+
+def earliest_year(settings: Any = None) -> int:
+    """`DATES_EARLIEST_YEAR` (default 1)"""
+    return setting("DATES_EARLIEST_YEAR", 1, settings)
 
 
 def earliest_day(calendar: Calendar, settings: Any = None) -> int:
     """`DATES_EARLIEST_YEAR`: a start that is not known is taken to be no earlier than the start of this year"""
-    return to_jdn(setting("DATES_EARLIEST_YEAR", 1, settings), 1, 1, calendar)
+    return to_jdn(earliest_year(settings), 1, 1, calendar)

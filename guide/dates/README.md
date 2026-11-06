@@ -95,7 +95,7 @@ found = await on_day(Factoid, "when", sunday, Calendar.JULIAN, family="Julian")
 |---|---|---|
 | `DATES_DEFAULT_CALENDAR` | `"gregorian"` | The calendar of a plain `Date` that does not say |
 | `DATES_PADDING_YEARS`, `DATES_PADDING_MONTHS`, `DATES_PADDING_DAYS` | `1`, `1`, `7` | What doubt adds either side |
-| `DATES_OPEN_END_YEAR` | `1600` | A period or order that is ongoing, or whose end is unknown, is taken to stop by the end of this year (so it can be found and ordered) |
+| `DATES_OPEN_END_YEAR` | `1600` | A period or order that is ongoing, or whose end is unknown, is taken to stop by the end of this year (so it can be found and ordered). **Set it after your latest dates**: a period that starts later than this year cannot be ongoing or have an unknown end, and is refused with a message naming this setting |
 | `DATES_EARLIEST_YEAR` | `1` | A start that is not known is taken to be no earlier than the start of this year. Set it near your sources (`1400`) so an unknown start does not reach back to the first century |
 
 Changing a padding does not change what is stored: a date is worked out again when it is next saved.

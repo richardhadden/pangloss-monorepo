@@ -360,3 +360,46 @@ async def test_reading_several_at_once_finds_the_same_in_the_same_order(
 
     limited = await check_data(limit=7, concurrency=4)
     assert limited.checked == 7 and len(limited.problems) == 7
+
+
+@no_type_check
+async def test_check_data_does_not_warn_of_every_read_it_makes_at_once(
+    db_driver, clear_database, caplog
+):
+    """Sixteen reads at once each wait for the others: a warning for each read over `SLOW_QUERY_MS` was hundreds of
+    lines round the one line of result. The threshold is raised for the check, and put back"""
+    import logging
+
+    from pangloss_models import initialise
+    from pangloss_testing.under_test.initialise_database import initialise_database
+
+    class Thing(Entity):
+        pass
+
+    initialise()
+    await initialise_database()
+    for n in range(6):
+        await Thing.Create(label=f"T{n}").save()
+    database = current()
+    # (every transaction is "slow")
+    database.settings.SLOW_QUERY_MS = -1
+    caplog.set_level(logging.INFO, logger="pangloss")
+
+    def slow_reads():
+        return [
+            r.getMessage()
+            for r in caplog.records
+            if r.levelname == "WARNING" and "get_entity" in r.getMessage()
+        ]
+
+    try:
+        assert database.slow_query_threshold is None
+        check = await check_data(concurrency=4)
+        assert check.ok and check.checked == 6
+        assert slow_reads() == []
+        assert database.slow_query_threshold is None
+        # one at a time, a slow read is a slow read
+        await check_data(concurrency=1)
+        assert len(slow_reads()) == 6
+    finally:
+        database.settings.SLOW_QUERY_MS = 500

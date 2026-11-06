@@ -526,3 +526,33 @@ def test_a_rule_on_a_feast_needs_the_calendar_package_and_the_id_of_a_characteri
     )
     with pytest.raises(ValidationError, match="needs pangloss-calendar"):
         feast("01a18688-4cf0-73dd-9d9c-a1c659bef751")
+
+
+def test_a_period_that_starts_after_the_open_end_year_says_which_setting_is_in_the_way(
+    models,
+):
+    """A period from 1605 that is still going on was refused with "the earliest date is after the latest (the range
+    would be empty)": true, and no help, since the latest is `DATES_OPEN_END_YEAR` (1600 unless set)"""
+    _, JulianEvent, _ = models
+    for end in ({"type": "JulianOngoingDate"}, {"type": "JulianUnknownDate"}):
+        with pytest.raises(ValidationError) as refused:
+            make(JulianEvent, lifetime(exact(1605), end))
+        said = str(refused.value)
+        assert "DATES_OPEN_END_YEAR" in said and "starts after 1600" in said
+    with pytest.raises(ValidationError, match="DATES_OPEN_END_YEAR"):
+        make(
+            JulianEvent,
+            {
+                "type": "JulianDateRange",
+                "not_before": exact(1605),
+                "not_after": {"type": "JulianUnknownDate"},
+            },
+        )
+    # (a start that is not known, before the floor: the other setting)
+    with pytest.raises(ValidationError, match="DATES_EARLIEST_YEAR"):
+        make(JulianEvent, lifetime({"type": "JulianUnknownDate"}, exact(-50)))
+    # two known dates the wrong way round are still said as they were
+    with pytest.raises(ValidationError, match="the range would be empty"):
+        make(JulianEvent, lifetime(exact(1605), exact(1600)))
+    # (and a period within the years is as it was)
+    assert make(JulianEvent, lifetime(exact(1590), {"type": "JulianOngoingDate"}))

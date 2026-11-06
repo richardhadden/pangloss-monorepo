@@ -23,6 +23,8 @@ class Settings(BaseSettings[MemgraphDatabaseSettings]):
     ]
 
     STORAGE: str | None = "pangloss_memgraph:storage"
+    # (7687 is the port Memgraph listens on unless told otherwise. If you also run the tests of Pangloss itself
+    # on this machine, give your database another port: they use the database on 7687, and empty it)
     DATABASE: MemgraphDatabaseSettings = MemgraphDatabaseSettings(
         DB_URL="bolt://localhost:7687",
         DB_USERNAME="memgraph",

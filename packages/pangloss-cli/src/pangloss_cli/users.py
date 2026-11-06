@@ -49,15 +49,29 @@ def describe(user: User) -> str:
 @users_cli.command()
 def create(
     ctx: typer.Context,
-    username: str = typer.Option(..., prompt=True),
-    email: str = typer.Option(..., prompt=True),
-    password: str = typer.Option(
-        ..., prompt=True, confirmation_prompt=True, hide_input=True
+    name: str | None = typer.Argument(
+        None,
+        metavar="[USERNAME]",
+        help="The username, as the other commands take it (or --username)",
     ),
+    username: str | None = typer.Option(None, help="The username"),
+    email: str | None = typer.Option(None),
+    password: str | None = typer.Option(None),
     full_name: str | None = typer.Option(None, help="The user's full name"),
-    admin: bool = typer.Option(False, "--admin/--no-admin", prompt="Make admin?"),
+    admin: bool | None = typer.Option(None, "--admin/--no-admin"),
 ) -> None:
-    """Add a new user (asking for what is not given as an option)"""
+    """Add a new user (asking for what is not given)"""
+    # (asked for here, in this order, and not by the options: an option that asks does so before an argument it
+    # does not expect is refused, and `users create admin` only said "Username: Aborted.")
+    if name and username and name != username:
+        fail(f"Two usernames were given: {name} and --username {username}")
+    username = name or username or typer.prompt("Username")
+    email = email or typer.prompt("Email")
+    password = password or typer.prompt(
+        "Password", hide_input=True, confirmation_prompt=True
+    )
+    if admin is None:
+        admin = typer.confirm("Make admin?", default=False)
     project = project_of(ctx)
     user = run_with_database(
         project,

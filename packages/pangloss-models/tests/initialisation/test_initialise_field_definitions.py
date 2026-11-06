@@ -394,6 +394,37 @@ def test_field_definition_for_optional_literal_field():
     assert integer_two_field_def.annotated_type == int | NoneType
 
 
+def test_an_optional_value_with_a_constraint_is_written_either_way():
+    """`Annotated[int, Ge(1)] | None` was refused as an unsupported type, though `Annotated[int | None, Ge(1)]`,
+    `Annotated[int, Ge(1)]` and `int | None` were each accepted"""
+    from annotated_types import Ge, Le
+    from pydantic import Field, ValidationError
+
+    class Statement(Document):
+        fluency: Annotated[int, Ge(1), Le(5)] | None = None
+        other_way: Annotated[int | None, Ge(1), Le(5)] = None
+        with_field: Annotated[int, Field(ge=1, description="How many")] | None = None
+        name: Annotated[str, MaxLen(3)] | None = None
+        kept: Annotated[int, DBField] | None = None
+
+    initialise()
+
+    fluency = Statement._meta.fields["fluency"]
+    other_way = Statement._meta.fields["other_way"]
+    assert fluency.annotated_type == int | NoneType == other_way.annotated_type
+    assert fluency.validators == other_way.validators == [Ge(1), Le(5)]
+    assert Statement._meta.fields["with_field"].validators == [Ge(1)]
+    assert Statement._meta.fields["with_field"].description == "How many"
+    assert Statement._meta.fields["kept"].db_field
+
+    # the generated models hold it: nothing, a value in range, and not one out of it
+    assert Statement.Create(label="x").fluency is None
+    assert Statement.Create(label="x", fluency=3, name="abc").fluency == 3
+    for wrong in ({"fluency": 0}, {"fluency": 6}, {"with_field": 0}, {"name": "abcd"}):
+        with pytest.raises(ValidationError):
+            Statement.Create(label="x", **wrong)
+
+
 def test_field_definition_for_list_field():
     """Build field definitions for list-typed fields and validate nested validators."""
 

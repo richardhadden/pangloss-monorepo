@@ -98,10 +98,14 @@ class Neo4jDialect:
     name = "neo4j"
 
     def driver_options(self) -> dict[str, Any]:
-        # (Neo4j reports each use of a deprecated feature with every query that has it)
+        # (Neo4j reports each use of a deprecated feature with every query that has it. And, until some data has it,
+        # each label, relationship type and property a query names that the database has not seen yet
+        # ("unrecognized": `review_status`, `head_node_type`), with the whole query: on a new database, a page of
+        # log for each read. The names are the models', which the database learns as documents are written)
         return {
             "notifications_disabled_classifications": [
-                neo4j.NotificationDisabledClassification.DEPRECATION
+                neo4j.NotificationDisabledClassification.DEPRECATION,
+                neo4j.NotificationDisabledClassification.UNRECOGNIZED,
             ]
         }
 
