@@ -2,7 +2,7 @@
 // It is made again each time the interface is built.
 import type { AnyRelationCondition, ChoiceCondition, CompareCondition, ItemsCondition, ModelDefinitions, NodePattern, RelationCondition, SearchOrder, SearchPattern, TextCondition } from "@pangloss/interface-core";
 
-export type ModelName = "Accusation" | "Appointment" | "Apprenticeship" | "Army" | "Artwork" | "AtPage" | "Authorship" | "Baptism" | "Battle" | "Betrothal" | "Birth" | "Book" | "Building" | "Burial" | "Canonisation" | "Causes" | "Certainty" | "Characterisation" | "Commission" | "Commodity" | "Construction" | "Conversion" | "Coronation" | "Court" | "CreationOfArtwork" | "CreationOfPhysicalObject" | "Currency" | "Date" | "DateCharacterisation" | "DateRange" | "DatedStatement" | "Death" | "Destruction" | "Dismissal" | "Donation" | "EDTFDate" | "Election" | "Employment" | "Ennoblement" | "EventStatement" | "ExactDate" | "Excommunication" | "Execution" | "Exile" | "Factoid" | "Family" | "Feast" | "Founding" | "Gift" | "Graduation" | "Group" | "Guild" | "Hypothetical" | "Identification" | "Imprisonment" | "InRole" | "Inheritance" | "Kinship" | "Knighting" | "Language" | "LanguageSpoken" | "Lawsuit" | "Letter" | "Likelihood" | "Loan" | "LocatedIn" | "Manuscript" | "Marriage" | "Matriculation" | "Meeting" | "Membership" | "Monastery" | "NameVariant" | "Negative" | "NegativeSubjunctive" | "NoRule" | "OccupationAscription" | "OccupationType" | "Office" | "OfficeHolding" | "OngoingDate" | "Order" | "Ordination" | "Origin" | "Ownership" | "Painting" | "Pardon" | "Payment" | "Period" | "PeriodStatement" | "Person" | "Petition" | "PhysicalDescription" | "PhysicalObject" | "Pilgrimage" | "Place" | "PositiveSubjunctive" | "Printing" | "Recurrence" | "Region" | "Reign" | "ReligiousOrder" | "Reputation" | "Residence" | "Sale" | "Sculpture" | "Sermon" | "Settlement" | "Ship" | "Shipwreck" | "Siege" | "Statement" | "StudyAt" | "TitleType" | "TradingCompany" | "Translation" | "Treaty" | "UndatedStatement" | "University" | "UnknownDate" | "Visit" | "Voyage" | "WeightedAlternative" | "WithCertainty" | "ZoteroBacked" | "ZoteroLibrary" | "ZoteroObject";
+export type ModelName = "Accusation" | "Appointment" | "Apprenticeship" | "Army" | "Artwork" | "AtPage" | "Attributed" | "Authorship" | "Baptism" | "Battle" | "Betrothal" | "Birth" | "Book" | "Building" | "Burial" | "Canonisation" | "Causes" | "Certainty" | "Characterisation" | "Commission" | "Commodity" | "Construction" | "Conversion" | "Coronation" | "Court" | "CreationOfArtwork" | "CreationOfPhysicalObject" | "Currency" | "Date" | "DateCharacterisation" | "DateRange" | "DatedStatement" | "Death" | "Destruction" | "Dismissal" | "Donation" | "EDTFDate" | "Election" | "Employment" | "Ennoblement" | "EventStatement" | "ExactDate" | "Excommunication" | "Execution" | "Exile" | "Factoid" | "Family" | "Feast" | "Founding" | "Gift" | "Graduation" | "Group" | "Guild" | "Hearsay" | "Hypothetical" | "Identification" | "Imprisonment" | "InRole" | "Inheritance" | "Kinship" | "Knighting" | "Language" | "LanguageSpoken" | "Lawsuit" | "Letter" | "Likelihood" | "Loan" | "LocatedIn" | "Manuscript" | "Marriage" | "Matriculation" | "Meeting" | "Membership" | "Monastery" | "NameVariant" | "Negative" | "NegativeSubjunctive" | "NoRule" | "OccupationAscription" | "OccupationType" | "Office" | "OfficeHolding" | "OngoingDate" | "Order" | "Ordination" | "Origin" | "Ownership" | "Painting" | "Pardon" | "Payment" | "Period" | "PeriodStatement" | "Person" | "Petition" | "PhysicalDescription" | "PhysicalObject" | "Pilgrimage" | "Place" | "PositiveSubjunctive" | "Printing" | "Recurrence" | "Region" | "Reign" | "ReligiousOrder" | "Report" | "Reputation" | "Residence" | "Sale" | "Sculpture" | "Seal" | "SealImpression" | "SealMatrix" | "SealedLetter" | "Sermon" | "Settlement" | "Ship" | "Shipwreck" | "Siege" | "Statement" | "StudyAt" | "TitleType" | "TradingCompany" | "Translation" | "Treaty" | "UndatedStatement" | "University" | "UnknownDate" | "Visit" | "Voyage" | "WeightedAlternative" | "WithCertainty" | "Witnessing" | "ZoteroBacked" | "ZoteroLibrary" | "ZoteroObject";
 
 export const definitions: ModelDefinitions = {
   "models": {
@@ -1256,6 +1256,17 @@ export const definitions: ModelDefinitions = {
           ]
         },
         {
+          "name": "presided_by_reverse",
+          "key": "presidedByReverse",
+          "sources": [
+            {
+              "model": "Witnessing",
+              "field": "presided_by",
+              "viaReified": false
+            }
+          ]
+        },
+        {
           "name": "printer_reverse",
           "key": "printerReverse",
           "sources": [
@@ -1311,6 +1322,17 @@ export const definitions: ModelDefinitions = {
           ]
         },
         {
+          "name": "reporter_reverse",
+          "key": "reporterReverse",
+          "sources": [
+            {
+              "model": "Report",
+              "field": "reporter",
+              "viaReified": false
+            }
+          ]
+        },
+        {
           "name": "reputed_reverse",
           "key": "reputedReverse",
           "sources": [
@@ -1328,6 +1350,17 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Residence",
               "field": "resident",
+              "viaReified": false
+            }
+          ]
+        },
+        {
+          "name": "sealed_by_reverse",
+          "key": "sealedByReverse",
+          "sources": [
+            {
+              "model": "SealedLetter",
+              "field": "sealed_by",
               "viaReified": false
             }
           ]
@@ -1570,6 +1603,65 @@ export const definitions: ModelDefinitions = {
         "headless": true,
         "hideOnForms": null
       }
+    },
+    "Attributed": {
+      "name": "Attributed",
+      "kind": "ReifiedRelation",
+      "abstract": false,
+      "description": "Who in the source says so",
+      "parent": null,
+      "concreteTypes": [],
+      "typeParameters": [
+        "T"
+      ],
+      "createWithId": false,
+      "createDirectly": true,
+      "acceptUrlAsId": false,
+      "requireLabel": false,
+      "useInSemanticSpaceLabel": true,
+      "fields": [
+        {
+          "name": "target",
+          "key": "target",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "relation",
+          "many": true,
+          "reverseName": "target_reverse",
+          "options": [
+            {
+              "kind": "typeVar",
+              "name": "T",
+              "edgeModel": null
+            }
+          ],
+          "validators": [],
+          "subclasses": [],
+          "defaultReifiedType": null,
+          "bindings": [],
+          "readOnly": false
+        },
+        {
+          "name": "attributed_by",
+          "key": "attributedBy",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": [],
+          "readOnly": false
+        }
+      ],
+      "incoming": [],
+      "traits": [],
+      "interfaceMeta": null
     },
     "Authorship": {
       "name": "Authorship",
@@ -3387,6 +3479,11 @@ export const definitions: ModelDefinitions = {
               "viaReified": false
             },
             {
+              "model": "SealedLetter",
+              "field": "places",
+              "viaReified": false
+            },
+            {
               "model": "Sermon",
               "field": "places",
               "viaReified": false
@@ -3423,6 +3520,11 @@ export const definitions: ModelDefinitions = {
             },
             {
               "model": "Voyage",
+              "field": "places",
+              "viaReified": false
+            },
+            {
+              "model": "Witnessing",
               "field": "places",
               "viaReified": false
             }
@@ -5421,6 +5523,17 @@ export const definitions: ModelDefinitions = {
           ]
         },
         {
+          "name": "presided_by_reverse",
+          "key": "presidedByReverse",
+          "sources": [
+            {
+              "model": "Witnessing",
+              "field": "presided_by",
+              "viaReified": false
+            }
+          ]
+        },
+        {
           "name": "printer_reverse",
           "key": "printerReverse",
           "sources": [
@@ -5476,6 +5589,17 @@ export const definitions: ModelDefinitions = {
           ]
         },
         {
+          "name": "reporter_reverse",
+          "key": "reporterReverse",
+          "sources": [
+            {
+              "model": "Report",
+              "field": "reporter",
+              "viaReified": false
+            }
+          ]
+        },
+        {
           "name": "reputed_reverse",
           "key": "reputedReverse",
           "sources": [
@@ -5493,6 +5617,17 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Residence",
               "field": "resident",
+              "viaReified": false
+            }
+          ]
+        },
+        {
+          "name": "sealed_by_reverse",
+          "key": "sealedByReverse",
+          "sources": [
+            {
+              "model": "SealedLetter",
+              "field": "sealed_by",
               "viaReified": false
             }
           ]
@@ -6551,11 +6686,13 @@ export const definitions: ModelDefinitions = {
         "Petition",
         "Printing",
         "Sale",
+        "SealedLetter",
         "Sermon",
         "Translation",
         "Treaty",
         "Visit",
-        "Voyage"
+        "Voyage",
+        "Witnessing"
       ],
       "typeParameters": [],
       "createWithId": false,
@@ -10006,6 +10143,11 @@ export const definitions: ModelDefinitions = {
                     },
                     {
                       "kind": "document",
+                      "type": "Report",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
                       "type": "Reputation",
                       "edgeModel": null
                     },
@@ -10017,6 +10159,11 @@ export const definitions: ModelDefinitions = {
                     {
                       "kind": "document",
                       "type": "Sale",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "SealedLetter",
                       "edgeModel": null
                     },
                     {
@@ -10057,6 +10204,11 @@ export const definitions: ModelDefinitions = {
                     {
                       "kind": "document",
                       "type": "Voyage",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Witnessing",
                       "edgeModel": null
                     }
                   ]
@@ -10351,6 +10503,11 @@ export const definitions: ModelDefinitions = {
                     },
                     {
                       "kind": "document",
+                      "type": "Report",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
                       "type": "Reputation",
                       "edgeModel": null
                     },
@@ -10362,6 +10519,11 @@ export const definitions: ModelDefinitions = {
                     {
                       "kind": "document",
                       "type": "Sale",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "SealedLetter",
                       "edgeModel": null
                     },
                     {
@@ -10402,6 +10564,11 @@ export const definitions: ModelDefinitions = {
                     {
                       "kind": "document",
                       "type": "Voyage",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Witnessing",
                       "edgeModel": null
                     }
                   ]
@@ -10695,6 +10862,11 @@ export const definitions: ModelDefinitions = {
             },
             {
               "kind": "document",
+              "type": "Report",
+              "edgeModel": null
+            },
+            {
+              "kind": "document",
               "type": "Reputation",
               "edgeModel": null
             },
@@ -10706,6 +10878,11 @@ export const definitions: ModelDefinitions = {
             {
               "kind": "document",
               "type": "Sale",
+              "edgeModel": null
+            },
+            {
+              "kind": "document",
+              "type": "SealedLetter",
               "edgeModel": null
             },
             {
@@ -10746,6 +10923,11 @@ export const definitions: ModelDefinitions = {
             {
               "kind": "document",
               "type": "Voyage",
+              "edgeModel": null
+            },
+            {
+              "kind": "document",
+              "type": "Witnessing",
               "edgeModel": null
             },
             {
@@ -11043,6 +11225,11 @@ export const definitions: ModelDefinitions = {
                     },
                     {
                       "kind": "document",
+                      "type": "Report",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
                       "type": "Reputation",
                       "edgeModel": null
                     },
@@ -11054,6 +11241,11 @@ export const definitions: ModelDefinitions = {
                     {
                       "kind": "document",
                       "type": "Sale",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "SealedLetter",
                       "edgeModel": null
                     },
                     {
@@ -11094,6 +11286,11 @@ export const definitions: ModelDefinitions = {
                     {
                       "kind": "document",
                       "type": "Voyage",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Witnessing",
                       "edgeModel": null
                     }
                   ]
@@ -11395,6 +11592,11 @@ export const definitions: ModelDefinitions = {
                     },
                     {
                       "kind": "document",
+                      "type": "Report",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
                       "type": "Reputation",
                       "edgeModel": null
                     },
@@ -11406,6 +11608,11 @@ export const definitions: ModelDefinitions = {
                     {
                       "kind": "document",
                       "type": "Sale",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "SealedLetter",
                       "edgeModel": null
                     },
                     {
@@ -11446,6 +11653,11 @@ export const definitions: ModelDefinitions = {
                     {
                       "kind": "document",
                       "type": "Voyage",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Witnessing",
                       "edgeModel": null
                     }
                   ]
@@ -11909,6 +12121,17 @@ export const definitions: ModelDefinitions = {
           ]
         },
         {
+          "name": "presided_by_reverse",
+          "key": "presidedByReverse",
+          "sources": [
+            {
+              "model": "Witnessing",
+              "field": "presided_by",
+              "viaReified": false
+            }
+          ]
+        },
+        {
           "name": "printer_reverse",
           "key": "printerReverse",
           "sources": [
@@ -11964,6 +12187,17 @@ export const definitions: ModelDefinitions = {
           ]
         },
         {
+          "name": "reporter_reverse",
+          "key": "reporterReverse",
+          "sources": [
+            {
+              "model": "Report",
+              "field": "reporter",
+              "viaReified": false
+            }
+          ]
+        },
+        {
           "name": "reputed_reverse",
           "key": "reputedReverse",
           "sources": [
@@ -11981,6 +12215,17 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Residence",
               "field": "resident",
+              "viaReified": false
+            }
+          ]
+        },
+        {
+          "name": "sealed_by_reverse",
+          "key": "sealedByReverse",
+          "sources": [
+            {
+              "model": "SealedLetter",
+              "field": "sealed_by",
               "viaReified": false
             }
           ]
@@ -13447,6 +13692,17 @@ export const definitions: ModelDefinitions = {
           ]
         },
         {
+          "name": "presided_by_reverse",
+          "key": "presidedByReverse",
+          "sources": [
+            {
+              "model": "Witnessing",
+              "field": "presided_by",
+              "viaReified": false
+            }
+          ]
+        },
+        {
           "name": "printer_reverse",
           "key": "printerReverse",
           "sources": [
@@ -13502,6 +13758,17 @@ export const definitions: ModelDefinitions = {
           ]
         },
         {
+          "name": "reporter_reverse",
+          "key": "reporterReverse",
+          "sources": [
+            {
+              "model": "Report",
+              "field": "reporter",
+              "viaReified": false
+            }
+          ]
+        },
+        {
           "name": "reputed_reverse",
           "key": "reputedReverse",
           "sources": [
@@ -13519,6 +13786,17 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Residence",
               "field": "resident",
+              "viaReified": false
+            }
+          ]
+        },
+        {
+          "name": "sealed_by_reverse",
+          "key": "sealedByReverse",
+          "sources": [
+            {
+              "model": "SealedLetter",
+              "field": "sealed_by",
               "viaReified": false
             }
           ]
@@ -14073,6 +14351,17 @@ export const definitions: ModelDefinitions = {
           ]
         },
         {
+          "name": "presided_by_reverse",
+          "key": "presidedByReverse",
+          "sources": [
+            {
+              "model": "Witnessing",
+              "field": "presided_by",
+              "viaReified": false
+            }
+          ]
+        },
+        {
           "name": "printer_reverse",
           "key": "printerReverse",
           "sources": [
@@ -14128,6 +14417,17 @@ export const definitions: ModelDefinitions = {
           ]
         },
         {
+          "name": "reporter_reverse",
+          "key": "reporterReverse",
+          "sources": [
+            {
+              "model": "Report",
+              "field": "reporter",
+              "viaReified": false
+            }
+          ]
+        },
+        {
           "name": "reputed_reverse",
           "key": "reputedReverse",
           "sources": [
@@ -14145,6 +14445,17 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Residence",
               "field": "resident",
+              "viaReified": false
+            }
+          ]
+        },
+        {
+          "name": "sealed_by_reverse",
+          "key": "sealedByReverse",
+          "sources": [
+            {
+              "model": "SealedLetter",
+              "field": "sealed_by",
               "viaReified": false
             }
           ]
@@ -14242,6 +14553,62 @@ export const definitions: ModelDefinitions = {
         "Agent"
       ],
       "interfaceMeta": null
+    },
+    "Hearsay": {
+      "name": "Hearsay",
+      "kind": "SemanticSpace",
+      "abstract": false,
+      "description": "Someone said that...",
+      "parent": null,
+      "concreteTypes": [
+        "Hearsay"
+      ],
+      "typeParameters": [
+        "T"
+      ],
+      "createWithId": false,
+      "createDirectly": true,
+      "acceptUrlAsId": false,
+      "requireLabel": false,
+      "useInSemanticSpaceLabel": true,
+      "fields": [
+        {
+          "name": "contents",
+          "key": "contents",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "relation",
+          "many": true,
+          "reverseName": "contents_reverse",
+          "options": [
+            {
+              "kind": "typeVar",
+              "name": "T",
+              "edgeModel": null
+            }
+          ],
+          "validators": [],
+          "subclasses": [],
+          "defaultReifiedType": null,
+          "bindings": [],
+          "readOnly": false
+        }
+      ],
+      "incoming": [],
+      "traits": [],
+      "interfaceMeta": {
+        "colour": "sky",
+        "navSection": null,
+        "listPage": null,
+        "itemPage": null,
+        "viewCard": null,
+        "editCard": null,
+        "collapse": null,
+        "headless": null,
+        "hideOnForms": null
+      }
     },
     "Hypothetical": {
       "name": "Hypothetical",
@@ -17984,6 +18351,17 @@ export const definitions: ModelDefinitions = {
           ]
         },
         {
+          "name": "presided_by_reverse",
+          "key": "presidedByReverse",
+          "sources": [
+            {
+              "model": "Witnessing",
+              "field": "presided_by",
+              "viaReified": false
+            }
+          ]
+        },
+        {
           "name": "printer_reverse",
           "key": "printerReverse",
           "sources": [
@@ -18039,6 +18417,17 @@ export const definitions: ModelDefinitions = {
           ]
         },
         {
+          "name": "reporter_reverse",
+          "key": "reporterReverse",
+          "sources": [
+            {
+              "model": "Report",
+              "field": "reporter",
+              "viaReified": false
+            }
+          ]
+        },
+        {
           "name": "reputed_reverse",
           "key": "reputedReverse",
           "sources": [
@@ -18056,6 +18445,17 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Residence",
               "field": "resident",
+              "viaReified": false
+            }
+          ]
+        },
+        {
+          "name": "sealed_by_reverse",
+          "key": "sealedByReverse",
+          "sources": [
+            {
+              "model": "SealedLetter",
+              "field": "sealed_by",
               "viaReified": false
             }
           ]
@@ -19710,6 +20110,11 @@ export const definitions: ModelDefinitions = {
                     },
                     {
                       "kind": "document",
+                      "type": "Report",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
                       "type": "Reputation",
                       "edgeModel": null
                     },
@@ -19721,6 +20126,11 @@ export const definitions: ModelDefinitions = {
                     {
                       "kind": "document",
                       "type": "Sale",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "SealedLetter",
                       "edgeModel": null
                     },
                     {
@@ -19761,6 +20171,11 @@ export const definitions: ModelDefinitions = {
                     {
                       "kind": "document",
                       "type": "Voyage",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Witnessing",
                       "edgeModel": null
                     }
                   ]
@@ -20062,6 +20477,11 @@ export const definitions: ModelDefinitions = {
                     },
                     {
                       "kind": "document",
+                      "type": "Report",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
                       "type": "Reputation",
                       "edgeModel": null
                     },
@@ -20073,6 +20493,11 @@ export const definitions: ModelDefinitions = {
                     {
                       "kind": "document",
                       "type": "Sale",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "SealedLetter",
                       "edgeModel": null
                     },
                     {
@@ -20113,6 +20538,11 @@ export const definitions: ModelDefinitions = {
                     {
                       "kind": "document",
                       "type": "Voyage",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Witnessing",
                       "edgeModel": null
                     }
                   ]
@@ -22518,6 +22948,17 @@ export const definitions: ModelDefinitions = {
           ]
         },
         {
+          "name": "presided_by_reverse",
+          "key": "presidedByReverse",
+          "sources": [
+            {
+              "model": "Witnessing",
+              "field": "presided_by",
+              "viaReified": false
+            }
+          ]
+        },
+        {
           "name": "printer_reverse",
           "key": "printerReverse",
           "sources": [
@@ -22594,6 +23035,17 @@ export const definitions: ModelDefinitions = {
           ]
         },
         {
+          "name": "reporter_reverse",
+          "key": "reporterReverse",
+          "sources": [
+            {
+              "model": "Report",
+              "field": "reporter",
+              "viaReified": false
+            }
+          ]
+        },
+        {
           "name": "reputed_reverse",
           "key": "reputedReverse",
           "sources": [
@@ -22633,6 +23085,17 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Canonisation",
               "field": "saint",
+              "viaReified": false
+            }
+          ]
+        },
+        {
+          "name": "sealed_by_reverse",
+          "key": "sealedByReverse",
+          "sources": [
+            {
+              "model": "SealedLetter",
+              "field": "sealed_by",
               "viaReified": false
             }
           ]
@@ -22749,6 +23212,17 @@ export const definitions: ModelDefinitions = {
               "model": "Petition",
               "field": "petitioned",
               "viaReified": false
+            }
+          ]
+        },
+        {
+          "name": "witnessed",
+          "key": "witnessed",
+          "sources": [
+            {
+              "model": "Witnessing",
+              "field": "witnesses",
+              "viaReified": true
             }
           ]
         }
@@ -23752,6 +24226,11 @@ export const definitions: ModelDefinitions = {
               "viaReified": false
             },
             {
+              "model": "SealedLetter",
+              "field": "places",
+              "viaReified": false
+            },
+            {
               "model": "Sermon",
               "field": "places",
               "viaReified": false
@@ -23788,6 +24267,11 @@ export const definitions: ModelDefinitions = {
             },
             {
               "model": "Voyage",
+              "field": "places",
+              "viaReified": false
+            },
+            {
+              "model": "Witnessing",
               "field": "places",
               "viaReified": false
             }
@@ -24878,6 +25362,11 @@ export const definitions: ModelDefinitions = {
               "viaReified": false
             },
             {
+              "model": "SealedLetter",
+              "field": "places",
+              "viaReified": false
+            },
+            {
               "model": "Sermon",
               "field": "places",
               "viaReified": false
@@ -24914,6 +25403,11 @@ export const definitions: ModelDefinitions = {
             },
             {
               "model": "Voyage",
+              "field": "places",
+              "viaReified": false
+            },
+            {
+              "model": "Witnessing",
               "field": "places",
               "viaReified": false
             }
@@ -25577,6 +26071,17 @@ export const definitions: ModelDefinitions = {
           ]
         },
         {
+          "name": "presided_by_reverse",
+          "key": "presidedByReverse",
+          "sources": [
+            {
+              "model": "Witnessing",
+              "field": "presided_by",
+              "viaReified": false
+            }
+          ]
+        },
+        {
           "name": "printer_reverse",
           "key": "printerReverse",
           "sources": [
@@ -25632,6 +26137,17 @@ export const definitions: ModelDefinitions = {
           ]
         },
         {
+          "name": "reporter_reverse",
+          "key": "reporterReverse",
+          "sources": [
+            {
+              "model": "Report",
+              "field": "reporter",
+              "viaReified": false
+            }
+          ]
+        },
+        {
           "name": "reputed_reverse",
           "key": "reputedReverse",
           "sources": [
@@ -25649,6 +26165,17 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Residence",
               "field": "resident",
+              "viaReified": false
+            }
+          ]
+        },
+        {
+          "name": "sealed_by_reverse",
+          "key": "sealedByReverse",
+          "sources": [
+            {
+              "model": "SealedLetter",
+              "field": "sealed_by",
               "viaReified": false
             }
           ]
@@ -25745,6 +26272,502 @@ export const definitions: ModelDefinitions = {
       "traits": [
         "Agent"
       ],
+      "interfaceMeta": null
+    },
+    "Report": {
+      "name": "Report",
+      "kind": "Document",
+      "abstract": false,
+      "description": "Someone reported a statement, which can itself be a report (of a report of an order of an order ...)",
+      "parent": "UndatedStatement",
+      "concreteTypes": [
+        "Report"
+      ],
+      "typeParameters": [],
+      "createWithId": false,
+      "createDirectly": false,
+      "acceptUrlAsId": false,
+      "requireLabel": true,
+      "useInSemanticSpaceLabel": true,
+      "fields": [
+        {
+          "name": "text",
+          "key": "text",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [
+            {
+              "name": "MinLen",
+              "min_length": 5
+            }
+          ],
+          "markers": [],
+          "readOnly": false
+        },
+        {
+          "name": "reporter",
+          "key": "reporter",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "relation",
+          "many": false,
+          "reverseName": "reporter_reverse",
+          "options": [
+            {
+              "kind": "entity",
+              "type": "Army",
+              "edgeModel": null
+            },
+            {
+              "kind": "entity",
+              "type": "Court",
+              "edgeModel": null
+            },
+            {
+              "kind": "entity",
+              "type": "Family",
+              "edgeModel": null
+            },
+            {
+              "kind": "entity",
+              "type": "Group",
+              "edgeModel": null
+            },
+            {
+              "kind": "entity",
+              "type": "Guild",
+              "edgeModel": null
+            },
+            {
+              "kind": "entity",
+              "type": "Monastery",
+              "edgeModel": null
+            },
+            {
+              "kind": "entity",
+              "type": "Person",
+              "edgeModel": null
+            },
+            {
+              "kind": "entity",
+              "type": "ReligiousOrder",
+              "edgeModel": null
+            },
+            {
+              "kind": "entity",
+              "type": "TradingCompany",
+              "edgeModel": null
+            },
+            {
+              "kind": "entity",
+              "type": "University",
+              "edgeModel": null
+            }
+          ],
+          "validators": [],
+          "subclasses": [
+            "involves"
+          ],
+          "defaultReifiedType": null,
+          "bindings": [],
+          "readOnly": false
+        },
+        {
+          "name": "reported",
+          "key": "reported",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "relation",
+          "many": false,
+          "reverseName": "reported_in",
+          "options": [
+            {
+              "kind": "semanticSpace",
+              "type": "Hearsay",
+              "edgeModel": null,
+              "params": {
+                "T": {
+                  "typeVar": "T",
+                  "options": [
+                    {
+                      "kind": "document",
+                      "type": "Accusation",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Appointment",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Apprenticeship",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Authorship",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Baptism",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Battle",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Betrothal",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Birth",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Burial",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Canonisation",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Characterisation",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Commission",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Construction",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Conversion",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Coronation",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "CreationOfArtwork",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "CreationOfPhysicalObject",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Death",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Destruction",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Dismissal",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Donation",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Election",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Employment",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Ennoblement",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Excommunication",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Execution",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Exile",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Founding",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Gift",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Graduation",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Imprisonment",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Inheritance",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Kinship",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Knighting",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "LanguageSpoken",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Lawsuit",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Letter",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Loan",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "LocatedIn",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Marriage",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Matriculation",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Meeting",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Membership",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "NameVariant",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "OccupationAscription",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "OfficeHolding",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Order",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Ordination",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Origin",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Ownership",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Pardon",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Payment",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Petition",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "PhysicalDescription",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Pilgrimage",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Printing",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Reign",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Report",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Reputation",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Residence",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Sale",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "SealedLetter",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Sermon",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Shipwreck",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Siege",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "StudyAt",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Translation",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Treaty",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Visit",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Voyage",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Witnessing",
+                      "edgeModel": null
+                    }
+                  ]
+                }
+              }
+            }
+          ],
+          "validators": [],
+          "subclasses": [],
+          "defaultReifiedType": null,
+          "bindings": [],
+          "readOnly": false
+        }
+      ],
+      "incoming": [],
+      "traits": [],
       "interfaceMeta": null
     },
     "Reputation": {
@@ -26512,6 +27535,391 @@ export const definitions: ModelDefinitions = {
       "traits": [],
       "interfaceMeta": null
     },
+    "Seal": {
+      "name": "Seal",
+      "kind": "Embedded",
+      "abstract": false,
+      "description": "A seal on a document, as it is now",
+      "parent": null,
+      "concreteTypes": [
+        "Seal"
+      ],
+      "typeParameters": [],
+      "createWithId": false,
+      "createDirectly": true,
+      "acceptUrlAsId": false,
+      "requireLabel": false,
+      "useInSemanticSpaceLabel": true,
+      "fields": [
+        {
+          "name": "condition",
+          "key": "condition",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": [],
+          "readOnly": false
+        },
+        {
+          "name": "impression",
+          "key": "impression",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "embedded",
+          "model": "SealImpression",
+          "types": [
+            "SealImpression"
+          ],
+          "markers": [],
+          "readOnly": false
+        }
+      ],
+      "incoming": [],
+      "traits": [],
+      "interfaceMeta": null
+    },
+    "SealImpression": {
+      "name": "SealImpression",
+      "kind": "Embedded",
+      "abstract": false,
+      "description": "The wax, and what struck it",
+      "parent": null,
+      "concreteTypes": [
+        "SealImpression"
+      ],
+      "typeParameters": [],
+      "createWithId": false,
+      "createDirectly": true,
+      "acceptUrlAsId": false,
+      "requireLabel": false,
+      "useInSemanticSpaceLabel": true,
+      "fields": [
+        {
+          "name": "wax_colour",
+          "key": "waxColour",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": [],
+          "readOnly": false
+        },
+        {
+          "name": "matrix",
+          "key": "matrix",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "embedded",
+          "model": "SealMatrix",
+          "types": [
+            "SealMatrix"
+          ],
+          "markers": [],
+          "readOnly": false
+        }
+      ],
+      "incoming": [],
+      "traits": [],
+      "interfaceMeta": null
+    },
+    "SealMatrix": {
+      "name": "SealMatrix",
+      "kind": "Embedded",
+      "abstract": false,
+      "description": "The die a seal was struck from",
+      "parent": null,
+      "concreteTypes": [
+        "SealMatrix"
+      ],
+      "typeParameters": [],
+      "createWithId": false,
+      "createDirectly": true,
+      "acceptUrlAsId": false,
+      "requireLabel": false,
+      "useInSemanticSpaceLabel": true,
+      "fields": [
+        {
+          "name": "engraved_by",
+          "key": "engravedBy",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": [],
+          "readOnly": false
+        },
+        {
+          "name": "motto",
+          "key": "motto",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": [],
+          "readOnly": false
+        }
+      ],
+      "incoming": [],
+      "traits": [],
+      "interfaceMeta": null
+    },
+    "SealedLetter": {
+      "name": "SealedLetter",
+      "kind": "Document",
+      "abstract": false,
+      "description": "A letter described by its seal: embedded three deep",
+      "parent": "DatedStatement",
+      "concreteTypes": [
+        "SealedLetter"
+      ],
+      "typeParameters": [],
+      "createWithId": false,
+      "createDirectly": false,
+      "acceptUrlAsId": false,
+      "requireLabel": true,
+      "useInSemanticSpaceLabel": true,
+      "fields": [
+        {
+          "name": "date",
+          "key": "date",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "embedded",
+          "model": "Date",
+          "types": [
+            "DateRange",
+            "EDTFDate",
+            "ExactDate",
+            "OngoingDate",
+            "Period",
+            "Recurrence",
+            "UnknownDate"
+          ],
+          "markers": [],
+          "readOnly": false
+        },
+        {
+          "name": "date_sort_day",
+          "key": "dateSortDay",
+          "description": null,
+          "dbField": true,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": [],
+          "markers": [],
+          "readOnly": false
+        },
+        {
+          "name": "date_end_sort_day",
+          "key": "dateEndSortDay",
+          "description": null,
+          "dbField": true,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": [],
+          "markers": [],
+          "readOnly": false
+        },
+        {
+          "name": "date_text",
+          "key": "dateText",
+          "description": null,
+          "dbField": true,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": [],
+          "readOnly": false
+        },
+        {
+          "name": "text",
+          "key": "text",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [
+            {
+              "name": "MinLen",
+              "min_length": 5
+            }
+          ],
+          "markers": [],
+          "readOnly": false
+        },
+        {
+          "name": "places",
+          "key": "places",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "relation",
+          "many": true,
+          "reverseName": "places_reverse",
+          "options": [
+            {
+              "kind": "entity",
+              "type": "Building",
+              "edgeModel": null
+            },
+            {
+              "kind": "entity",
+              "type": "Place",
+              "edgeModel": null
+            },
+            {
+              "kind": "entity",
+              "type": "Region",
+              "edgeModel": null
+            },
+            {
+              "kind": "entity",
+              "type": "Settlement",
+              "edgeModel": null
+            }
+          ],
+          "validators": [],
+          "subclasses": [],
+          "defaultReifiedType": null,
+          "bindings": [],
+          "readOnly": false
+        },
+        {
+          "name": "sealed_by",
+          "key": "sealedBy",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "relation",
+          "many": false,
+          "reverseName": "sealed_by_reverse",
+          "options": [
+            {
+              "kind": "entity",
+              "type": "Army",
+              "edgeModel": null
+            },
+            {
+              "kind": "entity",
+              "type": "Court",
+              "edgeModel": null
+            },
+            {
+              "kind": "entity",
+              "type": "Family",
+              "edgeModel": null
+            },
+            {
+              "kind": "entity",
+              "type": "Group",
+              "edgeModel": null
+            },
+            {
+              "kind": "entity",
+              "type": "Guild",
+              "edgeModel": null
+            },
+            {
+              "kind": "entity",
+              "type": "Monastery",
+              "edgeModel": null
+            },
+            {
+              "kind": "entity",
+              "type": "Person",
+              "edgeModel": null
+            },
+            {
+              "kind": "entity",
+              "type": "ReligiousOrder",
+              "edgeModel": null
+            },
+            {
+              "kind": "entity",
+              "type": "TradingCompany",
+              "edgeModel": null
+            },
+            {
+              "kind": "entity",
+              "type": "University",
+              "edgeModel": null
+            }
+          ],
+          "validators": [],
+          "subclasses": [
+            "involves"
+          ],
+          "defaultReifiedType": null,
+          "bindings": [],
+          "readOnly": false
+        },
+        {
+          "name": "seal",
+          "key": "seal",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "embedded",
+          "model": "Seal",
+          "types": [
+            "Seal"
+          ],
+          "markers": [],
+          "readOnly": false
+        }
+      ],
+      "incoming": [],
+      "traits": [
+        "Dateable"
+      ],
+      "interfaceMeta": null
+    },
     "Sermon": {
       "name": "Sermon",
       "kind": "Document",
@@ -27080,6 +28488,11 @@ export const definitions: ModelDefinitions = {
               "viaReified": false
             },
             {
+              "model": "SealedLetter",
+              "field": "places",
+              "viaReified": false
+            },
+            {
               "model": "Sermon",
               "field": "places",
               "viaReified": false
@@ -27116,6 +28529,11 @@ export const definitions: ModelDefinitions = {
             },
             {
               "model": "Voyage",
+              "field": "places",
+              "viaReified": false
+            },
+            {
+              "model": "Witnessing",
               "field": "places",
               "viaReified": false
             }
@@ -27753,9 +29171,11 @@ export const definitions: ModelDefinitions = {
         "Pilgrimage",
         "Printing",
         "Reign",
+        "Report",
         "Reputation",
         "Residence",
         "Sale",
+        "SealedLetter",
         "Sermon",
         "Shipwreck",
         "Siege",
@@ -27763,7 +29183,8 @@ export const definitions: ModelDefinitions = {
         "Translation",
         "Treaty",
         "Visit",
-        "Voyage"
+        "Voyage",
+        "Witnessing"
       ],
       "typeParameters": [],
       "createWithId": false,
@@ -28597,6 +30018,17 @@ export const definitions: ModelDefinitions = {
           ]
         },
         {
+          "name": "presided_by_reverse",
+          "key": "presidedByReverse",
+          "sources": [
+            {
+              "model": "Witnessing",
+              "field": "presided_by",
+              "viaReified": false
+            }
+          ]
+        },
+        {
           "name": "printer_reverse",
           "key": "printerReverse",
           "sources": [
@@ -28652,6 +30084,17 @@ export const definitions: ModelDefinitions = {
           ]
         },
         {
+          "name": "reporter_reverse",
+          "key": "reporterReverse",
+          "sources": [
+            {
+              "model": "Report",
+              "field": "reporter",
+              "viaReified": false
+            }
+          ]
+        },
+        {
           "name": "reputed_reverse",
           "key": "reputedReverse",
           "sources": [
@@ -28669,6 +30112,17 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Residence",
               "field": "resident",
+              "viaReified": false
+            }
+          ]
+        },
+        {
+          "name": "sealed_by_reverse",
+          "key": "sealedByReverse",
+          "sources": [
+            {
+              "model": "SealedLetter",
+              "field": "sealed_by",
               "viaReified": false
             }
           ]
@@ -29243,6 +30697,7 @@ export const definitions: ModelDefinitions = {
         "Origin",
         "Ownership",
         "PhysicalDescription",
+        "Report",
         "Reputation"
       ],
       "typeParameters": [],
@@ -29790,6 +31245,17 @@ export const definitions: ModelDefinitions = {
           ]
         },
         {
+          "name": "presided_by_reverse",
+          "key": "presidedByReverse",
+          "sources": [
+            {
+              "model": "Witnessing",
+              "field": "presided_by",
+              "viaReified": false
+            }
+          ]
+        },
+        {
           "name": "printer_reverse",
           "key": "printerReverse",
           "sources": [
@@ -29845,6 +31311,17 @@ export const definitions: ModelDefinitions = {
           ]
         },
         {
+          "name": "reporter_reverse",
+          "key": "reporterReverse",
+          "sources": [
+            {
+              "model": "Report",
+              "field": "reporter",
+              "viaReified": false
+            }
+          ]
+        },
+        {
           "name": "reputed_reverse",
           "key": "reputedReverse",
           "sources": [
@@ -29862,6 +31339,17 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Residence",
               "field": "resident",
+              "viaReified": false
+            }
+          ]
+        },
+        {
+          "name": "sealed_by_reverse",
+          "key": "sealedByReverse",
+          "sources": [
+            {
+              "model": "SealedLetter",
+              "field": "sealed_by",
               "viaReified": false
             }
           ]
@@ -30864,6 +32352,294 @@ export const definitions: ModelDefinitions = {
       ],
       "incoming": [],
       "traits": [],
+      "interfaceMeta": null
+    },
+    "Witnessing": {
+      "name": "Witnessing",
+      "kind": "Document",
+      "abstract": false,
+      "description": "Witnesses to something, each one reified four deep: who in the source names the witness, in what role, and\nwhich of several people the name is",
+      "parent": "DatedStatement",
+      "concreteTypes": [
+        "Witnessing"
+      ],
+      "typeParameters": [],
+      "createWithId": false,
+      "createDirectly": false,
+      "acceptUrlAsId": false,
+      "requireLabel": true,
+      "useInSemanticSpaceLabel": true,
+      "fields": [
+        {
+          "name": "date",
+          "key": "date",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "embedded",
+          "model": "Date",
+          "types": [
+            "DateRange",
+            "EDTFDate",
+            "ExactDate",
+            "OngoingDate",
+            "Period",
+            "Recurrence",
+            "UnknownDate"
+          ],
+          "markers": [],
+          "readOnly": false
+        },
+        {
+          "name": "date_sort_day",
+          "key": "dateSortDay",
+          "description": null,
+          "dbField": true,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": [],
+          "markers": [],
+          "readOnly": false
+        },
+        {
+          "name": "date_end_sort_day",
+          "key": "dateEndSortDay",
+          "description": null,
+          "dbField": true,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": [],
+          "markers": [],
+          "readOnly": false
+        },
+        {
+          "name": "date_text",
+          "key": "dateText",
+          "description": null,
+          "dbField": true,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": [],
+          "readOnly": false
+        },
+        {
+          "name": "text",
+          "key": "text",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [
+            {
+              "name": "MinLen",
+              "min_length": 5
+            }
+          ],
+          "markers": [],
+          "readOnly": false
+        },
+        {
+          "name": "places",
+          "key": "places",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "relation",
+          "many": true,
+          "reverseName": "places_reverse",
+          "options": [
+            {
+              "kind": "entity",
+              "type": "Building",
+              "edgeModel": null
+            },
+            {
+              "kind": "entity",
+              "type": "Place",
+              "edgeModel": null
+            },
+            {
+              "kind": "entity",
+              "type": "Region",
+              "edgeModel": null
+            },
+            {
+              "kind": "entity",
+              "type": "Settlement",
+              "edgeModel": null
+            }
+          ],
+          "validators": [],
+          "subclasses": [],
+          "defaultReifiedType": null,
+          "bindings": [],
+          "readOnly": false
+        },
+        {
+          "name": "presided_by",
+          "key": "presidedBy",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "relation",
+          "many": false,
+          "reverseName": "presided_by_reverse",
+          "options": [
+            {
+              "kind": "entity",
+              "type": "Army",
+              "edgeModel": null
+            },
+            {
+              "kind": "entity",
+              "type": "Court",
+              "edgeModel": null
+            },
+            {
+              "kind": "entity",
+              "type": "Family",
+              "edgeModel": null
+            },
+            {
+              "kind": "entity",
+              "type": "Group",
+              "edgeModel": null
+            },
+            {
+              "kind": "entity",
+              "type": "Guild",
+              "edgeModel": null
+            },
+            {
+              "kind": "entity",
+              "type": "Monastery",
+              "edgeModel": null
+            },
+            {
+              "kind": "entity",
+              "type": "Person",
+              "edgeModel": null
+            },
+            {
+              "kind": "entity",
+              "type": "ReligiousOrder",
+              "edgeModel": null
+            },
+            {
+              "kind": "entity",
+              "type": "TradingCompany",
+              "edgeModel": null
+            },
+            {
+              "kind": "entity",
+              "type": "University",
+              "edgeModel": null
+            }
+          ],
+          "validators": [],
+          "subclasses": [
+            "involves"
+          ],
+          "defaultReifiedType": null,
+          "bindings": [],
+          "readOnly": false
+        },
+        {
+          "name": "witnesses",
+          "key": "witnesses",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "relation",
+          "many": true,
+          "reverseName": "witnessed",
+          "options": [
+            {
+              "kind": "reifiedRelation",
+              "type": "Attributed",
+              "edgeModel": null,
+              "params": {
+                "T": {
+                  "typeVar": "T",
+                  "options": [
+                    {
+                      "kind": "reifiedRelation",
+                      "type": "InRole",
+                      "edgeModel": null,
+                      "params": {
+                        "T": {
+                          "typeVar": "T",
+                          "options": [
+                            {
+                              "kind": "reifiedRelation",
+                              "type": "Identification",
+                              "edgeModel": null,
+                              "params": {
+                                "T": {
+                                  "typeVar": "T",
+                                  "options": [
+                                    {
+                                      "kind": "conjunction",
+                                      "type": "WeightedAlternative",
+                                      "edgeModel": null,
+                                      "params": {
+                                        "T": {
+                                          "typeVar": "T",
+                                          "options": [
+                                            {
+                                              "kind": "entity",
+                                              "type": "Person",
+                                              "edgeModel": null
+                                            }
+                                          ]
+                                        }
+                                      }
+                                    }
+                                  ]
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          ],
+          "validators": [],
+          "subclasses": [],
+          "defaultReifiedType": null,
+          "bindings": [],
+          "readOnly": false
+        }
+      ],
+      "incoming": [],
+      "traits": [
+        "Dateable"
+      ],
       "interfaceMeta": null
     },
     "ZoteroBacked": {
@@ -34530,9 +36306,11 @@ export const definitions: ModelDefinitions = {
             "Pilgrimage",
             "Printing",
             "Reign",
+            "Report",
             "Reputation",
             "Residence",
             "Sale",
+            "SealedLetter",
             "Sermon",
             "Shipwreck",
             "Siege",
@@ -34540,7 +36318,8 @@ export const definitions: ModelDefinitions = {
             "Translation",
             "Treaty",
             "Visit",
-            "Voyage"
+            "Voyage",
+            "Witnessing"
           ]
         },
         "recorded_on": {
@@ -36276,9 +38055,11 @@ export const definitions: ModelDefinitions = {
             "Pilgrimage",
             "Printing",
             "Reign",
+            "Report",
             "Reputation",
             "Residence",
             "Sale",
+            "SealedLetter",
             "Sermon",
             "Shipwreck",
             "Siege",
@@ -36286,7 +38067,8 @@ export const definitions: ModelDefinitions = {
             "Translation",
             "Treaty",
             "Visit",
-            "Voyage"
+            "Voyage",
+            "Witnessing"
           ]
         }
       },
@@ -37389,6 +39171,112 @@ export const definitions: ModelDefinitions = {
         "name"
       ]
     },
+    "Report": {
+      "kind": "document",
+      "fields": {
+        "text": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "reporter": {
+          "operators": "relation",
+          "targets": [
+            "Army",
+            "Court",
+            "Family",
+            "Group",
+            "Guild",
+            "Monastery",
+            "Person",
+            "ReligiousOrder",
+            "TradingCompany",
+            "University"
+          ]
+        },
+        "reported": {
+          "operators": "relation",
+          "targets": [
+            "Accusation",
+            "Appointment",
+            "Apprenticeship",
+            "Authorship",
+            "Baptism",
+            "Battle",
+            "Betrothal",
+            "Birth",
+            "Burial",
+            "Canonisation",
+            "Characterisation",
+            "Commission",
+            "Construction",
+            "Conversion",
+            "Coronation",
+            "CreationOfArtwork",
+            "CreationOfPhysicalObject",
+            "Death",
+            "Destruction",
+            "Dismissal",
+            "Donation",
+            "Election",
+            "Employment",
+            "Ennoblement",
+            "Excommunication",
+            "Execution",
+            "Exile",
+            "Founding",
+            "Gift",
+            "Graduation",
+            "Imprisonment",
+            "Inheritance",
+            "Kinship",
+            "Knighting",
+            "LanguageSpoken",
+            "Lawsuit",
+            "Letter",
+            "Loan",
+            "LocatedIn",
+            "Marriage",
+            "Matriculation",
+            "Meeting",
+            "Membership",
+            "NameVariant",
+            "OccupationAscription",
+            "OfficeHolding",
+            "Order",
+            "Ordination",
+            "Origin",
+            "Ownership",
+            "Pardon",
+            "Payment",
+            "Petition",
+            "PhysicalDescription",
+            "Pilgrimage",
+            "Printing",
+            "Reign",
+            "Report",
+            "Reputation",
+            "Residence",
+            "Sale",
+            "SealedLetter",
+            "Sermon",
+            "Shipwreck",
+            "Siege",
+            "StudyAt",
+            "Translation",
+            "Treaty",
+            "Visit",
+            "Voyage",
+            "Witnessing"
+          ]
+        }
+      },
+      "orderBy": [
+        "label",
+        "text"
+      ]
+    },
     "Reputation": {
       "kind": "document",
       "fields": {
@@ -37618,6 +39506,148 @@ export const definitions: ModelDefinitions = {
       "fields": {},
       "orderBy": [
         "label"
+      ]
+    },
+    "Seal": {
+      "kind": "embedded",
+      "fields": {
+        "condition": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "impression": {
+          "operators": "relation",
+          "targets": [
+            "SealImpression"
+          ]
+        }
+      },
+      "orderBy": []
+    },
+    "SealImpression": {
+      "kind": "embedded",
+      "fields": {
+        "wax_colour": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "matrix": {
+          "operators": "relation",
+          "targets": [
+            "SealMatrix"
+          ]
+        }
+      },
+      "orderBy": []
+    },
+    "SealMatrix": {
+      "kind": "embedded",
+      "fields": {
+        "engraved_by": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "motto": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        }
+      },
+      "orderBy": []
+    },
+    "SealedLetter": {
+      "kind": "document",
+      "fields": {
+        "date": {
+          "operators": "relation",
+          "targets": [
+            "Date",
+            "DateRange",
+            "EDTFDate",
+            "ExactDate",
+            "OngoingDate",
+            "Period",
+            "Recurrence",
+            "UnknownDate"
+          ]
+        },
+        "date_sort_day": {
+          "operators": "compare",
+          "value": {
+            "type": "int"
+          }
+        },
+        "date_end_sort_day": {
+          "operators": "compare",
+          "value": {
+            "type": "int"
+          }
+        },
+        "date_text": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "text": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "places": {
+          "operators": "relation",
+          "targets": [
+            "Building",
+            "Place",
+            "Region",
+            "Settlement"
+          ]
+        },
+        "sealed_by": {
+          "operators": "relation",
+          "targets": [
+            "Army",
+            "Court",
+            "Family",
+            "Group",
+            "Guild",
+            "Monastery",
+            "Person",
+            "ReligiousOrder",
+            "TradingCompany",
+            "University"
+          ]
+        },
+        "seal": {
+          "operators": "relation",
+          "targets": [
+            "Seal"
+          ]
+        }
+      },
+      "orderBy": [
+        "label",
+        "date.source_text",
+        "date.earliest_fuzzy",
+        "date.earliest_strict",
+        "date.latest_strict",
+        "date.latest_fuzzy",
+        "date.sort_day",
+        "date.end_sort_day",
+        "date_sort_day",
+        "date_end_sort_day",
+        "date_text",
+        "text",
+        "seal.condition",
+        "seal.impression.wax_colour"
       ]
     },
     "Sermon": {
@@ -38475,6 +40505,92 @@ export const definitions: ModelDefinitions = {
           "operators": "relation",
           "targets": [
             "Commodity"
+          ]
+        }
+      },
+      "orderBy": [
+        "label",
+        "date.source_text",
+        "date.earliest_fuzzy",
+        "date.earliest_strict",
+        "date.latest_strict",
+        "date.latest_fuzzy",
+        "date.sort_day",
+        "date.end_sort_day",
+        "date_sort_day",
+        "date_end_sort_day",
+        "date_text",
+        "text"
+      ]
+    },
+    "Witnessing": {
+      "kind": "document",
+      "fields": {
+        "date": {
+          "operators": "relation",
+          "targets": [
+            "Date",
+            "DateRange",
+            "EDTFDate",
+            "ExactDate",
+            "OngoingDate",
+            "Period",
+            "Recurrence",
+            "UnknownDate"
+          ]
+        },
+        "date_sort_day": {
+          "operators": "compare",
+          "value": {
+            "type": "int"
+          }
+        },
+        "date_end_sort_day": {
+          "operators": "compare",
+          "value": {
+            "type": "int"
+          }
+        },
+        "date_text": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "text": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "places": {
+          "operators": "relation",
+          "targets": [
+            "Building",
+            "Place",
+            "Region",
+            "Settlement"
+          ]
+        },
+        "presided_by": {
+          "operators": "relation",
+          "targets": [
+            "Army",
+            "Court",
+            "Family",
+            "Group",
+            "Guild",
+            "Monastery",
+            "Person",
+            "ReligiousOrder",
+            "TradingCompany",
+            "University"
+          ]
+        },
+        "witnesses": {
+          "operators": "relation",
+          "targets": [
+            "Person"
           ]
         }
       },
@@ -39671,7 +41787,7 @@ export type ExilePattern = { type: "Exile"; where?: ExileWhere };
 
 export type FactoidWhere = {
   source?: RelationCondition | (RelationCondition & (BookPattern | ZoteroObjectPattern));
-  statements?: RelationCondition | (RelationCondition & (AccusationPattern | AppointmentPattern | ApprenticeshipPattern | AuthorshipPattern | BaptismPattern | BattlePattern | BetrothalPattern | BirthPattern | BurialPattern | CanonisationPattern | CharacterisationPattern | CommissionPattern | ConstructionPattern | ConversionPattern | CoronationPattern | CreationOfArtworkPattern | CreationOfPhysicalObjectPattern | DeathPattern | DestructionPattern | DismissalPattern | DonationPattern | ElectionPattern | EmploymentPattern | EnnoblementPattern | ExcommunicationPattern | ExecutionPattern | ExilePattern | FoundingPattern | GiftPattern | GraduationPattern | ImprisonmentPattern | InheritancePattern | KinshipPattern | KnightingPattern | LanguageSpokenPattern | LawsuitPattern | LetterPattern | LoanPattern | LocatedInPattern | MarriagePattern | MatriculationPattern | MeetingPattern | MembershipPattern | NameVariantPattern | OccupationAscriptionPattern | OfficeHoldingPattern | OrderPattern | OrdinationPattern | OriginPattern | OwnershipPattern | PardonPattern | PaymentPattern | PetitionPattern | PhysicalDescriptionPattern | PilgrimagePattern | PrintingPattern | ReignPattern | ReputationPattern | ResidencePattern | SalePattern | SermonPattern | ShipwreckPattern | SiegePattern | StudyAtPattern | TranslationPattern | TreatyPattern | VisitPattern | VoyagePattern));
+  statements?: RelationCondition | (RelationCondition & (AccusationPattern | AppointmentPattern | ApprenticeshipPattern | AuthorshipPattern | BaptismPattern | BattlePattern | BetrothalPattern | BirthPattern | BurialPattern | CanonisationPattern | CharacterisationPattern | CommissionPattern | ConstructionPattern | ConversionPattern | CoronationPattern | CreationOfArtworkPattern | CreationOfPhysicalObjectPattern | DeathPattern | DestructionPattern | DismissalPattern | DonationPattern | ElectionPattern | EmploymentPattern | EnnoblementPattern | ExcommunicationPattern | ExecutionPattern | ExilePattern | FoundingPattern | GiftPattern | GraduationPattern | ImprisonmentPattern | InheritancePattern | KinshipPattern | KnightingPattern | LanguageSpokenPattern | LawsuitPattern | LetterPattern | LoanPattern | LocatedInPattern | MarriagePattern | MatriculationPattern | MeetingPattern | MembershipPattern | NameVariantPattern | OccupationAscriptionPattern | OfficeHoldingPattern | OrderPattern | OrdinationPattern | OriginPattern | OwnershipPattern | PardonPattern | PaymentPattern | PetitionPattern | PhysicalDescriptionPattern | PilgrimagePattern | PrintingPattern | ReignPattern | ReportPattern | ReputationPattern | ResidencePattern | SalePattern | SealedLetterPattern | SermonPattern | ShipwreckPattern | SiegePattern | StudyAtPattern | TranslationPattern | TreatyPattern | VisitPattern | VoyagePattern | WitnessingPattern));
   recorded_on?: CompareCondition<string>;
   $all?: FactoidWhere[];
   $any_of?: FactoidWhere[];
@@ -40259,7 +42375,7 @@ export type OrderWhere = {
   places?: RelationCondition | (RelationCondition & (BuildingPattern | PlacePattern | RegionPattern | SettlementPattern));
   ordered_by?: RelationCondition | (RelationCondition & (ArmyPattern | CourtPattern | FamilyPattern | GroupPattern | GuildPattern | MonasteryPattern | PersonPattern | ReligiousOrderPattern | TradingCompanyPattern | UniversityPattern));
   ordered_to?: RelationCondition | (RelationCondition & (ArmyPattern | CourtPattern | FamilyPattern | GroupPattern | GuildPattern | MonasteryPattern | PersonPattern | ReligiousOrderPattern | TradingCompanyPattern | UniversityPattern));
-  thing_ordered?: RelationCondition | (RelationCondition & (AccusationPattern | AppointmentPattern | ApprenticeshipPattern | AuthorshipPattern | BaptismPattern | BattlePattern | BetrothalPattern | BirthPattern | BurialPattern | CanonisationPattern | CharacterisationPattern | CommissionPattern | ConstructionPattern | ConversionPattern | CoronationPattern | CreationOfArtworkPattern | CreationOfPhysicalObjectPattern | DeathPattern | DestructionPattern | DismissalPattern | DonationPattern | ElectionPattern | EmploymentPattern | EnnoblementPattern | ExcommunicationPattern | ExecutionPattern | ExilePattern | FoundingPattern | GiftPattern | GraduationPattern | ImprisonmentPattern | InheritancePattern | KinshipPattern | KnightingPattern | LanguageSpokenPattern | LawsuitPattern | LetterPattern | LoanPattern | LocatedInPattern | MarriagePattern | MatriculationPattern | MeetingPattern | MembershipPattern | NameVariantPattern | OccupationAscriptionPattern | OfficeHoldingPattern | OrderPattern | OrdinationPattern | OriginPattern | OwnershipPattern | PardonPattern | PaymentPattern | PetitionPattern | PhysicalDescriptionPattern | PilgrimagePattern | PrintingPattern | ReignPattern | ReputationPattern | ResidencePattern | SalePattern | SermonPattern | ShipwreckPattern | SiegePattern | StudyAtPattern | TranslationPattern | TreatyPattern | VisitPattern | VoyagePattern));
+  thing_ordered?: RelationCondition | (RelationCondition & (AccusationPattern | AppointmentPattern | ApprenticeshipPattern | AuthorshipPattern | BaptismPattern | BattlePattern | BetrothalPattern | BirthPattern | BurialPattern | CanonisationPattern | CharacterisationPattern | CommissionPattern | ConstructionPattern | ConversionPattern | CoronationPattern | CreationOfArtworkPattern | CreationOfPhysicalObjectPattern | DeathPattern | DestructionPattern | DismissalPattern | DonationPattern | ElectionPattern | EmploymentPattern | EnnoblementPattern | ExcommunicationPattern | ExecutionPattern | ExilePattern | FoundingPattern | GiftPattern | GraduationPattern | ImprisonmentPattern | InheritancePattern | KinshipPattern | KnightingPattern | LanguageSpokenPattern | LawsuitPattern | LetterPattern | LoanPattern | LocatedInPattern | MarriagePattern | MatriculationPattern | MeetingPattern | MembershipPattern | NameVariantPattern | OccupationAscriptionPattern | OfficeHoldingPattern | OrderPattern | OrdinationPattern | OriginPattern | OwnershipPattern | PardonPattern | PaymentPattern | PetitionPattern | PhysicalDescriptionPattern | PilgrimagePattern | PrintingPattern | ReignPattern | ReportPattern | ReputationPattern | ResidencePattern | SalePattern | SealedLetterPattern | SermonPattern | ShipwreckPattern | SiegePattern | StudyAtPattern | TranslationPattern | TreatyPattern | VisitPattern | VoyagePattern | WitnessingPattern));
   $all?: OrderWhere[];
   $any_of?: OrderWhere[];
   $not?: OrderWhere;
@@ -40640,6 +42756,24 @@ export type ReligiousOrderWhere = {
 
 export type ReligiousOrderPattern = { type: "ReligiousOrder"; where?: ReligiousOrderWhere };
 
+export type ReportWhere = {
+  text?: TextCondition;
+  reporter?: RelationCondition | (RelationCondition & (ArmyPattern | CourtPattern | FamilyPattern | GroupPattern | GuildPattern | MonasteryPattern | PersonPattern | ReligiousOrderPattern | TradingCompanyPattern | UniversityPattern));
+  reported?: RelationCondition | (RelationCondition & (AccusationPattern | AppointmentPattern | ApprenticeshipPattern | AuthorshipPattern | BaptismPattern | BattlePattern | BetrothalPattern | BirthPattern | BurialPattern | CanonisationPattern | CharacterisationPattern | CommissionPattern | ConstructionPattern | ConversionPattern | CoronationPattern | CreationOfArtworkPattern | CreationOfPhysicalObjectPattern | DeathPattern | DestructionPattern | DismissalPattern | DonationPattern | ElectionPattern | EmploymentPattern | EnnoblementPattern | ExcommunicationPattern | ExecutionPattern | ExilePattern | FoundingPattern | GiftPattern | GraduationPattern | ImprisonmentPattern | InheritancePattern | KinshipPattern | KnightingPattern | LanguageSpokenPattern | LawsuitPattern | LetterPattern | LoanPattern | LocatedInPattern | MarriagePattern | MatriculationPattern | MeetingPattern | MembershipPattern | NameVariantPattern | OccupationAscriptionPattern | OfficeHoldingPattern | OrderPattern | OrdinationPattern | OriginPattern | OwnershipPattern | PardonPattern | PaymentPattern | PetitionPattern | PhysicalDescriptionPattern | PilgrimagePattern | PrintingPattern | ReignPattern | ReportPattern | ReputationPattern | ResidencePattern | SalePattern | SealedLetterPattern | SermonPattern | ShipwreckPattern | SiegePattern | StudyAtPattern | TranslationPattern | TreatyPattern | VisitPattern | VoyagePattern | WitnessingPattern));
+  $all?: ReportWhere[];
+  $any_of?: ReportWhere[];
+  $not?: ReportWhere;
+  $any?: AnyRelationCondition;
+  label?: TextCondition;
+  published?: ChoiceCondition<boolean>;
+  review_status?: TextCondition;
+  $mentions?: AnyRelationCondition;
+  $somewhere?: NodePattern[];
+  $spaces?: string[];
+};
+
+export type ReportPattern = { type: "Report"; where?: ReportWhere };
+
 export type ReputationWhere = {
   text?: TextCondition;
   reputed?: RelationCondition | (RelationCondition & (ArmyPattern | CourtPattern | FamilyPattern | GroupPattern | GuildPattern | MonasteryPattern | PersonPattern | ReligiousOrderPattern | TradingCompanyPattern | UniversityPattern));
@@ -40717,6 +42851,62 @@ export type SculptureWhere = {
 };
 
 export type SculpturePattern = { type: "Sculpture"; where?: SculptureWhere };
+
+export type SealWhere = {
+  condition?: TextCondition;
+  impression?: RelationCondition | (RelationCondition & (SealImpressionPattern));
+  $all?: SealWhere[];
+  $any_of?: SealWhere[];
+  $not?: SealWhere;
+  $any?: AnyRelationCondition;
+};
+
+export type SealPattern = { type: "Seal"; where?: SealWhere };
+
+export type SealImpressionWhere = {
+  wax_colour?: TextCondition;
+  matrix?: RelationCondition | (RelationCondition & (SealMatrixPattern));
+  $all?: SealImpressionWhere[];
+  $any_of?: SealImpressionWhere[];
+  $not?: SealImpressionWhere;
+  $any?: AnyRelationCondition;
+};
+
+export type SealImpressionPattern = { type: "SealImpression"; where?: SealImpressionWhere };
+
+export type SealMatrixWhere = {
+  engraved_by?: TextCondition;
+  motto?: TextCondition;
+  $all?: SealMatrixWhere[];
+  $any_of?: SealMatrixWhere[];
+  $not?: SealMatrixWhere;
+  $any?: AnyRelationCondition;
+};
+
+export type SealMatrixPattern = { type: "SealMatrix"; where?: SealMatrixWhere };
+
+export type SealedLetterWhere = {
+  date?: RelationCondition | (RelationCondition & (DatePattern | DateRangePattern | EDTFDatePattern | ExactDatePattern | OngoingDatePattern | PeriodPattern | RecurrencePattern | UnknownDatePattern));
+  date_sort_day?: CompareCondition<number>;
+  date_end_sort_day?: CompareCondition<number>;
+  date_text?: TextCondition;
+  text?: TextCondition;
+  places?: RelationCondition | (RelationCondition & (BuildingPattern | PlacePattern | RegionPattern | SettlementPattern));
+  sealed_by?: RelationCondition | (RelationCondition & (ArmyPattern | CourtPattern | FamilyPattern | GroupPattern | GuildPattern | MonasteryPattern | PersonPattern | ReligiousOrderPattern | TradingCompanyPattern | UniversityPattern));
+  seal?: RelationCondition | (RelationCondition & (SealPattern));
+  $all?: SealedLetterWhere[];
+  $any_of?: SealedLetterWhere[];
+  $not?: SealedLetterWhere;
+  $any?: AnyRelationCondition;
+  label?: TextCondition;
+  published?: ChoiceCondition<boolean>;
+  review_status?: TextCondition;
+  $mentions?: AnyRelationCondition;
+  $somewhere?: NodePattern[];
+  $spaces?: string[];
+};
+
+export type SealedLetterPattern = { type: "SealedLetter"; where?: SealedLetterWhere };
 
 export type SermonWhere = {
   date?: RelationCondition | (RelationCondition & (DatePattern | DateRangePattern | EDTFDatePattern | ExactDatePattern | OngoingDatePattern | PeriodPattern | RecurrencePattern | UnknownDatePattern));
@@ -41021,6 +43211,29 @@ export type VoyageWhere = {
 
 export type VoyagePattern = { type: "Voyage"; where?: VoyageWhere };
 
+export type WitnessingWhere = {
+  date?: RelationCondition | (RelationCondition & (DatePattern | DateRangePattern | EDTFDatePattern | ExactDatePattern | OngoingDatePattern | PeriodPattern | RecurrencePattern | UnknownDatePattern));
+  date_sort_day?: CompareCondition<number>;
+  date_end_sort_day?: CompareCondition<number>;
+  date_text?: TextCondition;
+  text?: TextCondition;
+  places?: RelationCondition | (RelationCondition & (BuildingPattern | PlacePattern | RegionPattern | SettlementPattern));
+  presided_by?: RelationCondition | (RelationCondition & (ArmyPattern | CourtPattern | FamilyPattern | GroupPattern | GuildPattern | MonasteryPattern | PersonPattern | ReligiousOrderPattern | TradingCompanyPattern | UniversityPattern));
+  witnesses?: RelationCondition | (RelationCondition & (PersonPattern));
+  $all?: WitnessingWhere[];
+  $any_of?: WitnessingWhere[];
+  $not?: WitnessingWhere;
+  $any?: AnyRelationCondition;
+  label?: TextCondition;
+  published?: ChoiceCondition<boolean>;
+  review_status?: TextCondition;
+  $mentions?: AnyRelationCondition;
+  $somewhere?: NodePattern[];
+  $spaces?: string[];
+};
+
+export type WitnessingPattern = { type: "Witnessing"; where?: WitnessingWhere };
+
 export type ZoteroBackedWhere = {
   zotero_url?: TextCondition;
   zotero_library?: TextCondition;
@@ -41181,10 +43394,12 @@ export interface Wheres {
   Region: RegionWhere;
   Reign: ReignWhere;
   ReligiousOrder: ReligiousOrderWhere;
+  Report: ReportWhere;
   Reputation: ReputationWhere;
   Residence: ResidenceWhere;
   Sale: SaleWhere;
   Sculpture: SculptureWhere;
+  SealedLetter: SealedLetterWhere;
   Sermon: SermonWhere;
   Settlement: SettlementWhere;
   Ship: ShipWhere;
@@ -41200,6 +43415,7 @@ export interface Wheres {
   University: UniversityWhere;
   Visit: VisitWhere;
   Voyage: VoyageWhere;
+  Witnessing: WitnessingWhere;
   ZoteroBacked: ZoteroBackedWhere;
   ZoteroLibrary: ZoteroLibraryWhere;
   ZoteroObject: ZoteroObjectWhere;
@@ -41290,10 +43506,12 @@ export interface OrderFields {
   Region: "label";
   Reign: "label" | "date_sort_day" | "date_end_sort_day" | "date_text" | "text";
   ReligiousOrder: "label" | "name";
+  Report: "label" | "text";
   Reputation: "label" | "text" | "reputation";
   Residence: "label" | "date_sort_day" | "date_end_sort_day" | "date_text" | "text";
   Sale: "label" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day" | "date_sort_day" | "date_end_sort_day" | "date_text" | "text" | "price";
   Sculpture: "label";
+  SealedLetter: "label" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day" | "date_sort_day" | "date_end_sort_day" | "date_text" | "text" | "seal.condition" | "seal.impression.wax_colour";
   Sermon: "label" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day" | "date_sort_day" | "date_end_sort_day" | "date_text" | "text" | "theme";
   Settlement: "label" | "population_estimate";
   Ship: "label" | "tonnage";
@@ -41309,6 +43527,7 @@ export interface OrderFields {
   University: "label" | "name" | "founded_year";
   Visit: "label" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day" | "date_sort_day" | "date_end_sort_day" | "date_text" | "text";
   Voyage: "label" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day" | "date_sort_day" | "date_end_sort_day" | "date_text" | "text";
+  Witnessing: "label" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day" | "date_sort_day" | "date_end_sort_day" | "date_text" | "text";
   ZoteroBacked: "label" | "zotero_url" | "zotero_library" | "zotero_key" | "zotero_version" | "zotero_synced_entity_version" | "item_type" | "title" | "short_title" | "creators" | "date" | "language" | "abstract" | "zotero_data" | "citation" | "bibliography" | "csl_json" | "synced_when" | "item_type_override";
   ZoteroLibrary: "label" | "library" | "synced_version" | "last_sync" | "last_error";
   ZoteroObject: "label" | "zotero_url" | "zotero_library" | "zotero_key" | "zotero_version" | "zotero_synced_entity_version" | "item_type" | "title" | "short_title" | "creators" | "date" | "language" | "abstract" | "zotero_data" | "citation" | "bibliography" | "csl_json" | "synced_when" | "item_type_override";

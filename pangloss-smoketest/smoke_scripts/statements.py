@@ -147,6 +147,9 @@ def make(pool: Pool, kind: str) -> dict:
         "Donation": lambda: {**anyd(), "donor": p.agent(), "recipient_institution": p.ref(R.choice(["Monastery", "University", "ReligiousOrder"])),
                              "amount": str(R.randint(1, 3000))},
         "Order": lambda: order(p),
+        # deep nesting (2026-11-07)
+        "Witnessing": lambda: {**anyd(), "presided_by": p.agent(), "witnesses": [witness(p) for _ in range(R.randint(1, 4))]},
+        "SealedLetter": lambda: {**anyd(), "sealed_by": p.agent(), "seal": seal()},
         # undated
         "Kinship": lambda: {"person": who, "relative": p.person(), "kinship_kind": R.choice(
             ["parent", "sibling", "cousin", "uncle_or_aunt", "grandparent", "godparent"])},
@@ -159,6 +162,7 @@ def make(pool: Pool, kind: str) -> dict:
         "Ownership": lambda: {"owner": p.agent(), "owned": p.ref(R.choice(["Ship", "Painting", "Manuscript", "Book"]))},
         "LocatedIn": lambda: {"involves": [], "place": p.ref("Building"), "within": p.ref("Settlement")},
         "OccupationAscription": lambda: {"person": who, "has_type": [p.ref("OccupationType")]},
+        "Report": lambda: report(p, R.choices([1, 2, 3, 4], [4, 3, 2, 1])[0]),
         "Reputation": lambda: {"reputed": p.agent(), "reputation": R.choice(fake.TRAITS), "favourable": R.random() < 0.5},
     }
     body = makers[kind]()
@@ -177,6 +181,39 @@ def order(p: Pool) -> dict:
     return {"date": fake.any_date(), "places": p.places(), "ordered_by": p.agent_or_identified(),
             "ordered_to": p.agent(),
             "thing_ordered": {"type": R.choice(["PositiveSubjunctive", "NegativeSubjunctive"]), "contents": [inner]}}
+
+
+def witness(p: Pool) -> dict:
+    """Attributed[InRole[Identification[WeightedAlternative[Person]]]]: four reified relations deep"""
+    return {"type": "Attributed", "attributed_by": f"the notary {R.choice(fake.SURNAMES)}", "target": [
+        {"type": "InRole", "role": R.choice(["witness", "witness", "host", "messenger"]), "target": [p.identified()]}]}
+
+
+def seal() -> dict:
+    """Seal > SealImpression > SealMatrix: embedded three deep"""
+    return {"type": "Seal", "condition": R.choice(["intact", "chipped", "fragment", "lost, tag remains"]),
+            "impression": {"type": "SealImpression", "wax_colour": R.choice(["red", "green", "brown", "natural"]),
+                           "matrix": {"type": "SealMatrix", "engraved_by": R.choice(fake.SURNAMES),
+                                      "motto": R.choice(["Fide et labore", "Nisi Dominus", "Semper idem"])}}}
+
+
+def deep_order(p: Pool, depth: int) -> dict:
+    """An order to order (to order ...) a gift, payment or letter; `depth` orders"""
+    o = {"type": "Order", **base("Order", f"Order ({R.randint(1, 10**6)})", "An order."), **order(p)}
+    for _ in range(depth - 1):
+        outer = {"type": "Order", **base("Order", f"Order ({R.randint(1, 10**6)})", "An order to order."), **order(p)}
+        outer["thing_ordered"]["contents"] = [o]
+        o = outer
+    return o
+
+
+def report(p: Pool, depth: int) -> dict:
+    """A report of a report (of a report ...) of a statement; at the bottom, sometimes an order of an order of an order"""
+    if depth <= 1:
+        inner = deep_order(p, R.randint(2, 4)) if R.random() < 0.4 else make(p, R.choice([k for k in KINDS if k != "Report"]))
+    else:
+        inner = {**base("Report", f"Report ({R.randint(1, 10**6)})", "Someone reported."), **report(p, depth - 1)}
+    return {"reporter": p.agent(), "reported": {"type": "Hearsay", "contents": [inner]}}
 
 
 def statement(p: Pool) -> dict:

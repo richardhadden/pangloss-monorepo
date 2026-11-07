@@ -13,6 +13,107 @@ severity.
 **Fixed since (2026-11-06, branch `full-smoke-test-fixes`; what was changed and how it was checked is in
 `FIXES.md`):** 1, 2, 3, 5, 6, 7 (in part), 8, 9, 10, 11, 12, 13, 15, 16, 20, 21, 22, 24, 25, 26, 31 (in part), 28 (in part), 29, 30, 32, 33, 34, 35 (the count, not the speed), 36, and what the user reported at the end. Each is marked below. The text of an item is as it was found.
 
+## Second run (2026-11-07, 10:32-11:13): deeper models, twice the data
+
+On `full-smoke-test-fixes` (everything in `FIXES.md` in). New in `smoke/models.py` (migration `0003_deep_nesting`):
+`Report` (an undated statement whose `reported` is a `Hearsay[Statement]` space, so reports of reports of orders of
+orders nest without limit), `Witnessing` (`witnesses: list[Attributed[InRole[Identification[WeightedAlternative[
+Person]]]]]`: four reified relations deep) and `SealedLetter` (`seal: Seal`, `Seal > SealImpression > SealMatrix`:
+three embedded levels). The data was doubled: a second run of `ingest_entities.py` (`SMOKE_RUN=2`: other names and
+URL ids, typologies and vocabularies reused) and 15,000 more factoids, which now include the new kinds (954 reports,
+1 to 4 deep with an order chain of 2 to 4 at the bottom in 40%; 425 witnessings; 431 sealed letters). Now: 115,227
+entity nodes (15,570 of them Zotero items), 30,228 factoids, **686,164 nodes** (410,274 before; 337,423 at the first report). Scripts:
+`nested_checks.py`, `deep_reads.py`, `deep_updates.py` (all three take `SMOKE_API`/`SMOKE_OUT`/`SMOKE_TOKEN`/
+`SMOKE_BOLT` for the Neo4j copy), `ui_nested.py`, `ui_pages.py` (`SMOKE_UI` for the production build on :3011).
+
+37. **High. `initialise()` crashes (`AttributeError: Create`, in `builder.embedded_annotation`) when an `Embedded`
+    model with a relation is a field of a document that a `FieldBinding` reaches.** Here: `SealMatrix.engraved_by:
+    Person`, in `Seal > SealImpression > SealMatrix`, on `SealedLetter`, a `Statement`; `Order.thing_ordered` binds
+    `ordered_to` into every `Statement`, so `build_bound_model` builds a bound `SealedLetter` and asks for
+    `Seal.Create` before it exists. The nesting does not matter: a relation directly on `Seal` crashes the same; with
+    no relation in the embedded chain (three levels deep) it works. `Order` and `Statement` are in a cycle, and
+    `_order_cyclic` puts the cycle before the embedded models that depend on `Person`. The docs allow an embedded
+    relation (`Date.about: Person`). Worked round in the smoke models (`engraved_by: str`, a comment points here).
+    `makemigrations`, `migrate` and the server all fail to start with it.
+38. **High. Deeply nested documents crash the interface: "Maximum call stack size exceeded".** Factoids of a report
+    chain (Report > Hearsay > Report ... > Order > PositiveSubjunctive > Order ... > Letter):
+
+    | Documents deep | 2, 4, 8 | 13 | 21 | 41 | 61 |
+    |---|---|---|---|---|---|
+    | Dev build, view | ok | ok | renders, then the message at the bottom | | |
+    | Dev build, edit | ok | **message only** (42 elements) | **message only** | | |
+    | Production, view | | ok (704) | ok (965) | ok (1,674) | **message only** (89) |
+    | Production, edit | | ok (2,293) | ok (3,590) | **message only** (90) | the server hangs (39) |
+
+    The stack when it fails (Chrome, paused on the exception) is 7,974 frames: each nested document costs hundreds of
+    synchronous frames of Solid's component creation (`createComponent` > `createRoot` > `createMemo` > `recompute`,
+    and in the dev build `HMRComp`, `observedComponent`, `runAsSolidCopy` too). Nothing is logged: the error boundary
+    shows the message and the console and `pageerror` see nothing, so the e2e checks for page errors would not
+    catch it. Data that the API takes and returns correctly cannot be opened or edited.
+39. **High. One request for a very deep document stops the production interface's server for everyone.** Opening the
+    edit page of the 61-deep factoid (logged in) kept `serve.mjs` at 100% CPU for about four minutes, its memory
+    growing from 706 to 790 MB; meanwhile it answered nothing, not even `/`. It recovered on its own. Most likely the
+    server-side render of the same tree as 38 (not confirmed: I did not ask again, to keep the server up).
+40. **Medium. Nested documents are indented once more at each level, so beyond about five levels the content column
+    shrinks to one character a line and the content spills out to the right** (the 21-deep view:
+    `out/ui_nested_8a542d.png`). Nested spaces each add their own coloured band too.
+41. **Perf. Reading a deeply nested document grows with the square of its depth, on both backends.** Median of five
+    `GET /api/Factoid/{id}` (Memgraph; Neo4j in brackets): 8 deep 31 ms (19), 21 deep 35 ms (29), 41 deep 120 ms
+    (536), 61 deep 1,097 ms (1,166); the edit view the same. The log says `read transaction get_document took
+    1076 ms`, but **the query is not most of it**: the query alone takes 88 ms at 61 deep. Profiled
+    (`Factoid.get`, 1.0 s): 1.39 s of 1.55 s under the profiler is pydantic validating the result, nearly all in
+    `convert_from_database` (`pangloss_models/hooks.py`), called 167 times with 4.5 million `isinstance` calls. It
+    is a `mode="before"` validator on every model made from database data (`_FromDatabaseBase.convert_database_types`),
+    and the converter walks everything it is given, so each nested model converts its whole subtree again:
+    O(nodes x depth). Converting once, at the root, would make it linear. (The query collects a path from the root to
+    every node and unwinds every edge of every path, which is also O(nodes x depth); keeping only the last edge of
+    each path, `last(relationships(path))`, gives the same 347 edges at 61 deep, but no clear gain in time: 57-88 ms
+    either way, `/tmp/smoke-nest/readq.py`. So the query is not where the time goes.) The size grows the same way:
+    38 KB / 117 KB / 241 KB, because each nested document's `meta.semanticSpaces` lists every space above
+    it (59 at depth 60; 7.4 KB of `meta` for that one document). Writes and updates are linear: a PUT that changes
+    the innermost letter is 68 ms at 21 deep and 232 ms at 61, and keeps every nested id.
+42. **Low. Adding a subclass of a type that a generic wrapper takes is flagged as losing data, and the migration's
+    description is enormous.** Adding three `Statement` kinds made `Factoid.statements` and `Order.thing_ordered`
+    "now also `Causes[TCause=document:Accusation|...]`, no longer `Causes[TCause=...]` [LOSES DATA]": the option is
+    compared by its text, which lists every kind. The labels are the same, so nothing is deleted (the check for
+    edges to removed labels finds none), but `migrate` asks for `--backup`/`--no-backup` and a "y", and
+    `makemigrations` printed 33 KB for this change.
+43. **Perf. Page 1 of an abstract class costs time in proportion to its size.** `GET /api/Statement?pageSize=5`:
+    240 ms (71,881 statements; 35 ms on the first data); `DatedStatement` 105 ms (25,261); `Letter` 17 ms (1,377);
+    `Factoid` 60 ms (30,228). Probably the count; not looked into.
+44. **Perf. A list search for text with no letters is slow and finds nothing.** `GET /api/Person?q=1` 250 ms,
+    `q=' OR 1=1 --` 450 ms (94 ms on the first data), both 0 results; `q=Lorenzo` 30 ms (493). Not looked into.
+45. **Low. `/api/search` for a class that is only ever inside another document answers `count: 0`.** `{"type":
+    "Letter"}`, `{"type": "Meeting", "where": {"participants": {"exists": true}}}`: 0, with no message. As documented
+    (results are head documents), but it looks like a search that found nothing. It could say "a Letter is only
+    found inside a Factoid: search Factoid with `statements` or `$somewhere`".
+
+**What worked in the second run:**
+
+- The new kinds are stored and read back exactly on both backends (Neo4j: the same checks on its copy, migrated with
+  0003): report chains up to 61 documents deep (30 reports of 30 orders of a letter), the letter's `sender` bound
+  from the innermost order; four reified levels with the people and their percentages; three embedded levels.
+  Writes stay linear: 21 deep 84 ms, 61 deep about 1.4 s (with the ingest running). Updates keep every nested id.
+- A person four reified levels down has the `Witnessing` in `witnessed`; one in an order 16 spaces deep has it in
+  `ordered`. Structured search sees through `InRole`, through all four reified levels (`witnesses: {is: id}`),
+  into three embedded levels (nested patterns) and finds deep documents with `$somewhere`; every count matched
+  Cypher (50-150 ms).
+- `migrate --backup` took a snapshot first, applied 0003 and read all 15,784 documents back (47 s). It says Memgraph
+  removes the snapshot in about 15 minutes unless kept: good to be told.
+- Doubling: 49,910 more entities in 325 s (308 s the first time) with 0 errors; 15,000 factoids over REST in 288 s
+  (52/s, p50 140 ms, p95 192 ms; 55/s the first time), 2 refused rightly (people deleted by earlier checks).
+- On 3.4 times the nodes of the first load test: 32 readers and 8 writers 277 requests/s (301), get person p50/p95
+  210/604 ms (199/489), writes 374/806 ms (328/675). `api_checks.py`: the same 8 failures as before (the three
+  fixed since are gone), its timings 1.5-2 times the first run's in total; `search_checks.py` the same 8 failures,
+  1.7 times. The super-person: `GET` 0.99 s / 1.86 MB; its page in the production build 0.84 s, 16,260 elements;
+  the list pages 0.06-0.13 s, the calendar 1.0 s.
+- `pangloss history baseline --dry-run` (an item left last time): 145,451 looked at, **0** to record (the hooks wrote
+  a record of everything as it went in), in 12 min 16 s (3.9 ms each on the first data, 5.1 ms now). So a real run
+  has nothing to do; it was not run.
+- `pangloss check-data` on the whole doubled database: all 219,101 documents and entities can be read, in 6 min
+  45 s. Six reads logged as slow, 10.0-11.6 s each (probably the most referred-to entities, read whole and several
+  at once; not checked).
+
 ## High
 
 1. ✅ *Fixed: the SDK's copy of a module takes the interface names from an inert stand-in; `pangloss_library` no longer needs the interface.* **No SDK can be built for a project that uses `InterfaceMeta` or `pangloss_library`, the demo included.**

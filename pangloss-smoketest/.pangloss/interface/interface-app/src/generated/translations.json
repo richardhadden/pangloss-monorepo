@@ -839,6 +839,11 @@
             "plural": "Plaintiff reverse",
             "help": ""
           },
+          "presided_by_reverse": {
+            "name": "Presided by reverse",
+            "plural": "Presided by reverse",
+            "help": ""
+          },
           "printer_reverse": {
             "name": "Printer reverse",
             "plural": "Printer reverse",
@@ -864,6 +869,11 @@
             "plural": "Recipient institution reverse",
             "help": ""
           },
+          "reporter_reverse": {
+            "name": "Reporter reverse",
+            "plural": "Reporter reverse",
+            "help": ""
+          },
           "reputed_reverse": {
             "name": "Reputed reverse",
             "plural": "Reputed reverse",
@@ -872,6 +882,11 @@
           "resident_reverse": {
             "name": "Resident reverse",
             "plural": "Resident reverse",
+            "help": ""
+          },
+          "sealed_by_reverse": {
+            "name": "Sealed by reverse",
+            "plural": "Sealed by reverse",
             "help": ""
           },
           "seller_reverse": {
@@ -961,6 +976,26 @@
           "page": {
             "name": "Page",
             "plural": "Page",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "Attributed": {
+        "name": "Attributed",
+        "plural": "Attributed",
+        "help": "",
+        "description": "Who in the source says so",
+        "kind": "ReifiedRelation",
+        "fields": {
+          "target": {
+            "name": "Target",
+            "plural": "Target",
+            "help": ""
+          },
+          "attributed_by": {
+            "name": "Attributed by",
+            "plural": "Attributed by",
             "help": ""
           }
         },
@@ -1967,6 +2002,11 @@
             "plural": "Plaintiff reverse",
             "help": ""
           },
+          "presided_by_reverse": {
+            "name": "Presided by reverse",
+            "plural": "Presided by reverse",
+            "help": ""
+          },
           "printer_reverse": {
             "name": "Printer reverse",
             "plural": "Printer reverse",
@@ -1992,6 +2032,11 @@
             "plural": "Recipient institution reverse",
             "help": ""
           },
+          "reporter_reverse": {
+            "name": "Reporter reverse",
+            "plural": "Reporter reverse",
+            "help": ""
+          },
           "reputed_reverse": {
             "name": "Reputed reverse",
             "plural": "Reputed reverse",
@@ -2000,6 +2045,11 @@
           "resident_reverse": {
             "name": "Resident reverse",
             "plural": "Resident reverse",
+            "help": ""
+          },
+          "sealed_by_reverse": {
+            "name": "Sealed by reverse",
+            "plural": "Sealed by reverse",
             "help": ""
           },
           "seller_reverse": {
@@ -3233,6 +3283,11 @@
             "plural": "Plaintiff reverse",
             "help": ""
           },
+          "presided_by_reverse": {
+            "name": "Presided by reverse",
+            "plural": "Presided by reverse",
+            "help": ""
+          },
           "printer_reverse": {
             "name": "Printer reverse",
             "plural": "Printer reverse",
@@ -3258,6 +3313,11 @@
             "plural": "Recipient institution reverse",
             "help": ""
           },
+          "reporter_reverse": {
+            "name": "Reporter reverse",
+            "plural": "Reporter reverse",
+            "help": ""
+          },
           "reputed_reverse": {
             "name": "Reputed reverse",
             "plural": "Reputed reverse",
@@ -3266,6 +3326,11 @@
           "resident_reverse": {
             "name": "Resident reverse",
             "plural": "Resident reverse",
+            "help": ""
+          },
+          "sealed_by_reverse": {
+            "name": "Sealed by reverse",
+            "plural": "Sealed by reverse",
             "help": ""
           },
           "seller_reverse": {
@@ -3674,6 +3739,11 @@
             "plural": "Plaintiff reverse",
             "help": ""
           },
+          "presided_by_reverse": {
+            "name": "Presided by reverse",
+            "plural": "Presided by reverse",
+            "help": ""
+          },
           "printer_reverse": {
             "name": "Printer reverse",
             "plural": "Printer reverse",
@@ -3699,6 +3769,11 @@
             "plural": "Recipient institution reverse",
             "help": ""
           },
+          "reporter_reverse": {
+            "name": "Reporter reverse",
+            "plural": "Reporter reverse",
+            "help": ""
+          },
           "reputed_reverse": {
             "name": "Reputed reverse",
             "plural": "Reputed reverse",
@@ -3707,6 +3782,11 @@
           "resident_reverse": {
             "name": "Resident reverse",
             "plural": "Resident reverse",
+            "help": ""
+          },
+          "sealed_by_reverse": {
+            "name": "Sealed by reverse",
+            "plural": "Sealed by reverse",
             "help": ""
           },
           "seller_reverse": {
@@ -3935,6 +4015,11 @@
             "plural": "Plaintiff reverse",
             "help": ""
           },
+          "presided_by_reverse": {
+            "name": "Presided by reverse",
+            "plural": "Presided by reverse",
+            "help": ""
+          },
           "printer_reverse": {
             "name": "Printer reverse",
             "plural": "Printer reverse",
@@ -3960,6 +4045,11 @@
             "plural": "Recipient institution reverse",
             "help": ""
           },
+          "reporter_reverse": {
+            "name": "Reporter reverse",
+            "plural": "Reporter reverse",
+            "help": ""
+          },
           "reputed_reverse": {
             "name": "Reputed reverse",
             "plural": "Reputed reverse",
@@ -3968,6 +4058,11 @@
           "resident_reverse": {
             "name": "Resident reverse",
             "plural": "Resident reverse",
+            "help": ""
+          },
+          "sealed_by_reverse": {
+            "name": "Sealed by reverse",
+            "plural": "Sealed by reverse",
             "help": ""
           },
           "seller_reverse": {
@@ -4011,6 +4106,21 @@
             "help": ""
           }
         }
+      },
+      "Hearsay": {
+        "name": "Hearsay",
+        "plural": "Hearsay",
+        "help": "",
+        "description": "Someone said that...",
+        "kind": "SemanticSpace",
+        "fields": {
+          "contents": {
+            "name": "Contents",
+            "plural": "Contents",
+            "help": ""
+          }
+        },
+        "incoming": {}
       },
       "Hypothetical": {
         "name": "Hypothetical",
@@ -4933,6 +5043,11 @@
             "plural": "Plaintiff reverse",
             "help": ""
           },
+          "presided_by_reverse": {
+            "name": "Presided by reverse",
+            "plural": "Presided by reverse",
+            "help": ""
+          },
           "printer_reverse": {
             "name": "Printer reverse",
             "plural": "Printer reverse",
@@ -4958,6 +5073,11 @@
             "plural": "Recipient institution reverse",
             "help": ""
           },
+          "reporter_reverse": {
+            "name": "Reporter reverse",
+            "plural": "Reporter reverse",
+            "help": ""
+          },
           "reputed_reverse": {
             "name": "Reputed reverse",
             "plural": "Reputed reverse",
@@ -4966,6 +5086,11 @@
           "resident_reverse": {
             "name": "Resident reverse",
             "plural": "Resident reverse",
+            "help": ""
+          },
+          "sealed_by_reverse": {
+            "name": "Sealed by reverse",
+            "plural": "Sealed by reverse",
             "help": ""
           },
           "seller_reverse": {
@@ -6025,6 +6150,11 @@
             "plural": "Preacher reverse",
             "help": ""
           },
+          "presided_by_reverse": {
+            "name": "Presided by reverse",
+            "plural": "Presided by reverse",
+            "help": ""
+          },
           "printer_reverse": {
             "name": "Printer reverse",
             "plural": "Printer reverse",
@@ -6055,6 +6185,11 @@
             "plural": "Relative of",
             "help": ""
           },
+          "reporter_reverse": {
+            "name": "Reporter reverse",
+            "plural": "Reporter reverse",
+            "help": ""
+          },
           "reputed_reverse": {
             "name": "Reputed reverse",
             "plural": "Reputed reverse",
@@ -6073,6 +6208,11 @@
           "saint_reverse": {
             "name": "Saint reverse",
             "plural": "Saint reverse",
+            "help": ""
+          },
+          "sealed_by_reverse": {
+            "name": "Sealed by reverse",
+            "plural": "Sealed by reverse",
             "help": ""
           },
           "seller_reverse": {
@@ -6123,6 +6263,11 @@
           "was_petitioned": {
             "name": "Was petitioned",
             "plural": "Was petitioned",
+            "help": ""
+          },
+          "witnessed": {
+            "name": "Witnessed",
+            "plural": "Witnessed",
             "help": ""
           }
         }
@@ -6803,6 +6948,11 @@
             "plural": "Plaintiff reverse",
             "help": ""
           },
+          "presided_by_reverse": {
+            "name": "Presided by reverse",
+            "plural": "Presided by reverse",
+            "help": ""
+          },
           "printer_reverse": {
             "name": "Printer reverse",
             "plural": "Printer reverse",
@@ -6828,6 +6978,11 @@
             "plural": "Recipient institution reverse",
             "help": ""
           },
+          "reporter_reverse": {
+            "name": "Reporter reverse",
+            "plural": "Reporter reverse",
+            "help": ""
+          },
           "reputed_reverse": {
             "name": "Reputed reverse",
             "plural": "Reputed reverse",
@@ -6836,6 +6991,11 @@
           "resident_reverse": {
             "name": "Resident reverse",
             "plural": "Resident reverse",
+            "help": ""
+          },
+          "sealed_by_reverse": {
+            "name": "Sealed by reverse",
+            "plural": "Sealed by reverse",
             "help": ""
           },
           "seller_reverse": {
@@ -6879,6 +7039,31 @@
             "help": ""
           }
         }
+      },
+      "Report": {
+        "name": "Report",
+        "plural": "Report",
+        "help": "",
+        "description": "Someone reported a statement, which can itself be a report (of a report of an order of an order ...)",
+        "kind": "Document",
+        "fields": {
+          "text": {
+            "name": "Text",
+            "plural": "Text",
+            "help": ""
+          },
+          "reporter": {
+            "name": "Reporter",
+            "plural": "Reporter",
+            "help": ""
+          },
+          "reported": {
+            "name": "Reported",
+            "plural": "Reported",
+            "help": ""
+          }
+        },
+        "incoming": {}
       },
       "Reputation": {
         "name": "Reputation",
@@ -7049,6 +7234,116 @@
             "help": ""
           }
         }
+      },
+      "Seal": {
+        "name": "Seal",
+        "plural": "Seal",
+        "help": "",
+        "description": "A seal on a document, as it is now",
+        "kind": "Embedded",
+        "fields": {
+          "condition": {
+            "name": "Condition",
+            "plural": "Condition",
+            "help": ""
+          },
+          "impression": {
+            "name": "Impression",
+            "plural": "Impression",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "SealImpression": {
+        "name": "Seal impression",
+        "plural": "Seal impression",
+        "help": "",
+        "description": "The wax, and what struck it",
+        "kind": "Embedded",
+        "fields": {
+          "wax_colour": {
+            "name": "Wax colour",
+            "plural": "Wax colour",
+            "help": ""
+          },
+          "matrix": {
+            "name": "Matrix",
+            "plural": "Matrix",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "SealMatrix": {
+        "name": "Seal matrix",
+        "plural": "Seal matrix",
+        "help": "",
+        "description": "The die a seal was struck from",
+        "kind": "Embedded",
+        "fields": {
+          "engraved_by": {
+            "name": "Engraved by",
+            "plural": "Engraved by",
+            "help": ""
+          },
+          "motto": {
+            "name": "Motto",
+            "plural": "Motto",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "SealedLetter": {
+        "name": "Sealed letter",
+        "plural": "Sealed letter",
+        "help": "",
+        "description": "A letter described by its seal: embedded three deep",
+        "kind": "Document",
+        "fields": {
+          "date": {
+            "name": "Date",
+            "plural": "Date",
+            "help": ""
+          },
+          "date_sort_day": {
+            "name": "Date sort day",
+            "plural": "Date sort day",
+            "help": ""
+          },
+          "date_end_sort_day": {
+            "name": "Date end sort day",
+            "plural": "Date end sort day",
+            "help": ""
+          },
+          "date_text": {
+            "name": "Date text",
+            "plural": "Date text",
+            "help": ""
+          },
+          "text": {
+            "name": "Text",
+            "plural": "Text",
+            "help": ""
+          },
+          "places": {
+            "name": "Places",
+            "plural": "Places",
+            "help": ""
+          },
+          "sealed_by": {
+            "name": "Sealed by",
+            "plural": "Sealed by",
+            "help": ""
+          },
+          "seal": {
+            "name": "Seal",
+            "plural": "Seal",
+            "help": ""
+          }
+        },
+        "incoming": {}
       },
       "Sermon": {
         "name": "Sermon",
@@ -7567,6 +7862,11 @@
             "plural": "Plaintiff reverse",
             "help": ""
           },
+          "presided_by_reverse": {
+            "name": "Presided by reverse",
+            "plural": "Presided by reverse",
+            "help": ""
+          },
           "printer_reverse": {
             "name": "Printer reverse",
             "plural": "Printer reverse",
@@ -7592,6 +7892,11 @@
             "plural": "Recipient institution reverse",
             "help": ""
           },
+          "reporter_reverse": {
+            "name": "Reporter reverse",
+            "plural": "Reporter reverse",
+            "help": ""
+          },
           "reputed_reverse": {
             "name": "Reputed reverse",
             "plural": "Reputed reverse",
@@ -7600,6 +7905,11 @@
           "resident_reverse": {
             "name": "Resident reverse",
             "plural": "Resident reverse",
+            "help": ""
+          },
+          "sealed_by_reverse": {
+            "name": "Sealed by reverse",
+            "plural": "Sealed by reverse",
             "help": ""
           },
           "seller_reverse": {
@@ -7948,6 +8258,11 @@
             "plural": "Plaintiff reverse",
             "help": ""
           },
+          "presided_by_reverse": {
+            "name": "Presided by reverse",
+            "plural": "Presided by reverse",
+            "help": ""
+          },
           "printer_reverse": {
             "name": "Printer reverse",
             "plural": "Printer reverse",
@@ -7973,6 +8288,11 @@
             "plural": "Recipient institution reverse",
             "help": ""
           },
+          "reporter_reverse": {
+            "name": "Reporter reverse",
+            "plural": "Reporter reverse",
+            "help": ""
+          },
           "reputed_reverse": {
             "name": "Reputed reverse",
             "plural": "Reputed reverse",
@@ -7981,6 +8301,11 @@
           "resident_reverse": {
             "name": "Resident reverse",
             "plural": "Resident reverse",
+            "help": ""
+          },
+          "sealed_by_reverse": {
+            "name": "Sealed by reverse",
+            "plural": "Sealed by reverse",
             "help": ""
           },
           "seller_reverse": {
@@ -8235,6 +8560,56 @@
           "certainty": {
             "name": "Certainty",
             "plural": "Certainty",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "Witnessing": {
+        "name": "Witnessing",
+        "plural": "Witnessing",
+        "help": "",
+        "description": "Witnesses to something, each one reified four deep: who in the source names the witness, in what role, and\nwhich of several people the name is",
+        "kind": "Document",
+        "fields": {
+          "date": {
+            "name": "Date",
+            "plural": "Date",
+            "help": ""
+          },
+          "date_sort_day": {
+            "name": "Date sort day",
+            "plural": "Date sort day",
+            "help": ""
+          },
+          "date_end_sort_day": {
+            "name": "Date end sort day",
+            "plural": "Date end sort day",
+            "help": ""
+          },
+          "date_text": {
+            "name": "Date text",
+            "plural": "Date text",
+            "help": ""
+          },
+          "text": {
+            "name": "Text",
+            "plural": "Text",
+            "help": ""
+          },
+          "places": {
+            "name": "Places",
+            "plural": "Places",
+            "help": ""
+          },
+          "presided_by": {
+            "name": "Presided by",
+            "plural": "Presided by",
+            "help": ""
+          },
+          "witnesses": {
+            "name": "Witnesses",
+            "plural": "Witnesses",
             "help": ""
           }
         },

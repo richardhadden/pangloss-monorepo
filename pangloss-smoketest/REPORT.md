@@ -5,6 +5,9 @@
 read from the code, unless it says so. Item numbers (#n) refer to `PROBLEMS.md`, which has the detail, the error
 messages and the commands for each.
 
+**Second run, 2026-11-07:** deeper models and twice the data, after the fixes of `FIXES.md`; see section 9, and
+`PROBLEMS.md` items 37-45.
+
 ## 1. Summary
 
 The core works well at this size. 50,000 entities and 8,000 factoids went in with no errors. Versions, validation,
@@ -273,3 +276,56 @@ still worth fixing at the source.
 - **Framework changes (uncommitted):** `packages/pangloss-api/src/pangloss_api/app.py`,
   `packages/pangloss-interface/src/pangloss_interface/cli.py`,
   `.../js/interface-app/serve.mjs` (new), `packages/pangloss-interface/tests/test_interface_cli.py`.
+
+## 9. Second run (2026-11-07, 10:32 to 11:13): deeper models, twice the data
+
+On `full-smoke-test-fixes`, with everything in `FIXES.md` in. Detail, numbers and commands in `PROBLEMS.md`
+("Second run", items 37-45).
+
+**Built.** Three new kinds of nesting in `smoke/models.py` (migration `0003_deep_nesting`, applied to the Memgraph
+and the Neo4j copies): `Report`, whose `reported` is a `Hearsay[Statement]` space, so reports of reports of orders
+of orders nest without limit; `Witnessing`, whose witnesses are reified four deep
+(`Attributed[InRole[Identification[WeightedAlternative[Person]]]]`); and `SealedLetter`, with three embedded levels
+(`Seal > SealImpression > SealMatrix`). The data was doubled with the same scripts (a second seeded run): now
+115,227 entity nodes, 30,228 factoids and 686,164 nodes (410,274 before).
+
+**The data layer holds up.** Everything was stored and read back exactly on both backends, up to 61 documents
+deep; field binding still reaches the innermost letter; reverse relations and structured search see through four
+reified levels and three embedded levels, with counts that match Cypher; updates keep every nested id. Ingest speed
+was the same on twice the data (154/s entities, 52/s factoids), and the mixed load test dropped from 301 to 277
+requests a second on 3.4 times the nodes of the first one.
+
+**What broke:**
+
+1. **A model the docs allow cannot be started** (#37): an `Embedded` with a relation, on any document that a
+   `FieldBinding` reaches, makes `initialise()` fail with `AttributeError: Create`, so `makemigrations`, `migrate`
+   and the server all fail. Here, any `Statement`, because `Order` binds into all of them. Worked round in the
+   smoke models.
+2. **The interface cannot show or edit deep documents** (#38): "Maximum call stack size exceeded", with nothing
+   logged. In the development build the edit page fails at 13 documents deep (8 works); in the production build
+   the edit page fails between 21 and 41 deep and the view between 41 and 61. Each nested document costs hundreds
+   of synchronous Solid frames.
+3. **One request can stop the production interface's server** (#39): the 61-deep edit page kept it at 100% CPU
+   for about four minutes, answering nobody.
+4. **Deep documents are laid out badly** (#40): every level indents, so past about five levels the text is one
+   character wide and spills off the page.
+5. **Reading a deep document grows with the square of its depth** (#41), on both backends: 35 ms at 21 deep, 1.1 s
+   at 61. Most of it is in Python: a pydantic "before" validator on every model read from the database converts
+   the database's types in its whole subtree, so each level converts everything below it again (profiled: 1.39 of
+   1.55 s); converting once at the root would make it linear. The query itself is 57-88 ms at 61 deep. The size grows the same way (every nested document lists all the spaces above
+   it).
+
+Smaller: adding a `Statement` kind is flagged `[LOSES DATA]` and described in 33 KB (#42); page 1 of the abstract
+`Statement` takes 240 ms, seven times the first run, in proportion to its 71,881 items (#43); a list search for
+digits or punctuation takes 250-450 ms to find nothing (#44); `/api/search` for a class that is never a head
+document silently finds 0 (#45).
+
+**Items of section 7 settled:** `history baseline` has nothing to record on this data (the dry run, 12 min 16 s,
+found 0 of 145,451), so a real run was not needed; `migrate --backup` took a snapshot; `check-data` read all 219,101 documents and
+entities of the doubled database in 6 min 45 s. Still not done: restoring a
+snapshot, the analytical bulk load (it needs an empty database), and driving the clipboard, stash, retype and
+sliders in the browser.
+
+**Left running:** nothing. The API (:8010), the dev interface (:3010) and the production interface (:3011) that
+this run started were stopped at the end; the containers are as in section 8. Scratch files in `/tmp/smoke-nest/`.
+

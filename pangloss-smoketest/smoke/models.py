@@ -31,6 +31,7 @@ from pangloss_models import (
     Conjunction,
     Document,
     EdgeModel,
+    Embedded,
     Entity,
     FieldBinding,
     FieldSubclassing,
@@ -114,6 +115,12 @@ class Identification[T](ReifiedRelation[T]):
     identified_by: str
     target: Annotated[list[T], MinLen(1), MaxLen(1)]
 
+
+
+class Attributed[T](ReifiedRelation[T]):
+    """Who in the source says so"""
+
+    attributed_by: str
 
 # ---------------------------------------------------------------------------
 # Entities
@@ -681,6 +688,49 @@ class Order(DatedStatement):
     ]
 
 
+
+# --- Deep nesting (added 2026-11-07) ------------------------------------------------
+
+
+class Witnessing(DatedStatement):
+    """Witnesses to something, each one reified four deep: who in the source names the witness, in what role, and
+    which of several people the name is"""
+
+    presided_by: Annotated[Agent, narrows_involves()]
+    witnesses: Annotated[
+        list[Attributed[InRole[Identification[WeightedAlternative[Person]]]]],
+        RelationConfig(reverse_name="witnessed"),
+    ]
+
+
+class SealMatrix(Embedded):
+    """The die a seal was struck from"""
+
+    # (a relation to Person here crashes initialise(): PROBLEMS.md #37)
+    engraved_by: str
+    motto: str
+
+
+class SealImpression(Embedded):
+    """The wax, and what struck it"""
+
+    wax_colour: str
+    matrix: SealMatrix
+
+
+class Seal(Embedded):
+    """A seal on a document, as it is now"""
+
+    condition: str
+    impression: SealImpression
+
+
+class SealedLetter(DatedStatement):
+    """A letter described by its seal: embedded three deep"""
+
+    sealed_by: Annotated[Agent, narrows_involves()]
+    seal: Seal
+
 # --- Undated -----------------------------------------------------------------------
 
 
@@ -737,6 +787,13 @@ class Reputation(UndatedStatement):
     favourable: bool
 
 
+
+class Report(UndatedStatement):
+    """Someone reported a statement, which can itself be a report (of a report of an order of an order ...)"""
+
+    reporter: Annotated[Agent, narrows_involves()]
+    reported: Annotated[Hearsay[Statement], RelationConfig(reverse_name="reported_in")]
+
 # ---------------------------------------------------------------------------
 # Spaces, conjunctions, the factoid
 # ---------------------------------------------------------------------------
@@ -765,6 +822,12 @@ class Hypothetical[T](SemanticSpace[T]):
 
     _interface_meta = InterfaceMeta(colour="yellow")
 
+
+
+class Hearsay[T](SemanticSpace[T]):
+    """Someone said that..."""
+
+    _interface_meta = InterfaceMeta(colour="sky")
 
 class Causes[TCause, TResult](Conjunction):
     """One thing led to another"""

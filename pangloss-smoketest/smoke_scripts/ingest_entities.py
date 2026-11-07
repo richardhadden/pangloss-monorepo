@@ -23,6 +23,10 @@ from pangloss_users import current_request_username  # noqa: E402
 OUT = Path(__file__).parent / os.environ.get("SMOKE_OUT", "out")
 CONCURRENCY = 16
 SCALE = float(os.environ.get("SMOKE_SCALE", "1"))
+# (a second run adds as many again: other URL ids, the typologies and vocabularies of the first reused, the ids
+# made added to entities.json)
+RUN = int(os.environ.get("SMOKE_RUN", "1"))
+URL = "https://example.org/smoke/" if RUN == 1 else f"https://example.org/smoke{RUN}/"
 
 COUNTS = {
     "Person": 28000,
@@ -76,30 +80,36 @@ async def main() -> None:
     made: dict[str, list[str]] = {}
     started = time.perf_counter()
     try:
-        # --- typologies, through their own API (a hierarchy)
-        occ: dict[str, str] = {}
-        for top, subs in fake.OCCUPATIONS.items():
-            parent = await m.OccupationTypology.create(top)
-            occ[top] = str(parent.id)
-            for s in subs:
-                occ[s] = str((await m.OccupationTypology.create(s, supertype=parent.id)).id)
-        titles: dict[str, str] = {}
-        for top, subs in fake.TITLES.items():
-            parent = await m.TitleTypology.create(top)
-            titles[top] = str(parent.id)
-            for s in subs:
-                titles[s] = str((await m.TitleTypology.create(s, supertype=parent.id)).id)
-        made["OccupationType"] = list(occ.values())
-        made["TitleType"] = list(titles.values())
-        occ_ids = list(occ.values())
-        title_ids = list(titles.values())
+        if RUN > 1:
+            earlier = json.loads((OUT / "entities.json").read_text())
+            for kind in ("OccupationType", "TitleType", "Commodity", "Currency", "Language"):
+                made[kind] = earlier[kind]
+            occ_ids, title_ids = earlier["OccupationType"], earlier["TitleType"]
+        else:
+            # --- typologies, through their own API (a hierarchy)
+            occ: dict[str, str] = {}
+            for top, subs in fake.OCCUPATIONS.items():
+                parent = await m.OccupationTypology.create(top)
+                occ[top] = str(parent.id)
+                for s in subs:
+                    occ[s] = str((await m.OccupationTypology.create(s, supertype=parent.id)).id)
+            titles: dict[str, str] = {}
+            for top, subs in fake.TITLES.items():
+                parent = await m.TitleTypology.create(top)
+                titles[top] = str(parent.id)
+                for s in subs:
+                    titles[s] = str((await m.TitleTypology.create(s, supertype=parent.id)).id)
+            made["OccupationType"] = list(occ.values())
+            made["TitleType"] = list(titles.values())
+            occ_ids = list(occ.values())
+            title_ids = list(titles.values())
 
-        # --- small vocabularies
-        made["Commodity"] = await run_all("Commodity", [{"label": c} for c in fake.COMMODITIES], m.Commodity)
-        made["Currency"] = await run_all("Currency", [{"label": c} for c in fake.CURRENCIES], m.Currency)
-        made["Language"] = await run_all(
-            "Language", [{"label": n, "iso_code": c} for n, c in fake.LANGUAGES], m.Language
-        )
+            # --- small vocabularies
+            made["Commodity"] = await run_all("Commodity", [{"label": c} for c in fake.COMMODITIES], m.Commodity)
+            made["Currency"] = await run_all("Currency", [{"label": c} for c in fake.CURRENCIES], m.Currency)
+            made["Language"] = await run_all(
+                "Language", [{"label": n, "iso_code": c} for n, c in fake.LANGUAGES], m.Language
+            )
 
         # --- people
         def person(i: int) -> dict:
@@ -114,7 +124,7 @@ async def main() -> None:
             }
             if i % 10 == 0:
                 # (some have a URL id from another database)
-                p["id"] = f"https://example.org/smoke/person/{i}"
+                p["id"] = f"{URL}person/{i}"
                 p["create_new"] = True
             return p
 
@@ -191,7 +201,7 @@ async def main() -> None:
         made["Book"] = await run_all(
             "Book",
             [
-                {"id": f"https://example.org/smoke/book/{i}", "create_new": True,
+                {"id": f"{URL}book/{i}", "create_new": True,
                  "label": f"De {R.choice(['re', 'arte', 'natura', 'vita', 'mercatura'])} {R.choice(fake.SURNAMES).lower()} ({i})",
                  "item_type": "book", "title": f"Book {i}", "creators": R.choice(fake.SURNAMES), "date": str(fake.year())}
                 for i in range(COUNTS["Book"])
@@ -226,6 +236,10 @@ async def main() -> None:
     took = time.perf_counter() - started
     print(f"TOTAL {total} entities in {took:.0f} s ({total / took:.0f}/s); {len(errors)} errors", flush=True)
     OUT.mkdir(exist_ok=True)
+    if RUN > 1:
+        for kind, ids in json.loads((OUT / "entities.json").read_text()).items():
+            if kind not in ("OccupationType", "TitleType", "Commodity", "Currency", "Language"):
+                made[kind] = ids + made.get(kind, [])
     (OUT / "entities.json").write_text(json.dumps(made))
     stats = {}
     for k, v in timings.items():

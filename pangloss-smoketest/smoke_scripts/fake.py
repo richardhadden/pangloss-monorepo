@@ -2,7 +2,10 @@
 
 import random
 
-R = random.Random(1517)
+import os
+
+# (SMOKE_RUN=2 and up: another run of the ingest, with other names and dates)
+R = random.Random(1517 + 1000 * (int(os.environ.get("SMOKE_RUN", "1")) - 1))
 
 FIRST_M = """Giovanni Pietro Antonio Francesco Lorenzo Cosimo Niccolò Bernardo Jacopo Matteo Andrea Tommaso Luca Marco
 Johann Hans Jakob Konrad Heinrich Ulrich Georg Albrecht Friedrich Wilhelm Sebastian Kaspar Martin Philipp
