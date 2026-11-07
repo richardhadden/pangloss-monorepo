@@ -20,6 +20,7 @@ Each feature in these docs is marked with its status:
 | [Packages](packages.md) | The workspace packages and how they depend on each other |
 | [Importing](imports.md) ✅ | Every package exports its public names from its root (`from pangloss_models import Document`); what each exports, and why there is no `pangloss.` namespace |
 | [Defining models](models.md) | Documents, Entities, Embedded, Traits, EdgeModels, and the other model kinds |
+| [Modelling DX](modelling-dx.md) ⏳ | A review (2026-11-08) of the footguns of declaring models as pydantic classes (defaults, validators and methods silently dropped; the rules that are not pydantic's), whether the built-in primitives are too many, and two proposals: a codec registry so pydantic's standard types can be stored, and a `pangloss check` plus a language server beside `pyrefly`. Nothing built |
 | [Relations and fields](relations.md) | Literal fields, relations, `ViaEdge`, `RelationConfig`, field binding, `Fulfils` |
 | [Generated models](generated-models.md) | The `Create`, `CreateDB`, `Update`, `UpdateDB`, `View`, `HeadView` and reference models, and the initialisation pipeline |
 | [Cleaning up initialise_models](initialise-models-cleanup.md) | How the five generated models are now made by one builder, what was fixed, and what is left to decide |
