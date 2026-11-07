@@ -2,7 +2,6 @@ import datetime
 
 import jwt
 import pytest
-from pangloss_api import create_app
 from pangloss_api.tokens import ALGORITHM, TokenError, create_token, decode_token
 
 
@@ -59,12 +58,6 @@ def test_tokens_need_a_subject_expiry_and_type(settings):
 def test_garbage(settings):
     with pytest.raises(TokenError):
         decode_token("not a token", "access")
-
-
-def test_a_short_secret_key_is_warned_about(settings):
-    settings.AUTHJWT_SECRET_KEY = "short"
-    with pytest.warns(UserWarning, match="AUTHJWT_SECRET_KEY"):
-        create_app()
 
 
 def test_settings_default_lifetimes(settings):

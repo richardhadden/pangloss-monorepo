@@ -25,8 +25,10 @@ from pangloss_api import throttle
 from pangloss_api.dependencies import (
     ACCESS_COOKIE_NAME,
     REFRESH_COOKIE_NAME,
+    REFRESH_COOKIE_PATH,
     CurrentAdmin,
     CurrentUser,
+    require_same_site,
     unauthorised,
 )
 from pangloss_api.schemas import (
@@ -54,6 +56,10 @@ logger = logging.getLogger("pangloss.api.auth")
 router = APIRouter(prefix="/api/users", tags=["Users"])
 
 LoginForm = Annotated[OAuth2PasswordRequestForm, Depends()]
+
+# (the session routes are for the API's own site: a login forged from another site would log the
+# browser in as someone else, and a logout would end its session)
+same_site = [Depends(require_same_site)]
 
 
 def client_address(request: Request) -> str:
@@ -86,12 +92,15 @@ def access_token_for(user: User) -> AccessTokenResponse:
     )
 
 
-def set_cookie(response: Response, name: str, value: str, token_type) -> None:
+def set_cookie(
+    response: Response, name: str, value: str, token_type, path: str = "/"
+) -> None:
     settings = core_settings.SETTINGS
     response.set_cookie(
         name,
         value,
         max_age=int(lifetime(token_type).total_seconds()),
+        path=path,
         httponly=True,
         samesite=settings.AUTH_COOKIE_SAMESITE,
         secure=settings.AUTH_COOKIE_SECURE or settings.AUTH_COOKIE_SAMESITE == "none",
@@ -177,7 +186,7 @@ async def revoke_token(body: RefreshRequest):
 # ---------------------------------------------------------------------------
 
 
-@router.post("/session", response_model=Message)
+@router.post("/session", response_model=Message, dependencies=same_site)
 async def start_session(form: LoginForm, request: Request, response: Response):
     """Log in, keeping the tokens in (HTTP-only) cookies"""
     user = await authenticated_user(form, request, "session")
@@ -192,11 +201,12 @@ async def start_session(form: LoginForm, request: Request, response: Response):
         REFRESH_COOKIE_NAME,
         create_token(user.username, "refresh", user.token_generation),
         "refresh",
+        path=REFRESH_COOKIE_PATH,
     )
     return Message(message="success")
 
 
-@router.post("/session/refresh", response_model=Message)
+@router.post("/session/refresh", response_model=Message, dependencies=same_site)
 async def refresh_session(request: Request, response: Response):
     """A new access cookie, given the refresh cookie"""
     claims = refresh_claims(request.cookies.get(REFRESH_COOKIE_NAME))
@@ -211,13 +221,13 @@ async def refresh_session(request: Request, response: Response):
     return Message(message="success")
 
 
-@router.delete("/session", response_model=Message)
+@router.delete("/session", response_model=Message, dependencies=same_site)
 async def end_session(request: Request, response: Response):
     """Log out: the cookies are cleared, and the tokens in them stop working"""
     await revoke(request.cookies.get(REFRESH_COOKIE_NAME))
     await revoke(request.cookies.get(ACCESS_COOKIE_NAME))
     response.delete_cookie(ACCESS_COOKIE_NAME)
-    response.delete_cookie(REFRESH_COOKIE_NAME)
+    response.delete_cookie(REFRESH_COOKIE_NAME, path=REFRESH_COOKIE_PATH)
     logger.info("Session ended")
     return Message(message="success")
 

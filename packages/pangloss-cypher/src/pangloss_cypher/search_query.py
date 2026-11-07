@@ -60,10 +60,6 @@ class Compiler:
         return self.condition(e, var)
 
     def condition(self, c: CheckedCondition, var: str) -> str:
-        # (`ne` includes what has no value: "not draft" is what it means)
-        prop = f"{var}.`{c.field}`"
-        if c.field == "published":  # (a document with no property is published)
-            prop = f"coalesce({prop}, true)"
         if c.kind == "relation":
             return self.relation(c, var)
         if c.kind == "somewhere":
@@ -81,6 +77,10 @@ class Compiler:
         if c.kind == "spaces":
             # (the spaces a node is inside are kept in its `meta`)
             return f"all(s IN {self.param(c.value)} WHERE s IN coalesce({dialect().meta_property(var, 'semantic_spaces')}, []))"
+        # (what is left tests a property of the node; `ne` includes what has no value: "not draft" is what it means)
+        prop = f"{var}.{fragments.property_name(c.field)}"
+        if c.field == "published":  # (a document with no property is published)
+            prop = f"coalesce({prop}, true)"
         if c.operator == "exists":
             return f"{prop} IS {'NOT ' if c.value else ''}NULL"
         if c.kind == "list":
@@ -113,7 +113,7 @@ class Compiler:
         uses the index on `PGIndexableNode(head_node_id)` for this inside an `EXISTS`, if the pattern has the
         label (3.13 scanned every node for each document: it is why this once went down from the head node)."""
         return (
-            f"({node}:PGIndexableNode{':`' + label + '`' if label else ''} "
+            f"({node}:PGIndexableNode{':' + fragments.label(label) if label else ''} "
             f"{{head_node_id: {head}.id}})"
         )
 
@@ -144,7 +144,7 @@ class Compiler:
             edge = f"({var})-[{e}]->({w})"
             where.append(f"NOT coalesce({e}.reverse, false) AND {w}:PGIndexableNode")
         else:
-            edge = f"({var})-[{e}:`{c.field}`]->({w})"
+            edge = f"({var})-[{e}:{fragments.field_edge(c.field)}]->({w})"
         if not through_wrappers:
             if (
                 c.wrapped and c.operator != "exists"
@@ -183,7 +183,7 @@ class Compiler:
         Memgraph scans every node of the class, for each node."""
         incoming: CheckedIncoming = c.value
         pattern = incoming.pattern
-        types = "|".join(f"`{name}`" for name in incoming.fields)
+        types = "|".join(fragments.field_edge(name) for name in incoming.fields)
 
         def source_tests(s: str) -> str:
             tests = [fragments.not_deleted(s), self.all_of(pattern.items, s)]
@@ -195,7 +195,7 @@ class Compiler:
         s, e = self.name("s"), self.name("e")
         label = pattern.model.__name__
         direct = (
-            f"EXISTS {{ MATCH ({var})<-[{e}:{types}]-({s}:`{label}`) "
+            f"EXISTS {{ MATCH ({var})<-[{e}:{types}]-({s}:{fragments.label(label)}) "
             f"WHERE {source_tests(s)} }}"
         )
         if not c.wrapped:
@@ -210,7 +210,7 @@ class Compiler:
         where.append(source_tests(s))
         via = (
             f"EXISTS {{ MATCH {p} = ({var})<-[{r}]-({x}){dialect().through_wrappers(q, backwards=True)}({w})"
-            f"<-[{e}:{types}]-({s}:`{label}`) WHERE {' AND '.join(where)} }}"
+            f"<-[{e}:{types}]-({s}:{fragments.label(label)}) WHERE {' AND '.join(where)} }}"
         )
         return via if c.through else f"({direct} OR {via})"
 
@@ -229,7 +229,7 @@ class Compiler:
             tests = self.all_of(pattern.items, t)
             if issubclass(pattern.model, Entity):  # (a deleted entity is not found)
                 tests = f"{fragments.not_deleted(t)} AND {tests}"
-            return f"{t}:`{pattern.model.__name__}` AND {tests}"
+            return f"{t}:{fragments.label(pattern.model.__name__)} AND {tests}"
         wanted = c.value if c.operator == "is_any" else [c.value]
         return f"{t}.id IN {self.param(wanted)}"
 
@@ -248,9 +248,11 @@ def ordering(compiler: Compiler, order: list[CheckedOrder]) -> tuple[str, str, s
         var = "n"
         for step in key.path:
             nxt = compiler.name("o")
-            finding.append(f"OPTIONAL MATCH ({var})-[:`{step}`]->({nxt})")
+            finding.append(
+                f"OPTIONAL MATCH ({var})-[:{fragments.field_edge(step)}]->({nxt})"
+            )
             var = nxt
-        value = f"{var}.`{key.field}`"
+        value = f"{var}.{fragments.property_name(key.field)}"
         if key.kind == "text":
             value = f"toLower({value})"
         keys.append(f"{value} AS order{index}")
@@ -285,7 +287,7 @@ def build_search_query(
     prelude = "\n    ".join(text for text, _ in compiler.preludes)
     query = f"""
     {prelude}
-    MATCH (n:`{model.__name__}`:{kind})
+    MATCH (n:{fragments.label(model.__name__)}:{kind})
     WHERE {where}
     {finding}
     WITH n{keys}

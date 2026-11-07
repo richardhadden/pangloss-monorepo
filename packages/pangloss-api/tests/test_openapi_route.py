@@ -23,6 +23,13 @@ def test_the_document_is_as_fastapi_makes_it(settings):
     assert docs.status_code == 200
     assert '<rapi-doc spec-url="/openapi.json"' in docs.text
     assert "swagger" not in docs.text.lower()
+    # (its script comes from this package, not a CDN, and the page does not keep a token in the browser)
+    assert 'src="/docs/rapidoc-min.js?v=' in docs.text
+    assert "unpkg" not in docs.text and "persist-auth" not in docs.text
+    script = client.get("/docs/rapidoc-min.js")
+    assert script.status_code == 200
+    assert script.headers["content-type"].startswith("text/javascript")
+    assert "rapidoc v" in script.text[:200]
     assert client.get("/redoc").status_code == 200
     # (neither is in the document)
     assert "/docs" not in document["paths"]

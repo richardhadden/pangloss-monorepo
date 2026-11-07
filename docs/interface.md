@@ -186,8 +186,8 @@ The interface uses **the API's own cookie session** (`POST /api/users/session` p
 cookies; `DELETE` ends it; `GET /api/users/me` says who it is: see [api.md](api.md)). Because the browser only talks to the interface's
 origin, which passes `/api` on, the cookies are first-party. A server render passes the request's `Cookie` header on to the API, so the
 page is rendered for the user. See [interface-to-document.md](interface-to-document.md), "Sessions and logging in". (The opaque
-session token that `api.py` was to give, and its stubs at `/api/interface/session`, are not needed.) Still to decide: CSRF protection
-beyond `SameSite`, and what the interface does with a 401 in the middle of a session.
+session token that `api.py` was to give, and its stubs at `/api/interface/session`, are not needed.) (The API refuses a write with the
+cookies from another site: see api.md.) Still to decide: what the interface does with a 401 in the middle of a session.
 
 ### Layers of `interface-core`
 

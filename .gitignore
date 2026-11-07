@@ -29,3 +29,8 @@ packages/pydantic-meta-kit/
 test-results/
 
 .ruff_cache/
+
+# Secrets of a project (AUTHJWT_SECRET_KEY, API keys): never for version control
+.env
+.env.*
+!.env.example

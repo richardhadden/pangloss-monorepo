@@ -88,7 +88,7 @@ SETTINGS = """
         STORAGE: str = "{database}:storage"
         DATABASE: DatabaseSettings = DatabaseSettings()
         INTERFACE_LANGUAGES: list[str] = []
-        AUTHJWT_SECRET_KEY: str = "secret"
+        AUTHJWT_SECRET_KEY: str = "a secret for the tests, of a decent length"
         ENTITY_BASE_URL: AnyHttpUrl = AnyHttpUrl("http://test.com/")
 
     Settings()

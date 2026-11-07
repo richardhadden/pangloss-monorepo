@@ -225,11 +225,12 @@ def create_app() -> FastAPI:
     settings = ensure_settings()
     configure_from_settings(settings)
 
+    # (refused, not warned of: a server whose tokens can be forged should not start)
     if len(settings.AUTHJWT_SECRET_KEY) < MIN_SECRET_LENGTH:
-        warnings.warn(
-            f"AUTHJWT_SECRET_KEY is shorter than {MIN_SECRET_LENGTH} characters: "
-            "tokens signed with it are easy to forge",
-            stacklevel=2,
+        raise RuntimeError(
+            f"AUTHJWT_SECRET_KEY is shorter than {MIN_SECRET_LENGTH} characters: tokens "
+            "signed with it are easy to forge. Set a long random one in .env (as "
+            "`pangloss new` does)"
         )
 
     # (the models are needed now, as the routes are made from them; the connection

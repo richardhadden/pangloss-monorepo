@@ -67,8 +67,8 @@ first the answer is `412` (with `currentVersion`) and nothing changes. The Pytho
 ## From a browser
 
 Set `BACKEND_CORS_ORIGINS` to the frontend's origin(s). With cookies, use one host name for the page and the API (cookies are
-per site), set `AUTH_COOKIE_SECURE` over HTTPS, and note that only `SameSite` protects them from CSRF. A frontend on
-another site should use tokens. [REST API](../../docs/api.md) has the table of every setting and route.
+per site) and set `AUTH_COOKIE_SECURE` over HTTPS. A write with the cookies is refused when the browser says it came from
+a site that is not the API's own or one of `BACKEND_CORS_ORIGINS`. A frontend on another site should use tokens. [REST API](../../docs/api.md) has the table of every setting and route.
 
 ## From a script
 

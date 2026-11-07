@@ -18,7 +18,7 @@ from pangloss_zotero.watch import watch
 router = APIRouter(prefix="/api/zotero", tags=["zotero"])
 
 
-@router.get("/status")
+@router.get("/status", dependencies=[Depends(get_current_user)])
 async def status(request: Request) -> dict[str, Any]:
     """Where each library is, whether the watcher runs here, and which class each item type is written as"""
     store = ModelStore()

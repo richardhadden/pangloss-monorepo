@@ -104,6 +104,11 @@ def field_edge(field: str) -> str:
     return _checked(field, "the name of a field")
 
 
+def property_name(name: str) -> str:
+    """A property of a node, for an expression (`n.{property_name(name)}`), if `name` can be the name of one"""
+    return _checked(name, "the name of a property")
+
+
 def derived_visible(fact: str) -> str:
     """A condition: the reader sees the derived fact `fact` (`pangloss-derived`): one of its justifications rests only on
     head nodes the reader sees (`visible`), and none of the entities it relates is deleted. So a deleted or unpublished
