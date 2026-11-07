@@ -160,6 +160,11 @@ const definitions = {
         } as FieldDefinition,
       ],
     }),
+    // (a chain of documents, each holding the next: nested as deep as one likes)
+    Chain: model("Chain", {
+      requireLabel: false,
+      fields: [literal("text", { type: "str" }), relation("next", [doc("Chain")], false)],
+    }),
     Factoid: model("Factoid", {
       fields: [
         literal("year", { type: "int" }, { required: true }),
@@ -1139,4 +1144,42 @@ test("a field only in the database is not in the form", async () => {
   expect(rowName("year")).toBeTruthy();
   expect(rowName("date_text")).toBeUndefined();
   expect(document.body.querySelector('[aria-label="date_text"]')).toBeNull();
+});
+
+// (a chain `depth` long below the item: chain 1 holds chain 2, which holds chain 3 ...)
+const chain = (depth: number): Record<string, unknown> => {
+  let inner: Record<string, unknown> = { id: `c${depth}`, type: "Chain", text: `chain ${depth}` };
+  for (let n = depth - 1; n >= 1; n--) inner = { id: `c${n}`, type: "Chain", text: `chain ${n}`, next: inner };
+  return { id: "c0", type: "Chain", label: "C", text: "chain 0", next: inner };
+};
+const chainTexts = () =>
+  [...document.body.querySelectorAll<HTMLInputElement>("input")].map((input) => input.value).filter((value) => value.startsWith("chain "));
+
+test("a block nested five deep starts folded, and its fields are not made until it is unfolded", async () => {
+  const { client } = fakeClient(() => ({ id: "c0", type: "Chain", label: "C" }));
+  show(client, { type: "Chain", initial: chain(12), version: 1 });
+  await settle();
+  // (chain 1 to 5 are open; chain 6, five blocks deep, is folded: its head bar is there, its fields are not)
+  expect(chainTexts()).toEqual(["chain 0", "chain 1", "chain 2", "chain 3", "chain 4", "chain 5"]);
+  const heads = () => [...document.body.querySelectorAll<HTMLButtonElement>("button[aria-label='Fold or unfold Chain']")];
+  expect(heads().length).toBe(6);
+  expect(heads().map((head) => head.getAttribute("aria-expanded"))).toEqual(["true", "true", "true", "true", "true", "false"]);
+  click(heads()[5]!);
+  await settle();
+  // (unfolded: the next five, and the one after them folded again)
+  expect(chainTexts().length).toBe(11);
+  expect(heads().length).toBe(11);
+  expect(heads()[10]!.getAttribute("aria-expanded")).toBe("false");
+});
+
+test("a block that holds the part the page is to show (`?show=`) starts open, however deep", async () => {
+  const { client } = fakeClient(() => ({ id: "c0", type: "Chain", label: "C" }));
+  show(client, { type: "Chain", initial: chain(12), version: 1, show: "c8" });
+  await settle();
+  // (chain 6 is open, since chain 8 is inside it; chain 11 is folded as before)
+  expect(chainTexts().length).toBe(11);
+  expect(document.body.querySelector('[data-item-id="c8"]')).toBeTruthy();
+  const heads = [...document.body.querySelectorAll<HTMLButtonElement>("button[aria-label='Fold or unfold Chain']")];
+  expect(heads[5]!.getAttribute("aria-expanded")).toBe("true");
+  expect(heads[10]!.getAttribute("aria-expanded")).toBe("false");
 });

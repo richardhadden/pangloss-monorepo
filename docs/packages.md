@@ -37,7 +37,7 @@ Everything about *declaring* and *initialising* models:
 
 Public entry point: `pangloss_models.initialise`, an alias for `ModelRegistry.finalise`.
 
-It contains `pangloss_models.meta_kit`, the `WithMeta[...]` / `BaseMeta` machinery behind `_meta` and `Meta(...)`, vendored from [pydantic-meta-kit](https://github.com/richardhadden/pydantic-meta-kit) (commit `6f8ea9c`; changes are made in `pangloss-models` now). It knows nothing of any database: what a database returns that the models cannot read (Memgraph's date types) is converted by a function the database module adds to `pangloss_models.hooks.from_database`.
+It contains `pangloss_models.meta_kit`, the `WithMeta[...]` / `BaseMeta` machinery behind `_meta` and `Meta(...)`, vendored from [pydantic-meta-kit](https://github.com/richardhadden/pydantic-meta-kit) (commit `6f8ea9c`; changes are made in `pangloss-models` now). It knows nothing of any database: what a database returns that the models cannot read (Memgraph's date types) is converted by a function the database module adds to `pangloss_models.hooks.from_database`. The function is given each value; the hook walks the data once and marks what it has been through, so that the models nested in a document do not convert their subtree again (a read of a document 60 deep took a second before, 2026-11-07).
 
 ## pangloss-memgraph ✅ / 🚧
 

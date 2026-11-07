@@ -64,6 +64,7 @@ import {
   plainTint,
   smallButtonClass,
   spaceButtonsClass,
+  spacePaddingClass,
   spaceTypeClass,
   typeChipClass,
 } from "./styles";
@@ -73,6 +74,7 @@ import { RetypeButtons } from "./Retype";
 import { ClipButtons, EmbeddedPasteSlot, RelationPasteSlot, useClipActions } from "./Clip";
 import { FieldProblems, useRowProblems, useSaveChecks } from "./Problems";
 import { Customised } from "../Customised";
+import { holdsId, NestingProvider, startsFolded, useNesting, useRevealed } from "../nesting";
 
 const isObject = (value: unknown): value is FormData =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -94,10 +96,14 @@ function Block(
     itemId?: string;
     /** Buttons before the fold (they may open menus, so the bar does not cut off what is over its edge) */
     buttons?: JSX.Element;
+    /** Open though it is nested deep enough to start folded (what is to be shown is inside it) */
+    startOpen?: boolean;
   }>,
 ) {
   const { t, modelName } = useTranslations();
-  const [folded, setFolded] = createSignal(false);
+  // (a block this deep starts folded, and what it holds is made when it is unfolded: see `nesting.ts`)
+  const nesting = useNesting();
+  const [folded, setFolded] = createSignal(startsFolded(nesting) && !untrack(() => props.startOpen));
   // (made once: each read of a prop that is elements makes them again, and one read only to ask whether there
   // are any left a second set, of which the browser said "Hydration key miss ... a detached element was created")
   const buttons = children(() => props.buttons);
@@ -149,7 +155,9 @@ function Block(
       </div>
       <Show when={!folded()}>
         {/* (the rule starts at the bar: what is under it hangs from the head) */}
-        <div class={["ml-2 pt-4", nestedClass, props.rule]}>{props.children}</div>
+        <div class={["ml-2 pt-4", nestedClass, props.rule]}>
+          <NestingProvider value={nesting + 1}>{props.children}</NestingProvider>
+        </div>
       </Show>
     </div>
   );
@@ -179,7 +187,7 @@ export function FieldRow(
       when={!props.bare}
       fallback={
         <div class={fieldRowClass} data-problem={bad() ? "" : undefined}>
-          <div class="col-span-2 min-w-0">
+          <div class="col-span-full min-w-0">
             <FieldProblems problems={problems()} path={props.path ?? []} />
             {props.children}
           </div>
@@ -829,6 +837,9 @@ function RelationItem(props: {
     const found = option();
     return found && "edgeModel" in found ? found.edgeModel : null;
   });
+  // (the part the page is to scroll to is inside it: it starts open, however deep)
+  const revealed = useRevealed();
+  const holdsRevealed = () => revealed !== null && holdsId(value(), revealed);
   return (
     <Switch fallback={<JsonEditor path={props.path} label={type()} />}>
       <Match when={model()?.kind === "Entity"}>
@@ -908,7 +919,7 @@ function RelationItem(props: {
               </button>
             </div>
           </div>
-          <div class="flex min-w-0 flex-1 flex-col gap-4 p-3">
+          <div class={["flex min-w-0 flex-1 flex-col gap-4", spacePaddingClass]}>
             <ModelFields model={model()!} path={props.path} env={childEnv()} bare="contents" />
           </div>
         </div>
@@ -922,6 +933,7 @@ function RelationItem(props: {
           onRemove={props.onRemove}
           clip={clip}
           itemId={typeof value()?.id === "string" ? String(value()!.id) : undefined}
+          startOpen={holdsRevealed()}
           buttons={
             <RetypeButtons
               type={type()}
@@ -950,6 +962,7 @@ function RelationItem(props: {
           rule={kindRule(model()?.kind, model()?.interfaceMeta?.colour)}
           onRemove={props.onRemove}
           clip={clip}
+          startOpen={holdsRevealed()}
         >
           <ModelFields
             model={model()!}

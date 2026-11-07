@@ -264,11 +264,14 @@ def add_fields(
 def embedded_annotation(kind: ModelKind, definition: Any) -> Any:
     """What may be given for an embedded object: its model (and, in `Update`, a new one)"""
     # (in a fixed order, as for a relation: the options are a set)
-    types = [
-        getattr(option.annotated_type, name)
-        for option in sorted(definition.type_options, key=option_order)
-        for name in kind.offers
-    ]
+    types = []
+    for option in sorted(definition.type_options, key=option_order):
+        for name in kind.offers:
+            # (the embedded model may come after the model with the field: a binding on `Order.thing_ordered`
+            # reaches `SealedLetter`, and so its `Seal`, through the abstract `Statement`, which the order of
+            # making the models does not see. Its fields are given to it in its turn)
+            initialise_model(KINDS[name], option.annotated_type)
+            types.append(getattr(option.annotated_type, name))
     return Union[*types]  # type: ignore[valid-type]
 
 

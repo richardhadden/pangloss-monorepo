@@ -190,14 +190,36 @@ def requesting_review_status(status: str | None) -> Generator[None]:
 #
 # A database returns its own types (Memgraph's driver, `neo4j.time.DateTime`). The models do
 # not know which database they have: the database module adds a function here that
-# converts what it knows of, anywhere in the data, and the models call `convert_from_database`
-# on what they are made from. With none, the data is as it is.
+# converts a value it knows of, and the models call `convert_from_database` on what they are
+# made from. With none, the data is as it is.
+#
+# `convert_from_database` walks the dicts and lists itself and gives each converter the values
+# in them (a converter that walks on its own account is given nothing to walk). What it has been
+# through is marked, so that the models nested in a document, each of which converts what it is
+# made from, do not walk their subtree again: a read of a document nested 60 deep took a second,
+# nearly all of it converting the same values over and over (O(nodes x depth)).
 type FromDatabaseConverter = Callable[[Any], Any]
 
 from_database: list[FromDatabaseConverter] = []
 
 
+class _Converted(dict):
+    """A dict that `convert_from_database` has been through, with everything in it"""
+
+
 def convert_from_database(data: Any) -> Any:
+    if not from_database or isinstance(data, _Converted):
+        return data
+    return _convert(data)
+
+
+def _convert(data: Any) -> Any:
+    if isinstance(data, _Converted):
+        return data
+    if isinstance(data, dict):
+        return _Converted((key, _convert(value)) for key, value in data.items())
+    if isinstance(data, list):
+        return [_convert(value) for value in data]
     for converter in from_database:
         data = converter(data)
     return data

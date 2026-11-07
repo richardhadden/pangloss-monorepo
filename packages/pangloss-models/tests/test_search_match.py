@@ -13,6 +13,7 @@ from pangloss_models import (
     Match,
     PanglossSearchError,
     PanglossUnknownTypeError,
+    SemanticSpace,
     Trait,
     initialise,
 )
@@ -158,6 +159,44 @@ def test_the_type_searched_is_a_document_or_an_entity():
     for name in ("Marked", "Nothing"):
         with pytest.raises(PanglossUnknownTypeError):
             resolve_search_type(name)
+
+
+def test_a_type_that_is_never_a_document_of_its_own_says_what_holds_it():
+    # (what a search finds is head documents: a `Statement`, `create_directly=False`, is only ever inside a `Factoid`,
+    # and a search for one answered `count: 0` with no word of why)
+    class Person(Entity):
+        pass
+
+    class Hearsay[T](SemanticSpace[T]):
+        pass
+
+    class Statement(Document):
+        _meta = Document.Meta(abstract=True, create_directly=False)
+        text: str
+
+    class Letter(Statement):
+        sender: Person
+
+    class Report(Statement):
+        reported: Hearsay[Statement]
+
+    class Factoid(Document):
+        statements: list[Statement]
+
+    initialise()
+
+    with pytest.raises(PanglossSearchError) as refused:
+        resolve_search_type("Letter")
+    message = str(refused.value)
+    assert "A Letter is never a document of its own" in message
+    assert "Factoid.statements, Report.reported" in message
+    assert (
+        '{"type": "Factoid", "where": {"$somewhere": {"type": "Letter", ...}}}'
+        in message
+    )
+    with pytest.raises(PanglossSearchError):
+        resolve_search_type("Statement")
+    assert resolve_search_type("Factoid") is Factoid
 
 
 def nested_models():

@@ -61,6 +61,7 @@ export default function EditItem(props: RouteProps<"/:type/:id/edit">) {
                   version={loaded.meta.version}
                   meta={loaded.meta}
                   guardLeaving={guardLeaving}
+                  show={typeof search.show === "string" ? search.show : undefined}
                   onSaved={(saved) => {
                     void revalidateAll();
                     navigate(`/${saved.type}/${encodeURIComponent(saved.id)}`);

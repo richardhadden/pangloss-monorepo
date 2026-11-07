@@ -148,6 +148,8 @@ export interface ItemFormProps {
   onDeleted?: () => void;
   /** Called to load the item again, after it was found to have been changed by someone else */
   onReload?: () => void;
+  /** The id of a document inside the item that the page is to show: a block nested deep enough to start folded opens if it is inside */
+  show?: string;
   /**
    * What the item is when there is nothing to save, if not `initial`: a new item opened from the stash starts as the
    * stashed item, and can be saved at once

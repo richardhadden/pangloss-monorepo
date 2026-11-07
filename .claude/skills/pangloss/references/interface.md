@@ -122,6 +122,10 @@ read its output after clicking through what you changed. The browser tests fail 
 - Text of the frame (not content) is `uppercase font-semibold`. Every icon has `select-none`.
 - Colours of types come from `InterfaceMeta(colour=...)`: blue for entities and green for documents by default.
 - Extract a repeated piece into a component, but ask the user before adding a new shared one.
+- **Nesting is bounded by folding, not by depth.** A block five deep starts folded, in the view and the form
+  (`components/nesting.ts`), and what is folded is not made: a document can nest without limit, and making sixty
+  levels at once overran the call stack. The rows of fields are a container query of what they are in
+  (`fieldGridClass`, `nestedClass` in `form/styles.ts`): keep new layout inside those classes' tiers.
 - The user works on a retina screen and sees half-pixel faults. `border-[0.5px]` draws a full CSS pixel in Chrome,
   so nested boxes must not rely on a half-pixel negative margin to overlap: draw the outer hairline as an
   `after:absolute after:inset-0` overlay. Check thickness in a screenshot's pixels, not by eye. Vertical rhythm was

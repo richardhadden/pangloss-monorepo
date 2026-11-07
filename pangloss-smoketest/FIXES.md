@@ -41,6 +41,19 @@ problem, what was changed, how it was checked, and what is still to do. Numbers 
 | 27 | Load: one worker, 479 req/s; a person read queues | **Measured again, not changed**: 450 req/s, the same latencies. One Python process is the limit; `pangloss run` has no `--workers`. For the user to decide (background tasks would run in each) |
 | 14 and the Design items (17, 18, 19) | | Not started |
 
+**Second run (2026-11-07, branch `more-smoke-test-fixes`):** `PROBLEMS.md` #37-45.
+
+| # | Problem | State |
+|---|---|---|
+| 37 | `initialise()` crashes (`AttributeError: Create`) on an embedded model with a relation under a `FieldBinding` | **Fixed**: the embedded model's class is made when first asked for; test; the smoke models initialise with `engraved_by: Person` |
+| 38, 39 | Deep documents: "Maximum call stack size exceeded" in the browser; one request hangs the production server | **Fixed**: a block five deep starts folded, view and form, and what is in it is made when it is unfolded; the 61-deep factoid opens in 0.15-0.3 s on both builds, unfolds to the bottom (13 unfolds, 30-120 ms each), no errors, no hang; Vitest; `?show=` opens the way to its part |
+| 40 | Nested documents squashed to one character a line | **Fixed** (as far as 61 levels): the rows of fields measure themselves by what they are in (container queries): under 28rem the name goes above the field and the indents shrink; under 24rem the indents all but vanish, and a floor of 14rem keeps the fields readable, each level stepping out of the one above (a staircase the page scrolls for). Seen in screenshots at 61 deep |
+| 41 | Reading a deep document is quadratic in its depth (`convert_from_database` re-walks each subtree) | **Fixed** (the time): the converter walks once and marks what it has done; 61 deep 1,020 ms -> 73 ms, 1.13 M converter calls -> 13,400. The size (every nested `meta.semanticSpaces`) is not changed |
+| 42 | Adding a subclass to a wrapped type is "LOSES DATA", 33 KB migration text | **Fixed**: a wrapper is compared by what it holds; the change reads "now also document:Death, semanticSpace:Negative holding Death", safe; test |
+| 43 | Page 1 of an abstract class costs in proportion to its size | **Measured, not changed**: 73k statements, count 114 ms (76% the lookup of each node's head), the page 263 ms in all (the rest the sort by id); grouping the lookups by head would gain at most 2.4x on the count. For the user |
+| 44 | A list search for text with no letters is slow and finds nothing | **Measured, not changed**: "finds nothing" is right (no Person label has a 1); the time is the text index's: `.*1.*` matches thousands of distinct terms (every year), 65,819 hits in 261 ms, where `.*of.*` is one term, 58,689 hits in 41 ms |
+| 45 | `/api/search` for a class only ever nested answers `count: 0` | **Fixed**: a 422 that says what holds it and shows the `$somewhere` search to make; test; the interface's list page does not offer the search form for such a class |
+
 ## What was done
 
 ### #1 The SDK (High)
@@ -669,6 +682,139 @@ reverse relations for each field on an entity's page; a small project on port 76
 API (#27); an operator for "this type or any below it" (#19); whether the texts of the language should leave the
 page (#23).
 
+### #37 An embedded model with a relation, reached through a binding (High)
+
+- **Cause.** The models are made in the order of their direct dependencies (`ModelRegistry._toposort`). `Order`
+  depends on `PositiveSubjunctive[Statement]`, not on `Statement`'s subclasses; but giving `Order.Create` its
+  `thing_ordered` with its `FieldBinding` builds a bound `Create` of every concrete `Statement`, `SealedLetter`
+  among them, and that asks `embedded_annotation` for `Seal.Create`, which did not exist yet (`Seal` waited on
+  `Person`, which waited on `WithCertainty[str]`; by name `Order` came first). Without a relation in the embedded
+  chain the embedded models were made early enough by chance. So: an embedded model reached, through an abstract
+  class, by a model whose name sorts before it.
+- **Fix.** `embedded_annotation` (`pangloss_models/initialise_models/builder.py`) makes the embedded model's class
+  for the kind if it is not there yet (`initialise_model`, as `entity_types` already does for an entity that may
+  be named inline), and the main loop gives it its fields in its turn. The schemas are all forgotten and made again
+  at the end of `_initialise_models` anyway, so the early, fieldless one is not kept.
+- **Test.** `pangloss-models/tests/generated_models/test_embedded_reached_through_a_binding.py` (the abstract class
+  is called `Act` so that it sorts before `Seal` in the test module, which is what shows the bug; failed before,
+  passes after). All 940 model tests pass.
+- **Checked** on the smoke models with `engraved_by: Person` restored: `initialise()` is fine. The smoke models
+  keep `engraved_by: str` (the comment says why: the data holds strings, and a migration to a relation would lose
+  them).
+
+### #41 Reading a deeply nested document (Perf)
+
+- **Cause.** Every model made from database data (`_FromDatabaseBase`, the head's `meta`) has a `mode="before"`
+  validator that calls `pangloss_models.hooks.convert_from_database`, and the one converter registered
+  (`pangloss_cypher.from_database.convert_neo4j_datetimes`) walked everything it was given. So each nested model
+  converted its whole subtree again: O(nodes x depth). Measured with the models directly on the smoke database
+  (`/tmp/pgfix/measure41.py`, median of five `Factoid.get`): 61 deep 1,020 ms and 1,132,862 converter calls;
+  21 deep 437 ms; 13 deep 38 ms.
+- **Fix.** `convert_from_database` (`pangloss_models/hooks.py`) does the walk itself, once: dicts become a marked
+  dict (`_Converted`), lists are walked, and the converters are given the values. A marked dict is returned as it
+  is, so the nested models' validators cost nothing. The contract of the hook changed accordingly: a converter is
+  given a value, not the tree (the one converter works as before: its own recursion is never reached). With no
+  converter registered (the SDK) nothing is walked, as before.
+- **After:** 61 deep 73 ms (13,400 calls), 21 deep 38 ms, 13 deep 26 ms: linear now, and about what the query
+  takes.
+- **Tests.** `test_from_database_hook.py`: a converter is given each value once, however deep, and what has been
+  through is not walked again. All 941 model tests pass; the database-backed packages (Memgraph) run below.
+- **Not changed:** the size of the response (each nested document's `meta.semanticSpaces` lists every space above
+  it, which is what the data holds), and the query, which the report found was not where the time went.
+
+### #38, #39, #40 Deeply nested documents in the interface (High, High, Medium)
+
+- **Cause of #38/#39.** Solid makes a component tree synchronously, hundreds of frames for each nested document
+  (more in the development build), so a chain of 41-61 documents overran the call stack in the browser, and on
+  the server the render of the edit page of the 61-deep factoid kept `serve.mjs` busy for minutes.
+- **Fix.** `interface-core/src/components/nesting.ts` (new): a context counting how many blocks (a document inside
+  a document, a reified relation, a conjunction) a thing is inside. A block five deep starts folded
+  (`startsFolded`: `FOLD_FROM` 5, then every `FOLD_EVERY` 5 levels of what is unfolded), in the view
+  (`ItemContents.tsx`: the head bar of such a block is the toggle, as in the form; a ▸ before the label while it is
+  folded) and in the form (`ModelFields.tsx`, `Block`, whose fold already existed). What is folded is not made at
+  all (`<Show>` round the children), so what is made at once is bounded; unfolding starts from the click, a new
+  stack. The server renders the same five levels. `?show=<id>` of the edit page (the edit button of a nested
+  document) still reaches its block: `ItemForm` takes `show`, and a block that holds that id starts open
+  (`RevealProvider`, `holdsId`); `Edit.tsx` passes it.
+- **#40.** The grid of fields (`fieldGridClass`, `fieldRowClass` in `form/styles.ts`) is a Tailwind container
+  query of the thing it is nested in (`nestedClass` and the item's contents and the form are `@container`):
+  under 28rem the name goes above the field (one column) and the indent and the bands' padding shrink
+  (`@max-md:`); under 24rem the indent all but vanishes (`@max-sm:ml-0 pl-1`, the rules down the left still show
+  the depth, as the bars of a quoted letter do) and the fields keep a floor of 14rem (`@max-sm:min-w-56`), so each
+  further level steps out of the one above by a few pixels: a staircase the page scrolls sideways for, instead of
+  text one character wide. Head chips, labels and space labels tighten in the same tier.
+- **Measured** on the smoke project, production build (`smoke_scripts/ui_nested.py`, and `ui_unfold.py`, new,
+  which unfolds to the bottom): the 13, 21, 41 and 61-deep factoids open in 0.06-0.27 s (view) and
+  0.08-0.20 s (edit), 334 / 625 elements, no errors, the server unmoved (before: 61 deep view "message only",
+  edit hung the server four minutes). Unfolding the 61-deep one to the bottom: 13 unfolds of 18-44 ms (view,
+  2,412 elements) and 34-120 ms (edit, 9,298 elements); the page 1,678 / 1,690 px wide (viewport 1,400; before the
+  floor 2,446 / 2,550, with text one character wide). The development build: the same pages, no errors and no
+  diagnostics in its log, unfolds of 58-334 ms (view) and 111-1,286 ms (edit). Screenshots in
+  `smoke_scripts/out/ui_nested_c6b10e*.png`.
+- **Tests.** Vitest: `ItemContents.test.tsx` (folds at five, unfolds five more, folds again; the containers),
+  `ItemForm.test.tsx` (the same in the form; `show` opens the way). All 340 interface tests pass. The e2e project
+  has no deep nesting: `e2e/COVERAGE.md` says so.
+- **Not changed:** a part deeper than five levels that a review comment points at is in a folded block until it is
+  unfolded (the item page has no `?show=`); the blocks' depth is counted from the page, so a document opened on
+  its own starts fresh.
+
+### #42 A kind added to what a wrapper holds (Low)
+
+- **Cause.** `diff_relation` (`pangloss_models/migrations/diff.py`) compared a relation's options by `option_key`,
+  which for a wrapper (`Causes[TCause=document:Accusation|...]`) spells out everything it holds; so three kinds of
+  statement added made every wrapper that takes a statement an option removed and another added: "lossy", with a
+  text naming every kind (33 KB).
+- **Fix.** `options_difference`: a wrapper that is in both (by `option_base`, the wrapper without its parameters)
+  is compared by what it holds (`option_leaves`): what it now also holds is an addition
+  ("semanticSpace:Negative holding Death"), what it no longer holds a removal. The change applied to the
+  database is unchanged (`alter_relation_target` uses `removed` only as a yes or no, and the labels of the
+  options as they are now). Test: `test_a_kind_added_to_what_a_wrapper_holds_is_an_addition_not_a_removal`
+  (both ways). All 30 diff tests pass.
+
+### #43 Page 1 of an abstract class (Perf: measured, not changed)
+
+- Logged in, on 73,093 statements: `GET /api/Statement?pageSize=5` 267 ms; `DatedStatement` (25,712) 117 ms;
+  `Factoid` (30,783) 46 ms; `Person` (56,001) 60 ms. The count alone (the first half of `_plain_page`,
+  `list_query.py`) is 114 ms; profiled, 76% of it is the lookup of each node's head by id (`ScanAllByLabelProperties
+  (counted_head :HeadNode {id})`, 148,020 hits), which the rule of what is seen needs for a nested node (its
+  head's `deleted` and `published`). The other 150 ms is the second scan with the sort by id for the page.
+  Entities and head documents have no head to look up, so their pages are cheaper for the same count.
+- Not changed: grouping the nested nodes by head before the lookup would cut the count by at most the number of
+  statements for each factoid (2.4 here); the sort stays. `/tmp/pgfix/profile43.py`. For the user: whether it is
+  worth it.
+
+### #44 A list search for a digit (Perf: measured, not changed)
+
+- `GET /api/Person?q=1` 271 ms and 0 results; `q=Lorenzo` 36 ms, 493; `q=1500` 12 ms, 0; `q=' OR 1=1 --` 477 ms
+  (its words are `or`, `1`, `1`), 0 and `truncated: true`.
+- "Finds nothing" is right: no Person label has a `1` in it (`CONTAINS '1'`: 0). The time is the text index's:
+  the pattern `.*1.*` matches thousands of distinct terms (every year in a label: 65,819 hits in 261 ms), each
+  with its postings to merge, where `.*of.*` is one term (58,689 hits in 41 ms) and `.*15.*` 5,847 in 12 ms. It is
+  the known cost of a substring search on the index (docs/deep-search.md), not a scan of the nodes. Not changed.
+
+### #45 `/api/search` for a class that is only ever inside another (Low)
+
+- `resolve_search_type` (`pangloss_models/search.py`) now refuses a document class that can never be a document
+  of its own (`create_directly` false for it and every class below it, `can_be_a_head`) with a
+  `PanglossSearchError`, a 422 at the API: "A Letter is never a document of its own (create_directly is False),
+  so a search for it finds nothing: it is inside Factoid.statements, Order.thing_ordered, Report.reported.
+  Search the document that holds it, with $somewhere: {"type": "Factoid", "where": {"$somewhere": {"type":
+  "Letter", ...}}}" (`holders_of`: the fields of the documents whose options hold the class or one above or below
+  it, wrappers such as `Hearsay[Statement]` left out; the example starts from a holder that can be a head).
+  Checked on the smoke API for Letter, Statement and Meeting.
+- Test: `test_a_type_that_is_never_a_document_of_its_own_says_what_holds_it` (`test_search_match.py`).
+- The interface's list page offered the search form for such a class too (its structured search went to the same
+  route, and found nothing): it no longer does, see below. **For the user:** whether the search should instead
+  find such documents through the ones that hold them (a change of the decision "results are head documents",
+  docs/structured-search.md).
+
+### The full run after the second run's fixes (2026-11-07, uncommitted)
+
+`./run_tests.sh`, exit 0: ruff, `ty`, the skill check and the packages' stubs pass; the packages on Memgraph 2,876
+passed; on Neo4j the conformance suite 537, `pangloss-neo4j` 166, the live tests of typology 26, calendar 19,
+dates 12 and Zotero 15; the browser tests 166 passed (the development server's log checked). Not committed: for
+the user to review.
+
 ## Still to do for what is fixed
 
 - **Docs: written** (2026-11-06): `docs/sdk.md` ("As built: phase 8": the stand-in, model settings, the check, the
@@ -687,10 +833,14 @@ page (#23).
 
 ## Where things are
 
-- **Servers**: the smoke test API on :8010, started with `/tmp/pgstubs/restart_api.sh` (the Zotero watcher off:
-  `ZOTERO_LIBRARIES='[]'`; log in `smoke_scripts/out/api_fixes.log`). Containers as in `REPORT.md` §8.
-  The interface dev server (`../.venv/bin/pangloss interface dev --api-url http://localhost:8010 --port 3010`, from
-  `pangloss-smoketest/`) is **not running**: start it when a page has to be looked at.
+- **Servers** (2026-11-07, left running): the smoke test API on :8010 (`ZOTERO_LIBRARIES='[]' ../.venv/bin/pangloss
+  run --port 8010` from `pangloss-smoketest/`; log `smoke_scripts/out/api_fixes2.log`); the development interface on
+  :3010 (`../.venv/bin/pangloss interface dev --api-url http://localhost:8010 --port 3010`; log `interface_dev-7.log`);
+  the production interface on :3011 (`pangloss interface build`, then `pangloss interface serve --api-url
+  http://localhost:8010 --port 3011`; log `interface_serve-7.log`). Containers as in `REPORT.md` §8. Stop a server
+  by the process on its port.
+- **Scratch of the second run's fixes**: `/tmp/pgfix/` (`measure41.py`, `profile43.py`, `time_lists.py`,
+  `repro37.py`; may be gone).
 - **Scratch** (may be gone): `/tmp/pgstubs/` (`sdk_debug.py` runs `sdk build` keeping ty's whole output).
 - **Data made in the smoke database by the checks**: a few `Commodity` entities labelled "Longword ..." and
   "Wordlen ..." (the long-word probes); `sdk_client.py` deletes what it makes; about 4,000 more ordinary factoids

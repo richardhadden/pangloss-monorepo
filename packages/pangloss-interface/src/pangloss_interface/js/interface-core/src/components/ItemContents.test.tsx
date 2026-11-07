@@ -768,3 +768,41 @@ test("a module's view of what refers to an entity says how many it is without, a
   expect(host.querySelector("[data-testid=incoming-not-read]")).toBeNull();
   localStorage.clear();
 });
+
+// (a claim of a claim of a claim ...: a document nested `depth` deep, each with a label saying which it is)
+const claims = (depth: number): Record<string, unknown> => {
+  let inner: Record<string, unknown> = { id: `c${depth}`, type: "Claim", label: `claim ${depth}`, target: [] };
+  for (let n = depth - 1; n >= 0; n--) {
+    inner = { id: `c${n}`, type: "Claim", label: `claim ${n}`, target: [inner] };
+  }
+  return { id: "f1", type: "Factoid", statements: [inner] };
+};
+
+test("a document nested five deep starts folded, and what it holds is not made until it is unfolded", () => {
+  const host = show(claims(12));
+  const shown = () => [...host.querySelectorAll("span.truncate")].map((s) => s.textContent);
+  // (the sixth claim is five blocks deep: its head is there, folded; the rest are not made)
+  expect(shown()).toEqual(["claim 0", "claim 1", "claim 2", "claim 3", "claim 4", "claim 5"]);
+  const toggles = () => [...host.querySelectorAll<HTMLButtonElement>("button[aria-label='Fold or unfold Claim']")];
+  expect(toggles().length).toBe(1);
+  expect(toggles()[0]!.getAttribute("aria-expanded")).toBe("false");
+  toggles()[0]!.click();
+  flush();
+  // (unfolded: the next five, and the one after them starts folded again)
+  expect(shown()).toEqual([...Array(12).keys()].map((n) => `claim ${n}`).slice(0, 11));
+  expect(toggles().length).toBe(2);
+  expect(toggles()[0]!.getAttribute("aria-expanded")).toBe("true");
+  expect(toggles()[1]!.getAttribute("aria-expanded")).toBe("false");
+  toggles()[0]!.click();
+  flush();
+  expect(shown().length).toBe(6);
+});
+
+test("the rows of the fields measure themselves by what they are in: the grid stacks the name above the field in a narrow place", () => {
+  const host = show(claims(1));
+  // (the contents are a container for the rows, and so is what each block's fields are in)
+  expect(host.firstElementChild!.className).toContain("@container");
+  const nested = host.querySelector("dl dd div.border-l-2")!;
+  expect(nested.className).toContain("@container");
+  expect(host.querySelector("dl")!.className).toContain("@max-md:grid-cols-1");
+});

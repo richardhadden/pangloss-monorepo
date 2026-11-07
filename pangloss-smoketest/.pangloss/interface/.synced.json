@@ -87,6 +87,7 @@
   "interface-core/src/components/form/reveal.ts",
   "interface-core/src/components/form/styles.ts",
   "interface-core/src/components/index.ts",
+  "interface-core/src/components/nesting.ts",
   "interface-core/src/components/search/SearchPanel.test.tsx",
   "interface-core/src/components/search/SearchPanel.tsx",
   "interface-core/src/components/search/saved.ts",

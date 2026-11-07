@@ -706,7 +706,8 @@ class Witnessing(DatedStatement):
 class SealMatrix(Embedded):
     """The die a seal was struck from"""
 
-    # (a relation to Person here crashes initialise(): PROBLEMS.md #37)
+    # (a relation to Person here crashed initialise(): PROBLEMS.md #37, fixed 2026-11-07. Left as a string: the
+    # 431 sealed letters in the smoke databases hold one, and a migration to a relation would lose it)
     engraved_by: str
     motto: str
 

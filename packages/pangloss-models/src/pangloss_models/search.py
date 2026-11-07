@@ -523,7 +523,86 @@ def resolve_search_type(name: str) -> type[Document | Entity]:
         raise PanglossUnknownTypeError(
             f"'{name}' is not a document or an entity type, so it cannot be searched"
         )
+    if issubclass(model, Document) and not can_be_a_head(model):
+        raise PanglossSearchError(never_a_head_message(model))
     return model
+
+
+def can_be_a_head(model: type[Document]) -> bool:
+    """Whether a document of the class, or of one below it, can be one of its own (`create_directly`): what a search
+    finds is head documents, so a class that is only ever inside another is found through the one that holds it"""
+    from pangloss_models.utils import generic_get_subclasses
+
+    return any(
+        not cls._meta.abstract and cls._meta.create_directly
+        for cls in (model, *generic_get_subclasses(model, include_abstract=True))
+    )
+
+
+def holders_of(model: type[Document]) -> list[str]:
+    """The fields of the models that can hold a document of the class, as `Model.field`, in order"""
+    from pangloss_models.field_definitions import RelationToDocument, RelationToEntity
+    from pangloss_models.model_registry import ModelRegistry
+
+    def leaves(options) -> Any:
+        for option in options:
+            if isinstance(option, (RelationToDocument, RelationToEntity)):
+                yield option.annotated_type
+            else:
+                for parameter in getattr(option, "parameter_type_options", {}).values():
+                    yield from leaves(parameter.type_options)
+
+    holders = []
+    for holder in ModelRegistry.all_models().values():
+        # (a document that holds it, not a wrapper such as `Hearsay[Statement]`, which is itself in one)
+        if getattr(holder, "__metatype__", None) not in (
+            "Document",
+            "ReifiedRelationDocument",
+        ):
+            continue
+        fields = getattr(getattr(holder, "_meta", None), "fields", None)
+        for field_name, definition in fields.relation_fields.items() if fields else ():
+            # (the options name concrete classes: the field holds the class, or one above or below it)
+            if any(
+                isinstance(leaf, type)
+                and (issubclass(model, leaf) or issubclass(leaf, model))
+                for leaf in leaves(definition.type_options)
+            ):
+                holders.append(f"{holder.__name__}.{field_name}")
+    return sorted(set(holders))
+
+
+def never_a_head_message(model: type[Document]) -> str:
+    name = model.__name__
+    holders = holders_of(model)
+    if not holders:
+        return (
+            f"A {name} is never a document of its own (create_directly is False), and nothing holds one: a search "
+            "for it finds nothing"
+        )
+    from pangloss_models.model_registry import ModelRegistry
+
+    # (the example starts from a holder that is a document of its own, if one is: `Report.reported` holds a
+    # statement, but a report is inside a factoid too)
+    models = ModelRegistry.all_models()
+    first = next(
+        (
+            holder.split(".")[0]
+            for holder in holders
+            if (
+                isinstance(held_by := models[holder.split(".")[0]], type)
+                and issubclass(held_by, Document)
+                and can_be_a_head(held_by)
+            )
+        ),
+        holders[0].split(".")[0],
+    )
+    shown = ", ".join(holders[:6]) + (", …" if len(holders) > 6 else "")
+    return (
+        f"A {name} is never a document of its own (create_directly is False), so a search for it finds nothing: "
+        f"it is inside {shown}. Search the document that holds it, with $somewhere: "
+        f'{{"type": "{first}", "where": {{"$somewhere": {{"type": "{name}", ...}}}}}}'
+    )
 
 
 def without_none(annotation: Any) -> Any:

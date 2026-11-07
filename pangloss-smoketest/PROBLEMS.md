@@ -26,7 +26,10 @@ entity nodes (15,570 of them Zotero items), 30,228 factoids, **686,164 nodes** (
 `nested_checks.py`, `deep_reads.py`, `deep_updates.py` (all three take `SMOKE_API`/`SMOKE_OUT`/`SMOKE_TOKEN`/
 `SMOKE_BOLT` for the Neo4j copy), `ui_nested.py`, `ui_pages.py` (`SMOKE_UI` for the production build on :3011).
 
-37. **High. `initialise()` crashes (`AttributeError: Create`, in `builder.embedded_annotation`) when an `Embedded`
+**Fixed since (2026-11-07, branch `more-smoke-test-fixes`; `FIXES.md`, "Second run"):** 37, 38, 39, 40, 41, 42, 45;
+43 and 44 are measured and explained, not changed. Each is marked below.
+
+37. ✅ *Fixed: the embedded model's classes are made when first asked for.* **High. `initialise()` crashes (`AttributeError: Create`, in `builder.embedded_annotation`) when an `Embedded`
     model with a relation is a field of a document that a `FieldBinding` reaches.** Here: `SealMatrix.engraved_by:
     Person`, in `Seal > SealImpression > SealMatrix`, on `SealedLetter`, a `Statement`; `Order.thing_ordered` binds
     `ordered_to` into every `Statement`, so `build_bound_model` builds a bound `SealedLetter` and asks for
@@ -35,7 +38,7 @@ entity nodes (15,570 of them Zotero items), 30,228 factoids, **686,164 nodes** (
     `_order_cyclic` puts the cycle before the embedded models that depend on `Person`. The docs allow an embedded
     relation (`Date.about: Person`). Worked round in the smoke models (`engraved_by: str`, a comment points here).
     `makemigrations`, `migrate` and the server all fail to start with it.
-38. **High. Deeply nested documents crash the interface: "Maximum call stack size exceeded".** Factoids of a report
+38. ✅ *Fixed: a block five deep starts folded, view and form, and what is in it is made when it is unfolded.* **High. Deeply nested documents crash the interface: "Maximum call stack size exceeded".** Factoids of a report
     chain (Report > Hearsay > Report ... > Order > PositiveSubjunctive > Order ... > Letter):
 
     | Documents deep | 2, 4, 8 | 13 | 21 | 41 | 61 |
@@ -50,14 +53,14 @@ entity nodes (15,570 of them Zotero items), 30,228 factoids, **686,164 nodes** (
     and in the dev build `HMRComp`, `observedComponent`, `runAsSolidCopy` too). Nothing is logged: the error boundary
     shows the message and the console and `pageerror` see nothing, so the e2e checks for page errors would not
     catch it. Data that the API takes and returns correctly cannot be opened or edited.
-39. **High. One request for a very deep document stops the production interface's server for everyone.** Opening the
+39. ✅ *Fixed: with 38 (the server renders the same five levels).* **High. One request for a very deep document stops the production interface's server for everyone.** Opening the
     edit page of the 61-deep factoid (logged in) kept `serve.mjs` at 100% CPU for about four minutes, its memory
     growing from 706 to 790 MB; meanwhile it answered nothing, not even `/`. It recovered on its own. Most likely the
     server-side render of the same tree as 38 (not confirmed: I did not ask again, to keep the server up).
-40. **Medium. Nested documents are indented once more at each level, so beyond about five levels the content column
+40. ✅ *Fixed: the rows measure themselves by what they are in (container queries): names above the fields, smaller indents, a floor of 14rem at the deepest.* **Medium. Nested documents are indented once more at each level, so beyond about five levels the content column
     shrinks to one character a line and the content spills out to the right** (the 21-deep view:
     `out/ui_nested_8a542d.png`). Nested spaces each add their own coloured band too.
-41. **Perf. Reading a deeply nested document grows with the square of its depth, on both backends.** Median of five
+41. ✅ *Fixed (the time): the converter walks once and marks what it has done; 61 deep 1,020 -> 73 ms.* **Perf. Reading a deeply nested document grows with the square of its depth, on both backends.** Median of five
     `GET /api/Factoid/{id}` (Memgraph; Neo4j in brackets): 8 deep 31 ms (19), 21 deep 35 ms (29), 41 deep 120 ms
     (536), 61 deep 1,097 ms (1,166); the edit view the same. The log says `read transaction get_document took
     1076 ms`, but **the query is not most of it**: the query alone takes 88 ms at 61 deep. Profiled
@@ -72,18 +75,18 @@ entity nodes (15,570 of them Zotero items), 30,228 factoids, **686,164 nodes** (
     38 KB / 117 KB / 241 KB, because each nested document's `meta.semanticSpaces` lists every space above
     it (59 at depth 60; 7.4 KB of `meta` for that one document). Writes and updates are linear: a PUT that changes
     the innermost letter is 68 ms at 21 deep and 232 ms at 61, and keeps every nested id.
-42. **Low. Adding a subclass of a type that a generic wrapper takes is flagged as losing data, and the migration's
+42. ✅ *Fixed: a wrapper is compared by what it holds.* **Low. Adding a subclass of a type that a generic wrapper takes is flagged as losing data, and the migration's
     description is enormous.** Adding three `Statement` kinds made `Factoid.statements` and `Order.thing_ordered`
     "now also `Causes[TCause=document:Accusation|...]`, no longer `Causes[TCause=...]` [LOSES DATA]": the option is
     compared by its text, which lists every kind. The labels are the same, so nothing is deleted (the check for
     edges to removed labels finds none), but `migrate` asks for `--backup`/`--no-backup` and a "y", and
     `makemigrations` printed 33 KB for this change.
-43. **Perf. Page 1 of an abstract class costs time in proportion to its size.** `GET /api/Statement?pageSize=5`:
+43. *Measured, not changed: 76% of the count is the lookup of each nested node's head.* **Perf. Page 1 of an abstract class costs time in proportion to its size.** `GET /api/Statement?pageSize=5`:
     240 ms (71,881 statements; 35 ms on the first data); `DatedStatement` 105 ms (25,261); `Letter` 17 ms (1,377);
     `Factoid` 60 ms (30,228). Probably the count; not looked into.
-44. **Perf. A list search for text with no letters is slow and finds nothing.** `GET /api/Person?q=1` 250 ms,
+44. *Measured, not changed: nothing is right (no Person label has a 1); `.*1.*` matches thousands of distinct terms of the index.* **Perf. A list search for text with no letters is slow and finds nothing.** `GET /api/Person?q=1` 250 ms,
     `q=' OR 1=1 --` 450 ms (94 ms on the first data), both 0 results; `q=Lorenzo` 30 ms (493). Not looked into.
-45. **Low. `/api/search` for a class that is only ever inside another document answers `count: 0`.** `{"type":
+45. ✅ *Fixed: a 422 that names what holds it and shows the `$somewhere` search.* **Low. `/api/search` for a class that is only ever inside another document answers `count: 0`.** `{"type":
     "Letter"}`, `{"type": "Meeting", "where": {"participants": {"exists": true}}}`: 0, with no message. As documented
     (results are head documents), but it looks like a search that found nothing. It could say "a Letter is only
     found inside a Factoid: search Factoid with `statements` or `$somewhere`".

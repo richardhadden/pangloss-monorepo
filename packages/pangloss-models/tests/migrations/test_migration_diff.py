@@ -770,6 +770,54 @@ def test_what_a_relation_can_be_to_widens_and_narrows():
 
 
 @no_type_check
+def test_a_kind_added_to_what_a_wrapper_holds_is_an_addition_not_a_removal():
+    # (a wrapper is compared by what it holds: adding a kind of statement to the models made every `Negative[...]`
+    # an option removed and another added, "LOSES DATA", in a text naming every kind)
+    def before():
+        class Negative[T](SemanticSpace[T]):
+            pass
+
+        class Statement(Document):
+            _meta = Document.Meta(abstract=True)
+
+        class Birth(Statement):
+            pass
+
+        class Factoid(Document):
+            statements: list[Statement | Negative[Statement]]
+
+    def after():
+        class Negative[T](SemanticSpace[T]):
+            pass
+
+        class Statement(Document):
+            _meta = Document.Meta(abstract=True)
+
+        class Birth(Statement):
+            pass
+
+        class Death(Statement):
+            pass
+
+        class Factoid(Document):
+            statements: list[Statement | Negative[Statement]]
+
+    wide = one(changes(before, after), AlterRelationTarget)
+    assert wide.added == ["document:Death", "semanticSpace:Negative holding Death"]
+    assert wide.removed == []
+    assert wide.safety == "safe"
+    assert (
+        wide.describe()
+        == "Factoid.statements: now also document:Death, semanticSpace:Negative holding Death"
+    )
+
+    narrow = one(changes(after, before), AlterRelationTarget)
+    assert narrow.added == []
+    assert narrow.removed == ["document:Death", "semanticSpace:Negative holding Death"]
+    assert narrow.safety == "lossy"
+
+
+@no_type_check
 def test_cardinality_and_the_reverse_name():
     def before():
         class Person(Entity):

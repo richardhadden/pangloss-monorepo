@@ -25,6 +25,7 @@ import type {
   ModelDefinition,
 } from "../types";
 import { Customised } from "./Customised";
+import { NestingProvider, startsFolded, useNesting } from "./nesting";
 import { SpaceBands } from "./SpaceBands";
 import {
   fieldGridClass,
@@ -38,6 +39,7 @@ import {
   nestedClass,
   plainTint,
   smallButtonClass,
+  spacePaddingClass,
   spaceTypeClass,
   typeChipClass,
 } from "./form/styles";
@@ -103,6 +105,9 @@ function Head(props: {
   href?: string;
   /** Gives the bar a button at its right end that folds it (what is shown whole that can be collapsed) */
   onFold?: () => void;
+  /** A block nested deep enough to start folded (`startsFolded`): whether it is open, and the button that opens and folds it */
+  open?: boolean;
+  onToggle?: () => void;
 }) {
   const { t, modelName } = useTranslations();
   const contents = () => (
@@ -111,8 +116,42 @@ function Head(props: {
         {modelName(props.type)}
       </span>
       <span class={headRestClass}>
-        <Show when={props.label}>
-          <span class={headLabelClass}>{props.label}</span>
+        <Show
+          when={props.onToggle && !props.href}
+          fallback={
+            <Show when={props.label}>
+              <span class={headLabelClass}>{props.label}</span>
+            </Show>
+          }
+        >
+          {/* (as in the form: the grey of the bar, with the label in it, folds and unfolds it; folded, a ▸ says so) */}
+          <button
+            type="button"
+            class="flex min-w-0 flex-1 cursor-pointer items-center gap-2 px-3 py-1 text-left text-sm hover:bg-slate-400/20 focus-visible:bg-slate-400/20 focus-visible:outline-none"
+            aria-expanded={props.open ? "true" : "false"}
+            aria-label={t("fold", "Fold or unfold {name}", { name: modelName(props.type) })}
+            title={t("fold", "Fold or unfold {name}", { name: modelName(props.type) })}
+            onClick={() => props.onToggle!()}
+          >
+            <Show when={!props.open}>
+              <span aria-hidden="true" class="shrink-0 text-xs text-slate-500">
+                ▸
+              </span>
+            </Show>
+            <span class="min-w-0 truncate">{props.label}</span>
+          </button>
+        </Show>
+        <Show when={props.onToggle && props.href}>
+          <button
+            type="button"
+            class={[headButtonClass, "ml-auto text-slate-500 hover:bg-slate-400/30"]}
+            aria-expanded={props.open ? "true" : "false"}
+            aria-label={t("fold", "Fold or unfold {name}", { name: modelName(props.type) })}
+            title={t("fold", "Fold or unfold {name}", { name: modelName(props.type) })}
+            onClick={() => props.onToggle!()}
+          >
+            {props.open ? "▾" : "▸"}
+          </button>
         </Show>
         <Show when={props.onFold}>
           <button
@@ -509,6 +548,11 @@ function ObjectValue(props: {
       : collapsedView(props.value, definitions, modules.collapseRule);
   const [whole, setWhole] = createSignal(false);
   const folded = () => collapsed() !== undefined && !whole();
+  // (a block this deep starts folded, and what it holds is made when it is opened: see `nesting.ts`)
+  const nesting = useNesting();
+  const deep = startsFolded(nesting);
+  const [open, setOpen] = createSignal(!deep);
+  const onToggle = deep ? () => setOpen(!open()) : undefined;
   // (a part of the item's own document is marked with its id, as in the form, for what points at it: a review comment;
   // not something of another document that refers to it)
   const partId = () =>
@@ -558,20 +602,26 @@ function ObjectValue(props: {
                     rule={rule()}
                     label={label()}
                     onFold={onFold()}
+                    open={open()}
+                    onToggle={onToggle}
                     href={
                       props.asChip && props.value.id
                         ? `/${type()}/${props.value.id}`
                         : undefined
                     }
                   />
-                  {/* (more room under the head than a reified relation has: its first row is a field's, text with no box, not a chip) */}
-                  <div class={["ml-2 pt-6", nestedClass, rule()]}>
-                    <Fields
-                      value={props.value}
-                      model={model()}
-                      depth={props.depth}
-                    />
-                  </div>
+                  <Show when={open()}>
+                    {/* (more room under the head than a reified relation has: its first row is a field's, text with no box, not a chip) */}
+                    <div class={["ml-2 pt-6", nestedClass, rule()]}>
+                      <NestingProvider value={nesting + 1}>
+                        <Fields
+                          value={props.value}
+                          model={model()}
+                          depth={props.depth}
+                        />
+                      </NestingProvider>
+                    </div>
+                  </Show>
                 </div>
               </SpaceBands>
             </div>
@@ -657,19 +707,25 @@ function ObjectValue(props: {
                 rule={rule()}
                 label={label()}
                 onFold={onFold()}
+                open={open()}
+                onToggle={onToggle}
               />
-              <div class={["ml-2 pt-4", nestedClass, rule()]}>
-                {/* (what it holds first, then what is said of the relation) */}
-                <div class="flex min-w-0 flex-wrap items-start gap-x-2 gap-y-4">
-                  <Value value={props.value.target} depth={props.depth} />
+              <Show when={open()}>
+                <div class={["ml-2 pt-4", nestedClass, rule()]}>
+                  <NestingProvider value={nesting + 1}>
+                    {/* (what it holds first, then what is said of the relation) */}
+                    <div class="flex min-w-0 flex-wrap items-start gap-x-2 gap-y-4">
+                      <Value value={props.value.target} depth={props.depth} />
+                    </div>
+                    <Fields
+                      value={props.value}
+                      model={model()}
+                      depth={props.depth}
+                      exclude="target"
+                    />
+                  </NestingProvider>
                 </div>
-                <Fields
-                  value={props.value}
-                  model={model()}
-                  depth={props.depth}
-                  exclude="target"
-                />
-              </div>
+              </Show>
             </div>
           </Match>
           <Match when={isAnnotated()}>
@@ -700,7 +756,7 @@ function ObjectValue(props: {
               ]}
             >
               <span class={spaceTypeClass}>{modelName(type() ?? "")}</span>
-              <div class="flex min-w-0 flex-1 flex-wrap items-start gap-x-2 gap-y-6 p-3">
+              <div class={["flex min-w-0 flex-1 flex-wrap items-start gap-x-2 gap-y-6", spacePaddingClass]}>
                 <Value value={props.value.contents} depth={props.depth + 1} />
               </div>
             </div>
@@ -734,5 +790,10 @@ export function ItemContents(props: ItemContentsProps) {
     typeof props.item.type === "string" && typeof props.item.id === "string"
       ? { type: props.item.type, id: props.item.id }
       : undefined;
-  return <Fields value={props.item} model={model()} depth={0} page={page()} />;
+  return (
+    // (what the rows of the fields measure themselves by: see `fieldGridClass`)
+    <div class="@container w-full min-w-0">
+      <Fields value={props.item} model={model()} depth={0} page={page()} />
+    </div>
+  );
 }

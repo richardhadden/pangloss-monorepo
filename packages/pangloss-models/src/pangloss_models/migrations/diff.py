@@ -576,6 +576,46 @@ def option_key(option: dict) -> str:
     return f"{option['kind']}:{option.get('type')}[{params}]"
 
 
+def option_base(option: dict) -> str:
+    """An option without what its parameters hold: the wrapper itself (`conjunction:Causes`), or the option"""
+    if option["kind"] == "typeVar" or option["kind"] in DIRECT_OPTION_KINDS:
+        return option_key(option)
+    return f"{option['kind']}:{option.get('type')}"
+
+
+def options_difference(
+    old_options: list[dict], new_options: list[dict]
+) -> tuple[list[str], list[str]]:
+    """What a relation can now also be to, and what it can no longer be to (`AlterRelationTarget`). A wrapper that
+    is in both (`Causes[...]`) but holds other things now is compared by what it holds, as the labels of its nodes
+    do not change: what it now also holds is an addition, what it no longer holds a removal. (Compared whole, by
+    `option_key`, a kind of statement added to a model made every wrapper that takes a statement an option removed
+    and another added: "LOSES DATA", though nothing is lost, in a text that named every kind.)"""
+    old_by_key = {option_key(o): o for o in old_options}
+    new_by_key = {option_key(o): o for o in new_options}
+    added: list[str] = []
+    removed: list[str] = []
+    # (a wrapper that was there, by what it is: paired with the same wrapper among what is added)
+    gone_wrappers = {
+        option_base(old_by_key[key]): key
+        for key in sorted(set(old_by_key) - set(new_by_key))
+    }
+    for key in sorted(set(new_by_key) - set(old_by_key)):
+        option = new_by_key[key]
+        base = option_base(option)
+        if base in gone_wrappers and base != key:
+            before = old_by_key[gone_wrappers.pop(base)]
+            was, now = option_leaves(before), option_leaves(option)
+            if now - was:
+                added.append(f"{base} holding {', '.join(sorted(now - was))}")
+            if was - now:
+                removed.append(f"{base} holding {', '.join(sorted(was - now))}")
+        else:
+            added.append(key)
+    removed.extend(gone_wrappers.values())
+    return sorted(added), sorted(removed)
+
+
 def option_key_with_edges(option: dict) -> str:
     """`option_key`, with the edge models of what is in its parameters (`Alternative[ViaEdge[Person,
     Probability]]`): the edges of those are another field's (the wrapper's), so a change to them
@@ -641,12 +681,13 @@ def diff_relation(model: str, old: dict, new: dict, result: DiffResult) -> None:
             option_key_with_edges(o) for o in new_options
         }:
             # (with nothing added or removed, only the edge models of what it holds have changed)
+            added, removed = options_difference(old_options, new_options)
             result.changes.append(
                 AlterRelationTarget(
                     model=model,
                     name=name,
-                    added=sorted(new_keys - old_keys),
-                    removed=sorted(old_keys - new_keys),
+                    added=added,
+                    removed=removed,
                     options=new_options,
                 )
             )

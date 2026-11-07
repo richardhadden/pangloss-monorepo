@@ -3,6 +3,7 @@ import type { ParentProps } from "solid-js";
 import { useModels, useTranslations } from "../context";
 import { spaceTint } from "../primitives";
 import { getModel } from "../schema";
+import { spacePaddingClass } from "./form/styles";
 
 /**
  * What is in the semantic spaces `spaces` (outermost first). Beside a chip or a row of a list, the
@@ -98,10 +99,10 @@ function StackedBands(props: ParentProps<{ spaces: string[]; depth: number }>) {
           spaceTint(getModel(definitions, props.spaces[0] ?? "")?.interfaceMeta?.colour, props.depth),
         ]}
       >
-        <span class="flex shrink-0 items-center px-3 pt-2 text-xs font-semibold uppercase select-none">
+        <span class="flex shrink-0 items-center px-3 pt-2 text-xs font-semibold uppercase select-none @max-md:px-1.5 @max-sm:px-1">
           {modelName(props.spaces[0] ?? "")}
         </span>
-        <div class="min-w-0 flex-1 p-3">
+        <div class={["min-w-0 flex-1", spacePaddingClass]}>
           <StackedBands spaces={props.spaces.slice(1)} depth={props.depth + 1}>
             {props.children}
           </StackedBands>
