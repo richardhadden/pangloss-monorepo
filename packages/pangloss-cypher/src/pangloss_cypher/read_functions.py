@@ -352,6 +352,58 @@ async def get_entity_with_some(
     return made_as.HeadView(**data), counts
 
 
+@read_transaction
+async def get_entity_without_incoming(
+    tx: Transaction, cls: type[Entity], id: UUID | AnyHttpUrl
+) -> _EntityHeadViewBase | None:
+    """An entity as `get_entity` gives it, but with none of what refers to it (its incoming fields are empty, and
+    not looked for). For a page that reads the entity first and what refers to it apart (`get_incoming_fields`)"""
+    read = await read_entity(tx, cls, id, incoming=False)
+    if read is None:
+        return None
+    data, made_as = read
+    return made_as.HeadView(**data)
+
+
+@dataclass
+class IncomingFields:
+    """What refers to an entity, the first of each relation (`get_incoming_fields`)"""
+
+    model: type[Entity]
+    """The class the entity is"""
+    counts: dict[str, int]
+    """How many there are in each incoming field that has any (by the field's Python name)"""
+    fields: dict[str, list[Any]]
+    """The first of each, by the field's Python name, as they are in that field of the entity's `HeadView`"""
+
+
+@read_transaction
+async def get_incoming_fields(
+    tx: Transaction, cls: type[Entity], id: UUID | AnyHttpUrl, limit: int
+) -> IncomingFields | None:
+    """What refers to an entity, in every incoming field at once: no more than `limit` of each (the first by label),
+    and how many there are in each. None if there is no such entity. With `get_entity_without_incoming`, the two
+    halves of `get_entity_with_some`, for a page that reads them apart"""
+    # (the entity is read first, as `get_incoming` reads it: whether it is there to be seen, and the class it is)
+    read = await read_entity(tx, cls, id, incoming=False)
+    if read is None:
+        return None
+    data, made_as = read
+    found, counts = await fetch_incoming_relations(
+        tx, made_as, UUID(str(data["id"])), limit=limit
+    )
+    fields = {
+        name: TypeAdapter(
+            made_as.HeadView.model_fields[name].annotation
+        ).validate_python(items)
+        for name, items in found.items()
+        if name in made_as.HeadView.model_fields
+    }
+    return IncomingFields(
+        model=made_as, counts={k: v for k, v in counts.items() if v}, fields=fields
+    )
+
+
 @dataclass
 class IncomingPage:
     """Some of what refers to an entity by one relation (`get_incoming`)"""

@@ -1,16 +1,13 @@
-import { createEffect, createMemo, createSignal, Errored, For, Loading, Match, Show, Switch } from "solid-js";
+import { createSignal, For, Match, Show, Switch } from "solid-js";
 import type { ParentProps } from "solid-js";
-import { Dynamic } from "@solidjs/web";
 import {
-  useApi,
   useComponent,
-  useIncomingView,
   useModels,
   useModules,
   useTranslations,
 } from "../context";
 import { kindRule, kindTint, spaceTint } from "../primitives";
-import { contextTrail, getIncoming, INCOMING_PAGE } from "../api";
+import { contextTrail } from "../api";
 import type { ContextLabel } from "../api";
 import {
   collapsedView,
@@ -20,11 +17,11 @@ import {
 } from "../schema";
 import type {
   FieldDefinition,
-  IncomingEntry,
   ItemContentsProps,
   ModelDefinition,
 } from "../types";
 import { Customised } from "./Customised";
+import { IncomingRelations } from "./IncomingRelations";
 import { NestingProvider, startsFolded, useNesting } from "./nesting";
 import { SpaceBands } from "./SpaceBands";
 import {
@@ -58,34 +55,17 @@ const isEmpty = (value: unknown) =>
 
 /**
  * A key on the left, its contents on the right: chips side by side (as many as fit on a line),
- * anything bigger, and each text, on a line of its own, with a faint rule above it as in a form. A
- * row of what refers to the item from elsewhere (`incoming`) has more room above it and between its
- * items, and centres the chips of a line on each other (some are taller, wrapped in semantic spaces).
+ * anything bigger, and each text, on a line of its own, with a faint rule above it as in a form.
+ * (A row of what refers to the item from elsewhere is `IncomingRelations`'s own.)
  */
-function Row(props: ParentProps<{ name: string; incoming?: boolean }>) {
+function Row(props: ParentProps<{ name: string }>) {
   return (
-    <div
-      class={[
-        fieldRowClass,
-        // (more room above what refers to the item from elsewhere)
-        { "pt-6": props.incoming, "first:pt-0": props.incoming },
-      ]}
-    >
+    <div class={fieldRowClass}>
       <dt class="pt-1 text-xs font-semibold text-slate-500 uppercase">
         {props.name}
       </dt>
-      <dd
-        class={[
-          "flex min-w-0 flex-wrap gap-x-2",
-          {
-            "items-start": !props.incoming,
-            // (a row with a block in it has blocks as far apart as rows of what refers to the item: `data-block`)
-            "gap-y-4 has-[>[data-block]]:gap-y-6": !props.incoming,
-            "items-center": props.incoming,
-            "gap-y-6": props.incoming,
-          },
-        ]}
-      >
+      {/* (a row with a block in it has blocks as far apart as rows of what refers to the item: `data-block`) */}
+      <dd class="flex min-w-0 flex-wrap items-start gap-x-2 gap-y-4 has-[>[data-block]]:gap-y-6">
         {props.children}
       </dd>
     </div>
@@ -179,120 +159,11 @@ function Head(props: {
   );
 }
 
-/** What has been read of what refers to an item: by the key of the incoming field, the items it has now */
-type Read = Record<string, Data[]>;
-
-const asItems = (value: unknown): Data[] =>
-  (Array.isArray(value) ? value : value ? [value] : []).filter(isObject);
-
-/**
- * After the items of a row of what refers to an entity, when there are more than were read with it: "and 109 more",
- * which reads the next of them (a hundred at a time, by label, as the first were) and gives the row what it has now.
- */
-function MoreIncoming(props: {
-  page: { type: string; id: string };
-  field: string;
-  /** What the row has */
-  items: Data[];
-  /** How many it does not have */
-  left: number;
-  onRead: (items: Data[]) => void;
-}) {
-  const api = useApi();
-  const { t } = useTranslations();
-  const [reading, setReading] = createSignal(false);
-  const read = async () => {
-    setReading(true);
-    try {
-      // (whole pages from the start: what the row has of the page it is in is read again with the rest of it)
-      const page = Math.floor(props.items.length / INCOMING_PAGE) + 1;
-      const kept = props.items.slice(0, (page - 1) * INCOMING_PAGE);
-      const answer = await getIncoming(api, props.page.type, props.page.id, props.field, page);
-      props.onRead([...kept, ...answer.results]);
-    } finally {
-      setReading(false);
-    }
-  };
-  return (
-    <button
-      type="button"
-      class={[smallButtonClass, "text-slate-600 disabled:text-slate-400"]}
-      disabled={reading()}
-      data-testid="incoming-more"
-      onClick={() => void read()}
-    >
-      {t("incoming_more", "and {count} more", { count: props.left })}
-    </button>
-  );
-}
-
-/**
- * Above an interface module's view of what refers to an entity, when not all of it has been read: the view has only
- * what the page has (sorted by date, the first few of each field are not the earliest), so it says how many are
- * missing, and reads them all when asked.
- */
-function ReadAllIncoming(props: {
-  page: { type: string; id: string };
-  /** The fields that have more than was read, by key, with what each has */
-  fields: { key: string; items: Data[] }[];
-  left: number;
-  /** (once, with every field: the view is laid out again for each change of what it has) */
-  onRead: (read: Read) => void;
-}) {
-  const api = useApi();
-  const { t } = useTranslations();
-  const [reading, setReading] = createSignal(false);
-  const all = async (key: string): Promise<Data[]> => {
-    let items: Data[] = [];
-    for (let page = 1; ; page++) {
-      const answer = await getIncoming(api, props.page.type, props.page.id, key, page, 500);
-      items = [...items, ...answer.results];
-      if (answer.results.length === 0 || items.length >= answer.count) return items;
-    }
-  };
-  const read = async () => {
-    setReading(true);
-    try {
-      const keys = props.fields.map((field) => field.key);
-      const found: Read = {};
-      // (a few fields at a time: an entity can have a hundred)
-      const next = async (): Promise<void> => {
-        const key = keys.shift();
-        if (key === undefined) return;
-        found[key] = await all(key);
-        return next();
-      };
-      await Promise.all(Array.from({ length: 6 }, next));
-      props.onRead(found);
-    } finally {
-      setReading(false);
-    }
-  };
-  return (
-    <p class="mt-6 flex flex-wrap items-center gap-3 text-xs text-slate-600" data-testid="incoming-not-read">
-      <span>{t("incoming_not_read", "{count} more refer to this and are not read yet", { count: props.left })}</span>
-      <button
-        type="button"
-        class={[smallButtonClass, "text-slate-600 disabled:text-slate-400"]}
-        disabled={reading()}
-        onClick={() => void read()}
-      >
-        {t("incoming_read_all", "Read them all")}
-      </button>
-    </p>
-  );
-}
-
 /**
  * The rows of an object: a key and its contents for each field of its model, in the order of
  * the model, the keys in a column on the left and the contents on the right. Fields with
- * nothing in them are left out, and those only in the database (worked out, not said). What refers to the object from
- * elsewhere (`incoming`) follows, as chips, by the field it is in; on the item's own page, an interface module's view
- * of it (`incomingViews`, chosen in the console) can take some of it, to show after the rows in its own way.
- *
- * An entity's page is read with the first few of each incoming field and how many there are (`incomingCounts`): a
- * row that has more ends in "and N more" (`MoreIncoming`), and a module's view says how many it is without
- * (`ReadAllIncoming`).
+ * nothing in them are left out, and those only in the database (worked out, not said). What refers to the
+ * object from elsewhere is not here: `IncomingRelations` (after the rows, on the item's own page).
  */
 function Fields(props: {
   value: Data;
@@ -300,142 +171,30 @@ function Fields(props: {
   depth: number;
   /** (a field that is shown some other way) */
   exclude?: string;
-  /** (the item's own page: its type and id, for a module's view of what refers to it) */
-  page?: { type: string; id: string };
 }) {
-  const { fieldName, incomingName } = useTranslations();
-  const definitions = useModels();
-  const views = useModules().incomingViews();
-  const incoming = useIncomingView();
-  // What has been read of what refers to the item since it was (forgotten when the item is another, or read again)
-  const [read, setRead] = createSignal<Read>(() => (void props.value, {}));
-  const itemsOf = (key: string): Data[] => read()[key] ?? asItems(props.value[key]);
-  const counts = () => (isObject(props.value.incomingCounts) ? (props.value.incomingCounts as Record<string, number>) : {});
-  // (how many of a field the page does not have)
-  const leftOf = (key: string) => Math.max(0, (counts()[key] ?? 0) - itemsOf(key).length);
-  const partial = createMemo(() =>
-    (props.model?.incoming ?? [])
-      .filter((incoming) => leftOf(incoming.key) > 0)
-      .map((incoming) => ({ key: incoming.key, items: itemsOf(incoming.key) })),
-  );
-  const entries = createMemo<IncomingEntry[]>(() =>
-    (props.model?.incoming ?? []).flatMap((incoming) =>
-      itemsOf(incoming.key).map((item) => ({
-        key: incoming.key,
-        name: incomingName(props.model!.name, incoming.name),
-        item,
-      })),
-    ),
-  );
-  // (the views that have something to show: only on the item's own page)
-  const offered = createMemo(() =>
-    props.page && views.length > 0
-      ? views.filter((view) => entries().some((entry) => view.takes(entry.item, definitions)))
-      : [],
-  );
-  // (the console offers each for as long as it has something)
-  createEffect(offered, (now) => {
-    const withdraw = now.map((view) => incoming.offer(view.name));
-    return () => withdraw.forEach((done) => done());
-  });
-  const view = () => offered().find((view) => view.name === incoming.chosen());
-  const taken = createMemo(() => {
-    const chosen = view();
-    return chosen ? entries().filter((entry) => chosen.takes(entry.item, definitions)) : [];
-  });
-  // (what the view does not take, by the relation it is in)
-  const restByField = createMemo(() => {
-    const groups = new Map<string, IncomingEntry[]>();
-    for (const entry of entries()) {
-      if (!taken().includes(entry)) groups.set(entry.name, [...(groups.get(entry.name) ?? []), entry]);
-    }
-    return [...groups.entries()];
-  });
+  const { fieldName } = useTranslations();
   return (
-    <>
-      <dl class={fieldGridClass}>
-        <For each={props.model?.fields ?? []}>
-          {(field) => (
-            <Show
-              when={
-                field.key !== props.exclude &&
-                !field.dbField &&
-                !isEmpty(props.value[field.key])
-              }
-            >
-              <Row name={fieldName(props.model!.name, field.name)}>
-                <Value
-                  value={props.value[field.key]}
-                  field={field}
-                  depth={props.depth}
-                />
-              </Row>
-            </Show>
-          )}
-        </For>
-        <Show
-          when={view()}
-          fallback={
-            <For each={props.model?.incoming ?? []}>
-              {(incoming) => (
-                <Show when={itemsOf(incoming.key).length > 0}>
-                  <Row name={incomingName(props.model!.name, incoming.name)} incoming>
-                    <Value value={itemsOf(incoming.key)} depth={props.depth} asChip />
-                    <Show when={props.page && leftOf(incoming.key) > 0}>
-                      <MoreIncoming
-                        page={props.page!}
-                        field={incoming.key}
-                        items={itemsOf(incoming.key)}
-                        left={leftOf(incoming.key)}
-                        onRead={(items) => setRead((before) => ({ ...before, [incoming.key]: items }))}
-                      />
-                    </Show>
-                  </Row>
-                </Show>
-              )}
-            </For>
-          }
-        >
-          <For each={restByField()}>
-            {([name, group]) => (
-              <Row name={name} incoming>
-                <Value value={group.map((entry) => entry.item)} depth={props.depth} asChip />
-              </Row>
-            )}
-          </For>
-        </Show>
-      </dl>
-      <Show when={view() && props.page && partial().length > 0}>
-        <ReadAllIncoming
-          page={props.page!}
-          fields={partial()}
-          left={partial().reduce((sum, field) => sum + leftOf(field.key), 0)}
-          onRead={(found) => setRead((before) => ({ ...before, ...found }))}
-        />
-      </Show>
-      <Show when={view() && props.page && props.model ? view() : undefined}>
-        {(chosen) => (
-          <Errored
-            fallback={(error) => {
-              // (said in the browser's console, so that a module's author sees why there is nothing)
-              console.error("A view of an interface module failed:", error());
-              return null;
-            }}
+    <dl class={fieldGridClass}>
+      <For each={props.model?.fields ?? []}>
+        {(field) => (
+          <Show
+            when={
+              field.key !== props.exclude &&
+              !field.dbField &&
+              !isEmpty(props.value[field.key])
+            }
           >
-            <Loading fallback={null}>
-              {/* (`Dynamic`: the view chosen is read where it is shown, so another one chosen is shown) */}
-              <Dynamic
-                component={chosen().component}
-                type={props.page!.type}
-                id={props.page!.id}
-                model={props.model!}
-                entries={taken()}
+            <Row name={fieldName(props.model!.name, field.name)}>
+              <Value
+                value={props.value[field.key]}
+                field={field}
+                depth={props.depth}
               />
-            </Loading>
-          </Errored>
+            </Row>
+          </Show>
         )}
-      </Show>
-    </>
+      </For>
+    </dl>
   );
 }
 
@@ -786,14 +545,28 @@ export function ItemContents(props: ItemContentsProps) {
       definitions,
       typeof props.item.type === "string" ? props.item.type : "",
     );
-  const page = () =>
-    typeof props.item.type === "string" && typeof props.item.id === "string"
-      ? { type: props.item.type, id: props.item.id }
-      : undefined;
+  // (whether any of the item's own fields is shown: what refers to it is ruled off from them)
+  const hasFields = () =>
+    (model()?.fields ?? []).some((field) => !field.dbField && !isEmpty(props.item[field.key]));
+  // (an item that something can refer to: the model has incoming fields)
+  const referable = () => {
+    const found = model();
+    return found && (found.incoming ?? []).length > 0 && typeof props.item.id === "string" ? found : undefined;
+  };
   return (
     // (what the rows of the fields measure themselves by: see `fieldGridClass`)
     <div class="@container w-full min-w-0">
-      <Fields value={props.item} model={model()} depth={0} page={page()} />
+      <Fields value={props.item} model={model()} depth={0} />
+      <Show when={referable()}>
+        {(model) => (
+          <IncomingRelations
+            item={props.item}
+            model={model()}
+            afterFields={hasFields()}
+            chips={(items) => <Value value={items} depth={0} asChip />}
+          />
+        )}
+      </Show>
     </div>
   );
 }

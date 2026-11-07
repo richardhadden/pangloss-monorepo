@@ -1,4 +1,5 @@
 import {
+  canBeSearched,
   Customised,
   SearchPanel,
   decodeSearchForm,
@@ -11,6 +12,7 @@ import {
   useTranslations,
   headOf,
   wrappingSpaces,
+  Spinner,
 } from "@pangloss/interface-core";
 import type { Page as ListPage, Summary } from "@pangloss/interface-core";
 import { useSearchParams } from "@solidjs/router";
@@ -105,8 +107,10 @@ function ListOfItems(props: RouteProps<"/:type">) {
   const structured = () => request() !== "";
   // (a deep search is not made with the form)
   const deep = () => searchOf(search).deep && !structured();
-  // The search form: there if the type has a search pattern; open at first if the address has one
-  const searchable = () => definitions.searchPatterns?.[props.params.type] !== undefined;
+  // The search form: there if the type has a search pattern, and a search for it can find anything (not a
+  // document that is only ever part of another); open at first if the address has one
+  const searchable = () =>
+    definitions.searchPatterns?.[props.params.type] !== undefined && canBeSearched(definitions, props.params.type);
   const [formOpen, setFormOpen] = createSignal(
     untrack(() => decodeSearchForm(form(), props.params.type) !== undefined),
   );
@@ -176,7 +180,7 @@ function ListOfItems(props: RouteProps<"/:type">) {
         </Show>
       </Show>
       <Errored fallback={(error) => <ErrorMessage error={error()} />}>
-        <Loading fallback={<p>{t("loading", "Loading…")}</p>}>
+        <Loading fallback={<p class="mx-6 pt-2 text-slate-500"><Spinner class="size-5" /></p>}>
           {/* (a new list for each answer: what was fetched of the last one is not this one) */}
           <Show when={first()} keyed>
             {(answer) => (

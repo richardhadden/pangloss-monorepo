@@ -2,7 +2,9 @@
  * Questions of the definitions of the models, that need no components: what can be
  * shown or related to.
  */
-export { getModel } from "./lookup";
+import { getModel } from "./lookup";
+
+export { getModel };
 import type {
   FieldDefinition,
   ModelDefinition,
@@ -21,6 +23,21 @@ export function headModels(definitions: ModelDefinitions): ModelDefinition[] {
  * that is only ever part of another (`create_directly=False`) */
 export function canCreate(model: ModelDefinition): boolean {
   return !model.abstract && model.createDirectly;
+}
+
+/**
+ * Whether a structured search for the type can find anything: what it finds is documents of their own, so a
+ * document class that is only ever part of another (`create_directly=False` for it and every class below it) is
+ * not searched (the API refuses it, and says what holds it); an entity always is
+ */
+export function canBeSearched(definitions: ModelDefinitions, type: string): boolean {
+  const model = getModel(definitions, type);
+  if (!model) return false;
+  if (model.kind !== "Document") return true;
+  return [model.name, ...model.concreteTypes].some((name) => {
+    const concrete = getModel(definitions, name);
+    return concrete !== undefined && canCreate(concrete);
+  });
 }
 
 export function isRelation(field: FieldDefinition): field is RelationField {

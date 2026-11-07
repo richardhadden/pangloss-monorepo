@@ -22,7 +22,7 @@ def test_what_refers_to_a_person_is_shown_by_date(page: Page, appointed):
     # (what has no date stays with the person's facts, with no heading; what has is a section of its own, under a bar)
     expect(page.locator("main h2")).to_have_text(["Timeline"])
     expect(
-        page.locator("main dl").first.get_by_role(
+        page.get_by_test_id("incoming-by-field").get_by_role(
             "link", name=re.compile("She was there")
         )
     ).to_be_visible()
@@ -34,7 +34,8 @@ def test_what_refers_to_a_person_is_shown_by_date(page: Page, appointed):
     expect(rows.nth(0).get_by_role("link")).to_have_text(re.compile("Notary"))
     expect(rows.nth(1)).to_contain_text("1510")
     expect(rows.nth(1).get_by_role("link")).to_have_text(re.compile("Bishop"))
-    expect(page.get_by_test_id("incoming-date-unknown")).to_contain_text("Abbot")
+    expect(page.get_by_test_id("incoming-date-unknown")).to_have_text("Date unknown")
+    expect(page.locator("[data-testid=dated-item][data-undated]")).to_contain_text("Abbot")
 
     # (the timeline beside them spans their years; there is no other filter of years)
     timeline = page.get_by_role("slider", name="Go to year")

@@ -1,6 +1,7 @@
 """What refers to an entity, some of it at a time: `get_entity_with_some` (the entity with the first few of each
-incoming field, and how many there are) and `get_incoming` (a page of one field). For the page of an entity that
-thousands of documents refer to, which `Entity.get` reads whole."""
+incoming field, and how many there are), its two halves `get_entity_without_incoming` and `get_incoming_fields` (for
+a page that reads the entity first and what refers to it apart), and `get_incoming` (a page of one field). For the
+page of an entity that thousands of documents refer to, which `Entity.get` reads whole."""
 
 import uuid
 from typing import no_type_check
@@ -99,6 +100,54 @@ async def test_an_entity_is_read_with_some_of_what_refers_to_it_and_the_counts(
     alone = await Person.Create(label="Nobody").save()
     lonely, counts = await operations.get_entity_with_some(Person, alone.id, 2)
     assert lonely.concerns_reverse == [] and counts == {}
+
+
+@no_type_check
+async def test_an_entity_and_what_refers_to_it_are_read_apart(clear_database):
+    Person, Scholar, Statement, Event, Gift = models()
+    await initialise_database()
+    person = await referred_to(Person, Statement, Event, Gift)
+    operations = storage_of().operations
+
+    # the entity alone: its own values, and nothing in its incoming fields
+    alone = await operations.get_entity_without_incoming(Person, person.id)
+    assert type(alone) is Person.HeadView and alone.label == "Alcuin"
+    assert alone.concerns_reverse == [] and alone.witnessed_by_reverse == []
+    assert alone.given_by_reverse == []
+    assert await operations.get_entity_without_incoming(Person, uuid.uuid7()) is None
+
+    # what refers to it, the first of each field, and the counts: the same as `get_entity_with_some` gives
+    some, counts = await operations.get_entity_with_some(Person, person.id, 2)
+    incoming = await operations.get_incoming_fields(Person, person.id, 2)
+    assert incoming.model is Person
+    assert (
+        incoming.counts
+        == counts
+        == {
+            "concerns_reverse": 6,
+            "witnessed_by_reverse": 3,
+            "given_by_reverse": 2,
+        }
+    )
+    assert set(incoming.fields) == set(counts)
+    assert incoming.fields["concerns_reverse"] == some.concerns_reverse
+    assert incoming.fields["witnessed_by_reverse"] == some.witnessed_by_reverse
+    assert incoming.fields["given_by_reverse"] == some.given_by_reverse
+    assert incoming.fields["given_by_reverse"][0].given_by.target[0].id == person.id
+    assert await operations.get_incoming_fields(Person, uuid.uuid7(), 2) is None
+    # one that nothing refers to: no fields, no counts
+    nobody = await Person.Create(label="Nobody").save()
+    empty = await operations.get_incoming_fields(Person, nobody.id, 2)
+    assert empty.fields == {} and empty.counts == {}
+    # of a subclass: as the subclass
+    scholar = await referred_to(Person, Statement, Event, Gift, cls=Scholar)
+    assert (
+        type(await operations.get_entity_without_incoming(Person, scholar.id))
+        is Scholar.HeadView
+    )
+    assert (
+        await operations.get_incoming_fields(Person, scholar.id, 1)
+    ).model is Scholar
 
 
 @no_type_check

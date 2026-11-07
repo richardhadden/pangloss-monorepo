@@ -919,14 +919,27 @@ async def test_an_entity_is_read_with_some_of_what_refers_to_it_and_the_rest_in_
         assert by_url.status_code == 200, by_url.text
         assert len(by_url.json()["aboutPersonReverse"]) == 1
         assert by_url.json()["incomingCounts"]["aboutPersonReverse"] == 5
-        for wrong in (0, 501, "many"):
+        for wrong in (-1, 501, "many"):
             assert (
                 await client.get(at, params={"incoming_limit": wrong})
             ).status_code == 422
+        # (0: none of it, which `/incoming` then gives, every field at once with the counts)
+        alone = (await client.get(at, params={"incoming_limit": 0})).json()
+        assert alone["aboutPersonReverse"] == [] and alone["givenByReverse"] == []
+        assert alone["incomingCounts"] is None and alone["label"] == whole["label"]
+        apart = (await client.get(f"{at}/incoming", params={"limit": 2})).json()
+        assert apart["limit"] == 2
+        assert apart["counts"] == {"aboutPersonReverse": 5, "givenByReverse": 1}
+        assert apart["fields"]["aboutPersonReverse"] == body["aboutPersonReverse"]
+        assert apart["fields"]["givenByReverse"] == whole["givenByReverse"]
+        assert (
+            await client.get(f"{at}/incoming", params={"limit": 0})
+        ).status_code == 422
         missing = f"/api/Person/{uuid7()}"
         assert (
             await client.get(missing, params={"incoming_limit": 2})
         ).status_code == 404
+        assert (await client.get(f"{missing}/incoming")).status_code == 404
         # (a document has no incoming fields: the limit changes nothing)
         statement = whole["aboutPersonReverse"][0]["id"]
         assert (

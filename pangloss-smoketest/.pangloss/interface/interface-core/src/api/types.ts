@@ -73,10 +73,20 @@ export interface HeadView {
   meta: ItemMeta;
   /**
    * An entity read with a limit on what refers to it (`getItem` with `incomingLimit`): how many there are in each
-   * incoming field, by its key (the field itself has the first of them; `getIncoming` reads the rest)
+   * incoming field, by its key (the field itself has the first of them; `getIncoming` reads the rest). `null`: read
+   * with none of it (`incomingLimit: 0`), which `getIncomingFields` reads apart. Absent: read whole
    */
-  incomingCounts?: Record<string, number>;
+  incomingCounts?: Record<string, number> | null;
   [field: string]: unknown;
+}
+
+/** What refers to an entity, the first of each incoming field at once (`getIncomingFields`) */
+export interface IncomingFields {
+  limit: number;
+  /** How many there are in each incoming field that has any, by its key */
+  counts: Record<string, number>;
+  /** The first `limit` of each, by its key, as they are in that field of the entity */
+  fields: Record<string, Record<string, unknown>[]>;
 }
 
 /** Some of what refers to an entity by one relation (`getIncoming`) */

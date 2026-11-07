@@ -831,6 +831,31 @@ the user to review.
   types of one name side by side); whether the add-on packages should be installable on a client without
   `--no-deps` (they depend on `pangloss-api`).
 
+## The page of the super-person, read apart (2026-11-07, asked for by the user; uncommitted)
+
+`/Person/01a1ae21-…` (3,927 references in 83 fields) was 4.4 MB of HTML, 2 s to hydrate, and "Sort by date" or
+"Read them all" locked the browser for 2 to 5 s: the sort is milliseconds, the DOM is the cost (measured with
+Playwright, `/tmp/measure_super.py`, may be gone). Done:
+
+- API: `GET /api/NAME/{id}?incoming_limit=0` (the entity alone, `incomingCounts: null`), `?extras=false` (no
+  `_derived`), `GET /api/NAME/{id}/incoming?limit=` (every incoming field at once, with counts),
+  `GET /api/derived/about/{Type}/{id}`; operations `get_entity_without_incoming`, `get_incoming_fields` (conformance
+  test `test_an_entity_and_what_refers_to_it_are_read_apart`; API test `test_an_entity_is_read_apart_from_what_refers_to_it`).
+- Interface: the item page reads the item alone; `IncomingRelations` (interface-core, out of `ItemContents`) and
+  each module section (`ItemSections` gives each a `Loading`; the Derived section reads for itself) read apart, in a
+  `Reveal` so that a section does not show before what refers to the item (asked for by the user), spinners instead
+  of the word "Loading" on the pages; `VirtualRows` renders only the rows on show from 200
+  references or lines on (by field, and the dates module's `ByDate`); the window virtualizer applies measurements in
+  the next frame (a "ResizeObserver loop" error otherwise). Numbers in docs/large-data.md (production build:
+  hydration 2 s to 0.07 s, "Sort by date" 2.3 s to 0.1 s, back by field 3.9 s to 0.16 s).
+- The smoke project's interface was built again (`pangloss interface build`), so the development copy on :3010 and
+  the production server on :3011 (restarted) run the new code; a linked development server was left on :3012.
+- Checked: `./run_tests.sh --no-neo4j` (ruff, ty, the skill, the stubs; packages on Memgraph 2,877 passed and
+  one failed, `test_api_models::...read_with_some...`, which expected `incoming_limit=0` to be refused: updated
+  and passing on Memgraph and Neo4j; the browser tests 166 passed); the two touched conformance files on Neo4j; the
+  interface's Vitest and layer check; the modules' Vitest (in the demo's workspace); the dev build on :3012 (no
+  Solid warnings). The rest of the Neo4j run was not repeated.
+
 ## Where things are
 
 - **Servers** (2026-11-07, left running): the smoke test API on :8010 (`ZOTERO_LIBRARIES='[]' ../.venv/bin/pangloss

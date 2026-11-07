@@ -221,9 +221,17 @@ you: to see pages that need a login, use the e2e stack with its own user, not a 
 - Keep e2e tests few: what only a browser shows (drag and drop, hydration, built chunks). Logic belongs in Vitest and
   API tests. Notes on writing them are in `e2e/README.md`.
 - In a module's Vitest, a lazy view needs `vi.waitFor`, not one tick.
-- **Do not give a lazy module component that the server renders a `Loading` of its own inside a page.** On a page
-  that takes seconds to hydrate, the nested boundary is resumed after its server-rendered nodes have been removed, and
-  the component hydrates nodes that are gone (`node.setAttribute is not a function`). Let the page's `Loading` wait for
-  it, as cards and `itemSections` do; an `Errored` of its own is fine.
+- **The parts of the item page that read for themselves are boundaries in a `Reveal`.** The page reads the item
+  alone; what refers to it (`IncomingRelations`) and each module section (`ItemSections` gives each a `Loading` with
+  no fallback) read in a `Loading` of their own, streamed after the item, and the page's `Reveal` shows them in page
+  order, so a section never appears before what is above it and then moves down. Rules learnt there: a `Loading` the
+  `Reveal` is to order must be the outermost boundary of its part (an `Errored` between severs it: put it inside); a
+  section reads its data directly, with no boundary of its own nested in the one it is given (the nested one hydrated
+  wrongly, its server nodes unclaimed); a `lazy` component's code is started with the page (`preloadItemPage`) and
+  awaited under the page's boundary as a serialisable value (`ItemSections.ready`), never resolved by hand into a
+  component (a function is not written into the page for hydration), so that the section's own boundary waits only
+  for its read (each wait after another is a pass on the server, and three are `[SSR_BOUNDARY_WATERFALL]`). A new
+  part of the item page that reads something should follow the same shape; a list that can be thousands of rows is
+  `VirtualRows` (docs/large-data.md).
 - **Save is off until the item has changed** (`ItemFormState.changed`): a test that saves must change something
   first, and in Vitest wait a tick after typing before clicking Save (the memo and the button follow after a flush).

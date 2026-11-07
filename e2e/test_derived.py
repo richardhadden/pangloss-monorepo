@@ -41,14 +41,11 @@ def test_what_is_derived_about_a_person_is_a_section_after_their_facts(
     expect(facts).to_have_text([fact] * 25)
     expect(section.locator(f'a[href="/Person/{grouped.jan}"]')).to_have_count(0)
     # (what refers to Jan stays with his facts, above; the section is not inside them)
-    expect(
-        page.locator("main dl").first.get_by_role(
-            "link", name=re.compile("Jan in The guild")
-        )
-    ).to_be_visible()
+    refers = page.get_by_test_id("incoming-by-field")
+    expect(refers.get_by_role("link", name=re.compile("Jan in The guild"))).to_be_visible()
 
     # (it looks as a section: below the facts, well apart from them, under a bar across the page)
-    facts_box = page.locator("main dl").first.bounding_box()
+    facts_box = refers.bounding_box()
     bar = section.locator("h2").bounding_box()
     main = page.locator("main").bounding_box()
     assert facts_box and bar and main

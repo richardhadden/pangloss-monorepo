@@ -6,7 +6,8 @@ they give the items of its subclasses; a document with `create_directly=False` h
 | | | |
 |-|-|-|
 | `GET`    | `/api/NAME`                       | list (`q`, `deep`, `page`, `page_size`) |
-| `GET`    | `/api/NAME/{id}`         | the `HeadView` (an entity: `incoming_limit` cuts what refers to it) |
+| `GET`    | `/api/NAME/{id}`         | the `HeadView` (an entity: `incoming_limit` cuts what refers to it, 0 leaves it out; `extras=false` leaves out what apps add) |
+| `GET`    | `/api/NAME/{id}/incoming` | an entity: what refers to it, the first `limit` of every relation, with the counts |
 | `GET`    | `/api/NAME/{id}/incoming/{field}` | an entity: what refers to it by one relation (`page`, `page_size`) |
 | `POST`   | `/api/NAME`              | create (`Create`); login required |
 | `GET`    | `/api/NAME/{id}/edit`    | to edit: an entity's `EditView`, a document's `HeadView`; login required |
@@ -85,6 +86,18 @@ class IncomingPage(BaseModel):
     page_size: int
     # (as they are in that field of the entity's `HeadView`)
     results: list[Any]
+
+
+class IncomingFields(BaseModel):
+    """What refers to an entity, the first of each relation (`GET /api/NAME/{id}/incoming`)"""
+
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    limit: int
+    # (how many there are in each incoming field that has any, by the field's key)
+    counts: dict[str, int]
+    # (the first `limit` of each, by the field's key, as they are in that field of the entity's `HeadView`)
+    fields: dict[str, list[Any]]
 
 
 # How many of what refers to an entity a page has, if the request does not say
@@ -173,7 +186,7 @@ def parse_reference(reference: str, query: str = "") -> UUID | AnyHttpUrl:
 
 
 # The parameters of the route that reads an entity: they are the request's, not part of a URL that names the entity
-OWN_PARAMETERS = {"incoming_limit"}
+OWN_PARAMETERS = {"incoming_limit", "extras"}
 
 
 async def entity_reference(
@@ -466,6 +479,45 @@ def build_router(model: type[Document | Entity]) -> APIRouter:
                 }
             )
 
+    if is_entity:
+
+        @router.get(
+            f"{item}/incoming",
+            response_model=IncomingFields,
+            operation_id=f"incoming_fields_{name}",
+        )
+        async def incoming_of_item_by_field(
+            id: ChangeId,  # type: ignore[valid-type]
+            limit: Annotated[
+                int, Query(ge=1, le=MAX_PAGE_SIZE)
+            ] = DEFAULT_INCOMING_PAGE,
+        ):
+            """What refers to the entity, in every incoming field at once: no more than `limit` of each (the first
+            by label), as they are in that field of the entity's view, and how many there are in each (`counts`).
+            The other half of `GET /api/NAME/{id}?incoming_limit=0`, for a page that reads the entity first and
+            what refers to it apart; `GET .../incoming/{field}` reads the rest of a field a page at a time"""
+            found = await called(
+                storage_of().operations.get_incoming_fields(model, id, limit)
+            )
+            if found is None:
+                raise not_found(model, id)
+            views = found.model.HeadView.model_fields
+            return JSONResponse(
+                {
+                    "limit": limit,
+                    "counts": {
+                        to_camel(field): count
+                        for field, count in sorted(found.counts.items())
+                    },
+                    "fields": {
+                        to_camel(field): TypeAdapter(
+                            views[field].annotation
+                        ).dump_python(items, mode="json", by_alias=True)
+                        for field, items in sorted(found.fields.items())
+                    },
+                }
+            )
+
     @router.get(item, response_model=get_response, operation_id=f"get_{name}")
     async def get_item(
         id: ItemId,  # type: ignore[valid-type]
@@ -473,27 +525,42 @@ def build_router(model: type[Document | Entity]) -> APIRouter:
         incoming_limit: Annotated[
             int | None,
             Query(
-                ge=1,
+                ge=0,
                 le=MAX_PAGE_SIZE,
                 description="For an entity: no more than this many of what refers to it in each incoming "
-                "field (the first by label), with how many there are in each as `incomingCounts`",
+                "field (the first by label), with how many there are in each as `incomingCounts`; 0 reads "
+                "none of it (`incomingCounts` is null: `GET .../incoming` reads it apart)",
             ),
         ] = None,
+        extras: Annotated[
+            bool,
+            Query(
+                description="Whether the view has what installed apps add to it (`_derived`): false leaves "
+                "them out, for a reader that asks the apps itself"
+            ),
+        ] = True,
     ):
         """The item, as the class it is: for a class that has subclasses, the view of the subclass (its
         `type` says which; `Content-Location` is where it is edited).
 
         An entity has everything that refers to it, in its incoming fields. For one that thousands of documents
-        refer to, `incoming_limit` cuts each field, and `GET .../incoming/{field}` reads the rest a page at a time."""
-        extras: dict[str, Any] = {}
-        if is_entity and incoming_limit is not None:
+        refer to, `incoming_limit` cuts each field, and `GET .../incoming/{field}` reads the rest a page at a time;
+        `incoming_limit=0` leaves them all to `GET .../incoming`."""
+        found_extras: dict[str, Any] = {}
+        if is_entity and incoming_limit == 0:
+            found = await called(
+                storage_of().operations.get_entity_without_incoming(model, id)
+            )
+            # (null: not read, as against read whole (no key) or cut (the counts))
+            found_extras["incomingCounts"] = None
+        elif is_entity and incoming_limit is not None:
             read = await called(
                 storage_of().operations.get_entity_with_some(model, id, incoming_limit)
             )
             found = read[0] if read is not None else None
             if read is not None:
                 # (every field that has something, so that a reader can tell which it has all of)
-                extras["incomingCounts"] = {
+                found_extras["incomingCounts"] = {
                     to_camel(field): count for field, count in sorted(read[1].items())
                 }
         else:
@@ -502,10 +569,11 @@ def build_router(model: type[Document | Entity]) -> APIRouter:
             raise not_found(model, id)
         if found.type != name:
             response.headers["Content-Location"] = f"/api/{found.type}/{found.id}"
-        for extra in hooks.head_view_extras:
-            extras.update(await extra(found._owner, found))
         if extras:
-            return with_extras(found, extras, response)
+            for extra in hooks.head_view_extras:
+                found_extras.update(await extra(found._owner, found))
+        if found_extras:
+            return with_extras(found, found_extras, response)
         return found
 
     if writable:

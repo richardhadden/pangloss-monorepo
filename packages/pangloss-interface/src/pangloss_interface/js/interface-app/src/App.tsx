@@ -18,6 +18,7 @@ import {
   useBottomBar,
   useComponent,
   useTranslations,
+  Spinner,
 } from "@pangloss/interface-core";
 import { Title } from "@solidjs/meta";
 import { createMemo, Loading } from "solid-js";
@@ -66,7 +67,7 @@ function Frame(props: ParentProps) {
           </Loading>
           <ConsoleBar />
           <Padded navPinned={navPinned()}>
-            <Loading fallback={<main>{t("loading", "Loading…")}</main>}>{props.children}</Loading>
+            <Loading fallback={<main class="p-6 text-slate-500"><Spinner class="size-5" /></main>}>{props.children}</Loading>
           </Padded>
           <ClipboardBar />
           <Toasts />

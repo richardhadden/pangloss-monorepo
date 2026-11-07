@@ -8,6 +8,7 @@ import {
   useStash,
   useTranslations,
   withCurrentReferences,
+  Spinner,
 } from "@pangloss/interface-core";
 import type { FormData } from "@pangloss/interface-core";
 import { useNavigate, useSearchParams } from "@solidjs/router";
@@ -84,7 +85,7 @@ function NewItemForm(props: RouteProps<"/:type/new">) {
   return (
     <RequireLogin onCancel={() => navigate("/", { replace: true })}>
       <Page>
-        <Show when={start()} keyed fallback={<p>{t("loading", "Loading…")}</p>}>
+        <Show when={start()} keyed fallback={<p class="pt-2 text-slate-500"><Spinner class="size-5" /></p>}>
           {(begin) => (
             <ItemForm
               type={props.params.type}

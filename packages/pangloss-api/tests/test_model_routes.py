@@ -121,7 +121,8 @@ def test_an_abstract_class_can_be_read_but_not_changed(settings, monkeypatch):
     } == {
         ("/api/Agent", "get"),
         ("/api/Agent/{ref}", "get"),
-        # (what refers to an entity, a page at a time: a read)
+        # (what refers to an entity, by field and a page at a time: reads)
+        ("/api/Agent/{ref}/incoming", "get"),
         ("/api/Agent/{ref}/incoming/{field}", "get"),
     }
     headers = {"Authorization": "Bearer nothing"}
@@ -342,6 +343,92 @@ def test_get_returns_the_head_view_in_camel_case(settings, monkeypatch):
                 yield from keys(item)
 
     assert not [key for key in keys(body) if "_" in key]
+
+
+def test_an_entity_is_read_apart_from_what_refers_to_it(settings, monkeypatch):
+    """`?incoming_limit=0` reads the entity alone (`incomingCounts` null), `?extras=false` leaves out what installed
+    apps add, and `GET .../incoming` reads the first of every incoming field with the counts"""
+    from fastapi.testclient import TestClient
+    from pangloss_core import storage_of
+    from pangloss_models import hooks
+
+    Place, Person, Statement = make_models()
+    client = TestClient(create_app())
+    place_id, person_id, statement_id = uuid7(), uuid7(), uuid7()
+    asked: list[tuple] = []
+
+    async def without_incoming(cls, id):
+        asked.append(("without", cls, id))
+        return Person.HeadView(
+            id=person_id,
+            label="John",
+            meta=META,
+            born_in=[{"type": "Place", "id": place_id, "label": "Paris"}],
+        )
+
+    async def incoming_fields(cls, id, limit):
+        asked.append(("fields", cls, id, limit))
+        operations = storage_of().operations
+        return operations.IncomingFields(
+            model=Person,
+            counts={"about_reverse": 3},
+            fields={
+                "about_reverse": [
+                    Statement.ReferenceView(
+                        id=statement_id, label="A statement", meta=META
+                    )
+                ]
+            },
+        )
+
+    operations = storage_of().operations
+    monkeypatch.setattr(
+        operations, "get_entity_without_incoming", without_incoming, raising=False
+    )
+    monkeypatch.setattr(
+        operations, "get_incoming_fields", incoming_fields, raising=False
+    )
+    from pangloss_cypher.read_functions import IncomingFields
+
+    monkeypatch.setattr(operations, "IncomingFields", IncomingFields, raising=False)
+
+    async def extra(owner, view):
+        return {"_extra": owner.__name__}
+
+    monkeypatch.setattr(hooks, "head_view_extras", [extra])
+
+    # the entity alone, with the apps' extras
+    response = client.get(f"/api/Person/{person_id}?incoming_limit=0")
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["label"] == "John" and body["aboutReverse"] == []
+    assert body["incomingCounts"] is None and body["_extra"] == "Person"
+    # and without them
+    body = client.get(f"/api/Person/{person_id}?incoming_limit=0&extras=false").json()
+    assert "_extra" not in body and body["incomingCounts"] is None
+    assert asked == [("without", Person, person_id)] * 2
+
+    # what refers to it, by field
+    response = client.get(f"/api/Person/{person_id}/incoming?limit=25")
+    assert response.status_code == 200, response.text
+    assert response.json() == {
+        "limit": 25,
+        "counts": {"aboutReverse": 3},
+        "fields": {
+            "aboutReverse": [
+                {
+                    "id": str(statement_id),
+                    "type": "Statement",
+                    "label": "A statement",
+                    "meta": response.json()["fields"]["aboutReverse"][0]["meta"],
+                }
+            ]
+        },
+    }
+    assert asked[-1] == ("fields", Person, person_id, 25)
+    # (a document has no such route; a limit must be given within bounds)
+    assert client.get(f"/api/Statement/{statement_id}/incoming").status_code == 404
+    assert client.get(f"/api/Person/{person_id}/incoming?limit=0").status_code == 422
 
 
 def test_create_passes_detail_and_accepts_either_naming(settings, monkeypatch):

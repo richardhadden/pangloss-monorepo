@@ -3,6 +3,7 @@ import {
   RequireLogin,
   useComponent,
   useTranslations,
+  Spinner,
 } from "@pangloss/interface-core";
 import { useNavigate, useSearchParams } from "@solidjs/router";
 import type { RouteProps } from "@solidjs/router";
@@ -51,7 +52,7 @@ export default function EditItem(props: RouteProps<"/:type/:id/edit">) {
     <RequireLogin onCancel={() => navigate("/", { replace: true })}>
       <Page>
         <Errored fallback={(error) => <ErrorMessage error={error()} />}>
-          <Loading fallback={<p>{t("loading", "Loading…")}</p>}>
+          <Loading fallback={<p class="pt-2 text-slate-500"><Spinner class="size-5" /></p>}>
             {/* (the form starts from a copy of the item, so it is made once the item is here, and again for a new one) */}
             <Show when={item()} keyed>
               {(loaded) => (

@@ -12,6 +12,7 @@ import type {
   AutocompleteParams,
   Deletable,
   HeadView,
+  IncomingFields,
   IncomingPage,
   ItemBody,
   ListParams,
@@ -46,15 +47,30 @@ export const INCOMING_PAGE = 100;
 /**
  * One item in full; an `ApiError` with status 404 if there is none. With `incomingLimit`, an entity has no more than
  * that many of what refers to it in each incoming field (the first by label), and `incomingCounts` says how many
- * there are: an entity that thousands of documents refer to is megabytes otherwise
+ * there are: an entity that thousands of documents refer to is megabytes otherwise. With `0`, none of it is read
+ * (`incomingCounts` is null): `getIncomingFields` reads it apart. With `extras: false`, what the installed apps add
+ * to the view (`_derived`) is left out, for a page whose parts ask the apps themselves
  */
 export function getItem(
   client: ApiClient,
   type: string,
   id: string,
-  options: { incomingLimit?: number } = {},
+  options: { incomingLimit?: number; extras?: boolean } = {},
 ): Promise<HeadView> {
-  return client.get(`/${segment(type)}/${segment(id)}`, { incoming_limit: options.incomingLimit });
+  return client.get(`/${segment(type)}/${segment(id)}`, {
+    incoming_limit: options.incomingLimit,
+    extras: options.extras === false ? false : undefined,
+  });
+}
+
+/** What refers to an entity, the first `limit` of each incoming field at once, by label, with how many there are */
+export function getIncomingFields(
+  client: ApiClient,
+  type: string,
+  id: string,
+  limit: number = INCOMING_SHOWN,
+): Promise<IncomingFields> {
+  return client.get(`/${segment(type)}/${segment(id)}/incoming`, { limit });
 }
 
 /** What refers to an entity by one relation (`field`: the key of an incoming field), a page of it, by label */

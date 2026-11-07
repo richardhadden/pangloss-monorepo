@@ -214,6 +214,8 @@ def much_refers_to(page: Page, philip: str) -> None:
     page.goto(f"/Person/{philip}")
     hydrated(page)
     expect(page.get_by_role("heading", name="Philip the Good")).to_be_visible()
+    # (the page reads the person alone, and what refers to them apart: the second list, after the person's own fields)
+    expect(page.get_by_test_id("incoming-by-field")).to_be_visible()
     letters = page.get_by_role("link", name=re.compile(r"Letter \d\d$"))
     offices = page.get_by_role("link", name=re.compile(r"Office \d\d$"))
     # (the first 25 of each, by label)

@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { render } from "@solidjs/web";
 import { flush } from "solid-js";
-import { afterEach, expect, test } from "vitest";
+import { afterEach, expect, test, vi } from "vitest";
 import type { ApiClient } from "../api";
 import {
   ApiProvider,
@@ -591,7 +591,7 @@ test("a module's view of what refers to an item: offered while it takes some, th
   flush();
   // (what it takes, given to it after the fields; what it does not take, by field)
   expect(host.querySelector("[data-testid=held]")!.textContent).toBe("Witness/w1: Bishop, Abbot, Notary");
-  const facts = host.querySelector("dl")!;
+  const facts = host.querySelector("[data-testid=incoming-by-field]")!;
   expect(facts.textContent).not.toContain("held reverse");
   expect(facts.querySelector('a[href="/Note/n1"]')).toBeTruthy();
   expect(facts.querySelector('a[href="/Birth/b1"]')).toBeTruthy();
@@ -767,6 +767,95 @@ test("a module's view of what refers to an entity says how many it is without, a
   expect(held().split(", ")).toHaveLength(250);
   expect(host.querySelector("[data-testid=incoming-not-read]")).toBeNull();
   localStorage.clear();
+});
+
+test("an entity read without what refers to it (the counts null) reads the first of each field, and shows them as if they had come with it", async () => {
+  const asked: [string, unknown][] = [];
+  const client = {
+    get: async (path: string, query?: Record<string, unknown>) => {
+      asked.push([path, query]);
+      if (path.endsWith("/incoming")) {
+        return {
+          limit: 25,
+          counts: { heldReverse: 250, aboutReverse: 1 },
+          fields: { heldReverse: offices250.slice(0, 25), aboutReverse: [{ id: "n1", type: "Note", label: "A note" }] },
+        };
+      }
+      return { field: "heldReverse", count: 250, page: 1, pageSize: 100, results: offices250.slice(0, 100) };
+    },
+  } as unknown as ApiClient;
+  const host = showWithApi({ id: "w1", type: "Witness", label: "A witness", incomingCounts: null }, client);
+  // (while they are read, a word; the item's own contents are there already)
+  expect(host.querySelector("[data-testid=incoming-loading]")).toBeTruthy();
+  expect(host.querySelector('a[href^="/Office/"]')).toBeNull();
+  await settle();
+  flush();
+  expect(asked).toEqual([["/Witness/w1/incoming", { limit: 25 }]]);
+  expect(host.querySelector("[data-testid=incoming-loading]")).toBeNull();
+  expect(host.querySelectorAll('a[href^="/Office/"]').length).toBe(25);
+  expect(host.querySelector('a[href="/Note/n1"]')).toBeTruthy();
+  // (and the rest is read as it is for an item read with its first few)
+  const more = host.querySelector<HTMLButtonElement>("[data-testid=incoming-more]")!;
+  expect(more.textContent).toBe("and 225 more");
+  more.click();
+  await settle();
+  flush();
+  expect(asked[1]).toEqual(["/Witness/w1/incoming/heldReverse", { page: 1, page_size: 100 }]);
+  expect(host.querySelectorAll('a[href^="/Office/"]').length).toBe(100);
+});
+
+test("many that refer to an entity: only the rows on show are rendered", () => {
+  // (thirty fields of ten each: more than `INCOMING_VIRTUAL_FROM`)
+  const incoming = Array.from({ length: 30 }, (_, n) => ({
+    name: `field_${n}_reverse`,
+    key: `field${n}Reverse`,
+    sources: [],
+  }));
+  const hub = {
+    id: "h1",
+    type: "Hub",
+    label: "A hub",
+    ...Object.fromEntries(
+      incoming.map((field, n) => [
+        field.key,
+        Array.from({ length: 10 }, (_, i) => ({ id: `d${n}-${i}`, type: "Note", label: `Note ${n}-${i}` })),
+      ]),
+    ),
+  };
+  // (a row is as tall as it is estimated to be: the browser's measure is not happy-dom's)
+  // (a row is as tall as it is estimated to be: happy-dom lays nothing out, and the virtualizer measures `offsetHeight`)
+  Object.defineProperty(HTMLElement.prototype, "offsetHeight", { get: () => 80, configurable: true });
+  // (happy-dom's resize observer reports no sizes: the rows keep the size they were measured at)
+  // (on the window itself: the virtualizer takes it from there, and `vi.stubGlobal` does not reach it)
+  const resizeObserver = window.ResizeObserver;
+  Object.defineProperty(window, "ResizeObserver", {
+    value: class { observe() {} unobserve() {} disconnect() {} },
+    configurable: true,
+    writable: true,
+  });
+  const container = document.createElement("div");
+  document.body.append(container);
+  dispose = render(
+    () => (
+      <ComponentsProvider components={{ ReferenceChip } as ComponentMap}>
+        <ModelsProvider definitions={{ ...definitions, models: { ...definitions.models, Hub: model("Hub", "Entity", [], incoming) } }}>
+          <ItemContents item={hub} />
+        </ModelsProvider>
+      </ComponentsProvider>
+    ),
+    container,
+  );
+  flush();
+  const list = container.querySelector("[data-testid=incoming-by-field] [data-virtual]")!;
+  expect(list).toBeTruthy();
+  // (as many rows as fill a window, and a few beyond; the first is the first field)
+  const rows = list.querySelectorAll("[data-index]").length;
+  expect(rows).toBeGreaterThan(5);
+  expect(rows).toBeLessThan(30);
+  expect(list.querySelector("[data-index='0'] dt")!.textContent).toBe("field 0 reverse");
+  expect(container.querySelectorAll('a[href^="/Note/"]').length).toBe(rows * 10);
+  delete (HTMLElement.prototype as { offsetHeight?: number }).offsetHeight;
+  Object.defineProperty(window, "ResizeObserver", { value: resizeObserver, configurable: true, writable: true });
 });
 
 // (a claim of a claim of a claim ...: a document nested `depth` deep, each with a label saying which it is)

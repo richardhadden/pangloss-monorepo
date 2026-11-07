@@ -3,13 +3,17 @@
     GET /api/derived                                  the derived classes, the rules and the types of rule
     GET /api/derived/status                           what is pending, the state of each rule, what the worker did
     GET /api/derived/graph/{type}?plain=true          the facts of the rules of a type, as edges
+    GET /api/derived/about/{Type}/{id}                what the rules derive about an entity or a head document: for
+                                                      each class, a count and a first page (what its view has as
+                                                      `_derived`, for a reader that asks for it apart)
     GET /api/derived/{Class}?entity=…&page=2          a page of the facts of a class (of an entity, or `evidence=` a
                                                       document; and `plain`, `context_label`, `rule_type`, and a value
                                                       for any field)
     GET /api/derived/{Class}/{id}                     one, with the justifications the reader sees ("why")
 
 What a reader sees is as for documents: a fact is seen if one of its justifications rests only on documents the reader
-may see. The view of an entity (`GET /api/Person/{id}`) and of a head document has `_derived`, a first page of each class.
+may see. The view of an entity (`GET /api/Person/{id}`) and of a head document has `_derived`, a first page of each class
+(unless read with `?extras=false`; `/api/derived/about/{Type}/{id}` gives the same apart).
 
 The worker runs in the server unless the setting `DERIVED_WORKER_IN_SERVER` is false (for a deployment that runs
 `pangloss derive worker` on its own). Only one worker works at a time, whichever process it is in.
@@ -124,6 +128,21 @@ async def get_graph(
 ) -> dict[str, Any]:
     edges = await read.graph(type_name, plain_only=plain)
     return {"type": type_name, "count": len(edges), "edges": edges}
+
+
+@router.get("/about/{type_name}/{id}", operation_id="derived_about")
+async def get_about(type_name: str, id: str) -> dict[str, Any]:
+    """What the rules derive about an entity or a head document, of the class `type_name` (its own, as its view
+    says): for each derived class that points at it (by its name, or its reverse name), the count and a first page,
+    as the view has it under `_derived`. Empty when nothing is derived about it; 404 if there is no such class"""
+    from pangloss_models import Document, Entity, ModelRegistry
+
+    owner = ModelRegistry.all_models().get(type_name)
+    if owner is None or not issubclass(owner, (Entity, Document)):
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND, f"There is no model called {type_name!r}"
+        )
+    return await read.derived_of_entity(owner, id)
 
 
 @router.get("/{name}", operation_id="derived_list")

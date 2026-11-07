@@ -3,6 +3,7 @@ import {
   Customised,
   getModel,
   ItemSections,
+  Spinner,
   useComponent,
   useModels,
   useModules,
@@ -24,6 +25,7 @@ import {
   Loading,
   onCleanup,
   onSettled,
+  Reveal,
   Show,
 } from "solid-js";
 import { useNavigate } from "@solidjs/router";
@@ -168,7 +170,7 @@ export default function EntityPage(props: RouteProps<"/:type/:id">) {
           </>
         )}
       >
-        <Loading fallback={<p>{t("loading", "Loading…")}</p>}>
+        <Loading fallback={<p class="pt-2 text-slate-500"><Spinner class="size-5" /></p>}>
           <Track item={item} onShow={setShown} />
           <Customised
             slot="itemPage"
@@ -185,8 +187,13 @@ export default function EntityPage(props: RouteProps<"/:type/:id">) {
                 <h1 class="mb-6 border-b-[0.5px] border-slate-400/70 pt-1 pb-2 text-2xl font-semibold">
                   {item().label ?? item().id}
                 </h1>
-                <ItemContents item={item()} />
-                <ItemSections item={item()} />
+                {/* (what refers to the item, and the modules' sections after it, each read apart from the item
+                    in a boundary of its own: in the order they are on the page, so that a section does not show
+                    before what is above it has, and then move down) */}
+                <Reveal>
+                  <ItemContents item={item()} />
+                  <ItemSections item={item()} />
+                </Reveal>
               </>
             }
           />

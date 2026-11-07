@@ -126,8 +126,26 @@ label of what refers, counts each field, and cuts each field **before** it reads
   many it is without, and **Read them all** reads them (78 requests and 5.3 s for the person above, and then the
   47,000 elements that view always was for it): on request, no longer on every visit.
 
-Not done: the HTML of that page is still 4.2 MB (the answer is in it twice, as markup and as the data the browser
-starts from), and the page is as tall as its 83 rows.
+**Read apart, and rendered as it comes on show (2026-11-07).** The page of that person was still 4.4 MB of HTML and
+took 2 s to hydrate (2,280 chips), and sorting it by date, or reading it all, locked the browser for 2 to 5 s: the sort
+itself is milliseconds, the DOM is the cost. Now:
+
+- The item's page reads the item alone (`?incoming_limit=0&extras=false`, 65 kB), and what refers to it is read by
+  `IncomingRelations` (`GET /api/Person/{id}/incoming?limit=25`, `get_incoming_fields`), and what is derived about it
+  by the Derived section (`GET /api/derived/about/Person/{id}`), each in a boundary of its own, in a `Reveal` that
+  shows them in page order (a section never appears first and is then pushed down): the server streams them after the
+  item, the browser shows the item at once (the heading at 0.05 s where it was at 2.7 s) with a spinner where the rows
+  will be.
+- From 200 references on (`INCOMING_VIRTUAL_FROM`), and from 200 lines on sorted by date (`BY_DATE_VIRTUAL_FROM`), only
+  the rows on show are rendered (`VirtualRows`, the list page's virtualizer): 238 chips in the page instead of 2,280.
+- Measured in a headless Chromium, before and after, on the development server: hydration's blocking task 2.0 s to
+  0.65 s; "Sort by date" 2.3 s to 0.5 s; "Read them all" (78 requests, then 3,505 lines) 5.5 s to 1.5 s; back by
+  field (83 rows of up to 134 chips, of which some fifteen are rendered) 3.9 s to 1.4 s. On the production build
+  after: hydration 0.07 s, "Sort by date" 0.1 s, "Read them all" 1.2 s (the requests), back by field 0.16 s; the
+  heading is on show at 0.07 s. The HTML is 1.85 MB still: the answer of `/incoming` is in it as the data the browser
+  starts from, so that the rows it renders are hydrated, not made again.
+- `incoming_limit=0` is the only way to read an entity without what refers to it (`incomingCounts: null` says so, as
+  against read whole, no key, or cut, the counts). `Entity.get` and the SDK are unchanged.
 
 ## Searching
 

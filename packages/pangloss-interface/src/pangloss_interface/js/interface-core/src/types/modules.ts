@@ -125,7 +125,8 @@ export interface NewItemActionProps {
 
 /**
  * What a component a module adds after the contents of an item's page (`itemSections`) is given. It decides itself
- * whether to show anything (a section, usually under a `SectionBar`).
+ * whether to show anything (a section, usually under a `SectionBar`). It is rendered in a `Loading` of its own (no
+ * fallback), after what refers to the item: what it reads for itself it reads directly, with no boundary of its own.
  */
 export interface ItemSectionProps {
   /** The item's own type */

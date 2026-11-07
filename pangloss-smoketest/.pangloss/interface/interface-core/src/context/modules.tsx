@@ -3,6 +3,7 @@ import type { Component, ParentProps } from "solid-js";
 import { findLoader, orderModules, slotOf } from "../schema";
 import type {
   CollapseRule,
+  ComponentLoader,
   ComponentReference,
   ConsoleActionProps,
   CustomProps,
@@ -29,6 +30,8 @@ interface ModulesValue {
   newItemFields(): Component<NewItemActionProps>[];
   /** What the modules add after the contents of an item's page (`itemSections`), in the order of the modules (lazy) */
   itemSections(): Component<ItemSectionProps>[];
+  /** The same, as their loaders: for `ItemSections`, which waits for their code itself, in one boundary */
+  itemSectionLoaders(): ComponentLoader[];
   /** The other ways of showing what refers to an item (`incomingViews`), by name `app:key` (each component lazy) */
   incomingViews(): LoadedIncomingView[];
   /**
@@ -57,6 +60,7 @@ const NONE: ModulesValue = {
   newItemActions: () => [],
   newItemFields: () => [],
   itemSections: () => [],
+  itemSectionLoaders: () => [],
   incomingViews: () => [],
   preloadItemPage: () => {},
 };
@@ -126,6 +130,9 @@ export function ModulesProvider(props: ParentProps<{ modules: readonly ModuleMan
         ([, loader]) => lazy(loader) as Component<ItemSectionProps>,
       );
       return sections;
+    },
+    itemSectionLoaders() {
+      return each((module) => module.itemSections).map(([, loader]) => loader);
     },
     incomingViews() {
       views ??= each((module) => module.incomingViews).map(([name, view]) => ({

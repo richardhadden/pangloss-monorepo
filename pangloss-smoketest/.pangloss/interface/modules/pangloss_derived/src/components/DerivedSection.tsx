@@ -260,18 +260,49 @@ function ClassSection(props: {
   );
 }
 
+/** What the rules derive about an item: for each derived class, by its name or a reverse name, a count and a first page */
+type DerivedOfItem = Record<string, DerivedClass>;
+
 /**
- * What the rules derive about an item (`_derived` of its view), apart from what its documents say: for each derived
- * class, its facts, each with "why" (the rules and documents it rests on) on demand. A section after the item's
- * contents (`itemSections.Derived`); the item (an entity, or a head document a fact points at) is left out of its facts.
+ * What the rules derive about an item, apart from what its documents say: for each derived class, its facts, each
+ * with "why" (the rules and documents it rests on) on demand. A section after the item's contents
+ * (`itemSections.Derived`); the item (an entity, or a head document a fact points at) is left out of its facts.
+ *
+ * The item's view carries it as `_derived`, and that is shown; an item read without what the apps add to its view
+ * (the item's page reads the item alone, so that it is on show at once) has it read here, from
+ * `/api/derived/about/{Type}/{id}`, read directly: the boundary is the one `ItemSections` gives every section (nothing
+ * shows until it has come, the page is not kept waiting, and it never shows before what refers to the item, which the
+ * item page's `Reveal` puts first). A boundary of the section's own, nested in that one, hydrated wrongly.
  */
 export default function DerivedSection(props: ItemSectionProps) {
+  return (
+    <Show
+      when={props.item._derived === undefined}
+      fallback={<Classes derived={props.item._derived as DerivedOfItem} itemId={props.id} />}
+    >
+      <FetchedClasses {...props} />
+    </Show>
+  );
+}
+
+// (read with the item, and again with a new one: after logging in or out, what a reader may see is not the same)
+function FetchedClasses(props: ItemSectionProps) {
+  const api = useApi();
+  const about = createMemo(() => {
+    const item = props.item;
+    return api.get<DerivedOfItem>(
+      `/derived/about/${encodeURIComponent(String(item.type))}/${encodeURIComponent(String(item.id))}`,
+    );
+  });
+  return <Classes derived={about()} itemId={props.id} />;
+}
+
+function Classes(props: { derived: DerivedOfItem | null | undefined; itemId: string }) {
   const { t } = useTranslations();
-  // (`_derived`: for each derived class, by its name or a reverse name, a count and a first page)
-  const classes = createMemo(() => Object.entries((props.item._derived ?? {}) as Record<string, DerivedClass>));
+  const classes = createMemo(() => Object.entries(props.derived ?? {}));
   return (
     <Show when={classes().length > 0}>
-      <section>
+      <section data-testid="derived-section">
         <SectionBar>{t("derived_heading", "Derived")}</SectionBar>
         <dl class={fieldGridClass}>
           <For each={classes()}>
@@ -282,7 +313,7 @@ export default function DerivedSection(props: ItemSectionProps) {
                 symmetricLabel={section.symmetricLabel}
                 count={section.count}
                 first={section.items}
-                itemId={props.id}
+                itemId={props.itemId}
               />
             )}
           </For>

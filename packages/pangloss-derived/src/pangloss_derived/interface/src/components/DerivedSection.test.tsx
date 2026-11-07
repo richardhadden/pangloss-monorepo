@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { describe, expect, it, vi } from "vitest";
 import { render } from "@solidjs/web";
-import { flush } from "solid-js";
+import { flush, Loading } from "solid-js";
 import { ApiProvider, ComponentsProvider, ModelsProvider, ReferenceChip } from "@pangloss/interface-core";
 import type { ApiClient, ComponentMap, ModelDefinition, ModelDefinitions } from "@pangloss/interface-core";
 import DerivedSection from "./DerivedSection";
@@ -91,6 +91,36 @@ describe("DerivedSection", () => {
     expect(get).toHaveBeenCalledWith("/derived/SameGroup/f1");
     expect(root.textContent).toContain("Two people said to be members of one group");
     expect(root.textContent).toContain("Annals, 800");
+  });
+
+  it("reads what is derived about an item that came without it, and shows nothing when there is nothing", async () => {
+    const get = vi.fn(async (path: string) => (path === "/derived/about/Person/p1" ? derived : {}));
+    const api = { get } as unknown as ApiClient;
+    const root = document.createElement("div");
+    render(
+      () => (
+        <Providers api={api}>
+          {/* (each in a `Loading`, as `ItemSections` renders a section) */}
+          <Loading fallback={null}>
+            <DerivedSection type="Person" id="p1" item={{ id: "p1", type: "Person" }} model={person} />
+          </Loading>
+          <Loading fallback={null}>
+            <DerivedSection type="Person" id="p2" item={{ id: "p2", type: "Person" }} model={person} />
+          </Loading>
+        </Providers>
+      ),
+      root,
+    );
+    flush();
+    // (nothing until it has come)
+    expect(root.textContent).toBe("");
+    await tick();
+    flush();
+    expect(get).toHaveBeenCalledWith("/derived/about/Person/p1");
+    expect(get).toHaveBeenCalledWith("/derived/about/Person/p2");
+    expect(root.querySelectorAll("[data-testid=derived-section]")).toHaveLength(1);
+    expect(root.textContent).toContain("Bertha");
+    expect(root.textContent).toContain("and 2 more");
   });
 
   it("reads the next page when asked for more", async () => {

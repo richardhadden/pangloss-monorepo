@@ -41,6 +41,8 @@ export interface WindowVirtualizer {
   firstVisible: () => number;
   /** The `ref` of the list: where it is in the document is measured */
   setList: (element: Element) => void;
+  /** Scrolls the window so that the row is at the top (under `scrollPaddingStart`) */
+  scrollToIndex: (index: number) => void;
 }
 
 /**
@@ -66,10 +68,23 @@ export function createWindowVirtualizer(options: WindowVirtualizerOptions): Wind
     measureElement,
     initialRect: { width: 0, height: UNMEASURED_HEIGHT },
     initialOffset: initialIndex * (options.estimateSize + gap),
-    onChange: (instance) => {
-      setItems(instance.getVirtualItems());
-      setTotalSize(instance.getTotalSize());
+    // (`sync`: the window was scrolled, and the rows follow at once. Otherwise the rows were measured, in the
+    // browser's resize observer: the rows that follow from that are made in the next frame, not in the observer's
+    // own pass, where making them (and so observing them) is "ResizeObserver loop completed with undelivered
+    // notifications", an error in the page)
+    onChange: (instance, sync) => {
+      if (sync || typeof requestAnimationFrame === "undefined") return apply(instance);
+      if (frame !== undefined) return;
+      frame = requestAnimationFrame(() => {
+        frame = undefined;
+        apply(instance);
+      });
     },
+  };
+  let frame: number | undefined;
+  const apply = (instance: Virtualizer<Window, Element>) => {
+    setItems(instance.getVirtualItems());
+    setTotalSize(instance.getTotalSize());
   };
   const virtualizer = new Virtualizer<Window, Element>(settings);
   const [items, setItems] = createSignal<VirtualItem[]>(virtualizer.getVirtualItems());
@@ -103,14 +118,17 @@ export function createWindowVirtualizer(options: WindowVirtualizerOptions): Wind
     // (a list that starts at the top is scrolled there: the window may still be where a list before it was)
     if (initialIndex > 0) virtualizer.scrollToIndex(initialIndex, { align: "start" });
     else if (window.scrollY > 0) window.scrollTo(0, 0);
-    // (and again when what it is in changes size: what is above it may have grown, as a panel that opens over it)
+    // (and again when what it is in changes size: what is above it may have grown, as a panel that opens over it. In
+    // the next frame, not in the observer's own pass: rows made there are observed there, which is the "ResizeObserver
+    // loop" error, as for `onChange` above)
     const observer =
       typeof ResizeObserver === "undefined" || !list?.parentElement
         ? undefined
-        : new ResizeObserver(() => measureMargin());
+        : new ResizeObserver(() => requestAnimationFrame(measureMargin));
     if (observer && list?.parentElement) observer.observe(list.parentElement);
     return () => {
       observer?.disconnect();
+      if (frame !== undefined) cancelAnimationFrame(frame);
       cleanup();
     };
   });
@@ -127,5 +145,6 @@ export function createWindowVirtualizer(options: WindowVirtualizerOptions): Wind
     setList: (element) => {
       list = element;
     },
+    scrollToIndex: (index) => virtualizer.scrollToIndex(index, { align: "start" }),
   };
 }

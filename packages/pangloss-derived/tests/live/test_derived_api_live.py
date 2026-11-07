@@ -121,6 +121,17 @@ async def test_the_routes_and_the_derived_section_of_a_view(clear_database):
         assert item["otherField"] in ("first", "second")
         assert item["fields"]["family"]["label"] == "G"
 
+        # (the same, apart from the view: for a page that reads the view without what the apps add to it)
+        about = (await client.get(f"/api/derived/about/Person/{a.id}")).json()
+        assert about == person["_derived"]
+        bare = (
+            await client.get(f"/api/Person/{a.id}", params={"extras": "false"})
+        ).json()
+        assert "_derived" not in bare and bare["label"] == "A"
+        assert (
+            await client.get(f"/api/derived/about/Nothing/{a.id}")
+        ).status_code == 404
+
         # (a document's view does not show what it is evidence of; `evidence=` gives it)
         factoid = (await client.get(f"/api/Factoid/{f.id}")).json()
         assert "_derived" not in factoid
@@ -137,9 +148,10 @@ async def test_the_routes_and_the_derived_section_of_a_view(clear_database):
             await client.get("/api/derived/SameFamily", params={"rule_type": "nothing"})
         ).json()["count"] == 0
 
-        # (a person with nothing derived has no `_derived`)
+        # (a person with nothing derived has no `_derived`, and nothing about them)
         c = await Person.Create(label="C").save()
         assert "_derived" not in (await client.get(f"/api/Person/{c.id}")).json()
+        assert (await client.get(f"/api/derived/about/Person/{c.id}")).json() == {}
 
         assert (await client.get("/api/derived/Nothing")).status_code == 404
         assert (await client.get("/api/derived/graph/nothing")).status_code == 404

@@ -7,7 +7,6 @@ import {
   decodeSearchForm,
   getCurrentUser,
   getItem,
-  INCOMING_SHOWN,
   listItems,
   searchItems,
 } from "@pangloss/interface-core";
@@ -37,9 +36,11 @@ export function requestOf(type: string, form: string, q: string): string {
   return request ? JSON.stringify(request) : "";
 }
 
-// (an entity with the first of what refers to it in each field: the page reads the rest when asked)
+// (the item alone: without what refers to it, and without what the installed apps add to its view, each of which
+// the page's parts read for themselves (`IncomingRelations`, a module's `itemSections`), so that the item is on show
+// at once however much refers to it)
 export const itemQuery = query(
-  (type: string, id: string) => getItem(apiClient(), type, id, { incomingLimit: INCOMING_SHOWN }),
+  (type: string, id: string) => getItem(apiClient(), type, id, { incomingLimit: 0, extras: false }),
   "item",
 );
 

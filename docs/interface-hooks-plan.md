@@ -63,6 +63,11 @@ interface ItemSectionProps {
   none.
 - **pangloss-derived** gets an interface module (`pangloss_derived/interface/`) with
   `itemSections: { Derived: … }`. The module's `DerivedSection` reads `item._derived`.
+  - As built (2026-11-07): the item page reads the item with `?extras=false`, so `_derived` is not on it; the section
+    then reads `/api/derived/about/{Type}/{id}` itself. `ItemSections` renders each section in a `Loading` with no
+    fallback, and the item page puts the contents and the sections in a `Reveal`: a section shows once what it
+    reads has come, and not before what refers to the item is on show. An item that carries `_derived` (a module's
+    page that read it whole) is shown from that.
 
 ### 2. `incomingViews`: another way to show what refers to the item
 

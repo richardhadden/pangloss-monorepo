@@ -134,13 +134,17 @@ plain ("only from a negated statement"). Nothing is filtered by default.
 | `GET /api/derived/{Class}/{id}` | one, with "why" |
 | `GET /api/derived/graph/{type}?plain=true` | the graph of a type |
 | `GET /api/derived/status` | what is pending, the state of each rule, what the worker did |
-| `GET /api/Person/{id}` | has `_derived`: for each class, a count and a first page (the other end and the field it is in, `otherField`; the other fields) |
+| `GET /api/Person/{id}` | has `_derived`: for each class, a count and a first page (the other end and the field it is in, `otherField`; the other fields). Not with `?extras=false` |
+| `GET /api/derived/about/{Type}/{id}` | the same `_derived` on its own, for a reader that read the view without it (`{Type}`: the item's own class); `{}` when nothing is derived about it |
 | `GET /api/Factoid/{id}` | has `_derived` only of facts with a field that points at the document, not what it is evidence of (that is what it says itself; `list(evidence=...)` gives it) |
 
 The same functions work through the SDK (they ask the API; blocking with `connect(sync=True)`, as the models' own
-are). The interface shows `_derived` under an item's contents, a page at a time, with "why" on demand: the "Derived" section is
+are). The interface shows what is derived under an item's contents, a page at a time, with "why" on demand: the "Derived" section is
 the interface module of `pangloss_derived` (`itemSections.Derived`), so a project can leave it out, or put its own in its place, with
-`InterfaceConfig(disabled=["pangloss_derived:Derived"])` ([interface-hooks-plan.md](interface-hooks-plan.md)).
+`InterfaceConfig(disabled=["pangloss_derived:Derived"])` ([interface-hooks-plan.md](interface-hooks-plan.md)). The section shows
+the item's `_derived` if the item came with it, and otherwise reads `/api/derived/about/{Type}/{id}` itself, in the section's own
+boundary (the item's page reads the item with `?extras=false`, so that it is on show before what is derived about it has been found;
+the section appears after what refers to the item, never before it).
 
 ## Commands
 
