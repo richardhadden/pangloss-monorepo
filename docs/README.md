@@ -20,7 +20,7 @@ Each feature in these docs is marked with its status:
 | [Packages](packages.md) | The workspace packages and how they depend on each other |
 | [Importing](imports.md) ✅ | Every package exports its public names from its root (`from pangloss_models import Document`); what each exports, and why there is no `pangloss.` namespace |
 | [Defining models](models.md) | Documents, Entities, Embedded, Traits, EdgeModels, and the other model kinds |
-| [Modelling DX](modelling-dx.md) 🚧 | A review (2026-11-08) of the footguns of declaring models as pydantic classes (defaults, validators and methods silently dropped; the rules that are not pydantic's), whether the built-in primitives are too many, and two proposals: a codec registry so pydantic's standard types can be stored, and a `pangloss check` plus a language server beside `pyrefly`. The footguns are closed and the registry built (`pangloss_models.literals`, "As built"); `pangloss check` and the language server are not |
+| [Modelling DX](modelling-dx.md) 🚧 | A review (2026-11-08) of the footguns of declaring models as pydantic classes (defaults, validators and methods silently dropped; the rules that are not pydantic's), whether the built-in primitives are too many, and two proposals: a codec registry so pydantic's standard types can be stored, and a `pangloss check` plus a language server beside `pyrefly`. The footguns are closed and the registry built (`pangloss_models.literals`, "As built"); `pangloss check` and the language server are built too ([language-server.md](language-server.md)) |
 | [Relations and fields](relations.md) | Literal fields, relations, `ViaEdge`, `RelationConfig`, field binding, `Fulfils` |
 | [Generated models](generated-models.md) | The `Create`, `CreateDB`, `Update`, `UpdateDB`, `View`, `HeadView` and reference models, and the initialisation pipeline |
 | [Cleaning up initialise_models](initialise-models-cleanup.md) | How the five generated models are now made by one builder, what was fixed, and what is left to decide |
@@ -42,6 +42,7 @@ Each feature in these docs is marked with its status:
 | [Publishing the packages](publishing.md) ⏳ | How the packages would be released (not done) |
 | [RDF / Oxigraph feasibility](rdf-oxigraph-feasibility.md) | A report on a third backend (not planned) |
 | [Command line](cli.md) | The `pangloss` command, and adding commands from apps |
+| [Language server](language-server.md) ✅ | `pangloss check`, and `pangloss-lsp`: what `initialise()` refuses at the line, quick fixes, completion of the `Meta`s, fresh stubs, hover; the Zed and VS Code extensions |
 | [Meta slots](meta-slots.md) 🚧 | Built in `pangloss_models` (and the protection of fields the API will not change): letting optional packages (the interface) keep their own `_<name>_meta` on a model class |
 | [Translations](translations.md) 🚧 | Translating the interface: the JSONC files per app and project, keeping manual edits when the models change, and the `generate`, `gather` and `check` commands (built; no page uses them yet) |
 | [Autocomplete](autocomplete.md) ✅ | One endpoint that finds existing entities by their label over any set of types, for the interface's relation fields and for other tools; built, with what is left to do later |

@@ -339,7 +339,8 @@ def is_list_of_literal_type(tp: Any) -> bool:
     if is_optional(_plain(item)):
         raise PanglossModelError(
             f"{tp!r}: a list cannot hold None among its items; make the whole list optional "
-            f"(`{_name(tp)} | None`) or give it a default (`= []`)"
+            f"(`{_name(tp)} | None`) or give it a default (`= []`)",
+            fix=("drop_none_in_items", "optional_list"),
         )
     return is_literal_type(item)
 

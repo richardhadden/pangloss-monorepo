@@ -98,6 +98,41 @@ class Manifest:
         )
 
 
+def keys_of(text: str, block: str) -> list[str]:
+    """The keys of `block: { ... }` in the source of a module's `defineModule`, by reading the text (the manifests
+    proper are TypeScript, read by Node, which is too slow to ask on each save): a best guess for an editor"""
+    start = re.search(rf"\b{block}\s*:\s*\{{", text)
+    if start is None:
+        return []
+    depth, keys, index, expect_key = 1, [], start.end(), True
+    key = re.compile(r"\s*(?:\"([^\"]+)\"|'([^']+)'|([A-Za-z_]\w*))\s*[:(,}]")
+    while index < len(text) and depth:
+        if depth == 1 and expect_key and (found := key.match(text, index)):
+            keys.append(next(group for group in found.groups() if group))
+            expect_key = False
+            index = found.end() - 1
+            continue
+        char = text[index]
+        if char in "{([":
+            depth += 1
+        elif char in "})]":
+            depth -= 1
+        elif char == "," and depth == 1:
+            expect_key = True
+        index += 1
+    return keys
+
+
+def declared_names(module: InterfaceModule, block: str) -> list[str]:
+    """`<app>:<Name>` for each key of `block` (`components`, `collapseRules`) in the module's source"""
+    names: list[str] = []
+    for path in sorted((module.root / "src").glob("*.ts*")):
+        text = path.read_text()
+        if "defineModule" in text:
+            names += [f"{module.app}:{key}" for key in keys_of(text, block)]
+    return names
+
+
 def core_version() -> str:
     return json.loads((CORE_PATH / "package.json").read_text())["version"]
 

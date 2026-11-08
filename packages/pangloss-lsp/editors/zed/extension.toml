@@ -1,0 +1,11 @@
+id = "pangloss"
+name = "Pangloss"
+version = "0.1.0"
+schema_version = 1
+authors = ["Richard Hadden <rwjhadden@gmail.com>"]
+description = "The errors of Pangloss models at the line, fresh stubs, and what a field means"
+repository = "https://github.com/richardhadden/pangloss-monorepo"
+
+[language_servers.pangloss]
+name = "Pangloss"
+languages = ["Python"]

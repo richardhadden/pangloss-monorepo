@@ -9,6 +9,7 @@ from pydantic import BaseModel
 from pydantic.alias_generators import to_camel
 lazy from pangloss_core import storage_of
 
+from pangloss_models.diagnostics import reported, stop_if_refused
 from pangloss_models.exceptions import (
     PanglossImportError,
     PanglossInitialisationError,
@@ -409,7 +410,9 @@ class ModelRegistry:
         )
 
         for model in cls._models:
-            model.model_rebuild(force=True, _types_namespace=namespace)
+            with reported(model):
+                model.model_rebuild(force=True, _types_namespace=namespace)
+        stop_if_refused()
 
         cls._initialise_models()
         logger.debug("Models initialised")
@@ -436,7 +439,9 @@ class ModelRegistry:
             # To initialise field definitions, we need to initialise in
             # declaration order
             for model in cls._model_dict.values():
-                initialise_field_definitions(model)
+                with reported(model):
+                    initialise_field_definitions(model)
+            stop_if_refused()
 
             check_relation_targets(list(cls._model_dict.values()))
 
@@ -448,14 +453,17 @@ class ModelRegistry:
                     "Entity",
                     "Embedded",
                 ]:
-                    check_indexes(model)
+                    with reported(model):
+                        check_indexes(model)
 
             for model in cls._model_dict.values():
                 if hasattr(model, "__metatype__") and model.__metatype__ in [
                     "Document",
                     "Entity",
                 ]:
-                    cls._check_field_names(model)
+                    with reported(model):
+                        cls._check_field_names(model)
+            stop_if_refused()
 
             # (the incoming relations are worked out from all the models, so start again if this is not the first time)
             for model in cls._model_dict.values():

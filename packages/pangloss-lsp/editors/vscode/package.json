@@ -1,0 +1,35 @@
+{
+  "name": "pangloss",
+  "displayName": "Pangloss",
+  "description": "The errors of Pangloss models at the line, fresh stubs, and what a field means",
+  "version": "0.1.0",
+  "publisher": "pangloss",
+  "private": true,
+  "engines": { "vscode": "^1.95.0" },
+  "categories": ["Programming Languages", "Linters"],
+  "activationEvents": ["onLanguage:python"],
+  "main": "./out/extension.js",
+  "contributes": {
+    "configuration": {
+      "title": "Pangloss",
+      "properties": {
+        "pangloss.serverPath": {
+          "type": "string",
+          "default": "",
+          "description": "The pangloss-lsp to run. If empty: .venv/bin/pangloss-lsp in the workspace, or the one on the PATH."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ."
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/vscode": "^1.95.0",
+    "typescript": "^5.6.0"
+  }
+}

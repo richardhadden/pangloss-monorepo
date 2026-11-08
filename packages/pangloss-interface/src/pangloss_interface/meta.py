@@ -173,6 +173,35 @@ class InterfaceMeta:
     # a package whose fields matter to some of the classes built on its base. `()` turns off the parent's
     hide_on_forms: Sequence[str] | Callable[[type], Iterable[str]] | None = None
 
+    @staticmethod
+    def editor_choices(option: str) -> list[str] | None:
+        """What the language server offers for an option: the components, or rules, that the interface modules of the
+        installed apps declare (`pangloss_models.editor_schema`)"""
+        block = (
+            "components"
+            if option in SLOTS
+            else "collapseRules"
+            if option == "collapse"
+            else None
+        )
+        if block is None:
+            return None
+        from pangloss_core import settings as core_settings
+
+        from pangloss_interface.modules import declared_names, discover
+
+        settings = getattr(core_settings, "SETTINGS", None)
+        if settings is None:
+            return None
+        try:
+            return [
+                name
+                for module in discover(settings.INSTALLED_APPS)
+                for name in declared_names(module, block)
+            ]
+        except OSError:
+            return None
+
     def __post_init__(self) -> None:
         if self.colour is not None and self.colour not in COLOURS:
             raise PanglossMetaError(

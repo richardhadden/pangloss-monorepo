@@ -149,6 +149,7 @@ separate distributable package.
 | [`pangloss-zotero`](packages/pangloss-zotero) | A Zotero library kept in the database, as sources and subjects of factoids |
 | [`pangloss-derived`](packages/pangloss-derived) | Relations derived from documents by rules, kept up to date in the background |
 | [`pangloss-library`](packages/pangloss-library) | Ready-made models built from the primitives (`WeightedAlternative`) |
+| [`pangloss-lsp`](packages/pangloss-lsp) | A language server: what `initialise()` refuses at the line, fresh stubs, what a field means |
 | [`pangloss-interface`](packages/pangloss-interface) | The web interface (Solid 2.0) |
 | [`pangloss-testing`](packages/pangloss-testing) | Live-database fixtures for the tests of add-ons, on either backend |
 

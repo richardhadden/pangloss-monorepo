@@ -11,12 +11,30 @@ class PanglossAwaitingInitialisation(Exception):
 
 
 class PanglossModelError(Exception):
-    pass
+    """A declared class says what the models cannot be made from. `fix`, if the mistake has an obvious mechanical
+    correction in the source, names it (a key of `pangloss_models.diagnostics.FIXES`): the language server offers it"""
+
+    def __init__(self, *args: object, fix: str | tuple[str, ...] | None = None):
+        super().__init__(*args)
+        self.fix = fix
 
 
 class PanglossModelWarning(UserWarning):
     """A declared class says something the generated models cannot carry (a method, a `model_config`, a
-    `@computed_field`): the models are made, and this says what was left behind"""
+    `@computed_field`): the models are made, and this says what was left behind. `model` and `member` say where in
+    the source it is, and `fix` (see `PanglossModelError`) what would correct it"""
+
+    def __init__(
+        self,
+        *args: object,
+        model: type | None = None,
+        member: str | None = None,
+        fix: str | tuple[str, ...] | None = None,
+    ):
+        super().__init__(*args)
+        self.model = model
+        self.member = member
+        self.fix = fix
 
 
 class PanglossInternalError(Exception):

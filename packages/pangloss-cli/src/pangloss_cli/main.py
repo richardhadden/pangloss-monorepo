@@ -6,7 +6,11 @@ Typer object named `cli` adds its commands as `pangloss <name> <command>`, where
 prefix). For example `pangloss_memgraph` adds `pangloss memgraph info`.
 """
 
+import contextlib
+import json
+import sys
 from collections.abc import Mapping, Sequence
+from dataclasses import asdict
 from pathlib import Path
 
 import typer
@@ -27,6 +31,7 @@ from pangloss_cli.project import (
     app_command_group,
     fail,
     group_name,
+    import_if_present,
     load_project,
 )
 from pangloss_cli.scaffold import (
@@ -117,6 +122,82 @@ def make_stubs(
         )
     else:
         typer.secho(f"Wrote {len(written)} stub file(s)", fg="green")
+
+
+def check(
+    ctx: typer.Context,
+    as_json: bool = typer.Option(
+        False,
+        "--json",
+        help="One line of JSON, for tools: the language server reads it",
+    ),
+    stubs: bool = typer.Option(
+        False, "--write-stubs", help="If the models are sound, write their stubs too"
+    ),
+) -> None:
+    """Say what is wrong with the models, at the file and line, without a database
+
+    Reports every field that initialising the models would refuse, and the warnings.
+    Exits with 1 if there is an error."""
+    project: Project = ctx.obj
+
+    from pangloss_models.diagnostics import (
+        Diagnostic,
+        check_models,
+        diagnostic_of_exception,
+        field_descriptions,
+    )
+    from pangloss_models.editor_schema import editor_schema
+    from pangloss_models.typestubs import write_stubs
+
+    diagnostics: list[Diagnostic] = []
+    descriptions: dict[str, str] = {}
+    schema: dict | None = None
+    # (what the project's own code prints must not come between a tool and the JSON)
+    with contextlib.redirect_stdout(sys.stderr if as_json else sys.stdout):
+        if project.settings is None:
+            message = project.settings_error or "No settings found"
+            diagnostics.append(Diagnostic("error", message))
+        else:
+            assert project.location is not None
+            root = project.location.root
+            for installed in project.settings.INSTALLED_APPS:
+                try:
+                    import_if_present(f"{installed}.models")
+                except Exception as error:
+                    diagnostics.append(diagnostic_of_exception(error, root))
+            if not diagnostics:
+                diagnostics = check_models()
+            if not any(d.severity == "error" for d in diagnostics):
+                descriptions = field_descriptions()
+                if stubs:
+                    write_stubs(root)
+            # (best effort: what is complete is offered even if some model is not)
+            try:
+                schema = editor_schema()
+            except Exception:
+                schema = None
+
+    failed = any(d.severity == "error" for d in diagnostics)
+    if as_json:
+        report = {
+            "diagnostics": [asdict(d) for d in diagnostics],
+            "fields": descriptions,
+            "schema": schema,
+        }
+        typer.echo(json.dumps(report))
+    else:
+        for d in diagnostics:
+            where = f"{d.file}:{d.line}:{d.column + 1}: " if d.file else ""
+            typer.secho(
+                f"{where}{d.severity}: {d.message}",
+                fg="red" if d.severity == "error" else "yellow",
+                err=True,
+            )
+        if not failed:
+            typer.secho("The models are sound", fg="green")
+    if failed:
+        raise typer.Exit(1)
 
 
 def new_project(
@@ -261,6 +342,7 @@ def build_app(
         ctx.obj = project
 
     app.command("setup-database")(setup_database)
+    app.command("check")(check)
     app.command("make-stubs")(make_stubs)
     app.command("makemigrations")(makemigrations)
     app.command("migrate")(migrate)

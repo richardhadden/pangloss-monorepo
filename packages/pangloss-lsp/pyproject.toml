@@ -1,0 +1,26 @@
+[project]
+name = "pangloss-lsp"
+version = "0.1.0"
+description = "A language server for Pangloss models: the errors of initialise() at the line, fresh stubs, and what a field means"
+readme = "README.md"
+authors = [
+    { name = "Richard Hadden", email = "rwjhadden@gmail.com" }
+]
+requires-python = ">=3.15"
+dependencies = [
+    "pangloss-cli",
+    "pygls>=2.1",
+]
+
+[project.scripts]
+pangloss-lsp = "pangloss_lsp.server:main"
+
+[project.urls]
+Repository = "https://github.com/richardhadden/pangloss-monorepo"
+
+[build-system]
+requires = ["uv_build>=0.11.8,<0.12.0"]
+build-backend = "uv_build"
+
+[tool.uv.sources]
+pangloss-cli = { workspace = true }

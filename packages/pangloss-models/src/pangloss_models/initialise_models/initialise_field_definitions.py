@@ -21,6 +21,7 @@ from pydantic import BaseModel
 from pydantic.fields import FieldInfo
 
 from pangloss_models import literals
+from pangloss_models.diagnostics import reported
 from pangloss_models.exceptions import PanglossModelError, PanglossModelWarning
 from pangloss_models.markers import FieldMarker
 from pangloss_models.write_checks import is_marked
@@ -1060,19 +1061,24 @@ def short_name(annotation: Any) -> str:
     return repr(annotation).replace("typing.", "")
 
 
-def unsupported_message(model: type, field_name: str, annotation: Any) -> str:
+def unsupported_error(
+    model: type, field_name: str, annotation: Any
+) -> PanglossModelError:
     """Why a field's type is refused, naming what to use instead where that can be told"""
     where = f"{model.__name__}.{field_name}"
     inner = literals.without_none(annotation)
     if annotation_is_optional(annotation) and is_list_relatable(inner):
-        return (
+        return PanglossModelError(
             f"{where}: an optional list of relations is not supported: `list[{short_name(get_args(inner)[0])}]` "
-            "already may be empty (`[]`); declare the field as that"
+            "already may be empty (`[]`); declare the field as that",
+            fix="drop_optional",
         )
     reason = literals.explain_unsupported(annotation)
     if reason:
-        return f"{where}: {annotation!r} is not supported: {reason}"
-    return f"Unsupported type for field {where}: {annotation!r}. {SUPPORTED_TYPES}"
+        return PanglossModelError(f"{where}: {annotation!r} is not supported: {reason}")
+    return PanglossModelError(
+        f"Unsupported type for field {where}: {annotation!r}. {SUPPORTED_TYPES}"
+    )
 
 
 def check_declared_class(model: type[_DeclaredClass]) -> None:
@@ -1142,9 +1148,13 @@ def check_declared_class(model: type[_DeclaredClass]) -> None:
     )
     if parent is not None and model.model_config != parent.model_config:
         warnings.warn(
-            f"{name} has a model_config of its own, which the models made from it do not take: they have their "
-            "own (camelCase aliases, names accepted too, extra keys refused on Create and Update)",
-            PanglossModelWarning,
+            PanglossModelWarning(
+                f"{name} has a model_config of its own, which the models made from it do not take: they have "
+                "their own (camelCase aliases, names accepted too, extra keys refused on Create and Update)",
+                model=model,
+                member="model_config",
+                fix="remove_member",
+            ),
             stacklevel=2,
         )
 
@@ -1249,42 +1259,41 @@ def initialise_field_definitions(model: type[_DeclaredClass]):
     for field_name, declared_info, field_fulfilment, normalised in get_fields_on_model(
         model
     ):
-        field_info = with_optional_lifted(declared_info)
-        is_db_field = any(
-            isclass(md) and issubclass(md, DBField) or isinstance(md, DBField)
-            for md in field_info.metadata
-        )
-
-        # Fields of the generic wrapper base classes (`target: list[T]`) and of their
-        # parametrisations (`Negative[Statement]`) are defined elsewhere (or on the
-        # unparametrised subclass), so are never "unsupported".
-        is_wrapper_field = define_wrapper_field(
-            model, field_name, field_info, is_db_field
-        )
-        supported_as_wrapper_field = is_generic_wrapper(model) or is_wrapper_field
-
-        if is_list_of_embedded_or_annotated_value(field_info.annotation):
-            raise PanglossModelError(
-                f"{model.__name__}.{field_name}: lists of Embedded objects or of AnnotatedValues are not "
-                "supported (a field can have only one). If each is a thing of its own, make it a Document; "
-                "to annotate a whole list, make the value a list: `WithCertainty[list[str]]`"
+        with reported(model, field_name):
+            field_info = with_optional_lifted(declared_info)
+            is_db_field = any(
+                isclass(md) and issubclass(md, DBField) or isinstance(md, DBField)
+                for md in field_info.metadata
             )
-        # (whatever the field is, what it is annotated with must be something that is carried)
-        constraints_of(field_info.metadata, f"{model.__name__}.{field_name}")
 
-        definition = define_field(
-            model, field_name, field_info, is_db_field, normalised
-        )
-        if definition is not None:
-            # (what a class that `Fulfils` another must hold for every field it has from it, of any
-            # kind: without them it is not that class)
-            definition.field_required_to_fulfil.update(field_fulfilment)
-            model._meta.field_definitions.add_field(
-                name=field_name, field_definition=definition
+            # Fields of the generic wrapper base classes (`target: list[T]`) and of their
+            # parametrisations (`Negative[Statement]`) are defined elsewhere (or on the
+            # unparametrised subclass), so are never "unsupported".
+            is_wrapper_field = define_wrapper_field(
+                model, field_name, field_info, is_db_field
             )
-        elif not supported_as_wrapper_field:
-            raise PanglossModelError(
-                unsupported_message(model, field_name, field_info.annotation)
+            supported_as_wrapper_field = is_generic_wrapper(model) or is_wrapper_field
+
+            if is_list_of_embedded_or_annotated_value(field_info.annotation):
+                raise PanglossModelError(
+                    f"{model.__name__}.{field_name}: lists of Embedded objects or of AnnotatedValues are not "
+                    "supported (a field can have only one). If each is a thing of its own, make it a Document; "
+                    "to annotate a whole list, make the value a list: `WithCertainty[list[str]]`"
+                )
+            # (whatever the field is, what it is annotated with must be something that is carried)
+            constraints_of(field_info.metadata, f"{model.__name__}.{field_name}")
+
+            definition = define_field(
+                model, field_name, field_info, is_db_field, normalised
             )
+            if definition is not None:
+                # (what a class that `Fulfils` another must hold for every field it has from it, of any
+                # kind: without them it is not that class)
+                definition.field_required_to_fulfil.update(field_fulfilment)
+                model._meta.field_definitions.add_field(
+                    name=field_name, field_definition=definition
+                )
+            elif not supported_as_wrapper_field:
+                raise unsupported_error(model, field_name, field_info.annotation)
 
     check_declared_class(model)

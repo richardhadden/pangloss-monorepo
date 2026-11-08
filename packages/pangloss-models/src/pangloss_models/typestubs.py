@@ -785,6 +785,9 @@ def write_stubs(root: Path, force: bool = False) -> tuple[list[Path], list[Path]
         if path.exists() and not force and not is_generated(path.read_text()):
             skipped.append(path)
             continue
-        path.write_text(stub_for_module(module, models, names))
+        stub = stub_for_module(module, models, names)
+        # (the language server calls this on each save: a stub written again is a type checker's work done again)
+        if not path.exists() or path.read_text() != stub:
+            path.write_text(stub)
         written.append(path)
     return written, skipped

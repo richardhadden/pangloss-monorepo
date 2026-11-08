@@ -77,8 +77,13 @@ hooks were removed. Methods and properties are copied to the generated models
 (and their stubs) instead of being warned about; `Entity(...)` is now `Entity.Create(...)`, as `Document(...)` was.
 See `docs/generated-models.md`, "Validators, write checks and methods".
 
-**§5.** `pangloss check --json`, the source ranges and the language server are not built. The checks of §5.3 are
-in `initialise()` (`check_declared_class`, `constraints_of`), which is where the review put them first.
+**§5.** The checks of §5.3 are in `initialise()` (`check_declared_class`, `constraints_of`), which is where the review
+put them first. `pangloss check [--json] [--write-stubs]`, the source positions (`pangloss_models.diagnostics`) and
+the language server (diagnostics, fresh stubs, hover; `pangloss-lsp`, with extensions for Zed and VS Code) were built
+later on 2026-11-08: see [language-server.md](language-server.md). It is a command `pangloss-lsp`, not `pangloss lsp`
+(the reason is there). §5.2's completions (the options and values of the `Meta`s, `RelationConfig` and `FieldBinding`,
+the slots) and code actions (the fixes a refusal names) were built the same day, from the classes themselves rather
+than a list kept by hand; not built: the clash warning for `reverse_name` and the keys of `Where`.
 
 **Tests.** The table of §2.1 is `packages/pangloss-models/tests/initialisation/test_field_types.py` (one case per
 type: its kind, its export, or its error) and `tests/generated_models/test_pydantic_conformance.py`; the round
