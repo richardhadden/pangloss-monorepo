@@ -272,5 +272,19 @@ def models_summary(models: Iterable[tuple[str, Any]]) -> dict[str, Any]:
                 field: FIELD_KINDS.get(type(definition).__name__, "other")
                 for field, definition in (definitions or {}).items()
             },
+            "where": where_keys(model),
         }
     return summary
+
+
+def where_keys(model: Any) -> list[dict[str, str]]:
+    """The keywords of `Model.Where(...)`: the fields that can be searched, then the `$` keys. (Read from the
+    generated class, which leaves out what cannot be searched yet)"""
+    where = model.__dict__.get("Where")
+    fields = getattr(where, "model_fields", None)
+    if not fields:
+        return []
+    return [
+        {"name": name, "type": _type_name(info.annotation)}
+        for name, info in fields.items()
+    ]

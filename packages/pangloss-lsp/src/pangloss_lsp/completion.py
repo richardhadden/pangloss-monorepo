@@ -123,12 +123,40 @@ def candidate_values(
     return [tuple(choice) for choice in parameter.get("choices", [])]  # type: ignore[misc]
 
 
+def complete_where(
+    schema: dict[str, Any], ctx: CallContext, text: str, offset: int
+) -> list[types.CompletionItem]:
+    """The keywords of `Person.Where(`: the fields of the model that can be searched, then the `$` keys"""
+    owner = ctx.callee.split(".")[-2]
+    keys: list[dict[str, str]] = (
+        schema.get("models", {}).get(owner, {}).get("where", [])
+    )
+    # (the `$` keys are written with a trailing underscore: they come after the model's own fields)
+    ordered = sorted(keys, key=lambda key: key["name"].endswith("_"))
+    return [
+        _item(
+            text,
+            ctx.prefix_start,
+            offset,
+            key["name"],
+            f"{key['name']}=",
+            types.CompletionItemKind.Property,
+            detail=short(key["type"]),
+            sort=f"{index:03}",
+        )
+        for index, key in enumerate(ordered)
+        if key["name"] not in ctx.used
+    ]
+
+
 def complete_call(
     schema: dict[str, Any], text: str, offset: int
 ) -> list[types.CompletionItem]:
     ctx = call_at(text, offset)
     if ctx is None:
         return []
+    if ctx.callee.endswith(".Where"):
+        return complete_where(schema, ctx, text, offset) if ctx.at_name else []
     call = resolve_call(schema, ctx.callee)
     if call is None:
         return []

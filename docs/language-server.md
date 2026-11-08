@@ -2,14 +2,14 @@
 
 **Status: ✅ built 2026-11-08: `pangloss check`, diagnostics, fresh stubs, hover, completions, quick fixes and "did you mean", tested
 over stdio. The two editor extensions are installed and work in Zed (the VS Code one compiles, and has not been run in
-VS Code). Not built: the completions of `Where` keys (the stubs give those to a type checker), the clash warning for
-`reverse_name`.**
+VS Code). Not built: the clash warning for `reverse_name`.**
 
 It sits beside your type checker and does what a type checker cannot: it knows Pangloss's rules.
 
 - **On save**, what `initialise()` refuses is shown at the field or class, every field at once, and the warnings too.
 - **Payload keys**: in a dict that says `"type": "Person"`, the keys of that model in camelCase, and the model names
   for `"type"`.
+- **`Where` keys**: in `Person.Where(`, the fields of that model that can be searched, then the `$` keys.
 - **Hover on a model's name** (its `class` line, or where an annotation names it): its kind, docstring, the classes
   above it, its indexes, and the fields that can hold it.
 - **Find references** on a model's name: the relation fields that can hold it.
@@ -109,7 +109,7 @@ refusal that has one should name it where it is raised.
   a `bool` or an `Enum`.
 - `aliases`: `Document.Meta`, `Entity.Meta` and `<Model>.Meta` for each model, to the class they are.
 - `slots`: the `_x_meta` names, their classes and the package to import them from.
-- `models`: each model's kind and the kind of each field (`literal`, `list`, `relation`, `embedded`, `annotated`).
+- `models`: each model's kind and the kind of each field (`literal`, `list`, `relation`, `embedded`, `annotated`), and the keywords of its generated `Where` (read from the class, so what cannot be searched yet is left out).
 
 A meta class can say what an option takes by an `editor_choices(option)` static method. `InterfaceMeta` does, for
 `list_page`, `item_page`, `view_card` and `edit_card` (the `<app>:<Name>` of each key of `components` in the installed
@@ -132,14 +132,16 @@ a value, or inside a list or a string.
 | any option with choices | the choices (strings quoted, unless the string is begun) |
 | the start of a line of a class body, after `_` | `_meta = <Base>.Meta(...)`, and each registered slot, with its import added |
 | a key in a dict literal that has `"type": "<Model>"` | the model's keys, camelCase, as the API takes them (`label` and `id` too, for a document or entity), those not already given |
+| a name in `Person.Where(` | the keywords of that model's `Where` (`label`, its searchable fields, then `all_`, `any_of_`, `not_`...), as `name=`, those not already given |
 | the value of `"type"` | the models (not abstract ones, nor generated parametrisations like `InRole[Person]`) |
 
 A dict says what it is by its `"type"`, wherever it is written (a script that uses the SDK, a test, `json=` of a
 request); one that does not say is offered `type`. The keys of `Person.Create(...)` itself are the type checker's, from
 the stubs. JSON files (a bulk upload) are not Python and are not offered anything.
 
-Not offered: `_typology_meta` (it belongs to the classes that subclass `Typology`, and is not a registered slot), and the
-keys of `Where`.
+`Where` is found by its name: `Person.Where(` is completed, but a `Where` imported on its own, or kept in a variable, is
+not. The values of a keyword (the `Text(`, `Rel(` operators) are not offered. Not offered either: `_typology_meta` (it
+belongs to the classes that subclass `Typology`, and is not a registered slot).
 
 ## How the server works
 

@@ -82,3 +82,25 @@ def test_the_schema_of_no_models_still_has_the_options_of_the_metas():
     assert "EntityMeta" in schema["calls"]
     assert schema["aliases"]["Entity.Meta"] == "EntityMeta"
     assert {slot["name"] for slot in schema["slots"]} >= {"_protect_meta"}
+
+
+def test_a_model_lists_the_keywords_of_its_where():
+    from pangloss_models import Entity, ModelRegistry, initialise
+
+    ModelRegistry._reset()
+    try:
+
+        class Place(Entity):
+            name: str
+
+        class Person(Entity):
+            name: str
+            born_in: Place
+
+        initialise(bind_database=False)
+        models = editor_schema()["models"]
+        keys = [key["name"] for key in models["Person"]["where"]]
+        assert {"label", "name", "born_in", "all_", "any_of_", "not_"} <= set(keys)
+        assert "name" in [key["name"] for key in models["Place"]["where"]]
+    finally:
+        ModelRegistry._reset()
