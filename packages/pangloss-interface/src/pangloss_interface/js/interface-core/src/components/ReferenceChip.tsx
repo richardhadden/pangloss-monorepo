@@ -1,12 +1,14 @@
-import { For, Show } from "solid-js";
+import { For, lazy, Loading, Show } from "solid-js";
 import { useModels, useTranslations } from "../context";
 import { kindRule, kindTint } from "../primitives";
 import { getModel } from "../schema";
 import type { ReferenceChipProps } from "../types";
 import { Customised } from "./Customised";
 import { SpaceBands } from "./SpaceBands";
-import { ClipButtons } from "./form/Clip";
 import { typeChipClass } from "./form/styles";
+
+// (a chip has them only in a form: a chip on any other page does not need the clipboard's code)
+const ClipButtons = lazy(() => import("./form/ClipButtons"));
 
 /**
  * A small chip for something that is referred to: its type on the left (tinted by its kind or
@@ -100,12 +102,14 @@ export function DefaultReferenceChip(props: ReferenceChipProps) {
             )}
           </For>
           <Show when={props.onCopy}>
+            <Loading fallback={null}>
             <ClipButtons
               name={props.label}
               buttonClass="flex w-7 shrink-0 cursor-pointer items-center justify-center border-y-[0.5px] border-l-[0.5px] border-slate-400/70 text-slate-500 select-none hover:bg-slate-300/60"
               onCopy={() => props.onCopy?.()}
               onCut={props.onCut}
             />
+            </Loading>
           </Show>
           <Show when={props.onRemove}>
             <button

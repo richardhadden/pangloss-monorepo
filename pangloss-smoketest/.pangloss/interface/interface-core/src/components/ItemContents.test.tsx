@@ -78,6 +78,12 @@ const definitions: ModelDefinitions = {
   models: {
     Factoid: model("Factoid", "Document", [
       field("year", "year"),
+      {
+        ...field("nicknames", "nicknames", "annotatedValue"),
+        model: "WithCertainty",
+        valueType: { type: "string" },
+        many: true,
+      } as unknown as FieldDefinition,
       field("statements", "statements", "relation"),
       field("involves", "involves", "relation"),
       {
@@ -477,6 +483,21 @@ test("an annotated value is its value, as the field's own, without its type or a
   expect(value.compareDocumentPosition(certainty) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 });
 
+test("a list of annotated values shows each, with what is said of it", () => {
+  const host = show({
+    id: "f1",
+    type: "Factoid",
+    nicknames: [
+      { value: "Karl", certainty: 5 },
+      { value: "Charles", certainty: 2 },
+    ],
+  });
+  const texts = [...host.querySelectorAll("span")].map((span) => span.textContent);
+  expect(texts).toContain("Karl");
+  expect(texts).toContain("Charles");
+  expect([...host.querySelectorAll("dt")].filter((dt) => dt.textContent === "certainty")).toHaveLength(2);
+});
+
 const smith = { id: "p1", type: "Person", label: "Smith", edgeProperties: { probability: 0.9 } };
 const jones = { id: "p2", type: "Person", label: "Jones" };
 const identified = (people: object[], identifiedBy = "") => ({
@@ -717,7 +738,8 @@ test("an entity read with the first of what refers to it: a row that has more sa
   await settle();
   flush();
   expect(asked[1]).toEqual(["/Witness/w1/incoming/heldReverse", { page: 2, page_size: 100 }]);
-  expect(links()).toBe(200);
+  // (from here it is virtual, which is `lazy`)
+  await vi.waitFor(() => expect(links()).toBe(200));
   buttons()[0].click();
   await settle();
   flush();

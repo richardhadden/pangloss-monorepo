@@ -1,5 +1,6 @@
 import {
   getEditView,
+  preload,
   RequireLogin,
   useComponent,
   useTranslations,
@@ -47,7 +48,11 @@ export default function EditItem(props: RouteProps<"/:type/:id/edit">) {
   const [search] = useSearchParams();
   const { t } = useTranslations();
   const guardLeaving = useLeaveGuard();
-  const item = createMemo(() => getEditView(apiClient(), props.params.type, props.params.id));
+  const item = createMemo(() => {
+    // (the form's code is loaded while the item is read)
+    preload(ItemForm);
+    return getEditView(apiClient(), props.params.type, props.params.id);
+  });
   return (
     <RequireLogin onCancel={() => navigate("/", { replace: true })}>
       <Page>

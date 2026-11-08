@@ -114,6 +114,16 @@ function ListOfItems(props: RouteProps<"/:type">) {
   const [formOpen, setFormOpen] = createSignal(
     untrack(() => decodeSearchForm(form(), props.params.type) !== undefined),
   );
+  // (its code is fetched the first time it is opened, and only then does it slide open, as it would have been there)
+  const [panelWanted, setPanelWanted] = createSignal(untrack(formOpen));
+  const [panelOpen, setPanelOpen] = createSignal(untrack(formOpen));
+  createEffect(formOpen, (open) => {
+    if (!open) return void setPanelOpen(false);
+    setPanelWanted(true);
+    void (SearchPanel as unknown as { preload: () => Promise<unknown> })
+      .preload()
+      .then(() => requestAnimationFrame(() => setPanelOpen(untrack(formOpen))));
+  });
   const toggleForm = () => {
     const opening = !formOpen();
     setFormOpen(opening);
@@ -163,12 +173,14 @@ function ListOfItems(props: RouteProps<"/:type">) {
         structured={structured()}
       />
       <Show when={searchable()}>
+       <Show when={panelWanted()} fallback={<div class="-mt-8" />}>
+        <Loading fallback={<div class="-mt-8" />}>
         <Show when={panel()} keyed>
           {(_panel) => (
             <SearchPanel
               type={props.params.type}
               initial={untrack(() => decodeSearchForm(form(), props.params.type))}
-              open={formOpen()}
+              open={panelOpen()}
               onClose={() => setFormOpen(false)}
               onChange={(changed) => {
                 askedForm = encodeSearchForm(changed) ?? "";
@@ -178,6 +190,8 @@ function ListOfItems(props: RouteProps<"/:type">) {
             />
           )}
         </Show>
+        </Loading>
+       </Show>
       </Show>
       <Errored fallback={(error) => <ErrorMessage error={error()} />}>
         <Loading fallback={<p class="mx-6 pt-2 text-slate-500"><Spinner class="size-5" /></p>}>

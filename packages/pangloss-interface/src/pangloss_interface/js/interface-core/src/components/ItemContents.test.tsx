@@ -738,7 +738,8 @@ test("an entity read with the first of what refers to it: a row that has more sa
   await settle();
   flush();
   expect(asked[1]).toEqual(["/Witness/w1/incoming/heldReverse", { page: 2, page_size: 100 }]);
-  expect(links()).toBe(200);
+  // (from here it is virtual, which is `lazy`)
+  await vi.waitFor(() => expect(links()).toBe(200));
   buttons()[0].click();
   await settle();
   flush();

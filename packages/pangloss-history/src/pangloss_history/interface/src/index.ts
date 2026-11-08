@@ -10,7 +10,7 @@ export default defineModule({
     HistoryPage: () => import("./components/HistoryPage"),
   },
   consoleActions: {
-    History: () => import("./components/HistoryAction"),
+    History: { loggedIn: true, load: () => import("./components/HistoryAction") },
   },
   routes: [{ path: "/:type/:id/history", component: "HistoryPage" }],
 });

@@ -556,7 +556,7 @@ Done afterwards (2026-10-29):
   page and of the form that edits an item (`consoleActions: { Review: () => import(...) }`), given `ConsoleActionProps` (`type`, `id`,
   `model`, `page`: `"item"` or `"edit"`); each decides itself whether to show anything. They are drawn by `Console` (new props `item`
   and `page`) before the page's own buttons, each lazily, in a `Loading` and an `Errored` of its own (a failure is logged in the browser's
-  console and shows nothing). `useModules().consoleActions()`; `Manifest.console_actions` in Python.
+  console and shows nothing). `useModules().consoleActions()`; `Manifest.console_actions` in Python. An action only for someone logged in is `{ loggedIn: true, load: () => import(...) }`: no one else fetches its code (2026-11-08).
 - **`itemSections` and `incomingViews` (2026-11-05, [interface-hooks-plan.md](interface-hooks-plan.md)).** `itemSections: { Name:
   () => import(...) }` are drawn after the contents of every item page by `ItemSections` (exported, so that a model's own `itemPage`
   can place them), given `ItemSectionProps` (`type`, `id`, `item`, `model`); pangloss-derived's "Derived" section is one.

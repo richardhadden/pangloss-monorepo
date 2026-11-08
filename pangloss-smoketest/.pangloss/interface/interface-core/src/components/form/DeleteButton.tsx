@@ -1,7 +1,9 @@
-import { createSignal, Show } from "solid-js";
+import { createSignal, lazy, Loading, Show } from "solid-js";
 import { useTranslations } from "../../context";
 import { ConsoleButton } from "../../primitives";
-import { DeleteDialog } from "./DeleteDialog";
+
+// (only someone who presses Delete needs the dialog)
+const DeleteDialog = lazy(() => import("./DeleteDialog"));
 
 /**
  * Delete, for the right of the console (of an item's page, and of its edit form): a bin that opens the
@@ -24,6 +26,7 @@ export function DeleteButton(props: { type: string; id: string; label: string | 
         </svg>
       </ConsoleButton>
       <Show when={asking()}>
+       <Loading fallback={null}>
         <DeleteDialog
           type={props.type}
           id={props.id}
@@ -34,6 +37,7 @@ export function DeleteButton(props: { type: string; id: string; label: string | 
           }}
           onClose={() => setAsking(false)}
         />
+       </Loading>
       </Show>
     </>
   );

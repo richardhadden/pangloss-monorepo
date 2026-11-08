@@ -11,6 +11,6 @@ export default defineModule({
     FromZotero: () => import("./components/FromZotero"),
   },
   consoleActions: {
-    Link: () => import("./components/ZoteroLinkAction"),
+    Link: { loggedIn: true, load: () => import("./components/ZoteroLinkAction") },
   },
 });

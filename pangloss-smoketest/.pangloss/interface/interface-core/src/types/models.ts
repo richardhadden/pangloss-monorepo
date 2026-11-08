@@ -6,6 +6,7 @@
  * `name` is the Python name of a field, and `key` the name in the JSON of the API.
  */
 
+/** How a value is stored (`pangloss_models.literals`): a `uuid`, a URL or a path is a `str` with a `format` */
 export type ScalarTypeName =
   | "str"
   | "int"
@@ -14,13 +15,28 @@ export type ScalarTypeName =
   | "decimal"
   | "date"
   | "datetime"
-  | "uuid";
+  | "time"
+  | "duration";
+
+/** What a stored text means, beyond being text; a date, a time or a number has none */
+export type ScalarFormat =
+  | "uuid"
+  | "url"
+  | "email"
+  | "ip"
+  | "ip-network"
+  | "ip-interface"
+  | "path"
+  | "regex"
+  | "fraction"
+  | "bytes"
+  | (string & {});
 
 export type FieldType =
-  | { type: ScalarTypeName }
+  | { type: ScalarTypeName; format?: ScalarFormat }
   | { type: "enum"; enum: string }
   | { type: "typedDict"; fields: Record<string, FieldType> }
-  | { type: "list"; item: FieldType }
+  | { type: "list"; item: FieldType; unique?: boolean; length?: number }
   | { type: "literal"; values: (string | number | boolean | null)[] }
   | { type: "unknown"; repr: string };
 
@@ -48,13 +64,17 @@ export interface LiteralField extends FieldBase {
   validators: Validator[];
   /** How the interface edits it (`Slider`, with its `step`) */
   markers?: FieldMarker[];
+  /** The value the class declares for it when it is left out (`year: int = 0`), or null for none */
+  default?: unknown;
 }
 
 export interface ListField extends FieldBase {
   kind: "list";
   item: FieldType;
+  /** The list's own (`MinLen`, `MaxLen`; `Unique` for a set) */
   validators: Validator[];
   itemValidators: Validator[];
+  default?: unknown;
 }
 
 /** A value of the type parameter of a generic model */
@@ -67,6 +87,8 @@ export interface AnnotatedValueField extends FieldBase {
   kind: "annotatedValue";
   model: string;
   valueType: FieldType | null;
+  /** A list of them (`list[WithCertainty[str]]`) */
+  many?: boolean;
 }
 
 export interface EmbeddedField extends FieldBase {

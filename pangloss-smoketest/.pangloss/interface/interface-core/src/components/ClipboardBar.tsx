@@ -1,32 +1,9 @@
 import { createEffect, createSignal, For, onSettled, Show } from "solid-js";
 import { useClipboard, useModels, useNavExpanded, useStash, useTranslations } from "../context";
 import { getModel, outline } from "../schema";
+import { useBottomBar } from "./bottomBar";
 import type { FormData } from "../schema";
 import { ClipLabel, CutIcon, CopyIcon, StashIcon } from "./form/Clip";
-
-/**
- * Whether the bar at the bottom is showing, and whether it is folded to its head line: for the page, which leaves room
- * for it
- */
-export function useBottomBar() {
-  const clipboard = useClipboard();
-  const stash = useStash();
-  const definitions = useModels();
-  const clipShown = () => (clipboard?.entries().length ?? 0) > 0 && !!clipboard?.formShown();
-  // (what is stashed of the types the page is about, or of their subtypes)
-  const stashed = () => {
-    const types = new Set(
-      (stash?.shownTypes() ?? []).flatMap((type) => [type, ...(getModel(definitions, type)?.concreteTypes ?? [])]),
-    );
-    return (stash?.entries() ?? []).filter((entry) => types.has(entry.type));
-  };
-  return {
-    clipShown,
-    stashed,
-    shown: () => clipShown() || stashed().length > 0,
-    collapsed: () => clipboard?.collapsed() ?? false,
-  };
-}
 
 /**
  * Fixed along the bottom of the page, inset as the console bar is at the top, and glassy as it is: what has been cut
@@ -48,7 +25,13 @@ export function ClipboardBar() {
   // (the section shown in full, if one is)
   const [open, setOpen] = createSignal<"clipboard" | "stash">();
   const entries = () => clipboard?.entries() ?? [];
-  const shown = bar$.shown;
+  // (it is first made with something to show: one frame hidden, so that it slides in then too)
+  const [entered, setEntered] = createSignal(false);
+  onSettled(() => {
+    const frame = requestAnimationFrame(() => setEntered(true));
+    return () => cancelAnimationFrame(frame);
+  });
+  const shown = () => entered() && bar$.shown();
   const collapsed = bar$.collapsed;
   const both = () => bar$.clipShown() && bar$.stashed().length > 0;
   const toggle = (section: "clipboard" | "stash") => {
@@ -289,3 +272,5 @@ function Outline(props: { value: FormData; depth: number }) {
     </Show>
   );
 }
+
+export default ClipboardBar;

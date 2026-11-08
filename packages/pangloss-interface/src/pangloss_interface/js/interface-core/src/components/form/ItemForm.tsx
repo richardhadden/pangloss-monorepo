@@ -303,3 +303,5 @@ export function ItemForm(props: ItemFormProps) {
     </RevealProvider>
   );
 }
+
+export default ItemForm;

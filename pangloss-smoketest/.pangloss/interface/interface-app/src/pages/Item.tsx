@@ -1,6 +1,7 @@
 import {
   ApiError,
   Customised,
+  preload,
   getModel,
   ItemSections,
   Spinner,
@@ -116,6 +117,7 @@ export default function EntityPage(props: RouteProps<"/:type/:id">) {
   const item = createMemo(() => {
     // (what the modules add to the page is loaded while the item is read, not once it has come)
     modules.preloadItemPage(props.params.type);
+    preload(ItemContents);
     return itemQuery(props.params.type, props.params.id);
   });
   // (a model may name a page of an interface module for its items: it replaces the rest of this one)

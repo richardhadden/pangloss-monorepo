@@ -570,3 +570,5 @@ export function ItemContents(props: ItemContentsProps) {
     </div>
   );
 }
+
+export default ItemContents;

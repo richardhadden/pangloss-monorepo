@@ -10,7 +10,7 @@ export default defineModule({
     ReviewQueue: () => import("./components/ReviewQueue"),
   },
   consoleActions: {
-    Review: () => import("./components/ReviewAction"),
+    Review: { loggedIn: true, load: () => import("./components/ReviewAction") },
   },
   // (the queue of documents to check; the navigation bar links to it: pangloss_review/interface_config.py)
   routes: [{ path: "/review", component: "ReviewQueue" }],

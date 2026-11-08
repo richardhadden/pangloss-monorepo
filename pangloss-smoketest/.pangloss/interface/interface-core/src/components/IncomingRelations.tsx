@@ -203,6 +203,7 @@ function IncomingRows(props: {
           <VirtualRows
             rows={rows()}
             virtual={virtual()}
+            soon={entries().length >= INCOMING_VIRTUAL_FROM / 2}
             estimateSize={ROW_HEIGHT}
             gap={ROW_GAP}
             class="col-span-full"

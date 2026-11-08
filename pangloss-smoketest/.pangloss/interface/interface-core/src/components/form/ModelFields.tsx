@@ -481,7 +481,10 @@ function FieldEditor(props: {
           label={name()}
         />
       </Match>
-      <Match when={props.field.kind === "annotatedValue"}>
+      <Match when={props.field.kind === "annotatedValue" && (props.field as AnnotatedValueField).many}>
+        <AnnotatedListEditor field={props.field as AnnotatedValueField} path={props.path} label={name()} />
+      </Match>
+      <Match when={props.field.kind === "annotatedValue" && !(props.field as AnnotatedValueField).many}>
         <AnnotatedEditor field={props.field as AnnotatedValueField} path={props.path} label={name()} />
       </Match>
       <Match when={props.field.kind === "embedded"}>
@@ -513,6 +516,50 @@ function AnnotatedEditor(props: { field: AnnotatedValueField; path: Accessor<Pat
       <Show when={model()}>
         <ModelFields model={model()!} path={props.path} env={{}} skip={["value"]} />
       </Show>
+    </div>
+  );
+}
+
+/** A list of values with fields of their own: each as one is, with a button to remove it, and one to add */
+function AnnotatedListEditor(props: { field: AnnotatedValueField; path: Accessor<Path>; label: string }) {
+  const form = useItemForm();
+  const { t } = useTranslations();
+  const items = () => (form.get(props.path()) as unknown[] | undefined) ?? [];
+  return (
+    <div class="flex w-full flex-col gap-2">
+      {/* (by place, not by value: the value changes with every key) */}
+      <For each={items()} keyed={false}>
+        {(_, index) => (
+          <div class="flex w-full items-start gap-2">
+            <AnnotatedEditor
+              field={props.field}
+              path={() => [...props.path(), index]}
+              label={`${props.label} ${index + 1}`}
+            />
+            <button
+              type="button"
+              class={smallButtonClass}
+              aria-label={t("remove_item", "Remove {name}", { name: `${props.label} ${index + 1}` })}
+              onClick={() => form.remove([...props.path(), index])}
+            >
+              ✕
+            </button>
+          </div>
+        )}
+      </For>
+      <button
+        type="button"
+        class={addSlotClass}
+        aria-label={t("add_to", "Add to {name}", { name: props.label })}
+        onClick={(event) => {
+          const slot = event.currentTarget;
+          form.set([...props.path(), items().length], {});
+          // (the new one is just before the slot)
+          revealAdded(() => slot.previousElementSibling);
+        }}
+      >
+        + {t("add", "Add")}
+      </button>
     </div>
   );
 }

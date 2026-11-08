@@ -1369,3 +1369,5 @@ function SavedSearches(props: { type: string; current: () => NodeSearch; onLoad:
     </div>
   );
 }
+
+export default SearchPanel;

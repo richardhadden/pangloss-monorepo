@@ -103,6 +103,7 @@ production build lets through.
   each thing it waits for.
 - An error thrown while the server renders reaches the page as "Internal Server Error" in the built interface unless
   it is marked `markSafeError` (as `ApiError` is). Test such a page in the built interface, not only in development.
+- What most pages do not show is `lazy`, so that it is not in every page's code: in the map, `ItemForm` and `ItemContents`; also `SearchPanel`, the virtualised branch of `VirtualRows`, the delete dialog and a chip's clip buttons. A page that shows one of the map's after reading data starts it with the data (`preload(ItemContents)`). A new import from a page-wide component can undo this: `e2e/test_code_splitting.py` guards it. A `lazy` first rendered while hydrating must also have been rendered on the server, or the page crashes: what depends only on the browser (the clipboard bar) uses a plain `import()` in an effect instead.
 - A module-level memo that depends on who is logged in reads `useSessionKey()`, so it is fetched again on login and
   logout.
 - Decide what a logged-in user sees with `userIsLoggedIn()`.
@@ -167,7 +168,7 @@ export default defineModule({
 | Its own list page, item page, view card or edit card for a model | `InterfaceMeta(list_page="app:Name", item_page=…, view_card=…, edit_card=…)` on the model |
 | A page not about one type (a month, a tree, a queue) | `routes` in the manifest |
 | Links and sections in the navigation bar | `<app>/interface_config.py`: `config = InterfaceConfig(nav=[NavModel(...), NavLink(...)], sections=[...])` |
-| A button or panel in the console of a page | `consoleActions` |
+| A button or panel in the console of a page | `consoleActions` (`{ loggedIn: true, load }` if only for someone logged in: no one else fetches its code) |
 | A button on the form of a new item that fills it in, or sends it another way | `newItemActions` (`NewItemForm`: `get`, `set`, `sendBy`) |
 | A row among the fields of a new item's form (page and relation dialog), with the same powers | `newItemFields` (draw a `FieldRow`) |
 | Fields a form must not edit (kept up to date by the package) | `Protection(read_only=...)` on the model: exported as `readOnly`, left off every form |

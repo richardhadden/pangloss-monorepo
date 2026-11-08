@@ -168,6 +168,9 @@ export interface IncomingViewProps {
 /** What a loader gives: a module with a component as its default export */
 export type ComponentLoader = () => Promise<{ default: Component<any> }>;
 
+/** A console action: its loader, or with `loggedIn`, one shown only to someone logged in, whose code no one else fetches */
+export type ConsoleAction = ComponentLoader | { loggedIn: true; load: ComponentLoader };
+
 export interface ModuleRoute {
   /** (inside the interface; it comes before `/:type`, so it may not be the name of a model) */
   path: string;
@@ -192,7 +195,7 @@ export interface ModuleManifest {
    * Components for the console of every item page and of the form that edits an item, at its right, before the page's
    * own buttons (each loaded when the console is first shown)
    */
-  consoleActions?: Record<string, ComponentLoader>;
+  consoleActions?: Record<string, ConsoleAction>;
   /**
    * Components for the console of the form that makes a new item, before its own buttons (`NewItemActionProps`: they
    * can fill the form in, and change how it is sent)

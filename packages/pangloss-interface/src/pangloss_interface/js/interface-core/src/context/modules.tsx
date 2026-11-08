@@ -23,7 +23,7 @@ interface ModulesValue {
   /** The rule `InterfaceMeta(collapse="app:name")` names, or undefined */
   collapseRule(reference: ComponentReference): CollapseRule | undefined;
   /** What the modules add to the console of an item (`consoleActions`), in the order of the modules (lazy; the same each time) */
-  consoleActions(): Component<ConsoleActionProps>[];
+  consoleActions(): LoadedConsoleAction[];
   /** What the modules add to the console of the form that makes a new item (`newItemActions`), in order (lazy) */
   newItemActions(): Component<NewItemActionProps>[];
   /** What the modules add first among the fields of the form that makes a new item (`newItemFields`), in order */
@@ -41,6 +41,13 @@ interface ModulesValue {
    * come, and the server rendered the page in as many passes as there were things to wait for, one after another
    */
   preloadItemPage(type: string): void;
+}
+
+/** A console action of a module, with its component made */
+export interface LoadedConsoleAction {
+  component: Component<ConsoleActionProps>;
+  /** Only for someone logged in: for anyone else it is not shown, and its code is not fetched */
+  loggedIn: boolean;
 }
 
 /** An `IncomingView` of a module, with its name and its component made */
@@ -80,7 +87,7 @@ export function ModulesProvider(props: ParentProps<{ modules: readonly ModuleMan
         .map(([key, value]): [string, T] => [`${module.name}:${key}`, value])
         .filter(([name]) => !disabled.has(name)),
     );
-  let actions: Component<ConsoleActionProps>[] | undefined;
+  let actions: LoadedConsoleAction[] | undefined;
   let newActions: Component<NewItemActionProps>[] | undefined;
   let newFields: Component<NewItemActionProps>[] | undefined;
   let sections: Component<ItemSectionProps>[] | undefined;
@@ -108,9 +115,10 @@ export function ModulesProvider(props: ParentProps<{ modules: readonly ModuleMan
       return rules && Object.hasOwn(rules, reference.name) ? rules[reference.name] : undefined;
     },
     consoleActions() {
-      actions ??= each((module) => module.consoleActions).map(
-        ([, loader]) => lazy(loader) as Component<ConsoleActionProps>,
-      );
+      actions ??= each((module) => module.consoleActions).map(([, action]) => ({
+        component: lazy(typeof action === "function" ? action : action.load) as Component<ConsoleActionProps>,
+        loggedIn: typeof action !== "function",
+      }));
       return actions;
     },
     newItemActions() {

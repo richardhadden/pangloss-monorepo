@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { render } from "@solidjs/web";
-import { afterEach, expect, test } from "vitest";
+import { afterEach, expect, test, vi } from "vitest";
 import { ApiError } from "../../api";
 import type { ApiClient } from "../../api";
 import {
@@ -759,6 +759,8 @@ test("Delete asks first, then deletes; a new item has no Delete, nor one without
   });
   await settle();
   click(button("Delete"));
+  // (the dialog is `lazy`)
+  await vi.waitFor(() => expect(document.body.querySelector('[role="dialog"]')).toBeTruthy());
   await settle();
   const dialog = document.body.querySelector('[role="dialog"]')!;
   expect(dialog.textContent).toContain("Are you sure you want to delete the Factoid “Fall of Rome”?");

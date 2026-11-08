@@ -3,7 +3,7 @@
 Keep this current: when a page or feature is added to the interface (or a test is added here), change its row.
 ✅ tested · 🚧 partly · ⬜ not yet · — not built, so nothing to test
 
-166 tests. The e2e project (`conftest.py`) has `Person` (`has_role: list[Role]`), `Role` (`has_type`), `RoleType` (a
+170 tests. The e2e project (`conftest.py`) has `Person` (`has_role: list[Role]`), `Role` (`has_type`), `RoleType` (a
 typology, also a `Role`) with Clerk > Secretary and Advisor, and `Statement` (a document: `text`, `about: Person`). The `data`
 fixture adds Maximilian (his secretary: a `Role` of the type Secretary), Marie of Burgundy (her advisor, and a statement
 about her "held court at Ghent") and Charles the Bold (no role); `types` has only the types; `stack` has one admin user.
@@ -88,6 +88,7 @@ about her "held court at Ghent") and Charles the Bold (no role); `types` has onl
 | Form: the entity search chosen with the arrow keys and Enter (Enter does not save), Escape closes it; the add button opens, in its place, a box of the types to add, in zones (types on their own, each semantic space, conjunctions; what can be pasted under the button; hierarchy indented inside the buttons, abstract classes not selectable; one Tab stop, arrow keys; Escape, close button, click elsewhere or Tab out close it), what was added or pasted flashing, nested documents, reified relations, conjunctions, edge properties, dates | 🚧 | unit tests (`TypeMenu.test.tsx`, `ItemForm.test.tsx`, `typeChoices.test.ts`; the flash is not tested); the e2e project has no semantic space, conjunction, reified relation or date |
 | Form: a field binding (`bind_to_child_field`): the parent's field copied to the bound fields of what the relation holds as it changes, and to what is added under it; a child changed by hand keeps its own; under a child that binds the same field, its own; a reified relation copied without its id; the types below those allowed or excluded; a narrower child's field that stands for the bound one (not given a value it cannot hold, and saying so at the field until it is filled in) | ✅ | e2e `test_retype.py::test_the_subject_of_a_provenance_is_given_to_a_step_of_a_narrower_type_in_its_own_field`, `test_a_step_that_cannot_hold_the_subject_says_so_at_its_field` (dev build: `test_narrowing_and_widening_a_document_in_a_form`); Vitest `formNotices.test.ts` (and the API: `test_the_server_gives_the_subject_to_a_step_of_a_narrower_type`); Vitest (`form.test.ts`); seen in the demo with a browser (`Order.ordered_to` into a transfer's `given_by`) |
 | `InterfaceMeta(headless=True)`: a reified relation that is the only type of a single, required field has no head bar, on the item page and in the form (what it holds, then its own fields); anywhere else its head | 🚧 | Vitest (`headless.test.ts`); seen in screenshots of the demo (`Factoid.source`, `AtPage`: view, edit, new); the e2e project has no reified relation |
+| Code fetched: forms and what is only for someone logged in (review, history, Zotero console actions) are not fetched by a reader logged out; the search form when it is opened; a logged-in user's console actions | ✅ | `test_code_splitting.py` |
 | Search from the home page / global search | — | not built |
 
 ## `pangloss_typology` module
