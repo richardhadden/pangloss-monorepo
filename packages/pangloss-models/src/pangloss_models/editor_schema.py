@@ -19,6 +19,7 @@ from pydantic import BaseModel
 from pydantic_core import PydanticUndefined
 
 from pangloss_models.diagnostics import _type_name
+from pangloss_models.model_bases.binding import NOT_MODELS
 
 # (a base class whose `Meta` an author calls: `Document.Meta(...)`)
 BASE_CLASSES = (
@@ -246,12 +247,27 @@ def editor_schema() -> dict[str, Any]:
 def models_summary(models: Iterable[tuple[str, Any]]) -> dict[str, Any]:
     """Each model: what it is, and the kind of each of its fields (inherited ones too)"""
     summary: dict[str, Any] = {}
+    models = list(models)
+    names = {name for name, _ in models}
     for name, model in models:
         meta = getattr(model, "_meta", None)
         definitions = getattr(getattr(meta, "field_definitions", None), "fields", None)
+        own_doc = model.__dict__.get("__doc__")
         summary[name] = {
             "kind": getattr(model, "__metatype__", None),
             "abstract": bool(getattr(meta, "abstract", False)),
+            # (its own docstring, not a parent's, and not the one pydantic gives a model that has none)
+            "doc": " ".join(inspect.cleandoc(own_doc).split("\n\n")[0].split())
+            if own_doc
+            else None,
+            "indexes": list(getattr(meta, "indexes", None) or []),
+            # (the classes above it that are the project's: its parents and traits, nearest first)
+            "above": [
+                parent.__name__
+                for parent in model.__mro__[1:]
+                if not parent.__module__.startswith(NOT_MODELS)
+                and parent.__name__ in names
+            ],
             "fields": {
                 field: FIELD_KINDS.get(type(definition).__name__, "other")
                 for field, definition in (definitions or {}).items()

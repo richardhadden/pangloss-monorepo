@@ -8,6 +8,8 @@ VS Code). Not built: the completions of `Where` keys (the stubs give those to a 
 It sits beside your type checker and does what a type checker cannot: it knows Pangloss's rules.
 
 - **On save**, what `initialise()` refuses is shown at the field or class, every field at once, and the warnings too.
+- **Hover on a model's name** (its `class` line, or where an annotation names it): its kind, docstring, the classes
+  above it, its indexes, and the fields that can hold it.
 - **Find references** on a model's name: the relation fields that can hold it.
 - **Inlay hints**: after each relation field, the name of the edge back (`born_in: Place  ⇄ born_in_reverse`).
 - **Changes not in a migration yet**, as warnings at the field or class that changed.
@@ -33,6 +35,13 @@ later steps need all the fields.
 
 In a `Diagnostic`, `line` counts from 1 and `column` from 0 (a character, not a byte). A problem with no one place has
 no `file`. The report also has `schema`, which the completions are made from.
+
+## Hover on a model
+
+Over a model's name the hover has its kind (`abstract entity`), the first paragraph of its docstring, the project's
+classes above it (parents and traits), its indexes, the number of its fields and relations, and the first six fields
+that can hold it (`Statement.about (as a Agent)`). Hovering a field's own name still says what that field is, and an
+option's name (`indexes=`) what the option is. The facts are in the report's `schema.models`.
 
 ## Find references
 

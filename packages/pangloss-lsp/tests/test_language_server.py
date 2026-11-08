@@ -510,3 +510,32 @@ def test_a_word_that_is_not_a_model_has_no_references(client: Client, models: Pa
         )
         is None
     )
+
+
+def test_hovering_the_name_of_a_model_says_what_it_is_and_what_holds_it(
+    client: Client, models: Path
+):
+    models.write_text(
+        GOOD.replace(
+            "class Place(Entity):", 'class Place(Entity):\n    """A place."""\n'
+        ).replace("    pass\n\n\nclass Person", "\n\nclass Person", 1)
+    )
+    opened(client, models)
+    wait_for_stub(models)
+
+    for _ in range(100):
+        result = client.request(
+            "textDocument/hover",
+            {
+                "textDocument": {"uri": models.as_uri()},
+                "position": {"line": 3, "character": len("class Pl")},
+            },
+        )
+        if result is not None:
+            break
+        threading.Event().wait(0.1)
+    assert result is not None
+    value = result["contents"]["value"]
+    assert value.startswith("**Place**: entity")
+    assert "A place." in value
+    assert "`Person.born_in`" in value

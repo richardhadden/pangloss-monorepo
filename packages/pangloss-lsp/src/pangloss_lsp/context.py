@@ -267,3 +267,14 @@ def line_end_depths(text: str) -> list[int]:
         index += 1
     depths.append(depth)
     return depths
+
+
+def word_at(text: str, line: int, character: int) -> str | None:
+    """The identifier the cursor is in or just after"""
+    lines = text.splitlines()
+    if line >= len(lines):
+        return None
+    for found in re.finditer(r"[A-Za-z_]\w*", lines[line]):
+        if found.start() <= character <= found.end():
+            return found[0]
+    return None

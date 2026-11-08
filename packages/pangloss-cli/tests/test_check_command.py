@@ -527,3 +527,34 @@ def test_a_model_nothing_points_at_has_no_entry(project: Path):
     write(project, "fakeapp/models.py", REFERENCES)
 
     assert "Statement" not in report()["references"]
+
+
+def test_the_summary_of_a_model_has_its_docstring_indexes_and_the_classes_above_it(
+    project: Path,
+):
+    write(
+        project,
+        "fakeapp/models.py",
+        """
+        from pangloss_models import Entity
+
+
+        class Agent(Entity):
+            pass
+
+
+        class Person(Agent):
+            \"\"\"Someone in the sources.
+
+            More than the first paragraph.\"\"\"
+
+            _meta = Entity.Meta(indexes=["name"])
+            name: str
+        """,
+    )
+
+    models = report()["schema"]["models"]
+    assert models["Person"]["doc"] == "Someone in the sources."
+    assert models["Person"]["indexes"] == ["name"]
+    assert models["Person"]["above"] == ["Agent"]
+    assert models["Agent"]["doc"] is None

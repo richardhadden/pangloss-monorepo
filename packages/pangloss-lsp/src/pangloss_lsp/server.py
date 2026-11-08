@@ -20,6 +20,8 @@ from pangloss_cli.project import settings_from_pyproject
 from pygls.lsp.server import LanguageServer
 
 from pangloss_lsp.completion import complete, hover_on_parameter, offset_of
+from pangloss_lsp.context import word_at
+from pangloss_lsp.describe import model_markdown
 from pangloss_lsp.hints import hints_in
 
 CHECK_TIMEOUT_SECONDS = 120
@@ -242,7 +244,14 @@ def hover(ls: PanglossLanguageServer, params: types.HoverParams) -> types.Hover 
     name = field_at(document.lines, params.position)
     description = project.fields.get(name) if name else None
     if description is None:
-        return None
+        # (a model's name: in its `class` line, or where an annotation names it)
+        word = word_at(document.source, params.position.line, params.position.character)
+        model = project.schema.get("models", {}).get(word or "")
+        if model is None:
+            return None
+        description = model_markdown(
+            word or "", model, project.references.get(word or "", [])
+        )
     return types.Hover(
         contents=types.MarkupContent(kind=types.MarkupKind.Markdown, value=description)
     )
@@ -327,17 +336,6 @@ def code_action(
     return actions or None
 
 
-def word_at(text: str, position: types.Position) -> str | None:
-    lines = text.splitlines()
-    if position.line >= len(lines):
-        return None
-    line = lines[position.line]
-    for found in re.finditer(r"[A-Za-z_]\w*", line):
-        if found.start() <= position.character <= found.end():
-            return found[0]
-    return None
-
-
 @server.feature(types.TEXT_DOCUMENT_REFERENCES)
 def references(
     ls: PanglossLanguageServer, params: types.ReferenceParams
@@ -347,7 +345,7 @@ def references(
     if project is None or not project.references:
         return None
     text = ls.workspace.get_text_document(params.text_document.uri).source
-    name = word_at(text, params.position)
+    name = word_at(text, params.position.line, params.position.character)
     found = project.references.get(name or "")
     if not found:
         return None
