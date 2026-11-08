@@ -338,3 +338,95 @@ def test_a_stub_that_has_not_changed_is_left_alone(project: Path):
     ModelRegistry._reset()
     check("--json", "--write-stubs")
     assert stub.stat().st_mtime_ns == first
+
+
+def test_a_misspelt_index_is_underlined_and_the_closest_names_are_offered(
+    project: Path,
+):
+    write(
+        project,
+        "fakeapp/models.py",
+        """
+        from pangloss_models import Entity
+
+
+        class Person(Entity):
+            _meta = Entity.Meta(indexes=['nmae'])
+            name: str
+            nickname: str
+        """,
+    )
+
+    (error,) = report()["diagnostics"]
+    assert error["line"] == 6
+    assert (error["column"], error["end_column"]) == (
+        len("    _meta = Entity.Meta(indexes=["),
+        len("    _meta = Entity.Meta(indexes=['nmae'"),
+    )
+    assert "Did you mean 'name'?" in error["message"]
+    fixes = {fix["title"]: fix["edits"][0] for fix in error["fixes"]}
+    # (the quotes the author used)
+    assert set(fixes) == {"Change to 'name'"}
+    assert (
+        fixes["Change to 'name'"]["old_text"],
+        fixes["Change to 'name'"]["new_text"],
+    ) == (
+        "'nmae'",
+        "'name'",
+    )
+
+
+def test_a_misspelt_name_in_a_binding_is_underlined_in_the_field(project: Path):
+    write(
+        project,
+        "fakeapp/models.py",
+        """
+        from typing import Annotated
+
+        from pangloss_models import Document, Entity, FieldBinding, RelationConfig
+
+
+        class Place(Entity):
+            pass
+
+
+        class Statement(Document):
+            when: str | None = None
+            at: Annotated[
+                list[Place],
+                RelationConfig(
+                    bind_to_child_field=[FieldBinding(bound_field="whn", child_fields=["when"])]
+                ),
+            ]
+        """,
+    )
+
+    (error,) = report()["diagnostics"]
+    assert error["line"] == 16
+    assert "Statement.at" in error["message"]
+    (fix,) = [f for f in error["fixes"] if f["title"] == 'Change to "when"']
+    assert fix["edits"][0]["old_text"] == '"whn"'
+
+
+def test_a_name_that_is_wrong_but_close_to_nothing_has_no_fix_but_is_still_underlined(
+    project: Path,
+):
+    write(
+        project,
+        "fakeapp/models.py",
+        """
+        from pangloss_models import Entity
+
+
+        class Person(Entity):
+            _meta = Entity.Meta(indexes=["zzzzzz"])
+            name: str
+        """,
+    )
+
+    (error,) = report()["diagnostics"]
+    assert error["fixes"] == []
+    assert (error["line"], error["end_column"] - error["column"]) == (
+        6,
+        len('"zzzzzz"'),
+    )

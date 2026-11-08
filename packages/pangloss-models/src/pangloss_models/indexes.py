@@ -16,7 +16,7 @@ database package makes them.
 from typing import Any
 
 from pangloss_models import literals
-from pangloss_models.exceptions import PanglossMetaError
+from pangloss_models.exceptions import AtString, PanglossMetaError, did_you_mean
 from pangloss_models.field_definitions import (
     ListFieldDefinition,
     LiteralFieldDefinition,
@@ -48,23 +48,35 @@ def indexed_classes() -> list[type]:
 def check_indexes(model: type) -> None:
     """Whether the fields a class asks for indexes of are ones that have a value of their own"""
     names = list(getattr(model._meta, "indexes", []))  # type: ignore
-    if len(set(names)) != len(names):
-        raise PanglossMetaError(f"{model.__name__}: indexes names a field twice")
     fields = model._meta.fields  # type: ignore
+    has_label = getattr(model, "__metatype__", None) != "Embedded"
+    # (what could have been meant: every document and entity has a label, which is not one of the fields)
+    indexable = [
+        name
+        for name, definition in fields.items()
+        if isinstance(definition, (LiteralFieldDefinition, ListFieldDefinition))
+    ] + (["label"] if has_label else [])
     for name in names:
-        if (
-            name == "label" and getattr(model, "__metatype__", None) != "Embedded"
-        ):  # (every document and entity has one: it is not one of the fields)
+        if names.count(name) > 1:
+            raise PanglossMetaError(
+                f"{model.__name__}: indexes names '{name}' twice",
+                at_string=AtString("indexes", name),
+            )
+    for name in names:
+        if name == "label" and has_label:
             continue
         definition = fields.get(name)
         if definition is None:
             raise PanglossMetaError(
-                f"{model.__name__}: indexes names '{name}', which is not a field of it"
+                f"{model.__name__}: indexes names '{name}', which is not a field of it."
+                + did_you_mean(name, indexable),
+                at_string=AtString("indexes", name, tuple(indexable)),
             )
         if not isinstance(definition, (LiteralFieldDefinition, ListFieldDefinition)):
             raise PanglossMetaError(
                 f"{model.__name__}: '{name}' cannot be indexed: only a field with a value of its own "
-                "(text, a number, a date, a choice, a list of these) is stored as a property"
+                "(text, a number, a date, a choice, a list of these) is stored as a property",
+                at_string=AtString("indexes", name),
             )
         base = (
             definition.inner_type
@@ -76,7 +88,8 @@ def check_indexes(model: type) -> None:
             # (`toFloat`), which no index of the text serves)
             raise PanglossMetaError(
                 f"{model.__name__}: '{name}' is a Decimal, which is stored as text and compared as a number: "
-                "an index of it would not be used. Store a float beside it if it is to be searched by range"
+                "an index of it would not be used. Store a float beside it if it is to be searched by range",
+                at_string=AtString("indexes", name),
             )
 
 

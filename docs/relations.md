@@ -165,6 +165,10 @@ class Statement(Document):
 - In `Statement.Create`, `action.action_when` becomes optional (`date | None`).
 - A model validator on `Create`/`Update` copies the parent's value into children where the child field is unset.
 - The binding recurses through intermediate objects and the semantic-space wrappers.
+- The names are checked at `initialise()` (2026-11-08; a misspelt one used to be ignored, so the binding never applied):
+  `bound_field` must be a field of the model (or `label`, `id`), each of `child_fields` a field of some model, and each
+  type name the name of a model or of a class above one. The error says "Did you mean ...?", and the language server
+  underlines the string.
 - `allowed_type_names` / `excluded_type_names` restrict which child types are bound, **with the types below them**
   (2026-11-05): `allowed_type_names=["CreationOfPhysicalObject"]` binds a `CreationOfPainting` too, and one excluded
   excludes its subclasses. A child is bound if its class, a class above it or one of its traits is allowed (or none is

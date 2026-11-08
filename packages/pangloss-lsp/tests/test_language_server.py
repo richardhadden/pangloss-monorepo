@@ -402,3 +402,38 @@ def test_the_server_advertises_completion_and_quick_fixes(models: Path):
     client.process.kill()
     assert "(" in capabilities["completionProvider"]["triggerCharacters"]
     assert capabilities["codeActionProvider"]["codeActionKinds"] == ["quickfix"]
+
+
+MISSPELT_INDEX = """\
+from pangloss_models import Entity
+
+
+class Person(Entity):
+    _meta = Entity.Meta(indexes=["nmae"])
+    name: str
+"""
+
+
+def test_a_misspelt_name_is_underlined_and_its_correction_is_a_quick_fix(
+    client: Client, models: Path
+):
+    models.write_text(MISSPELT_INDEX)
+    opened(client, models)
+    (diagnostic,) = client.diagnostics_of(models.as_uri())
+
+    assert diagnostic["range"] == {
+        "start": {"line": 4, "character": len("    _meta = Entity.Meta(indexes=[")},
+        "end": {"line": 4, "character": len('    _meta = Entity.Meta(indexes=["nmae"')},
+    }
+    actions = client.request(
+        "textDocument/codeAction",
+        {
+            "textDocument": {"uri": models.as_uri()},
+            "range": diagnostic["range"],
+            "context": {"diagnostics": [diagnostic]},
+        },
+    )
+    (action,) = actions
+    assert action["title"] == 'Change to "name"'
+    (edit,) = action["edit"]["changes"][models.as_uri()]
+    assert edit["newText"] == '"name"'

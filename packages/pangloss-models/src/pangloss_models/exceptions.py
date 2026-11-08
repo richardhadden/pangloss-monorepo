@@ -1,8 +1,45 @@
+from collections.abc import Iterable
+from dataclasses import dataclass
+from difflib import get_close_matches
+
+
 class PanglossInitialisationError(Exception):
     pass
 
 
-class PanglossMetaError(Exception):
+@dataclass(frozen=True)
+class AtString:
+    """The string in the source that a refusal is about: the option it is given to (`indexes`), the string itself, and
+    the names it could have been (the language server underlines the string, and offers the closest of these)"""
+
+    option: str
+    value: str
+    candidates: tuple[str, ...] = ()
+
+
+def did_you_mean(value: str, candidates: Iterable[str]) -> str:
+    """` Did you mean 'name'?`, or nothing, to add to a message about a name that is not one of `candidates`"""
+    close = get_close_matches(value, list(candidates), n=1, cutoff=0.6)
+    return f" Did you mean '{close[0]}'?" if close else ""
+
+
+class _Refusal(Exception):
+    """What a declared class says that Pangloss refuses. `fix`, if the mistake has an obvious mechanical correction
+    in the source, names it (a key of `pangloss_models.diagnostics.FIXES`): the language server offers it.
+    `at_string` says which string in the source it is about"""
+
+    def __init__(
+        self,
+        *args: object,
+        fix: str | tuple[str, ...] | None = None,
+        at_string: AtString | None = None,
+    ):
+        super().__init__(*args)
+        self.fix = fix
+        self.at_string = at_string
+
+
+class PanglossMetaError(_Refusal):
     pass
 
 
@@ -10,13 +47,8 @@ class PanglossAwaitingInitialisation(Exception):
     pass
 
 
-class PanglossModelError(Exception):
-    """A declared class says what the models cannot be made from. `fix`, if the mistake has an obvious mechanical
-    correction in the source, names it (a key of `pangloss_models.diagnostics.FIXES`): the language server offers it"""
-
-    def __init__(self, *args: object, fix: str | tuple[str, ...] | None = None):
-        super().__init__(*args)
-        self.fix = fix
+class PanglossModelError(_Refusal):
+    pass
 
 
 class PanglossModelWarning(UserWarning):

@@ -5,6 +5,7 @@ The rules are those of `initialise()`, which is run: nothing here decides what i
 """
 
 import ast
+import difflib
 import functools
 import inspect
 import re
@@ -19,7 +20,7 @@ from typing import Any, Literal, get_origin
 
 from pydantic_core import PydanticUndefined
 
-from pangloss_models.exceptions import MODEL_ERRORS, PanglossModelWarning
+from pangloss_models.exceptions import MODEL_ERRORS, AtString, PanglossModelWarning
 
 
 @dataclass(frozen=True)
@@ -342,6 +343,70 @@ def _remove_member(model: type, member: str | None) -> Fix | None:
     )
 
 
+def _find_string(
+    model: type, member: str | None, at: AtString
+) -> tuple[Path, list[str], str, ast.Constant] | None:
+    """The string literal `at.value` given to the option `at.option`: in the field's statement if the refusal is about
+    a field, else in the class (or, for a name a class inherits, the class above that wrote it)"""
+    for candidate in model.__mro__:
+        found = _class_node(candidate)
+        if found is None:
+            continue
+        path, node, lines = found
+        _, source = _parsed(str(path), path.stat().st_mtime_ns)
+        located = _member_statement(node, member) if member else None
+        statement = located[0] if located else None
+        for root in (statement, node) if statement is not None else (node,):
+            for call in ast.walk(root):
+                if not isinstance(call, ast.Call):
+                    continue
+                for keyword in call.keywords:
+                    if keyword.arg != at.option:
+                        continue
+                    for string in ast.walk(keyword.value):
+                        if (
+                            isinstance(string, ast.Constant)
+                            and string.value == at.value
+                        ):
+                            return path, lines, source, string
+    return None
+
+
+def _string_place(model: type, member: str | None, at: AtString) -> _Place | None:
+    found = _find_string(model, member, at)
+    if found is None:
+        return None
+    path, lines, _, string = found
+    column = _column(lines, string.lineno, string.col_offset)
+    if (string.end_lineno or string.lineno) != string.lineno:
+        return _Place(str(path), string.lineno, column, len(lines[string.lineno - 1]))
+    return _Place(
+        str(path),
+        string.lineno,
+        column,
+        _column(lines, string.lineno, string.end_col_offset or 0),
+    )
+
+
+def _did_you_mean_fixes(
+    model: type, member: str | None, at: AtString
+) -> tuple[Fix, ...]:
+    """A fix for each of the (up to three) names that the misspelt one is close to"""
+    found = _find_string(model, member, at)
+    if found is None:
+        return ()
+    path, lines, source, string = found
+    written = ast.get_source_segment(source, string) or ""
+    quote = written[-1] if written and written[-1] in "'\"" else '"'
+    return tuple(
+        Fix(
+            f"Change to {quote}{name}{quote}",
+            (_edit(path, lines, source, string, f"{quote}{name}{quote}"),),
+        )
+        for name in difflib.get_close_matches(at.value, at.candidates, n=3, cutoff=0.6)
+    )
+
+
 FIXES: dict[str, Callable[[type, str | None], Fix | None]] = {
     "drop_optional": _drop_optional,
     "drop_none_in_items": _drop_none_in_items,
@@ -411,13 +476,24 @@ def check_models() -> list[Diagnostic]:
     models = ModelRegistry.all_models()
     for error, model, field_name in collected:
         message = str(error) if _is_ours(error) else f"{type(error).__name__}: {error}"
+        at_string = getattr(error, "at_string", None)
+        string_place = (
+            _string_place(model, field_name, at_string) if at_string and model else None
+        )
         places = [source_place(model, field_name)] if field_name and model else []
         places = [place for place in places if place is not None]
         found += _diagnostics_at(
             "error",
             message,
-            places or _places_named_in(message, models) or _own_place(model),
-            _fixes_of(getattr(error, "fix", None), model, field_name),
+            [string_place]
+            if string_place
+            else places or _places_named_in(message, models) or _own_place(model),
+            _fixes_of(getattr(error, "fix", None), model, field_name)
+            + (
+                _did_you_mean_fixes(model, field_name, at_string)
+                if at_string and model and string_place
+                else ()
+            ),
         )
     if unattached is not None and (_is_ours(unattached) or not found):
         message = (

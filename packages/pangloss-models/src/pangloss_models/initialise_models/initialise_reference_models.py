@@ -11,7 +11,7 @@ from pydantic.alias_generators import to_camel
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined
 
-from pangloss_models.exceptions import PanglossModelError
+from pangloss_models.exceptions import AtString, PanglossModelError, did_you_mean
 from pangloss_models.model_bases.base_models import _DeclaredClass
 from pangloss_models.model_bases.document import Document
 from pangloss_models.model_bases.entity import Entity
@@ -121,7 +121,13 @@ def initialise_reference_view_model(model: type[_DeclaredClass]):
         if field_name not in model._meta.fields.literal_fields:
             raise PanglossModelError(
                 f"{model.__name__}._meta.reference_view_extra_fields '{field_name}' "
-                "either does not exist or is not a literal field"
+                "either does not exist or is not a literal field."
+                + did_you_mean(field_name, model._meta.fields.literal_fields),
+                at_string=AtString(
+                    "reference_view_extra_fields",
+                    field_name,
+                    tuple(model._meta.fields.literal_fields),
+                ),
             )
 
         field_definition = model._meta.fields[field_name]

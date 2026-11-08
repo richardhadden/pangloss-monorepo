@@ -1,6 +1,6 @@
 # The language server
 
-**Status: ✅ built 2026-11-08: `pangloss check`, diagnostics, fresh stubs, hover, completions and quick fixes, tested
+**Status: ✅ built 2026-11-08: `pangloss check`, diagnostics, fresh stubs, hover, completions, quick fixes and "did you mean", tested
 over stdio. The two editor extensions are installed and work in Zed (the VS Code one compiles, and has not been run in
 VS Code). Not built: the completions of `Where` keys (the stubs give those to a type checker), the clash warning for
 `reverse_name`.**
@@ -44,6 +44,15 @@ was made from the saved file).
 | `visited: list[Place] \| None` | change to `list[Place]` (a list may already be empty) |
 | `tags: list[str \| None]` | remove `None` from the items, or make the whole list optional |
 | a `model_config` of the class's own (warning, at the `model_config` line) | remove it |
+| a name in a string that is not one (`indexes=["nmae"]`) | change to the closest names (up to three) |
+
+**Names in strings.** A type checker cannot see `indexes=["nmae"]`, `reference_view_extra_fields`, or the names of a
+`FieldBinding`. `initialise()` refuses each (the bindings' `bound_field`, `child_fields`, `allowed_type_names` and
+`excluded_type_names` were not checked before: a misspelt one never applied, without a word), and the error carries the
+string it is about (`PanglossModelError(..., at_string=AtString(option, value, candidates))`). The editor underlines
+that string, not the class, and the message says "Did you mean 'name'?". A binding's `child_fields` must be a field of
+some model, not of a particular one, since which classes it reaches depends on what the field holds. The names of a
+binding's types are those of the models and of the classes above them (a trait's too).
 
 Most of the old refusals of `docs/modelling-dx.md` §2 are not refusals now, so there are few mechanical fixes left. A
 refusal that has one should name it where it is raised.

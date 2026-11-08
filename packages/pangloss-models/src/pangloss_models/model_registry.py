@@ -28,6 +28,7 @@ lazy from pangloss_models.initialise_models.initialise_edit_view_model import (
     can_have_edit_view_model,
     initialise_edit_view_model,
 )
+lazy from pangloss_models.initialise_models.check_bindings import check_bindings
 lazy from pangloss_models.initialise_models.check_relation_targets import (
     check_relation_targets,
 )
@@ -444,6 +445,7 @@ class ModelRegistry:
             stop_if_refused()
 
             check_relation_targets(list(cls._model_dict.values()))
+            check_bindings(list(cls._model_dict.values()))
 
             from pangloss_models.indexes import check_indexes
 
@@ -478,8 +480,10 @@ class ModelRegistry:
                     initialise_incoming_relation_definitions(model)
 
             for model in chain(order, cyclic):
-                initialise_reference_set_model(model)
-                initialise_reference_view_model(model)
+                with reported(model):
+                    initialise_reference_set_model(model)
+                    initialise_reference_view_model(model)
+            stop_if_refused()
 
             # (what the sort ordered first: none of it depends on what it could not, which is ordered as well as it can be)
             for model in chain(order, cyclic):
