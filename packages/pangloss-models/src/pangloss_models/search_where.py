@@ -562,22 +562,9 @@ OPERATORS_OF_KIND = {
 def value_type(base: Any) -> dict[str, Any]:
     """The type of the values of a condition, as `export_models` writes types (`{"type": "date"}`,
     `{"type": "enum", "enum": "Status"}`)"""
-    import enum
+    from pangloss_models import literals
 
-    if isinstance(base, type) and issubclass(base, enum.Enum):
-        return {"type": "enum", "enum": base.__name__}
-    names = {
-        str: "str",
-        int: "int",
-        float: "float",
-        bool: "bool",
-        Decimal: "decimal",
-        datetime.datetime: "datetime",
-        datetime.date: "date",
-    }
-    if base in names:
-        return {"type": names[base]}
-    return {"type": "unknown", "repr": repr(base)}
+    return literals.export_type(base) or {"type": "unknown", "repr": repr(base)}
 
 
 def export_search_patterns(models: Iterable[Any]) -> dict[str, Any]:

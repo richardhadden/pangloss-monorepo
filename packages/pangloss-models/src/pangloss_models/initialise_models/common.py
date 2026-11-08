@@ -4,7 +4,7 @@
 from typing import Any
 
 from frozendict import frozendict
-from pydantic import model_validator
+from pydantic import field_validator, model_validator
 
 from pangloss_models.field_definitions import (
     EmbeddedFieldDefinition,
@@ -69,10 +69,11 @@ def check_create_and_id_present(self):
 
 def get_model_validators(model, ids: bool, declared: bool) -> dict[str, Any]:
     """The validators a generated model has: if the model can be given an id (`ids`), the id and `create_new` go
-    together; and (`declared`) the `mode="after"` model validators the class itself declares, which are copied to
-    the models that are written (`Create`, `Update`, `CreateDB`, `UpdateDB`) so that a class can fill in what it
-    derives from its other fields (the bounds of a date). They are passed the generated model, so they can use
-    only the literal fields the class has; the other modes are not copied."""
+    together; and (`declared`) the validators the class itself declares, which are copied to the models that are
+    written (`Create`, `Update`, `CreateDB`, `UpdateDB`): its model validators (of any mode) so that a class can
+    fill in what it derives from its other fields (the bounds of a date), and its field validators, which are of
+    literal fields (`check_declared_class` refuses one of a relation). They are passed the generated model, so a
+    model validator can use only the literal fields the class has."""
     validators = {}
     if ids and getattr(model._meta, "create_with_id", False):
         validators["check_create_and_id_present"] = model_validator(mode="after")(
@@ -93,10 +94,18 @@ def get_model_validators(model, ids: bool, declared: bool) -> dict[str, Any]:
 
         for name, decorator in model.__pydantic_decorators__.model_validators.items():
             # (not those of Pangloss's own base classes, which the generated models have in their own way)
-            if decorator.info.mode == "after" and not decorator.cls_ref.startswith(
-                "pangloss_models."
-            ):
-                validators[name] = model_validator(mode="after")(decorator.func)
+            if not decorator.cls_ref.startswith("pangloss_models."):
+                validators[name] = model_validator(mode=decorator.info.mode)(
+                    decorator.func
+                )
+        for name, decorator in model.__pydantic_decorators__.field_validators.items():
+            if not decorator.cls_ref.startswith("pangloss_models."):
+                # (`check_fields=False`: the fields are there, but added after the model is made)
+                validators[name] = field_validator(
+                    *decorator.info.fields,
+                    mode=decorator.info.mode,
+                    check_fields=False,
+                )(decorator.func)
 
         shares = {
             name: found

@@ -1,3 +1,5 @@
+import inspect
+import warnings
 from collections.abc import Iterable
 from copy import copy
 from inspect import isclass
@@ -12,11 +14,12 @@ from typing import (
     get_origin,
 )
 
-from annotated_types import BaseMetadata
 from frozendict import frozendict
+from pydantic import BaseModel
 from pydantic.fields import FieldInfo
 
-from pangloss_models.exceptions import PanglossModelError
+from pangloss_models import literals
+from pangloss_models.exceptions import PanglossModelError, PanglossModelWarning
 from pangloss_models.markers import FieldMarker
 from pangloss_models.field_definitions import (
     AnnotatedValueFieldDefinition,
@@ -58,6 +61,7 @@ from pangloss_models.model_bases.trait import NonHeritableTrait, Trait
 from pangloss_models.utils import (
     annotation_is_optional,
     check_enum_values_in,
+    constraints_of,
     extract_validators,
     flatten,
     get_all_parent_classes,
@@ -111,21 +115,21 @@ def build_list_field_definition(
     Raises:
         PanglossModelError: when field annotation is not a valid literal list.
     """
-    invalid = PanglossModelError(
-        f"{model.__name__}.{field_name} has an invalid list field definition"
+    where = f"{model.__name__}.{field_name}"
+    invalid = PanglossModelError(f"{where} has an invalid list field definition")
+    list_inner_type: Any = literals.collection_item_type(
+        literals.without_none(field_info.annotation)
     )
-    arguments = get_args(field_info.annotation) if field_info.annotation else ()
-    if not arguments:
+    if list_inner_type is None:
         raise invalid
-    list_inner_type: Any = arguments[0]
 
-    inner_type_validators: list[BaseMetadata] = []
+    inner_type_validators: list[Any] = []
     if get_origin(list_inner_type) is Annotated:
         annotated_arguments = get_args(list_inner_type)
         list_inner_type = annotated_arguments[0]
-        inner_type_validators = [
-            arg for arg in annotated_arguments if isinstance(arg, BaseMetadata)
-        ]
+        inner_type_validators = constraints_of(
+            annotated_arguments[1:], f"the items of {where}"
+        )
     if not is_literal(list_inner_type):
         raise invalid
     refuse_shares(model, field_name, field_info)
@@ -134,9 +138,11 @@ def build_list_field_definition(
         field_on_model=model,
         field_name=field_name,
         annotated_type=field_info.annotation,
-        validators=[md for md in field_info.metadata if isinstance(md, BaseMetadata)],
+        validators=constraints_of(field_info.metadata, where),
         inner_type=list_inner_type,
         inner_type_validators=inner_type_validators,
+        default=field_info.default,
+        default_factory=field_info.default_factory,
         db_field=is_db_field,
         description=extract_field_description(field_info),
     )
@@ -1001,17 +1007,132 @@ def define_field(
             field_on_model=model,
             field_name=field_name,
             annotated_type=annotation,
-            validators=[
-                md for md in field_info.metadata if isinstance(md, BaseMetadata)
-            ],
+            validators=constraints_of(
+                field_info.metadata, f"{model.__name__}.{field_name}"
+            ),
             markers=tuple(
                 md for md in field_info.metadata if isinstance(md, FieldMarker)
             ),
+            default=field_info.default,
+            default_factory=field_info.default_factory,
             db_field=is_db_field,
             description=extract_field_description(field_info),
         )
 
     return None
+
+
+SUPPORTED_TYPES = (
+    "Supported: a literal (str, int, float, bool, Decimal, date, datetime, time, timedelta, UUID, a URL, an "
+    "email address, a Literal[...], an Enum, a TypedDict of these, or a list, set or tuple of these), another "
+    "Pangloss model (a relation), an Embedded, or an AnnotatedValue"
+)
+
+
+def unsupported_message(model: type, field_name: str, annotation: Any) -> str:
+    """Why a field's type is refused, naming what to use instead where that can be told"""
+    where = f"{model.__name__}.{field_name}"
+    inner = literals.without_none(annotation)
+    if annotation_is_optional(annotation):
+        # (an embedded class is a declared class too: asked first)
+        if is_embedded(inner) or is_union_of_embedded(inner):
+            return (
+                f"{where}: an optional embedded object ({annotation!r}) is not supported: a field holds exactly "
+                "one. If it may be absent, make the embedded class's own fields optional"
+            )
+        if is_relatable(inner) or is_list_relatable(inner):
+            return (
+                f"{where}: an optional relation ({annotation!r}) is not supported. Use `list[...]` for a "
+                "relation that may be empty, or the class itself for exactly one"
+            )
+    reason = literals.explain_unsupported(annotation)
+    if reason:
+        return f"{where}: {annotation!r} is not supported: {reason}"
+    return f"Unsupported type for field {where}: {annotation!r}. {SUPPORTED_TYPES}"
+
+
+def check_declared_class(model: type[_DeclaredClass]) -> None:
+    """What a declared class says that the models made from it will not have, said now rather than found later.
+
+    A `@field_validator` is copied to the models that are written, so it must be of a field that those models
+    have as the class declares it: a literal, a list, an annotated value or `label` (a relation is a reference
+    or a nested model there); otherwise it is an error. A `@computed_field`, a method, a property or a
+    `model_config` of the class's own is not on any generated model (`Person(...)` is `Person.Create(...)`):
+    a warning says so."""
+    name = model.__name__
+    decorators = model.__pydantic_decorators__
+    own_fields = model._meta.fields
+    value_fields = {
+        *own_fields.literal_fields,
+        *own_fields.annotated_value_fields,
+        "label",
+    }
+    for decorator in decorators.field_validators.values():
+        if decorator.cls_ref.startswith("pangloss_models."):
+            continue
+        for field_name in decorator.info.fields:
+            if field_name in value_fields:
+                continue
+            if field_name in own_fields:
+                raise PanglossModelError(
+                    f"{name}.{decorator.func.__name__}: a field_validator of {field_name!r} cannot be carried: "
+                    f"in the generated models that field is a relation or an embedded object, not the value "
+                    f"the class declares. Validate it with a model_validator(mode='after') instead"
+                )
+            raise PanglossModelError(
+                f"{name}.{decorator.func.__name__}: a field_validator of {field_name!r}, which is not a field "
+                f"of {name}"
+            )
+
+    left_behind: list[str] = []
+    for field_name, decorator in decorators.computed_fields.items():
+        if not decorator.cls_ref.startswith("pangloss_models."):
+            left_behind.append(f"the computed field {field_name!r}")
+    decorated = (
+        set(decorators.field_validators)
+        | set(decorators.model_validators)
+        | set(decorators.computed_fields)
+        | set(decorators.field_serializers)
+        | set(decorators.model_serializers)
+        | set(decorators.validators)
+        | set(decorators.root_validators)
+    )
+    for attribute, value in model.__dict__.items():
+        # (not what pydantic puts on every class: `model_post_init`, `model_config`)
+        if (
+            attribute.startswith("_")
+            or attribute in decorated
+            or hasattr(BaseModel, attribute)
+        ):
+            continue
+        if isinstance(value, property):
+            left_behind.append(f"the property {attribute!r}")
+        elif inspect.isfunction(value):
+            left_behind.append(f"the method {attribute!r}")
+    if left_behind:
+        warnings.warn(
+            f"{name} declares {', '.join(left_behind)}, which the models made from it (Create, Update, View, "
+            f"HeadView) do not have: {name}(...) is {name}.Create(...), and what is read back is a HeadView. "
+            "Put what you need in a function that takes the model, or in a model_validator(mode='after'), "
+            "which is copied to the models that are written",
+            PanglossModelWarning,
+            stacklevel=2,
+        )
+    parent = next(
+        (
+            base
+            for base in model.__mro__[1:]
+            if hasattr(base, "model_config") and not hasattr(base, "_fulfilling_types")
+        ),
+        None,
+    )
+    if parent is not None and model.model_config != parent.model_config:
+        warnings.warn(
+            f"{name} has a model_config of its own, which the models made from it do not take: they have their "
+            "own (camelCase aliases, names accepted too, extra keys refused on Create and Update)",
+            PanglossModelWarning,
+            stacklevel=2,
+        )
 
 
 def with_optional_lifted(field_info: FieldInfo) -> FieldInfo:
@@ -1069,9 +1190,12 @@ def initialise_field_definitions(model: type[_DeclaredClass]):
 
         if is_list_of_embedded_or_annotated_value(field_info.annotation):
             raise PanglossModelError(
-                f"{model.__name__}.{field_name}: lists of Embedded objects or of "
-                "AnnotatedValues are not supported (a field can have only one)"
+                f"{model.__name__}.{field_name}: lists of Embedded objects or of AnnotatedValues are not "
+                "supported (a field can have only one). If each is a thing of its own, make it a Document; "
+                "to annotate a whole list, make the value a list: `WithCertainty[list[str]]`"
             )
+        # (whatever the field is, what it is annotated with must be something that is carried)
+        constraints_of(field_info.metadata, f"{model.__name__}.{field_name}")
 
         definition = define_field(
             model, field_name, field_info, is_db_field, normalised
@@ -1085,8 +1209,7 @@ def initialise_field_definitions(model: type[_DeclaredClass]):
             )
         elif not supported_as_wrapper_field:
             raise PanglossModelError(
-                f"Unsupported type for field {model.__name__}.{field_name}: "
-                f"{field_info.annotation!r}. Supported field types are str, int, "
-                "float, bool, Decimal, date, datetime, Enum subclasses, TypedDicts "
-                "of these, lists of these, and other Pangloss models"
+                unsupported_message(model, field_name, field_info.annotation)
             )
+
+    check_declared_class(model)

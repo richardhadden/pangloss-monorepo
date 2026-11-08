@@ -25,7 +25,9 @@ from contextvars import ContextVar
 from typing import Any
 
 import neo4j
+from pangloss_models import literals
 from pangloss_models.context import propagate_context
+from pydantic import TypeAdapter
 from pangloss_models import (
     PanglossMigrationAnswerNeeded,
     PanglossMigrationError,
@@ -237,10 +239,12 @@ def literal_expression(
         return "[" + ", ".join(items) + "]"
     if kind == "decimal":
         params[name] = str(value)
-    elif kind == "date" and isinstance(value, str):
-        import datetime
-
-        params[name] = datetime.date.fromisoformat(value)
+    elif isinstance(value, str) and (
+        python_type := literals.python_type_of_storage(descriptor)
+    ) not in (None, str):
+        # (a value written in a migration file is text: a date, a time or a duration is given to the driver as
+        # the Python value, which it stores as the database's own type)
+        params[name] = TypeAdapter(python_type).validate_python(value)
     else:
         params[name] = value
     return f"${name}"

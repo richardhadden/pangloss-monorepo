@@ -136,7 +136,7 @@ class Statement(Document):
 ```
 
 - **A field typed with a base `Embedded` class accepts its subclasses** (each is told apart by `type` in the `Create` and `Update` models; the base class itself is accepted too).
-- **Validators.** A `@model_validator(mode="after")` the class declares is copied to the `Create`, `Update`, `CreateDB` and `UpdateDB` models (not to the views), so a class can fill in what it derives from its other fields, such as the bounds of a date. It is passed the generated model, so it can use the literal fields the class has; the other modes are not copied. Generated models do not carry a field's default: a field the client may leave out must be `X | None = None`.
+- **Validators.** The `@model_validator`s (of any mode) and the `@field_validator`s of literal fields that the class declares are copied to the `Create`, `Update`, `CreateDB` and `UpdateDB` models (not to the views), so a class can fill in what it derives from its other fields, such as the bounds of a date, or normalise a value. A model validator is passed the generated model, so it can use the literal fields the class has. A field's default (`year: int = 0`) is carried too: such a field may be left out. See [Defaults](relations.md#defaults).
 - **Indexes.** `Embedded.Meta(indexes=["field"])` asks for a label-and-property index of a field, as on documents and entities (it is not inherited; the nodes of its subclasses carry the label too). An embedded class has no label index unless it asks for a field.
 
 ## Traits

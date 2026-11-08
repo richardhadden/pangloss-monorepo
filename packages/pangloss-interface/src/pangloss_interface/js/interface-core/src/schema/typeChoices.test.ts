@@ -169,6 +169,23 @@ test("a new item starts with the one thing a required single field can hold, unl
     enums: {},
   } as unknown as ModelDefinitions;
   expect(blankItem(withList, "Bag")).toEqual({ type: "Bag", items: [] });
+  // (a field with a default the class declares starts with it; a copy, so that editing it changes nothing else)
+  const withDefaults = {
+    models: {
+      Counted: model("Counted", {
+        fields: [
+          { name: "count", key: "count", kind: "literal", type: { type: "int" }, required: false, default: 0 },
+          { name: "tags", key: "tags", kind: "list", item: { type: "str" }, required: false, default: ["a"] },
+          { name: "note", key: "note", kind: "literal", type: { type: "str" }, required: false, default: null },
+        ] as never,
+      }),
+    },
+    enums: {},
+  } as unknown as ModelDefinitions;
+  const counted = blankItem(withDefaults, "Counted");
+  expect(counted).toEqual({ type: "Counted", count: 0, tags: ["a"] });
+  (counted.tags as string[]).push("b");
+  expect(blankItem(withDefaults, "Counted").tags).toEqual(["a"]);
 });
 
 test("what is sent has no meta and no incoming fields, references are only type and id, and empty things are gone", () => {

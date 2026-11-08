@@ -36,7 +36,7 @@ There are other kinds ([Defining models](../../docs/models.md) has them all); th
 
 ## Fields
 
-`name: str` and `text: str` are **literal** fields: a plain value stored on the node. Besides `str` you can use `int`, `float`, `bool`, `Decimal`, `date`, `datetime`, enums, and lists of these. `X | None` makes a literal optional.
+`name: str` and `text: str` are **literal** fields: a plain value stored on the node. Besides `str` you can use `int`, `float`, `bool`, `Decimal`, `date`, `datetime`, `time`, `timedelta`, `UUID`, pydantic's URL and email types, enums, `Literal["a", "b"]`, a `TypedDict`, and lists (or sets, or tuples) of these. `X | None` makes a literal optional, and a default (`year: int = 0`) means it can be left out, as in any pydantic model. Constraints work as in pydantic too: `Annotated[int, Ge(1)]`, `Field(pattern=...)`, `PositiveInt`.
 
 `sent_by: Person` is a **relation**: a field whose type is another model. It is stored as an edge from the letter to the person, and the person is *referred to*, not copied. Every `Letter` must have exactly one `sent_by` and one `sent_to`.
 

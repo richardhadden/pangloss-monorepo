@@ -49,14 +49,19 @@ const definitions = {
         literal("price", { type: "decimal" }, { validators: [{ name: "Ge", ge: 0 }] }),
         literal("seen", { type: "date" }),
         literal("at", { type: "datetime" }),
-        literal("ref", { type: "uuid" }),
+        literal("ref", { type: "str", format: "uuid" }),
+        literal("home", { type: "str", format: "url" }),
+        literal("mail", { type: "str", format: "email" }),
+        literal("hour", { type: "time" }),
+        literal("lasted", { type: "duration" }),
         literal("done", { type: "bool" }),
         literal("kind", { type: "enum", enum: "Kind" }),
         literal("level", { type: "enum", enum: "Level" }),
         literal("mood", { type: "literal", values: ["happy", "sad"] }),
         literal("where", { type: "typedDict", fields: { lat: { type: "float" }, lon: { type: "float" } } }),
         literal("step", { type: "int" }, { validators: [{ name: "MultipleOf", multiple_of: 5 }] }),
-        literal("slug", { type: "str" }, { validators: [{ name: "_PydanticGeneralMetadata", pattern: "^[a-z]+$" }] }),
+        literal("slug", { type: "str" }, { validators: [{ name: "Constraints", pattern: "^[a-z]+$" }] }),
+        list("tags", { type: "str" }, { validators: [{ name: "Unique" }] }),
         list("aliases", { type: "str" }, { ...required, itemValidators: [{ name: "MinLen", min_length: 2 }], validators: [{ name: "MaxLen", max_length: 2 }] }),
         relation("statements", [doc("Activity"), { kind: "semanticSpace", type: "Negative", edgeModel: null, params: { T: { typeVar: "T", options: [doc("Activity")] } } }], required),
         relation("author", [entity("Person")], { many: false }),
@@ -137,6 +142,18 @@ test("the scalars: a text, a whole number, a number, a decimal (typed as text), 
   expect(problems(factoid({ at: "10:30" }))).toEqual([["at", "not_datetime", {}]]);
   expect(problems(factoid({ ref: "0193a4f2-8c1e-7d3a-9b2c-1e2f3a4b5c6d" }))).toEqual([]);
   expect(problems(factoid({ ref: "nope" }))).toEqual([["ref", "not_uuid", {}]]);
+  expect(problems(factoid({ home: "https://example.org/a" }))).toEqual([]);
+  expect(problems(factoid({ home: "nope" }))).toEqual([["home", "not_url", {}]]);
+  expect(problems(factoid({ mail: "a@example.org" }))).toEqual([]);
+  expect(problems(factoid({ mail: "nope" }))).toEqual([["mail", "not_email", {}]]);
+  expect(problems(factoid({ hour: "10:30" }))).toEqual([]);
+  expect(problems(factoid({ hour: "10:30:15" }))).toEqual([]);
+  expect(problems(factoid({ hour: "2024-02-03" }))).toEqual([["hour", "not_time", {}]]);
+  expect(problems(factoid({ lasted: "P1DT2H30M" }))).toEqual([]);
+  expect(problems(factoid({ lasted: "90" }))).toEqual([]);
+  expect(problems(factoid({ lasted: "two hours" }))).toEqual([["lasted", "not_duration", {}]]);
+  expect(problems(factoid({ tags: ["a", "b"] }))).toEqual([]);
+  expect(problems(factoid({ tags: ["a", "a"] }))).toEqual([["tags", "not_unique", {}]]);
   expect(problems(factoid({ done: "yes" }))).toEqual([["done", "wrong_type", { expected: "boolean" }]]);
 });
 

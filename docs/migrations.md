@@ -29,8 +29,9 @@ A change to a model is a change to one of these. (From `memgraph.md`, confirmed 
 | In the model | In the graph |
 |--------------|--------------|
 | A class | Labels on its nodes: its name, every parent class and trait name, its kind (`Document`, `Entity`, `Embedded`, `ReifiedRelation`, ...), `PGIndexableNode`; `HeadNode` on top-level nodes. Property `type` is the class name |
-| A `str`/`int`/`float`/`bool`/`date`/`datetime`/list literal | A node property of the field's name (absent when `None`) |
-| `Decimal` | A string property |
+| A `str`/`int`/`float`/`bool`/`date`/`datetime`/`time`/`timedelta`/list literal | A node property of the field's name (absent when `None`) |
+| `Decimal`; a `UUID`, a URL, an email address, an IP address, a path, a regular expression, a fraction | A string property. The snapshot records the format (`{"type": "str", "format": "uuid"}`); a change between two types stored the same (`UUID` to `str`, a `Literal` of strings to `str`, a list to a set) is `StateOnly`: nothing is done to the data |
+| A `Literal["a", "b"]` | The value, as a property of the type of the values |
 | An `Enum` | The **value** of the member (a string or a number), as a plain property; nothing is made in the database for the enum |
 | A `TypedDict` | A map property |
 | An `AnnotatedValue[T]` | A map property `{value: ..., <extra fields>}` on the node |
@@ -197,6 +198,8 @@ For each: how it is **detected** (from the diff), what it does to **data**, and 
 | **Type**, widening (`int` to `float`, `str` to `list[str]`) | convert in place: `SET n.f = toFloat(n.f)`; `[n.f]` | T |
 | **Type**, narrowing or incompatible (`str` to `int`, `float` to `int`, to a `date`) | per node conversion with `toInteger`, `date(...)`; a value that does not convert fails the migration, or is set to null/default (a choice, written in the migration) | T / L |
 | **To or from `Decimal`** | stored as a string: convert to `toString(...)` / `toFloat(...)` | T |
+| **A `datetime`, `time` or `timedelta` to `str`** | `toString(...)`; the other way, and between these, is written by hand | T |
+| **Add**, with a default the class declares | the nodes that exist get the default: nothing is asked | A |
 | **To an `Enum`** | `SET n.f = $map[toString(n.f)]` from the text of the old value to the value of the member: a string that is the value of a member stays; anything else is `null`, which fails, or is set to `on_failure` / `default`. From another enum, by the name of the member or a `mapping` of names |
 | **From an `Enum`** | to a string: `toString(n.f)`. Any other type is refused (by hand) |
 | **List item type** | as above, applied with `[x IN n.f | convert(x)]` | T |

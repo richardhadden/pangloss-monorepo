@@ -62,9 +62,11 @@ from pangloss_models.migrations.changes import (
     RenameEnumMember,
     RenameField,
     RenameModel,
+    StateOnly,
     UnwrapRelation,
     WrapRelation,
 )
+from pangloss_models.literals import storage_descriptor
 from pangloss_models.migrations.snapshot import data_view
 from pangloss_models.migrations.state import (
     rename_enum,
@@ -100,6 +102,8 @@ MODEL_RENAME_SIMILARITY = 0.5
 class DiffResult:
     changes: list[Change] = field(default_factory=list)
     questions: list[PossibleRename] = field(default_factory=list)
+    # (the default each literal or list field's class declares, by (model, field): see `declared_defaults`)
+    declared_defaults: dict[tuple[str, str], Any] = field(default_factory=dict)
 
     @property
     def is_final(self) -> bool:
@@ -115,8 +119,8 @@ def diff(
     """The changes from the snapshot `old` to the snapshot `new`"""
     confirmed = list(confirmed)
     declined = set(declined)
+    result = DiffResult(declared_defaults=declared_defaults(new))
     old, new = data_view(old), data_view(new)
-    result = DiffResult()
 
     # Renames come first: once the old snapshot has the new names, what is left is compared
     # as it is, and a renamed thing that also changed shows how
@@ -352,6 +356,7 @@ def diff_model(
                     field_kind=entry["kind"],
                     needs_value=needs_value(entry),
                     definition=entry,
+                    default=result.declared_defaults.get((name, field_name)),
                     from_narrowing=field_name in old_narrowed,
                 )
             )
@@ -473,6 +478,29 @@ def needs_value(entry: dict) -> bool:
 # --- fields -------------------------------------------------------------------------------------
 
 
+def models_only_if_stored_the_same(change: Change, old: dict, new: dict) -> Change:
+    """A change of type between two types that are stored the same (`UUID` and `str`, a `Literal` of strings and
+    `str`) is a change to the models only: nothing is done to the data"""
+    if storage_descriptor(old) == storage_descriptor(new):
+        return StateOnly(changes=(change,))
+    return change
+
+
+def declared_defaults(snapshot: dict) -> dict[tuple[str, str], Any]:
+    """The default each literal or list field's class declares, by (model, field), from a snapshot as it was
+    built (the data view has no defaults: a default is a value the generated models fill in, not one that is
+    stored). A new field with one gives the nodes that exist that value, so nothing has to be asked"""
+    found: dict[tuple[str, str], Any] = {}
+    for model_name, model in (snapshot.get("models") or {}).items():
+        for entry in model.get("fields", []):
+            if (
+                entry.get("kind") in ("literal", "list")
+                and entry.get("default") is not None
+            ):
+                found[(model_name, entry["name"])] = entry["default"]
+    return found
+
+
 def diff_field(model: str, old: dict, new: dict, result: DiffResult) -> None:
     name = new["name"]
     old_kind, new_kind = old["kind"], new["kind"]
@@ -500,17 +528,19 @@ def diff_field(model: str, old: dict, new: dict, result: DiffResult) -> None:
 
     if old_kind == "literal":
         if old["type"] != new["type"]:
+            change = AlterLiteralType(
+                model=model, name=name, old=old["type"], new=new["type"]
+            )
             result.changes.append(
-                AlterLiteralType(
-                    model=model, name=name, old=old["type"], new=new["type"]
-                )
+                models_only_if_stored_the_same(change, old["type"], new["type"])
             )
     elif old_kind == "list":
         if old["item"] != new["item"]:
+            change = AlterListItemType(
+                model=model, name=name, old=old["item"], new=new["item"]
+            )
             result.changes.append(
-                AlterListItemType(
-                    model=model, name=name, old=old["item"], new=new["item"]
-                )
+                models_only_if_stored_the_same(change, old["item"], new["item"])
             )
     elif old_kind == "annotatedValue":
         if old["model"] != new["model"] or old.get("valueType") != new.get("valueType"):

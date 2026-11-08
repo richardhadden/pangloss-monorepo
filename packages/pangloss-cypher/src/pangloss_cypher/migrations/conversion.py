@@ -6,8 +6,19 @@ Decimals are stored as strings; enums as the values of their members.
 """
 
 from pangloss_models import PanglossMigrationNotSupported
+from pangloss_models.literals import storage_descriptor
 
-SCALARS = {"str", "int", "float", "bool", "decimal", "date"}
+SCALARS = {
+    "str",
+    "int",
+    "float",
+    "bool",
+    "decimal",
+    "date",
+    "datetime",
+    "time",
+    "duration",
+}
 
 
 def convert_expression(
@@ -18,6 +29,8 @@ def convert_expression(
     A type is a descriptor of the snapshot (`{"type": "int"}`, `{"type": "enum", "enum":
     "Colour"}`). `mapping` gives the member of an enum for each value, where it is not to be
     found from the enum's values."""
+    # (what is stored: a `UUID` is a `str`, a `Literal["a", "b"]` the type of its values)
+    old, new = storage_descriptor(old), storage_descriptor(new)
     old_type, new_type = old["type"], new["type"]
     params: dict = {}
 
@@ -59,6 +72,9 @@ def convert_expression(
         ("decimal", "float"): f"toFloat({ref})",
         ("decimal", "int"): f"toInteger({ref})",
         ("date", "str"): f"toString({ref})",
+        ("datetime", "str"): f"toString({ref})",
+        ("time", "str"): f"toString({ref})",
+        ("duration", "str"): f"toString({ref})",
     }
     try:
         return table[(old_type, new_type)], params

@@ -193,25 +193,50 @@ def with_answer(change: c.Change, field: str, value: Any) -> c.Change:
 
 
 def parse_value(text: str, descriptor: dict[str, Any], enums: dict[str, Any]) -> Any:
-    """An answer typed by a person, as data for the migration file"""
+    """An answer typed by a person, as data for the migration file (a date, a time or a duration as its ISO text;
+    a value of a `Literal[...]` must be one of its values)"""
+    from pydantic import TypeAdapter, ValidationError
+
+    from pangloss_models.literals import storage_descriptor
+
     kind = descriptor["type"]
+    storage = storage_descriptor(descriptor)["type"]
     text = text.strip()
     try:
-        if kind == "int":
+        if kind == "literal":
+            values = descriptor.get("values") or []
+            for value in values:
+                if text == str(value) or (
+                    isinstance(value, bool) and text.lower() == str(value).lower()
+                ):
+                    return value
+            raise ValueError(text)
+        if storage == "int":
             return int(text)
-        if kind == "float":
+        if storage == "float":
             return float(text)
-        if kind == "bool":
+        if storage == "bool":
             if text.lower() in ("true", "yes", "y", "1"):
                 return True
             if text.lower() in ("false", "no", "n", "0"):
                 return False
             raise ValueError(text)
-        if kind in ("decimal",):
+        if storage == "decimal":
             float(text)  # (it must be a number: it is kept as the text)
             return text
-        if kind == "date":
+        if storage == "date":
             return datetime.date.fromisoformat(text).isoformat()
+        if storage in ("datetime", "time", "duration"):
+            python_type = {
+                "datetime": datetime.datetime,
+                "time": datetime.time,
+                "duration": datetime.timedelta,
+            }[storage]
+            try:
+                parsed = TypeAdapter(python_type).validate_python(text)
+            except ValidationError:
+                raise ValueError(text) from None
+            return TypeAdapter(python_type).dump_python(parsed, mode="json")
         if kind == "enum":
             members = enums.get(descriptor["enum"], {}).get("members", [])
             for member in members:

@@ -46,17 +46,21 @@ initialisation and each use gets its own generated models. Docstrings of classes
 
 | Annotation | Kind | Stored as |
 |---|---|---|
-| `str`, `int`, `float`, `bool`, `date`, `datetime`, `Decimal`, an `Enum`, a `TypedDict`; `list[...]` of these; any as `X \| None` | literal | A property of the node. `Decimal` is a string. An enum is the member's *value* (so renaming a member changes nothing; changing its value is a migration). `None` is not written; falsy values (`0`, `""`, `[]`) are |
+| `str`, `int`, `float`, `bool`, `date`, `datetime`, `time`, `timedelta`, `Decimal`, `UUID`, the URL, email, IP and path types, `re.Pattern`, `Fraction`, an `Enum`, a `Literal[...]`, a `TypedDict`; `list`/`set`/`tuple` of these; any as `X \| None` | literal | A property of the node. `Decimal`, `UUID`, a URL and the like are strings (the export says the format). An enum is the member's *value* (so renaming a member changes nothing; changing its value is a migration). `None` is not written; falsy values (`0`, `""`, `[]`) are. The list of types is `pangloss_models.literals`; a package may add a codec |
 | Another declared class, a union, a `list[...]` of them, a trait, a generic wrapper | relation | Nodes and edge pairs (below) |
 | An `Embedded` class, or a union of them | embedded | A node, joined like a relation |
 | An `AnnotatedValue[...]` | annotated value | A map property |
 | `Annotated[T, DBField]` | database-side field | In `CreateDB`, not in `Create`: filled by a validator or `to_db`, not by the user |
 
-`annotated_types` validators (`Annotated[int, Ge(1)]`, `MinLen`, `MaxLen`) are carried to the generated models, the
-export and so the interface's forms. An optional one is written either way: `Annotated[int, Ge(1)] | None` or
-`Annotated[int | None, Ge(1)]`. `pangloss_models.validators.SumsTo` checks that an edge property adds up over a
-list. A `@model_validator(mode="after")` on an `Embedded` class or a trait is copied to `Create`/`Update` and their DB
-models (not the views), so a class can work out fields from its others.
+Everything in `Annotated` that pydantic acts on (`Ge(1)`, `MinLen`, `Predicate`, `StringConstraints`, `Strict`,
+`Field(pattern=...)`, `AfterValidator`; so `PositiveInt`, `constr(...)` too) is carried to the generated models, the
+export and so the interface's forms; anything else that is not Pangloss's own is an error. An optional one is written
+either way: `Annotated[int, Ge(1)] | None` or `Annotated[int | None, Ge(1)]`. `pangloss_models.validators.SumsTo`
+checks that an edge property adds up over a list. The `@model_validator`s (any mode) and the `@field_validator`s of
+literal fields of a class or trait are copied to `Create`/`Update` and their DB models (not the views), so a class
+can work out fields from its others. A default the class declares (`year: int = 0`) is carried: the field may be
+left out. A method, a property, a `@computed_field` or a `model_config` on a declared class is warned about
+(`PanglossModelWarning`): the generated models do not have them.
 
 ## Relations: what `Create` expects
 
@@ -86,7 +90,8 @@ Each of these raises at `initialise()`:
 - an optional relation (`Person | None`): use `list[Person]`, which may be empty;
 - an optional embedded object, a list of embedded objects, a list of annotated values (annotate a list instead:
   `WithCertainty[list[str]]`);
-- a plain `dict` (use a `TypedDict`), `bytes`, `complex`, a `UUID` as a field of your own;
+- a plain `dict` (use a `TypedDict`), `bytes`, `complex`, a pydantic model or dataclass (use an `Embedded` or a
+  `TypedDict`), a `Flag` enum, a union of literal types, `list[X | None]`;
 - a model called `users`, `docs`, `redoc`, `openapi.json` or `sdk`, in any case (the API uses those paths).
 
 Check `docs/status.md` ("Not implemented") before telling a user that something cannot be done: this list shrinks.

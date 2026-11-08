@@ -1,8 +1,68 @@
 # Modelling DX: footguns, pydantic's types, and editor tooling
 
-**Status: a review and two proposals, written 2026-11-08. Nothing here is built.** The facts about the current
-behaviour were checked by running a probe script against `initialise(bind_database=False)` on this day (the table in
-§2 is its output); everything marked *to check* was not.
+**Status: a review and two proposals, written 2026-11-08; §2.1, §4 and most of §5.3 built the same day (see "As
+built", below).** The facts about the behaviour before were checked by running a probe script against
+`initialise(bind_database=False)` on this day (the table in §2 is its output); everything marked *to check* was not.
+
+## As built (2026-11-08)
+
+The review stands as written; this says what the code does now, and what was decided where the review left a choice.
+
+**§2.1, the silent rows.** None is silent now.
+
+- A default the class declares (`n: int = 0`, `n: int | None = 5`, `tags: list[str] = []`, `default_factory=list`)
+  is carried to every generated model, so the field may be left out and has that value; a mutable default is
+  copied. The export says it (`default`), the interface starts a new item with it, and a new field with a default
+  gives the nodes that exist that value (`makemigrations` asks nothing). A default is not in the snapshot's hash.
+- `@field_validator`s of literal fields and `@model_validator`s of every mode are copied to `Create`, `Update`,
+  `CreateDB` and `UpdateDB`. A `field_validator` of a relation or an embedded field is a `PanglossModelError`.
+- A method, a `@property`, a `@computed_field` or a `model_config` of the class's own is a `PanglossModelWarning`
+  at `initialise()`, naming each. (A `classmethod` or `staticmethod` is not: it is called on the class, which is
+  there.) `pangloss_models.exceptions.MODEL_ERRORS` is unchanged; the warning is Python's.
+- Everything in `Annotated` that pydantic acts on is carried as it is, in the `Annotated` of the generated field:
+  the constraints of `annotated_types` (`Predicate` too), `StringConstraints`, `Strict`, the arguments of `Field`
+  (`pattern=`), and `AfterValidator` and the other functional validators and serialisers. So `constr`, `conint`,
+  `conlist`, `StrictStr`, `PositiveInt` work. Anything else in `Annotated` that is not Pangloss's own is an error.
+  The export lists them by name (`Constraints` for pydantic's, with what was given; a function by its class's name
+  alone); the interface checks a pattern.
+- **Decided: `extra="forbid"`** on `Create`, `Update` and `ReferenceSet` (one line each: `forbid_extra` in
+  `initialise_models/kinds.py`, the config of `_ReferenceSetBase`). Over the API a misspelt key is a 422 with the
+  key in `loc`. The one exception is what a read itself gives, which may be sent back unchanged (the edit cycle):
+  `meta`, the incoming relations, the `DBField`s, `semantic_spaces`, `context_labels`, `db_labels`, and on a
+  reference the fields its `ReferenceView` shows; a `before` validator takes them out (`without_server_keys`).
+  The payloads of four conformance tests had given a narrowing subclass its parent's field (`person` to an `Action`
+  that narrows it to `carried_out_by`), which had been dropped in silence: that is exactly the row the table warned
+  of, and they were corrected.
+- `IntFlag`/`Flag`: refused. A `Decimal` keeps the string and the `toFloat` comparison (§4.3), stated in
+  `docs/relations.md`; `Meta(indexes=[a Decimal])` is refused. Zoned datetimes: checked (`test_literal_types.py`),
+  the offset survives on both backends; nothing to decide.
+- `list[X | None]` is refused; `list[X] | None` is accepted (no list, as against an empty one).
+
+**§2.2.** `Literal["a", "b"]` is a literal type (the values of one type). `tuple[X, ...]`, `tuple[X, X]`, `set[X]`,
+`frozenset[X]` are lists with a rule the generated models keep (the export says `Unique`, `MinLen`/`MaxLen`).
+`UUID`, the URL types, `EmailStr`, `NameEmail`, the IP types, `Path`, `re.Pattern`, `Fraction`, `ByteSize`,
+`datetime.time` and `timedelta` are literal types. Every refusal that can name an alternative does (`dict`, a
+pydantic model or dataclass, a `NamedTuple`, `bytes`, a union of literals, an optional relation or embedded
+object). **Not built:** optional relations and optional embedded objects as 0..1 (§3): still refused, with the
+message naming `list[...]`; they are the first thing to do next (`TODO.md`, Model layer).
+
+**§4, the codec registry.** Built as `pangloss_models.literals`: `LiteralCodec(types, storage, format,
+search_kind, to_storage)`, the natives and the format codecs, `register_codec` for a package. `is_literal`,
+`convert_type_for_writing`, `Exporter.describe_type`, `kind_of`, `checked_value`, the stubs (by way of pydantic's
+annotations) and the migrations (`storage_descriptor`) ask it. The export is `{"type": <storage>, "format":
+<name>}` (`uuid` was `{"type": "uuid"}`; nothing in the demo used it). A change of type between two types stored the
+same is a `StateOnly` change. The driver's `Duration` is read back as a `timedelta` (`pangloss_cypher.from_database`).
+The interface needs no new widget: a text of a format is an `<input type="url" | "email">` or text, a time is
+`<input type="time">`, a duration a text with the ISO 8601 form as its placeholder, and `validation.ts` checks
+`uuid`, `url`, `email`, `time`, `duration` and `Unique`.
+
+**§5.** `pangloss check --json`, the source ranges and the language server are not built. The checks of §5.3 are
+in `initialise()` (`check_declared_class`, `constraints_of`), which is where the review put them first.
+
+**Tests.** The table of §2.1 is `packages/pangloss-models/tests/initialisation/test_field_types.py` (one case per
+type: its kind, its export, or its error) and `tests/generated_models/test_pydantic_conformance.py`; the round
+trips on both backends are `pangloss_testing/conformance/test_literal_types.py`; the migration side
+`tests/migrations/test_migration_literal_types.py`.
 
 ## 0. The question
 

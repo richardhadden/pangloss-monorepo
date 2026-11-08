@@ -148,7 +148,7 @@ The JSON is `camelCase` throughout (`bornIn`, `meta.createdBy`, `aboutPersonReve
 | 404 | No such item (also: update, delete or undelete of one that does not exist) |
 | 409 | (Every error answer has `detail` and `error`, the name of the exception class, which the SDK raises again.) An id already in use; undeleting what is not deleted; deleting an entity that is referred to. For the last, the response also has `referencedBy`, a list of `{id, type, label}`, and the entity is marked for deletion |
 | 503 | A write while `pangloss migrate` runs (`PanglossReadOnlyError`, with `Retry-After`); any request once the database has been migrated since the server started: its `detail` says to restart the server (see [Database migrations](migrations.md)) |
-| 422 | A body that is not valid for the model; a reference to an entity that does not exist or is of the wrong type; a bad page; a query parameter the route does not have |
+| 422 | A body that is not valid for the model, including a key the model has no field for (`extra_forbidden`, with the key in `loc`: a misspelt key is refused, not dropped; what a read gave, such as `meta`, may be sent back); a reference to an entity that does not exist or is of the wrong type; a bad page; a query parameter the route does not have |
 
 **URLs.** An entity can be given URLs, such as its address in another database, by creating it with a URL as its `id` (if its class has `create_with_id`; the entity still gets an id of its own). To get an entity, one of its URLs can be put in the path instead of its `{id}`, as it is:
 

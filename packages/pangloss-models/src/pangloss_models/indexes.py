@@ -15,6 +15,7 @@ database package makes them.
 
 from typing import Any
 
+from pangloss_models import literals
 from pangloss_models.exceptions import PanglossMetaError
 from pangloss_models.field_definitions import (
     ListFieldDefinition,
@@ -64,6 +65,18 @@ def check_indexes(model: type) -> None:
             raise PanglossMetaError(
                 f"{model.__name__}: '{name}' cannot be indexed: only a field with a value of its own "
                 "(text, a number, a date, a choice, a list of these) is stored as a property"
+            )
+        base = (
+            definition.inner_type
+            if isinstance(definition, ListFieldDefinition)
+            else definition.annotated_type
+        )
+        if literals.search_kind_of(base) == "decimal":
+            # (a Decimal is stored as text, to keep its exact value, and a search compares it as a number
+            # (`toFloat`), which no index of the text serves)
+            raise PanglossMetaError(
+                f"{model.__name__}: '{name}' is a Decimal, which is stored as text and compared as a number: "
+                "an index of it would not be used. Store a float beside it if it is to be searched by range"
             )
 
 

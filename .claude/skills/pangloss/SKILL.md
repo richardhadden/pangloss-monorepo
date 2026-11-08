@@ -65,13 +65,19 @@ These are the facts that most mistakes come from not knowing.
    same way from readers who are not logged in. Any query you write over model data has to apply these rules (there
    are helpers: see the architecture reference).
 6. **What the models cannot do is an error, not a guess.** An annotation `initialise()` does not understand raises
-   `PanglossModelError` naming the model and field. Not supported: optional relations (`Person | None`; use
-   `list[Person]`), optional or listed embedded objects, lists of annotated values, plain `dict` (use a `TypedDict`).
-   Writes that cannot succeed raise typed `PanglossWriteError`s.
+   `PanglossModelError` naming the model, field and the alternative. Not supported: optional relations
+   (`Person | None`; use `list[Person]`), optional or listed embedded objects, lists of annotated values, plain
+   `dict` (use a `TypedDict`). What a literal is, and how it is stored, is said once in `pangloss_models.literals`
+   (pydantic's standard types included: a `UUID` or a URL is text with a format); anything in `Annotated` that is
+   neither pydantic's nor Pangloss's is an error, and a method or `model_config` on a declared class a
+   `PanglossModelWarning` (the generated models do not have them). Writes that cannot succeed raise typed
+   `PanglossWriteError`s.
 7. **Python is `snake_case`, JSON is `camelCase`.** The API and the interface see `bornIn`; requests accept either.
    Every generated model has a `type` field, the discriminator of unions.
-8. **`Create` wants everything that is not `X | None`.** A `list[...]` field has to be given (`[]` will do), and so does
-   every relation. Generated models do not carry a field's default: only `X | None = None` may be left out.
+8. **`Create` wants everything that has no default.** `X | None` and a field with a default (`count: int = 0`,
+   `tags: list[str] = []`) may be left out, as in pydantic; every other list and every relation has to be given
+   (`[]` will do). A key a `Create`, `Update` or `ReferenceSet` has no field for is **refused** (a 422 over the
+   API), except what a read itself gives (`meta`, incoming relations, `DBField`s), which may be sent back as it is.
 9. **A project is settings plus apps.** One `BaseSettings` subclass; `STORAGE` names the backend
    (`"pangloss_memgraph:storage"`, `"pangloss_neo4j:storage"`, or the SDK's `"pangloss_sdk.storage:api"`);
    `INSTALLED_APPS` lists the packages whose models, routes, commands, migrations and interface modules are used.

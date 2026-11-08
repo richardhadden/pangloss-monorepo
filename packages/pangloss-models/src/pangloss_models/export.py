@@ -26,24 +26,27 @@ and each field has a `kind`:
                     `RelationConfig(default_reified_type=...)`), bindings (the fields of the model
                     given to fields of what it holds: `RelationConfig(bind_to_child_field=...)`)
 
-A type is `{"type": "str"}` (also `int`, `float`, `bool`, `decimal`, `date`, `datetime`,
-`uuid`), `{"type": "enum", "enum": "Name"}` (the members are in `enums`), `{"type":
-"typedDict", "fields": {...}}`, `{"type": "list", "item": type}`, `{"type": "literal",
-"values": [...]}` or `{"type": "unknown", "repr": "..."}`.
+A type is `{"type": "str"}` (also `int`, `float`, `bool`, `decimal`, `date`, `datetime`, `time`,
+`duration`), with a `"format"` when the stored text means something more (`{"type": "str", "format":
+"uuid"}`; also `url`, `email`, `ip`, `path`, `regex`, `fraction`), `{"type": "enum", "enum": "Name"}`
+(the members are in `enums`), `{"type": "typedDict", "fields": {...}}`, `{"type": "list", "item": type}`
+(with `"unique": true` for a set, `"length": n` for a tuple of a fixed length), `{"type": "literal",
+"values": [...]}` or `{"type": "unknown", "repr": "..."}`. See `pangloss_models.literals`.
+
+A literal or list field has `default`: the value the class declares for it (which the generated models
+take, so the field may be left out), or null; `required` says whether it may be left out.
 """
 
 import dataclasses
-import datetime
-import decimal
 import enum
 import inspect
 import typing
-import uuid
 from types import UnionType
 from typing import Any, get_args, get_origin, is_typeddict
 
 from pydantic.alias_generators import to_camel
 
+from pangloss_models import literals
 from pangloss_models.field_definitions import (
     AnnotatedValueFieldDefinition,
     EmbeddedFieldDefinition,
@@ -66,18 +69,6 @@ from pangloss_models.field_definitions import (
 )
 from pangloss_models.model_registry import ModelRegistry
 
-SCALAR_TYPES: list[tuple[type, str]] = [
-    # (bool before int, datetime before date)
-    (bool, "bool"),
-    (int, "int"),
-    (float, "float"),
-    (str, "str"),
-    (decimal.Decimal, "decimal"),
-    (datetime.datetime, "datetime"),
-    (datetime.date, "date"),
-    (uuid.UUID, "uuid"),
-]
-
 
 class Exporter:
     def __init__(self) -> None:
@@ -86,18 +77,25 @@ class Exporter:
     # --- types -----------------------------------------------------------
 
     def describe_type(self, tp: Any) -> dict[str, Any]:
+        """A type as `pangloss_models.literals.export_type` says it (the enums met on the way are kept)"""
         origin = get_origin(tp)
-        if origin is typing.Annotated:
+        if origin in (
+            typing.Annotated,
+            typing.Required,
+            typing.NotRequired,
+            typing.ReadOnly,
+        ):
             return self.describe_type(get_args(tp)[0])
         if origin is typing.Literal:
             return {"type": "literal", "values": [self.plain(v) for v in get_args(tp)]}
-        if origin in (list, set, frozenset, tuple):
-            args = get_args(tp)
+        if origin in literals.LIST_ORIGINS:
+            item = literals.collection_item_type(tp)
             return {
                 "type": "list",
-                "item": self.describe_type(args[0])
-                if args
+                "item": self.describe_type(item)
+                if item is not None
                 else {"type": "unknown", "repr": "?"},
+                **literals.collection_rule(tp),
             }
         if origin is typing.Union or origin is UnionType:
             options = [a for a in get_args(tp) if a is not type(None)]
@@ -112,12 +110,14 @@ class Exporter:
                     "type": "typedDict",
                     "fields": {
                         name: self.describe_type(annotation)
-                        for name, annotation in typing.get_type_hints(tp).items()
+                        for name, annotation in typing.get_type_hints(
+                            tp, include_extras=True
+                        ).items()
                     },
                 }
-            for scalar, name in SCALAR_TYPES:
-                if issubclass(tp, scalar):
-                    return {"type": name}
+            codec = literals.codec_for(tp)
+            if codec is not None:
+                return codec.describe()
         return {"type": "unknown", "repr": repr(tp)}
 
     def describe_enum(self, enumeration: type[enum.Enum]) -> dict[str, Any]:
@@ -144,13 +144,28 @@ class Exporter:
         return str(value)
 
     def validators(self, validators: list) -> list[dict[str, Any]]:
-        """Constraints from `annotated_types` (`Gt(5)`, `MaxLen(10)`, ...), by name"""
+        """What a field is annotated with, by name: the constraints of `annotated_types` (`Gt(5)`, `MaxLen(10)`)
+        with their values, pydantic's `Strict` and the arguments of `Field(pattern=...)` or `StringConstraints`
+        (as `Constraints`, with what was given), and its functional validators by name alone (`AfterValidator`:
+        a function, which only the server runs). A callable is never exported"""
         result = []
         for validator in validators:
-            entry: dict[str, Any] = {"name": type(validator).__name__}
-            if dataclasses.is_dataclass(validator):
-                for f in dataclasses.fields(validator):
-                    entry[f.name] = self.plain(getattr(validator, f.name))
+            name = type(validator).__name__
+            entry: dict[str, Any] = {
+                "name": "Constraints" if name.startswith("_Pydantic") else name
+            }
+            attributes = (
+                {
+                    f.name: getattr(validator, f.name)
+                    for f in dataclasses.fields(validator)
+                }
+                if dataclasses.is_dataclass(validator)
+                else dict(getattr(validator, "__dict__", {}))
+            )
+            for key, value in attributes.items():
+                if value is None or callable(value):
+                    continue
+                entry[key] = self.plain(value)
             result.append(entry)
         return result
 
@@ -190,8 +205,11 @@ class Exporter:
             entry |= {
                 "kind": "list",
                 "item": self.describe_type(definition.inner_type),
-                "validators": self.validators(definition.validators),
+                # (what the collection itself says: a set has no repeats, a tuple a fixed length)
+                "validators": self.validators(definition.validators)
+                + self.collection_validators(definition.annotated_type),
                 "itemValidators": self.validators(definition.inner_type_validators),
+                "default": self.default(definition),
             }
         elif isinstance(definition, LiteralFieldDefinition):
             entry |= {
@@ -199,6 +217,7 @@ class Exporter:
                 "type": self.describe_type(definition.annotated_type),
                 "validators": self.validators(definition.validators),
                 "markers": self.markers(definition.markers),
+                "default": self.default(definition),
             }
             for marker in definition.markers:
                 marker.check(definition.field_on_model.__name__, entry)
@@ -248,6 +267,24 @@ class Exporter:
         else:
             entry["kind"] = "unknown"
         return entry
+
+    def collection_validators(self, annotation: Any) -> list[dict[str, Any]]:
+        """The rule of a collection as validators: `Unique` for a set, `MinLen` and `MaxLen` for a tuple of a
+        fixed length (which the interface already checks on a list)"""
+        rule = literals.collection_rule(literals.without_none(annotation))
+        found: list[dict[str, Any]] = []
+        if rule.get("unique"):
+            found.append({"name": "Unique"})
+        if "length" in rule:
+            found.append({"name": "MinLen", "min_length": rule["length"]})
+            found.append({"name": "MaxLen", "max_length": rule["length"]})
+        return found
+
+    def default(self, definition: Any) -> Any:
+        """The default the class declares for a literal or list field, as JSON can have it; None for none"""
+        if not definition.has_default:
+            return None
+        return self.plain(definition.default_value())
 
     def field_requirements(self, definition: FieldDefinition) -> dict[str, Any]:
         """Whether the field may be left out, or be null, as the model declares it"""

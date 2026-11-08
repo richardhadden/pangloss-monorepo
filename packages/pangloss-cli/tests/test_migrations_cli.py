@@ -198,7 +198,7 @@ def test_a_model_declared_wrongly_is_a_message_not_a_traceback(models_project: P
     exit_code, output = invoke("makemigrations")
     assert exit_code == 1
     assert (
-        "Cannot initialise the models: Unsupported type for field Person.nickname"
+        "Cannot initialise the models: Person.nickname: <class 'complex'> is not supported"
         in output
     )
     assert "Traceback" not in output

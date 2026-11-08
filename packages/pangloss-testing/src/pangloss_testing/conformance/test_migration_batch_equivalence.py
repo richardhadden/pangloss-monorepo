@@ -181,7 +181,6 @@ async def test_unwrapping_a_reified_relation(db_driver, clear_database):
                 {
                     "type": "Action",
                     "label": "Narrowed",
-                    "person": person_payload(person, True, 8),
                     "carried_out_by": person_payload(person, True, 7),
                 },
             ],
@@ -665,6 +664,7 @@ async def test_a_field_that_narrows_a_parent_field_and_stops(db_driver, clear_da
         old_models, old = declare(plain)
         person = await old_models.Person.Create(label="P").save()
         for n in range(5):
+            # (`involves` is the parent's field, which this Action has as it is; the narrowing one has not)
             await old_models.Action.Create(
                 label=f"A{n}",
                 carried_out_by={"type": "Person", "id": person.id},
@@ -684,7 +684,6 @@ async def test_a_field_that_narrows_a_parent_field_and_stops(db_driver, clear_da
             await old_models.Action.Create(
                 label=f"A{n}",
                 carried_out_by={"type": "Person", "id": person.id},
-                involves=[],
             ).save()
         _, new = declare(plain)
         await migrate(old, new, batch_size=batch)

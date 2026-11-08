@@ -89,7 +89,6 @@ async def test_a_wrapped_relation_is_unwrapped_to_what_it_was(
             {
                 "type": "Action",
                 "label": "Narrowed",
-                "person": person_payload(person, False),
                 "carried_out_by": person_payload(person, False),
             },
         ],

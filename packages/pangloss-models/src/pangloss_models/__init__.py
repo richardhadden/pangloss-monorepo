@@ -33,6 +33,10 @@ lazy from pangloss_models.field_definitions import (
 )
 lazy from pangloss_models.validators import SumsTo
 lazy from pangloss_models.markers import FieldMarker
+lazy from pangloss_models.literals import (
+    LiteralCodec,
+    register_codec,
+)
 lazy from pangloss_models.search import (
     AnyOf,
     Match,
@@ -74,6 +78,7 @@ lazy from pangloss_models.exceptions import (
     PanglossMigrationIrreversible,
     PanglossMigrationNotSupported,
     PanglossModelError,
+    PanglossModelWarning,
     PanglossNotCreatableError,
     PanglossNotDeletableError,
     PanglossNotDeletedError,
@@ -122,6 +127,7 @@ __all__ = [
     "IncomingFrom",
     "initialise",
     "Items",
+    "LiteralCodec",
     "Match",
     "ModelRegistry",
     "NonHeritableTrait",
@@ -142,6 +148,7 @@ __all__ = [
     "PanglossMigrationIrreversible",
     "PanglossMigrationNotSupported",
     "PanglossModelError",
+    "PanglossModelWarning",
     "PanglossNotCreatableError",
     "PanglossNotDeletableError",
     "PanglossNotDeletedError",
@@ -162,6 +169,7 @@ __all__ = [
     "protection_of",
     "register_meta_slot",
     "ReifiedRelation",
+    "register_codec",
     "ReifiedRelationDocument",
     "Rel",
     "RelationConfig",

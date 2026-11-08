@@ -28,6 +28,7 @@ Subclasses carry their parents' labels, so a change made to a model applies wher
 | Rename a field | **Asked** if it is a rename. The values move across | transforming |
 | Make a field optional | Nothing | safe |
 | Make an optional field required | **Asked** for a value; records with no value get it | additive |
+| Add a required field with a default (`count: int = 0`) | Records that exist get the default; nothing is asked | additive |
 | Change its type | Each value is converted (see below) | transforming |
 | Change the type of a list's items | As above, for every item | transforming |
 
@@ -42,7 +43,8 @@ These conversions are understood:
 | `float` | `int`, `str`, `Decimal` |
 | `bool` | `str`, `int` |
 | `Decimal` | `str`, `float`, `int` |
-| `date` | `str` |
+| `date`, `datetime`, `time`, `timedelta` | `str` |
+| `UUID`, a URL, an email address, a path, a `Literal` of strings | `str`, and back: nothing to convert (the same text is stored; the migration says `StateOnly`) |
 | an enum | `str` (the member's value as text), another enum (by member name, or by `mapping` of member names) |
 
 Any other pair (for example `datetime`, or an enum to `int`) is refused: write it by hand ([chapter 6](06-by-hand.md)). A conversion can be lossy in practice (`float` to `int` drops the fraction), so the migration is marked as one that may not be undone exactly.

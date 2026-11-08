@@ -32,8 +32,10 @@ arithmetic). An integer orders correctly, can be indexed, and does not depend on
 - Python's `datetime.date` is proleptic Gregorian, so it is **not used**. A library for Julian and Gregorian
   conversion does the work (to check which; the conversions are short enough to write and test if not).
 - The weekday is calendar independent: `(JDN + 1) mod 7` is 0 for Sunday.
-- Pangloss field types are limited (`str`, `int`, `float`, `bool`, `Decimal`, `date`, `datetime`, enums,
-  `TypedDict`s and lists of these). So the Embedded types below hold **integers, strings and enums**; a custom Pydantic
+- Pangloss field types were limited when this was written (`str`, `int`, `float`, `bool`, `Decimal`, `date`,
+  `datetime`, enums, `TypedDict`s and lists of these; since 2026-11-08 `pangloss_models.literals` admits pydantic's
+  standard types too, and a package may register a codec of its own). So the Embedded types below hold **integers,
+  strings and enums**; a custom Pydantic
   type converts to and from a readable string at the edges (JSON carries `"J1503-04-02"`, with the calendar named).
 - A date also records what the **source said** (`source_text="last week, probably Tuesday"`), its **calendar**
   (Julian, Gregorian), and its **year style** (1 January, 25 March, Easter, ...) for double dates ("1 Feb 1500/1").

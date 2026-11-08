@@ -1995,6 +1995,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Activity"
@@ -2540,6 +2541,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Activity"
@@ -3003,6 +3005,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Activity"
@@ -3156,6 +3159,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Activity"
@@ -3755,6 +3759,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Appointment"
@@ -4162,6 +4167,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Appointment"
@@ -4430,6 +4436,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "AtPage"
@@ -4548,6 +4555,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "AtPage"
@@ -4713,6 +4721,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "AtPage"
@@ -4761,6 +4770,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "AtPage"
@@ -4982,6 +4992,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "AtPage"
@@ -5229,6 +5240,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "AtPage[declare.<locals>.Source]"
@@ -5369,6 +5381,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "AtPage[declare.<locals>.Source]"
@@ -5556,6 +5569,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Attested"
@@ -5700,6 +5714,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Attested"
@@ -5902,6 +5917,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Attested"
@@ -5961,6 +5977,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Attested"
@@ -6219,6 +6236,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Attested"
@@ -6514,6 +6532,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Attested[declare.<locals>.Person]"
@@ -6680,6 +6699,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Attested[declare.<locals>.Person]"
@@ -6871,6 +6891,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Causes"
@@ -6967,6 +6988,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Causes"
@@ -7284,6 +7306,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Causes"
@@ -7336,6 +7359,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Causes"
@@ -7399,6 +7423,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Causes"
@@ -7592,6 +7617,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Causes"
@@ -7642,6 +7668,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Causes"
@@ -7869,6 +7896,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Causes"
@@ -8180,6 +8208,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Causes[declare.<locals>.Place, declare.<locals>.Person]"
@@ -8324,6 +8353,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Causes[declare.<locals>.Place, declare.<locals>.Person]"
@@ -8517,6 +8547,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Causes[declare.<locals>.Statement, declare.<locals>.Statement]"
@@ -8665,6 +8696,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Causes[declare.<locals>.Statement, declare.<locals>.Statement]"
@@ -8882,6 +8914,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Date"
@@ -9022,6 +9055,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Date"
@@ -9242,6 +9276,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Doubt"
@@ -9616,6 +9651,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Doubt"
@@ -10285,6 +10321,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Factoid"
@@ -10721,6 +10758,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Factoid"
@@ -11137,6 +11175,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Grant"
@@ -11544,6 +11583,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Grant"
@@ -11826,6 +11866,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Group"
@@ -12229,6 +12270,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_what_the_view_shows",
     "remove_label"
    ],
    "owner": "Group"
@@ -12348,6 +12390,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Group"
@@ -12563,6 +12606,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_what_the_view_shows",
     "remove_label"
    ],
    "owner": "Group"
@@ -12646,6 +12690,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Hypothetical"
@@ -12742,6 +12787,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Hypothetical"
@@ -13014,6 +13060,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Hypothetical"
@@ -13051,6 +13098,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Hypothetical"
@@ -13099,6 +13147,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Hypothetical"
@@ -13253,6 +13302,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Hypothetical"
@@ -13290,6 +13340,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Hypothetical"
@@ -13478,6 +13529,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Hypothetical"
@@ -13730,6 +13782,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Hypothetical[InRole[declare.<locals>.Agent]]"
@@ -13848,6 +13901,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Hypothetical[InRole[declare.<locals>.Agent]]"
@@ -14002,6 +14056,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Hypothetical[declare.<locals>.Statement]"
@@ -14120,6 +14175,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Hypothetical[declare.<locals>.Statement]"
@@ -14274,6 +14330,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "InRole"
@@ -14392,6 +14449,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "InRole"
@@ -14557,6 +14615,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "InRole"
@@ -14605,6 +14664,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "InRole"
@@ -14653,6 +14713,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "InRole"
@@ -14701,6 +14762,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "InRole"
@@ -14749,6 +14811,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "InRole"
@@ -14797,6 +14860,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "InRole"
@@ -14845,6 +14909,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "InRole"
@@ -15655,6 +15720,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "InRole"
@@ -15714,6 +15780,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "InRole"
@@ -15762,6 +15829,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "InRole"
@@ -15810,6 +15878,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "InRole"
@@ -15869,6 +15938,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "InRole"
@@ -15928,6 +15998,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "InRole"
@@ -15987,6 +16058,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "InRole"
@@ -16046,6 +16118,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "InRole"
@@ -16443,6 +16516,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "InRole"
@@ -16513,6 +16587,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "InRole"
@@ -17325,6 +17400,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "InRole[declare.<locals>.Agent]"
@@ -17465,6 +17541,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "InRole[declare.<locals>.Agent]"
@@ -17652,6 +17729,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "LivedIn"
@@ -17910,6 +17988,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "LivedIn"
@@ -18119,6 +18198,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "LivedIn"
@@ -18178,6 +18258,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "LivedIn"
@@ -18421,6 +18502,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "LivedIn"
@@ -18480,6 +18562,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "LivedIn"
@@ -18550,6 +18633,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "LivedIn"
@@ -18620,6 +18704,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "LivedIn"
@@ -19015,6 +19100,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "LivedIn[declare.<locals>.Place]"
@@ -19306,6 +19392,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "LivedIn[declare.<locals>.Place]"
@@ -19504,6 +19591,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Negative"
@@ -19600,6 +19688,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Negative"
@@ -19872,6 +19961,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Negative"
@@ -19909,6 +19999,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Negative"
@@ -19957,6 +20048,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Negative"
@@ -20111,6 +20203,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Negative[declare.<locals>.Statement]"
@@ -20229,6 +20322,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Negative[declare.<locals>.Statement]"
@@ -20407,6 +20501,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Note"
@@ -20713,6 +20808,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Note"
@@ -20937,6 +21033,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Note"
@@ -21009,6 +21106,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Note"
@@ -21128,6 +21226,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Office"
@@ -21445,6 +21544,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_what_the_view_shows",
     "remove_label"
    ],
    "owner": "Office"
@@ -21561,6 +21661,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Office"
@@ -21826,6 +21927,7 @@
    "json_schema": "ok",
    "model_validators": [
     "check_create_and_id_present",
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Person"
@@ -22430,6 +22532,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_what_the_view_shows",
     "remove_label"
    ],
    "owner": "Person"
@@ -22592,6 +22695,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Person"
@@ -23150,6 +23254,7 @@
    "json_schema": "ok",
    "model_validators": [
     "check_create_and_id_present",
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Person"
@@ -23209,6 +23314,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_what_the_view_shows",
     "remove_label"
    ],
    "owner": "Person"
@@ -23314,6 +23420,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Place"
@@ -23664,6 +23771,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_what_the_view_shows",
     "remove_label"
    ],
    "owner": "Place"
@@ -23780,6 +23888,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Place"
@@ -23967,6 +24076,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "ReifiedRelationDocument[TypeVar]"
@@ -24192,6 +24302,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "ReifiedRelationDocument[TypeVar]"
@@ -24346,6 +24457,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "ReifiedRelation[TypeVar]"
@@ -24372,6 +24484,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "ReifiedRelation[TypeVar]"
@@ -24398,6 +24511,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "ReifiedRelation[TypeVar]"
@@ -24612,6 +24726,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "ReifiedRelation[TypeVar]"
@@ -24649,6 +24764,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "ReifiedRelation[TypeVar]"
@@ -24686,6 +24802,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "ReifiedRelation[TypeVar]"
@@ -24997,6 +25114,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "SemanticSpace[TypeVar]"
@@ -25023,6 +25141,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "SemanticSpace[TypeVar]"
@@ -25178,6 +25297,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "SemanticSpace[TypeVar]"
@@ -25215,6 +25335,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "SemanticSpace[TypeVar]"
@@ -25498,6 +25619,7 @@
    "json_schema": "ok",
    "model_validators": [
     "check_create_and_id_present",
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Source"
@@ -25893,6 +26015,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_what_the_view_shows",
     "remove_label"
    ],
    "owner": "Source"
@@ -26031,6 +26154,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Source"
@@ -26341,6 +26465,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Statement"
@@ -26783,6 +26908,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Statement"
@@ -27180,6 +27306,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Transfer"
@@ -27729,6 +27856,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Transfer"
@@ -28196,6 +28324,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Transfer"
@@ -28351,6 +28480,7 @@
    },
    "json_schema": "ok",
    "model_validators": [
+    "drop_server_keys",
     "propagate_bound_values"
    ],
    "owner": "Transfer"

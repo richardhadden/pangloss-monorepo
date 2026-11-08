@@ -15,7 +15,11 @@ For each declared class, `initialise()` creates a set of Pydantic models and att
 | `ReferenceView` | Document, Entity, ReifiedRelationDocument | `{type, id, label, ...}` summary; used in lists and nested reads | ✅ |
 | `Where` | Document, Entity, Embedded | A structured search pattern (`pangloss_models.search_where`): a field for each field that can be searched, typed by its operators (`Text`, `Compare[T]`, `Choice[T]`, `Items[T]`, `Rel` or the `Where` of what a relation points at). Not an `_ActionClass`: no camelCase aliases, as the fields of a search are the Python names. See [Typed search patterns](search-where-implementation.md) | ✅ |
 
-Optional literal fields (`X | None`) default to `None` in all of these models, so they can be left out when creating and are `None` when absent from the database.
+Optional literal fields (`X | None`) default to `None` in all of these models, so they can be left out when creating and are `None` when absent from the database. A default the class declares (`count: int = 0`) is carried to all of them too, so such a field can be left out as well (see [Defaults](relations.md#defaults)).
+
+**What a client sends is checked against the model, and a key the model has no field for is refused** (`Create`, `Update` and `ReferenceSet` have `extra="forbid"`): over the API that is a 422 naming the key, so a misspelt key in a script or an upload does not lose its value in silence. The one kind of key that is not a mistake is what the server itself gave in a read: `meta`, the incoming relations of an entity, the fields only the database side has (`DBField`), and on a reference the fields its `ReferenceView` shows. Those are taken out before the check, so what `get` or `get_for_edit` gives can be changed and sent back as an `Update` as it is.
+
+**What the class declares is on the models that are written** (`Create`, `Update`, `CreateDB`, `UpdateDB`): its `model_validator`s of every mode and its `field_validator`s of literal fields are copied to them (a `field_validator` of a relation is refused at `initialise()`: the field is a reference or a nested model there). What cannot be carried is said at `initialise()` as a `PanglossModelWarning`: a method, a property, a `@computed_field` or a `model_config` of the class's own, none of which the generated models have (`Person(...)` is `Person.Create(...)`, and what is read back is a `HeadView`).
 
 ## What the base classes add
 

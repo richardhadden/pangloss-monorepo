@@ -37,6 +37,7 @@ NOT_DATA_KEYS = {
     "itemValidators",
     "dbField",  # only whether it is in `CreateDB`
     "required",  # whether it has a default
+    "default",  # the default the class declares: a value the generated models fill in, not one that is stored
     "concreteTypes",  # follows from the models that exist
     "incoming",  # follows from the fields of the other models
     "traits",  # the labels say it

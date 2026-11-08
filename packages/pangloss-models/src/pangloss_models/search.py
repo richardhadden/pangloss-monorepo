@@ -9,13 +9,11 @@ operator has to fit the type of its field, and every value is made the type of t
 
 import contextlib
 import contextvars
-import datetime
 import enum
 import types as pytypes
 import typing
 from collections.abc import Callable
 from dataclasses import dataclass
-from decimal import Decimal
 from collections.abc import Generator
 from typing import Any, Literal, cast
 from uuid import UUID
@@ -33,6 +31,7 @@ from pydantic import (
 )
 from pydantic_core import core_schema
 
+from pangloss_models import literals
 from pangloss_models.exceptions import PanglossSearchError, PanglossUnknownTypeError
 from pangloss_models.field_definitions import (
     EmbeddedFieldDefinition,
@@ -629,23 +628,13 @@ def resolve_pattern_type(name: str, roots: list[type]) -> type:
 
 
 def kind_of(base: Any) -> Kind | None:
-    if base is str:
-        return "text"
-    if base is bool:
-        return "simple"
-    if base in (int, float):
-        return "number"
-    if base is Decimal:
-        return "decimal"
-    if base in (datetime.date, datetime.datetime):
-        return "temporal"
-    if isinstance(base, type) and issubclass(base, enum.Enum):
-        return "simple"
-    return None
+    """How a field of a literal type is compared (`pangloss_models.literals` says, for each type)"""
+    return literals.search_kind_of(base)
 
 
 def checked_value(base: Any, kind: str, value: Any, where: str) -> Any:
-    """The value as the Python value of the type of the field (a `Decimal` as a float, which is how it is compared)"""
+    """The value as it is compared with what is stored: the Python value of the type of the field, as it is
+    written to the database (a `UUID` as its text; a `Decimal` as a float, which is how it is compared)"""
     strict = base in (str, bool, int, float)
     try:
         converted = TypeAdapter(base).validate_python(value, strict=strict)
@@ -657,7 +646,7 @@ def checked_value(base: Any, kind: str, value: Any, where: str) -> Any:
         return float(converted)
     if isinstance(converted, enum.Enum):
         return converted.value
-    return converted
+    return literals.to_storage(converted)
 
 
 def many(values: list, label: str, where: str) -> list:

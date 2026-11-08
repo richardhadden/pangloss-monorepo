@@ -1,6 +1,7 @@
 import datetime
 import warnings
 from abc import ABC, abstractmethod
+from collections.abc import Iterable
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -198,8 +199,83 @@ class _ReferenceViewBase(_ActionClass):
     label: str
 
 
+# --- what a client sends: the keys it may not have --------------------------------------------------------
+#
+# `Create`, `Update` and `ReferenceSet` refuse a key they have no field for (`extra="forbid"`): a misspelt key
+# would otherwise be dropped, and the document saved without it. The one kind of key that is not a mistake is
+# what the server itself gave in a read, which a client may send back as it is (`get_for_edit`, change, save):
+# `meta`, the incoming relations of an entity's view, the fields only the database side has (`DBField`), and
+# on a reference the fields its `ReferenceView` shows. Those are taken out before anything is checked.
+
+SERVER_KEYS = frozenset(
+    {
+        "meta",
+        "semantic_spaces",
+        "semanticSpaces",
+        "context_labels",
+        "contextLabels",
+        "head_node_id",
+        "headNodeId",
+        "head_node_type",
+        "headNodeType",
+        "db_labels",
+        "dbLabels",
+    }
+)
+
+
+def with_aliases(names: Iterable[str]) -> set[str]:
+    found: set[str] = set()
+    for name in names:
+        found.add(name)
+        found.add(to_camel(name))
+    return found
+
+
+def without_server_keys(cls: type[_ActionClass], data: Any) -> Any:
+    """`data` without the keys a read of the owner gives that a client cannot set (see above)"""
+    if not isinstance(data, dict):
+        return data
+    definitions = cls._owner._meta.field_definitions
+    drop = (
+        SERVER_KEYS
+        | with_aliases(definitions.incoming_fields)
+        | with_aliases(
+            name for name, field in definitions.fields.items() if field.db_field
+        )
+    )
+    if drop.isdisjoint(data):
+        return data
+    return {key: value for key, value in data.items() if key not in drop}
+
+
 class _ReferenceSetBase(_ActionClass):
+    # (a key a reference has no field for is refused, as on `Create` and `Update`: a misspelt key is not dropped)
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True,
+        alias_generator=to_camel,
+        populate_by_name=True,
+        extra="forbid",
+    )
+
     id: UUID
+
+    @model_validator(mode="before")
+    @classmethod
+    def drop_what_the_view_shows(cls, data: Any) -> Any:
+        """A `ReferenceView` (as a read gives it: `label`, `reference_view_extra_fields`) may be sent back as
+        the reference: what it shows beyond the reference is taken out"""
+        if not isinstance(data, dict):
+            return data
+        view = getattr(cls._owner, "ReferenceView", None)
+        if view is None:
+            return data
+        drop = with_aliases(
+            name for name in view.model_fields if name not in cls.model_fields
+        )
+        if drop.isdisjoint(data):
+            return data
+        return {key: value for key, value in data.items() if key not in drop}
 
     @model_validator(mode="after")
     def remove_label(self):
@@ -214,6 +290,11 @@ class _ReferenceSetBase(_ActionClass):
 
 
 class _CreateBase(_ActionClass):
+    @model_validator(mode="before")
+    @classmethod
+    def drop_server_keys(cls, data: Any) -> Any:
+        return without_server_keys(cls, data)
+
     def _to_db_model(self):
 
         db_model_instance: _CreateDBBase = self._owner.CreateDB(**self.model_dump())
@@ -261,6 +342,11 @@ class _CreateDBBase(_ActionClass):
 
 class _UpdateBase(_ActionClass):
     id: UUID
+
+    @model_validator(mode="before")
+    @classmethod
+    def drop_server_keys(cls, data: Any) -> Any:
+        return without_server_keys(cls, data)
 
     def _to_db_model(self):
 

@@ -37,6 +37,8 @@ SCALARS = {
     "bool": "boolean",
     "date": "string",
     "datetime": "string",
+    "time": "string",
+    "duration": "string",
 }
 
 

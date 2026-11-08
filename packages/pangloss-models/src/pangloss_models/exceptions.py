@@ -14,6 +14,11 @@ class PanglossModelError(Exception):
     pass
 
 
+class PanglossModelWarning(UserWarning):
+    """A declared class says something the generated models cannot carry (a method, a `model_config`, a
+    `@computed_field`): the models are made, and this says what was left behind"""
+
+
 class PanglossInternalError(Exception):
     pass
 

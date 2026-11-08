@@ -77,6 +77,11 @@ export function blankItem(
   const model = getModel(definitions, type);
   if (!model || depth > 4) return item;
   for (const field of model.fields) {
+    // (the default the class declares, as the API would fill it in: shown, so that what is sent is what is seen)
+    if ((field.kind === "literal" || field.kind === "list") && field.default !== null && field.default !== undefined) {
+      item[field.key] = structuredClone(field.default);
+      continue;
+    }
     // (a required list is sent, empty, when nothing is added: the API does not take it as absent)
     if (field.required && field.kind === "list") {
       item[field.key] = [];

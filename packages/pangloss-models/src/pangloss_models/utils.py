@@ -1,7 +1,5 @@
 import typing
 from collections.abc import Iterable
-from datetime import date, datetime
-from decimal import Decimal
 from enum import Enum
 from functools import cache
 from inspect import isclass
@@ -19,13 +17,24 @@ from typing import (
 )
 
 import annotated_types
-from annotated_types import BaseMetadata
+from annotated_types import BaseMetadata, GroupedMetadata
 from pydantic import BaseModel
+from pydantic._internal._fields import PydanticMetadata
 from pydantic._internal._generics import PydanticGenericMetadata
 from pydantic.fields import FieldInfo
+from pydantic.functional_serializers import PlainSerializer, WrapSerializer
+from pydantic.functional_validators import (
+    AfterValidator,
+    BeforeValidator,
+    PlainValidator,
+    WrapValidator,
+)
+from pydantic.json_schema import WithJsonSchema
 
+from pangloss_models import literals
 from pangloss_models.exceptions import PanglossModelError
 from pangloss_models.field_definitions import FieldBinding
+from pangloss_models.markers import FieldMarker
 from pangloss_models.meta_kit import WithMeta
 from pangloss_models.model_bases.annotated_value import AnnotatedValue
 from pangloss_models.model_bases.base_models import _BaseObject, _DeclaredClass
@@ -46,8 +55,6 @@ from pangloss_models.model_bases.trait import (
 )
 
 type ConcreteUnionType[T] = type[type[T] | type[T]]  # noqa: PYI016
-
-LITERAL_TYPES = {str, int, float, bool, Decimal, date, datetime}
 
 
 def get_concrete_types[T](
@@ -209,13 +216,14 @@ def check_enum_values(enumeration: type[Enum]) -> None:
 def check_enum_values_in(annotation: Any) -> None:
     """Check the enums in the annotation of a literal field (the enum itself, a list of it, an optional
     one, or one in the value of a `TypedDict`)"""
-    if annotation_is_optional(annotation):
-        annotation = [t for t in get_args(annotation) if t is not NoneType][0]
-    annotation = get_list_item_type(annotation) or annotation
+    annotation = literals.without_none(literals._plain(annotation))
+    annotation = literals._plain(
+        literals.collection_item_type(annotation) or annotation
+    )
     if isclass(annotation) and issubclass(annotation, Enum):
         check_enum_values(annotation)
     elif is_typeddict(annotation):
-        for value_type in get_type_hints(annotation).values():
+        for value_type in get_type_hints(annotation, include_extras=True).values():
             check_enum_values_in(value_type)
 
 
@@ -223,37 +231,81 @@ def is_literal(
     annotation: type[Any] | None | UnionType,
 ) -> TypeIs[type[BaseTypes]]:
     """Checks whether an annotation is of a literal type: one stored as a property
-    of its node, rather than as a node of its own.
-
-    Literal types are `str`, `int`, `float`, `bool`, `Decimal`, `date`, `datetime`,
-    `Enum` subclasses and `TypedDict`s (whose values must themselves be literals,
-    or lists of literals)."""
-    if annotation_is_optional(annotation):
-        annotation = [t for t in get_args(annotation) if t is not NoneType][0]
-
-    if annotation in LITERAL_TYPES:
-        return True
-
-    if not isclass(annotation):
-        return False
-
-    if issubclass(annotation, Enum):
-        return True
-
-    if is_typeddict(annotation):
-        return all(
-            is_literal(value_type) or is_list_of_literal(value_type)
-            for value_type in get_type_hints(annotation).values()
-        )
-
-    return False
+    of its node, rather than as a node of its own (`pangloss_models.literals` says which)"""
+    return literals.is_literal_type(annotation)
 
 
 def is_list_of_literal(
     annotation: type[Any] | None,
 ) -> TypeIs[type[list[BaseTypes]]]:
-    inner_type = get_list_item_type(annotation)
-    return inner_type is not None and is_literal(inner_type)
+    """A `list` (or `set`, `frozenset`, `tuple`) of a literal type, or `X | None` of one"""
+    return literals.is_list_of_literal_type(annotation)
+
+
+# What a field may be annotated with besides its type, and is carried to the generated models as it is:
+# pydantic's own validators and serialisers, and `Strict()` and the like (`PydanticMetadata`)
+CARRIED_METADATA: tuple[type, ...] = (
+    BaseMetadata,
+    PydanticMetadata,
+    AfterValidator,
+    BeforeValidator,
+    PlainValidator,
+    WrapValidator,
+    PlainSerializer,
+    WrapSerializer,
+    WithJsonSchema,
+)
+
+
+def is_pangloss_metadata(item: Any) -> bool:
+    """What a field may be annotated with that Pangloss itself reads: a description, a marker, a relation's
+    config, `DBField`, `SumsTo`, what a stub is to say (`StubAnnotation`)"""
+    from pangloss_models.model_bases.helpers import DBField
+    from pangloss_models.search_where import StubAnnotation
+    from pangloss_models.validators import SumsTo
+
+    if item is None or isinstance(item, (str, FieldInfo, FieldMarker, RelationConfig)):
+        return True
+    if isinstance(item, (SumsTo, StubAnnotation, annotated_types.DocInfo)):
+        return True
+    if item is DBField or isinstance(item, DBField):
+        return True
+    return hasattr(item, "apply_to_embedded")
+
+
+def constraints_of(metadata: Iterable[Any], where: str) -> list[Any]:
+    """What a field's `Annotated[...]` (or `Field(...)`) says that pydantic checks or applies, flattened
+    (`Interval(ge=0)` is `Ge(0)`; `StringConstraints(...)` is its parts), in the order written.
+
+    Anything else is an error: an annotation that was written to do something, and that the generated models
+    would not do, must not be dropped in silence. `where` names the model and field for the message."""
+    found: list[Any] = []
+    for item in metadata:
+        if is_pangloss_metadata(item):
+            continue
+        if isinstance(item, GroupedMetadata):
+            # (a group is a dataclass or a protocol, not something pydantic applies itself: its parts are)
+            found.extend(constraints_of(item, where))
+            continue
+        if isinstance(item, CARRIED_METADATA):
+            found.append(item)
+            continue
+        raise PanglossModelError(
+            f"{where} is annotated with {item!r}, which Pangloss does not know how to carry to the generated "
+            "models. Supported: the constraints of annotated_types (Ge, MaxLen, Predicate, ...), pydantic's "
+            "StringConstraints, Strict, pattern= and the other arguments of Field, and its AfterValidator, "
+            "BeforeValidator, PlainValidator, WrapValidator and serialisers; Pangloss's own RelationConfig, "
+            "DBField, SumsTo and field markers"
+        )
+    return found
+
+
+def with_constraints(annotation: Any, constraints: Iterable[Any]) -> Any:
+    """`Annotated[annotation, *constraints]`, or the annotation if there are none"""
+    items = tuple(constraints)
+    if not items:
+        return annotation
+    return Annotated[annotation, *items]  # type: ignore[valid-type]
 
 
 def get_list_item_type(annotation: Any) -> Any:

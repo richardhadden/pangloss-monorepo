@@ -508,7 +508,6 @@ async def test_a_relation_is_wrapped_in_a_reified_relation(db_driver, clear_data
             {
                 "type": "Action",
                 "label": "Narrowed",
-                "person": person_payload(person, False),
                 "carried_out_by": person_payload(person, False),
             },
         ],
@@ -556,7 +555,6 @@ async def test_a_relation_is_wrapped_in_a_reified_relation(db_driver, clear_data
             {
                 "type": "Action",
                 "label": "Narrowed",
-                "person": person_payload(person, True, 5),
                 "carried_out_by": person_payload(person, True, 5),
             },
         ],

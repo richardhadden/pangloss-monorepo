@@ -13,28 +13,36 @@
 | `AnnotatedValue[...]` | `AnnotatedValueFieldDefinition` | `.annotated_value_fields` |
 | `Annotated[T, DBField]` | marked `db_field=True` | |
 
-Any other annotation is an error: `initialise()` raises `PanglossModelError` naming the model, field and type, rather than ignoring the field. In particular, a plain `dict`, `complex`, `bytes` and `UUID` are not supported, and nor are optional relations (`Person | None`); use a `list[Person]` for a relation that may be empty. Lists of embedded objects (`list[Date]`) and of annotated values are not supported either: a field has one of each.
+Any other annotation is an error: `initialise()` raises `PanglossModelError` naming the model, field and type, and what to use instead where that can be said, rather than ignoring the field. In particular, a plain `dict` (use a `TypedDict`), `bytes`, `complex`, a pydantic model or a dataclass (use an `Embedded` or a `TypedDict`), a `Flag` enum and a union of literal types (`int | str`) are not supported, and nor are optional relations (`Person | None`; use a `list[Person]` for a relation that may be empty) or optional embedded objects. Lists of embedded objects (`list[Date]`) and of annotated values are not supported either: a field has one of each.
 
-`Annotated[..., DBField]` marks a field as a database-side field: it appears in the `CreateDB` model but not in the user-facing `Create` model. The `annotated_types` validators (`Gt`, `MinLen`, ...) are carried through to the generated models.
+`Annotated[..., DBField]` marks a field as a database-side field: it appears in the `CreateDB` model but not in the user-facing `Create` model. Everything else a field is annotated with that pydantic acts on is carried to the generated models as it is: the constraints of `annotated_types` (`Gt`, `MinLen`, `Predicate`, ...), `StringConstraints`, `Strict`, the arguments of `Field(pattern=..., ge=...)`, and `AfterValidator` and the other functional validators and serialisers. Pydantic's shorthands (`PositiveInt`, `constr(max_length=3)`, `conint(ge=0)`, `StrictStr`) are these in `Annotated`, so they work too. Anything in `Annotated` that is none of these, and not one of Pangloss's own (`RelationConfig`, `DBField`, `SumsTo`, a `FieldMarker`, a description), is an error: what was written to do something must not be dropped in silence.
 
 ## Literal fields
 
-Literal fields are stored as properties of the node (or edge) they belong to, rather than as nodes of their own.
+Literal fields are stored as properties of the node (or edge) they belong to, rather than as nodes of their own. What is a literal, and how each is stored, is said once, in `pangloss_models.literals` (a registry of *codecs*; a package may add one with `register_codec`), and every other part asks it: the analysis of the fields, what is written, what the interface is told (`{"type": "str", "format": "uuid"}`), how a search compares a value, and what a migration sees as a change of storage.
 
-| Type | Stored in Memgraph as | Notes |
-|------|-----------------------|-------|
+| Type | Stored as | Notes |
+|------|-----------|-------|
 | `str`, `int`, `float`, `bool` | The same type | |
-| `date`, `datetime` | Memgraph date / datetime | |
-| `Decimal` | A string, e.g. `"1.10"` | Memgraph has no decimal type, and a float would lose precision. Strings are read back as `Decimal`, but cannot be compared numerically in Cypher |
-| `Enum` (including `IntEnum`) | The member's value (a string or a number), as a plain property | Nothing to create; migrations change the values when a member's value changes or a member goes |
+| `date`, `datetime`, `time` | The database's own types | A `datetime` with a timezone keeps its offset on both backends (tested); a naive one is naive |
+| `timedelta` | A duration | Compared for equality only in a search (Neo4j does not order durations). Written in JSON as ISO 8601 (`P1DT2H30M`) |
+| `Decimal` | A string, e.g. `"1.10"` | The databases have no decimal type, and a float would lose precision. Read back as `Decimal`; compared in a search as a number (`toFloat`, about 15 significant digits), so a `Meta(indexes=...)` of a `Decimal` field is refused: an index of the text would not be used |
+| `UUID`; `AnyUrl`, `HttpUrl` and the other URL types; `EmailStr`, `NameEmail`; the `ipaddress` types and `IPvAnyAddress`; `Path`; `re.Pattern`; `Fraction` | A string | The export says the format (`uuid`, `url`, `email`, `ip`, `path`, `regex`, `fraction`), so the interface can check and show it. Read back as the type. Searched as text |
+| `ByteSize` | An integer | format `bytes` |
+| `Enum` (including `IntEnum`, `StrEnum`) | The member's value (a string or a number), as a plain property | Nothing to create; migrations change the values when a member's value changes or a member goes. A `Flag` is refused (a combination of members is a value no member has) |
+| `Literal["a", "b"]` | The value | The values must be of one type (strings, whole numbers or booleans); the interface shows them as choices. The lightest fixed list; an `Enum` when the members need names |
 | `TypedDict` | A map | Every value must itself be a literal type or a list of one; may be nested, and may contain `NotRequired` keys |
-| `list[...]` of any of the above | A list | |
+| `list[...]`, `set[...]`, `frozenset[...]`, `tuple[X, ...]`, `tuple[X, X]` of any of the above | A list | A set has no repeats and a tuple of a fixed length has that many items: the generated models and the interface see to it; the same list is stored. The items of a tuple must be of one type. `list[X | None]` is refused: a list holds values |
 
 Any of these can be written `X | None`.
 
+### Defaults
+
+The default a class declares is carried to the generated models, as pydantic would have it: `count: int = 0`, `rank: int | None = 5`, `tags: list[str] = []` and `Field(default_factory=list)` all let the field be left out of a `Create` or an `Update`, and give it that value (a mutable default is copied, not shared). A default is a value like any other once written: it is stored. It is not part of the migrations' snapshot of what is stored, so changing one is not a migration; a *new* field with a default gives the nodes that exist that value, so `makemigrations` has nothing to ask.
+
 ### Optional literals
 
-An optional literal (`number: int | None`) does not have to be given: it defaults to `None` in `Create`, `CreateDB`, `Update`, `UpdateDB`, `View`, `HeadView` and `ReferenceView` (for `reference_view_extra_fields`). A `None` value is **not written** to the database, so the property is absent from the node, and reads back as `None`.
+An optional literal (`number: int | None`) does not have to be given: it defaults to `None` in `Create`, `CreateDB`, `Update`, `UpdateDB`, `View`, `HeadView` and `ReferenceView` (for `reference_view_extra_fields`). (Here Pangloss is more lenient than pydantic, for which `int | None` without `= None` is still required.) A `None` value is **not written** to the database, so the property is absent from the node, and reads back as `None`. An optional list (`tags: list[str] | None`) is the same: left out, nothing is written, and `None` is read back, as against `[]`.
 
 Falsy values (`0`, `0.0`, `""`, `False`, `[]`) are values, and are written.
 

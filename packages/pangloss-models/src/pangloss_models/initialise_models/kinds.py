@@ -142,6 +142,9 @@ class ModelKind:
     skip_db_fields: bool = False
     """Client models leave out fields that are only written to the database (`DBField`)"""
     descriptions: bool = False
+    forbid_extra: bool = False
+    """Whether a key the model has no field for is refused (the models a client sends: a misspelt key would
+    otherwise be dropped, and the document saved without it)"""
     discriminated: bool = False
     """Whether the union of a relation is discriminated on `type`"""
     empty_list_default: bool = False
@@ -233,6 +236,7 @@ CLIENT_LITERAL = rule({"bound", "fulfil"}, {"bound", "fulfil", "optional"})
 
 CREATE = ModelKind(
     declared_validators=True,
+    forbid_extra=True,
     attribute="Create",
     bases=bases_for("Create"),
     offers=("Create",),
@@ -260,6 +264,7 @@ CREATE = ModelKind(
 
 UPDATE = ModelKind(
     declared_validators=True,
+    forbid_extra=True,
     attribute="Update",
     bases=bases_for("Update"),
     offers=("Update", "Create"),

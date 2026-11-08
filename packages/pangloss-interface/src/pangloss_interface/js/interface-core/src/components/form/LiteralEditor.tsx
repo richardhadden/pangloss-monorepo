@@ -27,9 +27,18 @@ function limit(validators: Validator[] | undefined, name: string, key: string): 
 /** How wide an input for a value of the type is: short for what is always short (a number, a date), else "" (the whole width) */
 function widthOf(type: FieldType): string {
   if (type.type === "int" || type.type === "float") return numberWidthClass;
-  if (type.type === "date") return dateWidthClass;
+  if (type.type === "date" || type.type === "time") return dateWidthClass;
   if (type.type === "datetime") return dateTimeWidthClass;
   return "";
+}
+
+// (what a text means, as the browser's input for it: a URL or an email address has one; the rest is text)
+const INPUT_TYPE_OF_FORMAT: Record<string, string> = { url: "url", email: "email" };
+
+/** The `type` of the input for a text (`str`) of the format, or "text" */
+export function textInputType(type: FieldType): string {
+  const format = "format" in type ? type.format : undefined;
+  return (format && INPUT_TYPE_OF_FORMAT[format]) || "text";
 }
 
 // (more choices than this are a dropdown; as many or fewer, pills to click)
@@ -75,7 +84,7 @@ function ChoicePills(props: {
 
 // (a value in a single box, which the remove button of a list can be joined on to)
 const joinable = (type: FieldType) =>
-  ["int", "float", "str", "uuid", "decimal", "date", "datetime", "enum", "literal"].includes(type.type);
+  ["int", "float", "str", "decimal", "date", "datetime", "time", "duration", "enum", "literal"].includes(type.type);
 
 /** A value of the type that is not a literal the form knows (or that is in a list of the field's): the JSON, to edit as it is */
 export function JsonEditor(props: { path: Accessor<Path>; label: string }) {
@@ -264,12 +273,14 @@ export function LiteralEditor(props: {
           onInput={(typed) => write(typed === "" ? "" : Number(typed))}
         />
       </Match>
-      <Match when={props.type.type === "str" || props.type.type === "uuid" || props.type.type === "decimal"}>
+      <Match when={props.type.type === "str" || props.type.type === "decimal" || props.type.type === "duration"}>
         <input
-          type="text"
+          type={textInputType(props.type)}
           class={inputClass}
           aria-label={props.label}
           inputmode={props.type.type === "decimal" ? "decimal" : undefined}
+          // (a duration is written as ISO 8601: a day, two hours and a half is P1DT2H30M)
+          placeholder={props.type.type === "duration" ? "P1DT2H30M" : undefined}
           // (a decimal is a number: what is not in one is refused as it is typed)
           onBeforeInput={props.type.type === "decimal" ? allowOnly(decimalCharacters) : undefined}
           maxlength={limit(props.validators, "MaxLen", "max_length")}
@@ -280,6 +291,16 @@ export function LiteralEditor(props: {
       <Match when={props.type.type === "date"}>
         <input
           type="date"
+          class={[inputClass, dateWidthClass]}
+          aria-label={props.label}
+          value={text()}
+          onInput={(event) => write(event.currentTarget.value)}
+        />
+      </Match>
+      <Match when={props.type.type === "time"}>
+        <input
+          type="time"
+          step={1}
           class={[inputClass, dateWidthClass]}
           aria-label={props.label}
           value={text()}

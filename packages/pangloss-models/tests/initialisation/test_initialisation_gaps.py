@@ -367,13 +367,7 @@ def test_what_is_given_for_a_relation_with_an_edge_model_is_kept():
             {
                 "type": "InRole",
                 "role": "witness",
-                "target": [
-                    {
-                        "type": "Person",
-                        "id": person_id,
-                        "edgeProperties": {"weight": 0.5},
-                    }
-                ],
+                "target": [{"type": "Person", "id": person_id}],
                 "edgeProperties": {"weight": 0.5},
             }
         ],
@@ -453,13 +447,7 @@ def test_a_binding_goes_through_a_relation_with_an_edge_model():
                     {
                         "type": "InRole",
                         "role": "witness",
-                        "target": [
-                            {
-                                "type": "Person",
-                                "id": uuid7(),
-                                "edgeProperties": {"weight": 0.5},
-                            }
-                        ],
+                        "target": [{"type": "Person", "id": uuid7()}],
                         "edgeProperties": {"weight": 0.5},
                     }
                 ],

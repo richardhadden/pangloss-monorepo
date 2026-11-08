@@ -22,6 +22,7 @@ from pydantic import create_model as pydantic_create_model
 from pydantic.alias_generators import to_camel
 from pydantic.fields import FieldInfo
 
+from pangloss_models import literals
 from pangloss_models.field_definitions import (
     FieldBinding,
     FieldDefinition,
@@ -54,6 +55,7 @@ from pangloss_models.utils import (
     annotation_is_optional,
     field_has_inherited_field_bindings,
     map_validators_to_kwargs,
+    with_constraints,
 )
 
 # Models made for a use of a model with bindings, by (kind, the model, the bindings). They hold a
@@ -94,7 +96,7 @@ def initialise_model(kind: ModelKind, model: type) -> None:
         __module__=model.__module__,
         _owner=(ClassVar[model], model),
         __doc__=model._meta.description if model._meta.description else "",  # type: ignore[attr-defined]
-        __config__=ConfigDict(alias_generator=to_camel),
+        __config__=config_for(kind),
         type=(Literal[name], name),
     )
     setattr(model, kind.attribute, made)
@@ -103,6 +105,14 @@ def initialise_model(kind: ModelKind, model: type) -> None:
         add_id_fields(made)
     add_label_field(made)
     rebuild(made)
+
+
+def config_for(kind: ModelKind) -> ConfigDict:
+    """The config of a generated model: camelCase aliases, and for the models a client sends no key the
+    model has no field for (a misspelt key would otherwise be dropped, and the document saved without it)"""
+    if kind.forbid_extra:
+        return ConfigDict(alias_generator=to_camel, extra="forbid")
+    return ConfigDict(alias_generator=to_camel)
 
 
 def add_id_fields(made: type) -> None:
@@ -164,24 +174,25 @@ def add_fields(
         if skipped(definition):
             continue
         when = conditions(name, definition, bool(definition.field_required_to_fulfil))
-        annotation = definition.annotated_type
-        if holds(kind.literal, "nullable", when):
-            annotation = annotation | None
-        set_field(
-            model,
-            name,
-            FieldInfo(
-                annotation=annotation,
-                validation_alias=to_camel(name),
-                **describe(definition),
-                **map_validators_to_kwargs(definition.validators),
-            ),
+        # (from the annotation, so that what the class annotated the field with is the field's metadata, as
+        # pydantic has it for a field declared in a class)
+        info = FieldInfo.from_annotation(
+            value_annotation(definition, holds(kind.literal, "nullable", when))
         )
-        if holds(kind.literal, "default", when):
-            model.model_fields[name].default = None  # type: ignore[attr-defined]
+        info.validation_alias = to_camel(name)
+        info.description = describe(definition)["description"]
+        set_field(model, name, info)
+        if definition.has_default:
+            # (the default the class declares, as pydantic would have it: a field with one may be left out)
+            if definition.default_factory is not None:
+                info.default_factory = definition.default_factory
+            else:
+                info.default = definition.default
+        elif holds(kind.literal, "default", when):
+            info.default = None
         elif definition.db_field and isinstance(definition, ListFieldDefinition):
             # a list only the database side has is filled in by a validator the class declares, so it may be left out
-            model.model_fields[name].default_factory = list  # type: ignore[attr-defined]
+            info.default_factory = list
 
     for name, definition in fields.embedded_fields.items():
         if skipped(definition):
@@ -259,6 +270,18 @@ def add_fields(
             model.model_fields[name].default = None  # type: ignore[attr-defined]
 
     rebuild(model)
+
+
+def value_annotation(definition: Any, nullable: bool) -> Any:
+    """The annotation of a literal or list field on a generated model: the declared type with what the class
+    annotated it with (`Ge(1)`, `StringConstraints(...)`, an `AfterValidator`) carried in an `Annotated`, and
+    `| None` if the class declared it optional or the kind of model makes it so"""
+    declared = definition.annotated_type
+    optional = annotation_is_optional(declared) or nullable
+    annotation = with_constraints(
+        literals.without_none(declared), definition.validators
+    )
+    return annotation | None if optional else annotation
 
 
 def embedded_annotation(kind: ModelKind, definition: Any) -> Any:
@@ -429,7 +452,7 @@ def _build_generic_model(
         ),
         __module__=generic.__module__,
         _owner=(ClassVar[generic], generic),
-        __config__=ConfigDict(alias_generator=to_camel),
+        __config__=config_for(kind),
         type=(Literal[generic.__name__], generic.__name__),
     )
 
@@ -507,7 +530,7 @@ def build_bound_model(
         ),
         __module__=owner.__module__,
         _owner=(ClassVar[owner], owner),
-        __config__=ConfigDict(alias_generator=to_camel),
+        __config__=config_for(kind),
         type=(Literal[owner.__name__], owner.__name__),
     )
     _bound_models[key] = bound

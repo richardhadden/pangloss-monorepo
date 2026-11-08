@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any, Protocol, TypeVar, runtime_checkable
 from annotated_types import BaseMetadata
 from frozendict import frozendict
 from pydantic.fields import FieldInfo
+from pydantic_core import PydanticUndefined
 
 from pangloss_models.exceptions import PanglossInitialisationError
 
@@ -61,17 +62,38 @@ class FieldDefinition:
 
 
 @dataclass(frozen=True, kw_only=True)
-class LiteralFieldDefinition(FieldDefinition):
+class ValueFieldDefinition(FieldDefinition):
+    """A field that holds a value of its own (a literal, or a list of them): what the class says of its value"""
+
+    validators: list[Any] = dataclass_field(default_factory=list)
+    """What the field is annotated with that pydantic checks or applies (`Ge(1)`, `StringConstraints(...)`,
+    `Strict()`, `AfterValidator(f)`): carried to the generated models as they are"""
+    default: Any = PydanticUndefined
+    """The default the class declares (`n: int = 0`), carried to the generated models; `PydanticUndefined` for none"""
+    default_factory: Callable[[], Any] | None = None
+    """The `default_factory` the class declares (`Field(default_factory=list)`)"""
+
+    @property
+    def has_default(self) -> bool:
+        return self.default is not PydanticUndefined or self.default_factory is not None
+
+    def default_value(self) -> Any:
+        """The default, made if it comes from a factory; `PydanticUndefined` if there is none"""
+        if self.default_factory is not None:
+            return self.default_factory()
+        return self.default
+
+
+@dataclass(frozen=True, kw_only=True)
+class LiteralFieldDefinition(ValueFieldDefinition):
     annotated_type: type[BaseTypes]
-    validators: list[BaseMetadata] = dataclass_field(default_factory=list)
     markers: tuple[Any, ...] = ()
     """What the field is annotated with that is a `FieldMarker` (`Annotated[int, Slider()]`): for the interface"""
 
 
 @dataclass(frozen=True, kw_only=True)
-class ListFieldDefinition(FieldDefinition):
+class ListFieldDefinition(ValueFieldDefinition):
     annotated_type: type[list[BaseTypes]]
-    validators: list[BaseMetadata] = dataclass_field(default_factory=list)
     inner_type: type[BaseTypes]
     inner_type_validators: list[BaseMetadata] = dataclass_field(default_factory=list)
 
