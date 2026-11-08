@@ -116,11 +116,11 @@ class Identification[T](ReifiedRelation[T]):
     target: Annotated[list[T], MinLen(1), MaxLen(1)]
 
 
-
 class Attributed[T](ReifiedRelation[T]):
     """Who in the source says so"""
 
     attributed_by: str
+
 
 # ---------------------------------------------------------------------------
 # Entities
@@ -287,7 +287,11 @@ class Feast(DateCharacterisation):
 
 
 def narrows_involves() -> RelationConfig:
-    return RelationConfig(subclasses_parent_fields=[FieldSubclassing("involves", field_on_model=Statement)])
+    return RelationConfig(
+        subclasses_parent_fields=[
+            FieldSubclassing("involves", field_on_model=Statement)
+        ]
+    )
 
 
 class Statement(Document):
@@ -468,7 +472,9 @@ class Membership(PeriodStatement):
         Agent | Identification[WeightedAlternative[Person]],
         RelationConfig(
             reverse_name="member_of",
-            subclasses_parent_fields=[FieldSubclassing("involves", field_on_model=Statement)],
+            subclasses_parent_fields=[
+                FieldSubclassing("involves", field_on_model=Statement)
+            ],
         ),
     ]
     group: Annotated[Group, RelationConfig(reverse_name="has_member")]
@@ -512,7 +518,9 @@ class Pilgrimage(PeriodStatement):
 
 
 class Meeting(DatedStatement):
-    participants: Annotated[list[InRole[Agent]], RelationConfig(default_reified_type=InRole)]
+    participants: Annotated[
+        list[InRole[Agent]], RelationConfig(default_reified_type=InRole)
+    ]
 
 
 class Letter(DatedStatement):
@@ -528,7 +536,9 @@ class Gift(DatedStatement):
         Agent | Identification[WeightedAlternative[Person]],
         RelationConfig(
             reverse_name="gave",
-            subclasses_parent_fields=[FieldSubclassing("involves", field_on_model=Statement)],
+            subclasses_parent_fields=[
+                FieldSubclassing("involves", field_on_model=Statement)
+            ],
         ),
     ]
     given_to: Annotated[
@@ -576,7 +586,9 @@ class CreationOfArtwork(CreationOfPhysicalObject):
         Artwork,
         RelationConfig(
             subclasses_parent_fields=[
-                FieldSubclassing(field_name="object_created", field_on_model=CreationOfPhysicalObject)
+                FieldSubclassing(
+                    field_name="object_created", field_on_model=CreationOfPhysicalObject
+                )
             ]
         ),
     ]
@@ -671,7 +683,9 @@ class Order(DatedStatement):
         Agent | Identification[WeightedAlternative[Person]],
         RelationConfig(
             reverse_name="ordered",
-            subclasses_parent_fields=[FieldSubclassing("involves", field_on_model=Statement)],
+            subclasses_parent_fields=[
+                FieldSubclassing("involves", field_on_model=Statement)
+            ],
         ),
     ]
     ordered_to: Annotated[
@@ -682,11 +696,13 @@ class Order(DatedStatement):
         PositiveSubjunctive[Statement] | NegativeSubjunctive[Statement],
         RelationConfig(
             bind_to_child_field=[
-                FieldBinding(bound_field="ordered_to", child_fields=["given_by", "payer", "sender"])
+                FieldBinding(
+                    bound_field="ordered_to",
+                    child_fields=["given_by", "payer", "sender"],
+                )
             ]
         ),
     ]
-
 
 
 # --- Deep nesting (added 2026-11-07) ------------------------------------------------
@@ -731,6 +747,7 @@ class SealedLetter(DatedStatement):
 
     sealed_by: Annotated[Agent, narrows_involves()]
     seal: Seal
+
 
 # --- Undated -----------------------------------------------------------------------
 
@@ -788,12 +805,12 @@ class Reputation(UndatedStatement):
     favourable: bool
 
 
-
 class Report(UndatedStatement):
     """Someone reported a statement, which can itself be a report (of a report of an order of an order ...)"""
 
     reporter: Annotated[Agent, narrows_involves()]
     reported: Annotated[Hearsay[Statement], RelationConfig(reverse_name="reported_in")]
+
 
 # ---------------------------------------------------------------------------
 # Spaces, conjunctions, the factoid
@@ -824,11 +841,11 @@ class Hypothetical[T](SemanticSpace[T]):
     _interface_meta = InterfaceMeta(colour="yellow")
 
 
-
 class Hearsay[T](SemanticSpace[T]):
     """Someone said that..."""
 
     _interface_meta = InterfaceMeta(colour="sky")
+
 
 class Causes[TCause, TResult](Conjunction):
     """One thing led to another"""
@@ -844,6 +861,9 @@ class Factoid(Document):
 
     source: AtPage[ZoteroBacked]
     statements: list[
-        Statement | Negative[Statement] | Hypothetical[Statement] | Causes[Statement, Statement]
+        Statement
+        | Negative[Statement]
+        | Hypothetical[Statement]
+        | Causes[Statement, Statement]
     ]
     recorded_on: datetime.date | None = None
