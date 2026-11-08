@@ -80,6 +80,36 @@ def load_models(project: Project) -> dict:
     return build_snapshot(structure_of(optional_migration_backend(project)))
 
 
+def unmigrated_diagnostics(project: Project) -> list:
+    """What `makemigrations` would write, as warnings at the field or class that changed (for `pangloss check` and the
+    language server). Nothing, for a project that has no migrations yet: every model would be new. The models are
+    initialised already; this does not need the database"""
+    from pangloss_models.diagnostics import Diagnostic, diagnose_model
+    from pangloss_models.migrations.diff import diff
+    from pangloss_models.migrations.planner import subject_of
+
+    try:
+        graph = graph_of(installed_apps(project))
+        if not graph.migrations:
+            return []
+        snapshot = build_snapshot(structure_of(optional_migration_backend(project)))
+        changes = diff(graph.state(), snapshot).changes
+    except PanglossMigrationError as error:
+        return [Diagnostic("warning", f"The migrations cannot be read: {error}")]
+    return [
+        diagnose_model(
+            "warning",
+            f"Not in a migration yet: {change.describe()} (`pangloss makemigrations`)",
+            subject_of(change),
+            # (a field is at its new name)
+            change.new
+            if isinstance(change, c.RenameField)
+            else getattr(change, "name", None),
+        )
+        for change in changes
+    ]
+
+
 def installed_apps(project: Project) -> list[str]:
     return list(project.require_settings().INSTALLED_APPS)
 

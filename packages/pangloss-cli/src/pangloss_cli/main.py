@@ -24,6 +24,7 @@ from pangloss_cli.migrations import (
     restore,
     showmigrations,
     squashmigrations,
+    unmigrated_diagnostics,
 )
 from pangloss_cli.project import (
     NO_SETTINGS_MESSAGE,
@@ -172,6 +173,7 @@ def check(
                 descriptions = field_descriptions()
                 if stubs:
                     write_stubs(root)
+                diagnostics += unmigrated_diagnostics(project)
             # (best effort: what is complete is offered even if some model is not)
             try:
                 schema = editor_schema()

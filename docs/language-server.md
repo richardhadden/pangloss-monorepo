@@ -8,6 +8,7 @@ VS Code). Not built: the completions of `Where` keys (the stubs give those to a 
 It sits beside your type checker and does what a type checker cannot: it knows Pangloss's rules.
 
 - **On save**, what `initialise()` refuses is shown at the field or class, every field at once, and the warnings too.
+- **Changes not in a migration yet**, as warnings at the field or class that changed.
 - **Quick fixes** for the refusals that have an obvious correction (below).
 - **Completion** of the options of every `Meta`, of `RelationConfig` and `FieldBinding`, of the values they take, and
   of the `_x_meta` slots (below).
@@ -30,6 +31,15 @@ later steps need all the fields.
 
 In a `Diagnostic`, `line` counts from 1 and `column` from 0 (a character, not a byte). A problem with no one place has
 no `file`. The report also has `schema`, which the completions are made from.
+
+## Changes not in a migration yet
+
+When the models have changed since the last migration, each change `makemigrations` would write is a warning at the
+field (an added field, a changed type) or at the class (a removed field, a changed option): "Not in a migration yet:
+Add the field Person.born ... (`pangloss makemigrations`)". A model that is gone from the code has no place, so its
+warning has none. It is `diff` of the migrations' state and the snapshot of the models, as `makemigrations --check`
+does, and needs no database. A project with no migrations at all is told nothing (every model would be new), and a
+warning does not make `pangloss check` exit with 1.
 
 ## Quick fixes
 

@@ -427,6 +427,23 @@ def _fixes_of(
     return tuple(fix for fix in found if fix is not None)
 
 
+def diagnose_model(
+    severity: Literal["error", "warning"],
+    message: str,
+    model_name: str | None,
+    member: str | None = None,
+) -> Diagnostic:
+    """A problem about a model (and perhaps one of its fields) by the model's name, at the source if the class is
+    one that is registered: the migrations name models, not classes"""
+    from pangloss_models.model_registry import ModelRegistry
+
+    model = ModelRegistry.all_models().get(model_name or "")
+    place = source_place(model, member) if model is not None else None
+    if place is None:
+        return Diagnostic(severity, message)
+    return _diagnostics_at(severity, message, [place])[0]
+
+
 def diagnostic_of_exception(error: BaseException, root: Path) -> Diagnostic:
     """Importing a module failed: where it failed, in the project's own code (the framework's frames say nothing)"""
     message = f"{type(error).__name__}: {error}" if not _is_ours(error) else str(error)

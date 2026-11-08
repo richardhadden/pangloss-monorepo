@@ -1092,3 +1092,78 @@ def test_a_query_by_hand_is_for_the_backend_installed(monkeypatch):
     assert migrations.cypher_dialect(project) == "neo4j"
     monkeypatch.setattr(migrations, "storage_of", storage("rdf", False))
     assert migrations.cypher_dialect(project) is None
+
+
+# ---------------------------------------------------------------------------
+# check: what is not in a migration yet
+# ---------------------------------------------------------------------------
+
+
+def check_report() -> dict:
+    import json
+
+    exit_code, output = invoke("check", "--json")
+    assert exit_code == 0, output
+    return json.loads(output.strip().rsplit("\n", 1)[-1])
+
+
+def test_models_that_the_migrations_come_to_have_nothing_pending(models_project: Path):
+    assert invoke("makemigrations")[0] == 0
+    ModelRegistry._reset()
+    set_models(models_project, V1)
+
+    assert check_report()["diagnostics"] == []
+
+
+def test_a_project_with_no_migrations_yet_is_not_told_every_model_is_new(
+    models_project: Path,
+):
+    assert check_report()["diagnostics"] == []
+
+
+def test_a_field_added_since_the_last_migration_is_a_warning_at_the_field(
+    models_project: Path,
+):
+    assert invoke("makemigrations")[0] == 0
+    set_models(models_project, V2)
+
+    (warning,) = check_report()["diagnostics"]
+    assert warning["severity"] == "warning"
+    assert "Not in a migration yet" in warning["message"]
+    assert "Person.born" in warning["message"]
+    assert "`pangloss makemigrations`" in warning["message"]
+    assert warning["file"] == str(models_project / "fakeapp/models.py")
+    # (the line of `born: int` in V2, below its first, empty line)
+    assert (warning["line"], warning["column"], warning["end_column"]) == (6, 4, 8)
+
+
+def test_a_field_removed_is_a_warning_at_its_class(models_project: Path):
+    set_models(models_project, V2)
+    assert invoke("makemigrations", input="1900\n")[0] == 0
+    set_models(models_project, V1)
+
+    (warning,) = check_report()["diagnostics"]
+    assert "Person.born" in warning["message"]
+    assert (warning["line"], warning["column"]) == (4, 6)  # (the name `Person`)
+
+
+def test_a_model_that_no_longer_exists_is_a_warning_with_no_place(models_project: Path):
+    assert invoke("makemigrations")[0] == 0
+    set_models(
+        models_project,
+        """
+        from pangloss_models import Entity
+
+        class Place(Entity):
+            name: str
+        """,
+    )
+
+    by_model = {
+        ("Person" if "Person" in d["message"] else "Place"): d
+        for d in check_report()["diagnostics"]
+    }
+    # (a model that is gone has no class to be at; a new one is at its class)
+    assert by_model["Person"]["file"] is None
+    assert by_model["Place"]["file"] == str(models_project / "fakeapp/models.py")
+    assert by_model["Place"]["line"] == 4
