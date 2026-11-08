@@ -240,9 +240,9 @@ def test_someone_logged_in_attaches_a_feast_to_a_day_and_takes_it_away(
     # the + of the search makes a new one, on this day to start with
     feasts.get_by_role("button", name="Make a new one").click()
     dialog = page.get_by_role("dialog")
-    # (a feast, or a document that can have a date, a dateable appointment too; the search finds only feasts)
+    # (a feast, or a document that can have a date (a letter's is optional), a dateable appointment too; the search finds only feasts)
     expect(dialog.locator("button[data-choice]")).to_have_text(
-        ["Appointment", "Feast", "Event"]
+        ["Appointment", "Feast", "Event", "Letter"]
     )
     dialog.get_by_role("button", name="Feast", exact=True).click()
     expect(dialog.get_by_label("When Year", exact=True)).to_have_value("1500")
@@ -279,9 +279,9 @@ def test_a_feast_is_made_from_the_plus_of_a_day_in_the_month(logged_in: Page, da
     month = page.get_by_test_id("calendar-month")
     month.get_by_role("button", name="Add to 7 March 1500").click()
     dialog = page.get_by_role("dialog")
-    # (a feast, and an event and an appointment, which have a date; not a report, which has none)
+    # (a feast, and an event, an appointment and a letter, which have a date; not a report, which has none)
     expect(dialog.locator("button[data-choice]")).to_have_text(
-        ["Appointment", "Feast", "Event"]
+        ["Appointment", "Feast", "Event", "Letter"]
     )
     dialog.get_by_role("button", name="Feast", exact=True).click()
     expect(dialog.get_by_role("heading", name="New Feast")).to_be_visible()

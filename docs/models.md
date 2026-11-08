@@ -124,7 +124,7 @@ A method that reads the database, or needs anything a client of the API does not
 
 ## Embedded
 
-Structured data without its own identity or head node, for example a date range belonging to the object that contains it. It is stored as a separate node, linked from its container, and written together with it, and read back with it (tested). `Embedded` classes are used as field types, singly or as a union (`Date | DateRange`), and get their own `Create`/`Update`/`View`/`CreateDB`/`UpdateDB` models. They never require a label. A list of embedded objects (`list[Date]`) and an optional embedded object (`Date | None`) are **not supported**, and raise an error at `initialise()`.
+Structured data without its own identity or head node, for example a date range belonging to the object that contains it. It is stored as a separate node, linked from its container, and written together with it, and read back with it (tested). `Embedded` classes are used as field types, singly or as a union (`Date | DateRange`), and get their own `Create`/`Update`/`View`/`CreateDB`/`UpdateDB` models. They never require a label. An embedded field may be optional (`Date | None`: none is no node; see [Optional relations and embedded objects](relations.md#optional-relations-and-embedded-objects-)). A list of embedded objects (`list[Date]`) is **not supported**, and raises an error at `initialise()`.
 
 ```python
 class Date(Embedded):

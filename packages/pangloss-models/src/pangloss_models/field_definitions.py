@@ -121,6 +121,8 @@ class EmbeddedFieldDefinition(FieldDefinition):
     markers: tuple[Any, ...] = ()
     """What the field is annotated with that has an `apply_to_embedded(value)` method (`Annotated[Date, Marker()]`):
     called, in the models that are written, with the embedded object that was given (after its own validators)"""
+    optional: bool = False
+    """Declared `Date | None`: there may be none (`annotated_type` is the class without the `None`)"""
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -188,6 +190,9 @@ class RelationFieldDefinition(FieldDefinition):
     reverse_name: str
     subclasses_parent_fields: set[str | FieldSubclassing]
     wrapper: type[list | tuple] | None = None
+    optional: bool = False
+    """Declared `Person | None`: a single relation that may be absent, stored as no edge (`annotated_type` is the
+    class without the `None`)"""
     validators: list[BaseMetadata] = dataclass_field(default_factory=list)
     bind_to_child_field: list[FieldBinding] = dataclass_field(default_factory=list)
     # (the name of the reified relation an entity found in the interface is put in: `RelationConfig`)

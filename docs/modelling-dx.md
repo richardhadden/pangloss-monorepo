@@ -42,9 +42,19 @@ The review stands as written; this says what the code does now, and what was dec
 `frozenset[X]` are lists with a rule the generated models keep (the export says `Unique`, `MinLen`/`MaxLen`).
 `UUID`, the URL types, `EmailStr`, `NameEmail`, the IP types, `Path`, `re.Pattern`, `Fraction`, `ByteSize`,
 `datetime.time` and `timedelta` are literal types. Every refusal that can name an alternative does (`dict`, a
-pydantic model or dataclass, a `NamedTuple`, `bytes`, a union of literals, an optional relation or embedded
-object). **Not built:** optional relations and optional embedded objects as 0..1 (§3): still refused, with the
-message naming `list[...]`; they are the first thing to do next (`TODO.md`, Model layer).
+pydantic model or dataclass, a `NamedTuple`, `bytes`, a union of literals, `list[Person] | None`).
+
+**§3, optional relations and embedded objects** (built later on 2026-11-08). `spouse: Person | None` and
+`born: Date | None` are accepted. Not as a list of at most one, as §3 proposed, but as what a single relation already
+was (`wrapper=None`), with `optional=True` on the `RelationFieldDefinition` or `EmbeddedFieldDefinition`: the
+annotation kept there is the class without the `None`, and every kind of generated model makes the field `X | None =
+None`. Storage needed nothing: a single relation was already written as one edge, and none is no edge. The export's
+`required` now means what `Create` requires (`X | None` is not required, literals too: it had been pydantic's view of
+the declared class); the interface needed no change, since it already started a field that is not required empty and
+offered to remove it. Migrations: `AlterNullability` now covers relations and embedded objects; made required, it
+checks that every node has one and fails with the count (no default to give). `list[Person] | None` is refused (a list
+may already be empty). Tests: `conformance/test_optional_objects.py`, `conformance/test_migrations_optional.py`, the
+two cases of `test_field_types.py`, and `e2e/test_editing.py` (a `Letter` with an optional sender and date).
 
 **§4, the codec registry.** Built as `pangloss_models.literals`: `LiteralCodec(types, storage, format,
 search_kind, to_storage)`, the natives and the format codecs, `register_codec` for a package. `is_literal`,

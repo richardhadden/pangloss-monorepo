@@ -287,14 +287,18 @@ class Exporter:
         return self.plain(definition.default_value())
 
     def field_requirements(self, definition: FieldDefinition) -> dict[str, Any]:
-        """Whether the field may be left out, or be null, as the model declares it"""
+        """Whether the field may be left out, or be null, as the model declares it (and as `Create` has it: a field
+        declared `X | None` may be left out)"""
         try:
             model_field = definition.model_field
         except Exception:
             return {"required": False, "nullable": False}
         annotation = model_field.annotation
         nullable = annotation is type(None) or type(None) in get_args(annotation)
-        return {"required": model_field.is_required(), "nullable": nullable}
+        return {
+            "required": model_field.is_required() and not nullable,
+            "nullable": nullable,
+        }
 
     # --- relations -------------------------------------------------------
 

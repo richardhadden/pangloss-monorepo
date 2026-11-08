@@ -90,6 +90,9 @@ def answers_needed(change: c.Change, state: dict[str, Any]) -> list[Question]:
         entry = next(
             (f for f in model.get("fields", []) if f["name"] == change.name), None
         )
+        if entry and entry["kind"] in ("relation", "embedded"):
+            # (no default for a relation or an embedded object: the migration checks that each node has one)
+            return []
         return [
             Question(
                 "default",

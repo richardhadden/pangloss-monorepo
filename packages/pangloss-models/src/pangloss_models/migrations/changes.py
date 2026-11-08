@@ -354,6 +354,10 @@ class AlterNullability(Change):
         return f"{self.model}.{self.name} may no longer be null (a value is needed where it is)"
 
 
+# (for a relation or an embedded object that may no longer be absent there is no default to give: the migration
+# checks that every node has one, and fails naming how many have not)
+
+
 @dataclass(frozen=True, kw_only=True)
 class ChangeFieldKind(Change):
     """The field is another kind of field (a literal that is now a relation...)"""

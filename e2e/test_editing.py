@@ -265,3 +265,34 @@ def test_an_item_saved_meanwhile_is_not_overwritten_and_the_new_version_can_be_l
     page.get_by_role("button", name="Save").click()
     page.wait_for_url(f"**/Statement/{data.statement}")
     expect(page.get_by_role("heading", name="Court at Bruges")).to_be_visible()
+
+
+def test_an_optional_relation_and_embedded_object_start_empty_may_be_left_out_and_removed(logged_in: Page, data):
+    page = logged_in
+    page.goto("/Letter/new")
+    hydrated(page)
+    # (nothing is put there to start with, and nothing is required)
+    expect(page.get_by_label("Find Person…")).to_be_visible()
+    expect(page.get_by_role("button", name="Add sent")).to_be_visible()
+    page.get_by_label("Label", exact=True).fill("An unsigned letter")
+    page.get_by_label("Text", exact=True).fill("Dear sir")
+    page.get_by_role("button", name="Save").click()
+    expect(page.get_by_role("heading", name="An unsigned letter")).to_be_visible()
+    letter = page.url.rstrip("/").split("/")[-1]
+
+    page.goto(f"/Letter/{letter}/edit")
+    hydrated(page)
+    page.get_by_label("Find Person…").fill("Marie")
+    page.get_by_role("option", name="Marie of Burgundy").click()
+    page.get_by_role("button", name="Save").click()
+    page.wait_for_url(f"**/Letter/{letter}")
+    expect(page.get_by_role("link", name="Marie of Burgundy")).to_be_visible()
+
+    page.goto(f"/Letter/{letter}/edit")
+    hydrated(page)
+    page.get_by_role("button", name="Remove Marie of Burgundy").click()
+    expect(page.get_by_label("Find Person…")).to_be_visible()
+    page.get_by_role("button", name="Save").click()
+    page.wait_for_url(f"**/Letter/{letter}")
+    expect(page.get_by_role("heading", name="An unsigned letter")).to_be_visible()
+    expect(page.get_by_role("link", name="Marie of Burgundy")).to_have_count(0)

@@ -87,8 +87,9 @@ lets one payload make a node that is also an `Other`, with its labels. See `docs
 
 Each of these raises at `initialise()`:
 
-- an optional relation (`Person | None`): use `list[Person]`, which may be empty;
-- an optional embedded object, a list of embedded objects, a list of annotated values (annotate a list instead:
+- an optional list of relations (`list[Person] | None`): `list[Person]` may already be empty (a single relation or
+  embedded object may be optional: `Person | None`, `Date | None`);
+- a list of embedded objects, a list of annotated values (annotate a list instead:
   `WithCertainty[list[str]]`);
 - a plain `dict` (use a `TypedDict`), `bytes`, `complex`, a pydantic model or dataclass (use an `Embedded` or a
   `TypedDict`), a `Flag` enum, a union of literal types, `list[X | None]`;

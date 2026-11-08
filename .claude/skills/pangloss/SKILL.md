@@ -65,8 +65,9 @@ These are the facts that most mistakes come from not knowing.
    same way from readers who are not logged in. Any query you write over model data has to apply these rules (there
    are helpers: see the architecture reference).
 6. **What the models cannot do is an error, not a guess.** An annotation `initialise()` does not understand raises
-   `PanglossModelError` naming the model, field and the alternative. Not supported: optional relations
-   (`Person | None`; use `list[Person]`), optional or listed embedded objects, lists of annotated values, plain
+   `PanglossModelError` naming the model, field and the alternative. A single relation or embedded
+   object may be optional (`Person | None`, `Date | None`: no edge or node when there is none). Not supported:
+   lists of embedded objects or of annotated values, `list[Person] | None` (a list may already be empty), plain
    `dict` (use a `TypedDict`). What a literal is, and how it is stored, is said once in `pangloss_models.literals`
    (pydantic's standard types included: a `UUID` or a URL is text with a format); anything in `Annotated` that is
    neither pydantic's nor Pangloss's is an error, and a method or `model_config` on a declared class a

@@ -20,5 +20,6 @@ def unwrap_single_item_lists(cls: Any, data: Any) -> Any:
             raise ValueError(
                 f"{cls.__name__}.{k}: More than one value returned for field"
             )
-        data[k] = v[0]
+        # (none, for one that is optional: `Person | None`)
+        data[k] = v[0] if v else None
     return data

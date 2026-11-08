@@ -161,7 +161,8 @@ def add_fields(
                 bindings, bound_names(name, definition), definition.field_on_model
             ),
             "fulfil": fulfil,
-            "optional": annotation_is_optional(definition.annotated_type),
+            "optional": annotation_is_optional(definition.annotated_type)
+            or getattr(definition, "optional", False),
         }
 
     def describe(definition: FieldDefinition) -> dict[str, Any]:

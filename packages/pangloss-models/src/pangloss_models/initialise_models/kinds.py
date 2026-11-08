@@ -257,8 +257,8 @@ CREATE = ModelKind(
     bind_generic_itself=True,
     copy_fields_from="Create",
     literal=CLIENT_LITERAL,
-    embedded=rule({"bound", "fulfil"}, {"bound", "fulfil"}),
-    relation=rule({"bound", "fulfil"}, {"bound", "fulfil"}),
+    embedded=rule({"optional", "bound", "fulfil"}, {"optional", "bound", "fulfil"}),
+    relation=rule({"optional", "bound", "fulfil"}, {"optional", "bound", "fulfil"}),
     annotated_value=rule({"bound", "fulfil"}, {"bound", "fulfil"}),
 )
 
@@ -283,8 +283,8 @@ UPDATE = ModelKind(
     cache_generic=True,
     copy_fields_from="Update",
     literal=CLIENT_LITERAL,
-    embedded=rule({"bound", "fulfil"}, {"bound", "fulfil"}),
-    relation=rule({"bound", "fulfil"}, {"bound", "fulfil"}),
+    embedded=rule({"optional", "bound", "fulfil"}, {"optional", "bound", "fulfil"}),
+    relation=rule({"optional", "bound", "fulfil"}, {"optional", "bound", "fulfil"}),
     annotated_value=rule({"bound", "fulfil"}, {"bound", "fulfil"}),
 )
 
@@ -312,8 +312,8 @@ CREATE_DB = ModelKind(
     generic_validators=True,
     copy_fields_from="CreateDB",
     literal=rule({"optional", "fulfil"}, {"fulfil", "optional"}),
-    embedded=rule({"fulfil"}, {"fulfil"}),
-    relation=rule({"fulfil"}, {"fulfil"}),
+    embedded=rule({"optional", "fulfil"}, {"optional", "fulfil"}),
+    relation=rule({"optional", "fulfil"}, {"optional", "fulfil"}),
     annotated_value=rule({"fulfil"}, {"fulfil"}),
 )
 
@@ -339,8 +339,8 @@ UPDATE_DB = ModelKind(
     id_fields=True,
     copy_fields_from="UpdateDB",
     literal=rule({"optional", "fulfil"}, {"optional", "fulfil"}),
-    embedded=rule({"fulfil"}, {"fulfil"}),
-    relation=rule({"fulfil"}, {"fulfil"}),
+    embedded=rule({"optional", "fulfil"}, {"optional", "fulfil"}),
+    relation=rule({"optional", "fulfil"}, {"optional", "fulfil"}),
     annotated_value=rule({"fulfil"}, {"fulfil"}),
 )
 
@@ -362,8 +362,8 @@ VIEW = ModelKind(
     bind_generic_itself=True,
     copy_fields_from="View",
     literal=CLIENT_LITERAL,
-    embedded=rule({"bound", "fulfil"}, {"bound", "fulfil"}),
-    relation=rule({"bound", "fulfil"}, {"bound", "fulfil"}),
+    embedded=rule({"optional", "bound", "fulfil"}, {"optional", "bound", "fulfil"}),
+    relation=rule({"optional", "bound", "fulfil"}, {"optional", "bound", "fulfil"}),
     annotated_value=rule({"bound", "fulfil"}, {"bound", "fulfil"}),
 )
 

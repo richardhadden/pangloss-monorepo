@@ -51,7 +51,8 @@ A snapshot of what works and what does not (updated 2026-10-30). Each package's 
 - ⏳ **Permissions** beyond admin / not admin (and personal access tokens' `read` / `write` scope).
 - ⏳ **Removing deleted nodes for good**. An entity marked for deletion is not deleted automatically when the last reference to it goes.
 - 🚧 **Interface languages** (`INTERFACE_LANGUAGES`): the translation files and the `pangloss interface translations generate | gather | check` commands are built (see [Translations](translations.md)); no page uses them yet. (`INSTALLED_APPS` is used by the command line, to add commands and import models; nothing else reads it yet.)
-- ⏳ **Optional relations** (`Person | None`), **optional embedded objects**, **lists of embedded objects or annotated values** and **plain `dict` fields** (use a `TypedDict`) are not supported by the model layer; each raises an error at `initialise()`.
+- ✅ **Optional relations** (`Person | None`) and **optional embedded objects** (`Date | None`): no edge or node when there is none; migrations to and from them ([relations.md](relations.md#optional-relations-and-embedded-objects-)).
+- ⏳ **Lists of embedded objects or annotated values** and **plain `dict` fields** (use a `TypedDict`) are not supported by the model layer; each raises an error at `initialise()`.
 - ⏳ **The `"subtract"` type wrapper** (opposite of `Fulfil`), from `todo.md`.
 - ⏳ **`Relation[Subject, Object]`**: placeholder class only.
 - ⏳ **A third database backend** (an RDF/Oxigraph backend was assessed: [feasibility](rdf-oxigraph-feasibility.md)). A backend is the `exposed_functions`, `setup`, `migration_backend`, `users` and `review` modules; Memgraph and Neo4j exist ([Neo4j](neo4j-implementation.md#3-the-contract-a-backend-must-meet)).

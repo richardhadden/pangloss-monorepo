@@ -13,7 +13,7 @@
 | `AnnotatedValue[...]` | `AnnotatedValueFieldDefinition` | `.annotated_value_fields` |
 | `Annotated[T, DBField]` | marked `db_field=True` | |
 
-Any other annotation is an error: `initialise()` raises `PanglossModelError` naming the model, field and type, and what to use instead where that can be said, rather than ignoring the field. In particular, a plain `dict` (use a `TypedDict`), `bytes`, `complex`, a pydantic model or a dataclass (use an `Embedded` or a `TypedDict`), a `Flag` enum and a union of literal types (`int | str`) are not supported, and nor are optional relations (`Person | None`; use a `list[Person]` for a relation that may be empty) or optional embedded objects. Lists of embedded objects (`list[Date]`) and of annotated values are not supported either: a field has one of each.
+Any other annotation is an error: `initialise()` raises `PanglossModelError` naming the model, field and type, and what to use instead where that can be said, rather than ignoring the field. In particular, a plain `dict` (use a `TypedDict`), `bytes`, `complex`, a pydantic model or a dataclass (use an `Embedded` or a `TypedDict`), a `Flag` enum and a union of literal types (`int | str`) are not supported, and nor is an optional list of relations (`list[Person] | None`: a `list[Person]` may already be empty). Lists of embedded objects (`list[Date]`) and of annotated values are not supported either: a field has one of each.
 
 `Annotated[..., DBField]` marks a field as a database-side field: it appears in the `CreateDB` model but not in the user-facing `Create` model. Everything else a field is annotated with that pydantic acts on is carried to the generated models as it is: the constraints of `annotated_types` (`Gt`, `MinLen`, `Predicate`, ...), `StringConstraints`, `Strict`, the arguments of `Field(pattern=..., ge=...)`, and `AfterValidator` and the other functional validators and serialisers. Pydantic's shorthands (`PositiveInt`, `constr(max_length=3)`, `conint(ge=0)`, `StrictStr`) are these in `Annotated`, so they work too. Anything in `Annotated` that is none of these, and not one of Pangloss's own (`RelationConfig`, `DBField`, `SumsTo`, a `FieldMarker`, a description), is an error: what was written to do something must not be dropped in silence.
 
@@ -47,6 +47,14 @@ An optional literal (`number: int | None`) does not have to be given: it default
 Falsy values (`0`, `0.0`, `""`, `False`, `[]`) are values, and are written.
 
 Similarly, a relation that is a list (`list[Person]`) defaults to an empty list in `View` and `HeadView` when it has no items, since an empty relation has no edges to read back. A single relation (`Person`) is required.
+
+### Optional relations and embedded objects ✅
+
+A single relation or embedded object may be declared optional: `spouse: Person | None`, `about: Person | Place | None`, `by: ViaEdge[Person, Certainty] | None`, `in_role: InRole[Person] | None`, `born: Date | None`, `when: Date | DateRange | None`. As with an optional literal, it may be left out of a `Create` or an `Update` (or given as `None`), and it is `None` in every generated model when there is none. What is stored is what a single one stores, or nothing: one edge (and its reverse) to the target, or one node for an embedded object or a reified relation; when there is none, no edge and no node. An update that leaves it out removes what there was (an entity it pointed at is untouched). In the export the field is `"many": false, "nullable": true, "required": false`, and the interface's form starts it empty and lets it be removed.
+
+`list[Person] | None` is refused: a list may already be empty (`[]`), so there is nothing for the `None` to say.
+
+Migrations: `Person` → `Person | None` is a safe `AlterNullability` (nothing stored changes). `Person | None` → `Person` checks that every node has one, and fails saying how many have not (there is no default to give a relation or an embedded object: give each one first). `list[Person]` → `Person | None` is the `AlterCardinality` of any list becoming single (where there are several, `keep: "first"`), and `Person | None` → `list[Person]` needs nothing. (⏳ `list[Person]` → `Person`, required, does not check that every node has one.)
 
 ## Relation fields
 

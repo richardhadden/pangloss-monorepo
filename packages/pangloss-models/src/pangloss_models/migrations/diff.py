@@ -571,9 +571,14 @@ def diff_field(model: str, old: dict, new: dict, result: DiffResult) -> None:
     elif old_kind == "relation":
         diff_relation(model, old, new, result)
 
-    if old_kind in ("literal", "list", "annotatedValue") and old.get(
-        "nullable"
-    ) != new.get("nullable"):
+    if old_kind in (
+        "literal",
+        "list",
+        "annotatedValue",
+        "relation",
+        "embedded",
+    ) and old.get("nullable") != new.get("nullable"):
+        # (a relation or embedded object: `Person` <-> `Person | None`)
         result.changes.append(
             AlterNullability(model=model, name=name, nullable=bool(new.get("nullable")))
         )

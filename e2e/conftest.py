@@ -117,6 +117,13 @@ MODELS = textwrap.dedent(
         when: Date
 
 
+    # (a single relation and an embedded object that may each be left out)
+    class Letter(Document):
+        text: str
+        sender: Person | None
+        sent: Date | None
+
+
     # (dateable: a person's page can show what refers to them by date)
     class Appointment(Document, Dateable):
         appointed: Person

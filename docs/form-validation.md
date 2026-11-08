@@ -75,4 +75,4 @@ is shown the same way, so the box of problems at the top of the form is gone.
 
 - Only what the export says is checked. A Pydantic validator written in Python (a `field_validator`, a
   `model_validator`) is not exported, so it is still only the API that says so (and that is shown at the field, too).
-- `required` is the base model's. If the `Create` or `Edit` model of a type differs, the API's answer is the truth.
+- `required` is `Create`'s: a field with a default, or declared `X | None`, is not required. If the `Edit` model of a type differs, the API's answer is the truth.

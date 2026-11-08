@@ -100,6 +100,10 @@ def declare(annotation: Any, default: Any = ...):
     return Statement, Statement._meta.fields["value"], exported
 
 
+def field_of(exported: dict, model: str, name: str) -> dict:
+    return next(f for f in exported["models"][model]["fields"] if f["name"] == name)
+
+
 SCALARS = [
     (str, {"type": "str"}, "text"),
     (int, {"type": "int"}, "number"),
@@ -232,25 +236,55 @@ def test_what_is_not_supported_is_refused_and_the_message_names_the_alternative(
         declare(annotation)
 
 
-def test_an_optional_relation_is_refused_naming_the_alternative():
+def test_an_optional_relation_is_a_single_relation_that_may_be_left_out():
     class Person(Entity):
+        pass
+
+    class Place(Entity):
         pass
 
     class Marriage(Document):
         spouse: Person | None
+        where: Person | Place | None
 
-    with pytest.raises(PanglossModelError, match=r"optional relation.*list\[\.\.\.\]"):
-        initialise()
+    initialise()
+
+    for name in ("spouse", "where"):
+        definition = Marriage._meta.fields.relation_fields[name]
+        assert definition.optional and definition.wrapper is None
+    assert Marriage.Create(label="m").spouse is None
+    assert Marriage.Create(label="m", spouse=None).spouse is None
+    assert not Marriage.Update.model_fields["spouse"].is_required()
+    assert Marriage.View.model_fields["spouse"].default is None
+    spouse = field_of(export_models(), "Marriage", "spouse")
+    assert spouse["many"] is False and spouse["nullable"] is True
 
 
-def test_an_optional_embedded_object_is_refused_naming_the_alternative():
+def test_an_optional_embedded_object_may_be_left_out():
     class Date(Embedded):
         when: datetime.date
 
     class Event(Document):
         date: Date | None
 
-    with pytest.raises(PanglossModelError, match="optional embedded object"):
+    initialise()
+
+    assert Event._meta.fields.embedded_fields["date"].optional
+    assert Event.Create(label="e").date is None
+    assert Event.Create(
+        label="e", date={"type": "Date", "when": "1500-01-01"}
+    ).date.when == datetime.date(1500, 1, 1)
+    assert field_of(export_models(), "Event", "date")["nullable"] is True
+
+
+def test_an_optional_list_of_relations_is_refused_naming_the_list():
+    class Person(Entity):
+        pass
+
+    class Family(Document):
+        children: list[Person] | None
+
+    with pytest.raises(PanglossModelError, match=r"list\[Person\]` already"):
         initialise()
 
 

@@ -76,8 +76,8 @@ Besides `str` you can use `int`, `float`, `bool`, `Decimal`, `date`, `datetime`,
 - `mentions: list[Person]` says that a factoid refers to any number of people (none is fine).
 
 A relation is stored as a link from one object to the other: the factoid *points at* the source, it does not contain a
-copy of it. A relation is either required (`Source`) or a list (`list[Person]`); there is no "optional relation", so use a
-list when there may be none.
+copy of it. A relation is required (`Source`), optional (`Source | None`: there may be none), or a list (`list[Person]`, which may
+be empty).
 
 `Place` has no fields of its own yet. It still has a label and an id, and that is enough to be referred to; you will use it
 in [part 4](04-statements.md).

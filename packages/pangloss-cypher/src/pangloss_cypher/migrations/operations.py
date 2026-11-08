@@ -702,8 +702,13 @@ async def alter_nullability(
 ) -> list[str] | None:
     if change.nullable:
         return None if window is None else []
-    needs(change, change.default, "a value where there is none (`default`)")
     field = field_of(state, change.model, change.name)
+    if field["kind"] in ("relation", "embedded"):
+        # (`Person | None` -> `list[Person]` is no longer null, but a list may be empty)
+        if not field.get("many"):
+            await check_each_has(tx, change, field)
+        return None if window is None else []
+    needs(change, change.default, "a value where there is none (`default`)")
     params: dict[str, Any] = {}
     if field["kind"] in ("literal", "list"):
         expression = literal_expression(
@@ -720,6 +725,30 @@ async def alter_nullability(
         + f" SET {prop} = {expression}",
         **params,
     )
+
+
+async def check_each_has(
+    tx: Transaction, change: c.AlterNullability, field: dict
+) -> None:
+    """A relation or an embedded object that may no longer be absent: every node of the model must have one
+    already (there is no default to give one), else the migration fails saying how many have not"""
+    forward, _ = edge_pairs(field)[0]
+    label = ident(change.model)
+    without = (
+        await run(
+            tx,
+            f"""
+            MATCH (n:{label}) WHERE NOT EXISTS {{ MATCH (n)-[e]->() WHERE type(e) = $forward AND NOT coalesce(e.reverse, false) }}
+            RETURN count(n) AS without
+            """,
+            forward=forward,
+        )
+    )[0]["without"]
+    if without:
+        raise PanglossMigrationNotSupported(
+            f"{change.model}.{change.name} may no longer be absent, but {without} nodes have none: give each one "
+            "first (or keep the field optional)"
+        )
 
 
 async def alter_literal_type(
@@ -2327,7 +2356,10 @@ def batch_kind(change: c.Change, state: dict) -> str | None:
             else None
         )
     if isinstance(change, c.AlterNullability):
-        return None if change.nullable else "window"
+        if change.nullable:
+            return None
+        field = field_of(state, change.model, change.name)
+        return None if field["kind"] in ("relation", "embedded") else "window"
     return "window"
 
 

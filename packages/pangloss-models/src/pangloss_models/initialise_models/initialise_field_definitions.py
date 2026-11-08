@@ -2,6 +2,7 @@ import inspect
 import warnings
 from collections.abc import Iterable
 from copy import copy
+from dataclasses import replace
 from inspect import isclass
 from types import NoneType, UnionType
 from typing import (
@@ -9,6 +10,7 @@ from typing import (
     Annotated,
     Any,
     TypeVar,
+    Union,
     cast,
     get_args,
     get_origin,
@@ -967,6 +969,15 @@ def define_field(
     subclasses_parent_fields: Iterable[str | FieldSubclassing] | None = None,
 ) -> FieldDefinition | None:
     """The definition of a field, by what its type is. None if the type is not one that is supported."""
+    if optional := optional_object(field_info.annotation):
+        # `Person | None`, `Date | None`: a single relation or embedded object that may be absent, defined as the
+        # single one is, and marked optional
+        field_info = copy(field_info)
+        field_info.annotation = optional
+        definition = define_field(
+            model, field_name, field_info, is_db_field, subclasses_parent_fields
+        )
+        return replace(definition, optional=True) if definition else None
     annotation = field_info.annotation
 
     if is_embedded(annotation) or is_union_of_embedded(annotation):
@@ -1029,22 +1040,34 @@ SUPPORTED_TYPES = (
 )
 
 
+def optional_object(annotation: Any) -> Any:
+    """`Person | None` (or `Person | Place | None`, `Date | None`) as `Person`; None if the annotation is not a single
+    relation or embedded object made optional"""
+    if not annotation_is_optional(annotation):
+        return None
+    members = [member for member in get_args(annotation) if member is not NoneType]
+    inner = members[0] if len(members) == 1 else Union[*members]  # type: ignore[valid-type]
+    if is_embedded(inner) or is_union_of_embedded(inner) or is_relatable(inner):
+        return inner
+    return None
+
+
+def short_name(annotation: Any) -> str:
+    """`Person`, `Person | Place`: a type as the class declared it, without the module"""
+    if isclass(annotation) and get_origin(annotation) is None:
+        return annotation.__name__
+    return repr(annotation).replace("typing.", "")
+
+
 def unsupported_message(model: type, field_name: str, annotation: Any) -> str:
     """Why a field's type is refused, naming what to use instead where that can be told"""
     where = f"{model.__name__}.{field_name}"
     inner = literals.without_none(annotation)
-    if annotation_is_optional(annotation):
-        # (an embedded class is a declared class too: asked first)
-        if is_embedded(inner) or is_union_of_embedded(inner):
-            return (
-                f"{where}: an optional embedded object ({annotation!r}) is not supported: a field holds exactly "
-                "one. If it may be absent, make the embedded class's own fields optional"
-            )
-        if is_relatable(inner) or is_list_relatable(inner):
-            return (
-                f"{where}: an optional relation ({annotation!r}) is not supported. Use `list[...]` for a "
-                "relation that may be empty, or the class itself for exactly one"
-            )
+    if annotation_is_optional(annotation) and is_list_relatable(inner):
+        return (
+            f"{where}: an optional list of relations is not supported: `list[{short_name(get_args(inner)[0])}]` "
+            "already may be empty (`[]`); declare the field as that"
+        )
     reason = literals.explain_unsupported(annotation)
     if reason:
         return f"{where}: {annotation!r} is not supported: {reason}"
