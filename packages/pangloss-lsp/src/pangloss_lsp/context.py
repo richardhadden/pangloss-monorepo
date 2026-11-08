@@ -230,3 +230,40 @@ def class_body_word(text: str, offset: int) -> tuple[int, str] | None:
     if found is None:
         return None
     return line_start + len(found[1]), found[2]
+
+
+def line_end_depths(text: str) -> list[int]:
+    """How many brackets are open at the end of each line (so where a statement that goes over several lines ends).
+    Strings and comments are read as `scan` reads them"""
+    depths: list[int] = []
+    depth = 0
+    quote: str | None = None
+    comment = False
+    index = 0
+    while index < len(text):
+        char = text[index]
+        if char == "\n":
+            depths.append(depth)
+            comment = False
+            if quote is not None and len(quote) == 1:
+                quote = None
+        elif comment:
+            pass
+        elif quote:
+            if char == "\\":
+                index += 1
+            elif text.startswith(quote, index):
+                index += len(quote) - 1
+                quote = None
+        elif char == "#":
+            comment = True
+        elif char in "\"'":
+            quote = char * 3 if text.startswith(char * 3, index) else char
+            index += len(quote) - 1
+        elif char in "([{":
+            depth += 1
+        elif char in ")]}":
+            depth = max(depth - 1, 0)
+        index += 1
+    depths.append(depth)
+    return depths

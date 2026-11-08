@@ -430,3 +430,31 @@ def test_a_name_that_is_wrong_but_close_to_nothing_has_no_fix_but_is_still_under
         6,
         len('"zzzzzz"'),
     )
+
+
+def test_a_relation_has_a_hint_with_the_name_of_its_edge_back(project: Path):
+    write(
+        project,
+        "fakeapp/models.py",
+        """
+        from typing import Annotated
+
+        from pangloss_models import Entity, RelationConfig
+
+
+        class Place(Entity):
+            pass
+
+
+        class Person(Entity):
+            name: str
+            born_in: Place
+            lived_in: Annotated[list[Place], RelationConfig(reverse_name="residents")]
+        """,
+    )
+
+    hints = report()["hints"]
+    assert set(hints) == {"Person.born_in", "Person.lived_in"}
+    assert hints["Person.born_in"]["label"] == "⇄ born_in_reverse"
+    assert hints["Person.lived_in"]["label"] == "⇄ residents"
+    assert "`residents` runs back" in hints["Person.lived_in"]["tooltip"]

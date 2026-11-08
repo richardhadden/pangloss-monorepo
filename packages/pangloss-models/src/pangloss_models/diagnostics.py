@@ -625,3 +625,27 @@ def field_descriptions() -> dict[str, str]:
                 parts.append(definition.description)
             descriptions[f"{name}.{field_name}"] = "\n\n".join(parts)
     return descriptions
+
+
+def field_hints() -> dict[str, dict[str, str]]:
+    """For each relation field, `Model.field`: the short text an editor shows after the line (its inlay hint), and
+    what it means. The models have to have been made. (Only what the source does not say: the name of the edge back,
+    which a query and the incoming relations of the target use)"""
+    from pangloss_models.model_registry import ModelRegistry
+
+    hints: dict[str, dict[str, str]] = {}
+    for name, model in ModelRegistry.all_models().items():
+        meta = getattr(model, "_meta", None)
+        definitions = getattr(getattr(meta, "field_definitions", None), "fields", None)
+        for field_name, definition in (definitions or {}).items():
+            reverse = getattr(definition, "reverse_name", None)
+            if type(definition).__name__ != "RelationFieldDefinition" or not reverse:
+                continue
+            hints[f"{name}.{field_name}"] = {
+                "label": f"\u21c4 {reverse}",
+                "tooltip": (
+                    f"A relation is two edges. `{field_name}` runs from {name} to {_names(definition.type_options)}, "
+                    f"and `{reverse}` runs back (the incoming relation of the target)."
+                ),
+            }
+    return hints

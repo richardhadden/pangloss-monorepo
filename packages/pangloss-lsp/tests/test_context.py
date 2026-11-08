@@ -145,3 +145,17 @@ def test_a_word_that_begins_a_line_of_a_body():
     assert class_body_word(source, len(source)) == (21, "_int")
     assert class_body_word("x = _in", 7) is None
     assert class_body_word("class A:\n    f(_in", len("class A:\n    f(_in")) is None
+
+
+def test_the_depth_at_the_end_of_each_line_says_where_a_statement_ends():
+    from pangloss_lsp.context import line_end_depths
+
+    text = "a: Annotated[\n    list[X],\n    Config(\n        a=1,\n    ),\n]\nb: int\n"
+    assert line_end_depths(text) == [1, 1, 2, 2, 1, 0, 0, 0]
+
+
+def test_a_bracket_in_a_string_or_a_comment_does_not_count_for_the_depth():
+    from pangloss_lsp.context import line_end_depths
+
+    text = 'x = "(" # [\ny = """\n(\n"""\nz = 1\n'
+    assert line_end_depths(text) == [0, 0, 0, 0, 0, 0]

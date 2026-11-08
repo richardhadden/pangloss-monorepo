@@ -8,6 +8,7 @@ VS Code). Not built: the completions of `Where` keys (the stubs give those to a 
 It sits beside your type checker and does what a type checker cannot: it knows Pangloss's rules.
 
 - **On save**, what `initialise()` refuses is shown at the field or class, every field at once, and the warnings too.
+- **Inlay hints**: after each relation field, the name of the edge back (`born_in: Place  ⇄ born_in_reverse`).
 - **Changes not in a migration yet**, as warnings at the field or class that changed.
 - **Quick fixes** for the refusals that have an obvious correction (below).
 - **Completion** of the options of every `Meta`, of `RelationConfig` and `FieldBinding`, of the values they take, and
@@ -31,6 +32,15 @@ later steps need all the fields.
 
 In a `Diagnostic`, `line` counts from 1 and `column` from 0 (a character, not a byte). A problem with no one place has
 no `file`. The report also has `schema`, which the completions are made from.
+
+## Inlay hints
+
+A relation is two edges, and the name of the one back (`born_in_reverse`, or the `reverse_name` the field was given) is
+what a query and the incoming relations of the target use, yet the source never says it. It is shown after the line of
+each relation field, or after the last line of a field whose statement goes over several. The report's `hints` has the
+text and a tooltip for each `Model.field` (`diagnostics.field_hints`); the server places them from the buffer, so they
+are where the field is as you type. Nothing else is hinted: a type or a default is in the source already. Zed shows
+inlay hints from a language server only when `"inlay_hints": {"enabled": true}` is in its settings.
 
 ## Changes not in a migration yet
 

@@ -20,6 +20,7 @@ from pangloss_cli.project import settings_from_pyproject
 from pygls.lsp.server import LanguageServer
 
 from pangloss_lsp.completion import complete, hover_on_parameter, offset_of
+from pangloss_lsp.hints import hints_in
 
 CHECK_TIMEOUT_SECONDS = 120
 
@@ -35,6 +36,8 @@ class ProjectState:
     fields: dict[str, str] = field(default_factory=dict)
     # What `pangloss check` knew of the options and models (`pangloss_models.editor_schema`)
     schema: dict = field(default_factory=dict)
+    # The inlay hint of each relation field, `Model.field` to its text and tooltip
+    hints: dict = field(default_factory=dict)
     # The last report's diagnostics by file, with their fixes, for the code actions
     problems: dict[str, list[dict]] = field(default_factory=dict)
 
@@ -145,6 +148,8 @@ def publish(
     # (with an error there is no description: the hover of the last good run is better than none)
     if report["fields"]:
         project.fields = report["fields"]
+    if report["fields"]:
+        project.hints = report.get("hints") or {}
     if report.get("schema"):
         # (a model that did not come through has no fields to offer: the last run's are kept)
         previous = project.schema.get("models")
@@ -317,6 +322,30 @@ def code_action(
             if action is not None:
                 actions.append(action)
     return actions or None
+
+
+@server.feature(types.TEXT_DOCUMENT_INLAY_HINT)
+def inlay_hint(
+    ls: PanglossLanguageServer, params: types.InlayHintParams
+) -> list[types.InlayHint] | None:
+    project = project_of(ls, params.text_document.uri)
+    if project is None or not project.hints:
+        return None
+    text = ls.workspace.get_text_document(params.text_document.uri).source
+    found = hints_in(
+        project.hints, text, params.range.start.line, params.range.end.line
+    )
+    return [
+        types.InlayHint(
+            position=types.Position(hint.line, hint.character),
+            label=hint.label,
+            padding_left=True,
+            tooltip=types.MarkupContent(types.MarkupKind.Markdown, hint.tooltip)
+            if hint.tooltip
+            else None,
+        )
+        for hint in found
+    ] or None
 
 
 def main() -> None:

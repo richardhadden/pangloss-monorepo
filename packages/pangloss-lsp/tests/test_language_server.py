@@ -437,3 +437,29 @@ def test_a_misspelt_name_is_underlined_and_its_correction_is_a_quick_fix(
     assert action["title"] == 'Change to "name"'
     (edit,) = action["edit"]["changes"][models.as_uri()]
     assert edit["newText"] == '"name"'
+
+
+def test_a_relation_has_its_reverse_name_as_an_inlay_hint(client: Client, models: Path):
+    opened(client, models)
+    wait_for_stub(models)
+
+    for _ in range(100):
+        hints = client.request(
+            "textDocument/inlayHint",
+            {
+                "textDocument": {"uri": models.as_uri()},
+                "range": {
+                    "start": {"line": 0, "character": 0},
+                    "end": {"line": 20, "character": 0},
+                },
+            },
+        )
+        if hints:
+            break
+        threading.Event().wait(0.1)
+    (hint,) = hints
+    assert hint["label"] == "⇄ born_in_reverse"
+    # (`born_in: Place` is the last line of GOOD, the ninth)
+    assert hint["position"] == {"line": 8, "character": len("    born_in: Place")}
+    assert hint["paddingLeft"] is True
+    assert "born_in_reverse" in hint["tooltip"]["value"]
