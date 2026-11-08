@@ -19,6 +19,8 @@ from pangloss_lsp.context import (
     field_of_statement,
     fields_declared_in,
 )
+from pangloss_lsp.payload import complete_payload
+from pangloss_lsp.positions import position_of
 
 # The options that name a field of the class they are written in
 FIELD_OPTIONS = frozenset(
@@ -51,22 +53,6 @@ def parameter_markdown(parameter: dict[str, Any]) -> str:
     default = f" = {parameter['default']}" if parameter.get("default") else ""
     heading = f"`{parameter['name']}: {short(parameter['type'])}{default}`"
     return f"{heading}\n\n{parameter['doc']}" if parameter.get("doc") else heading
-
-
-def offset_of(text: str, position: types.Position) -> int:
-    offset = 0
-    for number, line in enumerate(text.splitlines(keepends=True)):
-        if number == position.line:
-            return offset + min(position.character, len(line.rstrip("\r\n")))
-        offset += len(line)
-    return len(text)
-
-
-def position_of(text: str, offset: int) -> types.Position:
-    line = text.count("\n", 0, offset)
-    return types.Position(
-        line=line, character=offset - (text.rfind("\n", 0, offset) + 1)
-    )
 
 
 def _item(
@@ -271,8 +257,10 @@ def complete_class_body(
 def complete(
     schema: dict[str, Any], text: str, offset: int
 ) -> list[types.CompletionItem]:
-    return complete_call(schema, text, offset) or complete_class_body(
-        schema, text, offset
+    return (
+        complete_call(schema, text, offset)
+        or complete_class_body(schema, text, offset)
+        or complete_payload(schema, text, offset)
     )
 
 

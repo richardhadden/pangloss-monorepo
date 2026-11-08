@@ -19,10 +19,11 @@ from lsprotocol import types
 from pangloss_cli.project import settings_from_pyproject
 from pygls.lsp.server import LanguageServer
 
-from pangloss_lsp.completion import complete, hover_on_parameter, offset_of
+from pangloss_lsp.completion import complete, hover_on_parameter
 from pangloss_lsp.context import word_at
 from pangloss_lsp.describe import model_markdown
 from pangloss_lsp.hints import hints_in
+from pangloss_lsp.positions import offset_of
 
 CHECK_TIMEOUT_SECONDS = 120
 

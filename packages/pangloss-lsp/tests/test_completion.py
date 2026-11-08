@@ -3,9 +3,9 @@ from pangloss_lsp.completion import (
     complete,
     hover_on_parameter,
     import_edit,
-    offset_of,
     resolve_call,
 )
+from pangloss_lsp.positions import offset_of
 
 SCHEMA = {
     "calls": {

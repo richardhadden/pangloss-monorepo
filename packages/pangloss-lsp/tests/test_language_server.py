@@ -539,3 +539,17 @@ def test_hovering_the_name_of_a_model_says_what_it_is_and_what_holds_it(
     assert value.startswith("**Place**: entity")
     assert "A place." in value
     assert "`Person.born_in`" in value
+
+
+def test_the_keys_of_a_payload_are_completed_from_its_type(
+    client: Client, models: Path
+):
+    opened(client, models)
+    wait_for_stub(models)
+
+    text = GOOD + 'payload = {"type": "Person", '
+    changed(client, models, text)
+    items = completions(client, models, 9, len('payload = {"type": "Person", '))
+
+    labels = [item["label"] for item in items]
+    assert "bornIn" in labels and "label" in labels and "type" not in labels
