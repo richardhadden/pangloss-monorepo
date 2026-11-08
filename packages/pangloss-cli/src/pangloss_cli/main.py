@@ -148,6 +148,7 @@ def check(
         diagnostic_of_exception,
         field_descriptions,
         field_hints,
+        relation_references,
     )
     from pangloss_models.editor_schema import editor_schema
     from pangloss_models.typestubs import write_stubs
@@ -156,6 +157,7 @@ def check(
     descriptions: dict[str, str] = {}
     schema: dict | None = None
     hints: dict = {}
+    references: dict = {}
     # (what the project's own code prints must not come between a tool and the JSON)
     with contextlib.redirect_stdout(sys.stderr if as_json else sys.stdout):
         if project.settings is None:
@@ -174,6 +176,7 @@ def check(
             if not any(d.severity == "error" for d in diagnostics):
                 descriptions = field_descriptions()
                 hints = field_hints()
+                references = relation_references()
                 if stubs:
                     write_stubs(root)
                 diagnostics += unmigrated_diagnostics(project)
@@ -189,6 +192,7 @@ def check(
             "diagnostics": [asdict(d) for d in diagnostics],
             "fields": descriptions,
             "hints": hints,
+            "references": references,
             "schema": schema,
         }
         typer.echo(json.dumps(report))

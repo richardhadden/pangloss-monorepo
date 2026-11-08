@@ -458,3 +458,72 @@ def test_a_relation_has_a_hint_with_the_name_of_its_edge_back(project: Path):
     assert hints["Person.born_in"]["label"] == "⇄ born_in_reverse"
     assert hints["Person.lived_in"]["label"] == "⇄ residents"
     assert "`residents` runs back" in hints["Person.lived_in"]["tooltip"]
+
+
+REFERENCES = """
+    from pangloss_models import Document, Entity, ReifiedRelation
+
+
+    class Place(Entity):
+        pass
+
+
+    class Agent(Entity):
+        pass
+
+
+    class Person(Agent):
+        born_in: Place
+
+
+    class Group(Agent):
+        pass
+
+
+    class InRole[T](ReifiedRelation[T]):
+        target: list[T]
+
+
+    class Statement(Document):
+        about: Agent
+        involves: list[InRole[Person]]
+"""
+
+
+def line_of(text: str) -> int:
+    """The line of the first line of REFERENCES that has this text, counting the empty first line as 1"""
+    return next(
+        number for number, line in enumerate(REFERENCES.splitlines(), 1) if text in line
+    )
+
+
+def places(model: str) -> dict[str, tuple]:
+    return {
+        r["label"]: (r["via"], r["line"], r["column"], r["end_column"])
+        for r in report()["references"].get(model, [])
+    }
+
+
+def test_the_fields_that_can_hold_a_model_are_listed_at_their_names(project: Path):
+    write(project, "fakeapp/models.py", REFERENCES)
+
+    assert places("Place") == {
+        "Person.born_in": (None, line_of("born_in: Place"), 4, 11)
+    }
+
+
+def test_a_field_that_goes_to_a_parent_class_can_hold_the_children(project: Path):
+    write(project, "fakeapp/models.py", REFERENCES)
+
+    # (`about: Agent` holds a Person or a Group, and says so; `involves` goes to Person alone)
+    assert set(places("Person")) == {"Statement.about", "Statement.involves"}
+    assert places("Person")["Statement.about"][0] == "Agent"
+    assert places("Person")["Statement.involves"][0] is None
+    assert set(places("Group")) == {"Statement.about"}
+    assert set(places("Agent")) == {"Statement.about"}
+
+
+def test_a_model_nothing_points_at_has_no_entry(project: Path):
+    write(project, "fakeapp/models.py", REFERENCES)
+
+    assert "Statement" not in report()["references"]

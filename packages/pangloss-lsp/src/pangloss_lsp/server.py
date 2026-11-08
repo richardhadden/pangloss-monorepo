@@ -36,6 +36,8 @@ class ProjectState:
     fields: dict[str, str] = field(default_factory=dict)
     # What `pangloss check` knew of the options and models (`pangloss_models.editor_schema`)
     schema: dict = field(default_factory=dict)
+    # The relation fields that can hold each model (`Model` to their places)
+    references: dict = field(default_factory=dict)
     # The inlay hint of each relation field, `Model.field` to its text and tooltip
     hints: dict = field(default_factory=dict)
     # The last report's diagnostics by file, with their fixes, for the code actions
@@ -150,6 +152,7 @@ def publish(
         project.fields = report["fields"]
     if report["fields"]:
         project.hints = report.get("hints") or {}
+        project.references = report.get("references") or {}
     if report.get("schema"):
         # (a model that did not come through has no fields to offer: the last run's are kept)
         previous = project.schema.get("models")
@@ -322,6 +325,42 @@ def code_action(
             if action is not None:
                 actions.append(action)
     return actions or None
+
+
+def word_at(text: str, position: types.Position) -> str | None:
+    lines = text.splitlines()
+    if position.line >= len(lines):
+        return None
+    line = lines[position.line]
+    for found in re.finditer(r"[A-Za-z_]\w*", line):
+        if found.start() <= position.character <= found.end():
+            return found[0]
+    return None
+
+
+@server.feature(types.TEXT_DOCUMENT_REFERENCES)
+def references(
+    ls: PanglossLanguageServer, params: types.ReferenceParams
+) -> list[types.Location] | None:
+    """The relation fields that can hold the model whose name is under the cursor"""
+    project = project_of(ls, params.text_document.uri)
+    if project is None or not project.references:
+        return None
+    text = ls.workspace.get_text_document(params.text_document.uri).source
+    name = word_at(text, params.position)
+    found = project.references.get(name or "")
+    if not found:
+        return None
+    return [
+        types.Location(
+            Path(place["file"]).as_uri(),
+            types.Range(
+                types.Position(place["line"] - 1, place["column"]),
+                types.Position(place["line"] - 1, place["end_column"]),
+            ),
+        )
+        for place in found
+    ]
 
 
 @server.feature(types.TEXT_DOCUMENT_INLAY_HINT)

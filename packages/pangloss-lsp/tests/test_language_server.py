@@ -463,3 +463,50 @@ def test_a_relation_has_its_reverse_name_as_an_inlay_hint(client: Client, models
     assert hint["position"] == {"line": 8, "character": len("    born_in: Place")}
     assert hint["paddingLeft"] is True
     assert "born_in_reverse" in hint["tooltip"]["value"]
+
+
+def test_references_of_a_model_are_the_relation_fields_that_can_hold_it(
+    client: Client, models: Path
+):
+    opened(client, models)
+    wait_for_stub(models)
+
+    # (on `Place` in `born_in: Place`, the last line of GOOD)
+    for _ in range(100):
+        found = client.request(
+            "textDocument/references",
+            {
+                "textDocument": {"uri": models.as_uri()},
+                "position": {"line": 8, "character": len("    born_in: Pl")},
+                "context": {"includeDeclaration": True},
+            },
+        )
+        if found:
+            break
+        threading.Event().wait(0.1)
+    assert found == [
+        {
+            "uri": models.as_uri(),
+            "range": {
+                "start": {"line": 8, "character": 4},
+                "end": {"line": 8, "character": 11},
+            },
+        }
+    ]
+
+
+def test_a_word_that_is_not_a_model_has_no_references(client: Client, models: Path):
+    opened(client, models)
+    wait_for_stub(models)
+
+    assert (
+        client.request(
+            "textDocument/references",
+            {
+                "textDocument": {"uri": models.as_uri()},
+                "position": {"line": 0, "character": 6},
+                "context": {"includeDeclaration": True},
+            },
+        )
+        is None
+    )

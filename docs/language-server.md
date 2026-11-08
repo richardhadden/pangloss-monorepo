@@ -8,6 +8,7 @@ VS Code). Not built: the completions of `Where` keys (the stubs give those to a 
 It sits beside your type checker and does what a type checker cannot: it knows Pangloss's rules.
 
 - **On save**, what `initialise()` refuses is shown at the field or class, every field at once, and the warnings too.
+- **Find references** on a model's name: the relation fields that can hold it.
 - **Inlay hints**: after each relation field, the name of the edge back (`born_in: Place  ⇄ born_in_reverse`).
 - **Changes not in a migration yet**, as warnings at the field or class that changed.
 - **Quick fixes** for the refusals that have an obvious correction (below).
@@ -32,6 +33,15 @@ later steps need all the fields.
 
 In a `Diagnostic`, `line` counts from 1 and `column` from 0 (a character, not a byte). A problem with no one place has
 no `file`. The report also has `schema`, which the completions are made from.
+
+## Find references
+
+On a model's name (its `class` line, or where an annotation names it), the editor's *find references* lists the
+relation fields that can hold one, each at the field's name. A type checker lists where the class is named; this lists
+where it is *pointed at*, which is also by a field that goes to a class above it or a trait it has (`about: Agent`
+can hold a `Person`), and by a field of reified relations or semantic spaces that take it as a parameter
+(`involves: list[InRole[Person]]`). `diagnostics.relation_references` makes the list, `via` in it says which class
+above the model the field goes to; the generated parametrisations (`InRole[Person]`) are not owners of fields.
 
 ## Inlay hints
 

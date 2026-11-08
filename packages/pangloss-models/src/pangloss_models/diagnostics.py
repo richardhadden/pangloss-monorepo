@@ -649,3 +649,56 @@ def field_hints() -> dict[str, dict[str, str]]:
                 ),
             }
     return hints
+
+
+def relation_references() -> dict[str, list[dict[str, Any]]]:
+    """For each model, the relation fields that can hold one: those that go to the model, to a class above it or to a
+    trait it has (`via` says which), through unions, lists and the parameters of reified relations and semantic
+    spaces (a `list[InRole[Person]]` can hold a `Person`). Each is at the name of the field in the source. The models
+    have to have been made"""
+    from pangloss_models.initialise_models.check_relation_targets import targets_of
+    from pangloss_models.model_bases.binding import NOT_MODELS
+    from pangloss_models.model_registry import ModelRegistry
+
+    models = ModelRegistry.all_models()
+    pointing: dict[str, list[tuple[str, str]]] = {}
+    for name, model in sorted(models.items()):
+        # (`InRole[Person]` is made from `InRole`, whose fields are in the source: the field that holds it is
+        # the one to show)
+        if "[" in name:
+            continue
+        relation_fields = getattr(
+            getattr(getattr(model, "_meta", None), "fields", None),
+            "relation_fields",
+            None,
+        )
+        for field_name, definition in (relation_fields or {}).items():
+            if definition.field_on_model is not model:
+                continue
+            for target in dict.fromkeys(targets_of(definition.annotated_type)):
+                pointing.setdefault(target.__name__, []).append((name, field_name))
+
+    references: dict[str, list[dict[str, Any]]] = {}
+    for name, model in models.items():
+        found = []
+        for ancestor in model.__mro__:
+            if ancestor is not model and ancestor.__module__.startswith(NOT_MODELS):
+                continue
+            via = None if ancestor is model else ancestor.__name__
+            for owner, field_name in pointing.get(ancestor.__name__, []):
+                place = source_place(models[owner], field_name)
+                if place is None:
+                    continue
+                found.append(
+                    {
+                        "label": f"{owner}.{field_name}",
+                        "via": via,
+                        "file": place.file,
+                        "line": place.line,
+                        "column": place.column,
+                        "end_column": place.end_column,
+                    }
+                )
+        if found:
+            references[name] = found
+    return references
