@@ -106,7 +106,10 @@ function carry(
     case "list":
       return from.kind === "list" && same(from.item, to.item) ? { value, lost: 0 } : { lost: whole() };
     case "annotatedValue":
-      return from.kind === "annotatedValue" && from.model === to.model && same(from.valueType, to.valueType)
+      return from.kind === "annotatedValue" &&
+        from.model === to.model &&
+        !from.many === !to.many &&
+        same(from.valueType, to.valueType)
         ? { value, lost: 0 }
         : { lost: whole() };
     case "embedded":

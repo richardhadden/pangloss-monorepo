@@ -22,6 +22,7 @@ about her "held court at Ghent") and Charles the Bold (no role); `types` has onl
 | Language: the interface modules' words come from their own apps' `translations/ui.jsonc` (derived, timeline, calendar link, typologies section, history), and a label an app gives a link in the bar is translated by its slot | ✅ | `test_derived.py::test_the_words_of_the_modules_are_their_own_and_follow_the_language`, `test_history.py::test_the_history_follows_the_language`; Vitest `NavModelList.test.tsx` |
 | Language: the fade while it loads | ⬜ | (CSS on `html[data-translating]`; checked by hand) |
 | Navigation bar: the pin is kept in `localStorage` over a reload | ✅ | `test_the_pin_is_remembered` |
+| A list of annotated values (`list[WithCertainty[str]]`): shown one by one, each with what is said of it; added to and removed from in the form, checked at its place in the list, sent as a list | ⬜ | Vitest only (`ItemContents.test.tsx`, `ItemForm.test.tsx`, `validation.test.ts`): no demo model has one yet, so no browser test |
 | Navigation bar: sections and links to the lists of the models | ✅ | `test_the_navigation_bar_links_to_the_lists` |
 | Navigation bar: the filter above the types (part of any name, any case; nothing left: a message; ✕ and Escape clear it) | ✅ | `test_the_types_in_the_navigation_bar_are_filtered`, dev build in `test_making_and_editing`; names in other languages and accents: Vitest (`NavModelList.test.tsx`) |
 | Navigation bar on a touch device (no hover) | ⬜ | |

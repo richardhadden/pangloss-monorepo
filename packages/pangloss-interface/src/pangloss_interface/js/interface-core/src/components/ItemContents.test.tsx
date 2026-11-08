@@ -78,6 +78,12 @@ const definitions: ModelDefinitions = {
   models: {
     Factoid: model("Factoid", "Document", [
       field("year", "year"),
+      {
+        ...field("nicknames", "nicknames", "annotatedValue"),
+        model: "WithCertainty",
+        valueType: { type: "string" },
+        many: true,
+      } as unknown as FieldDefinition,
       field("statements", "statements", "relation"),
       field("involves", "involves", "relation"),
       {
@@ -475,6 +481,21 @@ test("an annotated value is its value, as the field's own, without its type or a
   const value = [...host.querySelectorAll("span")].find((span) => span.textContent === "Karolus Magnus")!;
   const certainty = [...host.querySelectorAll("dt")].find((dt) => dt.textContent === "certainty")!;
   expect(value.compareDocumentPosition(certainty) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+});
+
+test("a list of annotated values shows each, with what is said of it", () => {
+  const host = show({
+    id: "f1",
+    type: "Factoid",
+    nicknames: [
+      { value: "Karl", certainty: 5 },
+      { value: "Charles", certainty: 2 },
+    ],
+  });
+  const texts = [...host.querySelectorAll("span")].map((span) => span.textContent);
+  expect(texts).toContain("Karl");
+  expect(texts).toContain("Charles");
+  expect([...host.querySelectorAll("dt")].filter((dt) => dt.textContent === "certainty")).toHaveLength(2);
 });
 
 const smith = { id: "p1", type: "Person", label: "Smith", edgeProperties: { probability: 0.9 } };

@@ -85,6 +85,15 @@ later on 2026-11-08: see [language-server.md](language-server.md). It is a comma
 the slots) and code actions (the fixes a refusal names) were built the same day, from the classes themselves rather
 than a list kept by hand; the keys of `Where` after. A `reverse_name` that is a field of the target (it silently replaced the field in the view, and the value was lost on write) is an error of `initialise()`; not built: a warning for two fields of one model sharing a `reverse_name`.
 
+**Lists of annotated values and the stubs** (built later on 2026-11-08). `names: list[WithCertainty[str]]` is
+allowed: a list of maps on the node, written whole and read back in order (Memgraph keeps the list of maps as it is;
+Neo4j keeps it as JSON text, as it does any list of maps), required, and starting empty on the nodes that exist when
+it is added. The export says `many: true` (only then: a single value's export, and so the snapshots, are as they
+were). Turning a single value into a list, or back, is a change of kind, which a migration refuses. The interface
+shows the items one by one and has an add and a remove button. `list[Embedded]` stays refused: an embedded object is
+a node of its own, and a list of them is a list of documents by another name. The reverse relation through a wrapper
+(`Person.HeadView.participants_reverse`) is no longer `typing.Any` in the stubs: see §2.3.
+
 **Tests.** The table of §2.1 is `packages/pangloss-models/tests/initialisation/test_field_types.py` (one case per
 type: its kind, its export, or its error) and `tests/generated_models/test_pydantic_conformance.py`; the round
 trips on both backends are `pangloss_testing/conformance/test_literal_types.py`; the migration side
@@ -171,7 +180,7 @@ user can predict.
 | `spouse: Person \| None` | Refused: "use `list[Person]`" | The most natural relation at the near limit. `list[Person]` for 0..1 says nothing about the cardinality, and the interface shows an "Add" button where a picker was wanted. The machinery exists: `AtPage.target: Annotated[list[T], MinLen(1), MaxLen(1)]` is a 1..1 relation today |
 | `spouse: Person` (required, one) | Accepted | So one is fine, zero-or-one is not |
 | `date: Date \| None`, `dates: list[Date]` (Embedded) | Refused | Same pattern |
-| `names: list[WithCertainty[str]]` | Refused: annotate the list instead | The workaround (`WithCertainty[list[str]]`) says something different (one certainty for all names) |
+| `names: list[WithCertainty[str]]` | Refused: annotate the list instead (**allowed since 2026-11-08**: a list of maps, see the end of "As built") | The workaround (`WithCertainty[list[str]]`) says something different (one certainty for all names) |
 | `tags: list[str] \| None` | Refused | but `tags: list[str \| None]` is **accepted**, and `None`s go into the stored list. The other way round would be the sensible one |
 | `kind: Literal["a", "b"]` | Refused: "use an Enum" | The export and the interface already have a `literal` type (for the `type` field); a `Literal` is the lightest fixed list there is |
 | `id_in_other_db: uuid.UUID`, `homepage: HttpUrl`, `email: EmailStr`, `when: datetime.time`, `lasted: timedelta`, `path: Path`, `ip: IPv4Address` | Refused | All are strings or numbers in the database, and `convert_type_for_writing` already knows how to write a `UUID` and an `AnyUrl`. §4 |

@@ -264,7 +264,12 @@ export class ItemSchemas {
           required,
         );
       case "annotatedValue":
-        return this.entry(this.annotated(field.model, field.valueType), required);
+        return this.entry(
+          field.many
+            ? listOf(this.definitions, this.annotated(field.model, field.valueType), [])
+            : this.annotated(field.model, field.valueType),
+          required,
+        );
       case "embedded":
         return this.entry(this.oneOf(field.types.map((type) => [type, () => this.model(type, {})])), required);
       case "relation": {

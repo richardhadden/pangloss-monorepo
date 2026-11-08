@@ -67,6 +67,7 @@ const definitions = {
         relation("author", [entity("Person")], { many: false }),
         embedded("when", ["Day"]),
         { ...base, name: "named", key: "named", kind: "annotatedValue", model: "WithCertainty", valueType: { type: "str" } },
+        { ...base, name: "nicknames", key: "nicknames", kind: "annotatedValue", model: "WithCertainty", valueType: { type: "str" }, many: true },
         { ...base, name: "odd", key: "odd", kind: "unknown" },
       ],
     }),
@@ -245,6 +246,14 @@ test("an annotated value has its value, of the field's type, and the fields of i
   expect(problems(factoid({ named: { value: 3, certainty: "" } }))).toEqual([
     ["named.certainty", "required", {}],
     ["named.value", "wrong_type", { expected: "string" }],
+  ]);
+});
+
+test("a list of annotated values has each one checked, at its place in the list", () => {
+  expect(problems(factoid({ nicknames: [{ value: "Rome", certainty: 2 }, { value: "Roma", certainty: 1 }] }))).toEqual([]);
+  expect(problems(factoid({ nicknames: [{ value: "Rome", certainty: 2 }, { value: 3, certainty: "" }] }))).toEqual([
+    ["nicknames.1.certainty", "required", {}],
+    ["nicknames.1.value", "wrong_type", { expected: "string" }],
   ]);
 });
 

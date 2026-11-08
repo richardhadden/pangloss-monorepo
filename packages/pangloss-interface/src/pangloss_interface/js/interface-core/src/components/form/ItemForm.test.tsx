@@ -165,10 +165,19 @@ const definitions = {
       requireLabel: false,
       fields: [literal("text", { type: "str" }), relation("next", [doc("Chain")], false)],
     }),
+    WithCertainty: model("WithCertainty", {
+      kind: "AnnotatedValue",
+      requireLabel: false,
+      fields: [
+        { ...base, name: "value", key: "value", kind: "typeVar", typeVar: "T", required: true },
+        literal("certainty", { type: "int" }, { required: true }),
+      ],
+    }),
     Factoid: model("Factoid", {
       fields: [
         literal("year", { type: "int" }, { required: true }),
         literal("aliases", { type: "list", item: { type: "str" } }),
+        { ...base, name: "names", key: "names", kind: "annotatedValue", model: "WithCertainty", valueType: { type: "str" }, many: true },
         relation("author", [{ kind: "entity", type: "Person", edgeModel: null }], false),
         relation("statements", [doc("Activity"), doc("Transfer"), negative]),
         { ...base, name: "when", key: "when", kind: "embedded", model: null, types: ["Day", "Span"] },
@@ -313,6 +322,28 @@ test("a new item is created with what was typed, keeping the focus in the field 
   // (the type is the address's)
   expect(sent[0]!.body).not.toHaveProperty("type");
   expect(saved).toEqual([{ id: "f1", type: "Factoid", label: "F" }]);
+});
+
+test("a list of annotated values is added to one by one, each with its value and its own fields, and removed from; the list is sent as it stands", async () => {
+  const { client, sent } = fakeClient(() => ({ id: "f1", type: "Factoid", label: "F" }));
+  show(client);
+  await settle();
+  fillRequired();
+  click(button("Add to names"));
+  await settle();
+  type("names 1", "Roma");
+  type("certainty", "3");
+  click(button("Add to names"));
+  await settle();
+  type("names 2", "Rome");
+  expect(byLabel("Remove names 2")).toBeTruthy();
+  click(byLabel("Remove names 2"));
+  await settle();
+  expect(byLabel("Remove names 2")).toBeFalsy();
+  click(button("Save"));
+  await settle();
+  expect(sent).toHaveLength(1);
+  expect(sent[0]!.body).toMatchObject({ names: [{ value: "Roma", certainty: 3 }] });
 });
 
 test("a statement is chosen from the types the add button opens, on their own or inside the Negative space, in vertical lists with the abstract class not selectable", async () => {

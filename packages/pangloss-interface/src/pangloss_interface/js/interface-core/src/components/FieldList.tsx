@@ -16,7 +16,7 @@ function describe(field: FieldDefinition): string {
     case "embedded":
       return `embedded ${field.model ?? ""}`;
     case "annotatedValue":
-      return `${field.model} value`;
+      return field.many ? `list of ${field.model} values` : `${field.model} value`;
     case "typeVar":
       return `${field.typeVar}`;
     default:

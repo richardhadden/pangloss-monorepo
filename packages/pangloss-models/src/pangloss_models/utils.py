@@ -36,7 +36,6 @@ from pangloss_models.exceptions import PanglossModelError
 from pangloss_models.field_definitions import FieldBinding
 from pangloss_models.markers import FieldMarker
 from pangloss_models.meta_kit import WithMeta
-from pangloss_models.model_bases.annotated_value import AnnotatedValue
 from pangloss_models.model_bases.base_models import _BaseObject, _DeclaredClass
 from pangloss_models.model_bases.base_types import BaseTypes
 from pangloss_models.model_bases.binding import binding_applies, class_names
@@ -321,16 +320,14 @@ def get_list_item_type(annotation: Any) -> Any:
     return inner_type
 
 
-def is_list_of_embedded_or_annotated_value(annotation: Any) -> bool:
-    """A field has a single embedded object or annotated value: lists of them are
-    not supported"""
+def is_list_of_embedded(annotation: Any) -> bool:
+    """A field has a single embedded object: lists of them are not supported (a list of annotated values is)"""
     inner_type = get_list_item_type(annotation)
     if inner_type is None:
         return False
     if is_union_of_embedded(inner_type):
         return True
-    # (a parametrised `AnnotatedValue[str]` is a class too)
-    return isclass(inner_type) and issubclass(inner_type, (Embedded, AnnotatedValue))
+    return isclass(inner_type) and issubclass(inner_type, Embedded)
 
 
 def is_embedded(annotation: type[Any] | UnionType | None) -> TypeIs[type[Embedded]]:

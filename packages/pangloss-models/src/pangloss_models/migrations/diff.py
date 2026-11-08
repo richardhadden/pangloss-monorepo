@@ -505,14 +505,37 @@ def diff_field(model: str, old: dict, new: dict, result: DiffResult) -> None:
     name = new["name"]
     old_kind, new_kind = old["kind"], new["kind"]
 
+    # (one value or a list of them is stored differently, as a plain value or a list is: a change of kind)
+    if old_kind == new_kind == "annotatedValue" and bool(old.get("many")) != bool(
+        new.get("many")
+    ):
+        result.changes.append(
+            ChangeFieldKind(
+                model=model,
+                name=name,
+                old="annotatedValue list" if old.get("many") else "annotatedValue",
+                new="annotatedValue list" if new.get("many") else "annotatedValue",
+                definition=new,
+            )
+        )
+        return
+
     if old_kind != new_kind:
-        if old_kind == "literal" and new_kind == "annotatedValue":
+        if (
+            old_kind == "literal"
+            and new_kind == "annotatedValue"
+            and not new.get("many")
+        ):
             result.changes.append(
                 LiteralToAnnotatedValue(
                     model=model, name=name, annotated_model=new["model"], definition=new
                 )
             )
-        elif old_kind == "annotatedValue" and new_kind == "literal":
+        elif (
+            old_kind == "annotatedValue"
+            and new_kind == "literal"
+            and not old.get("many")
+        ):
             result.changes.append(
                 AnnotatedValueToLiteral(
                     model=model, name=name, annotated_model=old["model"], definition=new

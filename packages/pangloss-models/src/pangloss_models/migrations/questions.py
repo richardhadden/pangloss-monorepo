@@ -71,7 +71,12 @@ def answers_needed(change: c.Change, state: dict[str, Any]) -> list[Question]:
         and change.needs_value
         and not change.from_narrowing
     ):
-        if change.default is None and change.definition["kind"] != "list":
+        # (a list that is needed starts empty: nothing to ask)
+        if (
+            change.default is None
+            and change.definition["kind"] != "list"
+            and not change.definition.get("many")
+        ):
             return [
                 Question(
                     "default",

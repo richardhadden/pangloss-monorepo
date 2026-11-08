@@ -326,10 +326,12 @@ def get_node_fields_as_writable_dict(
 
     # An annotated value (a value with extra literal fields) is stored on the node
     # as a map, e.g. {value: "John", certainty: 2}
-    for field_name in instance._meta.fields.annotated_value_fields:
+    for field_name, definition in instance._meta.fields.annotated_value_fields.items():
         if (annotated_value := getattr(instance, field_name, None)) is not None:
             node_data[field_name] = convert_type_for_writing(
-                annotated_value.model_dump()
+                [item.model_dump() for item in annotated_value]
+                if definition.many
+                else annotated_value.model_dump()
             )
     return node_data
 

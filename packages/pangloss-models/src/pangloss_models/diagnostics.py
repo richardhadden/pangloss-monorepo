@@ -572,6 +572,8 @@ def _what_the_field_is(definition: Any) -> str:
         case "ListFieldDefinition":
             return f"A list of values stored on the node: `{_type_name(definition.inner_type)}`."
         case "AnnotatedValueFieldDefinition":
+            if definition.many:
+                return "A list of values with facts about each, stored as a list of maps on the node."
             return "A value with facts about it, stored as a map on the node."
         case "EmbeddedFieldDefinition":
             optional = "Optional embedded" if definition.optional else "Embedded"

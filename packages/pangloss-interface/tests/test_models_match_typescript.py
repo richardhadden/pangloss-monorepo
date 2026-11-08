@@ -32,6 +32,17 @@ FIELD_INTERFACES = {
 }
 
 
+def optional_keys(source: str) -> dict[str, set[str]]:
+    """The keys an `export interface` marks optional (`many?: boolean`): the export may leave them out"""
+    pattern = re.compile(
+        r"export interface (\w+)(?: extends \w+)? \{\n(.*?)\n\}", re.DOTALL
+    )
+    return {
+        name: set(re.findall(r"^  (\w+)\?:", body, re.MULTILINE))
+        for name, body in pattern.findall(source)
+    }
+
+
 def interfaces(source: str) -> dict[str, set[str]]:
     """The keys of each `export interface` (with those of what it extends)"""
     found: dict[str, tuple[str | None, set[str]]] = {}
@@ -95,17 +106,17 @@ def test_every_model_has_the_keys_of_model_definition(exported, typescript):
 
 
 def test_every_field_has_the_keys_of_its_kind(exported, typescript):
-    _, types = typescript
+    source, types = typescript
+    optional = optional_keys(source)
     seen = set()
     for model in exported["models"].values():
         for field in model["fields"]:
             seen.add(field["kind"])
             interface = FIELD_INTERFACES[field["kind"]]
-            assert set(field) == types[interface], (
-                model["name"],
-                field["name"],
-                interface,
-            )
+            # (every key of the type, but those it marks optional, which are written only when they say something)
+            assert set(field) <= types[interface] and types[interface] - optional[
+                interface
+            ] <= set(field), (model["name"], field["name"], interface)
     # (the kitchen sink has every kind but "unknown", which is for what the export cannot say)
     assert seen == set(FIELD_INTERFACES) - {"unknown"}
 

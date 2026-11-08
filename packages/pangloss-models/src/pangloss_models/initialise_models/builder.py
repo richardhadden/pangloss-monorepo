@@ -262,6 +262,8 @@ def add_fields(
             continue
         when = conditions(name, definition, bool(definition.field_required_to_fulfil))
         annotation = definition.annotated_type
+        if definition.many:
+            annotation = list[annotation]  # type: ignore[valid-type]
         if holds(kind.annotated_value, "nullable", when):
             annotation = annotation | None
         set_field(model, name, FieldInfo(annotation=annotation, **describe(definition)))

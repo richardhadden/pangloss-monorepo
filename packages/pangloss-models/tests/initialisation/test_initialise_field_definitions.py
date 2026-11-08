@@ -341,17 +341,53 @@ def test_list_of_embedded_objects_raises():
         initialise()
 
 
-def test_list_of_annotated_values_raises():
-    """A field has one annotated value; to annotate a list, annotate the whole list"""
+def test_a_list_of_annotated_values_is_a_field_of_many():
+    class WithCertainty[T](AnnotatedValue[T]):
+        certainty: int
+
+    class Naming(Document):
+        names: list[WithCertainty[str]]
+        name: WithCertainty[str]
+
+    initialise()
+
+    names = Naming._meta.fields["names"]
+    assert isinstance(names, AnnotatedValueFieldDefinition)
+    assert names.many and not Naming._meta.fields["name"].many  # type: ignore[attr-defined]
+
+    naming = Naming.Create(
+        label="A Naming",
+        names=[{"value": "a", "certainty": 1}, {"value": "b", "certainty": 2}],
+        name={"value": "c", "certainty": 3},
+    )
+    assert [(n.value, n.certainty) for n in naming.names] == [("a", 1), ("b", 2)]
+    # (the list is needed, as a list of literals is)
+    with pytest.raises(ValidationError, match="names"):
+        Naming.Create(label="A Naming", name={"value": "c", "certainty": 3})
+    # (and each item must be whole)
+    with pytest.raises(ValidationError, match="certainty"):
+        Naming.Create(
+            label="A Naming",
+            names=[{"value": "a"}],
+            name={"value": "c", "certainty": 3},
+        )
+
+
+def test_the_export_says_a_list_of_annotated_values_is_many_and_a_single_value_is_as_it_was():
+    from pangloss_models.export import export_models
 
     class WithCertainty[T](AnnotatedValue[T]):
         certainty: int
 
     class Naming(Document):
         names: list[WithCertainty[str]]
+        name: WithCertainty[str]
 
-    with pytest.raises(PanglossModelError, match=r"Naming\.names"):
-        initialise()
+    initialise()
+
+    fields = {f["name"]: f for f in export_models()["models"]["Naming"]["fields"]}
+    assert fields["names"]["kind"] == "annotatedValue" and fields["names"]["many"]
+    assert "many" not in fields["name"]
 
 
 def test_annotated_value_with_a_list_of_literals_as_its_value():

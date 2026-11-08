@@ -87,6 +87,8 @@ export interface AnnotatedValueField extends FieldBase {
   kind: "annotatedValue";
   model: string;
   valueType: FieldType | null;
+  /** A list of them (`list[WithCertainty[str]]`) */
+  many?: boolean;
 }
 
 export interface EmbeddedField extends FieldBase {

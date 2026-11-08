@@ -101,6 +101,8 @@ class ListFieldDefinition(ValueFieldDefinition):
 @dataclass(frozen=True, kw_only=True)
 class AnnotatedValueFieldDefinition(FieldDefinition):
     annotated_type: type[AnnotatedValue]
+    # A list of them (`list[WithCertainty[str]]`): a list of maps
+    many: bool = False
 
 
 type TRelationFieldDefinitionAnnotation = type[

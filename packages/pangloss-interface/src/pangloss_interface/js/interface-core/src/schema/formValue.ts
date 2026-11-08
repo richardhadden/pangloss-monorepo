@@ -83,7 +83,7 @@ export function blankItem(
       continue;
     }
     // (a required list is sent, empty, when nothing is added: the API does not take it as absent)
-    if (field.required && field.kind === "list") {
+    if (field.required && (field.kind === "list" || (field.kind === "annotatedValue" && field.many))) {
       item[field.key] = [];
       continue;
     }

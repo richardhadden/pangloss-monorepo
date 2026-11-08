@@ -71,10 +71,11 @@ from pangloss_models.utils import (
     get_all_parent_classes,
     get_concrete_types,
     get_direct_instantiations_of_trait,
+    get_list_item_type,
     get_model_and_edge_type,
     get_relation_config,
     is_embedded,
-    is_list_of_embedded_or_annotated_value,
+    is_list_of_embedded,
     is_list_of_literal,
     is_list_relatable,
     is_literal,
@@ -996,6 +997,18 @@ def define_field(
             description=extract_field_description(field_info),
         )
 
+    # (a list of annotated values is a list of maps)
+    item = get_list_item_type(annotation)
+    if isclass(item) and issubclass(item, AnnotatedValue):
+        return AnnotatedValueFieldDefinition(
+            field_on_model=model,
+            field_name=field_name,
+            annotated_type=item,
+            db_field=is_db_field,
+            description=extract_field_description(field_info),
+            many=True,
+        )
+
     if is_relatable(annotation) or is_list_relatable(annotation):
         definition = build_relatable_field_definition(
             field_name,
@@ -1274,11 +1287,10 @@ def initialise_field_definitions(model: type[_DeclaredClass]):
             )
             supported_as_wrapper_field = is_generic_wrapper(model) or is_wrapper_field
 
-            if is_list_of_embedded_or_annotated_value(field_info.annotation):
+            if is_list_of_embedded(field_info.annotation):
                 raise PanglossModelError(
-                    f"{model.__name__}.{field_name}: lists of Embedded objects or of AnnotatedValues are not "
-                    "supported (a field can have only one). If each is a thing of its own, make it a Document; "
-                    "to annotate a whole list, make the value a list: `WithCertainty[list[str]]`"
+                    f"{model.__name__}.{field_name}: lists of Embedded objects are not supported (a field can "
+                    "have only one). If each is a thing of its own, make it a Document"
                 )
             # (whatever the field is, what it is annotated with must be something that is carried)
             constraints_of(field_info.metadata, f"{model.__name__}.{field_name}")

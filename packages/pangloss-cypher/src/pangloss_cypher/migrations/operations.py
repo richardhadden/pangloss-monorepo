@@ -406,7 +406,7 @@ async def add_field(
         return (
             None if window is None else []
         )  # (an absent property is none; a relation is empty)
-    if field["kind"] == "list" and change.default is None:
+    if (field["kind"] == "list" or field.get("many")) and change.default is None:
         change = dataclasses.replace(
             change, default=[]
         )  # (a list that is needed starts empty)

@@ -235,6 +235,9 @@ class Exporter:
                 "model": (origin or definition.annotated_type).__name__,
                 "valueType": self.describe_type(args[0]) if args else None,
             }
+            # (only a list says so: the export of a single value, and the snapshots made from it, are as they were)
+            if definition.many:
+                entry["many"] = True
         elif isinstance(definition, EmbeddedFieldDefinition):
             entry |= {
                 "kind": "embedded",

@@ -93,8 +93,8 @@ Each of these raises at `initialise()`:
 
 - an optional list of relations (`list[Person] | None`): `list[Person]` may already be empty (a single relation or
   embedded object may be optional: `Person | None`, `Date | None`);
-- a list of embedded objects, a list of annotated values (annotate a list instead:
-  `WithCertainty[list[str]]`);
+- a list of embedded objects (a list of annotated values, `list[WithCertainty[str]]`, is allowed: a list of maps; to
+  give one certainty to a whole list, `WithCertainty[list[str]]`);
 - a plain `dict` (use a `TypedDict`), `bytes`, `complex`, a pydantic model or dataclass (use an `Embedded` or a
   `TypedDict`), a `Flag` enum, a union of literal types, `list[X | None]`;
 - a model called `users`, `docs`, `redoc`, `openapi.json` or `sdk`, in any case (the API uses those paths).

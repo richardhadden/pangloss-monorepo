@@ -189,7 +189,7 @@ class Naming(Document):
     name: WithCertainty[str]
 ```
 
-✅ A field holds exactly one annotated value, stored as a **map property on the node it belongs to** (`{value: "John", certainty: 2}`), not as a node of its own, and read back from it. Both the value and the extra fields are literals (so `Decimal`, `Enum` and dates are converted as for any literal). A list of annotated values (`list[WithCertainty[str]]`) is **not supported** and raises an error at `initialise()`; to annotate a whole list, make the value a list: `WithCertainty[list[str]]`.
+✅ A field holds exactly one annotated value, stored as a **map property on the node it belongs to** (`{value: "John", certainty: 2}`), not as a node of its own, and read back from it. Both the value and the extra fields are literals (so `Decimal`, `Enum` and dates are converted as for any literal). A **list** of annotated values (`names: list[WithCertainty[str]]`) is allowed: a list of maps on the node (`[{value: "John", certainty: 3}, ...]`), written and read back whole, in order, like a list of literals (it is required, and may be empty; a new one on existing nodes starts empty). Neo4j cannot keep a list of maps as a property, so there it is stored as JSON text (`names#json`) and decoded when read, as any list of maps is. To give one certainty to a whole list instead, make the value a list: `WithCertainty[list[str]]`. Changing a single annotated value into a list of them, or back, is a change of kind, which a migration refuses (add a new field and move the data by hand). Not searchable, as a single annotated value is not.
 
 ## ReifiedRelation
 

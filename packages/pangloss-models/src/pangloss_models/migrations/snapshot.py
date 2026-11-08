@@ -52,7 +52,11 @@ NOT_DATA_KEYS = {
 
 def field_storage(definition: FieldDefinition) -> dict[str, Any]:
     if isinstance(definition, AnnotatedValueFieldDefinition):
-        return {"kind": "map_property"}
+        return (
+            {"kind": "map_property", "many": True}
+            if definition.many
+            else {"kind": "map_property"}
+        )
 
     if isinstance(definition, EmbeddedFieldDefinition):
         return {
