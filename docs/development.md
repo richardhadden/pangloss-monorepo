@@ -33,6 +33,9 @@ Line coverage of `pangloss_models` (the Python must be one `coverage` supports: 
 uv run coverage run -m pytest packages && uv run coverage report    # fails below 94% (pyproject.toml)
 ```
 
+Every package at once, over the xdist workers and the Neo4j runs: `.coveragerc-all`, with the commands in the
+[README](../README.md#test-coverage).
+
 The tests of `pangloss-models` are in `tests/initialisation/` (declaring and initialising models), `tests/generated_models/` (the models made, with the snapshot), `tests/migrations/`, `tests/export/` and `tests/typestubs/`; the helpers they share (`kitchen_sink`, `sample_data`, ...) are in `tests/support/`.
 
 ## Repository layout

@@ -1,0 +1,15 @@
+# Line coverage of every package (pyproject.toml's [tool.coverage] measures pangloss_models only, for its gate).
+# Use with COVERAGE_RCFILE=.coveragerc-all: the README, "Test coverage", has the runs.
+[run]
+source_pkgs = pangloss_core, pangloss_models, pangloss_memgraph, pangloss_neo4j, pangloss_cypher, pangloss_users, pangloss_api, pangloss_cli, pangloss_sdk, pangloss_sdk_server, pangloss_history, pangloss_review, pangloss_dates, pangloss_calendar, pangloss_typology, pangloss_derived, pangloss_zotero, pangloss_library, pangloss_interface
+# (the xdist workers are subprocesses: each writes its own data file, and `coverage combine` joins them)
+parallel = true
+patch = subprocess
+
+[report]
+show_missing = true
+skip_covered = true
+exclude_also =
+    if TYPE_CHECKING:
+    raise NotImplementedError
+    \.\.\.$

@@ -10,6 +10,7 @@ Describe your research data as Python classes. Get validated models, a graph-dat
 ![Memgraph](https://img.shields.io/badge/graph-Memgraph%20%7C%20Neo4j-FB6E00)
 ![FastAPI](https://img.shields.io/badge/API-FastAPI-009688?logo=fastapi&logoColor=white)
 ![Pydantic v2](https://img.shields.io/badge/models-Pydantic%20v2-E92063)
+![Coverage 94%](https://img.shields.io/badge/coverage-94%25-brightgreen)
 ![Status](https://img.shields.io/badge/status-in%20development-orange)
 
 [All guides](guide/README.md) ·
@@ -78,7 +79,8 @@ loaded = await Statement.get(statement.id)        # a Statement.HeadView
 | ✅ **Review, history** | Documents unpublished until checked, with comments; every version kept, with diffs and restore. [Review](guide/review/README.md), [History](guide/history/README.md) |
 | 📅 **Dates and calendar** | Uncertain dates, periods, recurrence, feasts and Easter, in the Julian or Gregorian calendar. [Dates](guide/dates/README.md), [Calendar](guide/calendar/README.md) |
 | 🌳 **Typology, Zotero** | Hierarchical vocabularies; a Zotero library kept as sources. [Typology](guide/typology/README.md), [Zotero](guide/zotero/README.md) |
-| 🖥️ **Interface** | A Solid 2.0 web interface: lists, search, item pages, login, a typology tree, your own components as interface modules (forms to edit items are still to come). [Guide](guide/interface/README.md) |
+| 🧮 **Derived relations** | Rules that make networks (person to person) from what documents say, each with its justification, kept up to date in the background. [Derived](guide/derived/README.md) |
+| 🖥️ **Interface** | A Solid 2.0 web interface: lists, search and a structured search form, item pages, forms to make and edit items (checked before saving, with a clipboard and a stash of unsaved work), review, history, calendar pages, a typology tree, and your own components as interface modules. [Guide](guide/interface/README.md) |
 | 🔭 **Observability** | Structured, secret-safe logging with request ids, audit lines for logins and writes, and slow-query warnings. [Logging](docs/logging.md) |
 | ⌨️ **A command line** | `pangloss new-project`, `run`, `dev`, `setup-database`, `users`, `make-stubs`, `check-data` and more. [Command line](docs/cli.md) |
 
@@ -137,6 +139,7 @@ separate distributable package.
 | [`pangloss-core`](packages/pangloss-core) | Settings and logging shared by every package |
 | [`pangloss-models`](packages/pangloss-models) | The base classes, model initialisation, export, type stubs and the migration planner |
 | [`pangloss-memgraph`](packages/pangloss-memgraph) · [`-neo4j`](packages/pangloss-neo4j) | The database backends: query builders, database functions, migrations |
+| [`pangloss-cypher`](packages/pangloss-cypher) | What the two Cypher backends share |
 | [`pangloss-users`](packages/pangloss-users) | User models, passwords, access tokens |
 | [`pangloss-api`](packages/pangloss-api) | The FastAPI application |
 | [`pangloss-cli`](packages/pangloss-cli) | The `pangloss` command |
@@ -144,6 +147,8 @@ separate distributable package.
 | [`pangloss-history`](packages/pangloss-history) · [`-review`](packages/pangloss-review) | Versions of everything written, and restoring them; checking before publishing |
 | [`pangloss-dates`](packages/pangloss-dates) · [`-calendar`](packages/pangloss-calendar) · [`-typology`](packages/pangloss-typology) | Uncertain dates; days, feasts and Easter; hierarchical vocabularies |
 | [`pangloss-zotero`](packages/pangloss-zotero) | A Zotero library kept in the database, as sources and subjects of factoids |
+| [`pangloss-derived`](packages/pangloss-derived) | Relations derived from documents by rules, kept up to date in the background |
+| [`pangloss-library`](packages/pangloss-library) | Ready-made models built from the primitives (`WeightedAlternative`) |
 | [`pangloss-interface`](packages/pangloss-interface) | The web interface (Solid 2.0) |
 | [`pangloss-testing`](packages/pangloss-testing) | Live-database fixtures for the tests of add-ons, on either backend |
 
@@ -173,12 +178,44 @@ The interface has Playwright tests in [`e2e/`](e2e). The add-on packages' live t
 container if there is none. **The tests empty that database**, so don't point them at one you care about.
 See [Development](docs/development.md) for the test layout, coverage and conventions.
 
+### Test coverage
+
+About 2,950 Python tests, 166 browser tests (Playwright) and 47 files of interface unit tests (Vitest). Line coverage of
+the Python packages is **94%** (25,591 statements; measured 2026-11-08, with the Memgraph run, the Neo4j package and the
+conformance suite on Neo4j; the code of `pangloss-testing` is left out, as it is mostly tests):
+
+| Package | Statements | Covered | | Package | Statements | Covered |
+|---|--:|--:|---|---|--:|--:|
+| `pangloss-api` | 1,165 | 98% | | `pangloss-library` | 21 | 100% |
+| `pangloss-calendar` | 918 | 91% | | `pangloss-memgraph` | 871 | 97% |
+| `pangloss-cli` | 1,063 | 93% | | `pangloss-models` | 7,187 | 96% |
+| `pangloss-core` | 260 | 95% | | `pangloss-neo4j` | 946 | 97% |
+| `pangloss-cypher` | 3,037 | 97% | | `pangloss-review` | 257 | 99% |
+| `pangloss-dates` | 865 | 98% | | `pangloss-sdk` | 1,095 | 92% |
+| `pangloss-derived` | 1,945 | 85% | | `pangloss-sdk-server` | 1,016 | 96% |
+| `pangloss-history` | 1,089 | 96% | | `pangloss-typology` | 763 | 87% |
+| `pangloss-interface` (Python) | 1,774 | 93% | | `pangloss-users` | 186 | 98% |
+| | | | | `pangloss-zotero` | 1,133 | 86% |
+
+To measure it again (with the test Memgraph and Neo4j as for `./run_tests.sh`; `.coveragerc-all` names every package
+and follows the xdist workers):
+
+```bash
+export COVERAGE_RCFILE=.coveragerc-all
+uv run coverage run -m pytest --dist=loadgroup -n auto --ignore=packages/pangloss-neo4j
+uv run coverage run -m pytest packages/pangloss-neo4j
+PANGLOSS_TEST_BACKEND=neo4j uv run coverage run -m pytest packages/pangloss-testing/src/pangloss_testing/conformance
+uv run coverage combine && uv run coverage report
+```
+
+What the browser tests cover, feature by feature, is in [`e2e/COVERAGE.md`](e2e/COVERAGE.md).
+
 ## Status
 
 Pangloss is in active development and **not yet released**: nothing is published to PyPI, and the APIs may change.
 The model layer, the Memgraph and Neo4j backends, REST API, users, migrations, history, review, search, dates, calendar,
-typology and the SDK work and are tested; Zotero is tested against a fake Zotero only. The interface can read and search but not
-yet edit, and finer-grained permissions are still to come. Each feature in the docs is marked ✅ implemented,
+typology, derived relations and the SDK work and are tested; Zotero is tested against a fake Zotero only. The interface reads,
+searches and edits; a pager on lists, translations on screen and finer-grained permissions are still to come. Each feature in the docs is marked ✅ implemented,
 🚧 partial or ⏳ planned, and [Status and roadmap](docs/status.md) has the full list.
 
 ## Licence

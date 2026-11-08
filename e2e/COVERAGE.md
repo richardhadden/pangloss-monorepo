@@ -3,7 +3,7 @@
 Keep this current: when a page or feature is added to the interface (or a test is added here), change its row.
 ✅ tested · 🚧 partly · ⬜ not yet · — not built, so nothing to test
 
-151 tests, about 355 s. The e2e project (`conftest.py`) has `Person` (`has_role: list[Role]`), `Role` (`has_type`), `RoleType` (a
+166 tests. The e2e project (`conftest.py`) has `Person` (`has_role: list[Role]`), `Role` (`has_type`), `RoleType` (a
 typology, also a `Role`) with Clerk > Secretary and Advisor, and `Statement` (a document: `text`, `about: Person`). The `data`
 fixture adds Maximilian (his secretary: a `Role` of the type Secretary), Marie of Burgundy (her advisor, and a statement
 about her "held court at Ghent") and Charles the Bold (no role); `types` has only the types; `stack` has one admin user.
