@@ -194,9 +194,11 @@ Not errors: things the user has to learn, which the class does not say.
   string. These are good decisions that a user discovers from a query, not from the class.
 - `initialise()` must run after every class and needs settings to exist (or `bind_database=False`). A module that
   calls it at import time breaks the second importer. Tests must `ModelRegistry._reset()`.
-- The stubs: `make-stubs` must be rerun by hand after each change, and a reverse relation through a wrapper is
-  `typing.Any` in the stub (`Person.HeadView.participants_reverse` in the demo), so the completion a user most
-  wants on an entity's page is the one that is missing.
+- The stubs: `make-stubs` must be rerun by hand after each change (the language server does it on save). A reverse
+  relation through a wrapper was `typing.Any` in the stub (`Person.HeadView.participants_reverse` in the demo): it is
+  now `list[Person._Activity_participants_reverse_incoming]`, a class of the stub of its own (a subclass of
+  `Activity.View`), so the label and the other fields of what points at the entity are completed. (The wrapper's own
+  field in that class, `participants`, is still `typing.Any`: it holds classes made at run time.)
 
 ## 3. Are the built-in primitives sufficient, or too many?
 

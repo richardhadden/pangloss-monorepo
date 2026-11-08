@@ -62,6 +62,37 @@ def generated_classes(model: type) -> dict[str, type[BaseModel]]:
     }
 
 
+def incoming_classes(model: type) -> dict[type[BaseModel], str]:
+    """The classes made for what is read back through a wrapper (`Statement.HeadView.participants_reverse` holds
+    `StatementView.from.Person.participants`): they are not an attribute of any module or class, so a stub gives each
+    a name of its own, in the class of the model that has them"""
+    head = model.__dict__.get("HeadView")
+    if head is None:
+        return {}
+    found: dict[type[BaseModel], str] = {}
+    taken: set[str] = set()
+
+    def walk(annotation: typing.Any) -> None:
+        for argument in typing.get_args(annotation):
+            walk(argument)
+        if (
+            isinstance(annotation, type)
+            and issubclass(annotation, BaseModel)
+            and ".from." in annotation.__name__
+        ):
+            source = annotation.__name__.split("View.from.")[0]
+            field = annotation.__name__.rsplit(".", 1)[-1]
+            name = f"_{source}_{field}_incoming"
+            while name in taken:
+                name += "_"
+            taken.add(name)
+            found.setdefault(annotation, name)
+
+    for field in head.model_fields.values():
+        walk(stub_annotation(field))
+    return found
+
+
 def is_for_users(name: str) -> bool:
     """(the `CreateDB` and `UpdateDB` models are for the database)"""
     return not name.endswith("DB")
@@ -211,6 +242,8 @@ def registered_class_names() -> dict[type, tuple[str, str]]:
             continue
         names[model] = (model.__module__, model.__qualname__)
         for name, cls in generated_classes(model).items():
+            names[cls] = (model.__module__, f"{model.__qualname__}.{name}")
+        for cls, name in incoming_classes(model).items():
             names[cls] = (model.__module__, f"{model.__qualname__}.{name}")
     return names
 
@@ -424,6 +457,11 @@ def nested_classes_of(
         )
         for name, cls in generated_classes(model).items()
         if is_for_users(name)
+    ]
+    # (written after the others: they are subclasses of the views of other models, which are named in full)
+    parts += [
+        stub_nested_class(renderer, name, cls)
+        for cls, name in incoming_classes(model).items()
     ]
     if operations:
         parts.append(operations_source(model, refer_as or qualified_name, operations))

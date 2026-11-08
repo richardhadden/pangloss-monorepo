@@ -328,3 +328,35 @@ def test_a_model_with_the_name_of_a_class_made_for_it_is_called_by_another_name_
     # (without the functions there is nothing to call it by)
     assert "_pg_model_" not in stub_for_module(module, [module.Order, module.Letter])
     sys.modules.pop("ordersapp", None)
+
+
+def test_what_is_read_back_through_a_wrapper_is_a_class_of_the_stub_that_can_be_completed():
+    from pangloss_models import Document, Entity, ReifiedRelation, initialise
+    from pangloss_models.typestubs import incoming_classes, nested_classes_of
+
+    class Place(Entity):
+        pass
+
+    class Shown[T](ReifiedRelation[T]):
+        how: str
+
+    class Letter(Document):
+        shows: list[Shown[Place]]
+
+    initialise()
+
+    ((made, stub_name),) = incoming_classes(Place).items()
+    assert made.__name__ == "LetterView.from.Place.shows_reverse"
+    assert stub_name == "_Letter_shows_reverse_incoming"
+
+    # (the models of a test are local, so what the registry would find is given by hand)
+    names = {
+        Place: ("here", "Place"),
+        Letter: ("here", "Letter"),
+        Letter.View: ("here", "Letter.View"),
+        made: ("here", f"Place.{stub_name}"),
+    }
+    source = nested_classes_of(TypeRenderer("here", names), Place, "async", "Place")
+    # (a class of its own, a subclass of the view of the document, held by the field of the head view)
+    assert "class _Letter_shows_reverse_incoming(Letter.View):" in source
+    assert "shows_reverse: list[Place._Letter_shows_reverse_incoming]" in source
