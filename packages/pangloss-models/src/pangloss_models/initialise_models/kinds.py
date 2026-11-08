@@ -135,7 +135,7 @@ class ModelKind:
     generic_validators: bool = False
     bound_validators: bool = False
     declared_validators: bool = False
-    """Whether the `mode="after"` model validators the class declares are copied (the models that are written)"""
+    """Whether the validators the class declares are copied (the models that are written: which, `get_model_validators`)"""
 
     # --- what is applied --------------------------------------------------------------------------
     applies_bindings: bool = False

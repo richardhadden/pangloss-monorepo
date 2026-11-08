@@ -136,7 +136,7 @@ class Statement(Document):
 ```
 
 - **A field typed with a base `Embedded` class accepts its subclasses** (each is told apart by `type` in the `Create` and `Update` models; the base class itself is accepted too).
-- **Validators.** The `@model_validator`s (of any mode) and the `@field_validator`s of literal fields that the class declares are copied to the `Create`, `Update`, `CreateDB` and `UpdateDB` models (not to the views), so a class can fill in what it derives from its other fields, such as the bounds of a date, or normalise a value. A model validator is passed the generated model, so it can use the literal fields the class has. A field's default (`year: int = 0`) is carried too: such a field may be left out. See [Defaults](relations.md#defaults).
+- **Validators.** The `@model_validator`s (of any mode) and the `@field_validator`s of literal fields that the class declares are copied to the `Create` and `Update` models, so they run once, where a payload is parsed (not again on the database models, nor on the views). What only the database has (a `DBField`, such as the bounds of a date) is filled in by a `@create_validator` / `@update_validator` instead, which run on `CreateDB` / `UpdateDB`. See [Validators, write checks and methods](generated-models.md#validators-write-checks-and-methods-). A field's default (`year: int = 0`) is carried too: such a field may be left out. See [Defaults](relations.md#defaults).
 - **Indexes.** `Embedded.Meta(indexes=["field"])` asks for a label-and-property index of a field, as on documents and entities (it is not inherited; the nodes of its subclasses carry the label too). An embedded class has no label index unless it asks for a field.
 
 ## Traits
@@ -159,7 +159,7 @@ class Statement(Document):
 
 - `Trait[T]` is heritable: subclasses of `Person` are also `Agent`s and the trait's name is added to the node labels.
 - `NonHeritableTrait` applies only to the classes that directly inherit it, not their subclasses.
-- A trait can carry fields (literal, embedded, `DBField`s) and `@model_validator(mode="after")`s, which the classes that have it get as their
+- A trait can carry fields (literal, embedded, `DBField`s), validators of every kind and methods, which the classes that have it get as their
   own. `reference_view_fields: ClassVar[tuple[str, ...]]` on a trait adds those fields to the `ReferenceView` of every class that has it (a
   `DBField` may be one: a reference view is only read). `pangloss_dates.dateable.Dateable` is one: a `date`, and a copy of its sort day and
   text in the reference.

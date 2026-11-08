@@ -19,6 +19,7 @@ from pangloss_models import (
     hooks,
 )
 from pangloss_models.hooks import emit_write_event
+from pangloss_models.write_checks import check_before_create, check_before_update
 from pangloss_models.model_bases.labels import labels_for_model
 from pangloss_models.model_bases.document import (
     _DocumentCreateBase,
@@ -275,6 +276,7 @@ async def create_head_node(
     db_instance: _DocumentCreateDBBase = cast(
         _DocumentCreateDBBase, instance._to_db_model()
     )
+    await check_before_create(db_instance)
     with hooks.requesting_review_status(
         hooks.review_status_asked(published, review_status)
     ):
@@ -450,6 +452,14 @@ async def update_head_node(
     refers to it by a relation that cannot hold this class."""
     db_instance = cast(
         _DocumentUpdateDBBase | _EntityUpdateDBBase, instance._to_db_model()
+    )
+    # (as it is now: read before the write's transaction; one made meanwhile is refused by `expected_version`)
+    await check_before_update(
+        db_instance,
+        lambda: _get_head_view(
+            changing_class_from or cast(type[Document | Entity], instance._owner),
+            db_instance.id,
+        ),
     )
     with hooks.requesting_review_status(
         hooks.review_status_asked(published, review_status)

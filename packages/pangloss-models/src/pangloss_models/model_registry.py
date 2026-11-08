@@ -31,6 +31,7 @@ lazy from pangloss_models.initialise_models.check_relation_targets import (
     check_relation_targets,
 )
 lazy from pangloss_models.initialise_models.initialise_field_definitions import (
+    declared_members,
     initialise_field_definitions,
 )
 lazy from pangloss_models.initialise_models.initialise_head_view_model import (
@@ -62,6 +63,8 @@ lazy from pangloss_models.initialise_models.initialise_view_model import (
 lazy from pangloss_models.model_bases.base_models import (
     _ActionClass,
     _DeclaredClass,
+    _ReferenceSetBase,
+    _ReferenceViewBase,
 )
 lazy from pangloss_models.model_bases.document import (
     Document,
@@ -505,6 +508,18 @@ class ModelRegistry:
             for action_class in list(cls._action_classes):
                 for variant in action_class._via.values():
                     inherit_fields(variant, action_class)
+
+            # The methods and properties of the declared classes, on the models made from them (not a reference,
+            # which has only what refers to it: its id, its label)
+            for action_class in cls._action_classes:
+                owner = getattr(action_class, "_owner", None)
+                if owner is None or issubclass(
+                    action_class, (_ReferenceSetBase, _ReferenceViewBase)
+                ):
+                    continue
+                for attribute, value in declared_members(owner).items():
+                    if attribute not in vars(action_class):
+                        setattr(action_class, attribute, value)
 
             # The fields added to the models above have to be given their camelCase
             # aliases (the `alias_generator` of the models only sees the fields they are

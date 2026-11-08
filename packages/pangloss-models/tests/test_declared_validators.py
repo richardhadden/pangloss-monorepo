@@ -1,4 +1,4 @@
-"""`mode="after"` model validators a class declares are copied to the models that are written"""
+"""The model validators a class declares are copied to the models a client writes (`Create`, `Update`), and run once"""
 
 import pytest
 from pangloss_models import Document, Embedded, initialise
@@ -46,10 +46,9 @@ def test_the_validator_runs_on_the_models_that_are_written_and_overwrites_what_a
     assert Note.Create(**payload).when.double == 4
     update = Note.Update(**payload, id="00000000-0000-0000-0000-000000000000")
     assert update.when.double == 4
-    created = Note.CreateDB.model_validate(
-        {"label": "a", "when": {"type": "Counted", "year": 3}}
-    )
-    assert created.when.double == 6
+    # (the database model is made from what the validator gave, and does not run it again)
+    assert Note.Create(**payload)._to_db_model().when.double == 4
+    assert "fill" not in Note.CreateDB.__pydantic_decorators__.model_validators
 
 
 def test_a_validator_that_refuses_refuses_the_whole_document():

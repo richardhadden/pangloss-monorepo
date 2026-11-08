@@ -100,7 +100,7 @@ A relation to an entity is a pair of edges (forward and reverse). Relations to d
 | Change its reverse name | Reverse edges are renamed | transforming |
 | Widen what it may point to | Nothing | safe |
 | Narrow what it may point to | Fails if any edge points to what is no longer allowed. **In the file**: `on_narrowing: 'remove'` deletes those edges instead | **lossy** |
-| List becomes a single value | Fails if any node has several. **In the file**: `keep: 'first'` keeps the first edge and removes the others | **lossy** |
+| List becomes a single value | Fails if any node has several. **In the file**: `keep: 'first'` keeps the first of the list and removes the others | **lossy** |
 | Single value becomes a list | Nothing | safe |
 | Add properties to the edges (an edge model) | **Asked** for values for the required ones, for the edges that exist | additive |
 | Remove them | The properties are removed | **lossy** |

@@ -5,6 +5,7 @@ import logging
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from pydantic.alias_generators import to_camel
 from pangloss_models import (
     PanglossClassChangeError,
     PanglossConflictError,
@@ -19,6 +20,7 @@ from pangloss_models import (
     PanglossUserNotFoundError,
     PanglossVersionConflictError,
     PanglossWriteError,
+    PanglossWriteRefused,
 )
 from pangloss_users import (
     PanglossInvalidUserError,
@@ -47,6 +49,7 @@ STATUS_FOR_ERROR: list[tuple[type[Exception], int]] = [
     (PanglossNotDeletedError, 409),
     (PanglossNotDeletableError, 400),
     (PanglossReferenceError, 422),
+    (PanglossWriteRefused, 422),
     (PanglossUserDisabledError, 403),
     (PanglossUserNotFoundError, 403),
     (PanglossReadOnlyError, 503),
@@ -69,6 +72,12 @@ async def error_handler(request: Request, error: Exception) -> JSONResponse:
         content["referencedBy"] = [
             {key: str(value) for key, value in item.items()}
             for item in error.referenced_by
+        ]
+    if isinstance(error, PanglossWriteRefused) and error.path:
+        # (about a field: as a 422 of pydantic's is, so that a client shows it at the field, nested or not)
+        loc = [to_camel(part) if isinstance(part, str) else part for part in error.path]
+        content["detail"] = [
+            {"loc": ["body", *loc], "msg": str(error), "type": "refused"}
         ]
     headers = {}
     if isinstance(error, PanglossVersionConflictError) and error.current_version:

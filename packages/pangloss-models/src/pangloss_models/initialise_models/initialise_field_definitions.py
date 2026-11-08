@@ -23,6 +23,7 @@ from pydantic.fields import FieldInfo
 from pangloss_models import literals
 from pangloss_models.exceptions import PanglossModelError, PanglossModelWarning
 from pangloss_models.markers import FieldMarker
+from pangloss_models.write_checks import is_marked
 from pangloss_models.field_definitions import (
     AnnotatedValueFieldDefinition,
     EmbeddedFieldDefinition,
@@ -1079,9 +1080,10 @@ def check_declared_class(model: type[_DeclaredClass]) -> None:
 
     A `@field_validator` is copied to the models that are written, so it must be of a field that those models
     have as the class declares it: a literal, a list, an annotated value or `label` (a relation is a reference
-    or a nested model there); otherwise it is an error. A `@computed_field`, a method, a property or a
-    `model_config` of the class's own is not on any generated model (`Person(...)` is `Person.Create(...)`):
-    a warning says so."""
+    or a nested model there); otherwise it is an error. Its methods and properties are copied to the generated
+    models (`declared_members`), so one with the name of a field of theirs, or of an operation Pangloss gives them
+    (`save`, `get`, ...), is an error. A `@computed_field` or a `model_config` of the class's own is not on any
+    generated model (`Person(...)` is `Person.Create(...)`): a warning says so."""
     name = model.__name__
     decorators = model.__pydantic_decorators__
     own_fields = model._meta.fields
@@ -1111,36 +1113,25 @@ def check_declared_class(model: type[_DeclaredClass]) -> None:
     for field_name, decorator in decorators.computed_fields.items():
         if not decorator.cls_ref.startswith("pangloss_models."):
             left_behind.append(f"the computed field {field_name!r}")
-    decorated = (
-        set(decorators.field_validators)
-        | set(decorators.model_validators)
-        | set(decorators.computed_fields)
-        | set(decorators.field_serializers)
-        | set(decorators.model_serializers)
-        | set(decorators.validators)
-        | set(decorators.root_validators)
-    )
-    for attribute, value in model.__dict__.items():
-        # (not what pydantic puts on every class: `model_post_init`, `model_config`)
-        if (
-            attribute.startswith("_")
-            or attribute in decorated
-            or hasattr(BaseModel, attribute)
-        ):
-            continue
-        if isinstance(value, property):
-            left_behind.append(f"the property {attribute!r}")
-        elif inspect.isfunction(value):
-            left_behind.append(f"the method {attribute!r}")
     if left_behind:
         warnings.warn(
             f"{name} declares {', '.join(left_behind)}, which the models made from it (Create, Update, View, "
-            f"HeadView) do not have: {name}(...) is {name}.Create(...), and what is read back is a HeadView. "
-            "Put what you need in a function that takes the model, or in a model_validator(mode='after'), "
-            "which is copied to the models that are written",
+            f"HeadView) do not have: it would change what the API gives. Make it a property (which they have) or "
+            "a field that a create_validator fills in",
             PanglossModelWarning,
             stacklevel=2,
         )
+    for attribute in declared_members(model):
+        if attribute in model.model_fields or attribute in GENERATED_FIELD_NAMES:
+            raise PanglossModelError(
+                f"{name}.{attribute}: a method or property of the same name as a field of the models made from "
+                f"{name}"
+            )
+        if attribute in OPERATION_NAMES:
+            raise PanglossModelError(
+                f"{name}.{attribute}: a method or property of the same name as one Pangloss gives the class or its "
+                f"models ({', '.join(sorted(OPERATION_NAMES))}), which it would hide"
+            )
     parent = next(
         (
             base
@@ -1156,6 +1147,67 @@ def check_declared_class(model: type[_DeclaredClass]) -> None:
             PanglossModelWarning,
             stacklevel=2,
         )
+
+
+# (what the generated models have that a declared class does not say: a method of that name would hide it)
+GENERATED_FIELD_NAMES = {
+    "id",
+    "type",
+    "meta",
+    "create_new",
+    "edge_properties",
+    "semantic_spaces",
+    "context_labels",
+}
+OPERATION_NAMES = {
+    "save",
+    "get",
+    "get_for_edit",
+    "delete",
+    "undelete",
+    "list",
+    "search",
+    "autocomplete",
+    "references",
+}
+
+
+def declared_members(model: type) -> dict[str, Any]:
+    """The methods and properties a declared class has from the classes a project or an app declared (itself, its
+    bases, its traits): what is copied to the models made from it, so that `Person(...)` (a `Person.Create`) and
+    what is read back (a `Person.HeadView`) have them. Not pydantic's validators, nor `write_checks`'s, which are
+    the validators of those models, and not what Pangloss's or pydantic's own classes have"""
+    members: dict[str, Any] = {}
+    for klass in reversed(model.__mro__):
+        if klass is object or klass.__module__.startswith(
+            ("pangloss_models.", "pydantic.")
+        ):
+            continue
+        decorated = set()
+        if isinstance(klass, type) and issubclass(klass, BaseModel):
+            found = klass.__pydantic_decorators__
+            decorated = (
+                set(found.field_validators)
+                | set(found.model_validators)
+                | set(found.computed_fields)
+                | set(found.field_serializers)
+                | set(found.model_serializers)
+                | set(found.validators)
+                | set(found.root_validators)
+            )
+        for attribute, value in vars(klass).items():
+            if (
+                (attribute.startswith("__") and attribute.endswith("__"))
+                or attribute in decorated
+                or hasattr(BaseModel, attribute)
+                or is_marked(value)
+            ):
+                continue
+            if isinstance(
+                value, (property, classmethod, staticmethod)
+            ) or inspect.isfunction(value):
+                members[attribute] = value
+    return members
 
 
 def with_optional_lifted(field_info: FieldInfo) -> FieldInfo:

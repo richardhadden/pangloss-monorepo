@@ -144,7 +144,7 @@ Then the operations are **ordered** (create models and enums before fields that 
 | What value to give existing nodes for a new required field | the model has no default for the *old* data | **Ask**, or `Field(migration_default=...)`; written into the migration |
 | How to convert a changed type | `str` to `int` may not parse | **Ask** for the conversion, or choose "fail on a value that does not convert" / "set to null" / "drop" |
 | What a new object wrapping a relation should contain | `IdentifiedAs.certainty` has no value for old edges | **Ask** for the `defaults` |
-| Which one to keep when a list becomes a single value | there may be several | **Ask**: first by creation order, or fail |
+| Which one to keep when a list becomes a single value | there may be several | **Ask**: the first of the list, or fail |
 
 `makemigrations` is interactive in a terminal, takes answers on the command line, and refuses to guess in a non-interactive run. Nothing is written until the person has seen the operations.
 
@@ -230,7 +230,7 @@ The identity of a *relation* is the pair `(model, field)` and so also names its 
 | **Target widened** (`Person` to `Person | Group`, a new subclass, a trait gaining an implementer) | none | S |
 | **Target narrowed** (`Person | Group` to `Person`, `Agent` to `Person`) | **check** the edges: those that point at a label that is no longer allowed make the migration fail, or are removed (a choice) | L |
 | **Single to list** | none: one edge is a list of one | S |
-| **List to single** | nodes with more than one edge need a choice: keep the first by edge creation order, keep by a property, or fail. Others' edges are removed | L |
+| **List to single** | nodes with more than one edge need a choice: keep the first of the list (✅ since 2026-11-08 by its position; it had been by the database's edge id, which Neo4j reuses), keep by a property, or fail. Others' edges are removed | L |
 | **Entity target to Document target** (or the reverse) | **M**: the target stops being a thing that is referred to and becomes part of the document (or the reverse); the node needs `head_node_id`, and entities have an identity of their own. Written by hand | M |
 | **Relation to an embedded object, or to literals** | **M** (see 5.5) | M |
 | **Add or remove `ViaEdge[T, Edge]`** | set `Edge`'s fields on both edges of every pair (defaults, asked); or remove those properties | A / L |

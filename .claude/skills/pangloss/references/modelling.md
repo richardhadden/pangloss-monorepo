@@ -56,11 +56,15 @@ Everything in `Annotated` that pydantic acts on (`Ge(1)`, `MinLen`, `Predicate`,
 `Field(pattern=...)`, `AfterValidator`; so `PositiveInt`, `constr(...)` too) is carried to the generated models, the
 export and so the interface's forms; anything else that is not Pangloss's own is an error. An optional one is written
 either way: `Annotated[int, Ge(1)] | None` or `Annotated[int | None, Ge(1)]`. `pangloss_models.validators.SumsTo`
-checks that an edge property adds up over a list. The `@model_validator`s (any mode) and the `@field_validator`s of
-literal fields of a class or trait are copied to `Create`/`Update` and their DB models (not the views), so a class
-can work out fields from its others. A default the class declares (`year: int = 0`) is carried: the field may be
-left out. A method, a property, a `@computed_field` or a `model_config` on a declared class is warned about
-(`PanglossModelWarning`): the generated models do not have them.
+checks that an edge property adds up over a list. A default the class declares (`year: int = 0`) is carried: the
+field may be left out.
+
+Validators and methods (`docs/generated-models.md`, "Validators, write checks and methods"): pydantic's
+`@model_validator`s and `@field_validator`s run once, on `Create`/`Update` (a `before` one gets snake_case keys);
+`@create_validator` / `@update_validator` run on `CreateDB` / `UpdateDB` (server side: fill in `DBField`s there, as
+`pangloss_dates` does); `async` `@before_create` / `@before_update(self, previous)` run on the server before a write, on
+each node of the class in it (nested too), and may raise `PanglossWriteRefused(message, field=...)` (a 422). Methods and properties are copied to
+every generated model but the references. A `@computed_field` or a `model_config` is a `PanglossModelWarning`.
 
 ## Relations: what `Create` expects
 

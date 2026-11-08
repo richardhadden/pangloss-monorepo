@@ -487,8 +487,8 @@ class AlterCardinality(Change):
     model: str
     name: str
     many: bool
-    # Answer, for a list that is now a single value: "fail", or "first" (by creation of
-    # the edge) to keep one of several
+    # Answer, for a list that is now a single value: "fail", or "first" (the first of the
+    # list) to keep one of several
     keep: str | None = None
 
     @property

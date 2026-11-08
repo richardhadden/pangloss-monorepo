@@ -340,6 +340,9 @@ Embedded
 - Validators on an Embedded did **not** reach the generated models; now `mode="after"` model validators the class declares are copied to
   `Create`, `Update`, `CreateDB` and `UpdateDB` (`initialise_models/common.py`, `kinds.py` `declared_validators`). The derived bounds are
   therefore `int | None = None` fields that the validator always fills (a client's values are overwritten).
+  (Since 2026-11-08 a class's pydantic validators are on `Create`/`Update` only, run once: the date's
+  `work_out_the_bounds` still checks a date there, and `store_the_bounds`, a `@create_validator` and
+  `@update_validator`, fills in the stored bounds on `CreateDB`/`UpdateDB`; `Dateable.copy_the_date` is one too.)
 - `Embedded.Meta(indexes=[...])` is built: label-and-property indexes for an Embedded class that asks (none otherwise), made by
   `initialise_database` and migrations like the others. Full suite 2186 passed.
 - Next: `models.py` in `pangloss-dates`.

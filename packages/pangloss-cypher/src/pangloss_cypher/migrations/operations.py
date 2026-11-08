@@ -943,13 +943,14 @@ async def alter_cardinality(
                 f"(`keep`: 'first')"
             )
         return 0
-    # keep the first edge (the oldest), and remove the others with their reverse edges
+    # keep the first of the list (by its position; the database's own id only between edges with none, as it is no
+    # order of making: Neo4j gives a deleted edge's id to a new one), and remove the others with their reverse edges
     window = f"WITH n, edges LIMIT {int(limit)} " if limit else ""
     rows = await run(
         tx,
         f"""
         MATCH (n:{label})-[e]->(t) WHERE type(e) = $forward AND NOT coalesce(e.reverse, false)
-        WITH n, e, t ORDER BY {dialect().tie_break("e")}
+        WITH n, e, t ORDER BY coalesce(e.{POSITION}, 0), {dialect().tie_break("e")}
         WITH n, collect({{e: e, t: t}}) AS edges WHERE size(edges) > 1
         {window}UNWIND edges[1..] AS extra
         WITH n, extra.e AS e, extra.t AS t

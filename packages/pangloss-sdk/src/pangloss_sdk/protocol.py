@@ -16,6 +16,7 @@ from pangloss_models.model_bases.base_models import _ListItems
 from pangloss_models.search import check_match
 from pangloss_models.utils import get_concrete_types
 from pydantic import TypeAdapter
+from pydantic.alias_generators import to_snake
 
 from pangloss_sdk.exceptions import (
     PanglossAuthenticationError,
@@ -52,6 +53,7 @@ ERRORS_BY_NAME: dict[str, type[Exception]] = {
         PanglossSdkOutOfDate,
         models_exceptions.PanglossNotFoundError,
         models_exceptions.PanglossReferenceError,
+        models_exceptions.PanglossWriteRefused,
         models_exceptions.PanglossConflictError,
         models_exceptions.PanglossVersionConflictError,
         models_exceptions.PanglossEntityInUseError,
@@ -121,6 +123,19 @@ def error_for(response: Any) -> Exception:
             entity_id=None,
             referenced_by=body.get("referencedBy", []),
         )
+    if kind is models_exceptions.PanglossWriteRefused:
+        # (about a field: `[{"loc": ["body", "clauses", 0, "text"], "msg": ...}]`)
+        detail = body.get("detail")
+        if isinstance(detail, list) and detail and isinstance(detail[0], dict):
+            loc = [
+                to_snake(part) if isinstance(part, str) else part
+                for part in (detail[0].get("loc") or [])[1:]
+            ]
+            field = loc[-1] if loc and isinstance(loc[-1], str) else None
+            refused = kind(str(detail[0].get("msg", message)), field=field)
+            refused.path = tuple(loc)
+            return refused
+        return kind(message)
     return kind(message)
 
 

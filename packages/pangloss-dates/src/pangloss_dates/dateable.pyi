@@ -4,8 +4,7 @@
 import typing
 
 from typing import Annotated, Any, ClassVar
-from pangloss_models import DBField, Trait
-from pydantic import model_validator
+from pangloss_models import DBField, Trait, create_validator, update_validator
 from pangloss_dates.models import Date, DateRange, EDTFDate, ExactDate, OngoingDate, Period, Recurrence, UnknownDate
 COPIED_FIELDS = ...
 
@@ -28,7 +27,8 @@ class Dateable(Trait):
     date_end_sort_day: Annotated[int | None, DBField] = None
     date_text: Annotated[str | None, DBField] = None
 
-    @model_validator(mode='after')
+    @create_validator
+    @update_validator
     def copy_the_date(self):
         ...
 

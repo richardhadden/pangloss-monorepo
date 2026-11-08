@@ -70,9 +70,10 @@ These are the facts that most mistakes come from not knowing.
    lists of embedded objects or of annotated values, `list[Person] | None` (a list may already be empty), plain
    `dict` (use a `TypedDict`). What a literal is, and how it is stored, is said once in `pangloss_models.literals`
    (pydantic's standard types included: a `UUID` or a URL is text with a format); anything in `Annotated` that is
-   neither pydantic's nor Pangloss's is an error, and a method or `model_config` on a declared class a
-   `PanglossModelWarning` (the generated models do not have them). Writes that cannot succeed raise typed
-   `PanglossWriteError`s.
+   neither pydantic's nor Pangloss's is an error, and a `model_config` or `@computed_field` on a declared class a
+   `PanglossModelWarning`. A class's methods are on its generated models; its pydantic validators run once, on
+   `Create`/`Update`; `@create_validator`/`@update_validator` on the DB models, `@before_create`/`@before_update`
+   (async, may refuse) before a write. Writes that cannot succeed raise typed `PanglossWriteError`s.
 7. **Python is `snake_case`, JSON is `camelCase`.** The API and the interface see `bornIn`; requests accept either.
    Every generated model has a `type` field, the discriminator of unions.
 8. **`Create` wants everything that has no default.** `X | None` and a field with a default (`count: int = 0`,

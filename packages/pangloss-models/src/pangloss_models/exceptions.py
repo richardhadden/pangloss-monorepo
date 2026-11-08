@@ -46,6 +46,17 @@ class PanglossWriteError(Exception):
     nothing was written"""
 
 
+class PanglossWriteRefused(PanglossWriteError):
+    """A `@before_create` or `@before_update` of the class refused the write (a 422 over the API). `field`, if
+    given, is the field the reason is about; `path`, set when it is raised, is where that is in what was written
+    (`("clauses", 0, "text")` for a nested document's)"""
+
+    def __init__(self, message: str, field: str | None = None):
+        super().__init__(message)
+        self.field = field
+        self.path: tuple[str | int, ...] = (field,) if field else ()
+
+
 class PanglossNotFoundError(PanglossWriteError):
     """The object being updated does not exist (or is not of the given type)"""
 

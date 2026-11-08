@@ -7,6 +7,8 @@ from uuid import UUID, uuid7
 import pytest
 from annotated_types import Gt, MinLen
 from pangloss_models import (
+    create_validator,
+    update_validator,
     AnnotatedValue,
     Conjunction,
     DBField,
@@ -932,20 +934,19 @@ def test_can_convert_create_to_update_db_model():
 
 
 @no_type_check
-def test_can_convert_update_to_update_db_model_with_declared_conversion():
+def test_can_convert_update_to_update_db_model_with_validators_of_the_database_models():
     class Statement(Document):
         name: str
         carried_out_by: Person
-        action_carried_out: Annotated[Action, DBField]
+        # (filled in by a validator of the database models, which runs after the fields are validated: so a field
+        # only they have that the validator fills needs a default)
+        action_carried_out: Annotated[Action | None, DBField] = None
         something_else: SomethingElse
 
-        @staticmethod
-        def to_db(incoming_data):
-
-            incoming_data.action_carried_out = Action(
-                label=incoming_data.name + " action",  # type: ignore
-            )
-            return incoming_data
+        @create_validator
+        @update_validator
+        def add_the_action(self):
+            self.action_carried_out = Action.CreateDB(label=self.name + " action")
 
     class Person(Entity):
         pass
@@ -954,19 +955,15 @@ def test_can_convert_update_to_update_db_model_with_declared_conversion():
         pass
 
     class SomethingElse(Document):
-        name: Annotated[str, DBField]
+        name: Annotated[str | None, DBField] = None
 
-        @staticmethod
-        def to_db_create(incoming_data):
-            name = "something else name"
+        @create_validator
+        def name_new(self):
+            self.name = "something else name"
 
-            return {**incoming_data.model_dump(), "name": name}
-
-        @staticmethod
-        def to_db_update(incoming_data):
-            name = "something else update name"
-
-            return {**incoming_data.model_dump(), "name": name}
+        @update_validator
+        def name_again(self):
+            self.name = "something else update name"
 
     initialise()
 

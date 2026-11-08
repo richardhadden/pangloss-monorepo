@@ -18,8 +18,7 @@ dateable". A class that had a date before it was dateable has nothing copied unt
 
 from typing import Annotated, Any, ClassVar
 
-from pangloss_models import DBField, Trait
-from pydantic import model_validator
+from pangloss_models import DBField, Trait, create_validator, update_validator
 
 from pangloss_dates.models import (
     Date,
@@ -97,13 +96,12 @@ class Dateable(Trait):
     date_text: Annotated[str | None, DBField] = None
     """The date said with no words: `1500-03`, `≥ 1500`, `1500–…`"""
 
-    @model_validator(mode="after")
+    @create_validator
+    @update_validator
     def copy_the_date(self):
-        # (on the models written to the database only, which have the copies; the date's own validator has run, and
+        # (on the models written to the database, which have the copies; the date's own validator has run, and
         # the field's markers, such as a `SortDefault`, have been applied to it)
-        if "date_sort_day" in type(self).model_fields:
-            copy_the_date(self)
-        return self
+        copy_the_date(self)
 
 
 def copy_the_date(item: Any) -> None:

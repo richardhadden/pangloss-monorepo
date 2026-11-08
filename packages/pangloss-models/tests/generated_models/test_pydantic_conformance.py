@@ -174,7 +174,9 @@ def test_field_validators_of_literal_fields_are_copied_to_the_models_that_are_wr
     initialise()
     made = Statement.Create(label="x", name="  a ", tags="b,c")
     assert made.name == "a" and made.tags == ["b", "c"]
-    assert Statement.CreateDB(label="x", name=" a", tags="b").name == "a"
+    # (run once, where the payload is parsed: the database model is made from what it gave)
+    assert made._to_db_model().name == "a"
+    assert "strip" not in Statement.CreateDB.__pydantic_decorators__.field_validators
     assert (
         Statement.Update(
             id="00000000-0000-0000-0000-000000000000", label="x", name=" a ", tags=[]
@@ -248,9 +250,14 @@ def test_a_field_validator_of_a_field_that_does_not_exist_is_refused():
         initialise()
 
 
-def test_methods_properties_and_computed_fields_are_warned_about():
-    class Person(Entity):
+def test_methods_and_properties_are_on_the_generated_models_and_a_computed_field_is_warned_about():
+    class Named(Trait):
         first: str
+
+        def greeting(self) -> str:
+            return f"Hello, {self.first}"
+
+    class Person(Entity, Named):
         last: str
 
         def full_name(self) -> str:
@@ -266,7 +273,7 @@ def test_methods_properties_and_computed_fields_are_warned_about():
             return self.first.upper()
 
         @classmethod
-        def kind(cls) -> str:  # (a classmethod is called on the class, which is there)
+        def kind(cls) -> str:
             return "person"
 
         @staticmethod
@@ -276,11 +283,39 @@ def test_methods_properties_and_computed_fields_are_warned_about():
     with pytest.warns(PanglossModelWarning) as caught:
         initialise()
     (message,) = [str(w.message) for w in caught if "Person declares" in str(w.message)]
-    assert "the method 'full_name'" in message
-    assert "the property 'initials'" in message
     assert "the computed field 'upper'" in message
-    assert "kind" not in message and "helper" not in message
-    assert not hasattr(Person.Create(label="x", first="a", last="b"), "full_name")
+    assert "full_name" not in message and "initials" not in message
+
+    made = Person(label="x", first="Ada", last="Lovelace")
+    assert made.full_name() == "Ada Lovelace" and made.initials == "AL"
+    assert made.greeting() == "Hello, Ada"  # (from a trait)
+    assert made.kind() == "person" and made.helper() == 1
+    for kind in (
+        "Create",
+        "Update",
+        "CreateDB",
+        "UpdateDB",
+        "View",
+        "HeadView",
+        "EditView",
+    ):
+        assert hasattr(getattr(Person, kind), "full_name"), kind
+    # (not a reference, which has only its id and label)
+    assert not hasattr(Person.ReferenceView, "full_name")
+    assert not hasattr(Person.ReferenceSet, "full_name")
+    # (nor is a computed field in what the API gives)
+    assert "upper" not in made.model_dump()
+
+
+@pytest.mark.parametrize("name", ["save", "search", "meta", "id"])
+def test_a_method_that_would_hide_a_field_or_an_operation_is_refused(name):
+    type("Person", (Entity,), {name: lambda self: None})
+
+    with pytest.raises(
+        PanglossModelError,
+        match=rf"Person\.{name}: a method or property of the same name",
+    ):
+        initialise()
 
 
 def test_a_model_config_of_the_class_is_warned_about():

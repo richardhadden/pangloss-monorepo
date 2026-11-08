@@ -10,6 +10,8 @@ from pydantic import AnyHttpUrl
 def reset_models():
     ModelRegistry._reset()
     yield
+    # (and after: a class a test means to fail, `Wrong`, is not left for a test of another package in this worker)
+    ModelRegistry._reset()
 
 
 @pytest.fixture(scope="module", autouse=True)

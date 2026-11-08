@@ -303,7 +303,8 @@ aliases
   Field required [type=missing, input_value={'label': 'Einhard'}, input_type=dict]
 ```
 
-The check happens as soon as you make the `Create`, before anything is sent to the database. A reference to something that
+The check happens as soon as you make the `Create`, before anything is sent to the database (your own checks can be
+added as in pydantic, and some that read the database too: see [Checking data](../validation/README.md)). A reference to something that
 does not exist is caught when you save:
 
 ```python

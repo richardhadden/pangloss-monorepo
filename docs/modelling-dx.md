@@ -66,6 +66,17 @@ The interface needs no new widget: a text of a format is an `<input type="url" |
 `<input type="time">`, a duration a text with the ISO 8601 form as its placeholder, and `validation.ts` checks
 `uuid`, `url`, `email`, `time`, `duration` and `Unique`.
 
+**Validators, write checks and methods** (built later on 2026-11-08; not in the review). Pydantic's validators
+had been copied to the database models too, so each ran twice a save (an `after` one that appends to a list
+appended twice), and a `before` one saw camelCase keys from the API, snake_case from Python. They now run once, on
+`Create`/`Update`, with snake_case keys. What only the database has is filled in by `@create_validator` /
+`@update_validator`, on `CreateDB` / `UpdateDB`; `pangloss_dates` moved to them. `@before_create` /
+`@before_update(self, previous)` are async checks before a write, of everything in it (the head and what is nested),
+that may read the database and refuse (`PanglossWriteRefused`, a 422 at the field it names). The older `to_db*`
+hooks were removed. Methods and properties are copied to the generated models
+(and their stubs) instead of being warned about; `Entity(...)` is now `Entity.Create(...)`, as `Document(...)` was.
+See `docs/generated-models.md`, "Validators, write checks and methods".
+
 **§5.** `pangloss check --json`, the source ranges and the language server are not built. The checks of §5.3 are
 in `initialise()` (`check_declared_class`, `constraints_of`), which is where the review put them first.
 

@@ -22,6 +22,9 @@ from pathlib import Path
 
 from pydantic import BaseModel
 
+from pangloss_models.initialise_models.initialise_field_definitions import (
+    declared_members,
+)
 from pangloss_models.model_registry import ModelRegistry
 from pangloss_models.search import orderable_fields
 
@@ -348,6 +351,7 @@ def stub_nested_class(
     model_name: str = "",
     is_document: bool = False,
     create_directly: bool = True,
+    methods: Iterable[str] = (),
 ) -> str:
     # (the class overrides the one of the base class of the model, which a type checker
     # takes for a mistake)
@@ -383,6 +387,10 @@ def stub_nested_class(
         ]
     if keyword_init(cls):
         lines.append(f"    {init_source(renderer, cls)}")
+    # (the methods and properties of the declared class, which every model made from it has but a reference)
+    if name not in ("ReferenceSet", "ReferenceView"):
+        for method in methods:
+            lines += [f"    {line}" for line in method.split("\n")]
     if len(lines) == 1:
         lines.append("    ...")
     return "\n".join(lines)
@@ -394,10 +402,12 @@ def nested_classes_of(
     operations: Operations | None = None,
     qualified_name: str = "",
     refer_as: str | None = None,
+    methods: Iterable[str] = (),
 ) -> str:
     """The source of the nested classes to add to a model (with the `save` of `Create` and
     `Update`, and the model's own `get`, `list` and so on, if `operations` says which kind).
-    `refer_as`: the name the model's own functions call it by, if not its own (`own_name_is_taken`)"""
+    `refer_as`: the name the model's own functions call it by, if not its own (`own_name_is_taken`).
+    `methods`: the stubs of the methods and properties the class declares, which the models have too"""
     from pangloss_models.model_bases.document import Document
 
     operations = operations if operations and has_operations(model) else None
@@ -410,6 +420,7 @@ def nested_classes_of(
             qualified_name,
             issubclass(model, Document),
             getattr(getattr(model, "_meta", None), "create_directly", True),
+            methods,
         )
         for name, cls in generated_classes(model).items()
         if is_for_users(name)
@@ -505,13 +516,15 @@ class Stubifier:
         # Another name for a model, at the top of the module, for its own functions (`own_name_is_taken`)
         self.aliases: dict[str, str] = {}
 
-    def nested(self, model: type, qualified_name: str) -> str:
+    def nested(
+        self, model: type, qualified_name: str, methods: Iterable[str] = ()
+    ) -> str:
         refer_as = None
         if self.operations and has_operations(model) and own_name_is_taken(model):
             refer_as = "_pg_model_" + qualified_name.replace(".", "_")
             self.aliases[refer_as] = qualified_name
         return nested_classes_of(
-            self.renderer, model, self.operations, qualified_name, refer_as
+            self.renderer, model, self.operations, qualified_name, refer_as, methods
         )
 
     def module(self, tree: ast.Module) -> ast.Module:
@@ -635,7 +648,14 @@ class Stubifier:
         qualified_name = f"{prefix}{node.name}"
         body = self.body(node.body, f"{qualified_name}.")
         if model := self.models.get(qualified_name):
-            if source := self.nested(model, qualified_name):
+            copied = declared_members(model)
+            methods = [
+                ast.unparse(ast.fix_missing_locations(statement))
+                for statement in body
+                if isinstance(statement, (ast.FunctionDef, ast.AsyncFunctionDef))
+                and statement.name in copied
+            ]
+            if source := self.nested(model, qualified_name, methods):
                 placeholder = f"__nested_classes_of_{len(self.insertions)}__"
                 self.insertions[placeholder] = source
                 body.append(ast.Expr(ast.Name(placeholder)))

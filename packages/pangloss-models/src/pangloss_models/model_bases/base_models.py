@@ -1,5 +1,4 @@
 import datetime
-import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from typing import (
@@ -40,7 +39,6 @@ from pangloss_models.model_bases.instance_context import (
 )
 from pangloss_models.model_bases.labels import get_labels_for_db_classes
 from pangloss_models.model_bases.model_tools import (
-    data_for_db,
     inherit_fields,
     make_id,
 )
@@ -333,12 +331,6 @@ class _CreateDBBase(_ActionClass):
             make_id(cls, data)
         return data
 
-    def __init__(self, **kwargs):
-        # (`model_construct` warns that the data might not be valid; it is validated by `__init__`)
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            super().__init__(**data_for_db(self, kwargs, "to_db_create", "to_db"))
-
 
 class _UpdateBase(_ActionClass):
     id: UUID
@@ -368,11 +360,6 @@ class _UpdateDBBase(_ActionClass):
     _labels = property(get_labels_for_db_classes)
     _fulfils_cache: list | None = None
     _fulfils_classes = property(lambda self: fulfilled_classes_of(self, "Update"))
-
-    def __init__(self, **kwargs):
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            super().__init__(**data_for_db(self, kwargs, "to_db_update", "to_db"))
 
 
 # --- reading: what the database returns ---------------------------------------------------------------

@@ -16,6 +16,9 @@ def reset_model_registry():
 
     ModelRegistry._reset()
     yield
+    # (and after: what a test declared, which may be a class it means to fail, is not left for a test of another
+    # package that the same worker runs next)
+    ModelRegistry._reset()
 
 
 @fixture(scope="module", autouse=True)

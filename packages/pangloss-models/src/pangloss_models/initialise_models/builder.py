@@ -90,9 +90,7 @@ def initialise_model(kind: ModelKind, model: type) -> None:
     made = pydantic_create_model(
         f"{name}{kind.attribute}",
         __base__=base,
-        __validators__=get_model_validators(
-            model, kind.base_validators, kind.declared_validators
-        ),
+        __validators__=get_model_validators(model, kind.base_validators, written(kind)),
         __module__=model.__module__,
         _owner=(ClassVar[model], model),
         __doc__=model._meta.description if model._meta.description else "",  # type: ignore[attr-defined]
@@ -273,6 +271,11 @@ def add_fields(
     rebuild(model)
 
 
+def written(kind: ModelKind) -> str | None:
+    """The kind of model, if it is one that is written (it has the validators the class declares)"""
+    return kind.attribute if kind.declared_validators else None
+
+
 def value_annotation(definition: Any, nullable: bool) -> Any:
     """The annotation of a literal or list field on a generated model: the declared type with what the class
     annotated it with (`Ge(1)`, `StringConstraints(...)`, an `AfterValidator`) carried in an `Annotated`, and
@@ -449,7 +452,7 @@ def _build_generic_model(
         f"{generic.__name__}[{type_names}]{kind.attribute}",
         __base__=base,
         __validators__=get_model_validators(
-            generic, kind.generic_validators, kind.declared_validators
+            generic, kind.generic_validators, written(kind)
         ),
         __module__=generic.__module__,
         _owner=(ClassVar[generic], generic),
@@ -527,7 +530,7 @@ def build_bound_model(
         f"{model.__name__}[bound=({names})]{kind.bound_suffix}",
         __base__=model,
         __validators__=get_model_validators(
-            owner, kind.bound_validators, kind.declared_validators
+            owner, kind.bound_validators, written(kind)
         ),
         __module__=owner.__module__,
         _owner=(ClassVar[owner], owner),

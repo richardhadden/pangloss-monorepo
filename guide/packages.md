@@ -9,7 +9,7 @@ routes, commands or interface pages. Python 3.15 is required throughout.
 | Package | What it is for | Guide |
 |---|---|---|
 | `pangloss-core` | Settings and logging shared by everything | [Settings](../docs/settings.md), [Logging](../docs/logging.md) |
-| `pangloss-models` | The base classes (`Document`, `Entity`, …), the generated models, export, type stubs, the migration planner | [Getting started](getting-started/README.md), [Migrations](migrations/README.md) |
+| `pangloss-models` | The base classes (`Document`, `Entity`, …), the generated models, export, type stubs, the migration planner | [Getting started](getting-started/README.md), [Checking data and methods](validation/README.md), [Migrations](migrations/README.md) |
 | `pangloss-memgraph` **or** `pangloss-neo4j` | The database | [Choosing and running a database](backends/README.md) |
 | `pangloss-users` and `pangloss-api` | Users, logins, tokens and the REST API | [Users, logins and the API](accounts/README.md) |
 | `pangloss-cli` | The `pangloss` command | [Command line](../docs/cli.md) |

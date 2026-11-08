@@ -166,10 +166,13 @@ such as a database driver or a project helper that connects at import).
 
 ### Server-only code in models
 
-A declared class may define `to_db`, `to_db_create`, `to_db_update`, validators, or helpers. These **run when
-models are validated**, on the client as well as the server, if they are in the module. Rules:
+A declared class may define validators, write checks and methods (see [Validators, write checks and
+methods](generated-models.md#validators-write-checks-and-methods-)). Pydantic's validators **run when `Create` or
+`Update` is validated**, on the client as well as the server; `@create_validator`, `@update_validator`,
+`@before_create` and `@before_update` run on the server only (the SDK sends the write; the server makes the
+database models and runs them). Rules:
 
-- A hook that only computes from the data (a derived label) works on both, and runs twice (client, then server
+- A validator that only computes from the data (a derived label) works on both, and runs twice (client, then server
   re-validates). That is harmless and expected: the server never trusts the client.
 - Code that needs the database or server resources must not be at module level of a model module. A decorator,
   `pangloss_models.server_only`, marks a function or method that is left **out of the SDK** (its body replaced with

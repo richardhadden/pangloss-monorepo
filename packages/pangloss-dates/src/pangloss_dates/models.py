@@ -20,7 +20,7 @@ them set. (They are `X | None = None` so that a `CreateDB` can be made without t
 
 from typing import Annotated, ClassVar
 
-from pangloss_models import DBField, Embedded
+from pangloss_models import DBField, Embedded, create_validator, update_validator
 from pydantic import model_validator
 
 from pangloss_dates import config
@@ -92,9 +92,15 @@ class Date(Embedded):
 
     @model_validator(mode="after")
     def work_out_the_bounds(self):
-        # (self is a model made for writing; `_owner` is the class declared)
+        # (self is a model a client writes: a date that cannot be is refused there; `_owner` is the class declared)
         type(self)._owner.fill_in(self)  # ty: ignore[unresolved-attribute]
         return self
+
+    @create_validator
+    @update_validator
+    def store_the_bounds(self):
+        # (and on the models written to the database, which keep what is worked out)
+        type(self)._owner.fill_in(self)  # ty: ignore[unresolved-attribute]
 
     @classmethod
     def fill_in(cls, date) -> None:

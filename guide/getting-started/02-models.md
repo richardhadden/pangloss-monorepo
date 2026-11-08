@@ -40,7 +40,9 @@ There are other kinds ([Defining models](../../docs/models.md) has them all); th
 
 `sent_by: Person` is a **relation**: a field whose type is another model. It is stored as an edge from the letter to the person, and the person is *referred to*, not copied. Every `Letter` must have exactly one `sent_by` and one `sent_to`.
 
-`sent_from: list[Place]` is a relation that can be empty or have several places. (A relation is either required, or a list. There is no `Place | None` for a relation: use a list for "may be empty".)
+`sent_from: list[Place]` is a relation that can be empty or have several places. A relation can also be optional: `sent_from: Place | None` would be one place, or none.
+
+Validators, constraints, methods and properties work as in pydantic; [Checking data, working things out, and methods](../validation/README.md) shows each, and what Pangloss adds.
 
 Every Pangloss object also gets a `label` (a short human-readable name, required) and an `id` (generated), without you declaring them.
 

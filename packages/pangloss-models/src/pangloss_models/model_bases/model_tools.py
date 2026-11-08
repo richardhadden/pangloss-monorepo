@@ -87,18 +87,3 @@ def make_id(model: type[BaseModel], data: dict[str, Any]) -> None:
     data["id"] = uuid7()
     if "create_new" in model.model_fields:
         data["create_new"] = True
-
-
-def data_for_db(
-    instance: Any, kwargs: dict[str, Any], *hook_names: str
-) -> dict[str, Any]:
-    """The data a `CreateDB` / `UpdateDB` is made from: what it is given, or, if the declared model has a
-    hook for it (`to_db_create`, `to_db_update`, or `to_db` for both: the first of `hook_names` it has),
-    what the hook makes of it"""
-    owner = instance._owner
-    hook = next((h for name in hook_names if (h := getattr(owner, name, None))), None)
-    if hook is None:
-        return kwargs
-    # (the hook is given the data as it is, not yet validated: validation comes when it is made)
-    data = hook(instance.__class__.model_construct(**kwargs))
-    return data if isinstance(data, dict) else data.model_dump()

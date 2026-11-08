@@ -141,6 +141,10 @@ class Entity(_DeclaredClass, WithMeta[EntityMeta]):
     HeadView: ClassVar[type[_EntityHeadViewBase]]
     EditView: ClassVar[type[_EntityEditViewBase]]
 
+    def __new__(cls, *args, **kwargs) -> _EntityCreateBase:
+        # (as for a document: `Person(...)` is `Person.Create(...)`)
+        return cls.Create(*args, **kwargs)
+
     get: ClassVar[
         Callable[
             [AnyHttpUrl | UUID],

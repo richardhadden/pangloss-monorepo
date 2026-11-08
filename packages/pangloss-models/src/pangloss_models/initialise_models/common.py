@@ -5,6 +5,7 @@ from typing import Any
 
 from frozendict import frozendict
 from pydantic import field_validator, model_validator
+from pydantic.alias_generators import to_camel
 
 from pangloss_models.field_definitions import (
     EmbeddedFieldDefinition,
@@ -24,6 +25,7 @@ from pangloss_models.model_bases.reified_relation import (
 )
 from pangloss_models.model_bases.semantic_space import SemanticSpace
 from pangloss_models.validators import SumsTo
+from pangloss_models.write_checks import marked
 
 # The kinds of declared model that have the models made from them (`Create`, `View`, ...)
 MODEL_KINDS_WITH_ACTION_MODELS = (
@@ -67,19 +69,23 @@ def check_create_and_id_present(self):
     return self
 
 
-def get_model_validators(model, ids: bool, declared: bool) -> dict[str, Any]:
+def get_model_validators(model, ids: bool, written: str | None) -> dict[str, Any]:
     """The validators a generated model has: if the model can be given an id (`ids`), the id and `create_new` go
-    together; and (`declared`) the validators the class itself declares, which are copied to the models that are
-    written (`Create`, `Update`, `CreateDB`, `UpdateDB`): its model validators (of any mode) so that a class can
-    fill in what it derives from its other fields (the bounds of a date), and its field validators, which are of
-    literal fields (`check_declared_class` refuses one of a relation). They are passed the generated model, so a
-    model validator can use only the literal fields the class has."""
+    together; and, for a model that is written (`written` is its kind: `Create`, `Update`, `CreateDB`, `UpdateDB`),
+    the validators the class declares.
+
+    Pydantic's (`@model_validator` of any mode, and `@field_validator`, of literal fields: `check_declared_class`
+    refuses one of a relation) are on `Create` and `Update`, which is where a payload is parsed: so each runs once,
+    as pydantic would run it, and not again when the database model is made from what it gave. A `before` one is
+    given the keys in snake_case, whichever the payload used. `@create_validator`s are on `CreateDB`,
+    `@update_validator`s on `UpdateDB` (see `write_checks`). They are passed the generated model, so a validator
+    can use only the literal fields the class has."""
     validators = {}
     if ids and getattr(model._meta, "create_with_id", False):
         validators["check_create_and_id_present"] = model_validator(mode="after")(
             check_create_and_id_present
         )
-    if declared:
+    if written:
         # (the markers of embedded fields first: a validator of the class that copies from such a field, as a
         # `Dateable` copies its date's sort day, sees it as it will be stored)
         markers = {
@@ -92,20 +98,13 @@ def get_model_validators(model, ids: bool, declared: bool) -> dict[str, Any]:
                 _apply_markers(markers)
             )
 
-        for name, decorator in model.__pydantic_decorators__.model_validators.items():
-            # (not those of Pangloss's own base classes, which the generated models have in their own way)
-            if not decorator.cls_ref.startswith("pangloss_models."):
-                validators[name] = model_validator(mode=decorator.info.mode)(
-                    decorator.func
-                )
-        for name, decorator in model.__pydantic_decorators__.field_validators.items():
-            if not decorator.cls_ref.startswith("pangloss_models."):
-                # (`check_fields=False`: the fields are there, but added after the model is made)
-                validators[name] = field_validator(
-                    *decorator.info.fields,
-                    mode=decorator.info.mode,
-                    check_fields=False,
-                )(decorator.func)
+        if written in ("Create", "Update"):
+            validators |= declared_pydantic_validators(model)
+        what = {"CreateDB": "create_validator", "UpdateDB": "update_validator"}.get(
+            written
+        )
+        for name, function in marked(model, what).items() if what else ():
+            validators[name] = model_validator(mode="after")(_returning_self(function))
 
         shares = {
             name: found
@@ -118,6 +117,50 @@ def get_model_validators(model, ids: bool, declared: bool) -> dict[str, Any]:
             )
 
     return validators
+
+
+def declared_pydantic_validators(model) -> dict[str, Any]:
+    """The `@model_validator`s and `@field_validator`s the class declares (not those of Pangloss's own base classes,
+    which the generated models have in their own way), and before them (pydantic runs the `before` validators
+    last added first) one that gives them the keys in snake_case"""
+    validators: dict[str, Any] = {}
+    for name, decorator in model.__pydantic_decorators__.model_validators.items():
+        if not decorator.cls_ref.startswith("pangloss_models."):
+            validators[name] = model_validator(mode=decorator.info.mode)(decorator.func)
+    for name, decorator in model.__pydantic_decorators__.field_validators.items():
+        if not decorator.cls_ref.startswith("pangloss_models."):
+            # (`check_fields=False`: the fields are there, but added after the model is made)
+            validators[name] = field_validator(
+                *decorator.info.fields,
+                mode=decorator.info.mode,
+                check_fields=False,
+            )(decorator.func)
+    if validators:
+        validators["snake_case_keys"] = model_validator(mode="before")(
+            _snake_case_keys(model)
+        )
+    return validators
+
+
+def _snake_case_keys(model):
+    """The keys of a payload as the class names its fields: a client may send `bornIn` for `born_in`"""
+    names = {to_camel(name): name for name in model.model_fields}
+
+    def snake_case_keys(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+        return {names.get(key, key): value for key, value in data.items()}
+
+    return classmethod(snake_case_keys)
+
+
+def _returning_self(function):
+    def run(self):
+        function(self)
+        return self
+
+    run.__name__ = function.__name__
+    return run
 
 
 def _check_shares(shares: dict[str, list[SumsTo]]):
