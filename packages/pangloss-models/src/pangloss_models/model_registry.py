@@ -29,6 +29,9 @@ lazy from pangloss_models.initialise_models.initialise_edit_view_model import (
     initialise_edit_view_model,
 )
 lazy from pangloss_models.initialise_models.check_bindings import check_bindings
+lazy from pangloss_models.initialise_models.check_reverse_names import (
+    check_reverse_names,
+)
 lazy from pangloss_models.initialise_models.check_relation_targets import (
     check_relation_targets,
 )
@@ -478,6 +481,9 @@ class ModelRegistry:
                     "ReifiedRelationDocument",
                 ]:
                     initialise_incoming_relation_definitions(model)
+
+            check_reverse_names(list(cls._model_dict.values()))
+            stop_if_refused()
 
             for model in chain(order, cyclic):
                 with reported(model):

@@ -83,7 +83,7 @@ the language server (diagnostics, fresh stubs, hover; `pangloss-lsp`, with exten
 later on 2026-11-08: see [language-server.md](language-server.md). It is a command `pangloss-lsp`, not `pangloss lsp`
 (the reason is there). §5.2's completions (the options and values of the `Meta`s, `RelationConfig` and `FieldBinding`,
 the slots) and code actions (the fixes a refusal names) were built the same day, from the classes themselves rather
-than a list kept by hand; the keys of `Where` after; not built: the clash warning for `reverse_name`.
+than a list kept by hand; the keys of `Where` after. A `reverse_name` that is a field of the target (it silently replaced the field in the view, and the value was lost on write) is an error of `initialise()`; not built: a warning for two fields of one model sharing a `reverse_name`.
 
 **Tests.** The table of §2.1 is `packages/pangloss-models/tests/initialisation/test_field_types.py` (one case per
 type: its kind, its export, or its error) and `tests/generated_models/test_pydantic_conformance.py`; the round

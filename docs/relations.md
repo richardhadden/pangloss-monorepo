@@ -69,7 +69,7 @@ A relation field's type determines what kind of value the generated model expect
 | `list[...]` | A list of the above | One edge per item |
 | `SemanticSpace[T]`, `Conjunction[...]`, `ReifiedRelation[...]` | Their generated models | See [Semantic spaces](semantic-spaces.md) |
 
-Each relation is stored as **two** edges: `(source)-[:field_name]->(target)` and `(source)<-[:reverse_name {reverse: true}]-(target)`. The reverse name defaults to a name derived from the field and can be set with `RelationConfig(reverse_name=...)` (lower-cased, spaces become `_`).
+Each relation is stored as **two** edges: `(source)-[:field_name]->(target)` and `(source)<-[:reverse_name {reverse: true}]-(target)`. The reverse name defaults to a name derived from the field and can be set with `RelationConfig(reverse_name=...)` (lower-cased, spaces become `_`). It may not be the name of a field of the target or of one of its subclasses, nor `id`, `type`, `meta`, `urls` or `label`: `initialise()` refuses it, since the relation would replace that field in the target's view and its value would be lost.
 
 Incoming relations (what points at an object) are analysed in `initialise_incoming_relation_definitions.py` and stored in `ModelFields.incoming_fields`; they feed the `HeadView` models.
 

@@ -2,7 +2,7 @@
 
 **Status: ✅ built 2026-11-08: `pangloss check`, diagnostics, fresh stubs, hover, completions, quick fixes and "did you mean", tested
 over stdio. The two editor extensions are installed and work in Zed (the VS Code one compiles, and has not been run in
-VS Code). Not built: the clash warning for `reverse_name`.**
+VS Code). Not built: a warning for two fields of one model sharing a `reverse_name`.**
 
 It sits beside your type checker and does what a type checker cannot: it knows Pangloss's rules.
 
@@ -94,6 +94,13 @@ string it is about (`PanglossModelError(..., at_string=AtString(option, value, c
 that string, not the class, and the message says "Did you mean 'name'?". A binding's `child_fields` must be a field of
 some model, not of a particular one, since which classes it reaches depends on what the field holds. The names of a
 binding's types are those of the models and of the classes above them (a trait's too).
+
+**A reverse name that is a field.** A relation is read on its target under its `reverse_name`. If the target (or a
+subclass of it) has a field of that name, or the name is `id`, `type`, `meta`, `urls` or `label`, the relation took the
+field's place in the view and its name was dropped from what a client writes: a value saved as the default, or refused
+as missing, and read back as a list of the incoming items. Nothing said so. It is now an error of `initialise()`
+(`check_reverse_names`), underlined at the `reverse_name="..."` string (at the field, when the name is the default
+`<field>_reverse`). There is no quick fix: the name is the author's to choose.
 
 Most of the old refusals of `docs/modelling-dx.md` §2 are not refusals now, so there are few mechanical fixes left. A
 refusal that has one should name it where it is raised.

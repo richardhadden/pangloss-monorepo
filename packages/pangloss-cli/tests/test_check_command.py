@@ -558,3 +558,33 @@ def test_the_summary_of_a_model_has_its_docstring_indexes_and_the_classes_above_
     assert models["Person"]["indexes"] == ["name"]
     assert models["Person"]["above"] == ["Agent"]
     assert models["Agent"]["doc"] is None
+
+
+def test_a_reverse_name_that_is_a_field_of_the_target_is_underlined_at_the_name(
+    project: Path,
+):
+    write(
+        project,
+        "fakeapp/models.py",
+        """
+        from typing import Annotated
+
+        from pangloss_models import Entity, RelationConfig
+
+
+        class Place(Entity):
+            name: str
+
+
+        class Person(Entity):
+            born_in: Annotated[Place, RelationConfig(reverse_name="name")]
+        """,
+    )
+
+    (error,) = report()["diagnostics"]
+    assert error["severity"] == "error"
+    assert "Person.born_in" in error["message"]
+    assert (error["line"], error["end_column"] - error["column"]) == (
+        12,
+        len('"name"'),
+    )
