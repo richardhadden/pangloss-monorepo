@@ -42,6 +42,10 @@ export interface NavRowButtonProps {
   inRow?: boolean;
   /** How many steps the text is moved in from the left */
   indent?: number;
+  /** Chosen with the keyboard: drawn as when the mouse is over it (a link) */
+  selected?: boolean;
+  /** Given the element of a link */
+  linkRef?: (element: HTMLAnchorElement) => void;
   children?: JSX.Element;
 }
 
@@ -252,6 +256,8 @@ export interface NavBarProps {
   /** The code of the language selected (`en` or `de`); `en` if not given */
   language?: string;
   onLanguage?: (code: string) => void;
+  /** Goes to a page of the application (the keyboard's way to a new item needs it; the library has no router) */
+  onNavigate?: (href: string) => void;
   /** What is shown in the bar while it is expanded */
   children?: JSX.Element;
 }

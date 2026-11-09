@@ -65,6 +65,41 @@ def test_the_shortcut_opens_the_navigation_bar_with_the_cursor_in_the_filter(pag
     expect(box).to_be_focused()
 
 
+def test_the_filter_of_the_types_chooses_with_the_arrows_and_enter_opens_the_list(page: Page, data):
+    page.goto("/")
+    hydrated(page)
+    page.keyboard.press("ControlOrMeta+k")
+    page.keyboard.type("r")
+    nav = page.get_by_role("navigation", name="Main")
+    selected = nav.locator("a[aria-current='true']")
+    first = selected.get_attribute("href")
+    page.keyboard.press("ArrowDown")
+    expect(selected).not_to_have_attribute("href", first or "")
+    page.keyboard.press("ArrowUp")
+    expect(selected).to_have_attribute("href", first or "")
+    # (a new item is for someone logged in: nothing happens)
+    page.get_by_label("Filter types").fill("Person")
+    expect(selected).to_have_attribute("href", "/Person")
+    page.keyboard.press("ControlOrMeta+Enter")
+    assert not page.url.endswith("/new")
+    page.keyboard.press("Enter")
+    page.wait_for_url("**/Person")
+    expect(page.get_by_label("Filter types")).to_have_count(0)
+
+
+def test_the_filter_of_the_types_makes_a_new_item_for_someone_logged_in(page: Page, data, logged_in):
+    page.goto("/")
+    hydrated(page)
+    page.keyboard.press("ControlOrMeta+k")
+    page.keyboard.type("Person")
+    expect(page.get_by_role("navigation", name="Main").locator("a[aria-current='true']")).to_have_attribute(
+        "href", "/Person"
+    )
+    page.keyboard.press("ControlOrMeta+Enter")
+    page.wait_for_url("**/Person/new")
+    expect(page.get_by_role("button", name="Save")).to_be_visible()
+
+
 def test_the_types_in_the_navigation_bar_are_filtered(page: Page, data):
     page.goto("/")
     expand_nav(page)

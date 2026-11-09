@@ -1,8 +1,9 @@
 import { createSignal, For, onCleanup, onSettled, Show } from "solid-js";
 import { useNavExpanded, useTranslations } from "../context";
 import { NavIconCell, NavRow, NavRowButton } from "../primitives";
-import { dialogIsOpen, isNavShortcut } from "./keys";
+import { dialogIsOpen, isNavShortcut, isNewItemShortcut, isPlainEnter } from "./keys";
 import { NavModelList } from "./NavModelList";
+import type { NavListKey } from "./NavModelList";
 import type { NavBarProps } from "../types";
 
 // (emoji for now) a language has a flag only where it is chosen here; the others show their code. English is shown
@@ -33,7 +34,8 @@ function languageName(code: string): string {
  * kept while the bar is retracted.
  *
  * Cmd+K (Ctrl+K off a Mac; `isNavShortcut`) opens the bar with the cursor in that box. Again, or Escape in the empty box,
- * closes it and gives the focus back; so does the focus leaving the bar, there being no mouse to leave it.
+ * closes it and gives the focus back; so does the focus leaving the bar, there being no mouse to leave it. While the
+ * cursor is in the box, the arrows choose a type, Enter opens its list and Cmd/Ctrl+Enter makes a new one.
  */
 export function NavBar(props: NavBarProps) {
   const { navExpanded, setNavExpanded, navPinned, setNavPinned } = useNavExpanded();
@@ -55,6 +57,13 @@ export function NavBar(props: NavBarProps) {
   let focusWhenShown = false;
   // (what had the focus before the shortcut)
   let returnTo: HTMLElement | null = null;
+  const [filterFocused, setFilterFocused] = createSignal(false);
+  let listKey: NavListKey | undefined;
+  // (what is left in it from the last time is selected, so that typing replaces it)
+  const focusFilter = (box: HTMLInputElement) => {
+    box.focus();
+    box.select();
+  };
   const dismiss = () => {
     setNavExpanded(false);
     returnTo?.focus();
@@ -65,7 +74,7 @@ export function NavBar(props: NavBarProps) {
       event.preventDefault();
       if (filterBox?.isConnected && document.activeElement === filterBox) return dismiss();
       returnTo = document.activeElement as HTMLElement | null;
-      if (filterBox?.isConnected) return filterBox.focus();
+      if (filterBox?.isConnected) return focusFilter(filterBox);
       focusWhenShown = true;
       setNavExpanded(true);
     };
@@ -215,9 +224,12 @@ export function NavBar(props: NavBarProps) {
           onEscape={dismiss}
           onShown={(box) => {
             filterBox = box;
-            if (focusWhenShown) box.focus();
+            if (focusWhenShown) focusFilter(box);
             focusWhenShown = false;
+            setFilterFocused(document.activeElement === box);
           }}
+          onFocusChange={setFilterFocused}
+          onListKey={(key) => listKey?.(key)}
         />
         {/* (room at the bottom so that the last item is not under the browser's preview of a hovered link) */}
         <div
@@ -227,7 +239,16 @@ export function NavBar(props: NavBarProps) {
             { "[scrollbar-color:transparent_transparent]": !scrolling() },
           ]}
         >
-          <NavModelList loggedIn={props.user !== undefined} filter={filter()} />
+          <NavModelList
+            loggedIn={props.user !== undefined}
+            filter={filter()}
+            selecting={filterFocused()}
+            keys={(key) => (listKey = key)}
+            onNew={(type) => {
+              props.onNavigate?.(`/${type}/new`);
+              setNavExpanded(false);
+            }}
+          />
           {props.children}
         </div>
       </Show>
@@ -244,6 +265,8 @@ function NavFilter(props: {
   onInput: (value: string) => void;
   onEscape: () => void;
   onShown: (box: HTMLInputElement) => void;
+  onFocusChange: (focused: boolean) => void;
+  onListKey: NavListKey;
 }) {
   const { t } = useTranslations();
   let input: HTMLInputElement | undefined;
@@ -271,11 +294,24 @@ function NavFilter(props: {
           type="search"
           value={props.value}
           onInput={(event) => props.onInput(event.currentTarget.value)}
+          onFocus={() => props.onFocusChange(true)}
+          onBlur={() => props.onFocusChange(false)}
           onKeyDown={(event) => {
-            if (event.key !== "Escape") return;
-            event.preventDefault();
-            if (props.value !== "") props.onInput("");
-            else props.onEscape();
+            const plain = !event.shiftKey && !event.altKey && !event.ctrlKey && !event.metaKey;
+            if (plain && (event.key === "ArrowDown" || event.key === "ArrowUp")) {
+              event.preventDefault();
+              props.onListKey(event.key === "ArrowDown" ? "next" : "previous");
+            } else if (isPlainEnter(event)) {
+              event.preventDefault();
+              props.onListKey("open");
+            } else if (isNewItemShortcut(event)) {
+              event.preventDefault();
+              props.onListKey("new");
+            } else if (event.key === "Escape") {
+              event.preventDefault();
+              if (props.value !== "") props.onInput("");
+              else props.onEscape();
+            }
           }}
           placeholder={t("nav_filter", "Filter types")}
           aria-label={t("nav_filter", "Filter types")}

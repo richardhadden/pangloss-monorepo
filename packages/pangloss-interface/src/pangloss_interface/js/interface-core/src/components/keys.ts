@@ -2,13 +2,33 @@
 
 const isMac = () => /Mac|iPhone|iPad/.test(navigator.platform);
 
+/** The Command key on a Mac, Control elsewhere, and no other modifier */
+function commandHeld(event: KeyboardEvent, mac: boolean): boolean {
+  if (event.altKey || event.shiftKey) return false;
+  return mac ? event.metaKey && !event.ctrlKey : event.ctrlKey && !event.metaKey;
+}
+
 /**
  * Cmd+K on a Mac, Ctrl+K elsewhere: opens the navigation bar. Not Alt+Right, which is the browser's Forward on Windows
  * and Linux and moves by a word in a text box on a Mac; not Ctrl+K on a Mac, which deletes to the end of the line there.
  */
 export function isNavShortcut(event: KeyboardEvent, mac = isMac()): boolean {
-  if (event.key.toLowerCase() !== "k" || event.altKey || event.shiftKey) return false;
-  return mac ? event.metaKey && !event.ctrlKey : event.ctrlKey && !event.metaKey;
+  return event.key.toLowerCase() === "k" && commandHeld(event, mac);
+}
+
+/**
+ * Cmd+Enter on a Mac, Ctrl+Enter elsewhere: a new item of the type chosen in the navigation bar. Not Cmd/Ctrl+N: the
+ * browsers keep that for a new window, and it never reaches the page.
+ */
+export function isNewItemShortcut(event: KeyboardEvent, mac = isMac()): boolean {
+  return event.key === "Enter" && !event.isComposing && commandHeld(event, mac);
+}
+
+/** Enter with no modifier, and not the one that ends the composing of a character */
+export function isPlainEnter(event: KeyboardEvent): boolean {
+  return (
+    event.key === "Enter" && !event.isComposing && !event.shiftKey && !event.altKey && !event.ctrlKey && !event.metaKey
+  );
 }
 
 function isTextEntry(target: EventTarget | null): boolean {

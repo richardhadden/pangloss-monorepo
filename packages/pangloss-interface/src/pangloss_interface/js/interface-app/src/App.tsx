@@ -1,3 +1,4 @@
+import { useNavigate } from "@solidjs/router";
 import {
   ApiProvider,
   ClipboardProvider,
@@ -38,6 +39,7 @@ function Frame(props: ParentProps) {
   const ConsoleBar = useComponent("ConsoleBar");
   const ClipboardBar = useComponent("ClipboardBar");
   const Toasts = useComponent("Toasts");
+  const navigate = useNavigate();
   const { openLogin } = useLoginDialog();
   const { navPinned } = useNavExpanded();
   const { t } = useTranslations();
@@ -63,6 +65,7 @@ function Frame(props: ParentProps) {
               user={user()?.username}
               onLogin={openLogin}
               onLogout={logOutHere}
+              onNavigate={(href) => navigate(href)}
             />
           </Loading>
           <ConsoleBar />

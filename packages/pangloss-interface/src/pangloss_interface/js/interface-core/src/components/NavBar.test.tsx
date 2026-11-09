@@ -24,7 +24,20 @@ const shortcut = () => {
   return event;
 };
 
-async function bar() {
+const person = () =>
+  ({
+    name: "Person",
+    kind: "Entity",
+    abstract: false,
+    createDirectly: true,
+    parent: null,
+    concreteTypes: [],
+    interfaceMeta: null,
+    fields: [],
+    incoming: [],
+  }) as never;
+
+async function bar(given: { definitions?: ModelDefinitions; user?: string; onNavigate?: (href: string) => void } = {}) {
   const outside = document.createElement("input");
   const host = document.createElement("div");
   document.body.append(outside, host);
@@ -35,10 +48,10 @@ async function bar() {
   }
   dispose = render(
     () => (
-      <ModelsProvider definitions={definitions}>
+      <ModelsProvider definitions={given.definitions ?? definitions}>
         <NavExpandedProvider>
           <Pin />
-          <NavBar />
+          <NavBar user={given.user} onNavigate={given.onNavigate} />
         </NavExpandedProvider>
       </ModelsProvider>
     ),
@@ -116,6 +129,49 @@ test("a pinned bar stays open: the shortcut only moves the cursor into the filte
   await settle();
   expect(filter()).not.toBeNull();
   expect(document.activeElement).toBe(outside);
+});
+
+test("in the filter, the arrows choose and Cmd/Ctrl+Enter makes a new item; a plain Enter does not", async () => {
+  const navigated: string[] = [];
+  const { filter } = await bar({
+    definitions: { models: { Person: person() }, enums: {} },
+    user: "me",
+    onNavigate: (href) => navigated.push(href),
+  });
+  shortcut();
+  await settle();
+  const box = filter()!;
+  const key = (init: KeyboardEventInit) => {
+    const event = new KeyboardEvent("keydown", { bubbles: true, cancelable: true, ...init });
+    box.dispatchEvent(event);
+    return event;
+  };
+  expect(document.querySelector("nav a[aria-current='true']")?.textContent?.trim()).toBe("Person");
+  expect(key({ key: "ArrowDown" }).defaultPrevented).toBe(true);
+  // (the wrong modifier is not the shortcut)
+  key({ key: "Enter", shiftKey: true });
+  expect(navigated).toEqual([]);
+  const mac = /Mac|iPhone|iPad/.test(navigator.platform);
+  key({ key: "Enter", metaKey: mac, ctrlKey: !mac });
+  expect(navigated).toEqual(["/Person/new"]);
+  await settle();
+  expect(filter()).toBeNull();
+});
+
+test("what is left in the filter is selected when the shortcut comes back to it, so that typing replaces it", async () => {
+  const { filter, outside } = await bar();
+  outside.focus();
+  shortcut();
+  await settle();
+  const box = filter()!;
+  box.value = "pers";
+  box.dispatchEvent(new InputEvent("input", { bubbles: true }));
+  shortcut();
+  await settle();
+  shortcut();
+  await settle();
+  expect(filter()!.selectionStart).toBe(0);
+  expect(filter()!.selectionEnd).toBe(4);
 });
 
 test("the shortcut does nothing while a dialog is open", async () => {
