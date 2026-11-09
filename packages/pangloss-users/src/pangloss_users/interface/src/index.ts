@@ -14,4 +14,8 @@ export default defineModule({
     { path: "/users/:username", component: "UserPage" },
   ],
   userHref: (username) => `/users/${encodeURIComponent(username)}`,
+  // (a part of the page /admin, when pangloss_admin is installed)
+  slots: {
+    admin: { Users: () => import("./components/UsersAdminSection") },
+  },
 });

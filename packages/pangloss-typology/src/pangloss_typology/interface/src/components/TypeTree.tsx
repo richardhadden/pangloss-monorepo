@@ -1,4 +1,4 @@
-import { ApiError, useApi, useComponent, useNavExpanded, userIsLoggedIn, useTranslations } from "@pangloss/interface-core";
+import { ApiError, useApi, useComponent, useNavExpanded, userIsLoggedIn, useTranslations, whileVisible } from "@pangloss/interface-core";
 import type { ListPageProps, ModelDefinition } from "@pangloss/interface-core";
 import { invoke } from "@solidjs/web/server-functions";
 import { createSignal, Errored, flush, For, Loading, onSettled, Show, untrack } from "solid-js";
@@ -78,7 +78,7 @@ function Hierarchy(props: {
   const type = untrack(() => props.type);
   const { tree, move, rename, add } = createTypeTree({
     type,
-    feed: (signal) => invoke(treeFeed, { signal }, type),
+    feed: (signal) => whileVisible((connection) => invoke(treeFeed, { signal: connection }, type), signal),
     api,
   });
   const [dragging, setDragging] = createSignal<string | undefined>();

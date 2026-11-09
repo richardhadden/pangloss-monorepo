@@ -105,7 +105,7 @@ production build lets through.
 - An error thrown while the server renders reaches the page as "Internal Server Error" in the built interface unless
   it is marked `markSafeError` (as `ApiError` is). Test such a page in the built interface, not only in development.
 - What most pages do not show is `lazy`, so that it is not in every page's code: in the map, `ItemForm` and `ItemContents`; also `SearchPanel`, the virtualised branch of `VirtualRows`, the delete dialog and a chip's clip buttons. A page that shows one of the map's after reading data starts it with the data (`preload(ItemContents)`). A new import from a page-wide component can undo this: `e2e/test_code_splitting.py` guards it. A `lazy` first rendered while hydrating must also have been rendered on the server, or the page crashes: what depends only on the browser (the clipboard bar) uses a plain `import()` in an effect instead.
-- A `live()` feed is opened only in the browser: draw what reads it inside `<Show when={inBrowser()}>`, a signal set in `onSettled`. Rendered on the server it gets a first answer, and the browser never opens the feed.
+- A `live()` feed is opened only in the browser: draw what reads it inside `<Show when={inBrowser()}>`, a signal set in `onSettled`. Rendered on the server it gets a first answer, and the browser never opens the feed. Open it through `whileVisible(...)` (core): an open feed holds one of the browser's six connections to the host, and feeds in background tabs left new pages stalled.
 - A module-level memo that depends on who is logged in reads `useSessionKey()`, so it is fetched again on login and
   logout.
 - Decide what a logged-in user sees with `userIsLoggedIn()`.

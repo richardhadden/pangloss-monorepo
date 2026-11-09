@@ -421,3 +421,56 @@ async def set_user_disabled(username: str, body: SetDisabled, admin: CurrentAdmi
         "Disabled of %r set to %s by %r", username, body.disabled, admin.username
     )
     return user
+
+
+@router.post("/{username}/logout-all", status_code=status.HTTP_204_NO_CONTENT)
+async def end_user_sessions(username: str, admin: CurrentAdmin):
+    """End every session of a user (personal access tokens go on: revoke them one by one)"""
+    await service.end_sessions(username)
+    logger.info("All sessions of %r ended by %r", username, admin.username)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.get("/{username}/tokens", response_model=list[AccessTokenInfo])
+async def list_user_access_tokens(username: str, _: CurrentAdmin):
+    """A user's personal access tokens (not the tokens themselves)"""
+    if await service.get_user(username) is None:
+        raise PanglossUserDoesNotExistError(f"There is no user '{username}'")
+    return await service.list_access_tokens(username)
+
+
+@router.post(
+    "/{username}/tokens",
+    response_model=CreatedAccessToken,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_user_access_token(
+    username: str, body: NewAccessToken, admin: CurrentAdmin, request: Request
+):
+    """Make a personal access token for a user. As with `/me/tokens`, the token is in the
+    answer once, and cannot be made with another token"""
+    not_with_an_access_token(request)
+    info, token = await service.create_access_token(
+        username, body.name, body.scope, body.expires_days
+    )
+    logger.info(
+        "Personal access token %r (scope %s) of %r made by %r",
+        body.name,
+        body.scope,
+        username,
+        admin.username,
+    )
+    return CreatedAccessToken(**info.model_dump(), token=token)
+
+
+@router.delete("/{username}/tokens/{token_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def revoke_user_access_token(username: str, token_id: str, admin: CurrentAdmin):
+    if not await service.revoke_access_token(username, token_id):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="There is no such token")
+    logger.info(
+        "Personal access token %s of %r revoked by %r",
+        token_id,
+        username,
+        admin.username,
+    )
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

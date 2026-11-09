@@ -1,4 +1,5 @@
-import { ApiError, useApi, useComponent, useTranslations } from "@pangloss/interface-core";
+import { ApiError, useApi, useComponent, useTranslations, whileVisible } from "@pangloss/interface-core";
+import type { LiveSource } from "@pangloss/interface-core";
 import { invoke } from "@solidjs/web/server-functions";
 import { createSignal, createStore, Errored, For, Loading, onCleanup, onSettled, Show, untrack } from "solid-js";
 import { cancelJob, deleteJob, fileUrl, startJob } from "../api";
@@ -30,9 +31,10 @@ function createJobs() {
       const abort = new AbortController();
       cancelPrevious = () => abort.abort();
       onCleanup(() => abort.abort());
-      const source = invoke(jobsFeed, { signal: abort.signal }) as unknown as AsyncIterable<Jobs> & {
-        onstatus?: (state: "connected" | "reconnecting" | "closed") => void;
-      };
+      const source: LiveSource<Jobs> = whileVisible(
+        (signal) => invoke(jobsFeed, { signal }) as unknown as AsyncIterable<Jobs>,
+        abort.signal,
+      );
       // (a reconnect is usually an access cookie that ran out while the page was open)
       source.onstatus = (state) => {
         if (state === "reconnecting") void api.post("/users/session/refresh").catch(() => undefined);

@@ -13,13 +13,16 @@ function AdminContents() {
       <PageTitle section={t("admin_title", "Admin")} />
       <Console type={t("admin_title", "Admin")} />
       <h1 class="mb-6 border-b-[0.5px] border-slate-400/70 pt-1 pb-2 text-2xl font-semibold">{t("admin_title", "Admin")}</h1>
-      <For each={sections}>
-        {(Section) => (
-          <Loading fallback={<p>{t("loading", "Loading…")}</p>}>
-            <Section />
-          </Loading>
-        )}
-      </For>
+      {/* (the gap is here, as the order of the sections is the order of the modules) */}
+      <div class="space-y-10">
+        <For each={sections}>
+          {(Section) => (
+            <Loading fallback={<p>{t("loading", "Loading…")}</p>}>
+              <Section />
+            </Loading>
+          )}
+        </For>
+      </div>
     </main>
   );
 }

@@ -280,4 +280,6 @@ API is not there (a 502, and "The interface cannot reach the API" on the page) i
 |---|---|---|
 | `/admin`: no link to it; login dialog when logged out; 404 page for a non-admin | ✅ | `test_admin.py` |
 | An RDF dump from the button to the download, kept up to date by the live feed, then deleted | ✅ | `test_admin.py`; dev build in `test_dev_mode.py` |
+| Managing users on `/admin` (`pangloss_users` slot): new user, admin and disabled buttons, details sent on leaving a field, tokens, password; a change made elsewhere reaches the open page by the live feed | ✅ | `test_admin.py::test_managing_users_is_kept_up_to_date_without_reloading`; dev build `test_dev_mode.py::test_the_admin_page`; end sessions in API tests |
+| Live feeds close in hidden tabs, so many open tabs do not stall a new page, and reopen when seen | ✅ | `test_admin.py::test_tabs_in_the_background_leave_connections_for_a_new_page`; Vitest `whileVisible.test.ts` |
 | Cancelling a job in the browser | ⏳ | process and API tests in `packages/pangloss-admin/tests/` |

@@ -343,3 +343,71 @@ def test_guesses_at_many_usernames_do_not_grow_the_record_without_end(monkeypatc
     now[0] += 301
     throttle.failed("d")
     assert set(throttle.FAILURES) == {"d"}
+
+
+# --- an admin managing someone else's ----------------------------------------------------
+
+
+def test_an_admin_manages_the_tokens_of_a_user(client):
+    make_user()
+    make_user("root", admin=True)
+    admin = bearer(client, "root")
+
+    made = client.post(
+        "/api/users/john/tokens",
+        json={"name": "script", "scope": "read"},
+        headers=admin,
+    )
+    assert made.status_code == 201
+    token = made.json()["token"]
+    assert me(client, token).json()["username"] == "john"
+
+    listed = client.get("/api/users/john/tokens", headers=admin).json()
+    assert [t["name"] for t in listed] == ["script"]
+    assert "token" not in listed[0]
+
+    path = f"/api/users/john/tokens/{made.json()['id']}"
+    assert client.delete(path, headers=admin).status_code == 204
+    assert me(client, token).status_code == 401
+    assert client.delete(path, headers=admin).status_code == 404
+    assert client.get("/api/users/nobody/tokens", headers=admin).status_code == 404
+
+
+def test_only_an_admin_manages_the_tokens_and_sessions_of_a_user(client):
+    make_user()
+    make_user("ann")
+    headers = bearer(client)
+    for method, path in (
+        ("GET", "/api/users/ann/tokens"),
+        ("POST", "/api/users/ann/tokens"),
+        ("DELETE", "/api/users/ann/tokens/x"),
+        ("POST", "/api/users/ann/logout-all"),
+    ):
+        response = client.request(method, path, json={"name": "x"}, headers=headers)
+        assert response.status_code == 403
+        assert client.request(method, path, json={"name": "x"}).status_code == 401
+
+
+def test_a_token_does_not_make_a_token_for_someone_else(client):
+    make_user()
+    make_user("root", admin=True)
+    admin = bearer(client, "root")
+    token = client.post(
+        "/api/users/root/tokens", json={"name": "script"}, headers=admin
+    ).json()["token"]
+    response = client.post(
+        "/api/users/john/tokens", json={"name": "more"}, headers=auth(token)
+    )
+    assert response.status_code == 403
+
+
+def test_an_admin_ends_the_sessions_of_a_user(client):
+    make_user()
+    make_user("root", admin=True)
+    given = tokens(client)
+    admin = bearer(client, "root")
+    response = client.post("/api/users/john/logout-all", headers=admin)
+    assert response.status_code == 204
+    assert me(client, given["access_token"]).status_code == 401
+    assert client.get("/api/users/root", headers=admin).status_code == 200
+    assert client.post("/api/users/nobody/logout-all", headers=admin).status_code == 404

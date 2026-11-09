@@ -2,8 +2,9 @@
 page with what they made or changed, and the link to it from a name in the console."""
 
 import re
+import subprocess
 
-from conftest import USERNAME
+from conftest import USERNAME, environment
 from helpers import expand_nav, hydrated
 from playwright.sync_api import Page, expect
 
@@ -46,3 +47,17 @@ def test_the_console_names_are_not_links_logged_out(page: Page, data):
     meta = page.get_by_test_id("console-meta")
     expect(meta).to_contain_text(USERNAME)
     expect(meta.get_by_role("link")).to_have_count(0)
+
+
+def test_the_module_tests_pass_in_the_built_project(stack):
+    """The users module's own vitest tests and type-check, run where a project builds it (a module has no
+    node_modules of its own)"""
+    interface = stack.project / ".pangloss" / "interface"
+    for command in (
+        ["npx", "vitest", "run", "--root", "modules/pangloss_users"],
+        ["npx", "tsc", "--noEmit", "-p", "modules/pangloss_users/tsconfig.json"],
+    ):
+        done = subprocess.run(
+            command, cwd=interface, env=environment(), capture_output=True, text=True, timeout=300, check=False
+        )
+        assert done.returncode == 0, (done.stdout + done.stderr)[-3000:]

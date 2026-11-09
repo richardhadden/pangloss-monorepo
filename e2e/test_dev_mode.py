@@ -573,5 +573,6 @@ def test_the_admin_page(page: Page, data, dev_url: str, errors: list[str]):
     page.goto(f"{dev_url}/admin")
     hydrated(page)
     expect(page.get_by_test_id("admin-job-form-rdf_dump")).to_be_visible()
+    expect(page.get_by_test_id("users-admin-row").first).to_be_visible()
     assert errors == []
     assert not any(SOLID_ERROR.search(text) for text in errors)
