@@ -1,11 +1,15 @@
 import { createSignal, createUniqueId, For, Show } from "solid-js";
-import { buttonClass } from "../../primitives";
+import { useModels, useTranslations } from "../../context";
+import { buttonClass, kindTint } from "../../primitives";
+import { getModel } from "../../schema";
 
 /** One thing to choose; `group` heads the options after it while it is the same */
 export interface MenuOption {
   value: string;
   label: string;
   group?: string;
+  /** A model the option is of: shown before the label as a type is everywhere, a tinted chip */
+  type?: string;
 }
 
 // (a box that chooses, as a text box looks: the same hairline, height and text; open, it is joined on to its list,
@@ -35,6 +39,12 @@ export function MenuSelect(props: {
   class?: string;
   onChoose: (value: string) => void;
 }) {
+  const definitions = useModels();
+  const { modelName } = useTranslations();
+  const tintOf = (type: string) => {
+    const model = getModel(definitions, type);
+    return kindTint(model?.kind, model?.interfaceMeta?.colour) || "bg-slate-400/20 text-slate-800";
+  };
   const id = createUniqueId();
   const [open, setOpen] = createSignal(false);
   const [active, setActive] = createSignal(0);
@@ -129,7 +139,8 @@ export function MenuSelect(props: {
           role="listbox"
           aria-label={props.label}
           class={[
-            "absolute top-full left-0 z-30 max-h-72 w-max max-w-sm overflow-y-auto border-[0.5px] border-slate-600 bg-white shadow-lg",
+            // (a long list scrolls up and down, never across: the room of its scroll bar is kept, where one takes room)
+            "absolute top-full left-0 z-30 max-h-72 w-max max-w-sm overflow-x-hidden overflow-y-auto [scrollbar-gutter:stable] border-[0.5px] border-slate-600 bg-white shadow-lg",
             // (joined on to a box, at least as wide as it; under a button, a little below it)
             { "-mt-px min-w-full rounded-tr-xs rounded-b-xs": look() !== "add" },
             { "mt-1 min-w-48 rounded-xs": look() === "add" },
@@ -150,9 +161,11 @@ export function MenuSelect(props: {
                   id={optionId(index())}
                   role="option"
                   data-value={option.value}
+                  // (what a screen reader says of one with a type: the type, then the label)
+                  aria-label={option.type ? `${modelName(option.type)} · ${option.label}` : undefined}
                   aria-selected={option.value === props.value ? "true" : "false"}
                   class={[
-                    "cursor-pointer border-t-[0.5px] border-slate-400/30 px-3 py-1.5 text-sm whitespace-nowrap select-none first:border-t-0",
+                    "flex cursor-pointer items-center gap-2 border-t-[0.5px] border-slate-400/30 px-3 py-1.5 text-sm select-none first:border-t-0",
                     { "bg-slate-400/25": active() === index() },
                     { "font-semibold": option.value === props.value },
                   ]}
@@ -161,7 +174,15 @@ export function MenuSelect(props: {
                   onMouseMove={() => setActive(index())}
                   onClick={() => choose(index())}
                 >
-                  {option.label}
+                  <Show when={option.type}>
+                    <span
+                      data-type-info={option.type}
+                      class={["shrink-0 rounded-xs px-1.5 py-0.5 text-xs font-semibold uppercase", tintOf(option.type!)]}
+                    >
+                      {modelName(option.type!)}
+                    </span>
+                  </Show>
+                  <span class="min-w-0 truncate">{option.label}</span>
                 </li>
               </>
             )}

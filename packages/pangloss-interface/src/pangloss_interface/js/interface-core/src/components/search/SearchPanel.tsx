@@ -1167,7 +1167,11 @@ function IncomingRow(props: { type: string; path: Accessor<Path>; onRemove: () =
         look="add"
         label={t("search_add_referring", "Add what refers to it")}
         placeholder={t("search_add_referring", "Add what refers to it")}
-        options={sources().map((source, index) => ({ value: String(index), label: sourceName(source) }))}
+        options={sources().map((source, index) => ({
+          value: String(index),
+          type: source.model,
+          label: fieldName(source.model, source.field),
+        }))}
         onChoose={(chosen) => {
           const source = sources()[Number(chosen)];
           if (source) form.set([...props.path(), entries().length], { field: source.field, node: { type: source.model } });
@@ -1230,7 +1234,7 @@ function SomewhereRow(props: { path: Accessor<Path>; onRemove: () => void }) {
   const definitions = useModels();
   const { t, modelName } = useTranslations();
   const entries = () => (form.get(props.path()) as SomewhereSearch[] | undefined) ?? [];
-  const types = createMemo(() => documentTypesOf(definitions));
+  const typeGroups = createMemo(() => searchableGroups(definitions, documentTypesOf(definitions)));
   return (
     <SearchRow
       name={t("search_somewhere", "Contains")}
@@ -1264,10 +1268,13 @@ function SomewhereRow(props: { path: Accessor<Path>; onRemove: () => void }) {
           </For>
         </div>
       </Show>
-      <AddSelect
-        label={t("search_add_somewhere", "Add a document it contains")}
-        options={types().map((type) => ({ value: type, name: modelName(type) }))}
-        onChoose={(type) => form.set([...props.path(), entries().length], { node: { type } })}
+      {/* (types are chosen as everywhere: by the hierarchy, in the menu of types) */}
+      <TypeMenu
+        groups={typeGroups()}
+        label={`+ ${t("search_add_somewhere", "Add a document it contains")}`}
+        title={t("search_add_somewhere", "Add a document it contains")}
+        buttonClass={addConditionClass}
+        onChoose={(choice) => form.set([...props.path(), entries().length], { node: { type: choice.type } })}
       />
     </SearchRow>
   );

@@ -371,7 +371,9 @@ test("alternatives: at least one of a group has to hold", async () => {
 test("a document it contains, somewhere, with a form of its own", async () => {
   const pattern = show("Letter");
   add("somewhere");
-  choose("Add a document it contains", "Activity");
+  // (types are chosen in the menu of types, by the hierarchy)
+  click(button("Add a document it contains"));
+  click([...document.body.querySelectorAll('[role="menuitem"]')].find((item) => item.textContent === "Activity"));
   const nested = document.body.querySelector('[data-search-node="Activity"]')!;
   add("text", nested);
   const text = nested.querySelector<HTMLInputElement>('input[aria-label="text"]')!;
