@@ -52,7 +52,8 @@ def _deep_roots(d: Dialect) -> str:
 
 
 # (the documents of the class in the trees found; they are ordered by the label of their head node)
-_DEEP_DOCUMENTS = f"""
+def _deep_documents(used: str) -> str:
+    return f"""
     CALL (rootId) {{
       MATCH (n:PGIndexableNode {{id: rootId}})
       WHERE $targetType IN labels(n)
@@ -67,12 +68,15 @@ _DEEP_DOCUMENTS = f"""
     {N_HEAD.match}
     WITH n, n_head
     WHERE {fragments.visible("n", N_HEAD, filters=True)}
+    {used}
     WITH n, toLower(coalesce(coalesce(n_head, n).label, "")) AS headLabel
     ORDER BY headLabel, n.id
 """
 
+
 # (the entities of the class that the nodes of the trees found refer to; ordered by their labels)
-_DEEP_ENTITIES = f"""
+def _deep_entities(used: str) -> str:
+    return f"""
     CALL (rootId) {{
       MATCH (t:PGIndexableNode {{id: rootId}})
       RETURN t
@@ -92,6 +96,7 @@ _DEEP_ENTITIES = f"""
     {N_HEAD.match}
     WITH n, n_head
     WHERE {fragments.visible("n", N_HEAD, filters=True)}
+    {used}
     WITH n, toLower(coalesce(coalesce(n_head, n).label, "")) AS headLabel
     ORDER BY headLabel, n.id
 """
@@ -186,9 +191,16 @@ def build_generic_list_query(
     published: bool | None = None,
     review_status: str | None = None,
     hit_limit: int = DEFAULT_HIT_LIMIT,
+    used_only: bool = False,
 ) -> tuple[LiteralString, dict]:
     query, params = _build_list_query(
-        object_class, search_terms, page_number, page_size, deep_search, hit_limit
+        object_class,
+        search_terms,
+        page_number,
+        page_size,
+        deep_search,
+        hit_limit,
+        used_only,
     )
     # (a document that is not published is listed only for those who may see it)
     params["see_unpublished"] = unpublished_visible()
@@ -205,11 +217,14 @@ def _build_list_query(
     page_size: int | None = None,
     deep_search: bool = False,
     hit_limit: int = DEFAULT_HIT_LIMIT,
+    used_only: bool = False,
 ) -> tuple[LiteralString, dict]:
     d = dialect()
     patterns = d.search_patterns(search_terms)
 
     if patterns and deep_search:
+        # (`n_head` is used after it, for the order)
+        used = fragments.only_used("n", "n_head") if used_only else ""
         params = {
             "targetType": object_class.__name__,
             "page": page_number or 1,
@@ -218,9 +233,9 @@ def _build_list_query(
             "limit": hit_limit,
         }
         if object_class.__metatype__ == "Document":
-            found = _DEEP_DOCUMENTS
+            found = _deep_documents(used)
         else:
-            found = _DEEP_ENTITIES
+            found = _deep_entities(used)
         return cast(LiteralString, _deep_roots(d) + found + _deep_page(d)), params
     if patterns:
         params = {
@@ -245,6 +260,7 @@ def _build_list_query(
             {N_HEAD.match}
             WITH n, totalScore, n_head
             WHERE {fragments.visible("n", N_HEAD, filters=True)}
+            {fragments.only_used("n", "totalScore") if used_only else ""}
             WITH n, totalScore
             ORDER BY totalScore DESC, {d.tie_break("n")}
             WITH collect(n) AS allNodes
@@ -294,7 +310,11 @@ def _build_list_query(
             "page_number": page_number or 1,
             "page_size": page_size or 50,
         }
-        page = d.query("list.plain.page", _plain_page(), object_class=object_class)
+        page = (
+            _used_page(object_class)
+            if used_only
+            else d.query("list.plain.page", _plain_page(), object_class=object_class)
+        )
         return cast(LiteralString, page + _plain_items(d)), params
 
 
@@ -318,6 +338,24 @@ def _plain_page() -> str:
                         ORDER BY n.id
                         SKIP ($page_number - 1) * $page_size
                         LIMIT $page_size
+"""
+
+
+def _used_page(object_class: type[Document | Entity]) -> str:
+    """As `_plain_page`, of what something refers to. The class is read once, for the number and the page together
+    (each node is tested for what refers to it: twice would be twice the cost), with the text the same on every backend"""
+    return f"""
+            MATCH (n:{fragments.label(object_class.__name__)})
+            {LISTED_HEAD.match}
+            WITH n, listed_head
+            WHERE {fragments.visible("n", LISTED_HEAD, filters=True)}
+            {fragments.only_used("n")}
+            WITH n
+            ORDER BY n.id
+            WITH collect(n) AS listed
+            WITH listed, size(listed) AS total
+            UNWIND listed[($page_number - 1) * $page_size .. $page_number * $page_size] AS n
+            WITH n, total
 """
 
 

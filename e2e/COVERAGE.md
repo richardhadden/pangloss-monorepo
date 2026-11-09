@@ -27,6 +27,7 @@ about her "held court at Ghent") and Charles the Bold (no role); `types` has onl
 | Navigation bar: the filter above the types (part of any name, any case; nothing left: a message; ✕ and Escape clear it) | ✅ | `test_the_types_in_the_navigation_bar_are_filtered`, dev build in `test_making_and_editing`; names in other languages and accents: Vitest (`NavModelList.test.tsx`) |
 | Navigation bar: Cmd+K (Ctrl+K off a Mac) opens it with the cursor in the filter; again, Escape in the empty filter, or the focus leaving closes it, the focus going back; a pinned bar stays; not while a dialog is open | ✅ | `test_the_shortcut_opens_the_navigation_bar_with_the_cursor_in_the_filter`, dev build in `test_making_and_editing`; the rest: Vitest (`NavBar.test.tsx`) |
 | Navigation bar: in the filter, the arrows choose a type (the first after each change), Enter opens its list, Cmd/Ctrl+Enter makes a new item (logged in, a type that can be made) | ✅ | `test_the_filter_of_the_types_chooses_with_the_arrows_and_enter_opens_the_list`, `test_the_filter_of_the_types_makes_a_new_item_for_someone_logged_in`; what cannot be made: Vitest (`NavModelList.test.tsx`, `NavBar.test.tsx`) |
+| Navigation bar: going to a type (Enter, Cmd/Ctrl+Enter, or a click) empties the filter | ✅ | `test_going_to_a_type_empties_the_filter`; Vitest `NavBar.test.tsx` |
 | Navigation bar on a touch device (no hover) | ⬜ | |
 | Console bar names the type (plural on a list) and the item | ✅ | `test_the_console_names_the_type_of_the_page` |
 | Console bar on an item page: created / modified, by whom and when, two light rows on the right | 🚧 | unit tests in `Console.test.tsx`; not in e2e |
@@ -208,6 +209,9 @@ bishop's appointment in 1510, a notary's not before 1490 (`notAfter` not known),
 
 | Area | State | Where / notes |
 | --- | --- | --- |
+| The page of an item: title, creators by role, the URL as a link opening a new tab, language, a readable sync time, no raw Zotero fields; what refers to it stays | ✅ | `test_an_items_page_shows_its_zotero_fields_cleaned_up` |
+| The list of Zotero items: only what is used at first, *Show all* / *Show used* beside the search (`?all=1`), a bubble with how many things refer to each; not on a class only made by hand | ✅ | `test_the_list_of_items_is_of_what_is_used_until_asked_for_all`, `test_a_class_only_made_by_hand_lists_everything` |
+| The bar has one link for Zotero (`ZoteroBacked`, shown as *Zotero Items*); `ZoteroObject` and `ZoteroLibrary` are off it, their pages still there | ✅ | `test_the_bar_has_one_link_for_zotero_called_zotero_items` |
 | The *Zotero item* row on the form of a new `Book` (no inputs for the Zotero fields): the picker of the library, the label filled in, the item as a chip, Save turns the item into the Book (same id; what cited it now cites a Book) | ✅ | `test_zotero.py::test_a_new_book_is_based_on_an_item_and_unlinked_again`; dev build in `test_dev_mode.py::test_a_book_from_zotero_and_unlinked` |
 | The same row in the dialog that makes a Book from a relation's field | ✅ | `test_a_book_made_in_a_relations_dialog_is_based_on_an_item` |
 | `item_type_override` not on the form of a class that names no Zotero types | ✅ | `test_a_new_book_is_based_on_an_item_and_unlinked_again`; pytest `test_zotero_mapping.py` |

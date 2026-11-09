@@ -1,9 +1,12 @@
 from typing import no_type_check
 
 import pytest
-from pangloss_models import Document, Entity, SemanticSpace, initialise
+from pangloss_models import Document, Entity, ReifiedRelation, SemanticSpace, initialise
 from pangloss_models.model_bases.base_models import _ListItems
 from pangloss_testing.under_test.database import current
+from pangloss_users import see_unpublished
+
+from .helpers import DATABASE_NAME
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -707,3 +710,118 @@ async def test_what_has_no_record_of_its_creation_is_listed_all_the_same(
         [item] = listed.results
         if isinstance(item, Letter.ReferenceView):  # (an entity's has no `meta`)
             assert item.meta.created_by is None
+
+
+@no_type_check
+def used_models():
+    class Source(Entity):
+        pass
+
+    class Mention[T](ReifiedRelation[T]):
+        pass
+
+    class Citing(Document):
+        cites: list[Source]
+
+    class Wrapping(Document):
+        cites_through: list[Mention[Source]]
+
+    initialise()
+    return Source, Citing, Wrapping, Mention
+
+
+@no_type_check
+async def make_uses():
+    Source, Citing, Wrapping, Mention = used_models()
+    twice = await Source.Create(label="Alpha cited").save()
+    once = await Source.Create(label="Beta cited").save()
+    never = await Source.Create(label="Gamma alone").save()
+    ref = lambda s: {"type": "Source", "id": s.id}  # noqa: E731
+    await Citing.Create(label="c1 words", cites=[ref(twice), ref(once)]).save()
+    await Wrapping.Create(
+        label="c2",
+        cites_through=[{"type": "Mention", "target": [ref(twice)]}],
+    ).save()
+    gone = await Citing.Create(label="c3", cites=[ref(never)]).save()
+    await Citing.delete(gone.id)
+    return Source, Citing, twice, once, never
+
+
+@no_type_check
+async def test_a_list_can_have_only_what_something_refers_to_with_the_counts(
+    clear_database,
+):
+    Source, _Citing, twice, once, never = await make_uses()
+
+    every = await Source.list()
+    assert every.count == 3 and every.use_counts is None
+
+    used = await Source.list(used_only=True, use_counts=True)
+    assert {r.label for r in used.results} == {"Alpha cited", "Beta cited"}
+    assert used.count == 2
+    assert used.use_counts == {str(twice.id): 2, str(once.id): 1}
+
+    # (what only a deleted document refers to has no uses, and shows that when everything is listed)
+    counted = await Source.list(use_counts=True)
+    assert counted.count == 3 and counted.use_counts[str(never.id)] == 0
+
+
+@no_type_check
+async def test_only_what_is_used_works_with_every_kind_of_search(clear_database):
+    Source, *_rest = await make_uses()
+
+    found = await Source.list("cited", used_only=True)
+    assert found.count == 2
+    assert (await Source.list("gamma", used_only=True)).count == 0
+    assert (await Source.list("gamma")).count == 1
+
+    pattern = Source.Where(label={"contains": "a"})
+    assert (await Source.search(pattern)).count == 3
+    searched = await Source.search(pattern, used_only=True, use_counts=True)
+    assert searched.count == 2 and len(searched.use_counts) == 2
+
+    # (a deep search finds an entity through what refers to it)
+    deep = await Source.list("words", deep_search=True, used_only=True)
+    assert {r.label for r in deep.results} == {"Alpha cited", "Beta cited"}
+
+
+@no_type_check
+async def test_pages_of_what_is_used_add_up(clear_database):
+    Source, Citing, Wrapping, Mention = used_models()
+    sources = [await Source.Create(label=f"S{i}").save() for i in range(5)]
+    await Source.Create(label="Unused").save()
+    await Citing.Create(
+        label="All", cites=[{"type": "Source", "id": s.id} for s in sources]
+    ).save()
+
+    first = await Source.list(used_only=True, page_size=2, page_number=1)
+    last = await Source.list(used_only=True, page_size=2, page_number=3)
+    past = await Source.list(used_only=True, page_size=2, page_number=9)
+    assert (first.count, last.count, past.count) == (5, 5, 5)
+    assert len(first.results) == 2 and len(last.results) == 1 and past.results == []
+
+
+@no_type_check
+async def test_what_a_reader_cannot_see_does_not_count_as_a_use(
+    clear_database, db_driver
+):
+    Source, Citing, Wrapping, Mention = used_models()
+    source = await Source.Create(label="Cited").save()
+    draft = await Citing.Create(
+        label="Draft", cites=[{"type": "Source", "id": source.id}]
+    ).save()
+    db_driver.execute_query(
+        "MATCH (n:HeadNode {id: $id}) SET n.published = false",
+        parameters_={"id": str(draft.id)},
+        database=DATABASE_NAME,
+    )
+
+    assert (await Source.list(used_only=True)).count == 1
+    token = see_unpublished.set(False)
+    try:
+        hidden = await Source.list(used_only=True, use_counts=True)
+        assert hidden.count == 0 and hidden.use_counts == {}
+        listed = await Source.list(use_counts=True)
+        assert listed.use_counts == {str(source.id): 0}
+    finally:
+        see_unpublished.reset(token)

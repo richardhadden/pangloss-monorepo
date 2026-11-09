@@ -100,6 +100,10 @@ export interface ConsoleSearchProps {
   onToggleForm?: () => void;
   /** Whether the search form is open (the button is pressed) */
   formOpen?: boolean;
+  /** Gives the search a button that shows the whole list or only what something refers to, which calls this */
+  onToggleUsed?: () => void;
+  /** Whether the whole list is on show (the button offers the used ones), not only what something refers to */
+  showingAll?: boolean;
   /** Whether a search by fields is in use: what is typed narrows it, and Deep search cannot be used */
   structured?: boolean;
   /** Gives the box's arrows and Enter to a list on the page: to move what is selected in it, and to open that */
@@ -217,6 +221,8 @@ export interface ResultButtonProps {
   head?: { type: string; id: string };
   /** Chosen with the keyboard: drawn as when the mouse is over it */
   selected?: boolean;
+  /** How many things refer to the item: a small bubble at the right, if it is given */
+  useCount?: number;
 }
 
 export interface ReferenceChipProps {

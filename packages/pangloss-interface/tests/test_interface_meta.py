@@ -7,6 +7,7 @@ from pangloss_core import ClientSettings
 from pangloss_core import settings as core_settings
 from pangloss_models import (
     Conjunction,
+    Document,
     Entity,
     ModelRegistry,
     PanglossMetaError,
@@ -28,6 +29,7 @@ def none(**given):
         "collapse": None,
         "headless": None,
         "hideOnForms": None,
+        "listUsedOnly": None,
         **given,
     }
 
@@ -404,4 +406,37 @@ def test_a_field_hidden_on_forms_must_be_one_of_the_models(clear_registry):
 
     initialise()
     with pytest.raises(PanglossMetaError, match="Place.*nowhere"):
+        export_definitions()
+
+
+@no_type_check
+def test_list_used_only_is_for_entities_and_may_depend_on_the_class(clear_registry):
+    class Source(Entity):
+        _interface_meta = InterfaceMeta(
+            list_used_only=lambda model: model.__name__ != "Handmade"
+        )
+
+    class Synced(Source):
+        pass
+
+    class Handmade(Source):
+        pass
+
+    class TurnedOff(Source):
+        _interface_meta = InterfaceMeta(list_used_only=False)
+
+    initialise()
+    models = export_definitions()["models"]
+    assert models["Synced"]["interfaceMeta"]["listUsedOnly"] is True
+    assert models["Handmade"]["interfaceMeta"]["listUsedOnly"] is None
+    assert models["TurnedOff"]["interfaceMeta"]["listUsedOnly"] is None
+
+
+@no_type_check
+def test_list_used_only_on_a_document_is_refused(clear_registry):
+    class Letter(Document):
+        _interface_meta = InterfaceMeta(list_used_only=True)
+
+    initialise()
+    with pytest.raises(PanglossMetaError, match="list_used_only"):
         export_definitions()

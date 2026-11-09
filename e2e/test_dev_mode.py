@@ -417,6 +417,27 @@ def test_a_book_from_zotero_and_unlinked(
     assert errors == []
 
 
+def test_the_list_of_zotero_items_and_an_items_page(
+    page: Page, types, dev_url: str, errors: list[str]
+):
+    """What is only on the pages of Zotero items: the list of what is used, its button and bubbles, and the item's page"""
+    from test_zotero import forget_items, seed
+
+    forget_items()
+    made = seed(types, "DEVTWO")
+    page.goto(f"{dev_url}/ZoteroObject")
+    hydrated(page)
+    expect(page.get_by_title("Found")).to_have_text("0")
+    page.get_by_role("button", name="Show all").click()
+    expect(page.get_by_test_id("use-count")).to_have_text("0")
+    page.get_by_role("link", name=re.compile("DEVTWO")).click()
+    expect(page.get_by_test_id("zotero-item")).to_contain_text("The book DEVTWO")
+    page.goto(f"{dev_url}/ZoteroObject/{made['DEVTWO']}")
+    expect(page.get_by_test_id("zotero-item")).to_contain_text("The book DEVTWO")
+    expect(page.locator("main")).not_to_contain_text(SOLID_ERROR)
+    assert errors == []
+
+
 def test_narrowing_and_widening_a_document_in_a_form(
     page: Page, provenance, dev_url: str, errors: list[str]
 ):

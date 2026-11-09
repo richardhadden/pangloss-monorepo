@@ -31,7 +31,7 @@ def test_it_passes_the_pattern_and_the_page_to_the_model_searched(
     client = TestClient(create_app())
     seen = {}
 
-    async def search(cls, match, page_number=None, page_size=None):
+    async def search(cls, match, page_number=None, page_size=None, **_wanted):
         seen.update(cls=cls, match=match, page=page_number, size=page_size)
         return empty()
 

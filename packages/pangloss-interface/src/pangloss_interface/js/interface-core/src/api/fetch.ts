@@ -34,6 +34,8 @@ export function listItems(
   return client.get(`/${segment(type)}`, {
     q: params.q,
     deep: params.deep || undefined,
+    used_only: params.usedOnly || undefined,
+    use_counts: params.useCounts || undefined,
     page: params.page,
     page_size: params.pageSize,
   });
@@ -171,6 +173,8 @@ export function searchItems(client: ApiClient, pattern: SearchPattern): Promise<
     type: pattern.type,
     where: pattern.where,
     order_by: pattern.orderBy,
+    used_only: pattern.usedOnly || undefined,
+    use_counts: pattern.useCounts || undefined,
     page: pattern.page,
     page_size: pattern.pageSize,
   });

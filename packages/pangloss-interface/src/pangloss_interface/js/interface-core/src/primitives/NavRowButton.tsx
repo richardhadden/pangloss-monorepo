@@ -29,7 +29,12 @@ export function NavRowButton(props: NavRowButtonProps) {
         ref={props.linkRef}
         href={props.href}
         aria-current={props.selected ? "true" : undefined}
-        onClick={() => setNavExpanded(false)} style={style()} class={classes()}>
+        onClick={() => {
+          props.onClick?.();
+          setNavExpanded(false);
+        }}
+        style={style()}
+        class={classes()}>
         {props.children}
       </a>
     </Show>

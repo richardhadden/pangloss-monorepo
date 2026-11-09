@@ -36,6 +36,7 @@ from pydantic.alias_generators import to_camel
 from pangloss_cypher import fragments
 from pangloss_cypher.autocomplete_query import autocomplete_query, most_used_query
 from pangloss_cypher.build_tree import GraphFragment
+from pangloss_cypher import fragments
 from pangloss_cypher.list_query import (
     DEFAULT_HIT_LIMIT,
     build_generic_list_query,
@@ -53,6 +54,7 @@ from pangloss_cypher.transactions import (
     timeout_from_setting,
 )
 from pangloss_cypher.values import convert_type_for_writing
+from pangloss_cypher.visibility import unpublished_visible
 
 
 async def empty_page(tx: Transaction, query: str, params: dict) -> dict[str, Any]:
@@ -81,6 +83,25 @@ async def empty_page(tx: Transaction, query: str, params: dict) -> dict[str, Any
     }
 
 
+# (asked apart from the list, for the items of the one page: the list's own query stays as it is)
+USE_COUNTS_QUERY = f"""
+    UNWIND $ids AS listed_id
+    MATCH (n:PGIndexableNode {{id: listed_id}})
+    {fragments.uses_of("n")}
+    RETURN n.id AS id, uses
+"""
+
+
+async def count_uses(tx: Transaction, items: list[dict]) -> dict[str, int]:
+    """How many things the reader sees refer to each of the items, by id (`fragments.uses_of`)"""
+    result = await tx.run(
+        USE_COUNTS_QUERY,  # ty: ignore[invalid-argument-type]
+        ids=[item["id"] for item in items],
+        see_unpublished=unpublished_visible(),
+    )
+    return {record["id"]: record["uses"] async for record in result}
+
+
 @read_transaction
 @timeout_from_setting("SEARCH_TIMEOUT_SECONDS", 30)
 async def list_items(
@@ -92,7 +113,11 @@ async def list_items(
     deep_search: bool = False,
     published: bool | None = None,
     review_status: str | None = None,
+    used_only: bool = False,
+    use_counts: bool = False,
 ) -> _ListItems[_DocumentReferenceViewBase | _EntityReferenceViewBase]:
+    """`used_only`: only what something the reader sees refers to. `use_counts`: how many things refer to each item of
+    the page (`use_counts` of the page, by id)"""
     hit_limit = getattr(current().settings, "SEARCH_HIT_LIMIT", DEFAULT_HIT_LIMIT)
     query, params = build_generic_list_query(
         cls,
@@ -103,6 +128,7 @@ async def list_items(
         published=published,
         review_status=review_status,
         hit_limit=hit_limit,
+        used_only=used_only,
     )
 
     concrete_types = get_concrete_types(cls)
@@ -127,6 +153,8 @@ async def list_items(
 
     if "facets" in results:
         results["facets"] = dialect().read_facets(results["facets"])
+    if use_counts:
+        results["use_counts"] = await count_uses(tx, results["results"])
     results["results"] = type_adapter.validate_python(results["results"])
     result = _ListItems(**results)
 
@@ -143,6 +171,8 @@ async def search(
     page_size: int | None = None,
     *,
     order_by: list[OrderBy | str] | None = None,
+    used_only: bool = False,
+    use_counts: bool = False,
 ) -> _ListItems[_DocumentReferenceViewBase | _EntityReferenceViewBase]:
     """The head documents (or entities) of the class, and its subclasses, that fit the pattern (a `Match`, or a
     `Where`; all of them, without one), as a page of reference views, like `list_items`. A pattern that cannot be
@@ -155,10 +185,13 @@ async def search(
         page_number or 1,
         page_size or 25,
         check_order(cls, match.order_by),
+        used_only,
     )
     result = await tx.run(query, **params)
     rows = await result.value()
     found: dict = rows[0] if rows else await empty_page(tx, query, params)
+    if use_counts:
+        found["use_counts"] = await count_uses(tx, found["results"])
 
     concrete_ref_types = [t.ReferenceView for t in get_concrete_types(cls)]
     adapter = TypeAdapter(list[Union[*concrete_ref_types]])  # type: ignore

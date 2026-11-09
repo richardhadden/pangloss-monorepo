@@ -440,6 +440,8 @@ class _ListItems[T: _ReferenceViewBase](_BaseObject):
     # True if a word of the search had more hits in the text index than were looked at (`SEARCH_HIT_LIMIT`):
     # then there are more results than `count`
     truncated: bool = False
+    # How many things refer to each item of the page, by id, if it was asked for (`use_counts`)
+    use_counts: dict[str, int] | None = None
 
 
 class _HeadViewBase(_FromDatabaseBase):

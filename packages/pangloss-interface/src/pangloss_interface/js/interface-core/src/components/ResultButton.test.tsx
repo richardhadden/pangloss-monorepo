@@ -68,3 +68,27 @@ test("an item inside a document has a button to it, at the far left, not in the 
 test("an item that is a head node has no such button", () => {
   expect(show([]).querySelectorAll("a")).toHaveLength(1);
 });
+
+function counted(useCount?: number) {
+  const host = document.createElement("div");
+  render(
+    () => (
+      <ModelsProvider definitions={{ models: {}, enums: {} }}>
+        <ResultButton href="/Source/1" type="Source" label="A book" useCount={useCount} />
+      </ModelsProvider>
+    ),
+    host,
+  );
+  return host.querySelector<HTMLElement>("[data-testid=use-count]");
+}
+
+test("with a count of its uses it has a bubble, and none unless it is given", () => {
+  expect(counted()).toBeNull();
+  expect(counted(12)?.textContent).toBe("12");
+  expect(counted(12)?.className).toContain("bg-sky-600");
+});
+
+test("a count of nothing is shown too, and quieter", () => {
+  expect(counted(0)?.textContent).toBe("0");
+  expect(counted(0)?.className).toContain("bg-slate-200");
+});

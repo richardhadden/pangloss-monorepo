@@ -279,6 +279,8 @@ def test_list_parameters(settings, monkeypatch):
         "deep_search": False,
         "published": None,
         "review_status": None,
+        "used_only": False,
+        "use_counts": False,
     }
 
     response = client.get(
@@ -293,6 +295,8 @@ def test_list_parameters(settings, monkeypatch):
         "deep_search": True,
         "published": None,
         "review_status": None,
+        "used_only": False,
+        "use_counts": False,
     }
     assert response.json()["page"] == 2
 

@@ -12,6 +12,8 @@ export interface Page<T> {
   previousPage: number | null;
   /** True if a word of the search had more hits than were looked at: there are more results than `count` */
   truncated?: boolean;
+  /** How many things refer to each item of the page, by id, if it was asked for (`useCounts`) */
+  useCounts?: Record<string, number> | null;
 }
 
 /** A Document or Entity in a list: enough to show and link to it */
@@ -109,6 +111,10 @@ export interface ListParams {
   q?: string;
   /** Searches more */
   deep?: boolean;
+  /** Only what something refers to */
+  usedOnly?: boolean;
+  /** With how many things refer to each item of the page */
+  useCounts?: boolean;
   page?: number;
   pageSize?: number;
 }
@@ -210,6 +216,10 @@ export interface SearchPattern {
   type: string;
   where?: Record<string, unknown>;
   orderBy?: SearchOrder[];
+  /** Only what something refers to */
+  usedOnly?: boolean;
+  /** With how many things refer to each item of the page */
+  useCounts?: boolean;
   page?: number;
   pageSize?: number;
 }

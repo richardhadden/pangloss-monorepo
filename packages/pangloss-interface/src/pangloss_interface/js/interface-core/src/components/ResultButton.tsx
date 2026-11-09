@@ -106,6 +106,20 @@ function DefaultResultButton(props: ResultButtonProps) {
             <span class="min-w-0 flex-1 truncate border-y-[0.5px] border-slate-400/70 px-4 py-3 text-sm">
               {props.label}
             </span>
+            <Show when={props.useCount !== undefined}>
+              <span class="flex shrink-0 items-center border-y-[0.5px] border-slate-400/70 pr-3 select-none">
+                <span
+                  data-testid="use-count"
+                  title={t("use_count", "Referred to by {count}", { count: props.useCount ?? 0 })}
+                  class={[
+                    "inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[0.65rem] font-bold tabular-nums",
+                    { "bg-sky-600 text-white": (props.useCount ?? 0) > 0, "bg-slate-200 text-slate-600": props.useCount === 0 },
+                  ]}
+                >
+                  {String(props.useCount)}
+                </span>
+              </span>
+            </Show>
           </a>
         </SpaceBands>
       </div>

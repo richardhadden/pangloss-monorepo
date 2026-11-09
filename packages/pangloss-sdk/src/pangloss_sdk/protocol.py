@@ -195,8 +195,14 @@ def list_items(
     deep_search: bool = False,
     published: bool | None = None,
     review_status: str | None = None,
+    used_only: bool = False,
+    use_counts: bool = False,
 ) -> Call:
     params: dict[str, Any] = {}
+    if used_only:
+        params["used_only"] = "true"
+    if use_counts:
+        params["use_counts"] = "true"
     if search_terms is not None:
         params["q"] = search_terms
     if page_number is not None:
@@ -226,6 +232,8 @@ def search(
     match: Match,
     page_number: int | None = None,
     page_size: int | None = None,
+    used_only: bool = False,
+    use_counts: bool = False,
 ) -> Call:
     """The pattern is checked against the models here, as the database module would check it, so that a
     pattern that cannot be made raises `PanglossSearchError` before it is sent. (The class called on is
@@ -238,6 +246,10 @@ def search(
         body["page"] = page_number
     if page_size is not None:
         body["page_size"] = page_size
+    if used_only:
+        body["used_only"] = True
+    if use_counts:
+        body["use_counts"] = True
     return Call("POST", "/api/search", json=body)
 
 

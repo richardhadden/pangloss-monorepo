@@ -407,6 +407,9 @@ class SearchRequest(Match):
 
     page: int = Field(default=1, ge=1)
     page_size: int = Field(default=25, ge=1, le=MAX_SEARCH_PAGE_SIZE)
+    # (only what something refers to; how many things refer to each item of the page)
+    used_only: bool = False
+    use_counts: bool = False
 
 
 Kind = Literal[

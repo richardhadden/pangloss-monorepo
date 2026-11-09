@@ -225,3 +225,28 @@ test("without a search form there is no button for one", () => {
   dispose = render(() => <ConsoleSearch />, host);
   expect(host.querySelector('button[aria-label^="Search by fields"]')).toBeNull();
 });
+
+test("a list that can show only what is used has a button that says what it would show next", () => {
+  const [all, setAll] = createSignal(false);
+  let toggled = 0;
+  const host = document.createElement("div");
+  document.body.append(host);
+  dispose = render(
+    () => <ConsoleSearch showingAll={all()} onToggleUsed={() => toggled++} />,
+    host,
+  );
+  const button = () => [...host.querySelectorAll("button")].find((b) => /Show/.test(b.textContent ?? ""))!;
+  expect(button().textContent).toBe("Show all");
+  button().click();
+  expect(toggled).toBe(1);
+  setAll(true);
+  flush();
+  expect(button().textContent).toBe("Show used");
+});
+
+test("a list that cannot has no such button", () => {
+  const host = document.createElement("div");
+  document.body.append(host);
+  dispose = render(() => <ConsoleSearch />, host);
+  expect([...host.querySelectorAll("button")].some((b) => /Show/.test(b.textContent ?? ""))).toBe(false);
+});

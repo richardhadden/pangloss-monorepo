@@ -184,3 +184,56 @@ test("the shortcut does nothing while a dialog is open", async () => {
   await settle();
   expect(filter()).toBeNull();
 });
+
+test("going to a type empties the filter: Enter, Cmd/Ctrl+Enter, or a click on it", async () => {
+  const { filter, pin } = await bar({
+    definitions: { models: { Person: person() }, enums: {} },
+    user: "me",
+  });
+  // (pinned, so that the box is still there to be looked at)
+  pin(true);
+  await settle();
+  const box = filter()!;
+  const mac = /Mac|iPhone|iPad/.test(navigator.platform);
+  const typed = async () => {
+    box.value = "per";
+    box.dispatchEvent(new InputEvent("input", { bubbles: true }));
+    await settle();
+    expect(box.value).toBe("per");
+  };
+  const link = () => document.querySelector<HTMLAnchorElement>("nav a[href='/Person']")!;
+  // (the page is not left, here)
+  const stay = (event: Event) => event.preventDefault();
+  document.addEventListener("click", stay);
+
+  await typed();
+  box.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
+  await settle();
+  expect(box.value).toBe("");
+
+  await typed();
+  box.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", metaKey: mac, ctrlKey: !mac, bubbles: true, cancelable: true }));
+  await settle();
+  expect(box.value).toBe("");
+
+  await typed();
+  link().click();
+  await settle();
+  expect(box.value).toBe("");
+  document.removeEventListener("click", stay);
+});
+
+test("only typing and going to a type change the filter: the bar closing keeps it", async () => {
+  const { filter, outside } = await bar({ definitions: { models: { Person: person() }, enums: {} } });
+  shortcut();
+  await settle();
+  const box = filter()!;
+  box.value = "per";
+  box.dispatchEvent(new InputEvent("input", { bubbles: true }));
+  await settle();
+  outside.focus();
+  await settle();
+  shortcut();
+  await settle();
+  expect(filter()!.value).toBe("per");
+});

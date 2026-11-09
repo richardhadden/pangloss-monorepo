@@ -177,7 +177,7 @@ export default defineModule({
 | Another way to show what refers to an item (a timeline) | `incomingViews` (`takes` chooses the items; the rest stay by field) |
 | A rule for folding a wrapper into the one thing it holds | `collapseRules`, named from `InterfaceMeta(collapse="app:rule")` |
 
-Other `InterfaceMeta` options: `colour`, `nav_section`, `collapse=True | Collapse(...)`, `headless=True` (a reified
+Other `InterfaceMeta` options: `list_used_only` (an Entity's list shows what something refers to until *Show all*, each with a count; `True`, `False`, or a function of the class), `colour`, `nav_section`, `collapse=True | Collapse(...)`, `headless=True` (a reified
 relation shown without its head bar where it is a field's only, single, required type). `InterfaceMeta` is resolved
 field by field through the parents: a subclass that sets only `colour` keeps its parent's `item_page`.
 

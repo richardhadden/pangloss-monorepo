@@ -21,5 +21,13 @@
   "zotero_unlink_note": { "en": "This keeps its own fields and what refers to it, and loses the Zotero fields. The item becomes an entry of its own again.", "de": "Die eigenen Felder und was darauf verweist bleiben, die Zotero-Felder fallen weg. Der Eintrag wird wieder ein eigener Datensatz.", "fr": "Ses propres champs et ce qui y renvoie sont conservés ; les champs Zotero disparaissent. L’élément redevient un enregistrement à part." },
   "zotero_unlinked": { "en": "Unlinked: the Zotero item is “{label}” again", "de": "Gelöst: Der Zotero-Eintrag ist wieder „{label}“", "fr": "Délié : l’élément Zotero est de nouveau « {label} »" },
   "zotero_unlink_refused": { "en": "Not unlinked: {reason}", "de": "Nicht gelöst: {reason}", "fr": "Non délié : {reason}" },
+  "zotero_url": { "en": "URL", "de": "URL", "fr": "URL" },
+  "zotero_creators": { "en": "Creators", "de": "Beteiligte", "fr": "Contributeurs" },
+  "zotero_creator_author": { "en": "Author", "de": "Autor:in", "fr": "Auteur" },
+  "zotero_creator_editor": { "en": "Editor", "de": "Herausgeber:in", "fr": "Éditeur scientifique" },
+  "zotero_creator_translator": { "en": "Translator", "de": "Übersetzer:in", "fr": "Traducteur" },
+  "zotero_creator_contributor": { "en": "Contributor", "de": "Mitwirkende:r", "fr": "Collaborateur" },
+  "zotero_creator_bookAuthor": { "en": "Book author", "de": "Buchautor:in", "fr": "Auteur du livre" },
+  "zotero_creator_seriesEditor": { "en": "Series editor", "de": "Reihenherausgeber:in", "fr": "Directeur de collection" },
   "zotero_unsaved_lost": { "en": "Changes in the form that are not saved are lost.", "de": "Nicht gespeicherte Änderungen im Formular gehen verloren.", "fr": "Les modifications non enregistrées du formulaire sont perdues." }
 }

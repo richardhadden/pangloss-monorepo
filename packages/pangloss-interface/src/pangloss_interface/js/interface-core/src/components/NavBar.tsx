@@ -31,11 +31,12 @@ function languageName(code: string): string {
  * to keep clear of the retracted bar.
  *
  * Above the types is a box that filters them (`NavModelList`'s `filter`); what is typed in it is
- * kept while the bar is retracted.
+ * kept while the bar is retracted, until a type is gone to.
  *
  * Cmd+K (Ctrl+K off a Mac; `isNavShortcut`) opens the bar with the cursor in that box. Again, or Escape in the empty box,
  * closes it and gives the focus back; so does the focus leaving the bar, there being no mouse to leave it. While the
- * cursor is in the box, the arrows choose a type, Enter opens its list and Cmd/Ctrl+Enter makes a new one.
+ * cursor is in the box, the arrows choose a type, Enter opens its list and Cmd/Ctrl+Enter makes a new one. Going to a type,
+ * so or with the mouse, empties the box.
  */
 export function NavBar(props: NavBarProps) {
   const { navExpanded, setNavExpanded, navPinned, setNavPinned } = useNavExpanded();
@@ -244,7 +245,9 @@ export function NavBar(props: NavBarProps) {
             filter={filter()}
             selecting={filterFocused()}
             keys={(key) => (listKey = key)}
+            onFollow={() => setFilter("")}
             onNew={(type) => {
+              setFilter("");
               props.onNavigate?.(`/${type}/new`);
               setNavExpanded(false);
             }}

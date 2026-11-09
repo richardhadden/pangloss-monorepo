@@ -39,6 +39,8 @@ def list_items(
     deep_search: bool = False,
     published: bool | None = None,
     review_status: str | None = None,
+    used_only: bool = False,
+    use_counts: bool = False,
 ) -> _ListItems:
     call = protocol.list_items(
         cls,
@@ -48,6 +50,8 @@ def list_items(
         deep_search,
         published,
         review_status,
+        used_only,
+        use_counts,
     )
     return protocol.listed(cls, current_client().send(call))
 
@@ -59,9 +63,16 @@ def search(
     page_size: int | None = None,
     *,
     order_by: list[OrderBy | str] | None = None,
+    used_only: bool = False,
+    use_counts: bool = False,
 ) -> _ListItems:
     call = protocol.search(
-        cls, search_match(cls, pattern, order_by), page_number, page_size
+        cls,
+        search_match(cls, pattern, order_by),
+        page_number,
+        page_size,
+        used_only,
+        use_counts,
     )
     return protocol.searched(cls, current_client().send(call))
 

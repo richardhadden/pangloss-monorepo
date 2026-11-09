@@ -1,0 +1,11 @@
+// The names of Zotero's models in the interface. A project changes them in its own `translations/models.jsonc`
+// (its overrides), not here: `pangloss interface translations generate` does not write into a package.
+{
+  "models": {
+    "ZoteroBacked": {
+      "en": { "name": "Zotero Item", "plural": "Zotero Items" },
+      "de": { "name": "Zotero-Eintrag", "plural": "Zotero-Einträge" },
+      "fr": { "name": "Élément Zotero", "plural": "Éléments Zotero" }
+    }
+  }
+}

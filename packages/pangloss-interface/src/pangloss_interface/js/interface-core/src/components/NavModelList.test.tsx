@@ -103,14 +103,14 @@ function filtered(filter: string) {
 }
 
 test("the filter matches part of any name of a type, in any language, without indents", () => {
-  expect(filtered("").names).toEqual(["Person", "Saint", "Place"]);
-  expect(filtered("lac").names).toEqual(["Place"]);
+  expect(filtered("").names).toEqual(["People", "Saints", "Places"]);
+  expect(filtered("lac").names).toEqual(["Places"]);
   // (German, which is not shown, and regardless of case and accents)
-  expect(filtered("ORT").names).toEqual(["Place"]);
-  expect(filtered("héil").names).toEqual(["Saint"]);
+  expect(filtered("ORT").names).toEqual(["Places"]);
+  expect(filtered("héil").names).toEqual(["Saints"]);
   expect(filtered("heil").indents).toEqual(["0.75rem"]);
   // (each word is to match)
-  expect(filtered("pe ple").names).toEqual(["Person"]);
+  expect(filtered("pe ple").names).toEqual(["People"]);
   expect(filtered("zzz").text).toContain("No types match");
 });
 

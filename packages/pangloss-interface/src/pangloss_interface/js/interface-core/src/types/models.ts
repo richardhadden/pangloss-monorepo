@@ -234,6 +234,8 @@ export interface InterfaceMeta {
   headless?: true | null;
   /** The keys of fields its forms do not show (the item's page does): `InterfaceMeta(hide_on_forms=...)` */
   hideOnForms?: string[] | null;
+  /** The list page shows at first only what something refers to, with a button for all of it, and how many things refer to each */
+  listUsedOnly?: true | null;
 }
 
 /** `Collapse(...)` in Python: conditions on top of the built-in rule, by the keys of fields */

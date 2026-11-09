@@ -348,3 +348,16 @@ def test_following_a_link_to_an_item_that_is_gone_is_a_404(page: Page, data):
     # (the interface still works)
     page.go_back()
     expect(page.get_by_role("link", name="Maximilian")).to_be_visible()
+
+
+def test_going_to_a_type_empties_the_filter(page: Page, data):
+    page.goto("/")
+    hydrated(page)
+    expand_nav(page)
+    box = page.get_by_label("Filter types")
+    box.fill("person")
+    box.press("Enter")
+    page.wait_for_url("**/Person")
+    # (the mouse is still over the bar, so it does not open by hovering: the shortcut opens it)
+    page.keyboard.press("ControlOrMeta+k")
+    expect(page.get_by_label("Filter types")).to_have_value("")

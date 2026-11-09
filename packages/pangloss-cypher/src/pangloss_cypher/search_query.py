@@ -272,6 +272,7 @@ def build_search_query(
     page_number: int,
     page_size: int,
     order: list[CheckedOrder] | None = None,
+    used_only: bool = False,
 ) -> tuple[LiteralString, dict]:
     params: dict = {
         "page": page_number,
@@ -289,6 +290,7 @@ def build_search_query(
     {prelude}
     MATCH (n:{fragments.label(model.__name__)}:{kind})
     WHERE {where}
+    {fragments.only_used("n") if used_only else ""}
     {finding}
     WITH n{keys}
     ORDER BY {sorting}toLower(n.label), {dialect().tie_break("n")}

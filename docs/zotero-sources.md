@@ -285,3 +285,19 @@ As planned, with these details:
 - `Create` takes no `urls`: a hand-made `Book` gets URLs of its own only by an update.
 - Not done: a test that classes of earlier tests do not leak into a
   relation to `ZoteroBacked` (they stay its subclasses after the registry is emptied: the tests name the classes).
+
+## The list and page of items ✅
+
+The page of an item (`ZoteroItemPage`, `item_page` of `ZoteroBacked`) shows its title, creators by role, URL, language and
+when it was synced, then what any item page has, without the fields the sync writes.
+
+The list of the classes the sync fills (`ZoteroBacked`, the fallback, a class with `_zotero_meta`) shows at first only the
+items that something refers to, with *Show all* / *Show used* beside the search (`?all=1`) and a bubble with how many things
+refer to each: `InterfaceMeta(list_used_only=...)`, which is general, over `used_only` and `use_counts` of `Model.list`,
+`Model.search` and their routes. A class only made by hand (the demo's `Book`) is not affected.
+
+Measured 2026-11-09 (Memgraph, 691k nodes, 18,571 items of which 7,117 used): the filter and all the counts of the class
+90 ms, the counts of a page of 50 items 9 ms. It grows with the number of items and of their edges.
+
+The bar has one link for Zotero: `ZoteroBacked`, named *Zotero Item* / *Zotero Items* (`translations/models.jsonc`). `interface_config.py`
+keeps `ZoteroObject` and `ZoteroLibrary` off it; their pages are still at their addresses.

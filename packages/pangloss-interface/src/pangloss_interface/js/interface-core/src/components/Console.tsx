@@ -194,6 +194,8 @@ export function Console(props: ConsoleProps) {
                   pending={props.pending}
                   onToggleForm={props.onToggleForm}
                   formOpen={props.formOpen}
+                  onToggleUsed={props.onToggleUsed}
+                  showingAll={props.showingAll}
                   structured={props.structured}
                   onListKey={props.onListKey}
                   onFocusChange={props.onFocusChange}

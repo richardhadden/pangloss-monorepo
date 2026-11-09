@@ -172,6 +172,10 @@ class InterfaceMeta:
     # as it was): their names, or a function of the class (a subclass's own, when it is exported) that gives them, for
     # a package whose fields matter to some of the classes built on its base. `()` turns off the parent's
     hide_on_forms: Sequence[str] | Callable[[type], Iterable[str]] | None = None
+    # (an Entity only) The list page of the type shows, at first, only the items that something refers to, with a button
+    # beside the search for all of them, and each item says how many things refer to it. True, False to turn off
+    # the parent's, or a function of the class (a subclass's own, when it is exported)
+    list_used_only: bool | Callable[[type], bool] | None = None
 
     @staticmethod
     def editor_choices(option: str) -> list[str] | None:
@@ -233,6 +237,15 @@ class InterfaceMeta:
             raise PanglossMetaError(
                 f"InterfaceMeta(hide_on_forms={self.hide_on_forms!r}): the names of fields, or a function of the "
                 "class that gives them"
+            )
+        if not (
+            self.list_used_only is None
+            or isinstance(self.list_used_only, bool)
+            or callable(self.list_used_only)
+        ):
+            raise PanglossMetaError(
+                f"InterfaceMeta(list_used_only={self.list_used_only!r}): True, False to turn off the parent's, or a "
+                "function of the class"
             )
         if self.headless is not None and not isinstance(self.headless, bool):
             raise PanglossMetaError(
@@ -296,6 +309,10 @@ def resolved_meta(model: type) -> dict[str, Any] | None:
     hidden = next((m.hide_on_forms for m in metas if m.hide_on_forms is not None), None)
     names = list(hidden(model) if callable(hidden) else hidden or [])
     resolved["hideOnForms"] = names or None
+    used = next((m.list_used_only for m in metas if m.list_used_only is not None), None)
+    resolved["listUsedOnly"] = (
+        True if (used(model) if callable(used) else used) else None
+    )
     return resolved
 
 
@@ -347,6 +364,10 @@ def export_definitions() -> dict[str, Any]:
                 meta["collapse"] = _export_collapse(name, definition, meta["collapse"])
         if meta and meta["hideOnForms"]:
             meta["hideOnForms"] = _export_hidden(name, definition, meta["hideOnForms"])
+        if meta and meta["listUsedOnly"] and definition["kind"] != "Entity":
+            raise PanglossMetaError(
+                f"{name}: InterfaceMeta(list_used_only=...) is for an Entity, and this is a {definition['kind']}"
+            )
         if meta and meta["headless"] and definition["kind"] != "ReifiedRelation":
             raise PanglossMetaError(
                 f"{name}: InterfaceMeta(headless=True) is for a ReifiedRelation, and this is a {definition['kind']}"

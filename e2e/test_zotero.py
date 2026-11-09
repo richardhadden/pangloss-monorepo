@@ -19,13 +19,13 @@ from conftest import (
     environment,
     forget,
 )
-from helpers import hydrated
+from helpers import expand_nav, hydrated
 from playwright.sync_api import Page, expect
 
 # (written into the project and run there: the API will not let a person set the fields the sync owns)
 SEED = textwrap.dedent(
     """
-    import asyncio, json, sys
+    import asyncio, datetime, json, sys
 
     from pangloss_cli import load_project
     from pangloss_models import initialise
@@ -58,6 +58,16 @@ SEED = textwrap.dedent(
                     item_type="book",
                     title=f"The book {key}",
                     citation=f"(Smith, {key})",
+                    creators="Smith, Ann; Jones, Bo",
+                    language="fr",
+                    synced_when=datetime.datetime(2026, 3, 4, 12, 30, tzinfo=datetime.timezone.utc),
+                    zotero_data=json.dumps({
+                        "url": "https://example.org/book",
+                        "creators": [
+                            {"creatorType": "author", "firstName": "Ann", "lastName": "Smith"},
+                            {"creatorType": "seriesEditor", "name": "Jones, Bo"},
+                        ],
+                    }),
                 ).save()
                 made[key] = str((await ZoteroObject.get(AnyHttpUrl(url))).id)
         finally:
@@ -122,6 +132,74 @@ def pick(page: Page, label: str) -> None:
     picker = page.get_by_test_id("zotero-picker")
     picker.get_by_role("combobox").fill(label)
     picker.get_by_role("option", name=re.compile(re.escape(label))).first.click()
+
+
+def test_an_items_page_shows_its_zotero_fields_cleaned_up(page: Page, items):
+    page.goto(f"/ZoteroObject/{items.ids['E2EONE']}")
+    hydrated(page)
+    shown = page.get_by_test_id("zotero-item")
+    expect(shown).to_contain_text("The book E2EONE")
+    expect(shown).to_contain_text("Smith, Ann")
+    expect(shown).to_contain_text("Series editor")
+    expect(shown).to_contain_text("March 4, 2026")
+    link = shown.get_by_role("link", name="https://example.org/book")
+    expect(link).to_have_attribute("target", "_blank")
+    # (not the raw fields; what refers to it is still there)
+    main = page.locator("main")
+    expect(main).not_to_contain_text("creatorType")
+    expect(page.get_by_text("Zotero key", exact=False)).to_have_count(0)
+    expect(main).to_contain_text("Cites one")
+
+
+def test_the_list_of_items_is_of_what_is_used_until_asked_for_all(page: Page, items):
+    page.goto("/ZoteroObject")
+    hydrated(page)
+    main = page.locator("main")
+    expect(main).to_contain_text("(Smith, E2EONE)")
+    expect(main).not_to_contain_text("(Smith, E2ETWO)")
+    expect(page.get_by_test_id("use-count")).to_have_text("1")
+
+    page.get_by_role("button", name="Show all").click()
+    expect(main).to_contain_text("(Smith, E2ETWO)")
+    assert "all=1" in page.url
+    expect(page.get_by_test_id("use-count")).to_have_text(["1", "0"])
+
+    # (what is typed narrows either; a page opened at the address is the same list)
+    page.reload()
+    hydrated(page)
+    expect(main).to_contain_text("(Smith, E2ETWO)")
+    page.get_by_role("button", name="Show used").click()
+    expect(main).not_to_contain_text("(Smith, E2ETWO)")
+    assert "all=1" not in page.url
+
+
+def test_the_bar_has_one_link_for_zotero_called_zotero_items(page: Page, items):
+    page.goto("/")
+    hydrated(page)
+    expand_nav(page)
+    nav = page.get_by_role("navigation", name="Main")
+    expect(nav.get_by_role("link", name="Zotero Items", exact=True)).to_be_visible()
+    expect(nav.get_by_role("link", name="Zotero object")).to_have_count(0)
+    expect(nav.get_by_role("link", name="Zotero library")).to_have_count(0)
+
+    # (what it opens is the list of what is used, by its plural; the other pages are still there)
+    nav.get_by_role("link", name="Zotero Items", exact=True).click()
+    page.wait_for_url(re.compile(r"/ZoteroBacked$"))
+    expect(page.get_by_role("banner", name="Console")).to_contain_text("Zotero Items")
+    expect(page.locator("main")).to_contain_text("(Smith, E2EONE)")
+    expect(page.locator("main")).not_to_contain_text("(Smith, E2ETWO)")
+    page.goto("/ZoteroLibrary")
+    hydrated(page)
+    expect(page.get_by_role("banner", name="Console")).to_be_visible()
+
+
+def test_a_class_only_made_by_hand_lists_everything(page: Page, items):
+    items.api.ok("POST", "/api/Book", {"label": "Nobody cites me", "pages": 3})
+    page.goto("/Book")
+    hydrated(page)
+    expect(page.locator("main")).to_contain_text("Nobody cites me")
+    expect(page.get_by_role("button", name="Show all")).to_have_count(0)
+    expect(page.get_by_test_id("use-count")).to_have_count(0)
 
 
 def test_a_new_book_is_based_on_an_item_and_unlinked_again(logged_in: Page, items):

@@ -44,13 +44,26 @@ def _override_unless_typed(model: type) -> tuple[str, ...]:
     return () if meta is not None and meta.item_types else ("item_type_override",)
 
 
+def _only_used_at_first(model: type) -> bool:
+    """A list of what the sync brings in is mostly of what nothing cites yet: those classes (the fallback, and any that
+    claim item types), and the list of every item, show what is used at first. A class that is only made by hand (no
+    Zotero types: the demo's Book) lists what people made"""
+    return model.__name__ == "ZoteroBacked" or getattr(model, SLOT, None) is not None
+
+
 def interface_meta() -> dict:
-    """What the forms do not show, if the interface is installed"""
+    """What the forms do not show, and the page of an item, if the interface is installed"""
     try:
         from pangloss_interface import InterfaceMeta
     except ImportError:
         return {}
-    return {"_interface_meta": InterfaceMeta(hide_on_forms=_override_unless_typed)}
+    return {
+        "_interface_meta": InterfaceMeta(
+            hide_on_forms=_override_unless_typed,
+            item_page="pangloss_zotero:ZoteroItemPage",
+            list_used_only=_only_used_at_first,
+        )
+    }
 
 
 class ZoteroBacked(Entity):

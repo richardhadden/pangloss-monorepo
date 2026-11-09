@@ -5,7 +5,7 @@ they give the items of its subclasses; a document with `create_directly=False` h
 
 | | | |
 |-|-|-|
-| `GET`    | `/api/NAME`                       | list (`q`, `deep`, `page`, `page_size`) |
+| `GET`    | `/api/NAME`                       | list (`q`, `deep`, `used_only`, `use_counts`, `page`, `page_size`) |
 | `GET`    | `/api/NAME/{id}`         | the `HeadView` (an entity: `incoming_limit` cuts what refers to it, 0 leaves it out; `extras=false` leaves out what apps add) |
 | `GET`    | `/api/NAME/{id}/incoming` | an entity: what refers to it, the first `limit` of every relation, with the counts |
 | `GET`    | `/api/NAME/{id}/incoming/{field}` | an entity: what refers to it by one relation (`page`, `page_size`) |
@@ -327,6 +327,13 @@ def build_router(model: type[Document | Entity]) -> APIRouter:
             str | None,
             Query(description="Only those with this review status (pangloss-review)"),
         ] = None,
+        used_only: Annotated[
+            bool, Query(description="Only those that something refers to")
+        ] = False,
+        use_counts: Annotated[
+            bool,
+            Query(description="With how many things refer to each (`useCounts`)"),
+        ] = False,
         page: Annotated[int | None, Query(ge=1)] = None,
         page_size: Annotated[int | None, Query(ge=1, le=MAX_PAGE_SIZE)] = None,
     ):
@@ -338,6 +345,8 @@ def build_router(model: type[Document | Entity]) -> APIRouter:
                 deep_search=deep,
                 published=published,
                 review_status=review_status,
+                used_only=used_only,
+                use_counts=use_counts,
             )
         )
 

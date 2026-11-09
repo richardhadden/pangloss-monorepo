@@ -82,6 +82,37 @@ def visible(
     return "\n".join(lines)
 
 
+def uses_of(node: str) -> str:
+    """A subquery that gives `uses`, how many things the reader sees refer to `node` (the node must be in the query
+    already; `$see_unpublished` must be given). What refers to it is the reverse edges leading out of it (as for
+    whether it can be deleted), each node once: a field that narrows another is two edges to the same node. What is
+    inside a deleted or unpublished document does not count, nor does a node referring to itself.
+
+    (Measured, 691k nodes: 90 ms for all 18,571 items of a class, 9 ms for a page of 50; it costs what the items have
+    edges, nothing is scanned.)"""
+    head = head_of("used_by", "used_head")
+    return f"""
+    CALL ({node}) {{
+      MATCH ({node})-[used_edge]->(used_by)
+      WHERE coalesce(used_edge.reverse, false)
+      {head.match}
+      WITH {node}, used_by, CASE WHEN used_by:Entity THEN used_by ELSE {head} END AS holder
+      WHERE {visible("holder")} AND holder <> {node}
+      RETURN count(DISTINCT used_by) AS uses
+    }}
+"""
+
+
+def only_used(node: str, *carried: str) -> str:
+    """What a query puts after it has `node` and the variables `carried` to keep only what something refers to"""
+    kept = ", ".join((node, *carried))
+    return f"""{uses_of(node)}
+    WITH {kept}, uses
+    WHERE uses > 0
+    WITH {kept}
+"""
+
+
 def hidden(head: str) -> str:
     """A condition: the reader does not see the head node `head` (the negation of `visible(head)`, written so that it
     is true or null, for a `NOT EXISTS` that finds a head node which hides what is below it)"""

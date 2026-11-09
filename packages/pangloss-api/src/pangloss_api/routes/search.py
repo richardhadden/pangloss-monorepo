@@ -34,6 +34,8 @@ async def search(request: SearchRequest):
                 ),
                 page_number=request.page,
                 page_size=request.page_size,
+                used_only=request.used_only,
+                use_counts=request.use_counts,
             )
         )
     except (PanglossUnknownTypeError, PanglossSearchError) as error:

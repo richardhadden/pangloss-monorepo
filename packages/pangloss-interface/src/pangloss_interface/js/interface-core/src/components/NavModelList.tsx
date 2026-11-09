@@ -10,7 +10,7 @@ export type NavListKey = (key: "next" | "previous" | "open" | "new") => void;
  * The sections of the bar (`navSections`): by default the Documents and the Entities of the
  * project, each type a link to its list page, in the order of the type hierarchy; and what the
  * installed apps' `InterfaceConfig`s change. Every button is as wide as the bar, and the text of
- * a type is indented a step more than that of its parent. Links that need a login are shown to someone logged in (`loggedIn`).
+ * a type is indented a step more than that of its parent. A type is named in the plural (its name, if it has no plural). Links that need a login are shown to someone logged in (`loggedIn`).
  *
  * With a `filter`, only what matches it is listed, without indents: each of its words is to be
  * part of one of the names of the type, in any language (or of the label of a link), regardless
@@ -26,6 +26,8 @@ export function NavModelList(props: {
   selecting?: boolean;
   keys?: (key: NavListKey) => void;
   onNew?: (type: string) => void;
+  /** A link of the list was followed (by the mouse, or by "open") */
+  onFollow?: () => void;
 }) {
   const models = useModels();
   const { t, modelName, modelNames } = useTranslations();
@@ -105,8 +107,9 @@ export function NavModelList(props: {
                   indent={filtering() ? 0 : entry.depth}
                   selected={!!props.selecting && entries()[selected()]?.href === entry.href}
                   linkRef={(element) => links.set(entry.href, element)}
+                  onClick={props.onFollow}
                 >
-                  {entry.model ? modelName(entry.model) : labelOf(entry)}
+                  {entry.model ? modelName(entry.model, true) : labelOf(entry)}
                 </NavRowButton>
               )}
             </For>

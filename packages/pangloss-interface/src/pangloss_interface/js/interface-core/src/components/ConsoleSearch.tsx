@@ -205,6 +205,13 @@ export function ConsoleSearch(props: ConsoleSearchProps) {
           </svg>
         </ConsoleButton>
       </Show>
+      <Show when={props.onToggleUsed}>
+        <ConsoleButton
+          text
+          label={props.showingAll ? t("show_used", "Show used") : t("show_all", "Show all")}
+          onClick={() => props.onToggleUsed?.()}
+        />
+      </Show>
     </div>
   );
 }
