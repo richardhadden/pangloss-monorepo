@@ -150,6 +150,7 @@ def build_list_field_definition(
         default_factory=field_info.default_factory,
         db_field=is_db_field,
         description=extract_field_description(field_info),
+        markers=field_markers(field_info),
     )
 
 
@@ -472,6 +473,7 @@ def build_relatable_field_definition(
         else [],
         validators=extract_validators(field_info),
         description=extract_field_description(field_info),
+        markers=field_markers(field_info),
         default_reified_type=default_reified_type,
     )
 
@@ -578,6 +580,10 @@ def build_embedded_field_definition(
         db_field=is_db_field,
         description=extract_field_description(field_info),
     )
+
+
+def field_markers(field_info: FieldInfo) -> tuple[FieldMarker, ...]:
+    return tuple(md for md in field_info.metadata if isinstance(md, FieldMarker))
 
 
 def get_field_origin_model_and_definition(
@@ -995,6 +1001,7 @@ def define_field(
             annotated_type=annotation,
             db_field=is_db_field,
             description=extract_field_description(field_info),
+            markers=field_markers(field_info),
         )
 
     # (a list of annotated values is a list of maps)
@@ -1006,6 +1013,7 @@ def define_field(
             annotated_type=item,
             db_field=is_db_field,
             description=extract_field_description(field_info),
+            markers=field_markers(field_info),
             many=True,
         )
 

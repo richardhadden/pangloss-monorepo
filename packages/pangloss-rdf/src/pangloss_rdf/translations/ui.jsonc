@@ -1,0 +1,4 @@
+// The fixed text of the interface module of pangloss_rdf: {"key": {"language": "text"}}.
+{
+  "view_rdf": { "en": "View as RDF", "de": "Als RDF anzeigen", "fr": "Afficher en RDF" }
+}

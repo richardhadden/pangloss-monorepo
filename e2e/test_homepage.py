@@ -6,7 +6,9 @@ from helpers import hydrated
 from playwright.sync_api import Page, expect
 
 
-def test_the_homepage_has_the_name_of_the_project_and_no_results_at_first(page: Page, data):
+def test_the_homepage_has_the_name_of_the_project_and_no_results_at_first(
+    page: Page, data
+):
     page.goto("/")
     hydrated(page)
     expect(page.get_by_role("heading", level=1)).to_have_text("e2e project")
@@ -47,11 +49,48 @@ def test_an_item_links_to_its_json_in_a_new_tab(page: Page, data):
     page.locator('main li a[href*="/Person/"]', has_text="Maximilian").first.click()
     page.wait_for_url("**/Person/**")
     item_id = page.url.rsplit("/", 1)[-1]
+    rdf = page.get_by_role("button", name="View as RDF")
+    rdf.click()
+    expect(page.get_by_role("menuitem")).to_have_count(6)
+    # (really on the screen: the console bar clips what is placed in it, and a click by the test would scroll to it anyway)
+    assert page.get_by_role("menuitem", name="N-Quads").evaluate(
+        "e => { const b = e.getBoundingClientRect(); return document.elementFromPoint(b.x + b.width / 2, b.y + b.height / 2) === e }"
+    )
+    expect(page.get_by_role("link", name="View as JSON")).to_have_count(0)
     with page.context.expect_page() as opened:
-        page.get_by_role("link", name="View as JSON").click()
+        page.get_by_role("menuitem", name="API JSON").click()
     opened.value.wait_for_load_state()
     assert opened.value.url.endswith(f"/api/Person/{item_id}")
     assert f'"id":"{item_id}"' in opened.value.content()
+    rdf.click()
+    with page.context.expect_page() as opened:
+        page.get_by_role("menuitem", name="JSON-LD").click()
+    opened.value.wait_for_load_state()
+    assert f"/api/rdf/Person/{item_id}?format=jsonld" in opened.value.url
+    assert f"Person/{item_id}" in opened.value.content()
+    expect(page.get_by_role("menu")).to_have_count(0)
+    # (the keys: Down opens it and goes in, Escape closes it and comes back)
+    rdf.focus()
+    page.keyboard.press("ArrowDown")
+    expect(page.get_by_role("menuitem", name="Turtle")).to_be_focused()
+    page.keyboard.press("ArrowDown")
+    expect(page.get_by_role("menuitem", name="JSON-LD")).to_be_focused()
+    page.keyboard.press("Escape")
+    expect(page.get_by_role("menu")).to_have_count(0)
+    expect(rdf).to_be_focused()
+    # (a click elsewhere closes it)
+    rdf.click()
+    page.locator("main").click(position={"x": 5, "y": 5})
+    expect(page.get_by_role("menu")).to_have_count(0)
+    # (a URI of the export, through the interface's server: the data for a client of it, and text for a browser)
+    origin = page.url.split("/Person/")[0]
+    data = page.request.get(
+        f"{origin}/entity/Person/{item_id}", headers={"Accept": "text/turtle"}
+    )
+    assert data.ok and data.headers["content-type"].startswith("text/turtle")
+    assert item_id in data.text()
+    page.goto(f"/entity/Person/{item_id}")
+    assert f"/api/rdf/Person/{item_id}" in page.url
 
 
 def test_a_type_word_becomes_a_chip_and_backspace_turns_it_back(page: Page, data):
@@ -77,7 +116,9 @@ def test_the_console_links_the_pages_and_marks_where_you_are(page: Page, data):
     page.wait_for_url("**/about")
     expect(page.get_by_role("heading", level=1, name="About")).to_be_visible()
     hydrated(page)
-    page.get_by_role("navigation", name="Pages").get_by_role("link", name="Home").click()
+    page.get_by_role("navigation", name="Pages").get_by_role(
+        "link", name="Home"
+    ).click()
     expect(page.get_by_role("searchbox", name="Quick search")).to_be_visible()
 
 
@@ -94,7 +135,9 @@ def test_types_are_offered_while_typing_and_tab_takes_one(page: Page, data):
     expect(box).to_be_focused()
 
 
-def test_a_long_type_of_several_words_is_offered_and_finds_what_is_inside_documents(page: Page, data):
+def test_a_long_type_of_several_words_is_offered_and_finds_what_is_inside_documents(
+    page: Page, data
+):
     painting = data.api.ok("POST", "/api/Painting", {"label": "The altarpiece"})["id"]
     data.api.ok(
         "POST",
@@ -116,7 +159,9 @@ def test_a_long_type_of_several_words_is_offered_and_finds_what_is_inside_docume
     box.press("Tab")
     chip = page.get_by_test_id("search-type-chip")
     expect(chip).to_have_attribute("data-type-info", "CreationOfArtwork")
-    result = page.locator('main li a[href*="/CreationOfPainting/"]', has_text="Making the altarpiece")
+    result = page.locator(
+        'main li a[href*="/CreationOfPainting/"]', has_text="Making the altarpiece"
+    )
     expect(result).to_be_visible()
     result.click()
     page.wait_for_url("**/CreationOfPainting/**")
@@ -146,7 +191,9 @@ def test_the_search_is_kept_in_the_address_and_comes_back(page: Page, data):
     hydrated(page)
     expect(page.get_by_test_id("search-type-chip")).to_have_text("Person")
     expect(page.get_by_role("searchbox", name="Quick search")).to_have_value("ma")
-    expect(page.locator('main li a[href*="/Person/"]', has_text="Maximilian")).to_be_visible()
+    expect(
+        page.locator('main li a[href*="/Person/"]', has_text="Maximilian")
+    ).to_be_visible()
 
 
 def test_results_are_in_the_page_the_server_sends(page: Page, data, stack):
@@ -178,4 +225,6 @@ def test_a_project_page_passes_the_type_check(stack):
         text=True,
         check=False,
     )
-    assert [line for line in done.stdout.splitlines() if "pages/About.tsx" in line] == []
+    assert [
+        line for line in done.stdout.splitlines() if "pages/About.tsx" in line
+    ] == []

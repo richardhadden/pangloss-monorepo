@@ -26,6 +26,7 @@ small, and between them use most of what Pangloss has:
 | A conjunction (a join of several things) | `Causes` (and the library's `WeightedAlternative`, any number) |
 | Shares that add up to 100, edited with sliders (`SumsTo`, `Slider`; `pangloss-library`) | `WeightedAlternative.alternatives` |
 | A reified relation to a conjunction, with edge properties on its members | `Identification[WeightedAlternative[Person]]` (the edge is in `WeightedAlternative`) |
+| Aligned to CIDOC-CRM in the RDF export (`pangloss-rdf`): plain mixins, which are not data, and a field's parent property | `Agent`, `Person`, `Group`, `Place`, `Statement`, `Activity` |
 | Literals: enums, dates, decimals, a TypedDict, lists, validators | throughout |
 | What a space or a conjunction does to a derived relation (`pangloss-derived`; the rules are in `derived.py`) | `WeightedAlternative` (exclusive), `InRole` |
 """
@@ -54,6 +55,17 @@ from pangloss_models import (
     SemanticSpace,
     Trait,
     ViaEdge,
+)
+from pangloss_rdf import RDFField
+from pangloss_rdf.ontologies.crm import (
+    E5_Event,
+    E7_Activity,
+    E21_Person,
+    E39_Actor,
+    E53_Place,
+    E74_Group,
+    P7_took_place_at,
+    P14_carried_out_by,
 )
 from pangloss_review import ReviewMeta
 from pangloss_typology import Typed, Typology, TypologyMeta
@@ -131,7 +143,7 @@ class Identification[T](ReifiedRelation[T]):
 # ---------------------------------------------------------------------------
 
 
-class Agent(Trait):
+class Agent(Trait, E39_Actor):
     """Anyone who can act: a person or a group"""
 
 
@@ -141,7 +153,7 @@ class OccupationTypology(Typology):
     _typology_meta = TypologyMeta(name="OccupationType")
 
 
-class Person(Entity, Agent):
+class Person(Entity, Agent, E21_Person):
     """A person"""
 
     # Persons (and sources) can be given a URL as their id, such as an address in another
@@ -154,13 +166,13 @@ class Person(Entity, Agent):
     has_type: list[Typed[OccupationTypology]]
 
 
-class Group(Entity, Agent):
+class Group(Entity, Agent, E74_Group):
     """A family, an order, an army..."""
 
     name: Annotated[str, MinLen(2), MaxLen(100)]
 
 
-class Place(Entity):
+class Place(Entity, E53_Place):
     coordinates: Coordinates | None = None
 
 
@@ -190,7 +202,7 @@ class Source(Entity):
 # ---------------------------------------------------------------------------
 
 
-class Statement(Document, Dateable):
+class Statement(Document, Dateable, E5_Event):
     """Something that happened between agents and in places (abstract: a kind of
     statement is one of the classes below). Dateable: it has a `date`, and says when in
     lists and on the pages of the people and places it involves"""
@@ -200,10 +212,10 @@ class Statement(Document, Dateable):
 
     text: Annotated[str, MinLen(5)]
     involves: list[Agent]
-    places: list[Place]
+    places: Annotated[list[Place], RDFField(parent=P7_took_place_at)]
 
 
-class Activity(Statement):
+class Activity(Statement, E7_Activity):
     """An agent did something, with others in different roles"""
 
     activity_type: ActivityType
@@ -217,6 +229,7 @@ class Activity(Statement):
                 FieldSubclassing("involves", field_on_model=Statement)
             ],
         ),
+        RDFField(parent=P14_carried_out_by),
     ]
     # (in the interface, a person or a group is searched for, and put in a role: `default_reified_type`)
     participants: Annotated[

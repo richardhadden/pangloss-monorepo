@@ -361,6 +361,11 @@ def serve(
         "--api-proxy/--no-api-proxy",
         help="Pass /api on to the API. Not needed where a reverse proxy in front does",
     ),
+    api_path: list[str] = typer.Option(
+        [],
+        "--api-path",
+        help="Another path to pass on to the API, such as the URIs of an RDF export (--api-path /entity)",
+    ),
 ) -> None:
     """Run the built interface (server-side rendered; it passes /api on to the API)"""
     directory = working_directory(project_of(ctx).location.root)
@@ -377,6 +382,7 @@ def serve(
             "PORT": str(port),
             "PANGLOSS_API_URL": api_url,
             "PANGLOSS_API_PROXY": "on" if api_proxy else "off",
+            **({"PANGLOSS_API_PATHS": ",".join(api_path)} if api_path else {}),
         },
     )
 

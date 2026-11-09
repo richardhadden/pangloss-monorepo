@@ -41,6 +41,8 @@ Each feature in these docs is marked with its status:
 | [The demo project](demo-setup.md) | `pangloss-demo/`: the finished project and how to set it up |
 | [Publishing the packages](publishing.md) ⏳ | How the packages would be released (not done) |
 | [RDF / Oxigraph feasibility](rdf-oxigraph-feasibility.md) | A report on a third backend (not planned) |
+| [RDF export](rdf.md) 🚧 | `pangloss-rdf`: every document and entity as RDF, and an ontology made from the models |
+| [RDF export plan](rdf-export-plan.md) | The design, its decisions, and what is not built |
 | [Command line](cli.md) | The `pangloss` command, and adding commands from apps |
 | [Language server](language-server.md) ✅ | `pangloss check`, and `pangloss-lsp`: what `initialise()` refuses at the line, quick fixes, completion of the `Meta`s, fresh stubs, hover; the Zed and VS Code extensions |
 | [Meta slots](meta-slots.md) 🚧 | Built in `pangloss_models` (and the protection of fields the API will not change): letting optional packages (the interface) keep their own `_<name>_meta` on a model class |

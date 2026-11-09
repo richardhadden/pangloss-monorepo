@@ -59,6 +59,8 @@ export function ConsoleButton(props: ConsoleButtonProps) {
         aria-label={props.label}
         aria-disabled={props.disabled ? "true" : undefined}
         title={props.label}
+        target={props.newTab ? "_blank" : undefined}
+        rel={props.newTab ? "noopener" : undefined}
         class={classes()}
       >
         {content()}

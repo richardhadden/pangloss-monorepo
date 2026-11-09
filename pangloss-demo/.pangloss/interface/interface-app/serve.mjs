@@ -12,7 +12,10 @@ const apiUrl = process.env.PANGLOSS_API_URL || "http://127.0.0.1:8000";
 // "off" where something in front of this server passes `/api` on itself, so that nothing for it should come here
 const passesApiOn = process.env.PANGLOSS_API_PROXY !== "off";
 
-const isForApi = (url) => url === "/api" || url.startsWith("/api/") || url.startsWith("/api?");
+// (and other paths the API answers, from `pangloss interface serve --api-path`, such as an installed app's)
+const apiPaths = ["/api", ...(process.env.PANGLOSS_API_PATHS ?? "").split(",").filter(Boolean)];
+
+const isForApi = (url) => apiPaths.some((path) => url === path || url.startsWith(`${path}/`) || url.startsWith(`${path}?`));
 
 function refuse(res, detail) {
   if (res.headersSent) return res.destroy();

@@ -218,6 +218,11 @@ export interface ModuleManifest {
    */
   consoleActions?: Record<string, ConsoleAction>;
   /**
+   * A key of `consoleActions` that also links to the item's JSON: the console then has no View as JSON button of its
+   * own (it keeps it if the project has disabled that action)
+   */
+  jsonLinkIn?: string;
+  /**
    * Components for the console of the form that makes a new item, before its own buttons (`NewItemActionProps`: they
    * can fill the form in, and change how it is sent)
    */

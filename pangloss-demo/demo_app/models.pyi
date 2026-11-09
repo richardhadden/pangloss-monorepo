@@ -31,6 +31,8 @@ from pangloss_derived import DerivedMeta
 from pangloss_interface import InterfaceMeta
 from pangloss_library import WeightedAlternative
 from pangloss_models import AnnotatedValue, Conjunction, Document, EdgeModel, Entity, FieldBinding, FieldSubclassing, ReifiedRelation, RelationConfig, SemanticSpace, Trait, ViaEdge
+from pangloss_rdf import RDFField
+from pangloss_rdf.ontologies.crm import E5_Event, E7_Activity, E21_Person, E39_Actor, E53_Place, E74_Group, P7_took_place_at, P14_carried_out_by
 from pangloss_review import ReviewMeta
 from pangloss_typology import Typed, Typology, TypologyMeta
 from pangloss_zotero import ZoteroBacked
@@ -105,14 +107,14 @@ class Identification[T](ReifiedRelation[T]):
         type: typing.Literal['Identification'] = ...
         identified_by: str
 
-class Agent(Trait):
+class Agent(Trait, E39_Actor):
     ...
 
 class OccupationTypology(Typology):
     _typology_meta = ...
     Type: typing.ClassVar[type[OccupationType]]
 
-class Person(Entity, Agent):
+class Person(Entity, Agent, E21_Person):
     _meta = ...
     known_as: WithCertainty[str]
     born: Annotated[Date, SortDefault(SortBy.EARLIEST_FUZZY)]
@@ -217,7 +219,7 @@ class Person(Entity, Agent):
         date_end_sort_day: int | None = ...
         date_text: str | None = ...
 
-class Group(Entity, Agent):
+class Group(Entity, Agent, E74_Group):
     name: Annotated[str, MinLen(2), MaxLen(100)]
     class ReferenceSet(pangloss_models.model_bases.entity._EntityReferenceSetBase):  # type: ignore
         id: pydantic.networks.AnyHttpUrl | uuid.UUID  # type: ignore
@@ -275,7 +277,7 @@ class Group(Entity, Agent):
         date_text: str | None = ...
         participants: typing.Any  # type: ignore
 
-class Place(Entity):
+class Place(Entity, E53_Place):
     coordinates: Coordinates | None = None
     class ReferenceSet(pangloss_models.model_bases.entity._EntityReferenceSetBase):  # type: ignore
         id: pydantic.networks.AnyHttpUrl | uuid.UUID  # type: ignore
@@ -425,11 +427,11 @@ class Source(Entity):
     class Order(pangloss_models.search.OrderBy):  # type: ignore
         field: typing.Literal['label', 'author', 'written', 'edition_price']  # type: ignore
 
-class Statement(Document, Dateable):
+class Statement(Document, Dateable, E5_Event):
     _meta = ...
     text: Annotated[str, MinLen(5)]
     involves: list[Agent]
-    places: list[Place]
+    places: Annotated[list[Place], RDFField(parent=P7_took_place_at)]
     class ReferenceView(pangloss_models.model_bases.document._DocumentReferenceViewBase):  # type: ignore
         type: typing.Literal['Statement'] = ...
         date_sort_day: int | None = ...
@@ -480,9 +482,9 @@ class Statement(Document, Dateable):
     class Order(pangloss_models.search.OrderBy):  # type: ignore
         field: typing.Literal['label', 'date.source_text', 'date.earliest_fuzzy', 'date.earliest_strict', 'date.latest_strict', 'date.latest_fuzzy', 'date.sort_day', 'date.end_sort_day', 'date_sort_day', 'date_end_sort_day', 'date_text', 'text']  # type: ignore
 
-class Activity(Statement):
+class Activity(Statement, E7_Activity):
     activity_type: ActivityType
-    carried_out_by: Annotated[ViaEdge[Agent, Certainty], RelationConfig(reverse_name='carried_out', subclasses_parent_fields=[FieldSubclassing('involves', field_on_model=Statement)])]
+    carried_out_by: Annotated[ViaEdge[Agent, Certainty], RelationConfig(reverse_name='carried_out', subclasses_parent_fields=[FieldSubclassing('involves', field_on_model=Statement)]), RDFField(parent=P14_carried_out_by)]
     participants: Annotated[list[InRole[Agent]], RelationConfig(default_reified_type=InRole)]
     class ReferenceView(pangloss_models.model_bases.document._DocumentReferenceViewBase):  # type: ignore
         type: typing.Literal['Activity'] = ...

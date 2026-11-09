@@ -1,0 +1,47 @@
+[project]
+name = "pangloss-rdf"
+version = "0.1.0"
+description = "Optional RDF export for Pangloss: every document and entity as RDF, and the project's ontology, generated from its models"
+readme = "README.md"
+authors = [
+    { name = "Richard Hadden", email = "rwjhadden@gmail.com" }
+]
+requires-python = ">=3.15"
+dependencies = [
+    "fastapi>=0.115",
+    "pangloss-api",
+    "pangloss-core",
+    "pangloss-models",
+    "pangloss-users",
+    "rdflib>=7.6",
+    "typer>=0.12",
+]
+
+[project.urls]
+Repository = "https://github.com/richardhadden/pangloss-monorepo"
+
+[build-system]
+requires = ["uv_build>=0.11.8,<0.12.0"]
+build-backend = "uv_build"
+
+[tool.uv.sources]
+pangloss-api = { workspace = true }
+pangloss-core = { workspace = true }
+pangloss-memgraph = { workspace = true }
+pangloss-neo4j = { workspace = true }
+pangloss-testing = { workspace = true }
+pangloss-users = { workspace = true }
+pangloss-models = { workspace = true }
+pangloss-sdk = { workspace = true }
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28",
+    "pangloss-memgraph",
+    "pangloss-neo4j",
+    "pangloss-sdk",
+    "pangloss-testing",
+    "pyshacl>=0.30",
+    "pytest>=9.0.3",
+    "pytest-asyncio>=1.4.0",
+]

@@ -90,6 +90,13 @@ export default defineConfig({
     },
     proxy: {
       "/api": { target: apiUrl, changeOrigin: false },
+      // (and other paths the API answers, as for `pangloss interface serve --api-path`)
+      ...Object.fromEntries(
+        (process.env.PANGLOSS_API_PATHS ?? "")
+          .split(",")
+          .filter(Boolean)
+          .map((path) => [path, { target: apiUrl, changeOrigin: false }]),
+      ),
     },
   },
   build: {

@@ -1,12 +1,12 @@
 """Field markers: what a field is annotated with to say something of it that is not its type or a constraint
 (`Annotated[int, Ge(1), Le(100), Slider()]`): exported with the field (`markers`), by the class's name and what
-`export()` gives, for the interface to act on. Not part of the data, nor of the migration snapshot."""
+`export()` gives, for the interface to act on. Not part of the data, nor of the migration snapshot. On a relation, a list or an annotated value a marker is kept on the field's definition, not exported."""
 
 from typing import Any
 
 
 class FieldMarker:
-    """A marker of a literal field (an embedded field's markers are those with `apply_to_embedded`). A subclass
+    """A marker of a field: a literal, a list of them, a relation or an annotated value (an embedded field's markers are those with `apply_to_embedded`). A subclass
     may check the field it is on (`check`, at export) and say more of itself (`export`)."""
 
     def check(self, owner: str, field: dict[str, Any]) -> None:

@@ -64,6 +64,8 @@ export interface ConsoleButtonProps {
   label: string;
   /** Makes it a link, rather than a button */
   href?: string;
+  /** A link that opens in a new tab: how to leave the interface for something that is not a page of it, such as the API */
+  newTab?: boolean;
   onClick?: () => void;
   /** Colour: `entity` and `document` match the tints of the console; `neutral` if not given */
   tone?: ConsoleButtonTone;

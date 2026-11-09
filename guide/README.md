@@ -13,6 +13,7 @@ Tutorials and how-tos. The reference, with the design of each part and what is b
 | [The SDK](sdk/README.md) | **Your models in your own scripts**: build the SDK on the server, install it, connect, read and write, stay current |
 | [Checking data and methods](validation/README.md) | Validators and constraints, values worked out for the database, checks that read the database before a write, methods on your models |
 | [Searching](search/README.md) | Lists, autocomplete, and structured search by a JSON pattern |
+| [Exporting as RDF](rdf/README.md) | Every item as RDF, the ontology, and aligning models to CIDOC-CRM |
 | [Users, logins and the API](accounts/README.md) | Users, tokens (including personal access tokens for scripts), running the REST API |
 | [Choosing and running a database](backends/README.md) | Memgraph or Neo4j; settings, differences, tests of add-ons |
 | [Review](review/README.md) | Checking documents before they are published, with comments (`pangloss-review`) |

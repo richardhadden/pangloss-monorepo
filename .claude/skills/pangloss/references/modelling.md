@@ -127,6 +127,7 @@ Other packages keep their own settings on the class in **meta slots**, attribute
 | `_typology_meta = TypologyMeta(name=...)` | `pangloss_typology` | The name of a typology's generated entity |
 | `_derived_meta = DerivedMeta(...)` | `pangloss_derived` | What a space or wrapper does to a derived relation |
 | `_zotero_meta` | `pangloss_zotero` | Which class a Zotero item becomes |
+| `_rdf_meta = RDFMeta(class_name=..., class_uri=..., exclude=...)` | `pangloss_rdf` | A class in the RDF export. A name is not inherited |
 
 A slot is inherited; a subclass's value replaces its parent's. A value of the wrong type is an error at the class.
 

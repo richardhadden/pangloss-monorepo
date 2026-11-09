@@ -46,6 +46,8 @@ class FieldDefinition:
     )
     db_field: bool = False
     description: str | None = None
+    markers: tuple[Any, ...] = ()
+    """What the field is annotated with that is a `FieldMarker`: not data, and for whoever asks (the interface, an export)"""
 
     @property
     def model_field(self) -> FieldInfo:

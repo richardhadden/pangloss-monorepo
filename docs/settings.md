@@ -51,7 +51,7 @@ Values can also come from environment variables or a `.env` file (`pydantic-sett
 | `REVIEW_ALLOW_SELF_REVIEW` | `True` | `pangloss_review` (optional): whether a user may check a document they created or last edited. See [Review](../guide/review/README.md) |
 | `SLOW_QUERY_MS`, `SLOW_REQUEST_MS` | `int` (`500`, `2000`) | A database transaction, or a request, that takes longer is logged as a warning. See [Logging](logging.md) |
 | `ZOTERO_API_KEY`, `ZOTERO_LIBRARIES`, `ZOTERO_WATCH`, `ZOTERO_SKIP_TYPES`, `ZOTERO_SYNC_USER`, `ZOTERO_API_URL`, `ZOTERO_STREAM_URL` | `pangloss_zotero` (optional; read from the settings if set). See [Zotero](zotero.md#commands-and-settings) |
-| `ENTITY_BASE_URL` | `AnyHttpUrl` | Reserved for entity URL generation ⏳ (nothing reads it) |
+| `ENTITY_BASE_URL` | `AnyHttpUrl` | The start of the URIs of items in an [RDF export](rdf.md); nothing else reads it |
 
 ## Database settings
 

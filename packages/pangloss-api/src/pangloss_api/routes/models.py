@@ -115,6 +115,7 @@ RESERVED_NAMES = {
     "autocomplete",
     "references",
     "search",
+    "rdf",
     "sdk",
     "docs",
     "redoc",

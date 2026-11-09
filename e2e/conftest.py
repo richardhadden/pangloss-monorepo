@@ -379,7 +379,7 @@ def make_project(root: Path) -> Path:
         '"pangloss_memgraph",',
         '"pangloss_memgraph",\n        "pangloss_interface",\n        "pangloss_typology",\n        "pangloss_dates",\n'
         '        "pangloss_calendar",\n        "pangloss_review",\n        "pangloss_library",\n        "pangloss_history",\n'
-        '        "pangloss_derived",\n        "pangloss_zotero",',
+        '        "pangloss_derived",\n        "pangloss_zotero",\n        "pangloss_rdf",',
         1,
     )
     text = text.replace('DB_USERNAME="memgraph"', 'DB_USERNAME="test"')
@@ -490,6 +490,8 @@ def stack(tmp_path_factory) -> Iterator[Stack]:
                 str(BIN / "pangloss"),
                 "interface",
                 "serve",
+                "--api-path",
+                "/entity",
                 "--port",
                 str(port),
                 "--api-url",

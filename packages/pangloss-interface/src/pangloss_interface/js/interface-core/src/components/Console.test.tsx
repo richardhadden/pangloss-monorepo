@@ -182,6 +182,14 @@ test("an item has a link to its JSON in a new tab, for anyone; an edit form and 
   expect(json()).toBeNull();
 });
 
+test("a module whose console action links to the JSON takes the button's place", async () => {
+  const json = () => document.body.querySelector('a[aria-label="View as JSON"]');
+  const module = { name: "m", requires: [], jsonLinkIn: "A", consoleActions: {} } as unknown as ModuleManifest;
+  show(() => undefined, { type: "Place", page: "item", item: { type: "Place", id: "p" } } as never, [module]);
+  await settle();
+  expect(json()).toBeNull();
+});
+
 test("an item in semantic spaces has a cell for each, outermost first, before its type", async () => {
   show(() => demo, {
     type: "Place",

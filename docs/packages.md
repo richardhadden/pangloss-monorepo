@@ -72,6 +72,10 @@ Lets Pangloss models be used locally and read and write a remote Pangloss instan
 - `SdkSettings`, login (settings, prompt, tokens kept in memory, or a kept refresh token: `pangloss-sdk login|logout|status`), `pangloss-sdk update` (installs the SDK the server has now, the way it was installed before), `pangloss-sdk sync-stubs` (type stubs for the blocking SDK), the errors the server's database module raises, and `iterate`.
 - The model tests use `databases/api` as a database module because it needs no live connection.
 
+## pangloss-rdf 🚧
+
+Optional: an RDF export of every document and entity, a button for it, a full dump, an ontology, SHACL shapes and a JSON-LD context made from the models, and mixins for outside ontologies (CIDOC-CRM ships ready-made). See [RDF export](rdf.md).
+
 ## pangloss-review ✅
 
 Optional: documents of the models marked `_review_meta = ReviewMeta(reviewable=True)` are written unpublished, and checked by a user (`unchecked`, `errors_found`, `checked` = published), with comments on the document or a part of it. The core part is the `published` property, which hides a document from requests that are not logged in (like `deleted`). Service, storage, API routes (`/api/review`) and commands are built; a review page in the interface is not. See [Review](review.md) and the [guide](../guide/review/README.md).

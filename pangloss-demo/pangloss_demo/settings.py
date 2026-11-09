@@ -33,6 +33,7 @@ class Settings(BaseSettings[MemgraphDatabaseSettings]):
         "pangloss_history",
         "pangloss_sdk_server",
         "pangloss_zotero",
+        "pangloss_rdf",
     ]
 
     STORAGE: str | None = "pangloss_memgraph:storage"
@@ -53,7 +54,7 @@ class Settings(BaseSettings[MemgraphDatabaseSettings]):
     CALENDAR_LAST_YEAR: int = 830
 
     INTERFACE_LANGUAGES: list[str] = ["en", "de", "fr"]
-    ENTITY_BASE_URL: AnyHttpUrl = AnyHttpUrl("http://localhost:8000/entity/")
+    ENTITY_BASE_URL: AnyHttpUrl = AnyHttpUrl("http://pangloss-demo-rdf.com/entity/")
 
     # (no default: it is read from the environment or `.env`)
     AUTHJWT_SECRET_KEY: str

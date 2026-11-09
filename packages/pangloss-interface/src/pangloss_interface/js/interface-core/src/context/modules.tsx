@@ -38,6 +38,8 @@ interface ModulesValue {
   itemSectionLoaders(): ComponentLoader[];
   /** What the modules add at the right end of each row of a list (`resultMarks`), in the order of the modules */
   resultMarks(): Component<ResultMarkProps>[];
+  /** Whether a console action of a module links to the item's JSON, so that the console need not (`jsonLinkIn`) */
+  jsonLinkTaken(): boolean;
   /** Where a person's name links to, if a module has a page for it (`userHref`) */
   userHref(username: string): string | undefined;
   /** The other ways of showing what refers to an item (`incomingViews`), by name `app:key` (each component lazy) */
@@ -78,6 +80,7 @@ const NONE: ModulesValue = {
   itemSections: () => [],
   itemSectionLoaders: () => [],
   resultMarks: () => [],
+  jsonLinkTaken: () => false,
   userHref: () => undefined,
   incomingViews: () => [],
   preloadItemPage: () => {},
@@ -164,6 +167,9 @@ export function ModulesProvider(props: ParentProps<{ modules: readonly ModuleMan
     resultMarks() {
       marks ??= each((module) => module.resultMarks).map(([, mark]) => mark);
       return marks;
+    },
+    jsonLinkTaken() {
+      return modules.some((module) => module.jsonLinkIn && !disabled.has(`${module.name}:${module.jsonLinkIn}`));
     },
     userHref(username) {
       return modules.find((module) => module.userHref)?.userHref?.(username);
