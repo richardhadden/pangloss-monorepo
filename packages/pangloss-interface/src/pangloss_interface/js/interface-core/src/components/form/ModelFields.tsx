@@ -886,7 +886,10 @@ function RelationItem(props: {
   });
   // (the part the page is to scroll to is inside it: it starts open, however deep)
   const revealed = useRevealed();
-  const holdsRevealed = () => revealed !== null && holdsId(value(), revealed);
+  const holdsRevealed = () => {
+    const id = revealed();
+    return id !== null && holdsId(value(), id);
+  };
   return (
     <Switch fallback={<JsonEditor path={props.path} label={type()} />}>
       <Match when={model()?.kind === "Entity"}>

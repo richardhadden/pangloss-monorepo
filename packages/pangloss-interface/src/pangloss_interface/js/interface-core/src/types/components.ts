@@ -250,6 +250,8 @@ export interface ReferenceChipProps {
 export interface ItemContentsProps {
   /** One Document or Entity as the API sends it: its fields are laid out by its model */
   item: Record<string, unknown>;
+  /** The id of a part of the item that is to be on show: a block that starts folded but has it inside starts open */
+  show?: string;
 }
 
 export interface NavBarProps {

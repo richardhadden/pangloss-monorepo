@@ -132,6 +132,7 @@
   // What the rules derive about an item (pangloss-derived), under its contents
   "no": { "en": "No", "de": "Nein", "fr": "Non" },
   "go_to_head": { "en": "Go to the {type}", "de": "Zum Objekt: {type}", "fr": "Aller à l’objet : {type}" },
+  "contained_in": { "en": "Contained in", "de": "Enthalten in", "fr": "Contenu dans" },
 
   // The login form
   "username": { "en": "Username", "de": "Benutzername", "fr": "Nom d’utilisateur" },

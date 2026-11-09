@@ -167,7 +167,7 @@ export function ItemForm(props: ItemFormProps) {
 
   // (`show` is read once: it is where the page scrolls to when the form first shows)
   return (
-    <RevealProvider value={untrack(() => props.show ?? null)}>
+    <RevealProvider value={() => untrack(() => props.show ?? null)}>
       <ItemFormProvider state={state}>
         <Console
           type={props.type}

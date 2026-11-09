@@ -801,6 +801,7 @@ async def test_save_return_types(db_driver, clear_database):
     assert full.text == "world"
     assert full.meta.created_by == "pangloss_default_user"
     assert full.meta.head_node_type == "Statement"
+    assert full.meta.head_node_label == "Another"
 
 
 # ---------------------------------------------------------------------------

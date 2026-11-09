@@ -1,4 +1,4 @@
-import { createSignal, For, Match, Show, Switch } from "solid-js";
+import { createSignal, For, Match, Show, Switch, untrack } from "solid-js";
 import type { ParentProps } from "solid-js";
 import {
   useComponent,
@@ -22,7 +22,7 @@ import type {
 } from "../types";
 import { Customised } from "./Customised";
 import { IncomingRelations } from "./IncomingRelations";
-import { NestingProvider, startsFolded, useNesting } from "./nesting";
+import { holdsId, NestingProvider, RevealProvider, startsFolded, useNesting, useRevealed } from "./nesting";
 import { SpaceBands } from "./SpaceBands";
 import {
   fieldGridClass,
@@ -310,7 +310,12 @@ function ObjectValue(props: {
   // (a block this deep starts folded, and what it holds is made when it is opened: see `nesting.ts`)
   const nesting = useNesting();
   const deep = startsFolded(nesting);
-  const [open, setOpen] = createSignal(!deep);
+  const revealed = useRevealed();
+  const holdsRevealed = () => {
+    const id = revealed();
+    return id !== null && holdsId(props.value, id);
+  };
+  const [open, setOpen] = createSignal(!deep || untrack(holdsRevealed));
   const onToggle = deep ? () => setOpen(!open()) : undefined;
   // (a part of the item's own document is marked with its id, as in the form, for what points at it: a review comment;
   // not something of another document that refers to it)
@@ -556,7 +561,9 @@ export function ItemContents(props: ItemContentsProps) {
   return (
     // (what the rows of the fields measure themselves by: see `fieldGridClass`)
     <div class="@container w-full min-w-0">
-      <Fields value={props.item} model={model()} depth={0} />
+      <RevealProvider value={() => props.show ?? null}>
+        <Fields value={props.item} model={model()} depth={0} />
+      </RevealProvider>
       <Show when={referable()}>
         {(model) => (
           <IncomingRelations

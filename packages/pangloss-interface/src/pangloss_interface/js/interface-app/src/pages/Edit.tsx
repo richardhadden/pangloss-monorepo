@@ -8,34 +8,12 @@ import {
 } from "@pangloss/interface-core";
 import { useNavigate, useSearchParams } from "@solidjs/router";
 import type { RouteProps } from "@solidjs/router";
-import { createMemo, Errored, Loading, onSettled, refresh, Show, untrack } from "solid-js";
+import { createMemo, Errored, Loading, refresh, Show } from "solid-js";
 import { apiClient } from "../api";
 import { revalidateAll } from "../queries";
 import { useLeaveGuard } from "../leaving";
 import { Page } from "../Page";
-
-// Once the form is on show, scrolls to the document inside it whose id is `id` (the block that has it in
-// `data-item-id`), and lights it up for a moment, so the eye finds it
-function ScrollToNested(props: { id: string | undefined }) {
-  // (read here, not in `onSettled`: reading the address there makes the router's reactive values in a place
-  // that may not have them, which the development build stops at)
-  // (once, on purpose: it is where to scroll to when the form first shows)
-  const id = untrack(() => props.id);
-  onSettled(() => {
-    if (!id) return;
-    // (after the browser has laid the form out)
-    requestAnimationFrame(() => {
-      const block = document.querySelector<HTMLElement>(`[data-item-id="${CSS.escape(id)}"]`);
-      if (!block) return;
-      block.scrollIntoView({ block: "start" });
-      block.animate(
-        [{ backgroundColor: "rgb(253 230 138 / 0.45)" }, { backgroundColor: "transparent" }],
-        { duration: 2000, easing: "ease-out" },
-      );
-    });
-  });
-  return null;
-}
+import { ScrollToNested } from "../ScrollToNested";
 
 // Change an item: /Person/<id>/edit (`?show=<id>`: of a document inside it, to scroll to; its own page's
 // edit button comes here, as such a document is edited only as a part of the one it is in). Only for someone logged in. The form works on a copy of the

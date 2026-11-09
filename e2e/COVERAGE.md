@@ -70,6 +70,7 @@ about her "held court at Ghent") and Charles the Bold (no role); `types` has onl
 | Form: an enum or literal field of 8 values or fewer is pills (a radio group; the chosen one again: none), more is a dropdown | 🚧 | unit test in `ItemForm.test.tsx`; the e2e models have no enum |
 | Form: what is added to a list (Add, a type from the menu, a paste, an entity found) lights up for a moment, and the cursor goes into it (not for an entity found: the search keeps it) | 🚧 | checked with the demo data; no test |
 | Item page: a type of a typology in a field is the same chip as in the form (`TypeCard` uses `DefaultReferenceChip` as a reference) | 🚧 | checked with the demo data |
+| Item page of a document inside another: "Contained in" and a chip to its head with its label, whose page scrolls to the document (`?show=`); the whole item in bands for its context, the bands of documents linking to them | 🚧 | checked with the demo data, built and dev (a Transfer three Orders deep); `contextPath` unit test; the e2e models have no nested documents |
 | Edit button of a document inside another: to the form of its head document (`?show=<id>`), scrolled to its block | 🚧 | checked with the demo data (a Transfer in a Factoid); the e2e models have no nested documents |
 | New item form: fields, an entity found by search, saved and shown | ✅ | |
 | A new entity made from the form (+ beside the search, dialog) is chosen | ✅ | |

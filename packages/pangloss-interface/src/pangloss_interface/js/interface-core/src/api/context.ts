@@ -28,18 +28,26 @@ export function headOf(item: {
 }
 
 /**
- * The full trail round an item, outermost first: for each context label its semantic space (not
- * the `#rootcontext`), then the documents it holds, which are the ones the item is nested in.
- * The item itself (`selfId`) is not a part of the trail.
+ * What is round an item, outermost first: for each context label its semantic space (not the
+ * `#rootcontext`), then the documents it holds, which are the ones the item is nested in. A
+ * document has its `id`, a semantic space none. The item itself (`selfId`) is not a part of it.
  */
+export function contextPath(
+  labels: readonly ContextLabel[] | null | undefined,
+  selfId?: string,
+): { type: string; id?: string }[] {
+  return (labels ?? []).flatMap((label) => [
+    ...(label.type === "#rootcontext" ? [] : [{ type: label.type }]),
+    ...(label.contents ?? [])
+      .filter((entry) => entry.id === undefined || entry.id !== selfId)
+      .map((entry) => ({ type: entry.type, id: entry.id })),
+  ]);
+}
+
+/** The names of what is round an item (`contextPath`) */
 export function contextTrail(
   labels: readonly ContextLabel[] | null | undefined,
   selfId?: string,
 ): string[] {
-  return (labels ?? []).flatMap((label) => [
-    ...(label.type === "#rootcontext" ? [] : [label.type]),
-    ...(label.contents ?? [])
-      .filter((entry) => entry.id === undefined || entry.id !== selfId)
-      .map((entry) => entry.type),
-  ]);
+  return contextPath(labels, selfId).map((entry) => entry.type);
 }

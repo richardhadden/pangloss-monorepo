@@ -1,9 +1,11 @@
 import {
   ApiError,
+  contextPath,
   Customised,
   preload,
   getModel,
   ItemSections,
+  SpaceBands,
   Spinner,
   useComponent,
   useModels,
@@ -29,10 +31,11 @@ import {
   Reveal,
   Show,
 } from "solid-js";
-import { useNavigate } from "@solidjs/router";
+import { useNavigate, useSearchParams } from "@solidjs/router";
 import { isServer } from "@solidjs/web";
 import { itemQuery, revalidateAll } from "../queries";
 import { Page } from "../Page";
+import { ScrollToNested } from "../ScrollToNested";
 
 // An item that is not there for this reader: it does not exist, or (as an unpublished document is to
 // someone who is not logged in) they may not see it. The API says which, but the page does not tell.
@@ -113,6 +116,9 @@ export default function EntityPage(props: RouteProps<"/:type/:id">) {
   const ErrorMessage = useComponent("ErrorMessage");
   const { t } = useTranslations();
   const navigate = useNavigate();
+  const [search] = useSearchParams();
+  // (`?show=<id>`: a document inside this one, to scroll to)
+  const show = () => (typeof search.show === "string" ? search.show : undefined);
   const modules = useModules();
   const item = createMemo(() => {
     // (what the modules add to the page is loaded while the item is read, not once it has come)
@@ -133,6 +139,12 @@ export default function EntityPage(props: RouteProps<"/:type/:id">) {
   }>();
   const definitions = useModels();
   const model = () => getModel(definitions, item().type);
+  const ReferenceChip = useComponent("ReferenceChip");
+  const head = () => headOf(item());
+  // (what the item is inside, as bands round the whole of it; what can be gone to has a link)
+  const path = () => contextPath(item().meta.contextLabels as ContextLabel[] | null | undefined, item().id);
+  const pathHrefs = () =>
+    path().map((entry) => (entry.id ? `/${entry.type}/${encodeURIComponent(entry.id)}` : undefined));
   return (
     <Page>
       {/* (the type is the item's own, which can be a subtype of the one in the address) */}
@@ -186,6 +198,27 @@ export default function EntityPage(props: RouteProps<"/:type/:id">) {
             }}
             fallback={
               <>
+                {/* (a document inside another: the one it is in) */}
+                <Show when={head()}>
+                  {(inside) => (
+                    <div class="mb-7 flex items-center gap-3 pt-1">
+                      <span class="shrink-0 text-xs font-semibold text-slate-500 uppercase select-none">
+                        {t("contained_in", "Contained in")}
+                      </span>
+                      <ReferenceChip
+                        type={inside().type}
+                        label={item().meta.headNodeLabel ?? inside().id}
+                        href={`/${inside().type}/${encodeURIComponent(inside().id)}?show=${encodeURIComponent(item().id)}`}
+                      />
+                    </div>
+                  )}
+                </Show>
+                <SpaceBands
+                  spaces={path().map((entry) => entry.type)}
+                  hrefs={pathHrefs()}
+                  depth={0}
+                  stacked
+                >
                 <h1 class="mb-6 border-b-[0.5px] border-slate-400/70 pt-1 pb-2 text-2xl font-semibold">
                   {item().label ?? item().id}
                 </h1>
@@ -193,9 +226,11 @@ export default function EntityPage(props: RouteProps<"/:type/:id">) {
                     in a boundary of its own: in the order they are on the page, so that a section does not show
                     before what is above it has, and then move down) */}
                 <Reveal>
-                  <ItemContents item={item()} />
+                  <ItemContents item={item()} show={show()} />
                   <ItemSections item={item()} />
                 </Reveal>
+                </SpaceBands>
+                <ScrollToNested id={item() ? show() : undefined} />
               </>
             }
           />

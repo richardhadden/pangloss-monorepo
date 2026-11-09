@@ -43,13 +43,33 @@ export function NavBar(props: NavBarProps) {
   const { t, language, languages, setLanguage } = useTranslations();
   const flag = (code: string) => FLAGS[code] ?? code.toUpperCase();
   const [filter, setFilter] = createSignal("");
-  // The scrollbar of the list is shown only while it is scrolled, and for a moment after
+  // The scrollbar of the list floats over it, so the rows go to the edge of the bar (a native one takes room from them, and
+  // has its own background). It is shown only while the list is scrolled, for a moment after, and while the pointer is on it.
   const [scrolling, setScrolling] = createSignal(false);
+  const [thumb, setThumb] = createSignal({ top: 0, height: 0 });
+  let scroller: HTMLDivElement | undefined;
+  let thumbHeld = false;
+  let dragFrom: { y: number; scrollTop: number } | undefined;
   let scrollTimer: ReturnType<typeof setTimeout> | undefined;
   const showScrollbar = () => {
     setScrolling(true);
     clearTimeout(scrollTimer);
-    scrollTimer = setTimeout(() => setScrolling(false), 800);
+    scrollTimer = setTimeout(() => {
+      if (!thumbHeld) setScrolling(false);
+    }, 800);
+  };
+  const onListScroll = () => {
+    if (!scroller) return;
+    const { scrollTop, scrollHeight, clientHeight } = scroller;
+    const height = Math.max(24, (clientHeight * clientHeight) / scrollHeight);
+    setThumb({ top: (scrollTop / (scrollHeight - clientHeight)) * (clientHeight - height), height });
+    showScrollbar();
+  };
+  const dragThumb = (event: PointerEvent) => {
+    if (!scroller || !dragFrom) return;
+    const { scrollHeight, clientHeight } = scroller;
+    scroller.scrollTop =
+      dragFrom.scrollTop + ((event.clientY - dragFrom.y) * (scrollHeight - clientHeight)) / (clientHeight - thumb().height);
   };
   onCleanup(() => clearTimeout(scrollTimer));
   let nav: HTMLElement | undefined;
@@ -234,27 +254,46 @@ export function NavBar(props: NavBarProps) {
           onFocusChange={setFilterFocused}
           onListKey={(key) => listKey?.(key)}
         />
-        {/* (room at the bottom so that the last item is not under the browser's preview of a hovered link) */}
-        <div
-          onScroll={showScrollbar}
-          class={[
-            "min-h-0 flex-1 overflow-y-auto pb-12 [scrollbar-width:thin]",
-            { "[scrollbar-color:transparent_transparent]": !scrolling() },
-          ]}
-        >
-          <NavModelList
-            loggedIn={props.user !== undefined}
-            filter={filter()}
-            selecting={filterFocused()}
-            keys={(key) => (listKey = key)}
-            onFollow={() => setFilter("")}
-            onNew={(type) => {
-              setFilter("");
-              props.onNavigate?.(`/${type}/new`);
-              setNavExpanded(false);
+        <div class="relative min-h-0 flex-1">
+          {/* (room at the bottom so that the last item is not under the browser's preview of a hovered link) */}
+          <div ref={scroller} onScroll={onListScroll} class="h-full overflow-y-auto pb-12 [scrollbar-width:none]">
+            <NavModelList
+              loggedIn={props.user !== undefined}
+              filter={filter()}
+              selecting={filterFocused()}
+              keys={(key) => (listKey = key)}
+              onFollow={() => setFilter("")}
+              onNew={(type) => {
+                setFilter("");
+                props.onNavigate?.(`/${type}/new`);
+                setNavExpanded(false);
+              }}
+            />
+            {props.children}
+          </div>
+          {/* (wider than what is drawn, to be easier to take hold of) */}
+          <div
+            aria-hidden="true"
+            onPointerEnter={() => (thumbHeld = true)}
+            onPointerLeave={() => {
+              thumbHeld = false;
+              showScrollbar();
             }}
-          />
-          {props.children}
+            onPointerDown={(event) => {
+              event.currentTarget.setPointerCapture(event.pointerId);
+              dragFrom = { y: event.clientY, scrollTop: scroller?.scrollTop ?? 0 };
+            }}
+            onPointerMove={dragThumb}
+            onPointerUp={() => (dragFrom = undefined)}
+            onPointerCancel={() => (dragFrom = undefined)}
+            style={{ top: `${thumb().top}px`, height: `${thumb().height}px` }}
+            class={[
+              "absolute right-0 flex w-2.5 cursor-default touch-none justify-end pr-0.5 transition-opacity duration-150 select-none",
+              { "opacity-0": !scrolling(), "pointer-events-none": !scrolling() },
+            ]}
+          >
+            <div class="h-full w-1 rounded-xs bg-slate-600/45" />
+          </div>
         </div>
       </Show>
     </nav>

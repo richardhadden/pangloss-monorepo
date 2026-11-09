@@ -392,6 +392,7 @@ class _APIHeadMeta(_BaseObject):
     context_labels: list[ContextLabel] | None = None
     head_node_type: str | None = None
     head_node_id: UUID | None = None
+    head_node_label: str | None = None
     # An entity that something refers to cannot be deleted: when someone tried to,
     # it was marked instead
     marked_for_deletion: bool = False

@@ -1,6 +1,6 @@
 import { isSafeError } from "@solidjs/web";
 import { expect, test } from "vitest";
-import { contextTrail, headOf, wrappingSpaces } from "./context";
+import { contextPath, contextTrail, headOf, wrappingSpaces } from "./context";
 import { ApiError, createApiClient, problemsOf, queryString } from "./client";
 import {
   autocomplete,
@@ -227,6 +227,12 @@ test("the trail has the spaces and the documents between them, but not the item 
     ),
   ).toEqual(["Negative", "Order", "Hypothetical"]);
   expect(contextTrail([{ type: "#rootcontext", contents: [{ type: "Order", id: "1" }] }])).toEqual(["Order"]);
+});
+
+test("the path round an item gives the id of each document, and of a space none", () => {
+  expect(
+    contextPath([{ type: "Negative", contents: [{ type: "Order", id: "1" }, { type: "Action", id: "2" }] }], "2"),
+  ).toEqual([{ type: "Negative" }, { type: "Order", id: "1" }]);
 });
 
 test("an item is created by a POST of the body, and updated by a PUT that says which version it is based on", async () => {

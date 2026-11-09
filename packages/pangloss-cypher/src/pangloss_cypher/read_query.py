@@ -103,6 +103,7 @@ def build_fetch_document_query(
             context_labels: {d.meta_property("root", "context_labels")},
             head_node_type: headnode.type,
             head_node_id: headnode.id,
+            head_node_label: headnode.label,
             marked_for_deletion: coalesce(root.marked_for_deletion, false),
             published: coalesce(headnode.published, true),
             review_status: headnode.review_status,
