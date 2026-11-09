@@ -40,6 +40,20 @@ def test_the_arrows_choose_a_result_and_enter_opens_it(page: Page, data):
     page.wait_for_url(f"**{href}")
 
 
+def test_an_item_links_to_its_json_in_a_new_tab(page: Page, data):
+    page.goto("/")
+    hydrated(page)
+    page.get_by_role("searchbox", name="Quick search").fill("Maximilian")
+    page.locator('main li a[href*="/Person/"]', has_text="Maximilian").first.click()
+    page.wait_for_url("**/Person/**")
+    item_id = page.url.rsplit("/", 1)[-1]
+    with page.context.expect_page() as opened:
+        page.get_by_role("link", name="View as JSON").click()
+    opened.value.wait_for_load_state()
+    assert opened.value.url.endswith(f"/api/Person/{item_id}")
+    assert f'"id":"{item_id}"' in opened.value.content()
+
+
 def test_a_type_word_becomes_a_chip_and_backspace_turns_it_back(page: Page, data):
     page.goto("/")
     hydrated(page)

@@ -263,6 +263,24 @@ export function Console(props: ConsoleProps) {
               </Show>
               <ModuleActions item={props.item} page={props.page ?? "item"} />
               {props.children}
+              {/* An item's HeadView as the API gives it, for anyone who can see the item (a new tab: not a page of the interface) */}
+              <Show when={props.page === "item" && props.item}>
+                {(item) => (
+                  <ConsoleButton
+                    label={t("view_json", "View as JSON")}
+                    href={`/api/${encodeURIComponent(item().type)}/${encodeURIComponent(item().id)}`}
+                    newTab
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      class="size-5 select-none fill-none stroke-current stroke-[1.5]"
+                      aria-hidden="true"
+                    >
+                      <path d="M9 4H8a2 2 0 0 0-2 2v4l-2 2 2 2v4a2 2 0 0 0 2 2h1M15 4h1a2 2 0 0 1 2 2v4l2 2-2 2v4a2 2 0 0 1-2 2h-1" />
+                    </svg>
+                  </ConsoleButton>
+                )}
+              </Show>
               {/* An item can be deleted and edited by someone who is logged in */}
               <Loading fallback={null}>
                 <Show when={props.item && props.onDeleted && userIsLoggedIn()}>

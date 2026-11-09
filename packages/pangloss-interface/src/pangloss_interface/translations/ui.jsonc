@@ -212,6 +212,7 @@
   "back": { "en": "Back", "de": "Zurück", "fr": "Retour" },
   "new": { "en": "New", "de": "Neu", "fr": "Nouveau" },
   "edit": { "en": "Edit", "de": "Bearbeiten", "fr": "Modifier" },
+  "view_json": { "en": "View as JSON", "de": "Als JSON anzeigen", "fr": "Afficher en JSON" },
   "open": { "en": "Open", "de": "Öffnen", "fr": "Ouvrir" },
   "remove": { "en": "Remove", "de": "Entfernen", "fr": "Retirer" },
   "console": { "en": "Console", "de": "Konsole", "fr": "Console" },

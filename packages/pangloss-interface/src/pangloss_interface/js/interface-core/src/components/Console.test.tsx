@@ -164,6 +164,24 @@ test("a document that cannot be made on its own (create_directly) has none eithe
   expect(newLink()).toBeNull();
 });
 
+test("an item has a link to its JSON in a new tab, for anyone; an edit form and a list have none", async () => {
+  const json = () => document.body.querySelector<HTMLAnchorElement>('a[aria-label="View as JSON"]');
+  show(() => undefined, { type: "Place", page: "item", item: { type: "Place", id: "p 1" } } as never);
+  await settle();
+  expect(json()?.getAttribute("href")).toBe("/api/Place/p%201");
+  expect(json()?.getAttribute("target")).toBe("_blank");
+  dispose?.();
+  document.body.innerHTML = "";
+  show(() => demo, { type: "Place", page: "edit", item: { type: "Place", id: "p1" } } as never);
+  await settle();
+  expect(json()).toBeNull();
+  dispose?.();
+  document.body.innerHTML = "";
+  show(() => demo, { type: "Place", list: true });
+  await settle();
+  expect(json()).toBeNull();
+});
+
 test("an item in semantic spaces has a cell for each, outermost first, before its type", async () => {
   show(() => demo, {
     type: "Place",

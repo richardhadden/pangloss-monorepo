@@ -70,6 +70,7 @@ about her "held court at Ghent") and Charles the Bold (no role); `types` has onl
 | Server rendering: the first response has the data | ✅ | raw response text; **not** complete without JavaScript (Solid streams it) |
 | Language switch | — | the bar shows the languages but `App.tsx` passes no `onLanguage`: it does nothing yet |
 | Interface translations shown in another language | — | not connected |
+| View as JSON in the console of an item: the API's `HeadView`, in a new tab, for anyone | ✅ | `test_homepage.py`; unit test in `Console.test.tsx` |
 | Edit button in the console of an item: only for someone logged in | ✅ | `test_editing.py`; unit tests in `Console.test.tsx` |
 | Edit item: the form has the item, saves a change and shows the item | ✅ | |
 | Edit item: someone else saved meanwhile (412): nothing is overwritten, the form says so, and "Load the new version" makes it again from the item as it is now | ✅ | `test_an_item_saved_meanwhile_is_not_overwritten_and_the_new_version_can_be_loaded` |
