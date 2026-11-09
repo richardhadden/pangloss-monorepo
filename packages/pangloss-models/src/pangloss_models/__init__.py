@@ -60,6 +60,10 @@ lazy from pangloss_models.protection import (
     Protection,
     protection_of,
 )
+lazy from pangloss_models.usage import (
+    Usage,
+    included_only_when_referenced,
+)
 lazy from pangloss_models.export import export_models
 lazy from pangloss_models.text import fold
 lazy from pangloss_models.exceptions import (
@@ -105,6 +109,7 @@ lazy from pangloss_models.write_checks import (
 
 from pangloss_models import hooks
 from pangloss_models import protection  # (registers the `_protect_meta` slot)
+from pangloss_models import usage  # (registers the `_usage_meta` slot)
 from pangloss_models.model_registry import ModelRegistry
 from pangloss_models.server_only import server_only
 
@@ -177,7 +182,10 @@ __all__ = [
     "create_validator",
     "update_validator",
     "Protection",
+    "Usage",
+    "included_only_when_referenced",
     "protection",
+    "usage",
     "protection_of",
     "register_meta_slot",
     "ReifiedRelation",

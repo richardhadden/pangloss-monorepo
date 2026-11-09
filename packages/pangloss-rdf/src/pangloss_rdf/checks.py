@@ -6,11 +6,12 @@ from pangloss_models.field_definitions import (
     ListFieldDefinition,
     RelationFieldDefinition,
 )
+from pangloss_models import Entity
 from pangloss_models.exceptions import PanglossMetaError
 
 from pangloss_rdf.convert import MIXIN_URI
 from pangloss_rdf.fields import rdf_field
-from pangloss_rdf.meta import declared_class
+from pangloss_rdf.meta import SLOT, RDFMeta, declared_class
 from pangloss_rdf.ontology import _option_class, exported_models, own_fields
 from pangloss_rdf.uris import base_url
 
@@ -20,9 +21,18 @@ def _outside_uris(model: type) -> set[str]:
 
 
 def check_markers() -> None:
-    """Raise for an `RDFField` that cannot do what it says"""
+    """Raise for an `RDFField` or `RDFMeta` that cannot do what it says"""
     problems = []
     for model in exported_models():
+        meta = getattr(declared_class(model), SLOT, None)
+        if (
+            isinstance(meta, RDFMeta)
+            and meta.dump == "used"
+            and not issubclass(model, Entity)
+        ):
+            raise PanglossMetaError(
+                f"RDFMeta: {model.__name__}: dump='used' is for an Entity"
+            )
         for name, definition in own_fields(model):
             marker = rdf_field(definition)
             if (

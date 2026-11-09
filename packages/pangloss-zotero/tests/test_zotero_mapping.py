@@ -1,7 +1,7 @@
 """Which class a Zotero item type is written as: declared, never guessed"""
 
 import pytest
-from pangloss_models import PanglossMetaError
+from pangloss_models import PanglossMetaError, included_only_when_referenced
 from pangloss_zotero import ZoteroBacked, ZoteroItemType, ZoteroMeta, ZoteroObject
 from pangloss_zotero.mapping import accepts, build_table
 
@@ -160,3 +160,12 @@ def test_the_override_of_the_type_is_on_the_forms_only_of_a_class_that_names_typ
     assert hidden(ZoteroObject) == ["item_type_override"]
     # (a person says what an item is where the class asks: "an Atlas cannot be a Zotero letter")
     assert hidden(Atlas) is None
+
+
+def test_what_the_sync_fills_matters_only_where_it_is_cited_and_what_is_made_by_hand_always():
+    class ByHand(ZoteroBacked):
+        pass
+
+    assert included_only_when_referenced(ZoteroBacked)
+    assert included_only_when_referenced(ZoteroObject)
+    assert not included_only_when_referenced(ByHand)

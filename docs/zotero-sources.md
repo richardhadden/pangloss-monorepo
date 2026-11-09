@@ -293,8 +293,10 @@ when it was synced, then what any item page has, without the fields the sync wri
 
 The list of the classes the sync fills (`ZoteroBacked`, the fallback, a class with `_zotero_meta`) shows at first only the
 items that something refers to, with *Show all* / *Show used* beside the search (`?all=1`) and a bubble with how many things
-refer to each: `InterfaceMeta(list_used_only=...)`, which is general, over `used_only` and `use_counts` of `Model.list`,
-`Model.search` and their routes. A class only made by hand (the demo's `Book`) is not affected.
+refer to each. `ZoteroBacked` says so with `Usage(include_only_when_referenced=...)`, which is general and which
+`InterfaceMeta(list_used_only=...)` follows unless it is set, over `used_only` and `use_counts` of `Model.list`,
+`Model.search` and their routes. The RDF dump follows it too, with no knowledge of Zotero. A class only made by hand
+(the demo's `Book`) is not affected.
 
 Measured 2026-11-09 (Memgraph, 691k nodes, 18,571 items of which 7,117 used): the filter and all the counts of the class
 90 ms, the counts of a page of 50 items 9 ms. It grows with the number of items and of their edges.

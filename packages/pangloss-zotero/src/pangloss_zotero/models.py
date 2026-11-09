@@ -11,7 +11,7 @@ which writes through Python. See docs/zotero-sources.md.
 
 import datetime
 
-from pangloss_models import Entity, Protection
+from pangloss_models import Entity, Protection, Usage
 
 from pangloss_zotero.item_types import SLOT, ZoteroMeta
 
@@ -44,10 +44,10 @@ def _override_unless_typed(model: type) -> tuple[str, ...]:
     return () if meta is not None and meta.item_types else ("item_type_override",)
 
 
-def _only_used_at_first(model: type) -> bool:
-    """A list of what the sync brings in is mostly of what nothing cites yet: those classes (the fallback, and any that
-    claim item types), and the list of every item, show what is used at first. A class that is only made by hand (no
-    Zotero types: the demo's Book) lists what people made"""
+def _only_cited_items_matter(model: type) -> bool:
+    """Most of what the sync brings in is what nothing cites: those classes (the fallback, and any that claim item
+    types), and the base of them all, are of interest where they are used. A class that is only made by hand (no Zotero
+    types: the demo's Book) is made because someone wanted it"""
     return model.__name__ == "ZoteroBacked" or getattr(model, SLOT, None) is not None
 
 
@@ -61,7 +61,6 @@ def interface_meta() -> dict:
         "_interface_meta": InterfaceMeta(
             hide_on_forms=_override_unless_typed,
             item_page="pangloss_zotero:ZoteroItemPage",
-            list_used_only=_only_used_at_first,
         )
     }
 
@@ -77,6 +76,7 @@ class ZoteroBacked(Entity):
         read_only=(*OWNED_FIELDS, "removed_from_zotero"),
         delete_only_if="removed_from_zotero",
     )
+    _usage_meta = Usage(include_only_when_referenced=_only_cited_items_matter)
     locals().update(interface_meta())
 
     # where it is from

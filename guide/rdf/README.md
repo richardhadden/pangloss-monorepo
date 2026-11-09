@@ -205,10 +205,15 @@ pangloss rdf dump -o data.nq.gz                     # N-Quads, compressed becaus
 pangloss rdf dump -o data.trig --format trig
 pangloss rdf dump -o people.nq --types Person,Group
 pangloss rdf dump -o all.nq --include-unpublished   # what a reader who is not logged in cannot see, too
+pangloss rdf dump -o all.nq --include-unused        # also the items of a class dumped only where they are used
 ```
 
 By default a dump has only what a reader who is not logged in can see. Each head is read once. An entity has no
 `core:referencedBy` in a dump, since the documents are all in the file.
+
+Some entities are brought in by the thousand and matter only where something refers to them: a Zotero library is the
+example. Such a class says `_usage_meta = Usage(include_only_when_referenced=True)`, and a dump has only the items that
+something refers to. The address of an item left out still works.
 
 ## The ontology, shapes and context
 
@@ -255,6 +260,7 @@ class Person(Entity):
 | `class_name` | The name in the class's URI and its items' URIs. **Not inherited**, or a subclass would have its parent's URI |
 | `class_uri` | A whole URI, to use an outside class as this class itself |
 | `exclude=True` | The class is not exported, nor any relation to it. Inherited |
+| `dump="all"` or `"used"` | For an Entity: a dump has every item, or only those something refers to, whatever the class's `Usage` says. Inherited |
 
 `RDFField` takes:
 

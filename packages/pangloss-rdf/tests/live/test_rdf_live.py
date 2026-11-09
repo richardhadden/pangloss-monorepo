@@ -21,6 +21,7 @@ from pangloss_models import (
     RelationConfig,
     SemanticSpace,
     Trait,
+    Usage,
     ViaEdge,
     initialise,
 )
@@ -458,6 +459,81 @@ async def test_the_dump_has_each_head_once(world, tmp_path):
     person = item_uri(m.Person, data.person.id).value
     assert f"<{person}> ." in text
     assert "referencedBy" not in text
+
+
+def harvested_models():
+    class Harvested(Entity):
+        _usage_meta = Usage(include_only_when_referenced=True)
+
+    class Everything(Harvested):
+        _rdf_meta = RDFMeta(dump="all")
+
+    class Note(Document):
+        cites: list[Harvested]
+
+    initialise()
+    return Harvested, Everything, Note
+
+
+async def make_harvested():
+    Harvested, Everything, Note = harvested_models()
+    cited = await Harvested(label="cited").save()
+    unused = await Harvested(label="unused").save()
+    kept = await Everything(label="kept").save()
+    note = await Note(
+        label="note", cites=[{"type": "Harvested", "id": str(cited.id)}]
+    ).save()
+    return SimpleNamespace(
+        Harvested=Harvested,
+        Everything=Everything,
+        Note=Note,
+        cited=cited,
+        unused=unused,
+        kept=kept,
+        note=note,
+    )
+
+
+async def dumped(path, **options):
+    await dump(path, **options)
+    return path.read_text()
+
+
+async def test_a_class_that_include_only_when_referenced_is_dumped_where_it_is_used(
+    clear_database, tmp_path
+):
+    h = await make_harvested()
+    text = await dumped(tmp_path / "data.nq")
+    assert f"<{item_uri(h.Harvested, h.cited.id).value}> ." in text
+    assert item_uri(h.Harvested, h.unused.id).value not in text
+    # (the project has the last word)
+    assert f"<{item_uri(h.Everything, h.kept.id).value}> ." in text
+
+
+async def test_the_dump_can_be_told_to_have_what_is_unused(clear_database, tmp_path):
+    h = await make_harvested()
+    text = await dumped(tmp_path / "data.nq", include_unused=True)
+    assert f"<{item_uri(h.Harvested, h.unused.id).value}> ." in text
+
+
+async def test_an_item_left_out_of_the_dump_still_has_its_export(clear_database):
+    h = await make_harvested()
+    assert await item_quads(h.Harvested, h.unused.id) is not None
+
+
+async def test_what_only_an_unpublished_document_cites_is_only_in_a_dump_of_those(
+    clear_database, db_driver, backend_under_test, tmp_path
+):
+    h = await make_harvested()
+    db_driver.execute_query(
+        "MATCH (n {id: $id}) SET n.published = false",
+        id=str(h.note.id),
+        database_=backend_under_test.database,
+    )
+    cited = item_uri(h.Harvested, h.cited.id).value
+    assert cited not in await dumped(tmp_path / "public.nq")
+    assert cited in await dumped(tmp_path / "all.nq", include_unpublished=True)
+    see_unpublished.set(True)
 
 
 async def test_excluding_a_class(clear_database):

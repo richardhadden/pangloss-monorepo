@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Literal, get_args
 
-from pangloss_models import PanglossMetaError
+from pangloss_models import Entity, PanglossMetaError, included_only_when_referenced
 
 # The base colours of Tailwind, except black and white. (The interface has the same list in
 # `interface-core/src/types/models.ts`; a test holds the two together.)
@@ -173,7 +173,8 @@ class InterfaceMeta:
     # a package whose fields matter to some of the classes built on its base. `()` turns off the parent's
     hide_on_forms: Sequence[str] | Callable[[type], Iterable[str]] | None = None
     # (an Entity only) The list page of the type shows, at first, only the items that something refers to, with a button
-    # beside the search for all of them, and each item says how many things refer to it. True, False to turn off
+    # beside the search for all of them, and each item says how many things refer to it. Unset, what the class's
+    # `Usage(include_only_when_referenced=...)` says. True, False to turn off
     # the parent's, or a function of the class (a subclass's own, when it is exported)
     list_used_only: bool | Callable[[type], bool] | None = None
 
@@ -281,7 +282,8 @@ def resolved_meta(model: type) -> dict[str, Any] | None:
         # (a slot that is not in `__dict__`, as an older class has it)
         meta = getattr(model, "_interface_meta", None)
         metas = [meta] if isinstance(meta, InterfaceMeta) else []
-    if not metas:
+    usage = issubclass(model, Entity) and included_only_when_referenced(model)
+    if not metas and not usage:
         return None
     resolved: dict[str, Any] = {
         "colour": next((m.colour for m in metas if m.colour is not None), None),
@@ -310,6 +312,8 @@ def resolved_meta(model: type) -> dict[str, Any] | None:
     names = list(hidden(model) if callable(hidden) else hidden or [])
     resolved["hideOnForms"] = names or None
     used = next((m.list_used_only for m in metas if m.list_used_only is not None), None)
+    # (what the class says of itself, unless the interface was told otherwise)
+    used = usage if used is None else used
     resolved["listUsedOnly"] = (
         True if (used(model) if callable(used) else used) else None
     )

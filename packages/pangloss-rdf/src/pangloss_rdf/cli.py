@@ -80,6 +80,10 @@ def dump(
     include_unpublished: Annotated[
         bool, typer.Option(help="Also what a reader who is not logged in cannot see")
     ] = False,
+    include_unused: Annotated[
+        bool,
+        typer.Option(help="Also the items of a class dumped only where they are used"),
+    ] = False,
 ) -> None:
     """Write every document and entity to a file"""
     from pangloss_rdf.dump import dump as run_dump
@@ -96,6 +100,7 @@ def dump(
                 format,
                 types.split(",") if types else None,
                 include_unpublished,
+                include_unused,
             )
         finally:
             await backend.disconnect()

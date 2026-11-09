@@ -171,6 +171,10 @@ A type checker does not know `_interface_meta` exists on `Entity`. Two ways, bot
   exporter writing a slot into `models.ts`. Instances do not see the slot differently from the class (tested: they
   read the class attribute).
 
+### Usage: a slot of the models' own
+
+`pangloss_models/usage.py` registers `_usage_meta = Usage(include_only_when_referenced=True | False | function of the class)`, read with `included_only_when_referenced(model)`. It is for entities brought in by the thousand, most of which nothing refers to (a Zotero library). It says something about the data and does nothing itself, so the package that brings the data in need not know who reads it. Today the interface's list pages (`list_used_only` takes it as its default) and the RDF dump do. It is inherited, `False` turns off a parent's, and a Document that says it is refused at `initialise()`.
+
 ### Protection: a slot of the models' own
 
 `pangloss_models/protection.py` registers `_protect_meta = Protection(read_only=(...), delete_only_if="...",

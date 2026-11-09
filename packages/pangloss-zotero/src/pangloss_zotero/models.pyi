@@ -12,14 +12,14 @@ import typing
 import uuid
 
 import datetime
-from pangloss_models import Entity, Protection
+from pangloss_models import Entity, Protection, Usage
 from pangloss_zotero.item_types import SLOT, ZoteroMeta
 OWNED_FIELDS = ...
 
 def _override_unless_typed(model: type) -> tuple[str, ...]:
     ...
 
-def _only_used_at_first(model: type) -> bool:
+def _only_cited_items_matter(model: type) -> bool:
     ...
 
 def interface_meta() -> dict:
@@ -28,6 +28,7 @@ def interface_meta() -> dict:
 class ZoteroBacked(Entity):
     _meta = ...
     _protect_meta = ...
+    _usage_meta = ...
     zotero_url: str | None = None
     zotero_library: str | None = None
     zotero_key: str | None = None

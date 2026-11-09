@@ -50,9 +50,13 @@ All optional but `ENTITY_BASE_URL`, which every project has.
 
 **These requests must reach the API.** Where the interface's server is in front, `pangloss interface serve --api-path /entity` passes them on (the development server reads `PANGLOSS_API_PATHS=/entity`). `ENTITY_BASE_URL` therefore needs a path of its own: `pangloss rdf check` warns of one at the root of the site, which is the interface's.
 
+## What a dump leaves out ✅
+
+An entity class with `Usage(include_only_when_referenced=...)` ([meta slots](meta-slots.md)) is dumped only where something the reader can see refers to it. `RDFMeta(dump="all" | "used")` on the class overrules that, and `--include-unused` overrules both. This is the dump only: the URI of an item left out still resolves. An item that only another left-out item refers to is still dumped, as it counts as used. A dump reads the filter once for each page of 200; the filter measured 90 ms for 18,571 items (2026-11-09, [Zotero](zotero-sources.md)), and a whole dump with it has not been measured.
+
 ## Commands ✅
 
-`pangloss rdf check`, `ontology [--shapes] [--context]`, `dump -o FILE[.gz] [--format nq|trig] [--types A,B] [--include-unpublished]`, `generate-ontology FILE --prefix crm [--title NAME] --out MODULE.py`.
+`pangloss rdf check`, `ontology [--shapes] [--context]`, `dump -o FILE[.gz] [--format nq|trig] [--types A,B] [--include-unpublished] [--include-unused]`, `generate-ontology FILE --prefix crm [--title NAME] --out MODULE.py`.
 
 ## A package's own RDF ✅
 

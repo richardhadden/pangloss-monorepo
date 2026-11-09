@@ -6,6 +6,7 @@ from pangloss_interface.meta import export_definitions
 from pangloss_core import ClientSettings
 from pangloss_core import settings as core_settings
 from pangloss_models import (
+    Usage,
     Conjunction,
     Document,
     Entity,
@@ -430,6 +431,24 @@ def test_list_used_only_is_for_entities_and_may_depend_on_the_class(clear_regist
     assert models["Synced"]["interfaceMeta"]["listUsedOnly"] is True
     assert models["Handmade"]["interfaceMeta"]["listUsedOnly"] is None
     assert models["TurnedOff"]["interfaceMeta"]["listUsedOnly"] is None
+
+
+@no_type_check
+def test_list_used_only_follows_what_the_class_says_of_itself(clear_registry):
+    class Harvested(Entity):
+        _usage_meta = Usage(include_only_when_referenced=True)
+
+    class ShownInFull(Harvested):
+        _interface_meta = InterfaceMeta(list_used_only=False)
+
+    class Person(Entity):
+        pass
+
+    initialise()
+    models = export_definitions()["models"]
+    assert models["Harvested"]["interfaceMeta"]["listUsedOnly"] is True
+    assert models["ShownInFull"]["interfaceMeta"]["listUsedOnly"] is None
+    assert models["Person"]["interfaceMeta"] is None
 
 
 @no_type_check

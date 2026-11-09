@@ -60,6 +60,7 @@ lazy from pangloss_models.initialise_models.initialise_update_model import (
     initialise_update_model,
 )
 lazy from pangloss_models.search_where import initialise_where_models
+lazy from pangloss_models.usage import check_usage
 lazy from pangloss_models.initialise_models.initialise_view_model import (
     add_fields_to_view_model,
     can_have_view_model,
@@ -417,6 +418,7 @@ class ModelRegistry:
             with reported(model):
                 model.model_rebuild(force=True, _types_namespace=namespace)
         stop_if_refused()
+        check_usage(list(cls._models))
 
         cls._initialise_models()
         logger.debug("Models initialised")
