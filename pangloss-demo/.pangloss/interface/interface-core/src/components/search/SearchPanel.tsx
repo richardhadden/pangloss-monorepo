@@ -992,7 +992,7 @@ function IncomingRow(props: { type: string; path: Accessor<Path> }) {
           form.set([...props.path(), entries().length], { field: chosen.field, node: { type: chosen.model } });
         }}
       >
-        <option value="">{`+ ${t("search_add_referring", "Add what refers to it")}`}</option>
+        <option value="" textContent={`+ ${t("search_add_referring", "Add what refers to it")}`} />
         <For each={sources()}>
           {(source, index) => <option value={String(index())}>{sourceName(source)}</option>}
         </For>
@@ -1047,8 +1047,13 @@ function AddSelect(props: { label: string; options: { value: string; name: strin
         if (chosen) props.onChoose(chosen);
       }}
     >
-      <option value="">{`+ ${props.label}`}</option>
-      <For each={props.options}>{(option) => <option value={option.value}>{option.name}</option>}</For>
+      {/* (the text as a property, not a child: a child that is an expression, in an option that others follow,
+          is counted by the browser and not by the server, and the options after it were not taken over) */}
+      <option value="" textContent={`+ ${props.label}`} />
+      {/* (by their values: the options are made anew each time one is chosen, and each would be a new row) */}
+      <For each={props.options} keyed={(option) => option.value}>
+        {(option) => <option value={option().value}>{option().name}</option>}
+      </For>
     </select>
   );
 }
@@ -1299,7 +1304,7 @@ function SavedSearches(props: { type: string; current: () => NodeSearch; onLoad:
             if (found) props.onLoad(structuredClone(found.form));
           }}
         >
-          <option value="">{t("search_saved_placeholder", "Saved searches…")}</option>
+          <option value="" textContent={t("search_saved_placeholder", "Saved searches…")} />
           <For each={all()}>
             {(each) => (
               <option value={each.name} selected={chosen() === each.name}>
@@ -1364,3 +1369,5 @@ function SavedSearches(props: { type: string; current: () => NodeSearch; onLoad:
     </div>
   );
 }
+
+export default SearchPanel;

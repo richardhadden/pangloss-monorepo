@@ -1,4 +1,5 @@
 import {
+  canBeSearched,
   Customised,
   SearchPanel,
   decodeSearchForm,
@@ -7,12 +8,14 @@ import {
   useComponent,
   getModel,
   useModels,
+  useStash,
   useTranslations,
   headOf,
   wrappingSpaces,
+  Spinner,
 } from "@pangloss/interface-core";
 import type { Page as ListPage, Summary } from "@pangloss/interface-core";
-import { useSearchParams } from "@solidjs/router";
+import { useNavigate, useSearchParams } from "@solidjs/router";
 import type { RouteProps } from "@solidjs/router";
 import {
   createEffect,
@@ -26,8 +29,11 @@ import {
   Show,
   untrack,
 } from "solid-js";
-import { LIST_PAGE_SIZE, listQuery, pageOf, searchOf, startOf, requestOf } from "../queries";
+import { LIST_PAGE_SIZE, listQuery, pageOf, searchOf, startOf, requestOf, usesOf } from "../queries";
+import type { ListUses } from "../queries";
 import { Page } from "../Page";
+
+type ListKey = (key: "next" | "previous" | "open") => void;
 
 // The list of a type of Document or Entity: /Person
 export default function EntityList(props: RouteProps<"/:type">) {
@@ -35,6 +41,12 @@ export default function EntityList(props: RouteProps<"/:type">) {
   const definitions = useModels();
   const model = () => getModel(definitions, props.params.type);
   const [search, setSearch] = useSearchParams();
+  // (the stashed items of this type, and of its types, are shown beside the clipboard while the page is about it)
+  const stash = useStash();
+  createEffect(
+    () => props.params.type,
+    (type) => stash?.showFor(type),
+  );
   return (
     <Customised
       slot="listPage"
@@ -96,13 +108,31 @@ function ListOfItems(props: RouteProps<"/:type">) {
   // (the pattern and order of the search form, with the words typed; "" while the form has neither)
   const request = () => requestOf(props.params.type, form(), text());
   const structured = () => request() !== "";
+  // (`InterfaceMeta(list_used_only=...)`: only what something refers to, unless the address has `?all=1`)
+  const uses = () => usesOf(definitions, props.params.type, searchOf(search).all);
+  const toggleUsed = () => {
+    position = 0;
+    setSearch({ all: uses() === "used" ? "1" : null, at: null }, { replace: true });
+  };
   // (a deep search is not made with the form)
   const deep = () => searchOf(search).deep && !structured();
-  // The search form: there if the type has a search pattern; open at first if the address has one
-  const searchable = () => definitions.searchPatterns?.[props.params.type] !== undefined;
+  // The search form: there if the type has a search pattern, and a search for it can find anything (not a
+  // document that is only ever part of another); open at first if the address has one
+  const searchable = () =>
+    definitions.searchPatterns?.[props.params.type] !== undefined && canBeSearched(definitions, props.params.type);
   const [formOpen, setFormOpen] = createSignal(
     untrack(() => decodeSearchForm(form(), props.params.type) !== undefined),
   );
+  // (its code is fetched the first time it is opened, and only then does it slide open, as it would have been there)
+  const [panelWanted, setPanelWanted] = createSignal(untrack(formOpen));
+  const [panelOpen, setPanelOpen] = createSignal(untrack(formOpen));
+  createEffect(formOpen, (open) => {
+    if (!open) return void setPanelOpen(false);
+    setPanelWanted(true);
+    void (SearchPanel as unknown as { preload: () => Promise<unknown> })
+      .preload()
+      .then(() => requestAnimationFrame(() => setPanelOpen(untrack(formOpen))));
+  });
   const toggleForm = () => {
     const opening = !formOpen();
     setFormOpen(opening);
@@ -125,13 +155,16 @@ function ListOfItems(props: RouteProps<"/:type">) {
   // (an async memo: what reads `first()` waits for it, inside the `Loading`; the arguments
   // are read before the query is called, so a change of them runs it again)
   const first = createMemo(async () => {
-    const asked = { type: props.params.type, q: text(), deep: deep(), form: form(), request: request() };
+    const asked = { type: props.params.type, q: text(), deep: deep(), form: form(), request: request(), uses: uses() };
     const start = position;
-    const page = await listQuery(asked.type, asked.q, asked.deep, asked.request, pageOf(start));
+    const page = await listQuery(asked.type, asked.q, asked.deep, asked.request, pageOf(start), asked.uses);
     return { ...asked, start, page };
   });
   // (true while a change of the search is being answered, the old results still on show)
   const pending = () => isPending(first);
+  // (the search box has the keyboard: the list on show answers its arrows and Enter, and shows what is selected while it has)
+  const [searchFocused, setSearchFocused] = createSignal(false);
+  let listKey: ListKey | undefined;
   return (
     <Page>
       <Console
@@ -149,15 +182,21 @@ function ListOfItems(props: RouteProps<"/:type">) {
         pending={pending()}
         onToggleForm={searchable() ? toggleForm : undefined}
         formOpen={formOpen()}
+        onToggleUsed={uses() === "none" ? undefined : toggleUsed}
+        showingAll={uses() === "all"}
         structured={structured()}
+        onListKey={(key) => listKey?.(key)}
+        onFocusChange={setSearchFocused}
       />
       <Show when={searchable()}>
+       <Show when={panelWanted()}>
+        <Loading>
         <Show when={panel()} keyed>
           {(_panel) => (
             <SearchPanel
               type={props.params.type}
               initial={untrack(() => decodeSearchForm(form(), props.params.type))}
-              open={formOpen()}
+              open={panelOpen()}
               onClose={() => setFormOpen(false)}
               onChange={(changed) => {
                 askedForm = encodeSearchForm(changed) ?? "";
@@ -167,13 +206,21 @@ function ListOfItems(props: RouteProps<"/:type">) {
             />
           )}
         </Show>
+        </Loading>
+       </Show>
       </Show>
       <Errored fallback={(error) => <ErrorMessage error={error()} />}>
-        <Loading fallback={<p>{t("loading", "Loading…")}</p>}>
+        <Loading fallback={<p class="mx-6 pt-2 text-slate-500"><Spinner class="size-5" /></p>}>
           {/* (a new list for each answer: what was fetched of the last one is not this one) */}
           <Show when={first()} keyed>
             {(answer) => (
-              <Results {...answer} pending={pending()} onScrolled={(at) => (position = at)} />
+              <Results
+                {...answer}
+                pending={pending()}
+                onScrolled={(at) => (position = at)}
+                showSelected={searchFocused()}
+                keys={(answerKey) => (listKey = answerKey)}
+              />
             )}
           </Show>
         </Loading>
@@ -190,6 +237,11 @@ const BAR_HEIGHT = 48;
 // (how long scrolling has to stop for before where the list is is written in the address)
 const SAVE_POSITION_MS = 300;
 
+/** The items of a page, each with how many things refer to it, where that was asked for */
+function counted(page: ListPage<Summary>) {
+  return page.results.map((item) => ({ ...item, useCount: page.useCounts?.[item.id] }));
+}
+
 /**
  * The items of a list, as many as there are, of which only those on show are rendered, and
  * asked for, a page at a time, when they come on show (`start` is the item the list was last
@@ -203,18 +255,25 @@ function Results(props: {
   /** The search form, as in the address, and the request it stands for */
   form: string;
   request: string;
+  /** Whether what is used is asked for, and how much is said of it */
+  uses: ListUses;
   start: number;
   page: ListPage<Summary>;
   pending: boolean;
   /** Where it has been scrolled to: the first item on show */
   onScrolled: (at: number) => void;
+  /** Whether to show which item is selected: while the keyboard is choosing */
+  showSelected: boolean;
+  /** Given what answers the keys of the search box */
+  keys: (key: ListKey) => void;
 }) {
   const ResultButton = useComponent("ResultButton");
   const { t } = useTranslations();
+  const navigate = useNavigate();
   // (what the list was made from, read once: a new answer is a new list)
-  const { type, q, deep, form, request, start, page } = untrack(() => ({ ...props }));
+  const { type, q, deep, form, request, uses, start, page } = untrack(() => ({ ...props }));
   // The pages fetched so far, by number
-  const [pages, setPages] = createSignal(new Map([[page.page, page.results]]));
+  const [pages, setPages] = createSignal(new Map([[page.page, counted(page)]]));
   const asked = new Set([page.page]);
   const virtual = createWindowVirtualizer({
     count: () => page.count,
@@ -227,6 +286,19 @@ function Results(props: {
   const itemAt = (index: number) =>
     pages().get(pageOf(index))?.[index % LIST_PAGE_SIZE];
 
+  // The item the search box's keys are on: the first of each new list, which is a new `Results`
+  const [selected, setSelected] = createSignal(start);
+  untrack(() => props.keys)((key) => {
+    if (key === "open") {
+      const item = itemAt(selected());
+      if (item) navigate(`/${item.type}/${item.id}`);
+      return;
+    }
+    const next = Math.max(0, Math.min(page.count - 1, selected() + (key === "next" ? 1 : -1)));
+    setSelected(next);
+    virtual.scrollToIndex(next, "auto");
+  });
+
   // Ask for the pages of what is on show that are not here yet
   createEffect(
     () => [...new Set(virtual.items().map((row) => pageOf(row.index)))],
@@ -234,8 +306,8 @@ function Results(props: {
       for (const number of needed) {
         if (asked.has(number)) continue;
         asked.add(number);
-        listQuery(type, q, deep, request, number).then(
-          (fetched) => setPages((old) => new Map(old).set(number, fetched.results)),
+        listQuery(type, q, deep, request, number, uses).then(
+          (fetched) => setPages((old) => new Map(old).set(number, counted(fetched))),
           // (asked again when it next comes on show)
           () => asked.delete(number),
         );
@@ -253,7 +325,13 @@ function Results(props: {
       const url = new URL(window.location.href);
       // (not if the address is already that of another search: this list is on its way out)
       const params = searchOf(Object.fromEntries(url.searchParams));
-      if (params.q !== q || (params.deep && !request) !== deep || params.form !== form) return;
+      if (
+        params.q !== q ||
+        (params.deep && !request) !== deep ||
+        params.form !== form ||
+        (uses !== "none" && params.all !== (uses === "all"))
+      )
+        return;
       const at = virtual.firstVisible();
       props.onScrolled(at);
       if (at > 0) url.searchParams.set("at", String(at));
@@ -298,6 +376,9 @@ function Results(props: {
                   label={item().label}
                   spaces={wrappingSpaces(item().meta?.contextLabels)}
                   head={headOf(item())}
+                  selected={props.showSelected && selected() === row().index}
+                  useCount={item().useCount}
+                  item={item() as unknown as Record<string, unknown>}
                 />
               )}
             </Show>

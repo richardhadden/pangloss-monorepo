@@ -50,6 +50,8 @@ export interface Summary {
     /** (of an item that is inside another document: the document it is in) */
     headNodeType?: string | null;
     headNodeId?: string | null;
+    /** (of a document that is reviewed, or inside one: the status of the head) */
+    reviewStatus?: string | null;
   };
 }
 

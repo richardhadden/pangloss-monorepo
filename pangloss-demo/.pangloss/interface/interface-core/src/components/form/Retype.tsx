@@ -1,6 +1,6 @@
 import { createMemo, createSignal, For, Show } from "solid-js";
 import { useComponent, useModels, useTranslations } from "../../context";
-import { menuGroups, narrowerTypes, retype, widerTypes } from "../../schema";
+import { menuGroups, narrowingChoices, retype, widerTypes } from "../../schema";
 import type { FormData, LostField } from "../../schema";
 import type { RelationOption } from "../../types";
 import { TypeMenu } from "./TypeMenu";
@@ -13,8 +13,11 @@ const typeOptions = (types: string[]): RelationOption[] =>
  * The buttons of a document inside another that change its type: to one below it (narrow, ↧) or
  * above it (widen, ↥), among those that the field it is in allows; with one to go to the button does
  * it, with several it opens a menu of them. What it holds goes to the fields of the new type
- * (`retype`); if some of it would be lost, a dialog says what and asks first. Neither button is
- * there when there is no type to go to.
+ * (`retype`). A narrowing never loses anything: a type below that has no room for what is filled in
+ * (an artwork, where only a painting can go) is in the menu, greyed, saying what it would lose, and
+ * cannot be chosen until that is changed. A widening that would lose something (a field only the
+ * narrower type has) asks first, in a dialog that says what. Neither button is there when there is
+ * no type to go to.
  */
 export function RetypeButtons(props: {
   type: string;
@@ -29,8 +32,24 @@ export function RetypeButtons(props: {
   const definitions = useModels();
   const Modal = useComponent("Modal");
   const { t, modelName, fieldName } = useTranslations();
-  const narrower = createMemo(() =>
-    menuGroups(definitions, typeOptions(narrowerTypes(definitions, props.type, props.options))),
+  const narrowings = createMemo(() =>
+    narrowingChoices(definitions, props.value() ?? { type: props.type }, props.options),
+  );
+  const narrower = createMemo(() => menuGroups(definitions, typeOptions(narrowings().map((choice) => choice.type))));
+  const lostName = (lost: LostField) =>
+    lost.edgeProperties
+      ? t("retype_lost_edge", "{field}: the properties of the relation", { field: fieldName(lost.model, lost.field) }) +
+        (lost.count > 1 ? ` (${lost.count})` : "")
+      : fieldName(lost.model, lost.field) + (lost.count > 1 ? ` (${lost.count})` : "");
+  const unavailable = createMemo(() =>
+    Object.fromEntries(
+      narrowings()
+        .filter((choice) => choice.lost.length > 0)
+        .map((choice) => [
+          choice.type,
+          t("narrow_would_lose", "Would lose: {fields}", { fields: choice.lost.map(lostName).join(", ") }),
+        ]),
+    ),
   );
   const wider = createMemo(() =>
     menuGroups(definitions, typeOptions(widerTypes(definitions, props.type, props.options))),
@@ -43,12 +62,11 @@ export function RetypeButtons(props: {
     if (result.lost.length > 0 && !sure) setAsking({ to, lost: result.lost });
     else props.onRetype(result.value);
   };
-  const lostName = (lost: LostField) =>
-    fieldName(lost.model, lost.field) + (lost.count > 1 ? ` (${lost.count})` : "");
   return (
     <>
       <TypeMenu
         groups={narrower()}
+        unavailable={unavailable()}
         label="↧"
         title={t("narrow_type", "Narrow {name} to a type below it", { name: props.name })}
         buttonClass={props.buttonClass}

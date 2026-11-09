@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { render } from "@solidjs/web";
-import { afterEach, expect, test } from "vitest";
+import { afterEach, expect, test, vi } from "vitest";
 import { ApiError } from "../../api";
 import type { ApiClient } from "../../api";
 import {
@@ -160,10 +160,24 @@ const definitions = {
         } as FieldDefinition,
       ],
     }),
+    // (a chain of documents, each holding the next: nested as deep as one likes)
+    Chain: model("Chain", {
+      requireLabel: false,
+      fields: [literal("text", { type: "str" }), relation("next", [doc("Chain")], false)],
+    }),
+    WithCertainty: model("WithCertainty", {
+      kind: "AnnotatedValue",
+      requireLabel: false,
+      fields: [
+        { ...base, name: "value", key: "value", kind: "typeVar", typeVar: "T", required: true },
+        literal("certainty", { type: "int" }, { required: true }),
+      ],
+    }),
     Factoid: model("Factoid", {
       fields: [
         literal("year", { type: "int" }, { required: true }),
         literal("aliases", { type: "list", item: { type: "str" } }),
+        { ...base, name: "names", key: "names", kind: "annotatedValue", model: "WithCertainty", valueType: { type: "str" }, many: true },
         relation("author", [{ kind: "entity", type: "Person", edgeModel: null }], false),
         relation("statements", [doc("Activity"), doc("Transfer"), negative]),
         { ...base, name: "when", key: "when", kind: "embedded", model: null, types: ["Day", "Span"] },
@@ -310,6 +324,28 @@ test("a new item is created with what was typed, keeping the focus in the field 
   expect(saved).toEqual([{ id: "f1", type: "Factoid", label: "F" }]);
 });
 
+test("a list of annotated values is added to one by one, each with its value and its own fields, and removed from; the list is sent as it stands", async () => {
+  const { client, sent } = fakeClient(() => ({ id: "f1", type: "Factoid", label: "F" }));
+  show(client);
+  await settle();
+  fillRequired();
+  click(button("Add to names"));
+  await settle();
+  type("names 1", "Roma");
+  type("certainty", "3");
+  click(button("Add to names"));
+  await settle();
+  type("names 2", "Rome");
+  expect(byLabel("Remove names 2")).toBeTruthy();
+  click(byLabel("Remove names 2"));
+  await settle();
+  expect(byLabel("Remove names 2")).toBeFalsy();
+  click(button("Save"));
+  await settle();
+  expect(sent).toHaveLength(1);
+  expect(sent[0]!.body).toMatchObject({ names: [{ value: "Roma", certainty: 3 }] });
+});
+
 test("a statement is chosen from the types the add button opens, on their own or inside the Negative space, in vertical lists with the abstract class not selectable", async () => {
   const { client, sent } = fakeClient(() => ({ id: "f1", type: "Factoid", label: "F" }));
   show(client);
@@ -366,6 +402,7 @@ test("an entity is found by searching, then shown as a reference, and only its t
   click(document.body.querySelector('[role="option"]'));
   await settle();
   fillRequired();
+  await settle();
   click(button("Save"));
   await settle();
   expect(sent.at(-1)!.body.author).toEqual({ type: "Person", id: "p1" });
@@ -553,6 +590,7 @@ test("an edit sends the whole item back with the version it was loaded at; what 
   await settle();
   expect(byLabel<HTMLInputElement>("Label").value).toBe("Fall of Rome");
   type("year", "477");
+  await settle();
   click(button("Save"));
   await settle();
   expect(sent[0]).toMatchObject({
@@ -630,6 +668,7 @@ test("a problem the API names is shown at its field, and the form keeps what was
   show(client);
   await settle();
   fillRequired();
+  await settle();
   click(button("Save"));
   await settle();
   expect(rowName("year").className).toContain("text-red-700");
@@ -646,8 +685,11 @@ test("Save is off while the item is being sent, and on again whatever the answer
   const { client } = fakeClient(() => new Promise((resolve, reject) => ((finish = resolve), (refuse = reject))));
   const saved = show(client);
   await settle();
-  fillRequired();
   const save = () => button("Save") as HTMLButtonElement;
+  // (nothing to save yet)
+  expect(save().disabled).toBe(true);
+  fillRequired();
+  await settle();
   expect(save().disabled).toBe(false);
   click(save());
   await settle();
@@ -673,6 +715,7 @@ test("an error that is not about the fields is a red toast", async () => {
   show(client);
   await settle();
   fillRequired();
+  await settle();
   click(button("Save"));
   await settle();
   expect(toastText()).toContain("You are not allowed to do this.");
@@ -689,6 +732,8 @@ test("an item saved by someone else meanwhile is not overwritten: the form says 
     version: 3,
     onReload: () => (reloaded += 1),
   });
+  await settle();
+  type("year", "477");
   await settle();
   click(button("Save"));
   await settle();
@@ -714,6 +759,8 @@ test("Delete asks first, then deletes; a new item has no Delete, nor one without
   });
   await settle();
   click(button("Delete"));
+  // (the dialog is `lazy`)
+  await vi.waitFor(() => expect(document.body.querySelector('[role="dialog"]')).toBeTruthy());
   await settle();
   const dialog = document.body.querySelector('[role="dialog"]')!;
   expect(dialog.textContent).toContain("Are you sure you want to delete the Factoid “Fall of Rome”?");
@@ -790,6 +837,7 @@ test("an entity can be made from the form: a dialog with its own form, and what 
   expect(document.body.querySelector('[role="dialog"]')).toBeNull();
   expect(document.body.textContent).toContain("Bede");
   fillRequired();
+  await settle();
   click(button("Save"));
   await settle();
   expect(sent.at(-1)).toMatchObject({ path: "/Factoid", body: { author: { type: "Person", id: "p9" } } });
@@ -866,7 +914,7 @@ test("with several types of entity, + opens the dialog on the types; the one cho
 
 const pasteSlots = () => [...document.body.querySelectorAll<HTMLElement>('[role="group"][aria-label="Paste here"]')];
 const clipboardCards = () =>
-  [...document.body.querySelectorAll('aside[aria-label="Clipboard"] li.w-72')].map((card) => card.textContent);
+  [...document.body.querySelectorAll('section[aria-label="Clipboard"] li.w-72')].map((card) => card.textContent);
 
 const meeting = { id: "a1", type: "Activity", label: "Meeting", text: "met", meta: { version: 1 } };
 
@@ -952,7 +1000,7 @@ test("the head bar of a block folds it, and its buttons are cut, copy, remove; t
   ]);
   click(button("Copy Meeting"));
   await settle();
-  const list = document.body.querySelector('aside[aria-label="Clipboard"] ul')!;
+  const list = document.body.querySelector('section[aria-label="Clipboard"] ul')!;
   expect(list.classList.contains("hidden")).toBe(false);
   click(byLabel("Fold or unfold the clipboard"));
   await settle();
@@ -1129,4 +1177,42 @@ test("a field only in the database is not in the form", async () => {
   expect(rowName("year")).toBeTruthy();
   expect(rowName("date_text")).toBeUndefined();
   expect(document.body.querySelector('[aria-label="date_text"]')).toBeNull();
+});
+
+// (a chain `depth` long below the item: chain 1 holds chain 2, which holds chain 3 ...)
+const chain = (depth: number): Record<string, unknown> => {
+  let inner: Record<string, unknown> = { id: `c${depth}`, type: "Chain", text: `chain ${depth}` };
+  for (let n = depth - 1; n >= 1; n--) inner = { id: `c${n}`, type: "Chain", text: `chain ${n}`, next: inner };
+  return { id: "c0", type: "Chain", label: "C", text: "chain 0", next: inner };
+};
+const chainTexts = () =>
+  [...document.body.querySelectorAll<HTMLInputElement>("input")].map((input) => input.value).filter((value) => value.startsWith("chain "));
+
+test("a block nested five deep starts folded, and its fields are not made until it is unfolded", async () => {
+  const { client } = fakeClient(() => ({ id: "c0", type: "Chain", label: "C" }));
+  show(client, { type: "Chain", initial: chain(12), version: 1 });
+  await settle();
+  // (chain 1 to 5 are open; chain 6, five blocks deep, is folded: its head bar is there, its fields are not)
+  expect(chainTexts()).toEqual(["chain 0", "chain 1", "chain 2", "chain 3", "chain 4", "chain 5"]);
+  const heads = () => [...document.body.querySelectorAll<HTMLButtonElement>("button[aria-label='Fold or unfold Chain']")];
+  expect(heads().length).toBe(6);
+  expect(heads().map((head) => head.getAttribute("aria-expanded"))).toEqual(["true", "true", "true", "true", "true", "false"]);
+  click(heads()[5]!);
+  await settle();
+  // (unfolded: the next five, and the one after them folded again)
+  expect(chainTexts().length).toBe(11);
+  expect(heads().length).toBe(11);
+  expect(heads()[10]!.getAttribute("aria-expanded")).toBe("false");
+});
+
+test("a block that holds the part the page is to show (`?show=`) starts open, however deep", async () => {
+  const { client } = fakeClient(() => ({ id: "c0", type: "Chain", label: "C" }));
+  show(client, { type: "Chain", initial: chain(12), version: 1, show: "c8" });
+  await settle();
+  // (chain 6 is open, since chain 8 is inside it; chain 11 is folded as before)
+  expect(chainTexts().length).toBe(11);
+  expect(document.body.querySelector('[data-item-id="c8"]')).toBeTruthy();
+  const heads = [...document.body.querySelectorAll<HTMLButtonElement>("button[aria-label='Fold or unfold Chain']")];
+  expect(heads[5]!.getAttribute("aria-expanded")).toBe("true");
+  expect(heads[10]!.getAttribute("aria-expanded")).toBe("false");
 });

@@ -8,7 +8,7 @@ import { visibleComments } from "../state";
 import type { ReviewView, ShownComment } from "../state";
 import { CommentText } from "./CommentText";
 import { Composer } from "./Composer";
-import { StatusFlag } from "./StatusFlag";
+import { STATUS_WORDS, StatusFlag, statusSlot } from "./StatusFlag";
 
 export interface ReviewPanelProps {
   review: ReviewView;
@@ -31,13 +31,6 @@ const STATUS_TONES: Record<ReviewStatus, string> = {
   unchecked: "aria-pressed:bg-slate-600 aria-pressed:text-white",
   errors_found: "aria-pressed:bg-red-600 aria-pressed:text-white",
   checked: "aria-pressed:bg-green-600 aria-pressed:text-white",
-};
-
-export const statusSlot = (status: ReviewStatus) => `review_status_${status}`;
-export const STATUS_WORDS: Record<ReviewStatus, string> = {
-  unchecked: "Unchecked",
-  errors_found: "Errors found",
-  checked: "Checked",
 };
 
 function when(value: string | null | undefined, language: string): string {

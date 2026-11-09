@@ -157,3 +157,79 @@ test("someone logged in can take away a feast attached to the day by hand, and a
   await settle();
   expect(props.onAttach).toHaveBeenCalledWith(expect.objectContaining({ id: "f1" }));
 });
+
+test("long periods that cover the day are counted, and read a page at a time when asked for", async () => {
+  const period = (n: number) => ({
+    ref: { id: `p${n}`, label: `Residence ${n}`, type: "Statement", field: "date" },
+    first: day(1),
+    last: day(30),
+  });
+  const pages = [
+    { first: day(2), last: day(2), count: 3, page: 1, page_size: 2, results: [period(1), period(2)] },
+    { first: day(2), last: day(2), count: 3, page: 2, page_size: 2, results: [period(3)] },
+  ];
+  const asked: unknown[] = [];
+  const covering: ApiClient = {
+    ...api,
+    get: vi.fn(async (path: string, query?: Record<string, unknown>) => {
+      asked.push([path, query]);
+      return pages[(query?.page as number) - 1];
+    }) as never,
+  };
+  const container = document.createElement("div");
+  document.body.append(container);
+  dispose = render(
+    () => (
+      <ApiProvider client={covering}>
+        <ModelsProvider definitions={DEFINITIONS}>
+          <ModulesProvider modules={[]}>
+            <DayView
+              report={report({ hits: [hit("s1", "A letter")], covering: 3 })}
+              calendar="julian"
+              loggedIn={false}
+              onAttach={() => {}}
+              onDetach={() => {}}
+              onCreated={() => {}}
+            />
+          </ModulesProvider>
+        </ModelsProvider>
+      </ApiProvider>
+    ),
+    container,
+  );
+  const section = container.querySelector("[data-testid=calendar-covering]")!;
+  // (the count, and nothing read yet: the day's own dates are all that is listed)
+  expect(section.querySelector("h2")!.textContent).toBe("Long periods that include this day(3)");
+  expect(section.querySelectorAll("li")).toHaveLength(0);
+  expect(asked).toHaveLength(0);
+
+  (section.querySelector("button") as HTMLButtonElement).click();
+  await settle();
+  expect(asked[0]).toEqual(["/calendar/covering", { first: day(2).jdn, last: day(2).jdn, page: 1 }]);
+  expect([...section.querySelectorAll("li a")].map((a) => a.getAttribute("href"))).toEqual(["/Statement/p1", "/Statement/p2"]);
+  expect(section.querySelector("button")!.textContent).toBe("and 1 more");
+
+  (section.querySelector("button") as HTMLButtonElement).click();
+  await settle();
+  expect(section.querySelectorAll("li")).toHaveLength(3);
+  // (all read: no button)
+  expect(section.querySelector("button")).toBeNull();
+});
+
+test("a day that no long period covers has no such section", () => {
+  const container = document.createElement("div");
+  document.body.append(container);
+  dispose = render(
+    () => (
+      <ApiProvider client={api}>
+        <ModelsProvider definitions={DEFINITIONS}>
+          <ModulesProvider modules={[]}>
+            <DayView report={report()} calendar="julian" loggedIn={false} onAttach={() => {}} onDetach={() => {}} onCreated={() => {}} />
+          </ModulesProvider>
+        </ModelsProvider>
+      </ApiProvider>
+    ),
+    container,
+  );
+  expect(container.querySelector("[data-testid=calendar-covering]")).toBeNull();
+});

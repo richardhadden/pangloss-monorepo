@@ -8,6 +8,7 @@ import * as v from "valibot";
 import type { FieldDefinition, FieldType, ModelDefinition, ModelDefinitions, RelationOption, Validator } from "../types";
 import type { FormData, Path } from "./formValue";
 import { getModel } from "./lookup";
+import type { FieldProblem, ProblemCode } from "./problems";
 import { sharesOf } from "./sharing";
 import type { Shares } from "./sharing";
 import { envOf, optionFor, resolveOptions } from "./typeChoices";
@@ -15,40 +16,8 @@ import type { Env } from "./typeChoices";
 
 type Schema = v.GenericSchema;
 
-/** What is wrong (each a UI string, `invalid_<code>`) */
-export type ProblemCode =
-  | "required"
-  | "too_short"
-  | "too_long"
-  | "too_few"
-  | "too_many"
-  | "too_small"
-  | "must_exceed"
-  | "too_large"
-  | "must_be_under"
-  | "not_whole"
-  | "not_multiple"
-  | "not_number"
-  | "not_date"
-  | "not_datetime"
-  | "not_uuid"
-  | "not_choice"
-  | "shares_total"
-  | "wrong_type"
-  | "type_not_allowed"
-  | "invalid"
-  | "server";
-
-/**
- * Something wrong in an item, at `path` of the form; `params` are what its text needs (`{n}`, the
- * API's `{message}`), and `message` is the text, in the language of the check (the API's own words for a 422)
- */
-export interface FieldProblem {
-  path: Path;
-  code: ProblemCode;
-  params: Record<string, string | number>;
-  message: string;
-}
+// (the types of what is wrong are in `problems.ts`, which the bindings use too)
+export type { FieldProblem, ProblemCode } from "./problems";
 
 /** The text of a problem in a language: what the interface's translations say for its code */
 export type SayProblem = (code: ProblemCode, params: Record<string, string | number>) => string;
@@ -110,6 +79,10 @@ function checks(validators: Validator[], on: "text" | "number" | "list"): v.Pipe
       case "MultipleOf":
         if (on === "number" && n("multiple_of") !== undefined) out.push(v.multipleOf(n("multiple_of")!));
         break;
+      case "Unique":
+        // (a set: no two items the same)
+        if (on === "list") out.push(uniqueCheck);
+        break;
       default:
         // (Pydantic's own: `pattern=` of a `Field`, `StringConstraints`)
         if (on === "text" && typeof validator.pattern === "string") {
@@ -129,6 +102,24 @@ const piped = (schema: Schema, items: v.PipeItem<any, any, v.BaseIssue<unknown>>
 
 const DECIMAL = /^\s*[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?\s*$/;
 const DATETIME = /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/;
+const TIME = /^\d{2}:\d{2}(:\d{2}(\.\d+)?)?$/;
+// (ISO 8601: P1DT2H30M, PT5S, P2W; or a number of seconds, which the API also takes)
+const DURATION = /^(P(?!$)(\d+Y)?(\d+M)?(\d+W)?(\d+D)?(T(?=\d)(\d+H)?(\d+M)?(\d+(\.\d+)?S)?)?|[+-]?\d+(\.\d+)?)$/;
+
+/** A text of the format (`uuid`, `url`, `email`): what the format says, else any text */
+function textSchema(type: FieldType): Schema {
+  const format = "format" in type ? type.format : undefined;
+  switch (format) {
+    case "uuid":
+      return v.pipe(v.string(), v.uuid());
+    case "url":
+      return v.pipe(v.string(), v.url());
+    case "email":
+      return v.pipe(v.string(), v.email());
+    default:
+      return v.string();
+  }
+}
 
 /**
  * The value of a field, kept apart from whether it is there (`present`). Empty items of a list are
@@ -137,7 +128,7 @@ const DATETIME = /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/;
 function valueSchema(definitions: ModelDefinitions, type: FieldType, validators: Validator[] = []): Schema {
   switch (type.type) {
     case "str":
-      return piped(v.string(), checks(validators, "text"));
+      return piped(textSchema(type), checks(validators, "text"));
     case "int":
       return piped(v.pipe(v.number(), v.integer()), checks(validators, "number"));
     case "float":
@@ -157,8 +148,10 @@ function valueSchema(definitions: ModelDefinitions, type: FieldType, validators:
       return v.pipe(v.string(), v.isoDate());
     case "datetime":
       return v.pipe(v.string(), v.regex(DATETIME));
-    case "uuid":
-      return v.pipe(v.string(), v.uuid());
+    case "time":
+      return v.pipe(v.string(), v.regex(TIME));
+    case "duration":
+      return v.pipe(v.string(), v.regex(DURATION));
     case "enum": {
       const members = definitions.enums[type.enum]?.members ?? [];
       return members.length === 0 ? v.unknown() : choice(members.map((member) => member.value));
@@ -195,6 +188,10 @@ function listOf(definitions: ModelDefinitions, item: Schema, validators: Validat
 
 // (what each shares check is of: for its problem's text)
 const SHARES = new WeakMap<object, Shares>();
+
+const uniqueCheck = v.check(
+  (items: unknown[]) => new Set(items.map((item) => JSON.stringify(item))).size === items.length,
+);
 
 const shareSum = (items: unknown[], key: string) =>
   items.reduce<number>((sum, inner) => {
@@ -267,7 +264,12 @@ export class ItemSchemas {
           required,
         );
       case "annotatedValue":
-        return this.entry(this.annotated(field.model, field.valueType), required);
+        return this.entry(
+          field.many
+            ? listOf(this.definitions, this.annotated(field.model, field.valueType), [])
+            : this.annotated(field.model, field.valueType),
+          required,
+        );
       case "embedded":
         return this.entry(this.oneOf(field.types.map((type) => [type, () => this.model(type, {})])), required);
       case "relation": {
@@ -378,6 +380,7 @@ export function problemOf(issue: v.BaseIssue<unknown>): Omit<FieldProblem, "mess
       if (shares && Array.isArray(issue.input)) {
         return { path, code: "shares_total", params: { n: shares.total, sum: shareSum(issue.input, shares.key) } };
       }
+      if (issue.requirement === uniqueCheck.requirement) return { path, code: "not_unique", params: {} };
       return { path, code: "invalid", params: {} };
     }
     case "never":
@@ -386,7 +389,16 @@ export function problemOf(issue: v.BaseIssue<unknown>): Omit<FieldProblem, "mess
       // (a decimal, a date and time, are checked by a pattern: by what the value is; a pattern of the model's, "invalid")
       return {
         path,
-        code: issue.requirement === DECIMAL ? "not_number" : issue.requirement === DATETIME ? "not_datetime" : "invalid",
+        code:
+          issue.requirement === DECIMAL
+            ? "not_number"
+            : issue.requirement === DATETIME
+              ? "not_datetime"
+              : issue.requirement === TIME
+                ? "not_time"
+                : issue.requirement === DURATION
+                  ? "not_duration"
+                  : "invalid",
         params: {},
       };
     case "min_length":
@@ -409,6 +421,10 @@ export function problemOf(issue: v.BaseIssue<unknown>): Omit<FieldProblem, "mess
       return { path, code: "not_date", params: {} };
     case "uuid":
       return { path, code: "not_uuid", params: {} };
+    case "url":
+      return { path, code: "not_url", params: {} };
+    case "email":
+      return { path, code: "not_email", params: {} };
     case "picklist":
       return { path, code: "not_choice", params: {} };
     case "union":

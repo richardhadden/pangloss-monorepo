@@ -1,8 +1,9 @@
 import { defineModule } from "@pangloss/interface-core";
+import { ListStatusFlag } from "./components/ListStatusFlag";
 
 // The interface of review: a button in the console of a reviewed document (its status and the number of open
-// comments), which opens a panel with the status and the comments; and a page with the queue of documents to check,
-// /review. (docs/review-interface.md)
+// comments), which opens a panel with the status and the comments; a flag on each reviewed row of a list; and a page
+// with the queue of documents to check, /review. (docs/review-interface.md)
 export default defineModule({
   name: "pangloss_review",
   requires: [],
@@ -10,8 +11,9 @@ export default defineModule({
     ReviewQueue: () => import("./components/ReviewQueue"),
   },
   consoleActions: {
-    Review: () => import("./components/ReviewAction"),
+    Review: { loggedIn: true, load: () => import("./components/ReviewAction") },
   },
+  resultMarks: { StatusFlag: ListStatusFlag },
   // (the queue of documents to check; the navigation bar links to it: pangloss_review/interface_config.py)
   routes: [{ path: "/review", component: "ReviewQueue" }],
 });

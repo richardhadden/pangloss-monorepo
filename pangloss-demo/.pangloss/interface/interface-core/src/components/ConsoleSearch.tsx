@@ -4,12 +4,14 @@ import {
   Errored,
   Loading,
   onCleanup,
+  onSettled,
   Show,
   untrack,
 } from "solid-js";
 import { useTranslations } from "../context";
 import { ConsoleButton, Spinner } from "../primitives";
 import type { ConsoleSearchProps } from "../types";
+import { dialogIsOpen, startsTyping } from "./keys";
 
 // (how long after the last key the search is made)
 const DEBOUNCE_MS = 250;
@@ -20,7 +22,8 @@ const DEBOUNCE_MS = 250;
  * (`onSearch`), and shows what it is given (`query`, `deep`), so the page can keep them in
  * the address. An ordinary search is made a moment after the last key, or at once on Enter. A
  * Deep Search is slow, so turning it on makes none: it is made on Enter, or by the run
- * button that appears with it. With `count`, it says how many were found: in red if none.
+ * button that appears with it. With `onListKey`, the arrows choose an item of the list, and Enter, once the list on show
+ * is of what is in the box, opens it. With `count`, it says how many were found: in red if none.
  *
  * The box's value is never bound to `query`: what is typed is the box's own, and a search the
  * page is answering (the address changed, and the list is being asked again) cannot hold it up or
@@ -68,9 +71,25 @@ export function ConsoleSearch(props: ConsoleSearchProps) {
     // (turning it off goes back to the ordinary search of what is typed; turning it on makes none)
     if (!on) search(false);
   };
+  // A character typed on the page starts or goes on with the search. Only the focus is moved: the browser then writes
+  // the key into the box itself, accents and all
+  onSettled(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (!box || !startsTyping(event) || dialogIsOpen()) return;
+      box.setSelectionRange(box.value.length, box.value.length);
+      box.focus({ preventScroll: true });
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  });
   // Run only changes anything if it is not what is on show already
   const upToDate = () =>
     draft() === (props.query ?? "") && (props.deep ?? false) === deepOn();
+  // (Enter opens an item only of the list that is what the box asks for; the box, not `draft`, as in `search`)
+  const listIsOfTheBox = () =>
+    !props.pending &&
+    box?.value === (props.query ?? "") &&
+    (props.structured || (props.deep ?? false) === deepOn());
   // (a count that is not all there is says so: the search has to be narrowed)
   const foundTitle = () => {
     if (props.truncated)
@@ -96,8 +115,17 @@ export function ConsoleSearch(props: ConsoleSearchProps) {
         ref={box}
         value={initial}
         onInput={(event) => typed(event.currentTarget.value)}
+        onFocus={() => props.onFocusChange?.(true)}
+        onBlur={() => props.onFocusChange?.(false)}
         onKeyDown={(event) => {
-          if (event.key === "Enter") search(deepOn() && !props.structured);
+          const plain = !event.shiftKey && !event.altKey && !event.ctrlKey && !event.metaKey;
+          if (props.onListKey && plain && (event.key === "ArrowDown" || event.key === "ArrowUp")) {
+            event.preventDefault();
+            props.onListKey(event.key === "ArrowDown" ? "next" : "previous");
+          } else if (event.key === "Enter") {
+            if (props.onListKey && listIsOfTheBox()) props.onListKey("open");
+            else search(deepOn() && !props.structured);
+          }
         }}
         class="h-full min-w-0 flex-1 bg-transparent px-3 text-sm font-normal normal-case outline-none placeholder:text-xs placeholder:font-semibold placeholder:text-slate-500 placeholder:uppercase"
       />
@@ -176,6 +204,13 @@ export function ConsoleSearch(props: ConsoleSearchProps) {
             </Show>
           </svg>
         </ConsoleButton>
+      </Show>
+      <Show when={props.onToggleUsed}>
+        <ConsoleButton
+          text
+          label={props.showingAll ? t("show_used", "Show used") : t("show_all", "Show all")}
+          onClick={() => props.onToggleUsed?.()}
+        />
       </Show>
     </div>
   );

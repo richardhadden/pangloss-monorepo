@@ -12,8 +12,7 @@ import { useNavigate, useSearchParams } from "@solidjs/router";
 import { createMemo, Errored, For, Loading, Show } from "solid-js";
 import { getQueue, getReviewableTypes, STATUSES } from "../api";
 import type { ReviewStatus } from "../api";
-import { STATUS_WORDS, statusSlot } from "./ReviewPanel";
-import { StatusFlag } from "./StatusFlag";
+import { STATUS_WORDS, StatusFlag, statusSlot } from "./StatusFlag";
 
 /** How many documents a page of the queue has */
 export const QUEUE_PAGE_SIZE = 25;
@@ -186,7 +185,7 @@ export default function ReviewQueue() {
               value={type()}
               onChange={(event) => setSearch({ type: event.currentTarget.value || undefined, page: undefined })}
             >
-              <option value="">{t("review_queue_all_types", "All types")}</option>
+              <option value="" textContent={t("review_queue_all_types", "All types")} />
               <For each={types()}>{(name) => <option value={name}>{modelName(name)}</option>}</For>
             </select>
           </label>

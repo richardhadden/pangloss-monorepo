@@ -1,3 +1,4 @@
+import { isSafeError } from "@solidjs/web";
 import { expect, test } from "vitest";
 import { contextTrail, headOf, wrappingSpaces } from "./context";
 import { ApiError, createApiClient, problemsOf, queryString } from "./client";
@@ -10,8 +11,11 @@ import {
   listItems,
   logIn,
   logOut,
+  references,
   searchItems,
+  withCurrentReferences,
 } from "./fetch";
+import type { ModelDefinitions } from "../types";
 
 type Call = { url: string; init: RequestInit };
 
@@ -59,6 +63,22 @@ test("the id of an item is escaped, as it can be a URL", async () => {
   const { client, calls } = clientAnswering(() => json({ id: "x" }));
   await getItem(client, "Person", "https://example.org/a b");
   expect(calls[0]!.url).toBe("http://api.test/api/Person/https%3A%2F%2Fexample.org%2Fa%20b");
+});
+
+test("an ApiError may be sent from the server render, and is still one when it arrives", () => {
+  // (the built server puts "Internal Server Error" in place of an error that is not marked safe)
+  const error = new ApiError(404, "There is no Place with id n1", { detail: "There is no Place with id n1" });
+  expect(isSafeError(error)).toBe(true);
+  // what the browser is given is a plain Error with the properties
+  const arrived = Object.assign(new Error(error.message), { name: "ApiError", status: 404, detail: error.detail });
+  expect(arrived instanceof ApiError).toBe(true);
+  expect((arrived as ApiError).status).toBe(404);
+  // ... and nothing else is one
+  expect(new Error("404 Not Found") instanceof ApiError).toBe(false);
+  expect(Object.assign(new Error("x"), { name: "ApiError" }) instanceof ApiError).toBe(false);
+  for (const other of [null, undefined, "ApiError", 404] as unknown[]) {
+    expect(other instanceof ApiError).toBe(false);
+  }
 });
 
 test("a failure is an ApiError with the status and what the API said", async () => {
@@ -234,4 +254,28 @@ test("a 412 keeps what else the API said, and a 422 is read as a line for each p
   );
   expect(problemsOf(invalid)).toEqual(["statements › 0 › text: too short", "odd"]);
   expect(problemsOf(new ApiError(409, "Id in use"))).toEqual(["Id in use"]);
+});
+
+test("which entities are still there is one request with every id; with none, no request", async () => {
+  const { client, calls } = clientAnswering(() => json({ found: [{ id: "p1", type: "Person", label: "Alice Smith" }] }));
+  expect(await references(client, [])).toEqual([]);
+  expect(calls).toEqual([]);
+  expect(await references(client, ["p1", "p2"])).toEqual([{ id: "p1", type: "Person", label: "Alice Smith" }]);
+  expect(calls[0]!.url).toBe("http://api.test/api/references");
+  expect(calls[0]!.init.method).toBe("POST");
+  expect(JSON.parse(String(calls[0]!.init.body))).toEqual({ ids: ["p1", "p2"] });
+});
+
+test("a stashed item is brought up to date with what the API says of its entities", async () => {
+  const definitions = { models: { Person: { name: "Person", kind: "Entity" } }, enums: {} } as unknown as ModelDefinitions;
+  const { client } = clientAnswering(() => json({ found: [{ id: "p1", type: "Person", label: "Alice Smith" }] }));
+  const refreshed = await withCurrentReferences(client, definitions, {
+    type: "Note",
+    people: [
+      { type: "Person", id: "p1", label: "Alice" },
+      { type: "Person", id: "p2", label: "Bob" },
+    ],
+  });
+  expect(refreshed.value.people).toEqual([{ type: "Person", id: "p1", label: "Alice Smith" }]);
+  expect(refreshed.gone).toEqual([{ type: "Person", id: "p2", label: "Bob" }]);
 });

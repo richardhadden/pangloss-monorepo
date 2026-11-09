@@ -24,12 +24,14 @@ import {
   useDatedDocumentTypes,
   useOnTheDayFill,
 } from "./Chrome";
+import { Covering } from "./Covering";
 import { MonthGrid } from "./MonthGrid";
 
 /**
  * Under the grid: the dates known only roughly, within a range that reaches beyond the month (a birth "in 735": said as
  * "between these days", not drawn on every day); the characterisations attached to the month, its year or a span (not
- * to a day); and a note if the month was cut
+ * to a day); how many long periods run over the whole month, which are read when asked for (`Covering`); and a note
+ * if the month was cut
  */
 export function MonthFoot(props: { report: MonthReport }) {
   const { t, language, fieldName } = useTranslations();
@@ -86,6 +88,13 @@ export function MonthFoot(props: { report: MonthReport }) {
           </ul>
         </section>
       </Show>
+      <Covering
+        count={props.report.covering ?? 0}
+        first={props.report.first}
+        last={props.report.last}
+        calendar={props.report.calendar}
+        heading={t("calendar_covering_month", "Long periods over the whole month")}
+      />
       <Show when={props.report.truncated}>
         <p class="mt-4 text-xs font-semibold text-red-700 uppercase">
           {t("calendar_truncated", "More dates were found than are shown")}

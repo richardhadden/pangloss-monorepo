@@ -162,6 +162,186 @@ test("a reified relation is copied as a new one (without its id), and still foll
   expect(state.get(givenBy)).toEqual({ type: "Named", target: [person("b")] });
 });
 
+// (who commissioned the works pays for them: a binding to the things made, and every kind of one below, but not a
+// sculpture or a kind of one; and one to anything dated)
+const paidBy = (more: object = {}) => ({
+  boundField: "commissionedBy",
+  childFields: ["paidBy"],
+  allowedTypes: [],
+  excludedTypes: [],
+  converted: false,
+  ...more,
+});
+const made = (name: string, parent: string | null, traits: string[] = []) => ({
+  ...model(name, "Document", [relation("paidBy")]),
+  parent,
+  traits,
+});
+const commissions = (bindings: object[]) =>
+  ({
+    models: {
+      Commission: model("Commission", "Document", [
+        relation("commissionedBy"),
+        relation("works", { many: true, bindings }),
+      ]),
+      Made: made("Made", null),
+      PaintingMade: made("PaintingMade", "Made"),
+      PortraitMade: made("PortraitMade", "PaintingMade", ["Dated"]),
+      SculptureMade: made("SculptureMade", "Made"),
+      BustMade: made("BustMade", "SculptureMade"),
+      Person: model("Person", "Entity"),
+    },
+    enums: {},
+  }) as unknown as ModelDefinitions;
+const kinds = ["Made", "PaintingMade", "PortraitMade", "SculptureMade", "BustMade"];
+const paid = (bindings: object[]) => {
+  const state = createItemFormState({ type: "Commission" }, { binder: createBinder(commissions(bindings)) });
+  state.set(["commissionedBy"], person("duke"));
+  kinds.forEach((type, at) => state.set(["works", at], { type }));
+  return Object.fromEntries(kinds.map((type, at) => [type, state.get(["works", at, "paidBy"]) !== undefined]));
+};
+
+test("a binding applies to the types below those it allows, and not to those below those it excludes", () => {
+  expect(paid([paidBy({ allowedTypes: ["Made"], excludedTypes: ["SculptureMade"] })])).toEqual({
+    Made: true,
+    PaintingMade: true,
+    PortraitMade: true,
+    SculptureMade: false,
+    BustMade: false,
+  });
+  // (one above the type is not allowed by one below it)
+  expect(paid([paidBy({ allowedTypes: ["PaintingMade"] })])).toEqual({
+    Made: false,
+    PaintingMade: true,
+    PortraitMade: true,
+    SculptureMade: false,
+    BustMade: false,
+  });
+  // (below one allowed and one excluded: excluded)
+  expect(paid([paidBy({ allowedTypes: ["Made"], excludedTypes: ["PaintingMade"] })])).toEqual({
+    Made: true,
+    PaintingMade: false,
+    PortraitMade: false,
+    SculptureMade: true,
+    BustMade: true,
+  });
+  // (a trait is a name of the type too)
+  expect(paid([paidBy({ allowedTypes: ["Dated"] })])).toEqual({
+    Made: false,
+    PaintingMade: false,
+    PortraitMade: true,
+    SculptureMade: false,
+    BustMade: false,
+  });
+});
+
+test("a child narrowed to a type below still follows the binding; widened out of what it allows, it is not given it", () => {
+  const state = createItemFormState(
+    { type: "Commission" },
+    { binder: createBinder(commissions([paidBy({ allowedTypes: ["PaintingMade"] })])) },
+  );
+  state.set(["commissionedBy"], person("duke"));
+  state.set(["works", 0], { type: "PaintingMade" });
+  expect(state.get(["works", 0, "paidBy"])).toEqual(person("duke"));
+  // (narrowed, as ↧ does: the same values, of a type below)
+  state.set(["works", 0], { ...(state.get(["works", 0]) as FormData), type: "PortraitMade" });
+  state.set(["commissionedBy"], person("count"));
+  expect(state.get(["works", 0, "paidBy"])).toEqual(person("count"));
+  // (widened to one the binding does not allow: what it had is its own, and it no longer follows)
+  state.set(["works", 0], { ...(state.get(["works", 0]) as FormData), type: "Made" });
+  state.set(["commissionedBy"], person("bishop"));
+  expect(state.get(["works", 0, "paidBy"])).toEqual(person("count"));
+});
+
+// (a commission of a thing, given to the creations it holds: into `object_created`, which each narrower creation
+// has under another name; only a painting can be the painting created)
+const entityOptions = (...types: string[]) => types.map((type) => ({ kind: "entity", type, edgeModel: null }));
+const created = (name: string, key: string, options: object[], subclasses: string[] = []) =>
+  relation(key, { name, options, subclasses });
+const creationModels = {
+  models: {
+    Commission: model("Commission", "Document", [
+      relation("thing", { options: entityOptions("PhysicalObject", "Artwork", "Painting") }),
+      relation("works", {
+        many: true,
+        bindings: [{ boundField: "thing", childFields: ["objectCreated"], allowedTypes: [], excludedTypes: [], converted: false }],
+      }),
+    ]),
+    CreationOfPhysicalObject: {
+      ...model("CreationOfPhysicalObject", "Document", [
+        created("object_created", "objectCreated", entityOptions("PhysicalObject", "Artwork", "Painting")),
+      ]),
+      parent: null,
+    },
+    CreationOfArtwork: {
+      ...model("CreationOfArtwork", "Document", [
+        created("artwork_created", "artworkCreated", entityOptions("Artwork", "Painting"), ["object_created"]),
+      ]),
+      parent: "CreationOfPhysicalObject",
+    },
+    CreationOfPainting: {
+      ...model("CreationOfPainting", "Document", [
+        created("painting_created", "paintingCreated", entityOptions("Painting"), ["artwork_created", "object_created"]),
+      ]),
+      parent: "CreationOfArtwork",
+    },
+    PhysicalObject: model("PhysicalObject", "Entity"),
+    Artwork: { ...model("Artwork", "Entity"), parent: "PhysicalObject" },
+    Painting: { ...model("Painting", "Entity"), parent: "Artwork" },
+  },
+  enums: {},
+} as unknown as ModelDefinitions;
+const painting = (id: string) => ({ type: "Painting", id, label: id });
+const artwork = (id: string) => ({ type: "Artwork", id, label: id });
+const commission = () => createItemFormState({ type: "Commission" }, { binder: createBinder(creationModels) });
+
+test("a binding into a field reaches the field that stands for it in a narrower type", () => {
+  const state = commission();
+  state.set(["thing"], painting("p1"));
+  state.set(["works", 0], { type: "CreationOfPhysicalObject" });
+  state.set(["works", 1], { type: "CreationOfArtwork" });
+  state.set(["works", 2], { type: "CreationOfPainting" });
+  expect(state.get(["works", 0, "objectCreated"])).toEqual(painting("p1"));
+  expect(state.get(["works", 1, "artworkCreated"])).toEqual(painting("p1"));
+  expect(state.get(["works", 2, "paintingCreated"])).toEqual(painting("p1"));
+  // (and they follow it)
+  state.set(["thing"], painting("p2"));
+  expect(state.get(["works", 2, "paintingCreated"])).toEqual(painting("p2"));
+  // (no field of the old name is made in the narrower ones)
+  expect(state.get(["works", 2, "objectCreated"])).toBeUndefined();
+});
+
+test("a narrower field is not given a value it cannot hold; one that followed is emptied, and filled again when it fits", () => {
+  const state = commission();
+  state.set(["thing"], artwork("a1"));
+  state.set(["works", 0], { type: "CreationOfArtwork" });
+  state.set(["works", 1], { type: "CreationOfPainting" });
+  // (an artwork is not a painting)
+  expect(state.get(["works", 0, "artworkCreated"])).toEqual(artwork("a1"));
+  expect(state.get(["works", 1, "paintingCreated"])).toBeUndefined();
+  // (a painting: both are given it)
+  state.set(["thing"], painting("p1"));
+  expect(state.get(["works", 1, "paintingCreated"])).toEqual(painting("p1"));
+  // (back to an artwork: the painting created, which followed, is emptied rather than left as it was)
+  state.set(["thing"], artwork("a2"));
+  expect(state.get(["works", 0, "artworkCreated"])).toEqual(artwork("a2"));
+  expect(state.get(["works", 1, "paintingCreated"])).toBeUndefined();
+  // (what was chosen by hand is the child's own, whatever the bound field becomes)
+  state.set(["works", 1, "paintingCreated"], painting("mine"));
+  state.set(["thing"], painting("p3"));
+  expect(state.get(["works", 1, "paintingCreated"])).toEqual(painting("mine"));
+});
+
+test("a child narrowed as ↧ does it still follows the binding in the field that stands for the bound one", () => {
+  const state = commission();
+  state.set(["thing"], painting("p1"));
+  state.set(["works", 0], { type: "CreationOfPhysicalObject" });
+  // (narrowed: the value moved to the field that stands for the old one)
+  state.set(["works", 0], { type: "CreationOfPainting", paintingCreated: state.get(["works", 0, "objectCreated"]) });
+  state.set(["thing"], painting("p2"));
+  expect(state.get(["works", 0, "paintingCreated"])).toEqual(painting("p2"));
+});
+
 // (the alternatives' percentages add up to 100: `SumsTo("percent")`, each at least 1)
 const shared = {
   models: {

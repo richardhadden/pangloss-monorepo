@@ -363,6 +363,12 @@ def test_a_manifest_keeps_the_names_of_its_item_sections_and_incoming_views():
     assert Manifest.from_data({"name": "m"}).contributions == ()
 
 
+def test_a_manifest_keeps_the_names_of_its_result_marks():
+    read = Manifest.from_data({"name": "m", "resultMarks": ["StatusFlag"]})
+    assert read.result_marks == ("StatusFlag",)
+    assert read.contributions == ("StatusFlag",)
+
+
 def test_what_a_project_disables_must_be_something_a_module_adds(module):
     given = manifests(
         console_actions=("SortByDate",),
@@ -377,8 +383,8 @@ def test_what_a_project_disables_must_be_something_a_module_adds(module):
     wrong_key = problems([module], given, {**exported(), "disabled": ["withmod:Page"]})
     assert wrong_key == [
         (
-            "InterfaceConfig(disabled=...) 'withmod:Page': 'Page' is not in the consoleActions, newItemActions, newItemFields, itemSections or "
-            "incomingViews of withmod (SortByDate, Derived, ByDate)"
+            "InterfaceConfig(disabled=...) 'withmod:Page': 'Page' is not in the consoleActions, newItemActions, newItemFields, itemSections, "
+            "incomingViews or resultMarks of withmod (SortByDate, Derived, ByDate)"
         )
     ]
     no_app = problems([module], given, {**exported(), "disabled": ["plain:Derived"]})

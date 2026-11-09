@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { getModel, headModels, modelHierarchy, relatedModelNames } from "./index";
+import { canBeSearched, getModel, headModels, modelHierarchy, relatedModelNames } from "./index";
 import type { ModelDefinition, ModelDefinitions, RelationField } from "../types";
 
 function model(name: string, kind: ModelDefinition["kind"], abstract = false): ModelDefinition {
@@ -71,4 +71,21 @@ test("models are in the order of the hierarchy, each below its parent", () => {
     ["Transfer", 1],
   ]);
   expect(modelHierarchy(tree, "Entity").map((m) => m.model.name)).toEqual(["Person"]);
+});
+
+test("a document that is only ever part of another is not searched; one of its own, and an entity, are", () => {
+  const statement = { ...model("Statement", "Document", true), createDirectly: false, concreteTypes: ["Letter", "Order"] };
+  const letter = { ...model("Letter", "Document"), parent: "Statement", createDirectly: false, concreteTypes: ["Letter"] };
+  // (a class below it that can be a document of its own makes the search worth making)
+  const order = { ...model("Order", "Document"), parent: "Statement", concreteTypes: ["Order"] };
+  const nested: ModelDefinitions = {
+    models: { ...definitions.models, Statement: statement, Letter: letter, Order: order },
+    enums: {},
+  };
+  expect(canBeSearched(nested, "Letter")).toBe(false);
+  expect(canBeSearched(nested, "Statement")).toBe(true);
+  expect(canBeSearched(nested, "Order")).toBe(true);
+  expect(canBeSearched(nested, "Book")).toBe(true);
+  expect(canBeSearched(nested, "Person")).toBe(true);
+  expect(canBeSearched(nested, "Nothing")).toBe(false);
 });

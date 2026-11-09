@@ -54,10 +54,22 @@ export function useSayProblem(): SayProblem {
         return t("invalid_not_datetime", "Must be a date and time");
       case "not_uuid":
         return t("invalid_not_uuid", "Must be a UUID");
+      case "not_url":
+        return t("invalid_not_url", "Must be a URL");
+      case "not_email":
+        return t("invalid_not_email", "Must be an email address");
+      case "not_time":
+        return t("invalid_not_time", "Must be a time");
+      case "not_duration":
+        return t("invalid_not_duration", "Must be a duration, such as P1DT2H30M");
+      case "not_unique":
+        return t("invalid_not_unique", "No two the same");
       case "not_choice":
         return t("invalid_not_choice", "Not one of the choices");
       case "type_not_allowed":
         return t("invalid_type_not_allowed", "This type is not allowed here");
+      case "bound_not_held":
+        return t("invalid_bound_not_held", "{value} is given to this from above, but cannot go here: choose one that can", params);
       case "server":
         // (the API's own words: it is English)
         return String(params.message ?? "");

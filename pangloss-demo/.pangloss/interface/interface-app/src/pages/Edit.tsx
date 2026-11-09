@@ -1,14 +1,17 @@
 import {
   getEditView,
+  preload,
   RequireLogin,
   useComponent,
   useTranslations,
+  Spinner,
 } from "@pangloss/interface-core";
 import { useNavigate, useSearchParams } from "@solidjs/router";
 import type { RouteProps } from "@solidjs/router";
-import { createMemo, Errored, Loading, onSettled, refresh, Show } from "solid-js";
+import { createMemo, Errored, Loading, onSettled, refresh, Show, untrack } from "solid-js";
 import { apiClient } from "../api";
 import { revalidateAll } from "../queries";
+import { useLeaveGuard } from "../leaving";
 import { Page } from "../Page";
 
 // Once the form is on show, scrolls to the document inside it whose id is `id` (the block that has it in
@@ -16,7 +19,8 @@ import { Page } from "../Page";
 function ScrollToNested(props: { id: string | undefined }) {
   // (read here, not in `onSettled`: reading the address there makes the router's reactive values in a place
   // that may not have them, which the development build stops at)
-  const id = props.id;
+  // (once, on purpose: it is where to scroll to when the form first shows)
+  const id = untrack(() => props.id);
   onSettled(() => {
     if (!id) return;
     // (after the browser has laid the form out)
@@ -43,12 +47,17 @@ export default function EditItem(props: RouteProps<"/:type/:id/edit">) {
   const navigate = useNavigate();
   const [search] = useSearchParams();
   const { t } = useTranslations();
-  const item = createMemo(() => getEditView(apiClient(), props.params.type, props.params.id));
+  const guardLeaving = useLeaveGuard();
+  const item = createMemo(() => {
+    // (the form's code is loaded while the item is read)
+    preload(ItemForm);
+    return getEditView(apiClient(), props.params.type, props.params.id);
+  });
   return (
     <RequireLogin onCancel={() => navigate("/", { replace: true })}>
       <Page>
         <Errored fallback={(error) => <ErrorMessage error={error()} />}>
-          <Loading fallback={<p>{t("loading", "Loading…")}</p>}>
+          <Loading fallback={<p class="pt-2 text-slate-500"><Spinner class="size-5" /></p>}>
             {/* (the form starts from a copy of the item, so it is made once the item is here, and again for a new one) */}
             <Show when={item()} keyed>
               {(loaded) => (
@@ -57,6 +66,8 @@ export default function EditItem(props: RouteProps<"/:type/:id/edit">) {
                   initial={loaded}
                   version={loaded.meta.version}
                   meta={loaded.meta}
+                  guardLeaving={guardLeaving}
+                  show={typeof search.show === "string" ? search.show : undefined}
                   onSaved={(saved) => {
                     void revalidateAll();
                     navigate(`/${saved.type}/${encodeURIComponent(saved.id)}`);

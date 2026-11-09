@@ -13,6 +13,7 @@ import type {
   ItemSectionProps,
   ModuleManifest,
   NewItemActionProps,
+  ResultMarkProps,
 } from "../types";
 import { useModels } from "./models";
 
@@ -32,6 +33,8 @@ interface ModulesValue {
   itemSections(): Component<ItemSectionProps>[];
   /** The same, as their loaders: for `ItemSections`, which waits for their code itself, in one boundary */
   itemSectionLoaders(): ComponentLoader[];
+  /** What the modules add at the right end of each row of a list (`resultMarks`), in the order of the modules */
+  resultMarks(): Component<ResultMarkProps>[];
   /** The other ways of showing what refers to an item (`incomingViews`), by name `app:key` (each component lazy) */
   incomingViews(): LoadedIncomingView[];
   /**
@@ -68,6 +71,7 @@ const NONE: ModulesValue = {
   newItemFields: () => [],
   itemSections: () => [],
   itemSectionLoaders: () => [],
+  resultMarks: () => [],
   incomingViews: () => [],
   preloadItemPage: () => {},
 };
@@ -92,6 +96,7 @@ export function ModulesProvider(props: ParentProps<{ modules: readonly ModuleMan
   let newFields: Component<NewItemActionProps>[] | undefined;
   let sections: Component<ItemSectionProps>[] | undefined;
   let views: LoadedIncomingView[] | undefined;
+  let marks: Component<ResultMarkProps>[] | undefined;
   const value: ModulesValue = {
     modules,
     custom(type, slot) {
@@ -141,6 +146,10 @@ export function ModulesProvider(props: ParentProps<{ modules: readonly ModuleMan
     },
     itemSectionLoaders() {
       return each((module) => module.itemSections).map(([, loader]) => loader);
+    },
+    resultMarks() {
+      marks ??= each((module) => module.resultMarks).map(([, mark]) => mark);
+      return marks;
     },
     incomingViews() {
       views ??= each((module) => module.incomingViews).map(([name, view]) => ({

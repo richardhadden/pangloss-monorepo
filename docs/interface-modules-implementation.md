@@ -557,6 +557,7 @@ Done afterwards (2026-10-29):
   `model`, `page`: `"item"` or `"edit"`); each decides itself whether to show anything. They are drawn by `Console` (new props `item`
   and `page`) before the page's own buttons, each lazily, in a `Loading` and an `Errored` of its own (a failure is logged in the browser's
   console and shows nothing). `useModules().consoleActions()`; `Manifest.console_actions` in Python. An action only for someone logged in is `{ loggedIn: true, load: () => import(...) }`: no one else fetches its code (2026-11-08).
+- **`resultMarks` (2026-11-09, for [review](review-interface.md)).** ✅ `resultMarks: { Name: Component }`, drawn by the default `ResultButton` inside the row's link, at its right end, given `ResultMarkProps` (`type`, and `item` as the list sends it). A component, not a loader, as `collapseRules` are: small, and on every row of every list, so no `lazy` boundary in each row. A model's own `viewCard` replaces the row, marks included. Can be disabled (`app:key`); `Manifest.result_marks` in Python.
 - **`itemSections` and `incomingViews` (2026-11-05, [interface-hooks-plan.md](interface-hooks-plan.md)).** `itemSections: { Name:
   () => import(...) }` are drawn after the contents of every item page by `ItemSections` (exported, so that a model's own `itemPage`
   can place them), given `ItemSectionProps` (`type`, `id`, `item`, `model`); pangloss-derived's "Derived" section is one.

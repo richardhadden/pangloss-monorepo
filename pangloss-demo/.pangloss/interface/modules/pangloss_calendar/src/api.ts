@@ -67,6 +67,8 @@ export interface DayReport {
   next: DayOut;
   characterisations: Characterised[];
   hits: Hit[];
+  /** How many long periods cover the day (they begin before it and end after): not among the `hits` (`getCovering`) */
+  covering?: number;
   truncated: boolean;
 }
 
@@ -102,7 +104,19 @@ export interface MonthReport {
   roughly: Spanning[];
   /** Characterisations attached to the month, its year or a span, not to a day */
   characterised_spans: Characterised[];
+  /** How many long periods cover the whole month (they begin before it and end after): not among `spanning` (`getCovering`) */
+  covering?: number;
   truncated: boolean;
+}
+
+/** The long periods that cover all the days from `first` to `last`, a page of them */
+export interface CoveringReport {
+  first: DayOut;
+  last: DayOut;
+  count: number;
+  page: number;
+  page_size: number;
+  results: Spanning[];
 }
 
 export interface CalendarSettings {
@@ -140,6 +154,10 @@ export const getMonth = (api: ApiClient, calendar: CalendarName, year: number, m
 /** A day by its name in a calendar (`J1500-03-02`), read in `calendar` */
 export const getDay = (api: ApiClient, ref: string, calendar: CalendarName): Promise<DayReport> =>
   api.get(`/calendar/day/${encodeURIComponent(ref)}`, { calendar });
+
+/** A page of the long periods that cover all the days from `first` to `last` (day numbers), the earliest to begin first */
+export const getCovering = (api: ApiClient, first: number, last: number, page: number): Promise<CoveringReport> =>
+  api.get("/calendar/covering", { first, last, page });
 
 /** Attach a characterisation to a day by hand (logged in) */
 export const attachToDay = (api: ApiClient, characterisation: string, day: string): Promise<{ attached: boolean }> =>

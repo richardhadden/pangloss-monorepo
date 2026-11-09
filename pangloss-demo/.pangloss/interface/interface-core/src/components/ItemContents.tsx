@@ -1,8 +1,7 @@
-import { createEffect, createMemo, createSignal, Errored, For, Loading, Match, Show, Switch } from "solid-js";
+import { createSignal, For, Match, Show, Switch } from "solid-js";
 import type { ParentProps } from "solid-js";
 import {
   useComponent,
-  useIncomingView,
   useModels,
   useModules,
   useTranslations,
@@ -18,11 +17,12 @@ import {
 } from "../schema";
 import type {
   FieldDefinition,
-  IncomingEntry,
   ItemContentsProps,
   ModelDefinition,
 } from "../types";
 import { Customised } from "./Customised";
+import { IncomingRelations } from "./IncomingRelations";
+import { NestingProvider, startsFolded, useNesting } from "./nesting";
 import { SpaceBands } from "./SpaceBands";
 import {
   fieldGridClass,
@@ -35,6 +35,8 @@ import {
   headRestClass,
   nestedClass,
   plainTint,
+  smallButtonClass,
+  spacePaddingClass,
   spaceTypeClass,
   typeChipClass,
 } from "./form/styles";
@@ -53,34 +55,17 @@ const isEmpty = (value: unknown) =>
 
 /**
  * A key on the left, its contents on the right: chips side by side (as many as fit on a line),
- * anything bigger, and each text, on a line of its own, with a faint rule above it as in a form. A
- * row of what refers to the item from elsewhere (`incoming`) has more room above it and between its
- * items, and centres the chips of a line on each other (some are taller, wrapped in semantic spaces).
+ * anything bigger, and each text, on a line of its own, with a faint rule above it as in a form.
+ * (A row of what refers to the item from elsewhere is `IncomingRelations`'s own.)
  */
-function Row(props: ParentProps<{ name: string; incoming?: boolean }>) {
+function Row(props: ParentProps<{ name: string }>) {
   return (
-    <div
-      class={[
-        fieldRowClass,
-        // (more room above what refers to the item from elsewhere)
-        { "pt-6": props.incoming, "first:pt-0": props.incoming },
-      ]}
-    >
+    <div class={fieldRowClass}>
       <dt class="pt-1 text-xs font-semibold text-slate-500 uppercase">
         {props.name}
       </dt>
-      <dd
-        class={[
-          "flex min-w-0 flex-wrap gap-x-2",
-          {
-            "items-start": !props.incoming,
-            // (a row with a block in it has blocks as far apart as rows of what refers to the item: `data-block`)
-            "gap-y-4 has-[>[data-block]]:gap-y-6": !props.incoming,
-            "items-center": props.incoming,
-            "gap-y-6": props.incoming,
-          },
-        ]}
-      >
+      {/* (a row with a block in it has blocks as far apart as rows of what refers to the item: `data-block`) */}
+      <dd class="flex min-w-0 flex-wrap items-start gap-x-2 gap-y-4 has-[>[data-block]]:gap-y-6">
         {props.children}
       </dd>
     </div>
@@ -100,6 +85,9 @@ function Head(props: {
   href?: string;
   /** Gives the bar a button at its right end that folds it (what is shown whole that can be collapsed) */
   onFold?: () => void;
+  /** A block nested deep enough to start folded (`startsFolded`): whether it is open, and the button that opens and folds it */
+  open?: boolean;
+  onToggle?: () => void;
 }) {
   const { t, modelName } = useTranslations();
   const contents = () => (
@@ -108,8 +96,42 @@ function Head(props: {
         {modelName(props.type)}
       </span>
       <span class={headRestClass}>
-        <Show when={props.label}>
-          <span class={headLabelClass}>{props.label}</span>
+        <Show
+          when={props.onToggle && !props.href}
+          fallback={
+            <Show when={props.label}>
+              <span class={headLabelClass}>{props.label}</span>
+            </Show>
+          }
+        >
+          {/* (as in the form: the grey of the bar, with the label in it, folds and unfolds it; folded, a ▸ says so) */}
+          <button
+            type="button"
+            class="flex min-w-0 flex-1 cursor-pointer items-center gap-2 px-3 py-1 text-left text-sm hover:bg-slate-400/20 focus-visible:bg-slate-400/20 focus-visible:outline-none"
+            aria-expanded={props.open ? "true" : "false"}
+            aria-label={t("fold", "Fold or unfold {name}", { name: modelName(props.type) })}
+            title={t("fold", "Fold or unfold {name}", { name: modelName(props.type) })}
+            onClick={() => props.onToggle!()}
+          >
+            <Show when={!props.open}>
+              <span aria-hidden="true" class="shrink-0 text-xs text-slate-500">
+                ▸
+              </span>
+            </Show>
+            <span class="min-w-0 truncate">{props.label}</span>
+          </button>
+        </Show>
+        <Show when={props.onToggle && props.href}>
+          <button
+            type="button"
+            class={[headButtonClass, "ml-auto text-slate-500 hover:bg-slate-400/30"]}
+            aria-expanded={props.open ? "true" : "false"}
+            aria-label={t("fold", "Fold or unfold {name}", { name: modelName(props.type) })}
+            title={t("fold", "Fold or unfold {name}", { name: modelName(props.type) })}
+            onClick={() => props.onToggle!()}
+          >
+            {props.open ? "▾" : "▸"}
+          </button>
         </Show>
         <Show when={props.onFold}>
           <button
@@ -140,9 +162,8 @@ function Head(props: {
 /**
  * The rows of an object: a key and its contents for each field of its model, in the order of
  * the model, the keys in a column on the left and the contents on the right. Fields with
- * nothing in them are left out, and those only in the database (worked out, not said). What refers to the object from
- * elsewhere (`incoming`) follows, as chips, by the field it is in; on the item's own page, an interface module's view
- * of it (`incomingViews`, chosen in the console) can take some of it, to show after the rows in its own way.
+ * nothing in them are left out, and those only in the database (worked out, not said). What refers to the
+ * object from elsewhere is not here: `IncomingRelations` (after the rows, on the item's own page).
  */
 function Fields(props: {
   value: Data;
@@ -150,117 +171,30 @@ function Fields(props: {
   depth: number;
   /** (a field that is shown some other way) */
   exclude?: string;
-  /** (the item's own page: its type and id, for a module's view of what refers to it) */
-  page?: { type: string; id: string };
 }) {
-  const { fieldName, incomingName } = useTranslations();
-  const definitions = useModels();
-  const views = useModules().incomingViews();
-  const incoming = useIncomingView();
-  const entries = createMemo<IncomingEntry[]>(() =>
-    (props.model?.incoming ?? []).flatMap((incoming) => {
-      const value = props.value[incoming.key];
-      return (Array.isArray(value) ? value : value ? [value] : [])
-        .filter(isObject)
-        .map((item) => ({
-          key: incoming.key,
-          name: incomingName(props.model!.name, incoming.name),
-          item,
-        }));
-    }),
-  );
-  // (the views that have something to show: only on the item's own page)
-  const offered = createMemo(() =>
-    props.page && views.length > 0
-      ? views.filter((view) => entries().some((entry) => view.takes(entry.item, definitions)))
-      : [],
-  );
-  // (the console offers each for as long as it has something)
-  createEffect(offered, (now) => {
-    const withdraw = now.map((view) => incoming.offer(view.name));
-    return () => withdraw.forEach((done) => done());
-  });
-  const view = () => offered().find((view) => view.name === incoming.chosen());
-  const taken = createMemo(() => {
-    const chosen = view();
-    return chosen ? entries().filter((entry) => chosen.takes(entry.item, definitions)) : [];
-  });
-  // (what the view does not take, by the relation it is in)
-  const restByField = createMemo(() => {
-    const groups = new Map<string, IncomingEntry[]>();
-    for (const entry of entries()) {
-      if (!taken().includes(entry)) groups.set(entry.name, [...(groups.get(entry.name) ?? []), entry]);
-    }
-    return [...groups.entries()];
-  });
+  const { fieldName } = useTranslations();
   return (
-    <>
-      <dl class={fieldGridClass}>
-        <For each={props.model?.fields ?? []}>
-          {(field) => (
-            <Show
-              when={
-                field.key !== props.exclude &&
-                !field.dbField &&
-                !isEmpty(props.value[field.key])
-              }
-            >
-              <Row name={fieldName(props.model!.name, field.name)}>
-                <Value
-                  value={props.value[field.key]}
-                  field={field}
-                  depth={props.depth}
-                />
-              </Row>
-            </Show>
-          )}
-        </For>
-        <Show
-          when={view()}
-          fallback={
-            <For each={props.model?.incoming ?? []}>
-              {(incoming) => (
-                <Show when={!isEmpty(props.value[incoming.key])}>
-                  <Row name={incomingName(props.model!.name, incoming.name)} incoming>
-                    <Value
-                      value={props.value[incoming.key]}
-                      depth={props.depth}
-                      asChip
-                    />
-                  </Row>
-                </Show>
-              )}
-            </For>
-          }
-        >
-          <For each={restByField()}>
-            {([name, group]) => (
-              <Row name={name} incoming>
-                <Value value={group.map((entry) => entry.item)} depth={props.depth} asChip />
-              </Row>
-            )}
-          </For>
-        </Show>
-      </dl>
-      <Show when={view() && props.page && props.model ? view() : undefined}>
-        {(chosen) => {
-          const View = chosen().component;
-          return (
-            <Errored
-              fallback={(error) => {
-                // (said in the browser's console, so that a module's author sees why there is nothing)
-                console.error("A view of an interface module failed:", error());
-                return null;
-              }}
-            >
-              <Loading fallback={null}>
-                <View type={props.page!.type} id={props.page!.id} model={props.model!} entries={taken()} />
-              </Loading>
-            </Errored>
-          );
-        }}
-      </Show>
-    </>
+    <dl class={fieldGridClass}>
+      <For each={props.model?.fields ?? []}>
+        {(field) => (
+          <Show
+            when={
+              field.key !== props.exclude &&
+              !field.dbField &&
+              !isEmpty(props.value[field.key])
+            }
+          >
+            <Row name={fieldName(props.model!.name, field.name)}>
+              <Value
+                value={props.value[field.key]}
+                field={field}
+                depth={props.depth}
+              />
+            </Row>
+          </Show>
+        )}
+      </For>
+    </dl>
   );
 }
 
@@ -373,6 +307,11 @@ function ObjectValue(props: {
       : collapsedView(props.value, definitions, modules.collapseRule);
   const [whole, setWhole] = createSignal(false);
   const folded = () => collapsed() !== undefined && !whole();
+  // (a block this deep starts folded, and what it holds is made when it is opened: see `nesting.ts`)
+  const nesting = useNesting();
+  const deep = startsFolded(nesting);
+  const [open, setOpen] = createSignal(!deep);
+  const onToggle = deep ? () => setOpen(!open()) : undefined;
   // (a part of the item's own document is marked with its id, as in the form, for what points at it: a review comment;
   // not something of another document that refers to it)
   const partId = () =>
@@ -422,20 +361,26 @@ function ObjectValue(props: {
                     rule={rule()}
                     label={label()}
                     onFold={onFold()}
+                    open={open()}
+                    onToggle={onToggle}
                     href={
                       props.asChip && props.value.id
                         ? `/${type()}/${props.value.id}`
                         : undefined
                     }
                   />
-                  {/* (more room under the head than a reified relation has: its first row is a field's, text with no box, not a chip) */}
-                  <div class={["ml-2 pt-6", nestedClass, rule()]}>
-                    <Fields
-                      value={props.value}
-                      model={model()}
-                      depth={props.depth}
-                    />
-                  </div>
+                  <Show when={open()}>
+                    {/* (more room under the head than a reified relation has: its first row is a field's, text with no box, not a chip) */}
+                    <div class={["ml-2 pt-6", nestedClass, rule()]}>
+                      <NestingProvider value={nesting + 1}>
+                        <Fields
+                          value={props.value}
+                          model={model()}
+                          depth={props.depth}
+                        />
+                      </NestingProvider>
+                    </div>
+                  </Show>
                 </div>
               </SpaceBands>
             </div>
@@ -521,19 +466,25 @@ function ObjectValue(props: {
                 rule={rule()}
                 label={label()}
                 onFold={onFold()}
+                open={open()}
+                onToggle={onToggle}
               />
-              <div class={["ml-2 pt-4", nestedClass, rule()]}>
-                {/* (what it holds first, then what is said of the relation) */}
-                <div class="flex min-w-0 flex-wrap items-start gap-x-2 gap-y-4">
-                  <Value value={props.value.target} depth={props.depth} />
+              <Show when={open()}>
+                <div class={["ml-2 pt-4", nestedClass, rule()]}>
+                  <NestingProvider value={nesting + 1}>
+                    {/* (what it holds first, then what is said of the relation) */}
+                    <div class="flex min-w-0 flex-wrap items-start gap-x-2 gap-y-4">
+                      <Value value={props.value.target} depth={props.depth} />
+                    </div>
+                    <Fields
+                      value={props.value}
+                      model={model()}
+                      depth={props.depth}
+                      exclude="target"
+                    />
+                  </NestingProvider>
                 </div>
-                <Fields
-                  value={props.value}
-                  model={model()}
-                  depth={props.depth}
-                  exclude="target"
-                />
-              </div>
+              </Show>
             </div>
           </Match>
           <Match when={isAnnotated()}>
@@ -564,7 +515,7 @@ function ObjectValue(props: {
               ]}
             >
               <span class={spaceTypeClass}>{modelName(type() ?? "")}</span>
-              <div class="flex min-w-0 flex-1 flex-wrap items-start gap-x-2 gap-y-6 p-3">
+              <div class={["flex min-w-0 flex-1 flex-wrap items-start gap-x-2 gap-y-6", spacePaddingClass]}>
                 <Value value={props.value.contents} depth={props.depth + 1} />
               </div>
             </div>
@@ -594,9 +545,30 @@ export function ItemContents(props: ItemContentsProps) {
       definitions,
       typeof props.item.type === "string" ? props.item.type : "",
     );
-  const page = () =>
-    typeof props.item.type === "string" && typeof props.item.id === "string"
-      ? { type: props.item.type, id: props.item.id }
-      : undefined;
-  return <Fields value={props.item} model={model()} depth={0} page={page()} />;
+  // (whether any of the item's own fields is shown: what refers to it is ruled off from them)
+  const hasFields = () =>
+    (model()?.fields ?? []).some((field) => !field.dbField && !isEmpty(props.item[field.key]));
+  // (an item that something can refer to: the model has incoming fields)
+  const referable = () => {
+    const found = model();
+    return found && (found.incoming ?? []).length > 0 && typeof props.item.id === "string" ? found : undefined;
+  };
+  return (
+    // (what the rows of the fields measure themselves by: see `fieldGridClass`)
+    <div class="@container w-full min-w-0">
+      <Fields value={props.item} model={model()} depth={0} />
+      <Show when={referable()}>
+        {(model) => (
+          <IncomingRelations
+            item={props.item}
+            model={model()}
+            afterFields={hasFields()}
+            chips={(items) => <Value value={items} depth={0} asChip />}
+          />
+        )}
+      </Show>
+    </div>
+  );
 }
+
+export default ItemContents;

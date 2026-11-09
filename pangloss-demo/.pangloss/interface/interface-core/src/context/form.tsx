@@ -1,6 +1,6 @@
-import { createContext, createSignal, createStore, snapshot, useContext } from "solid-js";
+import { createContext, createMemo, createSignal, createStore, snapshot, useContext } from "solid-js";
 import type { Accessor, ParentProps } from "solid-js";
-import { getAt, removeAt, setAt } from "../schema";
+import { getAt, removeAt, sameValue, setAt } from "../schema";
 import type { FieldProblem, FormData, FormHook, Path } from "../schema";
 
 /** A problem, and the row of the form it is shown at (none: it is told elsewhere, in the toast) */
@@ -30,10 +30,20 @@ export interface ItemFormState {
   problems: Accessor<PlacedProblem[]>;
   /** Shows these problems instead of those shown; gives them back placed */
   setProblems: (problems: FieldProblem[]) => PlacedProblem[];
-  /** The problems shown at the row of `path` (reactive) */
+  /**
+   * The problems shown at the row of `path` (reactive): those found on save placed there, and what the form's hooks
+   * say about the field at `path` as the item is now (`FormHook.notices`: a bound value that cannot go there)
+   */
   problemsAt: (path: Path) => FieldProblem[];
   /** Says that a row of the form shows the field at `path`, for as long as it is there: call what it gives back to take it away */
   registerRow: (path: Path) => () => void;
+  /**
+   * Whether the item is not what it is when there is nothing to save (`ItemFormOptions.baseline`): what turns Save on
+   * (reactive). Compared as `ItemFormOptions.comparable` makes them
+   */
+  changed: Accessor<boolean>;
+  /** Whether the item is not what the form started with: what asks before the form is left (reactive) */
+  edited: Accessor<boolean>;
 }
 
 const keyOf = (path: Path) => JSON.stringify(path);
@@ -53,13 +63,29 @@ export interface ItemFormOptions {
    * holds, as it changes: `createBinder`) and their shares (`createSharer`), as one (`composeHooks`)
    */
   binder?: FormHook<unknown>;
+  /** What the item is when there is nothing to save (`changed`); without it, `initial` */
+  baseline?: FormData;
+  /**
+   * What is compared to tell whether the item has changed (`changed`, `edited`): given the item (a store, so that what
+   * it reads is followed) and gives back a plain value. Without it, the whole item
+   */
+  comparable?: (item: FormData) => unknown;
 }
 
 /** Starts from a copy of `initial` */
 export function createItemFormState(initial: FormData, options: ItemFormOptions = {}): ItemFormState {
   const { headId, fill, binder } = options;
   const [data, setData] = createStore<FormData>(structuredClone(initial));
+  const comparable = options.comparable ?? ((item: FormData) => snapshotDeep(item));
+  // (what the item is compared with: plain copies, made once)
+  const startedAs = comparable(structuredClone(initial));
+  const baseline = options.baseline === undefined ? startedAs : comparable(structuredClone(options.baseline));
+  const now = createMemo(() => comparable(data));
+  const changed = createMemo(() => !sameValue(now(), baseline));
+  const edited = createMemo(() => !sameValue(now(), startedAs));
   const [problems, setPlaced] = createSignal<PlacedProblem[]>([]);
+  // (what the hooks say about the item as it is, by the path of the field: worked out again when the item changes)
+  const notices = createMemo(() => binder?.notices?.(data) ?? []);
   // (the rows on the page, by path: a plain count, read only when problems are placed)
   const rows = new Map<string, number>();
   const rowOf = (path: Path): Path | undefined => {
@@ -105,10 +131,15 @@ export function createItemFormState(initial: FormData, options: ItemFormOptions 
     },
     problemsAt: (path) => {
       const key = keyOf(path);
-      return problems()
-        .filter(({ row }) => row !== undefined && keyOf(row) === key)
-        .map(({ problem }) => problem);
+      return [
+        ...problems()
+          .filter(({ row }) => row !== undefined && keyOf(row) === key)
+          .map(({ problem }) => problem),
+        ...notices().filter((notice) => keyOf(notice.path) === key),
+      ];
     },
+    changed,
+    edited,
     registerRow: (path) => {
       const key = keyOf(path);
       rows.set(key, (rows.get(key) ?? 0) + 1);
@@ -119,6 +150,13 @@ export function createItemFormState(initial: FormData, options: ItemFormOptions 
       };
     },
   };
+}
+
+// (a plain copy of the item that reads every part of it, so that a memo of it follows every change)
+function snapshotDeep(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(snapshotDeep);
+  if (typeof value !== "object" || value === null) return value;
+  return Object.fromEntries(Object.entries(value).map(([key, inner]) => [key, snapshotDeep(inner)]));
 }
 
 const FormContext = createContext<ItemFormState>();

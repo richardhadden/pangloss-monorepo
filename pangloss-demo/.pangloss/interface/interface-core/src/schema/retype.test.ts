@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 import type { FieldDefinition, ModelDefinition, ModelDefinitions, RelationOption } from "../types";
-import { narrowerTypes, retype, widerTypes } from "./retype";
+import { narrowerTypes, narrowingChoices, retype, widerTypes } from "./retype";
 
 const model = (name: string, extra: Partial<ModelDefinition> = {}) =>
   ({
@@ -40,6 +40,7 @@ const relation = (name: string, options: RelationOption[], many: boolean, subcla
     subclasses,
   }) as FieldDefinition;
 const doc = (type: string): RelationOption => ({ kind: "document", type, edgeModel: null });
+const certain = (type: string): RelationOption => ({ kind: "entity", type, edgeModel: "Certainty" });
 
 // As in the demo: a statement involves agents; a creation's `created_by` (a person) stands for
 // `involves`, and each narrower creation's object stands for the one above it
@@ -89,6 +90,24 @@ const definitions = {
     Meeting: model("Meeting", {
       parent: "Event",
       fields: [relation("chaired_by", entities("Person"), false, ["involves"])],
+    }),
+    // (relations with properties: a gathering's people, each with how certain; an audience's have none, a
+    // council's have the same edge model, a hearing's another; a hearing holds one)
+    Gathering: model("Gathering", {
+      concreteTypes: ["Audience", "Council", "Gathering", "Hearing"],
+      fields: [relation("present", [certain("Person"), certain("Group")], true)],
+    }),
+    Audience: model("Audience", {
+      parent: "Gathering",
+      fields: [relation("received", entities("Person"), true, ["present"])],
+    }),
+    Council: model("Council", {
+      parent: "Gathering",
+      fields: [relation("councillors", [certain("Person")], true, ["present"])],
+    }),
+    Hearing: model("Hearing", {
+      parent: "Gathering",
+      fields: [relation("heard", [{ kind: "entity", type: "Person", edgeModel: "Witnessed" }], false, ["present"])],
     }),
     Place: model("Place", { kind: "Entity" }),
     Person: model("Person", { kind: "Entity" }),
@@ -199,4 +218,85 @@ test("an entity not yet chosen goes where its type is allowed, and is not counte
   expect(retype(definitions, { type: "Meeting", chairedBy: unchosen }, "Event").value.involves).toEqual([unchosen]);
   const wrong = retype(definitions, { type: "Event", involves: [{ type: "Group" }] }, "Meeting");
   expect(wrong).toEqual({ value: { type: "Meeting" }, lost: [] });
+});
+
+const painting = { type: "Painting", id: "pa1", label: "A painting" };
+
+test("only a narrowing that loses nothing can be chosen: the others say what they would lose", () => {
+  // (an artwork can be the artwork created, but not the painting created)
+  expect(narrowingChoices(definitions, made, statements)).toEqual([
+    { type: "CreationOfArtwork", lost: [] },
+    { type: "CreationOfPainting", lost: [{ model: "CreationOfPhysicalObject", field: "object_created", count: 1 }] },
+  ]);
+  // (a painting can be either)
+  expect(narrowingChoices(definitions, { ...made, objectCreated: painting }, statements)).toEqual([
+    { type: "CreationOfArtwork", lost: [] },
+    { type: "CreationOfPainting", lost: [] },
+  ]);
+  // (with nothing chosen yet, everything below can be chosen, and the object chosen after)
+  expect(narrowingChoices(definitions, { type: "CreationOfPhysicalObject", text: "Made" }, statements)).toEqual([
+    { type: "CreationOfArtwork", lost: [] },
+    { type: "CreationOfPainting", lost: [] },
+  ]);
+  // (a type the field does not allow is not one of them; nor is anything below the narrowest)
+  expect(narrowingChoices(definitions, made, [doc("CreationOfPhysicalObject"), doc("CreationOfPainting")])).toEqual([
+    { type: "CreationOfPainting", lost: [{ model: "CreationOfPhysicalObject", field: "object_created", count: 1 }] },
+  ]);
+  expect(narrowingChoices(definitions, { type: "CreationOfPainting", paintingCreated: painting }, statements)).toEqual([]);
+});
+
+test("a narrowing from a list to one thing can be chosen only when the list has one thing in it", () => {
+  const group = { type: "Group", id: "g1", label: "The guild" };
+  expect(narrowingChoices(definitions, { type: "Event", involves: [alice, bob] }, [doc("Event"), doc("Meeting")])).toEqual([
+    { type: "Meeting", lost: [{ model: "Event", field: "involves", count: 1 }] },
+  ]);
+  expect(narrowingChoices(definitions, { type: "Event", involves: [alice] }, [doc("Event"), doc("Meeting")])).toEqual([
+    { type: "Meeting", lost: [] },
+  ]);
+  // (one, but one a meeting cannot be chaired by)
+  expect(narrowingChoices(definitions, { type: "Event", involves: [group] }, [doc("Event"), doc("Meeting")])).toEqual([
+    { type: "Meeting", lost: [{ model: "Event", field: "involves", count: 1 }] },
+  ]);
+  expect(narrowingChoices(definitions, { type: "Event", involves: [] }, [doc("Event"), doc("Meeting")])).toEqual([
+    { type: "Meeting", lost: [] },
+  ]);
+});
+
+const gatherings = ["Audience", "Council", "Gathering", "Hearing"].map(doc);
+const sure = { ...alice, edgeProperties: { level: 3 } };
+// (a property not yet typed: nothing to lose)
+const unsure = { ...bob, edgeProperties: { level: "" } };
+
+test("the properties of a relation are lost where the new field's relation has none or others, and that is said", () => {
+  const audience = retype(definitions, { type: "Gathering", present: [sure, unsure] }, "Audience");
+  // (both people are kept; the properties that were filled in are counted as lost, the empty ones not)
+  expect(audience.value.received).toEqual([alice, bob]);
+  expect(audience.lost).toEqual([{ model: "Gathering", field: "present", count: 1, edgeProperties: true }]);
+  // (the same edge model: kept, and nothing lost)
+  const council = retype(definitions, { type: "Gathering", present: [sure, unsure] }, "Council");
+  expect(council).toEqual({ value: { type: "Council", councillors: [sure, unsure] }, lost: [] });
+  // (another edge model, to one thing: the first is kept without its properties)
+  const hearing = retype(definitions, { type: "Gathering", present: [sure] }, "Hearing");
+  expect(hearing).toEqual({
+    value: { type: "Hearing", heard: alice },
+    lost: [{ model: "Gathering", field: "present", count: 1, edgeProperties: true }],
+  });
+  // (widening back: the edge model of the wider field is not the one they had)
+  expect(retype(definitions, { type: "Hearing", heard: { ...alice, edgeProperties: { seen: true } } }, "Gathering").lost).toEqual([
+    { model: "Hearing", field: "heard", count: 1, edgeProperties: true },
+  ]);
+});
+
+test("so a narrowing that would lose the properties of a relation cannot be chosen", () => {
+  expect(narrowingChoices(definitions, { type: "Gathering", present: [sure] }, gatherings)).toEqual([
+    { type: "Audience", lost: [{ model: "Gathering", field: "present", count: 1, edgeProperties: true }] },
+    { type: "Council", lost: [] },
+    { type: "Hearing", lost: [{ model: "Gathering", field: "present", count: 1, edgeProperties: true }] },
+  ]);
+  // (with no properties filled in, nothing would be lost)
+  expect(narrowingChoices(definitions, { type: "Gathering", present: [unsure] }, gatherings).map((c) => c.lost)).toEqual([
+    [],
+    [],
+    [],
+  ]);
 });

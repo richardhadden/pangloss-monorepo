@@ -27,6 +27,7 @@ try {
       newItemActions: Object.keys(manifest.newItemActions ?? {}),
       itemSections: Object.keys(manifest.itemSections ?? {}),
       incomingViews: Object.keys(manifest.incomingViews ?? {}),
+      resultMarks: Object.keys(manifest.resultMarks ?? {}),
       routes: (manifest.routes ?? []).map(({ path, component }) => ({ path, component })),
     });
   }

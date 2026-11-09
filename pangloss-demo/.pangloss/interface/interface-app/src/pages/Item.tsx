@@ -1,10 +1,13 @@
 import {
   ApiError,
   Customised,
+  preload,
   getModel,
   ItemSections,
+  Spinner,
   useComponent,
   useModels,
+  useModules,
   headOf,
   useTranslations,
   wrappingSpaces,
@@ -23,9 +26,11 @@ import {
   Loading,
   onCleanup,
   onSettled,
+  Reveal,
   Show,
 } from "solid-js";
 import { useNavigate } from "@solidjs/router";
+import { isServer } from "@solidjs/web";
 import { itemQuery, revalidateAll } from "../queries";
 import { Page } from "../Page";
 
@@ -74,7 +79,8 @@ function Track(props: {
       });
     },
   );
-  onCleanup(() => props.onShow(undefined));
+  // (in the browser only: the server renders a page in passes and discards each, and state is not written there)
+  if (!isServer) onCleanup(() => props.onShow(undefined));
   return null;
 }
 
@@ -107,7 +113,13 @@ export default function EntityPage(props: RouteProps<"/:type/:id">) {
   const ErrorMessage = useComponent("ErrorMessage");
   const { t } = useTranslations();
   const navigate = useNavigate();
-  const item = createMemo(() => itemQuery(props.params.type, props.params.id));
+  const modules = useModules();
+  const item = createMemo(() => {
+    // (what the modules add to the page is loaded while the item is read, not once it has come)
+    modules.preloadItemPage(props.params.type);
+    preload(ItemContents);
+    return itemQuery(props.params.type, props.params.id);
+  });
   // (a model may name a page of an interface module for its items: it replaces the rest of this one)
   // What the console says of the item, kept in a signal of its own (set by `Track`, which is inside the error
   // boundary below and so goes with the item's page): the console is outside it, and an item that was there and
@@ -160,7 +172,7 @@ export default function EntityPage(props: RouteProps<"/:type/:id">) {
           </>
         )}
       >
-        <Loading fallback={<p>{t("loading", "Loading…")}</p>}>
+        <Loading fallback={<p class="pt-2 text-slate-500"><Spinner class="size-5" /></p>}>
           <Track item={item} onShow={setShown} />
           <Customised
             slot="itemPage"
@@ -177,8 +189,13 @@ export default function EntityPage(props: RouteProps<"/:type/:id">) {
                 <h1 class="mb-6 border-b-[0.5px] border-slate-400/70 pt-1 pb-2 text-2xl font-semibold">
                   {item().label ?? item().id}
                 </h1>
-                <ItemContents item={item()} />
-                <ItemSections item={item()} />
+                {/* (what refers to the item, and the modules' sections after it, each read apart from the item
+                    in a boundary of its own: in the order they are on the page, so that a section does not show
+                    before what is above it has, and then move down) */}
+                <Reveal>
+                  <ItemContents item={item()} />
+                  <ItemSections item={item()} />
+                </Reveal>
               </>
             }
           />

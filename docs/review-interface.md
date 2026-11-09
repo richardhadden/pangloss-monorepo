@@ -42,6 +42,14 @@ reader who is not logged in). The `Console` gets the item as a new prop, `item?:
 page passes them, and so does `ItemForm` when it edits an existing item. The manifest reader and `Manifest` in Python
 learn the key (`console_actions`), so `pangloss interface check` lists them.
 
+## The flag in lists ✅
+
+A list's row shows the review status at its right (`resultMarks: { StatusFlag }`, `ListStatusFlag`): from
+`meta.reviewStatus`, which the list already sends, so no request of its own. An item inside a reviewed document has its
+head's status. Someone not logged in sees none, as with the rest of review, and is only ever shown what is checked. A
+document of a reviewed class written before the class was marked has no stored status, so no flag, though its item page
+counts it as checked if it is published.
+
 ## The review module
 
 ```

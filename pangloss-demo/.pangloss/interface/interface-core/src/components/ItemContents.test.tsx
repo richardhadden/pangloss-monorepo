@@ -1,8 +1,10 @@
 // @vitest-environment happy-dom
 import { render } from "@solidjs/web";
 import { flush } from "solid-js";
-import { afterEach, expect, test } from "vitest";
+import { afterEach, expect, test, vi } from "vitest";
+import type { ApiClient } from "../api";
 import {
+  ApiProvider,
   ComponentsProvider,
   ConsoleMountProvider,
   ModelsProvider,
@@ -76,6 +78,12 @@ const definitions: ModelDefinitions = {
   models: {
     Factoid: model("Factoid", "Document", [
       field("year", "year"),
+      {
+        ...field("nicknames", "nicknames", "annotatedValue"),
+        model: "WithCertainty",
+        valueType: { type: "string" },
+        many: true,
+      } as unknown as FieldDefinition,
       field("statements", "statements", "relation"),
       field("involves", "involves", "relation"),
       {
@@ -475,6 +483,21 @@ test("an annotated value is its value, as the field's own, without its type or a
   expect(value.compareDocumentPosition(certainty) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 });
 
+test("a list of annotated values shows each, with what is said of it", () => {
+  const host = show({
+    id: "f1",
+    type: "Factoid",
+    nicknames: [
+      { value: "Karl", certainty: 5 },
+      { value: "Charles", certainty: 2 },
+    ],
+  });
+  const texts = [...host.querySelectorAll("span")].map((span) => span.textContent);
+  expect(texts).toContain("Karl");
+  expect(texts).toContain("Charles");
+  expect([...host.querySelectorAll("dt")].filter((dt) => dt.textContent === "certainty")).toHaveLength(2);
+});
+
 const smith = { id: "p1", type: "Person", label: "Smith", edgeProperties: { probability: 0.9 } };
 const jones = { id: "p2", type: "Person", label: "Jones" };
 const identified = (people: object[], identifiedBy = "") => ({
@@ -575,6 +598,8 @@ const witness = {
 test("a module's view of what refers to an item: offered while it takes some, then it shows that, the rest by field", async () => {
   localStorage.clear();
   let host = show(witness, [offices]);
+  // (the module also has a section, which has no boundary of its own: the page is there once its code is)
+  await settle();
   flush();
   expect(incoming.offered("offices:Held")).toBe(true);
   expect(incoming.chosen()).toBeUndefined();
@@ -587,7 +612,7 @@ test("a module's view of what refers to an item: offered while it takes some, th
   flush();
   // (what it takes, given to it after the fields; what it does not take, by field)
   expect(host.querySelector("[data-testid=held]")!.textContent).toBe("Witness/w1: Bishop, Abbot, Notary");
-  const facts = host.querySelector("dl")!;
+  const facts = host.querySelector("[data-testid=incoming-by-field]")!;
   expect(facts.textContent).not.toContain("held reverse");
   expect(facts.querySelector('a[href="/Note/n1"]')).toBeTruthy();
   expect(facts.querySelector('a[href="/Birth/b1"]')).toBeTruthy();
@@ -598,6 +623,7 @@ test("a module's view of what refers to an item: offered while it takes some, th
 
   // (nothing it takes: not offered, and by field though it is chosen)
   host = show({ ...witness, heldReverse: [] }, [offices]);
+  await settle();
   flush();
   expect(incoming.offered("offices:Held")).toBe(false);
   expect(host.querySelector("[data-testid=held]")).toBeNull();
@@ -628,4 +654,266 @@ test("what is only in the database is not shown, and does not make a reference a
   // (the copy of a dateable document's date is a field of its model only in the database)
   expect(host.textContent).not.toContain("date text");
   expect(host.querySelectorAll("[data-block]")).toHaveLength(0);
+});
+
+// (an API that answers `getIncoming` from a list of everything that refers by a field)
+function incomingApi(all: Record<string, Record<string, unknown>[]>) {
+  const asked: [string, unknown][] = [];
+  const client = {
+    get: async (path: string, query?: Record<string, unknown>) => {
+      asked.push([path, query]);
+      const field = path.split("/").at(-1)!;
+      const size = query!.page_size as number;
+      const start = ((query!.page as number) - 1) * size;
+      return {
+        field,
+        count: all[field].length,
+        page: query!.page,
+        pageSize: size,
+        results: all[field].slice(start, start + size),
+      };
+    },
+  } as unknown as ApiClient;
+  return { client, asked };
+}
+
+function showWithApi(item: Record<string, unknown>, client: ApiClient, modules: ModuleManifest[] = []) {
+  const container = document.createElement("div");
+  document.body.append(container);
+  dispose = render(
+    () => (
+      <ApiProvider client={client}>
+        <ConsoleMountProvider>
+          <Probe />
+          <ComponentsProvider components={{ ReferenceChip } as ComponentMap}>
+            <ModelsProvider definitions={definitions}>
+              <ModulesProvider modules={modules}>
+                <ItemContents item={item} />
+              </ModulesProvider>
+            </ModelsProvider>
+          </ComponentsProvider>
+        </ConsoleMountProvider>
+      </ApiProvider>
+    ),
+    container,
+  );
+  return container;
+}
+
+const offices250 = Array.from({ length: 250 }, (_, n) => ({
+  id: `o${n}`,
+  type: "Office",
+  label: `Office ${String(n).padStart(3, "0")}`,
+}));
+
+test("an entity read with the first of what refers to it: a row that has more says how many, and reads them when asked", async () => {
+  const { client, asked } = incomingApi({ heldReverse: offices250 });
+  const host = showWithApi(
+    {
+      id: "w1",
+      type: "Witness",
+      label: "A witness",
+      heldReverse: offices250.slice(0, 25),
+      aboutReverse: [{ id: "n1", type: "Note", label: "A note" }],
+      incomingCounts: { heldReverse: 250, aboutReverse: 1 },
+    },
+    client,
+  );
+  const links = () => host.querySelectorAll('a[href^="/Office/"]').length;
+  expect(links()).toBe(25);
+  // (one row has more; the other is all there, and has no button; the counts are not a field)
+  const buttons = () => [...host.querySelectorAll<HTMLButtonElement>("[data-testid=incoming-more]")];
+  expect(buttons().map((button) => button.textContent)).toEqual(["and 225 more"]);
+  expect(host.textContent).not.toContain("incomingCounts");
+  expect(asked).toEqual([]);
+
+  // a hundred at a time, whole pages from the start (the 25 are the first of the first page)
+  buttons()[0].click();
+  await settle();
+  flush();
+  expect(asked).toEqual([["/Witness/w1/incoming/heldReverse", { page: 1, page_size: 100 }]]);
+  expect(links()).toBe(100);
+  expect(buttons()[0].textContent).toBe("and 150 more");
+  buttons()[0].click();
+  await settle();
+  flush();
+  expect(asked[1]).toEqual(["/Witness/w1/incoming/heldReverse", { page: 2, page_size: 100 }]);
+  // (from here it is virtual, which is `lazy`)
+  await vi.waitFor(() => expect(links()).toBe(200));
+  buttons()[0].click();
+  await settle();
+  flush();
+  expect(links()).toBe(250);
+  expect(host.querySelector('a[href="/Office/o249"]')).toBeTruthy();
+  // (all read: no button)
+  expect(buttons()).toEqual([]);
+});
+
+test("an entity read whole (no counts) has no such button, and needs no API", () => {
+  const host = show({ id: "w1", type: "Witness", label: "A witness", heldReverse: offices250.slice(0, 30) });
+  expect(host.querySelectorAll('a[href^="/Office/"]').length).toBe(30);
+  expect(host.querySelector("[data-testid=incoming-more]")).toBeNull();
+});
+
+test("a module's view of what refers to an entity says how many it is without, and reads them all when asked", async () => {
+  localStorage.clear();
+  const { client, asked } = incomingApi({ heldReverse: offices250 });
+  const host = showWithApi(
+    {
+      id: "w1",
+      type: "Witness",
+      label: "A witness",
+      heldReverse: offices250.slice(0, 25),
+      incomingCounts: { heldReverse: 250 },
+    },
+    client,
+    [offices],
+  );
+  await settle();
+  flush();
+  // (by field: no notice, the row's own button)
+  expect(host.querySelector("[data-testid=incoming-not-read]")).toBeNull();
+  incoming.choose("offices:Held");
+  flush();
+  await settle();
+  flush();
+  const held = () => host.querySelector("[data-testid=held]")!.textContent!;
+  expect(held().split(", ")).toHaveLength(25);
+  const notice = host.querySelector("[data-testid=incoming-not-read]")!;
+  expect(notice.textContent).toContain("225 more refer to this and are not read yet");
+  notice.querySelector("button")!.click();
+  await settle();
+  flush();
+  // (every page of the field, five hundred at a time, and the view has them all)
+  expect(asked).toEqual([["/Witness/w1/incoming/heldReverse", { page: 1, page_size: 500 }]]);
+  expect(held().split(", ")).toHaveLength(250);
+  expect(host.querySelector("[data-testid=incoming-not-read]")).toBeNull();
+  localStorage.clear();
+});
+
+test("an entity read without what refers to it (the counts null) reads the first of each field, and shows them as if they had come with it", async () => {
+  const asked: [string, unknown][] = [];
+  const client = {
+    get: async (path: string, query?: Record<string, unknown>) => {
+      asked.push([path, query]);
+      if (path.endsWith("/incoming")) {
+        return {
+          limit: 25,
+          counts: { heldReverse: 250, aboutReverse: 1 },
+          fields: { heldReverse: offices250.slice(0, 25), aboutReverse: [{ id: "n1", type: "Note", label: "A note" }] },
+        };
+      }
+      return { field: "heldReverse", count: 250, page: 1, pageSize: 100, results: offices250.slice(0, 100) };
+    },
+  } as unknown as ApiClient;
+  const host = showWithApi({ id: "w1", type: "Witness", label: "A witness", incomingCounts: null }, client);
+  // (while they are read, a word; the item's own contents are there already)
+  expect(host.querySelector("[data-testid=incoming-loading]")).toBeTruthy();
+  expect(host.querySelector('a[href^="/Office/"]')).toBeNull();
+  await settle();
+  flush();
+  expect(asked).toEqual([["/Witness/w1/incoming", { limit: 25 }]]);
+  expect(host.querySelector("[data-testid=incoming-loading]")).toBeNull();
+  expect(host.querySelectorAll('a[href^="/Office/"]').length).toBe(25);
+  expect(host.querySelector('a[href="/Note/n1"]')).toBeTruthy();
+  // (and the rest is read as it is for an item read with its first few)
+  const more = host.querySelector<HTMLButtonElement>("[data-testid=incoming-more]")!;
+  expect(more.textContent).toBe("and 225 more");
+  more.click();
+  await settle();
+  flush();
+  expect(asked[1]).toEqual(["/Witness/w1/incoming/heldReverse", { page: 1, page_size: 100 }]);
+  expect(host.querySelectorAll('a[href^="/Office/"]').length).toBe(100);
+});
+
+test("many that refer to an entity: only the rows on show are rendered", () => {
+  // (thirty fields of ten each: more than `INCOMING_VIRTUAL_FROM`)
+  const incoming = Array.from({ length: 30 }, (_, n) => ({
+    name: `field_${n}_reverse`,
+    key: `field${n}Reverse`,
+    sources: [],
+  }));
+  const hub = {
+    id: "h1",
+    type: "Hub",
+    label: "A hub",
+    ...Object.fromEntries(
+      incoming.map((field, n) => [
+        field.key,
+        Array.from({ length: 10 }, (_, i) => ({ id: `d${n}-${i}`, type: "Note", label: `Note ${n}-${i}` })),
+      ]),
+    ),
+  };
+  // (a row is as tall as it is estimated to be: the browser's measure is not happy-dom's)
+  // (a row is as tall as it is estimated to be: happy-dom lays nothing out, and the virtualizer measures `offsetHeight`)
+  Object.defineProperty(HTMLElement.prototype, "offsetHeight", { get: () => 80, configurable: true });
+  // (happy-dom's resize observer reports no sizes: the rows keep the size they were measured at)
+  // (on the window itself: the virtualizer takes it from there, and `vi.stubGlobal` does not reach it)
+  const resizeObserver = window.ResizeObserver;
+  Object.defineProperty(window, "ResizeObserver", {
+    value: class { observe() {} unobserve() {} disconnect() {} },
+    configurable: true,
+    writable: true,
+  });
+  const container = document.createElement("div");
+  document.body.append(container);
+  dispose = render(
+    () => (
+      <ComponentsProvider components={{ ReferenceChip } as ComponentMap}>
+        <ModelsProvider definitions={{ ...definitions, models: { ...definitions.models, Hub: model("Hub", "Entity", [], incoming) } }}>
+          <ItemContents item={hub} />
+        </ModelsProvider>
+      </ComponentsProvider>
+    ),
+    container,
+  );
+  flush();
+  const list = container.querySelector("[data-testid=incoming-by-field] [data-virtual]")!;
+  expect(list).toBeTruthy();
+  // (as many rows as fill a window, and a few beyond; the first is the first field)
+  const rows = list.querySelectorAll("[data-index]").length;
+  expect(rows).toBeGreaterThan(5);
+  expect(rows).toBeLessThan(30);
+  expect(list.querySelector("[data-index='0'] dt")!.textContent).toBe("field 0 reverse");
+  expect(container.querySelectorAll('a[href^="/Note/"]').length).toBe(rows * 10);
+  delete (HTMLElement.prototype as { offsetHeight?: number }).offsetHeight;
+  Object.defineProperty(window, "ResizeObserver", { value: resizeObserver, configurable: true, writable: true });
+});
+
+// (a claim of a claim of a claim ...: a document nested `depth` deep, each with a label saying which it is)
+const claims = (depth: number): Record<string, unknown> => {
+  let inner: Record<string, unknown> = { id: `c${depth}`, type: "Claim", label: `claim ${depth}`, target: [] };
+  for (let n = depth - 1; n >= 0; n--) {
+    inner = { id: `c${n}`, type: "Claim", label: `claim ${n}`, target: [inner] };
+  }
+  return { id: "f1", type: "Factoid", statements: [inner] };
+};
+
+test("a document nested five deep starts folded, and what it holds is not made until it is unfolded", () => {
+  const host = show(claims(12));
+  const shown = () => [...host.querySelectorAll("span.truncate")].map((s) => s.textContent);
+  // (the sixth claim is five blocks deep: its head is there, folded; the rest are not made)
+  expect(shown()).toEqual(["claim 0", "claim 1", "claim 2", "claim 3", "claim 4", "claim 5"]);
+  const toggles = () => [...host.querySelectorAll<HTMLButtonElement>("button[aria-label='Fold or unfold Claim']")];
+  expect(toggles().length).toBe(1);
+  expect(toggles()[0]!.getAttribute("aria-expanded")).toBe("false");
+  toggles()[0]!.click();
+  flush();
+  // (unfolded: the next five, and the one after them starts folded again)
+  expect(shown()).toEqual([...Array(12).keys()].map((n) => `claim ${n}`).slice(0, 11));
+  expect(toggles().length).toBe(2);
+  expect(toggles()[0]!.getAttribute("aria-expanded")).toBe("true");
+  expect(toggles()[1]!.getAttribute("aria-expanded")).toBe("false");
+  toggles()[0]!.click();
+  flush();
+  expect(shown().length).toBe(6);
+});
+
+test("the rows of the fields measure themselves by what they are in: the grid stacks the name above the field in a narrow place", () => {
+  const host = show(claims(1));
+  // (the contents are a container for the rows, and so is what each block's fields are in)
+  expect(host.firstElementChild!.className).toContain("@container");
+  const nested = host.querySelector("dl dd div.border-l-2")!;
+  expect(nested.className).toContain("@container");
+  expect(host.querySelector("dl")!.className).toContain("@max-md:grid-cols-1");
 });

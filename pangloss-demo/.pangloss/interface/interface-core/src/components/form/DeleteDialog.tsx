@@ -118,3 +118,5 @@ export function DeleteDialog(props: {
     </Modal>
   );
 }
+
+export default DeleteDialog;

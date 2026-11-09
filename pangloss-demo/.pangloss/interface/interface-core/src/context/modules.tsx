@@ -3,6 +3,7 @@ import type { Component, ParentProps } from "solid-js";
 import { findLoader, orderModules, slotOf } from "../schema";
 import type {
   CollapseRule,
+  ComponentLoader,
   ComponentReference,
   ConsoleActionProps,
   CustomProps,
@@ -12,6 +13,7 @@ import type {
   ItemSectionProps,
   ModuleManifest,
   NewItemActionProps,
+  ResultMarkProps,
 } from "../types";
 import { useModels } from "./models";
 
@@ -22,15 +24,33 @@ interface ModulesValue {
   /** The rule `InterfaceMeta(collapse="app:name")` names, or undefined */
   collapseRule(reference: ComponentReference): CollapseRule | undefined;
   /** What the modules add to the console of an item (`consoleActions`), in the order of the modules (lazy; the same each time) */
-  consoleActions(): Component<ConsoleActionProps>[];
+  consoleActions(): LoadedConsoleAction[];
   /** What the modules add to the console of the form that makes a new item (`newItemActions`), in order (lazy) */
   newItemActions(): Component<NewItemActionProps>[];
   /** What the modules add first among the fields of the form that makes a new item (`newItemFields`), in order */
   newItemFields(): Component<NewItemActionProps>[];
   /** What the modules add after the contents of an item's page (`itemSections`), in the order of the modules (lazy) */
   itemSections(): Component<ItemSectionProps>[];
+  /** The same, as their loaders: for `ItemSections`, which waits for their code itself, in one boundary */
+  itemSectionLoaders(): ComponentLoader[];
+  /** What the modules add at the right end of each row of a list (`resultMarks`), in the order of the modules */
+  resultMarks(): Component<ResultMarkProps>[];
   /** The other ways of showing what refers to an item (`incomingViews`), by name `app:key` (each component lazy) */
   incomingViews(): LoadedIncomingView[];
+  /**
+   * Start loading the code the modules add to the page of an item of the type: the model's own page, the sections,
+   * the views of what refers to it, and the cards of the models that have their own. A page calls it as it starts to read the item, so that the code is loaded
+   * while the item is read: left to the first render that needs it, it was asked for only once the item had
+   * come, and the server rendered the page in as many passes as there were things to wait for, one after another
+   */
+  preloadItemPage(type: string): void;
+}
+
+/** A console action of a module, with its component made */
+export interface LoadedConsoleAction {
+  component: Component<ConsoleActionProps>;
+  /** Only for someone logged in: for anyone else it is not shown, and its code is not fetched */
+  loggedIn: boolean;
 }
 
 /** An `IncomingView` of a module, with its name and its component made */
@@ -50,7 +70,10 @@ const NONE: ModulesValue = {
   newItemActions: () => [],
   newItemFields: () => [],
   itemSections: () => [],
+  itemSectionLoaders: () => [],
+  resultMarks: () => [],
   incomingViews: () => [],
+  preloadItemPage: () => {},
 };
 const ModulesContext = createContext<ModulesValue>(NONE);
 
@@ -68,11 +91,12 @@ export function ModulesProvider(props: ParentProps<{ modules: readonly ModuleMan
         .map(([key, value]): [string, T] => [`${module.name}:${key}`, value])
         .filter(([name]) => !disabled.has(name)),
     );
-  let actions: Component<ConsoleActionProps>[] | undefined;
+  let actions: LoadedConsoleAction[] | undefined;
   let newActions: Component<NewItemActionProps>[] | undefined;
   let newFields: Component<NewItemActionProps>[] | undefined;
   let sections: Component<ItemSectionProps>[] | undefined;
   let views: LoadedIncomingView[] | undefined;
+  let marks: Component<ResultMarkProps>[] | undefined;
   const value: ModulesValue = {
     modules,
     custom(type, slot) {
@@ -96,9 +120,10 @@ export function ModulesProvider(props: ParentProps<{ modules: readonly ModuleMan
       return rules && Object.hasOwn(rules, reference.name) ? rules[reference.name] : undefined;
     },
     consoleActions() {
-      actions ??= each((module) => module.consoleActions).map(
-        ([, loader]) => lazy(loader) as Component<ConsoleActionProps>,
-      );
+      actions ??= each((module) => module.consoleActions).map(([, action]) => ({
+        component: lazy(typeof action === "function" ? action : action.load) as Component<ConsoleActionProps>,
+        loggedIn: typeof action !== "function",
+      }));
       return actions;
     },
     newItemActions() {
@@ -119,6 +144,13 @@ export function ModulesProvider(props: ParentProps<{ modules: readonly ModuleMan
       );
       return sections;
     },
+    itemSectionLoaders() {
+      return each((module) => module.itemSections).map(([, loader]) => loader);
+    },
+    resultMarks() {
+      marks ??= each((module) => module.resultMarks).map(([, mark]) => mark);
+      return marks;
+    },
     incomingViews() {
       views ??= each((module) => module.incomingViews).map(([name, view]) => ({
         name,
@@ -126,6 +158,22 @@ export function ModulesProvider(props: ParentProps<{ modules: readonly ModuleMan
         component: lazy(view.component) as Component<IncomingViewProps>,
       }));
       return views;
+    },
+    preloadItemPage(type) {
+      const page = slotOf(definitions, type, "itemPage") ? value.custom(type, "itemPage") : undefined;
+      // (the cards of the models that have their own: what is inside the item, or refers to it, can be of any of them)
+      const cards = Object.keys(definitions.models)
+        .filter((name) => slotOf(definitions, name, "viewCard"))
+        .map((name) => value.custom(name, "viewCard"));
+      for (const component of [
+        page,
+        ...cards,
+        ...value.itemSections(),
+        ...value.incomingViews().map((view) => view.component),
+      ]) {
+        // (a `lazy` component; what fails to load says so where it is shown, not here)
+        void (component as { preload?: () => Promise<unknown> } | undefined)?.preload?.().catch(() => {});
+      }
     },
   };
   return <ModulesContext value={value}>{props.children}</ModulesContext>;

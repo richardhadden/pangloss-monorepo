@@ -4,6 +4,7 @@
   "modules/pangloss_calendar/src/api.ts",
   "modules/pangloss_calendar/src/components/Chrome.test.tsx",
   "modules/pangloss_calendar/src/components/Chrome.tsx",
+  "modules/pangloss_calendar/src/components/Covering.tsx",
   "modules/pangloss_calendar/src/components/DayPage.tsx",
   "modules/pangloss_calendar/src/components/DayView.test.tsx",
   "modules/pangloss_calendar/src/components/DayView.tsx",
@@ -83,6 +84,8 @@
   "modules/pangloss_review/src/components/CommentText.tsx",
   "modules/pangloss_review/src/components/Composer.test.tsx",
   "modules/pangloss_review/src/components/Composer.tsx",
+  "modules/pangloss_review/src/components/ListStatusFlag.test.tsx",
+  "modules/pangloss_review/src/components/ListStatusFlag.tsx",
   "modules/pangloss_review/src/components/ReviewAction.test.tsx",
   "modules/pangloss_review/src/components/ReviewAction.tsx",
   "modules/pangloss_review/src/components/ReviewPanel.test.tsx",
@@ -124,8 +127,10 @@
   "modules/pangloss_zotero/src/api.ts",
   "modules/pangloss_zotero/src/components/FromZotero.tsx",
   "modules/pangloss_zotero/src/components/ItemPicker.tsx",
+  "modules/pangloss_zotero/src/components/ZoteroItemPage.tsx",
   "modules/pangloss_zotero/src/components/ZoteroLinkAction.tsx",
   "modules/pangloss_zotero/src/index.ts",
+  "modules/pangloss_zotero/src/zoteroItem.ts",
   "modules/pangloss_zotero/tsconfig.json",
   "modules/pangloss_zotero/vitest.config.ts"
 ]

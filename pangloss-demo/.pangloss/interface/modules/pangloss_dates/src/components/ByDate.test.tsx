@@ -141,7 +141,7 @@ test("what refers to an item by field, until the button sorts it by date (offere
   expect(toggle(host)!.getAttribute("aria-pressed")).toBe("true");
   // (the item's own values and what cannot have a date, with no heading; then the timeline, a section of its own)
   expect([...host.querySelectorAll("h2")].map((h) => h.textContent)).toEqual(["Timeline"]);
-  const facts = host.querySelector("dl")!;
+  const facts = host.querySelector("[data-testid=incoming-by-field]")!;
   expect(facts.querySelector('a[href="/Note/n1"]')).toBeTruthy();
   expect(facts.querySelector("[data-testid=dated-item]")).toBeNull();
   expect(host.querySelector("section")!.querySelector("[data-testid=dated-item]")).toBeTruthy();
@@ -156,8 +156,9 @@ test("what refers to an item by field, until the button sorts it by date (offere
   expect([...host.querySelectorAll("[data-year]")].map((h) => h.textContent)).toEqual(["1490", "1500", "1510"]);
   expect(rows[2]!.textContent).toContain("1510 to 1520");
   expect(rows[0]!.textContent).toContain("held reverse");
-  // (last, those whose date is not known)
-  expect(host.querySelector("[data-testid=incoming-date-unknown]")!.textContent).toContain("Abbot");
+  // (last, under a heading of their own, those whose date is not known)
+  expect(host.querySelector("[data-testid=incoming-date-unknown]")!.textContent).toBe("Date unknown");
+  expect(host.querySelector("[data-testid=dated-item][data-undated]")!.textContent).toContain("Abbot");
   // (the choice is remembered from one page to the next)
   expect(localStorage.getItem("pangloss.incomingView")).toBe(BY_DATE);
 
@@ -195,6 +196,50 @@ test("the timeline goes to the heading of a year (the next that has something), 
   // (a bar for each year, the longest for the year with most)
   const bars = [...host.querySelectorAll<HTMLElement>("[data-bar]")];
   expect(bars.map((bar) => bar.style.width)).toEqual(["100%", "100%", "100%"]);
+});
+
+test("thousands sorted by date: only the lines on show are rendered, and the timeline scrolls to a year's line", async () => {
+  localStorage.setItem("pangloss.incomingView", BY_DATE);
+  // (three hundred offices, one a year from 1200: more than `BY_DATE_VIRTUAL_FROM` lines)
+  const offices = Array.from({ length: 300 }, (_, n) => ({
+    id: `o${n}`,
+    type: "Office",
+    label: `Office ${n}`,
+    dateSortDay: 2159351 + n * 365,
+    dateText: String(1200 + n),
+  }));
+  // (a row is as tall as it is estimated to be: happy-dom lays nothing out, and the virtualizer measures `offsetHeight`)
+  Object.defineProperty(HTMLElement.prototype, "offsetHeight", { get: () => 56, configurable: true });
+  // (happy-dom's resize observer reports no sizes: the rows keep the size they were measured at; and its window
+  // keeps where an earlier test scrolled it, which the list would take for where it starts)
+  // (on the window itself: the virtualizer takes it from there, and `vi.stubGlobal` does not reach it)
+  const resizeObserver = window.ResizeObserver;
+  Object.defineProperty(window, "ResizeObserver", {
+    value: class { observe() {} unobserve() {} disconnect() {} },
+    configurable: true,
+    writable: true,
+  });
+  window.scrollTo(0, 0);
+  const host = show({ ...witness, bornReverse: [], heldReverse: offices, aboutReverse: [] });
+  await loaded(host);
+  const list = host.querySelector("[data-testid=incoming-by-date] [data-virtual]")!;
+  expect(list).toBeTruthy();
+  const lines = list.querySelectorAll("[data-index]").length;
+  expect(lines).toBeGreaterThan(5);
+  expect(lines).toBeLessThan(600);
+  // (the first line is the first year, the next its office)
+  expect(list.querySelector("[data-index='0']")!.textContent).toBe("1200");
+  expect(list.querySelector("[data-index='1'] a")!.textContent).toBe("OfficeOffice 0");
+  // (the timeline spans the years (the three hundred years of 365 days fall a little short of 1499), and goes to the
+  // last year's line though it is not rendered)
+  const timeline = host.querySelector<HTMLElement>("[role=slider][aria-orientation=vertical]")!;
+  const last = timeline.getAttribute("aria-valuemax")!;
+  expect(Number(last)).toBeGreaterThan(1495);
+  timeline.dispatchEvent(new KeyboardEvent("keydown", { key: "End", bubbles: true }));
+  flush();
+  expect(timeline.getAttribute("aria-valuenow")).toBe(last);
+  delete (HTMLElement.prototype as { offsetHeight?: number }).offsetHeight;
+  Object.defineProperty(window, "ResizeObserver", { value: resizeObserver, configurable: true, writable: true });
 });
 
 test("no button on an edit page", () => {

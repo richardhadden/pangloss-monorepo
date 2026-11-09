@@ -378,6 +378,7 @@ function Results(props: {
                   head={headOf(item())}
                   selected={props.showSelected && selected() === row().index}
                   useCount={item().useCount}
+                  item={item() as unknown as Record<string, unknown>}
                 />
               )}
             </Show>

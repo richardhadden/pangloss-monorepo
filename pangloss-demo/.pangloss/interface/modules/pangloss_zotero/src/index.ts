@@ -6,11 +6,13 @@ import { defineModule } from "@pangloss/interface-core";
 export default defineModule({
   name: "pangloss_zotero",
   requires: [],
-  components: {},
+  components: {
+    ZoteroItemPage: () => import("./components/ZoteroItemPage"),
+  },
   newItemFields: {
     FromZotero: () => import("./components/FromZotero"),
   },
   consoleActions: {
-    Link: () => import("./components/ZoteroLinkAction"),
+    Link: { loggedIn: true, load: () => import("./components/ZoteroLinkAction") },
   },
 });

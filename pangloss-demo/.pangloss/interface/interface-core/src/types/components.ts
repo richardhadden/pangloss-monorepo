@@ -42,6 +42,10 @@ export interface NavRowButtonProps {
   inRow?: boolean;
   /** How many steps the text is moved in from the left */
   indent?: number;
+  /** Chosen with the keyboard: drawn as when the mouse is over it (a link) */
+  selected?: boolean;
+  /** Given the element of a link */
+  linkRef?: (element: HTMLAnchorElement) => void;
   children?: JSX.Element;
 }
 
@@ -96,8 +100,16 @@ export interface ConsoleSearchProps {
   onToggleForm?: () => void;
   /** Whether the search form is open (the button is pressed) */
   formOpen?: boolean;
+  /** Gives the search a button that shows the whole list or only what something refers to, which calls this */
+  onToggleUsed?: () => void;
+  /** Whether the whole list is on show (the button offers the used ones), not only what something refers to */
+  showingAll?: boolean;
   /** Whether a search by fields is in use: what is typed narrows it, and Deep search cannot be used */
   structured?: boolean;
+  /** Gives the box's arrows and Enter to a list on the page: to move what is selected in it, and to open that */
+  onListKey?: (key: "next" | "previous" | "open") => void;
+  /** Called when the box takes or loses the focus */
+  onFocusChange?: (focused: boolean) => void;
 }
 
 export interface ConsoleProps extends ConsoleSearchProps {
@@ -148,6 +160,29 @@ export interface ItemFormProps {
   onDeleted?: () => void;
   /** Called to load the item again, after it was found to have been changed by someone else */
   onReload?: () => void;
+  /** The id of a document inside the item that the page is to show: a block nested deep enough to start folded opens if it is inside */
+  show?: string;
+  /**
+   * What the item is when there is nothing to save, if not `initial`: a new item opened from the stash starts as the
+   * stashed item, and can be saved at once
+   */
+  baseline?: Record<string, unknown>;
+  /**
+   * The stashed item the form was opened from (`initial` is it): stashing again replaces it, and saving removes it.
+   * `gone`: the entities it referred to that are no longer there, which were taken out (shown above the form)
+   */
+  stashed?: { key: string; gone: { type: string; id: string; label?: string }[] };
+  /**
+   * Called once the form is shown, with what the page calls before it is left: given how to leave, it says whether the
+   * page may go now (true: nothing to lose). If not, the form asks (stay, leave without saving, or stash and leave),
+   * and leaves itself if told to. What it gives back is called when the form is gone
+   */
+  guardLeaving?: (guard: (leave: () => void) => boolean) => (() => void) | void;
+  /**
+   * With it, a new head document (not an entity) has a Stash button beside Save (where there is a stash); called once
+   * it is stashed
+   */
+  onStashed?: () => void;
 }
 
 export interface ModalProps {
@@ -182,8 +217,14 @@ export interface ResultButtonProps {
   label: string;
   /** The semantic spaces the item is in, outermost first: each wraps it in a band of its own */
   spaces?: string[];
-  /** The head node of an item that is inside another document: a button to it on the left */
+  /** The head node of an item that is inside another document: a button to it at the far right */
   head?: { type: string; id: string };
+  /** Chosen with the keyboard: drawn as when the mouse is over it */
+  selected?: boolean;
+  /** How many things refer to the item: a small bubble at the right, if it is given */
+  useCount?: number;
+  /** The item as the list sends it: what the modules' `resultMarks` are given. Without it they are not drawn */
+  item?: Record<string, unknown>;
 }
 
 export interface ReferenceChipProps {
@@ -223,6 +264,8 @@ export interface NavBarProps {
   /** The code of the language selected (`en` or `de`); `en` if not given */
   language?: string;
   onLanguage?: (code: string) => void;
+  /** Goes to a page of the application (the keyboard's way to a new item needs it; the library has no router) */
+  onNavigate?: (href: string) => void;
   /** What is shown in the bar while it is expanded */
   children?: JSX.Element;
 }

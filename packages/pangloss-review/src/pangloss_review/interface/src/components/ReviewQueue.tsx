@@ -12,8 +12,7 @@ import { useNavigate, useSearchParams } from "@solidjs/router";
 import { createMemo, Errored, For, Loading, Show } from "solid-js";
 import { getQueue, getReviewableTypes, STATUSES } from "../api";
 import type { ReviewStatus } from "../api";
-import { STATUS_WORDS, statusSlot } from "./ReviewPanel";
-import { StatusFlag } from "./StatusFlag";
+import { STATUS_WORDS, StatusFlag, statusSlot } from "./StatusFlag";
 
 /** How many documents a page of the queue has */
 export const QUEUE_PAGE_SIZE = 25;

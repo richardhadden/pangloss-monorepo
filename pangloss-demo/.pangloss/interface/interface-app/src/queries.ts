@@ -7,9 +7,11 @@ import {
   decodeSearchForm,
   getCurrentUser,
   getItem,
+  getModel,
   listItems,
   searchItems,
 } from "@pangloss/interface-core";
+import type { ModelDefinitions } from "@pangloss/interface-core";
 import { query, revalidate } from "@solidjs/router";
 import { isServer } from "@solidjs/web";
 import { apiClient } from "./api";
@@ -17,15 +19,25 @@ import { apiClient } from "./api";
 /** How many items a list asks for at a time (a page); more are asked for as it is scrolled */
 export const LIST_PAGE_SIZE = 50;
 
+/** `InterfaceMeta(list_used_only=...)`: not for this type; only what is used, with the counts; everything, with the counts */
+export type ListUses = "none" | "used" | "all";
+
+/** What a list of the type asks for, with `?all=1` in the address or not */
+export function usesOf(definitions: ModelDefinitions, type: string, showAll: boolean): ListUses {
+  if (!getModel(definitions, type)?.interfaceMeta?.listUsedOnly) return "none";
+  return showAll ? "all" : "used";
+}
+
 /**
  * A page of the list of a type: searched by the text `q` (deeply, with `deep`), or, with a `request` (the search
  * form's `where` and order, as JSON: `requestOf`), by that, which has the words of `q` in it already
  */
 export const listQuery = query(
-  (type: string, q: string, deep: boolean, request: string, page: number) => {
-    if (!request) return listItems(apiClient(), type, { q, deep, page, pageSize: LIST_PAGE_SIZE });
+  (type: string, q: string, deep: boolean, request: string, page: number, uses: ListUses) => {
+    const wanted = { usedOnly: uses === "used", useCounts: uses !== "none" };
+    if (!request) return listItems(apiClient(), type, { q, deep, page, pageSize: LIST_PAGE_SIZE, ...wanted });
     const { where, orderBy } = JSON.parse(request);
-    return searchItems(apiClient(), { type, where, orderBy, page, pageSize: LIST_PAGE_SIZE });
+    return searchItems(apiClient(), { type, where, orderBy, page, pageSize: LIST_PAGE_SIZE, ...wanted });
   },
   "list",
 );
@@ -36,7 +48,13 @@ export function requestOf(type: string, form: string, q: string): string {
   return request ? JSON.stringify(request) : "";
 }
 
-export const itemQuery = query((type: string, id: string) => getItem(apiClient(), type, id), "item");
+// (the item alone: without what refers to it, and without what the installed apps add to its view, each of which
+// the page's parts read for themselves (`IncomingRelations`, a module's `itemSections`), so that the item is on show
+// at once however much refers to it)
+export const itemQuery = query(
+  (type: string, id: string) => getItem(apiClient(), type, id, { incomingLimit: 0, extras: false }),
+  "item",
+);
 
 /**
  * Who is logged in, or undefined. `revalidateAll()` after logging in or out.
@@ -63,7 +81,12 @@ export function revalidateAll() {
  */
 export function searchOf(search: Record<string, string | string[] | undefined>) {
   const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);
-  return { q: first(search.q) ?? "", deep: first(search.deep) === "1", form: first(search.form) ?? "" };
+  return {
+    q: first(search.q) ?? "",
+    deep: first(search.deep) === "1",
+    form: first(search.form) ?? "",
+    all: first(search.all) === "1",
+  };
 }
 
 /**

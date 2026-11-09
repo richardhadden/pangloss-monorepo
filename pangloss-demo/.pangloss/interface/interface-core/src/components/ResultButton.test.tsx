@@ -1,7 +1,8 @@
 // @vitest-environment happy-dom
 import { render } from "@solidjs/web";
 import { expect, test } from "vitest";
-import { ModelsProvider } from "../context";
+import { ModelsProvider, ModulesProvider } from "../context";
+import type { ModuleManifest, ResultMarkProps } from "../types";
 import { ResultButton } from "./ResultButton";
 
 function show(spaces?: string[], head?: { type: string; id: string }) {
@@ -67,4 +68,65 @@ test("an item inside a document has a button to it, at the far left, not in the 
 
 test("an item that is a head node has no such button", () => {
   expect(show([]).querySelectorAll("a")).toHaveLength(1);
+});
+
+function counted(useCount?: number) {
+  const host = document.createElement("div");
+  render(
+    () => (
+      <ModelsProvider definitions={{ models: {}, enums: {} }}>
+        <ResultButton href="/Source/1" type="Source" label="A book" useCount={useCount} />
+      </ModelsProvider>
+    ),
+    host,
+  );
+  return host.querySelector<HTMLElement>("[data-testid=use-count]");
+}
+
+test("with a count of its uses it has a bubble, and none unless it is given", () => {
+  expect(counted()).toBeNull();
+  expect(counted(12)?.textContent).toBe("12");
+  expect(counted(12)?.className).toContain("bg-sky-600");
+});
+
+test("a count of nothing is shown too, and quieter", () => {
+  expect(counted(0)?.textContent).toBe("0");
+  expect(counted(0)?.className).toContain("bg-slate-200");
+});
+
+const mark = (props: ResultMarkProps) => <i data-testid="mark">{`${props.type} ${String(props.item.id)}`}</i>;
+const WITH_MARK: ModuleManifest[] = [{ name: "m", components: {}, resultMarks: { Flag: mark } }];
+
+function showMarked(options: { item?: Record<string, unknown>; head?: { type: string; id: string }; disabled?: string[] }) {
+  const host = document.createElement("div");
+  render(
+    () => (
+      <ModelsProvider definitions={{ models: {}, enums: {}, disabled: options.disabled }}>
+        <ModulesProvider modules={WITH_MARK}>
+          <ResultButton href="/Activity/1" type="Activity" label="A coronation" head={options.head} item={options.item} />
+        </ModulesProvider>
+      </ModelsProvider>
+    ),
+    host,
+  );
+  return host;
+}
+
+test("what a module adds is inside the row's link, given the item", () => {
+  const host = showMarked({ item: { id: "1" } });
+  const found = host.querySelector("a [data-testid=mark]");
+  expect(found?.textContent).toBe("Activity 1");
+});
+
+test("a row given no item has no marks, and a mark a project disables is not drawn", () => {
+  expect(showMarked({}).querySelector("[data-testid=mark]")).toBeNull();
+  expect(showMarked({ item: { id: "1" }, disabled: ["m:Flag"] }).querySelector("[data-testid=mark]")).toBeNull();
+});
+
+test("the button to the head is last in the row, after what a module adds", () => {
+  const host = showMarked({ item: { id: "1" }, head: { type: "Factoid", id: "9" } });
+  const links = [...host.querySelectorAll("a")];
+  expect(links.map((a) => a.getAttribute("href"))).toEqual(["/Activity/1", "/Factoid/9"]);
+  const marked = host.querySelector("[data-testid=mark]")!;
+  expect(marked.compareDocumentPosition(links[1]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 });

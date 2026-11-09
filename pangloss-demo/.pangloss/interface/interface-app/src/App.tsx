@@ -1,3 +1,4 @@
+import { useNavigate } from "@solidjs/router";
 import {
   ApiProvider,
   ClipboardProvider,
@@ -13,10 +14,12 @@ import {
   TranslationsProvider,
   SessionProvider,
   SidePanelProvider,
+  StashProvider,
   ToastsProvider,
-  useClipboard,
+  useBottomBar,
   useComponent,
   useTranslations,
+  Spinner,
 } from "@pangloss/interface-core";
 import { Title } from "@solidjs/meta";
 import { createMemo, Loading } from "solid-js";
@@ -36,6 +39,7 @@ function Frame(props: ParentProps) {
   const ConsoleBar = useComponent("ConsoleBar");
   const ClipboardBar = useComponent("ClipboardBar");
   const Toasts = useComponent("Toasts");
+  const navigate = useNavigate();
   const { openLogin } = useLoginDialog();
   const { navPinned } = useNavExpanded();
   const { t } = useTranslations();
@@ -51,6 +55,7 @@ function Frame(props: ParentProps) {
     <SessionProvider user={user}>
       {/* (each user has their own clipboard) */}
       <ClipboardProvider owner={() => user()?.username}>
+       <StashProvider owner={() => user()?.username}>
         {/* (the frame outlives the pages, so a toast stays when a save goes to another page) */}
         <ToastsProvider>
           {/* (the bar reads the user, so it waits for it: until then, one with no one logged in) */}
@@ -60,25 +65,27 @@ function Frame(props: ParentProps) {
               user={user()?.username}
               onLogin={openLogin}
               onLogout={logOutHere}
+              onNavigate={(href) => navigate(href)}
             />
           </Loading>
           <ConsoleBar />
           <Padded navPinned={navPinned()}>
-            <Loading fallback={<main>{t("loading", "Loading…")}</main>}>{props.children}</Loading>
+            <Loading fallback={<main class="p-6 text-slate-500"><Spinner class="size-5" /></main>}>{props.children}</Loading>
           </Padded>
           <ClipboardBar />
           <Toasts />
           <LoginDialog />
         </ToastsProvider>
+       </StashProvider>
       </ClipboardProvider>
     </SessionProvider>
   );
 }
 
-// The page beside the nav bar, clear of the console bar, and of the clipboard bar when it is showing
+// The page beside the nav bar, clear of the console bar, and of the bar of the clipboard and stash when it is showing
 function Padded(props: ParentProps<{ navPinned: boolean }>) {
-  const clipboard = useClipboard();
-  const barShown = () => (clipboard?.entries().length ?? 0) > 0 && !!clipboard?.formShown();
+  const bottomBar = useBottomBar();
+  const barShown = bottomBar.shown;
   return (
     <div
       class={[
@@ -86,8 +93,8 @@ function Padded(props: ParentProps<{ navPinned: boolean }>) {
         {
           "pl-72": props.navPinned,
           "pl-12": !props.navPinned,
-          "pb-48": barShown() && !clipboard?.collapsed(),
-          "pb-12": barShown() && !!clipboard?.collapsed(),
+          "pb-48": barShown() && !bottomBar.collapsed(),
+          "pb-12": barShown() && bottomBar.collapsed(),
         },
       ]}
     >

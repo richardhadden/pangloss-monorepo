@@ -26,13 +26,13 @@ const groups: MenuGroup[] = [
   { spaces: ["Negative"], columns: [[row("Activity", 0, true)]] },
 ];
 
-function show(menuGroups: MenuGroup[], onChoose: (choice: Choice) => void) {
+function show(menuGroups: MenuGroup[], onChoose: (choice: Choice) => void, unavailable?: Record<string, string>) {
   const container = document.createElement("div");
   document.body.append(container);
   dispose = render(
     () => (
       <ModelsProvider definitions={definitions}>
-        <TypeMenu groups={menuGroups} label="Add statement" onChoose={onChoose} />
+        <TypeMenu groups={menuGroups} label="Add statement" onChoose={onChoose} unavailable={unavailable} />
       </ModelsProvider>
     ),
     container,
@@ -93,6 +93,67 @@ test("Escape and a click elsewhere close it; with one choice there is no menu, t
   document.body.innerHTML = "";
   const chosen: Choice[] = [];
   show([{ spaces: [], columns: [[row("Activity", 0, true)]] }], (choice) => chosen.push(choice));
+  expect(opener()).toBeNull();
+  click(document.body.querySelector("button"));
+  expect(chosen).toEqual([{ spaces: [], type: "Activity" }]);
+});
+
+const keyIn = (target: Element | null, key: string) =>
+  (target as HTMLElement).dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true }));
+
+test("a type that is unavailable is in the menu, greyed, with why; the arrow keys reach it, but it cannot be chosen", async () => {
+  const chosen: Choice[] = [];
+  show(groups, (choice) => chosen.push(choice), { Battle: "Would lose: the dead" });
+  click(opener());
+  await settle();
+  const unavailable = document.body.querySelector<HTMLElement>("[data-unavailable]")!;
+  expect(unavailable.getAttribute("role")).toBe("menuitem");
+  expect(unavailable.getAttribute("aria-disabled")).toBe("true");
+  expect(unavailable.firstChild?.textContent).toBe("Battle");
+  expect(unavailable.querySelector("[data-reason]")?.textContent).toBe("Would lose: the dead");
+  // (only one of them is)
+  expect(document.body.querySelectorAll("[data-unavailable]")).toHaveLength(1);
+  click(unavailable);
+  await settle();
+  expect(chosen).toEqual([]);
+  // (the menu stays open, as after a click on a line of it that is not a choice)
+  expect(document.body.querySelector('[role="menu"]')).not.toBeNull();
+  // (Down from the first goes on to it: it is a line of the menu)
+  const items = [...document.body.querySelectorAll<HTMLElement>('[role="menuitem"]')];
+  expect(items.map((item) => item.firstChild?.textContent)).toEqual(["Activity", "Battle", "Feast", "Activity"]);
+  items[0]!.focus();
+  keyIn(items[0]!, "ArrowDown");
+  expect(document.activeElement).toBe(unavailable);
+  // (the others are still chosen as before)
+  click(items[2]!);
+  expect(chosen).toEqual([{ spaces: [], type: "Feast" }]);
+});
+
+test("with one to choose and others unavailable it is still a menu; with none to choose, a menu that says why", async () => {
+  const two: MenuGroup[] = [{ spaces: [], columns: [[row("Activity", 0, true), row("Battle", 0, true)]] }];
+  const chosen: Choice[] = [];
+  show(two, (choice) => chosen.push(choice), { Battle: "No room" });
+  // (not a button that chooses Activity at once: Battle is to be seen, and why it cannot be chosen)
+  expect(opener()).not.toBeNull();
+  click(opener());
+  await settle();
+  expect(document.body.querySelector("[data-reason]")?.textContent).toBe("No room");
+  dispose?.();
+  document.body.innerHTML = "";
+  show(two, (choice) => chosen.push(choice), { Activity: "No room", Battle: "None either" });
+  expect(opener()).not.toBeNull();
+  click(opener());
+  await settle();
+  expect([...document.body.querySelectorAll("[data-reason]")].map((reason) => reason.textContent)).toEqual([
+    "No room",
+    "None either",
+  ]);
+  click(document.body.querySelector("[data-unavailable]"));
+  expect(chosen).toEqual([]);
+  // (an empty list of unavailable types changes nothing: one choice is a button that chooses)
+  dispose?.();
+  document.body.innerHTML = "";
+  show([{ spaces: [], columns: [[row("Activity", 0, true)]] }], (choice) => chosen.push(choice), {});
   expect(opener()).toBeNull();
   click(document.body.querySelector("button"));
   expect(chosen).toEqual([{ spaces: [], type: "Activity" }]);

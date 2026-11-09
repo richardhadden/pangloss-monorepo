@@ -12,6 +12,8 @@ export interface Page<T> {
   previousPage: number | null;
   /** True if a word of the search had more hits than were looked at: there are more results than `count` */
   truncated?: boolean;
+  /** How many things refer to each item of the page, by id, if it was asked for (`useCounts`) */
+  useCounts?: Record<string, number> | null;
 }
 
 /** A Document or Entity in a list: enough to show and link to it */
@@ -48,6 +50,8 @@ export interface Summary {
     /** (of an item that is inside another document: the document it is in) */
     headNodeType?: string | null;
     headNodeId?: string | null;
+    /** (of a document that is reviewed, or inside one: the status of the head) */
+    reviewStatus?: string | null;
   };
 }
 
@@ -71,7 +75,34 @@ export interface HeadView {
   type: string;
   label?: string;
   meta: ItemMeta;
+  /**
+   * An entity read with a limit on what refers to it (`getItem` with `incomingLimit`): how many there are in each
+   * incoming field, by its key (the field itself has the first of them; `getIncoming` reads the rest). `null`: read
+   * with none of it (`incomingLimit: 0`), which `getIncomingFields` reads apart. Absent: read whole
+   */
+  incomingCounts?: Record<string, number> | null;
   [field: string]: unknown;
+}
+
+/** What refers to an entity, the first of each incoming field at once (`getIncomingFields`) */
+export interface IncomingFields {
+  limit: number;
+  /** How many there are in each incoming field that has any, by its key */
+  counts: Record<string, number>;
+  /** The first `limit` of each, by its key, as they are in that field of the entity */
+  fields: Record<string, Record<string, unknown>[]>;
+}
+
+/** Some of what refers to an entity by one relation (`getIncoming`) */
+export interface IncomingPage {
+  /** The key of the incoming field */
+  field: string;
+  /** How many there are in all */
+  count: number;
+  page: number;
+  pageSize: number;
+  /** As they are in that field of the entity */
+  results: Record<string, unknown>[];
 }
 
 /** The body of a create or an update: the fields of the model, as the edit view has them */
@@ -82,6 +113,10 @@ export interface ListParams {
   q?: string;
   /** Searches more */
   deep?: boolean;
+  /** Only what something refers to */
+  usedOnly?: boolean;
+  /** With how many things refer to each item of the page */
+  useCounts?: boolean;
   page?: number;
   pageSize?: number;
 }
@@ -183,6 +218,10 @@ export interface SearchPattern {
   type: string;
   where?: Record<string, unknown>;
   orderBy?: SearchOrder[];
+  /** Only what something refers to */
+  usedOnly?: boolean;
+  /** With how many things refer to each item of the page */
+  useCounts?: boolean;
   page?: number;
   pageSize?: number;
 }

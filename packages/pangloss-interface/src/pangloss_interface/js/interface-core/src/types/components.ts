@@ -217,12 +217,14 @@ export interface ResultButtonProps {
   label: string;
   /** The semantic spaces the item is in, outermost first: each wraps it in a band of its own */
   spaces?: string[];
-  /** The head node of an item that is inside another document: a button to it on the left */
+  /** The head node of an item that is inside another document: a button to it at the far right */
   head?: { type: string; id: string };
   /** Chosen with the keyboard: drawn as when the mouse is over it */
   selected?: boolean;
   /** How many things refer to the item: a small bubble at the right, if it is given */
   useCount?: number;
+  /** The item as the list sends it: what the modules' `resultMarks` are given. Without it they are not drawn */
+  item?: Record<string, unknown>;
 }
 
 export interface ReferenceChipProps {

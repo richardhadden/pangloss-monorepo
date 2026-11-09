@@ -16,8 +16,8 @@ import { reviewFeed } from "../feed";
 import { partsOf, referencedIds } from "../parts";
 import type { Part } from "../parts";
 import { createReview } from "../state";
-import { ReviewPanel, STATUS_WORDS, statusSlot } from "./ReviewPanel";
-import { StatusFlag } from "./StatusFlag";
+import { ReviewPanel } from "./ReviewPanel";
+import { STATUS_WORDS, StatusFlag, statusSlot } from "./StatusFlag";
 
 const reasonOf = (error: unknown) =>
   error instanceof ApiError ? error.detail : error instanceof Error ? error.message : String(error);

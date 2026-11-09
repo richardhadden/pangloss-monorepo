@@ -1,4 +1,4 @@
-import { action, createMemo, createOptimistic, createRenderEffect, createSignal, onSettled, untrack, For, Match, Show, Switch } from "solid-js";
+import { action, children, createMemo, createOptimistic, createRenderEffect, createSignal, onSettled, untrack, For, Match, Show, Switch } from "solid-js";
 import type { Accessor, ParentProps } from "solid-js";
 import type { JSX } from "@solidjs/web";
 import {
@@ -64,6 +64,7 @@ import {
   plainTint,
   smallButtonClass,
   spaceButtonsClass,
+  spacePaddingClass,
   spaceTypeClass,
   typeChipClass,
 } from "./styles";
@@ -73,6 +74,7 @@ import { RetypeButtons } from "./Retype";
 import { ClipButtons, EmbeddedPasteSlot, RelationPasteSlot, useClipActions } from "./Clip";
 import { FieldProblems, useRowProblems, useSaveChecks } from "./Problems";
 import { Customised } from "../Customised";
+import { holdsId, NestingProvider, startsFolded, useNesting, useRevealed } from "../nesting";
 
 const isObject = (value: unknown): value is FormData =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -94,10 +96,17 @@ function Block(
     itemId?: string;
     /** Buttons before the fold (they may open menus, so the bar does not cut off what is over its edge) */
     buttons?: JSX.Element;
+    /** Open though it is nested deep enough to start folded (what is to be shown is inside it) */
+    startOpen?: boolean;
   }>,
 ) {
   const { t, modelName } = useTranslations();
-  const [folded, setFolded] = createSignal(false);
+  // (a block this deep starts folded, and what it holds is made when it is unfolded: see `nesting.ts`)
+  const nesting = useNesting();
+  const [folded, setFolded] = createSignal(startsFolded(nesting) && !untrack(() => props.startOpen));
+  // (made once: each read of a prop that is elements makes them again, and one read only to ask whether there
+  // are any left a second set, of which the browser said "Hydration key miss ... a detached element was created")
+  const buttons = children(() => props.buttons);
   return (
     // (scrolled to, it stops clear of the console bar, with room for a line of what it is in)
     <div class="flex w-full min-w-0 scroll-mt-28 flex-col" data-item-id={props.itemId}>
@@ -105,7 +114,7 @@ function Block(
         <span data-tint class={[typeChipClass, props.tint || plainTint, props.rule]}>
           {modelName(props.type)}
         </span>
-        <div class={props.buttons ? headRestOpenClass : headRestClass}>
+        <div class={buttons() ? headRestOpenClass : headRestClass}>
           {/* (the grey of the bar, with the label in it, folds it; folded, a ▸ says so) */}
           <button
             type="button"
@@ -122,7 +131,7 @@ function Block(
             </Show>
             <span class="min-w-0 truncate">{props.label}</span>
           </button>
-          {props.buttons}
+          {buttons()}
           {/* (cut, copy, remove) */}
           <Show when={props.clip}>
             <ClipButtons
@@ -146,7 +155,9 @@ function Block(
       </div>
       <Show when={!folded()}>
         {/* (the rule starts at the bar: what is under it hangs from the head) */}
-        <div class={["ml-2 pt-4", nestedClass, props.rule]}>{props.children}</div>
+        <div class={["ml-2 pt-4", nestedClass, props.rule]}>
+          <NestingProvider value={nesting + 1}>{props.children}</NestingProvider>
+        </div>
       </Show>
     </div>
   );
@@ -176,7 +187,7 @@ export function FieldRow(
       when={!props.bare}
       fallback={
         <div class={fieldRowClass} data-problem={bad() ? "" : undefined}>
-          <div class="col-span-2 min-w-0">
+          <div class="col-span-full min-w-0">
             <FieldProblems problems={problems()} path={props.path ?? []} />
             {props.children}
           </div>
@@ -470,7 +481,10 @@ function FieldEditor(props: {
           label={name()}
         />
       </Match>
-      <Match when={props.field.kind === "annotatedValue"}>
+      <Match when={props.field.kind === "annotatedValue" && (props.field as AnnotatedValueField).many}>
+        <AnnotatedListEditor field={props.field as AnnotatedValueField} path={props.path} label={name()} />
+      </Match>
+      <Match when={props.field.kind === "annotatedValue" && !(props.field as AnnotatedValueField).many}>
         <AnnotatedEditor field={props.field as AnnotatedValueField} path={props.path} label={name()} />
       </Match>
       <Match when={props.field.kind === "embedded"}>
@@ -502,6 +516,50 @@ function AnnotatedEditor(props: { field: AnnotatedValueField; path: Accessor<Pat
       <Show when={model()}>
         <ModelFields model={model()!} path={props.path} env={{}} skip={["value"]} />
       </Show>
+    </div>
+  );
+}
+
+/** A list of values with fields of their own: each as one is, with a button to remove it, and one to add */
+function AnnotatedListEditor(props: { field: AnnotatedValueField; path: Accessor<Path>; label: string }) {
+  const form = useItemForm();
+  const { t } = useTranslations();
+  const items = () => (form.get(props.path()) as unknown[] | undefined) ?? [];
+  return (
+    <div class="flex w-full flex-col gap-2">
+      {/* (by place, not by value: the value changes with every key) */}
+      <For each={items()} keyed={false}>
+        {(_, index) => (
+          <div class="flex w-full items-start gap-2">
+            <AnnotatedEditor
+              field={props.field}
+              path={() => [...props.path(), index]}
+              label={`${props.label} ${index + 1}`}
+            />
+            <button
+              type="button"
+              class={smallButtonClass}
+              aria-label={t("remove_item", "Remove {name}", { name: `${props.label} ${index + 1}` })}
+              onClick={() => form.remove([...props.path(), index])}
+            >
+              ✕
+            </button>
+          </div>
+        )}
+      </For>
+      <button
+        type="button"
+        class={addSlotClass}
+        aria-label={t("add_to", "Add to {name}", { name: props.label })}
+        onClick={(event) => {
+          const slot = event.currentTarget;
+          form.set([...props.path(), items().length], {});
+          // (the new one is just before the slot)
+          revealAdded(() => slot.previousElementSibling);
+        }}
+      >
+        + {t("add", "Add")}
+      </button>
     </div>
   );
 }
@@ -826,6 +884,9 @@ function RelationItem(props: {
     const found = option();
     return found && "edgeModel" in found ? found.edgeModel : null;
   });
+  // (the part the page is to scroll to is inside it: it starts open, however deep)
+  const revealed = useRevealed();
+  const holdsRevealed = () => revealed !== null && holdsId(value(), revealed);
   return (
     <Switch fallback={<JsonEditor path={props.path} label={type()} />}>
       <Match when={model()?.kind === "Entity"}>
@@ -905,7 +966,7 @@ function RelationItem(props: {
               </button>
             </div>
           </div>
-          <div class="flex min-w-0 flex-1 flex-col gap-4 p-3">
+          <div class={["flex min-w-0 flex-1 flex-col gap-4", spacePaddingClass]}>
             <ModelFields model={model()!} path={props.path} env={childEnv()} bare="contents" />
           </div>
         </div>
@@ -919,6 +980,7 @@ function RelationItem(props: {
           onRemove={props.onRemove}
           clip={clip}
           itemId={typeof value()?.id === "string" ? String(value()!.id) : undefined}
+          startOpen={holdsRevealed()}
           buttons={
             <RetypeButtons
               type={type()}
@@ -947,6 +1009,7 @@ function RelationItem(props: {
           rule={kindRule(model()?.kind, model()?.interfaceMeta?.colour)}
           onRemove={props.onRemove}
           clip={clip}
+          startOpen={holdsRevealed()}
         >
           <ModelFields
             model={model()!}

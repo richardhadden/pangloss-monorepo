@@ -109,7 +109,8 @@ function ModuleActions(props: { item: ConsoleProps["item"]; page: "item" | "edit
         <Show when={getModel(definitions, item().type)}>
           {(model) => (
             <For each={actions}>
-              {(Action) => (
+              {(action) => (
+                <Show when={!action.loggedIn || userIsLoggedIn()}>
                 <Errored
                   fallback={(error) => {
                     // (said in the browser's console, so that a module's author sees why there is nothing)
@@ -118,9 +119,10 @@ function ModuleActions(props: { item: ConsoleProps["item"]; page: "item" | "edit
                   }}
                 >
                   <Loading fallback={null}>
-                    <Action type={item().type} id={item().id} model={model()} page={props.page} />
+                    <action.component type={item().type} id={item().id} model={model()} page={props.page} />
                   </Loading>
                 </Errored>
+                </Show>
               )}
             </For>
           )}
@@ -192,7 +194,11 @@ export function Console(props: ConsoleProps) {
                   pending={props.pending}
                   onToggleForm={props.onToggleForm}
                   formOpen={props.formOpen}
+                  onToggleUsed={props.onToggleUsed}
+                  showingAll={props.showingAll}
                   structured={props.structured}
+                  onListKey={props.onListKey}
+                  onFocusChange={props.onFocusChange}
                 />
               </div>
             </Show>

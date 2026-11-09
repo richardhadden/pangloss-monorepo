@@ -41,6 +41,8 @@ export interface ViewCardProps {
   item?: Record<string, unknown>;
   /** Where it is shown */
   context: "result" | "reference" | "embedded" | "page";
+  /** In a list (`context: "result"`): the keyboard has it selected. A card may draw that as it does being hovered */
+  selected?: boolean;
 }
 
 /**
@@ -125,7 +127,8 @@ export interface NewItemActionProps {
 
 /**
  * What a component a module adds after the contents of an item's page (`itemSections`) is given. It decides itself
- * whether to show anything (a section, usually under a `SectionBar`).
+ * whether to show anything (a section, usually under a `SectionBar`). It is rendered in a `Loading` of its own (no
+ * fallback), after what refers to the item: what it reads for itself it reads directly, with no boundary of its own.
  */
 export interface ItemSectionProps {
   /** The item's own type */
@@ -134,6 +137,17 @@ export interface ItemSectionProps {
   /** The item as the API sends it */
   item: Record<string, unknown>;
   model: ModelDefinition;
+}
+
+/**
+ * What a component a module adds to the rows of a list (`resultMarks`) is given. It decides itself whether to show
+ * anything, and draws something small: it is inside the row's link, at its right end, with its own space on the right.
+ */
+export interface ResultMarkProps {
+  /** The item's own type */
+  type: string;
+  /** The item as the list sends it (`id`, `label`, `meta`, and the literal fields of the node) */
+  item: Record<string, unknown>;
 }
 
 /** One item that refers to the item of the page, with the name of the field (as the page says it) it is in */
@@ -167,6 +181,9 @@ export interface IncomingViewProps {
 /** What a loader gives: a module with a component as its default export */
 export type ComponentLoader = () => Promise<{ default: Component<any> }>;
 
+/** A console action: its loader, or with `loggedIn`, one shown only to someone logged in, whose code no one else fetches */
+export type ConsoleAction = ComponentLoader | { loggedIn: true; load: ComponentLoader };
+
 export interface ModuleRoute {
   /** (inside the interface; it comes before `/:type`, so it may not be the name of a model) */
   path: string;
@@ -191,7 +208,7 @@ export interface ModuleManifest {
    * Components for the console of every item page and of the form that edits an item, at its right, before the page's
    * own buttons (each loaded when the console is first shown)
    */
-  consoleActions?: Record<string, ComponentLoader>;
+  consoleActions?: Record<string, ConsoleAction>;
   /**
    * Components for the console of the form that makes a new item, before its own buttons (`NewItemActionProps`: they
    * can fill the form in, and change how it is sent)
@@ -204,6 +221,11 @@ export interface ModuleManifest {
   newItemFields?: Record<string, ComponentLoader>;
   /** Components after the contents of every item's page, in the order of the modules (each loaded when first shown) */
   itemSections?: Record<string, ComponentLoader>;
+  /**
+   * Components at the right end of each row of a list (`ResultMarkProps`), in the order of the modules. Not loaded
+   * lazily, as `collapseRules` are not: they are small, and every row of every list is drawn with them
+   */
+  resultMarks?: Record<string, Component<ResultMarkProps>>;
   /** Other ways of showing what refers to an item (`IncomingView`): by its name `app:key` */
   incomingViews?: Record<string, IncomingView>;
 }

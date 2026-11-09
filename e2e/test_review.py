@@ -459,3 +459,61 @@ def test_a_reified_relation_document_can_be_referred_to(logged_in: Page, report)
     assert (comment["targetId"], comment["targetLabel"]) == (finding, "Overspend")
     # (its block on the page is marked, so the chip can show it)
     expect(page.locator(f'[data-item-id="{finding}"]')).to_contain_text("Overspend")
+
+
+def list_flags(page: Page):
+    return page.get_by_test_id("list-review-status")
+
+
+def test_the_list_flags_the_status_of_what_is_reviewed(logged_in: Page, report):
+    page = logged_in
+    checked = make_report(report.stack, "Checked report", [], [])
+    report.bob.ok("POST", f"/api/review/{checked}/status", {"status": "checked"})
+    page.goto("/Report")
+    hydrated(page)
+    expect(list_flags(page)).to_have_count(2)
+    row = page.get_by_role("listitem").filter(has_text="Checked report")
+    expect(row.get_by_test_id("list-review-status")).to_have_attribute(
+        "data-status", "checked"
+    )
+    row = page.get_by_role("listitem").filter(has_text="Annual report")
+    flag = row.get_by_test_id("list-review-status")
+    expect(flag).to_have_attribute("data-status", "unchecked")
+    expect(flag).to_have_attribute("title", "Unchecked")
+    # (on the right: after the label)
+    label = row.get_by_text("Annual report")
+    assert flag.bounding_box()["x"] > label.bounding_box()["x"]
+
+
+def test_what_is_inside_a_reviewed_document_has_the_flag_then_the_link_to_it(
+    logged_in: Page, report
+):
+    page = logged_in
+    page.goto("/ReportSection")
+    hydrated(page)
+    row = page.get_by_role("listitem").filter(has_text="Costs")
+    flag = row.get_by_test_id("list-review-status")
+    expect(flag).to_have_attribute("data-status", "unchecked")
+    head = row.get_by_role("link", name="Go to the Report")
+    expect(head).to_have_attribute("href", f"/Report/{report.id}")
+    assert head.bounding_box()["x"] > flag.bounding_box()["x"]
+    assert (
+        head.bounding_box()["x"]
+        > row.get_by_role("link", name="Costs").bounding_box()["x"]
+    )
+
+
+def test_the_list_flags_nothing_not_reviewed_or_for_a_reader_logged_out(
+    logged_in: Page, report
+):
+    report.bob.ok("POST", f"/api/review/{report.id}/status", {"status": "checked"})
+    report.api.ok("POST", "/api/Person", {"label": "Someone unreviewed", "hasRole": []})
+    logged_in.goto("/Person")
+    hydrated(logged_in)
+    expect(logged_in.get_by_text("Someone unreviewed")).to_be_visible()
+    expect(list_flags(logged_in)).to_have_count(0)
+    logged_in.context.clear_cookies()
+    logged_in.goto("/Report")
+    hydrated(logged_in)
+    expect(logged_in.get_by_text("Annual report")).to_be_visible()
+    expect(list_flags(logged_in)).to_have_count(0)

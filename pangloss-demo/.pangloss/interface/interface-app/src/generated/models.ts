@@ -56,6 +56,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -71,6 +72,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -86,6 +88,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -106,6 +109,7 @@ export const definitions: ModelDefinitions = {
             }
           ],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -145,6 +149,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -329,6 +334,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         }
       ],
@@ -343,7 +349,8 @@ export const definitions: ModelDefinitions = {
         "editCard": null,
         "collapse": null,
         "headless": true,
-        "hideOnForms": null
+        "hideOnForms": null,
+        "listUsedOnly": null
       }
     },
     "Book": {
@@ -375,6 +382,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": true
         },
         {
@@ -390,6 +398,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": true
         },
         {
@@ -405,6 +414,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": true
         },
         {
@@ -420,6 +430,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": true
         },
         {
@@ -435,6 +446,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": true
         },
         {
@@ -450,6 +462,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": true
         },
         {
@@ -465,6 +478,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": true
         },
         {
@@ -480,6 +494,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": true
         },
         {
@@ -495,6 +510,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": true
         },
         {
@@ -510,6 +526,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": true
         },
         {
@@ -525,6 +542,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": true
         },
         {
@@ -540,6 +558,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": true
         },
         {
@@ -555,6 +574,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": true
         },
         {
@@ -570,6 +590,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": true
         },
         {
@@ -585,6 +606,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": true
         },
         {
@@ -600,6 +622,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": true
         },
         {
@@ -615,6 +638,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": true
         },
         {
@@ -630,6 +654,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": true
         },
         {
@@ -645,6 +670,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         }
       ],
@@ -677,14 +703,18 @@ export const definitions: ModelDefinitions = {
         "colour": null,
         "navSection": null,
         "listPage": null,
-        "itemPage": null,
+        "itemPage": {
+          "module": "pangloss_zotero",
+          "name": "ZoteroItemPage"
+        },
         "viewCard": null,
         "editCard": null,
         "collapse": null,
         "headless": null,
         "hideOnForms": [
           "itemTypeOverride"
-        ]
+        ],
+        "listUsedOnly": null
       }
     },
     "Causes": {
@@ -789,6 +819,7 @@ export const definitions: ModelDefinitions = {
             }
           ],
           "markers": [],
+          "default": null,
           "readOnly": false
         }
       ],
@@ -847,6 +878,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -862,6 +894,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -877,6 +910,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -897,6 +931,7 @@ export const definitions: ModelDefinitions = {
             }
           ],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -1034,6 +1069,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -1049,6 +1085,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -1064,6 +1101,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -1084,6 +1122,7 @@ export const definitions: ModelDefinitions = {
             }
           ],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -1219,6 +1258,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -1234,6 +1274,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -1249,6 +1290,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -1269,6 +1311,7 @@ export const definitions: ModelDefinitions = {
             }
           ],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -1400,6 +1443,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -1415,6 +1459,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -1431,6 +1476,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -1447,6 +1493,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -1462,6 +1509,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -1477,6 +1525,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -1492,6 +1541,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -1507,6 +1557,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -1522,6 +1573,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -1537,6 +1589,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         }
       ],
@@ -1557,7 +1610,8 @@ export const definitions: ModelDefinitions = {
         },
         "collapse": null,
         "headless": null,
-        "hideOnForms": null
+        "hideOnForms": null,
+        "listUsedOnly": null
       }
     },
     "DateCharacterisation": {
@@ -1631,6 +1685,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -1646,6 +1701,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -1662,6 +1718,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -1678,6 +1735,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -1693,6 +1751,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -1708,6 +1767,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -1723,6 +1783,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -1738,6 +1799,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -1753,6 +1815,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -1768,6 +1831,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -1820,7 +1884,8 @@ export const definitions: ModelDefinitions = {
         },
         "collapse": null,
         "headless": null,
-        "hideOnForms": null
+        "hideOnForms": null,
+        "listUsedOnly": null
       }
     },
     "EDTFDate": {
@@ -1853,6 +1918,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -1868,6 +1934,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -1884,6 +1951,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -1900,6 +1968,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -1915,6 +1984,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -1930,6 +2000,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -1945,6 +2016,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -1960,6 +2032,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -1975,6 +2048,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -1990,6 +2064,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -2005,6 +2080,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         }
       ],
@@ -2025,7 +2101,8 @@ export const definitions: ModelDefinitions = {
         },
         "collapse": null,
         "headless": null,
-        "hideOnForms": null
+        "hideOnForms": null,
+        "listUsedOnly": null
       }
     },
     "ExactDate": {
@@ -2058,6 +2135,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -2073,6 +2151,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -2089,6 +2168,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -2105,6 +2185,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -2120,6 +2201,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -2135,6 +2217,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -2150,6 +2233,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -2165,6 +2249,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -2180,6 +2265,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -2195,6 +2281,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -2210,6 +2297,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -2225,6 +2313,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -2240,6 +2329,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         }
       ],
@@ -2260,7 +2350,8 @@ export const definitions: ModelDefinitions = {
         },
         "collapse": null,
         "headless": null,
-        "hideOnForms": null
+        "hideOnForms": null,
+        "listUsedOnly": null
       }
     },
     "Factoid": {
@@ -2607,6 +2698,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -2622,6 +2714,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         }
       ],
@@ -2667,6 +2760,7 @@ export const definitions: ModelDefinitions = {
             }
           ],
           "markers": [],
+          "default": null,
           "readOnly": false
         }
       ],
@@ -2829,7 +2923,8 @@ export const definitions: ModelDefinitions = {
         "editCard": null,
         "collapse": null,
         "headless": null,
-        "hideOnForms": null
+        "hideOnForms": null,
+        "listUsedOnly": null
       }
     },
     "Identification": {
@@ -2893,6 +2988,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         }
       ],
@@ -2907,7 +3003,8 @@ export const definitions: ModelDefinitions = {
         "editCard": null,
         "collapse": true,
         "headless": null,
-        "hideOnForms": null
+        "hideOnForms": null,
+        "listUsedOnly": null
       }
     },
     "InRole": {
@@ -2963,6 +3060,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         }
       ],
@@ -3011,6 +3109,7 @@ export const definitions: ModelDefinitions = {
               "unit": "%"
             }
           ],
+          "default": null,
           "readOnly": false
         }
       ],
@@ -3068,6 +3167,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -3083,6 +3183,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -3098,6 +3199,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -3118,6 +3220,7 @@ export const definitions: ModelDefinitions = {
             }
           ],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -3285,7 +3388,8 @@ export const definitions: ModelDefinitions = {
         "editCard": null,
         "collapse": null,
         "headless": null,
-        "hideOnForms": null
+        "hideOnForms": null,
+        "listUsedOnly": null
       }
     },
     "NegativeSubjunctive": {
@@ -3341,7 +3445,8 @@ export const definitions: ModelDefinitions = {
         "editCard": null,
         "collapse": null,
         "headless": null,
-        "hideOnForms": null
+        "hideOnForms": null,
+        "listUsedOnly": null
       }
     },
     "NoRule": {
@@ -3393,6 +3498,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -3436,6 +3542,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -3451,6 +3558,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         }
       ],
@@ -3497,7 +3605,8 @@ export const definitions: ModelDefinitions = {
         "editCard": null,
         "collapse": null,
         "headless": null,
-        "hideOnForms": null
+        "hideOnForms": null,
+        "listUsedOnly": null
       }
     },
     "OngoingDate": {
@@ -3530,6 +3639,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -3545,6 +3655,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -3561,6 +3672,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -3577,6 +3689,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -3592,6 +3705,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -3607,6 +3721,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -3622,6 +3737,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -3637,6 +3753,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -3652,6 +3769,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -3667,6 +3785,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         }
       ],
@@ -3687,7 +3806,8 @@ export const definitions: ModelDefinitions = {
         },
         "collapse": null,
         "headless": null,
-        "hideOnForms": null
+        "hideOnForms": null,
+        "listUsedOnly": null
       }
     },
     "Order": {
@@ -3740,6 +3860,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -3755,6 +3876,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -3770,6 +3892,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -3790,6 +3913,7 @@ export const definitions: ModelDefinitions = {
             }
           ],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -4145,6 +4269,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -4160,6 +4285,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -4176,6 +4302,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -4192,6 +4319,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -4207,6 +4335,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -4222,6 +4351,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -4237,6 +4367,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -4252,6 +4383,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -4267,6 +4399,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -4282,6 +4415,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -4339,7 +4473,8 @@ export const definitions: ModelDefinitions = {
         },
         "collapse": null,
         "headless": null,
-        "hideOnForms": null
+        "hideOnForms": null,
+        "listUsedOnly": null
       }
     },
     "Person": {
@@ -4411,6 +4546,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "itemValidators": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -4477,12 +4613,12 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Transfer",
               "field": "given_by",
-              "viaReified": true
+              "viaReified": false
             },
             {
               "model": "Transfer",
               "field": "given_by",
-              "viaReified": false
+              "viaReified": true
             }
           ]
         },
@@ -4504,12 +4640,12 @@ export const definitions: ModelDefinitions = {
             {
               "model": "MemberOf",
               "field": "member",
-              "viaReified": true
+              "viaReified": false
             },
             {
               "model": "MemberOf",
               "field": "member",
-              "viaReified": false
+              "viaReified": true
             }
           ]
         },
@@ -4520,12 +4656,12 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Order",
               "field": "ordered_by",
-              "viaReified": true
+              "viaReified": false
             },
             {
               "model": "Order",
               "field": "ordered_by",
-              "viaReified": false
+              "viaReified": true
             }
           ]
         },
@@ -4547,12 +4683,12 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Transfer",
               "field": "given_to",
-              "viaReified": true
+              "viaReified": false
             },
             {
               "model": "Transfer",
               "field": "given_to",
-              "viaReified": false
+              "viaReified": true
             }
           ]
         },
@@ -4563,12 +4699,12 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Order",
               "field": "ordered_to",
-              "viaReified": true
+              "viaReified": false
             },
             {
               "model": "Order",
               "field": "ordered_to",
-              "viaReified": false
+              "viaReified": true
             }
           ]
         }
@@ -4650,6 +4786,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         }
       ],
@@ -4757,7 +4894,8 @@ export const definitions: ModelDefinitions = {
         "editCard": null,
         "collapse": null,
         "headless": null,
-        "hideOnForms": null
+        "hideOnForms": null,
+        "listUsedOnly": null
       }
     },
     "Recurrence": {
@@ -4790,6 +4928,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -4805,6 +4944,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -4821,6 +4961,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -4837,6 +4978,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -4852,6 +4994,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -4867,6 +5010,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -4882,6 +5026,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -4897,6 +5042,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -4912,6 +5058,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -4927,6 +5074,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -4943,6 +5091,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -4958,6 +5107,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "itemValidators": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -4973,6 +5123,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -4988,6 +5139,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -5003,6 +5155,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -5018,6 +5171,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -5033,6 +5187,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "itemValidators": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -5048,6 +5203,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -5063,6 +5219,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -5078,6 +5235,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -5130,6 +5288,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "itemValidators": [],
+          "default": null,
           "readOnly": false
         }
       ],
@@ -5150,7 +5309,8 @@ export const definitions: ModelDefinitions = {
         },
         "collapse": null,
         "headless": null,
-        "hideOnForms": null
+        "hideOnForms": null,
+        "listUsedOnly": null
       }
     },
     "Source": {
@@ -5182,6 +5342,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -5197,6 +5358,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -5212,6 +5374,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         }
       ],
@@ -5275,6 +5438,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -5290,6 +5454,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -5305,6 +5470,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -5325,6 +5491,7 @@ export const definitions: ModelDefinitions = {
             }
           ],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -5435,6 +5602,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -5450,6 +5618,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -5465,6 +5634,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -5485,6 +5655,7 @@ export const definitions: ModelDefinitions = {
             }
           ],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -5523,6 +5694,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -5538,6 +5710,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -5693,6 +5866,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -5708,6 +5882,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -5724,6 +5899,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -5740,6 +5916,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -5755,6 +5932,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -5770,6 +5948,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -5785,6 +5964,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -5800,6 +5980,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -5815,6 +5996,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         },
         {
@@ -5830,6 +6012,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         }
       ],
@@ -5850,7 +6033,8 @@ export const definitions: ModelDefinitions = {
         },
         "collapse": null,
         "headless": null,
-        "hideOnForms": null
+        "hideOnForms": null,
+        "listUsedOnly": null
       }
     },
     "WeightedAlternative": {
@@ -5919,7 +6103,8 @@ export const definitions: ModelDefinitions = {
         "editCard": null,
         "collapse": true,
         "headless": null,
-        "hideOnForms": null
+        "hideOnForms": null,
+        "listUsedOnly": null
       }
     },
     "WithCertainty": {
@@ -5962,6 +6147,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         }
       ],
@@ -5999,6 +6185,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": true
         },
         {
@@ -6014,6 +6201,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": true
         },
         {
@@ -6029,6 +6217,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": true
         },
         {
@@ -6044,6 +6233,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": true
         },
         {
@@ -6059,6 +6249,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": true
         },
         {
@@ -6074,6 +6265,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": true
         },
         {
@@ -6089,6 +6281,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": true
         },
         {
@@ -6104,6 +6297,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": true
         },
         {
@@ -6119,6 +6313,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": true
         },
         {
@@ -6134,6 +6329,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": true
         },
         {
@@ -6149,6 +6345,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": true
         },
         {
@@ -6164,6 +6361,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": true
         },
         {
@@ -6179,6 +6377,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": true
         },
         {
@@ -6194,6 +6393,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": true
         },
         {
@@ -6209,6 +6409,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": true
         },
         {
@@ -6224,6 +6425,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": true
         },
         {
@@ -6239,6 +6441,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": true
         },
         {
@@ -6254,6 +6457,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": true
         },
         {
@@ -6269,6 +6473,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         }
       ],
@@ -6278,14 +6483,18 @@ export const definitions: ModelDefinitions = {
         "colour": null,
         "navSection": null,
         "listPage": null,
-        "itemPage": null,
+        "itemPage": {
+          "module": "pangloss_zotero",
+          "name": "ZoteroItemPage"
+        },
         "viewCard": null,
         "editCard": null,
         "collapse": null,
         "headless": null,
         "hideOnForms": [
           "itemTypeOverride"
-        ]
+        ],
+        "listUsedOnly": true
       }
     },
     "ZoteroLibrary": {
@@ -6317,6 +6526,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": true
         },
         {
@@ -6332,6 +6542,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": true
         },
         {
@@ -6347,6 +6558,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": true
         },
         {
@@ -6362,6 +6574,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": true
         }
       ],
@@ -6398,6 +6611,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": true
         },
         {
@@ -6413,6 +6627,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": true
         },
         {
@@ -6428,6 +6643,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": true
         },
         {
@@ -6443,6 +6659,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": true
         },
         {
@@ -6458,6 +6675,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": true
         },
         {
@@ -6473,6 +6691,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": true
         },
         {
@@ -6488,6 +6707,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": true
         },
         {
@@ -6503,6 +6723,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": true
         },
         {
@@ -6518,6 +6739,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": true
         },
         {
@@ -6533,6 +6755,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": true
         },
         {
@@ -6548,6 +6771,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": true
         },
         {
@@ -6563,6 +6787,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": true
         },
         {
@@ -6578,6 +6803,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": true
         },
         {
@@ -6593,6 +6819,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": true
         },
         {
@@ -6608,6 +6835,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": true
         },
         {
@@ -6623,6 +6851,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": true
         },
         {
@@ -6638,6 +6867,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": true
         },
         {
@@ -6653,6 +6883,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": true
         },
         {
@@ -6668,6 +6899,7 @@ export const definitions: ModelDefinitions = {
           },
           "validators": [],
           "markers": [],
+          "default": null,
           "readOnly": false
         }
       ],
@@ -6689,14 +6921,18 @@ export const definitions: ModelDefinitions = {
         "colour": null,
         "navSection": null,
         "listPage": null,
-        "itemPage": null,
+        "itemPage": {
+          "module": "pangloss_zotero",
+          "name": "ZoteroItemPage"
+        },
         "viewCard": null,
         "editCard": null,
         "collapse": null,
         "headless": null,
         "hideOnForms": [
           "itemTypeOverride"
-        ]
+        ],
+        "listUsedOnly": true
       }
     }
   },
@@ -6841,7 +7077,22 @@ export const definitions: ModelDefinitions = {
       "Documents",
       "Entities"
     ],
-    "models": {},
+    "models": {
+      "ZoteroObject": {
+        "label": null,
+        "labelSlot": "nav_pangloss_zotero_zoteroobject",
+        "section": null,
+        "order": null,
+        "hidden": true
+      },
+      "ZoteroLibrary": {
+        "label": null,
+        "labelSlot": "nav_pangloss_zotero_zoterolibrary",
+        "section": null,
+        "order": null,
+        "hidden": true
+      }
+    },
     "links": [
       {
         "label": "Calendar",

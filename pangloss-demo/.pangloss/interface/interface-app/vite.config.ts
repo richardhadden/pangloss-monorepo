@@ -54,7 +54,7 @@ export default defineConfig({
       // to dist/client, and the server to dist/server (with `node.js`, which
       // `npm start` runs)
       ssr: true,
-      start: { node: true },
+      start: { nodeServer: true },
       // "use server" functions: the translations of a language are fetched with one (src/translations.ts), and an
       // interface module may have its own (pangloss_review's live feed)
       serverFunctions: {
