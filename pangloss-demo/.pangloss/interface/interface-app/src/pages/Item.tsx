@@ -6,7 +6,7 @@ import {
   preload,
   getModel,
   ItemSections,
-  SpaceBands,
+  ContextFrames,
   Spinner,
   useComponent,
   useModels,
@@ -142,10 +142,8 @@ export default function EntityPage(props: RouteProps<"/:type/:id">) {
   const model = () => getModel(definitions, item().type);
   const ReferenceChip = useComponent("ReferenceChip");
   const head = () => headOf(item());
-  // (what the item is inside, as bands round the whole of it; what can be gone to has a link)
+  // (what the item is inside, round the whole of it)
   const path = () => contextPath(item().meta.contextLabels as ContextLabel[] | null | undefined, item().id);
-  const pathHrefs = () =>
-    path().map((entry) => (entry.id ? `/${entry.type}/${encodeURIComponent(entry.id)}` : undefined));
   return (
     <Page>
       {/* (the type is the item's own, which can be a subtype of the one in the address) */}
@@ -215,12 +213,7 @@ export default function EntityPage(props: RouteProps<"/:type/:id">) {
                     </div>
                   )}
                 </Show>
-                <SpaceBands
-                  spaces={path().map((entry) => entry.type)}
-                  hrefs={pathHrefs()}
-                  depth={0}
-                  stacked
-                >
+                <ContextFrames path={path()}>
                 <h1 class="mb-6 border-b-[0.5px] border-slate-400/70 pt-1 pb-2 text-2xl font-semibold">
                   {item().label ?? item().id}
                 </h1>
@@ -231,7 +224,7 @@ export default function EntityPage(props: RouteProps<"/:type/:id">) {
                   <ItemContents item={item()} show={show()} />
                   <ItemSections item={item()} />
                 </Reveal>
-                </SpaceBands>
+                </ContextFrames>
                 <ScrollToNested id={item() ? show() : undefined} />
               </>
             }

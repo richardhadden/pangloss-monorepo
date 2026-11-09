@@ -12,3 +12,4 @@ export * from "./clipboard";
 export * from "./stash";
 export * from "./toasts";
 export * from "./sidePanel";
+export * from "./searchAddress";

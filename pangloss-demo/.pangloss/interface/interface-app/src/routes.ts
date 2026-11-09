@@ -7,8 +7,10 @@ import { defineRoute, defineRoutes } from "@solidjs/router";
 import { httpStatus } from "@solidjs/web";
 import { lazy } from "solid-js";
 import { orderModules } from "@pangloss/interface-core";
+import type { PageLoader } from "@pangloss/interface-core";
 import { definitions } from "@generated/models";
 import { modules } from "@generated/modules";
+import { pageComponent, projectHome, projectPages } from "./projectPages";
 import { itemQuery, listQuery, pageOf, searchOf, startOf, requestOf, usesOf } from "./queries";
 
 // The pages of the interface modules of the installed apps: before `/:type`, which would take their addresses for a type
@@ -23,8 +25,12 @@ const moduleRoutes = orderModules(modules).flatMap((module) =>
   ),
 );
 
+const defaultHome = () => import("./pages/Home");
+
 export const routes = defineRoutes([
-  defineRoute({ path: "/", component: lazy(() => import("./pages/Home")) }),
+  defineRoute({ path: "/", component: pageComponent(projectHome ?? (defaultHome as PageLoader)) }),
+  // (a project's own pages, before `/:type`, which would take their addresses for a type)
+  ...projectPages.map((page) => defineRoute({ path: `/${page.slug}`, component: pageComponent(page.load, page.slug) })),
   ...moduleRoutes,
   defineRoute({
     path: "/:type",

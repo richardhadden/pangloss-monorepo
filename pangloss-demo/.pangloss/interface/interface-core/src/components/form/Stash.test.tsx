@@ -35,6 +35,7 @@ const model = (name: string, extra: Partial<ModelDefinition> = {}) =>
     typeParameters: [],
     createWithId: false,
     createDirectly: true,
+    globalSearch: true,
     acceptUrlAsId: false,
     requireLabel: true,
     useInSemanticSpaceLabel: true,

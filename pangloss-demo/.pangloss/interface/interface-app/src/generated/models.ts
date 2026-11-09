@@ -19,6 +19,7 @@ export const definitions: ModelDefinitions = {
       "createWithId": false,
       "createDirectly": false,
       "acceptUrlAsId": false,
+      "globalSearch": true,
       "requireLabel": true,
       "useInSemanticSpaceLabel": true,
       "fields": [
@@ -243,6 +244,7 @@ export const definitions: ModelDefinitions = {
       "createWithId": false,
       "createDirectly": true,
       "acceptUrlAsId": true,
+      "globalSearch": true,
       "requireLabel": true,
       "useInSemanticSpaceLabel": true,
       "fields": [],
@@ -286,6 +288,7 @@ export const definitions: ModelDefinitions = {
       "createWithId": false,
       "createDirectly": true,
       "acceptUrlAsId": false,
+      "globalSearch": true,
       "requireLabel": false,
       "useInSemanticSpaceLabel": true,
       "fields": [
@@ -366,6 +369,7 @@ export const definitions: ModelDefinitions = {
       "createWithId": true,
       "createDirectly": true,
       "acceptUrlAsId": true,
+      "globalSearch": true,
       "requireLabel": true,
       "useInSemanticSpaceLabel": true,
       "fields": [
@@ -733,6 +737,7 @@ export const definitions: ModelDefinitions = {
       "createWithId": false,
       "createDirectly": true,
       "acceptUrlAsId": false,
+      "globalSearch": true,
       "requireLabel": false,
       "useInSemanticSpaceLabel": true,
       "fields": [
@@ -798,6 +803,7 @@ export const definitions: ModelDefinitions = {
       "createWithId": false,
       "createDirectly": true,
       "acceptUrlAsId": false,
+      "globalSearch": true,
       "requireLabel": true,
       "useInSemanticSpaceLabel": true,
       "fields": [
@@ -841,6 +847,7 @@ export const definitions: ModelDefinitions = {
       "createWithId": false,
       "createDirectly": false,
       "acceptUrlAsId": false,
+      "globalSearch": true,
       "requireLabel": true,
       "useInSemanticSpaceLabel": true,
       "fields": [
@@ -1032,6 +1039,7 @@ export const definitions: ModelDefinitions = {
       "createWithId": false,
       "createDirectly": false,
       "acceptUrlAsId": false,
+      "globalSearch": true,
       "requireLabel": true,
       "useInSemanticSpaceLabel": true,
       "fields": [
@@ -1221,6 +1229,7 @@ export const definitions: ModelDefinitions = {
       "createWithId": false,
       "createDirectly": false,
       "acceptUrlAsId": false,
+      "globalSearch": true,
       "requireLabel": true,
       "useInSemanticSpaceLabel": true,
       "fields": [
@@ -1426,6 +1435,7 @@ export const definitions: ModelDefinitions = {
       "createWithId": false,
       "createDirectly": true,
       "acceptUrlAsId": false,
+      "globalSearch": true,
       "requireLabel": false,
       "useInSemanticSpaceLabel": true,
       "fields": [
@@ -1627,6 +1637,7 @@ export const definitions: ModelDefinitions = {
       "createWithId": false,
       "createDirectly": true,
       "acceptUrlAsId": true,
+      "globalSearch": true,
       "requireLabel": true,
       "useInSemanticSpaceLabel": true,
       "fields": [
@@ -1668,6 +1679,7 @@ export const definitions: ModelDefinitions = {
       "createWithId": false,
       "createDirectly": true,
       "acceptUrlAsId": false,
+      "globalSearch": true,
       "requireLabel": false,
       "useInSemanticSpaceLabel": true,
       "fields": [
@@ -1901,6 +1913,7 @@ export const definitions: ModelDefinitions = {
       "createWithId": false,
       "createDirectly": true,
       "acceptUrlAsId": false,
+      "globalSearch": true,
       "requireLabel": false,
       "useInSemanticSpaceLabel": true,
       "fields": [
@@ -2118,6 +2131,7 @@ export const definitions: ModelDefinitions = {
       "createWithId": false,
       "createDirectly": true,
       "acceptUrlAsId": false,
+      "globalSearch": true,
       "requireLabel": false,
       "useInSemanticSpaceLabel": true,
       "fields": [
@@ -2367,6 +2381,7 @@ export const definitions: ModelDefinitions = {
       "createWithId": false,
       "createDirectly": true,
       "acceptUrlAsId": false,
+      "globalSearch": true,
       "requireLabel": true,
       "useInSemanticSpaceLabel": true,
       "fields": [
@@ -2673,6 +2688,7 @@ export const definitions: ModelDefinitions = {
       "createWithId": false,
       "createDirectly": true,
       "acceptUrlAsId": true,
+      "globalSearch": true,
       "requireLabel": true,
       "useInSemanticSpaceLabel": true,
       "fields": [
@@ -2746,6 +2762,7 @@ export const definitions: ModelDefinitions = {
       "createWithId": false,
       "createDirectly": true,
       "acceptUrlAsId": true,
+      "globalSearch": true,
       "requireLabel": true,
       "useInSemanticSpaceLabel": true,
       "fields": [
@@ -2896,6 +2913,7 @@ export const definitions: ModelDefinitions = {
       "createWithId": false,
       "createDirectly": true,
       "acceptUrlAsId": false,
+      "globalSearch": true,
       "requireLabel": false,
       "useInSemanticSpaceLabel": true,
       "fields": [
@@ -2951,6 +2969,7 @@ export const definitions: ModelDefinitions = {
       "createWithId": false,
       "createDirectly": true,
       "acceptUrlAsId": false,
+      "globalSearch": true,
       "requireLabel": false,
       "useInSemanticSpaceLabel": true,
       "fields": [
@@ -3031,6 +3050,7 @@ export const definitions: ModelDefinitions = {
       "createWithId": false,
       "createDirectly": true,
       "acceptUrlAsId": false,
+      "globalSearch": true,
       "requireLabel": false,
       "useInSemanticSpaceLabel": true,
       "fields": [
@@ -3090,6 +3110,7 @@ export const definitions: ModelDefinitions = {
       "createWithId": false,
       "createDirectly": true,
       "acceptUrlAsId": false,
+      "globalSearch": true,
       "requireLabel": true,
       "useInSemanticSpaceLabel": true,
       "fields": [
@@ -3141,6 +3162,7 @@ export const definitions: ModelDefinitions = {
       "createWithId": false,
       "createDirectly": false,
       "acceptUrlAsId": false,
+      "globalSearch": true,
       "requireLabel": true,
       "useInSemanticSpaceLabel": true,
       "fields": [
@@ -3361,6 +3383,7 @@ export const definitions: ModelDefinitions = {
       "createWithId": false,
       "createDirectly": true,
       "acceptUrlAsId": false,
+      "globalSearch": true,
       "requireLabel": false,
       "useInSemanticSpaceLabel": true,
       "fields": [
@@ -3418,6 +3441,7 @@ export const definitions: ModelDefinitions = {
       "createWithId": false,
       "createDirectly": true,
       "acceptUrlAsId": false,
+      "globalSearch": true,
       "requireLabel": false,
       "useInSemanticSpaceLabel": true,
       "fields": [
@@ -3473,6 +3497,7 @@ export const definitions: ModelDefinitions = {
       "createWithId": false,
       "createDirectly": true,
       "acceptUrlAsId": false,
+      "globalSearch": true,
       "requireLabel": false,
       "useInSemanticSpaceLabel": true,
       "fields": [],
@@ -3493,6 +3518,7 @@ export const definitions: ModelDefinitions = {
       "createWithId": false,
       "createDirectly": true,
       "acceptUrlAsId": true,
+      "globalSearch": true,
       "requireLabel": true,
       "useInSemanticSpaceLabel": true,
       "fields": [
@@ -3633,6 +3659,7 @@ export const definitions: ModelDefinitions = {
       "createWithId": false,
       "createDirectly": true,
       "acceptUrlAsId": false,
+      "globalSearch": true,
       "requireLabel": false,
       "useInSemanticSpaceLabel": true,
       "fields": [
@@ -3834,6 +3861,7 @@ export const definitions: ModelDefinitions = {
       "createWithId": false,
       "createDirectly": false,
       "acceptUrlAsId": false,
+      "globalSearch": true,
       "requireLabel": true,
       "useInSemanticSpaceLabel": true,
       "fields": [
@@ -4209,6 +4237,7 @@ export const definitions: ModelDefinitions = {
       "createWithId": false,
       "createDirectly": true,
       "acceptUrlAsId": true,
+      "globalSearch": true,
       "requireLabel": true,
       "useInSemanticSpaceLabel": true,
       "fields": [],
@@ -4263,6 +4292,7 @@ export const definitions: ModelDefinitions = {
       "createWithId": false,
       "createDirectly": true,
       "acceptUrlAsId": false,
+      "globalSearch": true,
       "requireLabel": false,
       "useInSemanticSpaceLabel": true,
       "fields": [
@@ -4501,6 +4531,7 @@ export const definitions: ModelDefinitions = {
       "createWithId": true,
       "createDirectly": true,
       "acceptUrlAsId": true,
+      "globalSearch": true,
       "requireLabel": true,
       "useInSemanticSpaceLabel": true,
       "fields": [
@@ -4624,12 +4655,12 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Transfer",
               "field": "given_by",
-              "viaReified": true
+              "viaReified": false
             },
             {
               "model": "Transfer",
               "field": "given_by",
-              "viaReified": false
+              "viaReified": true
             }
           ]
         },
@@ -4651,12 +4682,12 @@ export const definitions: ModelDefinitions = {
             {
               "model": "MemberOf",
               "field": "member",
-              "viaReified": true
+              "viaReified": false
             },
             {
               "model": "MemberOf",
               "field": "member",
-              "viaReified": false
+              "viaReified": true
             }
           ]
         },
@@ -4667,12 +4698,12 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Order",
               "field": "ordered_by",
-              "viaReified": true
+              "viaReified": false
             },
             {
               "model": "Order",
               "field": "ordered_by",
-              "viaReified": false
+              "viaReified": true
             }
           ]
         },
@@ -4694,12 +4725,12 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Transfer",
               "field": "given_to",
-              "viaReified": true
+              "viaReified": false
             },
             {
               "model": "Transfer",
               "field": "given_to",
-              "viaReified": false
+              "viaReified": true
             }
           ]
         },
@@ -4710,12 +4741,12 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Order",
               "field": "ordered_to",
-              "viaReified": true
+              "viaReified": false
             },
             {
               "model": "Order",
               "field": "ordered_to",
-              "viaReified": false
+              "viaReified": true
             }
           ]
         }
@@ -4741,6 +4772,7 @@ export const definitions: ModelDefinitions = {
       "createWithId": false,
       "createDirectly": true,
       "acceptUrlAsId": true,
+      "globalSearch": true,
       "requireLabel": true,
       "useInSemanticSpaceLabel": true,
       "fields": [],
@@ -4773,6 +4805,7 @@ export const definitions: ModelDefinitions = {
       "createWithId": false,
       "createDirectly": true,
       "acceptUrlAsId": true,
+      "globalSearch": true,
       "requireLabel": true,
       "useInSemanticSpaceLabel": true,
       "fields": [
@@ -4867,6 +4900,7 @@ export const definitions: ModelDefinitions = {
       "createWithId": false,
       "createDirectly": true,
       "acceptUrlAsId": false,
+      "globalSearch": true,
       "requireLabel": false,
       "useInSemanticSpaceLabel": true,
       "fields": [
@@ -4922,6 +4956,7 @@ export const definitions: ModelDefinitions = {
       "createWithId": false,
       "createDirectly": true,
       "acceptUrlAsId": false,
+      "globalSearch": true,
       "requireLabel": false,
       "useInSemanticSpaceLabel": true,
       "fields": [
@@ -5337,6 +5372,7 @@ export const definitions: ModelDefinitions = {
       "createWithId": true,
       "createDirectly": true,
       "acceptUrlAsId": true,
+      "globalSearch": true,
       "requireLabel": true,
       "useInSemanticSpaceLabel": true,
       "fields": [
@@ -5412,6 +5448,7 @@ export const definitions: ModelDefinitions = {
       "createWithId": false,
       "createDirectly": false,
       "acceptUrlAsId": false,
+      "globalSearch": true,
       "requireLabel": true,
       "useInSemanticSpaceLabel": true,
       "fields": [
@@ -5576,6 +5613,7 @@ export const definitions: ModelDefinitions = {
       "createWithId": false,
       "createDirectly": false,
       "acceptUrlAsId": false,
+      "globalSearch": true,
       "requireLabel": true,
       "useInSemanticSpaceLabel": true,
       "fields": [
@@ -5860,6 +5898,7 @@ export const definitions: ModelDefinitions = {
       "createWithId": false,
       "createDirectly": true,
       "acceptUrlAsId": false,
+      "globalSearch": true,
       "requireLabel": false,
       "useInSemanticSpaceLabel": true,
       "fields": [
@@ -6063,6 +6102,7 @@ export const definitions: ModelDefinitions = {
       "createWithId": false,
       "createDirectly": true,
       "acceptUrlAsId": false,
+      "globalSearch": true,
       "requireLabel": false,
       "useInSemanticSpaceLabel": true,
       "fields": [
@@ -6131,6 +6171,7 @@ export const definitions: ModelDefinitions = {
       "createWithId": false,
       "createDirectly": true,
       "acceptUrlAsId": false,
+      "globalSearch": true,
       "requireLabel": true,
       "useInSemanticSpaceLabel": true,
       "fields": [
@@ -6180,6 +6221,7 @@ export const definitions: ModelDefinitions = {
       "createWithId": true,
       "createDirectly": true,
       "acceptUrlAsId": true,
+      "globalSearch": true,
       "requireLabel": true,
       "useInSemanticSpaceLabel": true,
       "fields": [
@@ -6521,6 +6563,7 @@ export const definitions: ModelDefinitions = {
       "createWithId": true,
       "createDirectly": true,
       "acceptUrlAsId": true,
+      "globalSearch": false,
       "requireLabel": true,
       "useInSemanticSpaceLabel": true,
       "fields": [
@@ -6606,6 +6649,7 @@ export const definitions: ModelDefinitions = {
       "createWithId": true,
       "createDirectly": true,
       "acceptUrlAsId": true,
+      "globalSearch": false,
       "requireLabel": true,
       "useInSemanticSpaceLabel": true,
       "fields": [

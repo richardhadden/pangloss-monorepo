@@ -20,7 +20,7 @@ export function ZoteroControlled() {
   const { t } = useTranslations();
   return (
     <span
-      class="mr-1 inline-block align-[-0.125em]"
+      class="mr-1 inline-flex align-[-0.22em]"
       title={t("zotero_controlled", "Kept up to date from Zotero")}
       data-testid="zotero-controlled"
     >

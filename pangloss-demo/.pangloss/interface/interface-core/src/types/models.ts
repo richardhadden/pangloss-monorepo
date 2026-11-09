@@ -296,6 +296,8 @@ export interface ModelDefinition {
   /** Whether one can be made on its own (`create_directly`): if not, a document is only ever part of another */
   createDirectly: boolean;
   acceptUrlAsId: boolean;
+  /** Whether "search everything" finds it (`global_search`) */
+  globalSearch: boolean;
   requireLabel: boolean;
   /** Whether its label is used in the label of a semantic space that contains it */
   useInSemanticSpaceLabel: boolean;

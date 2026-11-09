@@ -24,22 +24,17 @@ import type {
 import { Customised } from "./Customised";
 import { IncomingRelations } from "./IncomingRelations";
 import { holdsId, NestingProvider, RevealProvider, startsFolded, useNesting, useRevealed } from "./nesting";
+import { Head } from "./Head";
 import { SpaceBands } from "./SpaceBands";
 import {
   fieldGridClass,
   fieldRowClass,
   fieldRuleClass,
-  headBarClass,
-  headButtonClass,
-  headBarLinkClass,
-  headLabelClass,
-  headRestClass,
   nestedClass,
   plainTint,
   smallButtonClass,
   spacePaddingClass,
   spaceTypeClass,
-  typeChipClass,
 } from "./form/styles";
 
 type Data = Record<string, unknown>;
@@ -70,93 +65,6 @@ function Row(props: ParentProps<{ name: string }>) {
         {props.children}
       </dd>
     </div>
-  );
-}
-
-/**
- * The head of something nested: a bar with its type as a chip at the left end, and its label. If it
- * is an item of its own (`href`), the whole bar is a link to it, and darkens as a chip does.
- */
-function Head(props: {
-  type: string;
-  tint: string;
-  /** The colour of the rule that hangs from it, which the frame of its type has too */
-  rule: string;
-  label?: string;
-  href?: string;
-  /** Gives the bar a button at its right end that folds it (what is shown whole that can be collapsed) */
-  onFold?: () => void;
-  /** A block nested deep enough to start folded (`startsFolded`): whether it is open, and the button that opens and folds it */
-  open?: boolean;
-  onToggle?: () => void;
-}) {
-  const { t, modelName } = useTranslations();
-  const contents = () => (
-    <>
-      <span data-type-info={props.type} class={[typeChipClass, props.tint || plainTint, props.rule]}>
-        {modelName(props.type)}
-      </span>
-      <span class={headRestClass}>
-        <Show
-          when={props.onToggle && !props.href}
-          fallback={
-            <Show when={props.label}>
-              <span class={headLabelClass}>{props.label}</span>
-            </Show>
-          }
-        >
-          {/* (as in the form: the grey of the bar, with the label in it, folds and unfolds it; folded, a ▸ says so) */}
-          <button
-            type="button"
-            class="flex min-w-0 flex-1 cursor-pointer items-center gap-2 px-3 py-1 text-left text-sm hover:bg-slate-400/20 focus-visible:bg-slate-400/20 focus-visible:outline-none"
-            aria-expanded={props.open ? "true" : "false"}
-            aria-label={t("fold", "Fold or unfold {name}", { name: modelName(props.type) })}
-            title={t("fold", "Fold or unfold {name}", { name: modelName(props.type) })}
-            onClick={() => props.onToggle!()}
-          >
-            <Show when={!props.open}>
-              <span aria-hidden="true" class="shrink-0 text-xs text-slate-500">
-                ▸
-              </span>
-            </Show>
-            <span class="min-w-0 truncate">{props.label}</span>
-          </button>
-        </Show>
-        <Show when={props.onToggle && props.href}>
-          <button
-            type="button"
-            class={[headButtonClass, "ml-auto text-slate-500 hover:bg-slate-400/30"]}
-            aria-expanded={props.open ? "true" : "false"}
-            aria-label={t("fold", "Fold or unfold {name}", { name: modelName(props.type) })}
-            title={t("fold", "Fold or unfold {name}", { name: modelName(props.type) })}
-            onClick={() => props.onToggle!()}
-          >
-            {props.open ? "▾" : "▸"}
-          </button>
-        </Show>
-        <Show when={props.onFold}>
-          <button
-            type="button"
-            class={[headButtonClass, "ml-auto text-slate-500 hover:bg-slate-400/30"]}
-            aria-label={t("collapse_fold", "Fold {name}", { name: modelName(props.type) })}
-            title={t("collapse_fold", "Fold {name}", { name: modelName(props.type) })}
-            onClick={() => props.onFold!()}
-          >
-            ▾
-          </button>
-        </Show>
-      </span>
-    </>
-  );
-  return (
-    <Show
-      when={props.href}
-      fallback={<div class={headBarClass}>{contents()}</div>}
-    >
-      <a href={props.href} class={[headBarClass, headBarLinkClass]}>
-        {contents()}
-      </a>
-    </Show>
   );
 }
 
@@ -386,7 +294,8 @@ function ObjectValue(props: {
                     open={open()}
                     onToggle={onToggle}
                     href={
-                      props.asChip && props.value.id
+                      // (a document inside this one has a page of its own, as what is referred to has)
+                      (props.asChip || model()?.kind === "Document") && props.value.id
                         ? `/${type()}/${props.value.id}`
                         : undefined
                     }

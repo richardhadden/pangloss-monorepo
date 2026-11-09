@@ -30,6 +30,7 @@ const person = () =>
     kind: "Entity",
     abstract: false,
     createDirectly: true,
+    globalSearch: true,
     parent: null,
     concreteTypes: [],
     interfaceMeta: null,

@@ -41,7 +41,11 @@ export default function ZoteroItemPage(props: ItemPageProps) {
       <h1 class="mb-6 border-b-[0.5px] border-slate-400/70 pt-1 pb-2 text-2xl font-semibold">
         {String(props.item.label ?? props.item.id)}
       </h1>
-      <div class="@container mb-5 w-full min-w-0" data-testid="zotero-item">
+      {/* (what comes next is another list, whose first row has no rule: it is ruled off here as a row is, if it shows any) */}
+      <div
+        class="@container mb-5 w-full min-w-0 [&+*:has(dt)]:border-t [&+*:has(dt)]:border-slate-500/15 [&+*:has(dt)]:pt-5"
+        data-testid="zotero-item"
+      >
         <dl class={fieldGridClass}>
           <For each={rows()} keyed={(row) => row.key}>
             {(row) => (

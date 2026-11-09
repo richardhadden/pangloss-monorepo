@@ -34,6 +34,10 @@ const moduleRoots = [
   fileURLToPath(new URL("../modules/*", import.meta.url)),
   ...(process.env.PANGLOSS_MODULE_ROOTS?.split(":").filter(Boolean) ?? []),
 ];
+// The project's own pages (`pangloss interface new-page`): in `<project>/pages`, three levels above the application as it
+// is built in the project. `pangloss interface dev --link` says where they are.
+const projectPages =
+  process.env.PANGLOSS_PAGES_DIR ?? fileURLToPath(new URL("../../../pages", import.meta.url));
 const SOURCE_FILES = "*.{jsx,tsx,ts,js,mjs}";
 
 export default defineConfig({
@@ -43,6 +47,7 @@ export default defineConfig({
       "@generated/modules": modulesModule,
       "@generated/translations": translationsModule,
       "@generated/sources.css": sourcesCss,
+      "@project-pages": projectPages,
     },
     // (an interface module has its own node_modules at times: one copy of each of these, or reactivity breaks)
     dedupe: ["solid-js", "@solidjs/web", "@solidjs/router", "@pangloss/interface-core"],
@@ -78,6 +83,7 @@ export default defineConfig({
         dirname(modelsModule),
         dirname(modulesModule),
         dirname(translationsModule),
+        projectPages,
         // (the modules of apps that are checked out, run where they are)
         ...(process.env.PANGLOSS_MODULE_ROOTS?.split(":").filter(Boolean) ?? []),
       ],

@@ -49,6 +49,7 @@ const entity = (name: string, parent: string | null = null): ModelDefinition => 
   typeParameters: [],
   createWithId: false,
   createDirectly: true,
+  globalSearch: true,
   acceptUrlAsId: false,
   requireLabel: true,
   useInSemanticSpaceLabel: true,

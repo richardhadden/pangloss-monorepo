@@ -71,3 +71,6 @@ export * from "./validation";
 export * from "./collapse";
 export * from "./headless";
 export * from "./searchForm";
+
+export * from "./globalSearch";
+export * from "./pageFiles";

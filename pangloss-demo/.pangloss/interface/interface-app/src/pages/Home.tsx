@@ -1,22 +1,15 @@
-import { headModels, PageTitle, useModels } from "@pangloss/interface-core";
-import { For } from "solid-js";
+import { GlobalSearch, PageTitle, readableName, useModels } from "@pangloss/interface-core";
 
-// What there is to show is from the definitions of the models of the project
+// The homepage: the name of the project, and a box that searches everything
 export default function Home() {
-  const models = headModels(useModels());
+  const definitions = useModels();
   return (
-    <main>
+    <main class="mx-auto flex max-w-4xl flex-col gap-10 px-6 pt-24 pb-12">
       <PageTitle />
-      <h1>Pangloss Yo!</h1>
-      <ul>
-        <For each={models}>
-          {(model) => (
-            <li>
-              <a href={`/${model.name}`}>{model.name}</a> ({model.kind})
-            </li>
-          )}
-        </For>
-      </ul>
+      <h1 class="text-center text-7xl font-semibold tracking-tight wrap-break-word text-slate-800">
+        {readableName(definitions.projectName ?? "Pangloss")}
+      </h1>
+      <GlobalSearch />
     </main>
   );
 }

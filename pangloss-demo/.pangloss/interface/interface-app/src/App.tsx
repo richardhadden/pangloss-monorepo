@@ -1,7 +1,8 @@
-import { useNavigate } from "@solidjs/router";
+import { useNavigate, useSearchParams } from "@solidjs/router";
 import {
   ApiProvider,
   ClipboardProvider,
+  SearchAddressProvider,
   ComponentsProvider,
   ConsoleMountProvider,
   ModelsProvider,
@@ -33,6 +34,23 @@ import { modules } from "@generated/modules";
 import { revalidateAll, sessionQuery } from "./queries";
 import { paths, Router } from "./router";
 import { loadTranslations } from "./translations";
+
+// Where a `GlobalSearch` keeps its search: in the address, replaced as it changes, as a list's is
+function GlobalSearchAddress(props: ParentProps) {
+  const [search, setSearch] = useSearchParams();
+  const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);
+  return (
+    <SearchAddressProvider
+      value={{
+        q: () => first(search.q) ?? "",
+        type: () => first(search.type),
+        set: ({ q, type }) => setSearch({ q: q || null, type: type ?? null }, { replace: true }),
+      }}
+    >
+      {props.children}
+    </SearchAddressProvider>
+  );
+}
 
 // The frame of every page: the navigation bar, fixed on the left, and the page beside it
 function Frame(props: ParentProps) {
@@ -71,7 +89,7 @@ function Frame(props: ParentProps) {
           </Loading>
           <ConsoleBar />
           <Padded navPinned={navPinned()}>
-            <Loading fallback={<main class="p-6 text-slate-500"><Spinner class="size-5" /></main>}>{props.children}</Loading>
+            <GlobalSearchAddress><Loading fallback={<main class="p-6 text-slate-500"><Spinner class="size-5" /></main>}>{props.children}</Loading></GlobalSearchAddress>
           </Padded>
           <ClipboardBar />
           <Toasts />

@@ -31,6 +31,7 @@ export const model = (name: string, kind: ModelDefinition["kind"], fields: Field
     typeParameters: [],
     createWithId: false,
     createDirectly: true,
+    globalSearch: true,
     acceptUrlAsId: false,
     requireLabel: true,
     useInSemanticSpaceLabel: true,

@@ -69,6 +69,9 @@ export const plainTint = "bg-slate-400/20 text-slate-800";
 export const headBarClass = "flex min-w-0 items-stretch rounded-xs bg-slate-400/10";
 export const headRestClass =
   "flex min-w-0 flex-1 items-stretch overflow-hidden rounded-r-xs border-[0.5px] border-l-0 border-slate-400/70";
+// (the same, as a link, with the buttons after it and outside it: they close the frame)
+export const headRestLinkClass =
+  "flex min-w-0 flex-1 items-stretch overflow-hidden border-y-[0.5px] border-slate-400/70";
 // (the same, where a button in it opens a menu, which hiding the overflow would cut off: its last button is rounded
 // instead, so that its colour on hover keeps to the corner)
 export const headRestOpenClass =
