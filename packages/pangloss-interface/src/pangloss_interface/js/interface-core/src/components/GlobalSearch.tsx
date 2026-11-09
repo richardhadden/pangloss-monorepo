@@ -28,7 +28,7 @@ interface TypeChip {
  * The box of the homepage: finds documents and entities of any class by their label, and shows the most connected
  * under it. A finished word that names a type, in any language, becomes a chip that narrows the search to it;
  * Backspace against the chip turns it back into the word. While a word is being typed, the types it could be are offered
- * in a list under the box, and the rest of the first is shown in grey after it: Tab takes it, the arrows choose another. Nothing is asked until words or a type are typed; a type alone shows the most connected of it. (See
+ * in a list under the box, and the rest of the first is shown in grey after it: Tab takes it, the arrows choose another. With no types on offer, the arrows go through the results, and Enter opens the one chosen (or the first). Nothing is asked until words or a type are typed; a type alone shows the most connected of it. (See
  * docs/homepage-and-pages.md.) As the search of a list, it is kept in the address (`?q=&type=`), and read from there on
  * the server: see `SearchAddress`.
  */
@@ -70,6 +70,8 @@ export function GlobalSearch(props: { limit?: number }) {
   // (the types on offer, and which is chosen with the arrows: -1, none)
   const [offer, setOffer] = createSignal<TypeOffer | undefined>();
   const [active, setActive] = createSignal(-1);
+  // (the result chosen with the arrows, when no types are on offer: -1, none)
+  const [activeResult, setActiveResult] = createSignal(-1);
   // (select all, with a chip: the chip is selected with the text)
   const [chipSelected, setChipSelected] = createSignal(false);
   let box: HTMLInputElement | undefined;
@@ -82,6 +84,7 @@ export function GlobalSearch(props: { limit?: number }) {
   // (as `current`: a key can come before the flush)
   let offered: TypeOffer | undefined;
   let chosen = -1;
+  let chosenResult = -1;
   let wholeSelected = false;
   // (the last search asked for: the address coming back with it is not a change to show)
   let lastAsked = keyOf(initial);
@@ -109,6 +112,12 @@ export function GlobalSearch(props: { limit?: number }) {
     chosen = index;
     setActive(index);
   };
+  const chooseResult = (index: number) => {
+    chosenResult = index;
+    setActiveResult(index);
+  };
+  // (the list of results on show, if there is one: once it has gone, `results` is what it was)
+  const resultRows = () => (results?.isConnected ? [...results.children] : []);
   const search = () => {
     clearTimeout(timer);
     const next: EverythingSearch = { q: box?.value.trim() ?? "", type: current?.model };
@@ -121,6 +130,8 @@ export function GlobalSearch(props: { limit?: number }) {
   createEffect(
     () => keyOf(asked()),
     (key) => {
+      // (other results are coming: what was chosen is not among them)
+      chooseResult(-1);
       if (key === lastAsked) return;
       lastAsked = key;
       const now = untrack(asked);
@@ -137,6 +148,7 @@ export function GlobalSearch(props: { limit?: number }) {
   };
   const typed = () => {
     if (!box) return;
+    chooseResult(-1);
     // (what was typed replaced everything that was selected, which was the chip too)
     if (wholeSelected) {
       showChip(undefined);
@@ -253,8 +265,8 @@ export function GlobalSearch(props: { limit?: number }) {
           type="search"
           ref={box}
           value={initial.q}
-          aria-label={t("search_everything", "Search everything")}
-          placeholder={t("search_everything", "Search everything")}
+          aria-label={t("search_everything", "Quick search")}
+          placeholder={t("search_everything", "Quick search")}
           aria-autocomplete="both"
           aria-controls="search-type-options"
           aria-activedescendant={active() >= 0 ? `search-type-option-${active()}` : undefined}
@@ -262,6 +274,7 @@ export function GlobalSearch(props: { limit?: number }) {
           onBlur={() => {
             showOffer(undefined);
             selectWhole(false);
+            chooseResult(-1);
           }}
           onMouseDown={() => selectWhole(false)}
           onKeyDown={(event) => {
@@ -304,13 +317,25 @@ export function GlobalSearch(props: { limit?: number }) {
                 return;
               }
             }
+            if ((event.key === "ArrowDown" || event.key === "ArrowUp") && !pending()) {
+              const rows = resultRows();
+              if (rows.length > 0) {
+                event.preventDefault();
+                // (round the list, through "none chosen", as the types are)
+                const step = event.key === "ArrowDown" ? 1 : -1;
+                const next = ((chosenResult + 1 + step + rows.length + 1) % (rows.length + 1)) - 1;
+                chooseResult(next);
+                rows[next]?.scrollIntoView({ block: "nearest" });
+                return;
+              }
+            }
             const atStart = event.currentTarget.selectionStart === 0 && event.currentTarget.selectionEnd === 0;
             if (event.key === "Backspace" && atStart && current) {
               event.preventDefault();
               turnBackChip();
             } else if (event.key === "Enter") {
-              // (the first of what is on show, once it is of what is in the box)
-              if (results && !pending()) results.querySelector("a")?.click();
+              // (what was chosen, or the first of what is on show, once it is of what is in the box)
+              if (!pending()) resultRows()[Math.max(chosenResult, 0)]?.querySelector("a")?.click();
             }
           }}
           class="relative h-full w-full bg-transparent px-3 text-xl outline-none placeholder:text-sm placeholder:font-semibold placeholder:text-slate-500 placeholder:uppercase"
@@ -378,8 +403,12 @@ export function GlobalSearch(props: { limit?: number }) {
             <div class="flex flex-col gap-4">
             <ul ref={results} class="flex flex-col items-start gap-1.5">
               <For each={page().results} keyed={(item) => item.id}>
-                {(item) => (
-                  <li>
+                {(item, index) => (
+                  // (the margin: clear of the console, which stays at the top of the page)
+                  <li
+                    aria-current={activeResult() === index() ? "true" : undefined}
+                    class={["scroll-my-16 rounded-xs", { "ring-2 ring-blue-400": activeResult() === index() }]}
+                  >
                     <ReferenceChip
                       type={item().type}
                       label={item().label}

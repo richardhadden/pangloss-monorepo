@@ -135,6 +135,6 @@ console of the homepage and of the other pages. A file called `10-About.tsx` is 
 has an address but no link. The text of the link is the translation `page_about` in your `translations/ui.jsonc`, or
 else the name of the file. `pangloss interface check` reports a page whose address is already used.
 
-In the box, a word that names a type offers that type in a list under it: Tab takes the first, the arrows choose another. A type narrows the search, and by itself lists the most connected of that type.
+In the box, a word that names a type offers that type in a list under it: Tab takes the first, the arrows choose another. A type narrows the search, and by itself lists the most connected of that type. With no types offered, the arrows go through the results, and Enter opens the one chosen, or the first.
 
 A class is left out of the search with `Entity.Meta(global_search=False)` (or `Document.Meta`).

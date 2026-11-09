@@ -104,6 +104,68 @@ test("Backspace against the chip gives the word back, and it does not become a c
   expect(chip()).toBeNull();
 });
 
+const twoResults = [
+  { id: "1", type: "Person", label: "Smith" },
+  { id: "2", type: "Person", label: "Smythe" },
+];
+
+test("with no types on offer the arrows go round the results, and Enter opens the one chosen", async () => {
+  const { host, type, press, settle, options } = setup(twoResults);
+  type("smi");
+  await settle();
+  expect(options()).toEqual([]);
+  const chosen = () => host.querySelector("li[aria-current] a")?.textContent;
+  expect(chosen()).toBeUndefined();
+  press("ArrowDown");
+  expect(chosen()).toBe("Smith");
+  press("ArrowDown");
+  expect(chosen()).toBe("Smythe");
+  press("ArrowDown");
+  expect(chosen()).toBeUndefined();
+  press("ArrowUp");
+  expect(chosen()).toBe("Smythe");
+  const opened: (string | null)[] = [];
+  host.addEventListener("click", (event) => {
+    event.preventDefault();
+    opened.push((event.target as HTMLElement).getAttribute("href"));
+  });
+  press("Enter");
+  expect(opened).toEqual(["/Person/2"]);
+});
+
+test("Enter with none chosen opens the first; typing forgets what was chosen", async () => {
+  const { host, type, press, settle } = setup(twoResults);
+  type("smi");
+  await settle();
+  press("ArrowDown");
+  press("ArrowDown");
+  type("smit");
+  flush();
+  expect(host.querySelector("li[aria-current]")).toBeNull();
+  await settle();
+  const opened: (string | null)[] = [];
+  host.addEventListener("click", (event) => {
+    event.preventDefault();
+    opened.push((event.target as HTMLElement).getAttribute("href"));
+  });
+  press("Enter");
+  expect(opened).toEqual(["/Person/1"]);
+});
+
+test("while types are on offer the arrows are theirs, not the results'", async () => {
+  const { host, type, press, settle, box } = setup(twoResults);
+  type("smi");
+  await settle();
+  type("per");
+  await settle();
+  box.setSelectionRange(3, 3);
+  type("pers");
+  flush();
+  press("ArrowDown");
+  expect(host.querySelector("[role=option][aria-selected=true]")?.textContent).toBe("Person");
+  expect(host.querySelector("li[aria-current]")).toBeNull();
+});
+
 test("when nothing is found it says so", async () => {
   const { host, type, settle } = setup([]);
   type("nobody");

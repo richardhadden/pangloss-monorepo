@@ -24,7 +24,7 @@ def errors(page: Page) -> list[str]:
 def test_homepage_and_a_page(page: Page, data, dev_url: str, errors: list[str]):
     page.goto(f"{dev_url}/")
     hydrated(page)
-    box = page.get_by_role("searchbox", name="Search everything")
+    box = page.get_by_role("searchbox", name="Quick search")
     box.press_sequentially("person Max")
     expect(page.locator("main li a", has_text="Maximilian").first).to_be_visible()
     box.fill("")
