@@ -17,6 +17,7 @@ import {
   SidePanelProvider,
   StashProvider,
   PageTitle,
+  QuickSearch,
   ToastsProvider,
   TypeInfoPopup,
   useBottomBar,
@@ -94,6 +95,8 @@ function Frame(props: ParentProps) {
           <ClipboardBar />
           <Toasts />
           <TypeInfoPopup />
+          {/* (outside `GlobalSearchAddress`: its search is not the page's, and is not put in the address) */}
+          <QuickSearch onNavigate={(href) => navigate(href)} />
           <LoginDialog />
         </ToastsProvider>
        </StashProvider>

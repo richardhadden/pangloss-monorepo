@@ -274,6 +274,12 @@ API is not there (a 502, and "The interface cannot reach the API" on the page) i
 - A checkbox the page sets from the server's answer does not stay checked at once: use `click()` and then `expect`.
 - The typology tree shows a move or a label before the API has it: wait for the API (`server_has` in `test_typology.py`).
 
+## Quick search popup
+
+| What | Covered | Where |
+|---|---|---|
+| `/` from any page, not while typing in a field; Enter or a click shows the item in the popup, which grows and slides the list away; Escape goes back, then closes; Cmd/Ctrl with a click or Enter goes to the page and closes; the address is left alone | ✅ | `test_quick_search.py`; dev build `test_dev_mode.py::test_the_quick_search_popup`; Vitest `keys.quicksearch.test.ts` |
+
 ## Admin (`pangloss_admin`)
 
 | What | | Tests |

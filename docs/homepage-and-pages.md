@@ -22,6 +22,10 @@
 | Custom homepage | `pages/index.tsx`: its layout is the project's, the search is the shared `GlobalSearch` |
 | Links to the pages | In the console of the homepage and of each page, the current one marked |
 
+## Quick search popup ✅
+
+`/`, from any page when not typing in a field, opens the homepage's search (`GlobalSearch`) in a popup (`QuickSearch`, its code fetched on first use). Its search is not put in the address. A click on a result, or Enter, shows the item in the popup: the list slides away and the panel grows, the same contents as the item's page without its console. Cmd or Ctrl with either goes to the item's page and closes the popup, and so does Cmd or Ctrl+Enter while an item is shown. Escape goes back to the list, then closes; typing goes back to the list. (No chord with Cmd was free on a Mac: Cmd+Space is Spotlight, Cmd+Shift+Space Siri, Cmd+Shift+K Firefox's web console.)
+
 ## Search everything
 
 **Opting out.** `Document.Meta(global_search=False)` / `Entity.Meta(global_search=False)`: not inherited, so a project's

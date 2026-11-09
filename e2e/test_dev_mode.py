@@ -576,3 +576,18 @@ def test_the_admin_page(page: Page, data, dev_url: str, errors: list[str]):
     expect(page.get_by_test_id("users-admin-row").first).to_be_visible()
     assert errors == []
     assert not any(SOLID_ERROR.search(text) for text in errors)
+
+
+def test_the_quick_search_popup(page: Page, data, dev_url: str, errors: list[str]):
+    """Opening an item in the popup, without an error of the development build"""
+    page.goto(f"{dev_url}/Statement")
+    hydrated(page)
+    page.keyboard.press("/")
+    popup = page.get_by_test_id("quick-search")
+    popup.get_by_role("searchbox").fill("Maximilian")
+    expect(popup.get_by_test_id("quick-search-results").get_by_role("link").first).to_be_visible()
+    page.keyboard.press("Enter")
+    expect(popup.get_by_test_id("quick-search-back")).to_be_visible()
+    page.wait_for_timeout(500)
+    expect(popup).not_to_contain_text(SOLID_ERROR)
+    assert errors == []

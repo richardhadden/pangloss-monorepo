@@ -13,6 +13,7 @@ export * from "./TypeInfoPopup";
 export * from "./Console";
 export * from "./ConsoleSearch";
 export * from "./GlobalSearch";
+export * from "./QuickSearch";
 export * from "./ResultButton";
 export * from "./SpaceBands";
 export * from "./ContextFrames";

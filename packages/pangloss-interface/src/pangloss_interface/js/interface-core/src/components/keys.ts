@@ -24,6 +24,15 @@ export function isNewItemShortcut(event: KeyboardEvent, mac = isMac()): boolean 
   return event.key === "Enter" && !event.isComposing && commandHeld(event, mac);
 }
 
+/**
+ * `/`, outside anything that takes text and with no dialog open: the quick search. By the character, and Shift is allowed,
+ * as on some layouts (German) it needs Shift. (No chord with Cmd or Ctrl was free: Spotlight, Siri and the web console have them.)
+ */
+export function isQuickSearchShortcut(event: KeyboardEvent): boolean {
+  if (event.key !== "/" || event.isComposing || event.ctrlKey || event.metaKey || event.altKey) return false;
+  return !isTextEntry(event.target) && !dialogIsOpen();
+}
+
 /** Cmd+S on a Mac, Ctrl+S elsewhere: saves the form on the page, in place of the browser's saving of the page */
 export function isSaveShortcut(event: KeyboardEvent, mac = isMac()): boolean {
   return event.key.toLowerCase() === "s" && commandHeld(event, mac);

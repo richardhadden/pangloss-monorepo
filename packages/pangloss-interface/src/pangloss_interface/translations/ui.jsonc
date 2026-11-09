@@ -19,6 +19,7 @@
 
   // The console
   "search": { "en": "Search", "de": "Suchen", "fr": "Rechercher" },
+  "quick_search_results": { "en": "Results", "de": "Ergebnisse", "fr": "Résultats" },
   "search_everything": { "en": "Quick search", "de": "Schnellsuche", "fr": "Recherche rapide" },
   "pages": { "en": "Pages", "de": "Seiten", "fr": "Pages" },
   "search_type_options": { "en": "Types", "de": "Typen", "fr": "Types" },
