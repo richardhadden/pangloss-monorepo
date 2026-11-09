@@ -43,6 +43,28 @@ def test_the_navigation_bar_links_to_the_lists(page: Page, data):
     expect(page.get_by_role("link", name="Marie of Burgundy")).to_be_visible()
 
 
+def test_the_shortcut_opens_the_navigation_bar_with_the_cursor_in_the_filter(page: Page, data):
+    page.goto("/Person")
+    hydrated(page)
+    box = page.get_by_role("searchbox", name="Search")
+    box.fill("Mar")
+    filter_box = page.get_by_label("Filter types")
+    expect(filter_box).to_have_count(0)
+    page.keyboard.press("ControlOrMeta+k")
+    expect(filter_box).to_be_focused()
+    page.keyboard.type("stat")
+    expect(filter_box).to_have_value("stat")
+    expect(
+        page.get_by_role("navigation", name="Main").get_by_role("link", name="Person")
+    ).to_have_count(0)
+    # (Escape clears it, then closes the bar and gives the focus back)
+    page.keyboard.press("Escape")
+    expect(filter_box).to_have_value("")
+    page.keyboard.press("Escape")
+    expect(filter_box).to_have_count(0)
+    expect(box).to_be_focused()
+
+
 def test_the_types_in_the_navigation_bar_are_filtered(page: Page, data):
     page.goto("/")
     expand_nav(page)

@@ -4,12 +4,14 @@ import {
   Errored,
   Loading,
   onCleanup,
+  onSettled,
   Show,
   untrack,
 } from "solid-js";
 import { useTranslations } from "../context";
 import { ConsoleButton, Spinner } from "../primitives";
 import type { ConsoleSearchProps } from "../types";
+import { dialogIsOpen, startsTyping } from "./keys";
 
 // (how long after the last key the search is made)
 const DEBOUNCE_MS = 250;
@@ -68,6 +70,17 @@ export function ConsoleSearch(props: ConsoleSearchProps) {
     // (turning it off goes back to the ordinary search of what is typed; turning it on makes none)
     if (!on) search(false);
   };
+  // A character typed on the page starts or goes on with the search. Only the focus is moved: the browser then writes
+  // the key into the box itself, accents and all
+  onSettled(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (!box || !startsTyping(event) || dialogIsOpen()) return;
+      box.setSelectionRange(box.value.length, box.value.length);
+      box.focus({ preventScroll: true });
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  });
   // Run only changes anything if it is not what is on show already
   const upToDate = () =>
     draft() === (props.query ?? "") && (props.deep ?? false) === deepOn();

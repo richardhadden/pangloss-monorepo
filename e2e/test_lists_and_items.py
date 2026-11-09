@@ -43,6 +43,22 @@ def test_typing_is_not_held_up_or_undone_by_the_searches_it_makes(page: Page, da
     expect(box).to_have_value("Marie of B")
 
 
+def test_typing_on_a_list_page_goes_into_the_search(page: Page, data):
+    page.goto("/Person")
+    hydrated(page)
+    box = page.get_by_role("searchbox", name="Search")
+    expect(box).not_to_be_focused()
+    # (with no box focused: the first letter is not lost, and the rest follow it)
+    page.keyboard.type("Marie")
+    expect(box).to_be_focused()
+    expect(box).to_have_value("Marie")
+    page.wait_for_url("**/Person?q=Marie")
+    # (away from the box again, what is typed is added to what is there)
+    box.blur()
+    page.keyboard.type("x")
+    expect(box).to_have_value("Mariex")
+
+
 def test_a_search_with_no_result_says_none(page: Page, data):
     page.goto("/Person")
     hydrated(page)

@@ -44,6 +44,75 @@ test("what is typed is the box's own: the search it asked for coming back does n
   expect(box.value).toBe("paris");
 });
 
+async function listed(query?: string) {
+  const host = document.createElement("div");
+  document.body.append(host);
+  dispose = render(() => <ConsoleSearch query={query} />, host);
+  await settle();
+  return host.querySelector("input")!;
+}
+
+const press = (init: KeyboardEventInit, target: Element = document.body) => {
+  target.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, cancelable: true, ...init }));
+};
+
+test("a character typed anywhere on the page goes to the box, after what is in it, and is left for the browser to write", async () => {
+  const box = await listed("rome");
+  const event = new KeyboardEvent("keydown", { key: "a", bubbles: true, cancelable: true });
+  document.body.dispatchEvent(event);
+  expect(document.activeElement).toBe(box);
+  expect(box.selectionStart).toBe(4);
+  expect(event.defaultPrevented).toBe(false);
+});
+
+test("a dead key starts typing too, so that an accented letter can be the first", async () => {
+  const box = await listed();
+  press({ key: "Dead" });
+  expect(document.activeElement).toBe(box);
+});
+
+test.each([
+  ["Control", { key: "a", ctrlKey: true }],
+  ["Command", { key: "c", metaKey: true }],
+  ["Option", { key: "ø", altKey: true }],
+  ["a space (which scrolls)", { key: " " }],
+  ["a key that writes nothing", { key: "Tab" }],
+  ["an arrow", { key: "ArrowDown" }],
+])("the box is left alone by %s", async (_name, init) => {
+  const box = await listed();
+  press(init);
+  expect(document.activeElement).not.toBe(box);
+});
+
+test("the box is left alone while typing somewhere else", async () => {
+  const other = document.createElement("textarea");
+  document.body.append(other);
+  const box = await listed();
+  other.focus();
+  press({ key: "a" }, other);
+  expect(document.activeElement).toBe(other);
+  expect(box.selectionStart).toBe(0);
+});
+
+test("the box is left alone by a key something has already dealt with", async () => {
+  const button = document.createElement("button");
+  button.addEventListener("keydown", (event) => event.preventDefault());
+  document.body.append(button);
+  const box = await listed();
+  press({ key: "a" }, button);
+  expect(document.activeElement).not.toBe(box);
+});
+
+test("the box is left alone while a dialog is open", async () => {
+  const dialog = document.createElement("div");
+  dialog.setAttribute("role", "dialog");
+  dialog.setAttribute("aria-modal", "true");
+  document.body.append(dialog);
+  const box = await listed();
+  press({ key: "a" });
+  expect(document.activeElement).not.toBe(box);
+});
+
 test("the button of the search form is there only for a list that has one; while it is in use, Deep search cannot be", () => {
   const host = document.createElement("div");
   document.body.append(host);
