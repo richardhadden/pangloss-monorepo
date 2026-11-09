@@ -11,7 +11,7 @@ import {
 import { useTranslations } from "../context";
 import { ConsoleButton, Spinner } from "../primitives";
 import type { ConsoleSearchProps } from "../types";
-import { dialogIsOpen, startsTyping } from "./keys";
+import { dialogIsOpen, startsTyping, isNewItemShortcut } from "./keys";
 
 // (how long after the last key the search is made)
 const DEBOUNCE_MS = 250;
@@ -122,7 +122,7 @@ export function ConsoleSearch(props: ConsoleSearchProps) {
           if (props.onListKey && plain && (event.key === "ArrowDown" || event.key === "ArrowUp")) {
             event.preventDefault();
             props.onListKey(event.key === "ArrowDown" ? "next" : "previous");
-          } else if (event.key === "Enter") {
+          } else if (event.key === "Enter" && !isNewItemShortcut(event)) {
             if (props.onListKey && listIsOfTheBox()) props.onListKey("open");
             else search(deepOn() && !props.structured);
           }

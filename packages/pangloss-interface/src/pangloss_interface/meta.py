@@ -341,7 +341,9 @@ def export_definitions() -> dict[str, Any]:
 
     from pangloss_interface.config import export_disabled, export_nav
 
-    apps = getattr(core_settings.__dict__.get("SETTINGS"), "INSTALLED_APPS", [])
+    settings = core_settings.__dict__.get("SETTINGS")
+    apps = getattr(settings, "INSTALLED_APPS", [])
+    exported["projectName"] = getattr(settings, "PROJECT_NAME", None)
     exported["nav"] = export_nav(apps, exported["models"])
     exported["disabled"] = export_disabled(apps)
     # (the search patterns of the models: the interface's types of them, `LetterWhere`)

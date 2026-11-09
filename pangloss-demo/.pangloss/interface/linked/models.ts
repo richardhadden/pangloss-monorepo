@@ -2648,7 +2648,7 @@ export const definitions: ModelDefinitions = {
       "incoming": [],
       "traits": [],
       "interfaceMeta": {
-        "colour": "violet",
+        "colour": "mauve",
         "navSection": null,
         "listPage": null,
         "itemPage": null,
@@ -7083,6 +7083,7 @@ export const definitions: ModelDefinitions = {
       ]
     }
   },
+  "projectName": "pangloss_demo",
   "nav": {
     "sections": [
       "Documents",

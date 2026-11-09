@@ -24,6 +24,16 @@ export function isNewItemShortcut(event: KeyboardEvent, mac = isMac()): boolean 
   return event.key === "Enter" && !event.isComposing && commandHeld(event, mac);
 }
 
+/** Cmd+S on a Mac, Ctrl+S elsewhere: saves the form on the page, in place of the browser's saving of the page */
+export function isSaveShortcut(event: KeyboardEvent, mac = isMac()): boolean {
+  return event.key.toLowerCase() === "s" && commandHeld(event, mac);
+}
+
+/** Cmd+E on a Mac, Ctrl+E elsewhere: goes to the form of the item on the page */
+export function isEditShortcut(event: KeyboardEvent, mac = isMac()): boolean {
+  return event.key.toLowerCase() === "e" && commandHeld(event, mac);
+}
+
 /** Enter with no modifier, and not the one that ends the composing of a character */
 export function isPlainEnter(event: KeyboardEvent): boolean {
   return (

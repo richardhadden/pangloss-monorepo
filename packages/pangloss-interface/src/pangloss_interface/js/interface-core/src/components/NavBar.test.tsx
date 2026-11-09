@@ -4,7 +4,7 @@ import { afterEach, expect, test } from "vitest";
 import { ModelsProvider, NavExpandedProvider, useNavExpanded } from "../context";
 import type { ModelDefinitions } from "../types";
 import { isNavShortcut } from "./keys";
-import { NavBar } from "./NavBar";
+import { NavBar, readableName } from "./NavBar";
 
 const definitions: ModelDefinitions = { models: {}, enums: {} };
 
@@ -236,4 +236,18 @@ test("only typing and going to a type change the filter: the bar closing keeps i
   shortcut();
   await settle();
   expect(filter()!.value).toBe("per");
+});
+
+test("the top of the bar links home under the name of the project", async () => {
+  await bar({ definitions: { ...definitions, projectName: "Prosopography" } });
+  shortcut();
+  await settle();
+  expect(document.querySelector('nav a[href="/"]')?.textContent).toBe("Prosopography");
+});
+
+test("the name of a project loses its hyphens, underscores and camel case", () => {
+  expect(readableName("pangloss_demo")).toBe("pangloss demo");
+  expect(readableName("my-big__project")).toBe("my big project");
+  expect(readableName("myBigProject")).toBe("my Big Project");
+  expect(readableName("Prosopography")).toBe("Prosopography");
 });

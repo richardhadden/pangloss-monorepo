@@ -298,6 +298,39 @@ const toastText = () => document.body.querySelector('[role="status"]')?.textCont
 const choices = (label: string) =>
   [...chooser(label).querySelectorAll("button[data-choice], [aria-disabled]")].map((item) => item.textContent?.trim());
 
+test("Cmd/Ctrl+S saves, and is kept from the browser even with nothing to save", async () => {
+  const { client, sent } = fakeClient(() => ({ id: "f1", type: "Factoid", label: "F" }));
+  const saved = show(client);
+  await settle();
+  const press = () => {
+    const mac = /Mac|iPhone|iPad/.test(navigator.platform);
+    const event = new KeyboardEvent("keydown", { key: "s", metaKey: mac, ctrlKey: !mac, bubbles: true, cancelable: true });
+    document.body.dispatchEvent(event);
+    return event;
+  };
+  expect(press().defaultPrevented).toBe(true);
+  await settle();
+  expect(sent.length).toBe(0);
+  type("Label", "Fall of Rome");
+  type("year", "476");
+  await settle();
+  press();
+  await settle();
+  expect(saved).toEqual([{ id: "f1", type: "Factoid", label: "F" }]);
+});
+
+test("a new item starts with the cursor in its label, and one being edited does not", async () => {
+  const { client } = fakeClient(() => ({}));
+  show(client);
+  await settle();
+  expect(document.activeElement).toBe(byLabel("Label"));
+  dispose?.();
+  document.body.innerHTML = "";
+  show(client, { version: 1, initial: { type: "Factoid", label: "F" } });
+  await settle();
+  expect(document.activeElement).not.toBe(byLabel("Label"));
+});
+
 test("a new item is created with what was typed, keeping the focus in the field while typing", async () => {
   const { client, sent } = fakeClient(() => ({ id: "f1", type: "Factoid", label: "F" }));
   const saved = show(client);

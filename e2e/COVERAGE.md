@@ -72,6 +72,10 @@ about her "held court at Ghent") and Charles the Bold (no role); `types` has onl
 | Item page: a type of a typology in a field is the same chip as in the form (`TypeCard` uses `DefaultReferenceChip` as a reference) | 🚧 | checked with the demo data |
 | Item page of a document inside another: "Contained in" and a chip to its head with its label, whose page scrolls to the document (`?show=`); the whole item in bands for its context, the bands of documents linking to them | 🚧 | checked with the demo data, built and dev (a Transfer three Orders deep); `contextPath` unit test; the e2e models have no nested documents |
 | Edit button of a document inside another: to the form of its head document (`?show=<id>`), scrolled to its block | 🚧 | checked with the demo data (a Transfer in a Factoid); the e2e models have no nested documents |
+| List page: Cmd/Ctrl+Enter opens a new item, where the New button is | 🚧 | unit test in `Console.test.tsx`; checked in the built and dev interface |
+| Item page: Cmd/Ctrl+E goes to the form, where the Edit button is | 🚧 | unit test in `Console.test.tsx`; checked in the built and dev interface |
+| Form: Cmd/Ctrl+S saves, as the Save button does | 🚧 | unit test in `ItemForm.test.tsx`; checked in the built and dev interface |
+| New item page: the cursor starts in the label | 🚧 | unit test in `ItemForm.test.tsx`; checked in the built and dev interface |
 | New item form: fields, an entity found by search, saved and shown | ✅ | |
 | A new entity made from the form (+ beside the search, dialog) is chosen | ✅ | |
 | With several entity types, + opens the dialog on the types (Back to them), then the form of the one chosen | ✅ | test_dev_mode (unit: ItemForm.test) |

@@ -17,6 +17,7 @@ import { blankItem, cleanForSave, comparableItem, createFormHooks, getModel } fr
 import type { FormData } from "../../schema";
 import type { ItemFormProps, NewItemForm } from "../../types";
 import { StashIcon } from "./Clip";
+import { dialogIsOpen, isSaveShortcut } from "../keys";
 import { DeleteButton } from "./DeleteButton";
 import { ItemFields } from "./ModelFields";
 import { RevealProvider } from "../nesting";
@@ -165,13 +166,26 @@ export function ItemForm(props: ItemFormProps) {
     props.onSaved(saved);
   }
 
+  // Cmd/Ctrl+S is the Save button. (Taken even when there is nothing to save: the browser's own dialog for saving the
+  // page is never what is meant here)
+  onSettled(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (!isSaveShortcut(event)) return;
+      event.preventDefault();
+      if (!event.repeat && !dialogIsOpen() && !saving()) void save();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  });
+
   // (`show` is read once: it is where the page scrolls to when the form first shows)
   return (
     <RevealProvider value={() => untrack(() => props.show ?? null)}>
       <ItemFormProvider state={state}>
         <Console
           type={props.type}
-          label={label() ?? (creating() ? t("new", "New") : undefined)}
+          label={label()}
+          formMode={creating() ? "new" : "edit"}
           meta={props.meta}
           item={creating() ? undefined : { type: props.type, id: String(props.initial.id) }}
           page="edit"
@@ -269,6 +283,7 @@ export function ItemForm(props: ItemFormProps) {
               model={model()!}
               path={() => []}
               creating={creating()}
+              focusLabel={creating()}
               title
               newItem={creating() ? newItemForm : undefined}
             />

@@ -291,6 +291,8 @@ export function ItemFields(props: {
   /** Show the id too, for an item that is being made */
   creating?: boolean;
   title?: boolean;
+  /** The cursor starts in the box of the label (`title`), as on the page of a new item */
+  focusLabel?: boolean;
   /** The form of the new item it is (the page's, or a dialog's): for the rows interface modules add (`newItemFields`) */
   newItem?: NewItemForm;
 }) {
@@ -318,6 +320,7 @@ export function ItemFields(props: {
           label={t("label", "Label")}
           path={[...props.path(), "label"]}
           required={props.model.requireLabel}
+          focus={props.focusLabel}
           onInput={(value) => form.set([...props.path(), "label"], value)}
         />
       </Show>
@@ -374,6 +377,7 @@ function TitleBox(props: {
   label: string;
   path: Path;
   required?: boolean;
+  focus?: boolean;
   onInput: (value: string) => void;
 }) {
   const problems = useRowProblems(() => props.path);
@@ -396,6 +400,7 @@ function TitleBox(props: {
   );
   onSettled(() => {
     fit();
+    if (props.focus) box?.focus();
     // (again when it is wider or narrower: the window, a dialog laid out, a panel opened beside it. Not when only its
     // height changes, which is this)
     if (!box || typeof ResizeObserver === "undefined") return;

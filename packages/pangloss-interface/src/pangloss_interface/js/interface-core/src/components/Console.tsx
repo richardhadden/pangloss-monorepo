@@ -12,6 +12,7 @@ import { DeleteButton } from "./form/DeleteButton";
 import { ConsoleButton, kindRule, kindTint, spaceTint } from "../primitives";
 import { ConsoleSearch } from "./ConsoleSearch";
 import { canCreate, getModel } from "../schema";
+import { dialogIsOpen, isEditShortcut, isNewItemShortcut } from "./keys";
 import type { ConsoleProps } from "../types";
 
 // (what the name of a model is when the translations have no plural for it: an English stand-in)
@@ -132,6 +133,23 @@ function ModuleActions(props: { item: ConsoleProps["item"]; page: "item" | "edit
 }
 
 /**
+ * A keyboard shortcut that clicks a button of the console: made only where the button is, so what it does and who may
+ * are the button's. (What took the key first, the navigation bar's filter, has dealt with it.)
+ */
+function ButtonKey(props: { matches: (event: KeyboardEvent) => boolean; button: () => HTMLElement | undefined }) {
+  onSettled(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (!props.matches(event) || event.defaultPrevented || event.repeat || dialogIsOpen()) return;
+      event.preventDefault();
+      props.button()?.click();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  });
+  return null;
+}
+
+/**
  * What a page says about itself in the console bar: on the left the type (in the plural
  * for a list) and, for one item, its label; on the right the actions that can be taken
  * (the `children`). It renders into the bar by a portal, so a page puts it anywhere in its
@@ -150,6 +168,8 @@ export function Console(props: ConsoleProps) {
   };
   const kind = () => model()?.kind;
   const wrapped = () => (props.spaces ?? []).length > 0;
+  let newButton: HTMLElement | undefined;
+  let editButton: HTMLElement | undefined;
   // (tells the bar there is something to show, for as long as the page has this)
   onSettled(() => register());
   return (
@@ -158,6 +178,15 @@ export function Console(props: ConsoleProps) {
         <Portal mount={element()}>
           <div class="flex h-full min-w-0 flex-1 items-center justify-between gap-4">
             <div class="flex h-full min-w-0 items-center">
+              <Show when={props.formMode}>
+                {(mode) => (
+                  <span class="flex shrink-0 items-center self-stretch border-r-[0.5px] border-slate-400/70 bg-slate-300/70 px-3 select-none">
+                    <Show when={mode() === "new"} fallback={t("edit", "Edit")}>
+                      {t("new", "New")}
+                    </Show>
+                  </span>
+                )}
+              </Show>
               {/* (the semantic spaces the item is in come before its type, outermost first, as they do before a chip) */}
               <Wrapped spaces={props.spaces ?? []} depth={0}>
                 {/* (the type fills the height of the bar, tinted by its kind, its sides in that colour as a chip's type is
@@ -240,7 +269,8 @@ export function Console(props: ConsoleProps) {
                   />
                 </Show>
                 <Show when={props.editHref && userIsLoggedIn()}>
-                  <ConsoleButton label={t("edit", "Edit")} href={props.editHref}>
+                  <ButtonKey matches={isEditShortcut} button={() => editButton} />
+                  <ConsoleButton label={t("edit", "Edit")} href={props.editHref} elementRef={(element) => (editButton = element)}>
                     <svg
                       viewBox="0 0 24 24"
                       class="size-5 select-none fill-none stroke-current stroke-[1.5]"
@@ -263,7 +293,9 @@ export function Console(props: ConsoleProps) {
                     userIsLoggedIn()
                   }
                 >
+                  <ButtonKey matches={isNewItemShortcut} button={() => newButton} />
                   <ConsoleButton
+                    elementRef={(element) => (newButton = element)}
                     label={t("new_item", "New {type}", {
                       type: modelName(props.type),
                     })}

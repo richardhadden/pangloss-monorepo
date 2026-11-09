@@ -1,5 +1,5 @@
 import { createSignal, For, onCleanup, onSettled, Show } from "solid-js";
-import { useNavExpanded, useTranslations } from "../context";
+import { useModels, useNavExpanded, useTranslations } from "../context";
 import { NavIconCell, NavRow, NavRowButton } from "../primitives";
 import { dialogIsOpen, isNavShortcut, isNewItemShortcut, isPlainEnter } from "./keys";
 import { NavModelList } from "./NavModelList";
@@ -18,6 +18,11 @@ function languageName(code: string): string {
   } catch {
     return code;
   }
+}
+
+/** A project's name as a person would write it: `my_project`, `my-project` and `myProject` are "my project" */
+export function readableName(name: string): string {
+  return name.replace(/[-_]+/g, " ").replace(/([\p{Ll}\d])(\p{Lu})/gu, "$1 $2").trim();
 }
 
 /**
@@ -41,6 +46,7 @@ function languageName(code: string): string {
 export function NavBar(props: NavBarProps) {
   const { navExpanded, setNavExpanded, navPinned, setNavPinned } = useNavExpanded();
   const { t, language, languages, setLanguage } = useTranslations();
+  const definitions = useModels();
   const flag = (code: string) => FLAGS[code] ?? code.toUpperCase();
   const [filter, setFilter] = createSignal("");
   // The scrollbar of the list floats over it, so the rows go to the edge of the bar (a native one takes room from them, and
@@ -121,11 +127,11 @@ export function NavBar(props: NavBarProps) {
         },
       ]}
     >
-      {/* The way home (with room for it), and the button that expands the bar, on the right */}
+      {/* The way home, under the name of the project (with room for it), and the button that expands the bar, on the right */}
       <NavRow>
         <Show when={navExpanded()}>
           <NavRowButton inRow href={props.homeHref ?? "/"}>
-            {t("home", "Home")}
+            {definitions.projectName ? readableName(definitions.projectName) : t("home", "Home")}
           </NavRowButton>
         </Show>
         <NavIconCell
