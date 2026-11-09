@@ -1,4 +1,4 @@
-import { action, children, createMemo, createOptimistic, createRenderEffect, createSignal, onSettled, untrack, For, Match, Show, Switch } from "solid-js";
+import { action, children, createEffect, createMemo, createOptimistic, createRenderEffect, createSignal, onSettled, untrack, For, Match, Show, Switch } from "solid-js";
 import type { Accessor, ParentProps } from "solid-js";
 import type { JSX } from "@solidjs/web";
 import {
@@ -21,6 +21,7 @@ import {
   envOf,
   filled,
   getModel,
+  labelledContents,
   headlessIn,
   lengthBound,
   menuGroups,
@@ -30,7 +31,7 @@ import {
   resolveOptions,
   wrapEntity,
 } from "../../schema";
-import type { Choice, Env, FormData, MenuGroup, Path } from "../../schema";
+import type { Choice, Env, FormData, LabelledContent, MenuGroup, Path } from "../../schema";
 import type {
   AnnotatedValueField,
   EmbeddedField,
@@ -98,12 +99,22 @@ function Block(
     buttons?: JSX.Element;
     /** Open though it is nested deep enough to start folded (what is to be shown is inside it) */
     startOpen?: boolean;
+    /** What it holds, shown as chips on the bar while it is folded (for what has no label of its own to show there) */
+    contents?: LabelledContent[];
   }>,
 ) {
-  const { t, modelName } = useTranslations();
+  const { t, modelName, fieldName } = useTranslations();
+  const ReferenceChip = useComponent("ReferenceChip");
   // (a block this deep starts folded, and what it holds is made when it is unfolded: see `nesting.ts`)
   const nesting = useNesting();
-  const [folded, setFolded] = createSignal(startsFolded(nesting) && !untrack(() => props.startOpen));
+  const { folds } = useItemForm();
+  const [folded, setFolded] = createSignal(untrack(folds.allFolded) || (startsFolded(nesting) && !untrack(() => props.startOpen)));
+  // (the button in the console: not a click from before this block was made)
+  const orderMadeAfter = untrack(folds.order);
+  createEffect(folds.order, (order) => {
+    if (order && order !== orderMadeAfter) setFolded(order.fold || startsFolded(nesting));
+  });
+  onSettled(() => folds.register());
   // (made once: each read of a prop that is elements makes them again, and one read only to ask whether there
   // are any left a second set, of which the browser said "Hydration key miss ... a detached element was created")
   const buttons = children(() => props.buttons);
@@ -116,21 +127,40 @@ function Block(
         </span>
         <div class={buttons() ? headRestOpenClass : headRestClass}>
           {/* (the grey of the bar, with the label in it, folds it; folded, a ▸ says so) */}
-          <button
-            type="button"
-            class="flex min-w-0 flex-1 cursor-pointer items-center gap-2 px-3 py-1 text-left text-sm hover:bg-slate-400/20 focus-visible:bg-slate-400/20 focus-visible:outline-none"
-            aria-expanded={folded() ? "false" : "true"}
-            aria-label={t("fold", "Fold or unfold {name}", { name: modelName(props.type) })}
-            title={t("fold", "Fold or unfold {name}", { name: modelName(props.type) })}
-            onClick={() => setFolded(!folded())}
-          >
-            <Show when={folded()}>
-              <span aria-hidden="true" class="shrink-0 text-xs text-slate-500">
-                ▸
-              </span>
+          <div class="relative flex min-w-0 flex-1">
+            <button
+              type="button"
+              class="flex min-w-0 flex-1 cursor-pointer items-center gap-2 px-3 py-1 text-left text-sm hover:bg-slate-400/20 focus-visible:bg-slate-400/20 focus-visible:outline-none"
+              aria-expanded={folded() ? "false" : "true"}
+              aria-label={t("fold", "Fold or unfold {name}", { name: modelName(props.type) })}
+              title={t("fold", "Fold or unfold {name}", { name: modelName(props.type) })}
+              onClick={() => setFolded(!folded())}
+            >
+              <Show when={folded()}>
+                <span aria-hidden="true" class="shrink-0 text-xs text-slate-500">
+                  ▸
+                </span>
+              </Show>
+              <span class="min-w-0 truncate">{props.label}</span>
+            </button>
+            {/* (over the button, not in it, as a chip can be a link; a click goes through to the button) */}
+            <Show when={folded() && props.contents?.length}>
+              <div data-folded-contents class="pointer-events-none absolute inset-y-0 right-2 left-7 flex items-center gap-2 overflow-hidden">
+                <For each={props.contents}>
+                  {(item) => (
+                    <span class="flex min-w-0 items-center gap-1.5">
+                      <For each={item.fields}>
+                        {(field) => (
+                          <span class="shrink-0 text-xs font-semibold text-slate-500 uppercase">{fieldName(field.model, field.name)}</span>
+                        )}
+                      </For>
+                      <ReferenceChip type={item.type} label={item.label} />
+                    </span>
+                  )}
+                </For>
+              </div>
             </Show>
-            <span class="min-w-0 truncate">{props.label}</span>
-          </button>
+          </div>
           {buttons()}
           {/* (cut, copy, remove) */}
           <Show when={props.clip}>
@@ -1018,6 +1048,7 @@ function RelationItem(props: {
           onRemove={props.onRemove}
           clip={clip}
           startOpen={holdsRevealed()}
+          contents={labelledContents(value(), definitions)}
         >
           <ModelFields
             model={model()!}

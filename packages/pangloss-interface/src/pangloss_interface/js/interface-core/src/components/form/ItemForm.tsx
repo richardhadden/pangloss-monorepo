@@ -190,6 +190,21 @@ export function ItemForm(props: ItemFormProps) {
           item={creating() ? undefined : { type: props.type, id: String(props.initial.id) }}
           page="edit"
         >
+          <Show when={state.folds.any()}>
+            <ConsoleButton
+              label={state.folds.allFolded() ? t("unfold_all", "Unfold all") : t("fold_all", "Fold all")}
+              onClick={state.folds.toggle}
+            >
+              <svg
+                viewBox="0 0 24 24"
+                class="size-5 select-none fill-none stroke-current stroke-[1.5]"
+                stroke-linecap="square"
+                aria-hidden="true"
+              >
+                <path d={state.folds.allFolded() ? "M7 9l5-5 5 5M7 15l5 5 5-5" : "M7 4l5 5 5-5M7 20l5-5 5 5"} />
+              </svg>
+            </ConsoleButton>
+          </Show>
           <Show when={creating() && model()}>
             {(made) => <NewItemActions type={props.type} model={made()} form={newItemForm} />}
           </Show>

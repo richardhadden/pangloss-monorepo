@@ -107,3 +107,42 @@ export function collapsedView(
   }
   return rule(value, model) ? { held, extras: filled } : undefined;
 }
+
+/** What a reified relation holds is its `target`; anything else without a label of its own, all its relations */
+function contentFields(model: ModelDefinition): FieldDefinition[] {
+  return model.kind === "ReifiedRelation"
+    ? model.fields.filter((field) => field.key === "target")
+    : model.fields.filter((field) => field.kind === "relation");
+}
+
+/** Something a folded block holds, and the fields to name before it, outermost first (see `labelledContents`) */
+export interface LabelledContent {
+  type: string;
+  label: string;
+  fields: { model: string; name: string }[];
+}
+
+/**
+ * The labelled things `value` holds, however many wrappers without a label of their own (a conjunction, a reified
+ * relation, a semantic space) they are inside, in order: what a block folded in a form shows on its bar, as chips.
+ * Where a wrapper has several fields of contents (a cause and a result) the first thing in each says which field it
+ * is in; with one there is nothing to tell apart. What has no label yet (a document not filled in, a place where an
+ * entity is still to be chosen) is left out.
+ */
+export function labelledContents(value: unknown, definitions: ModelDefinitions): LabelledContent[] {
+  if (!isObject(value)) return [];
+  const model = getModel(definitions, typeof value.type === "string" ? value.type : "");
+  if (!model) return [];
+  const fields = contentFields(model);
+  return fields.flatMap((field) => {
+    const contents = value[field.key];
+    const held = (Array.isArray(contents) ? contents : [contents]).flatMap((item): LabelledContent[] => {
+      if (!isObject(item) || typeof item.type !== "string") return [];
+      if (typeof item.label === "string" && item.label !== "") return [{ type: item.type, label: item.label, fields: [] }];
+      const kind = getModel(definitions, item.type)?.kind;
+      return kind === "Entity" || kind === "Document" ? [] : labelledContents(item, definitions);
+    });
+    if (fields.length > 1 && held[0]) held[0] = { ...held[0], fields: [{ model: model.name, name: field.name }, ...held[0].fields] };
+    return held;
+  });
+}

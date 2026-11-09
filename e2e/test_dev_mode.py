@@ -465,6 +465,13 @@ def test_narrowing_and_widening_a_document_in_a_form(
     expect(page.get_by_role("dialog")).to_have_count(0)
     # (the document is as it was loaded: nothing to save)
     expect(page.get_by_role("button", name="Save")).to_be_disabled()
+    # (every block folded from the console, and unfolded again)
+    head = page.get_by_role("button", name=re.compile("^Fold or unfold")).first
+    expect(head).to_have_attribute("aria-expanded", "true")
+    page.get_by_role("button", name="Fold all").click()
+    expect(head).to_have_attribute("aria-expanded", "false")
+    page.get_by_role("button", name="Unfold all").click()
+    expect(head).to_have_attribute("aria-expanded", "true")
     # (a new one whose subject a creation of a painting cannot hold: said at the field)
     page.goto(f"{dev_url}/Provenance/new")
     hydrated(page)

@@ -6,7 +6,7 @@ import type {
   ModelDefinition,
   ModelDefinitions,
 } from "../types";
-import { collapsedView } from "./collapse";
+import { collapsedView, labelledContents } from "./collapse";
 
 const field = (key: string, kind: FieldDefinition["kind"] = "literal") =>
   ({
@@ -188,4 +188,33 @@ test("conditions: hidden fields are not shown beside it, and a hidden field that
 test("conditions: the structure still has to fold (one held item that ends as a chip)", () => {
   expect(collapsedView(inRole({ target: [person, other] }), definitions, none)).toBeUndefined();
   expect(collapsedView(inRole({ target: [{ id: "x", type: "Activity" }] }), definitions, none)).toBeUndefined();
+});
+
+test("what a block holds: through wrappers with no label, leaving out what has none yet", () => {
+  const definitions = {
+    models: {
+      Person: model("Person", "Entity"),
+      Statement: model("Statement", "Document"),
+      Causes: model("Causes", "Conjunction", [field("cause", "relation"), field("result", "relation")]),
+      Maybe: model("Maybe", "ReifiedRelation", [field("target", "relation"), field("by", "relation")]),
+    },
+  } as unknown as ModelDefinitions;
+  const value = {
+    type: "Causes",
+    cause: { type: "Statement", label: "A fire" },
+    result: [
+      { type: "Maybe", target: [{ type: "Person", id: "p", label: "Smith" }], by: [{ type: "Person", id: "q", label: "Not shown" }] },
+      { type: "Statement", label: "" },
+      { type: "Person" },
+    ],
+  };
+  expect(labelledContents(value, definitions)).toEqual([
+    { type: "Statement", label: "A fire", fields: [{ model: "Causes", name: "cause" }] },
+    { type: "Person", label: "Smith", fields: [{ model: "Causes", name: "result" }] },
+  ]);
+  // (one field of contents: nothing to tell apart)
+  expect(labelledContents({ type: "Maybe", target: [{ type: "Person", id: "p", label: "Smith" }, { type: "Person", id: "r", label: "Jones" }] }, definitions)).toEqual([
+    { type: "Person", label: "Smith", fields: [] },
+    { type: "Person", label: "Jones", fields: [] },
+  ]);
 });

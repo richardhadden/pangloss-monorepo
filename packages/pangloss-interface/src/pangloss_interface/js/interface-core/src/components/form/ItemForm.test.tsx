@@ -1024,7 +1024,7 @@ test("the head bar of a block folds it, and its buttons are cut, copy, remove; t
   const { client } = fakeClient(() => ({ id: "f1", type: "Factoid", label: "F" }));
   show(client, { initial: { id: "f1", type: "Factoid", label: "F", year: 476, statements: [meeting] }, version: 3 });
   await settle();
-  const head = byLabel("Fold or unfold Activity").parentElement!;
+  const head = byLabel("Fold or unfold Activity").parentElement!.parentElement!;
   expect([...head.querySelectorAll("button")].map((b) => b.getAttribute("aria-label"))).toEqual([
     "Fold or unfold Activity",
     "Cut Meeting",
@@ -1236,6 +1236,53 @@ test("a block nested five deep starts folded, and its fields are not made until 
   expect(chainTexts().length).toBe(11);
   expect(heads().length).toBe(11);
   expect(heads()[10]!.getAttribute("aria-expanded")).toBe("false");
+});
+
+test("the console folds every block and unfolds them again; while all are folded, a block opened by hand has its own folded", async () => {
+  const { client } = fakeClient(() => ({ id: "c0", type: "Chain", label: "C" }));
+  show(client, { type: "Chain", initial: chain(3), version: 1 });
+  await settle();
+  const heads = () => [...document.body.querySelectorAll<HTMLButtonElement>("button[aria-label='Fold or unfold Chain']")];
+  const button = (name: string) => document.body.querySelector<HTMLButtonElement>(`button[aria-label='${name}']`)!;
+  expect(heads().length).toBe(3);
+  click(button("Fold all"));
+  await settle();
+  expect(chainTexts()).toEqual(["chain 0"]);
+  expect(heads().map((head) => head.getAttribute("aria-expanded"))).toEqual(["false"]);
+  // (one level at a time)
+  click(heads()[0]!);
+  await settle();
+  expect(chainTexts()).toEqual(["chain 0", "chain 1"]);
+  expect(heads().map((head) => head.getAttribute("aria-expanded"))).toEqual(["true", "false"]);
+  click(button("Unfold all"));
+  await settle();
+  expect(chainTexts()).toEqual(["chain 0", "chain 1", "chain 2", "chain 3"]);
+  expect(button("Fold all")).toBeTruthy();
+});
+
+test("a block with no label of its own shows what it holds as chips while it is folded", async () => {
+  const { client } = fakeClient(() => ({ id: "m", type: "Meeting", label: "M" }));
+  const held = (label: string) => ({ type: "Person", id: label, label });
+  const attendee = {
+    type: "Identification",
+    identified_by: "",
+    target: [{ type: "Alternative", alternatives: [held("Smith"), held("Jones")] }],
+  };
+  show(client, { type: "Meeting", initial: { id: "m", type: "Meeting", label: "M", member: held("Brown"), attendees: [attendee] }, version: 1 });
+  await settle();
+  const shown = () => document.body.querySelector("[data-folded-contents]");
+  expect(shown()).toBeNull();
+  click(document.body.querySelector<HTMLButtonElement>("button[aria-label='Fold or unfold Identification']")!);
+  await settle();
+  expect(shown()!.textContent).toContain("Smith");
+  expect(shown()!.textContent).toContain("Jones");
+});
+
+test("a form with no blocks has no button to fold them", async () => {
+  const { client } = fakeClient(() => ({ id: "c0", type: "Chain", label: "C" }));
+  show(client, { type: "Chain", initial: { id: "c0", type: "Chain", label: "C", text: "chain 0" }, version: 1 });
+  await settle();
+  expect(document.body.querySelector("button[aria-label='Fold all']")).toBeNull();
 });
 
 test("a block that holds the part the page is to show (`?show=`) starts open, however deep", async () => {

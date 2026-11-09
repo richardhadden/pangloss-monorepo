@@ -229,6 +229,8 @@
     "fr": "{count} autres y renvoient et ne sont pas encore chargés"
   },
   "incoming_read_all": { "en": "Read them all", "de": "Alle laden", "fr": "Tout charger" },
+  "fold_all": { "en": "Fold all", "de": "Alle einklappen", "fr": "Tout plier" },
+  "unfold_all": { "en": "Unfold all", "de": "Alle ausklappen", "fr": "Tout déplier" },
   "collapse_fold": { "en": "Fold {name}", "de": "{name} einklappen", "fr": "Replier : {name}" },
   "narrow_type": { "en": "Narrow {name} to a type below it", "de": "{name} auf einen Untertyp einschränken", "fr": "Restreindre {name} à un sous-type" },
   "widen_type": { "en": "Widen {name} to a type above it", "de": "{name} auf einen Obertyp erweitern", "fr": "Élargir {name} à un type parent" },
