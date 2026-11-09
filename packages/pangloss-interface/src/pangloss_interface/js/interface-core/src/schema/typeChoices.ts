@@ -139,6 +139,21 @@ export function menuGroups(
   return groups;
 }
 
+/**
+ * What can go inside the semantic spaces `spaces` (outermost first) of a field with these `options`,
+ * as `menuGroups` offers it: the options of the innermost space's contents, with `env` resolved.
+ * Nothing if the field does not accept those spaces.
+ */
+export function spaceOptions(options: RelationOption[], env: Env, spaces: string[]): RelationOption[] | undefined {
+  let within = resolveOptions(options, env);
+  for (const space of spaces) {
+    const option = within.find((found) => found.kind === "semanticSpace" && found.type === space);
+    if (!option || !hasParams(option)) return undefined;
+    within = resolveOptions(option.params.T?.options ?? [], env);
+  }
+  return within;
+}
+
 /** Every choice in the groups, in order */
 export function choicesOf(groups: MenuGroup[]): Choice[] {
   return groups.flatMap((group) =>
@@ -151,8 +166,17 @@ export function choicesOf(groups: MenuGroup[]): Choice[] {
  * semantic space (outermost first).
  */
 export function choiceValue(definitions: ModelDefinitions, choice: Choice): Record<string, unknown> {
-  let value: Record<string, unknown> = { type: choice.type };
-  for (const space of [...choice.spaces].reverse()) {
+  return inSpaces(definitions, choice.spaces, { type: choice.type });
+}
+
+/** `value` in a `{ type, contents: [...] }` for each of `spaces` (outermost first) */
+export function inSpaces(
+  definitions: ModelDefinitions,
+  spaces: string[],
+  inner: Record<string, unknown>,
+): Record<string, unknown> {
+  let value = inner;
+  for (const space of [...spaces].reverse()) {
     const contents = getModel(definitions, space)?.fields.find((field) => field.name === "contents");
     const many = contents?.kind !== "relation" || contents.many;
     value = { type: space, contents: many ? [value] : value };

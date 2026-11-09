@@ -1,4 +1,5 @@
 import { createMemo, createSignal, flush, For, onSettled, Show } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import type { ParentProps } from "solid-js";
 import { useModels, useTranslations } from "../../context";
 import { kindTint, spaceTint } from "../../primitives";
@@ -261,9 +262,15 @@ export function useSelectTitle(groups: () => MenuGroup[]) {
  * chip is; the buttons of a list are joined into one block, the names inside indented to show the
  * hierarchy (an abstract class is a line of the block, not a button). The types are one stop for
  * Tab; the arrow keys go through them (Home and End to the first and last). With `autofocus`, the
- * cursor goes into them when they are drawn.
+ * cursor goes into them when they are drawn. `spaceFooter` is drawn at the bottom of each space's zone (what can be
+ * pasted into a new space of that kind).
  */
-export function TypeGrid(props: { groups: MenuGroup[]; onChoose: (choice: Choice) => void; autofocus?: boolean }) {
+export function TypeGrid(props: {
+  groups: MenuGroup[];
+  onChoose: (choice: Choice) => void;
+  autofocus?: boolean;
+  spaceFooter?: (spaces: string[]) => JSX.Element;
+}) {
   const definitions = useModels();
   const { modelName } = useTranslations();
   const keyOf = (choice: Choice) => [...choice.spaces, choice.type].join("/");
@@ -390,6 +397,7 @@ export function TypeGrid(props: { groups: MenuGroup[]; onChoose: (choice: Choice
                 )}
               </For>
             </div>
+            <Show when={zone.spaces.length > 0 && props.spaceFooter}>{props.spaceFooter!(zone.spaces)}</Show>
           </section>
         )}
       </For>
@@ -402,7 +410,8 @@ export function TypeGrid(props: { groups: MenuGroup[]; onChoose: (choice: Choice
  * can hold (a `TypeGrid`), under a title bar that names what is chosen (Select statement type…, by
  * the type they all come from). Choosing one, Escape, the close button, a click elsewhere or Tab out
  * of it close the box. With only one thing to choose the button chooses it. What is given as
- * `children` (what can be pasted here) is under the button.
+ * `children` (what can be pasted here) is under the button; `inSpace` is drawn at the bottom of each semantic
+ * space's zone of the box (what can be pasted into a new space of that kind), and given what closes the box.
  */
 export function TypeChooser(
   props: ParentProps<{
@@ -412,6 +421,7 @@ export function TypeChooser(
     onChoose: (choice: Choice) => void;
     /** The classes of the button */
     buttonClass?: string;
+    inSpace?: (spaces: string[], close: () => void) => JSX.Element;
   }>,
 ) {
   const { t } = useTranslations();
@@ -515,7 +525,11 @@ export function TypeChooser(
               ✕
             </button>
           </div>
-          <TypeGrid groups={props.groups} onChoose={choose} />
+          <TypeGrid
+            groups={props.groups}
+            onChoose={choose}
+            spaceFooter={props.inSpace && ((spaces) => props.inSpace!(spaces, () => setOpen(false)))}
+          />
         </div>
         </Show>
         {props.children}

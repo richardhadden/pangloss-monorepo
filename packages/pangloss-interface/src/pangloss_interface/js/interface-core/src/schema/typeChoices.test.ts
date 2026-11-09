@@ -5,8 +5,10 @@ import {
   choicesOf,
   choiceValue,
   envOf,
+  inSpaces,
   menuGroups,
   resolveOptions,
+  spaceOptions,
   typeColumns,
 } from "./typeChoices";
 
@@ -132,6 +134,32 @@ test("a semantic space inside a semantic space is a group of its own, and type v
   expect(resolveOptions([{ kind: "typeVar", name: "T", edgeModel: null }], env)).toHaveLength(2);
 });
 
+test("what goes inside a semantic space is its contents' options; something pasted there is put in a new one", () => {
+  const space = (type: string, inner: RelationOption[]): RelationOption => ({
+    kind: "semanticSpace",
+    type,
+    edgeModel: null,
+    params: { T: { typeVar: "T", options: inner } },
+  });
+  const options = [
+    doc("Activity"),
+    space("Negative", [doc("Activity"), space("Hypothetical", [{ kind: "typeVar", name: "U", edgeModel: null }])]),
+  ];
+  const env = { U: [doc("Transfer")] };
+  const types = (found: RelationOption[] | undefined) => found?.map((option) => ("type" in option ? option.type : option.kind));
+  expect(types(spaceOptions(options, env, []))).toEqual(["Activity", "Negative"]);
+  expect(types(spaceOptions(options, env, ["Negative"]))).toEqual(["Activity", "Hypothetical"]);
+  // (a type variable inside is bound as the field binds it)
+  expect(types(spaceOptions(options, env, ["Negative", "Hypothetical"]))).toEqual(["Transfer"]);
+  // (a space the field does not accept there)
+  expect(spaceOptions(options, env, ["Hypothetical"])).toBeUndefined();
+  const pasted = { type: "Transfer", label: "Gift", date: { type: "ExactDate", year: 800 } };
+  expect(inSpaces(definitions, ["Negative", "Hypothetical"], pasted)).toEqual({
+    type: "Negative",
+    contents: [{ type: "Hypothetical", contents: [pasted] }],
+  });
+});
+
 test("a type variable with an edge model gives it to what it stands for (`list[ViaEdge[T, Probability]]`)", () => {
   const env = { T: [{ kind: "entity", type: "Person", edgeModel: null }, doc("Note")] as RelationOption[] };
   const edgeModels = (options: RelationOption[]) => options.map((option) => ("edgeModel" in option ? option.edgeModel : undefined));
@@ -217,5 +245,24 @@ test("what is sent has no meta and no incoming fields, references are only type 
     nothing: null,
     zero: 0,
     no: false,
+  });
+});
+
+test("nothing inside a new node is sent with an id, but references to entities keep theirs", () => {
+  // (a statement cut and pasted, with its ids, into a new semantic space of the same document)
+  const moved = { type: "Transfer", id: "t1", label: "Gift", date: { type: "Note", id: "d1" }, to: { type: "Person", id: "p1" } };
+  const sent = cleanForSave(definitions, {
+    type: "Letter",
+    id: "l1",
+    statements: [{ type: "Negative", contents: [moved] }, { type: "Activity", id: "a1", date: { type: "Note", id: "d2" } }],
+  });
+  expect(sent).toEqual({
+    type: "Letter",
+    id: "l1",
+    statements: [
+      { type: "Negative", contents: [{ type: "Transfer", label: "Gift", date: { type: "Note" }, to: { type: "Person", id: "p1" } }] },
+      // (what is saved already keeps its ids)
+      { type: "Activity", id: "a1", date: { type: "Note", id: "d2" } },
+    ],
   });
 });

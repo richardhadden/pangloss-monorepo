@@ -18,6 +18,8 @@ import {
   cleanForSave,
   choicesOf,
   choiceValue,
+  inSpaces,
+  spaceOptions,
   envOf,
   filled,
   getModel,
@@ -778,6 +780,18 @@ function RelationEditor(props: {
       }}
     />
   );
+  // (in the box of types, under a semantic space's types: what fits inside it, pasted in a new space of that kind)
+  const pasteInSpace = (spaces: string[], close: () => void) => (
+    <RelationPasteSlot
+      options={spaceOptions(options(), props.env, spaces) ?? []}
+      env={props.env}
+      onPaste={(pasted) => {
+        close();
+        form.set(where(), inSpaces(definitions, spaces, pasted));
+        revealAdded(lastAdded);
+      }}
+    />
+  );
   return (
     <div class={["flex w-full min-w-0 flex-col", endsInBlock() ? "gap-6" : "gap-4"]}>
       <Show
@@ -836,6 +850,7 @@ function RelationEditor(props: {
                 }
                 buttonClass={addSlotClass}
                 onChoose={add}
+                inSpace={pasteInSpace}
               >
                 {pasteSlot()}
               </TypeChooser>
